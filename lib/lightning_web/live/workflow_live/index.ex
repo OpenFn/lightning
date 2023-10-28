@@ -7,7 +7,6 @@ defmodule LightningWeb.WorkflowLive.Index do
   alias Lightning.Workflows
   alias Lightning.Policies.{Permissions, ProjectUsers}
   import LightningWeb.WorkflowLive.Components
-  import WorkflowLive.Modal
 
   attr :can_create_workflow, :boolean
   attr :can_delete_workflow, :boolean
@@ -78,7 +77,7 @@ defmodule LightningWeb.WorkflowLive.Index do
     {:noreply, apply_action(socket, socket.assigns.live_action, params)}
   end
 
-  defp apply_action(socket, :index, params) do
+  defp apply_action(socket, :index, _) do
     socket
     |> assign(
       active_menu_item: :overview,
@@ -88,7 +87,7 @@ defmodule LightningWeb.WorkflowLive.Index do
   end
 
   @impl true
-  def handle_event("toggle_workflow_modal", params, socket) do
+  def handle_event("toggle_workflow_modal", _, socket) do
     socket =
       socket
       |> assign(show_modal: !socket.assigns.show_modal)

@@ -529,7 +529,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
         Lightning.Repo.insert_or_update(socket.assigns.changeset)
         |> case do
           {:ok, workflow} ->
-
             socket
             |> assign_workflow(workflow)
             |> put_flash(:info, "Workflow saved")

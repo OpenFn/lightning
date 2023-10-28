@@ -1,12 +1,7 @@
 defmodule LightningWeb.WorkflowLive.Form do
   use LightningWeb, :live_component
-  alias Lightning.Workflows
-  alias Lightning.Workflows.Workflow
-  import Ecto.Changeset
   import WorkflowLive.Modal
   alias WorkflowLive.WorkFlowNameValidator
-
-  # alias Project Struct
 
   def update(assigns, socket) do
     changeset = WorkFlowNameValidator.validate_workflow(%WorkFlowNameValidator{})
@@ -32,7 +27,7 @@ defmodule LightningWeb.WorkflowLive.Form do
 
   def handle_event(
         "create_work_flow",
-        %{"workflow" => workflow_name} = params,
+        %{"workflow" => workflow_name},
         socket
       ) do
     changeset =

@@ -1,4 +1,5 @@
 defmodule WorkflowLive.WorkFlowNameValidator do
+  @moduledoc false
   alias Lightning.Workflows
   defstruct [:name, :project_id]
   @types %{name: :string, project_id: :string}
