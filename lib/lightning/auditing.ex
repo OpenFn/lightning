@@ -7,7 +7,7 @@ defmodule Lightning.Auditing do
   alias Lightning.Repo
 
   def list_all(params \\ %{}) do
-    from(a in Lightning.Credentials.Audit,
+    from(a in Lightning.Credentials.Audit.base_query(),
       left_join: u in Lightning.Accounts.User,
       on: [id: a.actor_id],
       select_merge: %{actor: u},

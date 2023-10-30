@@ -3,6 +3,7 @@ defmodule LightningWeb.Components.NewInputs do
   A temporary module that will serve as a place to put new inputs that conform
   with the newer CoreComponents conventions introduced in Phoenix 1.7.
   """
+  alias Phoenix.LiveView.JS
 
   use Phoenix.Component
 
@@ -115,7 +116,7 @@ defmodule LightningWeb.Components.NewInputs do
       ~w(accept autocomplete capture cols disabled form list max maxlength min minlength
                 multiple pattern placeholder readonly required rows size step)
 
-  attr :class, :string, default: nil
+  attr :class, :string, default: ""
 
   slot :inner_block
 
@@ -164,7 +165,7 @@ defmodule LightningWeb.Components.NewInputs do
         id={@id}
         name={@name}
         class={[
-          "block w-full rounded-md border border-secondary-300 bg-white",
+          "block w-full rounded-md border border-secondary-300 bg-white mt-2",
           "text-sm shadow-sm",
           "focus:border-primary-300 focus:ring focus:ring-primary-200 focus:ring-opacity-50",
           "disabled:cursor-not-allowed"
@@ -188,17 +189,71 @@ defmodule LightningWeb.Components.NewInputs do
         id={@id}
         name={@name}
         class={[
-          "rounded-md shadow-sm font-mono proportional-nums text-sm",
+          "focus:outline focus:outline-2 focus:outline-offset-1 rounded-md shadow-sm font-mono proportional-nums text-sm",
           "mt-2 block w-full focus:ring-0",
           "text-slate-200 bg-slate-700 sm:text-sm sm:leading-6",
           "phx-no-feedback:border-slate-300 phx-no-feedback:focus:border-slate-400 overflow-y-auto",
-          @errors == [] && "border-slate-300 focus:border-slate-400",
-          @errors != [] && "border-danger-400 focus:border-danger-400",
+          @errors == [] &&
+            "border-slate-300 focus:border-slate-400 focus:outline-indigo-600",
+          @errors != [] && @field && @field.field == @name && @field.errors != [] &&
+            "border-danger-400 focus:border-danger-400 focus:outline-danger-400",
           @class
         ]}
         {@rest}
       ><%= Phoenix.HTML.Form.normalize_value("textarea", @value) %></textarea>
       <.error :for={msg <- @errors}><%= msg %></.error>
+    </div>
+    """
+  end
+
+  def input(%{type: "password"} = assigns) do
+    ~H"""
+    <div phx-feedback-for={@name}>
+      <.label for={@id}><%= @label %></.label>
+      <div class="relative mt-2 rounded-lg shadow-sm">
+        <input
+          type={@type}
+          name={@name}
+          id={@id}
+          value={Phoenix.HTML.Form.normalize_value(@type, @value)}
+          phx-debounce="blur"
+          class={[
+            "focus:outline focus:outline-2 focus:outline-offset-1 block w-full rounded-lg text-slate-900 focus:ring-0 sm:text-sm sm:leading-6",
+            "phx-no-feedback:border-slate-300 phx-no-feedback:focus:border-slate-400 disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-500",
+            @class,
+            @errors == [] &&
+              "border-slate-300 focus:border-slate-400 focus:outline-indigo-600",
+            @errors != [] && @field && @field.field == @name && @field.errors != [] &&
+              "border-danger-400 focus:border-danger-400 focus:outline-danger-400"
+          ]}
+          {@rest}
+        />
+        <div class="absolute inset-y-0 right-0 flex items-center pr-3">
+          <Heroicons.eye_slash
+            class="h-5 w-5 cursor-pointer"
+            id={"show_password_#{@id}"}
+            phx-hook="TogglePassword"
+            data-target={@id}
+            phx-then={
+              JS.toggle(to: "#hide_password_#{@id}")
+              |> JS.toggle(to: "#show_password_#{@id}")
+            }
+          />
+          <Heroicons.eye
+            class="h-5 w-5 cursor-pointer hidden"
+            phx-hook="TogglePassword"
+            data-target={@id}
+            phx-then={
+              JS.toggle(to: "#hide_password_#{@id}")
+              |> JS.toggle(to: "#show_password_#{@id}")
+            }
+            id={"hide_password_#{@id}"}
+          />
+        </div>
+      </div>
+      <div class="error-space h-6">
+        <.error :for={msg <- @errors}><%= msg %></.error>
+      </div>
     </div>
     """
   end
@@ -215,10 +270,13 @@ defmodule LightningWeb.Components.NewInputs do
         value={Phoenix.HTML.Form.normalize_value(@type, @value)}
         phx-debounce="blur"
         class={[
-          "mt-2 block w-full rounded-lg text-slate-900 focus:ring-0 sm:text-sm sm:leading-6",
-          "phx-no-feedback:border-slate-300 phx-no-feedback:focus:border-slate-400",
-          @errors == [] && "border-slate-300 focus:border-slate-400",
-          @errors != [] && "border-danger-400 focus:border-danger-400"
+          "focus:outline focus:outline-2 focus:outline-offset-1 mt-2 block w-full rounded-lg text-slate-900 focus:ring-0 sm:text-sm sm:leading-6",
+          "phx-no-feedback:border-slate-300 phx-no-feedback:focus:border-slate-400 disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-500",
+          @class,
+          @errors == [] &&
+            "border-slate-300 focus:border-slate-400 focus:outline-indigo-600",
+          @errors != [] &&
+            "border-danger-400 focus:border-danger-400 focus:outline-danger-400"
         ]}
         {@rest}
       />

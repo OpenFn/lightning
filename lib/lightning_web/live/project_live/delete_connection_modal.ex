@@ -63,7 +63,7 @@ defmodule LightningWeb.ProjectLive.DeleteConnectionModal do
                 <div class="my-4 items-center">
                   <button
                     phx-click={
-                      LightningWeb.CoreComponents.hide_modal(
+                      LightningWeb.Components.Modal.hide_modal(
                         "delete_connection_modal"
                       )
                     }
@@ -75,7 +75,7 @@ defmodule LightningWeb.ProjectLive.DeleteConnectionModal do
                   <button
                     phx-click={
                       JS.push("delete_repo_connection")
-                      |> LightningWeb.CoreComponents.hide_modal(
+                      |> LightningWeb.Components.Modal.hide_modal(
                         "delete_connection_modal"
                       )
                     }

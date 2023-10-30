@@ -62,7 +62,7 @@ defmodule Lightning.Credentials.AuditTest do
       assert audit.item_type == "credential"
       assert audit.item_id == credential.id
 
-      assert audit.changes == %Lightning.Credentials.Audit.Changes{
+      assert audit.changes == %Lightning.Auditing.Model.Changes{
                before: nil,
                after: nil
              }

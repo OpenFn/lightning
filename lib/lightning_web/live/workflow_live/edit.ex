@@ -9,6 +9,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
   alias Lightning.Workflows
   alias Lightning.Workflows.Job
+  alias Lightning.Workflows.Trigger
   alias Lightning.Workflows.Workflow
   alias LightningWeb.Components.Form
   alias LightningWeb.WorkflowLive.Helpers
@@ -238,6 +239,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
                   on_change={&send_form_changed/1}
                   disabled={!@can_edit_job}
                   webhook_url={webhook_url(@selected_trigger)}
+                  selected_trigger={@selected_trigger}
+                  action={@live_action}
                   cancel_url={
                     ~p"/projects/#{@project.id}/w/#{@workflow.id || "new"}"
                   }
@@ -266,6 +269,22 @@ defmodule LightningWeb.WorkflowLive.Edit do
             </.panel>
           </.single_inputs_for>
         </.form>
+
+        <.live_component
+          :if={
+            @live_action == :edit && @can_create_webhook_auth_method &&
+              @selected_trigger
+          }
+          module={LightningWeb.WorkflowLive.WebhookAuthMethodModalComponent}
+          id="webhooks_auth_method_modal"
+          action={:new}
+          trigger={@selected_trigger}
+          project={@project}
+          current_user={@current_user}
+          return_to={
+            ~p"/projects/#{@project.id}/w/#{@workflow.id}?#{%{s: @selected_trigger.id}}"
+          }
+        />
       </div>
     </LayoutComponents.page_content>
     """
@@ -385,6 +404,20 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
     socket
     |> assign(
+      can_create_webhook_auth_method:
+        Permissions.can?(
+          ProjectUsers,
+          :create_webhook_auth_method,
+          current_user,
+          project_user
+        ),
+      can_edit_webhook_auth_method:
+        Permissions.can?(
+          ProjectUsers,
+          :edit_webhook_auth_method,
+          current_user,
+          project_user
+        ),
       can_edit_job:
         Permissions.can?(ProjectUsers, :edit_job, current_user, project_user),
       can_run_job:
@@ -445,8 +478,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
         workflow =
           Workflows.get_workflow(workflow_id)
           |> Lightning.Repo.preload([
-            :triggers,
             :edges,
+            triggers: Trigger.with_auth_methods_query(),
             jobs: [:credential]
           ])
 
@@ -922,6 +955,10 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
         %Job{} = job ->
           {:halt, [field, job |> Lightning.Repo.preload(:credential)]}
+
+        %Trigger{} = trigger ->
+          {:halt,
+           [field, Lightning.Repo.preload(trigger, :webhook_auth_methods)]}
 
         item ->
           {:halt, [field, item]}
