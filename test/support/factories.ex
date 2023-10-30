@@ -251,7 +251,8 @@ defmodule Lightning.Factories do
   end
 
   def simple_workflow_factory(attrs) do
-    trigger = build(:trigger, type: :webhook)
+    {trigger_enabled, attrs} = Map.pop(attrs, :trigger_enabled, true)
+    trigger = build(:trigger, type: :webhook, enabled: trigger_enabled)
 
     job =
       build(:job,

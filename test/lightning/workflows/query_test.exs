@@ -19,25 +19,61 @@ defmodule Lightning.Workflows.QueryTest do
            ]
   end
 
-  test "enabled_cron_jobs_by_edge/0" do
-    trigger = insert(:trigger, %{type: :cron, cron_expression: "* * * * *"})
-    job = insert(:job, enabled: true, workflow: trigger.workflow)
+  describe "enabled_cron_jobs_by_edge/0" do
+    test "returns the jobs when trigger is enabled" do
+      trigger =
+        insert(:trigger, %{
+          type: :cron,
+          cron_expression: "* * * * *",
+          enabled: true
+        })
 
-    insert(:edge, %{
-      source_trigger: trigger,
-      target_job: job,
-      workflow: job.workflow
-    })
+      job = insert(:job, enabled: true, workflow: trigger.workflow)
 
-    _disabled_conjob = job_fixture(enabled: false)
+      insert(:edge, %{
+        source_trigger: trigger,
+        target_job: job,
+        workflow: job.workflow
+      })
 
-    _non_cronjob = job_fixture()
+      _disabled_conjob = job_fixture(enabled: false)
 
-    jobs =
-      Query.enabled_cron_jobs_by_edge()
-      |> Repo.all()
-      |> Enum.map(fn e -> e.target_job.id end)
+      _non_cronjob = job_fixture()
 
-    assert jobs == [job.id]
+      jobs =
+        Query.enabled_cron_jobs_by_edge()
+        |> Repo.all()
+        |> Enum.map(fn e -> e.target_job.id end)
+
+      assert jobs == [job.id]
+    end
+
+    test "returns no jobs when trigger is disabled" do
+      trigger =
+        insert(:trigger, %{
+          type: :cron,
+          cron_expression: "* * * * *",
+          enabled: false
+        })
+
+      job = insert(:job, enabled: true, workflow: trigger.workflow)
+
+      insert(:edge, %{
+        source_trigger: trigger,
+        target_job: job,
+        workflow: job.workflow
+      })
+
+      _disabled_conjob = job_fixture(enabled: false)
+
+      _non_cronjob = job_fixture()
+
+      jobs =
+        Query.enabled_cron_jobs_by_edge()
+        |> Repo.all()
+        |> Enum.map(fn e -> e.target_job.id end)
+
+      assert jobs == []
+    end
   end
 end

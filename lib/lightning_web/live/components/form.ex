@@ -290,6 +290,17 @@ defmodule LightningWeb.Components.Form do
     """
   end
 
+  attr :form, :map, required: true
+  attr :field, :any, required: true
+  attr :label, :string, default: nil
+  attr :disabled, :boolean
+  attr :checked_value, :boolean
+  attr :unchecked_value, :boolean
+  attr :value, :boolean
+
+  slot :inner_block,
+    doc: "optional additional description to the label"
+
   def check_box(assigns) do
     checkbox_classes = ~w[
       focus:ring-primary-500
@@ -337,7 +348,7 @@ defmodule LightningWeb.Components.Form do
       </div>
       <div class="ml-3 text-sm">
         <LightningWeb.CoreComponents.old_error field={@form[@field]} />
-        <%= Phoenix.HTML.Form.label(@form, @field, @label_opts) %>
+        <%= Phoenix.HTML.Form.label(@form, @label || @field, @label_opts) %>
         <%= if assigns[:inner_block] do %>
           <%= render_slot(@inner_block) %>
         <% end %>

@@ -101,7 +101,8 @@ defmodule Lightning.JobsFixtures do
     t =
       insert(:trigger,
         workflow: attrs[:workflow],
-        type: :webhook
+        type: :webhook,
+        enabled: attrs[:enabled]
       )
 
     e =

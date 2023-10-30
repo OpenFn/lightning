@@ -102,7 +102,7 @@ defmodule LightningWeb.WebhooksControllerTest do
 
   describe "a disabled message" do
     setup %{conn: conn} do
-      %{triggers: [trigger]} = insert(:simple_workflow)
+      %{triggers: [trigger]} = insert(:simple_workflow, trigger_enabled: false)
 
       [conn: conn, trigger_id: trigger.id, message: %{"foo" => "bar"}]
     end

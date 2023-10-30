@@ -18,6 +18,7 @@ defmodule LightningWeb.WorkflowLive.Components do
             can_delete_workflow={@can_delete_workflow}
             workflow={%{workflow | name: workflow.name || "Untitled"}}
             project={@project}
+            trigger_enabled={Enum.any?(workflow.triggers, & &1.enabled)}
           />
         <% end %>
       </div>
@@ -28,6 +29,7 @@ defmodule LightningWeb.WorkflowLive.Components do
   attr :project, :map, required: true
   attr :can_delete_workflow, :boolean, default: false
   attr :workflow, :map, required: true
+  attr :trigger_enabled, :boolean
 
   def workflow_card(assigns) do
     assigns =
@@ -58,9 +60,20 @@ defmodule LightningWeb.WorkflowLive.Components do
                 <%= @workflow.name %>
               </span>
             </div>
-            <p class="text-gray-500 text-xs">
-              Updated <%= @relative_updated_at %>
-            </p>
+            <%= if @trigger_enabled do %>
+              <p class="text-gray-500 text-xs">
+                Updated <%= @relative_updated_at %>
+              </p>
+            <% else %>
+              <div class="flex items-center">
+                <div style="background: #8b5f0d" class="w-2 h-2 rounded-full"></div>
+                <div>
+                  <p class="text-[#8b5f0d] text-xs">
+                    &nbsp; Disabled
+                  </p>
+                </div>
+              </div>
+            <% end %>
           </div>
         </.link>
         <div class="flex-shrink-0 pr-2">
@@ -252,10 +265,11 @@ defmodule LightningWeb.WorkflowLive.Components do
   attr :webhook_url, :string, required: true
   attr :on_change, :any, required: true
 
-  def trigger_form(assigns) do
+  def trigger_form(%{form: form} = assigns) do
     assigns =
       assign(assigns,
-        type: assigns.form.source |> Ecto.Changeset.get_field(:type)
+        type: form.source |> Ecto.Changeset.get_field(:type),
+        trigger_enabled: Map.get(form.params, "enabled", form.data.enabled)
       )
 
     ~H"""
@@ -311,6 +325,21 @@ defmodule LightningWeb.WorkflowLive.Components do
           </div>
       <% end %>
     </div>
+    <div class="hidden sm:block" aria-hidden="true">
+      <div class="py-2"></div>
+    </div>
+    <hr class="h-px bg-gray-200 border-0 dark:bg-gray-700 position:absolute" />
+    <div class="hidden sm:block" aria-hidden="true">
+      <div class="py-2"></div>
+    </div>
+    <Form.check_box
+      form={@form}
+      field={:enabled}
+      label="Disable this trigger"
+      checked_value={false}
+      unchecked_value={true}
+      value={@trigger_enabled}
+    />
     """
   end
 
