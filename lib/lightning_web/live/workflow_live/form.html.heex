@@ -11,19 +11,27 @@
     <.input field={f[:name]} type="text" label="Workflow Name" name="workflow" />
 
     <.modal_footer>
-      <div class="flex gap-x-5 justify-end">
+      <div class="flex gap-x-5 justify-end relative">
         <.link
           class="justify-center rounded-md bg-white px-4 py-3 text-sm font-semibold text-gray-500 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:mt-0 sm:w-auto"
           navigate={~p"/"}
         >
           Cancel
         </.link>
-        <button
-          type="submit"
-          class=" justify-center rounded-md bg-primary-600 disabled:bg-primary-300 px-6 py-3 text-sm font-semibold text-white shadow-sm hover:bg-primary-500 disabled:outline-0 focus:outline-2 focus:outline-indigo-600 focus:outline-offset-2 active:outlin-2 active:outline-indigo-600 active:outline-offset-2"
-        >
-          Create Workflow
-        </button>
+        <span class="group">
+          <button
+            disabled={!@isButtonDisabled}
+            type="submit"
+            class=" justify-center rounded-md bg-primary-600 disabled:bg-primary-300 px-6 py-3 text-sm font-semibold text-white shadow-sm hover:bg-primary-500 disabled:outline-0 focus:outline-2 focus:outline-indigo-600 focus:outline-offset-2 active:outlin-2 active:outline-indigo-600 active:outline-offset-2"
+          >
+            Create Workflow
+            <%= if !@isButtonDisabled do %>
+              <span class="invisible group-hover:visible w-36 bg-[#030712] absolute border-2 rounded-md -translate-y-14 -translate-x-32">
+                A workflow name is required
+              </span>
+            <% end %>
+          </button>
+        </span>
       </div>
     </.modal_footer>
   </.form>

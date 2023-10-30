@@ -11,6 +11,7 @@ defmodule LightningWeb.WorkflowLive.Form do
       socket
       |> assign(:form, to_form(changeset))
       |> assign(:project_id, assigns.id)
+      |> assign(:isButtonDisabled, changeset.valid?)
 
     {:ok, socket}
   end
@@ -18,6 +19,11 @@ defmodule LightningWeb.WorkflowLive.Form do
   @impl true
   def handle_event("validate", %{"workflow" => workflow_name}, socket) do
     changeset = validate_workflow(workflow_name, socket)
+
+    socket =
+      socket
+      |> assign(:isButtonDisabled, changeset.valid?)
+
     {:noreply, assign(socket, form: to_form(changeset))}
   end
 
