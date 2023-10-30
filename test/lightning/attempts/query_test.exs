@@ -1,4 +1,4 @@
-defmodule Lightning.Attempts.QueryTest dohttps://github.com/OpenFn/Lightning/issues/1238
+defmodule Lightning.Attempts.QueryTest do
   use Lightning.DataCase, async: true
 
   alias Lightning.Attempt
