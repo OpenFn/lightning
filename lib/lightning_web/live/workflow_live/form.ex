@@ -3,50 +3,52 @@ defmodule LightningWeb.WorkflowLive.Form do
   import WorkflowLive.Modal
   alias WorkflowLive.WorkFlowNameValidator
 
+  @impl true
   def update(assigns, socket) do
     changeset = WorkFlowNameValidator.validate_workflow(%WorkFlowNameValidator{})
 
-    {
-      :ok,
+    socket =
       socket
       |> assign(:form, to_form(changeset))
-      |> assign(:project, assigns.id)
-    }
+      |> assign(:project_id, assigns.id)
+
+    {:ok, socket}
   end
 
+  @impl true
   def handle_event("validate", %{"workflow" => workflow_name}, socket) do
-    changeset =
-      WorkFlowNameValidator.validate_workflow(%WorkFlowNameValidator{}, %{
-        name: workflow_name,
-        project_id: socket.assigns.project
-      })
-      |> Map.put(:action, :validate)
-
-    {:noreply, assign(socket, form: to_form(%Ecto.Changeset{} = changeset))}
+    changeset = validate_workflow(workflow_name, socket)
+    {:noreply, assign(socket, form: to_form(changeset))}
   end
 
-  def handle_event(
-        "create_work_flow",
-        %{"workflow" => workflow_name},
-        socket
-      ) do
-    changeset =
-      WorkFlowNameValidator.validate_workflow(%WorkFlowNameValidator{}, %{
-        name: workflow_name,
-        project_id: socket.assigns.project
-      })
+  @impl true
+  def handle_event("create_work_flow", %{"workflow" => workflow_name}, socket) do
+    changeset = validate_workflow(workflow_name, socket)
 
     if changeset.valid? do
-      changeset =
-        WorkFlowNameValidator.validate_workflow(%WorkFlowNameValidator{})
-
-      {:noreply, socket |> assign(:form, to_form(changeset))}
+      navigate_to_new_workflow(socket, workflow_name)
     else
-      changeset =
-        changeset
-        |> Map.put(:action, :validate)
-
-      {:noreply, assign(socket, :form, to_form(changeset))}
+      {:noreply, update_form(socket, changeset)}
     end
+  end
+
+  defp validate_workflow(workflow_name, socket) do
+    WorkFlowNameValidator.validate_workflow(%WorkFlowNameValidator{}, %{
+      name: workflow_name,
+      project_id: socket.assigns.project_id
+    })
+    |> Map.put(:action, :validate)
+  end
+
+  defp navigate_to_new_workflow(socket, workflow_name) do
+    {:noreply,
+     push_navigate(socket,
+       to:
+         ~p"/projects/#{socket.assigns.project_id}/w/new?#{%{name: workflow_name}}"
+     )}
+  end
+
+  defp update_form(socket, changeset) do
+    assign(socket, :form, to_form(changeset))
   end
 end
