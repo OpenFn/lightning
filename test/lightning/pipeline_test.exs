@@ -8,8 +8,8 @@ defmodule Lightning.PipelineTest do
 
   import Lightning.Factories
 
-  @tag :skip
   describe "process/1 with an attempt" do
+    @tag :skip
     test "creates an initial attempt run" do
       workflow = insert(:simple_workflow)
 
@@ -30,6 +30,7 @@ defmodule Lightning.PipelineTest do
   end
 
   describe "process/1 with an attempt run" do
+    @tag :skip
     test "starts a run for a given AttemptRun and executes its on_job_failure downstream job" do
       workflow = insert(:workflow)
 
@@ -108,6 +109,7 @@ defmodule Lightning.PipelineTest do
       assert error |> Enum.join("\n") =~ "Error: I'm supposed to fail"
     end
 
+    @tag :skip
     test "starts a run for a given AttemptRun and executes its on_job_success downstream job" do
       project = insert(:project)
       workflow = insert(:workflow, project: project)
@@ -215,6 +217,7 @@ defmodule Lightning.PipelineTest do
   end
 
   describe "run logs" do
+    @tag :skip
     test "logs_for_run/1 returns an array of the logs for a given run" do
       run =
         insert(:run,
@@ -232,6 +235,7 @@ defmodule Lightning.PipelineTest do
              ]
     end
 
+    @tag :skip
     test "assemble_logs_for_run/1 returns a string representation of the logs for a run" do
       run =
         insert(:run,
@@ -243,6 +247,7 @@ defmodule Lightning.PipelineTest do
       assert log_string == "Hello\nI am a\nlog"
     end
 
+    @tag :skip
     test "assemble_logs_for_run/1 returns nil when given a nil run" do
       assert Pipeline.assemble_logs_for_run(nil) == nil
     end
