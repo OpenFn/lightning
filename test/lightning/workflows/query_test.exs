@@ -36,9 +36,13 @@ defmodule Lightning.Workflows.QueryTest do
         workflow: job.workflow
       })
 
-      _disabled_conjob = job_fixture(enabled: false)
+      _disabled_cronjob =
+        insert(:job, enabled: false, workflow: trigger.workflow)
 
-      _non_cronjob = job_fixture()
+      webhook_trigger = insert(:trigger, type: :webhook)
+
+      _non_cron_job =
+        insert(:job, enabled: true, workflow: webhook_trigger.workflow)
 
       jobs =
         Query.enabled_cron_jobs_by_edge()
@@ -64,9 +68,13 @@ defmodule Lightning.Workflows.QueryTest do
         workflow: job.workflow
       })
 
-      _disabled_conjob = job_fixture(enabled: false)
+      _disabled_cronjob =
+        insert(:job, enabled: false, workflow: trigger.workflow)
 
-      _non_cronjob = job_fixture()
+      webhook_trigger = insert(:trigger, type: :webhook)
+
+      _non_cron_job =
+        insert(:job, enabled: true, workflow: webhook_trigger.workflow)
 
       jobs =
         Query.enabled_cron_jobs_by_edge()
