@@ -32,7 +32,7 @@ defmodule Lightning.WebhookAuthMethods do
 
   alias Ecto.Multi
   alias Lightning.Accounts.User
-  alias Lightning.Jobs.Trigger
+  alias Lightning.Workflows.Trigger
   alias Lightning.Projects.Project
   alias Lightning.Workflows.WebhookAuthMethod
   alias Lightning.Workflows.WebhookAuthMethodAudit
@@ -421,12 +421,11 @@ defmodule Lightning.WebhookAuthMethods do
       |> WebhookAuthMethod.changeset(params)
       |> Ecto.Changeset.apply_changes()
 
-    auth_method =
-      if auth_method.auth_type == :api do
-        api_key = WebhookAuthMethod.generate_api_key()
-        %{auth_method | api_key: api_key}
-      else
-        auth_method
-      end
+    if auth_method.auth_type == :api do
+      api_key = WebhookAuthMethod.generate_api_key()
+      %{auth_method | api_key: api_key}
+    else
+      auth_method
+    end
   end
 end

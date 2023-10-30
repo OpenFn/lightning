@@ -1,9 +1,9 @@
 defmodule LightningWeb.WorkflowLive.Components do
   @moduledoc false
-  alias Lightning.Jobs.Trigger
   use LightningWeb, :component
 
   alias LightningWeb.Components.Form
+  alias Lightning.Workflows.Trigger
   alias Phoenix.LiveView.JS
 
   def workflow_list(assigns) do
@@ -628,6 +628,7 @@ defmodule LightningWeb.WorkflowLive.Components do
   attr :on_row_select, :any, default: nil
   attr :row_selected?, :any
   attr :class, :string, default: ""
+  attr :return_to, :string
   slot :action, doc: "the slot for showing user actions in the last table column"
   slot :linked_triggers, doc: "the slot for showing the linked triggers modal"
 

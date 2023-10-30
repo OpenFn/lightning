@@ -1,6 +1,5 @@
 defmodule LightningWeb.WorkflowLive.Edit do
   @moduledoc false
-  alias Lightning.Jobs.Trigger
   use LightningWeb, :live_view
 
   alias Lightning.Policies.Permissions
@@ -10,6 +9,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
   alias Lightning.Workflows
   alias Lightning.Workflows.Job
+  alias Lightning.Workflows.Trigger
   alias Lightning.Workflows.Workflow
   alias LightningWeb.Components.Form
   alias LightningWeb.WorkflowLive.Helpers

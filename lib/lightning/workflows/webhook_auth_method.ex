@@ -43,7 +43,7 @@ defmodule Lightning.Workflows.WebhookAuthMethod do
 
     belongs_to :project, Lightning.Projects.Project
 
-    many_to_many :triggers, Lightning.Jobs.Trigger,
+    many_to_many :triggers, Lightning.Workflows.Trigger,
       join_through: "trigger_webhook_auth_methods"
 
     timestamps()
