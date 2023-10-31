@@ -55,6 +55,10 @@ defmodule Lightning.Attempt do
     field :started_at, :utc_datetime_usec
     field :finished_at, :utc_datetime_usec
 
+    field :priority, Ecto.Enum,
+      values: [immediate: 0, normal: 1],
+      default: :normal
+
     timestamps type: :utc_datetime_usec, updated_at: false
   end
 
@@ -87,7 +91,7 @@ defmodule Lightning.Attempt do
   @doc false
   def changeset(attempt, attrs) do
     attempt
-    |> cast(attrs, [:reason_id, :work_order_id])
+    |> cast(attrs, [:reason_id, :work_order_id, :priority])
     |> cast_assoc(:runs, required: false)
     |> validate_required([:reason_id, :work_order_id])
     |> assoc_constraint(:work_order)

@@ -76,6 +76,66 @@ defmodule Lightning.AttemptsTest do
       assert claimed_3.id == attempt_3.id
       assert claimed_3.state == :claimed
     end
+
+    test "claims with demand for all immediate attempt" do
+      %{triggers: [trigger]} = workflow = insert(:simple_workflow)
+
+      [second_last_attempt, last_attempt] =
+        Enum.map(1..2, fn _i ->
+          WorkOrders.create_for(trigger,
+            workflow: workflow,
+            dataclip: params_with_assocs(:dataclip)
+          )
+          |> then(fn {:ok, %{attempts: [attempt]}} -> attempt end)
+        end)
+
+      dataclip = insert(:dataclip)
+
+      work_order =
+        insert(:workorder,
+          workflow: workflow,
+          trigger: trigger,
+          dataclip: dataclip
+        )
+
+      attempts =
+        Map.new(1..4, fn i ->
+          build(:attempt,
+            work_order: work_order,
+            starting_trigger: trigger,
+            dataclip: dataclip,
+            priority: :immediate
+          )
+          |> Attempts.enqueue()
+          |> then(fn {:ok, attempt} -> {i, attempt} end)
+        end)
+
+      assert {:ok, [claimed_1, claimed_2]} = Attempts.claim(2)
+
+      assert claimed_1.id == attempts[1].id
+      assert claimed_1.state == :claimed
+      assert claimed_2.id == attempts[2].id
+      assert claimed_2.state == :claimed
+
+      assert {:ok, [claimed_3]} = Attempts.claim()
+
+      assert claimed_3.id == attempts[3].id
+      assert claimed_3.state == :claimed
+
+      assert {:ok, [claimed_4, claimed_5]} = Attempts.claim(2)
+
+      assert claimed_4.id in [attempts[4].id, second_last_attempt.id]
+      assert claimed_4.state == :claimed
+
+      assert claimed_5.id != claimed_4.id
+      assert claimed_5.id in [attempts[4].id, second_last_attempt.id]
+      assert claimed_5.state == :claimed
+
+      assert {:ok, [claimed_6]} = Attempts.claim(2)
+
+      assert claimed_6.id == last_attempt.id
+      assert claimed_6.state == :claimed
+    end
   end
 
   describe "dequeue/1" do

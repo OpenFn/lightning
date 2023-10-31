@@ -18,7 +18,7 @@ defmodule Lightning.Attempts.Queue do
       |> select([:id])
       |> where([j], j.state == :available)
       |> limit(^demand)
-      |> order_by(asc: :inserted_at)
+      |> order_by([:priority, :inserted_at])
       |> lock("FOR UPDATE SKIP LOCKED")
 
     # The Postgres planner may choose to generate a plan that executes a nested

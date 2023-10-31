@@ -211,7 +211,7 @@ defmodule Lightning.WorkOrders do
         end)
       end)
 
-    Attempt.new()
+    Attempt.new(%{priority: :immediate})
     |> put_assoc(:created_by, attrs[:created_by])
     |> put_assoc(:work_order, attempt.work_order)
     |> put_change(:dataclip_id, run.input_dataclip_id)
