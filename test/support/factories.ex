@@ -50,7 +50,8 @@ defmodule Lightning.Factories do
   def trigger_factory do
     %Lightning.Workflows.Trigger{
       id: fn -> Ecto.UUID.generate() end,
-      workflow: build(:workflow)
+      workflow: build(:workflow),
+      enabled: true
     }
   end
 

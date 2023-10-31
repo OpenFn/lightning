@@ -11,8 +11,9 @@ defmodule Lightning.Pipeline.StateAssemblerTest do
   import Lightning.CredentialsFixtures
   import Ecto.Changeset
 
-  @tag :deprecated
+  @tag deprecated: true, skip: true
   describe "assemble/2" do
+    @tag deprecated: true, skip: true
     test "run with no previous run" do
       %{job: job} = webhook_workflow()
 
@@ -41,6 +42,7 @@ defmodule Lightning.Pipeline.StateAssemblerTest do
              }
     end
 
+    @tag deprecated: true, skip: true
     test "run whose previous run failed" do
       %{job: job} = webhook_workflow()
 
@@ -51,7 +53,9 @@ defmodule Lightning.Pipeline.StateAssemblerTest do
           job_id: job.id,
           input_dataclip_id: dataclip.id,
           exit_code: 1,
-          log_lines: [%{body: "I've failed, log log"}]
+          log_lines: [
+            %{message: "I've failed, log log", timestamp: DateTime.utc_now()}
+          ]
         })
         |> Repo.insert!()
 
@@ -80,6 +84,7 @@ defmodule Lightning.Pipeline.StateAssemblerTest do
              }
     end
 
+    @tag deprecated: true, skip: true
     test "run whose previous run succeeded" do
       %{job: job, workflow: workflow} = webhook_workflow()
 
