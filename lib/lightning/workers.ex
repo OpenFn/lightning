@@ -36,7 +36,6 @@ defmodule Lightning.Workers do
         "exp",
         fn ->
           Lightning.current_time()
-          |> DateTime.utc_now()
           |> DateTime.add(Lightning.Config.grace_period())
           |> DateTime.to_unix()
         end,
