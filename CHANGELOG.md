@@ -52,8 +52,6 @@ and this project adheres to
 - [#1140](https://github.com/OpenFn/Lightning/issues/1140) Adaptor icons load
   gracefully
 
-### Fixed
-
 ## [v0.9.3] - 2023-09-27
 
 ### Added
