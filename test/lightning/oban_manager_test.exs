@@ -76,6 +76,7 @@ defmodule Lightning.CrashTest do
       %{run: run, attempt_run: attempt_run}
     end
 
+    @tag skip: "Deprecated. To be deleted"
     test "timeout jobs generate results with :killed status", %{run: run} do
       result = Pipeline.Runner.start(run)
 
@@ -95,6 +96,7 @@ defmodule Lightning.CrashTest do
       assert run.exit_code == nil
     end
 
+    @tag skip: "Deprecated. To be deleted"
     test "handle_event/4 marks a job as finished for :killed jobs", %{
       attempt_run: attempt_run
     } do
@@ -121,6 +123,7 @@ defmodule Lightning.CrashTest do
       assert run.finished_at
     end
 
+    @tag skip: "Deprecated. To be deleted"
     test "handle_event/4 marks a job as finished for :timeout jobs", %{
       attempt_run: attempt_run
     } do

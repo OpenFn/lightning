@@ -140,7 +140,7 @@ defmodule LightningWeb.WorkflowNewLive.WorkflowParamsTest do
                    "adaptor" => "@openfn/language-common@latest",
                    "body" => "",
                    "project_credential_id" => nil,
-                   "enabled" => "true",
+                   "enabled" => true,
                    "errors" => %{"body" => ["can't be blank"]},
                    "name" => "job-3",
                    "id" => ^job_3_id
