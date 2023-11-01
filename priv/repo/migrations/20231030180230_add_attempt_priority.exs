@@ -3,7 +3,7 @@ defmodule Lightning.Repo.Migrations.AddAttemptPriority do
 
   def change do
     alter table(:attempts) do
-      add :priority, :integer, null: false
+      add :priority, :integer, null: false, default: 1
     end
   end
 end
