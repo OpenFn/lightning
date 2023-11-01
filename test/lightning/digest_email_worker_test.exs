@@ -3,10 +3,7 @@ defmodule Lightning.DigestEmailWorkerTest do
 
   alias Lightning.{
     AccountsFixtures,
-    InvocationFixtures,
-    JobsFixtures,
     ProjectsFixtures,
-    WorkflowsFixtures,
     DigestEmailWorker
   }
 
@@ -86,122 +83,19 @@ defmodule Lightning.DigestEmailWorkerTest do
 
   describe "get_digest_data/3" do
     test "Gets project digest data" do
-      user = AccountsFixtures.user_fixture()
+      user = insert(:user)
 
       project =
-        ProjectsFixtures.project_fixture(
-          project_users: [%{user_id: user.id, digest: :daily}]
-        )
+        insert(:project, project_users: [%{user_id: user.id, digest: :daily}])
 
-      workflow_a = WorkflowsFixtures.workflow_fixture(project_id: project.id)
-      workflow_b = WorkflowsFixtures.workflow_fixture(project_id: project.id)
+      workflow_a = insert(:simple_workflow, project: project)
+      workflow_b = insert(:simple_workflow, project: project)
 
-      job_a =
-        JobsFixtures.job_fixture(
-          project_id: project.id,
-          workflow_id: workflow_a.id
-        )
-
-      job_a_trigger =
-        insert(:trigger, %{workflow_id: workflow_a.id, workflow: workflow_a})
-
-      _unused_edge =
-        insert(:edge, %{
-          workflow: workflow_a,
-          workflow_id: workflow_a.id,
-          target_job: job_a,
-          source_trigger: job_a_trigger,
-          condition: :always
-        })
-
-      job_b =
-        JobsFixtures.job_fixture(
-          project_id: project.id,
-          workflow_id: workflow_b.id
-        )
-
-      workorder_a =
-        InvocationFixtures.work_order_fixture(workflow_id: workflow_a.id)
-
-      workorder_b =
-        InvocationFixtures.work_order_fixture(workflow_id: workflow_a.id)
-
-      workorder_c =
-        InvocationFixtures.work_order_fixture(workflow_id: workflow_b.id)
-
-      workorder_d =
-        InvocationFixtures.work_order_fixture(workflow_id: workflow_b.id)
-
-      workorder_e =
-        InvocationFixtures.work_order_fixture(workflow_id: workflow_a.id)
-
-      reason = InvocationFixtures.reason_fixture(trigger_id: job_a_trigger.id)
-
-      finished_at = Timex.now() |> Timex.shift(days: -1)
-
-      create_run(workorder_a, reason, %{
-        project_id: project.id,
-        job_id: job_a.id,
-        input_dataclip_id: reason.dataclip_id,
-        exit_code: 0,
-        finished_at: finished_at
-      })
-
-      create_run(workorder_b, reason, %{
-        project_id: project.id,
-        job_id: job_a.id,
-        input_dataclip_id: reason.dataclip_id,
-        exit_code: 1,
-        finished_at: finished_at
-      })
-
-      create_run(workorder_b, reason, %{
-        project_id: project.id,
-        job_id: job_a.id,
-        input_dataclip_id: reason.dataclip_id,
-        exit_code: 0,
-        finished_at: finished_at
-      })
-
-      create_run(workorder_c, reason, %{
-        project_id: project.id,
-        job_id: job_b.id,
-        input_dataclip_id: reason.dataclip_id,
-        exit_code: 1,
-        finished_at: finished_at
-      })
-
-      create_run(workorder_c, reason, %{
-        project_id: project.id,
-        job_id: job_b.id,
-        input_dataclip_id: reason.dataclip_id,
-        exit_code: 0,
-        finished_at: finished_at
-      })
-
-      create_run(workorder_d, reason, %{
-        project_id: project.id,
-        job_id: job_b.id,
-        input_dataclip_id: reason.dataclip_id,
-        exit_code: 0,
-        finished_at: finished_at
-      })
-
-      create_run(workorder_d, reason, %{
-        project_id: project.id,
-        job_id: job_b.id,
-        input_dataclip_id: reason.dataclip_id,
-        exit_code: 0,
-        finished_at: finished_at
-      })
-
-      create_run(workorder_e, reason, %{
-        project_id: project.id,
-        job_id: job_a.id,
-        input_dataclip_id: reason.dataclip_id,
-        exit_code: 1,
-        finished_at: finished_at
-      })
+      create_runs(workflow_a, [:pending])
+      create_runs(workflow_a, [:running, :success])
+      create_runs(workflow_b, [:failed, :killed])
+      create_runs(workflow_b, [:crashed, :success])
+      create_runs(workflow_a, [:success])
 
       start_date = DigestEmailWorker.digest_to_date(:monthly)
       end_date = Timex.now()
@@ -218,19 +112,48 @@ defmodule Lightning.DigestEmailWorkerTest do
 
       assert DigestEmailWorker.get_digest_data(workflow_b, start_date, end_date) ==
                %{
-                 failed_workorders: 0,
+                 failed_workorders: 3,
                  #  rerun_workorders: 1,
-                 successful_workorders: 2,
+                 successful_workorders: 1,
                  workflow: workflow_b
                }
     end
   end
 
-  defp create_run(workorder, reason, run_params) do
-    Lightning.AttemptService.build_attempt(workorder, reason)
-    |> Ecto.Changeset.put_assoc(:runs, [
-      Lightning.Invocation.Run.changeset(%Lightning.Invocation.Run{}, run_params)
-    ])
-    |> Repo.insert()
+  defp create_runs(
+         %{triggers: [trigger], jobs: [job], project: project} = workflow,
+         status_list
+       ) do
+    dataclip = insert(:dataclip, project: project)
+
+    Enum.each(status_list, fn status ->
+      state =
+        case status do
+          :pending -> :available
+          :running -> :claimed
+          other -> other
+        end
+
+      insert(:workorder,
+        workflow: workflow,
+        trigger: trigger,
+        dataclip: dataclip,
+        state: status
+      )
+      |> with_attempt(
+        state: state,
+        dataclip: dataclip,
+        starting_trigger: trigger,
+        finished_at: build(:timestamp),
+        runs: [
+          build(:run,
+            job: job,
+            input_dataclip: dataclip,
+            started_at: build(:timestamp),
+            finished_at: build(:timestamp)
+          )
+        ]
+      )
+    end)
   end
 end

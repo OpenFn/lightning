@@ -105,10 +105,10 @@ defmodule Lightning.DigestEmailWorker do
 
     failed_workorders =
       search_workorders(project, %{
-        "crash" => true,
-        "failure" => true,
-        "timeout" => true,
+        "crashed" => true,
+        "failed" => true,
         "pending" => true,
+        "killed" => true,
         "date_after" => start_date,
         "date_before" => end_date,
         "workflow_id" => workflow.id
