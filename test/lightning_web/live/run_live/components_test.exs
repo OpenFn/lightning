@@ -4,7 +4,6 @@ defmodule LightningWeb.RunLive.ComponentsTest do
   import Phoenix.LiveViewTest
 
   alias LightningWeb.RunLive.Components
-  import Lightning.InvocationFixtures
 
   import Lightning.Factories
 
@@ -34,15 +33,14 @@ defmodule LightningWeb.RunLive.ComponentsTest do
                "There is no output for this run"
 
       run =
-        run_fixture(
+        insert(:run,
           exit_code: 0,
-          output_dataclip_id:
-            insert(:dataclip,
+          output_dataclip:
+            build(:dataclip,
               type: :run_result,
               body: %{name: "dataclip_body"}
-            ).id
+            )
         )
-        |> Lightning.Repo.preload(:output_dataclip)
 
       assert render_component(&LightningWeb.RunLive.Components.run_viewer/1,
                run: run |> Lightning.Repo.preload(:log_lines)
@@ -77,8 +75,12 @@ defmodule LightningWeb.RunLive.ComponentsTest do
                 output_dataclip: output_dataclip,
                 exit_reason: "success"
               ),
-              insert(:run, job: job_2, input_dataclip: output_dataclip),
-              insert(:run, job: job_3)
+              insert(:run,
+                job: job_2,
+                input_dataclip: output_dataclip,
+                exit_code: 0
+              ),
+              insert(:run, job: job_3, finished_at: build(:timestamp))
             ]
           }
         ]
@@ -153,21 +155,30 @@ defmodule LightningWeb.RunLive.ComponentsTest do
   end
 
   test "no rerun button is displayed when user can't rerun a job" do
-    reason = insert(:reason, type: :webhook)
+    %{triggers: [trigger]} = workflow = insert(:simple_workflow)
 
-    attempt =
-      build(:attempt,
-        work_order: build(:workorder, reason: reason),
+    dataclip = insert(:dataclip)
+
+    %{attempts: [attempt]} =
+      insert(:workorder,
+        workflow: workflow,
+        trigger: trigger,
+        dataclip: dataclip,
+        state: :failed
+      )
+      |> with_attempt(
+        state: :failed,
+        dataclip: dataclip,
+        starting_trigger: trigger,
+        finished_at: build(:timestamp),
         runs: [
           build(:run),
           build(:run, finished_at: DateTime.utc_now(), exit_code: 0),
           build(:run, finished_at: DateTime.utc_now())
-        ],
-        reason: reason
+        ]
       )
-      |> insert()
 
-    run = attempt.runs |> List.first()
+    run = List.first(attempt.runs)
 
     project_id = run.job.workflow.project_id
 

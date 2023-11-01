@@ -51,17 +51,17 @@ defmodule LightningWeb.UserRegistrationControllerTest do
       # Modify the env so that we created new projects for new users
       Application.put_env(:lightning, :init_project_for_new_user, true)
 
+      # conn
+      # |> post(~p"/users/confirm",
+      #   user: valid_user_attributes(first_name: "Emory")
+      # )
+      # |> get("/")
       conn =
-        get(
-          post(conn, Routes.user_registration_path(conn, :create), %{
-            "user" =>
-              valid_user_attributes(
-                email: unique_user_email(),
-                first_name: "Emory"
-              )
-          }),
-          "/"
+        conn
+        |> post(~p"/users/register",
+          user: valid_user_attributes(first_name: "Emory")
         )
+        |> get("/")
 
       project =
         conn.assigns.current_user
@@ -75,9 +75,13 @@ defmodule LightningWeb.UserRegistrationControllerTest do
              |> Lightning.Projects.project_workorders_query()
              |> Lightning.Repo.aggregate(:count, :id) == 1
 
+      project
+      |> Lightning.Projects.project_runs_query()
+      |> Lightning.Repo.all()
+
       assert project
              |> Lightning.Projects.project_runs_query()
-             |> Lightning.Repo.aggregate(:count, :id) == 3
+             |> Lightning.Repo.aggregate(:count, :id) == 2
 
       # Set this back to the default "false" before finishing the test
       Application.put_env(:lightning, :init_project_for_new_user, false)
