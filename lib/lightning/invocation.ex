@@ -163,7 +163,7 @@ defmodule Lightning.Invocation do
   """
   def delete_dataclip(%Dataclip{} = dataclip) do
     dataclip
-    |> Dataclip.changeset(%{})
+    |> Ecto.Changeset.change(%{})
     |> Map.put(:action, :delete)
     |> Dataclip.changeset(%{body: nil})
     |> Repo.update()
