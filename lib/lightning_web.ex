@@ -18,7 +18,7 @@ defmodule LightningWeb do
   """
   def static_paths,
     do: ~w(assets fonts images favicon.ico apple-touch-icon.png favicon-32x32.png
-      favicon-16x16.png safari-pinned-tab.svg robots.txt)
+      favicon-16x16.png safari-pinned-tab.svg robots.txt manifest.json)
 
   def router do
     quote do
@@ -70,6 +70,7 @@ defmodule LightningWeb do
               unquote(opts)
             )
       use Phoenix.LiveView, @opts
+      import LightningWeb.Components.NewInputs
 
       unquote(html_helpers())
     end
@@ -131,6 +132,8 @@ defmodule LightningWeb do
       alias Components.Settings
       alias Components.Common
       alias Components.Icon
+
+      import LightningWeb.Components.Pills
 
       unquote(verified_routes())
     end
