@@ -47,5 +47,17 @@ services:
     ports:
       - "${LIGHTNING_EXTERNAL_PORT:-127.0.0.1:${PORT}}:${URL_PORT}"
 
+  worker:
+    deploy:
+      resources:
+        limits:
+          cpus: "${DOCKER_WORKER_CPUS:-0}"
+          memory: "${DOCKER_WEB_MEMORY:-0}"
+    env_file:
+      - ".env"
+    image: "openfn/ws-worker:latest"
+    restart: "${DOCKER_RESTART_POLICY:-unless-stopped}"
+    stop_grace_period: "3s"
+
 volumes:
   postgres: {}
