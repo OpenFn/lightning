@@ -38,7 +38,7 @@ config :lightning, Lightning.Vault,
 
 config :lightning, Lightning.Runtime.RuntimeManager,
   start: true,
-  version: "0.1.0",
+  version: "0.1.1",
   args: ~w(npm exec @openfn/ws-worker),
   cd: Path.expand("../assets", __DIR__)
 
