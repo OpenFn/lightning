@@ -222,6 +222,7 @@ defmodule LightningWeb.WorkflowLive.Components do
 
   def job_form(assigns) do
     ~H"""
+    <%= inspect(Phoenix.HTML.Form.hidden_inputs_for(@form)) %>
     <div class="md:grid md:grid-cols-6 md:gap-4 p-2 @container">
       <% Phoenix.HTML.Form.hidden_inputs_for(@form) %>
       <div class="col-span-6">
@@ -455,9 +456,14 @@ defmodule LightningWeb.WorkflowLive.Components do
 
   attr :form, :map, required: true
   attr :disabled, :boolean, required: true
+  attr :enable_edge, :boolean, default: true
   attr :cancel_url, :string, required: true
 
   def edge_form(assigns) do
+    IO.inspect(assigns.form.source |> Ecto.Changeset.apply_changes(),
+      label: "---------Ecto"
+    )
+
     edge_options =
       case assigns.form.source |> Ecto.Changeset.apply_changes() do
         %{source_trigger_id: nil, source_job_id: job_id}
@@ -479,33 +485,46 @@ defmodule LightningWeb.WorkflowLive.Components do
     assigns = assigns |> assign(:edge_options, edge_options)
 
     ~H"""
+    <div class="md:grid grid-row-1 md:grid-cols-1 md:gap-4 p-2 @container"></div>
     <% Phoenix.HTML.Form.hidden_inputs_for(@form) %>
 
-    <Form.label_field
-      form={@form}
-      field={:condition}
-      title="Condition"
-      for={Phoenix.HTML.Form.input_id(@form, :condition)}
-    />
-    <.old_error field={@form[:condition]} />
-    <%= if Phoenix.HTML.Form.input_value(@form, :condition) == :always do %>
-      <Form.select_field
+    <div>
+      <Form.label_field
         form={@form}
-        name={:condition}
-        values={@edge_options}
-        disabled={true}
+        field={:condition}
+        title="Condition"
+        for={Phoenix.HTML.Form.input_id(@form, :condition)}
       />
-      <div class="max-w-xl text-sm text-gray-500 mt-2">
-        <p>Jobs connected to a trigger are always run.</p>
-      </div>
-    <% else %>
-      <Form.select_field
-        form={@form}
-        name={:condition}
-        values={@edge_options}
-        disabled={@disabled}
-      />
-    <% end %>
+      <.old_error field={@form[:condition]} />
+      <%= if Phoenix.HTML.Form.input_value(@form, :condition) == :always do %>
+        <Form.select_field
+          form={@form}
+          name={:condition}
+          values={@edge_options}
+          disabled={true}
+        />
+        <div class="max-w-xl text-sm text-gray-500 mt-2">
+          <p>Jobs connected to a trigger are always run.</p>
+        </div>
+      <% else %>
+        <Form.select_field
+          form={@form}
+          name={:condition}
+          values={@edge_options}
+          disabled={@disabled}
+        />
+      <% end %>
+    </div>
+    <div class="  mt-7 border-t flex flex-col justify-between">
+      <h2 class=" flex mt-5">
+        <Form.check_box
+          form={@form}
+          field={:enabled}
+          disabled={!@enable_edge}
+          label="Disable all following Jobs from processing"
+        />
+      </h2>
+    </div>
     """
   end
 

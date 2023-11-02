@@ -25,6 +25,14 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
   @impl true
   def render(assigns) do
+    # IO.inspect(assigns,
+    #   label: "----------------Assigns Map------------------------"
+    # )
+
+    # IO.inspect(to_form(assigns.changeset),
+    #   label: "---------Changeset In Assigns-------------------"
+    # )
+
     assigns =
       assigns
       |> assign(
@@ -448,6 +456,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
   @impl true
   def handle_params(params, _url, socket) do
+    IO.inspect(params, label: "Parameters")
+
     {:noreply,
      apply_action(socket, socket.assigns.live_action, params)
      |> apply_query_params(params)
@@ -469,6 +479,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
   end
 
   def apply_action(socket, :edit, %{"id" => workflow_id}) do
+    IO.puts("Shit I am the edit")
+
     case socket.assigns.workflow do
       %{id: ^workflow_id} ->
         socket
@@ -483,12 +495,15 @@ defmodule LightningWeb.WorkflowLive.Edit do
             jobs: [:credential]
           ])
 
+        IO.inspect(workflow, label: "Workflow")
         socket |> assign_workflow(workflow) |> assign(page_title: workflow.name)
     end
   end
 
   @impl true
   def handle_event("get-initial-state", _params, socket) do
+    IO.puts("I have been hit")
+
     {:noreply,
      socket
      |> push_event("current-workflow-params", %{
@@ -497,6 +512,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
   end
 
   def handle_event("delete_node", %{"id" => id}, socket) do
+    IO.puts("----I hate to code----")
+
     %{
       changeset: changeset,
       workflow_params: initial_params,
@@ -542,6 +559,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
   end
 
   def handle_event("validate", %{"workflow" => params}, socket) do
+    IO.inspect(params, label: "-----Validate-----Params------")
+    IO.puts("=====Disabling me-====")
     {:noreply, handle_new_params(socket, params)}
   end
 
@@ -589,6 +608,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
   end
 
   def handle_event("push-change", %{"patches" => patches}, socket) do
+    IO.puts("-----====Make noise===----")
+    IO.inspect(patches, label: "Patches")
     # Apply the incoming patches to the current workflow params producing a new
     # set of params.
     {:ok, params} =
@@ -769,6 +790,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
   end
 
   defp handle_new_params(socket, params) do
+    IO.puts("->>>>dELLISHS<<<--->>>>")
+
     %{workflow_params: initial_params, can_edit_job: can_edit_job} =
       socket.assigns
 
@@ -802,12 +825,17 @@ defmodule LightningWeb.WorkflowLive.Edit do
   end
 
   defp assign_workflow(socket, workflow) do
+    IO.inspect(socket.assigns.workflow_params, label: "Major Herer")
+    IO.puts("---------------------------------------")
+    IO.inspect(workflow, label: "Superintednded")
+
     socket
     |> assign(workflow: workflow)
     |> apply_params(socket.assigns.workflow_params)
   end
 
   defp apply_params(socket, params) do
+    IO.inspect(params, label: "Nonsense Code")
     # Build a new changeset from the new params
     changeset =
       socket.assigns.workflow
@@ -817,10 +845,13 @@ defmodule LightningWeb.WorkflowLive.Edit do
         |> Map.put("project_id", socket.assigns.project.id)
       )
 
+    IO.inspect(changeset, label: "Please make sense")
     socket |> assign_changeset(changeset)
   end
 
   defp apply_query_params(socket, params) do
+    IO.puts("please love me=----------")
+
     socket
     |> assign(
       query_params:
@@ -852,9 +883,12 @@ defmodule LightningWeb.WorkflowLive.Edit do
     |> maybe_follow_attempt(socket.assigns.query_params)
   end
 
+  IO.puts("-------------I was figured-----------------------")
+
   defp assign_changeset(socket, changeset) do
     # Prepare a new set of workflow params from the changeset
     workflow_params = changeset |> WorkflowParams.to_map()
+    IO.inspect(workflow_params, label: "Crappy Params")
 
     socket
     |> assign(
@@ -864,6 +898,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
   end
 
   defp push_patches_applied(socket, initial_params) do
+    IO.puts("-----------Anyh home-----------")
     next_params = socket.assigns.workflow_params
 
     patches = WorkflowParams.to_patches(initial_params, next_params)
