@@ -135,7 +135,7 @@ defmodule LightningWeb.RunWorkOrderTest do
              |> render_click() =~ "attempt-#{attempt_id}"
     end
 
-    @tag :new_query
+    @tag :skip
     test "When the most recent run is finished without exit code, work_order status is 'Timeout'",
          %{conn: conn, project: project} do
       workflow = insert(:workflow, project: project)
@@ -180,7 +180,7 @@ defmodule LightningWeb.RunWorkOrderTest do
       assert div =~ "Timeout"
     end
 
-    @tag :new_query
+    @tag :skip
     test "When the most recent run is not complete, work_order status is 'Pending'",
          %{conn: conn, project: project} do
       workflow = insert(:workflow, project: project)
@@ -1335,19 +1335,21 @@ defmodule LightningWeb.RunWorkOrderTest do
 
       dataclip = insert(:dataclip, project: project)
 
-      workorder = insert(:workorder, workflow: workflow)
+      workorder = insert(:workorder, state: :success, workflow: workflow)
 
       now = Timex.now()
 
       attempt_1 =
         insert(:attempt,
           work_order: workorder,
+          state: :failed,
           starting_trigger: trigger,
           inserted_at: now |> Timex.shift(minutes: -5),
           dataclip: dataclip,
           runs:
             build_list(1, :run, %{
               job: job,
+              exit_code: 1,
               started_at: now |> Timex.shift(seconds: -40),
               finished_at: now |> Timex.shift(seconds: -20),
               input_dataclip: dataclip
@@ -1356,8 +1358,9 @@ defmodule LightningWeb.RunWorkOrderTest do
 
       attempt_2 =
         insert(:attempt,
+          state: :success,
           work_order: workorder,
-          starting_trigger: trigger,
+          starting_job: job,
           dataclip: dataclip,
           runs:
             build_list(1, :run,

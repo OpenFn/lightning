@@ -421,7 +421,7 @@ defmodule Lightning.Invocation do
   defp filter_by_date_after(query, nil), do: query
 
   defp filter_by_date_after(query, date_after) do
-    from([attempt: attempt] in query, where: attempt.finished_at >= ^date_after)
+    from [attempt: attempt] in query, where: attempt.inserted_at >= ^date_after
   end
 
   defp filter_by_date_before(query, nil), do: query
