@@ -85,8 +85,8 @@ defmodule Lightning.Attempts do
     |> update_attempt()
   end
 
-  def complete_attempt(attempt, status) do
-    Attempt.complete(attempt, status)
+  def complete_attempt(attempt, new_state) do
+    Attempt.complete(attempt, new_state)
     |> case do
       %{valid?: false} = changeset ->
         {:error, changeset}

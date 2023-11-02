@@ -9,6 +9,8 @@ defmodule Lightning.WorkOrder do
   alias Lightning.Invocation.Dataclip
   alias Lightning.{InvocationReason, Attempt}
 
+  require Attempt
+
   @type t :: %__MODULE__{
           __meta__: Ecto.Schema.Metadata.t(),
           id: Ecto.UUID.t() | nil,
@@ -22,7 +24,14 @@ defmodule Lightning.WorkOrder do
   @foreign_key_type :binary_id
   schema "work_orders" do
     field :state, Ecto.Enum,
-      values: [:pending, :running, :success, :failed, :killed, :crashed],
+      values:
+        Enum.concat(
+          [
+            :pending,
+            :running
+          ],
+          Attempt.final_states()
+        ),
       default: :pending
 
     belongs_to :workflow, Workflow

@@ -405,7 +405,7 @@ defmodule LightningWeb.AttemptChannelTest do
 
     @tag attempt_state: :claimed
     test "attempt:complete when claimed", %{socket: socket} do
-      ref = push(socket, "attempt:complete", %{"status" => "success"})
+      ref = push(socket, "attempt:complete", %{"reason" => "ok"})
 
       assert_reply ref, :error, errors
 
@@ -418,11 +418,63 @@ defmodule LightningWeb.AttemptChannelTest do
       attempt: attempt,
       work_order: work_order
     } do
-      ref = push(socket, "attempt:complete", %{"status" => "success"})
+      ref = push(socket, "attempt:complete", %{"reason" => "ok"})
       assert_reply ref, :ok, nil
 
       assert %{state: :success} = Lightning.Repo.reload!(attempt)
       assert %{state: :success} = Lightning.Repo.reload!(work_order)
+    end
+
+    @tag attempt_state: :started
+    test "attempt:complete when started and cancelled", %{
+      socket: socket,
+      attempt: attempt,
+      work_order: work_order
+    } do
+      ref = push(socket, "attempt:complete", %{"reason" => "cancel"})
+      assert_reply ref, :ok, nil
+
+      assert %{state: :cancelled} = Lightning.Repo.reload!(attempt)
+      assert %{state: :cancelled} = Lightning.Repo.reload!(work_order)
+    end
+
+    @tag attempt_state: :started
+    test "attempt:complete when started and fails", %{
+      socket: socket,
+      attempt: attempt,
+      work_order: work_order
+    } do
+      ref = push(socket, "attempt:complete", %{"reason" => "fail"})
+      assert_reply ref, :ok, nil
+
+      assert %{state: :failed} = Lightning.Repo.reload!(attempt)
+      assert %{state: :failed} = Lightning.Repo.reload!(work_order)
+    end
+
+    @tag attempt_state: :started
+    test "attempt:complete when started and crashes", %{
+      socket: socket,
+      attempt: attempt,
+      work_order: work_order
+    } do
+      ref = push(socket, "attempt:complete", %{"reason" => "crash"})
+      assert_reply ref, :ok, nil
+
+      assert %{state: :crashed} = Lightning.Repo.reload!(attempt)
+      assert %{state: :crashed} = Lightning.Repo.reload!(work_order)
+    end
+
+    @tag attempt_state: :started
+    test "attempt:complete when started and gets a kill", %{
+      socket: socket,
+      attempt: attempt,
+      work_order: work_order
+    } do
+      ref = push(socket, "attempt:complete", %{"reason" => "kill"})
+      assert_reply ref, :ok, nil
+
+      assert %{state: :killed} = Lightning.Repo.reload!(attempt)
+      assert %{state: :killed} = Lightning.Repo.reload!(work_order)
     end
   end
 
