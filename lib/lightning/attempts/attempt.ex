@@ -17,6 +17,23 @@ defmodule Lightning.Attempt do
   alias Lightning.Workflows.Trigger
   # alias Lightning.Workflows.Node
 
+  @final_states [
+    :success,
+    :cancelled,
+    :failed,
+    :killed,
+    :crashed
+  ]
+
+  @doc """
+  Returns the list of final states for an attempt.
+  """
+  defmacro final_states do
+    quote do
+      unquote(@final_states)
+    end
+  end
+
   @type t :: %__MODULE__{
           __meta__: Ecto.Schema.Metadata.t(),
           id: Ecto.UUID.t() | nil,
@@ -40,15 +57,15 @@ defmodule Lightning.Attempt do
     many_to_many :runs, Run, join_through: AttemptRun
 
     field :state, Ecto.Enum,
-      values: [
-        :available,
-        :claimed,
-        :started,
-        :success,
-        :failed,
-        :killed,
-        :crashed
-      ],
+      values:
+        Enum.concat(
+          [
+            :available,
+            :claimed,
+            :started
+          ],
+          @final_states
+        ),
       default: :available
 
     field :claimed_at, :utc_datetime_usec
@@ -122,13 +139,12 @@ defmodule Lightning.Attempt do
   def complete(attempt, state) do
     attempt
     |> cast(%{state: state}, [:state])
-    |> change(finished_at: DateTime.utc_now())
-    |> validate_inclusion(:state, [:success, :failed, :killed, :crashed])
-    |> then(fn changeset ->
-      previous_state = changeset.data |> Map.get(:state)
-
+    |> validate_required([:state])
+    |> validate_inclusion(:state, @final_states)
+    |> then(fn %{data: %{state: previous_state}} = changeset ->
       if previous_state == :started do
         changeset
+        |> change(finished_at: DateTime.utc_now())
       else
         changeset
         |> add_error(:state, "cannot complete attempt that is not started")

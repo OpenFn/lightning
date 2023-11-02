@@ -1,4 +1,7 @@
 defmodule LightningWeb.AttemptChannel do
+  @moduledoc """
+  Phoenix channel to interact with Attempts.
+  """
   alias Lightning.{Workers, Attempts}
   alias LightningWeb.AttemptJson
   use LightningWeb, :channel
@@ -49,10 +52,8 @@ defmodule LightningWeb.AttemptChannel do
   end
 
   def handle_in("attempt:complete", payload, socket) do
-    Attempts.complete_attempt(
-      socket.assigns.attempt,
-      payload |> Map.get("status")
-    )
+    socket.assigns.attempt
+    |> Attempts.complete_attempt(map_rtm_reason_state(payload))
     |> case do
       {:ok, attempt} ->
         {:reply, {:ok, nil}, socket |> assign(attempt: attempt)}
@@ -118,4 +119,17 @@ defmodule LightningWeb.AttemptChannel do
   defp get_attempt(id) do
     Attempts.get(id, include: [workflow: [:triggers, :jobs, :edges]])
   end
+
+  defp map_rtm_reason_state(%{"reason" => reason}) do
+    case reason do
+      "ok" -> :success
+      "cancel" -> :cancelled
+      "fail" -> :failed
+      "kill" -> :killed
+      "crash" -> :crashed
+      unknown -> unknown
+    end
+  end
+
+  defp map_rtm_reason_state(_payload), do: nil
 end

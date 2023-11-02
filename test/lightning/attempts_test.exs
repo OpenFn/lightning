@@ -267,6 +267,53 @@ defmodule Lightning.AttemptsTest do
       assert attempt.state == :success
       assert DateTime.utc_now() >= attempt.finished_at
     end
+
+    test "returns error if state is not present" do
+      dataclip = insert(:dataclip)
+      %{triggers: [trigger]} = workflow = insert(:simple_workflow)
+
+      %{attempts: [attempt]} =
+        work_order_for(trigger, workflow: workflow, dataclip: dataclip)
+        |> insert()
+
+      {:ok, attempt} =
+        attempt
+        |> Ecto.Changeset.change(state: :started)
+        |> Repo.update()
+
+      {:error, changeset} =
+        Attempts.complete_attempt(attempt, nil)
+
+      assert changeset.errors == [
+               state: {"can't be blank", [validation: :required]}
+             ]
+    end
+
+    test "returns error if state is not identifiable" do
+      dataclip = insert(:dataclip)
+      %{triggers: [trigger]} = workflow = insert(:simple_workflow)
+
+      %{attempts: [attempt]} =
+        work_order_for(trigger, workflow: workflow, dataclip: dataclip)
+        |> insert()
+
+      {:ok, attempt} =
+        attempt
+        |> Ecto.Changeset.change(state: :started)
+        |> Repo.update()
+
+      {:error, changeset} =
+        Attempts.complete_attempt(attempt, "some_unknown_state")
+
+      assert [
+               state:
+                 {"is invalid",
+                  [
+                    type: {:parameterized, Ecto.Enum, _allowed},
+                    validation: :cast
+                  ]}
+             ] = changeset.errors
+    end
   end
 
   describe "append_attempt_log/1" do
