@@ -133,8 +133,6 @@ defmodule LightningWeb do
       alias Components.Common
       alias Components.Icon
 
-      import LightningWeb.Components.Pills
-
       unquote(verified_routes())
     end
   end
