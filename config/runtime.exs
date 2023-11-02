@@ -97,7 +97,11 @@ base_oban_cron = [
   {"0 10 * * 1", Lightning.DigestEmailWorker,
    args: %{"type" => "weekly_project_digest"}},
   {"0 10 1 * *", Lightning.DigestEmailWorker,
-   args: %{"type" => "monthly_project_digest"}}
+   args: %{"type" => "monthly_project_digest"}},
+  {"0 1 * * *", Lightning.PartitionTableService,
+   args: %{"add_headroom" => %{"weeks" => 2}}},
+  {"0 0 * * *", Lightning.PartitionTableService,
+   args: %{"drop_older_than" => %{"weeks" => -6}}}
 ]
 
 conditional_cron =

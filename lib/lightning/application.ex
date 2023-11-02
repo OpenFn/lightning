@@ -131,4 +131,14 @@ defmodule Lightning.Application do
   def oban_opts() do
     Application.get_env(:lightning, Oban)
   end
+
+  @impl true
+  @doc """
+  Perform any idempotent database setup that must be done after the repo is started.
+  """
+  def start_phase(:ensure_db_config, :normal, _opts) do
+    Lightning.PartitionTableService.add_headroom(:all, 2)
+    Lightning.PartitionTableService.add_headroom(:all, -5)
+    :ok
+  end
 end
