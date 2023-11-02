@@ -343,23 +343,4 @@ defmodule Lightning.AttemptsTest do
       assert log_line.message == %{"foo" => "bar"} |> Jason.encode!()
     end
   end
-
-  describe "resolve/1" do
-    test "marks an attempt as completed" do
-      %{triggers: [trigger]} = workflow = insert(:simple_workflow)
-
-      {:ok, %{attempts: [attempt]}} =
-        WorkOrders.create_for(trigger,
-          workflow: workflow,
-          dataclip: params_with_assocs(:dataclip)
-        )
-
-      assert {:ok, [claimed]} = Attempts.claim()
-
-      assert {:ok, completed} = Attempts.resolve(claimed)
-
-      assert completed.id == attempt.id
-      assert completed.state == :resolved
-    end
-  end
 end

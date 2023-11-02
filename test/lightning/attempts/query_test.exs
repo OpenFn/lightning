@@ -1,12 +1,8 @@
 defmodule Lightning.Attempts.QueryTest do
   use Lightning.DataCase, async: true
 
-  alias Lightning.Attempt
   alias Lightning.Attempts.Query
 
-  import Lightning.JobsFixtures
-  import Lightning.AccountsFixtures
-  import Lightning.ProjectsFixtures
   import Lightning.Factories
 
   describe "lost/1" do
