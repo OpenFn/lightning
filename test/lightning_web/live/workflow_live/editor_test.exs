@@ -233,12 +233,14 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
              )
              |> has_element?()
 
+      assert [] == live_children(view)
+
       view
       |> element("#manual-job-#{job.id} form")
       |> render_submit()
 
       assert [run_viewer] = live_children(view)
-      assert run_viewer |> render() =~ "Not started."
+      assert run_viewer |> render() =~ "State: Pending"
     end
   end
 

@@ -16,7 +16,7 @@ defmodule LightningWeb.WebhooksController do
         OpenTelemetry.Tracer.with_span "lightning.api.webhook", %{
           attributes: start_opts
         } do
-          conn = handle_create(conn, path)
+          conn = handle_create(conn)
           {conn, %{status: Plug.Conn.Status.reason_atom(conn.status)}}
         end
 
@@ -24,14 +24,12 @@ defmodule LightningWeb.WebhooksController do
     end)
   end
 
-  defp handle_create(conn, path) do
-    path
-    |> Workflows.get_webhook_trigger(include: [:workflow, :edges])
-    |> case do
+  defp handle_create(conn) do
+    case conn.assigns.trigger do
       nil ->
-        conn |> put_status(:not_found) |> json(%{})
+        conn |> put_status(:not_found) |> json(%{"error" => "Webhook not found"})
 
-      trigger = %Workflows.Trigger{enabled: true} ->
+      %Workflows.Trigger{enabled: true} = trigger ->
         {:ok, work_order} =
           WorkOrders.create_for(trigger,
             workflow: trigger.workflow,

@@ -5,6 +5,8 @@ defmodule LightningWeb.Plugs.WebhookAuth do
   """
   use LightningWeb, :controller
 
+  require OpenTelemetry.Tracer
+
   alias Lightning.Workflows.WebhookAuthMethod
   alias Lightning.WebhookAuthMethods
   alias Lightning.Workflows
@@ -57,7 +59,25 @@ defmodule LightningWeb.Plugs.WebhookAuth do
   def call(conn, _opts) do
     case conn.path_info do
       ["i", webhook] ->
-        Workflows.get_trigger_by_webhook(webhook) |> validate_auth(conn)
+        start_opts = %{path: webhook}
+
+        :telemetry.span([:lightning, :workorder, :webhook], start_opts, fn ->
+          {conn, metadata} =
+            OpenTelemetry.Tracer.with_span "lightning.api.webhook", %{
+              attributes: start_opts
+            } do
+              trigger =
+                Workflows.get_webhook_trigger(webhook,
+                  include: [:workflow, :edges]
+                )
+
+              conn = validate_auth(trigger, conn)
+
+              {conn, %{status: Plug.Conn.Status.reason_atom(conn.status || 202)}}
+            end
+
+          {conn, start_opts |> Map.merge(metadata)}
+        end)
 
       _ ->
         conn

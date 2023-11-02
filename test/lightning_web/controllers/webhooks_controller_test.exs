@@ -78,7 +78,7 @@ defmodule LightningWeb.WebhooksControllerTest do
 
     test "with an invalid trigger id returns a 404", %{conn: conn} do
       conn = post(conn, "/i/bar")
-      assert json_response(conn, 404) == %{}
+      assert json_response(conn, 404) == %{"error" => "Webhook not found"}
     end
 
     test "with an invalid trigger id - indicates this in the telemetry span", %{
