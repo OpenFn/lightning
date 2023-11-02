@@ -68,8 +68,8 @@ services:
       ['pnpm', 'start', '-l', 'ws://web:${LIGHTNING_EXTERNAL_PORT}/worker']
     restart: '${DOCKER_RESTART_POLICY:-unless-stopped}'
     stop_grace_period: '3s'
-    ports:
-      - 2222:2222
+    expose:
+      - '2222'
 
 volumes:
   postgres: {}
