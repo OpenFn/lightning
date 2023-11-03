@@ -928,6 +928,12 @@ defmodule Lightning.SetupUtils do
   end
 
   def tear_down(opts \\ [destroy_super: false]) do
+    delete_other_tables([
+      "oban_jobs",
+      "oban_peers",
+      "trigger_webhook_auth_methods"
+    ])
+
     delete_all_entities([
       Lightning.Attempt,
       Lightning.AttemptRun,
@@ -940,13 +946,12 @@ defmodule Lightning.SetupUtils do
       Lightning.Credentials.Credential,
       Lightning.Workflows.Job,
       Lightning.Workflows.Trigger,
+      Lightning.Workflows.WebhookAuthMethod,
       Lightning.Workflows.Workflow,
       Lightning.Projects.ProjectUser,
       Lightning.Invocation.Dataclip,
       Lightning.Projects.Project
     ])
-
-    delete_other_tables(["oban_jobs", "oban_peers"])
 
     if opts[:destroy_super] do
       Repo.delete_all(Lightning.Accounts.User)
