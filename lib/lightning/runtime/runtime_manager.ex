@@ -53,144 +53,13 @@ defmodule Lightning.Runtime.RuntimeManager do
   end
 
   def start_link(args) do
-    if config()[:start] && is_nil(config()[:version]) do
-      Logger.warning("""
-      runtime version is not configured. Please set it in your config files:
-
-          config :lightning, #{__MODULE__}, version: "#{latest_version()}"
-      """)
-    end
-
-    configured_version = configured_version()
-
-    case bin_version() do
-      {:ok, ^configured_version} ->
-        :ok
-
-      {:ok, version} ->
-        Logger.warning("""
-        Outdated runtime version. Expected #{configured_version}, got #{version}. \
-        Please run `mix lightning.runtime.install` or update the version in your config files.\
-        """)
-
-      :error ->
-        :ok
-    end
-
     {name, args} = Keyword.pop(args, :name, __MODULE__)
     GenServer.start_link(__MODULE__, args, name: name)
-  end
-
-  @doc """
-  Returns the path to the executable.
-
-  The executable may not be available if it was not yet installed.
-  """
-  def bin_path do
-    # name = "lightning-runtime-#{target()}"
-    name = "lightning-runtime"
-
-    config()[:path] ||
-      if Code.ensure_loaded?(Mix.Project) do
-        Path.join(Path.dirname(Mix.Project.build_path()), name)
-      else
-        Path.expand("_build/#{name}")
-      end
-  end
-
-  @doc """
-  Returns the version of the runtime executable.
-
-  Returns `{:ok, version_string}` on success or `:error` when the executable
-  is not available.
-  """
-  def bin_version do
-    path = bin_path()
-
-    with true <- File.exists?(path),
-         {result, 0} <- System.cmd(path, ["--version"], env: %{}) do
-      {:ok, String.trim(result)}
-    else
-      _ -> :error
-    end
-  end
-
-  @doc false
-  # Latest known version at the time of publishing.
-  def latest_version, do: @latest_version
-
-  @doc """
-  Returns the configured runtime version.
-  """
-  def configured_version do
-    Keyword.get(config(), :version, latest_version())
   end
 
   defp config do
     Application.get_env(:lightning, __MODULE__, [])
   end
-
-  # NOTE: it hasnt yet been decided on the naming convention for the binary
-  # commented to wait for the binary
-  # defp target do
-  #   case :os.type() do
-  #     # Assuming it's an x86 CPU
-  #     {:win32, _} ->
-  #       windows_target()
-
-  #     {:unix, osname} ->
-  #       arch_str = :erlang.system_info(:system_architecture)
-  #       [arch | _] = arch_str |> List.to_string() |> String.split("-")
-
-  #       try do
-  #         unix_target(arch, osname)
-  #       rescue
-  #         CaseClauseError ->
-  #           reraise(
-  #             "lightning-runtime is not available for architecture: #{arch_str}",
-  #             __STACKTRACE__
-  #           )
-  #       end
-  #   end
-  # end
-
-  # defp unix_target(arch, osname) do
-  #   case arch do
-  #     "amd64" ->
-  #       "#{osname}-x64"
-
-  #     "x86_64" ->
-  #       "#{osname}-x64"
-
-  #     "i686" ->
-  #       "#{osname}-ia32"
-
-  #     "i386" ->
-  #       "#{osname}-ia32"
-
-  #     "aarch64" ->
-  #       "#{osname}-arm64"
-
-  #     "arm" when osname == :darwin ->
-  #       "darwin-arm64"
-
-  #     "arm" ->
-  #       "#{osname}-arm"
-
-  #     "armv7" <> _ ->
-  #       "#{osname}-arm"
-  #   end
-  # end
-
-  # defp windows_target do
-  #   wordsize = :erlang.system_info(:wordsize)
-
-  #   if wordsize == 8 do
-  #     "win32-x64"
-  #   else
-  #     "win32-ia32"
-  #   end
-  # end
 
   @impl true
   def handle_continue(:start_runtime, state) do
@@ -292,8 +161,20 @@ defmodule Lightning.Runtime.RuntimeManager do
     opts =
       cmd_opts(
         start_opts,
-        [:use_stdio, :exit_status, :binary, :hide] ++
-          [args: [bin_path() | args], line: 1024]
+        [
+          :use_stdio,
+          :exit_status,
+          :binary,
+          :hide,
+          args: args,
+          line: 1024,
+          env: [
+            {~c"WORKER_SECRET",
+             Application.get_env(:lightning, :workers, [])
+             |> Keyword.get(:worker_secret)
+             |> to_charlist()}
+          ]
+        ]
       )
 
     port = Port.open(init_cmd, opts)

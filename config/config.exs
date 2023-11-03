@@ -94,14 +94,6 @@ config :tailwind,
     cd: Path.expand("../assets", __DIR__)
   ]
 
-config :lightning, Lightning.Runtime.RuntimeManager,
-  start: false,
-  version: "0.1.0",
-  args: ~w(--lightning-url=http://localhost:4000),
-  cd: Path.expand("..", __DIR__),
-  env: [],
-  path: Path.expand("../priv/runtime/fake_runtime", __DIR__)
-
 # Configures Elixir's Logger
 config :logger, :console,
   format: "$time $metadata[$level] $message\n",
