@@ -367,7 +367,6 @@ defmodule Lightning.Invocation do
       search_params.search_fields,
       search_params.search_term
     )
-    |> IO.inspect()
   end
 
   defp base_query(project_id) do

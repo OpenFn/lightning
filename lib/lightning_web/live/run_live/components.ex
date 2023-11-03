@@ -593,6 +593,16 @@ defmodule LightningWeb.RunLive.Components do
     """
   end
 
+  def pending_pill(assigns) do
+    assigns = assigns |> apply_classes(~w[bg-gray-200 text-gray-800])
+
+    ~H"""
+    <span class={@classes}>
+      <%= render_slot(@inner_block) %>
+    </span>
+    """
+  end
+
   def other_state_pill(assigns) do
     assigns = assigns |> apply_classes(~w[bg-black text-white])
 

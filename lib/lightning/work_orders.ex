@@ -52,6 +52,8 @@ defmodule Lightning.WorkOrders do
   import Ecto.Query
   import Lightning.Validators
 
+  @pubsub Lightning.PubSub
+
   @type work_order_option ::
           {:workflow, Workflow.t()}
           | {:dataclip, Dataclip.t()}
@@ -222,6 +224,7 @@ defmodule Lightning.WorkOrders do
     |> validate_required_assoc(:work_order)
     |> validate_required_assoc(:created_by)
     |> Attempts.enqueue()
+    |> maybe_broadcast()
   end
 
   def retry(%Attempt{id: attempt_id}, %Run{id: run_id}, opts) do
@@ -358,4 +361,20 @@ defmodule Lightning.WorkOrders do
   def subscribe(project_id) do
     Events.subscribe(project_id)
   end
+
+  defp maybe_broadcast({:ok, attempt} = result) do
+    workflow = attempt |> Repo.preload(:workflow) |> Map.get(:workflow)
+
+    Phoenix.PubSub.broadcast(
+      @pubsub,
+      topic(workflow.project_id),
+      {__MODULE__, %Events.AttemptCreated{attempt: attempt}}
+    )
+
+    result
+  end
+
+  defp maybe_broadcast(result), do: result
+
+  defp topic(project_id), do: "project:#{project_id}"
 end

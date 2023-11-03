@@ -207,6 +207,8 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
               <.failure_pill>Failed</.failure_pill>
             <% :killed -> %>
               <.killed_pill>Killed</.killed_pill>
+            <% :pending -> %>
+              <.pending_pill>Pending</.pending_pill>
             <% state -> %>
               <.other_state_pill>
                 <%= state |> Atom.to_string() |> String.capitalize() %>
@@ -242,6 +244,7 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
                     <% else %>
                       Running...
                     <% end %>
+                    <%!-- <%= attempt.state %> --%>
                   </div>
                   <a
                     :if={index == Enum.count(@attempts)}
