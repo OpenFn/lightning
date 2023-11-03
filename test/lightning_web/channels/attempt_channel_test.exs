@@ -156,7 +156,7 @@ defmodule LightningWeb.AttemptChannelTest do
 
       jobs =
         workflow.jobs
-        |> Enum.map(&Map.take(&1, [:id, :name, :body]))
+        |> Enum.map(&Map.take(&1, [:id, :name, :body, :adaptor]))
         |> Enum.map(&stringify_keys/1)
 
       edges =
