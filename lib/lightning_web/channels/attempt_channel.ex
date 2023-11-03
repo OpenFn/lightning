@@ -2,9 +2,15 @@ defmodule LightningWeb.AttemptChannel do
   @moduledoc """
   Phoenix channel to interact with Attempts.
   """
-  alias Lightning.{Workers, Attempts}
-  alias LightningWeb.AttemptJson
   use LightningWeb, :channel
+
+  alias Lightning.Attempts
+  alias Lightning.Attempts.Events.AttemptUpdated
+  alias Lightning.Attempts.Events.RunStarted
+  alias Lightning.Workers
+  alias LightningWeb.AttemptJson
+
+  require Logger
 
   @impl true
   def join(
@@ -114,6 +120,18 @@ defmodule LightningWeb.AttemptChannel do
       {:ok, log_line} ->
         {:reply, {:ok, %{log_line_id: log_line.id}}, socket}
     end
+  end
+
+  @impl true
+  def handle_info(message, socket)
+      when is_struct(message, RunStarted) or is_struct(message, AttemptUpdated) do
+    {:noreply, socket}
+  end
+
+  @impl true
+  def handle_info(message, socket) do
+    Logger.warning("Unknown message: #{inspect(message)}")
+    {:noreply, socket}
   end
 
   defp get_attempt(id) do
