@@ -232,7 +232,7 @@ defmodule LightningWeb.WorkflowLive.TriggerTest do
       |> element("#edit_auth_method_link_#{auth_method.id}")
       |> render_click()
 
-    assert html =~ "Edit webhook credential"
+    assert html =~ "Edit webhook auth method"
 
     new_credential_name = "funnyapicredentialname"
 
@@ -252,7 +252,7 @@ defmodule LightningWeb.WorkflowLive.TriggerTest do
         ~p"/projects/#{project.id}/w/#{workflow.id}?#{[s: trigger.id]}"
       )
 
-    assert flash["info"] == "Webhook credential updated successfully"
+    assert flash["info"] == "Webhook auth method updated successfully"
 
     updated_auth_method =
       Lightning.Repo.get(Lightning.Workflows.WebhookAuthMethod, auth_method.id)
@@ -260,7 +260,7 @@ defmodule LightningWeb.WorkflowLive.TriggerTest do
     refute updated_auth_method.name == auth_method.name
     assert updated_auth_method.name == new_credential_name
 
-    # only credential name is updated
+    # only auth method name is updated
     refute auth_method.username == "username"
     assert auth_method.username == updated_auth_method.username
 
@@ -301,7 +301,7 @@ defmodule LightningWeb.WorkflowLive.TriggerTest do
         ~p"/projects/#{project.id}/w/#{workflow.id}?#{[s: trigger.id]}"
       )
 
-    assert flash["info"] == "Trigger webhook credentials updated successfully"
+    assert flash["info"] == "Trigger webhook auth methods updated successfully"
 
     updated_trigger =
       Lightning.Repo.preload(trigger, [:webhook_auth_methods], force: true)

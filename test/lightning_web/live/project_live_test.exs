@@ -1268,7 +1268,7 @@ defmodule LightningWeb.ProjectLiveTest do
             settings_path <> "#webhook_security"
           )
 
-        assert flash["info"] == "Webhook credential updated successfully"
+        assert flash["info"] == "Webhook auth method updated successfully"
 
         {:ok, _view, html} =
           live(

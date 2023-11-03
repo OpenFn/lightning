@@ -152,7 +152,7 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodFormComponent do
       {:ok, _webhook_auth_method} ->
         {:noreply,
          socket
-         |> put_flash(:info, "Webhook credential updated successfully")
+         |> put_flash(:info, "Webhook auth method updated successfully")
          |> push_navigate(to: socket.assigns.return_to)}
 
       {:error, %Ecto.Changeset{} = changeset} ->
@@ -226,12 +226,12 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodFormComponent do
       >
         <div class="space-y-4 ml-[24px] mr-[24px]">
           <%= if @webhook_auth_method.triggers |> Enum.count() == 0 do %>
-            <p>You are about to delete the webhook credential
+            <p>You are about to delete the webhook auth method
               "<span class="font-bold"><%= @webhook_auth_method.name %></span>"
               which is used by no workflows.</p>
           <% else %>
             <p>
-              You are about to delete the webhook credential
+              You are about to delete the webhook auth method
               "<span class="font-bold"><%= @webhook_auth_method.name %></span>"
               which is used by <span class="mb-2 text-purple-600 underline cursor-pointer"><%= @webhook_auth_method.triggers |> Enum.count() %> workflow triggers</span>.
             </p>
@@ -347,7 +347,7 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodFormComponent do
         <div class="ml-[24px] mr-[24px]">
           <%= case @webhook_auth_method.auth_type do %>
             <% :basic -> %>
-              <.label for={:name}>Credential name</.label>
+              <.label for={:name}>Auth method name</.label>
               <.input type="text" field={f[:name]} required="true" />
 
               <div class="hidden sm:block" aria-hidden="true">
@@ -386,7 +386,7 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodFormComponent do
                 </div>
               <% end %>
             <% :api -> %>
-              <.label for={:name}>Credential name</.label>
+              <.label for={:name}>Auth method name</.label>
               <.input type="text" field={f[:name]} required="true" />
 
               <div class="hidden sm:block" aria-hidden="true">

@@ -240,7 +240,7 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodModalComponent do
 
     {:noreply,
      socket
-     |> put_flash(:info, "Trigger webhook credentials updated successfully")
+     |> put_flash(:info, "Trigger webhook auth method updated successfully")
      |> push_navigate(to: socket.assigns.return_to)}
   end
 
@@ -263,18 +263,18 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodModalComponent do
                     <% nil -> %>
                       Add an authentication method
                     <% :basic -> %>
-                      Create a Basic HTTP Credential
+                      Create a "basic auth" method
                     <% :api -> %>
-                      Create an API Credential
+                      Create an "API token" method
                   <% end %>
                 <% :edit -> %>
-                  Edit webhook credential
+                  Edit webhook auth method
                 <% :display_triggers -> %>
                   Associated Workflow Triggers
                 <% :delete -> %>
                   Delete Authentication Method
                 <% :index -> %>
-                  Webhook Authentication Credentials
+                  Webhook Authentication Methods
               <% end %>
             </span>
 
@@ -293,7 +293,7 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodModalComponent do
         <:subtitle>
           <%= if @action == :new && @webhook_auth_method.auth_type do %>
             <span class="italic text-xs">
-              Webhook authentication credentials are accessible to everyone within your project and can be managed via
+              Webhook authentication methods are accessible to everyone within your project and can be managed via
               <.link
                 id="access-settings"
                 navigate={
@@ -459,7 +459,7 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodModalComponent do
             phx-click="new_auth_method"
             phx-target={@myself}
           >
-            Create a new webhook credential
+            Create a new webhook auth method
           </.link>
         </div>
         <div class="sm:flex sm:flex-row-reverse">
