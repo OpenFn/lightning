@@ -162,6 +162,7 @@ defmodule LightningWeb.RunWorkOrderTest do
         Attempt.new(%{
           work_order_id: work_order.id,
           reason_id: reason.id,
+          dataclip_id: dataclip.id,
           runs: [
             %{
               job_id: job.id,
@@ -371,6 +372,7 @@ defmodule LightningWeb.RunWorkOrderTest do
         workflow: workflow_two,
         trigger: trigger_two,
         dataclip: dataclip_two,
+        last_activity: DateTime.utc_now(),
         attempts: [
           build(:attempt,
             starting_trigger: trigger_two,

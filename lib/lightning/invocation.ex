@@ -367,6 +367,7 @@ defmodule Lightning.Invocation do
       search_params.search_fields,
       search_params.search_term
     )
+    |> IO.inspect()
   end
 
   defp base_query(project_id) do
@@ -422,13 +423,17 @@ defmodule Lightning.Invocation do
   defp filter_by_date_after(query, nil), do: query
 
   defp filter_by_date_after(query, date_after) do
-    from [attempt: attempt] in query, where: attempt.inserted_at >= ^date_after
+    from([workorder: workorder] in query,
+      where: workorder.last_activity >= ^date_after
+    )
   end
 
   defp filter_by_date_before(query, nil), do: query
 
   defp filter_by_date_before(query, date_before) do
-    from([attempt: attempt] in query, where: attempt.finished_at <= ^date_before)
+    from([workorder: workorder] in query,
+      where: workorder.last_activity <= ^date_before
+    )
   end
 
   defp filter_by_body_or_log(query, _search_fields, nil), do: query

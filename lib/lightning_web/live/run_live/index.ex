@@ -26,10 +26,11 @@ defmodule LightningWeb.RunLive.Index do
     wo_date_after: :utc_datetime,
     wo_date_before: :utc_datetime,
     success: :boolean,
-    failure: :boolean,
-    timeout: :boolean,
-    crash: :boolean,
-    pending: :boolean
+    failed: :boolean,
+    killed: :boolean,
+    crashed: :boolean,
+    pending: :boolean,
+    running: :boolean
   }
 
   on_mount {LightningWeb.Hooks, :project_scope}
@@ -89,20 +90,21 @@ defmodule LightningWeb.RunLive.Index do
 
   defp init_filters(),
     do: %{
+      "workflow_id" => "",
+      "search_term" => "",
       "body" => "true",
-      "crash" => "true",
+      "log" => "true",
       "date_after" =>
         Timex.now() |> Timex.shift(days: -30) |> DateTime.to_string(),
       "date_before" => "",
-      "failure" => "true",
-      "log" => "true",
-      "pending" => "true",
-      "search_term" => "",
-      "success" => "true",
-      "timeout" => "true",
       "wo_date_after" => "",
       "wo_date_before" => "",
-      "workflow_id" => ""
+      "failed" => "true",
+      "crashed" => "true",
+      "killed" => "true",
+      "pending" => "true",
+      "running" => "true",
+      "success" => "true"
     }
 
   @impl true
