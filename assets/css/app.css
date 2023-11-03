@@ -192,3 +192,9 @@ div[id^='tippy-'] {
 .collapsible-panel.collapsed .panel-header-title {
   transform: rotate(-90deg) !important;
 }
+
+div.line-log-level::before {
+  content: attr(data-log-level);
+  padding-left: 0.1em;
+  max-width: min-content;
+}

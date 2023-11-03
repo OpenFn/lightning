@@ -79,6 +79,18 @@ defmodule Lightning.LogMessage do
 
   def cast(d) when is_binary(d), do: Ecto.Type.cast(:string, d)
 
+  def cast(d) when is_integer(d),
+    do: Ecto.Type.cast(:string, d |> Integer.to_string())
+
+  def cast(d) when is_list(d) do
+    {:ok,
+     d
+     |> Enum.map(&cast/1)
+     |> Enum.map(fn {:ok, v} -> v end)
+     |> Enum.intersperse(" ")
+     |> IO.iodata_to_binary()}
+  end
+
   def cast(d) when is_map(d) or is_list(d) do
     Jason.encode(d)
   end

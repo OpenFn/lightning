@@ -39,5 +39,5 @@ defmodule Lightning.Attempts.Events do
     Lightning.subscribe(topic(id))
   end
 
-  defp topic(id), do: "attempt:#{id}"
+  defp topic(id), do: "attempt_events:#{id}"
 end

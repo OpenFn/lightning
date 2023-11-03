@@ -2,8 +2,8 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
   @moduledoc """
   Workorder component
   """
-  use Phoenix.Component
   use LightningWeb, :live_component
+
   import LightningWeb.RunLive.Components
 
   @impl true
@@ -205,17 +205,17 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
           />
         <% else %>
           <%= for {attempt, index} <- @attempts |> Enum.reverse() |> Enum.with_index(1) |> Enum.reverse() do %>
-            <div
-              id={"attempt_#{attempt.id}"}
-              class={
-                if index != Enum.count(@attempts) and !@show_prev_attempts,
-                  do: "hidden",
-                  else: ""
-              }
-            >
+            <div id={"attempt_#{attempt.id}"}>
               <div>
                 <div class="flex gap-2 items-center bg-gray-300 pl-28 ">
                   <p class="text-sm py-2 text-gray-800">
+                    <.pill>
+                      <.link navigate={
+                        ~p"/projects/#{@work_order.workflow.project_id}/attempts/#{attempt}"
+                      }>
+                        a
+                      </.link>
+                    </.pill>
                     Attempt <%= index %> of <%= Enum.count(@attempts) %>
                   </p>
                   <div class="text-sm">
