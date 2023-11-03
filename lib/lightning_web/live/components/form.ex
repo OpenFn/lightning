@@ -295,8 +295,10 @@ defmodule LightningWeb.Components.Form do
   attr :label, :string, default: nil
   attr :disabled, :boolean
   attr :checked_value, :boolean
+  attr :checked, :boolean
   attr :unchecked_value, :boolean
   attr :value, :boolean
+  attr :name, :string
 
   slot :inner_block,
     doc: "optional additional description to the label"
@@ -333,13 +335,14 @@ defmodule LightningWeb.Components.Form do
     ]
 
     opts = assigns_to_attributes(assigns, [:id, :form])
-
+    # IO.inspect(opts, label: "Options on Checkbox")
     assigns =
       assign(assigns,
         checkbox_opts: opts ++ [class: checkbox_classes],
         label_opts: opts ++ [class: label_classes],
         error_tag_opts: opts ++ [class: error_tag_classes]
       )
+    # IO.inspect(assigns,label: "Checkbox")
 
     ~H"""
     <div class="flex items-start">

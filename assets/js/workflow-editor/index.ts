@@ -106,6 +106,7 @@ export default {
     );
 
     this.handleEvent('patches-applied', (response: { patches: Patch[] }) => {
+      console.log("Patches applied")
       console.debug('patches-applied', response.patches);
       this.workflowStore.getState().applyPatches(response.patches);
     });
@@ -116,6 +117,7 @@ export default {
     });
 
     // Get the initial data from the server
+    console.log("I HAVE MOUNTED");
     this.getWorkflowParams();
   },
   reconnected() {

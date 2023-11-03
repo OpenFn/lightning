@@ -456,14 +456,10 @@ defmodule LightningWeb.WorkflowLive.Components do
 
   attr :form, :map, required: true
   attr :disabled, :boolean, required: true
-  attr :enable_edge, :boolean, default: true
   attr :cancel_url, :string, required: true
+  attr :enable_edge, :boolean
 
   def edge_form(assigns) do
-    IO.inspect(assigns.form.source |> Ecto.Changeset.apply_changes(),
-      label: "---------Ecto"
-    )
-
     edge_options =
       case assigns.form.source |> Ecto.Changeset.apply_changes() do
         %{source_trigger_id: nil, source_job_id: job_id}
@@ -497,12 +493,7 @@ defmodule LightningWeb.WorkflowLive.Components do
       />
       <.old_error field={@form[:condition]} />
       <%= if Phoenix.HTML.Form.input_value(@form, :condition) == :always do %>
-        <Form.select_field
-          form={@form}
-          name={:condition}
-          values={@edge_options}
-          disabled={true}
-        />
+        <Form.select_field form={@form} name={:condition} values={@edge_options} />
         <div class="max-w-xl text-sm text-gray-500 mt-2">
           <p>Jobs connected to a trigger are always run.</p>
         </div>
@@ -520,8 +511,8 @@ defmodule LightningWeb.WorkflowLive.Components do
         <Form.check_box
           form={@form}
           field={:enabled}
-          disabled={!@enable_edge}
           label="Disable all following Jobs from processing"
+
         />
       </h2>
     </div>
