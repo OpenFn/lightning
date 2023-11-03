@@ -245,7 +245,7 @@
             <div class="leading-loose">
               <h6 class="font-medium text-black">Webhook Security</h6>
               <small class="block my-1 text-xs text-gray-600">
-                Webhook authentication credentials that are used with the starting trigger in workflows.
+                Webhook authentication methods that are used with the starting trigger in workflows.
               </small>
             </div>
             <div class="sm:block" aria-hidden="true">
@@ -256,7 +256,7 @@
                 class="rounded-md bg-indigo-600 px-2.5 py-1.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 disabled:opacity-50"
                 {if !@can_create_webhook_auth_method, do: [disabled: "disabled"], else: []}
               >
-                Add a credential
+                Add an auth method
               </button>
               <.live_component
                 :if={@can_create_webhook_auth_method}

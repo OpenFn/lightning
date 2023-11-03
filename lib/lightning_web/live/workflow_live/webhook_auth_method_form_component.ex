@@ -410,7 +410,7 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodFormComponent do
               class="inline-flex w-full justify-center rounded-md disabled:bg-primary-300 bg-primary-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary-500 sm:ml-3 sm:w-auto"
             >
               <%= if @action == :new do %>
-                Create credential
+                Create auth method
               <% else %>
                 Save changes
               <% end %>
