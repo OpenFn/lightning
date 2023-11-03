@@ -114,8 +114,9 @@ defmodule Lightning.Jobs do
   """
   def get_job!(id), do: Repo.get!(Job |> preload([:workflow]), id)
 
-  def get_job(id) do
-    from(j in Job, preload: [:workflow]) |> Repo.get(id)
+  def get_job_with_credential(id) do
+    Repo.get(Job, id)
+    |> Repo.preload(:credential)
   end
 
   @doc """

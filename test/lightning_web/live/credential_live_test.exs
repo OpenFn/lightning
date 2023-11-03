@@ -4,6 +4,7 @@ defmodule LightningWeb.CredentialLiveTest do
   import Phoenix.LiveViewTest
   import LightningWeb.CredentialLiveHelpers
 
+  import Lightning.BypassHelpers
   import Lightning.CredentialsFixtures
   import Lightning.Factories
 
@@ -578,24 +579,22 @@ defmodule LightningWeb.CredentialLiveTest do
       conn: conn,
       user: user
     } do
-      Lightning.BypassHelpers.expect_wellknown(bypass)
+      expect_wellknown(bypass)
 
-      Lightning.BypassHelpers.expect_token(
+      expect_token(
         bypass,
         Lightning.AuthProviders.Google.get_wellknown!(),
-        """
-        {
-          "access_token": "ya29.a0AVvZ...",
-          "refresh_token": "1//03vpp6Li...",
-          "expires_in": 3600,
-          "token_type": "Bearer",
-          "id_token": "eyJhbGciO...",
-          "scope": "scope1 scope2"
+        %{
+          access_token: "ya29.a0AVvZ...",
+          refresh_token: "1//03vpp6Li...",
+          expires_in: 3600,
+          token_type: "Bearer",
+          id_token: "eyJhbGciO...",
+          scope: "scope1 scope2"
         }
-        """
       )
 
-      Lightning.BypassHelpers.expect_userinfo(
+      expect_userinfo(
         bypass,
         Lightning.AuthProviders.Google.get_wellknown!(),
         """
@@ -696,14 +695,15 @@ defmodule LightningWeb.CredentialLiveTest do
       user: user,
       bypass: bypass
     } do
-      Lightning.BypassHelpers.expect_wellknown(bypass)
+      expect_wellknown(bypass)
 
-      Lightning.BypassHelpers.expect_userinfo(
+      expect_userinfo(
         bypass,
         Lightning.AuthProviders.Google.get_wellknown!(),
-        """
-        {"picture": "image.png", "name": "Test User"}
-        """
+        %{
+          picture: "image.png",
+          name: "Test User"
+        }
       )
 
       expires_at = DateTime.to_unix(DateTime.utc_now()) + 3600
@@ -738,7 +738,7 @@ defmodule LightningWeb.CredentialLiveTest do
       user: user,
       bypass: bypass
     } do
-      Lightning.BypassHelpers.expect_wellknown(bypass)
+      expect_wellknown(bypass)
 
       expires_at = DateTime.to_unix(DateTime.utc_now()) + 3600
 
@@ -771,9 +771,9 @@ defmodule LightningWeb.CredentialLiveTest do
       bypass: bypass,
       conn: conn
     } do
-      Lightning.BypassHelpers.expect_wellknown(bypass)
+      expect_wellknown(bypass)
 
-      Lightning.BypassHelpers.expect_userinfo(
+      expect_userinfo(
         bypass,
         Lightning.AuthProviders.Google.get_wellknown!(),
         """
@@ -795,19 +795,17 @@ defmodule LightningWeb.CredentialLiveTest do
           }
         )
 
-      Lightning.BypassHelpers.expect_token(
+      expect_token(
         bypass,
         Lightning.AuthProviders.Google.get_wellknown!(),
-        """
-        {
-          "access_token": "ya29.a0AVvZ...",
-          "refresh_token": "1//03vpp6Li...",
-          "expires_in": 3600,
-          "token_type": "Bearer",
-          "id_token": "eyJhbGciO...",
-          "scope": "scope1 scope2"
+        %{
+          access_token: "ya29.a0AVvZ...",
+          refresh_token: "1//03vpp6Li...",
+          expires_in: 3600,
+          token_type: "Bearer",
+          id_token: "eyJhbGciO...",
+          scope: "scope1 scope2"
         }
-        """
       )
 
       {:ok, edit_live, _html} = live(conn, ~p"/credentials/#{credential.id}")
@@ -826,9 +824,9 @@ defmodule LightningWeb.CredentialLiveTest do
       bypass: bypass,
       conn: conn
     } do
-      Lightning.BypassHelpers.expect_wellknown(bypass)
+      expect_wellknown(bypass)
 
-      Lightning.BypassHelpers.expect_userinfo(
+      expect_userinfo(
         bypass,
         Lightning.AuthProviders.Google.get_wellknown!(),
         {400,
@@ -864,7 +862,7 @@ defmodule LightningWeb.CredentialLiveTest do
              |> has_element?("p", "Failed retrieving your information.")
 
       # Now respond with success
-      Lightning.BypassHelpers.expect_userinfo(
+      expect_userinfo(
         bypass,
         Lightning.AuthProviders.Google.get_wellknown!(),
         """
@@ -885,9 +883,9 @@ defmodule LightningWeb.CredentialLiveTest do
       bypass: bypass,
       conn: conn
     } do
-      Lightning.BypassHelpers.expect_wellknown(bypass)
+      expect_wellknown(bypass)
 
-      Lightning.BypassHelpers.expect_token(
+      expect_token(
         bypass,
         Lightning.AuthProviders.Google.get_wellknown!(),
         {400,

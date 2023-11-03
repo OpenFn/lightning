@@ -34,7 +34,7 @@ defmodule Lightning.BypassHelpers do
   def expect_token(bypass, wellknown, token \\ nil)
 
   def expect_token(bypass, wellknown, {code, body}) do
-    path = URI.new!(wellknown.token_endpoint).path
+    %{path: path} = URI.new!(wellknown.token_endpoint)
 
     Bypass.expect(bypass, "POST", path, fn conn ->
       Plug.Conn.resp(conn, code, body)
@@ -42,14 +42,15 @@ defmodule Lightning.BypassHelpers do
   end
 
   def expect_token(bypass, wellknown, token) do
-    body =
+    token_attrs =
       token ||
         %{
-          "access_token" => "blah",
-          "refresh_token" => "blerg",
-          "expires_in" => 3600
+          access_token: "access_token_123",
+          refresh_token: "refresh_token_123",
+          expires_in: 3600
         }
-        |> Jason.encode!()
+
+    body = Jason.encode!(token_attrs)
 
     expect_token(bypass, wellknown, {200, body})
   end

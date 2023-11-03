@@ -25,6 +25,8 @@ defmodule LightningWeb.ChannelCase do
 
       import Mox
 
+      alias Lightning.Repo
+
       # The default endpoint for testing
       @endpoint LightningWeb.Endpoint
     end

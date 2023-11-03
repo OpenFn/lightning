@@ -4,10 +4,12 @@ defmodule LightningWeb.AttemptChannel do
   """
   use LightningWeb, :channel
 
-  alias Lightning.Repo
   alias Lightning.Attempts
   alias Lightning.Attempts.Events.AttemptUpdated
   alias Lightning.Attempts.Events.RunStarted
+  alias Lightning.Credentials
+  alias Lightning.Jobs
+  alias Lightning.Repo
   alias Lightning.Workers
   alias LightningWeb.AttemptJson
 
@@ -88,15 +90,30 @@ defmodule LightningWeb.AttemptChannel do
   end
 
   def handle_in("run:start", payload, socket) do
-    %{"attempt_id" => socket.assigns.attempt.id}
-    |> Enum.into(payload)
-    |> Attempts.start_run()
-    |> case do
-      {:error, changeset} ->
-        {:reply, {:error, LightningWeb.ChangesetJSON.error(changeset)}, socket}
+    with job_id when is_binary(job_id) <-
+           Map.get(payload, "job_id", :missing_job_id),
+         %{credential: credential} <-
+           Jobs.get_job_with_credential(job_id) do
+      # Continues even if could not refresh the token
+      _ignore_result = Credentials.maybe_refresh_token(credential)
 
-      {:ok, run} ->
-        {:reply, {:ok, %{run_id: run.id}}, socket}
+      %{"attempt_id" => socket.assigns.attempt.id}
+      |> Enum.into(payload)
+      |> Attempts.start_run()
+      |> case do
+        {:error, changeset} ->
+          {:reply, {:error, LightningWeb.ChangesetJSON.error(changeset)}, socket}
+
+        {:ok, run} ->
+          {:reply, {:ok, %{run_id: run.id}}, socket}
+      end
+    else
+      :missing_job_id ->
+        {:reply, {:error, %{errors: %{job_id: ["This field can't be blank."]}}},
+         socket}
+
+      nil ->
+        {:reply, {:error, %{errors: %{job_id: ["Job not found!"]}}}, socket}
     end
   end
 

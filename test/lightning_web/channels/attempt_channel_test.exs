@@ -1,8 +1,11 @@
 defmodule LightningWeb.AttemptChannelTest do
-  use LightningWeb.ChannelCase, async: true
+  use LightningWeb.ChannelCase
 
+  alias Lightning.Jobs
   alias Lightning.Workers
+
   import Lightning.Factories
+  import Lightning.BypassHelpers
 
   describe "joining" do
     test "without providing a token" do
@@ -191,7 +194,11 @@ defmodule LightningWeb.AttemptChannelTest do
 
   describe "marking runs as started and finished" do
     setup do
-      project = insert(:project)
+      user = insert(:user)
+
+      project =
+        insert(:project, project_users: [%{user_id: user.id}])
+
       dataclip = insert(:dataclip, body: %{"foo" => "bar"}, project: project)
 
       %{triggers: [trigger]} =
@@ -228,23 +235,67 @@ defmodule LightningWeb.AttemptChannelTest do
           %{"token" => Workers.generate_attempt_token(attempt)}
         )
 
-      %{socket: socket, attempt: attempt, workflow: workflow}
+      %{socket: socket, attempt: attempt, user: user, workflow: workflow}
     end
 
-    test "run:start", %{socket: socket, attempt: attempt, workflow: workflow} do
+    test "run:start", %{
+      socket: socket,
+      attempt: attempt,
+      user: user,
+      workflow: %{project: project} = workflow
+    } do
       # { id, job_id, input_dataclip_id }
       run_id = Ecto.UUID.generate()
       [job] = workflow.jobs
 
-      ref =
-        push(socket, "run:start", %{
-          "job_id" => job.id,
-          "input_dataclip_id" => attempt.dataclip_id
-        })
+      expires_at =
+        DateTime.utc_now()
+        |> DateTime.add(-299, :second)
+        |> DateTime.to_unix()
 
-      assert_reply ref, :error, errors
+      credential_body = %{
+        "access_token" => "ya29.a0AWY7CknfkidjXaoDTuNi",
+        "expires_at" => expires_at,
+        "refresh_token" => "1//03dATMQTmE5NSCgYIARAAGAMSNwF",
+        "scope" => "https://www.googleapis.com/auth/spreadsheets"
+      }
 
-      assert errors == %{run_id: ["This field can't be blank."]}
+      new_expiry = expires_at + 3600
+      bypass = Bypass.open()
+
+      Lightning.ApplicationHelpers.put_temporary_env(:lightning, :oauth_clients,
+        google: [
+          client_id: "foo",
+          client_secret: "bar",
+          wellknown_url: "http://localhost:#{bypass.port}/auth/.well-known"
+        ]
+      )
+
+      expect_wellknown(bypass)
+
+      expect_token(
+        bypass,
+        Lightning.AuthProviders.Google.get_wellknown!(),
+        Map.put(credential_body, "expires_at", new_expiry)
+      )
+
+      credential =
+        insert(:credential,
+          name: "google credential",
+          user: user,
+          schema: "googlesheets",
+          body: credential_body
+        )
+
+      %{id: project_credential_id} =
+        insert(:project_credential, credential: credential, project: project)
+
+      Jobs.update_job(job, %{project_credential_id: project_credential_id})
+
+      assert %{credential: %{body: %{"expires_at" => ^expires_at}}} =
+               job.id
+               |> Jobs.get_job!()
+               |> Repo.preload(:credential)
 
       ref =
         push(socket, "run:start", %{
@@ -253,7 +304,11 @@ defmodule LightningWeb.AttemptChannelTest do
           "input_dataclip_id" => attempt.dataclip_id
         })
 
-      assert_reply ref, :ok, %{run_id: ^run_id}
+      assert_reply ref, :ok, %{run_id: ^run_id}, 1_000
+
+      %{credential: refreshed_credential} = Jobs.get_job_with_credential(job.id)
+
+      assert new_expiry == refreshed_credential.body["expires_at"]
     end
 
     test "run:complete", %{socket: socket, attempt: attempt, workflow: workflow} do
