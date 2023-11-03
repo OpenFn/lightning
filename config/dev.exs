@@ -29,6 +29,14 @@ config :lightning, LightningWeb.Endpoint,
     storybook_tailwind: {Tailwind, :install_and_run, [:storybook, ~w(--watch)]}
   ]
 
+config :lightning, Lightning.Runtime.RuntimeManager,
+  start: true,
+  # version: "#{@latest_version}",
+  # args: ~w(npm exec @openfn/ws-worker),
+  # cd: Path.expand("../assets", __DIR__),
+  # env: %{"NODE_PATH" => Path.expand("../deps", __DIR__)},
+  version: "0.1.1"
+
 config :lightning,
   schemas_path: "priv/schemas",
   adaptor_icons_path: "priv/static/images/adaptors"
