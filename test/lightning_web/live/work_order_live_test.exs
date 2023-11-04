@@ -1,10 +1,10 @@
 defmodule LightningWeb.RunWorkOrderTest do
-  alias Lightning.Repo
+  alias Lightning.Invocation
+  alias Lightning.Attempts
   use LightningWeb.ConnCase, async: true
 
   import Phoenix.LiveViewTest
 
-  alias Lightning.Attempt
   alias Lightning.WorkOrders.SearchParams
 
   import Lightning.Factories
@@ -86,7 +86,8 @@ defmodule LightningWeb.RunWorkOrderTest do
         insert(:workorder,
           workflow: workflow,
           trigger: trigger,
-          dataclip: dataclip
+          dataclip: dataclip,
+          last_activity: DateTime.utc_now()
         )
 
       %{id: attempt_id} =
@@ -147,33 +148,27 @@ defmodule LightningWeb.RunWorkOrderTest do
 
       dataclip = insert(:dataclip)
 
-      reason =
-        insert(:reason,
-          type: :webhook,
+      work_order =
+        insert(:workorder,
+          workflow: workflow,
           trigger: trigger,
           dataclip: dataclip
         )
 
-      work_order = insert(:workorder, workflow: workflow, reason: reason)
+      attempt =
+        insert(:attempt,
+          work_order: work_order,
+          dataclip: dataclip,
+          starting_trigger: trigger
+        )
 
-      now = Timex.now()
-
-      %{id: _attempt_id} =
-        Attempt.new(%{
-          work_order_id: work_order.id,
-          reason_id: reason.id,
-          dataclip_id: dataclip.id,
-          runs: [
-            %{
-              job_id: job.id,
-              started_at: now |> Timex.shift(seconds: -25),
-              finished_at: now |> Timex.shift(seconds: -1),
-              exit_code: 1,
-              input_dataclip_id: dataclip.id
-            }
-          ]
+      {:ok, _run} =
+        Attempts.start_run(%{
+          "attempt_id" => attempt.id,
+          "job_id" => job.id,
+          "input_dataclip_id" => dataclip.id,
+          "run_id" => Ecto.UUID.generate()
         })
-        |> Lightning.Repo.insert!()
 
       {:ok, view, html} =
         live(conn, Routes.project_run_index_path(conn, :index, project.id))
@@ -185,19 +180,23 @@ defmodule LightningWeb.RunWorkOrderTest do
              |> has_element?()
 
       assert view
-             |> element("input#run-filter-form_failure[checked]")
+             |> element("input#run-filter-form_failed[checked]")
              |> has_element?()
 
       assert view
-             |> element("input#run-filter-form_timeout[checked]")
+             |> element("input#run-filter-form_running[checked]")
              |> has_element?()
 
       assert view
-             |> element("input#run-filter-form_crash[checked]")
+             |> element("input#run-filter-form_crashed[checked]")
              |> has_element?()
 
       assert view
              |> element("input#run-filter-form_pending[checked]")
+             |> has_element?()
+
+      assert view
+             |> element("input#run-filter-form_killed[checked]")
              |> has_element?()
 
       assert view
@@ -244,7 +243,7 @@ defmodule LightningWeb.RunWorkOrderTest do
              |> has_element?()
     end
 
-    test "Run with failure status shows when option checked", %{
+    test "Workorder with failed status shows when option checked", %{
       conn: conn,
       project: project
     } do
@@ -254,32 +253,29 @@ defmodule LightningWeb.RunWorkOrderTest do
 
       dataclip = insert(:dataclip)
 
-      reason =
-        insert(:reason,
-          type: :webhook,
+      work_order =
+        insert(:workorder,
+          workflow: workflow,
           trigger: trigger,
-          dataclip: dataclip
+          dataclip: dataclip,
+          last_activity: DateTime.utc_now(),
+          state: :failed
         )
 
-      work_order = insert(:workorder, workflow: workflow, reason: reason)
+      attempt =
+        insert(:attempt,
+          work_order: work_order,
+          dataclip: dataclip,
+          starting_trigger: trigger
+        )
 
-      now = Timex.now()
-
-      %{id: _attempt_id} =
-        Attempt.new(%{
-          work_order_id: work_order.id,
-          reason_id: reason.id,
-          runs: [
-            %{
-              job_id: job.id,
-              started_at: now |> Timex.shift(seconds: -25),
-              finished_at: now |> Timex.shift(seconds: -1),
-              exit_code: 1,
-              input_dataclip_id: dataclip.id
-            }
-          ]
+      {:ok, _run} =
+        Attempts.start_run(%{
+          "attempt_id" => attempt.id,
+          "job_id" => job.id,
+          "input_dataclip_id" => dataclip.id,
+          "run_id" => Ecto.UUID.generate()
         })
-        |> Lightning.Repo.insert!()
 
       {:ok, view, _html} =
         live(conn, Routes.project_run_index_path(conn, :index, project.id))
@@ -291,12 +287,12 @@ defmodule LightningWeb.RunWorkOrderTest do
         )
         |> render()
 
-      assert div =~ "Failure"
+      assert div =~ "Failed"
 
       # uncheck :failure
 
       view
-      |> form("#run-filter-form", filters: %{"failure" => "false"})
+      |> form("#run-filter-form", filters: %{"failed" => "false"})
       |> render_submit()
 
       refute view
@@ -308,7 +304,7 @@ defmodule LightningWeb.RunWorkOrderTest do
       # recheck failure
 
       view
-      |> form("#run-filter-form", filters: %{"failure" => "true"})
+      |> form("#run-filter-form", filters: %{"failed" => "true"})
       |> render_submit()
 
       div =
@@ -318,7 +314,7 @@ defmodule LightningWeb.RunWorkOrderTest do
         )
         |> render()
 
-      assert div =~ "Failure"
+      assert div =~ "Failed"
     end
 
     test "Filter by workflow", %{
@@ -340,6 +336,7 @@ defmodule LightningWeb.RunWorkOrderTest do
         workflow: workflow,
         trigger: trigger,
         dataclip: dataclip,
+        last_activity: DateTime.utc_now(),
         attempts: [
           build(:attempt,
             starting_trigger: trigger,
@@ -443,130 +440,10 @@ defmodule LightningWeb.RunWorkOrderTest do
       refute div =~ "workflow 2"
     end
 
-    test "Filter by run finished_at", %{
-      conn: conn,
-      project: project
-    } do
-      workflow_one = insert(:workflow, project: project)
-      trigger_one = insert(:trigger, type: :webhook, workflow: workflow_one)
-      job_one = insert(:job, workflow: workflow_one)
-
-      dataclip = insert(:dataclip)
-
-      reason =
-        insert(:reason,
-          type: :webhook,
-          trigger: trigger_one,
-          dataclip: dataclip
-        )
-
-      work_order = insert(:workorder, workflow: workflow_one, reason: reason)
-      expected_d1 = Timex.now() |> Timex.shift(days: -12)
-
-      %{id: _attempt_id} =
-        Attempt.new(%{
-          work_order_id: work_order.id,
-          reason_id: reason.id,
-          runs: [
-            %{
-              job_id: job_one.id,
-              started_at: expected_d1,
-              finished_at: expected_d1,
-              exit_code: 0,
-              input_dataclip_id: dataclip.id
-            }
-          ]
-        })
-        |> Lightning.Repo.insert!()
-
-      workflow_two = insert(:workflow, project: project)
-      trigger_two = insert(:trigger, type: :webhook, workflow: workflow_two)
-      job_two = insert(:job, workflow: workflow_two)
-
-      dataclip = insert(:dataclip)
-
-      reason =
-        insert(:reason,
-          type: :webhook,
-          trigger: trigger_two,
-          dataclip: dataclip
-        )
-
-      work_order = insert(:workorder, workflow: workflow_two, reason: reason)
-
-      expected_d2 = Timex.now() |> Timex.shift(days: -10)
-
-      %{id: _attempt_id} =
-        Attempt.new(%{
-          work_order_id: work_order.id,
-          reason_id: reason.id,
-          runs: [
-            %{
-              job_id: job_two.id,
-              started_at: expected_d2,
-              finished_at: expected_d2,
-              exit_code: 1,
-              input_dataclip_id: dataclip.id
-            }
-          ]
-        })
-        |> Lightning.Repo.insert!()
-
-      {:ok, view, html} =
-        live(
-          conn,
-          Routes.project_run_index_path(conn, :index, project.id)
-        )
-
-      assert html =~ expected_d2 |> Timex.format!("%d/%b/%y", :strftime)
-      assert html =~ expected_d1 |> Timex.format!("%d/%b/%y", :strftime)
-
-      # set date after to 11 days ago, only see second workorder
-
-      result =
-        view
-        |> element("form#run-filter-form")
-        |> render_submit(%{
-          "filters[date_after]" => Timex.now() |> Timex.shift(days: -11)
-        })
-
-      refute result =~ expected_d1 |> Timex.format!("%d/%b/%y", :strftime)
-      assert result =~ expected_d2 |> Timex.format!("%d/%b/%y", :strftime)
-
-      # set date before to 12 days ago, only see first workorder
-
-      # reset after date
-      view
-      |> element("form#run-filter-form")
-      |> render_submit(%{"filters[date_after]" => nil})
-
-      result =
-        view
-        |> element("form#run-filter-form")
-        |> render_submit(%{
-          "filters[date_before]" => Timex.now() |> Timex.shift(days: -12)
-        })
-
-      assert result =~ expected_d1 |> Timex.format!("%d/%b/%y", :strftime)
-      refute result =~ expected_d2 |> Timex.format!("%d/%b/%y", :strftime)
-
-      # reset before date
-      result =
-        view
-        |> element("form#run-filter-form")
-        |> render_submit(%{"filters[date_before]" => nil})
-
-      assert result =~ expected_d1 |> Timex.format!("%d/%b/%y", :strftime)
-      assert result =~ expected_d2 |> Timex.format!("%d/%b/%y", :strftime)
-    end
-
     test "Filter by run run_log and dataclip_body", %{
       conn: conn,
       project: project
     } do
-      # workflow 1 -> 1 run success -> contains body with some data
-      # workflow 2 -> 1 run failure -> contains log with some log
-
       workflow_one = insert(:workflow, project: project, name: "workflow 1")
       trigger_one = insert(:trigger, type: :webhook, workflow: workflow_one)
 
@@ -582,31 +459,32 @@ defmodule LightningWeb.RunWorkOrderTest do
           body: %{"username" => "eliaswalyba"}
         )
 
-      reason =
-        insert(:reason,
-          type: :webhook,
+      work_order_one =
+        insert(:workorder,
+          workflow: workflow_one,
           trigger: trigger_one,
-          dataclip: dataclip
+          dataclip: dataclip,
+          last_activity: DateTime.utc_now()
         )
 
-      work_order = insert(:workorder, workflow: workflow_one, reason: reason)
+      attempt_one =
+        insert(:attempt,
+          work_order: work_order_one,
+          dataclip: dataclip,
+          starting_trigger: trigger_one
+        )
+
       expected_d1 = Timex.now() |> Timex.shift(days: -12)
 
-      %{id: _attempt_id} =
-        Attempt.new(%{
-          work_order_id: work_order.id,
-          reason_id: reason.id,
-          runs: [
-            %{
-              job_id: job_one.id,
-              started_at: expected_d1,
-              finished_at: expected_d1 |> Timex.shift(minutes: 2),
-              exit_code: 0,
-              input_dataclip_id: dataclip.id
-            }
-          ]
+      {:ok, _run} =
+        Attempts.start_run(%{
+          "attempt_id" => attempt_one.id,
+          "job_id" => job_one.id,
+          "input_dataclip_id" => dataclip.id,
+          "started_at" => expected_d1,
+          "finished_at" => expected_d1 |> Timex.shift(minutes: 2),
+          "run_id" => Ecto.UUID.generate()
         })
-        |> Lightning.Repo.insert!()
 
       workflow_two = insert(:workflow, project: project, name: "workflow 2")
       trigger_two = insert(:trigger, type: :webhook, workflow: workflow_two)
@@ -615,37 +493,38 @@ defmodule LightningWeb.RunWorkOrderTest do
       dataclip =
         insert(:dataclip, type: :http_request, body: %{"username" => "qassim"})
 
-      reason =
-        insert(:reason,
-          type: :webhook,
+      work_order_two =
+        insert(:workorder,
+          workflow: workflow_two,
           trigger: trigger_two,
-          dataclip: dataclip
+          dataclip: dataclip,
+          last_activity: DateTime.utc_now(),
+          state: :failed
         )
 
-      work_order = insert(:workorder, workflow: workflow_two, reason: reason)
+      attempt_two =
+        insert(:attempt,
+          work_order: work_order_two,
+          dataclip: dataclip,
+          starting_trigger: trigger_two
+        )
 
       expected_d2 = Timex.now() |> Timex.shift(days: -10)
 
-      %{id: _attempt_id} =
-        Attempt.new(%{
-          work_order_id: work_order.id,
-          reason_id: reason.id,
-          runs: [
-            %{
-              job_id: job_two.id,
-              started_at: expected_d2,
-              finished_at: expected_d2 |> Timex.shift(minutes: 5),
-              exit_code: 1,
-              input_dataclip_id: dataclip.id,
-              log_lines: [
-                %{body: "Hi mom!"},
-                %{body: "Log me something fun."},
-                %{body: "It's another great log."}
-              ]
-            }
-          ]
+      {:ok, _run} =
+        Attempts.start_run(%{
+          "attempt_id" => attempt_two.id,
+          "job_id" => job_two.id,
+          "input_dataclip_id" => dataclip.id,
+          "started_at" => expected_d2,
+          "finished_at" => expected_d2 |> Timex.shift(minutes: 5),
+          "log_lines" => [
+            %{body: "Hi mom!"},
+            %{body: "Log me something fun."},
+            %{body: "It's another great log."}
+          ],
+          "run_id" => Ecto.UUID.generate()
         })
-        |> Lightning.Repo.insert!()
 
       {:ok, view, _html} =
         live(conn, Routes.project_run_index_path(conn, :index, project.id))
@@ -657,9 +536,7 @@ defmodule LightningWeb.RunWorkOrderTest do
         )
         |> render()
 
-      assert div =~ "Failure"
-
-      # search :some data
+      assert div =~ "Failed"
 
       view
       |> search_for("xxxx", [])
@@ -865,44 +742,27 @@ defmodule LightningWeb.RunWorkOrderTest do
 
       dataclip = insert(:dataclip, project: project)
 
-      reason =
-        insert(:reason,
-          type: :webhook,
+      work_order =
+        insert(:workorder,
+          workflow: workflow,
+          trigger: trigger,
           dataclip: dataclip,
-          trigger: trigger
+          last_activity: DateTime.utc_now(),
+          state: :failed
         )
-
-      workorder = insert(:workorder, workflow: workflow, reason: reason)
-
-      now = Timex.now()
 
       attempt_1 =
         insert(:attempt,
-          work_order: workorder,
-          reason: reason,
-          inserted_at: now |> Timex.shift(minutes: -5),
-          runs:
-            build_list(1, :run, %{
-              job: job,
-              started_at: now |> Timex.shift(seconds: -40),
-              finished_at: now |> Timex.shift(seconds: -20),
-              exit_code: nil,
-              input_dataclip: dataclip
-            })
+          work_order: work_order,
+          dataclip: dataclip,
+          starting_trigger: trigger
         )
 
       attempt_2 =
         insert(:attempt,
-          work_order: workorder,
-          reason: reason,
-          runs:
-            build_list(1, :run,
-              job: job,
-              started_at: Timex.shift(now, seconds: -20),
-              finished_at: now,
-              exit_code: nil,
-              input_dataclip: dataclip
-            )
+          work_order: work_order,
+          dataclip: dataclip,
+          starting_trigger: trigger
         )
 
       {:ok, view, _html} =
@@ -911,7 +771,7 @@ defmodule LightningWeb.RunWorkOrderTest do
           Routes.project_run_index_path(conn, :index, project.id)
         )
 
-      view |> element("#toggle_details_for_#{workorder.id}") |> render_click()
+      view |> element("#toggle_details_for_#{work_order.id}") |> render_click()
 
       assert has_element?(view, "#attempt_#{attempt_1.id}.hidden")
       refute has_element?(view, "#attempt_#{attempt_2.id}.hidden")
@@ -968,7 +828,14 @@ defmodule LightningWeb.RunWorkOrderTest do
 
       dataclip = insert(:dataclip, project: project)
 
-      workorder = insert(:workorder, state: :success, workflow: workflow)
+      workorder =
+        insert(:workorder,
+          state: :success,
+          workflow: workflow,
+          trigger: trigger,
+          dataclip: dataclip,
+          last_activity: DateTime.utc_now()
+        )
 
       now = Timex.now()
 
@@ -1077,7 +944,8 @@ defmodule LightningWeb.RunWorkOrderTest do
         insert(:workorder,
           workflow: workflow,
           trigger: trigger,
-          dataclip: dataclip
+          dataclip: dataclip,
+          last_activity: DateTime.utc_now()
         )
 
       attempt =
@@ -1302,7 +1170,8 @@ defmodule LightningWeb.RunWorkOrderTest do
         insert(:workorder,
           workflow: workflow,
           trigger: trigger,
-          dataclip: dataclip
+          dataclip: dataclip,
+          last_activity: DateTime.utc_now()
         )
 
       insert(:attempt,
@@ -1329,8 +1198,10 @@ defmodule LightningWeb.RunWorkOrderTest do
               log: true,
               success: true,
               pending: true,
-              crash: true,
-              failure: true
+              crashed: true,
+              killed: true,
+              running: true,
+              failed: true
             }
           )
         )
@@ -1342,11 +1213,11 @@ defmodule LightningWeb.RunWorkOrderTest do
       refute html =~ "Rerun all 2 matching workorders from start"
       assert html =~ "Rerun 2 selected workorders from start"
 
+      # uncheck 1 work order
       view
       |> form("##{work_order_b.id}-selection-form")
       |> render_change(%{selected: false})
 
-      # uncheck 1 work order
       updated_html = render(view)
       refute updated_html =~ "Rerun all 2 matching workorders from start"
       assert updated_html =~ "Rerun 1 selected workorder from start"
@@ -1560,7 +1431,8 @@ defmodule LightningWeb.RunWorkOrderTest do
         insert(:workorder,
           workflow: workflow,
           trigger: trigger,
-          dataclip: dataclip
+          dataclip: dataclip,
+          last_activity: DateTime.utc_now()
         )
         |> with_attempt(
           state: :failed,
@@ -1586,7 +1458,8 @@ defmodule LightningWeb.RunWorkOrderTest do
         insert(:workorder,
           workflow: workflow,
           trigger: trigger,
-          dataclip: dataclip
+          dataclip: dataclip,
+          last_activity: DateTime.utc_now()
         )
         |> with_attempt(
           state: :failed,
@@ -1642,7 +1515,8 @@ defmodule LightningWeb.RunWorkOrderTest do
           workflow: workflow,
           trigger: trigger,
           dataclip: dataclip,
-          state: :success
+          state: :success,
+          last_activity: DateTime.utc_now()
         )
         |> with_attempt(
           starting_trigger: trigger,
@@ -1669,8 +1543,10 @@ defmodule LightningWeb.RunWorkOrderTest do
               log: true,
               success: true,
               pending: true,
-              crash: true,
-              failure: true
+              crashed: true,
+              failed: true,
+              killed: true,
+              running: true
             }
           )
         )
@@ -1787,7 +1663,8 @@ defmodule LightningWeb.RunWorkOrderTest do
               state: :success,
               workflow: workflow,
               trigger: build(:trigger),
-              dataclip: build(:dataclip)
+              dataclip: build(:dataclip),
+              last_activity: DateTime.utc_now()
             )
 
           jobs = insert_list(5, :job, workflow: workflow)
@@ -1824,8 +1701,10 @@ defmodule LightningWeb.RunWorkOrderTest do
             log: true,
             success: true,
             pending: true,
-            crash: true,
-            failure: true
+            killing: true,
+            running: true,
+            crashed: true,
+            failed: true
           }
         )
 
@@ -1836,7 +1715,6 @@ defmodule LightningWeb.RunWorkOrderTest do
           refute has_element?(view, "input#job_#{job.id}")
         end
 
-        # SELECT
         view
         |> form("##{scenario.work_order.id}-selection-form")
         |> render_change(%{selected: true})
@@ -1845,7 +1723,6 @@ defmodule LightningWeb.RunWorkOrderTest do
           assert has_element?(view, "input#job_#{job.id}")
         end
 
-        # UNSELECT
         view
         |> form("##{scenario.work_order.id}-selection-form")
         |> render_change(%{selected: false})

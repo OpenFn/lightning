@@ -707,8 +707,6 @@
                   data-entity="work_order_list"
                   class="bg-white divide-y divide-gray-200 text-gray-500"
                 >
-                  <!-- Table Row 1-->
-                  <!-- TODO(frank): Get rid of this Enum.uniq -->
                   <%= for wo <- @page.entries do %>
                     <.live_component
                       module={LightningWeb.RunLive.WorkOrderComponent}
