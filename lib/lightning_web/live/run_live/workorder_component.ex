@@ -239,12 +239,10 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
                     Attempt <%= index %> of <%= Enum.count(@attempts) %>
                   </p>
                   <div class="text-sm">
-                    <%= if last_run = List.last(attempt.runs) do %>
-                      <.timestamp timestamp={last_run.finished_at} />
-                    <% else %>
-                      Running...
+                    <%= attempt.state %>
+                    <%= if attempt.finished_at do %>
+                      <.timestamp timestamp={attempt.finished_at} />
                     <% end %>
-                    <%!-- <%= attempt.state %> --%>
                   </div>
                   <a
                     :if={index == Enum.count(@attempts)}
