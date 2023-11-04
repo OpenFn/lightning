@@ -235,7 +235,7 @@ defmodule Lightning.WorkOrders do
           [WorkOrder.t(), ...],
           job_id :: Ecto.UUID.t(),
           [work_order_option(), ...] | []
-        ) :: {:ok, count :: Integer.t()}
+        ) :: {:ok, count :: integer()}
   def retry_many([%WorkOrder{} | _rest] = workorders, job_id, opts) do
     orders_ids = Enum.map(workorders, & &1.id)
 
@@ -271,7 +271,7 @@ defmodule Lightning.WorkOrders do
   @spec retry_many(
           [WorkOrder.t(), ...] | [AttemptRun.t(), ...],
           [work_order_option(), ...] | []
-        ) :: {:ok, count :: Integer.t()}
+        ) :: {:ok, count :: integer()}
   def retry_many([%WorkOrder{} | _rest] = workorders, opts) do
     orders_ids = Enum.map(workorders, & &1.id)
 

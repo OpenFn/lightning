@@ -8,7 +8,7 @@ defmodule Lightning.Config do
     @callback attempt_token_signer() :: Joken.Signer.t()
     @callback worker_token_signer() :: Joken.Signer.t()
     @callback attempts_adaptor() :: module()
-    @callback grace_period() :: Integer.t()
+    @callback grace_period() :: integer()
 
     def attempt_token_signer() do
       pem =
