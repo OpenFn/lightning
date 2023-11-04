@@ -51,8 +51,8 @@ defmodule LightningWeb.RunLive.Components do
         class="col-span-3 py-2 text-sm font-normal text-left rtl:text-right text-gray-500"
       >
         <div class="flex pl-28">
-          <%= case @run.exit_code do %>
-            <% nil -> %>
+          <%= case @run.exit_reason do %>
+            <% 'fail' -> %>
               <%= if @run.finished_at do %>
                 <Heroicons.x_circle
                   solid
@@ -64,16 +64,13 @@ defmodule LightningWeb.RunLive.Components do
                   class="mr-1.5 h-5 w-5 flex-shrink-0 text-gray-500"
                 />
               <% end %>
-            <% val when val > 0-> %>
-              <Heroicons.x_circle
-                solid
-                class="mr-1.5 h-5 w-5 flex-shrink-0 text-red-500"
-              />
-            <% val when val == 0 -> %>
+            <% 'success' -> %>
               <Heroicons.check_circle
                 solid
                 class="mr-1.5 h-5 w-5 flex-shrink-0 text-green-500"
               />
+            <% val -> %>
+              <%= val %>
           <% end %>
           <div class="text-gray-800 flex gap-2 text-sm">
             <.link
