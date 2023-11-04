@@ -422,27 +422,6 @@ defmodule Lightning.SetupUtils do
       }
     ]
 
-    # output_dataclip_id =
-    #   create_dataclip(%{
-    #     body: %{
-    #       data: %{
-    #         age_in_months: 19,
-    #         name: "Genevieve Wimplemews"
-    #       }
-    #     },
-    #     project_id: project.id,
-    #     type: :http_request
-    #   }).id
-
-    # {:ok, workorder} =
-    #   create_workorder(
-    #     source_trigger,
-    #     job_1_edge,
-    #     ~s[{"age_in_months": 19, "name": "Genevieve Wimplemews"}],
-    #     run_params,
-    #     output_dataclip_id
-    #   )
-    #
     {:ok, workorder} =
       create_workorder(
         workflow,
@@ -630,22 +609,6 @@ defmodule Lightning.SetupUtils do
       }
     ]
 
-    # output_dataclip_id =
-    #   create_dataclip(%{
-    #     body: %{data: %{}, references: []},
-    #     project_id: openhie_project.id,
-    #     type: :http_request
-    #   }).id
-
-    # {:ok, openhie_workorder} =
-    #   create_workorder(
-    #     openhie_trigger,
-    #     openhie_root_edge,
-    #     ~s[{}],
-    #     run_params,
-    #     output_dataclip_id
-    #   )
-    #
     {:ok, openhie_workorder} =
       create_workorder(
         openhie_workflow,
@@ -819,53 +782,6 @@ defmodule Lightning.SetupUtils do
       }
     ]
 
-    # output_dataclip_id =
-    #   create_dataclip(%{
-    #     body: %{
-    #       data: %{
-    #         attributes: [
-    #           %{
-    #             attribute: "zDhUuAYrxNC",
-    #             created: "2016-08-03T23:49:43.309",
-    #             displayName: "Last name",
-    #             lastUpdated: "2016-08-03T23:49:43.309",
-    #             value: "Kelly",
-    #             valueType: "TEXT"
-    #           },
-    #           %{
-    #             attribute: "w75KJ2mc4zz",
-    #             code: "MMD_PER_NAM",
-    #             created: "2016-08-03T23:49:43.308",
-    #             displayName: "First name",
-    #             lastUpdated: "2016-08-03T23:49:43.308",
-    #             value: "John",
-    #             valueType: "TEXT"
-    #           }
-    #         ],
-    #         created: "2014-03-06T05:49:28.256",
-    #         createdAtClient: "2014-03-06T05:49:28.256",
-    #         lastUpdated: "2016-08-03T23:49:43.309",
-    #         orgUnit: "DiszpKrYNg8",
-    #         trackedEntityInstance: "PQfMcpmXeFE",
-    #         trackedEntityType: "nEenWmSyUEp"
-    #       },
-    #       references: [
-    #         %{}
-    #       ]
-    #     },
-    #     project_id: dhis2_project.id,
-    #     type: :http_request
-    #   }).id
-
-    # {:ok, successful_dhis2_workorder} =
-    #   create_workorder(
-    #     dhis_trigger,
-    #     root_edge,
-    #     ~s[{"data": {}, "references": \[\]}],
-    #     run_params,
-    #     output_dataclip_id
-    #   )
-
     {:ok, successful_dhis2_workorder} =
       create_workorder(
         dhis2_workflow,
@@ -1008,18 +924,8 @@ defmodule Lightning.SetupUtils do
       })
       |> Ecto.Changeset.put_assoc(:runs, runs)
     end)
-    |> Multi.update(:workorder, fn %{workorder: workorder} -> nil end)
+    |> Multi.update(:workorder, fn %{workorder: _workorder} -> nil end)
     |> Repo.transaction()
-
-    # OLD LOGIC
-    # WorkOrderService.multi_for(
-    #   trigger,
-    #   edge,
-    #   dataclip
-    #   |> Jason.decode!()
-    # )
-    # |> add_and_update_runs(run_params, output_dataclip_id)
-    # |> Repo.transaction()
   end
 
   def add_and_update_runs(multi, run_params, output_dataclip_id)
