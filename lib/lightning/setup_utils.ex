@@ -818,15 +818,6 @@ defmodule Lightning.SetupUtils do
       }
     ]
 
-    # {:ok, failure_dhis2_workorder} =
-    #   create_workorder(
-    #     dhis_trigger,
-    #     root_edge,
-    #     ~s[{"data": {}, "references": \[\]}],
-    #     run_params,
-    #     output_dataclip_id
-    #   )
-
     {:ok, failure_dhis2_workorder} =
       create_workorder(
         dhis2_workflow,
@@ -893,39 +884,42 @@ defmodule Lightning.SetupUtils do
          input_dataclip,
          run_params
        ) do
-    Multi.new()
-    |> Multi.insert(
-      :workorder,
-      WorkOrders.build_for(trigger, %{
-        workflow: workflow,
-        dataclip: input_dataclip
-      })
-    )
-    |> Multi.update(:attempt, fn %{workorder: %{attempts: [attempt]}} ->
-      runs =
-        Enum.map(run_params, fn params ->
-          log_lines =
-            Enum.map(params.log_lines, fn line ->
-              Map.merge(line, %{attempt_id: attempt.id})
-            end)
+    {:ok, %{attempt: attempt}} =
+      Multi.new()
+      |> Multi.insert(
+        :workorder,
+        WorkOrders.build_for(trigger, %{
+          workflow: workflow,
+          dataclip: input_dataclip,
+          last_activity: DateTime.utc_now() |> DateTime.add(-40, :second)
+        })
+      )
+      |> Multi.update(:attempt, fn %{workorder: %{attempts: [attempt]}} ->
+        runs =
+          Enum.map(run_params, fn params ->
+            log_lines =
+              Enum.map(params.log_lines, fn line ->
+                Map.merge(line, %{attempt_id: attempt.id})
+              end)
 
-          params
-          |> Map.merge(%{log_lines: log_lines})
-          |> Run.new()
-        end)
+            params
+            |> Map.merge(%{log_lines: log_lines})
+            |> Run.new()
+          end)
 
-      attempt
-      |> Repo.preload([:runs])
-      |> Ecto.Changeset.change(%{
-        state: :success,
-        claimed_at: DateTime.utc_now() |> DateTime.add(-47, :second),
-        started_at: DateTime.utc_now() |> DateTime.add(-45, :second),
-        finished_at: DateTime.utc_now() |> DateTime.add(-40, :second)
-      })
-      |> Ecto.Changeset.put_assoc(:runs, runs)
-    end)
-    # |> Multi.update(:workorder, fn %{workorder: _workorder} -> nil end)
-    |> Repo.transaction()
+        attempt
+        |> Repo.preload([:runs])
+        |> Ecto.Changeset.change(%{
+          state: :success,
+          claimed_at: DateTime.utc_now() |> DateTime.add(-47, :second),
+          started_at: DateTime.utc_now() |> DateTime.add(-45, :second),
+          finished_at: DateTime.utc_now() |> DateTime.add(-40, :second)
+        })
+        |> Ecto.Changeset.put_assoc(:runs, runs)
+      end)
+      |> Repo.transaction()
+
+    Lightning.WorkOrders.update_state(attempt)
   end
 
   def add_and_update_runs(multi, run_params, output_dataclip_id)
