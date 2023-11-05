@@ -327,14 +327,12 @@ defmodule Lightning.WorkOrders do
   def update_state(%Attempt{} = attempt) do
     state_query = Query.state_for(attempt)
 
-    now = DateTime.utc_now()
-
     from(wo in WorkOrder,
       where: wo.id == ^attempt.work_order_id,
       join: s in subquery(state_query),
       on: true,
       select: wo,
-      update: [set: [state: s.state, last_activity: ^now]]
+      update: [set: [state: s.state, last_activity: ^attempt.finished_at]]
     )
     |> Repo.update_all([])
     |> then(fn {_, [wo]} -> {:ok, wo} end)
