@@ -239,7 +239,7 @@ defmodule LightningWeb.RunLive.Components do
           class="@container h-full overflow-y-auto"
         >
           <%= cond  do %>
-            <% is_nil(@run.exit_code) -> %>
+            <% is_nil(@run.exit_reason) -> %>
               <.dataclip_view
                 dataclip={nil}
                 no_dataclip_message={
@@ -250,7 +250,7 @@ defmodule LightningWeb.RunLive.Components do
                   }
                 }
               />
-            <% @run.exit_code > 0 -> %>
+            <% @run.exit_reason != "success" -> %>
               <.dataclip_view
                 dataclip={nil}
                 no_dataclip_message={
@@ -345,19 +345,21 @@ defmodule LightningWeb.RunLive.Components do
         <div class="basis-1/2 text-right"><%= @run_finished_at %></div>
       </div>
       <div class="flex flex-row text-xs lg:text-sm" id={"ran-for-#{@run.id}"}>
-        <div class="lg:basis-1/2 font-semibold text-secondary-700">Ran for</div>
+        <div class="lg:basis-1/2 font-semibold text-secondary-700">Duration</div>
         <div class="basis-1/2 text-right"><%= @ran_for %></div>
       </div>
-      <div class="flex flex-row text-xs lg:text-sm" id={"exit-code-#{@run.id}"}>
-        <div class="basis-1/2 font-semibold text-secondary-700">Exit Code</div>
+      <div class="flex flex-row text-xs lg:text-sm" id={"exit-reason-#{@run.id}"}>
+        <div class="basis-1/2 font-semibold text-secondary-700">Exit Reason</div>
         <div class="basis-1/2 text-right">
-          <%= case @run.exit_code do %>
-            <% nil -> %>
-              <.other_state_pill class="font-mono font-bold">?</.other_state_pill>
-            <% 0 -> %>
-              <.success_pill class="font-mono font-bold">0</.success_pill>
+          <%= case @run.exit_reason do %>
+            <% "fail" -> %>
+              <.failure_pill class="font-mono font-bold">fail</.failure_pill>
+            <% "success" -> %>
+              <.success_pill class="font-mono font-bold">success</.success_pill>
             <% val -> %>
-              <.failure_pill class="font-mono font-bold"><%= val %></.failure_pill>
+              <.other_state_pill class="font-mono font-bold">
+                <%= val %>
+              </.other_state_pill>
           <% end %>
         </div>
       </div>
