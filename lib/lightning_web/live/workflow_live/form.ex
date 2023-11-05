@@ -1,11 +1,60 @@
 defmodule LightningWeb.WorkflowLive.Form do
   use LightningWeb, :live_component
   import WorkflowLive.Modal
-  alias WorkflowLive.WorkFlowNameValidator
+
+  import Ecto.Changeset
+  alias Lightning.Workflows
+  defstruct [:name, :project_id]
+
+  @types %{name: :string, project_id: :string}
+
+  @impl true
+  def render(assigns) do
+    ~H"""
+    <div>
+      <.form
+        :let={f}
+        for={@form}
+        phx-change="validate"
+        phx-submit="create_work_flow"
+        phx-target={@myself}
+        class="w-11/12 mx-auto"
+        phx-debounce="2000"
+      >
+        <.input field={f[:name]} type="text" label="Workflow Name" name="workflow_name" />
+
+        <.modal_footer>
+          <div class="flex gap-x-5 justify-end relative">
+            <.link
+              class="justify-center rounded-md bg-white px-4 py-3 text-sm font-semibold text-gray-500 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:mt-0 sm:w-auto"
+              phx-click={WorkflowLive.Modal.hide_modal("workflow_modal")}
+            >
+              Cancel
+            </.link>
+            <span class="group">
+              <button
+                disabled={!@isButtonDisabled}
+                type="submit"
+                class=" justify-center rounded-md bg-primary-600 disabled:bg-primary-300 px-6 py-3 text-sm font-semibold text-white shadow-sm hover:bg-primary-500 disabled:outline-0 focus:outline-2 focus:outline-indigo-600 focus:outline-offset-2 active:outlin-2 active:outline-indigo-600 active:outline-offset-2"
+              >
+                Create Workflow
+                <%= if !@isButtonDisabled do %>
+                  <span class="invisible group-hover:visible w-36 py-1 px-3 bg-[#030712] absolute  rounded-md -translate-y-16 -translate-x-32">
+                    A workflow name is required
+                  </span>
+                <% end %>
+              </button>
+            </span>
+          </div>
+        </.modal_footer>
+      </.form>
+    </div>
+    """
+  end
 
   @impl true
   def update(assigns, socket) do
-    changeset = WorkFlowNameValidator.validate_workflow(%WorkFlowNameValidator{})
+    changeset = validate_workflow_name(%__MODULE__{})
 
     socket =
       socket
@@ -17,7 +66,7 @@ defmodule LightningWeb.WorkflowLive.Form do
   end
 
   @impl true
-  def handle_event("validate", %{"workflow" => workflow_name}, socket) do
+  def handle_event("validate", %{"workflow_name" => workflow_name}, socket) do
     changeset = validate_workflow(workflow_name, socket)
 
     socket =
@@ -28,7 +77,7 @@ defmodule LightningWeb.WorkflowLive.Form do
   end
 
   @impl true
-  def handle_event("create_work_flow", %{"workflow" => workflow_name}, socket) do
+  def handle_event("create_work_flow", %{"workflow_name" => workflow_name}, socket) do
     changeset = validate_workflow(workflow_name, socket)
 
     if changeset.valid? do
@@ -39,7 +88,7 @@ defmodule LightningWeb.WorkflowLive.Form do
   end
 
   defp validate_workflow(workflow_name, socket) do
-    WorkFlowNameValidator.validate_workflow(%WorkFlowNameValidator{}, %{
+    validate_workflow_name(%__MODULE__{}, %{
       name: workflow_name,
       project_id: socket.assigns.project_id
     })
@@ -56,5 +105,33 @@ defmodule LightningWeb.WorkflowLive.Form do
 
   defp update_form(socket, changeset) do
     assign(socket, :form, to_form(changeset))
+  end
+
+  def changeset(%__MODULE__{} = workflow, attrs) do
+    {workflow, @types}
+    |> cast(attrs, Map.keys(@types))
+    |> validate_required([:name])
+    |> validate()
+  end
+
+  def validate(changeset) do
+    workflow_name = get_field(changeset, :name)
+    project_id = get_field(changeset, :project_id)
+
+    if workflow_name && project_id do
+      case Workflows.workflow_exists?(project_id, workflow_name) do
+        true ->
+          add_error(changeset, :name, "Workflow name already been used")
+
+        false ->
+          changeset
+      end
+    else
+      changeset
+    end
+  end
+
+  def validate_workflow_name(%__MODULE__{} = workflow, attrs \\ %{}) do
+    changeset(workflow, attrs)
   end
 end

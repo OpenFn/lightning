@@ -3,7 +3,7 @@ defmodule LightningWeb.WorkflowLive.Components do
   use LightningWeb, :component
 
   alias LightningWeb.Components.Form
-  import WorkflowLive.Modal
+  # import WorkflowLive.Modal
 
   alias Phoenix.LiveView.JS
 
@@ -90,7 +90,7 @@ defmodule LightningWeb.WorkflowLive.Components do
     ~H"""
     <div>
       <button
-        phx-click="toggle_workflow_modal"
+        phx-click={show_modal("workflow_modal")}
         class="col-span-1 rounded-md"
         role={@can_create_workflow && "button"}
       >
@@ -490,12 +490,12 @@ defmodule LightningWeb.WorkflowLive.Components do
 
   def create_workflow_modal(assigns) do
     ~H"""
-    <.modal id="modal" show width="w-full max-w-xl">
+    <WorkflowLive.Modal.modal id="workflow_modal" width="w-full max-w-xl">
       <:title>
         <div class="flex justify-between">
           Let's get started
           <button
-            phx-click="close_workflow_modal"
+            phx-click={hide_modal("workflow_modal")}
             type="button"
             class="rounded-md bg-white text-gray-400 hover:text-gray-500 focus:outline-none"
             aria-label={gettext("close")}
@@ -506,7 +506,7 @@ defmodule LightningWeb.WorkflowLive.Components do
         </div>
       </:title>
       <%= render_slot(@inner_block) %>
-    </.modal>
+    </WorkflowLive.Modal.modal>
     """
   end
 end
