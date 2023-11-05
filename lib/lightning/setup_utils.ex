@@ -924,7 +924,7 @@ defmodule Lightning.SetupUtils do
       })
       |> Ecto.Changeset.put_assoc(:runs, runs)
     end)
-    |> Multi.update(:workorder, fn %{workorder: _workorder} -> nil end)
+    # |> Multi.update(:workorder, fn %{workorder: _workorder} -> nil end)
     |> Repo.transaction()
   end
 
