@@ -3,7 +3,6 @@ defmodule LightningWeb.WorkflowLive.Components do
   use LightningWeb, :component
 
   alias LightningWeb.Components.Form
-  # import WorkflowLive.Modal
 
   alias Phoenix.LiveView.JS
 

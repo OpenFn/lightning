@@ -21,7 +21,12 @@ defmodule LightningWeb.WorkflowLive.Form do
         class="w-11/12 mx-auto"
         phx-debounce="2000"
       >
-        <.input field={f[:name]} type="text" label="Workflow Name" name="workflow_name" />
+        <.input
+          field={f[:name]}
+          type="text"
+          label="Workflow Name"
+          name="workflow_name"
+        />
 
         <.modal_footer>
           <div class="flex gap-x-5 justify-end relative">
@@ -77,7 +82,11 @@ defmodule LightningWeb.WorkflowLive.Form do
   end
 
   @impl true
-  def handle_event("create_work_flow", %{"workflow_name" => workflow_name}, socket) do
+  def handle_event(
+        "create_work_flow",
+        %{"workflow_name" => workflow_name},
+        socket
+      ) do
     changeset = validate_workflow(workflow_name, socket)
 
     if changeset.valid? do
