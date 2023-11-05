@@ -116,14 +116,14 @@ defmodule LightningWeb.WorkflowLive.Form do
     assign(socket, :form, to_form(changeset))
   end
 
-  def changeset(%__MODULE__{} = workflow, attrs) do
+  defp changeset(%__MODULE__{} = workflow, attrs) do
     {workflow, @types}
     |> cast(attrs, Map.keys(@types))
     |> validate_required([:name])
     |> validate()
   end
 
-  def validate(changeset) do
+  defp validate(changeset) do
     workflow_name = get_field(changeset, :name)
     project_id = get_field(changeset, :project_id)
 
@@ -140,7 +140,7 @@ defmodule LightningWeb.WorkflowLive.Form do
     end
   end
 
-  def validate_workflow_name(%__MODULE__{} = workflow, attrs \\ %{}) do
+  defp validate_workflow_name(%__MODULE__{} = workflow, attrs \\ %{}) do
     changeset(workflow, attrs)
   end
 end
