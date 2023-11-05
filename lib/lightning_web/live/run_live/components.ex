@@ -52,7 +52,7 @@ defmodule LightningWeb.RunLive.Components do
       >
         <div class="flex pl-28">
           <%= case @run.exit_reason do %>
-            <% 'fail' -> %>
+            <% "fail" -> %>
               <%= if @run.finished_at do %>
                 <Heroicons.x_circle
                   solid
@@ -64,7 +64,7 @@ defmodule LightningWeb.RunLive.Components do
                   class="mr-1.5 h-5 w-5 flex-shrink-0 text-gray-500"
                 />
               <% end %>
-            <% 'success' -> %>
+            <% "success" -> %>
               <Heroicons.check_circle
                 solid
                 class="mr-1.5 h-5 w-5 flex-shrink-0 text-green-500"
