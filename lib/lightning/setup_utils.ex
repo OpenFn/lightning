@@ -273,7 +273,7 @@ defmodule Lightning.SetupUtils do
     run_params = [
       %{
         job_id: job_2.id,
-        exit_code: 0,
+        exit_reason: "success",
         log_lines:
           to_log_lines("""
           -- THIS IS ONLY A SAMPLE --
@@ -324,7 +324,7 @@ defmodule Lightning.SetupUtils do
       },
       %{
         job_id: job_3.id,
-        exit_code: 0,
+        exit_reason: "success",
         log_lines:
           to_log_lines("""
           -- THIS IS ONLY A SAMPLE --
@@ -422,27 +422,6 @@ defmodule Lightning.SetupUtils do
       }
     ]
 
-    # output_dataclip_id =
-    #   create_dataclip(%{
-    #     body: %{
-    #       data: %{
-    #         age_in_months: 19,
-    #         name: "Genevieve Wimplemews"
-    #       }
-    #     },
-    #     project_id: project.id,
-    #     type: :http_request
-    #   }).id
-
-    # {:ok, workorder} =
-    #   create_workorder(
-    #     source_trigger,
-    #     job_1_edge,
-    #     ~s[{"age_in_months": 19, "name": "Genevieve Wimplemews"}],
-    #     run_params,
-    #     output_dataclip_id
-    #   )
-    #
     {:ok, workorder} =
       create_workorder(
         workflow,
@@ -575,7 +554,7 @@ defmodule Lightning.SetupUtils do
     run_params = [
       %{
         job_id: send_to_openhim.id,
-        exit_code: 0,
+        exit_reason: "success",
         log_lines:
           to_log_lines("""
           -- THIS IS ONLY A SAMPLE --
@@ -603,7 +582,7 @@ defmodule Lightning.SetupUtils do
       },
       %{
         job_id: notify_upload_successful.id,
-        exit_code: 0,
+        exit_reason: "success",
         log_lines:
           to_log_lines("""
           -- THIS IS ONLY A SAMPLE --
@@ -630,22 +609,6 @@ defmodule Lightning.SetupUtils do
       }
     ]
 
-    # output_dataclip_id =
-    #   create_dataclip(%{
-    #     body: %{data: %{}, references: []},
-    #     project_id: openhie_project.id,
-    #     type: :http_request
-    #   }).id
-
-    # {:ok, openhie_workorder} =
-    #   create_workorder(
-    #     openhie_trigger,
-    #     openhie_root_edge,
-    #     ~s[{}],
-    #     run_params,
-    #     output_dataclip_id
-    #   )
-    #
     {:ok, openhie_workorder} =
       create_workorder(
         openhie_workflow,
@@ -793,7 +756,7 @@ defmodule Lightning.SetupUtils do
     run_params = [
       %{
         job_id: upload_to_google_sheet.id,
-        exit_code: 0,
+        exit_reason: "success",
         log_lines:
           to_log_lines("""
           -- THIS IS ONLY A SAMPLE --
@@ -819,53 +782,6 @@ defmodule Lightning.SetupUtils do
       }
     ]
 
-    # output_dataclip_id =
-    #   create_dataclip(%{
-    #     body: %{
-    #       data: %{
-    #         attributes: [
-    #           %{
-    #             attribute: "zDhUuAYrxNC",
-    #             created: "2016-08-03T23:49:43.309",
-    #             displayName: "Last name",
-    #             lastUpdated: "2016-08-03T23:49:43.309",
-    #             value: "Kelly",
-    #             valueType: "TEXT"
-    #           },
-    #           %{
-    #             attribute: "w75KJ2mc4zz",
-    #             code: "MMD_PER_NAM",
-    #             created: "2016-08-03T23:49:43.308",
-    #             displayName: "First name",
-    #             lastUpdated: "2016-08-03T23:49:43.308",
-    #             value: "John",
-    #             valueType: "TEXT"
-    #           }
-    #         ],
-    #         created: "2014-03-06T05:49:28.256",
-    #         createdAtClient: "2014-03-06T05:49:28.256",
-    #         lastUpdated: "2016-08-03T23:49:43.309",
-    #         orgUnit: "DiszpKrYNg8",
-    #         trackedEntityInstance: "PQfMcpmXeFE",
-    #         trackedEntityType: "nEenWmSyUEp"
-    #       },
-    #       references: [
-    #         %{}
-    #       ]
-    #     },
-    #     project_id: dhis2_project.id,
-    #     type: :http_request
-    #   }).id
-
-    # {:ok, successful_dhis2_workorder} =
-    #   create_workorder(
-    #     dhis_trigger,
-    #     root_edge,
-    #     ~s[{"data": {}, "references": \[\]}],
-    #     run_params,
-    #     output_dataclip_id
-    #   )
-
     {:ok, successful_dhis2_workorder} =
       create_workorder(
         dhis2_workflow,
@@ -878,7 +794,7 @@ defmodule Lightning.SetupUtils do
     run_params = [
       %{
         job_id: upload_to_google_sheet.id,
-        exit_code: 1,
+        exit_reason: "fail",
         log_lines:
           to_log_lines("""
           -- THIS IS ONLY A SAMPLE --
@@ -901,15 +817,6 @@ defmodule Lightning.SetupUtils do
         input_dataclip_id: input_dataclip.id
       }
     ]
-
-    # {:ok, failure_dhis2_workorder} =
-    #   create_workorder(
-    #     dhis_trigger,
-    #     root_edge,
-    #     ~s[{"data": {}, "references": \[\]}],
-    #     run_params,
-    #     output_dataclip_id
-    #   )
 
     {:ok, failure_dhis2_workorder} =
       create_workorder(
@@ -977,48 +884,42 @@ defmodule Lightning.SetupUtils do
          input_dataclip,
          run_params
        ) do
-    Multi.new()
-    |> Multi.insert(
-      :workorder,
-      WorkOrders.build_for(trigger, %{
-        workflow: workflow,
-        dataclip: input_dataclip
-      })
-    )
-    |> Multi.update(:attempt, fn %{workorder: %{attempts: [attempt]}} ->
-      runs =
-        Enum.map(run_params, fn params ->
-          log_lines =
-            Enum.map(params.log_lines, fn line ->
-              Map.merge(line, %{attempt_id: attempt.id})
-            end)
+    {:ok, %{attempt: attempt}} =
+      Multi.new()
+      |> Multi.insert(
+        :workorder,
+        WorkOrders.build_for(trigger, %{
+          workflow: workflow,
+          dataclip: input_dataclip,
+          last_activity: DateTime.utc_now() |> DateTime.add(-40, :second)
+        })
+      )
+      |> Multi.update(:attempt, fn %{workorder: %{attempts: [attempt]}} ->
+        runs =
+          Enum.map(run_params, fn params ->
+            log_lines =
+              Enum.map(params.log_lines, fn line ->
+                Map.merge(line, %{attempt_id: attempt.id})
+              end)
 
-          params
-          |> Map.merge(%{log_lines: log_lines})
-          |> Run.new()
-        end)
+            params
+            |> Map.merge(%{log_lines: log_lines})
+            |> Run.new()
+          end)
 
-      attempt
-      |> Repo.preload([:runs])
-      |> Ecto.Changeset.change(%{
-        state: :success,
-        claimed_at: DateTime.utc_now() |> DateTime.add(-47, :second),
-        started_at: DateTime.utc_now() |> DateTime.add(-45, :second),
-        finished_at: DateTime.utc_now() |> DateTime.add(-40, :second)
-      })
-      |> Ecto.Changeset.put_assoc(:runs, runs)
-    end)
-    |> Repo.transaction()
+        attempt
+        |> Repo.preload([:runs])
+        |> Ecto.Changeset.change(%{
+          state: :success,
+          claimed_at: DateTime.utc_now() |> DateTime.add(-47, :second),
+          started_at: DateTime.utc_now() |> DateTime.add(-45, :second),
+          finished_at: DateTime.utc_now() |> DateTime.add(-40, :second)
+        })
+        |> Ecto.Changeset.put_assoc(:runs, runs)
+      end)
+      |> Repo.transaction()
 
-    # OLD LOGIC
-    # WorkOrderService.multi_for(
-    #   trigger,
-    #   edge,
-    #   dataclip
-    #   |> Jason.decode!()
-    # )
-    # |> add_and_update_runs(run_params, output_dataclip_id)
-    # |> Repo.transaction()
+    Lightning.WorkOrders.update_state(attempt)
   end
 
   def add_and_update_runs(multi, run_params, output_dataclip_id)
@@ -1033,7 +934,7 @@ defmodule Lightning.SetupUtils do
         run
         |> Repo.preload(:log_lines)
         |> Run.changeset(%{
-          exit_code: 0,
+          exit_reason: "success",
           log_lines:
             to_log_lines("""
             -- THIS IS ONLY A SAMPLE --

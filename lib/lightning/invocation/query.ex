@@ -7,6 +7,7 @@ defmodule Lightning.Invocation.Query do
   alias Lightning.Accounts.User
   alias Lightning.Invocation.Run
   alias Lightning.Workflows.Job
+  alias Lightning.Invocation.Dataclip
 
   @doc """
   Runs for a specific user
@@ -50,5 +51,15 @@ defmodule Lightning.Invocation.Query do
   def last_successful_run_for_job(%Job{id: id}) do
     last_run_for_job(%Job{id: id})
     |> runs_with_code(0)
+  end
+
+  @doc """
+  By default, the dataclip body is not returned via a query. This query selects
+  the body specifically.
+  """
+  def dataclip_with_body() do
+    from(d in Dataclip,
+      select: [:id, :body, :type, :project_id, :inserted_at, :updated_at]
+    )
   end
 end

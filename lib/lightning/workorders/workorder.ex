@@ -34,6 +34,8 @@ defmodule Lightning.WorkOrder do
         ),
       default: :pending
 
+    field :last_activity, :utc_datetime_usec
+
     belongs_to :workflow, Workflow
 
     belongs_to :trigger, Trigger
@@ -54,8 +56,8 @@ defmodule Lightning.WorkOrder do
   @doc false
   def changeset(attempt, attrs) do
     attempt
-    |> cast(attrs, [:state, :reason_id, :workflow_id])
-    |> validate_required([:state, :reason_id, :workflow_id])
+    |> cast(attrs, [:state, :last_activity, :reason_id, :workflow_id])
+    |> validate_required([:state, :last_activity, :reason_id, :workflow_id])
     |> validate()
   end
 

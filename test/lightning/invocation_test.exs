@@ -53,7 +53,7 @@ defmodule Lightning.InvocationTest do
     end
 
     test "get_dataclip!/1 returns the dataclip with given id" do
-      dataclip = insert(:dataclip)
+      dataclip = insert(:dataclip, body: nil)
 
       assert Invocation.get_dataclip!(dataclip.id) |> Repo.preload(:project) ==
                dataclip
@@ -64,7 +64,7 @@ defmodule Lightning.InvocationTest do
     end
 
     test "get_dataclip/1 returns the dataclip with given id" do
-      dataclip = insert(:dataclip)
+      dataclip = insert(:dataclip, body: nil)
 
       assert Invocation.get_dataclip(dataclip.id) |> Repo.preload(:project) ==
                dataclip
@@ -105,13 +105,14 @@ defmodule Lightning.InvocationTest do
     end
 
     test "update_dataclip/2 with invalid data returns error changeset" do
-      dataclip = insert(:dataclip)
+      dataclip = insert(:dataclip, body: nil)
 
       assert {:error, %Ecto.Changeset{}} =
                Invocation.update_dataclip(dataclip, @invalid_attrs)
 
       assert dataclip ==
-               Invocation.get_dataclip!(dataclip.id) |> Repo.preload(:project)
+               Invocation.get_dataclip!(dataclip.id)
+               |> Repo.preload(:project)
     end
 
     test "delete_dataclip/1 sets the body to nil" do

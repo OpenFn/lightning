@@ -51,8 +51,8 @@ defmodule LightningWeb.RunLive.Components do
         class="col-span-3 py-2 text-sm font-normal text-left rtl:text-right text-gray-500"
       >
         <div class="flex pl-28">
-          <%= case @run.exit_code do %>
-            <% nil -> %>
+          <%= case @run.exit_reason do %>
+            <% "fail" -> %>
               <%= if @run.finished_at do %>
                 <Heroicons.x_circle
                   solid
@@ -64,16 +64,13 @@ defmodule LightningWeb.RunLive.Components do
                   class="mr-1.5 h-5 w-5 flex-shrink-0 text-gray-500"
                 />
               <% end %>
-            <% val when val > 0-> %>
-              <Heroicons.x_circle
-                solid
-                class="mr-1.5 h-5 w-5 flex-shrink-0 text-red-500"
-              />
-            <% val when val == 0 -> %>
+            <% "success" -> %>
               <Heroicons.check_circle
                 solid
                 class="mr-1.5 h-5 w-5 flex-shrink-0 text-green-500"
               />
+            <% val -> %>
+              <%= val %>
           <% end %>
           <div class="text-gray-800 flex gap-2 text-sm">
             <.link
@@ -174,7 +171,7 @@ defmodule LightningWeb.RunLive.Components do
       assign(
         assigns,
         :log,
-        Pipeline.logs_for_run(assigns.run) |> Enum.map(fn log -> log.body end)
+        Pipeline.logs_for_run(assigns.run) |> Enum.map(fn log -> log.message end)
       )
 
     ~H"""
@@ -242,7 +239,7 @@ defmodule LightningWeb.RunLive.Components do
           class="@container h-full overflow-y-auto"
         >
           <%= cond  do %>
-            <% is_nil(@run.exit_code) -> %>
+            <% is_nil(@run.exit_reason) -> %>
               <.dataclip_view
                 dataclip={nil}
                 no_dataclip_message={
@@ -253,7 +250,7 @@ defmodule LightningWeb.RunLive.Components do
                   }
                 }
               />
-            <% @run.exit_code > 0 -> %>
+            <% @run.exit_reason != "success" -> %>
               <.dataclip_view
                 dataclip={nil}
                 no_dataclip_message={
@@ -348,19 +345,21 @@ defmodule LightningWeb.RunLive.Components do
         <div class="basis-1/2 text-right"><%= @run_finished_at %></div>
       </div>
       <div class="flex flex-row text-xs lg:text-sm" id={"ran-for-#{@run.id}"}>
-        <div class="lg:basis-1/2 font-semibold text-secondary-700">Ran for</div>
+        <div class="lg:basis-1/2 font-semibold text-secondary-700">Duration</div>
         <div class="basis-1/2 text-right"><%= @ran_for %></div>
       </div>
-      <div class="flex flex-row text-xs lg:text-sm" id={"exit-code-#{@run.id}"}>
-        <div class="basis-1/2 font-semibold text-secondary-700">Exit Code</div>
+      <div class="flex flex-row text-xs lg:text-sm" id={"exit-reason-#{@run.id}"}>
+        <div class="basis-1/2 font-semibold text-secondary-700">Exit Reason</div>
         <div class="basis-1/2 text-right">
-          <%= case @run.exit_code do %>
-            <% nil -> %>
-              <.pending_pill class="font-mono font-bold">?</.pending_pill>
-            <% val when val > 0-> %>
-              <.failure_pill class="font-mono font-bold"><%= val %></.failure_pill>
-            <% val when val == 0 -> %>
-              <.success_pill class="font-mono font-bold">0</.success_pill>
+          <%= case @run.exit_reason do %>
+            <% "fail" -> %>
+              <.failure_pill class="font-mono font-bold">fail</.failure_pill>
+            <% "success" -> %>
+              <.success_pill class="font-mono font-bold">success</.success_pill>
+            <% val -> %>
+              <.other_state_pill class="font-mono font-bold">
+                <%= val %>
+              </.other_state_pill>
           <% end %>
         </div>
       </div>
@@ -571,6 +570,16 @@ defmodule LightningWeb.RunLive.Components do
     """
   end
 
+  def killed_pill(assigns) do
+    assigns = assigns |> apply_classes(~w[text-yellow-800 bg-yellow-200])
+
+    ~H"""
+    <span class={@classes}>
+      <%= render_slot(@inner_block) %>
+    </span>
+    """
+  end
+
   def success_pill(assigns) do
     assigns =
       assigns
@@ -585,6 +594,16 @@ defmodule LightningWeb.RunLive.Components do
 
   def pending_pill(assigns) do
     assigns = assigns |> apply_classes(~w[bg-gray-200 text-gray-800])
+
+    ~H"""
+    <span class={@classes}>
+      <%= render_slot(@inner_block) %>
+    </span>
+    """
+  end
+
+  def other_state_pill(assigns) do
+    assigns = assigns |> apply_classes(~w[bg-black text-white])
 
     ~H"""
     <span class={@classes}>

@@ -182,11 +182,7 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
           class="py-1 px-4 text-sm font-normal text-left rtl:text-right text-gray-500"
           role="cell"
         >
-          <%= if @last_run do %>
-            <.timestamp timestamp={@last_run.finished_at} style={:wrapped} />
-          <% else %>
-            --
-          <% end %>
+          <.timestamp timestamp={@work_order.last_activity} style={:wrapped} />
         </div>
         <div
           class="py-1 px-4 text-sm font-normal text-left rtl:text-right text-gray-500"
@@ -204,15 +200,19 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
           class="py-1 px-4 text-sm font-normal text-left rtl:text-right text-gray-500"
           role="cell"
         >
-          <%= case @last_run do %>
-            <% %{exit_code: 0} -> %>
+          <%= case @work_order.state do %>
+            <% :success -> %>
               <.success_pill>Success</.success_pill>
-            <% %{exit_code: val} when is_integer(val) and val > 0 -> %>
-              <.failure_pill>Failure</.failure_pill>
-            <% %{exit_code: nil, finished_at: %_{}} -> %>
-              <.failure_pill>Timeout</.failure_pill>
-            <% _other -> %>
+            <% :failed -> %>
+              <.failure_pill>Failed</.failure_pill>
+            <% :killed -> %>
+              <.killed_pill>Killed</.killed_pill>
+            <% :pending -> %>
               <.pending_pill>Pending</.pending_pill>
+            <% state -> %>
+              <.other_state_pill>
+                <%= state |> Atom.to_string() |> String.capitalize() %>
+              </.other_state_pill>
           <% end %>
         </div>
       </div>
@@ -239,10 +239,9 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
                     Attempt <%= index %> of <%= Enum.count(@attempts) %>
                   </p>
                   <div class="text-sm">
-                    <%= if last_run = List.last(attempt.runs) do %>
-                      <.timestamp timestamp={last_run.finished_at} />
-                    <% else %>
-                      Running...
+                    <%= attempt.state %>
+                    <%= if attempt.finished_at do %>
+                      <.timestamp timestamp={attempt.finished_at} />
                     <% end %>
                   </div>
                   <a
