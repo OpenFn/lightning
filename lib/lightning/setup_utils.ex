@@ -273,7 +273,7 @@ defmodule Lightning.SetupUtils do
     run_params = [
       %{
         job_id: job_2.id,
-        exit_code: 0,
+        exit_reason: "success",
         log_lines:
           to_log_lines("""
           -- THIS IS ONLY A SAMPLE --
@@ -324,7 +324,7 @@ defmodule Lightning.SetupUtils do
       },
       %{
         job_id: job_3.id,
-        exit_code: 0,
+        exit_reason: "success",
         log_lines:
           to_log_lines("""
           -- THIS IS ONLY A SAMPLE --
@@ -554,7 +554,7 @@ defmodule Lightning.SetupUtils do
     run_params = [
       %{
         job_id: send_to_openhim.id,
-        exit_code: 0,
+        exit_reason: "success",
         log_lines:
           to_log_lines("""
           -- THIS IS ONLY A SAMPLE --
@@ -582,7 +582,7 @@ defmodule Lightning.SetupUtils do
       },
       %{
         job_id: notify_upload_successful.id,
-        exit_code: 0,
+        exit_reason: "success",
         log_lines:
           to_log_lines("""
           -- THIS IS ONLY A SAMPLE --
@@ -756,7 +756,7 @@ defmodule Lightning.SetupUtils do
     run_params = [
       %{
         job_id: upload_to_google_sheet.id,
-        exit_code: 0,
+        exit_reason: "success",
         log_lines:
           to_log_lines("""
           -- THIS IS ONLY A SAMPLE --
@@ -794,7 +794,7 @@ defmodule Lightning.SetupUtils do
     run_params = [
       %{
         job_id: upload_to_google_sheet.id,
-        exit_code: 1,
+        exit_reason: "fail",
         log_lines:
           to_log_lines("""
           -- THIS IS ONLY A SAMPLE --
@@ -940,7 +940,7 @@ defmodule Lightning.SetupUtils do
         run
         |> Repo.preload(:log_lines)
         |> Run.changeset(%{
-          exit_code: 0,
+          exit_reason: "success",
           log_lines:
             to_log_lines("""
             -- THIS IS ONLY A SAMPLE --
