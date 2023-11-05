@@ -10,7 +10,7 @@ defmodule Lightning.Invocation do
   alias Lightning.WorkOrders.SearchParams
   alias Lightning.Repo
 
-  alias Lightning.Invocation.{Dataclip, Run}
+  alias Lightning.Invocation.{Dataclip, Run, Query}
   alias Lightning.Projects.Project
 
   @doc """
@@ -44,13 +44,24 @@ defmodule Lightning.Invocation do
     from(r in Run,
       join: d in assoc(r, :input_dataclip),
       where: r.job_id == ^job_id,
-      select: d,
+      select: %Dataclip{
+        id: d.id,
+        body: d.body,
+        type: d.type,
+        project_id: d.project_id,
+        inserted_at: d.inserted_at,
+        updated_at: d.updated_at
+      },
       distinct: [desc: d.inserted_at],
       order_by: [desc: d.inserted_at],
       limit: 3
     )
     |> Repo.all()
   end
+
+  @spec get_dataclip_details!(id :: Ecto.UUID.t()) :: Dataclip.t()
+  def get_dataclip_details!(id),
+    do: Repo.get!(Query.dataclip_with_body(), id)
 
   @doc """
   Gets a single dataclip.
