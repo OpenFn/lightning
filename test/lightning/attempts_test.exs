@@ -405,7 +405,9 @@ defmodule Lightning.AttemptsTest do
           timestamp: DateTime.utc_now() |> DateTime.to_unix(:millisecond)
         })
 
-      log_line = log_line |> Repo.reload!() |> Repo.preload(:run)
+      log_line =
+        Repo.get_by(Invocation.LogLine, id: log_line.id)
+        |> Repo.preload(:run)
 
       assert log_line.run.id == run.id
     end

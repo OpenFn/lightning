@@ -27,9 +27,10 @@ defmodule Lightning.Invocation.LogLine do
           attempt: Attempt.t() | Ecto.Association.NotLoaded.t() | nil
         }
 
-  @primary_key {:id, :binary_id, autogenerate: true}
+  @primary_key false
   @foreign_key_type :binary_id
   schema "log_lines" do
+    field :id, Ecto.UUID
     field :source, :string
 
     field :level, Ecto.Enum,

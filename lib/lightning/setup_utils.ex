@@ -81,8 +81,12 @@ defmodule Lightning.SetupUtils do
   defp to_log_lines(log) do
     log
     |> String.split("\n")
-    |> Enum.map(fn log ->
-      %{message: log, timestamp: DateTime.utc_now()}
+    |> Enum.with_index()
+    |> Enum.map(fn {log, index} ->
+      %{
+        message: log,
+        timestamp: DateTime.utc_now() |> DateTime.add(index, :millisecond)
+      }
     end)
   end
 
@@ -936,7 +940,10 @@ defmodule Lightning.SetupUtils do
           Enum.map(run_params, fn params ->
             log_lines =
               Enum.map(params.log_lines, fn line ->
-                Map.merge(line, %{attempt_id: attempt.id})
+                Map.merge(line, %{
+                  id: Ecto.UUID.generate(),
+                  attempt_id: attempt.id
+                })
               end)
 
             params
