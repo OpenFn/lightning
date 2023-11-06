@@ -61,7 +61,7 @@ defmodule Lightning.SetupUtils do
       project: dhis2_project,
       workflow: dhis2_workflow,
       jobs: dhis2_jobs,
-      workorders: [successful_dhis2_workorder, failure_dhis2_workorder]
+      workorders: [failure_dhis2_workorder]
     } =
       create_dhis2_project([
         %{user_id: admin.id, role: :admin}
@@ -74,7 +74,6 @@ defmodule Lightning.SetupUtils do
       workflows: [openhie_workflow, dhis2_workflow],
       workorders: [
         openhie_workorder,
-        successful_dhis2_workorder,
         failure_dhis2_workorder
       ]
     }
@@ -536,13 +535,6 @@ defmodule Lightning.SetupUtils do
         workflow_id: openhie_workflow.id
       })
 
-    dataclip =
-      create_dataclip(%{
-        body: %{data: %{}, references: []},
-        project_id: openhie_project.id,
-        type: :http_request
-      })
-
     {:ok, _failed_upload} =
       Workflows.create_edge(%{
         workflow_id: openhie_workflow.id,
@@ -551,9 +543,23 @@ defmodule Lightning.SetupUtils do
         source_job_id: send_to_openhim.id
       })
 
+    dataclip =
+      create_dataclip(%{
+        body: %{data: %{}, references: []},
+        project_id: openhie_project.id,
+        type: :http_request
+      })
+
+    output_dataclip =
+      create_dataclip(%{
+        body: %{data: %{}, references: []},
+        project_id: openhie_project.id,
+        type: :run_result
+      })
+
     run_params = [
       %{
-        job_id: send_to_openhim.id,
+        job_id: fhir_standard_data.id,
         exit_reason: "success",
         log_lines:
           to_log_lines("""
@@ -575,10 +581,37 @@ defmodule Lightning.SetupUtils do
           [CLI] ✔ Writing output to /tmp/output-1686840746-126941-i2yb2g.json
           [CLI] ✔ Done in 223ms! ✨
           """),
+        started_at: DateTime.utc_now() |> DateTime.add(-55, :second),
+        finished_at: DateTime.utc_now() |> DateTime.add(-50, :second),
+        input_dataclip_id: dataclip.id,
+        output_dataclip_id: output_dataclip.id
+      },
+      %{
+        job_id: send_to_openhim.id,
+        exit_reason: "success",
+        log_lines:
+          to_log_lines("""
+          -- THIS IS ONLY A SAMPLE --
+          [CLI] ℹ Versions:
+               ▸ node.js                  18.12.0
+               ▸ cli                      0.0.32
+               ▸ runtime                  0.0.20
+               ▸ compiler                 0.0.26
+               ▸ @openfn/language-http    4.2.6
+          [CLI] ✔ Loaded state from /tmp/state-1686840746-126941-1hou2fm.json
+          [CLI] ℹ Loaded typedefs for @openfn/language-http@latest
+          [CMP] ℹ Added import statement for @openfn/language-http
+          [CMP] ℹ Added export * statement for @openfn/language-http
+          [CLI] ✔ Compiled job from /tmp/expression-1686840746-126941-1wuk06h.js
+          [R/T] ℹ Resolved adaptor @openfn/language-http to version 4.2.6
+          [R/T] ✔ Operation 1 complete in 0ms
+          [CLI] ✔ Writing output to /tmp/output-1686840746-126941-i2yb2g.json
+          [CLI] ✔ Done in 223ms! ✨
+          """),
         started_at: DateTime.utc_now() |> DateTime.add(-45, :second),
         finished_at: DateTime.utc_now() |> DateTime.add(-40, :second),
-        input_dataclip_id: dataclip.id,
-        output_dataclip_id: dataclip.id
+        input_dataclip_id: output_dataclip.id,
+        output_dataclip_id: output_dataclip.id
       },
       %{
         job_id: notify_upload_successful.id,
@@ -604,8 +637,8 @@ defmodule Lightning.SetupUtils do
           """),
         started_at: DateTime.utc_now() |> DateTime.add(-35, :second),
         finished_at: DateTime.utc_now() |> DateTime.add(-30, :second),
-        input_dataclip_id: dataclip.id,
-        output_dataclip_id: dataclip.id
+        input_dataclip_id: output_dataclip.id,
+        output_dataclip_id: output_dataclip.id
       }
     ]
 
@@ -753,45 +786,36 @@ defmodule Lightning.SetupUtils do
         type: :http_request
       })
 
+    # Make it fail for demo purposes
     run_params = [
       %{
-        job_id: upload_to_google_sheet.id,
+        job_id: get_dhis2_data.id,
         exit_reason: "success",
         log_lines:
           to_log_lines("""
-          -- THIS IS ONLY A SAMPLE --
-          [CLI] ℹ Versions:
-               ▸ node.js                  18.12.0
-               ▸ cli                      0.0.32
-               ▸ runtime                  0.0.21
-               ▸ compiler                 0.0.26
-               ▸ @openfn/language-http    4.2.6
-          [CLI] ✔ Loaded state from /tmp/state-1686840343-126941-92qxs9.json
-          [CMP] ℹ Added import statement for @openfn/language-http
-          [CMP] ℹ Added export * statement for @openfn/language-http
-          [CLI] ✔ Compiled job from /tmp/expression-1686840343-126941-1pnt7u5.js
-          [R/T] ℹ Resolved adaptor @openfn/language-http to version 4.2.6
-          [R/T] ✔ Operation 1 complete in 0ms
-          [CLI] ✔ Writing output to /tmp/output-1686840343-126941-1hb3ve5.json
-          [CLI] ✔ Done in 216ms! ✨
+            -- THIS IS ONLY A SAMPLE --
+            [CLI] ✔ Compiled job from /tmp/expression-1686836010-94749-1cn5qct.js
+            [R/T] ℹ Resolved adaptor @openfn/language-dhis2@latest to version 3.2.11
+            [R/T] ✔ Operation 1 complete in 0ms
+            [CLI] ✔ Writing output to /tmp/output-1686836010-94749-1v3ppcw.json
+            [CLI] ✔ Done in 179ms! ✨
+            -- THIS IS ONLY A SAMPLE --
+            [CLI] ℹ Versions:
+                 ▸ node.js                   18.12.0
+                 ▸ cli                       0.0.32
+                 ▸ runtime                   0.0.20
+                 ▸ compiler                  0.0.26
+                 ▸ @openfn/language-dhis2@latest            3.2.11
+            [CLI] ✔ Loaded state from /tmp/state-1686836010-94749-17tka8f.json
+            [CLI] ℹ Loaded typedefs for @openfn/language-dhis2@latest
+            [CMP] ℹ Added import statement for @openfn/language-dhis2@latest
+            [CMP] ℹ Added export * statement for @openfn/language-dhis2@latest
           """),
-        started_at: DateTime.utc_now() |> DateTime.add(-45, :second),
-        finished_at: DateTime.utc_now() |> DateTime.add(-40, :second),
+        started_at: DateTime.utc_now() |> DateTime.add(-55, :second),
+        finished_at: DateTime.utc_now() |> DateTime.add(-50, :second),
         input_dataclip_id: input_dataclip.id,
         output_dataclip_id: output_dataclip.id
-      }
-    ]
-
-    {:ok, successful_dhis2_workorder} =
-      create_workorder(
-        dhis2_workflow,
-        dhis_trigger,
-        input_dataclip,
-        run_params
-      )
-
-    # Make it fail for demo purposes
-    run_params = [
+      },
       %{
         job_id: upload_to_google_sheet.id,
         exit_reason: "fail",
@@ -829,7 +853,7 @@ defmodule Lightning.SetupUtils do
     %{
       project: dhis2_project,
       workflow: dhis2_workflow,
-      workorders: [successful_dhis2_workorder, failure_dhis2_workorder],
+      workorders: [failure_dhis2_workorder],
       jobs: [get_dhis2_data, upload_to_google_sheet]
     }
   end
