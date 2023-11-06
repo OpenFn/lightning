@@ -387,16 +387,8 @@ defmodule Lightning.Invocation do
       join: workflow in assoc(workorder, :workflow),
       as: :workflow,
       where: workflow.project_id == ^project_id,
-      left_join: attempt in assoc(workorder, :attempts),
-      as: :attempt,
-      left_join: run in assoc(attempt, :runs),
-      as: :run,
-      left_join: dataclip in assoc(run, :input_dataclip),
-      as: :dataclip,
-      left_join: logline in assoc(run, :log_lines),
-      as: :logline,
       select: workorder,
-      preload: [workflow: workflow, attempts: {attempt, [runs: run]}],
+      preload: [workflow: workflow, attempts: [:runs]],
       order_by: [desc_nulls_first: workorder.last_activity],
       distinct: true
     )
@@ -449,13 +441,14 @@ defmodule Lightning.Invocation do
   defp filter_by_body_or_log(query, _search_fields, nil), do: query
 
   defp filter_by_body_or_log(query, search_fields, search_term) do
-    has_body_search = :body in search_fields
-    has_log_search = :log in search_fields
-
-    cond do
-      has_body_search and has_log_search ->
+    case search_fields do
+      [:body, :log] ->
         from(
-          [dataclip: dataclip, logline: logline] in query,
+          [workorder: workorder] in query,
+          left_join: attempt in assoc(workorder, :attempts),
+          left_join: run in assoc(attempt, :runs),
+          left_join: dataclip in assoc(run, :input_dataclip),
+          left_join: logline in assoc(run, :log_lines),
           where:
             fragment(
               "CAST(? AS TEXT) iLIKE ?",
@@ -469,8 +462,12 @@ defmodule Lightning.Invocation do
               )
         )
 
-      has_body_search ->
-        from([dataclip: dataclip] in query,
+      [:body] ->
+        from(
+          [workorder: workorder] in query,
+          left_join: attempt in assoc(workorder, :attempts),
+          left_join: run in assoc(attempt, :runs),
+          left_join: dataclip in assoc(run, :input_dataclip),
           where:
             fragment(
               "CAST(? AS TEXT) iLIKE ?",
@@ -479,8 +476,12 @@ defmodule Lightning.Invocation do
             )
         )
 
-      has_log_search ->
-        from([logline: logline] in query,
+      [:log] ->
+        from(
+          [workorder: workorder] in query,
+          left_join: attempt in assoc(workorder, :attempts),
+          left_join: run in assoc(attempt, :runs),
+          left_join: logline in assoc(run, :log_lines),
           where:
             fragment(
               "CAST(? AS TEXT) iLIKE ?",

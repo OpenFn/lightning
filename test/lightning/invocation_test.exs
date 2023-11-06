@@ -616,7 +616,7 @@ defmodule Lightning.InvocationTest do
              end)
     end
 
-    test "filters workorders by attempt finished_at" do
+    test "filters workorders by last_activity" do
       project = insert(:project)
       dataclip = insert(:dataclip)
 
@@ -627,30 +627,26 @@ defmodule Lightning.InvocationTest do
       past_time = Timex.shift(now, days: -1)
       future_time = Timex.shift(now, days: 1)
 
-      wo_past = insert(:workorder, workflow: workflow, inserted_at: now)
-      wo_now = insert(:workorder, workflow: workflow, inserted_at: now)
-      wo_future = insert(:workorder, workflow: workflow, inserted_at: now)
+      wo_past =
+        insert(:workorder,
+          workflow: workflow,
+          inserted_at: past_time,
+          last_activity: past_time
+        )
 
-      insert(:attempt,
-        work_order: wo_past,
-        dataclip: dataclip,
-        starting_trigger: trigger,
-        finished_at: past_time
-      )
+      wo_now =
+        insert(:workorder,
+          workflow: workflow,
+          inserted_at: past_time,
+          last_activity: now
+        )
 
-      insert(:attempt,
-        work_order: wo_now,
-        dataclip: dataclip,
-        starting_trigger: trigger,
-        finished_at: now
-      )
-
-      insert(:attempt,
-        work_order: wo_future,
-        dataclip: dataclip,
-        starting_trigger: trigger,
-        finished_at: future_time
-      )
+      wo_future =
+        insert(:workorder,
+          workflow: workflow,
+          inserted_at: past_time,
+          last_activity: future_time
+        )
 
       [found_workorder] =
         Lightning.Invocation.search_workorders(
@@ -688,7 +684,7 @@ defmodule Lightning.InvocationTest do
       assert found_workorder.id == wo_now.id
     end
 
-    test "filters workorders by search term on body and / or run logs" do
+    test "filters workorders by search term on body and/or run logs" do
       project = insert(:project)
 
       dataclip =
@@ -733,7 +729,7 @@ defmodule Lightning.InvocationTest do
                project,
                SearchParams.new(%{
                  "search_term" => "won't match anything",
-                 "search_fields" => ["log", "body"]
+                 "search_fields" => ["body", "log"]
                })
              ).entries == []
 
@@ -742,7 +738,7 @@ defmodule Lightning.InvocationTest do
                  project,
                  SearchParams.new(%{
                    "search_term" => "senegal",
-                   "search_fields" => ["log", "body"]
+                   "search_fields" => ["body", "log"]
                  })
                ).entries
 

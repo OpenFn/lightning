@@ -954,6 +954,7 @@ defmodule Lightning.SetupUtils do
       end)
       |> Repo.transaction()
 
+    # TODO: update me for demo!
     Lightning.WorkOrders.update_state(attempt)
   end
 
