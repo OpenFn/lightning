@@ -15,6 +15,7 @@ defmodule Lightning.Pipeline.Runner do
     @moduledoc """
     Custom handler callbacks for Lightnings use of Engine to execute runs.
     """
+    alias Lightning.Invocation.LogLine
     use Lightning.Runtime.Handler
     alias Lightning.Repo
     alias Lightning.Pipeline.Runner
