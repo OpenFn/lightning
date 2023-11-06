@@ -18,9 +18,10 @@ defmodule Lightning.Invocation.LogLine do
           attempt: Attempt.t() | Ecto.Association.NotLoaded.t() | nil
         }
 
-  @primary_key {:id, :binary_id, autogenerate: true}
+  @primary_key false
   @foreign_key_type :binary_id
   schema "log_lines" do
+    field :id, :binary_id, autogenerate: true, primary_key: true
     field :source, :string
 
     field :level, Ecto.Enum,
@@ -32,7 +33,7 @@ defmodule Lightning.Invocation.LogLine do
     belongs_to :run, Run
     belongs_to :attempt, Attempt
 
-    field :timestamp, UnixDateTime
+    field :timestamp, UnixDateTime, primary_key: true
   end
 
   def new(%Attempt{} = attempt, attrs \\ %{}) do
