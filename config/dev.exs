@@ -38,7 +38,7 @@ config :lightning, Lightning.Vault,
 
 config :lightning, Lightning.Runtime.RuntimeManager,
   start: true,
-  args: ~w(npm exec @openfn/ws-worker),
+  args: ~w(npm exec @openfn/ws-worker -- --backoff 0.5/5),
   cd: Path.expand("../assets", __DIR__)
 
 # ## SSL Support
