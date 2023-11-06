@@ -3,6 +3,8 @@ defmodule Lightning.Workflows.Scheduler do
   The Scheduler is responsible for finding jobs that are ready to run based on
   their cron schedule, and then running them.
   """
+  alias Lightning.WorkOrders
+
   use Oban.Worker,
     queue: :scheduler,
     priority: 1,
@@ -36,17 +38,14 @@ defmodule Lightning.Workflows.Scheduler do
     date_time
     |> Workflows.get_edges_for_cron_execution()
     |> Enum.each(fn edge ->
-      {:ok, %{attempt_run: attempt_run}} = invoke_cronjob(edge)
-
-      Pipeline.new(%{attempt_run_id: attempt_run.id})
-      |> Oban.insert()
+      {:ok, _workorder} = invoke_cronjob(edge)
     end)
 
     :ok
   end
 
   @spec invoke_cronjob(Lightning.Workflows.Edge.t()) :: {:ok | :error, map()}
-  defp invoke_cronjob(%{target_job: job} = edge) do
+  defp invoke_cronjob(%{target_job: job, source_trigger: trigger} = _edge) do
     case last_state_for_job(job.id) do
       nil ->
         Logger.debug(fn ->
@@ -60,16 +59,20 @@ defmodule Lightning.Workflows.Scheduler do
         # The implementation would look like:
         # default_state_for_job(id)
         # %{id: uuid, type: :global, body: %{arbitrary: true}}
-        WorkOrderService.multi_for(
-          :cron,
-          edge,
-          Dataclip.new(%{
+
+        dataclip =
+          %{
             type: :global,
             body: %{},
             project_id: job.workflow.project_id
-          })
-        )
-        |> Repo.transaction()
+          }
+          |> Dataclip.new()
+          |> Repo.insert!()
+
+        WorkOrders.create_for(trigger, %{
+          dataclip: dataclip,
+          workflow: job.workflow
+        })
 
       dataclip ->
         Logger.debug(fn ->
@@ -78,8 +81,10 @@ defmodule Lightning.Workflows.Scheduler do
           # coveralls-ignore-stop
         end)
 
-        WorkOrderService.multi_for(:cron, edge, dataclip)
-        |> Repo.transaction()
+        WorkOrders.create_for(trigger, %{
+          dataclip: dataclip,
+          workflow: job.workflow
+        })
     end
   end
 

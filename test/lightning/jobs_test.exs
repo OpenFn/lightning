@@ -44,7 +44,8 @@ defmodule Lightning.JobsTest do
         target_job: build(:job, workflow: workflow, enabled: false)
       )
 
-      assert Jobs.list_active_cron_jobs() == [Jobs.get_job!(enabled_job.id)]
+      assert [active_job] = Jobs.list_active_cron_jobs()
+      assert active_job.id == enabled_job.id
     end
 
     test "get_job!/1 returns the job with given id" do
@@ -309,19 +310,12 @@ defmodule Lightning.JobsTest do
 
       Scheduler.enqueue_cronjobs()
 
-      run = Repo.one(Lightning.Invocation.Run)
+      attempt = Repo.one(Lightning.Attempt)
 
-      assert run.job_id == job.id
+      assert attempt.starting_trigger_id == trigger.id
 
-      run =
-        %Workflows.Job{id: job.id}
-        |> Lightning.Invocation.Query.last_successful_run_for_job()
-        |> Repo.one()
-        |> Repo.preload(:input_dataclip)
-        |> Repo.preload(:output_dataclip)
-
-      assert run.input_dataclip.type == :global
-      assert run.input_dataclip.body == %{}
+      attempt = Repo.preload(attempt, [:dataclip])
+      assert attempt.dataclip.type == :global
     end
   end
 
@@ -346,11 +340,29 @@ defmodule Lightning.JobsTest do
           target_job: job
         })
 
-      {:ok, %{attempt_run: attempt_run}} =
-        Lightning.WorkOrderService.multi_for(:cron, edge, insert(:dataclip))
-        |> Repo.transaction()
+      dataclip = insert(:dataclip)
 
-      Lightning.Pipeline.process(attempt_run)
+      attempt =
+        insert(:attempt,
+          workorder:
+            build(:workorder,
+              workflow: job.workflow,
+              dataclip: dataclip,
+              trigger: trigger,
+              state: :success
+            ),
+          starting_trigger: trigger,
+          state: :success,
+          dataclip: dataclip,
+          runs: [
+            build(:run,
+              exit_code: 0,
+              job: job,
+              input_dataclip: dataclip,
+              output_dataclip: build(:dataclip, body: %{"changed" => true})
+            )
+          ]
+        )
 
       old =
         %Workflows.Job{id: job.id}
