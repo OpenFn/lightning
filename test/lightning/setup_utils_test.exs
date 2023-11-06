@@ -222,101 +222,109 @@ defmodule Lightning.SetupUtilsTest do
       assert job_3.enabled
       assert job_3.adaptor == "@openfn/language-dhis2@latest"
 
-      first_run =
-        Map.get(workorder, "update_run")
-        |> Repo.preload([:input_dataclip, :output_dataclip, :previous])
+      runs =
+        workorder
+        |> Repo.preload(attempts: [:runs])
+        |> Map.get(:attempts)
+        |> List.first()
+        |> Map.get(:runs)
 
-      second_run =
-        Map.get(workorder, "attempt_run_0").run
+      first_run =
+        runs
+        |> Enum.at(0)
         |> Repo.preload([:input_dataclip, :output_dataclip, :previous])
 
       last_run =
-        Map.get(workorder, "attempt_run_1").run
+        runs
+        |> Enum.at(1)
         |> Repo.preload([:input_dataclip, :output_dataclip, :previous])
 
       # first run is older than second run
       assert DateTime.diff(
                first_run.finished_at,
-               second_run.finished_at,
+               last_run.finished_at,
                :second
              ) < 0
 
-      # second run is older than last run
-      assert DateTime.diff(second_run.finished_at, last_run.finished_at, :second) <
-               0
+      assert first_run.exit_reason == "success"
 
-      assert first_run.exit_code == 0
-
-      assert first_run.input_dataclip.body == %{
-               "age_in_months" => 19,
-               "name" => "Genevieve Wimplemews"
-             }
-
-      assert first_run.output_dataclip.body == %{
-               "data" => %{
-                 "age_in_months" => 19,
-                 "name" => "Genevieve Wimplemews"
+      assert get_dataclip_body(first_run.input_dataclip.id) |> Jason.decode!() ==
+               %{
+                 "data" => %{
+                   "age_in_months" => 19,
+                   "name" => "Genevieve Wimplemews"
+                 }
                }
-             }
+
+      assert get_dataclip_body(first_run.output_dataclip.id) |> Jason.decode!() ==
+               %{
+                 "data" => %{
+                   "age_in_months" => 19,
+                   "name" => "Genevieve Wimplemews"
+                 },
+                 "names" => ["Genevieve", "Wimplemews"]
+               }
 
       assert Pipeline.assemble_logs_for_run(first_run) ==
                """
                -- THIS IS ONLY A SAMPLE --
                [CLI] ℹ Versions:
-                    ▸ node.js                   18.12.0
-                    ▸ cli                       0.0.32
-                    ▸ runtime                   0.0.20
-                    ▸ compiler                  0.0.26
-                    ▸ @openfn/language-common@latest            3.2.11
-               [CLI] ✔ Loaded state from /tmp/state-1686836010-94749-17tka8f.json
+                    ▸ node.js                    18.12.0
+                    ▸ cli                        0.0.32
+                    ▸ runtime                    0.0.20
+                    ▸ compiler                   0.0.26
+                    ▸ @openfn/language-common    1.7.5
+               [CLI] ✔ Loaded state from /tmp/state-1686850600-169521-e1925t.json
                [CLI] ℹ Loaded typedefs for @openfn/language-common@latest
-               [CMP] ℹ Added import statement for @openfn/language-common@latest
-               [CMP] ℹ Added export * statement for @openfn/language-common@latest
-               [CLI] ✔ Compiled job from /tmp/expression-1686836010-94749-1cn5qct.js
-               [R/T] ℹ Resolved adaptor @openfn/language-common@latest to version 3.2.11
+               [CMP] ℹ Added import statement for @openfn/language-common
+               [CMP] ℹ Added export * statement for @openfn/language-common
+               [CLI] ✔ Compiled job from /tmp/expression-1686850600-169521-1sqw0sl.js
+               [R/T] ℹ Resolved adaptor @openfn/language-common to version 1.7.5
                [R/T] ✔ Operation 1 complete in 0ms
-               [CLI] ✔ Writing output to /tmp/output-1686836010-94749-1v3ppcw.json
-               [CLI] ✔ Done in 179ms! ✨
+               [CLI] ✔ Writing output to /tmp/output-1686850600-169521-1drewz.json
+               [CLI] ✔ Done in 304ms! ✨
                """
 
-      assert last_run.exit_code == 0
+      assert last_run.exit_reason == "success"
 
-      assert last_run.input_dataclip.body == %{
-               "data" => %{
-                 "age_in_months" => 19,
-                 "name" => "Genevieve Wimplemews"
-               },
-               "names" => ["Genevieve", "Wimplemews"]
-             }
-
-      assert last_run.output_dataclip.body == %{
-               "data" => %{
-                 "httpStatus" => "OK",
-                 "httpStatusCode" => 200,
-                 "message" => "Import was successful.",
-                 "response" => %{
-                   "importSummaries" => [
-                     %{
-                       "href" =>
-                         "https://play.dhis2.org/dev/api/trackedEntityInstances/iqJrb85GmJb",
-                       "reference" => "iqJrb85GmJb",
-                       "responseType" => "ImportSummary",
-                       "status" => "SUCCESS"
-                     }
-                   ],
-                   "imported" => 1,
-                   "responseType" => "ImportSummaries",
-                   "status" => "SUCCESS",
-                   "total" => 1,
-                   "updated" => 0
+      assert get_dataclip_body(last_run.input_dataclip.id) |> Jason.decode!() ==
+               %{
+                 "data" => %{
+                   "age_in_months" => 19,
+                   "name" => "Genevieve Wimplemews"
                  },
-                 "status" => "OK"
-               },
-               "names" => ["Genevieve", "Wimplemews"],
-               "references" => [
-                 %{"age_in_months" => 19, "name" => "Genevieve Wimplemews"}
-               ]
-             }
+                 "names" => ["Genevieve", "Wimplemews"]
+               }
+
+      assert get_dataclip_body(last_run.output_dataclip.id) |> Jason.decode!() ==
+               %{
+                 "data" => %{
+                   "httpStatus" => "OK",
+                   "httpStatusCode" => 200,
+                   "message" => "Import was successful.",
+                   "response" => %{
+                     "importSummaries" => [
+                       %{
+                         "href" =>
+                           "https://play.dhis2.org/dev/api/trackedEntityInstances/iqJrb85GmJb",
+                         "reference" => "iqJrb85GmJb",
+                         "responseType" => "ImportSummary",
+                         "status" => "SUCCESS"
+                       }
+                     ],
+                     "imported" => 1,
+                     "responseType" => "ImportSummaries",
+                     "status" => "SUCCESS",
+                     "total" => 1,
+                     "updated" => 0
+                   },
+                   "status" => "OK"
+                 },
+                 "names" => ["Genevieve", "Wimplemews"],
+                 "references" => [
+                   %{"age_in_months" => 19, "name" => "Genevieve Wimplemews"}
+                 ]
+               }
 
       assert Pipeline.assemble_logs_for_run(last_run) ==
                """
@@ -357,40 +365,83 @@ defmodule Lightning.SetupUtilsTest do
                [CLI] ✔ Done in 2.052s! ✨
                """
 
-      assert second_run.exit_code == 0
+      assert last_run.exit_reason == "success"
 
-      assert second_run.input_dataclip.body == %{
-               "data" => %{
-                 "age_in_months" => 19,
-                 "name" => "Genevieve Wimplemews"
+      assert get_dataclip_body(last_run.input_dataclip.id) |> Jason.decode!() ==
+               %{
+                 "data" => %{
+                   "age_in_months" => 19,
+                   "name" => "Genevieve Wimplemews"
+                 },
+                 "names" => ["Genevieve", "Wimplemews"]
                }
-             }
 
-      assert second_run.output_dataclip.body == %{
-               "data" => %{
-                 "age_in_months" => 19,
-                 "name" => "Genevieve Wimplemews"
-               },
-               "names" => ["Genevieve", "Wimplemews"]
-             }
+      assert get_dataclip_body(last_run.output_dataclip.id) |> Jason.decode!() ==
+               %{
+                 "data" => %{
+                   "httpStatus" => "OK",
+                   "httpStatusCode" => 200,
+                   "message" => "Import was successful.",
+                   "response" => %{
+                     "importSummaries" => [
+                       %{
+                         "href" =>
+                           "https://play.dhis2.org/dev/api/trackedEntityInstances/iqJrb85GmJb",
+                         "reference" => "iqJrb85GmJb",
+                         "responseType" => "ImportSummary",
+                         "status" => "SUCCESS"
+                       }
+                     ],
+                     "imported" => 1,
+                     "responseType" => "ImportSummaries",
+                     "status" => "SUCCESS",
+                     "total" => 1,
+                     "updated" => 0
+                   },
+                   "status" => "OK"
+                 },
+                 "names" => ["Genevieve", "Wimplemews"],
+                 "references" => [
+                   %{"age_in_months" => 19, "name" => "Genevieve Wimplemews"}
+                 ]
+               }
 
-      assert Pipeline.assemble_logs_for_run(second_run) == """
+      assert Pipeline.assemble_logs_for_run(last_run) == """
              -- THIS IS ONLY A SAMPLE --
              [CLI] ℹ Versions:
-                  ▸ node.js                    18.12.0
-                  ▸ cli                        0.0.32
-                  ▸ runtime                    0.0.20
-                  ▸ compiler                   0.0.26
-                  ▸ @openfn/language-common    1.7.5
-             [CLI] ✔ Loaded state from /tmp/state-1686850600-169521-e1925t.json
-             [CLI] ℹ Loaded typedefs for @openfn/language-common@latest
-             [CMP] ℹ Added import statement for @openfn/language-common
-             [CMP] ℹ Added export * statement for @openfn/language-common
-             [CLI] ✔ Compiled job from /tmp/expression-1686850600-169521-1sqw0sl.js
-             [R/T] ℹ Resolved adaptor @openfn/language-common to version 1.7.5
-             [R/T] ✔ Operation 1 complete in 0ms
-             [CLI] ✔ Writing output to /tmp/output-1686850600-169521-1drewz.json
-             [CLI] ✔ Done in 304ms! ✨
+                  ▸ node.js                   18.12.0
+                  ▸ cli                       0.0.32
+                  ▸ runtime                   0.0.20
+                  ▸ compiler                  0.0.26
+                  ▸ @openfn/language-dhis2    3.2.11
+             [CLI] ✔ Loaded state from /tmp/state-1686850601-169521-1eyevfx.json
+             [CLI] ℹ Loaded typedefs for @openfn/language-dhis2@latest
+             [CMP] ℹ Added import statement for @openfn/language-dhis2
+             [CMP] ℹ Added export * statement for @openfn/language-dhis2
+             [CLI] ✔ Compiled job from /tmp/expression-1686850601-169521-1i644ux.js
+             [R/T] ℹ Resolved adaptor @openfn/language-dhis2 to version 3.2.11
+             Preparing create operation...
+             Using latest available version of the DHIS2 api on this server.
+             Sending post request to https://play.dhis2.org/dev/api/trackedEntityInstances
+             ✓ Success at Thu Jun 15 2023 17:36:44 GMT+0000 (Greenwich Mean Time):
+             Created trackedEntityInstances with response {
+               "httpStatus": "OK",
+               "httpStatusCode": 200,
+               "status": "OK",
+               "message": "Import was successful.",
+               "response": {
+                 "responseType": "ImportSummaries",
+                 "status": "SUCCESS",
+                 "imported": 1,
+                 "updated": 0,
+                 "deleted": 0,
+                 "ignored": 0,
+                 "total": 1
+               }
+             }
+             [R/T] ✔ Operation 1 complete in 1.775s
+             [CLI] ✔ Writing output to /tmp/output-1686850601-169521-1k3hzfw.json
+             [CLI] ✔ Done in 2.052s! ✨
              """
     end
   end
@@ -503,16 +554,26 @@ defmodule Lightning.SetupUtilsTest do
       assert notify_upload_failed.enabled
       assert notify_upload_failed.adaptor == "@openfn/language-http@latest"
 
+      runs =
+        openhie_workorder
+        |> Repo.preload(attempts: [:runs])
+        |> Map.get(:attempts)
+        |> List.first()
+        |> Map.get(:runs)
+
       first_run =
-        Map.get(openhie_workorder, "update_run")
+        runs
+        |> Enum.at(0)
         |> Repo.preload([:input_dataclip, :output_dataclip, :previous])
 
       second_run =
-        Map.get(openhie_workorder, "attempt_run_0").run
+        runs
+        |> Enum.at(1)
         |> Repo.preload([:input_dataclip, :output_dataclip, :previous])
 
       last_run =
-        Map.get(openhie_workorder, "attempt_run_1").run
+        runs
+        |> Enum.at(2)
         |> Repo.preload([:input_dataclip, :output_dataclip, :previous])
 
       # first run is older than second run
@@ -526,41 +587,83 @@ defmodule Lightning.SetupUtilsTest do
       assert DateTime.diff(second_run.finished_at, last_run.finished_at, :second) <
                0
 
-      assert first_run.exit_code == 0
-      assert first_run.input_dataclip.body == %{}
+      # IO.inspect(first_run)
 
-      assert first_run.output_dataclip.body == %{
-               "data" => %{},
-               "references" => []
-             }
+      assert first_run.exit_reason == "success"
+
+      assert get_dataclip_body(first_run.input_dataclip.id) |> Jason.decode!() ==
+               %{
+                 "data" => %{
+                   "formId" => "early_enrollment",
+                   "patientId" => 1234,
+                   "patientData" => %{
+                     "name" => "Wally",
+                     "surname" => "Robertston"
+                   }
+                 }
+               }
+
+      assert get_dataclip_body(first_run.output_dataclip.id) |> Jason.decode!() ==
+               %{
+                 "data" => %{
+                   "formId" => "early_enrollment",
+                   "patientId" => 1234,
+                   "patientData" => %{
+                     "name" => "Wally",
+                     "surname" => "Robertston"
+                   }
+                 },
+                 "references" => []
+               }
 
       assert Pipeline.assemble_logs_for_run(first_run) ==
                """
                -- THIS IS ONLY A SAMPLE --
                [CLI] ℹ Versions:
-                    ▸ node.js                   18.12.0
-                    ▸ cli                       0.0.32
-                    ▸ runtime                   0.0.20
-                    ▸ compiler                  0.0.26
-                    ▸ @openfn/language-http@latest            3.2.11
-               [CLI] ✔ Loaded state from /tmp/state-1686836010-94749-17tka8f.json
+                    ▸ node.js                  18.12.0
+                    ▸ cli                      0.0.32
+                    ▸ runtime                  0.0.20
+                    ▸ compiler                 0.0.26
+                    ▸ @openfn/language-http    4.2.6
+               [CLI] ✔ Loaded state from /tmp/state-1686840746-126941-1hou2fm.json
                [CLI] ℹ Loaded typedefs for @openfn/language-http@latest
-               [CMP] ℹ Added import statement for @openfn/language-http@latest
-               [CMP] ℹ Added export * statement for @openfn/language-http@latest
-               [CLI] ✔ Compiled job from /tmp/expression-1686836010-94749-1cn5qct.js
-               [R/T] ℹ Resolved adaptor @openfn/language-http@latest to version 3.2.11
+               [CLI] ℹ Loaded typedefs for @openfn/language-http@latest
+               [CMP] ℹ Added import statement for @openfn/language-http
+               [CMP] ℹ Added export * statement for @openfn/language-http
+               [CLI] ✔ Compiled job from /tmp/expression-1686840746-126941-1wuk06h.js
+               [R/T] ℹ Resolved adaptor @openfn/language-http to version 4.2.6
                [R/T] ✔ Operation 1 complete in 0ms
-               [CLI] ✔ Writing output to /tmp/output-1686836010-94749-1v3ppcw.json
-               [CLI] ✔ Done in 179ms! ✨
+               [CLI] ✔ Writing output to /tmp/output-1686840746-126941-i2yb2g.json
+               [CLI] ✔ Done in 223ms! ✨
                """
 
-      assert last_run.exit_code == 0
-      assert last_run.input_dataclip.body == %{"data" => %{}, "references" => []}
+      assert last_run.exit_reason == "success"
 
-      assert last_run.output_dataclip.body == %{
-               "data" => %{},
-               "references" => []
-             }
+      assert get_dataclip_body(last_run.input_dataclip.id) |> Jason.decode!() ==
+               %{
+                 "data" => %{
+                   "formId" => "early_enrollment",
+                   "patientId" => 1234,
+                   "patientData" => %{
+                     "name" => "Wally",
+                     "surname" => "Robertston"
+                   }
+                 },
+                 "references" => []
+               }
+
+      assert get_dataclip_body(last_run.output_dataclip.id) |> Jason.decode!() ==
+               %{
+                 "data" => %{
+                   "formId" => "early_enrollment",
+                   "patientData" => %{
+                     "name" => "Wally",
+                     "surname" => "Robertston"
+                   },
+                   "patientId" => 1234
+                 },
+                 "references" => []
+               }
 
       assert Pipeline.assemble_logs_for_run(last_run) ==
                """
@@ -582,17 +685,33 @@ defmodule Lightning.SetupUtilsTest do
                [CLI] ✔ Done in 209ms! ✨
                """
 
-      assert second_run.exit_code == 0
+      assert second_run.exit_reason == "success"
 
-      assert second_run.input_dataclip.body == %{
-               "data" => %{},
-               "references" => []
-             }
+      assert get_dataclip_body(second_run.input_dataclip.id) |> Jason.decode!() ==
+               %{
+                 "data" => %{
+                   "formId" => "early_enrollment",
+                   "patientData" => %{
+                     "name" => "Wally",
+                     "surname" => "Robertston"
+                   },
+                   "patientId" => 1234
+                 },
+                 "references" => []
+               }
 
-      assert second_run.output_dataclip.body == %{
-               "data" => %{},
-               "references" => []
-             }
+      assert get_dataclip_body(second_run.output_dataclip.id) |> Jason.decode!() ==
+               %{
+                 "data" => %{
+                   "formId" => "early_enrollment",
+                   "patientData" => %{
+                     "name" => "Wally",
+                     "surname" => "Robertston"
+                   },
+                   "patientId" => 1234
+                 },
+                 "references" => []
+               }
 
       assert Pipeline.assemble_logs_for_run(second_run) == """
              -- THIS IS ONLY A SAMPLE --
@@ -603,7 +722,6 @@ defmodule Lightning.SetupUtilsTest do
                   ▸ compiler                 0.0.26
                   ▸ @openfn/language-http    4.2.6
              [CLI] ✔ Loaded state from /tmp/state-1686840746-126941-1hou2fm.json
-             [CLI] ℹ Loaded typedefs for @openfn/language-http@latest
              [CLI] ℹ Loaded typedefs for @openfn/language-http@latest
              [CMP] ℹ Added import statement for @openfn/language-http
              [CMP] ℹ Added export * statement for @openfn/language-http
@@ -624,7 +742,7 @@ defmodule Lightning.SetupUtilsTest do
       %{
         project: dhis2_project,
         workflow: dhis2_workflow,
-        workorders: [successful_dhis2_workorder, failure_dhis2_workorder],
+        workorders: [failure_dhis2_workorder],
         jobs: [get_dhis2_data, upload_to_google_sheet] = jobs
       } =
         Lightning.SetupUtils.create_dhis2_project([
@@ -663,173 +781,31 @@ defmodule Lightning.SetupUtilsTest do
       assert upload_to_google_sheet.enabled
       assert upload_to_google_sheet.adaptor == "@openfn/language-http@latest"
 
-      first_run =
-        Map.get(successful_dhis2_workorder, "update_run")
-        |> Repo.preload([:input_dataclip, :output_dataclip, :previous])
+      runs =
+        failure_dhis2_workorder
+        |> Repo.preload(attempts: [:runs])
+        |> Map.get(:attempts)
+        |> List.first()
+        |> Map.get(:runs)
 
-      last_run =
-        Map.get(successful_dhis2_workorder, "attempt_run_0").run
-        |> Repo.preload([:input_dataclip, :output_dataclip, :previous])
-
-      # first run is older than second run
-      assert DateTime.diff(first_run.finished_at, last_run.finished_at, :second) <
-               0
-
-      assert first_run.exit_code == 0
-
-      assert first_run.input_dataclip.body == %{
-               "data" => %{},
-               "references" => []
-             }
-
-      assert first_run.output_dataclip.body == %{
-               "data" => %{
-                 "attributes" => [
-                   %{
-                     "attribute" => "zDhUuAYrxNC",
-                     "created" => "2016-08-03T23:49:43.309",
-                     "displayName" => "Last name",
-                     "lastUpdated" => "2016-08-03T23:49:43.309",
-                     "value" => "Kelly",
-                     "valueType" => "TEXT"
-                   },
-                   %{
-                     "attribute" => "w75KJ2mc4zz",
-                     "code" => "MMD_PER_NAM",
-                     "created" => "2016-08-03T23:49:43.308",
-                     "displayName" => "First name",
-                     "lastUpdated" => "2016-08-03T23:49:43.308",
-                     "value" => "John",
-                     "valueType" => "TEXT"
-                   }
-                 ],
-                 "created" => "2014-03-06T05:49:28.256",
-                 "createdAtClient" => "2014-03-06T05:49:28.256",
-                 "lastUpdated" => "2016-08-03T23:49:43.309",
-                 "orgUnit" => "DiszpKrYNg8",
-                 "trackedEntityInstance" => "PQfMcpmXeFE",
-                 "trackedEntityType" => "nEenWmSyUEp"
-               },
-               "references" => [%{}]
-             }
-
-      assert Pipeline.assemble_logs_for_run(first_run) ==
-               """
-               -- THIS IS ONLY A SAMPLE --
-               [CLI] ℹ Versions:
-                    ▸ node.js                   18.12.0
-                    ▸ cli                       0.0.32
-                    ▸ runtime                   0.0.20
-                    ▸ compiler                  0.0.26
-                    ▸ @openfn/language-dhis2@latest            3.2.11
-               [CLI] ✔ Loaded state from /tmp/state-1686836010-94749-17tka8f.json
-               [CLI] ℹ Loaded typedefs for @openfn/language-dhis2@latest
-               [CMP] ℹ Added import statement for @openfn/language-dhis2@latest
-               [CMP] ℹ Added export * statement for @openfn/language-dhis2@latest
-               [CLI] ✔ Compiled job from /tmp/expression-1686836010-94749-1cn5qct.js
-               [R/T] ℹ Resolved adaptor @openfn/language-dhis2@latest to version 3.2.11
-               [R/T] ✔ Operation 1 complete in 0ms
-               [CLI] ✔ Writing output to /tmp/output-1686836010-94749-1v3ppcw.json
-               [CLI] ✔ Done in 179ms! ✨
-               """
-
-      assert last_run.exit_code == 0
-
-      assert last_run.input_dataclip.body == %{
-               "data" => %{
-                 "attributes" => [
-                   %{
-                     "attribute" => "zDhUuAYrxNC",
-                     "created" => "2016-08-03T23:49:43.309",
-                     "displayName" => "Last name",
-                     "lastUpdated" => "2016-08-03T23:49:43.309",
-                     "value" => "Kelly",
-                     "valueType" => "TEXT"
-                   },
-                   %{
-                     "attribute" => "w75KJ2mc4zz",
-                     "code" => "MMD_PER_NAM",
-                     "created" => "2016-08-03T23:49:43.308",
-                     "displayName" => "First name",
-                     "lastUpdated" => "2016-08-03T23:49:43.308",
-                     "value" => "John",
-                     "valueType" => "TEXT"
-                   }
-                 ],
-                 "created" => "2014-03-06T05:49:28.256",
-                 "createdAtClient" => "2014-03-06T05:49:28.256",
-                 "lastUpdated" => "2016-08-03T23:49:43.309",
-                 "orgUnit" => "DiszpKrYNg8",
-                 "trackedEntityInstance" => "PQfMcpmXeFE",
-                 "trackedEntityType" => "nEenWmSyUEp"
-               },
-               "references" => [%{}]
-             }
-
-      assert last_run.output_dataclip.body == %{
-               "data" => %{
-                 "spreadsheetId" => "wv5ftwhte",
-                 "tableRange" => "A3:D3",
-                 "updates" => %{"updatedCells" => 4}
-               },
-               "references" => [%{}]
-             }
-
-      assert Pipeline.assemble_logs_for_run(last_run) ==
-               """
-               -- THIS IS ONLY A SAMPLE --
-               [CLI] ℹ Versions:
-                    ▸ node.js                  18.12.0
-                    ▸ cli                      0.0.32
-                    ▸ runtime                  0.0.21
-                    ▸ compiler                 0.0.26
-                    ▸ @openfn/language-http    4.2.6
-               [CLI] ✔ Loaded state from /tmp/state-1686840343-126941-92qxs9.json
-               [CMP] ℹ Added import statement for @openfn/language-http
-               [CMP] ℹ Added export * statement for @openfn/language-http
-               [CLI] ✔ Compiled job from /tmp/expression-1686840343-126941-1pnt7u5.js
-               [R/T] ℹ Resolved adaptor @openfn/language-http to version 4.2.6
-               [R/T] ✔ Operation 1 complete in 0ms
-               [CLI] ✔ Writing output to /tmp/output-1686840343-126941-1hb3ve5.json
-               [CLI] ✔ Done in 216ms! ✨
-               """
+      # |> IO.inspect()
 
       failed_run =
-        Map.get(failure_dhis2_workorder, "attempt_run_0").run
+        runs
+        |> Enum.at(1)
         |> Repo.preload([:input_dataclip, :output_dataclip, :previous])
 
-      assert failed_run.exit_code == 1
+      assert failed_run.exit_reason == "fail"
 
-      assert failed_run.input_dataclip.body == %{
-               "data" => %{
-                 "attributes" => [
-                   %{
-                     "attribute" => "zDhUuAYrxNC",
-                     "created" => "2016-08-03T23:49:43.309",
-                     "displayName" => "Last name",
-                     "lastUpdated" => "2016-08-03T23:49:43.309",
-                     "value" => "Kelly",
-                     "valueType" => "TEXT"
-                   },
-                   %{
-                     "attribute" => "w75KJ2mc4zz",
-                     "code" => "MMD_PER_NAM",
-                     "created" => "2016-08-03T23:49:43.308",
-                     "displayName" => "First name",
-                     "lastUpdated" => "2016-08-03T23:49:43.308",
-                     "value" => "John",
-                     "valueType" => "TEXT"
-                   }
-                 ],
-                 "created" => "2014-03-06T05:49:28.256",
-                 "createdAtClient" => "2014-03-06T05:49:28.256",
-                 "lastUpdated" => "2016-08-03T23:49:43.309",
-                 "orgUnit" => "DiszpKrYNg8",
-                 "trackedEntityInstance" => "PQfMcpmXeFE",
-                 "trackedEntityType" => "nEenWmSyUEp"
-               },
-               "references" => [%{}]
-             }
+      assert get_dataclip_body(failed_run.input_dataclip.id) |> Jason.decode!() ==
+               %{
+                 "data" => %{
+                   "spreadsheetId" => "wv5ftwhte",
+                   "tableRange" => "A3:D3",
+                   "updates" => %{"updatedCells" => 4}
+                 },
+                 "references" => [%{}]
+               }
 
       assert failed_run.output_dataclip == nil
 
@@ -885,5 +861,13 @@ defmodule Lightning.SetupUtilsTest do
       assert Lightning.Workflows.list_workflows() |> Enum.count() == 0
       assert Lightning.Jobs.list_jobs() |> Enum.count() == 0
     end
+  end
+
+  defp get_dataclip_body(dataclip_id) do
+    from(d in Lightning.Invocation.Dataclip,
+      select: type(d.body, :string),
+      where: d.id == ^dataclip_id
+    )
+    |> Repo.one()
   end
 end
