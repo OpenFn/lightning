@@ -915,16 +915,20 @@ defmodule Lightning.SetupUtils do
          input_dataclip,
          run_params
        ) do
-    number_of_runs = length(run_params)
+    attempt_finished_at =
+      DateTime.utc_now()
+      |> DateTime.add(length(run_params) * 2, :second)
+
     [%{exit_reason: final_run_exit_reason} | _rest] = Enum.reverse(run_params)
 
-    {:ok, %{attempt: attempt}} =
+    {:ok, %{workorder: workorder, attempt: attempt}} =
       Multi.new()
       |> Multi.insert(
         :workorder,
         WorkOrders.build_for(trigger, %{
           workflow: workflow,
-          dataclip: input_dataclip
+          dataclip: input_dataclip,
+          last_activity: attempt_finished_at
         })
       )
       |> Multi.update(:attempt, fn %{workorder: %{attempts: [attempt]}} ->
@@ -947,15 +951,17 @@ defmodule Lightning.SetupUtils do
             if(final_run_exit_reason == "success", do: :success, else: :failed),
           claimed_at: DateTime.utc_now() |> DateTime.add(1, :second),
           started_at: DateTime.utc_now() |> DateTime.add(1, :second),
-          finished_at:
-            DateTime.utc_now() |> DateTime.add(number_of_runs * 2, :second)
+          finished_at: attempt_finished_at
         })
         |> Ecto.Changeset.put_assoc(:runs, runs)
       end)
       |> Repo.transaction()
 
-    # TODO: update me for demo!
     Lightning.WorkOrders.update_state(attempt)
+
+    workorder
+    |> Ecto.Changeset.change(last_activity: attempt_finished_at)
+    |> Repo.update()
   end
 
   defp create_dataclip(params) do
