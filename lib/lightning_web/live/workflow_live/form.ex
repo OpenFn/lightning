@@ -4,8 +4,7 @@ defmodule LightningWeb.WorkflowLive.Form do
 
   import Ecto.Changeset
   alias Lightning.Workflows
-  defstruct [:name, :project_id]
-
+  @form_fields %{name: nil, project_id: nil}
   @types %{name: :string, project_id: :string}
 
   @impl true
@@ -59,11 +58,11 @@ defmodule LightningWeb.WorkflowLive.Form do
 
   @impl true
   def update(assigns, socket) do
-    changeset = validate_workflow_name(%__MODULE__{})
+    changeset = validate_workflow_name(@form_fields)
 
     socket =
       socket
-      |> assign(:form, to_form(changeset))
+      |> assign(:form, to_form(changeset, as: :input_form))
       |> assign(:project_id, assigns.id)
       |> assign(:isButtonDisabled, changeset.valid?)
 
@@ -78,7 +77,7 @@ defmodule LightningWeb.WorkflowLive.Form do
       socket
       |> assign(:isButtonDisabled, changeset.valid?)
 
-    {:noreply, assign(socket, form: to_form(changeset))}
+    {:noreply, assign(socket, form: to_form(changeset, as: :input_form))}
   end
 
   @impl true
@@ -97,7 +96,7 @@ defmodule LightningWeb.WorkflowLive.Form do
   end
 
   defp validate_workflow(workflow_name, socket) do
-    validate_workflow_name(%__MODULE__{}, %{
+    validate_workflow_name(@form_fields, %{
       name: workflow_name,
       project_id: socket.assigns.project_id
     })
@@ -113,10 +112,10 @@ defmodule LightningWeb.WorkflowLive.Form do
   end
 
   defp update_form(socket, changeset) do
-    assign(socket, :form, to_form(changeset))
+    assign(socket, :form, to_form(changeset, as: :input_form))
   end
 
-  defp changeset(%__MODULE__{} = workflow, attrs) do
+  defp changeset(workflow, attrs) do
     {workflow, @types}
     |> cast(attrs, Map.keys(@types))
     |> validate_required([:name])
@@ -140,7 +139,7 @@ defmodule LightningWeb.WorkflowLive.Form do
     end
   end
 
-  defp validate_workflow_name(%__MODULE__{} = workflow, attrs \\ %{}) do
+  defp validate_workflow_name(workflow, attrs \\ %{}) do
     changeset(workflow, attrs)
   end
 end
