@@ -146,5 +146,5 @@ defmodule Lightning.Pipeline do
   """
   @spec assemble_logs_for_run(Run.t()) :: binary()
   def assemble_logs_for_run(%Run{} = run),
-    do: logs_for_run(run) |> Enum.map_join("\n", fn log -> log.body end)
+    do: logs_for_run(run) |> Enum.map_join("\n", fn log -> log.message end)
 end
