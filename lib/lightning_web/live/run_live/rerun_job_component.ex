@@ -29,6 +29,7 @@ defmodule LightningWeb.RunLive.RerunJobComponent do
      |> assign(assigns)}
   end
 
+  @impl true
   def handle_event(
         "select_job",
         %{"job" => job_id},

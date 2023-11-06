@@ -332,7 +332,7 @@ defmodule Lightning.WorkOrders do
       join: s in subquery(state_query),
       on: true,
       select: wo,
-      update: [set: [state: s.state, last_activity: ^attempt.finished_at]]
+      update: [set: [state: s.state, last_activity: ^DateTime.utc_now()]]
     )
     |> Repo.update_all([])
     |> then(fn {_, [wo]} -> {:ok, wo} end)

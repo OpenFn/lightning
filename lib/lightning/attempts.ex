@@ -115,6 +115,8 @@ defmodule Lightning.Attempts do
     |> Repo.transaction()
     |> case do
       {:ok, %{attempts: {1, [attempt]}}} ->
+        # TODO: Broadcast here ? Below doesn't seem to update the live view
+        Events.attempt_updated(attempt)
         {:ok, attempt}
 
       {:error, changeset} ->
