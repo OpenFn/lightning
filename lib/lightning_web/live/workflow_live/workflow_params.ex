@@ -10,6 +10,9 @@ defmodule LightningWeb.WorkflowNewLive.WorkflowParams do
   params.
   """
   def apply_form_params(current_params, form_params) do
+    IO.inspect(current_params,label: "Current Params")
+    IO.puts("----------------------------------------------")
+    IO.inspect(form_params,label: "Data from form")
     Map.merge(current_params, form_params, fn _key, current, next ->
       case {current, next} do
         {current, next} when is_list(current) and is_map(next) ->

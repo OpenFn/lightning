@@ -512,8 +512,9 @@ defmodule LightningWeb.WorkflowLive.Components do
           form={@form}
           field={:enabled}
           label="Disable all following Jobs from processing"
-
+         
         />
+
       </h2>
     </div>
     """

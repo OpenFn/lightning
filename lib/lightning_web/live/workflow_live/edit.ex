@@ -260,6 +260,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
                 <!-- Show only the currently selected one -->
                 <.edge_form
                   form={ef}
+                  disabled={!@can_edit_job}
                   cancel_url={
                     ~p"/projects/#{@project.id}/w/#{@workflow.id || "new"}"
                   }
@@ -489,7 +490,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
   @impl true
   def handle_event("get-initial-state", _params, socket) do
-    # IO.inspect(socket.assigns.workflow_params, label: "Workflow Params")
+    IO.inspect(socket.assigns.workflow_params, label: "Workflow Params")
 
     {:noreply,
      socket

@@ -40,7 +40,7 @@ defmodule Lightning.Workflows.Edge do
 
     field :condition, Ecto.Enum, values: @conditions
 
-    # field :enabled, :boolean, default: true
+    field :enabled, :boolean, default: true
 
     field :delete, :boolean, virtual: true
 
