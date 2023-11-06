@@ -350,9 +350,19 @@ defmodule Lightning.Invocation do
         %SearchParams{} = search_params,
         params \\ %{}
       ) do
-    project
-    |> search_workorders_query(search_params)
-    |> Repo.paginate(params)
+    query = search_workorders_query(project, search_params)
+    page = Repo.paginate(query, page: 1, page_size: 10)
+
+    Repo.to_sql(:all, query) |> IO.inspect(label: "TO SQL ----------------")
+
+    query
+    |> Repo.all()
+    |> Enum.count()
+    |> IO.inspect(label: "+++++++++++++++++++++++++++++++++++++++")
+
+    page.entries |> Enum.count() |> IO.inspect(label: "=======================>")
+
+    page
   end
 
   def search_workorders_query(

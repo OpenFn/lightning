@@ -203,11 +203,16 @@ defmodule LightningWeb.RunLive.Index do
         {:selection_toggled, {workorder, selected?}},
         %{assigns: assigns} = socket
       ) do
+    selected_workorder = %Lightning.WorkOrder{
+      id: workorder.id,
+      workflow_id: workorder.workflow_id
+    }
+
     work_orders =
       if selected? do
-        [workorder | assigns.selected_work_orders]
+        [selected_workorder | assigns.selected_work_orders]
       else
-        assigns.selected_work_orders -- [workorder]
+        assigns.selected_work_orders -- [selected_workorder]
       end
 
     {:noreply, assign(socket, selected_work_orders: work_orders)}
@@ -276,7 +281,7 @@ defmodule LightningWeb.RunLive.Index do
     work_orders =
       if selection do
         Enum.map(page.entries, fn entry ->
-          Map.take(entry, [:id, :workflow_id])
+          %Lightning.WorkOrder{id: entry.id, workflow_id: entry.workflow_id}
         end)
       else
         []

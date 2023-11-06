@@ -129,7 +129,7 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
               for={selection_params(@work_order, @entry_selected)}
               phx-change="toggle_selection"
               phx-target={@myself}
-              id={"#{@work_order.id}-selection-form"}
+              id={"selection-form-#{@work_order.id}"}
             >
               <%= Phoenix.HTML.Form.checkbox(f, :selected,
                 id: "select_#{@work_order.id}",

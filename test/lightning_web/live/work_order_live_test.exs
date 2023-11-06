@@ -101,7 +101,7 @@ defmodule LightningWeb.RunWorkOrderTest do
               job: job,
               started_at: build(:timestamp),
               finished_at: build(:timestamp),
-              exit_code: 1,
+              exit_reason: "failed",
               input_dataclip: dataclip
             )
           ]
@@ -380,7 +380,7 @@ defmodule LightningWeb.RunWorkOrderTest do
                 input_dataclip: dataclip_two,
                 started_at: build(:timestamp),
                 finished_at: build(:timestamp),
-                exit_code: 1
+                exit_reason: "failed"
               )
             ]
           )
@@ -849,7 +849,7 @@ defmodule LightningWeb.RunWorkOrderTest do
           runs:
             build_list(1, :run, %{
               job: job,
-              exit_code: 1,
+              exit_reason: "failed",
               started_at: now |> Timex.shift(seconds: -40),
               finished_at: now |> Timex.shift(seconds: -20),
               input_dataclip: dataclip
@@ -961,7 +961,7 @@ defmodule LightningWeb.RunWorkOrderTest do
               input_dataclip: dataclip,
               started_at: build(:timestamp),
               finished_at: build(:timestamp),
-              exit_code: 1
+              exit_reason: "failed"
             )
           ]
         )
@@ -1135,7 +1135,7 @@ defmodule LightningWeb.RunWorkOrderTest do
       assert html =~ "New attempts enqueued for 2 workorders"
 
       view
-      |> form("##{work_order_b.id}-selection-form")
+      |> form("#selection-form-#{work_order_b.id}")
       |> render_change(%{selected: true})
 
       result = render_click(view, "bulk-rerun", %{type: "selected"})
@@ -1215,7 +1215,7 @@ defmodule LightningWeb.RunWorkOrderTest do
 
       # uncheck 1 work order
       view
-      |> form("##{work_order_b.id}-selection-form")
+      |> form("#selection-form-#{work_order_b.id}")
       |> render_change(%{selected: false})
 
       updated_html = render(view)
@@ -1447,7 +1447,7 @@ defmodule LightningWeb.RunWorkOrderTest do
                 input_dataclip: dataclip,
                 started_at: build(:timestamp),
                 finished_at: build(:timestamp),
-                exit_code: 1
+                exit_reason: "failed"
               )
             end)
         )
@@ -1474,7 +1474,7 @@ defmodule LightningWeb.RunWorkOrderTest do
                 input_dataclip: dataclip,
                 started_at: build(:timestamp),
                 finished_at: build(:timestamp),
-                exit_code: 1
+                exit_reason: "failed"
               )
             end)
         )
@@ -1560,7 +1560,7 @@ defmodule LightningWeb.RunWorkOrderTest do
 
       # uncheck 1 work order
       view
-      |> form("##{work_order_3.id}-selection-form")
+      |> form("#selection-form-#{work_order_3.id}")
       |> render_change(%{selected: false})
 
       updated_html = render(view)
@@ -1634,7 +1634,7 @@ defmodule LightningWeb.RunWorkOrderTest do
                "New attempts enqueued for 2 workorders"
 
       view
-      |> form("##{work_order_1.id}-selection-form")
+      |> form("#selection-form-#{work_order_1.id}")
       |> render_change(%{selected: true})
 
       view
@@ -1656,40 +1656,37 @@ defmodule LightningWeb.RunWorkOrderTest do
          } do
       scenarios =
         Enum.map(1..3, fn _n ->
-          workflow = insert(:workflow, project: project)
+          %{triggers: [trigger], jobs: jobs} =
+            workflow = insert(:complex_workflow, project: project)
+
+          dataclip = insert(:dataclip, project: project)
 
           work_order =
             insert(:workorder,
               state: :success,
               workflow: workflow,
-              trigger: build(:trigger),
-              dataclip: build(:dataclip),
+              trigger: trigger,
+              dataclip: dataclip,
               last_activity: DateTime.utc_now()
             )
-
-          jobs = insert_list(5, :job, workflow: workflow)
-
-          runs =
-            Enum.map(
-              jobs,
-              fn j ->
-                build(:run,
-                  input_dataclip: build(:dataclip),
-                  job: j,
-                  started_at: build(:timestamp),
-                  finished_at: build(:timestamp),
-                  exit_code: 0
-                )
-              end
+            |> with_attempt(
+              state: :success,
+              dataclip: dataclip,
+              starting_trigger: trigger,
+              started_at: build(:timestamp),
+              finished_at: build(:timestamp),
+              runs:
+                Enum.map(jobs, fn j ->
+                  build(:run,
+                    job: j,
+                    input_dataclip: dataclip,
+                    output_dataclip: dataclip,
+                    started_at: build(:timestamp),
+                    finished_at: build(:timestamp),
+                    exit_reason: "success"
+                  )
+                end)
             )
-
-          insert(:attempt,
-            work_order: work_order,
-            finished_at: build(:timestamp),
-            starting_trigger: build(:trigger),
-            dataclip: build(:dataclip),
-            runs: runs
-          )
 
           %{work_order: work_order, workflow: workflow, jobs: jobs}
         end)
@@ -1701,7 +1698,7 @@ defmodule LightningWeb.RunWorkOrderTest do
             log: true,
             success: true,
             pending: true,
-            killing: true,
+            killed: true,
             running: true,
             crashed: true,
             failed: true
@@ -1716,7 +1713,7 @@ defmodule LightningWeb.RunWorkOrderTest do
         end
 
         view
-        |> form("##{scenario.work_order.id}-selection-form")
+        |> form("#selection-form-#{scenario.work_order.id}")
         |> render_change(%{selected: true})
 
         for job <- scenario.jobs do
@@ -1724,7 +1721,7 @@ defmodule LightningWeb.RunWorkOrderTest do
         end
 
         view
-        |> form("##{scenario.work_order.id}-selection-form")
+        |> form("#selection-form-#{scenario.work_order.id}")
         |> render_change(%{selected: false})
       end
     end
