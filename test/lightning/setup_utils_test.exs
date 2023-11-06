@@ -223,11 +223,7 @@ defmodule Lightning.SetupUtilsTest do
       assert job_3.adaptor == "@openfn/language-dhis2@latest"
 
       runs =
-        workorder
-        |> Repo.preload(attempts: [:runs])
-        |> Map.get(:attempts)
-        |> List.first()
-        |> Map.get(:runs)
+        workorder |> get_runs_from_workorder()
 
       first_run =
         runs
@@ -555,11 +551,7 @@ defmodule Lightning.SetupUtilsTest do
       assert notify_upload_failed.adaptor == "@openfn/language-http@latest"
 
       runs =
-        openhie_workorder
-        |> Repo.preload(attempts: [:runs])
-        |> Map.get(:attempts)
-        |> List.first()
-        |> Map.get(:runs)
+        openhie_workorder |> get_runs_from_workorder()
 
       first_run =
         runs
@@ -586,8 +578,6 @@ defmodule Lightning.SetupUtilsTest do
       # second run is older than last run
       assert DateTime.diff(second_run.finished_at, last_run.finished_at, :second) <
                0
-
-      # IO.inspect(first_run)
 
       assert first_run.exit_reason == "success"
 
@@ -782,13 +772,7 @@ defmodule Lightning.SetupUtilsTest do
       assert upload_to_google_sheet.adaptor == "@openfn/language-http@latest"
 
       runs =
-        failure_dhis2_workorder
-        |> Repo.preload(attempts: [:runs])
-        |> Map.get(:attempts)
-        |> List.first()
-        |> Map.get(:runs)
-
-      # |> IO.inspect()
+        failure_dhis2_workorder |> get_runs_from_workorder()
 
       failed_run =
         runs
@@ -869,5 +853,13 @@ defmodule Lightning.SetupUtilsTest do
       where: d.id == ^dataclip_id
     )
     |> Repo.one()
+  end
+
+  defp get_runs_from_workorder(workorder, attempt_idx \\ 0) do
+    workorder
+    |> Repo.preload(attempts: [:runs])
+    |> Map.get(:attempts)
+    |> Enum.at(attempt_idx)
+    |> Map.get(:runs)
   end
 end
