@@ -36,11 +36,12 @@ defmodule Lightning.Runtime.RuntimeManager do
   use GenServer, restart: :transient, shutdown: 10_000
   require Logger
 
-  defstruct [
-    :runtime_port,
-    :runtime_os_pid,
-    buffer: []
-  ]
+  defstruct runtime_port: nil,
+            runtime_os_pid: nil,
+            shutdown: false,
+            buffer: []
+
+  @sigterm_status 143
 
   @impl true
   def init(_args) do
@@ -70,7 +71,7 @@ defmodule Lightning.Runtime.RuntimeManager do
   def handle_info({port, {:exit_status, status}}, %{runtime_port: port} = state) do
     Logger.error("Runtime exited with status: #{status}")
     # Data may arrive after exit status on line mode
-    {:noreply, state, 0}
+    {:noreply, %{state | shutdown: status == @sigterm_status}, 0}
   end
 
   def handle_info(:timeout, state) do
@@ -100,9 +101,17 @@ defmodule Lightning.Runtime.RuntimeManager do
     {:stop, :premature_termination, %{state | buffer: []}}
   end
 
-  def handle_info({:EXIT, port, reason}, %{runtime_port: port} = state) do
+  def handle_info(
+        {:EXIT, port, reason},
+        %{runtime_port: port, shutdown: shutdown?} = state
+      ) do
     Logger.debug("Runtime port was stopped with reason: #{reason}")
-    {:stop, :premature_termination, state}
+
+    if shutdown? do
+      {:noreply, %{state | runtime_port: nil, runtime_os_pid: nil}}
+    else
+      {:stop, :premature_termination, state}
+    end
   end
 
   def handle_info({:EXIT, _pid, reason}, state) do
@@ -110,18 +119,21 @@ defmodule Lightning.Runtime.RuntimeManager do
   end
 
   @impl true
-  def terminate(reason, state) do
-    Task.async(fn ->
-      port = state.runtime_port
-      os_pid = state.runtime_os_pid
+  def terminate(reason, %{shutdown: shutdown?} = state) do
+    unless shutdown? do
+      Task.async(fn ->
+        port = state.runtime_port
+        os_pid = state.runtime_os_pid
 
-      if reason not in [:timeout, :premature_termination] and state.runtime_port do
-        Port.connect(port, self())
-        System.cmd("kill", ["-TERM", "#{os_pid}"], into: "", env: %{})
-        handle_pending_msg(port, state.buffer)
-      end
-    end)
-    |> Task.await(:infinity)
+        if reason not in [:timeout, :premature_termination] and
+             state.runtime_port do
+          Port.connect(port, self())
+          System.cmd("kill", ["-TERM", "#{os_pid}"])
+          handle_pending_msg(port, state.buffer)
+        end
+      end)
+      |> Task.await(:infinity)
+    end
 
     state
   end
@@ -179,6 +191,8 @@ defmodule Lightning.Runtime.RuntimeManager do
 
     port = Port.open(init_cmd, opts)
     {:os_pid, os_pid} = Port.info(port, :os_pid)
+    :persistent_term.put(:runtime_os_pid, os_pid)
+
     %{state | runtime_port: port, runtime_os_pid: os_pid}
   end
 
