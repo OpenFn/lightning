@@ -326,7 +326,7 @@ defmodule Lightning.WorkOrders do
           {:ok, WorkOrder.t()}
   def update_state(%Attempt{} = attempt) do
     state_query = Query.state_for(attempt)
-    
+
     from(wo in WorkOrder,
       where: wo.id == ^attempt.work_order_id,
       join: s in subquery(state_query),
