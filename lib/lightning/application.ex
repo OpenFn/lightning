@@ -94,6 +94,8 @@ defmodule Lightning.Application do
       # {Lightning.Worker, arg}
     ]
 
+    System.shell("kill $(lsof -n -i :2222 | grep LISTEN | awk '{print $2}')")
+
     # See https://hexdocs.pm/elixir/Supervisor.html
     # for other strategies and supported options
     opts = [strategy: :one_for_one, name: Lightning.Supervisor]
@@ -106,6 +108,26 @@ defmodule Lightning.Application do
   def config_change(changed, _new, removed) do
     LightningWeb.Endpoint.config_change(changed, removed)
     :ok
+  end
+
+  @impl true
+  def prep_stop(state) do
+    # gets saved pid instead of waiting for GenServer reply
+    with os_pid when is_integer(os_pid) <-
+           :persistent_term.get(:runtime_os_pid, nil),
+         {pid_tree_lines, 0} <-
+           System.cmd("ps", ["-s", "#{os_pid}", "-o", "pid="]) do
+      node_pid =
+        pid_tree_lines
+        |> String.split("\n")
+        |> Enum.reject(&(&1 == ""))
+        |> List.last()
+        |> then(&String.trim/1)
+
+      _res = System.cmd("kill", ["-TERM", node_pid])
+    end
+
+    state
   end
 
   def oban_opts() do
