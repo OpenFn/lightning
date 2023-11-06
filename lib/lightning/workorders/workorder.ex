@@ -34,7 +34,7 @@ defmodule Lightning.WorkOrder do
         ),
       default: :pending
 
-    field :last_activity, :utc_datetime_usec
+    field :last_activity, :utc_datetime_usec, autogenerate: {DateTime, :utc_now, []}
 
     belongs_to :workflow, Workflow
 
