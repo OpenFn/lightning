@@ -483,6 +483,10 @@ defmodule LightningWeb.WorkflowLive.Edit do
             jobs: [:credential]
           ])
 
+        IO.inspect(workflow,
+          label: "----------------Test to see workflow---------------"
+        )
+
         socket |> assign_workflow(workflow) |> assign(page_title: workflow.name)
     end
   end
@@ -542,6 +546,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
   end
 
   def handle_event("validate", %{"workflow" => params}, socket) do
+    IO.inspect(params, label: "-----New Input Params---------------------")
     {:noreply, handle_new_params(socket, params)}
   end
 
@@ -682,6 +687,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
   @impl true
   def handle_info({"form_changed", %{"workflow" => params}}, socket) do
+    IO.puts("=====================When to trigger me ===============")
     {:noreply, handle_new_params(socket, params)}
   end
 
@@ -776,6 +782,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
       next_params =
         WorkflowParams.apply_form_params(socket.assigns.workflow_params, params)
 
+      IO.inspect(next_params, label: "========================Testing output of next params=============")
       socket
       |> apply_params(next_params)
       |> mark_validated()
@@ -802,6 +809,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
   end
 
   defp assign_workflow(socket, workflow) do
+
     socket
     |> assign(workflow: workflow)
     |> apply_params(socket.assigns.workflow_params)
@@ -813,11 +821,16 @@ defmodule LightningWeb.WorkflowLive.Edit do
       socket.assigns.workflow
       |> Workflow.changeset(
         params
+        |> IO.inspect(label: "First Params")
         |> set_default_adaptors()
+        |> IO.inspect(label: "Second Params")
         |> Map.put("project_id", socket.assigns.project.id)
+        |> IO.inspect(label: "Third params")
       )
 
+    # IO.inspect(changeset, lable: "-============Changeset Data ============")
     socket |> assign_changeset(changeset)
+    # |>IO.inspect(label: "Third Parameters")
   end
 
   defp apply_query_params(socket, params) do
@@ -854,8 +867,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
   defp assign_changeset(socket, changeset) do
     # Prepare a new set of workflow params from the changeset
-    workflow_params = changeset |> WorkflowParams.to_map()
-
+    workflow_params = changeset |> WorkflowParams.to_map()|>IO.inspect(label: "++++++++++++++++++This is Workflow Params++++++++++++++++")
     socket
     |> assign(
       changeset: changeset,
@@ -969,6 +981,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
   defp mark_validated(socket) do
     socket
     |> assign(changeset: socket.assigns.changeset |> Map.put(:action, :validate))
+    # |>IO.inspect(label: "---------------------Mark Validated Intereeding------------------------------")
   end
 
   defp box_loader(assigns) do

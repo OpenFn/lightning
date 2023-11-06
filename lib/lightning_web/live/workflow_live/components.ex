@@ -283,7 +283,9 @@ defmodule LightningWeb.WorkflowLive.Components do
   def trigger_form(%{form: form} = assigns) do
     assigns =
       assign(assigns,
-        type: form.source |> Ecto.Changeset.get_field(:type),
+        type:
+          form.source
+          |> Ecto.Changeset.get_field(:type),
         trigger_enabled: Map.get(form.params, "enabled", form.data.enabled)
       )
 
@@ -457,7 +459,10 @@ defmodule LightningWeb.WorkflowLive.Components do
   attr :disabled, :boolean, required: true
   attr :cancel_url, :string, required: true
 
-  def edge_form(assigns) do
+  def edge_form(%{form: form} = assigns) do
+    # IO.inspect(assigns,label: "Assigns to check form")
+    # assigns.form.source |> Ecto.Changeset.apply_changes()
+    # |>IO.inspect(label: "--------------------CHECKING-------------------")
     edge_options =
       case assigns.form.source |> Ecto.Changeset.apply_changes() do
         %{source_trigger_id: nil, source_job_id: job_id}
@@ -476,7 +481,13 @@ defmodule LightningWeb.WorkflowLive.Components do
           []
       end
 
-    assigns = assigns |> assign(:edge_options, edge_options)
+    assigns =
+      assigns
+      |> assign(:edge_options, edge_options)
+      |> assign(
+        :edge_enabled,
+        Map.get(form.params, "enabled", form.data.enabled)
+      )
 
     ~H"""
     <% Phoenix.HTML.Form.hidden_inputs_for(@form) %>
@@ -506,6 +517,15 @@ defmodule LightningWeb.WorkflowLive.Components do
         disabled={@disabled}
       />
     <% end %>
+
+    <Form.check_box
+      form={@form}
+      field={:enabled}
+      label="Disable this edge"
+      checked_value={false}
+      unchecked_value={true}
+      value={@edge_enabled}
+    />
     """
   end
 
