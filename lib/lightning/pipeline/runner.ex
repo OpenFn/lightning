@@ -72,13 +72,17 @@ defmodule Lightning.Pipeline.Runner do
       dataclip_result
     end
 
+    # TODO - this, along with everything else in the runner, will probably be deleted in a hot second.
     defp save_logs_for_run(logs, run) do
       Enum.each(logs, fn log ->
-        Invocation.create_log_line(%{
+        %Lightning.Invocation.LogLine{}
+        |> Ecto.Changeset.change(%{
           run: run,
           message: log,
           timestamp: Timex.now()
         })
+        |> LogLine.validate()
+        |> Repo.insert!()
       end)
     end
   end

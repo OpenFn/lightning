@@ -212,21 +212,6 @@ defmodule Lightning.InvocationTest do
                } in errors
     end
 
-    test "create_log_line/2 create log lines for a given run" do
-      run = insert(:run)
-
-      Invocation.create_log_line(%{
-        run: run,
-        message: "log",
-        timestamp: Timex.now()
-      })
-
-      run_logs = Invocation.get_run!(run.id) |> Pipeline.logs_for_run()
-
-      assert length(run_logs) == 1
-      assert [%{message: "log"}] = run_logs
-    end
-
     test "update_run/2 with valid data updates the run" do
       run = insert(:run) |> Repo.preload(:log_lines)
 
@@ -719,11 +704,13 @@ defmodule Lightning.InvocationTest do
           "run_id" => Ecto.UUID.generate()
         })
 
-      Invocation.create_log_line(%{
+      %Lightning.Invocation.LogLine{
+        attempt: attempt,
         run: run,
         message: "Sadio Mane is playing in Senegal and Al Nasr",
         timestamp: Timex.now()
-      })
+      }
+      |> Repo.insert!()
 
       assert Lightning.Invocation.search_workorders(
                project,

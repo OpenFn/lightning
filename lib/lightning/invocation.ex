@@ -299,13 +299,6 @@ defmodule Lightning.Invocation do
     end
   end
 
-  def create_log_line(attrs) do
-    %LogLine{}
-    |> Ecto.Changeset.change(attrs)
-    |> LogLine.validate()
-    |> Repo.insert!()
-  end
-
   @doc """
   Deletes a run.
 
@@ -446,9 +439,9 @@ defmodule Lightning.Invocation do
         from(
           [workorder: workorder] in query,
           left_join: attempt in assoc(workorder, :attempts),
+          left_join: log_line in assoc(attempt, :log_lines),
           left_join: run in assoc(attempt, :runs),
           left_join: dataclip in assoc(run, :input_dataclip),
-          left_join: logline in assoc(run, :log_lines),
           where:
             fragment(
               "CAST(? AS TEXT) iLIKE ?",
@@ -457,7 +450,7 @@ defmodule Lightning.Invocation do
             ) or
               fragment(
                 "CAST(? AS TEXT) iLIKE ?",
-                logline.message,
+                log_line.message,
                 ^"%#{search_term}%"
               )
         )
@@ -480,12 +473,11 @@ defmodule Lightning.Invocation do
         from(
           [workorder: workorder] in query,
           left_join: attempt in assoc(workorder, :attempts),
-          left_join: run in assoc(attempt, :runs),
-          left_join: logline in assoc(run, :log_lines),
+          left_join: log_line in assoc(attempt, :log_lines),
           where:
             fragment(
               "CAST(? AS TEXT) iLIKE ?",
-              logline.message,
+              log_line.message,
               ^"%#{search_term}%"
             )
         )

@@ -12,6 +12,7 @@ defmodule Lightning.Attempt do
   alias Lightning.InvocationReason
   alias Lightning.WorkOrder
   alias Lightning.Invocation.Run
+  alias Lightning.Invocation.LogLine
   alias Lightning.AttemptRun
   alias Lightning.Workflows.Job
   alias Lightning.Workflows.Trigger
@@ -54,6 +55,7 @@ defmodule Lightning.Attempt do
 
     has_one :workflow, through: [:work_order, :workflow]
 
+    has_many :log_lines, LogLine
     many_to_many :runs, Run, join_through: AttemptRun
 
     field :state, Ecto.Enum,
