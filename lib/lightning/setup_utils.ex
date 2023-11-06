@@ -10,7 +10,6 @@ defmodule Lightning.SetupUtils do
     Workflows,
     Repo,
     Credentials,
-    AttemptRun,
     WorkOrders,
     VersionControl
   }
@@ -962,10 +961,5 @@ defmodule Lightning.SetupUtils do
     {:ok, dataclip} = Lightning.Invocation.create_dataclip(params)
 
     dataclip
-  end
-
-  defp adaptor_for_log(run) do
-    run_with_job = Repo.preload(run, :job)
-    run_with_job.job.adaptor
   end
 end
