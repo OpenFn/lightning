@@ -21,6 +21,7 @@ defmodule Lightning.Invocation.Dataclip do
   """
   use Ecto.Schema
   import Ecto.Changeset
+  import Ecto.Query
 
   alias Lightning.Invocation.Run
   alias Lightning.Projects.Project
@@ -93,5 +94,9 @@ defmodule Lightning.Invocation.Dataclip do
 
   def get_types do
     @source_types
+  end
+
+  def body_included_query do
+    from d in __MODULE__, select: %{d | body: d.body}
   end
 end

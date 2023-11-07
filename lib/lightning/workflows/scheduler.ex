@@ -3,7 +3,6 @@ defmodule Lightning.Workflows.Scheduler do
   The Scheduler is responsible for finding jobs that are ready to run based on
   their cron schedule, and then running them.
   """
-  alias Lightning.WorkOrders
 
   use Oban.Worker,
     queue: :scheduler,
@@ -16,9 +15,8 @@ defmodule Lightning.Workflows.Scheduler do
 
   alias Lightning.{
     Invocation,
-    Pipeline,
     Repo,
-    WorkOrderService,
+    WorkOrders,
     Workflows
   }
 

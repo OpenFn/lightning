@@ -1,4 +1,6 @@
 defmodule Lightning.JobsTest do
+  alias Lightning.Attempt
+  alias Lightning.Invocation.Dataclip
   use Lightning.DataCase, async: true
 
   alias Lightning.Jobs
@@ -333,18 +335,17 @@ defmodule Lightning.JobsTest do
           workflow: job.workflow
         })
 
-      edge =
-        insert(:edge, %{
-          workflow: job.workflow,
-          source_trigger: trigger,
-          target_job: job
-        })
+      insert(:edge, %{
+        workflow: job.workflow,
+        source_trigger: trigger,
+        target_job: job
+      })
 
       dataclip = insert(:dataclip)
 
       attempt =
         insert(:attempt,
-          workorder:
+          work_order:
             build(:workorder,
               workflow: job.workflow,
               dataclip: dataclip,
@@ -359,33 +360,29 @@ defmodule Lightning.JobsTest do
               exit_code: 0,
               job: job,
               input_dataclip: dataclip,
-              output_dataclip: build(:dataclip, body: %{"changed" => true})
+              output_dataclip:
+                build(:dataclip, type: :run_result, body: %{"changed" => true})
             )
           ]
         )
 
-      old =
-        %Workflows.Job{id: job.id}
-        |> Lightning.Invocation.Query.last_successful_run_for_job()
-        |> Repo.one()
-        |> Repo.preload(:input_dataclip)
-        |> Repo.preload(:output_dataclip)
+      [old_run] = attempt.runs
 
       _result = Scheduler.enqueue_cronjobs()
 
-      new =
-        %Workflows.Job{id: job.id}
-        |> Lightning.Invocation.Query.last_successful_run_for_job()
+      new_attempt =
+        Attempt
+        |> last(:inserted_at)
+        |> preload(dataclip: ^Dataclip.body_included_query())
         |> Repo.one()
-        |> Repo.preload(:input_dataclip)
-        |> Repo.preload(:output_dataclip)
 
-      assert old.input_dataclip.type == :http_request
-      assert old.input_dataclip.body == %{}
+      assert attempt.dataclip.type == :http_request
+      assert old_run.input_dataclip.type == :http_request
+      assert old_run.input_dataclip.body == %{}
 
-      assert new.input_dataclip.type == :run_result
-      assert new.input_dataclip.body == old.output_dataclip.body
-      assert new.output_dataclip.body == %{"changed" => true}
+      refute new_attempt.id == attempt.id
+      assert new_attempt.dataclip.type == :run_result
+      assert new_attempt.dataclip.body == old_run.output_dataclip.body
     end
   end
 end
