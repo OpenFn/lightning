@@ -1,6 +1,5 @@
 defmodule Lightning.SetupUtilsTest do
   alias Lightning.Invocation
-  alias Lightning.Pipeline
   use Lightning.DataCase, async: true
   # use Mimic
 

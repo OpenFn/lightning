@@ -4,7 +4,6 @@ defmodule Lightning.InvocationTest do
   import Lightning.Factories
 
   alias Lightning.Attempts
-  alias Lightning.Pipeline
   alias Lightning.WorkOrders.SearchParams
   alias Lightning.Invocation
   alias Lightning.Invocation.Run
@@ -579,16 +578,16 @@ defmodule Lightning.InvocationTest do
 
     test "filters workorders by last_activity" do
       project = insert(:project)
-      dataclip = insert(:dataclip)
+      _dataclip = insert(:dataclip)
 
-      {workflow, trigger, _job} =
+      {workflow, _trigger, _job} =
         build_workflow(project: project, name: "chw-help")
 
       now = Timex.now()
       past_time = Timex.shift(now, days: -1)
       future_time = Timex.shift(now, days: 1)
 
-      wo_past =
+      _wo_past =
         insert(:workorder,
           workflow: workflow,
           inserted_at: past_time,
@@ -602,7 +601,7 @@ defmodule Lightning.InvocationTest do
           last_activity: now
         )
 
-      wo_future =
+      _wo_future =
         insert(:workorder,
           workflow: workflow,
           inserted_at: past_time,
@@ -728,18 +727,21 @@ defmodule Lightning.InvocationTest do
   end
 
   describe "run logs" do
-    @tag :skip
     test "logs_for_run/1 returns an array of the logs for a given run" do
       run =
         insert(:run,
-          log_lines: [%{body: "Hello"}, %{body: "I am a"}, %{body: "log"}]
+          log_lines: [
+            %{message: "Hello", timestamp: build(:timestamp)},
+            %{message: "I am a", timestamp: build(:timestamp)},
+            %{message: "log", timestamp: build(:timestamp)}
+          ]
         )
 
       log_lines = Invocation.logs_for_run(run)
 
       assert Enum.count(log_lines) == 3
 
-      assert log_lines |> Enum.map(fn log_line -> log_line.body end) == [
+      assert log_lines |> Enum.map(fn log_line -> log_line.message end) == [
                "Hello",
                "I am a",
                "log"
@@ -749,7 +751,11 @@ defmodule Lightning.InvocationTest do
     test "assemble_logs_for_run/1 returns a string representation of the logs for a run" do
       run =
         insert(:run,
-          log_lines: [%{body: "Hello"}, %{body: "I am a"}, %{body: "log"}]
+          log_lines: [
+            %{message: "Hello", timestamp: build(:timestamp)},
+            %{message: "I am a", timestamp: build(:timestamp)},
+            %{message: "log", timestamp: build(:timestamp)}
+          ]
         )
 
       log_string = Invocation.assemble_logs_for_run(run)
