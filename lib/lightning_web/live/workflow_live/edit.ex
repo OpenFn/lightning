@@ -682,7 +682,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
   @impl true
   def handle_info({"form_changed", %{"workflow" => params}}, socket) do
-    IO.puts("=====================When to trigger me ===============")
     {:noreply, handle_new_params(socket, params)}
   end
 

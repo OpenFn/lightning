@@ -13,13 +13,7 @@ defmodule LightningWeb.WorkflowNewLive.WorkflowParams do
     Map.merge(current_params, form_params, fn _key, current, next ->
       case {current, next} do
         {current, next} when is_list(current) and is_map(next) ->
-          if Map.has_key?(form_params, "edges") &&
-               Map.has_key?(form_params["edges"], "0") &&
-               Map.get(form_params["edges"]["0"], "enabled") == "false" do
-            Enum.map(current, &Map.put(&1, "enabled", false))
-          else
-            merge_list_params(current, next)
-          end
+          merge_list_params(current, next)
 
         {current, next} when is_map(current) ->
           Map.merge(current, next)
