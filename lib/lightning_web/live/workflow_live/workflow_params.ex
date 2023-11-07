@@ -10,26 +10,20 @@ defmodule LightningWeb.WorkflowNewLive.WorkflowParams do
   params.
   """
   def apply_form_params(current_params, form_params) do
-    # IO.inspect(current_params,label: "=====Current form Param=====")
-    # IO.puts("------------------------------------------------------")
-    # IO.inspect(form_params,label: "-----New PARAMS----------------")
+
     Map.merge(current_params, form_params, fn _key, current, next ->
       case {current, next} do
         {current, next} when is_list(current) and is_map(next) ->
-          IO.inspect(current, label: "Current Caller")
-          IO.puts("====================================================")
-          IO.inspect(next, label: "Next Caller")
 
-          IO.puts(
-            "------------------I am a List when i get called----------------------"
-          )
-
-          merge_list_params(current, next)
+          if Map.has_key?(form_params, "edges") &&
+               Map.has_key?(form_params["edges"], "0") &&
+               Map.get(form_params["edges"]["0"], "enabled") == "false" do
+            Enum.map(current, &Map.put(&1, "enabled", false))
+          else
+            merge_list_params(current, next)
+          end
 
         {current, next} when is_map(current) ->
-          IO.puts(
-            "------------------I am a Map when i get called----------------------"
-          )
 
           Map.merge(current, next)
 
@@ -41,7 +35,6 @@ defmodule LightningWeb.WorkflowNewLive.WorkflowParams do
 
   defp merge_list_params(source, new) when is_list(source) do
     new
-    |> IO.inspect(label: "This is crazy")
     |> Enum.reduce(source, fn {index, val}, acc ->
       acc |> List.update_at(index |> key_as_int(), &Map.merge(&1, val))
     end)
