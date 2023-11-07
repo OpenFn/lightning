@@ -266,39 +266,6 @@ defmodule Lightning.Invocation do
   end
 
   @doc """
-  Updates a run.
-
-  ## Examples
-
-      iex> update_run(run, %{field: new_value})
-      {:ok, %Run{}}
-
-      iex> update_run(run, %{field: bad_value})
-      {:error, %Ecto.Changeset{}}
-
-  """
-  def update_run(%Run{} = run, attrs) do
-    run
-    |> Run.changeset(attrs)
-    |> Repo.update()
-    |> case do
-      {:ok, run} = res ->
-        LightningWeb.Endpoint.broadcast!(
-          "run:#{run.id}",
-          "update",
-          %{}
-        )
-
-        Lightning.WorkOrderService.attempt_updated(run)
-
-        res
-
-      res ->
-        res
-    end
-  end
-
-  @doc """
   Deletes a run.
 
   ## Examples
@@ -532,4 +499,20 @@ defmodule Lightning.Invocation do
       ]
     )
   end
+
+  @doc """
+  Return all logs for a run as a list
+  """
+  @spec logs_for_run(Run.t()) :: list()
+  def logs_for_run(%Run{} = run),
+    do: Repo.preload(run, :log_lines) |> Map.get(:log_lines, [])
+
+  def assemble_logs_for_run(nil), do: nil
+
+  @doc """
+  Return all logs for a run as a string of text, separated by new line \n breaks
+  """
+  @spec assemble_logs_for_run(Run.t()) :: binary()
+  def assemble_logs_for_run(%Run{} = run),
+    do: logs_for_run(run) |> Enum.map_join("\n", fn log -> log.message end)
 end

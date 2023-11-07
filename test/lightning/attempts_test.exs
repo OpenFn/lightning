@@ -1,4 +1,5 @@
 defmodule Lightning.AttemptsTest do
+  alias Lightning.Invocation
   use Lightning.DataCase, async: true
   import Lightning.Factories
 
@@ -202,17 +203,35 @@ defmodule Lightning.AttemptsTest do
       {:ok, run} =
         Attempts.complete_run(%{
           run_id: run.id,
-          reason: "normal",
+          reason: "success",
           output_dataclip: ~s({"foo": "bar"}),
           output_dataclip_id: Ecto.UUID.generate(),
           attempt_id: attempt.id,
           project_id: workflow.project_id
         })
 
-      assert %{"foo" => "bar"} =
-               Lightning.Invocation.get_output_dataclip_query(run)
-               |> select([d], d.body)
-               |> Repo.one()
+      run =
+        run
+        |> Repo.preload(output_dataclip: Invocation.Query.dataclip_with_body())
+
+      assert run.exit_reason == "success"
+      assert run.output_dataclip.body == %{"foo" => "bar"}
+    end
+
+    test "with invalid data returns error changeset" do
+      dataclip = insert(:dataclip)
+      %{triggers: [trigger], jobs: [job]} = workflow = insert(:simple_workflow)
+
+      %{attempts: [attempt]} =
+        work_order_for(trigger, workflow: workflow, dataclip: dataclip)
+        |> insert()
+
+      run = insert(:run, attempts: [attempt], job: job, input_dataclip: dataclip)
+
+      assert {:error, %Ecto.Changeset{}} =
+               Attempts.complete_run(%{
+                 run_id: run.id
+               })
     end
   end
 

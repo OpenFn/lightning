@@ -1,8 +1,8 @@
 defmodule LightningWeb.RunLive.Components do
   @moduledoc false
+  alias Lightning.Invocation
   use LightningWeb, :component
   import LightningWeb.RouteHelpers
-  alias Lightning.Pipeline
   alias Lightning.WorkOrders.SearchParams
   alias Phoenix.LiveView.JS
 
@@ -176,7 +176,8 @@ defmodule LightningWeb.RunLive.Components do
       assign(
         assigns,
         :log,
-        Pipeline.logs_for_run(assigns.run) |> Enum.map(fn log -> log.message end)
+        Invocation.logs_for_run(assigns.run)
+        |> Enum.map(fn log -> log.message end)
       )
 
     ~H"""

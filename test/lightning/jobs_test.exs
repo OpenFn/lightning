@@ -327,8 +327,11 @@ defmodule Lightning.JobsTest do
 
       assert attempt.starting_trigger_id == trigger.id
 
-      attempt = Repo.preload(attempt, [:dataclip])
+      attempt =
+        Repo.preload(attempt, dataclip: Invocation.Query.dataclip_with_body())
+
       assert attempt.dataclip.type == :global
+      assert attempt.dataclip.body == %{}
     end
   end
 

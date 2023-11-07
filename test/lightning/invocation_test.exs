@@ -4,7 +4,6 @@ defmodule Lightning.InvocationTest do
   import Lightning.Factories
 
   alias Lightning.Attempts
-  alias Lightning.Pipeline
   alias Lightning.WorkOrders.SearchParams
   alias Lightning.Invocation
   alias Lightning.Invocation.Run
@@ -193,7 +192,7 @@ defmodule Lightning.InvocationTest do
                )
 
       assert run.exit_code == 42
-      assert run |> Pipeline.logs_for_run() == []
+      assert run |> Invocation.logs_for_run() == []
       assert run.finished_at == ~U[2022-02-02 11:49:00.000000Z]
       assert run.started_at == ~U[2022-02-02 11:49:00.000000Z]
     end
@@ -210,30 +209,6 @@ defmodule Lightning.InvocationTest do
                  "does not exist",
                  [constraint: :foreign, constraint_name: "runs_event_id_fkey"]
                } in errors
-    end
-
-    test "update_run/2 with valid data updates the run" do
-      run = insert(:run) |> Repo.preload(:log_lines)
-
-      update_attrs = %{
-        exit_code: 43,
-        finished_at: ~U[2022-02-03 11:49:00.000000Z],
-        log_lines: [],
-        started_at: ~U[2022-02-03 11:49:00.000000Z]
-      }
-
-      assert {:ok, %Run{} = run} = Invocation.update_run(run, update_attrs)
-      assert run.exit_code == 43
-      assert run.finished_at == ~U[2022-02-03 11:49:00.000000Z]
-      assert Pipeline.logs_for_run(run) == []
-      assert run.started_at == ~U[2022-02-03 11:49:00.000000Z]
-    end
-
-    test "update_run/2 with invalid data returns error changeset" do
-      run = insert(:run)
-
-      assert {:error, %Ecto.Changeset{}} =
-               Invocation.update_run(run, @invalid_attrs)
     end
 
     test "delete_run/1 deletes the run" do
@@ -603,16 +578,16 @@ defmodule Lightning.InvocationTest do
 
     test "filters workorders by last_activity" do
       project = insert(:project)
-      dataclip = insert(:dataclip)
+      _dataclip = insert(:dataclip)
 
-      {workflow, trigger, _job} =
+      {workflow, _trigger, _job} =
         build_workflow(project: project, name: "chw-help")
 
       now = Timex.now()
       past_time = Timex.shift(now, days: -1)
       future_time = Timex.shift(now, days: 1)
 
-      wo_past =
+      _wo_past =
         insert(:workorder,
           workflow: workflow,
           inserted_at: past_time,
@@ -626,7 +601,7 @@ defmodule Lightning.InvocationTest do
           last_activity: now
         )
 
-      wo_future =
+      _wo_future =
         insert(:workorder,
           workflow: workflow,
           inserted_at: past_time,
@@ -748,6 +723,48 @@ defmodule Lightning.InvocationTest do
                    "search_fields" => ["log"]
                  })
                ).entries
+    end
+  end
+
+  describe "run logs" do
+    test "logs_for_run/1 returns an array of the logs for a given run" do
+      run =
+        insert(:run,
+          log_lines: [
+            %{message: "Hello", timestamp: build(:timestamp)},
+            %{message: "I am a", timestamp: build(:timestamp)},
+            %{message: "log", timestamp: build(:timestamp)}
+          ]
+        )
+
+      log_lines = Invocation.logs_for_run(run)
+
+      assert Enum.count(log_lines) == 3
+
+      assert log_lines |> Enum.map(fn log_line -> log_line.message end) == [
+               "Hello",
+               "I am a",
+               "log"
+             ]
+    end
+
+    test "assemble_logs_for_run/1 returns a string representation of the logs for a run" do
+      run =
+        insert(:run,
+          log_lines: [
+            %{message: "Hello", timestamp: build(:timestamp)},
+            %{message: "I am a", timestamp: build(:timestamp)},
+            %{message: "log", timestamp: build(:timestamp)}
+          ]
+        )
+
+      log_string = Invocation.assemble_logs_for_run(run)
+
+      assert log_string == "Hello\nI am a\nlog"
+    end
+
+    test "assemble_logs_for_run/1 returns nil when given a nil run" do
+      assert Invocation.assemble_logs_for_run(nil) == nil
     end
   end
 end
