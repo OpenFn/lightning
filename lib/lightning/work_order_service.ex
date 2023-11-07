@@ -40,17 +40,6 @@ defmodule Lightning.WorkOrderService do
     |> Ecto.Changeset.put_assoc(:reason, reason)
   end
 
-  def attempt_updated(%Run{} = run) do
-    run = run |> Repo.preload([:attempts, job: :workflow])
-
-    for attempt <- run.attempts do
-      broadcast(
-        run.job.workflow.project_id,
-        %Events.AttemptUpdated{attempt: attempt}
-      )
-    end
-  end
-
   def subscribe(project_id) do
     Phoenix.PubSub.subscribe(@pubsub, topic(project_id))
   end
