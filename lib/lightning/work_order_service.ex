@@ -5,13 +5,8 @@ defmodule Lightning.WorkOrderService do
 
   import Ecto.Query, warn: false
 
-  alias Lightning.Invocation.Run
   alias Lightning.Repo
-
-  alias Lightning.{
-    WorkOrder
-  }
-
+  alias Lightning.{WorkOrder}
   alias Lightning.WorkOrders.Events
 
   @pubsub Lightning.PubSub
@@ -42,10 +37,6 @@ defmodule Lightning.WorkOrderService do
 
   def subscribe(project_id) do
     Phoenix.PubSub.subscribe(@pubsub, topic(project_id))
-  end
-
-  defp broadcast(project_id, msg) do
-    Phoenix.PubSub.broadcast(@pubsub, topic(project_id), {__MODULE__, msg})
   end
 
   defp topic(project_id), do: "project:#{project_id}"
