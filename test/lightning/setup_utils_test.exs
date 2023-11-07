@@ -588,7 +588,7 @@ defmodule Lightning.SetupUtilsTest do
                    "patientId" => 1234,
                    "patientData" => %{
                      "name" => "Wally",
-                     "surname" => "Robertston"
+                     "surname" => "Robertson"
                    }
                  }
                }
@@ -600,7 +600,7 @@ defmodule Lightning.SetupUtilsTest do
                    "patientId" => 1234,
                    "patientData" => %{
                      "name" => "Wally",
-                     "surname" => "Robertston"
+                     "surname" => "Robertson"
                    }
                  },
                  "references" => []
@@ -636,7 +636,7 @@ defmodule Lightning.SetupUtilsTest do
                    "patientId" => 1234,
                    "patientData" => %{
                      "name" => "Wally",
-                     "surname" => "Robertston"
+                     "surname" => "Robertson"
                    }
                  },
                  "references" => []
@@ -648,7 +648,7 @@ defmodule Lightning.SetupUtilsTest do
                    "formId" => "early_enrollment",
                    "patientData" => %{
                      "name" => "Wally",
-                     "surname" => "Robertston"
+                     "surname" => "Robertson"
                    },
                    "patientId" => 1234
                  },
@@ -683,7 +683,7 @@ defmodule Lightning.SetupUtilsTest do
                    "formId" => "early_enrollment",
                    "patientData" => %{
                      "name" => "Wally",
-                     "surname" => "Robertston"
+                     "surname" => "Robertson"
                    },
                    "patientId" => 1234
                  },
@@ -696,7 +696,7 @@ defmodule Lightning.SetupUtilsTest do
                    "formId" => "early_enrollment",
                    "patientData" => %{
                      "name" => "Wally",
-                     "surname" => "Robertston"
+                     "surname" => "Robertson"
                    },
                    "patientId" => 1234
                  },

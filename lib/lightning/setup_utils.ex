@@ -545,7 +545,7 @@ defmodule Lightning.SetupUtils do
     http_body = %{
       "formId" => "early_enrollment",
       "patientId" => 1234,
-      "patientData" => %{"name" => "Wally", "surname" => "Robertston"}
+      "patientData" => %{"name" => "Wally", "surname" => "Robertson"}
     }
 
     dataclip =
