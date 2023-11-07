@@ -44,8 +44,20 @@ defmodule LightningWeb.RunLive.Components do
   attr :can_rerun_job, :boolean, required: true
 
   def run_list_item(assigns) do
+    is_clone =
+      DateTime.compare(assigns.run.inserted_at, assigns.attempt.inserted_at) ==
+        :lt
+
+    base_classes = ~w(grid grid-cols-8 items-center)
+
+    run_item_classes =
+      if is_clone, do: base_classes ++ ~w(opacity-50), else: base_classes
+
+    assigns =
+      assign(assigns, is_clone: is_clone, run_item_classes: run_item_classes)
+
     ~H"""
-    <div role="row" class="grid grid-cols-8 items-center">
+    <div role="row" class={@run_item_classes}>
       <div
         role="cell"
         class="col-span-3 py-2 text-sm font-normal text-left rtl:text-right text-gray-500"
@@ -85,6 +97,14 @@ defmodule LightningWeb.RunLive.Components do
             >
               <span><%= @run.job.name %></span>
             </.link>
+            <%= if @is_clone do %>
+              <div class="flex gap-1">
+                <Heroicons.document_duplicate
+                  solid
+                  class="mr-1.5 mt-1 h-3 w-3 flex-shrink-0 text-gray-500"
+                />
+              </div>
+            <% end %>
             <div class="flex gap-1">
               <%= if @can_rerun_job && @run.exit_reason do %>
                 <span
