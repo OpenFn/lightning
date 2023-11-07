@@ -3,7 +3,6 @@ defmodule LightningWeb.RunLive.Components do
   alias Lightning.Invocation
   use LightningWeb, :component
   import LightningWeb.RouteHelpers
-  alias Lightning.Pipeline
   alias Lightning.WorkOrders.SearchParams
   alias Phoenix.LiveView.JS
 
