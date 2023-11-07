@@ -58,9 +58,5 @@ defmodule Lightning.Invocation.Query do
   By default, the dataclip body is not returned via a query. This query selects
   the body specifically.
   """
-  def dataclip_with_body() do
-    from(d in Dataclip,
-      select: [:id, :body, :type, :project_id, :inserted_at, :updated_at]
-    )
-  end
+  def dataclip_with_body, do: from(d in Dataclip, select: %{d | body: d.body})
 end

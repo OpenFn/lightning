@@ -1,8 +1,8 @@
 defmodule Lightning.JobsTest do
-  alias Lightning.Attempt
-  alias Lightning.Invocation.Dataclip
   use Lightning.DataCase, async: true
 
+  alias Lightning.Attempt
+  alias Lightning.Invocation
   alias Lightning.Jobs
   alias Lightning.Repo
   alias Lightning.Workflows.Job
@@ -384,7 +384,7 @@ defmodule Lightning.JobsTest do
       new_attempt =
         Attempt
         |> last(:inserted_at)
-        |> preload(dataclip: ^Dataclip.body_included_query())
+        |> preload(dataclip: ^Invocation.Query.dataclip_with_body())
         |> Repo.one()
 
       assert attempt.dataclip.type == :http_request
