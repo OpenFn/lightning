@@ -220,10 +220,6 @@ defmodule LightningWeb.WorkflowNewLive.WorkflowParamsTest do
     } do
       assert WorkflowParams.to_patches(original_params, params) ==
                [
-                 # Remove when https://github.com/corka149/jsonpatch/issues/16
-                 # is fixed and released.
-                 %{op: "add", path: "/project_id", value: nil},
-                 %{op: "add", path: "/name", value: nil},
                  %{op: "remove", path: "/jobs/1"},
                  %{op: "remove", path: "/jobs/0"}
                ]
