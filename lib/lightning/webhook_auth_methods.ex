@@ -372,32 +372,32 @@ defmodule Lightning.WebhookAuthMethods do
   end
 
   @doc """
-  Schedules a given credential for deletion.
+  Schedules a given webhook auth method for deletion.
 
   The deletion date is determined based on the `:purge_deleted_after_days` configuration
-  in the application environment. If this configuration is absent, the credential is scheduled
+  in the application environment. If this configuration is absent, the webhook auth method is scheduled
   for immediate deletion.
 
   The function will also perform necessary side effects such as:
-    - Removing associations of the credential.
-    - Notifying the owner of the credential about the scheduled deletion.
+    - Removing associations of the webhook auth method.
+    - Notifying the owner of the webhook auth method about the scheduled deletion.
 
   ## Parameters
 
-    - `credential`: A `Credential` struct that is to be scheduled for deletion.
+    - `webhook_auth_method`: A `WebhookAuthMethod` struct that is to be scheduled for deletion.
 
   ## Returns
 
-    - `{:ok, credential}`: Returns an `:ok` tuple with the updated credential struct if the
+    - `{:ok, webhook_auth_method}`: Returns an `:ok` tuple with the updated webhook auth method struct if the
       update was successful.
     - `{:error, changeset}`: Returns an `:error` tuple with the changeset if the update failed.
 
   ## Examples
 
-      iex> schedule_credential_deletion(%Credential{id: some_id})
-      {:ok, %Credential{}}
+      iex> schedule_for_deletion(%WebhookAuthMethod{id: some_id})
+      {:ok, %WebhookAuthMethod{}}
 
-      iex> schedule_credential_deletion(%Credential{})
+      iex> schedule_for_deletion(%WebhookAuthMethod{})
       {:error, %Ecto.Changeset{}}
 
   """

@@ -240,7 +240,7 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodModalComponent do
 
     {:noreply,
      socket
-     |> put_flash(:info, "Trigger webhook auth method updated successfully")
+     |> put_flash(:info, "Trigger webhook auth methods updated successfully")
      |> push_navigate(to: socket.assigns.return_to)}
   end
 
