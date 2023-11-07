@@ -1,5 +1,4 @@
 defmodule LightningWeb.RunWorkOrderTest do
-  alias Lightning.Invocation
   alias Lightning.Attempts
   use LightningWeb.ConnCase, async: true
 
@@ -60,7 +59,7 @@ defmodule LightningWeb.RunWorkOrderTest do
               job: job,
               started_at: build(:timestamp),
               finished_at: nil,
-              exit_code: nil,
+              exit_reason: nil,
               input_dataclip: dataclip
             }
           ]
@@ -101,7 +100,7 @@ defmodule LightningWeb.RunWorkOrderTest do
               job: job,
               started_at: build(:timestamp),
               finished_at: build(:timestamp),
-              exit_code: 1,
+              exit_reason: "failed",
               input_dataclip: dataclip
             )
           ]
@@ -347,7 +346,7 @@ defmodule LightningWeb.RunWorkOrderTest do
                 input_dataclip: dataclip,
                 started_at: build(:timestamp),
                 finished_at: build(:timestamp),
-                exit_code: 0
+                exit_reason: "success"
               )
             ]
           )
@@ -380,7 +379,7 @@ defmodule LightningWeb.RunWorkOrderTest do
                 input_dataclip: dataclip_two,
                 started_at: build(:timestamp),
                 finished_at: build(:timestamp),
-                exit_code: 1
+                exit_reason: "failed"
               )
             ]
           )
@@ -639,7 +638,12 @@ defmodule LightningWeb.RunWorkOrderTest do
       started_at = now |> Timex.shift(seconds: -25)
       finished_at = now |> Timex.shift(seconds: -1)
 
-      run = insert(:run, started_at: started_at, finished_at: finished_at)
+      run =
+        insert(:run,
+          started_at: started_at,
+          finished_at: finished_at,
+          exit_reason: "success"
+        )
 
       html =
         render_component(&LightningWeb.RunLive.Components.run_details/1,
@@ -658,9 +662,8 @@ defmodule LightningWeb.RunWorkOrderTest do
                "24000 ms"
 
       assert html
-             |> Floki.find("div#exit-code-#{run.id} > div:nth-child(2)")
-             |> Floki.text() =~
-               "?"
+             |> Floki.find("div#exit-reason-#{run.id} > div:nth-child(2)")
+             |> Floki.text() =~ "success"
     end
 
     test "run_details component with pending run" do
@@ -687,9 +690,8 @@ defmodule LightningWeb.RunWorkOrderTest do
       #  ~r/25\d\d\d ms/
 
       assert html
-             |> Floki.find("div#exit-code-#{run.id} > div:nth-child(2)")
-             |> Floki.text() =~
-               "?"
+             |> Floki.find("div#exit-reason-#{run.id} > div:nth-child(2)")
+             |> Floki.text() =~ "running"
     end
 
     test "by default only the latest attempt is present when there are multiple attempts",
@@ -849,7 +851,7 @@ defmodule LightningWeb.RunWorkOrderTest do
           runs:
             build_list(1, :run, %{
               job: job,
-              exit_code: 1,
+              exit_reason: "failed",
               started_at: now |> Timex.shift(seconds: -40),
               finished_at: now |> Timex.shift(seconds: -20),
               input_dataclip: dataclip
@@ -961,7 +963,7 @@ defmodule LightningWeb.RunWorkOrderTest do
               input_dataclip: dataclip,
               started_at: build(:timestamp),
               finished_at: build(:timestamp),
-              exit_code: 1
+              exit_reason: "failed"
             )
           ]
         )
@@ -1040,7 +1042,7 @@ defmodule LightningWeb.RunWorkOrderTest do
             job: job_b,
             started_at: build(:timestamp),
             finished_at: build(:timestamp),
-            exit_code: 0,
+            exit_reason: "success",
             input_dataclip: dataclip
           }
         ]
@@ -1108,7 +1110,7 @@ defmodule LightningWeb.RunWorkOrderTest do
             job: job_b,
             started_at: build(:timestamp),
             finished_at: build(:timestamp),
-            exit_code: 0,
+            exit_reason: "success",
             input_dataclip: dataclip
           }
         ]
@@ -1135,7 +1137,7 @@ defmodule LightningWeb.RunWorkOrderTest do
       assert html =~ "New attempts enqueued for 2 workorders"
 
       view
-      |> form("##{work_order_b.id}-selection-form")
+      |> form("#selection-form-#{work_order_b.id}")
       |> render_change(%{selected: true})
 
       result = render_click(view, "bulk-rerun", %{type: "selected"})
@@ -1183,7 +1185,7 @@ defmodule LightningWeb.RunWorkOrderTest do
             job: job_b,
             started_at: build(:timestamp),
             finished_at: build(:timestamp),
-            exit_code: 0,
+            exit_reason: "success",
             input_dataclip: dataclip
           }
         ]
@@ -1215,7 +1217,7 @@ defmodule LightningWeb.RunWorkOrderTest do
 
       # uncheck 1 work order
       view
-      |> form("##{work_order_b.id}-selection-form")
+      |> form("#selection-form-#{work_order_b.id}")
       |> render_change(%{selected: false})
 
       updated_html = render(view)
@@ -1447,7 +1449,7 @@ defmodule LightningWeb.RunWorkOrderTest do
                 input_dataclip: dataclip,
                 started_at: build(:timestamp),
                 finished_at: build(:timestamp),
-                exit_code: 1
+                exit_reason: "failed"
               )
             end)
         )
@@ -1474,7 +1476,7 @@ defmodule LightningWeb.RunWorkOrderTest do
                 input_dataclip: dataclip,
                 started_at: build(:timestamp),
                 finished_at: build(:timestamp),
-                exit_code: 1
+                exit_reason: "failed"
               )
             end)
         )
@@ -1528,8 +1530,7 @@ defmodule LightningWeb.RunWorkOrderTest do
               started_at: build(:timestamp),
               finished_at: build(:timestamp),
               exit_reason: "success",
-              input_dataclip: dataclip,
-              exit_code: 0
+              input_dataclip: dataclip
             }
           ]
         )
@@ -1560,7 +1561,7 @@ defmodule LightningWeb.RunWorkOrderTest do
 
       # uncheck 1 work order
       view
-      |> form("##{work_order_3.id}-selection-form")
+      |> form("#selection-form-#{work_order_3.id}")
       |> render_change(%{selected: false})
 
       updated_html = render(view)
@@ -1634,7 +1635,7 @@ defmodule LightningWeb.RunWorkOrderTest do
                "New attempts enqueued for 2 workorders"
 
       view
-      |> form("##{work_order_1.id}-selection-form")
+      |> form("#selection-form-#{work_order_1.id}")
       |> render_change(%{selected: true})
 
       view
@@ -1656,40 +1657,37 @@ defmodule LightningWeb.RunWorkOrderTest do
          } do
       scenarios =
         Enum.map(1..3, fn _n ->
-          workflow = insert(:workflow, project: project)
+          %{triggers: [trigger], jobs: jobs} =
+            workflow = insert(:complex_workflow, project: project)
+
+          dataclip = insert(:dataclip, project: project)
 
           work_order =
             insert(:workorder,
               state: :success,
               workflow: workflow,
-              trigger: build(:trigger),
-              dataclip: build(:dataclip),
+              trigger: trigger,
+              dataclip: dataclip,
               last_activity: DateTime.utc_now()
             )
-
-          jobs = insert_list(5, :job, workflow: workflow)
-
-          runs =
-            Enum.map(
-              jobs,
-              fn j ->
-                build(:run,
-                  input_dataclip: build(:dataclip),
-                  job: j,
-                  started_at: build(:timestamp),
-                  finished_at: build(:timestamp),
-                  exit_code: 0
-                )
-              end
+            |> with_attempt(
+              state: :success,
+              dataclip: dataclip,
+              starting_trigger: trigger,
+              started_at: build(:timestamp),
+              finished_at: build(:timestamp),
+              runs:
+                Enum.map(jobs, fn j ->
+                  build(:run,
+                    job: j,
+                    input_dataclip: dataclip,
+                    output_dataclip: dataclip,
+                    started_at: build(:timestamp),
+                    finished_at: build(:timestamp),
+                    exit_reason: "success"
+                  )
+                end)
             )
-
-          insert(:attempt,
-            work_order: work_order,
-            finished_at: build(:timestamp),
-            starting_trigger: build(:trigger),
-            dataclip: build(:dataclip),
-            runs: runs
-          )
 
           %{work_order: work_order, workflow: workflow, jobs: jobs}
         end)
@@ -1701,7 +1699,7 @@ defmodule LightningWeb.RunWorkOrderTest do
             log: true,
             success: true,
             pending: true,
-            killing: true,
+            killed: true,
             running: true,
             crashed: true,
             failed: true
@@ -1716,7 +1714,7 @@ defmodule LightningWeb.RunWorkOrderTest do
         end
 
         view
-        |> form("##{scenario.work_order.id}-selection-form")
+        |> form("#selection-form-#{scenario.work_order.id}")
         |> render_change(%{selected: true})
 
         for job <- scenario.jobs do
@@ -1724,7 +1722,7 @@ defmodule LightningWeb.RunWorkOrderTest do
         end
 
         view
-        |> form("##{scenario.work_order.id}-selection-form")
+        |> form("#selection-form-#{scenario.work_order.id}")
         |> render_change(%{selected: false})
       end
     end

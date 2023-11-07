@@ -22,7 +22,13 @@ defmodule LightningWeb.Plugs.WebhookAuthTest do
     trigger: trigger
   } do
     conn = conn(:post, "/i/#{trigger.id}") |> WebhookAuth.call([])
-    assert conn.assigns[:trigger] == trigger |> unload_relation(:workflow)
+
+    expected_trigger =
+      trigger
+      |> unload_relation(:workflow)
+      |> Repo.preload([:workflow, :edges])
+
+    assert conn.assigns[:trigger] == expected_trigger
   end
 
   test "responds with 401 for an unauthenticated request to a protected trigger",
@@ -61,7 +67,12 @@ defmodule LightningWeb.Plugs.WebhookAuthTest do
       |> put_req_header("authorization", correct_credentials)
       |> WebhookAuth.call([])
 
-    assert conn.assigns[:trigger] == trigger |> unload_relation(:workflow)
+    expected_trigger =
+      trigger
+      |> unload_relation(:workflow)
+      |> Repo.preload([:workflow, :edges])
+
+    assert conn.assigns[:trigger] == expected_trigger
   end
 
   defp associate_auth_method(trigger, auth_method) do
