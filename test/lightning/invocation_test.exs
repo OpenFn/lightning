@@ -212,6 +212,7 @@ defmodule Lightning.InvocationTest do
                } in errors
     end
 
+    # TODO - elias, how does this happen in the current code and is it tested?
     test "update_run/2 with valid data updates the run" do
       run = insert(:run) |> Repo.preload(:log_lines)
 
@@ -229,6 +230,7 @@ defmodule Lightning.InvocationTest do
       assert run.started_at == ~U[2022-02-03 11:49:00.000000Z]
     end
 
+    # TODO - elias, how does this happen in the current code and is it tested?
     test "update_run/2 with invalid data returns error changeset" do
       run = insert(:run)
 
