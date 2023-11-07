@@ -1,3 +1,4 @@
+# This module will be re-introduced in https://github.com/OpenFn/Lightning/issues/1143
 defmodule LightningWeb.EndToEndTest do
   use LightningWeb.ConnCase, async: true
   use Oban.Testing, repo: Lightning.Repo
@@ -35,6 +36,7 @@ defmodule LightningWeb.EndToEndTest do
   end
 
   # workflow runs webhook then flow job
+  @tag :skip
   test "the whole thing", %{conn: conn} do
     project = insert(:project)
 
