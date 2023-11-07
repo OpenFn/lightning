@@ -69,6 +69,11 @@ defmodule LightningWeb.RunLive.Components do
                 solid
                 class="mr-1.5 h-5 w-5 flex-shrink-0 text-green-500"
               />
+            <% nil -> %>
+              <Heroicons.clock
+                solid
+                class="mr-1.5 h-5 w-5 flex-shrink-0 text-gray-500"
+              />
             <% val -> %>
               <%= val %>
           <% end %>
@@ -81,7 +86,7 @@ defmodule LightningWeb.RunLive.Components do
               <span><%= @run.job.name %></span>
             </.link>
             <div class="flex gap-1">
-              <%= if @can_rerun_job do %>
+              <%= if @can_rerun_job && @run.exit_reason do %>
                 <span
                   id={@run.id}
                   class="text-indigo-400 hover:underline hover:underline-offset-2 hover:text-indigo-500 cursor-pointer"
