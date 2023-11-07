@@ -34,7 +34,7 @@ defmodule LightningWeb.ChannelCase do
     # Mox.stub_with(Lightning.Config.Mock, Lightning.Config.Stub)
     # Application.put_env(:lightning, Lightning.Config, Lightning.Config.Mock)
     Mox.stub_with(Lightning.Mock, Lightning.Stub)
-    Application.put_env(:lightning, Lightning, Lightning.Mock)
+    # Application.put_env(:lightning, Lightning, Lightning.Mock)
 
     pid =
       Ecto.Adapters.SQL.Sandbox.start_owner!(Lightning.Repo,
