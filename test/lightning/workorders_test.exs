@@ -39,6 +39,7 @@ defmodule Lightning.WorkOrdersTest do
       assert workorder.workflow_id == workflow.id
       assert workorder.trigger_id == trigger.id
       assert workorder.dataclip_id == dataclip.id
+      assert workorder.dataclip.type == :http_request
 
       [attempt] = workorder.attempts
 
@@ -58,6 +59,7 @@ defmodule Lightning.WorkOrdersTest do
       assert workorder.workflow_id == workflow.id
       assert workorder.trigger_id == trigger.id
       assert workorder.dataclip_id == dataclip.id
+      assert workorder.dataclip.type == :http_request
 
       [attempt] = workorder.attempts
 
@@ -65,14 +67,12 @@ defmodule Lightning.WorkOrdersTest do
     end
 
     test "creating a manual workorder", %{workflow: workflow, job: job} do
-      alias Lightning.WorkOrders.Manual
-
       user = insert(:user)
 
       Lightning.WorkOrders.subscribe(workflow.project_id)
 
       assert {:ok, manual} =
-               Manual.new(%{"body" => ~s({"foo": "bar"})},
+               Lightning.WorkOrders.Manual.new(%{"body" => ~s({"foo": "bar"})},
                  workflow: workflow,
                  project: workflow.project,
                  job: job,
@@ -82,6 +82,9 @@ defmodule Lightning.WorkOrdersTest do
 
       assert {:ok, workorder} = WorkOrders.create_for(manual)
       assert [attempt] = workorder.attempts
+
+      assert workorder.dataclip.type == :saved_input
+      assert workorder.dataclip.body == %{"foo" => "bar"}
 
       assert attempt.created_by.id == user.id
 

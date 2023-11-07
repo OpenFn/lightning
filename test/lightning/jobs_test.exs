@@ -305,6 +305,7 @@ defmodule Lightning.JobsTest do
   end
 
   describe "Scheduler" do
+    # TODO - ELIAS, please make sure that this starts with a new state
     test "enqueue_cronjobs/1 enqueues a cron job that's never been run before" do
       job = insert(:job)
 
@@ -333,6 +334,7 @@ defmodule Lightning.JobsTest do
   end
 
   describe "Scheduler repeats" do
+    # TODO - ELIAS, please make sure that this starts with the state of the last succesful job
     test "enqueue_cronjobs/1 enqueues a cron job that has been run before" do
       job =
         insert(:job,
