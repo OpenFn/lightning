@@ -7,7 +7,6 @@ defmodule Lightning.WorkOrderService do
 
   alias Lightning.Repo
   alias Lightning.{WorkOrder}
-  alias Lightning.WorkOrders.Events
 
   @pubsub Lightning.PubSub
 

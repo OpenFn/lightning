@@ -4,10 +4,6 @@ defmodule Lightning.ObanManager do
   """
   require Logger
 
-  alias Lightning.Repo
-  alias Lightning.AttemptRun
-  alias Lightning.Invocation
-
   def handle_event([:oban, :job, :exception], measure, meta, _pid) do
     Logger.error(~s"""
     Oban exception:

@@ -4,8 +4,6 @@ defmodule LightningWeb.EndToEndTest do
   use Oban.Testing, repo: Lightning.Repo
 
   import Lightning.JobsFixtures
-
-  alias Lightning.Pipeline
   import Lightning.Factories
 
   alias Lightning.Invocation
