@@ -266,39 +266,6 @@ defmodule Lightning.Invocation do
   end
 
   @doc """
-  Updates a run.
-
-  ## Examples
-
-      iex> update_run(run, %{field: new_value})
-      {:ok, %Run{}}
-
-      iex> update_run(run, %{field: bad_value})
-      {:error, %Ecto.Changeset{}}
-
-  """
-  def update_run(%Run{} = run, attrs) do
-    run
-    |> Run.changeset(attrs)
-    |> Repo.update()
-    |> case do
-      {:ok, run} = res ->
-        LightningWeb.Endpoint.broadcast!(
-          "run:#{run.id}",
-          "update",
-          %{}
-        )
-
-        Lightning.WorkOrderService.attempt_updated(run)
-
-        res
-
-      res ->
-        res
-    end
-  end
-
-  @doc """
   Deletes a run.
 
   ## Examples

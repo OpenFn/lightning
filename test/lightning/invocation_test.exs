@@ -212,32 +212,6 @@ defmodule Lightning.InvocationTest do
                } in errors
     end
 
-    # TODO - elias, how does this happen in the current code and is it tested?
-    test "update_run/2 with valid data updates the run" do
-      run = insert(:run) |> Repo.preload(:log_lines)
-
-      update_attrs = %{
-        exit_code: 43,
-        finished_at: ~U[2022-02-03 11:49:00.000000Z],
-        log_lines: [],
-        started_at: ~U[2022-02-03 11:49:00.000000Z]
-      }
-
-      assert {:ok, %Run{} = run} = Invocation.update_run(run, update_attrs)
-      assert run.exit_code == 43
-      assert run.finished_at == ~U[2022-02-03 11:49:00.000000Z]
-      assert Invocation.logs_for_run(run) == []
-      assert run.started_at == ~U[2022-02-03 11:49:00.000000Z]
-    end
-
-    # TODO - elias, how does this happen in the current code and is it tested?
-    test "update_run/2 with invalid data returns error changeset" do
-      run = insert(:run)
-
-      assert {:error, %Ecto.Changeset{}} =
-               Invocation.update_run(run, @invalid_attrs)
-    end
-
     test "delete_run/1 deletes the run" do
       run = insert(:run)
       assert {:ok, %Run{}} = Invocation.delete_run(run)
