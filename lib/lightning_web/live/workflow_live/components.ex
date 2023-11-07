@@ -224,9 +224,7 @@ defmodule LightningWeb.WorkflowLive.Components do
     ~H"""
     <div class="md:grid md:grid-cols-6 md:gap-4 p-2 @container">
       <% Phoenix.HTML.Form.hidden_inputs_for(@form) %>
-      <div class="col-span-6">
-        <Form.check_box form={@form} field={:enabled} disabled={!@editable} />
-      </div>
+      <div class="col-span-6"></div>
       <div class="col-span-6 @md:col-span-4">
         <Form.text_field
           form={@form}

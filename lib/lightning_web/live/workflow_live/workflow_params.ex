@@ -10,11 +10,9 @@ defmodule LightningWeb.WorkflowNewLive.WorkflowParams do
   params.
   """
   def apply_form_params(current_params, form_params) do
-
     Map.merge(current_params, form_params, fn _key, current, next ->
       case {current, next} do
         {current, next} when is_list(current) and is_map(next) ->
-
           if Map.has_key?(form_params, "edges") &&
                Map.has_key?(form_params["edges"], "0") &&
                Map.get(form_params["edges"]["0"], "enabled") == "false" do
@@ -24,7 +22,6 @@ defmodule LightningWeb.WorkflowNewLive.WorkflowParams do
           end
 
         {current, next} when is_map(current) ->
-
           Map.merge(current, next)
 
         _ ->
@@ -95,7 +92,6 @@ defmodule LightningWeb.WorkflowNewLive.WorkflowParams do
             :name,
             :adaptor,
             :body,
-            :enabled,
             :project_credential_id
           ]),
         triggers:
