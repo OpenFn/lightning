@@ -76,7 +76,7 @@ defmodule Lightning.MixProject do
       {:httpoison, "~> 1.8"},
       {:jason, "~> 1.2"},
       {:joken, "~> 2.6.0"},
-      {:jsonpatch, "~> 1.0.1"},
+      {:jsonpatch, "~> 1.0.2"},
       {:junit_formatter, "~> 3.0", only: [:test]},
       {:libcluster, "~> 3.3"},
       {:mimic, "~> 1.7.2", only: :test},
