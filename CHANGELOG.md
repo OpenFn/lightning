@@ -98,6 +98,8 @@ bearing with us as we move towards our first stable Lightning release.)
   [#1223](https://github.com/OpenFn/Lightning/issues/1223)
 - Partition `log_lines` table based on `attempt_id`
   [#1254](https://github.com/OpenFn/Lightning/issues/1254)
+- Remove foreign key from `attempts` in preparation for partitioning
+  `work_orders` [#1254](https://github.com/OpenFn/Lightning/issues/1254)
 
 ### Changed
 
