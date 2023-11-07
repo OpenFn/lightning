@@ -305,7 +305,6 @@ defmodule Lightning.JobsTest do
   end
 
   describe "Scheduler" do
-    # TODO - ELIAS, please make sure that this starts with a new state
     test "enqueue_cronjobs/1 enqueues a cron job that's never been run before" do
       job = insert(:job)
 
@@ -328,13 +327,15 @@ defmodule Lightning.JobsTest do
 
       assert attempt.starting_trigger_id == trigger.id
 
-      attempt = Repo.preload(attempt, [:dataclip])
+      attempt =
+        Repo.preload(attempt, dataclip: Invocation.Query.dataclip_with_body())
+
       assert attempt.dataclip.type == :global
+      assert attempt.dataclip.body == %{}
     end
   end
 
   describe "Scheduler repeats" do
-    # TODO - ELIAS, please make sure that this starts with the state of the last succesful job
     test "enqueue_cronjobs/1 enqueues a cron job that has been run before" do
       job =
         insert(:job,
