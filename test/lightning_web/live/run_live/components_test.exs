@@ -12,7 +12,7 @@ defmodule LightningWeb.RunLive.ComponentsTest do
       assert render_component(
                &LightningWeb.RunLive.Components.run_viewer/1,
                run:
-                 insert(:run, exit_code: 1, output_dataclip_id: nil)
+                 insert(:run, exit_reason: "fail", output_dataclip_id: nil)
                  |> Lightning.Repo.preload(:log_lines)
              ) =~
                "This run failed"
@@ -27,14 +27,14 @@ defmodule LightningWeb.RunLive.ComponentsTest do
 
       assert render_component(&LightningWeb.RunLive.Components.run_viewer/1,
                run:
-                 insert(:run, exit_code: 0, output_dataclip_id: nil)
+                 insert(:run, exit_reason: "success", output_dataclip_id: nil)
                  |> Lightning.Repo.preload(:log_lines)
              ) =~
                "There is no output for this run"
 
       run =
         insert(:run,
-          exit_code: 0,
+          exit_reason: "success",
           output_dataclip:
             build(:dataclip,
               type: :run_result,
@@ -73,14 +73,18 @@ defmodule LightningWeb.RunLive.ComponentsTest do
                 job: job_1,
                 input_dataclip: dataclip,
                 output_dataclip: output_dataclip,
-                exit_reason: "success"
+                exit_reason: nil
               ),
               insert(:run,
                 job: job_2,
                 input_dataclip: output_dataclip,
-                exit_code: 0
+                exit_reason: "success"
               ),
-              insert(:run, job: job_3, finished_at: build(:timestamp))
+              insert(:run,
+                job: job_3,
+                exit_reason: "fail",
+                finished_at: build(:timestamp)
+              )
             ]
           }
         ]
@@ -172,9 +176,7 @@ defmodule LightningWeb.RunLive.ComponentsTest do
         starting_trigger: trigger,
         finished_at: build(:timestamp),
         runs: [
-          build(:run),
-          build(:run, finished_at: DateTime.utc_now(), exit_code: 0),
-          build(:run, finished_at: DateTime.utc_now())
+          build(:run, finished_at: DateTime.utc_now(), exit_reason: "success")
         ]
       )
 
@@ -192,6 +194,7 @@ defmodule LightningWeb.RunLive.ComponentsTest do
       |> Floki.parse_fragment!()
 
     assert html
+           |> IO.inspect(label: "Are you failing ?")
            |> Floki.find(~s{span[title="Rerun workflow from here"]})
            |> Enum.any?()
 
@@ -255,9 +258,9 @@ defmodule LightningWeb.RunLive.ComponentsTest do
                "24000 ms"
 
       assert html
-             |> Floki.find("div#exit-code-#{run.id} > div:nth-child(2)")
+             |> Floki.find("div#exit-reason-#{run.id} > div:nth-child(2)")
              |> Floki.text() =~
-               "?"
+               "running"
     end
 
     test "with pending run" do
@@ -282,9 +285,9 @@ defmodule LightningWeb.RunLive.ComponentsTest do
       #  ~r/25\d\d\d ms/
 
       assert html
-             |> Floki.find("div#exit-code-#{run.id} > div:nth-child(2)")
+             |> Floki.find("div#exit-reason-#{run.id} > div:nth-child(2)")
              |> Floki.text() =~
-               "?"
+               "running"
     end
 
     test "with unstarted run" do
@@ -303,9 +306,9 @@ defmodule LightningWeb.RunLive.ComponentsTest do
              |> Floki.text() =~ "Not started."
 
       assert html
-             |> Floki.find("div#exit-code-#{run.id} > div:nth-child(2)")
+             |> Floki.find("div#exit-reason-#{run.id} > div:nth-child(2)")
              |> Floki.text() =~
-               "?"
+               "running"
     end
   end
 end
