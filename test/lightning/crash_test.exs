@@ -1,4 +1,4 @@
-# This will be handled in
+# This will be handled in https://github.com/OpenFn/Lightning/issues/1300
 # defmodule Lightning.CrashTest do
 #   use Lightning.DataCase, async: false
 #   # use Oban.Testing, repo: Lightning.Repo
