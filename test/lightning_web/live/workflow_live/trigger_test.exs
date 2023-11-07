@@ -117,14 +117,14 @@ defmodule LightningWeb.WorkflowLive.TriggerTest do
 
     assert html =~ "Create auth method"
 
-    credential_name = "funnycredentialname"
+    auth_method_name = "funnyauthmethodname"
 
-    refute render(view) =~ credential_name
+    refute render(view) =~ auth_method_name
 
     view
     |> form("#form_#{modal_id}_new_webhook_auth_method",
       webhook_auth_method: %{
-        name: credential_name,
+        name: auth_method_name,
         username: "testusername",
         password: "testpassword123"
       }
@@ -145,7 +145,7 @@ defmodule LightningWeb.WorkflowLive.TriggerTest do
         ~p"/projects/#{project.id}/w/#{workflow.id}?#{[s: trigger.id]}"
       )
 
-    assert html =~ credential_name
+    assert html =~ auth_method_name
   end
 
   test "user can successfully create an API authentication method", %{
@@ -175,14 +175,14 @@ defmodule LightningWeb.WorkflowLive.TriggerTest do
     assert html =~ "API Key"
     refute html =~ "password"
 
-    credential_name = "funnyapicredentialname"
+    auth_method_name = "funnyapiauthmethodname"
 
-    refute render(view) =~ credential_name
+    refute render(view) =~ auth_method_name
 
     assert view
            |> form("#form_#{modal_id}_new_webhook_auth_method",
              webhook_auth_method: %{
-               name: credential_name
+               name: auth_method_name
              }
            )
            |> render_submit()
@@ -201,7 +201,7 @@ defmodule LightningWeb.WorkflowLive.TriggerTest do
         ~p"/projects/#{project.id}/w/#{workflow.id}?#{[s: trigger.id]}"
       )
 
-    assert html =~ credential_name
+    assert html =~ auth_method_name
   end
 
   test "user can successfully update an authentication method", %{
@@ -234,13 +234,13 @@ defmodule LightningWeb.WorkflowLive.TriggerTest do
 
     assert html =~ "Edit webhook auth method"
 
-    new_credential_name = "funnyapicredentialname"
+    new_auth_method_name = "funnyapiauthmethodname"
 
     assert view
            |> form("#form_#{modal_id}_#{auth_method.id}")
            |> render_submit(%{
              webhook_auth_method: %{
-               name: new_credential_name,
+               name: new_auth_method_name,
                username: "newusername",
                password: "newpassword123"
              }
@@ -258,7 +258,7 @@ defmodule LightningWeb.WorkflowLive.TriggerTest do
       Lightning.Repo.get(Lightning.Workflows.WebhookAuthMethod, auth_method.id)
 
     refute updated_auth_method.name == auth_method.name
-    assert updated_auth_method.name == new_credential_name
+    assert updated_auth_method.name == new_auth_method_name
 
     # only auth method name is updated
     refute auth_method.username == "username"

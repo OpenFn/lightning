@@ -47,7 +47,7 @@ defmodule LightningWeb.Plugs.WebhookAuthTest do
 
     conn =
       conn(:post, "/i/#{trigger.id}")
-      |> put_req_header("authorization", "Basic wrong_encoded_credentials")
+      |> put_req_header("authorization", "Basic wrong_encoded_auth_method")
       |> WebhookAuth.call([])
 
     assert conn.status == 404
@@ -58,13 +58,13 @@ defmodule LightningWeb.Plugs.WebhookAuthTest do
        %{trigger: trigger, auth_method: auth_method} do
     associate_auth_method(trigger, auth_method)
 
-    correct_credentials =
+    correct_auth_method =
       "Basic " <>
         Base.encode64("#{auth_method.username}:#{auth_method.password}")
 
     conn =
       conn(:post, "/i/#{trigger.id}")
-      |> put_req_header("authorization", correct_credentials)
+      |> put_req_header("authorization", correct_auth_method)
       |> WebhookAuth.call([])
 
     expected_trigger =
