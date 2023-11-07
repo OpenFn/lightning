@@ -361,6 +361,8 @@ defmodule LightningWeb.RunLive.Components do
               <.failure_pill class="font-mono font-bold">fail</.failure_pill>
             <% "success" -> %>
               <.success_pill class="font-mono font-bold">success</.success_pill>
+            <% nil -> %>
+              <.pending_pill class="font-mono font-bold">running</.pending_pill>
             <% val -> %>
               <.other_state_pill class="font-mono font-bold">
                 <%= val %>

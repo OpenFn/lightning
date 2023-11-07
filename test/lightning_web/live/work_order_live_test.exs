@@ -1,5 +1,4 @@
 defmodule LightningWeb.RunWorkOrderTest do
-  alias Lightning.Invocation
   alias Lightning.Attempts
   use LightningWeb.ConnCase, async: true
 
@@ -60,7 +59,7 @@ defmodule LightningWeb.RunWorkOrderTest do
               job: job,
               started_at: build(:timestamp),
               finished_at: nil,
-              exit_code: nil,
+              exit_reason: nil,
               input_dataclip: dataclip
             }
           ]
@@ -347,7 +346,7 @@ defmodule LightningWeb.RunWorkOrderTest do
                 input_dataclip: dataclip,
                 started_at: build(:timestamp),
                 finished_at: build(:timestamp),
-                exit_code: 0
+                exit_reason: "success"
               )
             ]
           )
@@ -639,7 +638,12 @@ defmodule LightningWeb.RunWorkOrderTest do
       started_at = now |> Timex.shift(seconds: -25)
       finished_at = now |> Timex.shift(seconds: -1)
 
-      run = insert(:run, started_at: started_at, finished_at: finished_at)
+      run =
+        insert(:run,
+          started_at: started_at,
+          finished_at: finished_at,
+          exit_reason: "success"
+        )
 
       html =
         render_component(&LightningWeb.RunLive.Components.run_details/1,
@@ -658,9 +662,8 @@ defmodule LightningWeb.RunWorkOrderTest do
                "24000 ms"
 
       assert html
-             |> Floki.find("div#exit-code-#{run.id} > div:nth-child(2)")
-             |> Floki.text() =~
-               "?"
+             |> Floki.find("div#exit-reason-#{run.id} > div:nth-child(2)")
+             |> Floki.text() =~ "success"
     end
 
     test "run_details component with pending run" do
@@ -687,9 +690,8 @@ defmodule LightningWeb.RunWorkOrderTest do
       #  ~r/25\d\d\d ms/
 
       assert html
-             |> Floki.find("div#exit-code-#{run.id} > div:nth-child(2)")
-             |> Floki.text() =~
-               "?"
+             |> Floki.find("div#exit-reason-#{run.id} > div:nth-child(2)")
+             |> Floki.text() =~ "running"
     end
 
     test "by default only the latest attempt is present when there are multiple attempts",
@@ -1040,7 +1042,7 @@ defmodule LightningWeb.RunWorkOrderTest do
             job: job_b,
             started_at: build(:timestamp),
             finished_at: build(:timestamp),
-            exit_code: 0,
+            exit_reason: "success",
             input_dataclip: dataclip
           }
         ]
@@ -1108,7 +1110,7 @@ defmodule LightningWeb.RunWorkOrderTest do
             job: job_b,
             started_at: build(:timestamp),
             finished_at: build(:timestamp),
-            exit_code: 0,
+            exit_reason: "success",
             input_dataclip: dataclip
           }
         ]
@@ -1183,7 +1185,7 @@ defmodule LightningWeb.RunWorkOrderTest do
             job: job_b,
             started_at: build(:timestamp),
             finished_at: build(:timestamp),
-            exit_code: 0,
+            exit_reason: "success",
             input_dataclip: dataclip
           }
         ]
@@ -1528,8 +1530,7 @@ defmodule LightningWeb.RunWorkOrderTest do
               started_at: build(:timestamp),
               finished_at: build(:timestamp),
               exit_reason: "success",
-              input_dataclip: dataclip,
-              exit_code: 0
+              input_dataclip: dataclip
             }
           ]
         )
