@@ -511,7 +511,6 @@ defmodule LightningWeb.WorkflowLive.Components do
         values={@edge_options}
         disabled={@disabled}
       />
-    <% end %>
     <div class="mt-7 border-t flex flex-col justify-between">
       <h2 class=" flex mt-3">
         <Form.check_box
@@ -524,6 +523,7 @@ defmodule LightningWeb.WorkflowLive.Components do
         />
       </h2>
     </div>
+    <% end %>
     """
   end
 
