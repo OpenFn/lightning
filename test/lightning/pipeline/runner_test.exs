@@ -11,11 +11,8 @@ defmodule Lightning.Pipeline.RunnerTest do
     BypassHelpers
   }
 
-  import Lightning.Factories
-
   alias Lightning.Pipeline.Runner
 
-  @tag :skip
   test "start/2 takes a run and executes it" do
     project = project_fixture()
     credential_body = %{"username" => "quux", "password" => "immasecret"}
@@ -55,7 +52,7 @@ defmodule Lightning.Pipeline.RunnerTest do
         type: :http_request
       )
 
-    run = insert(:run, job: job, input_dataclip: dataclip)
+    run = run_fixture(job_id: job.id, input_dataclip_id: dataclip.id)
     result = %Lightning.Runtime.Result{} = Pipeline.Runner.start(run)
 
     expected_state = %{
@@ -91,7 +88,6 @@ defmodule Lightning.Pipeline.RunnerTest do
            end)
   end
 
-  @tag :skip
   test "start/2 takes a run and executes it, refreshing the oauth token if required" do
     bypass = Bypass.open()
 
@@ -148,7 +144,8 @@ defmodule Lightning.Pipeline.RunnerTest do
         type: :http_request
       )
 
-    run = insert(:run, job: job, input_dataclip: dataclip)
+    run = run_fixture(job_id: job.id, input_dataclip_id: dataclip.id)
+
     result = %Lightning.Runtime.Result{} = Pipeline.Runner.start(run)
 
     new_expiry =
@@ -161,13 +158,11 @@ defmodule Lightning.Pipeline.RunnerTest do
     assert Enum.at(result.log, 11) =~ "expires_at\":#{new_expiry}"
   end
 
-  @tag :skip
   test "scrub_result/1 removes :configuration from a map" do
     map = %{"data" => true, "configuration" => %{"secret" => "hello"}}
     assert Runner.scrub_result(map) == %{"data" => true}
   end
 
-  @tag :skip
   test "create_dataclip_from_result/3" do
     assert Pipeline.Runner.create_dataclip_from_result(
              %Lightning.Runtime.Result{final_state_path: "no_such_path"},
