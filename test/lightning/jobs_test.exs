@@ -19,35 +19,46 @@ defmodule Lightning.JobsTest do
       assert Jobs.list_jobs() == [Jobs.get_job!(job.id)]
     end
 
-    test "list_active_cron_jobs/0 returns all active jobs with cron triggers" do
+    test "list_active_cron_jobs/0 returns all jobs with active cron triggers" do
       insert(:job)
 
       workflow = insert(:workflow)
 
-      t =
+      enabled_trigger =
         insert(:trigger,
           workflow: workflow,
           type: :cron,
+          enabled: true,
           cron_expression: "5 0 * 8 *"
         )
 
-      enabled_job = insert(:job, workflow: workflow)
+      job_1 = insert(:job, workflow: workflow)
 
       insert(:edge,
         workflow: workflow,
-        source_trigger_id: t.id,
-        target_job_id: enabled_job.id
+        source_trigger: enabled_trigger,
+        target_job: job_1
       )
 
-      # disabled job
+      # disabled trigger
+      disabled_trigger =
+        insert(:trigger,
+          workflow: workflow,
+          type: :cron,
+          enabled: false,
+          cron_expression: "5 0 * 8 *"
+        )
+
+      job_2 = insert(:job, workflow: workflow)
+
       insert(:edge,
         workflow: workflow,
-        source_trigger_id: t.id,
-        target_job: build(:job, workflow: workflow, enabled: false)
+        source_trigger: disabled_trigger,
+        target_job: job_2
       )
 
       assert [active_job] = Jobs.list_active_cron_jobs()
-      assert active_job.id == enabled_job.id
+      assert active_job.id == job_1.id
     end
 
     test "get_job!/1 returns the job with given id" do
@@ -357,7 +368,7 @@ defmodule Lightning.JobsTest do
           dataclip: dataclip,
           runs: [
             build(:run,
-              exit_code: 0,
+              exit_reason: "success",
               job: job,
               input_dataclip: dataclip,
               output_dataclip:
