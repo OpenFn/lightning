@@ -750,4 +750,39 @@ defmodule Lightning.InvocationTest do
                ).entries
     end
   end
+
+  describe "run logs" do
+    @tag :skip
+    test "logs_for_run/1 returns an array of the logs for a given run" do
+      run =
+        insert(:run,
+          log_lines: [%{body: "Hello"}, %{body: "I am a"}, %{body: "log"}]
+        )
+
+      log_lines = Invocation.logs_for_run(run)
+
+      assert Enum.count(log_lines) == 3
+
+      assert log_lines |> Enum.map(fn log_line -> log_line.body end) == [
+               "Hello",
+               "I am a",
+               "log"
+             ]
+    end
+
+    test "assemble_logs_for_run/1 returns a string representation of the logs for a run" do
+      run =
+        insert(:run,
+          log_lines: [%{body: "Hello"}, %{body: "I am a"}, %{body: "log"}]
+        )
+
+      log_string = Invocation.assemble_logs_for_run(run)
+
+      assert log_string == "Hello\nI am a\nlog"
+    end
+
+    test "assemble_logs_for_run/1 returns nil when given a nil run" do
+      assert Invocation.assemble_logs_for_run(nil) == nil
+    end
+  end
 end
