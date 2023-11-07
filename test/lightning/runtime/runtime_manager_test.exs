@@ -9,10 +9,9 @@ defmodule Lightning.Runtime.RuntimeManagerTest do
   @default_config [
     start: true,
     version: "0.1.0",
-    args: ["Hello world 😎", "0.2", "0"],
+    args: [@line_runtime_path, "Hello world 😎", "0.2", "0"],
     cd: Path.expand("..", __DIR__),
-    env: %{"TEST" => "hello", "STOP" => nil},
-    path: @line_runtime_path
+    env: %{"TEST" => "hello", "STOP" => nil}
   ]
 
   setup do
@@ -30,17 +29,6 @@ defmodule Lightning.Runtime.RuntimeManagerTest do
 
     assert :ignore ==
              RuntimeManager.start_link(name: :test_start_false)
-  end
-
-  test "the runtime manager logs a warning when version is not configured",
-       %{test: test} do
-    config = Keyword.merge(@default_config, version: nil)
-    Application.put_env(:lightning, RuntimeManager, config)
-
-    assert ExUnit.CaptureLog.capture_log(fn ->
-             RuntimeManager.start_link(name: test)
-           end) =~
-             "runtime version is not configured. Please set it in your config files"
   end
 
   test "the runtime manager waits for a certain timeout when the runtime exits",
@@ -145,7 +133,12 @@ defmodule Lightning.Runtime.RuntimeManagerTest do
     config =
       @default_config
       |> Keyword.merge(
-        args: ["#{line_to_print}", "#{interval}", "#{cleanup_time}"]
+        args: [
+          @line_runtime_path,
+          "#{line_to_print}",
+          "#{interval}",
+          "#{cleanup_time}"
+        ]
       )
       |> Keyword.merge(override_opts)
 
