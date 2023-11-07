@@ -115,7 +115,7 @@ defmodule LightningWeb.WorkflowLive.TriggerTest do
       )
       |> render_submit()
 
-    assert html =~ "Create credential"
+    assert html =~ "Create auth method"
 
     credential_name = "funnycredentialname"
 
@@ -171,7 +171,7 @@ defmodule LightningWeb.WorkflowLive.TriggerTest do
       )
       |> render_submit()
 
-    assert html =~ "Create credential"
+    assert html =~ "Create auth method"
     assert html =~ "API Key"
     refute html =~ "password"
 
