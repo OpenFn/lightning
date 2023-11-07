@@ -152,7 +152,9 @@ defmodule Lightning.Attempts.Handlers do
     end
 
     def call(params) do
-      with {:ok, complete_run} <- new(params) |> apply_action(:validate),
+      with {:ok, complete_run} <-
+             new(params)
+             |> apply_action(:validate),
            {:ok, run} <- update(complete_run) do
         {:ok, run}
       end

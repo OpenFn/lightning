@@ -107,6 +107,7 @@ defmodule LightningWeb.AttemptChannel do
         {:reply, {:error, LightningWeb.ChangesetJSON.error(changeset)}, socket}
 
       {:ok, run} ->
+        Lightning.FailureAlerter.alert_on_failure(run)
         {:reply, {:ok, %{run_id: run.id}}, socket}
     end
   end

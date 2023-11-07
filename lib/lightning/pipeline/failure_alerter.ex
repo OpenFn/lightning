@@ -3,7 +3,7 @@ defmodule Lightning.FailureAlerter do
 
   alias Lightning.Repo
 
-  def alert_on_failure(run) when run.exit_code == 0, do: nil
+  def alert_on_failure(run) when run.exit_reason == "success", do: nil
 
   def alert_on_failure(run) do
     attempt = Lightning.AttemptService.get_last_attempt_for(run)

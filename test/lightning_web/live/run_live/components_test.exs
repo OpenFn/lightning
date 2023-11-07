@@ -194,7 +194,6 @@ defmodule LightningWeb.RunLive.ComponentsTest do
       |> Floki.parse_fragment!()
 
     assert html
-           |> IO.inspect(label: "Are you failing ?")
            |> Floki.find(~s{span[title="Rerun workflow from here"]})
            |> Enum.any?()
 
