@@ -1,4 +1,5 @@
 defmodule Lightning.PipelineTest do
+  alias Lightning.Invocation
   use Lightning.DataCase, async: true
   use Mimic
 
@@ -224,7 +225,7 @@ defmodule Lightning.PipelineTest do
           log_lines: [%{body: "Hello"}, %{body: "I am a"}, %{body: "log"}]
         )
 
-      log_lines = Pipeline.logs_for_run(run)
+      log_lines = Invocation.logs_for_run(run)
 
       assert Enum.count(log_lines) == 3
 
@@ -242,14 +243,14 @@ defmodule Lightning.PipelineTest do
           log_lines: [%{body: "Hello"}, %{body: "I am a"}, %{body: "log"}]
         )
 
-      log_string = Pipeline.assemble_logs_for_run(run)
+      log_string = Invocation.assemble_logs_for_run(run)
 
       assert log_string == "Hello\nI am a\nlog"
     end
 
     @tag :skip
     test "assemble_logs_for_run/1 returns nil when given a nil run" do
-      assert Pipeline.assemble_logs_for_run(nil) == nil
+      assert Invocation.assemble_logs_for_run(nil) == nil
     end
   end
 end

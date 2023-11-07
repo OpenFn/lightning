@@ -532,4 +532,20 @@ defmodule Lightning.Invocation do
       ]
     )
   end
+
+  @doc """
+  Return all logs for a run as a list
+  """
+  @spec logs_for_run(Run.t()) :: list()
+  def logs_for_run(%Run{} = run),
+    do: Repo.preload(run, :log_lines) |> Map.get(:log_lines, [])
+
+  def assemble_logs_for_run(nil), do: nil
+
+  @doc """
+  Return all logs for a run as a string of text, separated by new line \n breaks
+  """
+  @spec assemble_logs_for_run(Run.t()) :: binary()
+  def assemble_logs_for_run(%Run{} = run),
+    do: logs_for_run(run) |> Enum.map_join("\n", fn log -> log.message end)
 end

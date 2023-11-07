@@ -1,4 +1,5 @@
 defmodule Lightning.Pipeline.RunnerTest do
+  alias Lightning.Invocation
   use Lightning.DataCase, async: false
 
   alias Lightning.Pipeline
@@ -76,11 +77,11 @@ defmodule Lightning.Pipeline.RunnerTest do
     refute is_nil(run.finished_at)
     assert run.exit_code == 0
 
-    log = Pipeline.assemble_logs_for_run(run)
+    log = Invocation.assemble_logs_for_run(run)
     # assert log =~ "@openfn/language-common"
     refute log =~ ~S(password":"immasecret")
 
-    assert Pipeline.logs_for_run(run) |> length() > 0
+    assert Invocation.logs_for_run(run) |> length() > 0
 
     refute Repo.all(Lightning.Invocation.Dataclip)
            |> Enum.any?(fn result ->

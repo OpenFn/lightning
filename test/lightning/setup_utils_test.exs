@@ -1,4 +1,5 @@
 defmodule Lightning.SetupUtilsTest do
+  alias Lightning.Invocation
   alias Lightning.Pipeline
   use Lightning.DataCase, async: true
   # use Mimic
@@ -261,7 +262,7 @@ defmodule Lightning.SetupUtilsTest do
                  "names" => ["Genevieve", "Wimplemews"]
                }
 
-      assert Pipeline.assemble_logs_for_run(first_run) ==
+      assert Invocation.assemble_logs_for_run(first_run) ==
                """
                -- THIS IS ONLY A SAMPLE --
                [CLI] ℹ Versions:
@@ -322,7 +323,7 @@ defmodule Lightning.SetupUtilsTest do
                  ]
                }
 
-      assert Pipeline.assemble_logs_for_run(last_run) ==
+      assert Invocation.assemble_logs_for_run(last_run) ==
                """
                -- THIS IS ONLY A SAMPLE --
                [CLI] ℹ Versions:
@@ -402,7 +403,7 @@ defmodule Lightning.SetupUtilsTest do
                  ]
                }
 
-      assert Pipeline.assemble_logs_for_run(last_run) == """
+      assert Invocation.assemble_logs_for_run(last_run) == """
              -- THIS IS ONLY A SAMPLE --
              [CLI] ℹ Versions:
                   ▸ node.js                   18.12.0
@@ -606,7 +607,7 @@ defmodule Lightning.SetupUtilsTest do
                  "references" => []
                }
 
-      assert Pipeline.assemble_logs_for_run(first_run) ==
+      assert Invocation.assemble_logs_for_run(first_run) ==
                """
                -- THIS IS ONLY A SAMPLE --
                [CLI] ℹ Versions:
@@ -655,7 +656,7 @@ defmodule Lightning.SetupUtilsTest do
                  "references" => []
                }
 
-      assert Pipeline.assemble_logs_for_run(last_run) ==
+      assert Invocation.assemble_logs_for_run(last_run) ==
                """
                -- THIS IS ONLY A SAMPLE --
                [CLI] ℹ Versions:
@@ -703,7 +704,7 @@ defmodule Lightning.SetupUtilsTest do
                  "references" => []
                }
 
-      assert Pipeline.assemble_logs_for_run(second_run) == """
+      assert Invocation.assemble_logs_for_run(second_run) == """
              -- THIS IS ONLY A SAMPLE --
              [CLI] ℹ Versions:
                   ▸ node.js                  18.12.0
@@ -793,7 +794,7 @@ defmodule Lightning.SetupUtilsTest do
 
       assert failed_run.output_dataclip == nil
 
-      assert Pipeline.assemble_logs_for_run(failed_run) ==
+      assert Invocation.assemble_logs_for_run(failed_run) ==
                """
                -- THIS IS ONLY A SAMPLE --
                [CLI] ℹ Versions:
