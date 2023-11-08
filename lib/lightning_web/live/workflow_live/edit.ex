@@ -389,14 +389,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
           can_edit_job:
             Permissions.can?(ProjectUsers, :edit_job, current_user, project_user),
           can_run_job:
-            Permissions.can?(ProjectUsers, :run_job, current_user, project_user),
-          can_create_webhook_auth_method:
-            Permissions.can?(
-              ProjectUsers,
-              :create_webhook_auth_method,
-              current_user,
-              project_user
-            )
+            Permissions.can?(ProjectUsers, :run_job, current_user, project_user)
         )
 
       {:error, _} ->
@@ -587,7 +580,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
           |> then(fn socket ->
             if live_action == :new do
               {:noreply,
-               push_patch(socket, to: ~p"/projects/#{project}/w/#{workflow}")}
+               push_navigate(socket, to: ~p"/projects/#{project}/w/#{workflow}")}
             else
               {:noreply, socket}
             end
