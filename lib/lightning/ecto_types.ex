@@ -28,6 +28,9 @@ defmodule Lightning.UnixDateTime do
       is_integer(u) ->
         DateTime.from_unix(u, :millisecond)
 
+      is_struct(u, DateTime) ->
+        {:ok, u}
+
       byte_size(u) == 13 ->
         String.to_integer(u)
         |> DateTime.from_unix(:millisecond)
@@ -35,9 +38,6 @@ defmodule Lightning.UnixDateTime do
       byte_size(u) == 16 ->
         String.to_integer(u)
         |> DateTime.from_unix(:microsecond)
-
-      is_struct(u, DateTime) ->
-        {:ok, u}
 
       true ->
         :error
