@@ -40,10 +40,10 @@ defmodule Lightning.FailureAlertTest do
           work_order: workorder_1,
           starting_trigger: build(:trigger),
           dataclip: build(:dataclip),
-          finished_at: build(:timestamp)
+          finished_at: build(:timestamp),
+          state: :started
         )
-
-      run_1 = insert(:run, attempts: [attempt_1])
+        |> Repo.preload(:log_lines)
 
       workflow_2 =
         insert(:workflow,
@@ -66,8 +66,7 @@ defmodule Lightning.FailureAlertTest do
           dataclip: build(:dataclip),
           finished_at: build(:timestamp)
         )
-
-      run_2 = insert(:run, attempts: [attempt_2])
+        |> Repo.preload(:log_lines)
 
       workflow_3 =
         insert(:workflow,
@@ -93,30 +92,27 @@ defmodule Lightning.FailureAlertTest do
           dataclip: build(:dataclip),
           finished_at: build(:timestamp)
         )
-
-      run_3 = insert(:run, attempts: [attempt_3])
+        |> Repo.preload(:log_lines)
 
       {:ok,
        period: period,
        project: project,
        workflows: [workflow_1, workflow_2, workflow_3],
        workorders: [workorder_1, workorder_2, workorder_3],
-       attempts: [attempt_1, attempt_2, attempt_3],
-       runs: [run_1, run_2, run_3]}
+       attempts: [attempt_1, attempt_2, attempt_3]}
     end
 
     test "sends a limited number of failure alert emails to a subscribed user.",
          %{
            period: period,
-           project: project,
            workorders: [workorder, _, _],
-           runs: [run, _, _]
+           attempts: [attempt, _, _]
          } do
-      FailureAlerter.alert_on_failure(run)
-      FailureAlerter.alert_on_failure(run)
-      FailureAlerter.alert_on_failure(run)
+      FailureAlerter.alert_on_failure(attempt)
+      FailureAlerter.alert_on_failure(attempt)
+      FailureAlerter.alert_on_failure(attempt)
 
-      FailureAlerter.alert_on_failure(run)
+      FailureAlerter.alert_on_failure(attempt)
 
       Oban.drain_queue(Oban, queue: :workflow_failures)
 
@@ -133,9 +129,6 @@ defmodule Lightning.FailureAlertTest do
       assert html_body =~ "workflow-a"
       assert html_body =~ workorder.id
 
-      assert html_body =~
-               "/projects/#{project.id}/runs/#{run.id}"
-
       s2 = "\"workflow-a\" has failed 2 times in the last #{period}."
       assert_receive {:email, %Swoosh.Email{subject: ^s2}}, 1500
 
@@ -149,13 +142,13 @@ defmodule Lightning.FailureAlertTest do
     test "sends a failure alert email for a workflow even if another workflow has been rate limited.",
          %{
            period: period,
-           runs: [run_1, run_2, _]
+           attempts: [attempt_1, attempt_2, _]
          } do
-      FailureAlerter.alert_on_failure(run_1)
-      FailureAlerter.alert_on_failure(run_1)
-      FailureAlerter.alert_on_failure(run_1)
+      FailureAlerter.alert_on_failure(attempt_1)
+      FailureAlerter.alert_on_failure(attempt_1)
+      FailureAlerter.alert_on_failure(attempt_1)
 
-      FailureAlerter.alert_on_failure(run_2)
+      FailureAlerter.alert_on_failure(attempt_2)
 
       Oban.drain_queue(Oban, queue: :workflow_failures)
 
@@ -176,23 +169,23 @@ defmodule Lightning.FailureAlertTest do
     end
 
     test "does not send failure emails to users who have unsubscribed", %{
-      runs: [run_1, _, run_3]
+      attempts: [attempt_1, _, attempt_3]
     } do
-      FailureAlerter.alert_on_failure(run_1)
+      FailureAlerter.alert_on_failure(attempt_1)
 
       assert_email_sent(subject: "\"workflow-a\" failed.")
 
-      FailureAlerter.alert_on_failure(run_3)
+      FailureAlerter.alert_on_failure(attempt_3)
 
       refute_email_sent(subject: "\"workflow-a\" failed.")
     end
 
     test "does not increment the rate-limiter counter when an email is not delivered.",
-         %{runs: [run, _, _], workorders: [workorder, _, _]} do
+         %{attempts: [attempt, _, _], workorders: [workorder, _, _]} do
       [time_scale: time_scale, rate_limit: rate_limit] =
         Application.fetch_env!(:lightning, Lightning.FailureAlerter)
 
-      FailureAlerter.alert_on_failure(run)
+      FailureAlerter.alert_on_failure(attempt)
 
       {:ok, {0, ^rate_limit, _, _, _}} =
         Hammer.inspect_bucket(workorder.workflow_id, time_scale, rate_limit)
@@ -203,7 +196,7 @@ defmodule Lightning.FailureAlertTest do
         {:error}
       end)
 
-      FailureAlerter.alert_on_failure(run)
+      FailureAlerter.alert_on_failure(attempt)
 
       refute_email_sent(subject: "\"workflow-a\" failed.")
 
@@ -232,17 +225,8 @@ defmodule Lightning.FailureAlertTest do
           %{"token" => Workers.generate_attempt_token(attempt)}
         )
 
-      %{runs: [run]} = Repo.preload(attempt, :runs)
+      _ref = push(socket, "attempt:complete", %{"reason" => "crash"})
 
-      push(socket, "run:complete", %{
-        "run_id" => run.id,
-        "output_dataclip_id" => Ecto.UUID.generate(),
-        "output_dataclip" => ~s({"foo": "bar"}),
-        "reason" => "normal"
-      })
-
-      # Wait a bit to make sure run:complete is handled
-      # TODO: Check with Taylor DOWNS and team if this is good enough
       Process.sleep(250)
 
       assert_email_sent(subject: "\"workflow-a\" failed.")
