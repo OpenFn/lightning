@@ -57,7 +57,7 @@ defmodule LightningWeb.RunLive.Components do
       assign(assigns, is_clone: is_clone, run_item_classes: run_item_classes)
 
     ~H"""
-    <div role="row" class={@run_item_classes}>
+    <div id={"run-#{@run.id}"} role="row" class={@run_item_classes}>
       <div
         role="cell"
         class="col-span-3 py-2 text-sm font-normal text-left rtl:text-right text-gray-500"

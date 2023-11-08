@@ -11,7 +11,6 @@ defmodule LightningWeb.RunLive.Index do
   alias Lightning.Policies.Permissions
   alias Lightning.Policies.ProjectUsers
   alias Lightning.WorkOrders
-  alias Lightning.WorkOrderService
   alias Lightning.WorkOrders.SearchParams
   alias LightningWeb.RunLive.Components
   alias Phoenix.LiveView.JS
@@ -37,7 +36,7 @@ defmodule LightningWeb.RunLive.Index do
 
   @impl true
   def mount(params, _session, socket) do
-    WorkOrderService.subscribe(socket.assigns.project.id)
+    WorkOrders.Events.subscribe(socket.assigns.project.id)
 
     workflows =
       Lightning.Workflows.get_workflows_for(socket.assigns.project)
@@ -176,7 +175,7 @@ defmodule LightningWeb.RunLive.Index do
 
   @impl true
   def handle_info(
-        {_, %Lightning.WorkOrders.Events.AttemptCreated{attempt: attempt}},
+        %Lightning.WorkOrders.Events.AttemptCreated{attempt: attempt},
         socket
       ) do
     send_update(LightningWeb.RunLive.WorkOrderComponent,
@@ -188,11 +187,45 @@ defmodule LightningWeb.RunLive.Index do
 
   @impl true
   def handle_info(
-        {_, %Lightning.WorkOrders.Events.AttemptUpdated{attempt: attempt}},
+        %Lightning.WorkOrders.Events.AttemptUpdated{attempt: attempt},
         socket
       ) do
     send_update(LightningWeb.RunLive.WorkOrderComponent,
       id: attempt.work_order_id
+    )
+
+    {:noreply, socket}
+  end
+
+  @impl true
+  def handle_info(
+        %Lightning.WorkOrders.Events.WorkOrderCreated{work_order: work_order},
+        %{assigns: assigns} = socket
+      ) do
+    params =
+      assigns.filters
+      |> Map.merge(%{"workorder_id" => work_order.id})
+      |> SearchParams.new()
+
+    page_result = Invocation.search_workorders(assigns.project, params)
+
+    page = %{
+      assigns.page
+      | entries: page_result.entries ++ assigns.page.entries,
+        page_size: assigns.page.page_size + page_result.total_entries,
+        total_entries: assigns.page.total_entries + page_result.total_entries
+    }
+
+    {:noreply, assign(socket, page: page)}
+  end
+
+  @impl true
+  def handle_info(
+        %Lightning.WorkOrders.Events.WorkOrderUpdated{work_order: work_order},
+        socket
+      ) do
+    send_update(LightningWeb.RunLive.WorkOrderComponent,
+      id: work_order.id
     )
 
     {:noreply, socket}

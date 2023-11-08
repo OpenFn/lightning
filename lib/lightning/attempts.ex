@@ -115,8 +115,6 @@ defmodule Lightning.Attempts do
     |> Repo.transaction()
     |> case do
       {:ok, %{attempts: {1, [attempt]}}} ->
-        # TODO: Broadcast here ? Below doesn't seem to update the live view
-        Events.attempt_updated(attempt)
         {:ok, attempt}
 
       {:error, changeset} ->
@@ -136,6 +134,7 @@ defmodule Lightning.Attempts do
     |> Ecto.Multi.run(:post, fn _, %{attempts: {_, attempts}} ->
       Enum.each(attempts, fn attempt ->
         {:ok, _} = Lightning.WorkOrders.update_state(attempt)
+
         Events.attempt_updated(attempt)
       end)
 

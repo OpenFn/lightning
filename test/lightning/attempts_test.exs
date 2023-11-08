@@ -174,6 +174,8 @@ defmodule Lightning.AttemptsTest do
 
       assert {:job_id, {"does not exist", []}} in changeset.errors
 
+      Lightning.WorkOrders.Events.subscribe(workflow.project_id)
+
       {:ok, run} =
         Attempts.start_run(%{
           "attempt_id" => attempt.id,
@@ -186,6 +188,12 @@ defmodule Lightning.AttemptsTest do
 
       assert Repo.get_by(Lightning.AttemptRun, run_id: run.id),
              "There is a corresponding AttemptRun linking it to the attempt"
+
+      attempt_id = attempt.id
+
+      assert_received %Lightning.WorkOrders.Events.AttemptUpdated{
+        attempt: %{id: ^attempt_id}
+      }
     end
   end
 
@@ -241,15 +249,24 @@ defmodule Lightning.AttemptsTest do
       %{triggers: [trigger]} = workflow = insert(:simple_workflow)
 
       %{attempts: [attempt]} =
+        workorder =
         work_order_for(trigger, workflow: workflow, dataclip: dataclip)
         |> insert()
 
       {:ok, attempt} =
         Repo.update(attempt |> Ecto.Changeset.change(state: :claimed))
 
+      Lightning.WorkOrders.Events.subscribe(workflow.project_id)
+
       {:ok, attempt} = Attempts.start_attempt(attempt)
 
       assert attempt.started_at <= DateTime.utc_now()
+
+      workorder_id = workorder.id
+
+      assert_received %Lightning.WorkOrders.Events.WorkOrderUpdated{
+        work_order: %{id: ^workorder_id}
+      }
     end
   end
 
@@ -259,6 +276,7 @@ defmodule Lightning.AttemptsTest do
       %{triggers: [trigger]} = workflow = insert(:simple_workflow)
 
       %{attempts: [attempt]} =
+        workorder =
         work_order_for(trigger, workflow: workflow, dataclip: dataclip)
         |> insert()
 
@@ -281,10 +299,18 @@ defmodule Lightning.AttemptsTest do
 
       assert WorkOrders.get(attempt.work_order_id).state == :running
 
+      Lightning.WorkOrders.Events.subscribe(workflow.project_id)
+
       {:ok, attempt} = Attempts.complete_attempt(attempt, "success")
 
       assert attempt.state == :success
       assert DateTime.utc_now() >= attempt.finished_at
+
+      workorder_id = workorder.id
+
+      assert_received %Lightning.WorkOrders.Events.WorkOrderUpdated{
+        work_order: %{id: ^workorder_id}
+      }
     end
 
     test "returns error if state is not present" do

@@ -114,6 +114,7 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
   def render(assigns) do
     ~H"""
     <div
+      id={"workorder-#{@work_order.id}"}
       data-entity="work_order"
       role="rowgroup"
       class={if @entry_selected, do: "bg-gray-50", else: "bg-white"}

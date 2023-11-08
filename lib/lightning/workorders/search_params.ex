@@ -29,6 +29,7 @@ defmodule Lightning.WorkOrders.SearchParams do
     field(:search_fields, {:array, :string}, default: @search_fields)
     field(:search_term, :string)
     field(:workflow_id, :binary_id)
+    field(:workorder_id, :binary_id)
     field(:date_after, :utc_datetime_usec)
     field(:date_before, :utc_datetime_usec)
     field(:wo_date_after, :utc_datetime_usec)
@@ -38,11 +39,13 @@ defmodule Lightning.WorkOrders.SearchParams do
   def new(params) do
     params = from_uri(params)
 
-    Ecto.Changeset.cast(%__MODULE__{}, params, [
+    %__MODULE__{}
+    |> cast(params, [
       :status,
       :search_fields,
       :search_term,
       :workflow_id,
+      :workorder_id,
       :date_after,
       :date_before,
       :wo_date_after,

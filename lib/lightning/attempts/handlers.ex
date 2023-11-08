@@ -5,7 +5,8 @@ defmodule Lightning.Attempts.Handlers do
 
   alias Lightning.Attempt
   alias Lightning.AttemptRun
-  alias Lightning.Attempts.Events
+  alias Lightning.Attempts
+  alias Lightning.WorkOrders
   alias Lightning.Invocation.Dataclip
   alias Lightning.Invocation.Run
   alias Lightning.Repo
@@ -45,7 +46,10 @@ defmodule Lightning.Attempts.Handlers do
     def call(params) do
       with {:ok, attrs} <- new(params) |> apply_action(:validate),
            {:ok, run} <- insert(attrs) do
-        Events.run_started(attrs.attempt_id, run)
+        attempt = Attempts.get(attrs.attempt_id, include: [:workflow])
+        WorkOrders.Events.attempt_updated(attempt.workflow.project_id, attempt)
+        Attempts.Events.run_started(attrs.attempt_id, run)
+
         {:ok, run}
       end
     end

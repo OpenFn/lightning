@@ -327,6 +327,7 @@ defmodule Lightning.Invocation do
         %SearchParams{} = search_params
       ) do
     base_query(project_id)
+    |> filter_by_workorder_id(search_params.workorder_id)
     |> filter_by_workflow_id(search_params.workflow_id)
     |> filter_by_statuses(search_params.status)
     |> filter_by_wo_date_after(search_params.wo_date_after)
@@ -351,6 +352,13 @@ defmodule Lightning.Invocation do
       order_by: [desc_nulls_first: workorder.last_activity],
       distinct: true
     )
+  end
+
+  defp filter_by_workorder_id(query, nil), do: query
+
+  defp filter_by_workorder_id(query, workorder_id)
+       when is_binary(workorder_id) do
+    from([workorder: workorder] in query, where: workorder.id == ^workorder_id)
   end
 
   defp filter_by_workflow_id(query, nil), do: query
