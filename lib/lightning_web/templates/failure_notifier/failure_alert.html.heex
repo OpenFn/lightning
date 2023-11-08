@@ -4,9 +4,6 @@
     Work order <code><%= @work_order_id %></code>
     failed for workflow "<%= @workflow_name %>".
   </p>
-  <p>
-    Click <a href={@run_url}>here</a> to inspect the run or view the logs below.
-  </p>
   <%= if @count > 1 do %>
     <p>
       Note that attempts for this workflow have failed <%= @count %> times in
@@ -15,9 +12,12 @@
     </p>
   <% end %>
   <p>
+    View the attempt logs below:
+  </p>
+  <p>
     <pre style="background-color: #ededed; padding: 16px; margin: 8px 0">
-      <%= Enum.map(@run.log_lines, fn(log_line) -> %>
-        <%= log_line.body %>
+      <%= Enum.map(@attempt_logs, fn(log) -> %>
+        <%= log.message %>
       <% end) %>
     </pre>
   </p>

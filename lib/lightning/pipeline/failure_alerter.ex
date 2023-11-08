@@ -1,51 +1,38 @@
 defmodule Lightning.FailureAlerter do
   @moduledoc false
 
-  alias Lightning.Repo
+  alias Lightning.Attempt
 
-  def alert_on_failure(run) when run.exit_code == 0, do: nil
+  def alert_on_failure(nil), do: nil
 
-  def alert_on_failure(run) do
-    attempt = Lightning.AttemptService.get_last_attempt_for(run)
+  def alert_on_failure(%Attempt{state: state}) when state == :success,
+    do: nil
 
-    attempt
-    |> case do
-      nil ->
-        nil
+  def alert_on_failure(%Attempt{} = attempt) do
+    workflow = attempt.work_order.workflow
 
-      attempt ->
-        work_order = attempt.work_order
-        workflow = attempt.work_order.workflow
-
-        Lightning.Accounts.get_users_to_alert_for_project(%{
-          id: workflow.project_id
-        })
-        |> Enum.each(fn user ->
-          %{
-            "workflow_id" => workflow.id,
-            "workflow_name" => workflow.name,
-            "run_id" => run.id,
-            "project_id" => workflow.project_id,
-            "work_order_id" => work_order.id,
-            "recipient" => user
-          }
-          |> Lightning.FailureAlerter.alert()
-        end)
-    end
+    Lightning.Accounts.get_users_to_alert_for_project(%{
+      id: workflow.project_id
+    })
+    |> Enum.each(fn user ->
+      %{
+        "workflow_id" => workflow.id,
+        "workflow_name" => workflow.name,
+        "work_order_id" => attempt.work_order_id,
+        "attempt_logs" => attempt.log_lines,
+        "recipient" => user
+      }
+      |> Lightning.FailureAlerter.alert()
+    end)
   end
 
   def alert(%{
         "workflow_id" => workflow_id,
         "workflow_name" => workflow_name,
-        "run_id" => run_id,
-        "project_id" => project_id,
         "work_order_id" => work_order_id,
+        "attempt_logs" => attempt_logs,
         "recipient" => recipient
       }) do
-    run = Repo.get!(Lightning.Invocation.Run, run_id)
-
-    run_url = LightningWeb.RouteHelpers.show_run_url(project_id, run_id)
-
     [time_scale: time_scale, rate_limit: rate_limit] =
       Application.fetch_env!(:lightning, __MODULE__)
 
@@ -64,10 +51,9 @@ defmodule Lightning.FailureAlerter do
           count: count,
           time_scale: time_scale,
           rate_limit: rate_limit,
-          run: run |> Repo.preload(:log_lines),
+          attempt_logs: attempt_logs,
           workflow_name: workflow_name,
           workflow_id: workflow_id,
-          run_url: run_url,
           recipient: recipient
         })
         |> case do

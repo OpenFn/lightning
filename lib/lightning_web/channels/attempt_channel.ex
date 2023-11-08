@@ -4,6 +4,7 @@ defmodule LightningWeb.AttemptChannel do
   """
   use LightningWeb, :channel
 
+  alias Lightning.Repo
   alias Lightning.Attempts
   alias Lightning.Attempts.Events.AttemptUpdated
   alias Lightning.Attempts.Events.RunStarted
@@ -62,6 +63,10 @@ defmodule LightningWeb.AttemptChannel do
     |> Attempts.complete_attempt(map_rtm_reason_state(payload))
     |> case do
       {:ok, attempt} ->
+        attempt
+        |> Repo.preload([:log_lines, work_order: [:workflow]])
+        |> Lightning.FailureAlerter.alert_on_failure()
+
         {:reply, {:ok, nil}, socket |> assign(attempt: attempt)}
 
       {:error, changeset} ->
