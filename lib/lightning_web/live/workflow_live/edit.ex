@@ -389,7 +389,14 @@ defmodule LightningWeb.WorkflowLive.Edit do
           can_edit_job:
             Permissions.can?(ProjectUsers, :edit_job, current_user, project_user),
           can_run_job:
-            Permissions.can?(ProjectUsers, :run_job, current_user, project_user)
+            Permissions.can?(ProjectUsers, :run_job, current_user, project_user),
+          can_create_webhook_auth_method:
+            Permissions.can?(
+              ProjectUsers,
+              :create_webhook_auth_method,
+              current_user,
+              project_user
+            )
         )
 
       {:error, _} ->
@@ -549,6 +556,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
     %{
       changeset: changeset,
       project: project,
+      live_action: live_action,
       workflow_params: initial_params,
       can_edit_job: can_edit_job
     } =
@@ -576,11 +584,14 @@ defmodule LightningWeb.WorkflowLive.Edit do
           |> assign_workflow(workflow)
           |> put_flash(:info, "Workflow saved")
           |> push_patches_applied(initial_params)
-
-          {:noreply,
-           push_navigate(socket,
-             to: ~p"/projects/#{project}/w/#{workflow}"
-           )}
+          |> then(fn socket ->
+            if live_action == :new do
+              {:noreply,
+               push_patch(socket, to: ~p"/projects/#{project}/w/#{workflow}")}
+            else
+              {:noreply, socket}
+            end
+          end)
 
         {:error, changeset} ->
           socket
@@ -835,8 +846,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
     |> assign(
       query_params:
         params
-        |> Map.take(["s", "m", "a"])
-        |> Enum.into(%{"s" => nil, "m" => nil, "a" => nil})
+        |> Map.take(["s", "m", "a", "w"])
+        |> Enum.into(%{"s" => nil, "m" => nil, "a" => nil, "w" => nil})
     )
     |> apply_query_params()
   end
