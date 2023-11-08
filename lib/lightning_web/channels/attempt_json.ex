@@ -2,7 +2,7 @@ defmodule LightningWeb.AttemptJson do
   alias Lightning.Attempt
   alias Lightning.Workflows.{Trigger, Edge, Job}
 
-  def render(attempt = %Attempt{}) do
+  def render(%Attempt{} = attempt) do
     %{
       "id" => attempt.id,
       "triggers" => attempt.workflow.triggers |> Enum.map(&render/1),
@@ -14,13 +14,13 @@ defmodule LightningWeb.AttemptJson do
     }
   end
 
-  def render(trigger = %Trigger{}) do
+  def render(%Trigger{} = trigger) do
     %{
       "id" => trigger.id
     }
   end
 
-  def render(job = %Job{}) do
+  def render(%Job{} = job) do
     %{
       "id" => job.id,
       "adaptor" => job.adaptor,
@@ -29,7 +29,7 @@ defmodule LightningWeb.AttemptJson do
     }
   end
 
-  def render(edge = %Edge{}) do
+  def render(%Edge{} = edge) do
     %{
       "id" => edge.id,
       "source_trigger_id" => edge.source_trigger_id,

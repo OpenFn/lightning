@@ -345,7 +345,7 @@ defmodule Lightning.WorkOrders do
 
       Lightning.WorkOrders.get(id, include: [:attempts])
   """
-  @spec get(Ecto.UUID.t(), [{:include, [atom()]}]) :: %WorkOrder{} | nil
+  @spec get(Ecto.UUID.t(), [{:include, [atom()]}]) :: WorkOrder.t() | nil
   def get(id, opts \\ []) do
     preloads = opts |> Keyword.get(:include, [])
 

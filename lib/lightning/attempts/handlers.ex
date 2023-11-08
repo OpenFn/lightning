@@ -154,9 +154,8 @@ defmodule Lightning.Attempts.Handlers do
     def call(params) do
       with {:ok, complete_run} <-
              new(params)
-             |> apply_action(:validate),
-           {:ok, run} <- update(complete_run) do
-        {:ok, run}
+             |> apply_action(:validate) do
+        update(complete_run)
       end
     end
 
@@ -164,9 +163,8 @@ defmodule Lightning.Attempts.Handlers do
       Repo.transact(fn ->
         with run = %Run{} <-
                get_run(complete_run.run_id) || {:error, :not_found},
-             {:ok, _} <- to_dataclip(complete_run) |> Repo.insert(),
-             {:ok, run} <- update_run(run, complete_run) do
-          {:ok, run}
+             {:ok, _} <- to_dataclip(complete_run) |> Repo.insert() do
+          update_run(run, complete_run)
         end
       end)
     end

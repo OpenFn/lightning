@@ -28,6 +28,7 @@ defmodule Lightning.Credentials.Schema do
   def new(json_schema, name) when is_map(json_schema) do
     fields =
       json_schema["properties"]
+      # credo:disable-for-next-line
       |> Enum.map(fn {k, _v} -> k |> String.to_atom() end)
 
     root = ExJsonSchema.Schema.resolve(json_schema)
@@ -101,6 +102,7 @@ defmodule Lightning.Credentials.Schema do
     root.schema
     |> Map.get("properties", [])
     |> Enum.map(fn {field, properties} ->
+      # credo:disable-for-next-line
       type = properties |> Map.get("type", "string") |> String.to_atom()
 
       {String.to_existing_atom(field), type}
