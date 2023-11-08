@@ -546,7 +546,12 @@ defmodule LightningWeb.WorkflowLive.Edit do
   end
 
   def handle_event("save", params, socket) do
-    %{workflow_params: initial_params, can_edit_job: can_edit_job} =
+    %{
+      changeset: changeset,
+      project: project,
+      workflow_params: initial_params,
+      can_edit_job: can_edit_job
+    } =
       socket.assigns
 
     if can_edit_job do
@@ -554,33 +559,38 @@ defmodule LightningWeb.WorkflowLive.Edit do
         case params do
           %{"workflow" => params} ->
             WorkflowParams.apply_form_params(
-              socket.assigns.workflow_params,
+              initial_params,
               params
             )
 
           %{} ->
-            socket.assigns.workflow_params
+            initial_params
         end
 
       socket = socket |> apply_params(next_params)
 
-      socket =
-        Lightning.Repo.insert_or_update(socket.assigns.changeset)
-        |> case do
-          {:ok, workflow} ->
-            socket
-            |> assign_workflow(workflow)
-            |> put_flash(:info, "Workflow saved")
+      Lightning.Repo.insert_or_update(changeset)
+      |> case do
+        {:ok, workflow} ->
+          socket
+          |> assign_workflow(workflow)
+          |> put_flash(:info, "Workflow saved")
+          |> push_patches_applied(initial_params)
 
-          {:error, changeset} ->
-            socket
-            |> assign_changeset(changeset)
-            |> mark_validated()
-            |> put_flash(:error, "Workflow could not be saved")
-        end
-        |> push_patches_applied(initial_params)
+          {:noreply,
+           push_navigate(socket,
+             to: ~p"/projects/#{project}/w/#{workflow}"
+           )}
 
-      {:noreply, socket}
+        {:error, changeset} ->
+          socket
+          |> assign_changeset(changeset)
+          |> mark_validated()
+          |> put_flash(:error, "Workflow could not be saved")
+          |> push_patches_applied(initial_params)
+
+          {:noreply, socket}
+      end
     else
       {:noreply,
        socket
