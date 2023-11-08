@@ -547,7 +547,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
   def handle_event("save", params, socket) do
     %{
-      changeset: changeset,
       project: project,
       live_action: live_action,
       workflow_params: initial_params,
@@ -570,7 +569,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
       socket = socket |> apply_params(next_params)
 
-      Lightning.Repo.insert_or_update(changeset)
+      Lightning.Repo.insert_or_update(socket.assigns.changeset)
       |> case do
         {:ok, workflow} ->
           socket
