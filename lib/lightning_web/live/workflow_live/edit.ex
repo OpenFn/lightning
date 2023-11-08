@@ -838,8 +838,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
     |> assign(
       query_params:
         params
-        |> Map.take(["s", "m", "a", "w"])
-        |> Enum.into(%{"s" => nil, "m" => nil, "a" => nil, "w" => nil})
+        |> Map.take(["s", "m", "a"])
+        |> Enum.into(%{"s" => nil, "m" => nil, "a" => nil})
     )
     |> apply_query_params()
   end
