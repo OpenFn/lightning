@@ -28,6 +28,16 @@ defmodule Lightning.Attempts.QueryTest do
           work_order: work_order,
           starting_trigger: trigger,
           dataclip: dataclip,
+          state: :claimed,
+          claimed_at: DateTime.add(earliest_acceptable_start, -10)
+        )
+
+      _crashed_but_NOT_lost =
+        insert(:attempt,
+          work_order: work_order,
+          starting_trigger: trigger,
+          dataclip: dataclip,
+          state: :crashed,
           claimed_at: DateTime.add(earliest_acceptable_start, -10)
         )
 
@@ -36,6 +46,7 @@ defmodule Lightning.Attempts.QueryTest do
           work_order: work_order,
           starting_trigger: trigger,
           dataclip: dataclip,
+          state: :claimed,
           claimed_at: DateTime.add(earliest_acceptable_start, 10)
         )
 
