@@ -25,7 +25,7 @@ defmodule LightningWeb.WorkflowLive.Form do
           label="Workflow Name"
           name="workflow_name"
         />
-        <%= inspect(@form.source.valid?) %>
+        
         <.modal_footer>
           <div class="flex gap-x-5 justify-end relative">
             <.link
@@ -74,7 +74,7 @@ defmodule LightningWeb.WorkflowLive.Form do
     socket =
       socket
       |> assign(:isButtonDisabled, not changeset.valid?)
-    
+
 
     {:noreply, assign(socket, form: to_form(changeset, as: :input_form))}
   end
