@@ -258,12 +258,8 @@ defmodule Lightning.Workflows do
   def workflow_exists?(project_id, workflow_name) do
     query =
       from w in Workflow,
-        where: w.project_id == ^project_id and w.name == ^workflow_name,
-        limit: 1
+        where: w.project_id == ^project_id and w.name == ^workflow_name
 
-    case Repo.one(query) do
-      nil -> false
-      _ -> true
-    end
+    Repo.exists?(query)
   end
 end

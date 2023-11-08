@@ -18,7 +18,6 @@ defmodule LightningWeb.WorkflowLive.Form do
         phx-submit="create_work_flow"
         phx-target={@myself}
         class="w-11/12 mx-auto"
-        phx-debounce="2000"
       >
         <.input
           field={f[:name]}
@@ -26,7 +25,7 @@ defmodule LightningWeb.WorkflowLive.Form do
           label="Workflow Name"
           name="workflow_name"
         />
-
+        <%= inspect(@form.source.valid?) %>
         <.modal_footer>
           <div class="flex gap-x-5 justify-end relative">
             <.link
@@ -37,12 +36,12 @@ defmodule LightningWeb.WorkflowLive.Form do
             </.link>
             <span class="group">
               <button
-                disabled={!@isButtonDisabled}
+                disabled={@isButtonDisabled}
                 type="submit"
                 class=" justify-center rounded-md bg-primary-600 disabled:bg-primary-300 px-6 py-3 text-sm font-semibold text-white shadow-sm hover:bg-primary-500 disabled:outline-0 focus:outline-2 focus:outline-indigo-600 focus:outline-offset-2 active:outlin-2 active:outline-indigo-600 active:outline-offset-2"
               >
                 Create Workflow
-                <%= if !@isButtonDisabled do %>
+                <%= if @isButtonDisabled do %>
                   <span class="invisible group-hover:visible w-36 py-1 px-3 bg-[#030712] absolute  rounded-md -translate-y-16 -translate-x-32">
                     A workflow name is required
                   </span>
@@ -64,7 +63,7 @@ defmodule LightningWeb.WorkflowLive.Form do
       socket
       |> assign(:form, to_form(changeset, as: :input_form))
       |> assign(:project_id, assigns.id)
-      |> assign(:isButtonDisabled, changeset.valid?)
+      |> assign(:isButtonDisabled, not changeset.valid?)
 
     {:ok, socket}
   end
@@ -72,10 +71,10 @@ defmodule LightningWeb.WorkflowLive.Form do
   @impl true
   def handle_event("validate", %{"workflow_name" => workflow_name}, socket) do
     changeset = validate_workflow(workflow_name, socket)
-
     socket =
       socket
-      |> assign(:isButtonDisabled, changeset.valid?)
+      |> assign(:isButtonDisabled, not changeset.valid?)
+    
 
     {:noreply, assign(socket, form: to_form(changeset, as: :input_form))}
   end
@@ -119,10 +118,10 @@ defmodule LightningWeb.WorkflowLive.Form do
     {workflow, @types}
     |> cast(attrs, Map.keys(@types))
     |> validate_required([:name])
-    |> validate()
+    |> validate_unique_name?()
   end
 
-  defp validate(changeset) do
+  defp validate_unique_name?(changeset) do
     workflow_name = get_field(changeset, :name)
     project_id = get_field(changeset, :project_id)
 
