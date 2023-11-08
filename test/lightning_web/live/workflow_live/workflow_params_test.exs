@@ -24,13 +24,15 @@ defmodule LightningWeb.WorkflowNewLive.WorkflowParamsTest do
           "id" => Ecto.UUID.generate(),
           "source_trigger_id" => trigger_1_id,
           "condition" => "on_job_failure",
-          "target_job_id" => job_1_id
+          "target_job_id" => job_1_id,
+          "enabled" => true
         },
         %{
           "id" => Ecto.UUID.generate(),
           "source_job_id" => job_1_id,
           "condition" => "on_job_success",
-          "target_job_id" => job_2_id
+          "target_job_id" => job_2_id,
+          "enabled" => true
         }
       ]
     }
@@ -124,7 +126,8 @@ defmodule LightningWeb.WorkflowNewLive.WorkflowParamsTest do
                    "id" => _,
                    "source_job_id" => nil,
                    "source_trigger_id" => ^trigger_1_id,
-                   "target_job_id" => ^job_1_id
+                   "target_job_id" => ^job_1_id,
+                   "enabled" => true
                  },
                  %{
                    "condition" => "on_job_success",
@@ -132,7 +135,8 @@ defmodule LightningWeb.WorkflowNewLive.WorkflowParamsTest do
                    "id" => _,
                    "source_job_id" => ^job_1_id,
                    "source_trigger_id" => nil,
-                   "target_job_id" => ^job_2_id
+                   "target_job_id" => ^job_2_id,
+                   "enabled" => true
                  }
                ],
                "jobs" => [
@@ -140,7 +144,6 @@ defmodule LightningWeb.WorkflowNewLive.WorkflowParamsTest do
                    "adaptor" => "@openfn/language-common@latest",
                    "body" => "",
                    "project_credential_id" => nil,
-                   "enabled" => true,
                    "errors" => %{"body" => ["can't be blank"]},
                    "name" => "job-3",
                    "id" => ^job_3_id

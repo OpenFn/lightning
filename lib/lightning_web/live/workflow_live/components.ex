@@ -511,18 +511,18 @@ defmodule LightningWeb.WorkflowLive.Components do
         values={@edge_options}
         disabled={@disabled}
       />
-    <div class="mt-7 border-t flex flex-col justify-between">
-      <h2 class=" flex mt-3">
-        <Form.check_box
-          form={@form}
-          field={:enabled}
-          label="Disable this path"
-          checked_value={false}
-          unchecked_value={true}
-          value={@edge_enabled}
-        />
-      </h2>
-    </div>
+      <div class="mt-7 border-t flex flex-col justify-between">
+        <h2 class=" flex mt-3">
+          <Form.check_box
+            form={@form}
+            field={:enabled}
+            label="Disable this path"
+            checked_value={false}
+            unchecked_value={true}
+            value={@edge_enabled}
+          />
+        </h2>
+      </div>
     <% end %>
     """
   end
