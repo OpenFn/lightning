@@ -186,7 +186,7 @@ defmodule Lightning.Workflows.EdgeTest do
              "New edges should be enabled by default"
     end
 
-    test "edges with source_trigger_id should be enabled regardless of job's enabled status" do
+    test "edges with source_trigger_id should be enabled" do
       changeset =
         Edge.changeset(%Edge{}, %{
           workflow_id: Ecto.UUID.generate(),
