@@ -253,7 +253,6 @@ defmodule Lightning.AttemptService do
               :job_id,
               :started_at,
               :finished_at,
-              :exit_code,
               :input_dataclip_id,
               :output_dataclip_id
             ]
@@ -302,7 +301,6 @@ defmodule Lightning.AttemptService do
                 :job_id,
                 :started_at,
                 :finished_at,
-                :exit_code,
                 :input_dataclip_id,
                 :output_dataclip_id
               ]

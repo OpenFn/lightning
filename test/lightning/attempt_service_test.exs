@@ -92,10 +92,9 @@ defmodule Lightning.AttemptServiceTest do
           %{
             job_id: j.id,
             input_dataclip_id: dataclip.id,
-            exit_code: 0
           }
         end) ++
-          [%{job_id: jobs.d.id, exit_code: 1, input_dataclip_id: dataclip.id}]
+          [%{job_id: jobs.d.id, input_dataclip_id: dataclip.id}]
 
       attempt =
         insert(:attempt,
@@ -109,7 +108,7 @@ defmodule Lightning.AttemptServiceTest do
         from(r in Run,
           join: a in assoc(r, :attempts),
           where: a.id == ^attempt.id,
-          where: r.exit_code == 1
+          where: r.exit_reason != :success
         )
         |> Repo.one()
 
@@ -166,10 +165,9 @@ defmodule Lightning.AttemptServiceTest do
           %{
             job_id: j.id,
             input_dataclip_id: dataclip.id,
-            exit_code: 0
           }
         end) ++
-          [%{job_id: jobs.d.id, exit_code: 1, input_dataclip_id: dataclip.id}]
+          [%{job_id: jobs.d.id, input_dataclip_id: dataclip.id}]
 
       attempt =
         Lightning.Attempt.new(%{
@@ -184,7 +182,7 @@ defmodule Lightning.AttemptServiceTest do
         from(r in Run,
           join: a in assoc(r, :attempts),
           where: a.id == ^attempt.id,
-          where: r.exit_code == 1
+          where: r.exit_reason == :failed
         )
         |> Repo.one()
 
@@ -260,7 +258,6 @@ defmodule Lightning.AttemptServiceTest do
               %{
                 job_id: j.id,
                 input_dataclip_id: dataclip.id,
-                exit_code: 0,
                 started_at: Timex.shift(now, microseconds: time),
                 finished_at: Timex.shift(now, microseconds: time + 5)
               }
@@ -325,7 +322,7 @@ defmodule Lightning.AttemptServiceTest do
                 %{
                   job_id: j.id,
                   input_dataclip_id: dataclip.id,
-                  exit_code: 0
+                  exit_reason: "success"
                 }
               end
             )
@@ -347,7 +344,6 @@ defmodule Lightning.AttemptServiceTest do
           %{
             job_id: j.id,
             input_dataclip_id: dataclip2.id,
-            exit_code: 0
           }
         end)
 
@@ -378,7 +374,7 @@ defmodule Lightning.AttemptServiceTest do
           run: %{
             job_id: jobs.d.id,
             input_dataclip_id: dataclip2.id,
-            exit_code: 0
+            exit_reason: "success"
           }
         })
         |> Repo.insert!()

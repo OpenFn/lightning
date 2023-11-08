@@ -18,8 +18,6 @@ defmodule Lightning.Runtime.ChildProcessTest do
                env: %{"PATH" => "./priv/openfn/bin:#{System.get_env("PATH")}"}
              )
 
-    # NOTE: we don't appear to get an exit code
-    # assert result.exit_code == 134
     assert result.exit_reason == :error
 
     assert String.contains?(Enum.join(result.log, "\n"), "heap out of memory")

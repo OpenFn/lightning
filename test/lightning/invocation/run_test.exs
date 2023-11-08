@@ -9,7 +9,6 @@ defmodule Lightning.Invocation.RunTest do
     test "returns a new Run changeset based off another" do
       run =
         Lightning.InvocationFixtures.run_fixture(
-          exit_code: 1,
           started_at: DateTime.utc_now(),
           finished_at: DateTime.utc_now(),
           log_lines: [%{body: "log"}, %{body: "line"}]

@@ -96,7 +96,7 @@ defmodule Lightning.InvocationFixtures do
         dataclip_fixture(project_id: attrs[:project_id]).id
       end)
       |> Enum.into(%{
-        exit_code: nil,
+        exit_reason: nil,
         finished_at: nil,
         log: [],
         event_id: nil,

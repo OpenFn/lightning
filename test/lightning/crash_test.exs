@@ -82,7 +82,6 @@
 #       result = Pipeline.Runner.start(run)
 
 #       assert result.exit_reason == :killed
-#       assert result.exit_code == nil
 
 #       assert File.read!(result.final_state_path) == ""
 

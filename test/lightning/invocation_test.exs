@@ -130,7 +130,7 @@ defmodule Lightning.InvocationTest do
   describe "runs" do
     @invalid_attrs %{job_id: nil}
     @valid_attrs %{
-      exit_code: 42,
+      exit_reason: "success",
       finished_at: ~U[2022-02-02 11:49:00.000000Z],
       log: [],
       started_at: ~U[2022-02-02 11:49:00.000000Z]
@@ -191,7 +191,6 @@ defmodule Lightning.InvocationTest do
                  })
                )
 
-      assert run.exit_code == 42
       assert run |> Invocation.logs_for_run() == []
       assert run.finished_at == ~U[2022-02-02 11:49:00.000000Z]
       assert run.started_at == ~U[2022-02-02 11:49:00.000000Z]

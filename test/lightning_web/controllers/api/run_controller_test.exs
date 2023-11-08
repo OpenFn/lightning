@@ -110,7 +110,6 @@ defmodule LightningWeb.API.RunControllerTest do
 
       assert %{
                "attributes" => %{
-                 "exit_code" => nil,
                  "finished_at" => nil
                },
                "id" => ^run_id,
