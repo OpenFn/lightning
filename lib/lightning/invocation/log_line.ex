@@ -24,7 +24,7 @@ defmodule Lightning.Invocation.LogLine do
     field :source, :string
 
     field :level, Ecto.Enum,
-      values: [:info, :warn, :error, :debug],
+      values: [:success, :always, :info, :warn, :error, :debug],
       default: :info
 
     field :message, LogMessage, default: ""
