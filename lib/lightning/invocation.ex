@@ -504,8 +504,11 @@ defmodule Lightning.Invocation do
   Return all logs for a run as a list
   """
   @spec logs_for_run(Run.t()) :: list()
-  def logs_for_run(%Run{} = run),
-    do: Repo.preload(run, :log_lines) |> Map.get(:log_lines, [])
+  def logs_for_run(%Run{} = run) do
+    Ecto.assoc(run, :log_lines)
+    |> order_by([l], asc: l.timestamp)
+    |> Repo.all()
+  end
 
   def assemble_logs_for_run(nil), do: nil
 

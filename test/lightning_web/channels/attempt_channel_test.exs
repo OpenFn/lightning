@@ -372,7 +372,7 @@ defmodule LightningWeb.AttemptChannelTest do
       assert_reply ref, :ok, _
 
       persisted_log_line = Lightning.Repo.one(Lightning.Invocation.LogLine)
-      assert persisted_log_line.timestamp == ~U[2023-11-08 11:57:33.874089Z]
+      assert persisted_log_line.timestamp == ~U[2023-11-08 11:57:33.874083Z]
     end
   end
 
