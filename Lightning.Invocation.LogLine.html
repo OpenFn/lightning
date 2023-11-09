@@ -13,7 +13,7 @@
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-EPF2X7PV.js"></script>
-    <script src="dist/sidebar_items-6D5A7B34.js"></script>
+    <script src="dist/sidebar_items-6FA2DA63.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -137,7 +137,9 @@ Pages
 
 
   <section id="moduledoc">
-<p>Ecto model for run logs.</p>
+<p>Ecto model for run logs.</p><p>Every log line from a worker is stored using this model.</p><p>Currently the <code class="inline">:message</code> field is a text field, however the worker sends
+messages in a JSON format. We will at some point consider changing this to
+a JSON field; but for now we coerce it into a string.</p><p>See <a href="Lightning.LogMessage.html"><code class="inline">LogMessage</code></a> for more information.</p>
   </section>
 
 
@@ -205,7 +207,7 @@ Pages
     </a>
     <h1 class="signature" translate="no">t()</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation/log_line.ex#L12" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation/log_line.ex#L21" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -258,7 +260,7 @@ Pages
     </a>
     <h1 class="signature" translate="no">new(attempt, attrs \\ %{})</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation/log_line.ex#L38" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation/log_line.ex#L47" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -280,7 +282,7 @@ Pages
     </a>
     <h1 class="signature" translate="no">validate(changeset)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation/log_line.ex#L52" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation/log_line.ex#L61" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>

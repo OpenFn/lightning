@@ -13,7 +13,7 @@
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-EPF2X7PV.js"></script>
-    <script src="dist/sidebar_items-6D5A7B34.js"></script>
+    <script src="dist/sidebar_items-6FA2DA63.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -141,7 +141,8 @@ Pages
 either a string, or a JSON object. This type will encode JSON objects to
 string.</p><blockquote><h4 class="info">Messages are always strings</h4><p>While this type allows JSON objects to be sent, the model will always return
 strings. This type is a stand-in until we want to add a JSONB column to the
-underlying table.</p></blockquote>
+underlying table.</p></blockquote><p>In the case of JSON objects we serialize them to a string, and in the case of
+arrays we serialize them individually and join them with a space.</p>
   </section>
 
 
@@ -239,7 +240,7 @@ underlying table.</p></blockquote>
     </a>
     <h1 class="signature" translate="no">cast(d)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/ecto_types.ex#L80" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/ecto_types.ex#L83" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -261,7 +262,7 @@ underlying table.</p></blockquote>
     </a>
     <h1 class="signature" translate="no">dump(d)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/ecto_types.ex#L90" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/ecto_types.ex#L105" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -283,7 +284,7 @@ underlying table.</p></blockquote>
     </a>
     <h1 class="signature" translate="no">embed_as(_)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/ecto_types.ex#L77" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/ecto_types.ex#L80" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -305,7 +306,7 @@ underlying table.</p></blockquote>
     </a>
     <h1 class="signature" translate="no">equal?(term1, term2)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/ecto_types.ex#L77" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/ecto_types.ex#L80" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -327,7 +328,7 @@ underlying table.</p></blockquote>
     </a>
     <h1 class="signature" translate="no">load(d)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/ecto_types.ex#L86" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/ecto_types.ex#L101" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -349,7 +350,7 @@ underlying table.</p></blockquote>
     </a>
     <h1 class="signature" translate="no">type()</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/ecto_types.ex#L78" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/ecto_types.ex#L81" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>

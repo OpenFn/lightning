@@ -122,6 +122,9 @@ LightningWeb.API.ProvisioningController.html
 LightningWeb.API.RunController.html
 LightningWeb.AttemptChannel.html
 LightningWeb.AttemptJson.html
+LightningWeb.AttemptLive.AttemptViewerLive.html
+LightningWeb.AttemptLive.Components.html
+LightningWeb.AttemptLive.Show.html
 LightningWeb.AuditLive.Index.html
 LightningWeb.AuthProvidersLive.FormComponent.html
 LightningWeb.AuthProvidersLive.Index.html
@@ -131,6 +134,7 @@ LightningWeb.ChangesetJSON.html
 LightningWeb.ChangesetView.html
 LightningWeb.Components.Modal.html
 LightningWeb.Components.NewInputs.html
+LightningWeb.Components.Pills.html
 LightningWeb.CredentialLive.Edit.html
 LightningWeb.CredentialLive.FormComponent.html
 LightningWeb.CredentialLive.GoogleSheetsComponent.html
@@ -239,8 +243,8 @@ dist/merriweather-latin-ext-300-normal-K6L27CZ5.woff2
 dist/merriweather-vietnamese-300-italic-EHHNZPUO.woff2
 dist/merriweather-vietnamese-300-normal-U376L4Z4.woff2
 dist/remixicon-NKANDIL5.woff2
-dist/search_data-43471C35.js
-dist/sidebar_items-6D5A7B34.js
+dist/search_data-F26F5BA9.js
+dist/sidebar_items-6FA2DA63.js
 index.html
 provisioning.html
 readme.html
