@@ -31,7 +31,7 @@ defmodule Lightning.WorkOrdersTest do
       workflow: workflow,
       trigger: trigger
     } do
-      Lightning.WorkOrders.Events.subscribe(workflow.project_id)
+      Lightning.WorkOrders.subscribe(workflow.project_id)
       dataclip = insert(:dataclip)
 
       {:ok, workorder} =
@@ -58,7 +58,7 @@ defmodule Lightning.WorkOrdersTest do
       workflow: workflow,
       trigger: trigger
     } do
-      Lightning.WorkOrders.Events.subscribe(workflow.project_id)
+      Lightning.WorkOrders.subscribe(workflow.project_id)
 
       dataclip = insert(:dataclip)
 
@@ -84,7 +84,7 @@ defmodule Lightning.WorkOrdersTest do
     test "creating a manual workorder", %{workflow: workflow, job: job} do
       user = insert(:user)
 
-      Lightning.WorkOrders.Events.subscribe(workflow.project_id)
+      Lightning.WorkOrders.subscribe(workflow.project_id)
 
       assert {:ok, manual} =
                Lightning.WorkOrders.Manual.new(%{"body" => ~s({"foo": "bar"})},

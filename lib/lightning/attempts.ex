@@ -188,7 +188,7 @@ defmodule Lightning.Attempts do
     Handlers.CompleteRun.call(params)
   end
 
-  defdelegate subscribe(attempt), to: Lightning.Attempts.Events
+  defdelegate subscribe(attempt), to: Events
 
   def get_project_id_for_attempt(attempt) do
     Ecto.assoc(attempt, [:work_order, :workflow, :project])

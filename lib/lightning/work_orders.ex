@@ -387,4 +387,6 @@ defmodule Lightning.WorkOrders do
     )
     |> Repo.one()
   end
+
+  defdelegate subscribe(project_id), to: Events
 end

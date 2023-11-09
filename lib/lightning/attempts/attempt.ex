@@ -59,7 +59,7 @@ defmodule Lightning.Attempt do
 
     many_to_many :runs, Run,
       join_through: AttemptRun,
-      preload_order: [asc: :finished_at]
+      preload_order: [asc: :started_at]
 
     field :state, Ecto.Enum,
       values:

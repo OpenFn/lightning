@@ -6,28 +6,6 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
   use LightningWeb, :live_component
   import LightningWeb.RunLive.Components
 
-  # @impl true
-  # def update_many(assigns_sockets) do
-  #   work_orders =
-  #     Enum.map(assigns_sockets, fn {assigns, _socket} -> assigns.work_order end)
-
-  #   updated_work_orders =
-  #     work_orders
-  #     |> Lightning.Repo.preload([:workflow, attempts: [runs: :job]],
-  #       force: true
-  #     )
-  #     |> Map.new(fn %{id: id} = wo -> {id, wo} end)
-
-  #   Enum.map(assigns_sockets, fn {assigns, socket} ->
-  #     socket =
-  #       assign(socket, assigns)
-  #       |> assign(:work_order, updated_work_orders[assigns.id])
-
-  #     update(socket.assigns, socket)
-  #     |> then(fn {:ok, socket} -> socket end)
-  #   end)
-  # end
-
   @impl true
   def update(
         %{work_order: work_order, project: project, can_rerun_job: can_rerun_job} =

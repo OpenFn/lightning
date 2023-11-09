@@ -36,7 +36,7 @@ defmodule LightningWeb.RunLive.Index do
 
   @impl true
   def mount(params, _session, socket) do
-    WorkOrders.Events.subscribe(socket.assigns.project.id)
+    WorkOrders.subscribe(socket.assigns.project.id)
 
     workflows =
       Lightning.Workflows.get_workflows_for(socket.assigns.project)

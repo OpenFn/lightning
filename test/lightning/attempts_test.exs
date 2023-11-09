@@ -174,7 +174,7 @@ defmodule Lightning.AttemptsTest do
 
       assert {:job_id, {"does not exist", []}} in changeset.errors
 
-      Lightning.WorkOrders.Events.subscribe(workflow.project_id)
+      Lightning.WorkOrders.subscribe(workflow.project_id)
 
       {:ok, run} =
         Attempts.start_run(%{
@@ -256,7 +256,7 @@ defmodule Lightning.AttemptsTest do
       {:ok, attempt} =
         Repo.update(attempt |> Ecto.Changeset.change(state: :claimed))
 
-      Lightning.WorkOrders.Events.subscribe(workflow.project_id)
+      Lightning.WorkOrders.subscribe(workflow.project_id)
 
       {:ok, attempt} = Attempts.start_attempt(attempt)
 
@@ -299,7 +299,7 @@ defmodule Lightning.AttemptsTest do
 
       assert WorkOrders.get(attempt.work_order_id).state == :running
 
-      Lightning.WorkOrders.Events.subscribe(workflow.project_id)
+      Lightning.WorkOrders.subscribe(workflow.project_id)
 
       {:ok, attempt} = Attempts.complete_attempt(attempt, "success")
 
