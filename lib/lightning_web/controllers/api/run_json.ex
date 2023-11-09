@@ -4,7 +4,7 @@ defmodule LightningWeb.API.RunJSON do
   alias LightningWeb.Router.Helpers, as: Routes
   import LightningWeb.API.Helpers
 
-  @fields ~w(exit_code started_at finished_at log)a
+  @fields ~w(started_at finished_at log)a
 
   def render("index.json", %{page: page, conn: conn}) do
     %{

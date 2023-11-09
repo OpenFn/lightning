@@ -48,7 +48,6 @@ defmodule Lightning.Runtime.ChildProcess do
         {msg,
          Result.new(
            exit_reason: msg,
-           exit_code: res.status,
            log: String.split(res.out <> res.err, "\n"),
            final_state_path: runspec.final_state_path
          )}

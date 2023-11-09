@@ -45,7 +45,6 @@ defmodule Lightning.FactoriesTest do
                      job: job,
                      started_at: Factories.build(:timestamp),
                      finished_at: nil,
-                     exit_code: nil,
                      input_dataclip: dataclip
                    }
                  ]

@@ -129,7 +129,6 @@ defmodule LightningWeb.EndToEndTest do
 
       # Run 1 should succeed and use the appropriate packages
       assert run_1.finished_at != nil
-      assert run_1.exit_code == 0
 
       assert Invocation.assemble_logs_for_run(run_1) =~ "Done in"
 
@@ -152,7 +151,7 @@ defmodule LightningWeb.EndToEndTest do
 
       # #  Run 2 should fail but not expose a secret
       assert run_2.finished_at != nil
-      assert run_2.exit_code == 1
+      assert run_2.exit_reason == :failed
 
       log = Invocation.assemble_logs_for_run(run_2)
       assert log =~ ~S[{"password":"***","username":"quux"}]
@@ -160,7 +159,7 @@ defmodule LightningWeb.EndToEndTest do
 
       #  Run 3 should succeed and log "6"
       assert run_3.finished_at != nil
-      assert run_3.exit_code == 0
+
       log = Invocation.assemble_logs_for_run(run_3)
       assert log =~ "[JOB] ℹ 6"
     end)
