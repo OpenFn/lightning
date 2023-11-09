@@ -82,7 +82,6 @@ defmodule LightningWeb.AttemptLive.AttemptViewerLive do
 
   @impl true
   def handle_info(%Attempts.Events.RunStarted{run: run}, socket) do
-    IO.inspect({socket.assigns.job_id, run.job_id, run.id}, label: "RunStarted")
     {:noreply, socket |> maybe_set_selected_run_id([run])}
   end
 
