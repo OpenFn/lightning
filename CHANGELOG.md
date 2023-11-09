@@ -10,14 +10,6 @@ and this project adheres to
 
 ### Added
 
-### Changed
-
-### Fixed
-
-## [v0.10.0] 2023-11-07
-
-### Added
-
 - Webhook Authentication Methods database and CRUD operations
   [#1152](https://github.com/OpenFn/Lightning/issues/1152)
 - Creation and Edit of webhook webhook authentication methods UI
