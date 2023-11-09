@@ -26,8 +26,7 @@ defmodule Lightning.ExportUtils do
       adaptor: job.adaptor,
       body: job.body,
       credential: nil,
-      globals: [],
-      # enabled: job.enabled
+      globals: []
     }
   end
 
@@ -54,6 +53,7 @@ defmodule Lightning.ExportUtils do
       source_trigger: find_trigger_name(edge, triggers),
       target_job: target_name,
       condition: edge.condition |> Atom.to_string(),
+      enabled: edge.enabled,
       node_type: :edge
     }
   end

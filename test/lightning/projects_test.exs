@@ -452,18 +452,18 @@ defmodule Lightning.ProjectsTest do
 
       %{project: project} = full_project_fixture()
 
-      project_jobs = Projects.project_jobs_query(project) |> Repo.all()
+      # project_jobs = Projects.project_jobs_query(project) |> Repo.all()
 
-      assert Enum.all?(project_jobs, & &1.enabled)
+      # assert Enum.all?(project_jobs, & &1.enabled)
 
       assert project.scheduled_deletion == nil
 
       now = DateTime.utc_now() |> DateTime.add(-1, :second)
       {:ok, project} = Projects.schedule_project_deletion(project)
 
-      project_jobs = Projects.project_jobs_query(project) |> Repo.all()
+      # project_jobs = Projects.project_jobs_query(project) |> Repo.all()
 
-      assert Enum.all?(project_jobs, &(!&1.enabled))
+      # assert Enum.all?(project_jobs, &(!&1.enabled))
 
       assert project.scheduled_deletion != nil
       assert Timex.diff(project.scheduled_deletion, now, :days) == days

@@ -12,6 +12,8 @@ defmodule Lightning.Projects do
   alias Lightning.AttemptRun
   alias Lightning.Workflows.Trigger
   alias Lightning.Workflows.Job
+  alias Lightning.Workflows.Edge
+
   alias Lightning.Projects.ProjectUser
   alias Lightning.Repo
 
@@ -454,7 +456,6 @@ defmodule Lightning.Projects do
   @spec export_project(:yaml, any) :: {:ok, binary}
   def export_project(:yaml, project_id) do
     {:ok, yaml} = ExportUtils.generate_new_yaml(project_id)
-   
 
     {:ok, yaml}
   end
