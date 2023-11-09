@@ -8,7 +8,10 @@ defmodule Lightning.Attempts.Query do
   alias Lightning.Attempt
 
   @doc """
-  Runs for a specific user
+  Return all attempts that have been claimed by a worker before the earliest
+  acceptable start time (determined by the longest acceptable run time) but are
+  still incomplete. This indicates that we may have lost contact with the worker
+  that was responsible for executing the attempt.
   """
   @spec lost(DateTime.t()) :: Ecto.Queryable.t()
   def lost(%DateTime{} = now) do
