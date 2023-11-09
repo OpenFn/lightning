@@ -106,7 +106,7 @@ defmodule Lightning.Runtime.RuntimeManagerTest do
     Process.unlink(port)
   end
 
-  test "the runtime manager updates the buffer for NOEL messages",
+  test "the runtime manager updates the buffer for NOEOL messages",
        %{test: test} do
     {:ok, server} = RuntimeManager.start_link(name: test)
 
@@ -122,6 +122,21 @@ defmodule Lightning.Runtime.RuntimeManagerTest do
 
     refute updated_state.buffer == state.buffer
     assert IO.iodata_to_binary(updated_state.buffer) == "eH"
+  end
+
+  test "the runtime manager updates the buffer for EOL messages",
+       %{test: test} do
+    {:ok, server} = RuntimeManager.start_link(name: test)
+
+    state = :sys.get_state(server)
+
+    state = %{state | buffer: ~c"H"}
+
+    assert {:noreply, %{buffer: []}} =
+             RuntimeManager.handle_info(
+               {state.runtime_port, {:data, {:eol, ~c"e"}}},
+               state
+             )
   end
 
   defp start_server(
