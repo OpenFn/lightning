@@ -4,20 +4,20 @@
     <meta charset="utf-8">
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="generator" content="ExDoc v0.29.1">
-    <meta name="project" content="Lightning v0.9.3">
+    <meta name="generator" content="ExDoc v0.30.9">
+    <meta name="project" content="Lightning v0.10.0-pre3">
 
-    <title>Provisioning — Lightning v0.9.3</title>
-    <link rel="stylesheet" href="dist/html-elixir-V2ETBPMB.css" />
+    <title>Provisioning — Lightning v0.10.0-pre3</title>
+    <link rel="stylesheet" href="dist/html-elixir-XFYN5IVA.css" />
 
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
-    <script src="dist/handlebars.templates-IV5W3OL2.js"></script>
-    <script src="dist/sidebar_items-C3EF67C0.js"></script>
+    <script src="dist/handlebars.templates-EPF2X7PV.js"></script>
+    <script src="dist/sidebar_items-6D5A7B34.js"></script>
 
       <script src="docs_config.js"></script>
 
-    <script async src="dist/html-XN2TSG4M.js"></script>
+    <script async src="dist/html-J2ASZTQE.js"></script>
 
 
   </head>
@@ -38,22 +38,22 @@
 
 <div class="main">
 
-<button class="sidebar-button sidebar-toggle" aria-label="toggle sidebar">
+<button class="sidebar-button sidebar-toggle" aria-label="toggle sidebar" aria-controls="sidebar">
   <i class="ri-menu-line ri-lg" title="Collapse/expand sidebar"></i>
 </button>
 
-<section class="sidebar">
+<nav id="sidebar" class="sidebar">
   <form class="sidebar-search" action="search.html">
+    <label class="search-label">
+      <span class="sr-only">Search documentation of Lightning</span>
+      <input name="q" type="text" class="search-input" placeholder="Search..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
+    </label>
     <button type="submit" class="search-button" aria-label="Submit Search">
       <i class="ri-search-2-line" aria-hidden="true" title="Submit search"></i>
     </button>
-    <button type="button" tabindex="-1" class="search-close-button" aria-label="Cancel Search">
-      <i class="ri-close-line ri-lg" aria-hidden="true" title="Cancel search"></i>
+    <button type="button" tabindex="-1" class="search-close-button" aria-hidden="true">
+      <i class="ri-close-line ri-lg" title="Cancel search"></i>
     </button>
-    <label class="search-label">
-      <p class="sr-only">Search</p>
-      <input name="q" type="text" class="search-input" placeholder="Search..." aria-label="Input your search terms" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
-    </label>
   </form>
 
   <div class="autocomplete">
@@ -71,26 +71,49 @@
       <a href="https://openfn.github.io/Lightning" class="sidebar-projectName" translate="no">
 Lightning
       </a>
-      <strong class="sidebar-projectVersion" translate="no">
-        v0.9.3
-      </strong>
+      <div class="sidebar-projectVersion" translate="no">
+        v0.10.0-pre3
+      </div>
     </div>
-    <ul class="sidebar-listNav">
-      <li><a id="extras-list-link" href="#full-list">Pages</a></li>
+    <ul id="sidebar-listNav" class="sidebar-listNav" role="tablist">
+      <li>
+        <button id="extras-list-tab-button" role="tab" data-type="extras" aria-controls="extras-tab-panel" aria-selected="true" tabindex="0">
+Pages
+        </button>
+      </li>
 
-        <li><a id="modules-list-link" href="#full-list">Modules</a></li>
+        <li>
+          <button id="modules-list-tab-button" role="tab" data-type="modules" aria-controls="modules-tab-panel" aria-selected="false" tabindex="-1">
+            Modules
+          </button>
+        </li>
 
 
-        <li><a id="tasks-list-link" href="#full-list"><span translate="no">Mix</span> Tasks</a></li>
+        <li>
+          <button id="tasks-list-tab-button" role="tab" data-type="tasks" aria-controls="tasks-tab-panel" aria-selected="false" tabindex="-1">
+            <span translate="no">Mix</span> Tasks
+          </button>
+        </li>
 
     </ul>
   </div>
 
-  <div class="gradient"></div>
-  <ul id="full-list" class="sidebar-fullList"></ul>
-</section>
+  <div id="extras-tab-panel" class="sidebar-tabpanel" role="tabpanel" aria-labelledby="extras-list-tab-button">
+    <ul id="extras-full-list" class="full-list"></ul>
+  </div>
 
-<section class="content">
+    <div id="modules-tab-panel" class="sidebar-tabpanel" role="tabpanel" aria-labelledby="modules-list-tab-button" hidden>
+      <ul id="modules-full-list" class="full-list"></ul>
+    </div>
+
+
+    <div id="tasks-tab-panel" class="sidebar-tabpanel" role="tabpanel" aria-labelledby="tasks-list-tab-button" hidden>
+      <ul id="tasks-full-list" class="full-list"></ul>
+    </div>
+
+</nav>
+
+<main class="content">
   <output role="status" id="toast"></output>
   <div class="content-outer">
     <div id="content" class="content-inner">
@@ -113,24 +136,24 @@ Lightning
 
 <p>Lightning offers the ability to configure projects via the HTTP API.</p><p>By providing a JSON document with the desired configuration, the project can be
 configured to your liking.</p><h2 id="using-the-api" class="section-heading">
-  <a href="#using-the-api" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">using-the-api</p>
+  <a href="#using-the-api" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  Using the API
+  <span class="text">Using the API</span>
 </h2>
 <p>The API is available at <code class="inline">/api/provision</code>, and expects an <code class="inline">application/json</code>
 Content-Type.</p><h3 id="authentication" class="section-heading">
-  <a href="#authentication" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">authentication</p>
+  <a href="#authentication" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  Authentication
+  <span class="text">Authentication</span>
 </h3>
 <p>The API requires a valid auth token to be provided in the <code class="inline">Authorization</code>
 header.</p><h3 id="example-request" class="section-heading">
-  <a href="#example-request" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">example-request</p>
+  <a href="#example-request" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  Example Request
+  <span class="text">Example Request</span>
 </h3>
 <pre><code class="makeup bash" translate="no"><span class=""> curl -X POST \
 </span><span class="">   -d @project.json \
@@ -138,10 +161,10 @@ header.</p><h3 id="example-request" class="section-heading">
 </span><span class="">   -H &quot;Content-Type: application/json&quot; \
 </span><span class="">   $ENDPOINT/api/provision
 </span></code></pre><h2 id="document-structure" class="section-heading">
-  <a href="#document-structure" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">document-structure</p>
+  <a href="#document-structure" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  Document Structure
+  <span class="text">Document Structure</span>
 </h2>
 <p>The provisioning document is a JSON document with the project at the root.</p><blockquote><p>All entities <strong>must have</strong> an <code class="inline">id</code> field, which is a UUIDv4 string. In the
 case of new entities, this must be generated by the client.</p></blockquote><p>The API is idempotent, and the distinction between creating and updating is
@@ -182,19 +205,19 @@ determined by the presence of the <code class="inline">id</code> field.</p><pre>
     // ... more workflows
   ]
 }</code></pre><h2 id="api-behaviour" class="section-heading">
-  <a href="#api-behaviour" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">api-behaviour</p>
+  <a href="#api-behaviour" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  API Behaviour
+  <span class="text">API Behaviour</span>
 </h2>
 <p>The API expects <strong>all</strong> existing entities to be provided in the provisioning
 document.</p><p>If the document provided is out of date (e.g. a new job was added on the
 server), a new reference document should be fetched and the changes applied to
 it.</p><h3 id="deleting-entities" class="section-heading">
-  <a href="#deleting-entities" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">deleting-entities</p>
+  <a href="#deleting-entities" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  Deleting Entities
+  <span class="text">Deleting Entities</span>
 </h3>
 <p>Entities can be deleted by setting the <code class="inline">disabled</code> key to <code class="inline">true</code>.</p><p>Example:</p><pre><code class="jsonc">{
   &quot;id&quot;: &quot;&lt;&lt;project-id&gt;&gt;&quot;,
@@ -210,10 +233,10 @@ it.</p><h3 id="deleting-entities" class="section-heading">
     }
   ]
 }</code></pre><h2 id="relationship-with-projects-as-code" class="section-heading">
-  <a href="#relationship-with-projects-as-code" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">relationship-with-projects-as-code</p>
+  <a href="#relationship-with-projects-as-code" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  Relationship with Projects as Code
+  <span class="text">Relationship with Projects as Code</span>
 </h2>
 <p>The Projects as Code spec is a superset of the provisioning API.</p><p>Projects as Code allows for the user to specify a key for each entity, which
 makes it easier to manage the project in the future.</p><p>For example:</p><pre><code class="yaml">name: my-project
@@ -269,12 +292,12 @@ updated to reflect the new IDs and entities.</p><pre><code class="json">{
 <div class="bottom-actions">
   <div class="bottom-actions-item">
 
-      <a href="benchmarking.md.html" class="bottom-actions-button" rel="prev">
+      <a href="workers.html" class="bottom-actions-button" rel="prev">
         <span class="subheader">
           ← Previous Page
         </span>
         <span class="title">
-Benchmarking
+Workers
         </span>
       </a>
 
@@ -309,7 +332,7 @@ Changelog
 
         <p class="built-using">
           Built using
-          <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" target="_blank" rel="help noopener" translate="no">ExDoc</a> (v0.29.1) for the
+          <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" target="_blank" rel="help noopener" translate="no">ExDoc</a> (v0.30.9) for the
 
             <a href="https://elixir-lang.org" title="Elixir" target="_blank" translate="no">Elixir programming language</a>
 
@@ -317,7 +340,7 @@ Changelog
       </footer>
     </div>
   </div>
-</section>
+</main>
 </div>
 
 

@@ -4,20 +4,20 @@
     <meta charset="utf-8">
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="generator" content="ExDoc v0.29.1">
-    <meta name="project" content="Lightning v0.9.3">
+    <meta name="generator" content="ExDoc v0.30.9">
+    <meta name="project" content="Lightning v0.10.0-pre3">
 
-    <title>Changelog — Lightning v0.9.3</title>
-    <link rel="stylesheet" href="dist/html-elixir-V2ETBPMB.css" />
+    <title>Changelog — Lightning v0.10.0-pre3</title>
+    <link rel="stylesheet" href="dist/html-elixir-XFYN5IVA.css" />
 
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
-    <script src="dist/handlebars.templates-IV5W3OL2.js"></script>
-    <script src="dist/sidebar_items-C3EF67C0.js"></script>
+    <script src="dist/handlebars.templates-EPF2X7PV.js"></script>
+    <script src="dist/sidebar_items-6D5A7B34.js"></script>
 
       <script src="docs_config.js"></script>
 
-    <script async src="dist/html-XN2TSG4M.js"></script>
+    <script async src="dist/html-J2ASZTQE.js"></script>
 
 
   </head>
@@ -38,22 +38,22 @@
 
 <div class="main">
 
-<button class="sidebar-button sidebar-toggle" aria-label="toggle sidebar">
+<button class="sidebar-button sidebar-toggle" aria-label="toggle sidebar" aria-controls="sidebar">
   <i class="ri-menu-line ri-lg" title="Collapse/expand sidebar"></i>
 </button>
 
-<section class="sidebar">
+<nav id="sidebar" class="sidebar">
   <form class="sidebar-search" action="search.html">
+    <label class="search-label">
+      <span class="sr-only">Search documentation of Lightning</span>
+      <input name="q" type="text" class="search-input" placeholder="Search..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
+    </label>
     <button type="submit" class="search-button" aria-label="Submit Search">
       <i class="ri-search-2-line" aria-hidden="true" title="Submit search"></i>
     </button>
-    <button type="button" tabindex="-1" class="search-close-button" aria-label="Cancel Search">
-      <i class="ri-close-line ri-lg" aria-hidden="true" title="Cancel search"></i>
+    <button type="button" tabindex="-1" class="search-close-button" aria-hidden="true">
+      <i class="ri-close-line ri-lg" title="Cancel search"></i>
     </button>
-    <label class="search-label">
-      <p class="sr-only">Search</p>
-      <input name="q" type="text" class="search-input" placeholder="Search..." aria-label="Input your search terms" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
-    </label>
   </form>
 
   <div class="autocomplete">
@@ -71,26 +71,49 @@
       <a href="https://openfn.github.io/Lightning" class="sidebar-projectName" translate="no">
 Lightning
       </a>
-      <strong class="sidebar-projectVersion" translate="no">
-        v0.9.3
-      </strong>
+      <div class="sidebar-projectVersion" translate="no">
+        v0.10.0-pre3
+      </div>
     </div>
-    <ul class="sidebar-listNav">
-      <li><a id="extras-list-link" href="#full-list">Pages</a></li>
+    <ul id="sidebar-listNav" class="sidebar-listNav" role="tablist">
+      <li>
+        <button id="extras-list-tab-button" role="tab" data-type="extras" aria-controls="extras-tab-panel" aria-selected="true" tabindex="0">
+Pages
+        </button>
+      </li>
 
-        <li><a id="modules-list-link" href="#full-list">Modules</a></li>
+        <li>
+          <button id="modules-list-tab-button" role="tab" data-type="modules" aria-controls="modules-tab-panel" aria-selected="false" tabindex="-1">
+            Modules
+          </button>
+        </li>
 
 
-        <li><a id="tasks-list-link" href="#full-list"><span translate="no">Mix</span> Tasks</a></li>
+        <li>
+          <button id="tasks-list-tab-button" role="tab" data-type="tasks" aria-controls="tasks-tab-panel" aria-selected="false" tabindex="-1">
+            <span translate="no">Mix</span> Tasks
+          </button>
+        </li>
 
     </ul>
   </div>
 
-  <div class="gradient"></div>
-  <ul id="full-list" class="sidebar-fullList"></ul>
-</section>
+  <div id="extras-tab-panel" class="sidebar-tabpanel" role="tabpanel" aria-labelledby="extras-list-tab-button">
+    <ul id="extras-full-list" class="full-list"></ul>
+  </div>
 
-<section class="content">
+    <div id="modules-tab-panel" class="sidebar-tabpanel" role="tabpanel" aria-labelledby="modules-list-tab-button" hidden>
+      <ul id="modules-full-list" class="full-list"></ul>
+    </div>
+
+
+    <div id="tasks-tab-panel" class="sidebar-tabpanel" role="tabpanel" aria-labelledby="tasks-list-tab-button" hidden>
+      <ul id="tasks-full-list" class="full-list"></ul>
+    </div>
+
+</nav>
+
+<main class="content">
   <output role="status" id="toast"></output>
   <div class="content-outer">
     <div id="content" class="content-inner">
@@ -114,239 +137,247 @@ Lightning
 <p>All notable changes to this project will be documented in this file.</p><p>The format is based on <a href="https://keepachangelog.com/en/1.0.0/">Keep a Changelog</a>,
 and this project adheres to
 <a href="https://semver.org/spec/v2.0.0.html">Semantic Versioning</a>.</p><h2 id="unreleased" class="section-heading">
-  <a href="#unreleased" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">unreleased</p>
+  <a href="#unreleased" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  [Unreleased]
+  <span class="text">[Unreleased]</span>
 </h2>
 <h3 id="added" class="section-heading">
-  <a href="#added" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">added</p>
+  <a href="#added" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  Added
+  <span class="text">Added</span>
 </h3>
-<ul><li>Restrict live dashboard access to only superusers, enable DB information and
-OS information <a href="https://github.com/OpenFn/Lightning/issues/1170">#1170</a></li><li>Expose additional metrics to LiveDashboard
+<ul><li>Webhook Authentication Methods database and CRUD operations
+<a href="https://github.com/OpenFn/Lightning/issues/1152">#1152</a></li><li>Creation and Edit of webhook webhook authentication methods UI
+<a href="https://github.com/OpenFn/Lightning/issues/1149">#1149</a></li><li>Add webhook authentication methods overview methods in the canvas
+<a href="https://github.com/OpenFn/Lightning/issues/1153">#1153</a></li><li>Add icon on the canvas for triggers that have authentication enabled
+<a href="https://github.com/OpenFn/Lightning/issues/1157">#1157</a></li><li>Require password/2FA code before showing password and API Key for webhook auth
+methods <a href="https://github.com/OpenFn/Lightning/issues/1200">#1200</a></li><li>Restrict live dashboard access to only superusers, enable DB information and
+OS information <a href="https://github.com/OpenFn/Lightning/issues/1170">#1170</a> OS
+information <a href="https://github.com/OpenFn/Lightning/issues/1170">#1170</a></li><li>Expose additional metrics to LiveDashboard
 <a href="https://github.com/OpenFn/Lightning/issues/1171">#1171</a></li><li>Add plumbing to dump Lightning metrics during load testing
 <a href="https://github.com/OpenFn/Lightning/issues/1178">#1178</a></li><li>Allow for heavier payloads during load testing
 <a href="https://github.com/OpenFn/Lightning/issues/1179">#1179</a></li><li>Add dynamic delay to help mitigate flickering test
 <a href="https://github.com/OpenFn/Lightning/issues/1195">#1195</a></li><li>Add a OpenTelemetry trace example
 <a href="https://github.com/OpenFn/Lightning/issues/1189">#1189</a></li><li>Add plumbing to support the use of PromEx
-<a href="https://github.com/OpenFn/Lightning/issues/1199">1199</a></li><li>Add warning text to PromEx config
-<a href="https://github.com/OpenFn/Lightning/issues/1222">1222</a></li><li>Track and filter on webhook controller state in :telemetry metrics
+<a href="https://github.com/OpenFn/Lightning/issues/1199">#1199</a></li><li>Add warning text to PromEx config 
+[#1222] (<a href="https://github.com/OpenFn/Lightning/issues/1222">https://github.com/OpenFn/Lightning/issues/1222</a>)</li><li>Track and filter on webhook controller state in :telemetry metrics
 <a href="https://github.com/OpenFn/Lightning/issues/1192">#1192</a></li><li>Secure PromEx metrics endpoint by default
 <a href="https://github.com/OpenFn/Lightning/issues/1223">#1223</a></li></ul><h3 id="changed" class="section-heading">
-  <a href="#changed" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">changed</p>
+  <a href="#changed" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  Changed
+  <span class="text">Changed</span>
 </h3>
 <ul><li>Updated vulnerable JS libraries, <code class="inline">postcss</code> and <code class="inline">semver</code>
-<a href="https://github.com/OpenFn/Lightning/issues/1176">#1176</a></li><li>Update &quot;Delete&quot; to &quot;Delete Job&quot; on Job panel and include javascript deletion confirmation
-<a href="https://github.com/OpenFn/Lightning/issues/1105">#1105</a></li></ul><h3 id="fixed" class="section-heading">
-  <a href="#fixed" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">fixed</p>
+<a href="https://github.com/OpenFn/Lightning/issues/1176">#1176</a></li><li>Update &quot;Delete&quot; to &quot;Delete Job&quot; on Job panel and include javascript deletion
+confirmation <a href="https://github.com/OpenFn/Lightning/issues/1105">#1105</a></li></ul><h3 id="fixed" class="section-heading">
+  <a href="#fixed" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  Fixed
+  <span class="text">Fixed</span>
 </h3>
-<h2 id="v0-9-3-2023-09-27" class="section-heading">
-  <a href="#v0-9-3-2023-09-27" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">v0-9-3-2023-09-27</p>
+<ul><li><a href="https://github.com/OpenFn/Lightning/issues/1140">#1140</a> Adaptor icons load
+gracefully</li></ul><h2 id="v0-9-3-2023-09-27" class="section-heading">
+  <a href="#v0-9-3-2023-09-27" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  [v0.9.3] - 2023-09-27
+  <span class="text">[v0.9.3] - 2023-09-27</span>
 </h2>
 <h3 id="added-1" class="section-heading">
-  <a href="#added-1" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">added-1</p>
+  <a href="#added-1" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  Added
+  <span class="text">Added</span>
 </h3>
 <ul><li>Add ellipsis when adaptor name is longer than the container allows
-<a href="https://github.com/OpenFn/Lightning/issues/1095">#1095</a></li></ul><h3 id="changed-1" class="section-heading">
-  <a href="#changed-1" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">changed-1</p>
+<a href="https://github.com/OpenFn/Lightning/issues/1095">#1095</a></li><li>Webhook Authentication Methods database and CRUD operations
+<a href="https://github.com/OpenFn/Lightning/issues/1152">#1152</a></li></ul><h3 id="changed-1" class="section-heading">
+  <a href="#changed-1" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  Changed
+  <span class="text">Changed</span>
 </h3>
 <ul><li>Prevent deletion of first job of a workflow
 <a href="https://github.com/OpenFn/Lightning/issues/1097">#1097</a></li></ul><h3 id="fixed-1" class="section-heading">
-  <a href="#fixed-1" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">fixed-1</p>
+  <a href="#fixed-1" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  Fixed
+  <span class="text">Fixed</span>
 </h3>
 <ul><li><p>Fix long name on workflow cards
 <a href="https://github.com/OpenFn/Lightning/issues/1102">#1102</a></p></li><li><p>Fix highlighted Edge can get out of sync with selected Edge
 <a href="https://github.com/OpenFn/Lightning/issues/1099">#1099</a></p></li><li><p>Creating a new user without a password fails and there is no user feedback
 <a href="https://github.com/OpenFn/Lightning/issues/731">#731</a></p></li><li><p>Crash when setting up version control
 <a href="https://github.com/OpenFn/Lightning/issues/1112">#1112</a></p></li></ul><h2 id="v0-9-2-2023-09-20" class="section-heading">
-  <a href="#v0-9-2-2023-09-20" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">v0-9-2-2023-09-20</p>
+  <a href="#v0-9-2-2023-09-20" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  [v0.9.2] - 2023-09-20
+  <span class="text">[v0.9.2] - 2023-09-20</span>
 </h2>
 <h3 id="added-2" class="section-heading">
-  <a href="#added-2" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">added-2</p>
+  <a href="#added-2" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  Added
+  <span class="text">Added</span>
 </h3>
 <ul><li>Add &quot;esc&quot; key binding to close job inspector modal
 <a href="https://github.com/OpenFn/Lightning/issues/1069">#1069</a></li></ul><h3 id="changed-2" class="section-heading">
-  <a href="#changed-2" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">changed-2</p>
+  <a href="#changed-2" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  Changed
+  <span class="text">Changed</span>
 </h3>
 <ul><li>Save icons from the <code class="inline">adaptors</code> repo locally and load them in the job editor
 <a href="https://github.com/OpenFn/Lightning/issues/943">#943</a></li></ul><h3 id="fixed-2" class="section-heading">
-  <a href="#fixed-2" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">fixed-2</p>
+  <a href="#fixed-2" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  Fixed
+  <span class="text">Fixed</span>
 </h3>
 <h2 id="v0-9-1-2023-09-19" class="section-heading">
-  <a href="#v0-9-1-2023-09-19" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">v0-9-1-2023-09-19</p>
+  <a href="#v0-9-1-2023-09-19" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  [v0.9.1] - 2023-09-19
+  <span class="text">[v0.9.1] - 2023-09-19</span>
 </h2>
 <h3 id="added-3" class="section-heading">
-  <a href="#added-3" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">added-3</p>
+  <a href="#added-3" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  Added
+  <span class="text">Added</span>
 </h3>
 <h3 id="changed-3" class="section-heading">
-  <a href="#changed-3" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">changed-3</p>
+  <a href="#changed-3" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  Changed
+  <span class="text">Changed</span>
 </h3>
 <ul><li><p>Modified audit trail to handle lots of different kind of audit events
 <a href="https://github.com/OpenFn/Lightning/issues/271">#271</a>/<a href="https://github.com/OpenFn/Lightning/issues/44">#44</a></p></li><li><p>Fix randomly unresponsive job panel after job deletion
 <a href="https://github.com/OpenFn/Lightning/issues/1113">#1113</a></p></li></ul><h2 id="v0-9-0-2023-09-15" class="section-heading">
-  <a href="#v0-9-0-2023-09-15" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">v0-9-0-2023-09-15</p>
+  <a href="#v0-9-0-2023-09-15" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  [v0.9.0] - 2023-09-15
+  <span class="text">[v0.9.0] - 2023-09-15</span>
 </h2>
 <h3 id="added-4" class="section-heading">
-  <a href="#added-4" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">added-4</p>
+  <a href="#added-4" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  Added
+  <span class="text">Added</span>
 </h3>
 <ul><li>Add favicons <a href="https://github.com/OpenFn/Lightning/issues/1079">#1079</a></li><li>Validate job name in placeholder job node
 <a href="https://github.com/OpenFn/Lightning/issues/1021">#1021</a></li><li>Bring credential delete in line with new GDPR interpretation
 <a href="https://github.com/OpenFn/Lightning/issues/802">#802</a></li><li>Make job names unique per workflow
 <a href="https://github.com/OpenFn/Lightning/issues/1053">#1053</a></li></ul><h3 id="changed-4" class="section-heading">
-  <a href="#changed-4" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">changed-4</p>
+  <a href="#changed-4" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  Changed
+  <span class="text">Changed</span>
 </h3>
 <ul><li>Enhanced the job editor/inspector interface
 <a href="https://github.com/OpenFn/Lightning/issues/1025">#1025</a></li></ul><h3 id="fixed-3" class="section-heading">
-  <a href="#fixed-3" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">fixed-3</p>
+  <a href="#fixed-3" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  Fixed
+  <span class="text">Fixed</span>
 </h3>
 <ul><li>Finished run never appears in inspector when it fails
 <a href="https://github.com/OpenFn/Lightning/issues/1084">#1084</a></li><li>Cannot delete some credentials via web UI
 <a href="https://github.com/OpenFn/Lightning/issues/1072">#1072</a></li><li>Stopped the History table from jumping when re-running a job
 <a href="https://github.com/OpenFn/Lightning/issues/1100">#1100</a></li><li>Fixed the &quot;+&quot; button when adding a job to a workflow
 <a href="https://github.com/OpenFn/Lightning/issues/1093">#1093</a></li></ul><h2 id="v0-8-3-2023-09-05" class="section-heading">
-  <a href="#v0-8-3-2023-09-05" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">v0-8-3-2023-09-05</p>
+  <a href="#v0-8-3-2023-09-05" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  [v0.8.3] - 2023-09-05
+  <span class="text">[v0.8.3] - 2023-09-05</span>
 </h2>
 <h3 id="added-5" class="section-heading">
-  <a href="#added-5" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">added-5</p>
+  <a href="#added-5" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  Added
+  <span class="text">Added</span>
 </h3>
 <ul><li>Render error when workflow diagram node is invalid
 <a href="https://github.com/OpenFn/Lightning/issues/956">#956</a></li></ul><h3 id="changed-5" class="section-heading">
-  <a href="#changed-5" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">changed-5</p>
+  <a href="#changed-5" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  Changed
+  <span class="text">Changed</span>
 </h3>
 <ul><li>Restyle history table <a href="https://github.com/OpenFn/Lightning/issues/1029">#1029</a></li><li>Moved Filter and Search controls to the top of the history page
 <a href="https://github.com/OpenFn/Lightning/issues/1027">#1027</a></li></ul><h3 id="fixed-4" class="section-heading">
-  <a href="#fixed-4" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">fixed-4</p>
+  <a href="#fixed-4" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  Fixed
+  <span class="text">Fixed</span>
 </h3>
 <ul><li>Output incorrectly shows &quot;this run failed&quot; when the run hasn't yet finished
 <a href="https://github.com/OpenFn/Lightning/issues/1048">#1048</a></li><li>Wrong label for workflow card timestamp
 <a href="https://github.com/OpenFn/Lightning/issues/1022">#1022</a></li></ul><h2 id="v0-8-2-2023-08-31" class="section-heading">
-  <a href="#v0-8-2-2023-08-31" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">v0-8-2-2023-08-31</p>
+  <a href="#v0-8-2-2023-08-31" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  [v0.8.2] - 2023-08-31
+  <span class="text">[v0.8.2] - 2023-08-31</span>
 </h2>
 <h3 id="added-6" class="section-heading">
-  <a href="#added-6" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">added-6</p>
+  <a href="#added-6" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  Added
+  <span class="text">Added</span>
 </h3>
 <h3 id="changed-6" class="section-heading">
-  <a href="#changed-6" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">changed-6</p>
+  <a href="#changed-6" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  Changed
+  <span class="text">Changed</span>
 </h3>
 <h3 id="fixed-5" class="section-heading">
-  <a href="#fixed-5" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">fixed-5</p>
+  <a href="#fixed-5" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  Fixed
+  <span class="text">Fixed</span>
 </h3>
 <ul><li>Lack of differentiation between top of job editor modal and top menu was
 disorienting. Added shadow.</li></ul><h2 id="v0-8-1-2023-08-31" class="section-heading">
-  <a href="#v0-8-1-2023-08-31" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">v0-8-1-2023-08-31</p>
+  <a href="#v0-8-1-2023-08-31" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  [v0.8.1] - 2023-08-31
+  <span class="text">[v0.8.1] - 2023-08-31</span>
 </h2>
 <h3 id="added-7" class="section-heading">
-  <a href="#added-7" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">added-7</p>
+  <a href="#added-7" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  Added
+  <span class="text">Added</span>
 </h3>
 <h3 id="changed-7" class="section-heading">
-  <a href="#changed-7" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">changed-7</p>
+  <a href="#changed-7" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  Changed
+  <span class="text">Changed</span>
 </h3>
 <ul><li>Moved Save and Run button to bottom of the Job edit modal
 <a href="https://github.com/OpenFn/Lightning/issues/1026">#1026</a></li><li>Allow a manual workorder to save the workflow before creating the workorder
 <a href="https://github.com/OpenFn/Lightning/issues/959">#959</a></li></ul><h3 id="fixed-6" class="section-heading">
-  <a href="#fixed-6" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">fixed-6</p>
+  <a href="#fixed-6" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  Fixed
+  <span class="text">Fixed</span>
 </h3>
 <h2 id="v0-8-0-2023-08-31" class="section-heading">
-  <a href="#v0-8-0-2023-08-31" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">v0-8-0-2023-08-31</p>
+  <a href="#v0-8-0-2023-08-31" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  [v0.8.0] - 2023-08-31
+  <span class="text">[v0.8.0] - 2023-08-31</span>
 </h2>
 <h3 id="added-8" class="section-heading">
-  <a href="#added-8" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">added-8</p>
+  <a href="#added-8" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  Added
+  <span class="text">Added</span>
 </h3>
 <ul><li>Introduces Github sync feature, users can now setup our github app on their
 instance and sync projects using our latest portability spec
@@ -358,122 +389,122 @@ instance and sync projects using our latest portability spec
 <a href="https://github.com/OpenFn/Lightning/issues/962">#962</a></li><li>Reimplement skipped WorkflowLive.IndexTest test
 <a href="https://github.com/OpenFn/Lightning/issues/964">#964</a></li><li>Show GitHub installation ID and repo link to help setup/debugging for version
 control <a href="https://github.com/OpenFn/Lightning/issues/1059">1059</a></li></ul><h3 id="changed-8" class="section-heading">
-  <a href="#changed-8" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">changed-8</p>
+  <a href="#changed-8" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  Changed
+  <span class="text">Changed</span>
 </h3>
 <h3 id="fixed-7" class="section-heading">
-  <a href="#fixed-7" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">fixed-7</p>
+  <a href="#fixed-7" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  Fixed
+  <span class="text">Fixed</span>
 </h3>
 <ul><li>Fixed issue where job names were being incorrectly hyphenated during
 project.yaml export <a href="https://github.com/OpenFn/Lightning/issues/1050">#1050</a></li><li>Allows the demo script to set a project id during creation to help with cli
 deploy/pull/Github integration testing.</li><li>Fixed demo project_repo_connection failing after nightly demo resets
 <a href="https://github.com/OpenFn/Lightning/issues/1058">1058</a></li><li>Fixed an issue where the monaco suggestion tooltip was offset from the main
 editor <a href="https://github.com/OpenFn/Lightning/issues/1030">1030</a></li></ul><h2 id="v0-7-3-2023-08-15" class="section-heading">
-  <a href="#v0-7-3-2023-08-15" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">v0-7-3-2023-08-15</p>
+  <a href="#v0-7-3-2023-08-15" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  [v0.7.3] - 2023-08-15
+  <span class="text">[v0.7.3] - 2023-08-15</span>
 </h2>
 <h3 id="added-9" class="section-heading">
-  <a href="#added-9" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">added-9</p>
+  <a href="#added-9" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  Added
+  <span class="text">Added</span>
 </h3>
 <h3 id="changed-9" class="section-heading">
-  <a href="#changed-9" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">changed-9</p>
+  <a href="#changed-9" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  Changed
+  <span class="text">Changed</span>
 </h3>
 <ul><li>Version control in project settings is now named Export your project
 <a href="https://github.com/OpenFn/Lightning/issues/1015">#1015</a></li></ul><h3 id="fixed-8" class="section-heading">
-  <a href="#fixed-8" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">fixed-8</p>
+  <a href="#fixed-8" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  Fixed
+  <span class="text">Fixed</span>
 </h3>
 <ul><li>Tooltip for credential select in Job Edit form is cut off
 <a href="https://github.com/OpenFn/Lightning/issues/972">#972</a></li><li>Dataclip type and state assembly notice for creating new dataclip dropped
 during refactor <a href="https://github.com/OpenFn/Lightning/issues/975">#975</a></li></ul><h2 id="v0-7-2-2023-08-10" class="section-heading">
-  <a href="#v0-7-2-2023-08-10" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">v0-7-2-2023-08-10</p>
+  <a href="#v0-7-2-2023-08-10" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  [v0.7.2] - 2023-08-10
+  <span class="text">[v0.7.2] - 2023-08-10</span>
 </h2>
 <h3 id="added-10" class="section-heading">
-  <a href="#added-10" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">added-10</p>
+  <a href="#added-10" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  Added
+  <span class="text">Added</span>
 </h3>
 <h3 id="changed-10" class="section-heading">
-  <a href="#changed-10" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">changed-10</p>
+  <a href="#changed-10" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  Changed
+  <span class="text">Changed</span>
 </h3>
 <ul><li>NodeJs security patch <a href="https://github.com/OpenFn/Lightning/pull/1009">1009</a></li></ul><h3 id="fixed-9" class="section-heading">
-  <a href="#fixed-9" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">fixed-9</p>
+  <a href="#fixed-9" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  Fixed
+  <span class="text">Fixed</span>
 </h3>
 <h2 id="v0-7-1-2023-08-04" class="section-heading">
-  <a href="#v0-7-1-2023-08-04" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">v0-7-1-2023-08-04</p>
+  <a href="#v0-7-1-2023-08-04" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  [v0.7.1] - 2023-08-04
+  <span class="text">[v0.7.1] - 2023-08-04</span>
 </h2>
 <h3 id="added-11" class="section-heading">
-  <a href="#added-11" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">added-11</p>
+  <a href="#added-11" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  Added
+  <span class="text">Added</span>
 </h3>
 <h3 id="changed-11" class="section-heading">
-  <a href="#changed-11" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">changed-11</p>
+  <a href="#changed-11" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  Changed
+  <span class="text">Changed</span>
 </h3>
 <h3 id="fixed-10" class="section-heading">
-  <a href="#fixed-10" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">fixed-10</p>
+  <a href="#fixed-10" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  Fixed
+  <span class="text">Fixed</span>
 </h3>
 <ul><li>Fixed flickery icons on new workflow job creation.</li></ul><h2 id="v0-7-0-2023-08-04" class="section-heading">
-  <a href="#v0-7-0-2023-08-04" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">v0-7-0-2023-08-04</p>
+  <a href="#v0-7-0-2023-08-04" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  [v0.7.0] - 2023-08-04
+  <span class="text">[v0.7.0] - 2023-08-04</span>
 </h2>
 <h3 id="added-12" class="section-heading">
-  <a href="#added-12" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">added-12</p>
+  <a href="#added-12" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  Added
+  <span class="text">Added</span>
 </h3>
 <ul><li>Project owners can require MFA for their users
 <a href="https://github.com/OpenFn/Lightning/issues/892">892</a></li></ul><h3 id="changed-12" class="section-heading">
-  <a href="#changed-12" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">changed-12</p>
+  <a href="#changed-12" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  Changed
+  <span class="text">Changed</span>
 </h3>
 <ul><li>Moved to Elixir 1.15 and Erlang 26.0.2 to sort our an annoying ElixirLS issue
 that was slowing down our engineers.</li><li>Update Debian base to use bookworm (Debian 12) for our Docker images</li><li>Change new credential modal to take up less space on the screen
 <a href="https://github.com/OpenFn/Lightning/issues/931">#931</a></li><li>Placeholder nodes are now purely handled client-side</li></ul><h3 id="fixed-11" class="section-heading">
-  <a href="#fixed-11" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">fixed-11</p>
+  <a href="#fixed-11" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  Fixed
+  <span class="text">Fixed</span>
 </h3>
 <ul><li>Fix issue creating a new credential from the Job editor where the new
 credential was not being set on the job.
@@ -483,236 +514,236 @@ first click. <a href="https://github.com/OpenFn/Lightning/issues/976">#976</a></
 Application.spec()<a href="https://github.com/OpenFn/Lightning/issues/1010">#1010</a></li><li>Fixed issue where entering a placeholder name through the form would result an
 in unsaveable workflow
 <a href="https://github.com/OpenFn/Lightning/issues/1001">#1001</a></li><li>Ensure the DownloadController checks for authentication and authorisation.</li></ul><h2 id="v0-7-0-pre5-2023-07-28" class="section-heading">
-  <a href="#v0-7-0-pre5-2023-07-28" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">v0-7-0-pre5-2023-07-28</p>
+  <a href="#v0-7-0-pre5-2023-07-28" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  [v0.7.0-pre5] - 2023-07-28
+  <span class="text">[v0.7.0-pre5] - 2023-07-28</span>
 </h2>
 <h3 id="added-13" class="section-heading">
-  <a href="#added-13" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">added-13</p>
+  <a href="#added-13" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  Added
+  <span class="text">Added</span>
 </h3>
 <h3 id="changed-13" class="section-heading">
-  <a href="#changed-13" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">changed-13</p>
+  <a href="#changed-13" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  Changed
+  <span class="text">Changed</span>
 </h3>
 <ul><li>Unless otherwise specified, only show workorders with activity in last 14 days
 <a href="https://github.com/OpenFn/Lightning/issues/968">#968</a></li></ul><h3 id="fixed-12" class="section-heading">
-  <a href="#fixed-12" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">fixed-12</p>
+  <a href="#fixed-12" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  Fixed
+  <span class="text">Fixed</span>
 </h3>
 <h2 id="v0-7-0-pre4-2023-07-27" class="section-heading">
-  <a href="#v0-7-0-pre4-2023-07-27" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">v0-7-0-pre4-2023-07-27</p>
+  <a href="#v0-7-0-pre4-2023-07-27" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  [v0.7.0-pre4] - 2023-07-27
+  <span class="text">[v0.7.0-pre4] - 2023-07-27</span>
 </h2>
 <h3 id="added-14" class="section-heading">
-  <a href="#added-14" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">added-14</p>
+  <a href="#added-14" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  Added
+  <span class="text">Added</span>
 </h3>
 <h3 id="changed-14" class="section-heading">
-  <a href="#changed-14" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">changed-14</p>
+  <a href="#changed-14" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  Changed
+  <span class="text">Changed</span>
 </h3>
 <ul><li>Don't add cast fragments if the search_term is nil
 <a href="https://github.com/OpenFn/Lightning/issues/968">#968</a></li></ul><h3 id="fixed-13" class="section-heading">
-  <a href="#fixed-13" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">fixed-13</p>
+  <a href="#fixed-13" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  Fixed
+  <span class="text">Fixed</span>
 </h3>
 <h2 id="v0-7-0-pre3-2023-07-26" class="section-heading">
-  <a href="#v0-7-0-pre3-2023-07-26" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">v0-7-0-pre3-2023-07-26</p>
+  <a href="#v0-7-0-pre3-2023-07-26" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  [v0.7.0-pre3] - 2023-07-26
+  <span class="text">[v0.7.0-pre3] - 2023-07-26</span>
 </h2>
 <h3 id="added-15" class="section-heading">
-  <a href="#added-15" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">added-15</p>
+  <a href="#added-15" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  Added
+  <span class="text">Added</span>
 </h3>
 <h3 id="changed-15" class="section-heading">
-  <a href="#changed-15" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">changed-15</p>
+  <a href="#changed-15" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  Changed
+  <span class="text">Changed</span>
 </h3>
 <h3 id="fixed-14" class="section-heading">
-  <a href="#fixed-14" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">fixed-14</p>
+  <a href="#fixed-14" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  Fixed
+  <span class="text">Fixed</span>
 </h3>
 <ul><li>Fixed an issue with newly created edges that prevented downstream jobs
 <a href="https://github.com/OpenFn/Lightning/issues/977">977</a></li></ul><h2 id="v0-7-0-pre2-2023-07-26" class="section-heading">
-  <a href="#v0-7-0-pre2-2023-07-26" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">v0-7-0-pre2-2023-07-26</p>
+  <a href="#v0-7-0-pre2-2023-07-26" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  [v0.7.0-pre2] - 2023-07-26
+  <span class="text">[v0.7.0-pre2] - 2023-07-26</span>
 </h2>
 <p>Note that this is a pre-release with a couple of known bugs that are tracked in
 the Nodes and Edges <a href="https://github.com/OpenFn/Lightning/issues/793">epic</a>.</p><h3 id="added-16" class="section-heading">
-  <a href="#added-16" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">added-16</p>
+  <a href="#added-16" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  Added
+  <span class="text">Added</span>
 </h3>
 <ul><li>Added ability for a user to enable MFA on their account; using 2FA apps like
 Authy, Google Authenticator etc
 <a href="https://github.com/OpenFn/Lightning/issues/890">#890</a></li><li>Write/run sql script to convert triggers
 <a href="https://github.com/OpenFn/Lightning/issues/875">#875</a></li><li>Export projects as <code class="inline">.yaml</code> via UI
 <a href="https://github.com/OpenFn/Lightning/issues/249">#249</a></li></ul><h3 id="changed-16" class="section-heading">
-  <a href="#changed-16" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">changed-16</p>
+  <a href="#changed-16" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  Changed
+  <span class="text">Changed</span>
 </h3>
 <ul><li>In <code class="inline">v0.7.0</code> we change the underlying workflow building and execution
 infrastructure to align with a standard &quot;nodes and edges&quot; design for directed
 acyclic graphs (DAGs). Make sure to run the migrations!
-<a href="<(https://github.com/OpenFn/Lightning/issues/793)>">793</a></li></ul><h3 id="fixed-15" class="section-heading">
-  <a href="#fixed-15" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">fixed-15</p>
+<a href="https://github.com/OpenFn/Lightning/issues/793">793</a></li></ul><h3 id="fixed-15" class="section-heading">
+  <a href="#fixed-15" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  Fixed
+  <span class="text">Fixed</span>
 </h3>
 <ul><li>Propagate url pushState/changes to Workflow Diagram selection
 <a href="https://github.com/OpenFn/Lightning/issues/944">#944</a></li><li>Fix issue when deleting nodes from the workflow editor
 <a href="https://github.com/OpenFn/Lightning/issues/830">#830</a></li><li>Fix issue when clicking a trigger on a new/unsaved workflow
 <a href="https://github.com/OpenFn/Lightning/issues/954">#954</a></li></ul><h2 id="0-6-7-2023-07-13" class="section-heading">
-  <a href="#0-6-7-2023-07-13" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">0-6-7-2023-07-13</p>
+  <a href="#0-6-7-2023-07-13" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  [0.6.7] - 2023-07-13
+  <span class="text">[0.6.7] - 2023-07-13</span>
 </h2>
 <h3 id="added-17" class="section-heading">
-  <a href="#added-17" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">added-17</p>
+  <a href="#added-17" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  Added
+  <span class="text">Added</span>
 </h3>
 <ul><li>Add feature to bulk rerun work orders from a specific step in their workflow;
 e.g., &quot;rerun these 50 work orders, starting each at step 4.&quot;
 <a href="https://github.com/OpenFn/Lightning/pull/906">#906</a></li></ul><h3 id="changed-17" class="section-heading">
-  <a href="#changed-17" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">changed-17</p>
+  <a href="#changed-17" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  Changed
+  <span class="text">Changed</span>
 </h3>
 <h3 id="fixed-16" class="section-heading">
-  <a href="#fixed-16" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">fixed-16</p>
+  <a href="#fixed-16" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  Fixed
+  <span class="text">Fixed</span>
 </h3>
 <ul><li>Oban exception: &quot;value too long&quot; when log lines are longer than 255 chars
 <a href="https://github.com/OpenFn/Lightning/issues/929">#929</a></li></ul><h2 id="0-6-6-2023-06-30" class="section-heading">
-  <a href="#0-6-6-2023-06-30" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">0-6-6-2023-06-30</p>
+  <a href="#0-6-6-2023-06-30" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  [0.6.6] - 2023-06-30
+  <span class="text">[0.6.6] - 2023-06-30</span>
 </h2>
 <h3 id="added-18" class="section-heading">
-  <a href="#added-18" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">added-18</p>
+  <a href="#added-18" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  Added
+  <span class="text">Added</span>
 </h3>
 <ul><li>Add public API token to the demo site setup script</li><li>Check and renew OAuth credentials when running a job
 <a href="https://github.com/OpenFn/Lightning/issues/646">#646</a></li></ul><h3 id="fixed-17" class="section-heading">
-  <a href="#fixed-17" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">fixed-17</p>
+  <a href="#fixed-17" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  Fixed
+  <span class="text">Fixed</span>
 </h3>
 <ul><li>Remove google sheets from adaptors list until supporting oauth flow
 <a href="https://github.com/OpenFn/Lightning/issues/792">#792</a></li><li>Remove duplicate google sheets adaptor display on credential type picklist
 <a href="https://github.com/OpenFn/Lightning/issues/663">#663</a></li><li>Fix demo setup script for calling from outside the app on Kubernetes
 deployments <a href="https://github.com/OpenFn/Lightning/issues/917">#917</a></li></ul><h2 id="0-6-5-2023-06-22" class="section-heading">
-  <a href="#0-6-5-2023-06-22" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">0-6-5-2023-06-22</p>
+  <a href="#0-6-5-2023-06-22" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  [0.6.5] - 2023-06-22
+  <span class="text">[0.6.5] - 2023-06-22</span>
 </h2>
 <h3 id="added-19" class="section-heading">
-  <a href="#added-19" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">added-19</p>
+  <a href="#added-19" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  Added
+  <span class="text">Added</span>
 </h3>
 <ul><li>Ability to rerun workorders from start by selecting one of more of them from
 the History page and clicking the &quot;Rerun&quot; button.
 <a href="https://github.com/OpenFn/Lightning/issues/659">#659</a></li></ul><h3 id="fixed-18" class="section-heading">
-  <a href="#fixed-18" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">fixed-18</p>
+  <a href="#fixed-18" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  Fixed
+  <span class="text">Fixed</span>
 </h3>
 <ul><li>Example runs for demo incorrect
 <a href="https://github.com/OpenFn/Lightning/issues/856">#856</a></li></ul><h2 id="0-6-3-2023-06-15" class="section-heading">
-  <a href="#0-6-3-2023-06-15" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">0-6-3-2023-06-15</p>
+  <a href="#0-6-3-2023-06-15" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  [0.6.3] - 2023-06-15
+  <span class="text">[0.6.3] - 2023-06-15</span>
 </h2>
 <h3 id="fixed-19" class="section-heading">
-  <a href="#fixed-19" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">fixed-19</p>
+  <a href="#fixed-19" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  Fixed
+  <span class="text">Fixed</span>
 </h3>
 <ul><li>Prevent saving null log lines to the database, fix issue with run display
 <a href="https://github.com/OpenFn/Lightning/issues/866">#866</a></li></ul><h2 id="0-6-2-2023-06-09" class="section-heading">
-  <a href="#0-6-2-2023-06-09" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">0-6-2-2023-06-09</p>
+  <a href="#0-6-2-2023-06-09" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  [0.6.2] - 2023-06-09
+  <span class="text">[0.6.2] - 2023-06-09</span>
 </h2>
 <h3 id="fixed-20" class="section-heading">
-  <a href="#fixed-20" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">fixed-20</p>
+  <a href="#fixed-20" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  Fixed
+  <span class="text">Fixed</span>
 </h3>
 <ul><li><p>Fixed viewer permissions for delete workflow</p></li><li><p>Fixed bug with workflow cards
 <a href="https://github.com/OpenFn/Lightning/issues/859">#859</a></p></li></ul><h2 id="0-6-1-2023-06-08" class="section-heading">
-  <a href="#0-6-1-2023-06-08" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">0-6-1-2023-06-08</p>
+  <a href="#0-6-1-2023-06-08" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  [0.6.1] - 2023-06-08
+  <span class="text">[0.6.1] - 2023-06-08</span>
 </h2>
 <h3 id="fixed-21" class="section-heading">
-  <a href="#fixed-21" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">fixed-21</p>
+  <a href="#fixed-21" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  Fixed
+  <span class="text">Fixed</span>
 </h3>
 <ul><li><p>Fixed bug with run logs <a href="https://github.com/OpenFn/Lightning/issues/864">#864</a></p></li><li><p>Correctly stagger demo runs to maintain order
-<a href="https://github.com/OpenFn/Lightning/issues/856">#856</a></p></li><li><p>Remove <a href="https://hexdocs.pm/timex/3.7.9/Timex.html"><code class="inline">Timex</code></a> use from <code class="inline">SetupUtils</code> in favor of <a href="https://hexdocs.pm/elixir/DateTime.html"><code class="inline">DateTime</code></a> to fix issue when
+<a href="https://github.com/OpenFn/Lightning/issues/856">#856</a></p></li><li><p>Remove <a href="https://hexdocs.pm/timex/3.7.11/Timex.html"><code class="inline">Timex</code></a> use from <code class="inline">SetupUtils</code> in favor of <a href="https://hexdocs.pm/elixir/DateTime.html"><code class="inline">DateTime</code></a> to fix issue when
 calling it in escript.</p></li></ul><h2 id="0-6-0-2023-04-12" class="section-heading">
-  <a href="#0-6-0-2023-04-12" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">0-6-0-2023-04-12</p>
+  <a href="#0-6-0-2023-04-12" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  [0.6.0]- 2023-04-12
+  <span class="text">[0.6.0]- 2023-04-12</span>
 </h2>
 <h3 id="added-20" class="section-heading">
-  <a href="#added-20" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">added-20</p>
+  <a href="#added-20" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  Added
+  <span class="text">Added</span>
 </h3>
 <ul><li>Create sample runs when generating sample workflow
 <a href="https://github.com/OpenFn/Lightning/issues/821">#821</a></li><li>Added a provisioning api for creating and updating projects and their
@@ -720,62 +751,62 @@ workflows See: <a href="provisioning.html">PROVISIONING.md</a>
 <a href="https://github.com/OpenFn/Lightning/issues/641">#641</a></li><li>Add ability for a <code class="inline">superuser</code> to schedule deletion, cancel deletion, and
 delete projects <a href="https://github.com/OpenFn/Lightning/issues/757">#757</a></li><li>Add ability for a <code class="inline">project owner</code> to schedule deletion, cancel deletion, and
 delete projects <a href="https://github.com/OpenFn/Lightning/issues/746">#746</a></li></ul><h3 id="changed-18" class="section-heading">
-  <a href="#changed-18" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">changed-18</p>
+  <a href="#changed-18" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  Changed
+  <span class="text">Changed</span>
 </h3>
 <ul><li>Ability to store run log lines as rows in a separate table
 <a href="https://github.com/OpenFn/Lightning/issues/514">#514</a></li></ul><h3 id="fixed-22" class="section-heading">
-  <a href="#fixed-22" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">fixed-22</p>
+  <a href="#fixed-22" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  Fixed
+  <span class="text">Fixed</span>
 </h3>
 <ul><li>Incorrect project digest queries
 <a href="https://github.com/OpenFn/Lightning/issues/768">#768</a>]</li><li>Fix issue when purging deleted users
 <a href="https://github.com/OpenFn/Lightning/issues/747">#747</a></li><li>Generate a random name for Workflows when creating one via the UI.
 <a href="https://github.com/OpenFn/Lightning/issues/828">#828</a></li><li>Handle error when deleting a job with runs.
 <a href="https://github.com/OpenFn/Lightning/issues/814">#814</a></li></ul><h2 id="0-5-2" class="section-heading">
-  <a href="#0-5-2" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">0-5-2</p>
+  <a href="#0-5-2" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  [0.5.2]
+  <span class="text">[0.5.2]</span>
 </h2>
 <h3 id="added-21" class="section-heading">
-  <a href="#added-21" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">added-21</p>
+  <a href="#added-21" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  Added
+  <span class="text">Added</span>
 </h3>
 <ul><li>Add <code class="inline">workflow_edges</code> table in preparation for new workflow editor
 implementation <a href="https://github.com/OpenFn/Lightning/issues/794">#794</a></li><li>Stamped <code class="inline">credential_id</code> on run directly for easier auditing of the history
 interface. Admins can now see which credential was used to run a run.
 <a href="https://github.com/OpenFn/Lightning/issues/800">#800</a></li><li>Better errors when using magic functions: &quot;no magic yet&quot; and &quot;check
 credential&quot; <a href="https://github.com/OpenFn/Lightning/issues/812">#812</a></li></ul><h3 id="changed-19" class="section-heading">
-  <a href="#changed-19" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">changed-19</p>
+  <a href="#changed-19" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  Changed
+  <span class="text">Changed</span>
 </h3>
 <ul><li>The <code class="inline">delete-project</code> function now delete all associated activities
 <a href="https://github.com/OpenFn/Lightning/issues/759">#759</a></li></ul><h3 id="fixed-23" class="section-heading">
-  <a href="#fixed-23" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">fixed-23</p>
+  <a href="#fixed-23" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  Fixed
+  <span class="text">Fixed</span>
 </h3>
 <h2 id="0-5-1-2023-04-12" class="section-heading">
-  <a href="#0-5-1-2023-04-12" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">0-5-1-2023-04-12</p>
+  <a href="#0-5-1-2023-04-12" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  [0.5.1] - 2023-04-12
+  <span class="text">[0.5.1] - 2023-04-12</span>
 </h2>
 <h3 id="added-22" class="section-heading">
-  <a href="#added-22" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">added-22</p>
+  <a href="#added-22" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  Added
+  <span class="text">Added</span>
 </h3>
 <ul><li>Added ability to create and revoke personal API tokens
 <a href="https://github.com/OpenFn/Lightning/issues/147">#147</a></li><li>Add <code class="inline">last-used at</code> to API tokens
@@ -784,33 +815,33 @@ save new or updated jobs job panel will <em>not</em> close. (Click elsewhere in 
 canvas or click the &quot;Close&quot; button to close.)
 <a href="https://github.com/OpenFn/Lightning/issues/568">#568</a></li><li>Add filtered search params to the history page URL
 <a href="https://github.com/OpenFn/Lightning/issues/660">#660</a></li></ul><h3 id="changed-20" class="section-heading">
-  <a href="#changed-20" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">changed-20</p>
+  <a href="#changed-20" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  Changed
+  <span class="text">Changed</span>
 </h3>
 <ul><li>The secret scrubber now ignores booleans
 <a href="https://github.com/OpenFn/Lightning/issues/690">690</a></li></ul><h3 id="fixed-24" class="section-heading">
-  <a href="#fixed-24" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">fixed-24</p>
+  <a href="#fixed-24" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  Fixed
+  <span class="text">Fixed</span>
 </h3>
 <ul><li>The secret scrubber now properly handles integer secrets from credentials
 <a href="https://github.com/OpenFn/Lightning/issues/690">690</a></li><li>Updated describe-package dependency, fixing sparkles in adaptor-docs
 <a href="https://github.com/OpenFn/Lightning/issues/657">657</a></li><li>Clicks on the workflow canvas were not lining up with the nodes users clicked
 on; they are now <a href="https://github.com/OpenFn/Lightning/issues/733">733</a></li><li>Job panel behaves better when collapsed
 <a href="https://github.com/OpenFn/Lightning/issues/774">774</a></li></ul><h2 id="0-5-0-2023-04-03" class="section-heading">
-  <a href="#0-5-0-2023-04-03" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">0-5-0-2023-04-03</p>
+  <a href="#0-5-0-2023-04-03" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  [0.5.0] - 2023-04-03
+  <span class="text">[0.5.0] - 2023-04-03</span>
 </h2>
 <h3 id="added-23" class="section-heading">
-  <a href="#added-23" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">added-23</p>
+  <a href="#added-23" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  Added
+  <span class="text">Added</span>
 </h3>
 <ul><li>Magic functions that fetch real metadata from connected systems via
 <code class="inline">credentials</code> and suggest completions in the job builder (e.g., pressing
@@ -820,10 +851,10 @@ and fill in their orgUnit codes upon
 enter.)<a href="https://github.com/OpenFn/Lightning/issues/670">670</a></li><li>A &quot;metadata explorer&quot; to browse actual system metadata for connected
 instances. <a href="https://github.com/OpenFn/Lightning/issues/658">658</a></li><li>Resizable job builder panel for the main canvas/workflow view.
 <a href="https://github.com/OpenFn/Lightning/issues/681">681</a></li></ul><h3 id="changed-21" class="section-heading">
-  <a href="#changed-21" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">changed-21</p>
+  <a href="#changed-21" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  Changed
+  <span class="text">Changed</span>
 </h3>
 <ul><li>Display timezone for cron schedule—it is always UTC.
 <a href="https://github.com/OpenFn/Lightning/issues/716">#716</a></li><li>Instance administrators can now configure the interval between when a project
@@ -834,55 +865,55 @@ variable to <code class="inline">0</code> will make automatic purging <em>never<
 &quot;deleted&quot; projects and users unavailable. This has been requested by certain
 organizations that must retain audit logs in a Lightning instance.
 <a href="https://github.com/OpenFn/Lightning/issues/758">758</a></li></ul><h3 id="fixed-25" class="section-heading">
-  <a href="#fixed-25" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">fixed-25</p>
+  <a href="#fixed-25" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  Fixed
+  <span class="text">Fixed</span>
 </h3>
 <ul><li>Locked CLI version to <code class="inline">@openfn/cli@0.0.35</code>.
 <a href="https://github.com/OpenFn/Lightning/issues/761">#761</a></li></ul><h2 id="0-4-8-2023-03-29" class="section-heading">
-  <a href="#0-4-8-2023-03-29" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">0-4-8-2023-03-29</p>
+  <a href="#0-4-8-2023-03-29" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  [0.4.8] - 2023-03-29
+  <span class="text">[0.4.8] - 2023-03-29</span>
 </h2>
 <h3 id="added-24" class="section-heading">
-  <a href="#added-24" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">added-24</p>
+  <a href="#added-24" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  Added
+  <span class="text">Added</span>
 </h3>
 <ul><li>Added a test harness for monitoring critical parts of the app using Telemetry
 <a href="https://github.com/OpenFn/Lightning/issues/654">#654</a></li></ul><h3 id="changed-22" class="section-heading">
-  <a href="#changed-22" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">changed-22</p>
+  <a href="#changed-22" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  Changed
+  <span class="text">Changed</span>
 </h3>
 <ul><li>Set log level to <code class="inline">info</code> for runs. Most of the <code class="inline">debug</code> logging is useful for
 the CLI, but not for Lightning. In the future the log level will be
 configurable at instance &gt; project &gt; job level by the <code class="inline">superuser</code> and any
 project <code class="inline">admin</code>.</li><li>Renamed license file so that automagic github icon is less confusing</li></ul><h3 id="fixed-26" class="section-heading">
-  <a href="#fixed-26" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">fixed-26</p>
+  <a href="#fixed-26" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  Fixed
+  <span class="text">Fixed</span>
 </h3>
 <ul><li>Broken links in failure alert email
 <a href="https://github.com/OpenFn/Lightning/issues/732">#732</a></li><li>Registration Submission on app.openfn.org shows internal server error in
 browser <a href="https://github.com/OpenFn/Lightning/issues/686">#686</a></li><li>Run the correct runtime install mix task in <code class="inline">Dockerfile-dev</code>
 <a href="https://github.com/OpenFn/Lightning/issues/541">#541</a></li><li>Users not disabled when scheduled for deletion
 <a href="https://github.com/OpenFn/Lightning/issues/719">#719</a></li></ul><h2 id="0-4-6-2023-03-23" class="section-heading">
-  <a href="#0-4-6-2023-03-23" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">0-4-6-2023-03-23</p>
+  <a href="#0-4-6-2023-03-23" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  [0.4.6] - 2023-03-23
+  <span class="text">[0.4.6] - 2023-03-23</span>
 </h2>
 <h3 id="added-25" class="section-heading">
-  <a href="#added-25" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">added-25</p>
+  <a href="#added-25" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  Added
+  <span class="text">Added</span>
 </h3>
 <ul><li>Implement roles and permissions across entire app
 <a href="https://github.com/OpenFn/Lightning/issues/645">#645</a></li><li>Fix webhook URL
@@ -891,82 +922,82 @@ OpenHIE demo workflow <a href="https://github.com/OpenFn/Lightning/issues/448">4
 <a href="https://github.com/OpenFn/Lightning/issues/634">#645</a></li><li>Notify user via email when they're added to a project
 <a href="https://github.com/OpenFn/Lightning/issues/306">#306</a></li><li>Added notify user via email when their account is created
 <a href="https://github.com/OpenFn/Lightning/issues/307">#307</a></li></ul><h3 id="changed-23" class="section-heading">
-  <a href="#changed-23" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">changed-23</p>
+  <a href="#changed-23" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  Changed
+  <span class="text">Changed</span>
 </h3>
 <ul><li>Improved errors when decoding encryption keys for use with Cloak.
 <a href="https://github.com/OpenFn/Lightning/issues/684">#684</a></li><li>Allow users to run ANY job with a custom input.
 <a href="https://github.com/OpenFn/Lightning/issues/629">#629</a></li></ul><h3 id="fixed-27" class="section-heading">
-  <a href="#fixed-27" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">fixed-27</p>
+  <a href="#fixed-27" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  Fixed
+  <span class="text">Fixed</span>
 </h3>
 <ul><li>Ensure JSON schema form inputs are in the same order as they are written in
 the schema <a href="https://github.com/OpenFn/Lightning/issues/685">#685</a></li></ul><h2 id="0-4-4-2023-03-10" class="section-heading">
-  <a href="#0-4-4-2023-03-10" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">0-4-4-2023-03-10</p>
+  <a href="#0-4-4-2023-03-10" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  [0.4.4] - 2023-03-10
+  <span class="text">[0.4.4] - 2023-03-10</span>
 </h2>
 <h3 id="added-26" class="section-heading">
-  <a href="#added-26" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">added-26</p>
+  <a href="#added-26" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  Added
+  <span class="text">Added</span>
 </h3>
 <ul><li>Users can receive a digest email reporting on a specified project.
 <a href="https://github.com/OpenFn/Lightning/issues/638">#638</a>
 <a href="https://github.com/OpenFn/Lightning/issues/585">#585</a></li></ul><h3 id="changed-24" class="section-heading">
-  <a href="#changed-24" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">changed-24</p>
+  <a href="#changed-24" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  Changed
+  <span class="text">Changed</span>
 </h3>
 <h3 id="fixed-28" class="section-heading">
-  <a href="#fixed-28" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">fixed-28</p>
+  <a href="#fixed-28" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  Fixed
+  <span class="text">Fixed</span>
 </h3>
 <h2 id="0-4-3-2023-03-06" class="section-heading">
-  <a href="#0-4-3-2023-03-06" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">0-4-3-2023-03-06</p>
+  <a href="#0-4-3-2023-03-06" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  [0.4.3] - 2023-03-06
+  <span class="text">[0.4.3] - 2023-03-06</span>
 </h2>
 <h3 id="added-27" class="section-heading">
-  <a href="#added-27" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">added-27</p>
+  <a href="#added-27" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  Added
+  <span class="text">Added</span>
 </h3>
 <ul><li>Tooltips on Job Builder panel
 <a href="https://github.com/OpenFn/Lightning/issues/650">#650</a></li></ul><h3 id="changed-25" class="section-heading">
-  <a href="#changed-25" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">changed-25</p>
+  <a href="#changed-25" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  Changed
+  <span class="text">Changed</span>
 </h3>
 <ul><li>Upgraded to Phoenix 1.7 (3945856)</li></ul><h3 id="fixed-29" class="section-heading">
-  <a href="#fixed-29" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">fixed-29</p>
+  <a href="#fixed-29" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  Fixed
+  <span class="text">Fixed</span>
 </h3>
 <ul><li>Issue with FailureAlerter configuration missing in <code class="inline">prod</code> mode.</li></ul><h2 id="0-4-2-2023-02-24" class="section-heading">
-  <a href="#0-4-2-2023-02-24" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">0-4-2-2023-02-24</p>
+  <a href="#0-4-2-2023-02-24" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  [0.4.2] - 2023-02-24
+  <span class="text">[0.4.2] - 2023-02-24</span>
 </h2>
 <h3 id="added-28" class="section-heading">
-  <a href="#added-28" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">added-28</p>
+  <a href="#added-28" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  Added
+  <span class="text">Added</span>
 </h3>
 <ul><li>A user can change their own email
 <a href="https://github.com/OpenFn/Lightning/issues/247">#247</a></li><li>Added a <code class="inline">SCHEMAS_PATH</code> environment variable to override the default folder
@@ -974,92 +1005,92 @@ location for credential schemas
 <a href="https://github.com/OpenFn/Lightning/issues/604">#604</a></li><li>Added the ability to configure Google Sheets credentials
 <a href="https://github.com/OpenFn/Lightning/issues/536">#536</a></li><li>Function to import a project
 <a href="https://github.com/OpenFn/Lightning/issues/574">#574</a></li></ul><h3 id="changed-26" class="section-heading">
-  <a href="#changed-26" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">changed-26</p>
+  <a href="#changed-26" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  Changed
+  <span class="text">Changed</span>
 </h3>
 <ul><li>Users cannot register if they have not selected the terms and conditions
 <a href="https://github.com/OpenFn/Lightning/issues/531">#531</a></li></ul><h3 id="fixed-30" class="section-heading">
-  <a href="#fixed-30" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">fixed-30</p>
+  <a href="#fixed-30" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  Fixed
+  <span class="text">Fixed</span>
 </h3>
 <ul><li>Jobs panel slow for first open after restart
 <a href="https://github.com/OpenFn/Lightning/issues/567">#567</a></li></ul><h2 id="0-4-0-2023-02-08" class="section-heading">
-  <a href="#0-4-0-2023-02-08" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">0-4-0-2023-02-08</p>
+  <a href="#0-4-0-2023-02-08" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  [0.4.0] - 2023-02-08
+  <span class="text">[0.4.0] - 2023-02-08</span>
 </h2>
 <h3 id="added-29" class="section-heading">
-  <a href="#added-29" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">added-29</p>
+  <a href="#added-29" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  Added
+  <span class="text">Added</span>
 </h3>
 <ul><li>Added a Delete job button in Inspector</li><li>Filter workflow runs by text/value in run logs or input body</li><li>Drop &quot;configuration&quot; key from Run output dataclips after completion</li><li>Ability to 'rerun' a run from the Run list</li><li>Attempts and Runs update themselves in the Runs list</li><li>Configure a project and workflow for a new registering user</li><li>Run a job with a custom input</li><li>Added plausible analytics</li><li>Allow user to click on Webhook Trigger Node to copy webhook URL on workflow
 diagram</li><li>Allow any user to delete a credential that they own</li><li>Create any credential through a form except for OAuth</li><li>Refit all diagram nodes on browser and container resize</li><li>Enable distributed Erlang, allowing any number of redundant Lightning nodes to
 communicate with each other.</li><li>Users can set up realtime alerts for a project</li></ul><h3 id="changed-27" class="section-heading">
-  <a href="#changed-27" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">changed-27</p>
+  <a href="#changed-27" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  Changed
+  <span class="text">Changed</span>
 </h3>
 <ul><li>Better code-assist and intelliense in the Job Editor</li><li>Updated @openfn/workflow-diagram to 0.4.0</li><li>Make plus button part of job nodes in Workflow Diagram</li><li>Updated @openfn/adaptor-docs to 0.0.5</li><li>Updated @openfn/describe-package to 0.0.10</li><li>Create an follow a manual Run from the Job Inspector</li><li>View all workflows in a project on the workflows index page</li><li>Move @openfn/workflow-diagram into the application, the NPM module is now
 deprecated.</li><li>Remove workflow name from first node</li><li>Move the used parts of <code class="inline">@openfn/engine</code> into the application.</li><li>[BREAKING CHANGE] Ported <code class="inline">mix openfn.install.runtime</code> into application, use
 <code class="inline">mix lightning.install_runtime</code>.</li><li>[BREAKING CHANGE] Introduced <code class="inline">@openfn/cli</code> as the new runtime for Jobs</li><li>Rename a workflow through the page heading</li><li>Hide the dataclips tab for beta</li><li>Make adaptor default to common@latest</li><li>Remove jobs list page</li><li>Better error handling in the docs panel</li><li>Disable credential ownership transfer in dev and prod environments</li><li>Add project settings page</li><li>Change Workorder filters to apply to the aggregate state of the workorder and
 not the run directly</li><li>Enable jobs by default</li><li>Set log level to info</li><li>Add Beta checkbox to register page</li><li>User roles and permissions</li></ul><h3 id="fixed-31" class="section-heading">
-  <a href="#fixed-31" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">fixed-31</p>
+  <a href="#fixed-31" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  Fixed
+  <span class="text">Fixed</span>
 </h3>
 <ul><li>Don't consider disabled jobs when calculating subsequent runs</li><li>Fixed overflow on Job Editor Tooltips</li><li>Fixed auto-scroll when adding a new snippet in the Job Editor</li><li>Fixed common operation typings in Job Editor</li></ul><h2 id="0-3-1-2022-11-22" class="section-heading">
-  <a href="#0-3-1-2022-11-22" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">0-3-1-2022-11-22</p>
+  <a href="#0-3-1-2022-11-22" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  [0.3.1] - 2022-11-22
+  <span class="text">[0.3.1] - 2022-11-22</span>
 </h2>
 <h3 id="fixed-32" class="section-heading">
-  <a href="#fixed-32" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">fixed-32</p>
+  <a href="#fixed-32" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  Fixed
+  <span class="text">Fixed</span>
 </h3>
 <ul><li>Fixed bug that attempted to execute HTML scripts in dataclips</li><li>Fixed bug that prevented workorders from displaying in the order of their last
 run, descending.</li><li>Remove alerts after set timeout or close</li></ul><h2 id="0-3-0-2022-11-21" class="section-heading">
-  <a href="#0-3-0-2022-11-21" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">0-3-0-2022-11-21</p>
+  <a href="#0-3-0-2022-11-21" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  [0.3.0] - 2022-11-21
+  <span class="text">[0.3.0] - 2022-11-21</span>
 </h2>
 <h3 id="added-30" class="section-heading">
-  <a href="#added-30" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">added-30</p>
+  <a href="#added-30" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  Added
+  <span class="text">Added</span>
 </h3>
 <ul><li>Add seed data for demo site</li><li>Create adaptor credentials through a form</li><li>Configure cron expressions through a form</li><li>View runs grouped by workorders and attempts</li><li>Run an existing Job with any dataclip uuid from the Job form</li></ul><h3 id="changed-28" class="section-heading">
-  <a href="#changed-28" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">changed-28</p>
+  <a href="#changed-28" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  Changed
+  <span class="text">Changed</span>
 </h3>
 <ul><li>Redirect users to projects list page when they click on Admin Settings menu</li><li>Move job, project, input and output Dataclips to Run table</li><li>Reverse the relationship between Jobs and Triggers. Triggers now can exist on
 their own; setting the stage for branching and merging workflows</li><li>Updated Elixir and frontend dependencies</li><li>[BREAKING CHANGE] Pipeline now uses WorkOrders, previous data is not
 compatible.</li><li>Runs, Dataclips and Attempts now all correctly use usec resolution timestamps.</li><li>Upgraded LiveView to 0.18.0</li><li>Upgraded Elixir to 1.14.1 and OTP 25</li><li>Workflow Job editor now behaves like a panel</li><li>Split JobLive.InspectorFormComponent into different plug-able subcomponents</li><li>Ensure new jobs with cron triggers receive a default frequency</li><li>Webhooks are now referenced by the trigger id instead of job id.</li><li>Filter runs by status</li><li>Filter runs by workflow</li><li>Filter runs by date</li><li>View a job run from the runs history</li><li>View latest matching inputs to run a job with</li></ul><h2 id="0-2-0-2022-09-12" class="section-heading">
-  <a href="#0-2-0-2022-09-12" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">0-2-0-2022-09-12</p>
+  <a href="#0-2-0-2022-09-12" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  [0.2.0] - 2022-09-12
+  <span class="text">[0.2.0] - 2022-09-12</span>
 </h2>
 <h3 id="changed-29" class="section-heading">
-  <a href="#changed-29" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">changed-29</p>
+  <a href="#changed-29" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  Changed
+  <span class="text">Changed</span>
 </h3>
 <ul><li>[BREAKING CHANGE] Add <code class="inline">Workflow</code> model, Jobs now belong to a Workflow This is
 a breaking change to the schema.</li><li>Use Node.js 18, soon to be in LTS.</li><li>Visualize success/fail triggers in workflow diagram.</li><li>Move WorkflowDiagram related actions from DashboardLive into WorkflowLive</li><li>Move WorkflowDiagram component into liveview, so that we can subscribe to
@@ -1069,39 +1100,39 @@ MutationObserver and a Base64 encoded JSON payload.</li><li>Fixed an issue where
 adaptor', added a condition to check an adaptor is actually selected.</li><li>Removed previous Workflow CTE queries, replaced by the introduction of the
 Workflow model, see
 (<a href="https://github.com/OpenFn/Lightning/blob/53da6883483e7d8d078783f348da327d1dd72d20/lib/lightning/workflows.ex#L111-L119">https://github.com/OpenFn/Lightning/blob/53da6883483e7d8d078783f348da327d1dd72d20/lib/lightning/workflows.ex#L111-L119</a>).</li></ul><h2 id="0-1-13-2022-08-29" class="section-heading">
-  <a href="#0-1-13-2022-08-29" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">0-1-13-2022-08-29</p>
+  <a href="#0-1-13-2022-08-29" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  [0.1.13] - 2022-08-29
+  <span class="text">[0.1.13] - 2022-08-29</span>
 </h2>
 <h3 id="added-31" class="section-heading">
-  <a href="#added-31" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">added-31</p>
+  <a href="#added-31" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  Added
+  <span class="text">Added</span>
 </h3>
 <ul><li>Allow administrators to configure OIDC providers for authentication (note that
 this is just for authenticating, not yet for creating new accounts via OIDC)</li><li>Add Monaco editor to the step/job panel</li><li>Allow users to delete their own accounts. Schedule their user and credentials
 data for deletion when they do.</li><li>Allow superusers to delete a user account. Schedule the user's credentials and
 user data for deletion when they do.</li><li>If a user is scheduled for deletion, disable their account and prevent them
 from logging in.</li><li>The 'User profile' and 'Credentials' page now have a sidebar menu</li></ul><h3 id="changed-30" class="section-heading">
-  <a href="#changed-30" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">changed-30</p>
+  <a href="#changed-30" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  Changed
+  <span class="text">Changed</span>
 </h3>
 <ul><li>Project users now have one of the following roles: viewer, editor, admin,
 owner</li><li>Users only have the following roles: user, superuser</li></ul><h2 id="0-1-12-2022-08-15" class="section-heading">
-  <a href="#0-1-12-2022-08-15" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">0-1-12-2022-08-15</p>
+  <a href="#0-1-12-2022-08-15" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  [0.1.12] - 2022-08-15
+  <span class="text">[0.1.12] - 2022-08-15</span>
 </h2>
 <h3 id="added-32" class="section-heading">
-  <a href="#added-32" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">added-32</p>
+  <a href="#added-32" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  Added
+  <span class="text">Added</span>
 </h3>
 <ul><li>Transfer credential ownership to another user.</li><li>Create credentials via a form interface*</li><li>Show &quot;projects with access&quot; in credentials list view.</li><li>Show job in runs list and run view.</li><li>Added roles and permissions to workflows and history page
 <a href="https://github.com/OpenFn/Lightning/issues/645">#645</a></li></ul><p>*The form is defined by a JSON schema provided by an adaptor, in most cases:
@@ -1109,111 +1140,111 @@ e.g., <code class="inline">language-dhis2</code> provides a single schema which 
 attributes for <code class="inline">state.configuration</code>, while <code class="inline">language-common</code> provides multiple
 credential schemas like &quot;oauth&quot; or &quot;basic auth&quot; which define attributes for
 <code class="inline">state.configuration</code> and which might be used by lots of different jobs.)</p><h3 id="fixed-33" class="section-heading">
-  <a href="#fixed-33" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">fixed-33</p>
+  <a href="#fixed-33" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  Fixed
+  <span class="text">Fixed</span>
 </h3>
 <ul><li>User menu (top right) appears on top of all other components.</li><li>User profile screen integrated with the rest of the liveview app.</li></ul><h2 id="0-1-11-2022-08-05" class="section-heading">
-  <a href="#0-1-11-2022-08-05" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">0-1-11-2022-08-05</p>
+  <a href="#0-1-11-2022-08-05" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  [0.1.11] - 2022-08-05
+  <span class="text">[0.1.11] - 2022-08-05</span>
 </h2>
 <h3 id="fixed-34" class="section-heading">
-  <a href="#fixed-34" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">fixed-34</p>
+  <a href="#fixed-34" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  Fixed
+  <span class="text">Fixed</span>
 </h3>
 <ul><li>Fixed logging in Runner when <code class="inline">:debug</code> log level used; note that this caused
 crashes in Oban</li></ul><h2 id="0-1-10-2022-08-05" class="section-heading">
-  <a href="#0-1-10-2022-08-05" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">0-1-10-2022-08-05</p>
+  <a href="#0-1-10-2022-08-05" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  [0.1.10] - 2022-08-05
+  <span class="text">[0.1.10] - 2022-08-05</span>
 </h2>
 <h3 id="added-33" class="section-heading">
-  <a href="#added-33" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">added-33</p>
+  <a href="#added-33" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  Added
+  <span class="text">Added</span>
 </h3>
 <ul><li>Credential auditing</li><li>Build/version information display for easier debugging</li></ul><h3 id="fixed-35" class="section-heading">
-  <a href="#fixed-35" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">fixed-35</p>
+  <a href="#fixed-35" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  Fixed
+  <span class="text">Fixed</span>
 </h3>
 <ul><li>Fixed a bug that enqueued cron-triggered jobs even when they were disabled</li></ul><h2 id="0-1-9-2022-07-27" class="section-heading">
-  <a href="#0-1-9-2022-07-27" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">0-1-9-2022-07-27</p>
+  <a href="#0-1-9-2022-07-27" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  [0.1.9] - 2022-07-27
+  <span class="text">[0.1.9] - 2022-07-27</span>
 </h2>
 <h3 id="added-34" class="section-heading">
-  <a href="#added-34" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">added-34</p>
+  <a href="#added-34" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  Added
+  <span class="text">Added</span>
 </h3>
 <ul><li>Navigate to user profile or credentials page and log out through the user icon
 dropdown</li><li>Create and edit dataclips</li><li>Add a production tag to credentials</li><li>View a dropdown of operations and their description for the language-common
 <code class="inline">v2.0.0-rc2</code> adaptor (this pattern to be rolled out across adaptors)</li></ul><h3 id="changed-31" class="section-heading">
-  <a href="#changed-31" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">changed-31</p>
+  <a href="#changed-31" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  Changed
+  <span class="text">Changed</span>
 </h3>
 <ul><li>Navigate between projects through a project picker on the navbar</li></ul><h3 id="fixed-36" class="section-heading">
-  <a href="#fixed-36" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">fixed-36</p>
+  <a href="#fixed-36" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  Fixed
+  <span class="text">Fixed</span>
 </h3>
 <ul><li>Run Lightning with docker</li></ul><h3 id="security" class="section-heading">
-  <a href="#security" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">security</p>
+  <a href="#security" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  Security
+  <span class="text">Security</span>
 </h3>
 <ul><li>Sensitive credential values are scrubbed from run logs</li><li>All credentials are encrypted at REST</li></ul><h2 id="0-1-7-2022-06-24" class="section-heading">
-  <a href="#0-1-7-2022-06-24" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">0-1-7-2022-06-24</p>
+  <a href="#0-1-7-2022-06-24" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  [0.1.7] - 2022-06-24
+  <span class="text">[0.1.7] - 2022-06-24</span>
 </h2>
 <h3 id="added-35" class="section-heading">
-  <a href="#added-35" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">added-35</p>
+  <a href="#added-35" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  Added
+  <span class="text">Added</span>
 </h3>
 <ul><li>Run a job with a cron trigger</li><li>Queue jobs via Oban/Postgres</li><li>Edit jobs via the workflow canvas</li></ul><h2 id="0-1-6-2022-06-07" class="section-heading">
-  <a href="#0-1-6-2022-06-07" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">0-1-6-2022-06-07</p>
+  <a href="#0-1-6-2022-06-07" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  [0.1.6] - 2022-06-07
+  <span class="text">[0.1.6] - 2022-06-07</span>
 </h2>
 <h3 id="added-36" class="section-heading">
-  <a href="#added-36" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">added-36</p>
+  <a href="#added-36" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  Added
+  <span class="text">Added</span>
 </h3>
 <ul><li><p>Register, log in and log out of an account</p></li><li><p>Allow superusers and admin users to create projects</p></li><li><p>Allow admin users to create or disable a user’s account</p></li><li><p>Allow superusers for local deployments to create users and give them access to
 project spaces</p></li><li><p>Create and edit a job with a webhook, flow/fail or cron trigger</p></li><li><p>Create and edit credentials for a job</p></li><li><p>Copy a job's webhook URL</p></li><li><p>View all workflows in a project visually</p></li><li><p>Deploy lightning locally with Docker</p></li><li><p>Enable a job to automatically process incoming requests</p></li><li><p>Run a job with a webhook or flow/fail trigger</p></li><li><p>View job runs along with their logs, exit code, start and end time</p></li><li><p>View data clips that have initiated job runs (http requests for webhooks, run
 results)</p></li></ul><h3 id="changed-32" class="section-heading">
-  <a href="#changed-32" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">changed-32</p>
+  <a href="#changed-32" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  Changed
+  <span class="text">Changed</span>
 </h3>
 <p>-</p><h3 id="removed" class="section-heading">
-  <a href="#removed" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">removed</p>
+  <a href="#removed" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  Removed
+  <span class="text">Removed</span>
 </h3>
 <p>-</p>
 <div class="bottom-actions">
@@ -1250,7 +1281,7 @@ Provisioning
 
         <p class="built-using">
           Built using
-          <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" target="_blank" rel="help noopener" translate="no">ExDoc</a> (v0.29.1) for the
+          <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" target="_blank" rel="help noopener" translate="no">ExDoc</a> (v0.30.9) for the
 
             <a href="https://elixir-lang.org" title="Elixir" target="_blank" translate="no">Elixir programming language</a>
 
@@ -1258,7 +1289,7 @@ Provisioning
       </footer>
     </div>
   </div>
-</section>
+</main>
 </div>
 
 

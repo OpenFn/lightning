@@ -4,20 +4,20 @@
     <meta charset="utf-8">
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="generator" content="ExDoc v0.29.1">
-    <meta name="project" content="Lightning v0.9.3">
+    <meta name="generator" content="ExDoc v0.30.9">
+    <meta name="project" content="Lightning v0.10.0-pre3">
 
-    <title>Lightning.Invocation.Query — Lightning v0.9.3</title>
-    <link rel="stylesheet" href="dist/html-elixir-V2ETBPMB.css" />
+    <title>Lightning.Invocation.Query — Lightning v0.10.0-pre3</title>
+    <link rel="stylesheet" href="dist/html-elixir-XFYN5IVA.css" />
 
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
-    <script src="dist/handlebars.templates-IV5W3OL2.js"></script>
-    <script src="dist/sidebar_items-C3EF67C0.js"></script>
+    <script src="dist/handlebars.templates-EPF2X7PV.js"></script>
+    <script src="dist/sidebar_items-6D5A7B34.js"></script>
 
       <script src="docs_config.js"></script>
 
-    <script async src="dist/html-XN2TSG4M.js"></script>
+    <script async src="dist/html-J2ASZTQE.js"></script>
 
 
   </head>
@@ -38,22 +38,22 @@
 
 <div class="main">
 
-<button class="sidebar-button sidebar-toggle" aria-label="toggle sidebar">
+<button class="sidebar-button sidebar-toggle" aria-label="toggle sidebar" aria-controls="sidebar">
   <i class="ri-menu-line ri-lg" title="Collapse/expand sidebar"></i>
 </button>
 
-<section class="sidebar">
+<nav id="sidebar" class="sidebar">
   <form class="sidebar-search" action="search.html">
+    <label class="search-label">
+      <span class="sr-only">Search documentation of Lightning</span>
+      <input name="q" type="text" class="search-input" placeholder="Search..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
+    </label>
     <button type="submit" class="search-button" aria-label="Submit Search">
       <i class="ri-search-2-line" aria-hidden="true" title="Submit search"></i>
     </button>
-    <button type="button" tabindex="-1" class="search-close-button" aria-label="Cancel Search">
-      <i class="ri-close-line ri-lg" aria-hidden="true" title="Cancel search"></i>
+    <button type="button" tabindex="-1" class="search-close-button" aria-hidden="true">
+      <i class="ri-close-line ri-lg" title="Cancel search"></i>
     </button>
-    <label class="search-label">
-      <p class="sr-only">Search</p>
-      <input name="q" type="text" class="search-input" placeholder="Search..." aria-label="Input your search terms" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
-    </label>
   </form>
 
   <div class="autocomplete">
@@ -71,26 +71,49 @@
       <a href="https://openfn.github.io/Lightning" class="sidebar-projectName" translate="no">
 Lightning
       </a>
-      <strong class="sidebar-projectVersion" translate="no">
-        v0.9.3
-      </strong>
+      <div class="sidebar-projectVersion" translate="no">
+        v0.10.0-pre3
+      </div>
     </div>
-    <ul class="sidebar-listNav">
-      <li><a id="extras-list-link" href="#full-list">Pages</a></li>
+    <ul id="sidebar-listNav" class="sidebar-listNav" role="tablist">
+      <li>
+        <button id="extras-list-tab-button" role="tab" data-type="extras" aria-controls="extras-tab-panel" aria-selected="true" tabindex="0">
+Pages
+        </button>
+      </li>
 
-        <li><a id="modules-list-link" href="#full-list">Modules</a></li>
+        <li>
+          <button id="modules-list-tab-button" role="tab" data-type="modules" aria-controls="modules-tab-panel" aria-selected="false" tabindex="-1">
+            Modules
+          </button>
+        </li>
 
 
-        <li><a id="tasks-list-link" href="#full-list"><span translate="no">Mix</span> Tasks</a></li>
+        <li>
+          <button id="tasks-list-tab-button" role="tab" data-type="tasks" aria-controls="tasks-tab-panel" aria-selected="false" tabindex="-1">
+            <span translate="no">Mix</span> Tasks
+          </button>
+        </li>
 
     </ul>
   </div>
 
-  <div class="gradient"></div>
-  <ul id="full-list" class="sidebar-fullList"></ul>
-</section>
+  <div id="extras-tab-panel" class="sidebar-tabpanel" role="tabpanel" aria-labelledby="extras-list-tab-button">
+    <ul id="extras-full-list" class="full-list"></ul>
+  </div>
 
-<section class="content">
+    <div id="modules-tab-panel" class="sidebar-tabpanel" role="tabpanel" aria-labelledby="modules-list-tab-button" hidden>
+      <ul id="modules-full-list" class="full-list"></ul>
+    </div>
+
+
+    <div id="tasks-tab-panel" class="sidebar-tabpanel" role="tabpanel" aria-labelledby="tasks-list-tab-button" hidden>
+      <ul id="tasks-full-list" class="full-list"></ul>
+    </div>
+
+</nav>
+
+<main class="content">
   <output role="status" id="toast"></output>
   <div class="content-outer">
     <div id="content" class="content-inner">
@@ -108,7 +131,7 @@ Lightning
     </a>
 
   <span translate="no">Lightning.Invocation.Query</span> 
-  <small class="app-vsn" translate="no">(Lightning v0.9.3)</small>
+  <small class="app-vsn" translate="no">(Lightning v0.10.0-pre3)</small>
 
 </h1>
 
@@ -122,14 +145,24 @@ Lightning
     <h1 class="section-heading">
       <a class="hover-link" href="#summary">
         <i class="ri-link-m" aria-hidden="true"></i>
-        <span class="sr-only">Link to this section</span>
       </a>
-      Summary
+      <span class="text">Summary</span>
     </h1>
 <div class="summary-functions summary">
   <h2>
     <a href="#functions">Functions</a>
   </h2>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#dataclip_with_body/0" translate="no">dataclip_with_body()</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>By default, the dataclip body is not returned via a query. This query selects
+the body specifically.</p></div>
+
+    </div>
 
     <div class="summary-row">
       <div class="summary-signature">
@@ -147,7 +180,8 @@ Lightning
 
       </div>
 
-        <div class="summary-synopsis"><p>The last run for a job for a particular exit code, used in scheduler</p></div>
+        <div class="summary-synopsis"><p>The last successful run for a job, used in scheduler to enable downstream attempts
+to access a previous attempt's state</p></div>
 
     </div>
 
@@ -163,11 +197,11 @@ Lightning
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#runs_with_code/2" translate="no">runs_with_code(query, exit_code)</a>
+        <a href="#runs_with_reason/2" translate="no">runs_with_reason(query, exit_reason)</a>
 
       </div>
 
-        <div class="summary-synopsis"><p>The last run for a job for a particular exit code, used in scheduler</p></div>
+        <div class="summary-synopsis"><p>The last run for a job for a particular exit reason, used in scheduler</p></div>
 
     </div>
 
@@ -180,11 +214,33 @@ Lightning
     <h1 class="section-heading">
       <a class="hover-link" href="#functions">
         <i class="ri-link-m" aria-hidden="true"></i>
-        <span class="sr-only">Link to this section</span>
       </a>
-Functions
+      <span class="text">Functions</span>
     </h1>
     <div class="functions-list">
+<section class="detail" id="dataclip_with_body/0">
+
+  <div class="detail-header">
+    <a href="#dataclip_with_body/0" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">dataclip_with_body()</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation/query.ex#L61" class="icon-action" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+<p>By default, the dataclip body is not returned via a query. This query selects
+the body specifically.</p>
+  </section>
+</section>
 <section class="detail" id="last_run_for_job/1">
 
   <div class="detail-header">
@@ -194,7 +250,7 @@ Functions
     </a>
     <h1 class="signature" translate="no">last_run_for_job(job)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation/query.ex#L30" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation/query.ex#L31" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -206,7 +262,7 @@ Functions
 
       <div class="specs">
 
-          <pre translate="no"><span class="attribute">@spec</span> last_run_for_job(<a href="Lightning.Jobs.Job.html#t:t/0">Lightning.Jobs.Job.t</a>()) :: <a href="https://hexdocs.pm/ecto/3.10.2/Ecto.Queryable.html#t:t/0">Ecto.Queryable.t</a>()</pre>
+          <pre translate="no"><span class="attribute">@spec</span> last_run_for_job(<a href="Lightning.Workflows.Job.html#t:t/0">Lightning.Workflows.Job.t</a>()) :: <a href="https://hexdocs.pm/ecto/3.10.3/Ecto.Queryable.html#t:t/0">Ecto.Queryable.t</a>()</pre>
 
       </div>
 
@@ -222,7 +278,7 @@ Functions
     </a>
     <h1 class="signature" translate="no">last_successful_run_for_job(job)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation/query.ex#L50" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation/query.ex#L52" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -234,11 +290,12 @@ Functions
 
       <div class="specs">
 
-          <pre translate="no"><span class="attribute">@spec</span> last_successful_run_for_job(<a href="Lightning.Jobs.Job.html#t:t/0">Lightning.Jobs.Job.t</a>()) :: <a href="https://hexdocs.pm/ecto/3.10.2/Ecto.Queryable.html#t:t/0">Ecto.Queryable.t</a>()</pre>
+          <pre translate="no"><span class="attribute">@spec</span> last_successful_run_for_job(<a href="Lightning.Workflows.Job.html#t:t/0">Lightning.Workflows.Job.t</a>()) :: <a href="https://hexdocs.pm/ecto/3.10.3/Ecto.Queryable.html#t:t/0">Ecto.Queryable.t</a>()</pre>
 
       </div>
 
-<p>The last run for a job for a particular exit code, used in scheduler</p>
+<p>The last successful run for a job, used in scheduler to enable downstream attempts
+to access a previous attempt's state</p>
   </section>
 </section>
 <section class="detail" id="runs_for/1">
@@ -250,7 +307,7 @@ Functions
     </a>
     <h1 class="signature" translate="no">runs_for(user)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation/query.ex#L15" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation/query.ex#L16" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -262,23 +319,23 @@ Functions
 
       <div class="specs">
 
-          <pre translate="no"><span class="attribute">@spec</span> runs_for(<a href="Lightning.Accounts.User.html#t:t/0">Lightning.Accounts.User.t</a>()) :: <a href="https://hexdocs.pm/ecto/3.10.2/Ecto.Queryable.html#t:t/0">Ecto.Queryable.t</a>()</pre>
+          <pre translate="no"><span class="attribute">@spec</span> runs_for(<a href="Lightning.Accounts.User.html#t:t/0">Lightning.Accounts.User.t</a>()) :: <a href="https://hexdocs.pm/ecto/3.10.3/Ecto.Queryable.html#t:t/0">Ecto.Queryable.t</a>()</pre>
 
       </div>
 
 <p>Runs for a specific user</p>
   </section>
 </section>
-<section class="detail" id="runs_with_code/2">
+<section class="detail" id="runs_with_reason/2">
 
   <div class="detail-header">
-    <a href="#runs_with_code/2" class="detail-link" title="Link to this function">
+    <a href="#runs_with_reason/2" class="detail-link" title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">runs_with_code(query, exit_code)</h1>
+    <h1 class="signature" translate="no">runs_with_reason(query, exit_reason)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation/query.ex#L42" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation/query.ex#L43" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -290,11 +347,11 @@ Functions
 
       <div class="specs">
 
-          <pre translate="no"><span class="attribute">@spec</span> runs_with_code(<a href="https://hexdocs.pm/ecto/3.10.2/Ecto.Queryable.html#t:t/0">Ecto.Queryable.t</a>(), <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">integer</a>()) :: <a href="https://hexdocs.pm/ecto/3.10.2/Ecto.Queryable.html#t:t/0">Ecto.Queryable.t</a>()</pre>
+          <pre translate="no"><span class="attribute">@spec</span> runs_with_reason(<a href="https://hexdocs.pm/ecto/3.10.3/Ecto.Queryable.html#t:t/0">Ecto.Queryable.t</a>(), <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>()) :: <a href="https://hexdocs.pm/ecto/3.10.3/Ecto.Queryable.html#t:t/0">Ecto.Queryable.t</a>()</pre>
 
       </div>
 
-<p>The last run for a job for a particular exit code, used in scheduler</p>
+<p>The last run for a job for a particular exit reason, used in scheduler</p>
   </section>
 </section>
 
@@ -318,7 +375,7 @@ Functions
 
         <p class="built-using">
           Built using
-          <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" target="_blank" rel="help noopener" translate="no">ExDoc</a> (v0.29.1) for the
+          <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" target="_blank" rel="help noopener" translate="no">ExDoc</a> (v0.30.9) for the
 
             <a href="https://elixir-lang.org" title="Elixir" target="_blank" translate="no">Elixir programming language</a>
 
@@ -326,7 +383,7 @@ Functions
       </footer>
     </div>
   </div>
-</section>
+</main>
 </div>
 
 

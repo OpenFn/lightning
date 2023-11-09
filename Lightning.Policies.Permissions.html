@@ -4,20 +4,20 @@
     <meta charset="utf-8">
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="generator" content="ExDoc v0.29.1">
-    <meta name="project" content="Lightning v0.9.3">
+    <meta name="generator" content="ExDoc v0.30.9">
+    <meta name="project" content="Lightning v0.10.0-pre3">
 
-    <title>Lightning.Policies.Permissions — Lightning v0.9.3</title>
-    <link rel="stylesheet" href="dist/html-elixir-V2ETBPMB.css" />
+    <title>Lightning.Policies.Permissions — Lightning v0.10.0-pre3</title>
+    <link rel="stylesheet" href="dist/html-elixir-XFYN5IVA.css" />
 
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
-    <script src="dist/handlebars.templates-IV5W3OL2.js"></script>
-    <script src="dist/sidebar_items-C3EF67C0.js"></script>
+    <script src="dist/handlebars.templates-EPF2X7PV.js"></script>
+    <script src="dist/sidebar_items-6D5A7B34.js"></script>
 
       <script src="docs_config.js"></script>
 
-    <script async src="dist/html-XN2TSG4M.js"></script>
+    <script async src="dist/html-J2ASZTQE.js"></script>
 
 
   </head>
@@ -38,22 +38,22 @@
 
 <div class="main">
 
-<button class="sidebar-button sidebar-toggle" aria-label="toggle sidebar">
+<button class="sidebar-button sidebar-toggle" aria-label="toggle sidebar" aria-controls="sidebar">
   <i class="ri-menu-line ri-lg" title="Collapse/expand sidebar"></i>
 </button>
 
-<section class="sidebar">
+<nav id="sidebar" class="sidebar">
   <form class="sidebar-search" action="search.html">
+    <label class="search-label">
+      <span class="sr-only">Search documentation of Lightning</span>
+      <input name="q" type="text" class="search-input" placeholder="Search..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
+    </label>
     <button type="submit" class="search-button" aria-label="Submit Search">
       <i class="ri-search-2-line" aria-hidden="true" title="Submit search"></i>
     </button>
-    <button type="button" tabindex="-1" class="search-close-button" aria-label="Cancel Search">
-      <i class="ri-close-line ri-lg" aria-hidden="true" title="Cancel search"></i>
+    <button type="button" tabindex="-1" class="search-close-button" aria-hidden="true">
+      <i class="ri-close-line ri-lg" title="Cancel search"></i>
     </button>
-    <label class="search-label">
-      <p class="sr-only">Search</p>
-      <input name="q" type="text" class="search-input" placeholder="Search..." aria-label="Input your search terms" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
-    </label>
   </form>
 
   <div class="autocomplete">
@@ -71,26 +71,49 @@
       <a href="https://openfn.github.io/Lightning" class="sidebar-projectName" translate="no">
 Lightning
       </a>
-      <strong class="sidebar-projectVersion" translate="no">
-        v0.9.3
-      </strong>
+      <div class="sidebar-projectVersion" translate="no">
+        v0.10.0-pre3
+      </div>
     </div>
-    <ul class="sidebar-listNav">
-      <li><a id="extras-list-link" href="#full-list">Pages</a></li>
+    <ul id="sidebar-listNav" class="sidebar-listNav" role="tablist">
+      <li>
+        <button id="extras-list-tab-button" role="tab" data-type="extras" aria-controls="extras-tab-panel" aria-selected="true" tabindex="0">
+Pages
+        </button>
+      </li>
 
-        <li><a id="modules-list-link" href="#full-list">Modules</a></li>
+        <li>
+          <button id="modules-list-tab-button" role="tab" data-type="modules" aria-controls="modules-tab-panel" aria-selected="false" tabindex="-1">
+            Modules
+          </button>
+        </li>
 
 
-        <li><a id="tasks-list-link" href="#full-list"><span translate="no">Mix</span> Tasks</a></li>
+        <li>
+          <button id="tasks-list-tab-button" role="tab" data-type="tasks" aria-controls="tasks-tab-panel" aria-selected="false" tabindex="-1">
+            <span translate="no">Mix</span> Tasks
+          </button>
+        </li>
 
     </ul>
   </div>
 
-  <div class="gradient"></div>
-  <ul id="full-list" class="sidebar-fullList"></ul>
-</section>
+  <div id="extras-tab-panel" class="sidebar-tabpanel" role="tabpanel" aria-labelledby="extras-list-tab-button">
+    <ul id="extras-full-list" class="full-list"></ul>
+  </div>
 
-<section class="content">
+    <div id="modules-tab-panel" class="sidebar-tabpanel" role="tabpanel" aria-labelledby="modules-list-tab-button" hidden>
+      <ul id="modules-full-list" class="full-list"></ul>
+    </div>
+
+
+    <div id="tasks-tab-panel" class="sidebar-tabpanel" role="tabpanel" aria-labelledby="tasks-list-tab-button" hidden>
+      <ul id="tasks-full-list" class="full-list"></ul>
+    </div>
+
+</nav>
+
+<main class="content">
   <output role="status" id="toast"></output>
   <div class="content-outer">
     <div id="content" class="content-inner">
@@ -108,20 +131,20 @@ Lightning
     </a>
 
   <span translate="no">Lightning.Policies.Permissions</span> 
-  <small class="app-vsn" translate="no">(Lightning v0.9.3)</small>
+  <small class="app-vsn" translate="no">(Lightning v0.10.0-pre3)</small>
 
 </h1>
 
 
   <section id="moduledoc">
 <p>This module defines a unique interface managing authorizations in Lightning.</p><p>Users in Lightning have instance-wide and project-wide roles which determine their level of access to resources in the application. Fo rmore details see the <a href="https://docs.openfn.org/documentation/about-lightning#roles-and-permissions">documentation</a>.</p><p>These authorizations policies are all implemented under the <code class="inline">lib/lightning/policies</code> folder. In that folder you can find 3 files:</p><ul><li>The <code class="inline">users.ex</code> file has all the policies for the instances wide access levels</li><li>The <code class="inline">project_users.ex</code> file has all the policies for the project wide access levels</li><li>The <code class="inline">permissions.ex</code> file defines the <a href="#can/4"><code class="inline">Lightning.Policies.Permissions.can/4</code></a> interface. Which is a wrapper around the <a href="https://hexdocs.pm/bodyguard/2.4.2/Bodyguard.html#permit/4"><code class="inline">Bodyguard.permit/4</code></a> function.
-We use that interface to be able to harmonize the use of policies accross the entire app.</li></ul><p>All the policies are tested in the <code class="inline">test/lightning/policies</code> folder. And the test are written in a way that allows the reader to quickly who can do what in the app.</p><p>We have two variants of the <a href="#can/4"><code class="inline">Lightning.Policies.Permissions.can/4</code></a> interface:</p><ul><li><code class="inline">Lightning.Policies.Permissions.can(policy, action, actor, resource)</code> returns <code class="inline">:ok</code> if the actor can perform the action on the resource and <code class="inline">{:error, :unauthorized}</code> otherwise.</li><li><code class="inline">Lightning.Policies.Permissions.can?(policy, action, actor, resource)</code> returns <code class="inline">true</code> if the actor can perform the action on the resource and <code class="inline">false</code> otherwise.</li></ul><p>Here is an example of how we the <a href="#can/4"><code class="inline">Lightning.Policies.Permissions.can/4</code></a> interface to check if the a user can edit a job or not</p><pre><code class="makeup elixir" translate="no"><span class="n">can_edit_job</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">Lightning.Policies.ProjectUsers</span><span class="w"> </span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Lightning.Policies.Permissions</span><span class="o">.</span><span class="n">can?</span><span class="p" data-group-id="5199631639-1">(</span><span class="ss">:edit_job</span><span class="p">,</span><span class="w"> </span><span class="n">socket</span><span class="o">.</span><span class="n">assigns</span><span class="o">.</span><span class="n">current_user</span><span class="p">,</span><span class="w"> </span><span class="n">socket</span><span class="o">.</span><span class="n">assigns</span><span class="o">.</span><span class="n">project</span><span class="p" data-group-id="5199631639-1">)</span><span class="w">
+We use that interface to be able to harmonize the use of policies accross the entire app.</li></ul><p>All the policies are tested in the <code class="inline">test/lightning/policies</code> folder. And the test are written in a way that allows the reader to quickly who can do what in the app.</p><p>We have two variants of the <a href="#can/4"><code class="inline">Lightning.Policies.Permissions.can/4</code></a> interface:</p><ul><li><code class="inline">Lightning.Policies.Permissions.can(policy, action, actor, resource)</code> returns <code class="inline">:ok</code> if the actor can perform the action on the resource and <code class="inline">{:error, :unauthorized}</code> otherwise.</li><li><code class="inline">Lightning.Policies.Permissions.can?(policy, action, actor, resource)</code> returns <code class="inline">true</code> if the actor can perform the action on the resource and <code class="inline">false</code> otherwise.</li></ul><p>Here is an example of how we the <a href="#can/4"><code class="inline">Lightning.Policies.Permissions.can/4</code></a> interface to check if the a user can edit a job or not</p><pre><code class="makeup elixir" translate="no"><span class="n">can_edit_job</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">Lightning.Policies.ProjectUsers</span><span class="w"> </span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Lightning.Policies.Permissions</span><span class="o">.</span><span class="n">can?</span><span class="p" data-group-id="0923452523-1">(</span><span class="ss">:edit_job</span><span class="p">,</span><span class="w"> </span><span class="n">socket</span><span class="o">.</span><span class="n">assigns</span><span class="o">.</span><span class="n">current_user</span><span class="p">,</span><span class="w"> </span><span class="n">socket</span><span class="o">.</span><span class="n">assigns</span><span class="o">.</span><span class="n">project</span><span class="p" data-group-id="0923452523-1">)</span><span class="w">
 
-</span><span class="k">if</span><span class="w"> </span><span class="n">can_edit_job</span><span class="w"> </span><span class="k" data-group-id="5199631639-2">do</span><span class="w">
+</span><span class="k">if</span><span class="w"> </span><span class="n">can_edit_job</span><span class="w"> </span><span class="k" data-group-id="0923452523-2">do</span><span class="w">
   </span><span class="c1"># allow user to edit the job</span><span class="w">
-</span><span class="k" data-group-id="5199631639-2">else</span><span class="w">
+</span><span class="k" data-group-id="0923452523-2">else</span><span class="w">
   </span><span class="c1"># quick user out</span><span class="w">
-</span><span class="k" data-group-id="5199631639-2">end</span></code></pre>
+</span><span class="k" data-group-id="0923452523-2">end</span></code></pre>
   </section>
 
 
@@ -129,9 +152,8 @@ We use that interface to be able to harmonize the use of policies accross the en
     <h1 class="section-heading">
       <a class="hover-link" href="#summary">
         <i class="ri-link-m" aria-hidden="true"></i>
-        <span class="sr-only">Link to this section</span>
       </a>
-      Summary
+      <span class="text">Summary</span>
     </h1>
 <div class="summary-functions summary">
   <h2>
@@ -167,9 +189,8 @@ We use that interface to be able to harmonize the use of policies accross the en
     <h1 class="section-heading">
       <a class="hover-link" href="#functions">
         <i class="ri-link-m" aria-hidden="true"></i>
-        <span class="sr-only">Link to this section</span>
       </a>
-Functions
+      <span class="text">Functions</span>
     </h1>
     <div class="functions-list">
 <section class="detail" id="can/4">
@@ -194,16 +215,16 @@ Functions
   <section class="docstring">
 
 <p>checks if user has the permissions to apply action using some policy module</p><p>Returns <code class="inline">:ok</code> if user can apply action and <code class="inline">{:error, :unauthorized}</code> otherwise</p><h2 id="can/4-examples" class="section-heading">
-  <a href="#can/4-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">examples</p>
+  <a href="#can/4-examples" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  Examples
+  <span class="text">Examples</span>
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">can</span><span class="p" data-group-id="6842044486-1">(</span><span class="nc">Lightning.Policies.Users</span><span class="p">,</span><span class="w"> </span><span class="ss">:create_workflow</span><span class="p">,</span><span class="w"> </span><span class="n">user</span><span class="p">,</span><span class="w"> </span><span class="n">project</span><span class="p" data-group-id="6842044486-1">)</span><span class="w">
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">can</span><span class="p" data-group-id="7470526679-1">(</span><span class="nc">Lightning.Policies.Users</span><span class="p">,</span><span class="w"> </span><span class="ss">:create_workflow</span><span class="p">,</span><span class="w"> </span><span class="n">user</span><span class="p">,</span><span class="w"> </span><span class="n">project</span><span class="p" data-group-id="7470526679-1">)</span><span class="w">
 </span><span class="ss">:ok</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">can</span><span class="p" data-group-id="6842044486-2">(</span><span class="nc">Lightning.Policies.Users</span><span class="p">,</span><span class="w"> </span><span class="ss">:create_project</span><span class="p">,</span><span class="w"> </span><span class="n">user</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="6842044486-3">%{</span><span class="p" data-group-id="6842044486-3">}</span><span class="p" data-group-id="6842044486-2">)</span><span class="w">
-</span><span class="p" data-group-id="6842044486-4">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="ss">:unauthorized</span><span class="p" data-group-id="6842044486-4">}</span></code></pre>
+</span><span class="gp unselectable">iex&gt; </span><span class="n">can</span><span class="p" data-group-id="7470526679-2">(</span><span class="nc">Lightning.Policies.Users</span><span class="p">,</span><span class="w"> </span><span class="ss">:create_project</span><span class="p">,</span><span class="w"> </span><span class="n">user</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="7470526679-3">%{</span><span class="p" data-group-id="7470526679-3">}</span><span class="p" data-group-id="7470526679-2">)</span><span class="w">
+</span><span class="p" data-group-id="7470526679-4">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="ss">:unauthorized</span><span class="p" data-group-id="7470526679-4">}</span></code></pre>
   </section>
 </section>
 <section class="detail" id="can?/4">
@@ -228,15 +249,15 @@ Functions
   <section class="docstring">
 
 <p>same as can/4 but returns <code class="inline">true</code> if user can apply action and <code class="inline">false</code> otherwise</p><h2 id="can?/4-examples" class="section-heading">
-  <a href="#can?/4-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">examples</p>
+  <a href="#can?/4-examples" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  Examples
+  <span class="text">Examples</span>
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">can</span><span class="p" data-group-id="6432427376-1">(</span><span class="nc">Lightning.Policies.Users</span><span class="p">,</span><span class="w"> </span><span class="ss">:create_workflow</span><span class="p">,</span><span class="w"> </span><span class="n">user</span><span class="p">,</span><span class="w"> </span><span class="n">project</span><span class="p" data-group-id="6432427376-1">)</span><span class="w">
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">can</span><span class="p" data-group-id="2895935219-1">(</span><span class="nc">Lightning.Policies.Users</span><span class="p">,</span><span class="w"> </span><span class="ss">:create_workflow</span><span class="p">,</span><span class="w"> </span><span class="n">user</span><span class="p">,</span><span class="w"> </span><span class="n">project</span><span class="p" data-group-id="2895935219-1">)</span><span class="w">
 </span><span class="no">true</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">can</span><span class="p" data-group-id="6432427376-2">(</span><span class="nc">Lightning.Policies.Users</span><span class="p">,</span><span class="w"> </span><span class="ss">:create_project</span><span class="p">,</span><span class="w"> </span><span class="n">user</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="6432427376-3">%{</span><span class="p" data-group-id="6432427376-3">}</span><span class="p" data-group-id="6432427376-2">)</span><span class="w">
+</span><span class="gp unselectable">iex&gt; </span><span class="n">can</span><span class="p" data-group-id="2895935219-2">(</span><span class="nc">Lightning.Policies.Users</span><span class="p">,</span><span class="w"> </span><span class="ss">:create_project</span><span class="p">,</span><span class="w"> </span><span class="n">user</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="2895935219-3">%{</span><span class="p" data-group-id="2895935219-3">}</span><span class="p" data-group-id="2895935219-2">)</span><span class="w">
 </span><span class="no">false</span></code></pre>
   </section>
 </section>
@@ -261,7 +282,7 @@ Functions
 
         <p class="built-using">
           Built using
-          <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" target="_blank" rel="help noopener" translate="no">ExDoc</a> (v0.29.1) for the
+          <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" target="_blank" rel="help noopener" translate="no">ExDoc</a> (v0.30.9) for the
 
             <a href="https://elixir-lang.org" title="Elixir" target="_blank" translate="no">Elixir programming language</a>
 
@@ -269,7 +290,7 @@ Functions
       </footer>
     </div>
   </div>
-</section>
+</main>
 </div>
 
 

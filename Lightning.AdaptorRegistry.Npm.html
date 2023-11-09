@@ -4,20 +4,20 @@
     <meta charset="utf-8">
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="generator" content="ExDoc v0.29.1">
-    <meta name="project" content="Lightning v0.9.3">
+    <meta name="generator" content="ExDoc v0.30.9">
+    <meta name="project" content="Lightning v0.10.0-pre3">
 
-    <title>Lightning.AdaptorRegistry.Npm — Lightning v0.9.3</title>
-    <link rel="stylesheet" href="dist/html-elixir-V2ETBPMB.css" />
+    <title>Lightning.AdaptorRegistry.Npm — Lightning v0.10.0-pre3</title>
+    <link rel="stylesheet" href="dist/html-elixir-XFYN5IVA.css" />
 
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
-    <script src="dist/handlebars.templates-IV5W3OL2.js"></script>
-    <script src="dist/sidebar_items-C3EF67C0.js"></script>
+    <script src="dist/handlebars.templates-EPF2X7PV.js"></script>
+    <script src="dist/sidebar_items-6D5A7B34.js"></script>
 
       <script src="docs_config.js"></script>
 
-    <script async src="dist/html-XN2TSG4M.js"></script>
+    <script async src="dist/html-J2ASZTQE.js"></script>
 
 
   </head>
@@ -38,22 +38,22 @@
 
 <div class="main">
 
-<button class="sidebar-button sidebar-toggle" aria-label="toggle sidebar">
+<button class="sidebar-button sidebar-toggle" aria-label="toggle sidebar" aria-controls="sidebar">
   <i class="ri-menu-line ri-lg" title="Collapse/expand sidebar"></i>
 </button>
 
-<section class="sidebar">
+<nav id="sidebar" class="sidebar">
   <form class="sidebar-search" action="search.html">
+    <label class="search-label">
+      <span class="sr-only">Search documentation of Lightning</span>
+      <input name="q" type="text" class="search-input" placeholder="Search..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
+    </label>
     <button type="submit" class="search-button" aria-label="Submit Search">
       <i class="ri-search-2-line" aria-hidden="true" title="Submit search"></i>
     </button>
-    <button type="button" tabindex="-1" class="search-close-button" aria-label="Cancel Search">
-      <i class="ri-close-line ri-lg" aria-hidden="true" title="Cancel search"></i>
+    <button type="button" tabindex="-1" class="search-close-button" aria-hidden="true">
+      <i class="ri-close-line ri-lg" title="Cancel search"></i>
     </button>
-    <label class="search-label">
-      <p class="sr-only">Search</p>
-      <input name="q" type="text" class="search-input" placeholder="Search..." aria-label="Input your search terms" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
-    </label>
   </form>
 
   <div class="autocomplete">
@@ -71,26 +71,49 @@
       <a href="https://openfn.github.io/Lightning" class="sidebar-projectName" translate="no">
 Lightning
       </a>
-      <strong class="sidebar-projectVersion" translate="no">
-        v0.9.3
-      </strong>
+      <div class="sidebar-projectVersion" translate="no">
+        v0.10.0-pre3
+      </div>
     </div>
-    <ul class="sidebar-listNav">
-      <li><a id="extras-list-link" href="#full-list">Pages</a></li>
+    <ul id="sidebar-listNav" class="sidebar-listNav" role="tablist">
+      <li>
+        <button id="extras-list-tab-button" role="tab" data-type="extras" aria-controls="extras-tab-panel" aria-selected="true" tabindex="0">
+Pages
+        </button>
+      </li>
 
-        <li><a id="modules-list-link" href="#full-list">Modules</a></li>
+        <li>
+          <button id="modules-list-tab-button" role="tab" data-type="modules" aria-controls="modules-tab-panel" aria-selected="false" tabindex="-1">
+            Modules
+          </button>
+        </li>
 
 
-        <li><a id="tasks-list-link" href="#full-list"><span translate="no">Mix</span> Tasks</a></li>
+        <li>
+          <button id="tasks-list-tab-button" role="tab" data-type="tasks" aria-controls="tasks-tab-panel" aria-selected="false" tabindex="-1">
+            <span translate="no">Mix</span> Tasks
+          </button>
+        </li>
 
     </ul>
   </div>
 
-  <div class="gradient"></div>
-  <ul id="full-list" class="sidebar-fullList"></ul>
-</section>
+  <div id="extras-tab-panel" class="sidebar-tabpanel" role="tabpanel" aria-labelledby="extras-list-tab-button">
+    <ul id="extras-full-list" class="full-list"></ul>
+  </div>
 
-<section class="content">
+    <div id="modules-tab-panel" class="sidebar-tabpanel" role="tabpanel" aria-labelledby="modules-list-tab-button" hidden>
+      <ul id="modules-full-list" class="full-list"></ul>
+    </div>
+
+
+    <div id="tasks-tab-panel" class="sidebar-tabpanel" role="tabpanel" aria-labelledby="tasks-list-tab-button" hidden>
+      <ul id="tasks-full-list" class="full-list"></ul>
+    </div>
+
+</nav>
+
+<main class="content">
   <output role="status" id="toast"></output>
   <div class="content-outer">
     <div id="content" class="content-inner">
@@ -108,7 +131,7 @@ Lightning
     </a>
 
   <span translate="no">Lightning.AdaptorRegistry.Npm</span> 
-  <small class="app-vsn" translate="no">(Lightning v0.9.3)</small>
+  <small class="app-vsn" translate="no">(Lightning v0.10.0-pre3)</small>
 
 </h1>
 
@@ -122,9 +145,8 @@ Lightning
     <h1 class="section-heading">
       <a class="hover-link" href="#summary">
         <i class="ri-link-m" aria-hidden="true"></i>
-        <span class="sr-only">Link to this section</span>
       </a>
-      Summary
+      <span class="text">Summary</span>
     </h1>
 <div class="summary-types summary">
   <h2>
@@ -537,9 +559,8 @@ application cannot connect to NPM. (E.g., because it's started offline.)</p></di
     <h1 class="section-heading">
       <a class="hover-link" href="#types">
         <i class="ri-link-m" aria-hidden="true"></i>
-        <span class="sr-only">Link to this section</span>
       </a>
-Types
+      <span class="text">Types</span>
     </h1>
     <div class="types-list">
 <section class="detail" id="t:body/0">
@@ -746,9 +767,8 @@ Types
     <h1 class="section-heading">
       <a class="hover-link" href="#functions">
         <i class="ri-link-m" aria-hidden="true"></i>
-        <span class="sr-only">Link to this section</span>
       </a>
-Functions
+      <span class="text">Functions</span>
     </h1>
     <div class="functions-list">
 <section class="detail" id="delete/3">
@@ -1643,10 +1663,10 @@ failure.</p><p>If the request does not fail, the response is returned.</p><p>See
 
 <p>Issues an HTTP request using a <code class="inline">Request</code> struct.</p><p>This function returns <code class="inline">{:ok, response}</code>, <code class="inline">{:ok, async_response}</code>, or <code class="inline">{:ok, maybe_redirect}</code>
 if the request is successful, <code class="inline">{:error, reason}</code> otherwise.</p><h2 id="request/1-redirect-handling" class="section-heading">
-  <a href="#request/1-redirect-handling" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">redirect-handling</p>
+  <a href="#request/1-redirect-handling" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  Redirect handling
+  <span class="text">Redirect handling</span>
 </h2>
 <p>If the option <code class="inline">:follow_redirect</code> is given, HTTP redirects are automatically follow if
 the method is set to <code class="inline">:get</code> or <code class="inline">:head</code> and the response's <code class="inline">status_code</code> is <code class="inline">301</code>, <code class="inline">302</code> or
@@ -1654,19 +1674,19 @@ the method is set to <code class="inline">:get</code> or <code class="inline">:h
 followed is <code class="inline">303</code>.</p><p>If any other method or <code class="inline">status_code</code> is returned, then this function returns a
 returns a <code class="inline">{:ok, %HTTPoison.MaybeRedirect{}}</code> containing the <code class="inline">redirect_url</code> for you to
 re-request with the method set to <code class="inline">:get</code>.</p><h2 id="request/1-examples" class="section-heading">
-  <a href="#request/1-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">examples</p>
+  <a href="#request/1-examples" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  Examples
+  <span class="text">Examples</span>
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="n">request</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p" data-group-id="8550351717-1">%</span><span class="nc" data-group-id="8550351717-1">HTTPoison.Request</span><span class="p" data-group-id="8550351717-1">{</span><span class="w">
+<pre><code class="makeup elixir" translate="no"><span class="n">request</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p" data-group-id="7865686534-1">%</span><span class="nc" data-group-id="7865686534-1">HTTPoison.Request</span><span class="p" data-group-id="7865686534-1">{</span><span class="w">
   </span><span class="ss">method</span><span class="p">:</span><span class="w"> </span><span class="ss">:post</span><span class="p">,</span><span class="w">
   </span><span class="ss">url</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;https://my.website.com&quot;</span><span class="p">,</span><span class="w">
   </span><span class="ss">body</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;{</span><span class="se">\&quot;</span><span class="s">foo</span><span class="se">\&quot;</span><span class="s">: 3}&quot;</span><span class="p">,</span><span class="w">
-  </span><span class="ss">headers</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="8550351717-2">[</span><span class="p" data-group-id="8550351717-3">{</span><span class="s">&quot;Accept&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;application/json&quot;</span><span class="p" data-group-id="8550351717-3">}</span><span class="p" data-group-id="8550351717-2">]</span><span class="w">
-</span><span class="p" data-group-id="8550351717-1">}</span><span class="w">
+  </span><span class="ss">headers</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="7865686534-2">[</span><span class="p" data-group-id="7865686534-3">{</span><span class="s">&quot;Accept&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;application/json&quot;</span><span class="p" data-group-id="7865686534-3">}</span><span class="p" data-group-id="7865686534-2">]</span><span class="w">
+</span><span class="p" data-group-id="7865686534-1">}</span><span class="w">
 
-</span><span class="n">request</span><span class="p" data-group-id="8550351717-4">(</span><span class="n">request</span><span class="p" data-group-id="8550351717-4">)</span></code></pre>
+</span><span class="n">request</span><span class="p" data-group-id="7865686534-4">(</span><span class="n">request</span><span class="p" data-group-id="7865686534-4">)</span></code></pre>
   </section>
 </section>
 <section class="detail" id="request/5">
@@ -1708,10 +1728,10 @@ re-request with the method set to <code class="inline">:get</code>.</p><h2 id="r
 <p>Issues an HTTP request with the given method to the given url.</p><p>This function is usually used indirectly by <a href="#get/3"><code class="inline">get/3</code></a>, <a href="#post/4"><code class="inline">post/4</code></a>, <a href="#put/4"><code class="inline">put/4</code></a>, etc</p><p>Args:</p><ul><li><code class="inline">method</code> - HTTP method as an atom (<code class="inline">:get</code>, <code class="inline">:head</code>, <code class="inline">:post</code>, <code class="inline">:put</code>,
 <code class="inline">:delete</code>, etc.)</li><li><code class="inline">url</code> - target url as a binary string or char list</li><li><code class="inline">body</code> - request body. See more below</li><li><code class="inline">headers</code> - HTTP headers as an orddict (e.g., <code class="inline">[{&quot;Accept&quot;, &quot;application/json&quot;}]</code>)</li><li><code class="inline">options</code> - Keyword list of options</li></ul><p>Body: see type <a href="https://hexdocs.pm/httpoison/1.8.2/HTTPoison.Request.html"><code class="inline">HTTPoison.Request</code></a></p><p>Options: see type <a href="https://hexdocs.pm/httpoison/1.8.2/HTTPoison.Request.html"><code class="inline">HTTPoison.Request</code></a></p><p>This function returns <code class="inline">{:ok, response}</code>, <code class="inline">{:ok, async_response}</code>, or <code class="inline">{:ok, maybe_redirect}</code>
 if the request is successful, <code class="inline">{:error, reason}</code> otherwise.</p><h2 id="request/5-redirect-handling" class="section-heading">
-  <a href="#request/5-redirect-handling" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">redirect-handling</p>
+  <a href="#request/5-redirect-handling" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  Redirect handling
+  <span class="text">Redirect handling</span>
 </h2>
 <p>If the option <code class="inline">:follow_redirect</code> is given, HTTP redirects are automatically follow if
 the method is set to <code class="inline">:get</code> or <code class="inline">:head</code> and the response's <code class="inline">status_code</code> is <code class="inline">301</code>, <code class="inline">302</code> or
@@ -1719,12 +1739,12 @@ the method is set to <code class="inline">:get</code> or <code class="inline">:h
 followed is <code class="inline">303</code>.</p><p>If any other method or <code class="inline">status_code</code> is returned, then this function returns a
 returns a <code class="inline">{:ok, %HTTPoison.MaybeRedirect{}}</code> containing the <code class="inline">redirect_url</code> for you to
 re-request with the method set to <code class="inline">:get</code>.</p><h2 id="request/5-examples" class="section-heading">
-  <a href="#request/5-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">examples</p>
+  <a href="#request/5-examples" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  Examples
+  <span class="text">Examples</span>
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="n">request</span><span class="p" data-group-id="3746472206-1">(</span><span class="ss">:post</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;https://my.website.com&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;{</span><span class="se">\&quot;</span><span class="s">foo</span><span class="se">\&quot;</span><span class="s">: 3}&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="3746472206-2">[</span><span class="p" data-group-id="3746472206-3">{</span><span class="s">&quot;Accept&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;application/json&quot;</span><span class="p" data-group-id="3746472206-3">}</span><span class="p" data-group-id="3746472206-2">]</span><span class="p" data-group-id="3746472206-1">)</span></code></pre>
+<pre><code class="makeup elixir" translate="no"><span class="n">request</span><span class="p" data-group-id="2355756436-1">(</span><span class="ss">:post</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;https://my.website.com&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;{</span><span class="se">\&quot;</span><span class="s">foo</span><span class="se">\&quot;</span><span class="s">: 3}&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="2355756436-2">[</span><span class="p" data-group-id="2355756436-3">{</span><span class="s">&quot;Accept&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;application/json&quot;</span><span class="p" data-group-id="2355756436-3">}</span><span class="p" data-group-id="2355756436-2">]</span><span class="p" data-group-id="2355756436-1">)</span></code></pre>
   </section>
 </section>
 <section class="detail" id="request!/5">
@@ -1868,7 +1888,7 @@ application cannot connect to NPM. (E.g., because it's started offline.)</p>
 
         <p class="built-using">
           Built using
-          <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" target="_blank" rel="help noopener" translate="no">ExDoc</a> (v0.29.1) for the
+          <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" target="_blank" rel="help noopener" translate="no">ExDoc</a> (v0.30.9) for the
 
             <a href="https://elixir-lang.org" title="Elixir" target="_blank" translate="no">Elixir programming language</a>
 
@@ -1876,7 +1896,7 @@ application cannot connect to NPM. (E.g., because it's started offline.)</p>
       </footer>
     </div>
   </div>
-</section>
+</main>
 </div>
 
 

@@ -4,20 +4,20 @@
     <meta charset="utf-8">
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="generator" content="ExDoc v0.29.1">
-    <meta name="project" content="Lightning v0.9.3">
+    <meta name="generator" content="ExDoc v0.30.9">
+    <meta name="project" content="Lightning v0.10.0-pre3">
 
-    <title>Lightning.CLI.Result — Lightning v0.9.3</title>
-    <link rel="stylesheet" href="dist/html-elixir-V2ETBPMB.css" />
+    <title>Lightning.CLI.Result — Lightning v0.10.0-pre3</title>
+    <link rel="stylesheet" href="dist/html-elixir-XFYN5IVA.css" />
 
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
-    <script src="dist/handlebars.templates-IV5W3OL2.js"></script>
-    <script src="dist/sidebar_items-C3EF67C0.js"></script>
+    <script src="dist/handlebars.templates-EPF2X7PV.js"></script>
+    <script src="dist/sidebar_items-6D5A7B34.js"></script>
 
       <script src="docs_config.js"></script>
 
-    <script async src="dist/html-XN2TSG4M.js"></script>
+    <script async src="dist/html-J2ASZTQE.js"></script>
 
 
   </head>
@@ -38,22 +38,22 @@
 
 <div class="main">
 
-<button class="sidebar-button sidebar-toggle" aria-label="toggle sidebar">
+<button class="sidebar-button sidebar-toggle" aria-label="toggle sidebar" aria-controls="sidebar">
   <i class="ri-menu-line ri-lg" title="Collapse/expand sidebar"></i>
 </button>
 
-<section class="sidebar">
+<nav id="sidebar" class="sidebar">
   <form class="sidebar-search" action="search.html">
+    <label class="search-label">
+      <span class="sr-only">Search documentation of Lightning</span>
+      <input name="q" type="text" class="search-input" placeholder="Search..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
+    </label>
     <button type="submit" class="search-button" aria-label="Submit Search">
       <i class="ri-search-2-line" aria-hidden="true" title="Submit search"></i>
     </button>
-    <button type="button" tabindex="-1" class="search-close-button" aria-label="Cancel Search">
-      <i class="ri-close-line ri-lg" aria-hidden="true" title="Cancel search"></i>
+    <button type="button" tabindex="-1" class="search-close-button" aria-hidden="true">
+      <i class="ri-close-line ri-lg" title="Cancel search"></i>
     </button>
-    <label class="search-label">
-      <p class="sr-only">Search</p>
-      <input name="q" type="text" class="search-input" placeholder="Search..." aria-label="Input your search terms" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
-    </label>
   </form>
 
   <div class="autocomplete">
@@ -71,26 +71,49 @@
       <a href="https://openfn.github.io/Lightning" class="sidebar-projectName" translate="no">
 Lightning
       </a>
-      <strong class="sidebar-projectVersion" translate="no">
-        v0.9.3
-      </strong>
+      <div class="sidebar-projectVersion" translate="no">
+        v0.10.0-pre3
+      </div>
     </div>
-    <ul class="sidebar-listNav">
-      <li><a id="extras-list-link" href="#full-list">Pages</a></li>
+    <ul id="sidebar-listNav" class="sidebar-listNav" role="tablist">
+      <li>
+        <button id="extras-list-tab-button" role="tab" data-type="extras" aria-controls="extras-tab-panel" aria-selected="true" tabindex="0">
+Pages
+        </button>
+      </li>
 
-        <li><a id="modules-list-link" href="#full-list">Modules</a></li>
+        <li>
+          <button id="modules-list-tab-button" role="tab" data-type="modules" aria-controls="modules-tab-panel" aria-selected="false" tabindex="-1">
+            Modules
+          </button>
+        </li>
 
 
-        <li><a id="tasks-list-link" href="#full-list"><span translate="no">Mix</span> Tasks</a></li>
+        <li>
+          <button id="tasks-list-tab-button" role="tab" data-type="tasks" aria-controls="tasks-tab-panel" aria-selected="false" tabindex="-1">
+            <span translate="no">Mix</span> Tasks
+          </button>
+        </li>
 
     </ul>
   </div>
 
-  <div class="gradient"></div>
-  <ul id="full-list" class="sidebar-fullList"></ul>
-</section>
+  <div id="extras-tab-panel" class="sidebar-tabpanel" role="tabpanel" aria-labelledby="extras-list-tab-button">
+    <ul id="extras-full-list" class="full-list"></ul>
+  </div>
 
-<section class="content">
+    <div id="modules-tab-panel" class="sidebar-tabpanel" role="tabpanel" aria-labelledby="modules-list-tab-button" hidden>
+      <ul id="modules-full-list" class="full-list"></ul>
+    </div>
+
+
+    <div id="tasks-tab-panel" class="sidebar-tabpanel" role="tabpanel" aria-labelledby="tasks-list-tab-button" hidden>
+      <ul id="tasks-full-list" class="full-list"></ul>
+    </div>
+
+</nav>
+
+<main class="content">
   <output role="status" id="toast"></output>
   <div class="content-outer">
     <div id="content" class="content-inner">
@@ -108,20 +131,20 @@ Lightning
     </a>
 
   <span translate="no">Lightning.CLI.Result</span> 
-  <small class="app-vsn" translate="no">(Lightning v0.9.3)</small>
+  <small class="app-vsn" translate="no">(Lightning v0.10.0-pre3)</small>
 
 </h1>
 
 
   <section id="moduledoc">
 <p>Struct that wraps the output of an OpenFn CLI call.</p><p>Containing the keys:</p><ul><li><code class="inline">start_time</code></li><li><code class="inline">end_time</code></li><li><code class="inline">status</code></li><li><code class="inline">logs</code></li></ul><h2 id="module-logs" class="section-heading">
-  <a href="#module-logs" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">logs</p>
+  <a href="#module-logs" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  Logs
+  <span class="text">Logs</span>
 </h2>
 <p>The OpenFn CLI returns JSON formatted log lines, which are decoded and added
-to a <code class="inline">Result</code> struct.</p><p>There are two kinds of output:</p><pre><code class="makeup elixir" translate="no"><span class="p" data-group-id="9495352071-1">{</span><span class="s">&quot;level&quot;</span><span class="ss">:&quot;&lt;&lt;level&gt;&gt;&quot;</span><span class="p">,</span><span class="s">&quot;name&quot;</span><span class="ss">:&quot;&lt;&lt;module&gt;&gt;&quot;</span><span class="p">,</span><span class="s">&quot;message&quot;</span><span class="ss">:&quot;...&quot;</span><span class="p">]</span><span class="p">,</span><span class="s">&quot;time&quot;</span><span class="ss">:&lt;</span><span class="o">&lt;</span><span class="n">timestamp</span><span class="p">&gt;&gt;</span><span class="p" data-group-id="9495352071-1">}</span></code></pre><p>These are usually for general logging, and debugging.</p><pre><code class="makeup elixir" translate="no"><span class="p" data-group-id="4554339991-1">{</span><span class="s">&quot;message&quot;</span><span class="p">:</span><span class="p" data-group-id="4554339991-2">[</span><span class="s">&quot;&lt;&lt;message|filepath|output&gt;&gt;&quot;</span><span class="p" data-group-id="4554339991-2">]</span><span class="p" data-group-id="4554339991-1">}</span></code></pre><p>The above is the equivalent of the output of a command</p>
+to a <code class="inline">Result</code> struct.</p><p>There are two kinds of output:</p><pre><code class="makeup elixir" translate="no"><span class="p" data-group-id="9019302565-1">{</span><span class="s">&quot;level&quot;</span><span class="ss">:&quot;&lt;&lt;level&gt;&gt;&quot;</span><span class="p">,</span><span class="s">&quot;name&quot;</span><span class="ss">:&quot;&lt;&lt;module&gt;&gt;&quot;</span><span class="p">,</span><span class="s">&quot;message&quot;</span><span class="ss">:&quot;...&quot;</span><span class="p">]</span><span class="p">,</span><span class="s">&quot;time&quot;</span><span class="ss">:&lt;</span><span class="o">&lt;</span><span class="n">timestamp</span><span class="p">&gt;&gt;</span><span class="p" data-group-id="9019302565-1">}</span></code></pre><p>These are usually for general logging, and debugging.</p><pre><code class="makeup elixir" translate="no"><span class="p" data-group-id="5973037487-1">{</span><span class="s">&quot;message&quot;</span><span class="p">:</span><span class="p" data-group-id="5973037487-2">[</span><span class="s">&quot;&lt;&lt;message|filepath|output&gt;&gt;&quot;</span><span class="p" data-group-id="5973037487-2">]</span><span class="p" data-group-id="5973037487-1">}</span></code></pre><p>The above is the equivalent of the output of a command</p>
   </section>
 
 
@@ -129,9 +152,8 @@ to a <code class="inline">Result</code> struct.</p><p>There are two kinds of out
     <h1 class="section-heading">
       <a class="hover-link" href="#summary">
         <i class="ri-link-m" aria-hidden="true"></i>
-        <span class="sr-only">Link to this section</span>
       </a>
-      Summary
+      <span class="text">Summary</span>
     </h1>
 <div class="summary-types summary">
   <h2>
@@ -187,9 +209,8 @@ to a <code class="inline">Result</code> struct.</p><p>There are two kinds of out
     <h1 class="section-heading">
       <a class="hover-link" href="#types">
         <i class="ri-link-m" aria-hidden="true"></i>
-        <span class="sr-only">Link to this section</span>
       </a>
-Types
+      <span class="text">Types</span>
     </h1>
     <div class="types-list">
 <section class="detail" id="t:t/0">
@@ -233,9 +254,8 @@ Types
     <h1 class="section-heading">
       <a class="hover-link" href="#functions">
         <i class="ri-link-m" aria-hidden="true"></i>
-        <span class="sr-only">Link to this section</span>
       </a>
-Functions
+      <span class="text">Functions</span>
     </h1>
     <div class="functions-list">
 <section class="detail" id="get_messages/1">
@@ -333,7 +353,7 @@ Functions
 
         <p class="built-using">
           Built using
-          <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" target="_blank" rel="help noopener" translate="no">ExDoc</a> (v0.29.1) for the
+          <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" target="_blank" rel="help noopener" translate="no">ExDoc</a> (v0.30.9) for the
 
             <a href="https://elixir-lang.org" title="Elixir" target="_blank" translate="no">Elixir programming language</a>
 
@@ -341,7 +361,7 @@ Functions
       </footer>
     </div>
   </div>
-</section>
+</main>
 </div>
 
 

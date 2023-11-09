@@ -4,20 +4,20 @@
     <meta charset="utf-8">
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="generator" content="ExDoc v0.29.1">
-    <meta name="project" content="Lightning v0.9.3">
+    <meta name="generator" content="ExDoc v0.30.9">
+    <meta name="project" content="Lightning v0.10.0-pre3">
 
-    <title>Deployment — Lightning v0.9.3</title>
-    <link rel="stylesheet" href="dist/html-elixir-V2ETBPMB.css" />
+    <title>Deployment — Lightning v0.10.0-pre3</title>
+    <link rel="stylesheet" href="dist/html-elixir-XFYN5IVA.css" />
 
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
-    <script src="dist/handlebars.templates-IV5W3OL2.js"></script>
-    <script src="dist/sidebar_items-C3EF67C0.js"></script>
+    <script src="dist/handlebars.templates-EPF2X7PV.js"></script>
+    <script src="dist/sidebar_items-6D5A7B34.js"></script>
 
       <script src="docs_config.js"></script>
 
-    <script async src="dist/html-XN2TSG4M.js"></script>
+    <script async src="dist/html-J2ASZTQE.js"></script>
 
 
   </head>
@@ -38,22 +38,22 @@
 
 <div class="main">
 
-<button class="sidebar-button sidebar-toggle" aria-label="toggle sidebar">
+<button class="sidebar-button sidebar-toggle" aria-label="toggle sidebar" aria-controls="sidebar">
   <i class="ri-menu-line ri-lg" title="Collapse/expand sidebar"></i>
 </button>
 
-<section class="sidebar">
+<nav id="sidebar" class="sidebar">
   <form class="sidebar-search" action="search.html">
+    <label class="search-label">
+      <span class="sr-only">Search documentation of Lightning</span>
+      <input name="q" type="text" class="search-input" placeholder="Search..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
+    </label>
     <button type="submit" class="search-button" aria-label="Submit Search">
       <i class="ri-search-2-line" aria-hidden="true" title="Submit search"></i>
     </button>
-    <button type="button" tabindex="-1" class="search-close-button" aria-label="Cancel Search">
-      <i class="ri-close-line ri-lg" aria-hidden="true" title="Cancel search"></i>
+    <button type="button" tabindex="-1" class="search-close-button" aria-hidden="true">
+      <i class="ri-close-line ri-lg" title="Cancel search"></i>
     </button>
-    <label class="search-label">
-      <p class="sr-only">Search</p>
-      <input name="q" type="text" class="search-input" placeholder="Search..." aria-label="Input your search terms" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
-    </label>
   </form>
 
   <div class="autocomplete">
@@ -71,26 +71,49 @@
       <a href="https://openfn.github.io/Lightning" class="sidebar-projectName" translate="no">
 Lightning
       </a>
-      <strong class="sidebar-projectVersion" translate="no">
-        v0.9.3
-      </strong>
+      <div class="sidebar-projectVersion" translate="no">
+        v0.10.0-pre3
+      </div>
     </div>
-    <ul class="sidebar-listNav">
-      <li><a id="extras-list-link" href="#full-list">Pages</a></li>
+    <ul id="sidebar-listNav" class="sidebar-listNav" role="tablist">
+      <li>
+        <button id="extras-list-tab-button" role="tab" data-type="extras" aria-controls="extras-tab-panel" aria-selected="true" tabindex="0">
+Pages
+        </button>
+      </li>
 
-        <li><a id="modules-list-link" href="#full-list">Modules</a></li>
+        <li>
+          <button id="modules-list-tab-button" role="tab" data-type="modules" aria-controls="modules-tab-panel" aria-selected="false" tabindex="-1">
+            Modules
+          </button>
+        </li>
 
 
-        <li><a id="tasks-list-link" href="#full-list"><span translate="no">Mix</span> Tasks</a></li>
+        <li>
+          <button id="tasks-list-tab-button" role="tab" data-type="tasks" aria-controls="tasks-tab-panel" aria-selected="false" tabindex="-1">
+            <span translate="no">Mix</span> Tasks
+          </button>
+        </li>
 
     </ul>
   </div>
 
-  <div class="gradient"></div>
-  <ul id="full-list" class="sidebar-fullList"></ul>
-</section>
+  <div id="extras-tab-panel" class="sidebar-tabpanel" role="tabpanel" aria-labelledby="extras-list-tab-button">
+    <ul id="extras-full-list" class="full-list"></ul>
+  </div>
 
-<section class="content">
+    <div id="modules-tab-panel" class="sidebar-tabpanel" role="tabpanel" aria-labelledby="modules-list-tab-button" hidden>
+      <ul id="modules-full-list" class="full-list"></ul>
+    </div>
+
+
+    <div id="tasks-tab-panel" class="sidebar-tabpanel" role="tabpanel" aria-labelledby="tasks-list-tab-button" hidden>
+      <ul id="tasks-full-list" class="full-list"></ul>
+    </div>
+
+</nav>
+
+<main class="content">
   <output role="status" id="toast"></output>
   <div class="content-outer">
     <div id="content" class="content-inner">
@@ -113,22 +136,31 @@ Lightning
 
 <p>Head to the <a href="https://docs.openfn.org/documentation/deploy/options">Deploy</a>
 section of our docs site to get started.</p><p>See below for technical considerations and instructions.</p><h2 id="encryption" class="section-heading">
-  <a href="#encryption" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">encryption</p>
+  <a href="#encryption" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  Encryption
+  <span class="text">Encryption</span>
 </h2>
-<p>Lightning enforces encryption at rest for Credentials, for which an encryption
-key must be provided when running in production.</p><p>The key is expected to be a randomized set of bytes, 32 long; and Base64 encoded
+<p>Lightning enforces encryption at rest for credentials, TOTP backup codes, and
+webhook trigger authentication methods, for which an encryption key must be
+provided when running in production.</p><p>The key is expected to be a randomized set of bytes, 32 long; and Base64 encoded
 when setting the environment variable.</p><p>There is a mix task that can generate keys in the correct shape for use as an
 environment variable:</p><pre><code class="makeup sh" translate="no"><span class="">mix lightning.gen_encryption_key
 </span><span class="">0bJ9w+hn4ebQrsCaWXuA9JY49fP9kbHmywGd5K7k+/s=
 </span></code></pre><p>Copy your key <em>(NOT THIS ONE)</em> and set it as <code class="inline">PRIMARY_ENCRYPTION_KEY</code> in your
-environment.</p><h2 id="environment-variables" class="section-heading">
-  <a href="#environment-variables" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">environment-variables</p>
+environment.</p><h2 id="workers" class="section-heading">
+  <a href="#workers" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  Environment Variables
+  <span class="text">Workers</span>
+</h2>
+<p>Lightning uses external worker processes for executing Attempts. There are three
+settings required to configure worker authentication.</p><ul><li><code class="inline">ATTEMPTS_PRIVATE_KEY</code></li><li><code class="inline">WORKER_SECRET</code></li><li><code class="inline">LIGHTNING_PUBLIC_KEY</code></li></ul><p>You can use the <code class="inline">mix lightning.gen_worker_keys</code> task to generate these for
+convenience.</p><p>For more information see the <a href="workers.html">Workers</a> documentation.</p><h2 id="environment-variables" class="section-heading">
+  <a href="#environment-variables" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
+  </a>
+  <span class="text">Environment Variables</span>
 </h2>
 <p>Note that for secure deployments, it's recommended to use a combination of
 <code class="inline">secrets</code> and <code class="inline">configMaps</code> to generate secure environment variables.</p><ul><li><code class="inline">ADAPTORS_PATH</code> - where you store your locally installed adaptors</li><li><code class="inline">DISABLE_DB_SSL</code> - in production the use of an SSL conntection to Postgres is
@@ -142,10 +174,10 @@ to run (keep this below your termination_grace_period if using kubernetes)</li><
 <a href="#encryption">Encryption</a>.</li><li><code class="inline">SCHEMAS_PATH</code> - path to the credential schemas that provide forms for
 different adaptors</li><li><code class="inline">SECRET_KEY_BASE</code> - a secret key used as a base to generate secrets for
 encrypting and signing data.</li><li><code class="inline">SENTRY_DSN</code> - if using Sentry for error monitoring, your DSN</li><li><code class="inline">URL_HOST</code> - the host, used for writing urls (e.g., <code class="inline">demo.openfn.org</code>)</li><li><code class="inline">URL_PORT</code> - the port, usually <code class="inline">443</code> for production</li><li><code class="inline">URL_SCHEME</code> - the scheme for writing urls, (e.g., <code class="inline">https</code>)</li></ul><h3 id="google" class="section-heading">
-  <a href="#google" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">google</p>
+  <a href="#google" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  Google
+  <span class="text">Google</span>
 </h3>
 <p>Using your Google Cloud account, provision a new OAuth 2.0 Client with the 'Web
 application' type.</p><p>Set the callback url to: <code class="inline">https://&lt;ENDPOINT DOMAIN&gt;/authenticate/callback</code>.
@@ -194,7 +226,7 @@ Benchmarking
 
         <p class="built-using">
           Built using
-          <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" target="_blank" rel="help noopener" translate="no">ExDoc</a> (v0.29.1) for the
+          <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" target="_blank" rel="help noopener" translate="no">ExDoc</a> (v0.30.9) for the
 
             <a href="https://elixir-lang.org" title="Elixir" target="_blank" translate="no">Elixir programming language</a>
 
@@ -202,7 +234,7 @@ Benchmarking
       </footer>
     </div>
   </div>
-</section>
+</main>
 </div>
 
 

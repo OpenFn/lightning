@@ -4,20 +4,20 @@
     <meta charset="utf-8">
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="generator" content="ExDoc v0.29.1">
-    <meta name="project" content="Lightning v0.9.3">
+    <meta name="generator" content="ExDoc v0.30.9">
+    <meta name="project" content="Lightning v0.10.0-pre3">
 
-    <title>API Reference — Lightning v0.9.3</title>
-    <link rel="stylesheet" href="dist/html-elixir-V2ETBPMB.css" />
+    <title>API Reference — Lightning v0.10.0-pre3</title>
+    <link rel="stylesheet" href="dist/html-elixir-XFYN5IVA.css" />
 
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
-    <script src="dist/handlebars.templates-IV5W3OL2.js"></script>
-    <script src="dist/sidebar_items-C3EF67C0.js"></script>
+    <script src="dist/handlebars.templates-EPF2X7PV.js"></script>
+    <script src="dist/sidebar_items-6D5A7B34.js"></script>
 
       <script src="docs_config.js"></script>
 
-    <script async src="dist/html-XN2TSG4M.js"></script>
+    <script async src="dist/html-J2ASZTQE.js"></script>
 
 
   </head>
@@ -38,22 +38,22 @@
 
 <div class="main">
 
-<button class="sidebar-button sidebar-toggle" aria-label="toggle sidebar">
+<button class="sidebar-button sidebar-toggle" aria-label="toggle sidebar" aria-controls="sidebar">
   <i class="ri-menu-line ri-lg" title="Collapse/expand sidebar"></i>
 </button>
 
-<section class="sidebar">
+<nav id="sidebar" class="sidebar">
   <form class="sidebar-search" action="search.html">
+    <label class="search-label">
+      <span class="sr-only">Search documentation of Lightning</span>
+      <input name="q" type="text" class="search-input" placeholder="Search..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
+    </label>
     <button type="submit" class="search-button" aria-label="Submit Search">
       <i class="ri-search-2-line" aria-hidden="true" title="Submit search"></i>
     </button>
-    <button type="button" tabindex="-1" class="search-close-button" aria-label="Cancel Search">
-      <i class="ri-close-line ri-lg" aria-hidden="true" title="Cancel search"></i>
+    <button type="button" tabindex="-1" class="search-close-button" aria-hidden="true">
+      <i class="ri-close-line ri-lg" title="Cancel search"></i>
     </button>
-    <label class="search-label">
-      <p class="sr-only">Search</p>
-      <input name="q" type="text" class="search-input" placeholder="Search..." aria-label="Input your search terms" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
-    </label>
   </form>
 
   <div class="autocomplete">
@@ -71,26 +71,49 @@
       <a href="https://openfn.github.io/Lightning" class="sidebar-projectName" translate="no">
 Lightning
       </a>
-      <strong class="sidebar-projectVersion" translate="no">
-        v0.9.3
-      </strong>
+      <div class="sidebar-projectVersion" translate="no">
+        v0.10.0-pre3
+      </div>
     </div>
-    <ul class="sidebar-listNav">
-      <li><a id="extras-list-link" href="#full-list">Pages</a></li>
+    <ul id="sidebar-listNav" class="sidebar-listNav" role="tablist">
+      <li>
+        <button id="extras-list-tab-button" role="tab" data-type="extras" aria-controls="extras-tab-panel" aria-selected="true" tabindex="0">
+Pages
+        </button>
+      </li>
 
-        <li><a id="modules-list-link" href="#full-list">Modules</a></li>
+        <li>
+          <button id="modules-list-tab-button" role="tab" data-type="modules" aria-controls="modules-tab-panel" aria-selected="false" tabindex="-1">
+            Modules
+          </button>
+        </li>
 
 
-        <li><a id="tasks-list-link" href="#full-list"><span translate="no">Mix</span> Tasks</a></li>
+        <li>
+          <button id="tasks-list-tab-button" role="tab" data-type="tasks" aria-controls="tasks-tab-panel" aria-selected="false" tabindex="-1">
+            <span translate="no">Mix</span> Tasks
+          </button>
+        </li>
 
     </ul>
   </div>
 
-  <div class="gradient"></div>
-  <ul id="full-list" class="sidebar-fullList"></ul>
-</section>
+  <div id="extras-tab-panel" class="sidebar-tabpanel" role="tabpanel" aria-labelledby="extras-list-tab-button">
+    <ul id="extras-full-list" class="full-list"></ul>
+  </div>
 
-<section class="content">
+    <div id="modules-tab-panel" class="sidebar-tabpanel" role="tabpanel" aria-labelledby="modules-list-tab-button" hidden>
+      <ul id="modules-full-list" class="full-list"></ul>
+    </div>
+
+
+    <div id="tasks-tab-panel" class="sidebar-tabpanel" role="tabpanel" aria-labelledby="tasks-list-tab-button" hidden>
+      <ul id="tasks-full-list" class="full-list"></ul>
+    </div>
+
+</nav>
+
+<main class="content">
   <output role="status" id="toast"></output>
   <div class="content-outer">
     <div id="content" class="content-inner">
@@ -102,17 +125,22 @@ Lightning
 </button>
 
 
+    <a href="https://github.com/OpenFn/lightning" title="View Source" class="icon-action" rel="help">
+      <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+      <span class="sr-only">View Source</span>
+    </a>
 
-  <span>API Reference <small class="app-vsn">Lightning v0.9.3</small></span>
+
+  <span>API Reference <small class="app-vsn">Lightning v0.10.0-pre3</small></span>
 </h1>
 
 
   <section class="details-list">
     <h2 id="modules" class="section-heading">
-  <a href="#modules" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">modules</p>
+  <a href="#modules" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  Modules
+  <span class="text">Modules</span>
 </h2>
 
     <div class="summary">
@@ -124,6 +152,15 @@ Lightning
 
     <div class="summary-synopsis"><p>Lightning keeps the contexts that define your domain
 and business logic.</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="Lightning.API.html" translate="no">Lightning.API</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>Behaviour for implementing the Lightning interface.</p></div>
 
 </div>
 <div class="summary-row">
@@ -244,6 +281,68 @@ writing jobs.</p></div>
 </div>
 <div class="summary-row">
   <div class="summary-signature">
+    <a href="Lightning.Attempts.html" translate="no">Lightning.Attempts</a>
+
+  </div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="Lightning.Attempts.Adaptor.html" translate="no">Lightning.Attempts.Adaptor</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>Behaviour for implementing an adaptor for the Lightning.Attempts module.</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="Lightning.Attempts.Events.html" translate="no">Lightning.Attempts.Events</a>
+
+  </div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="Lightning.Attempts.Handlers.html" translate="no">Lightning.Attempts.Handlers</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>Handler modules for working with attempts.</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="Lightning.Attempts.Handlers.CompleteRun.html" translate="no">Lightning.Attempts.Handlers.CompleteRun</a>
+
+  </div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="Lightning.Attempts.Handlers.StartRun.html" translate="no">Lightning.Attempts.Handlers.StartRun</a>
+
+  </div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="Lightning.Attempts.Query.html" translate="no">Lightning.Attempts.Query</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>Query functions for working with Attempts</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="Lightning.Attempts.Queue.html" translate="no">Lightning.Attempts.Queue</a>
+
+  </div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
     <a href="Lightning.Auditing.html" translate="no">Lightning.Auditing</a>
 
   </div>
@@ -343,6 +442,15 @@ any OIDC compliant provider.</p></div>
 </div>
 <div class="summary-row">
   <div class="summary-signature">
+    <a href="Lightning.Config.html" translate="no">Lightning.Config</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>Centralised runtime configuration for Lightning.</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
     <a href="Lightning.Credentials.html" translate="no">Lightning.Credentials</a>
 
   </div>
@@ -374,7 +482,7 @@ any OIDC compliant provider.</p></div>
 
   </div>
 
-    <div class="summary-synopsis"><p>Structure that can parse JsonSchemas (using <a href="https://hexdocs.pm/ex_json_schema/0.9.2/ExJsonSchema.html"><code class="inline">ExJsonSchema</code></a>) and validate
+    <div class="summary-synopsis"><p>Structure that can parse JsonSchemas (using <a href="https://hexdocs.pm/ex_json_schema/0.9.3/ExJsonSchema.html"><code class="inline">ExJsonSchema</code></a>) and validate
 changesets for a given schema.</p></div>
 
 </div>
@@ -408,6 +516,15 @@ changesets for a given schema.</p></div>
 </div>
 <div class="summary-row">
   <div class="summary-signature">
+    <a href="Lightning.Env.html" translate="no">Lightning.Env</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>Mapping between environment variables and configuration values.</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
     <a href="Lightning.ExportUtils.html" translate="no">Lightning.ExportUtils</a>
 
   </div>
@@ -419,6 +536,13 @@ from a project and its workflows.</p></div>
 <div class="summary-row">
   <div class="summary-signature">
     <a href="Lightning.FailureNotifierView.html" translate="no">Lightning.FailureNotifierView</a>
+
+  </div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="Lightning.Graph.html" translate="no">Lightning.Graph</a>
 
   </div>
 
@@ -497,6 +621,16 @@ from a project and its workflows.</p></div>
 </div>
 <div class="summary-row">
   <div class="summary-signature">
+    <a href="Lightning.Janitor.html" translate="no">Lightning.Janitor</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>The Janitor is responsible for detecting attempts that have been &quot;lost&quot; due to
+communication issues with the worker.</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
     <a href="Lightning.Jobs.html" translate="no">Lightning.Jobs</a>
 
   </div>
@@ -506,39 +640,11 @@ from a project and its workflows.</p></div>
 </div>
 <div class="summary-row">
   <div class="summary-signature">
-    <a href="Lightning.Jobs.Job.html" translate="no">Lightning.Jobs.Job</a>
+    <a href="Lightning.LogMessage.html" translate="no">Lightning.LogMessage</a>
 
   </div>
 
-    <div class="summary-synopsis"><p>Ecto model for Jobs.</p></div>
-
-</div>
-<div class="summary-row">
-  <div class="summary-signature">
-    <a href="Lightning.Jobs.Query.html" translate="no">Lightning.Jobs.Query</a>
-
-  </div>
-
-    <div class="summary-synopsis"><p>Query module for finding Jobs.</p></div>
-
-</div>
-<div class="summary-row">
-  <div class="summary-signature">
-    <a href="Lightning.Jobs.Scheduler.html" translate="no">Lightning.Jobs.Scheduler</a>
-
-  </div>
-
-    <div class="summary-synopsis"><p>The Scheduler is responsible for finding jobs that are ready to run based on
-their cron schedule, and then running them.</p></div>
-
-</div>
-<div class="summary-row">
-  <div class="summary-signature">
-    <a href="Lightning.Jobs.Trigger.html" translate="no">Lightning.Jobs.Trigger</a>
-
-  </div>
-
-    <div class="summary-synopsis"><p>Ecto model for Triggers.</p></div>
+    <div class="summary-synopsis"><p>A custom type to handle JSON log messages.</p></div>
 
 </div>
 <div class="summary-row">
@@ -573,42 +679,6 @@ their cron schedule, and then running them.</p></div>
   </div>
 
     <div class="summary-synopsis"><p>The Oban Manager</p></div>
-
-</div>
-<div class="summary-row">
-  <div class="summary-signature">
-    <a href="Lightning.Pipeline.html" translate="no">Lightning.Pipeline</a>
-
-  </div>
-
-    <div class="summary-synopsis"><p>Service class to coordinate the running of jobs, and their downstream jobs.</p></div>
-
-</div>
-<div class="summary-row">
-  <div class="summary-signature">
-    <a href="Lightning.Pipeline.Runner.html" translate="no">Lightning.Pipeline.Runner</a>
-
-  </div>
-
-    <div class="summary-synopsis"><p>Job running entrypoint</p></div>
-
-</div>
-<div class="summary-row">
-  <div class="summary-signature">
-    <a href="Lightning.Pipeline.Runner.Handler.html" translate="no">Lightning.Pipeline.Runner.Handler</a>
-
-  </div>
-
-    <div class="summary-synopsis"><p>Custom handler callbacks for Lightnings use of Engine to execute runs.</p></div>
-
-</div>
-<div class="summary-row">
-  <div class="summary-signature">
-    <a href="Lightning.Pipeline.StateAssembler.html" translate="no">Lightning.Pipeline.StateAssembler</a>
-
-  </div>
-
-    <div class="summary-synopsis"><p>Facilities for building the state for a Run</p></div>
 
 </div>
 <div class="summary-row">
@@ -800,6 +870,15 @@ characters.</p></div>
 </div>
 <div class="summary-row">
   <div class="summary-signature">
+    <a href="Lightning.Runtime.RuntimeManager.html" translate="no">Lightning.Runtime.RuntimeManager</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>Locates and runs the Runtime server. Added in order to ease development and default installations of Lightning</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
     <a href="Lightning.SafetyString.html" translate="no">Lightning.SafetyString</a>
 
   </div>
@@ -833,6 +912,15 @@ URL-safe strings.</p></div>
   </div>
 
     <div class="summary-synopsis"><p>A TaskWorker with concurrency limits.</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="Lightning.UnixDateTime.html" translate="no">Lightning.UnixDateTime</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>A custom DateTime type for Ecto that uses millisecond Unix timestamps.</p></div>
 
 </div>
 <div class="summary-row">
@@ -905,11 +993,20 @@ tokens for communicating with github</p></div>
 </div>
 <div class="summary-row">
   <div class="summary-signature">
+    <a href="Lightning.WebhookAuthMethods.html" translate="no">Lightning.WebhookAuthMethods</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>The <a href="Lightning.WebhookAuthMethods.html#content"><code class="inline">Lightning.WebhookAuthMethods</code></a> context provides a suite of functionalities to handle and interact with Webhook Authentication Methods within the application.</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
     <a href="Lightning.WorkOrder.html" translate="no">Lightning.WorkOrder</a>
 
   </div>
 
-    <div class="summary-synopsis"><p>Ecto model for Workorders.</p></div>
+    <div class="summary-synopsis"><p>Ecto model for WorkOrders.</p></div>
 
 </div>
 <div class="summary-row">
@@ -923,11 +1020,60 @@ tokens for communicating with github</p></div>
 </div>
 <div class="summary-row">
   <div class="summary-signature">
+    <a href="Lightning.WorkOrders.html" translate="no">Lightning.WorkOrders</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>Context for creating WorkOrders.</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
     <a href="Lightning.WorkOrders.Manual.html" translate="no">Lightning.WorkOrders.Manual</a>
 
   </div>
 
     <div class="summary-synopsis"><p>A model is used to build WorkOrders with custom input data.</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="Lightning.WorkOrders.Query.html" translate="no">Lightning.WorkOrders.Query</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>Query functions for the Lightning.WorkOrders module.</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="Lightning.WorkOrders.SearchParams.html" translate="no">Lightning.WorkOrders.SearchParams</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>This module is used to parse search parameters for workorders and provide
+a query to the database.</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="Lightning.Workers.html" translate="no">Lightning.Workers</a>
+
+  </div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="Lightning.Workers.AttemptToken.html" translate="no">Lightning.Workers.AttemptToken</a>
+
+  </div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="Lightning.Workers.Token.html" translate="no">Lightning.Workers.Token</a>
+
+  </div>
 
 </div>
 <div class="summary-row">
@@ -959,21 +1105,73 @@ tokens for communicating with github</p></div>
 </div>
 <div class="summary-row">
   <div class="summary-signature">
+    <a href="Lightning.Workflows.Job.html" translate="no">Lightning.Workflows.Job</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>Ecto model for Jobs.</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="Lightning.Workflows.Node.html" translate="no">Lightning.Workflows.Node</a>
+
+  </div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="Lightning.Workflows.Query.html" translate="no">Lightning.Workflows.Query</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>Query module for finding Jobs.</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="Lightning.Workflows.Scheduler.html" translate="no">Lightning.Workflows.Scheduler</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>The Scheduler is responsible for finding jobs that are ready to run based on
+their cron schedule, and then running them.</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="Lightning.Workflows.Trigger.html" translate="no">Lightning.Workflows.Trigger</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>Ecto model for Triggers.</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="Lightning.Workflows.WebhookAuthMethod.html" translate="no">Lightning.Workflows.WebhookAuthMethod</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>The <a href="Lightning.Workflows.WebhookAuthMethod.html#content"><code class="inline">Lightning.Workflows.WebhookAuthMethod</code></a> module defines the schema for webhook authentication methods and provides functionalities to handle them.</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="Lightning.Workflows.WebhookAuthMethodAudit.html" translate="no">Lightning.Workflows.WebhookAuthMethodAudit</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>Model for storing changes to WebhookAuthMethod</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
     <a href="Lightning.Workflows.Workflow.html" translate="no">Lightning.Workflows.Workflow</a>
 
   </div>
 
     <div class="summary-synopsis"><p>Ecto model for Workflows.</p></div>
-
-</div>
-<div class="summary-row">
-  <div class="summary-signature">
-    <a href="Lightning.Workorders.SearchParams.html" translate="no">Lightning.Workorders.SearchParams</a>
-
-  </div>
-
-    <div class="summary-synopsis"><p>This module is used to parse search parameters for workorders and provide
-a query to the database.</p></div>
 
 </div>
 <div class="summary-row">
@@ -1019,6 +1217,22 @@ as controllers, views, channels and so on.</p></div>
 <div class="summary-row">
   <div class="summary-signature">
     <a href="LightningWeb.API.RunController.html" translate="no">LightningWeb.API.RunController</a>
+
+  </div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="LightningWeb.AttemptChannel.html" translate="no">LightningWeb.AttemptChannel</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>Phoenix channel to interact with Attempts.</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="LightningWeb.AttemptJson.html" translate="no">LightningWeb.AttemptJson</a>
 
   </div>
 
@@ -1213,7 +1427,7 @@ with the newer CoreComponents conventions introduced in Phoenix 1.7.</p></div>
 
   </div>
 
-    <div class="summary-synopsis"><p>Translates controller action results into valid <a href="https://hexdocs.pm/plug/1.14.2/Plug.Conn.html"><code class="inline">Plug.Conn</code></a> responses.</p></div>
+    <div class="summary-synopsis"><p>Translates controller action results into valid <a href="https://hexdocs.pm/plug/1.15.1/Plug.Conn.html"><code class="inline">Plug.Conn</code></a> responses.</p></div>
 
 </div>
 <div class="summary-row">
@@ -1362,6 +1576,16 @@ back to a LiveView component.</p></div>
 
     <div class="summary-synopsis"><p>Plug to redirect HTTP requests to <code class="inline">/first_setup</code> if there are no
 superusers in the system yet.</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="LightningWeb.Plugs.WebhookAuth.html" translate="no">LightningWeb.Plugs.WebhookAuth</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>A Plug to authenticate and authorize requests based on paths starting with '/i/'.
+It verifies the presence of correct API keys or Basic Authentication credentials.</p></div>
 
 </div>
 <div class="summary-row">
@@ -1597,6 +1821,13 @@ for common functionality.</p></div>
 </div>
 <div class="summary-row">
   <div class="summary-signature">
+    <a href="LightningWeb.Utils.html" translate="no">LightningWeb.Utils</a>
+
+  </div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
     <a href="LightningWeb.VersionControlController.html" translate="no">LightningWeb.VersionControlController</a>
 
   </div>
@@ -1605,6 +1836,20 @@ for common functionality.</p></div>
 <div class="summary-row">
   <div class="summary-signature">
     <a href="LightningWeb.WebhooksController.html" translate="no">LightningWeb.WebhooksController</a>
+
+  </div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="LightningWeb.WorkerChannel.html" translate="no">LightningWeb.WorkerChannel</a>
+
+  </div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="LightningWeb.WorkerSocket.html" translate="no">LightningWeb.WorkerSocket</a>
 
   </div>
 
@@ -1664,10 +1909,10 @@ for common functionality.</p></div>
 
   <section class="details-list">
     <h2 id="mix-tasks" class="section-heading">
-  <a href="#mix-tasks" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">mix-tasks</p>
+  <a href="#mix-tasks" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  Mix Tasks
+  <span class="text">Mix Tasks</span>
 </h2>
 
     <div class="summary">
@@ -1678,6 +1923,15 @@ for common functionality.</p></div>
   </div>
 
     <div class="summary-synopsis"><p>Helper to generate a unique encryption key for Vault</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="Mix.Tasks.Lightning.GenWorkerKeys.html" translate="no">mix lightning.gen_worker_keys</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>Helper to generate the private and public keys for worker authentication</p></div>
 
 </div>
 <div class="summary-row">
@@ -1746,7 +2000,7 @@ Lightning
 
         <p class="built-using">
           Built using
-          <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" target="_blank" rel="help noopener" translate="no">ExDoc</a> (v0.29.1) for the
+          <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" target="_blank" rel="help noopener" translate="no">ExDoc</a> (v0.30.9) for the
 
             <a href="https://elixir-lang.org" title="Elixir" target="_blank" translate="no">Elixir programming language</a>
 
@@ -1754,7 +2008,7 @@ Lightning
       </footer>
     </div>
   </div>
-</section>
+</main>
 </div>
 
 
