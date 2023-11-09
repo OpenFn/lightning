@@ -396,6 +396,10 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       })
       |> render_change()
 
+      view
+      |> form("#workflow-form")
+      |> render_submit()
+
       edge = Repo.reload!(edge)
 
       refute edge.enabled
