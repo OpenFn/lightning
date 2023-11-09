@@ -97,7 +97,6 @@ defmodule LightningWeb.WorkflowLive.EditTest do
                 "name" => ["can't be blank"]
               }
             },
-            %{op: "add", path: "/jobs/0/enabled", value: true},
             %{op: "add", path: "/jobs/0/body", value: ""},
             %{
               op: "add",
