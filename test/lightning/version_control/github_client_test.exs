@@ -35,6 +35,7 @@ defmodule Lightning.VersionControl.GithubClientTest do
       end)
     end
 
+    @tag :capture_log
     test "client can handle invalid application message from github" do
       p_repo = insert(:project_repo_connection)
 
@@ -46,6 +47,7 @@ defmodule Lightning.VersionControl.GithubClientTest do
                VersionControl.fetch_installation_repos(p_repo.project_id)
     end
 
+    @tag :capture_log
     test "client can handle invalid PEM message from github" do
       p_repo =
         insert(:project_repo_connection, github_installation_id: "fail-id")
@@ -58,6 +60,7 @@ defmodule Lightning.VersionControl.GithubClientTest do
                VersionControl.run_sync(p_repo.project_id, "some-user-name")
     end
 
+    @tag :capture_log
     test "fetch repo branches can handle fail" do
       p_repo = insert(:project_repo_connection)
 
@@ -69,6 +72,7 @@ defmodule Lightning.VersionControl.GithubClientTest do
                VersionControl.fetch_repo_branches(p_repo.project_id, p_repo.repo)
     end
 
+    @tag :capture_log
     test "client can fetch installation repos" do
       p_repo = insert(:project_repo_connection)
 

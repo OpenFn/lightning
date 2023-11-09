@@ -1,5 +1,7 @@
 import Config
 
+config :ex_unit, :assert_receive_timeout, 500
+
 # Only in tests, remove the complexity from the password hashing algorithm
 config :bcrypt_elixir, :log_rounds, 1
 
@@ -31,7 +33,7 @@ config :lightning, Lightning.Vault,
 # We don't run a server during test. If one is required,
 # you can enable the server option below.
 config :lightning, LightningWeb.Endpoint,
-  http: [ip: {127, 0, 0, 1}, port: 4002],
+  url: [host: "localhost", port: 4002],
   secret_key_base:
     "/8zedVJLxvmGGFoRExE3e870g7CGZZQ1Vq11A5MbQGPKOpK57MahVsPW6Wkkv61n",
   server: false
@@ -54,6 +56,8 @@ config :lightning, Lightning.FailureAlerter,
 config :lightning,
   schemas_path: "test/fixtures/schemas",
   adaptor_icons_path: "test/fixtures/adaptors/icons"
+
+config :lightning, Lightning.Runtime.RuntimeManager, start: false
 
 # Print only warnings and errors during test
 config :logger, level: :warning

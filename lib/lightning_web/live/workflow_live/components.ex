@@ -3,6 +3,7 @@ defmodule LightningWeb.WorkflowLive.Components do
   use LightningWeb, :component
 
   alias LightningWeb.Components.Form
+  alias Lightning.Workflows.Trigger
   alias Phoenix.LiveView.JS
 
   def workflow_list(assigns) do
@@ -18,6 +19,7 @@ defmodule LightningWeb.WorkflowLive.Components do
             can_delete_workflow={@can_delete_workflow}
             workflow={%{workflow | name: workflow.name || "Untitled"}}
             project={@project}
+            trigger_enabled={Enum.any?(workflow.triggers, & &1.enabled)}
           />
         <% end %>
       </div>
@@ -28,6 +30,7 @@ defmodule LightningWeb.WorkflowLive.Components do
   attr :project, :map, required: true
   attr :can_delete_workflow, :boolean, default: false
   attr :workflow, :map, required: true
+  attr :trigger_enabled, :boolean
 
   def workflow_card(assigns) do
     assigns =
@@ -58,9 +61,20 @@ defmodule LightningWeb.WorkflowLive.Components do
                 <%= @workflow.name %>
               </span>
             </div>
-            <p class="text-gray-500 text-xs">
-              Updated <%= @relative_updated_at %>
-            </p>
+            <%= if @trigger_enabled do %>
+              <p class="text-gray-500 text-xs">
+                Updated <%= @relative_updated_at %>
+              </p>
+            <% else %>
+              <div class="flex items-center">
+                <div style="background: #8b5f0d" class="w-2 h-2 rounded-full"></div>
+                <div>
+                  <p class="text-[#8b5f0d] text-xs">
+                    &nbsp; Disabled
+                  </p>
+                </div>
+              </div>
+            <% end %>
           </div>
         </.link>
         <div class="flex-shrink-0 pr-2">
@@ -183,10 +197,8 @@ defmodule LightningWeb.WorkflowLive.Components do
           </div>
         </div>
         <div class="px-4 py-5 sm:p-6">
-          <div class="md:grid md:grid-cols-6 md:gap-4 @container">
-            <div class="col-span-6">
-              <%= render_slot(@inner_block) %>
-            </div>
+          <div class="md:gap-4">
+            <%= render_slot(@inner_block) %>
           </div>
         </div>
         <div :if={Enum.any?(@footer)} class="p-3">
@@ -246,44 +258,50 @@ defmodule LightningWeb.WorkflowLive.Components do
     """
   end
 
+  defp sort_by_name(webhook_auth_methods) do
+    webhook_auth_methods |> Enum.sort(&(&1.name < &2.name))
+  end
+
+  defp filter_scheduled_for_deletion(webhook_auth_methods) do
+    webhook_auth_methods |> Enum.filter(&is_nil(&1.scheduled_deletion))
+  end
+
+  defp get_webhook_auth_methods_from_trigger(trigger) do
+    trigger.webhook_auth_methods
+    |> filter_scheduled_for_deletion()
+    |> sort_by_name()
+  end
+
   attr :form, :map, required: true
   attr :cancel_url, :string, required: true
   attr :disabled, :boolean, required: true
   attr :webhook_url, :string, required: true
   attr :on_change, :any, required: true
+  attr :selected_trigger, Trigger, required: true
+  attr :action, :any, required: true
 
-  def trigger_form(assigns) do
+  def trigger_form(%{form: form} = assigns) do
     assigns =
       assign(assigns,
-        type: assigns.form.source |> Ecto.Changeset.get_field(:type)
+        type: form.source |> Ecto.Changeset.get_field(:type),
+        trigger_enabled: Map.get(form.params, "enabled", form.data.enabled)
       )
 
     ~H"""
     <% Phoenix.HTML.Form.hidden_inputs_for(@form) %>
-    <div class="col-span-6 @md:col-span-4">
-      <%= Phoenix.HTML.Form.label @form, :type, class: "col-span-4 @md:col-span-2" do %>
-        <div class="flex flex-row">
-          <span class="text-sm font-medium text-secondary-700">
-            Type
-          </span>
-          <Common.tooltip
-            id="trigger-tooltip"
-            title="Choose when this job should run. Select 'webhook' for realtime workflows triggered by notifications from external systems."
-            class="inline-block"
-          />
-        </div>
-        <.old_error field={@form[:type]} />
-        <Form.select_field
-          form={@form}
-          name={:type}
-          id="triggerType"
-          values={[
-            "Cron Schedule (UTC)": "cron",
-            "Webhook Event": "webhook"
-          ]}
-          disabled={@disabled}
-        />
-      <% end %>
+    <div class="">
+      <.input
+        type="select"
+        id="triggerType"
+        field={@form[:type]}
+        label="Trigger type"
+        class=""
+        options={[
+          "Cron Schedule (UTC)": "cron",
+          "Webhook Event": "webhook"
+        ]}
+        disabled={@disabled}
+      />
       <%= case @type do %>
         <% :cron -> %>
           <div class="hidden sm:block" aria-hidden="true">
@@ -297,20 +315,141 @@ defmodule LightningWeb.WorkflowLive.Components do
             disabled={@disabled}
           />
         <% :webhook -> %>
-          <div class="col-span-4 @md:col-span-2 text-right text-">
-            <a
-              id="copyWebhookUrl"
-              href={@webhook_url}
-              class="text-xs text-indigo-400 underline underline-offset-2 hover:text-indigo-500 cursor-pointer"
-              onclick="(function(e) {  navigator.clipboard.writeText(e.target.href); e.preventDefault(); })(event)"
-              target="_blank"
-              phx-click="copied_to_clipboard"
+          <div class="my-6">
+            <label class="block text-sm font-semibold leading-6 text-slate-800">
+              Webhook URL
+            </label>
+            <div class="mt-2 flex rounded-md shadow-sm">
+              <input
+                type="text"
+                id="webhookUrlInput"
+                class="block w-full flex-1 rounded-l-lg text-slate-900 disabled:bg-gray-50 disabled:text-gray-500 border border-r-0 border-secondary-300 sm:text-sm sm:leading-6"
+                value={@webhook_url}
+                disabled="disabled"
+              />
+
+              <button
+                id="copyWebhookUrl"
+                type="button"
+                phx-hook="Copy"
+                data-to="#webhookUrlInput"
+                class="w-[100px] inline-block relative rounded-r-lg px-3 text-sm font-normal text-gray-900 border border-secondary-300 hover:bg-gray-50"
+              >
+                Copy URL
+              </button>
+            </div>
+          </div>
+          <div>
+            <div
+              class="flex items-center inline-block"
+              id="webhook-authentication-tooltip-div"
+              aria-label="Add an extra layer of security with Webhook authentication."
+              phx-hook="Tooltip"
             >
-              Copy webhook url
-            </a>
+              <span class="text-sm font-medium text-secondary-700 mr-1">
+                Webhook Authentication
+              </span>
+              <span class="inline-block relative cursor-pointer">
+                <Heroicons.information_circle
+                  solid
+                  class="w-4 h-4 text-primary-600 opacity-50"
+                />
+              </span>
+            </div>
+            <div class="text-xs">
+              <%= if length(get_webhook_auth_methods_from_trigger(@selected_trigger)) == 0 do %>
+                <p class="italic mt-3">
+                  <span>
+                    Add an extra layer of security with Webhook authentication.
+                  </span>
+                  <.link
+                    id="addAuthenticationLink"
+                    href="#"
+                    class={[
+                      "text-indigo-400 underline not-italic inline-flex items-center",
+                      if(@action == :new or @disabled,
+                        do: "text-gray-500 cursor-not-allowed",
+                        else: ""
+                      )
+                    ]}
+                    phx-click={show_modal("webhooks_auth_method_modal")}
+                  >
+                    Add authentication
+                    <%= if @action == :new do %>
+                      <Common.tooltip
+                        id="webhook-authentication-disabled-tooltip"
+                        title="You must save your changes before adding an authentication method"
+                        class="inline"
+                      />
+                    <% end %>
+                  </.link>
+                </p>
+              <% else %>
+                <ul class="truncate w-full list-disc p-2 pl-3 mb-2 leading-relaxed">
+                  <li :for={
+                    auth_method <-
+                      get_webhook_auth_methods_from_trigger(@selected_trigger)
+                  }>
+                    <%= if auth_method.name |> String.length <= 50 do %>
+                      <%= auth_method.name %> (<.humanized_auth_method_type auth_method={
+                        auth_method
+                      } />)
+                    <% else %>
+                      <%= auth_method.name |> String.slice(0..50) %> ... (<.humanized_auth_method_type auth_method={
+                        auth_method
+                      } />)
+                    <% end %>
+                  </li>
+                </ul>
+
+                <div>
+                  <.link
+                    href="#"
+                    class="text-primary-700 underline hover:text-primary-800"
+                    phx-click={show_modal("webhooks_auth_method_modal")}
+                  >
+                    Manage authentication
+                  </.link>
+                </div>
+              <% end %>
+            </div>
           </div>
       <% end %>
     </div>
+    <div class="hidden sm:block" aria-hidden="true">
+      <div class="py-2"></div>
+    </div>
+    <hr class="h-px bg-gray-200 border-0 dark:bg-gray-700 position:absolute" />
+    <div class="hidden sm:block" aria-hidden="true">
+      <div class="py-2"></div>
+    </div>
+    <Form.check_box
+      form={@form}
+      field={:enabled}
+      label="Disable this trigger"
+      checked_value={false}
+      unchecked_value={true}
+      value={@trigger_enabled}
+    />
+    """
+  end
+
+  attr :auth_method, :map, required: true
+
+  def humanized_auth_method_type(assigns) do
+    assigns =
+      assign(
+        assigns,
+        :humanized_type,
+        %{
+          api: "API",
+          basic: "Basic"
+        }
+        |> Map.get(assigns.auth_method.auth_type, "")
+      )
+
+    ~H"""
+    <span><%= @humanized_type %></span>
     """
   end
 
@@ -479,6 +618,113 @@ defmodule LightningWeb.WorkflowLive.Components do
         class="panel-content min-h-0 min-w-0 flex-1 pt-2"
       >
         <%= render_slot(@inner_block) %>
+      </div>
+    </div>
+    """
+  end
+
+  attr :auth_methods, :list, required: true
+  attr :current_user, :map, required: true
+  attr :on_row_select, :any, default: nil
+  attr :row_selected?, :any
+  attr :class, :string, default: ""
+  attr :return_to, :string
+  slot :action, doc: "the slot for showing user actions in the last table column"
+  slot :linked_triggers, doc: "the slot for showing the linked triggers modal"
+
+  def webhook_auth_methods_table(assigns) do
+    assigns =
+      assign(assigns,
+        auth_methods:
+          Lightning.Repo.preload(assigns.auth_methods, [:triggers, :project])
+      )
+
+    ~H"""
+    <div class="flow-root">
+      <div class="-mx-4 -my-2 overflow-x-auto sm:-mx-6 lg:-mx-8">
+        <div class="inline-block min-w-full py-2 align-middle sm:px-6 lg:px-8">
+          <table class={["min-w-full border-y border-gray-200 bg-white", @class]}>
+            <thead class="bg-slate-100 border-gray-200 border-y">
+              <tr class="sm:px-6 lg:px-8">
+                <th
+                  :if={@on_row_select}
+                  scope="col"
+                  class="relative px-7 sm:w-12 sm:px-6"
+                >
+                  <span class="sr-only">Select</span>
+                </th>
+                <th
+                  scope="col"
+                  class={[
+                    "min-w-[10rem] py-2.5 text-left text-sm font-normal text-gray-900",
+                    if(!@on_row_select, do: "pl-4")
+                  ]}
+                >
+                  Name
+                </th>
+                <th
+                  scope="col"
+                  class="min-w-[7rem] py-2.5 text-left text-sm font-normal text-gray-900"
+                >
+                  Auth.Type
+                </th>
+                <th
+                  scope="col"
+                  class="min-w-[10rem] py-2.5 text-left text-sm font-normal text-gray-900"
+                >
+                  Linked Triggers
+                </th>
+                <th
+                  scope="col"
+                  class="min-w-[4rem] py-2.5 text-right text-sm font-normal text-gray-900"
+                >
+                </th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200 bg-white">
+              <tr
+                :for={auth_method <- @auth_methods}
+                class="hover:bg-[#F2EEFD] transition-colors duration-200"
+                id={auth_method.id}
+                phx-hook="ShowActionsOnRowHover"
+              >
+                <td :if={@on_row_select} class="relative sm:w-12 sm:px-6">
+                  <input
+                    id={"select_#{auth_method.id}"}
+                    phx-value-selection={to_string(!@row_selected?.(auth_method))}
+                    type="checkbox"
+                    class="absolute left-4 top-1/2 -mt-2 h-4 w-4 rounded border-gray-300 text-[#1992CC] focus:ring-indigo-600"
+                    phx-click={@on_row_select.(auth_method)}
+                    checked={@row_selected?.(auth_method)}
+                  />
+                </td>
+                <td class={[
+                  "whitespace-nowrap py-2.5 text-sm text-gray-900 text-ellipsis overflow-hidden max-w-[15rem] pr-5",
+                  if(!@on_row_select, do: "pl-4")
+                ]}>
+                  <%= auth_method.name %>
+                </td>
+                <td class="whitespace-nowrap text-sm text-gray-900">
+                  <.humanized_auth_method_type auth_method={auth_method} />
+                </td>
+                <td class="whitespace-nowrap text-sm text-gray-900">
+                  <%= render_slot(@linked_triggers, auth_method) %>
+                </td>
+                <td
+                  :if={@action != []}
+                  class="text-right px-4 hover-content font-normal opacity-0 transition-opacity duration-300 whitespace-nowrap"
+                >
+                  <div
+                    :for={action <- @action}
+                    class="flex items-center inline-flex gap-x-2"
+                  >
+                    <%= render_slot(action, auth_method) %>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
     """

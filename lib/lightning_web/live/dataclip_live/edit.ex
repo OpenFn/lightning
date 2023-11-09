@@ -24,7 +24,7 @@ defmodule LightningWeb.DataclipLive.Edit do
   defp apply_action(socket, :edit, %{"id" => id}) do
     socket
     |> assign(:page_title, "Edit Dataclip")
-    |> assign(:dataclip, Invocation.get_dataclip!(id))
+    |> assign(:dataclip, Invocation.get_dataclip_details!(id))
   end
 
   defp apply_action(socket, :new, _params) do

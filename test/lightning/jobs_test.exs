@@ -1,10 +1,12 @@
 defmodule Lightning.JobsTest do
   use Lightning.DataCase, async: true
 
+  alias Lightning.Attempt
+  alias Lightning.Invocation
   alias Lightning.Jobs
   alias Lightning.Repo
-  alias Lightning.Jobs.Job
-  alias Lightning.Jobs.Scheduler
+  alias Lightning.Workflows.Job
+  alias Lightning.Workflows.Scheduler
   alias Lightning.Workflows
 
   import Lightning.Factories
@@ -17,34 +19,46 @@ defmodule Lightning.JobsTest do
       assert Jobs.list_jobs() == [Jobs.get_job!(job.id)]
     end
 
-    test "list_active_cron_jobs/0 returns all active jobs with cron triggers" do
+    test "list_active_cron_jobs/0 returns all jobs with active cron triggers" do
       insert(:job)
 
       workflow = insert(:workflow)
 
-      t =
+      enabled_trigger =
         insert(:trigger,
           workflow: workflow,
           type: :cron,
+          enabled: true,
           cron_expression: "5 0 * 8 *"
         )
 
-      enabled_job = insert(:job, workflow: workflow)
+      job_1 = insert(:job, workflow: workflow)
 
       insert(:edge,
         workflow: workflow,
-        source_trigger_id: t.id,
-        target_job_id: enabled_job.id
+        source_trigger: enabled_trigger,
+        target_job: job_1
       )
 
-      # disabled job
+      # disabled trigger
+      disabled_trigger =
+        insert(:trigger,
+          workflow: workflow,
+          type: :cron,
+          enabled: false,
+          cron_expression: "5 0 * 8 *"
+        )
+
+      job_2 = insert(:job, workflow: workflow)
+
       insert(:edge,
         workflow: workflow,
-        source_trigger_id: t.id,
-        target_job: build(:job, workflow: workflow, enabled: false)
+        source_trigger: disabled_trigger,
+        target_job: job_2
       )
 
-      assert Jobs.list_active_cron_jobs() == [Jobs.get_job!(enabled_job.id)]
+      assert [active_job] = Jobs.list_active_cron_jobs()
+      assert active_job.id == job_1.id
     end
 
     test "get_job!/1 returns the job with given id" do
@@ -309,19 +323,15 @@ defmodule Lightning.JobsTest do
 
       Scheduler.enqueue_cronjobs()
 
-      run = Repo.one(Lightning.Invocation.Run)
+      attempt = Repo.one(Lightning.Attempt)
 
-      assert run.job_id == job.id
+      assert attempt.starting_trigger_id == trigger.id
 
-      run =
-        %Jobs.Job{id: job.id}
-        |> Lightning.Invocation.Query.last_successful_run_for_job()
-        |> Repo.one()
-        |> Repo.preload(:input_dataclip)
-        |> Repo.preload(:output_dataclip)
+      attempt =
+        Repo.preload(attempt, dataclip: Invocation.Query.dataclip_with_body())
 
-      assert run.input_dataclip.type == :global
-      assert run.input_dataclip.body == %{}
+      assert attempt.dataclip.type == :global
+      assert attempt.dataclip.body == %{}
     end
   end
 
@@ -339,41 +349,54 @@ defmodule Lightning.JobsTest do
           workflow: job.workflow
         })
 
-      edge =
-        insert(:edge, %{
-          workflow: job.workflow,
-          source_trigger: trigger,
-          target_job: job
-        })
+      insert(:edge, %{
+        workflow: job.workflow,
+        source_trigger: trigger,
+        target_job: job
+      })
 
-      {:ok, %{attempt_run: attempt_run}} =
-        Lightning.WorkOrderService.multi_for(:cron, edge, insert(:dataclip))
-        |> Repo.transaction()
+      dataclip = insert(:dataclip)
 
-      Lightning.Pipeline.process(attempt_run)
+      attempt =
+        insert(:attempt,
+          work_order:
+            build(:workorder,
+              workflow: job.workflow,
+              dataclip: dataclip,
+              trigger: trigger,
+              state: :success
+            ),
+          starting_trigger: trigger,
+          state: :success,
+          dataclip: dataclip,
+          runs: [
+            build(:run,
+              exit_reason: "success",
+              job: job,
+              input_dataclip: dataclip,
+              output_dataclip:
+                build(:dataclip, type: :run_result, body: %{"changed" => true})
+            )
+          ]
+        )
 
-      old =
-        %Jobs.Job{id: job.id}
-        |> Lightning.Invocation.Query.last_successful_run_for_job()
-        |> Repo.one()
-        |> Repo.preload(:input_dataclip)
-        |> Repo.preload(:output_dataclip)
+      [old_run] = attempt.runs
 
       _result = Scheduler.enqueue_cronjobs()
 
-      new =
-        %Jobs.Job{id: job.id}
-        |> Lightning.Invocation.Query.last_successful_run_for_job()
+      new_attempt =
+        Attempt
+        |> last(:inserted_at)
+        |> preload(dataclip: ^Invocation.Query.dataclip_with_body())
         |> Repo.one()
-        |> Repo.preload(:input_dataclip)
-        |> Repo.preload(:output_dataclip)
 
-      assert old.input_dataclip.type == :http_request
-      assert old.input_dataclip.body == %{}
+      assert attempt.dataclip.type == :http_request
+      assert old_run.input_dataclip.type == :http_request
+      assert old_run.input_dataclip.body == %{}
 
-      assert new.input_dataclip.type == :run_result
-      assert new.input_dataclip.body == old.output_dataclip.body
-      assert new.output_dataclip.body == %{"changed" => true}
+      refute new_attempt.id == attempt.id
+      assert new_attempt.dataclip.type == :run_result
+      assert new_attempt.dataclip.body == old_run.output_dataclip.body
     end
   end
 end

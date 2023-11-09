@@ -2,8 +2,6 @@ defmodule LightningWeb.WorkflowLive.EditorPane do
   use LightningWeb, :live_component
   alias LightningWeb.JobLive.JobBuilderComponents
 
-  # import Phoenix.HTML.Form, only: [input_value: 2]
-
   attr :id, :string, required: true
   attr :disabled, :boolean, default: false
   attr :class, :string, default: ""
@@ -37,12 +35,11 @@ defmodule LightningWeb.WorkflowLive.EditorPane do
       socket
       |> assign(
         adaptor:
-          form
-          |> Phoenix.HTML.Form.input_value(:adaptor)
+          form[:adaptor].value
           |> Lightning.AdaptorRegistry.resolve_adaptor(),
-        source: form |> Phoenix.HTML.Form.input_value(:body),
-        credential: form |> Phoenix.HTML.Form.input_value(:credential),
-        job_id: form |> Phoenix.HTML.Form.input_value(:id)
+        source: form[:body].value,
+        credential: form[:credential].value,
+        job_id: form[:id].value
       )
 
     {:ok, socket |> assign(assigns)}
@@ -77,8 +74,8 @@ defmodule LightningWeb.WorkflowLive.EditorPane do
 
   def handle_event("job_body_changed", %{"source" => source}, socket) do
     params =
-      {Phoenix.HTML.Form.input_name(socket.assigns.form, :body), source}
-      |> Plug.Conn.Query.decode_pair(%{})
+      {socket.assigns.form[:body].name, source}
+      |> LightningWeb.Utils.decode_one()
 
     send(self(), {"form_changed", params})
 

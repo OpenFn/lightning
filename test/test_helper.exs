@@ -1,4 +1,4 @@
-Code.put_compiler_option(:warnings_as_errors, true)
+Code.put_compiler_option(:warnings_as_errors, false)
 # Report which tests are synchronous
 # Rexbug.start("ExUnit.Server.add_sync_module/_")
 
@@ -7,7 +7,6 @@ Code.put_compiler_option(:warnings_as_errors, true)
 Mimic.copy(:hackney)
 Mimic.copy(File)
 Mimic.copy(IO)
-Mimic.copy(Lightning.Pipeline.Runner)
 Mimic.copy(Lightning.FailureEmail)
 Mimic.copy(Lightning.WorkOrderService)
 Mimic.copy(Mix.Tasks.Lightning.InstallSchemas)

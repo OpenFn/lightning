@@ -6,7 +6,8 @@ defmodule Lightning.Invocation.Query do
 
   alias Lightning.Accounts.User
   alias Lightning.Invocation.Run
-  alias Lightning.Jobs.Job
+  alias Lightning.Workflows.Job
+  alias Lightning.Invocation.Dataclip
 
   @doc """
   Runs for a specific user
@@ -36,19 +37,26 @@ defmodule Lightning.Invocation.Query do
   end
 
   @doc """
-  The last run for a job for a particular exit code, used in scheduler
+  The last run for a job for a particular exit reason, used in scheduler
   """
-  @spec runs_with_code(Ecto.Queryable.t(), integer()) :: Ecto.Queryable.t()
-  def runs_with_code(query, exit_code) do
-    from(q in query, where: q.exit_code == ^exit_code)
+  @spec runs_with_reason(Ecto.Queryable.t(), String.t()) :: Ecto.Queryable.t()
+  def runs_with_reason(query, exit_reason) do
+    from(q in query, where: q.exit_reason == ^exit_reason)
   end
 
   @doc """
-  The last run for a job for a particular exit code, used in scheduler
+  The last successful run for a job, used in scheduler to enable downstream attempts
+  to access a previous attempt's state
   """
   @spec last_successful_run_for_job(Job.t()) :: Ecto.Queryable.t()
   def last_successful_run_for_job(%Job{id: id}) do
     last_run_for_job(%Job{id: id})
-    |> runs_with_code(0)
+    |> runs_with_reason("success")
   end
+
+  @doc """
+  By default, the dataclip body is not returned via a query. This query selects
+  the body specifically.
+  """
+  def dataclip_with_body, do: from(d in Dataclip, select: %{d | body: d.body})
 end

@@ -4,9 +4,6 @@ defmodule Lightning.Runtime.Handler do
 
   This module handles the dirty bits, setting up processes and coordinating
   results (and logs) as they arrive.
-
-  Since it is a macro, see `Lightning.Pipeline.Runner.Handler` for a usage
-  example.
   """
   alias Lightning.Runtime.{RunSpec, Result}
 

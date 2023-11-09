@@ -6,12 +6,12 @@ defmodule LightningWeb.RunLive.Index do
 
   import Ecto.Changeset, only: [get_change: 2]
 
-  alias Lightning.Workorders.SearchParams
+  alias Lightning.Invocation
+  alias Lightning.Invocation.Run
   alias Lightning.Policies.Permissions
   alias Lightning.Policies.ProjectUsers
-  alias Lightning.WorkOrderService
-  alias Lightning.{AttemptService, Invocation}
-  alias Lightning.Invocation.Run
+  alias Lightning.WorkOrders
+  alias Lightning.WorkOrders.SearchParams
   alias LightningWeb.RunLive.Components
   alias Phoenix.LiveView.JS
 
@@ -25,17 +25,18 @@ defmodule LightningWeb.RunLive.Index do
     wo_date_after: :utc_datetime,
     wo_date_before: :utc_datetime,
     success: :boolean,
-    failure: :boolean,
-    timeout: :boolean,
-    crash: :boolean,
-    pending: :boolean
+    failed: :boolean,
+    killed: :boolean,
+    crashed: :boolean,
+    pending: :boolean,
+    running: :boolean
   }
 
   on_mount {LightningWeb.Hooks, :project_scope}
 
   @impl true
   def mount(params, _session, socket) do
-    WorkOrderService.subscribe(socket.assigns.project.id)
+    WorkOrders.subscribe(socket.assigns.project.id)
 
     workflows =
       Lightning.Workflows.get_workflows_for(socket.assigns.project)
@@ -51,9 +52,10 @@ defmodule LightningWeb.RunLive.Index do
 
     statuses = [
       %{id: :success, label: "Success", value: true},
-      %{id: :failure, label: "Failure", value: true},
-      %{id: :timeout, label: "Timeout", value: true},
-      %{id: :crash, label: "Crash", value: true},
+      %{id: :failed, label: "Failed", value: true},
+      %{id: :running, label: "Running", value: true},
+      %{id: :killed, label: "Killed", value: true},
+      %{id: :crashed, label: "Crashed", value: true},
       %{id: :pending, label: "Pending", value: true}
     ]
 
@@ -87,20 +89,21 @@ defmodule LightningWeb.RunLive.Index do
 
   defp init_filters(),
     do: %{
+      "workflow_id" => "",
+      "search_term" => "",
       "body" => "true",
-      "crash" => "true",
+      "log" => "true",
       "date_after" =>
         Timex.now() |> Timex.shift(days: -30) |> DateTime.to_string(),
       "date_before" => "",
-      "failure" => "true",
-      "log" => "true",
-      "pending" => "true",
-      "search_term" => "",
-      "success" => "true",
-      "timeout" => "true",
       "wo_date_after" => "",
       "wo_date_before" => "",
-      "workflow_id" => ""
+      "failed" => "true",
+      "crashed" => "true",
+      "killed" => "true",
+      "pending" => "true",
+      "running" => "true",
+      "success" => "true"
     }
 
   @impl true
@@ -172,38 +175,91 @@ defmodule LightningWeb.RunLive.Index do
 
   @impl true
   def handle_info(
-        {_, %Lightning.Workorders.Events.AttemptCreated{attempt: attempt}},
+        %Lightning.WorkOrders.Events.AttemptCreated{attempt: attempt},
         socket
       ) do
-    send_update(LightningWeb.RunLive.WorkOrderComponent,
-      id: attempt.work_order_id
-    )
+    attempt =
+      Lightning.Repo.preload(
+        attempt,
+        [work_order: [:workflow, attempts: [runs: :job]]],
+        force: true
+      )
 
-    {:noreply, socket}
+    {:noreply,
+     assign(socket,
+       page: update_page_workorder(socket.assigns.page, attempt.work_order)
+     )}
   end
 
   @impl true
   def handle_info(
-        {_, %Lightning.Workorders.Events.AttemptUpdated{attempt: attempt}},
+        %Lightning.WorkOrders.Events.AttemptUpdated{attempt: attempt},
         socket
       ) do
-    send_update(LightningWeb.RunLive.WorkOrderComponent,
-      id: attempt.work_order_id
-    )
+    attempt =
+      Lightning.Repo.preload(
+        attempt,
+        [work_order: [:workflow, attempts: [runs: :job]]],
+        force: true
+      )
 
-    {:noreply, socket}
+    {:noreply,
+     assign(socket,
+       page: update_page_workorder(socket.assigns.page, attempt.work_order)
+     )}
   end
 
   @impl true
   def handle_info(
-        {:selection_toggled, {%{id: id, workflow_id: workflow_id}, selected?}},
+        %Lightning.WorkOrders.Events.WorkOrderCreated{work_order: work_order},
         %{assigns: assigns} = socket
       ) do
+    params =
+      assigns.filters
+      |> Map.merge(%{"workorder_id" => work_order.id})
+      |> SearchParams.new()
+
+    page_result = Invocation.search_workorders(assigns.project, params)
+
+    page = %{
+      assigns.page
+      | entries: page_result.entries ++ assigns.page.entries,
+        page_size: assigns.page.page_size + page_result.total_entries,
+        total_entries: assigns.page.total_entries + page_result.total_entries
+    }
+
+    {:noreply, assign(socket, page: page)}
+  end
+
+  @impl true
+  def handle_info(
+        %Lightning.WorkOrders.Events.WorkOrderUpdated{work_order: work_order},
+        socket
+      ) do
+    work_order =
+      Lightning.Repo.preload(work_order, [:workflow, attempts: [runs: :job]],
+        force: true
+      )
+
+    {:noreply,
+     assign(socket, page: update_page_workorder(socket.assigns.page, work_order))}
+  end
+
+  @impl true
+  def handle_info(
+        {:selection_toggled, {workorder, selected?}},
+        %{assigns: assigns} = socket
+      ) do
+    selected_workorder = %Lightning.WorkOrder{
+      id: workorder.id,
+      workflow_id: workorder.workflow_id
+    }
+
     work_orders =
       if selected? do
-        [%{id: id, workflow_id: workflow_id} | assigns.selected_work_orders]
+        [selected_workorder | assigns.selected_work_orders]
       else
-        assigns.selected_work_orders -- [%{id: id, workflow_id: workflow_id}]
+        assigns.selected_work_orders -- [selected_workorder]
       end
 
     {:noreply, assign(socket, selected_work_orders: work_orders)}
@@ -216,9 +272,9 @@ defmodule LightningWeb.RunLive.Index do
         socket
       ) do
     if socket.assigns.can_rerun_job do
-      attempt_id
-      |> AttemptService.get_for_rerun(run_id)
-      |> WorkOrderService.retry_attempt_run(socket.assigns.current_user)
+      Lightning.WorkOrders.retry(attempt_id, run_id,
+        created_by: socket.assigns.current_user
+      )
 
       {:noreply, socket}
     else
@@ -230,8 +286,7 @@ defmodule LightningWeb.RunLive.Index do
 
   def handle_event("bulk-rerun", attrs, socket) do
     with true <- socket.assigns.can_rerun_job,
-         {:ok, %{attempt_runs: {count, _attempt_runs}}} <-
-           handle_bulk_rerun(socket, attrs) do
+         {:ok, count} <- handle_bulk_rerun(socket, attrs) do
       {:noreply,
        socket
        |> put_flash(
@@ -273,7 +328,7 @@ defmodule LightningWeb.RunLive.Index do
     work_orders =
       if selection do
         Enum.map(page.entries, fn entry ->
-          Map.take(entry, [:id, :workflow_id])
+          %Lightning.WorkOrder{id: entry.id, workflow_id: entry.workflow_id}
         end)
       else
         []
@@ -303,38 +358,30 @@ defmodule LightningWeb.RunLive.Index do
 
   defp handle_bulk_rerun(socket, %{"type" => "selected", "job" => job_id}) do
     socket.assigns.selected_work_orders
-    |> workorders_ids()
-    |> AttemptService.list_for_rerun_from_job(job_id)
-    |> WorkOrderService.retry_attempt_runs(socket.assigns.current_user)
+    |> WorkOrders.retry_many(job_id, created_by: socket.assigns.current_user)
   end
 
   defp handle_bulk_rerun(socket, %{"type" => "all", "job" => job_id}) do
     filter = SearchParams.new(socket.assigns.filters)
 
     socket.assigns.project
-    |> Invocation.list_work_orders_for_project_query(filter)
+    |> Invocation.search_workorders_query(filter)
     |> Lightning.Repo.all()
-    |> Enum.map(& &1.id)
-    |> AttemptService.list_for_rerun_from_job(job_id)
-    |> WorkOrderService.retry_attempt_runs(socket.assigns.current_user)
+    |> WorkOrders.retry_many(job_id, created_by: socket.assigns.current_user)
   end
 
   defp handle_bulk_rerun(socket, %{"type" => "selected"}) do
     socket.assigns.selected_work_orders
-    |> workorders_ids()
-    |> AttemptService.list_for_rerun_from_start()
-    |> WorkOrderService.retry_attempt_runs(socket.assigns.current_user)
+    |> WorkOrders.retry_many(created_by: socket.assigns.current_user)
   end
 
   defp handle_bulk_rerun(socket, %{"type" => "all"}) do
     filter = SearchParams.new(socket.assigns.filters)
 
     socket.assigns.project
-    |> Invocation.list_work_orders_for_project_query(filter)
+    |> Invocation.search_workorders_query(filter)
     |> Lightning.Repo.all()
-    |> Enum.map(& &1.id)
-    |> AttemptService.list_for_rerun_from_start()
-    |> WorkOrderService.retry_attempt_runs(socket.assigns.current_user)
+    |> WorkOrders.retry_many(created_by: socket.assigns.current_user)
   end
 
   defp all_selected?(work_orders, entries) do
@@ -344,10 +391,6 @@ defmodule LightningWeb.RunLive.Index do
   defp partially_selected?(work_orders, entries) do
     entries != [] && !none_selected?(work_orders) &&
       !all_selected?(work_orders, entries)
-  end
-
-  defp workorders_ids(selected_orders) do
-    Enum.map(selected_orders, fn workorder -> workorder.id end)
   end
 
   defp none_selected?(selected_orders) do
@@ -377,5 +420,18 @@ defmodule LightningWeb.RunLive.Index do
 
   defp maybe_humanize_date(date) do
     date && Timex.format!(date, "{D}/{M}/{YY}")
+  end
+
+  defp update_page_workorder(page, workorder) do
+    entries =
+      Enum.reduce(page.entries, [], fn entry, acc ->
+        if entry.id == workorder.id do
+          [workorder | acc]
+        else
+          [entry | acc]
+        end
+      end)
+
+    %{page | entries: Enum.reverse(entries)}
   end
 end

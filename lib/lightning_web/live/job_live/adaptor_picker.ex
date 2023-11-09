@@ -138,15 +138,14 @@ defmodule LightningWeb.JobLive.AdaptorPicker do
         socket
       ) do
     params =
-      build_params_for_field(socket.assigns.form, :adaptor, "#{value}@latest")
+      LightningWeb.Utils.build_params_for_field(
+        socket.assigns.form,
+        :adaptor,
+        "#{value}@latest"
+      )
 
     socket.assigns.on_change.(params)
 
     {:noreply, socket}
-  end
-
-  defp build_params_for_field(form, field, value) do
-    name = Phoenix.HTML.Form.input_name(form, field)
-    Plug.Conn.Query.decode_pair({name, value}, %{})
   end
 end

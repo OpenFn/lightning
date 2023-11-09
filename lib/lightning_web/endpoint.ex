@@ -1,7 +1,8 @@
 defmodule LightningWeb.Endpoint do
   use Sentry.PlugCapture
-
   use Phoenix.Endpoint, otp_app: :lightning
+
+  alias LightningWeb.Plugs
 
   # The session will be stored in the cookie and signed,
   # this means its contents can be read but not tampered with.
@@ -14,6 +15,10 @@ defmodule LightningWeb.Endpoint do
 
   socket "/live", Phoenix.LiveView.Socket,
     websocket: [connect_info: [session: @session_options]]
+
+  socket "/worker", LightningWeb.WorkerSocket,
+    websocket: [error_handler: {LightningWeb.WorkerSocket, :handle_error, []}],
+    longpoll: false
 
   # Serve at "/" the static files from "priv/static" directory.
   #
@@ -39,8 +44,14 @@ defmodule LightningWeb.Endpoint do
     cookie_key: "request_logger"
 
   plug Plug.RequestId
-  plug PromEx.Plug, prom_ex_module: Lightning.PromEx
+
+  plug Unplug,
+    if: {LightningWeb.PromExPlugAuthorization, nil},
+    do: {PromEx.Plug, prom_ex_module: Lightning.PromEx}
+
   plug Plug.Telemetry, event_prefix: [:phoenix, :endpoint]
+
+  plug Plugs.WebhookAuth
 
   plug Plug.Parsers,
     parsers: [:urlencoded, :multipart, :json],

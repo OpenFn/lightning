@@ -39,7 +39,7 @@ defmodule Lightning.Invocation.Dataclip do
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id
   schema "dataclips" do
-    field :body, :map
+    field :body, :map, load_in_query: false
     field :type, Ecto.Enum, values: @source_types
     belongs_to :project, Project
 
@@ -49,7 +49,7 @@ defmodule Lightning.Invocation.Dataclip do
   end
 
   def new(attrs \\ %{}) do
-    change(%__MODULE__{}, %{id: Ecto.UUID.generate()})
+    change(%__MODULE__{id: Ecto.UUID.generate()}, attrs)
     |> change(attrs)
     |> validate()
   end

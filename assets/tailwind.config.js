@@ -1,8 +1,8 @@
 // See the Tailwind configuration guide for advanced usage
 // https://tailwindcss.com/docs/configuration
 const plugin = require('tailwindcss/plugin');
-const fs = require('fs');
-const path = require('path');
+const fs = require('node:fs');
+const path = require('node:path');
 const defaultTheme = require('tailwindcss/defaultTheme');
 const colors = require('tailwindcss/colors');
 
@@ -16,6 +16,16 @@ module.exports = {
     '../deps/petal_components/**/*.*ex',
   ],
   theme: {
+    minWidth: {
+      '0': '0',
+      '1/4': '25%',
+      '1/3': '33%',
+      '1/2': '50%',
+      '3/4': '75%',
+      'full': '100%',
+      'min': 'min-content',
+      'max': 'max-content'
+    },
     extend: {
       colors: {
         primary: colors.indigo,
@@ -83,7 +93,7 @@ module.exports = {
     // Embeds Heroicons (https://heroicons.com) into your app.css bundle
     // See your `CoreComponents.icon/1` for more information.
     //
-    plugin(function ({ matchComponents, theme }) {
+    plugin(function({ matchComponents, theme }) {
       let iconsDir = path.join(__dirname, './vendor/heroicons/optimized');
       let values = {};
       let icons = [

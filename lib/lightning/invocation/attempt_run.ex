@@ -20,21 +20,13 @@ defmodule Lightning.AttemptRun do
     belongs_to :attempt, Attempt
     belongs_to :run, Run
 
-    timestamps(type: :utc_datetime_usec)
+    timestamps type: :utc_datetime_usec, updated_at: false
   end
 
   def new(attrs \\ %{}) do
-    change(%__MODULE__{}, %{id: Ecto.UUID.generate()} |> Map.merge(attrs))
+    change(%__MODULE__{id: Ecto.UUID.generate()}, attrs)
     |> validate()
   end
-
-  # make a changeset,
-  # then use the internal style function like put_change, put_assoc,
-  # and validate it when you need
-
-  # or
-
-  # make a changeset with _cast_ and do your validation right then
 
   @spec new(
           attempt :: Attempt.t() | Ecto.Changeset.t(Attempt.t()),

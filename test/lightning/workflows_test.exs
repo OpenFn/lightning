@@ -91,28 +91,19 @@ defmodule Lightning.WorkflowsTest do
     end
   end
 
-  describe "workflows and edges" do
-    test "get_edge_by_webhook/1 returns the job for a path" do
-      workflow = insert(:workflow)
-      job = insert(:job, workflow: workflow)
-      trigger = insert(:trigger, workflow: workflow)
+  describe "finders" do
+    test "get_webhook_trigger/1 returns the trigger for a path" do
+      %{triggers: [trigger]} =
+        insert(:simple_workflow) |> Repo.preload(:triggers)
 
-      edge =
-        insert(:edge,
-          workflow: workflow,
-          source_trigger: trigger,
-          target_job: job,
-          condition: :always
-        )
-
-      assert Workflows.get_edge_by_webhook(trigger.id).id == edge.id
+      assert Workflows.get_webhook_trigger(trigger.id).id == trigger.id
 
       Ecto.Changeset.change(trigger, custom_path: "foo")
       |> Lightning.Repo.update!()
 
-      assert Workflows.get_edge_by_webhook(trigger.id) == nil
+      assert Workflows.get_webhook_trigger(trigger.id) == nil
 
-      assert Workflows.get_edge_by_webhook("foo").id == edge.id
+      assert Workflows.get_webhook_trigger("foo").id == trigger.id
     end
 
     test "get_jobs_for_cron_execution/0 returns jobs to run for a given time" do
@@ -220,7 +211,7 @@ defmodule Lightning.WorkflowsTest do
       assert {:ok, workflow} =
                Lightning.Workflows.update_workflow(workflow, valid_attrs)
 
-      assert Repo.get_by(Lightning.Jobs.Job,
+      assert Repo.get_by(Lightning.Workflows.Job,
                id: job_id,
                name: "some-job-renamed"
              )
@@ -241,6 +232,51 @@ defmodule Lightning.WorkflowsTest do
       assert workflow.edges |> Enum.empty?()
 
       refute Repo.get(Lightning.Workflows.Edge, edge.id)
+    end
+  end
+
+  describe "get_trigger_by_webhook/1" do
+    test "returns a trigger when a matching custom_path is provided" do
+      trigger = insert(:trigger, custom_path: "some_path")
+
+      assert trigger |> unload_relation(:workflow) ==
+               Workflows.get_trigger_by_webhook("some_path")
+    end
+
+    test "returns a trigger when a matching id is provided" do
+      trigger = insert(:trigger)
+
+      assert trigger |> unload_relation(:workflow) ==
+               Workflows.get_trigger_by_webhook(trigger.id)
+    end
+
+    test "returns nil when no matching trigger is found" do
+      insert(:trigger, custom_path: "some_path")
+      assert Workflows.get_trigger_by_webhook("non_existent_path") == nil
+    end
+  end
+
+  describe "get_edge_by_trigger/1" do
+    test "returns an edge when associated trigger is provided" do
+      workflow = insert(:workflow)
+      trigger = insert(:trigger, workflow: workflow)
+      job = insert(:job, workflow: workflow)
+
+      edge =
+        insert(:edge,
+          workflow: workflow,
+          source_trigger_id: trigger.id,
+          target_job_id: job.id
+        )
+
+      assert edge |> unload_relation(:workflow) ==
+               Workflows.get_edge_by_trigger(trigger)
+               |> unload_relations([:target_job, :source_trigger])
+    end
+
+    test "returns nil when no associated edge is found" do
+      trigger = insert(:trigger)
+      assert Workflows.get_edge_by_trigger(trigger) == nil
     end
   end
 

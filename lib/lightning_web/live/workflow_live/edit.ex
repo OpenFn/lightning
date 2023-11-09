@@ -2,15 +2,18 @@ defmodule LightningWeb.WorkflowLive.Edit do
   @moduledoc false
   use LightningWeb, :live_view
 
-  alias Lightning.Policies.ProjectUsers
   alias Lightning.Policies.Permissions
-  alias Lightning.Workflows
-  alias Lightning.Workflows.Workflow
-  alias Lightning.Jobs.Job
-  alias LightningWeb.Components.Form
-  alias LightningWeb.WorkflowNewLive.WorkflowParams
-  alias LightningWeb.WorkflowLive.Helpers
+  alias Lightning.Policies.ProjectUsers
+
   alias Lightning.WorkOrders
+
+  alias Lightning.Workflows
+  alias Lightning.Workflows.Job
+  alias Lightning.Workflows.Trigger
+  alias Lightning.Workflows.Workflow
+  alias LightningWeb.Components.Form
+  alias LightningWeb.WorkflowLive.Helpers
+  alias LightningWeb.WorkflowNewLive.WorkflowParams
 
   import LightningWeb.Components.NewInputs
   import LightningWeb.WorkflowLive.Components
@@ -81,7 +84,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
               current_user={@current_user}
               project={@project}
               socket={@socket}
-              follow_run_id={@follow_run_id}
+              follow_attempt_id={@follow_attempt_id}
               close_url={
                 "#{@base_url}?s=#{@selected_job.id}"
               }
@@ -165,7 +168,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
           >
             <.panel
               title={
-                Phoenix.HTML.Form.input_value(jf, :name)
+                jf[:name].value
                 |> then(fn
                   "" -> "Untitled Job"
                   name -> name
@@ -199,8 +202,9 @@ defmodule LightningWeb.WorkflowLive.Edit do
                         class="focus:ring-red-500 bg-red-600 hover:bg-red-700 disabled:bg-red-300"
                         disabled={!@can_edit_job or has_child_edges or is_first_job}
                         tooltip="You can't delete the first job of a workflow"
+                        data-confirm="Are you sure you want to delete this Job?"
                       >
-                        Delete
+                        Delete Job
                       </.button>
                     </label>
                   </div>
@@ -235,6 +239,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
                   on_change={&send_form_changed/1}
                   disabled={!@can_edit_job}
                   webhook_url={webhook_url(@selected_trigger)}
+                  selected_trigger={@selected_trigger}
+                  action={@live_action}
                   cancel_url={
                     ~p"/projects/#{@project.id}/w/#{@workflow.id || "new"}"
                   }
@@ -263,6 +269,22 @@ defmodule LightningWeb.WorkflowLive.Edit do
             </.panel>
           </.single_inputs_for>
         </.form>
+
+        <.live_component
+          :if={
+            @live_action == :edit && @can_create_webhook_auth_method &&
+              @selected_trigger
+          }
+          module={LightningWeb.WorkflowLive.WebhookAuthMethodModalComponent}
+          id="webhooks_auth_method_modal"
+          action={:new}
+          trigger={@selected_trigger}
+          project={@project}
+          current_user={@current_user}
+          return_to={
+            ~p"/projects/#{@project.id}/w/#{@workflow.id}?#{%{s: @selected_trigger.id}}"
+          }
+        />
       </div>
     </LayoutComponents.page_content>
     """
@@ -304,20 +326,22 @@ defmodule LightningWeb.WorkflowLive.Edit do
   end
 
   defp single_inputs_for(form, field, id) do
-    form
-    |> Phoenix.HTML.Form.inputs_for(field)
+    %Phoenix.HTML.FormField{field: field_name, form: parent_form} = form[field]
+
+    parent_form.impl.to_form(parent_form.source, parent_form, field_name, [])
     |> Enum.find(&(Ecto.Changeset.get_field(&1.source, :id) == id))
   end
 
   defp single_inputs_for(%{field: :jobs} = assigns) do
-    form = assigns[:form]
+    %{form: form, field: field} = assigns
 
     has_child_edges = form.source |> has_child_edges?(assigns[:id])
     is_first_job = form.source |> is_first_job?(assigns[:id])
 
+    %Phoenix.HTML.FormField{field: field_name, form: parent_form} = form[field]
+
     forms =
-      form
-      |> Phoenix.HTML.Form.inputs_for(assigns[:field])
+      parent_form.impl.to_form(parent_form.source, parent_form, field_name, [])
       |> Enum.filter(&(Ecto.Changeset.get_field(&1.source, :id) == assigns[:id]))
 
     assigns =
@@ -336,11 +360,12 @@ defmodule LightningWeb.WorkflowLive.Edit do
   end
 
   defp single_inputs_for(assigns) do
-    form = assigns[:form]
+    %{form: form, field: field} = assigns
+
+    %Phoenix.HTML.FormField{field: field_name, form: parent_form} = form[field]
 
     forms =
-      form
-      |> Phoenix.HTML.Form.inputs_for(assigns[:field])
+      parent_form.impl.to_form(parent_form.source, parent_form, field_name, [])
       |> Enum.filter(&(Ecto.Changeset.get_field(&1.source, :id) == assigns[:id]))
 
     assigns = assigns |> assign(forms: forms)
@@ -379,6 +404,20 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
     socket
     |> assign(
+      can_create_webhook_auth_method:
+        Permissions.can?(
+          ProjectUsers,
+          :create_webhook_auth_method,
+          current_user,
+          project_user
+        ),
+      can_edit_webhook_auth_method:
+        Permissions.can?(
+          ProjectUsers,
+          :edit_webhook_auth_method,
+          current_user,
+          project_user
+        ),
       can_edit_job:
         Permissions.can?(ProjectUsers, :edit_job, current_user, project_user),
       can_run_job:
@@ -394,14 +433,14 @@ defmodule LightningWeb.WorkflowLive.Edit do
      |> assign(
        active_menu_item: :overview,
        expanded_job: nil,
-       follow_run_id: nil,
+       follow_attempt_id: nil,
        manual_run_form: nil,
        page_title: "",
        selected_edge: nil,
        selected_job: nil,
        selected_trigger: nil,
        selection_mode: nil,
-       selection_params: %{"s" => nil, "m" => nil},
+       query_params: %{"s" => nil, "m" => nil, "a" => nil},
        workflow: nil,
        workflow_params: %{}
      )}
@@ -411,7 +450,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
   def handle_params(params, _url, socket) do
     {:noreply,
      apply_action(socket, socket.assigns.live_action, params)
-     |> apply_selection_params(params)
+     |> apply_query_params(params)
      |> maybe_show_manual_run()}
   end
 
@@ -439,8 +478,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
         workflow =
           Workflows.get_workflow(workflow_id)
           |> Lightning.Repo.preload([
-            :triggers,
             :edges,
+            triggers: Trigger.with_auth_methods_query(),
             jobs: [:credential]
           ])
 
@@ -561,7 +600,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
     # the changeset/validation.
     patches = WorkflowParams.to_patches(params, socket.assigns.workflow_params)
 
-    {:reply, %{patches: patches}, socket |> apply_selection_params()}
+    {:reply, %{patches: patches}, socket |> apply_query_params()}
   end
 
   def handle_event("copied_to_clipboard", _, socket) do
@@ -572,13 +611,12 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
   def handle_event("manual_run_change", %{"manual" => params}, socket) do
     changeset =
-      WorkOrders.Manual.changeset(
-        %{
-          project: socket.assigns.project,
-          job: socket.assigns.selected_job,
-          user: socket.assigns.current_user
-        },
-        params
+      WorkOrders.Manual.new(
+        params,
+        project: socket.assigns.project,
+        workflow: socket.assigns.workflow,
+        job: socket.assigns.selected_job,
+        created_by: socket.assigns.current_user
       )
       |> Map.put(:action, :validate)
 
@@ -588,6 +626,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
   def handle_event("manual_run_submit", %{"manual" => params}, socket) do
     %{
       project: project,
+      workflow: workflow,
       selected_job: selected_job,
       current_user: current_user,
       workflow_params: workflow_params,
@@ -600,24 +639,25 @@ defmodule LightningWeb.WorkflowLive.Edit do
     if can_run_job && can_edit_job do
       Helpers.save_and_run(
         socket.assigns.changeset,
-        WorkOrders.Manual.changeset(
-          %{
-            project: project,
-            job: selected_job,
-            user: current_user
-          },
-          params
+        WorkOrders.Manual.new(
+          params,
+          workflow: workflow,
+          project: project,
+          job: selected_job,
+          created_by: current_user
         )
       )
     else
       {:error, :unauthorized}
     end
     |> case do
-      {:ok, %{attempt_run: attempt_run, workflow: workflow}} ->
+      {:ok, %{workorder: workorder, workflow: workflow}} ->
+        %{attempts: [attempt]} = workorder
+
         {:noreply,
          socket
-         |> assign(follow_run_id: attempt_run.run_id)
-         |> assign_workflow(workflow)}
+         |> assign_workflow(workflow)
+         |> follow_attempt(attempt)}
 
       {:error, %Ecto.Changeset{data: %WorkOrders.Manual{}} = changeset} ->
         {:noreply,
@@ -645,10 +685,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
     {:noreply, handle_new_params(socket, params)}
   end
 
-  def handle_info({:follow_run, attempt_run}, socket) do
-    {:noreply, socket |> assign(follow_run_id: attempt_run.run_id)}
-  end
-
   defp maybe_show_manual_run(socket) do
     case socket.assigns do
       %{selected_job: nil} ->
@@ -660,17 +696,16 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
       %{selected_job: job, selection_mode: "expand"} when not is_nil(job) ->
         changeset =
-          WorkOrders.Manual.changeset(
-            %{
-              project: socket.assigns.project,
-              job: socket.assigns.selected_job,
-              user: socket.assigns.current_user
-            },
-            %{}
+          WorkOrders.Manual.new(
+            %{},
+            project: socket.assigns.project,
+            workflow: socket.assigns.workflow,
+            job: socket.assigns.selected_job,
+            user: socket.assigns.current_user
           )
 
         selectable_dataclips =
-          Lightning.Invocation.list_dataclips_for_job(%Lightning.Jobs.Job{
+          Lightning.Invocation.list_dataclips_for_job(%Lightning.Workflows.Job{
             id: job.id
           })
 
@@ -706,7 +741,10 @@ defmodule LightningWeb.WorkflowLive.Edit do
   end
 
   defp editor_is_empty(form, job) do
-    single_inputs_for(form, :jobs, job.id)
+    %Phoenix.HTML.FormField{field: field_name, form: parent_form} = form[:jobs]
+
+    parent_form.impl.to_form(parent_form.source, parent_form, field_name, [])
+    |> Enum.find(fn f -> Ecto.Changeset.get_field(f.source, :id) == job.id end)
     |> Map.get(:source)
     |> Map.get(:errors)
     |> Keyword.has_key?(:body)
@@ -782,17 +820,19 @@ defmodule LightningWeb.WorkflowLive.Edit do
     socket |> assign_changeset(changeset)
   end
 
-  defp apply_selection_params(socket, params) do
+  defp apply_query_params(socket, params) do
     socket
     |> assign(
-      selection_params:
-        params |> Map.take(["s", "m"]) |> Enum.into(%{"s" => nil, "m" => nil})
+      query_params:
+        params
+        |> Map.take(["s", "m", "a"])
+        |> Enum.into(%{"s" => nil, "m" => nil, "a" => nil})
     )
-    |> apply_selection_params()
+    |> apply_query_params()
   end
 
-  defp apply_selection_params(socket) do
-    socket.assigns.selection_params
+  defp apply_query_params(socket) do
+    socket.assigns.query_params
     |> case do
       # Nothing is selected
       %{"s" => nil} ->
@@ -802,13 +842,14 @@ defmodule LightningWeb.WorkflowLive.Edit do
       %{"s" => selected_id, "m" => mode} ->
         case find_item_in_changeset(socket.assigns.changeset, selected_id) do
           [type, selected] ->
-            socket |> select_node({type, selected}, mode)
+            socket
+            |> set_selected_node(type, selected, mode)
 
           nil ->
             socket |> unselect_all()
         end
     end
-    |> maybe_unfollow_run()
+    |> maybe_follow_attempt(socket.assigns.query_params)
   end
 
   defp assign_changeset(socket, changeset) do
@@ -864,7 +905,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
     |> assign(selection_mode: nil)
   end
 
-  defp select_node(socket, {type, value}, selection_mode) do
+  defp set_selected_node(socket, type, value, selection_mode) do
     case type do
       :jobs ->
         socket
@@ -881,11 +922,23 @@ defmodule LightningWeb.WorkflowLive.Edit do
     |> assign(selection_mode: selection_mode)
   end
 
-  defp maybe_unfollow_run(socket) do
-    if changed?(socket, :selected_job) do
-      socket |> assign(follow_run_id: nil)
-    else
-      socket
+  defp follow_attempt(socket, attempt) do
+    %{query_params: query_params, project: project, workflow: workflow} =
+      socket.assigns
+
+    params = query_params |> Map.put("a", attempt.id) |> Enum.into([])
+
+    socket
+    |> push_patch(to: ~p"/projects/#{project}/w/#{workflow}?#{params}")
+  end
+
+  defp maybe_follow_attempt(socket, query_params) do
+    case query_params do
+      %{"a" => attempt_id} when is_binary(attempt_id) ->
+        socket |> assign(follow_attempt_id: attempt_id)
+
+      _ ->
+        socket |> assign(follow_attempt_id: nil)
     end
   end
 
@@ -902,6 +955,10 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
         %Job{} = job ->
           {:halt, [field, job |> Lightning.Repo.preload(:credential)]}
+
+        %Trigger{} = trigger ->
+          {:halt,
+           [field, Lightning.Repo.preload(trigger, :webhook_auth_methods)]}
 
         item ->
           {:halt, [field, item]}

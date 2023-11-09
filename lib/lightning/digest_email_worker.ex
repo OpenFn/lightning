@@ -1,11 +1,16 @@
 defmodule Lightning.DigestEmailWorker do
   @moduledoc false
 
+  alias Lightning.Accounts.UserNotifier
   alias Lightning.Projects
   alias Lightning.Projects.Project
-  alias Lightning.Accounts.UserNotifier
   alias Lightning.Projects.ProjectUser
-  alias Lightning.{Workflows, Repo}
+
+  alias Lightning.Repo
+
+  alias Lightning.WorkOrders.SearchParams
+
+  alias Lightning.Workflows
 
   import Ecto.Query, warn: false
 
@@ -100,10 +105,10 @@ defmodule Lightning.DigestEmailWorker do
 
     failed_workorders =
       search_workorders(project, %{
-        "crash" => true,
-        "failure" => true,
-        "timeout" => true,
+        "crashed" => true,
+        "failed" => true,
         "pending" => true,
+        "killed" => true,
         "date_after" => start_date,
         "date_before" => end_date,
         "workflow_id" => workflow.id
@@ -117,7 +122,7 @@ defmodule Lightning.DigestEmailWorker do
   end
 
   defp search_workorders(project, params) do
-    search_params = Lightning.Workorders.SearchParams.new(params)
+    search_params = SearchParams.new(params)
 
     Lightning.Invocation.search_workorders(
       project,

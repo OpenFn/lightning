@@ -1,4 +1,4 @@
-defmodule Lightning.Workorders.SearchParams do
+defmodule Lightning.WorkOrders.SearchParams do
   @moduledoc """
   This module is used to parse search parameters for workorders and provide
   a query to the database.
@@ -9,12 +9,10 @@ defmodule Lightning.Workorders.SearchParams do
   use Ecto.Schema
   import Ecto.Changeset
 
-  alias Lightning.Workorders.SearchParams
-
-  @statuses ~w(success failure pending timeout crash)
+  @statuses ~w(success failed pending killed crashed running)
   @search_fields ~w(body log)
 
-  @type t :: %SearchParams{
+  @type t :: %__MODULE__{
           status: [String.t()],
           search_fields: [String.t()],
           search_term: String.t(),
@@ -31,6 +29,7 @@ defmodule Lightning.Workorders.SearchParams do
     field(:search_fields, {:array, :string}, default: @search_fields)
     field(:search_term, :string)
     field(:workflow_id, :binary_id)
+    field(:workorder_id, :binary_id)
     field(:date_after, :utc_datetime_usec)
     field(:date_before, :utc_datetime_usec)
     field(:wo_date_after, :utc_datetime_usec)
@@ -40,11 +39,13 @@ defmodule Lightning.Workorders.SearchParams do
   def new(params) do
     params = from_uri(params)
 
-    Ecto.Changeset.cast(%__MODULE__{}, params, [
+    %__MODULE__{}
+    |> cast(params, [
       :status,
       :search_fields,
       :search_term,
       :workflow_id,
+      :workorder_id,
       :date_after,
       :date_before,
       :wo_date_after,

@@ -1,0 +1,41 @@
+#!/bin/bash
+
+print_string_char_by_char() {
+  local string="$1"
+  local interval="$2"
+
+  for ((i=0; i<${#string}; i++)); do
+    echo -n "${string:$i:1}"
+    sleep "$interval"
+  done
+  echo
+}
+
+
+# Function to perform cleanup on SIGTERM
+cleanup_time="$3"
+cleanup() {
+  echo "Received SIGTERM signal. Performing cleanup..."
+  # Add your cleanup code here, if necessary
+  sleep "$cleanup_time"
+  exit 0
+}
+
+# Trap the SIGTERM signal and call the cleanup function
+trap 'cleanup' SIGTERM
+
+# Check if the string and interval arguments are provided
+if [ "$#" -ne 3 ]; then
+  echo "Usage: $0 <string_to_print> <interval_in_seconds> <cleanup_time_in_seconds>"
+  exit 1
+fi
+
+string_to_print="$1"
+interval="$2"
+
+# Run your application logic here
+
+while true; do
+  # Print the string character by character with the specified interval
+  print_string_char_by_char "$string_to_print" "$interval"
+done

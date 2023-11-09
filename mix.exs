@@ -4,7 +4,7 @@ defmodule Lightning.MixProject do
   def project do
     [
       app: :lightning,
-      version: "0.9.3",
+      version: "0.10.0-pre4",
       elixir: "~> 1.15",
       elixirc_paths: elixirc_paths(Mix.env()),
       elixirc_options: [
@@ -58,9 +58,9 @@ defmodule Lightning.MixProject do
       {:bypass, "~> 2.1"},
       {:cachex, "~> 3.4"},
       {:cloak_ecto, "~> 1.2.0"},
-      {:credo, "~> 1.6", only: [:test, :dev], runtime: false},
+      {:credo, "~> 1.7.1", only: [:test, :dev]},
       {:crontab, "~> 1.1"},
-      {:dialyxir, "~> 1.3", only: [:test, :dev], runtime: false},
+      {:dialyxir, "~> 1.4.2", only: [:test, :dev], runtime: false},
       {:ecto_enum, "~> 1.4"},
       {:ecto_psql_extras, "~> 0.7.14"},
       {:ecto_sql, "~> 3.6"},
@@ -77,11 +77,12 @@ defmodule Lightning.MixProject do
       {:httpoison, "~> 1.8"},
       {:jason, "~> 1.2"},
       {:joken, "~> 2.6.0"},
-      {:jsonpatch, "~> 1.0.1"},
+      {:jsonpatch, "~> 1.0.2"},
       {:junit_formatter, "~> 3.0", only: [:test]},
       {:libcluster, "~> 3.3"},
       {:mimic, "~> 1.7.2", only: :test},
       {:mix_test_watch, "~> 1.0", only: [:test, :dev], runtime: false},
+      {:mox, "~> 1.0.2", only: :test},
       {:oauth2, "~> 2.1"},
       {:oban, "~> 2.13"},
       {:opentelemetry_exporter, "~> 1.6.0"},
@@ -99,7 +100,7 @@ defmodule Lightning.MixProject do
       {:phoenix_html, "~> 3.3"},
       {:phoenix_live_dashboard, "~> 0.8"},
       {:phoenix_live_reload, "~> 1.2", only: :dev},
-      {:phoenix_live_view, "~> 0.20.0"},
+      {:phoenix_live_view, "~> 0.20.1"},
       {:phoenix_storybook, "~> 0.5.2"},
       {:plug_cowboy, "~> 2.5"},
       {:postgrex, ">= 0.0.0"},
@@ -116,9 +117,11 @@ defmodule Lightning.MixProject do
       {:temp, "~> 0.4"},
       {:tesla, "~> 1.4"},
       {:timex, "~> 3.7"},
+      {:unplug, "~> 1.0"},
       {:phoenix_swoosh, "~> 1.0"},
       {:hammer_backend_mnesia, "~> 0.6"},
       {:hammer, "~> 6.0"},
+      {:vapor, "~> 0.10.0"},
       # MFA
       {:nimble_totp, "~> 1.0"},
       {:eqrcode, "~> 0.1"}
@@ -172,6 +175,7 @@ defmodule Lightning.MixProject do
           title: "Benchmarking",
           filename: "benchmarking.md"
         ],
+        "WORKERS.md": [title: "Workers"],
         "PROVISIONING.md": [title: "Provisioning"],
         "CHANGELOG.md": [title: "Changelog"]
       ],
@@ -180,6 +184,12 @@ defmodule Lightning.MixProject do
       groups_for_modules: [
         Accounts: [
           ~r/Lightning.Accounts/
+        ],
+        Attempts: [
+          ~r/Lightning.Attempts/
+        ],
+        WorkOrders: [
+          ~r/Lightning.WorkOrders/
         ],
         Credentials: [
           ~r/Lightning.Credentials/
@@ -198,6 +208,14 @@ defmodule Lightning.MixProject do
         ],
         Runtime: [
           ~r/Lightning.Runtime/
+        ],
+        Workflows: [
+          ~r/Lightning.Workflow/
+        ],
+        Other: [
+          ~r/Lightning.Graph/,
+          ~r/Lightning.LogMessage/,
+          ~r/Lightning.UnixDateTime/
         ]
       ]
     ]

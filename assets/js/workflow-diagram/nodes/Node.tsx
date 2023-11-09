@@ -8,7 +8,8 @@ type NodeData = any;
 
 type BaseNodeProps = NodeProps<NodeData> & {
   shape?: 'circle' | 'rect';
-  icon?: string;
+  primaryIcon?: any;
+  secondaryIcon?: any;
   label?: string;
   sublabel?: string;
   toolbar?: any;
@@ -89,7 +90,8 @@ const Node = ({
   shape,
   label, // main label which appears to the right
   sublabel, // A smaller label to the right
-  icon, // displayed inside the SVG shape
+  primaryIcon, // displayed inside the SVG shape
+  secondaryIcon,
 
   errors,
 }: BaseNodeProps) => {
@@ -124,7 +126,7 @@ const Node = ({
               styles={style}
             />
           </svg>
-          {icon && (
+          {primaryIcon && (
             <div
               style={{
                 position: 'absolute',
@@ -136,7 +138,7 @@ const Node = ({
                 ...nodeLabelStyles(selected),
               }}
             >
-              {typeof icon === 'string' ? (
+              {typeof primaryIcon === 'string' ? (
                 <div
                   className="font-bold"
                   style={{
@@ -145,10 +147,37 @@ const Node = ({
                     whiteSpace: 'nowrap',
                   }}
                 >
-                  {icon}
+                  {primaryIcon}
                 </div>
               ) : (
-                icon
+                primaryIcon
+              )}
+            </div>
+          )}
+          {secondaryIcon && (
+            <div
+              style={{
+                position: 'absolute',
+                left: '2%', // You can adjust these values for precise positioning
+                top: '2%',
+                height: `${0.3 * height}px`, // Adjusting size for secondary icon
+                width: `${0.3 * width}px`,
+                ...nodeLabelStyles(selected),
+              }}
+            >
+              {typeof secondaryIcon === 'string' ? (
+                <div
+                  className="font-bold"
+                  style={{
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  {secondaryIcon}
+                </div>
+              ) : (
+                secondaryIcon
               )}
             </div>
           )}

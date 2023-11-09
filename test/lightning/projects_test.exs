@@ -215,27 +215,46 @@ defmodule Lightning.ProjectsTest do
 
       p1_user = Lightning.Accounts.get_user!(p1_pu.user_id)
 
-      {:ok, p1_work_order} =
-        Lightning.WorkOrderService.multi_for(
-          :webhook,
-          e1,
-          ~s[{"foo": "bar"}] |> Jason.decode!()
-        )
-        |> Repo.transaction()
+      p1_dataclip = insert(:dataclip, body: %{foo: "bar"}, project: p1)
 
-      Oban.Testing.with_testing_mode(:inline, fn ->
-        Lightning.WorkOrderService.retry_attempt_run(
-          p1_work_order.attempt_run,
-          p1_user
-        )
-      end)
-
-      Lightning.WorkOrderService.multi_for(
-        :webhook,
-        e2,
-        ~s[{"foo": "bar"}] |> Jason.decode!()
+      insert(:workorder,
+        trigger: t1,
+        dataclip: p1_dataclip,
+        workflow: w1,
+        attempts: [
+          build(:attempt,
+            starting_trigger: e1.source_trigger,
+            dataclip: p1_dataclip,
+            runs: [
+              build(:run, input_dataclip: p1_dataclip, job: e1.target_job)
+            ]
+          ),
+          build(:attempt,
+            starting_trigger: e1.source_trigger,
+            dataclip: p1_dataclip,
+            created_by: p1_user,
+            runs: [
+              build(:run, input_dataclip: p1_dataclip, job: e1.target_job)
+            ]
+          )
+        ]
       )
-      |> Repo.transaction()
+
+      p2_dataclip = insert(:dataclip, body: %{foo: "bar"}, project: p2)
+
+      insert(:workorder,
+        trigger: t2,
+        workflow: w2,
+        dataclip: p2_dataclip,
+        attempts:
+          build_list(1, :attempt,
+            starting_trigger: e2.source_trigger,
+            dataclip: p2_dataclip,
+            runs: [
+              build(:run, input_dataclip: p2_dataclip, job: e2.target_job)
+            ]
+          )
+      )
 
       runs_query = Lightning.Projects.project_runs_query(p1)
 
@@ -245,13 +264,6 @@ defmodule Lightning.ProjectsTest do
 
       attempt_run_query = Lightning.Projects.project_attempt_run_query(p1)
 
-      trigger_ir_query = Lightning.Projects.project_trigger_invocation_reason(p1)
-
-      run_ir_query = Lightning.Projects.project_run_invocation_reasons(p1)
-
-      dataclip_ir_query =
-        Lightning.Projects.project_dataclip_invocation_reason(p1)
-
       pu_query = Lightning.Projects.project_users_query(p1)
 
       pc_query = Lightning.Projects.project_credentials_query(p1)
@@ -260,19 +272,13 @@ defmodule Lightning.ProjectsTest do
 
       jobs_query = Lightning.Projects.project_jobs_query(p1)
 
-      assert runs_query |> Repo.aggregate(:count, :id) == 3
+      assert runs_query |> Repo.aggregate(:count, :id) == 2
 
       assert work_order_query |> Repo.aggregate(:count, :id) == 1
 
       assert attempt_query |> Repo.aggregate(:count, :id) == 2
 
-      assert attempt_run_query |> Repo.aggregate(:count, :id) == 3
-
-      assert trigger_ir_query |> Repo.aggregate(:count, :id) == 1
-
-      assert dataclip_ir_query |> Repo.aggregate(:count, :id) == 1
-
-      assert run_ir_query |> Repo.aggregate(:count, :id) == 1
+      assert attempt_run_query |> Repo.aggregate(:count, :id) == 2
 
       assert pu_query |> Repo.aggregate(:count, :id) == 1
 
@@ -301,12 +307,6 @@ defmodule Lightning.ProjectsTest do
       assert workflows_query |> Repo.aggregate(:count, :id) == 0
 
       assert jobs_query |> Repo.aggregate(:count, :id) == 0
-
-      assert trigger_ir_query |> Repo.aggregate(:count, :id) == 0
-
-      assert run_ir_query |> Repo.aggregate(:count, :id) == 0
-
-      assert dataclip_ir_query |> Repo.aggregate(:count, :id) == 0
 
       assert_raise Ecto.NoResultsError, fn ->
         Projects.get_project!(p1.id)

@@ -11,7 +11,7 @@ defmodule Lightning.JobsFixtures do
   @doc """
   Generate a job.
   """
-  @spec job_fixture(attrs :: Keyword.t()) :: Lightning.Jobs.Job.t()
+  @spec job_fixture(attrs :: Keyword.t()) :: Lightning.Workflows.Job.t()
   def job_fixture(attrs \\ []) when is_list(attrs) do
     attrs =
       attrs
@@ -101,7 +101,8 @@ defmodule Lightning.JobsFixtures do
     t =
       insert(:trigger,
         workflow: attrs[:workflow],
-        type: :webhook
+        type: :webhook,
+        enabled: attrs[:enabled]
       )
 
     e =
@@ -115,6 +116,7 @@ defmodule Lightning.JobsFixtures do
     %{job: job, edge: e, trigger: t, workflow: workflow}
   end
 
+  @deprecated "Use the `:complex_workflow` factory instead"
   def workflow_scenario(context \\ %{}) do
     project = Map.get_lazy(context, :project, fn -> insert(:project) end)
     workflow = insert(:workflow, project: project)

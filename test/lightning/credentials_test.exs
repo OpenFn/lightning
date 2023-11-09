@@ -86,7 +86,7 @@ defmodule Lightning.CredentialsTest do
       assert credential.body == %{}
       assert credential.name == "some name"
 
-      assert from(a in Audit,
+      assert from(a in Audit.base_query(),
                where: a.item_id == ^credential.id and a.event == "created"
              )
              |> Repo.one!(),
@@ -137,7 +137,7 @@ defmodule Lightning.CredentialsTest do
       assert credential.name == "some updated name"
 
       audit_events =
-        from(a in Audit,
+        from(a in Audit.base_query(),
           where: a.item_id == ^credential.id,
           select: {a.event, type(a.changes, :map)}
         )
@@ -195,7 +195,7 @@ defmodule Lightning.CredentialsTest do
 
       assert {:ok,
               %{
-                audit: %Lightning.Credentials.Audit{} = audit,
+                audit: %Lightning.Auditing.Model{} = audit,
                 credential: %Credential{} = credential
               }} =
                Credentials.delete_credential(%Lightning.Credentials.Credential{
@@ -208,7 +208,7 @@ defmodule Lightning.CredentialsTest do
 
       # previous  audit records are not deleted
       # a new audit (event: deleted) is added
-      assert from(a in Lightning.Credentials.Audit,
+      assert from(a in Audit.base_query(),
                where: a.item_id == ^credential.id
              )
              |> Repo.all()
@@ -230,7 +230,7 @@ defmodule Lightning.CredentialsTest do
                )
              ) == 0
 
-      job = Repo.get!(Lightning.Jobs.Job, job.id)
+      job = Repo.get!(Lightning.Workflows.Job, job.id)
 
       assert job.project_credential_id == nil
     end

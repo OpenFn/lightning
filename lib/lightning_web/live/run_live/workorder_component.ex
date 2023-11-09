@@ -2,9 +2,8 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
   @moduledoc """
   Workorder component
   """
-  alias Lightning.Invocation
-  use Phoenix.Component
   use LightningWeb, :live_component
+
   import LightningWeb.RunLive.Components
 
   @impl true
@@ -37,12 +36,15 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
     last_run = List.last(List.first(work_order.attempts).runs)
 
     last_run_finished_at =
-      case last_run.finished_at do
-        nil -> nil
-        finished_at -> finished_at |> Calendar.strftime("%c %Z")
+      case last_run do
+        %{finished_at: %_{} = finished_at} ->
+          Calendar.strftime(finished_at, "%c %Z")
+
+        _ ->
+          nil
       end
 
-    work_order_inserted_at = work_order.inserted_at |> Calendar.strftime("%c %Z")
+    work_order_inserted_at = Calendar.strftime(work_order.inserted_at, "%c %Z")
 
     socket
     |> assign(
@@ -80,27 +82,7 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
       {:selection_toggled, {assigns.work_order, !assigns[:entry_selected]}}
     )
 
-    {:noreply, assign(socket, :entry_selected, !socket.assigns[:entry_selected])}
-  end
-
-  @impl true
-  def update_many(assigns_sockets) do
-    ids = Enum.map(assigns_sockets, fn {assigns, _socket} -> assigns.id end)
-
-    work_orders =
-      Invocation.get_workorders_by_ids(ids)
-      |> Invocation.with_attempts()
-      |> Lightning.Repo.all()
-      |> Map.new(fn %{id: id} = wo -> {id, wo} end)
-
-    Enum.map(assigns_sockets, fn {assigns, socket} ->
-      socket =
-        assign(socket, assigns)
-        |> assign(:work_order, work_orders[assigns.id])
-
-      update(socket.assigns, socket)
-      |> then(fn {:ok, socket} -> socket end)
-    end)
+    {:noreply, assign(socket, :entry_selected, !assigns[:entry_selected])}
   end
 
   attr :show_details, :boolean, default: false
@@ -111,6 +93,7 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
   def render(assigns) do
     ~H"""
     <div
+      id={"workorder-#{@work_order.id}"}
       data-entity="work_order"
       role="rowgroup"
       class={if @entry_selected, do: "bg-gray-50", else: "bg-white"}
@@ -126,7 +109,7 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
               for={selection_params(@work_order, @entry_selected)}
               phx-change="toggle_selection"
               phx-target={@myself}
-              id={"#{@work_order.id}-selection-form"}
+              id={"selection-form-#{@work_order.id}"}
             >
               <%= Phoenix.HTML.Form.checkbox(f, :selected,
                 id: "select_#{@work_order.id}",
@@ -154,15 +137,15 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
               <span class="mt-2 text-gray-700">
                 <%= display_short_uuid(@work_order.id) %> .
                 <.link navigate={
-                  ~p"/projects/#{@work_order.workflow.project_id}/dataclips/#{@work_order.reason.dataclip_id}/edit"
+                  ~p"/projects/#{@work_order.workflow.project_id}/dataclips/#{@work_order.dataclip_id}/edit"
                 }>
                   <span
-                    title={@work_order.reason.dataclip_id}
+                    title={@work_order.dataclip_id}
                     class="font-normal text-xs whitespace-nowrap text-ellipsis
                             bg-gray-200 p-1 rounded-md font-mono text-indigo-400 hover:underline
                             underline-offset-2 hover:text-indigo-500"
                   >
-                    <%= display_short_uuid(@work_order.reason.dataclip_id) %>
+                    <%= display_short_uuid(@work_order.dataclip_id) %>
                   </span>
                 </.link>
               </span>
@@ -179,7 +162,7 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
           class="py-1 px-4 text-sm font-normal text-left rtl:text-right text-gray-500"
           role="cell"
         >
-          <.timestamp timestamp={@last_run.finished_at} style={:wrapped} />
+          <.timestamp timestamp={@work_order.last_activity} style={:wrapped} />
         </div>
         <div
           class="py-1 px-4 text-sm font-normal text-left rtl:text-right text-gray-500"
@@ -197,17 +180,19 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
           class="py-1 px-4 text-sm font-normal text-left rtl:text-right text-gray-500"
           role="cell"
         >
-          <%= case @last_run.exit_code do %>
-            <% nil -> %>
-              <%= if @last_run.finished_at do %>
-                <.failure_pill>Timeout</.failure_pill>
-              <% else %>
-                <.pending_pill>Pending</.pending_pill>
-              <% end %>
-            <% val when val == 0 -> %>
+          <%= case @work_order.state do %>
+            <% :success -> %>
               <.success_pill>Success</.success_pill>
-            <% val when val > 0 -> %>
-              <.failure_pill>Failure</.failure_pill>
+            <% :failed -> %>
+              <.failure_pill>Failed</.failure_pill>
+            <% :killed -> %>
+              <.killed_pill>Killed</.killed_pill>
+            <% :pending -> %>
+              <.pending_pill>Pending</.pending_pill>
+            <% state -> %>
+              <.other_state_pill>
+                <%= state |> Atom.to_string() |> String.capitalize() %>
+              </.other_state_pill>
           <% end %>
         </div>
       </div>
@@ -234,10 +219,9 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
                     Attempt <%= index %> of <%= Enum.count(@attempts) %>
                   </p>
                   <div class="text-sm">
-                    <%= if last_run = List.last(attempt.runs) do %>
-                      <.timestamp timestamp={last_run.finished_at} />
-                    <% else %>
-                      Running...
+                    <%= attempt.state %>
+                    <%= if attempt.finished_at do %>
+                      <.timestamp timestamp={attempt.finished_at} />
                     <% end %>
                   </div>
                   <a

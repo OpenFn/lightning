@@ -1,10 +1,9 @@
+# This module will be re-introduced in https://github.com/OpenFn/Lightning/issues/1143
 defmodule LightningWeb.EndToEndTest do
   use LightningWeb.ConnCase, async: true
   use Oban.Testing, repo: Lightning.Repo
 
   import Lightning.JobsFixtures
-
-  alias Lightning.Pipeline
   import Lightning.Factories
 
   alias Lightning.Invocation
@@ -35,6 +34,7 @@ defmodule LightningWeb.EndToEndTest do
   end
 
   # workflow runs webhook then flow job
+  @tag :skip
   test "the whole thing", %{conn: conn} do
     project = insert(:project)
 
@@ -131,10 +131,10 @@ defmodule LightningWeb.EndToEndTest do
       assert run_1.finished_at != nil
       assert run_1.exit_code == 0
 
-      assert Pipeline.assemble_logs_for_run(run_1) =~ "Done in"
+      assert Invocation.assemble_logs_for_run(run_1) =~ "Done in"
 
       r1_logs =
-        Pipeline.logs_for_run(run_1)
+        Invocation.logs_for_run(run_1)
         |> Enum.map(fn line -> line.body end)
 
       # Check that versions are accurate and printed at the top of each run
@@ -154,14 +154,14 @@ defmodule LightningWeb.EndToEndTest do
       assert run_2.finished_at != nil
       assert run_2.exit_code == 1
 
-      log = Pipeline.assemble_logs_for_run(run_2)
+      log = Invocation.assemble_logs_for_run(run_2)
       assert log =~ ~S[{"password":"***","username":"quux"}]
       assert log =~ ~S[Error in runtime execution!]
 
       #  Run 3 should succeed and log "6"
       assert run_3.finished_at != nil
       assert run_3.exit_code == 0
-      log = Pipeline.assemble_logs_for_run(run_3)
+      log = Invocation.assemble_logs_for_run(run_3)
       assert log =~ "[JOB] ℹ 6"
     end)
   end

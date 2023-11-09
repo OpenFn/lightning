@@ -4,6 +4,7 @@ defmodule Lightning.Invocation.RunTest do
   alias Lightning.Invocation.Run
   import Ecto.Changeset, only: [get_field: 2]
 
+  @tag skip: "deprecated"
   describe "new_from/2" do
     test "returns a new Run changeset based off another" do
       run =

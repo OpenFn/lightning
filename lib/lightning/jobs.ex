@@ -6,9 +6,9 @@ defmodule Lightning.Jobs do
   import Ecto.Query, warn: false
   alias Lightning.Repo
 
-  alias Lightning.Jobs.{Job, Query}
-  alias Lightning.Projects.Project
   alias Lightning.Workflows.{Edge, Workflow}
+  alias Lightning.Workflows.{Job, Query}
+  alias Lightning.Projects.Project
 
   @doc """
   Returns the list of jobs.
