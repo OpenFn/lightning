@@ -563,7 +563,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
             )
 
           %{} ->
-            socket.assigns.workflow_params
+            initial_params
         end
 
       %{assigns: %{changeset: changeset}} =
