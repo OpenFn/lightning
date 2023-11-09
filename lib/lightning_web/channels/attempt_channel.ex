@@ -119,19 +119,21 @@ defmodule LightningWeb.AttemptChannel do
   end
 
   def handle_in("run:start", payload, socket) do
-    with job_id when is_binary(job_id) <-
-           Map.get(payload, "job_id", :missing_job_id) do
-      %{"attempt_id" => socket.assigns.attempt.id}
-      |> Enum.into(payload)
-      |> Attempts.start_run()
-      |> case do
-        {:error, changeset} ->
-          {:reply, {:error, LightningWeb.ChangesetJSON.error(changeset)}, socket}
+    Map.get(payload, "job_id", :missing_job_id)
+    |> case do
+      job_id when is_binary(job_id) ->
+        %{"attempt_id" => socket.assigns.attempt.id}
+        |> Enum.into(payload)
+        |> Attempts.start_run()
+        |> case do
+          {:error, changeset} ->
+            {:reply, {:error, LightningWeb.ChangesetJSON.error(changeset)},
+             socket}
 
-        {:ok, run} ->
-          {:reply, {:ok, %{run_id: run.id}}, socket}
-      end
-    else
+          {:ok, run} ->
+            {:reply, {:ok, %{run_id: run.id}}, socket}
+        end
+
       :missing_job_id ->
         {:reply, {:error, %{errors: %{job_id: ["This field can't be blank."]}}},
          socket}
