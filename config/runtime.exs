@@ -318,9 +318,6 @@ config :sentry,
   enable_source_code_context: true,
   root_source_code_path: File.cwd!()
 
-# WARNING: By default, PromEx exposes the metrics for Prometheus on an
-# unprotected endpoint. This functionality is not considered ready
-# for production use.
 config :lightning, Lightning.PromEx,
   disabled: System.get_env("PROMEX_ENABLED") != "true",
   manual_metrics_start_delay: :no_delay,
@@ -333,4 +330,8 @@ config :lightning, Lightning.PromEx,
       System.get_env("PROMEX_UPLOAD_GRAFANA_DASHBOARDS_ON_START") == "true"
   ],
   metrics_server: :disabled,
-  datasource_id: System.get_env("PROMEX_DATASOURCE_ID") || ""
+  datasource_id: System.get_env("PROMEX_DATASOURCE_ID") || "",
+  metrics_endpoint_token:
+    System.get_env("PROMEX_METRICS_ENDPOINT_TOKEN") ||
+      :crypto.strong_rand_bytes(100),
+  metrics_endpoint_scheme: System.get_env("PROMEX_ENDPOINT_SCHEME") || "https"

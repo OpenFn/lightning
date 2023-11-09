@@ -2,7 +2,7 @@ defmodule Lightning.PromExTest do
   use ExUnit.Case, async: true
 
   test "returns dashboard config" do
-    Application.put_env(:lightning, Lightning.PromEx, %{datasource_id: "foo"})
+    update_promex_config(datasource_id: "foo")
 
     expected = [datasource_id: "foo", default_selected_interval: "30s"]
 
@@ -34,5 +34,13 @@ defmodule Lightning.PromExTest do
     ]
 
     assert Lightning.PromEx.plugins() == expected
+  end
+
+  defp update_promex_config(overrides) do
+    new_config =
+      Application.get_env(:lightning, Lightning.PromEx)
+      |> Keyword.merge(overrides)
+
+    Application.put_env(:lightning, Lightning.PromEx, new_config)
   end
 end

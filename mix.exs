@@ -116,6 +116,7 @@ defmodule Lightning.MixProject do
       {:temp, "~> 0.4"},
       {:tesla, "~> 1.4"},
       {:timex, "~> 3.7"},
+      {:unplug, "~> 1.0"},
       {:phoenix_swoosh, "~> 1.0"},
       {:hammer_backend_mnesia, "~> 0.6"},
       {:hammer, "~> 6.0"},

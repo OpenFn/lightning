@@ -42,11 +42,13 @@ and this project adheres to
 - Add a OpenTelemetry trace example
   [#1189](https://github.com/OpenFn/Lightning/issues/1189)
 - Add plumbing to support the use of PromEx
-  [1199](https://github.com/OpenFn/Lightning/issues/1199)
-- Add warning text to PromEx config [1222]
-  (https://github.com/OpenFn/Lightning/issues/1222)
+  [#1199](https://github.com/OpenFn/Lightning/issues/1199)
+- Add warning text to PromEx config 
+  [#1222] (https://github.com/OpenFn/Lightning/issues/1222)
 - Track and filter on webhook controller state in :telemetry metrics
   [#1192](https://github.com/OpenFn/Lightning/issues/1192)
+- Secure PromEx metrics endpoint by default
+  [#1223](https://github.com/OpenFn/Lightning/issues/1223)
 
 ### Changed
 
