@@ -68,7 +68,8 @@ defmodule Lightning.ExportUtils do
       source_job: source_job,
       target_job: target_job,
       condition: edge.condition |> Atom.to_string(),
-      node_type: :edge
+      node_type: :edge,
+      enabled: edge.enabled
     }
   end
 
@@ -84,7 +85,7 @@ defmodule Lightning.ExportUtils do
       workflow: [:name, :jobs, :triggers, :edges],
       job: [:name, :adaptor, :credential, :globals, :body],
       trigger: [:type, :cron_expression],
-      edge: [:source_trigger, :source_job, :target_job, :condition]
+      edge: [:source_trigger, :source_job, :target_job, :condition, :enabled]
     }
 
     map
