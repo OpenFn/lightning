@@ -70,7 +70,7 @@ defmodule Lightning.JobsTest do
         Jobs.get_job!(Ecto.UUID.generate())
       end
 
-      assert Jobs.get_job(Ecto.UUID.generate()) == nil
+      assert Jobs.get_job_with_credential(Ecto.UUID.generate()) == nil
     end
 
     test "change_job/1 returns a job changeset" do

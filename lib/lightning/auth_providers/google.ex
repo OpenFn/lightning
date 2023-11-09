@@ -20,6 +20,17 @@ defmodule Lightning.AuthProviders.Google do
       changeset(attrs) |> apply_changes()
     end
 
+    def from_oauth2_token(
+          %OAuth2.AccessToken{
+            other_params: %{"expires_at" => expires_at, "scope" => scope}
+          } =
+            token
+        ) do
+      Map.from_struct(token)
+      |> Map.merge(%{expires_at: expires_at, scope: scope})
+      |> new()
+    end
+
     def from_oauth2_token(%OAuth2.AccessToken{} = token) do
       Map.from_struct(token) |> new()
     end

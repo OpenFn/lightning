@@ -24,6 +24,7 @@ defmodule LightningWeb.AttemptJson do
     %{
       "id" => job.id,
       "adaptor" => job.adaptor,
+      "credential_id" => get_credential_id(job),
       "body" => job.body,
       "name" => job.name
     }
@@ -37,5 +38,13 @@ defmodule LightningWeb.AttemptJson do
       "condition" => edge.condition,
       "target_job_id" => edge.target_job_id
     }
+  end
+
+  defp get_credential_id(job) do
+    job.credential
+    |> case do
+      nil -> nil
+      c -> c.id
+    end
   end
 end
