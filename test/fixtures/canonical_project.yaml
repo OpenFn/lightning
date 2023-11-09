@@ -9,7 +9,7 @@ workflows:
       webhook-job:
         name: webhook job
         adaptor: '@openfn/language-common@latest'
-        enabled: true
+        # enabled: true
         # credential:
         # globals:
         body: |
@@ -18,7 +18,7 @@ workflows:
       on-fail:
         name: on fail
         adaptor: '@openfn/language-common@latest'
-        enabled: true
+        # enabled: true
         # credential:
         # globals:
         body: |
@@ -27,7 +27,7 @@ workflows:
       on-success:
         name: on success
         adaptor: '@openfn/language-common@latest'
-        enabled: true
+        # enabled: true
         # credential:
         # globals:
         body: |
@@ -54,7 +54,7 @@ workflows:
       some-cronjob:
         name: some cronjob
         adaptor: '@openfn/language-common@latest'
-        enabled: true
+        # enabled: true
         # credential:
         # globals:
         body: |
@@ -62,7 +62,7 @@ workflows:
       on-cron-failure:
         name: on cron failure
         adaptor: '@openfn/language-common@latest'
-        enabled: true
+        # enabled: true
         # credential:
         # globals:
         body: |

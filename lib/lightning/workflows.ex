@@ -174,7 +174,7 @@ defmodule Lightning.Workflows do
       })
       |> Repo.update()
 
-      Repo.update_all(workflow_jobs_query, set: [enabled: false])
+      # Repo.update_all(workflow_jobs_query, set: [enabled: false])
     end)
   end
 

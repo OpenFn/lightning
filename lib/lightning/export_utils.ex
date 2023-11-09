@@ -27,7 +27,7 @@ defmodule Lightning.ExportUtils do
       body: job.body,
       credential: nil,
       globals: [],
-      enabled: job.enabled
+      # enabled: job.enabled
     }
   end
 
@@ -82,7 +82,7 @@ defmodule Lightning.ExportUtils do
     ordering_map = %{
       project: [:name, :description, :credentials, :globals, :workflows],
       workflow: [:name, :jobs, :triggers, :edges],
-      job: [:name, :adaptor, :enabled, :credential, :globals, :body],
+      job: [:name, :adaptor, :credential, :globals, :body],
       trigger: [:type, :cron_expression],
       edge: [:source_trigger, :source_job, :target_job, :condition]
     }

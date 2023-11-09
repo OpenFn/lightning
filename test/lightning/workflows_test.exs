@@ -128,7 +128,6 @@ defmodule Lightning.WorkflowsTest do
 
       # Disabled Job
       insert(:job, %{
-        enabled: false,
         workflow: t2.workflow
       })
 
@@ -409,9 +408,9 @@ defmodule Lightning.WorkflowsTest do
 
       assert length(Workflows.get_workflows_for(project)) == 1
 
-      assert Jobs.get_job!(job_1.id).enabled == false
+      # assert Jobs.get_job!(job_1.id).enabled == false
 
-      assert Jobs.get_job!(job_2.id).enabled == false
+      # assert Jobs.get_job!(job_2.id).enabled == false
     end
   end
 end

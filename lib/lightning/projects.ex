@@ -291,6 +291,13 @@ defmodule Lightning.Projects do
     )
   end
 
+  def project_edges_query(project) do
+    from(e in Edge,
+      join: w in assoc(e, :workflow),
+      where: w.project_id == ^project.id
+    )
+  end
+
   def project_runs_query(project) do
     from(r in Run,
       join: j in assoc(r, :job),
@@ -447,6 +454,7 @@ defmodule Lightning.Projects do
   @spec export_project(:yaml, any) :: {:ok, binary}
   def export_project(:yaml, project_id) do
     {:ok, yaml} = ExportUtils.generate_new_yaml(project_id)
+   
 
     {:ok, yaml}
   end

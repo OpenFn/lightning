@@ -143,13 +143,12 @@ defmodule Lightning.JobsTest do
 
       update_attrs = %{
         body: "some updated body",
-        enabled: false,
         name: "some updated name"
       }
 
       assert {:ok, %Job{} = job} = Jobs.update_job(job, update_attrs)
       assert job.body == "some updated body"
-      assert job.enabled == false
+
       assert job.name == "some updated name"
     end
 
@@ -170,7 +169,6 @@ defmodule Lightning.JobsTest do
       {:ok, job1} =
         Jobs.create_job(%{
           body: "some body",
-          enabled: true,
           name: "some name",
           adaptor: "@openfn/language-common",
           workflow_id: job.workflow_id
@@ -195,7 +193,6 @@ defmodule Lightning.JobsTest do
       assert_raise Postgrex.Error, fn ->
         Jobs.create_job(%{
           body: "some body",
-          enabled: true,
           name: "some name",
           adaptor: "@openfn/language-common"
         })
@@ -215,7 +212,6 @@ defmodule Lightning.JobsTest do
       assert {:ok, %Job{} = job} =
                Jobs.create_job(%{
                  body: "some body",
-                 enabled: true,
                  name: "some name",
                  trigger: %{type: "webhook", comment: "foo"},
                  adaptor: "@openfn/language-common",
@@ -237,7 +233,6 @@ defmodule Lightning.JobsTest do
     test "with valid data creates a job" do
       valid_attrs = %{
         body: "some body",
-        enabled: true,
         name: "some name",
         adaptor: "@openfn/language-common",
         workflow_id: insert(:workflow).id
@@ -245,7 +240,6 @@ defmodule Lightning.JobsTest do
 
       assert {:ok, %Job{} = job} = Jobs.create_job(valid_attrs)
       assert job.body == "some body"
-      assert job.enabled == true
       assert job.name == "some name"
     end
 
@@ -256,7 +250,6 @@ defmodule Lightning.JobsTest do
         Jobs.create_job(%{
           name: "job 1",
           body: "some body",
-          enabled: true,
           adaptor: "@openfn/language-common",
           trigger: %{type: "webhook"},
           workflow_id: workflow.id
@@ -266,7 +259,6 @@ defmodule Lightning.JobsTest do
         Jobs.create_job(%{
           name: "job 2",
           body: "some body",
-          enabled: true,
           adaptor: "@openfn/language-common",
           trigger: %{type: "on_job_success", upstream_job_id: upstream_job.id},
           workflow_id: workflow.id
@@ -281,7 +273,6 @@ defmodule Lightning.JobsTest do
       {:ok, %Job{} = upstream_job} =
         Jobs.create_job(%{
           body: "some body",
-          enabled: true,
           name: "job 1",
           adaptor: "@openfn/language-common",
           trigger: %{type: "webhook"},
@@ -293,7 +284,6 @@ defmodule Lightning.JobsTest do
       {:ok, %Job{} = _job} =
         Jobs.create_job(%{
           body: "some body",
-          enabled: true,
           name: "job 2",
           adaptor: "@openfn/language-common",
           trigger: %{type: "on_job_success", upstream_job_id: upstream_job.id},
