@@ -586,13 +586,12 @@ defmodule LightningWeb.WorkflowLive.Edit do
           end)
 
         {:error, changeset} ->
-          socket
-          |> assign_changeset(changeset)
-          |> mark_validated()
-          |> put_flash(:error, "Workflow could not be saved")
-          |> push_patches_applied(initial_params)
-
-          {:noreply, socket}
+          {:noreply,
+           socket
+           |> assign_changeset(changeset)
+           |> mark_validated()
+           |> put_flash(:error, "Workflow could not be saved")
+           |> push_patches_applied(initial_params)}
       end
     else
       {:noreply,
