@@ -139,7 +139,8 @@ Pages
   <section id="moduledoc">
 <p>The Janitor is responsible for detecting attempts that have been &quot;lost&quot; due to
 communication issues with the worker.</p><p>Every X minutes the Janitor will check to ensure that no attempts have been
-running for more than Y seconds.</p>
+running for more than Y seconds.</p><p>Configure your maximum attempt runtime with a MAX_RUN_DURATION environment
+variable; the grace period will be an additional 20%.</p>
   </section>
 
 
@@ -200,7 +201,7 @@ by the Oban cron plugin.</p></div>
     </a>
     <h1 class="signature" translate="no">find_and_update_lost()</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/janitor.ex#L33" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/janitor.ex#L36" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -224,7 +225,7 @@ unfinished attempts, and marks them as lost.</p>
     </a>
     <h1 class="signature" translate="no">perform(job)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/janitor.ex#L26" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/janitor.ex#L29" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>

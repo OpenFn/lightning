@@ -159,7 +159,10 @@ Pages
 
       </div>
 
-        <div class="summary-synopsis"><p>Runs for a specific user</p></div>
+        <div class="summary-synopsis"><p>Return all attempts that have been claimed by a worker before the earliest
+acceptable start time (determined by the longest acceptable run time) but are
+still incomplete. This indicates that we may have lost contact with the worker
+that was responsible for executing the attempt.</p></div>
 
     </div>
 
@@ -185,7 +188,7 @@ Pages
     </a>
     <h1 class="signature" translate="no">lost(now)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/attempts/query.ex#L14" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/attempts/query.ex#L17" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -201,7 +204,10 @@ Pages
 
       </div>
 
-<p>Runs for a specific user</p>
+<p>Return all attempts that have been claimed by a worker before the earliest
+acceptable start time (determined by the longest acceptable run time) but are
+still incomplete. This indicates that we may have lost contact with the worker
+that was responsible for executing the attempt.</p>
   </section>
 </section>
 
