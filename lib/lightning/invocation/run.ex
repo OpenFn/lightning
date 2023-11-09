@@ -10,7 +10,7 @@ defmodule Lightning.Invocation.Run do
   import Ecto.Changeset
 
   alias Lightning.Invocation.Dataclip
-  alias Lightning.Jobs.Job
+  alias Lightning.Workflows.Job
   alias Lightning.Credentials.Credential
   alias Lightning.{AttemptRun, Attempt}
   alias Lightning.Invocation.LogLine
@@ -18,6 +18,7 @@ defmodule Lightning.Invocation.Run do
   @type t :: %__MODULE__{
           __meta__: Ecto.Schema.Metadata.t(),
           id: Ecto.UUID.t() | nil,
+          exit_reason: String.t() | nil,
           job: Job.t() | Ecto.Association.NotLoaded.t() | nil
         }
 
@@ -25,6 +26,7 @@ defmodule Lightning.Invocation.Run do
   @foreign_key_type :binary_id
   schema "runs" do
     field :exit_code, :integer
+    field :exit_reason, :string
     field :finished_at, :utc_datetime_usec
     field :started_at, :utc_datetime_usec
     belongs_to :job, Job
@@ -43,9 +45,18 @@ defmodule Lightning.Invocation.Run do
   end
 
   def new(attrs \\ %{}) do
-    change(%__MODULE__{}, %{id: Ecto.UUID.generate()})
+    change(%__MODULE__{id: Ecto.UUID.generate()}, %{})
     |> change(attrs)
     |> validate()
+  end
+
+  def finished(run, output_dataclip_id, exit_reason) do
+    change(run, %{
+      finished_at: DateTime.utc_now(),
+      output_dataclip_id: output_dataclip_id,
+      exit_reason: exit_reason
+    })
+    |> validate_required([:finished_at, :output_dataclip_id, :exit_reason])
   end
 
   @doc """
@@ -67,7 +78,9 @@ defmodule Lightning.Invocation.Run do
   def changeset(run, attrs) do
     run
     |> cast(attrs, [
+      :id,
       :exit_code,
+      :exit_reason,
       :started_at,
       :finished_at,
       :job_id,
@@ -76,12 +89,11 @@ defmodule Lightning.Invocation.Run do
       :output_dataclip_id
     ])
     |> cast_assoc(:output_dataclip, with: &Dataclip.changeset/2, required: false)
-    |> cast_assoc(:log_lines, with: &LogLine.changeset/2, required: false)
     |> validate_required([:job_id, :input_dataclip_id])
     |> validate()
   end
 
-  defp validate(changeset) do
+  def validate(changeset) do
     changeset
     |> assoc_constraint(:input_dataclip)
     |> assoc_constraint(:output_dataclip)

@@ -18,9 +18,11 @@ defmodule Lightning.InstallAdaptorIconsTest do
                        )
   setup do
     File.mkdir_p(@icons_path)
+    Mix.shell(Mix.Shell.Process)
     on_exit(fn -> File.rm_rf!(@icons_path) end)
   end
 
+  @tag :capture_log
   test "generates http adaptor icons correctly" do
     mock(fn
       %{method: :get, url: @adaptors_tar_url} ->
@@ -29,6 +31,9 @@ defmodule Lightning.InstallAdaptorIconsTest do
 
     assert File.ls!(@icons_path) == []
     InstallAdaptorIcons.run([])
+
+    assert_receive {:mix_shell, :info, [msg]}
+    assert msg =~ "Adaptor icons installed successfully. Manifest saved at: "
 
     icons = File.ls!(@icons_path)
     assert length(icons) == 2
@@ -56,6 +61,9 @@ defmodule Lightning.InstallAdaptorIconsTest do
     assert File.ls!(@icons_path) == []
     InstallAdaptorIcons.run([])
 
+    assert_receive {:mix_shell, :info, [msg]}
+    assert msg =~ "Adaptor icons installed successfully. Manifest saved at: "
+
     icons = File.ls!(@icons_path)
     assert length(icons) == 2
     assert "dhis2-square.png" in icons
@@ -73,6 +81,7 @@ defmodule Lightning.InstallAdaptorIconsTest do
              })
   end
 
+  @tag :capture_log
   test "generates both dhis2 and http adaptor icons correctly" do
     mock(fn
       %{method: :get, url: @adaptors_tar_url} ->
@@ -81,6 +90,9 @@ defmodule Lightning.InstallAdaptorIconsTest do
 
     assert File.ls!(@icons_path) == []
     InstallAdaptorIcons.run([])
+
+    assert_receive {:mix_shell, :info, [msg]}
+    assert msg =~ "Adaptor icons installed successfully. Manifest saved at: "
 
     icons = File.ls!(@icons_path)
     assert length(icons) == 3

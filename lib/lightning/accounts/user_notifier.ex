@@ -8,13 +8,13 @@ defmodule Lightning.Accounts.UserNotifier do
   import Swoosh.Email
 
   alias Lightning.Accounts.User
-  alias Lightning.Workorders.SearchParams
+  alias Lightning.Helpers
+  alias Lightning.Mailer
   alias Lightning.Projects
   alias Lightning.Projects.Project
-  alias Lightning.Mailer
-  alias Lightning.Helpers
+  alias Lightning.WorkOrders.SearchParams
 
-  defp admin(), do: Application.get_env(:lightning, :email_addresses)[:admin]
+  defp admin, do: Application.get_env(:lightning, :email_addresses)[:admin]
 
   # Delivers the email using the application mailer.
   defp deliver(recipient, subject, body) do

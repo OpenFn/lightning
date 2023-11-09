@@ -1,47 +1,70 @@
 defmodule LightningWeb.RunLive.RunViewerLive do
-  alias Lightning.Repo
   use LightningWeb, {:live_view, container: {:div, []}}
 
-  import Ecto.Query, only: [from: 2]
+  alias LightningWeb.RunLive.Components
+  alias Lightning.Attempts
 
   @impl true
   def render(assigns) do
+    assigns =
+      assigns
+      |> assign(
+        attempt_state:
+          case assigns.attempt.state do
+            :available -> "Pending"
+            :claimed -> "Starting"
+            :started -> "Running"
+            :success -> "Success"
+            :failed -> "Failed"
+            :killed -> "Killed"
+            :crashed -> "Crashed"
+          end
+      )
+
     ~H"""
-    <LightningWeb.RunLive.Components.run_viewer run={@run} />
+    State: <%= @attempt_state %> Attempt ID: <%= @attempt.id %>
+    <%= @run && @run.id %>
+    <table>
+      <tbody id="log_lines" phx-update="stream">
+        <tr :for={{dom_id, log_line} <- @streams.log_lines} id={dom_id}>
+          <td>
+            <Components.timestamp timestamp={log_line.timestamp} style={:time_only} />
+          </td>
+          <td><%= log_line.level %></td>
+          <td><%= log_line.source %></td>
+          <td><%= log_line.message %></td>
+        </tr>
+      </tbody>
+    </table>
     """
   end
 
   @impl true
-  def mount(_params, %{"run_id" => run_id}, socket) do
-    run = get_run_with_output(run_id)
+  def mount(_params, %{"attempt_id" => attempt_id}, socket) do
+    attempt = Attempts.get(attempt_id)
 
-    LightningWeb.Endpoint.subscribe("run:#{run.id}")
+    Attempts.subscribe(attempt)
 
-    {:ok, socket |> assign(run: run), layout: false}
-  end
-
-  @doc """
-  Reload the run when any update messages arrive.
-  """
-  @impl true
-  def handle_info(
-        %Phoenix.Socket.Broadcast{event: "update", payload: _payload},
-        socket
-      ) do
-    {:noreply,
+    {:ok,
      socket
-     |> assign(
-       run: get_run_with_output(socket.assigns.run.id),
-       show_input_dataclip: false
-     )}
+     |> assign(attempt: attempt, run: nil)
+     |> stream(:log_lines, []), layout: false}
   end
 
-  defp get_run_with_output(id) do
-    from(r in Lightning.Invocation.Run,
-      where: r.id == ^id,
-      preload: :output_dataclip
-    )
-    |> Repo.one()
-    |> Repo.preload(:log_lines)
+  @impl true
+  def handle_info(%Attempts.Events.RunStarted{run: _run}, socket) do
+    # Use this to determine is the Job associated with the attempt is now running
+    {:noreply, socket}
   end
+
+  def handle_info(%Attempts.Events.AttemptUpdated{attempt: attempt}, socket) do
+    {:noreply, socket |> assign(attempt: attempt)}
+  end
+
+  def handle_info(%Attempts.Events.LogAppended{log_line: log_line}, socket) do
+    {:noreply, socket |> stream_insert(:log_lines, log_line)}
+  end
+
+  # Fallthrough in case there are events we don't care about.
+  def handle_info(%{}, socket), do: {:noreply, socket}
 end

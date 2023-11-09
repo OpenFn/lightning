@@ -35,27 +35,21 @@ defmodule Lightning.FactoriesTest do
     } do
       dataclip = Factories.insert(:dataclip)
 
-      reason =
-        Factories.insert(:reason,
-          type: :webhook,
-          trigger: trigger,
-          dataclip: dataclip
-        )
-
       assert work_order =
-               Factories.build(:workorder, workflow: workflow, reason: reason)
+               Factories.insert(:workorder, workflow: workflow)
                |> Factories.with_attempt(
+                 dataclip: dataclip,
+                 starting_trigger: trigger,
                  runs: [
                    %{
-                     job_id: job.id,
-                     started_at: Timex.now() |> Timex.shift(seconds: -25),
+                     job: job,
+                     started_at: Factories.build(:timestamp),
                      finished_at: nil,
                      exit_code: nil,
-                     input_dataclip_id: dataclip.id
+                     input_dataclip: dataclip
                    }
                  ]
                )
-               |> Factories.insert()
 
       attempt_id = hd(Repo.all(Lightning.Attempt)).id
 

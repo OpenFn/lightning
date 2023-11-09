@@ -3,11 +3,10 @@ defmodule Lightning.Workflows do
   The Workflows context.
   """
 
-  import Ecto.Query, warn: false
+  import Ecto.Query
   alias Lightning.Repo
-  alias Lightning.Workflows.{Edge, Workflow}
   alias Lightning.Projects.Project
-  alias Lightning.{Jobs, Jobs.Trigger, Jobs.Job}
+  alias Lightning.Workflows.{Edge, Job, Workflow, Trigger, Trigger, Query}
 
   @doc """
   Returns the list of workflows.
@@ -165,7 +164,7 @@ defmodule Lightning.Workflows do
   """
   def mark_for_deletion(workflow, _attrs \\ %{}) do
     workflow_jobs_query =
-      from(j in Lightning.Jobs.Job,
+      from(j in Lightning.Workflows.Job,
         where: j.workflow_id == ^workflow.id
       )
 
@@ -191,18 +190,77 @@ defmodule Lightning.Workflows do
   @doc """
   Gets a Single Edge by it's webhook trigger.
   """
-  def get_edge_by_webhook(path) when is_binary(path) do
-    from(e in Edge,
-      join: j in Job,
-      on: j.id == e.target_job_id,
-      join: t in Trigger,
-      on: e.source_trigger_id == t.id,
+  def get_webhook_trigger(path, opts \\ []) when is_binary(path) do
+    preloads = opts |> Keyword.get(:include, [])
+
+    from(t in Trigger,
       where:
         fragment(
           "coalesce(?, ?)",
           t.custom_path,
-          type(e.source_trigger_id, :string)
+          type(t.id, :string)
         ) == ^path,
+      preload: ^preloads
+    )
+    |> Repo.one()
+  end
+
+  @doc """
+  Gets a single `Trigger` by its `custom_path` or `id`.
+
+  ## Parameters
+  - `path`: A binary string representing the `custom_path` or `id` of the trigger.
+
+  ## Returns
+  - Returns a `Trigger` struct if a trigger is found.
+  - Returns `nil` if no trigger is found for the given `path`.
+
+  ## Examples
+
+  ```
+  Lightning.Workflows.get_trigger_by_webhook("some_path_or_id")
+  # => %Trigger{id: 1, custom_path: "some_path_or_id", ...}
+
+  Lightning.Workflows.get_trigger_by_webhook("non_existent_path_or_id")
+  # => nil
+  ```
+  """
+  def get_trigger_by_webhook(path) when is_binary(path) do
+    from(t in Trigger,
+      where:
+        fragment("coalesce(?, ?)", t.custom_path, type(t.id, :string)) == ^path
+    )
+    |> Repo.one()
+  end
+
+  @doc """
+  Gets an `Edge` by its associated `Trigger`.
+
+  ## Parameters
+  - `%Trigger{id: trigger_id}`: A `Trigger` struct from which the associated `Edge` is to be found.
+
+  ## Returns
+  - Returns an `Edge` struct preloaded with its `source_trigger` and `target_job` if found.
+  - Returns `nil` if no `Edge` is associated with the given `Trigger`.
+
+  ## Examples
+  ```
+  trigger = %Trigger{id: 1, ...}
+  Lightning.Workflows.get_edge_by_trigger(trigger)
+  # => %Edge{source_trigger: %Trigger{}, target_job: %Job{}, ...}
+
+  non_existent_trigger = %Trigger{id: 999, ...}
+  Lightning.Workflows.get_edge_by_trigger(non_existent_trigger)
+  # => nil
+  ```
+  """
+  def get_edge_by_trigger(%Trigger{id: trigger_id}) do
+    from(e in Edge,
+      join: j in Job,
+      on: j.id == e.target_job_id,
+      left_join: t in Trigger,
+      on: e.source_trigger_id == t.id,
+      where: t.id == ^trigger_id,
       preload: [:source_trigger, :target_job]
     )
     |> Repo.one()
@@ -215,7 +273,7 @@ defmodule Lightning.Workflows do
   @spec get_edges_for_cron_execution(DateTime.t()) :: [Edge.t()]
   def get_edges_for_cron_execution(datetime) do
     cron_edges =
-      Jobs.Query.enabled_cron_jobs_by_edge()
+      Query.enabled_cron_jobs_by_edge()
       |> Repo.all()
 
     for e <- cron_edges,

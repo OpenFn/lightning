@@ -12,6 +12,8 @@ defmodule LightningWeb.ProjectLive.Settings do
   alias Lightning.Policies.Permissions
   alias Lightning.Accounts.User
   alias Lightning.{Projects, Credentials}
+  alias Lightning.WebhookAuthMethods
+  alias Lightning.Workflows.WebhookAuthMethod
 
   alias LightningWeb.Components.Form
   alias LightningWeb.ProjectLive.DeleteConnectionModal
@@ -25,6 +27,7 @@ defmodule LightningWeb.ProjectLive.Settings do
       Projects.get_project_with_users!(socket.assigns.project.id).project_users
 
     credentials = Credentials.list_credentials(socket.assigns.project)
+    auth_methods = WebhookAuthMethods.list_for_project(socket.assigns.project)
 
     can_delete_project =
       ProjectUsers
@@ -50,6 +53,27 @@ defmodule LightningWeb.ProjectLive.Settings do
         socket.assigns.project
       )
 
+    project_user =
+      Enum.find(project_users, fn project_user ->
+        project_user.user_id == socket.assigns.current_user.id
+      end)
+
+    can_create_webhook_auth_method =
+      Permissions.can?(
+        ProjectUsers,
+        :create_webhook_auth_method,
+        socket.assigns.current_user,
+        project_user
+      )
+
+    can_edit_webhook_auth_method =
+      Permissions.can?(
+        ProjectUsers,
+        :edit_webhook_auth_method,
+        socket.assigns.current_user,
+        project_user
+      )
+
     {show_github_setup, show_repo_setup, show_sync_button,
      project_repo_connection} =
       repo_settings(socket)
@@ -62,6 +86,7 @@ defmodule LightningWeb.ProjectLive.Settings do
      socket
      |> assign(
        active_menu_item: :settings,
+       webhook_auth_methods: auth_methods,
        credentials: credentials,
        project_users: project_users,
        current_user: socket.assigns.current_user,
@@ -69,6 +94,8 @@ defmodule LightningWeb.ProjectLive.Settings do
        can_delete_project: can_delete_project,
        can_edit_project_name: can_edit_project_name,
        can_edit_project_description: can_edit_project_description,
+       can_create_webhook_auth_method: can_create_webhook_auth_method,
+       can_edit_webhook_auth_method: can_edit_webhook_auth_method,
        show_github_setup: show_github_setup,
        show_repo_setup: show_repo_setup,
        show_sync_button: show_sync_button,

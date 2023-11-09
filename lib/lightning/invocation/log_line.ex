@@ -6,38 +6,57 @@ defmodule Lightning.Invocation.LogLine do
   import Ecto.Changeset
 
   alias Lightning.Invocation.Run
+  alias Lightning.Attempt
+  alias Lightning.{UnixDateTime, LogMessage}
 
   @type t :: %__MODULE__{
           __meta__: Ecto.Schema.Metadata.t(),
           id: Ecto.UUID.t() | nil,
-          body: String.t(),
-          timestamp: integer(),
-          run: Run.t() | Ecto.Association.NotLoaded.t() | nil
+          message: String.t(),
+          timestamp: DateTime.t(),
+          run: Run.t() | Ecto.Association.NotLoaded.t() | nil,
+          attempt: Attempt.t() | Ecto.Association.NotLoaded.t() | nil
         }
 
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id
   schema "log_lines" do
-    field :body, :string, default: ""
-    field :timestamp, :integer
+    field :source, :string
+
+    field :level, Ecto.Enum,
+      values: [:success, :always, :info, :warn, :error, :debug],
+      default: :info
+
+    field :message, LogMessage, default: ""
 
     belongs_to :run, Run
+    belongs_to :attempt, Attempt
 
-    timestamps type: :utc_datetime_usec, updated_at: false
+    field :timestamp, UnixDateTime
+  end
+
+  def new(%Attempt{} = attempt, attrs \\ %{}) do
+    %__MODULE__{id: Ecto.UUID.generate()}
+    |> cast(attrs, [:message, :timestamp, :run_id, :attempt_id, :level, :source])
+    |> put_assoc(:attempt, attempt)
+    |> validate()
   end
 
   @doc false
   def changeset(log_line, attrs) do
     log_line
-    |> cast(attrs, [:body, :timestamp, :run_id])
+    |> cast(attrs, [:message, :timestamp, :run_id, :attempt_id, :level, :source])
     |> validate()
   end
 
   def validate(changeset) do
     changeset
+    |> validate_required([:message, :timestamp])
+    |> validate_length(:source, max: 8)
     |> assoc_constraint(:run)
-    |> validate_change(:body, fn _, body ->
-      if is_nil(body) do
+    |> assoc_constraint(:attempt)
+    |> validate_change(:message, fn _, message ->
+      if is_nil(message) do
         [message: "can't be nil"]
       else
         []

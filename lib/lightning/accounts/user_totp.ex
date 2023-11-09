@@ -43,7 +43,7 @@ defmodule Lightning.Accounts.UserTOTP do
   end
 
   def valid_totp?(totp, code) do
-    is_binary(code) and byte_size(code) == 6 and
+    is_struct(totp, __MODULE__) and is_binary(code) and byte_size(code) == 6 and
       NimbleTOTP.valid?(totp.secret, code)
   end
 end

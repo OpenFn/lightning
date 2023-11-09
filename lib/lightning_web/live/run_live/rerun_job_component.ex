@@ -7,6 +7,7 @@ defmodule LightningWeb.RunLive.RerunJobComponent do
   alias Lightning.Jobs
   alias Lightning.Workflows
 
+  @impl true
   def update(
         %{
           total_entries: _count,
@@ -29,6 +30,7 @@ defmodule LightningWeb.RunLive.RerunJobComponent do
      |> assign(assigns)}
   end
 
+  @impl true
   def handle_event(
         "select_job",
         %{"job" => job_id},
@@ -40,6 +42,7 @@ defmodule LightningWeb.RunLive.RerunJobComponent do
     {:noreply, assign(socket, selected_job: selected_job)}
   end
 
+  @impl true
   def render(assigns) do
     ~H"""
     <div

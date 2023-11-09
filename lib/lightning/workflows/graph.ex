@@ -10,7 +10,7 @@ defmodule Lightning.Workflows.Graph do
   @type t :: %__MODULE__{
           digraph: :digraph.graph(),
           root: vertex(),
-          jobs: [Lightning.Jobs.Job.t()]
+          jobs: [Lightning.Workflows.Job.t()]
         }
 
   @spec new(workflow :: Workflow.t()) :: __MODULE__.t()
@@ -53,7 +53,7 @@ defmodule Lightning.Workflows.Graph do
     %{graph | jobs: vertices(graph)}
   end
 
-  @spec vertices(__MODULE__.t()) :: [Lightning.Jobs.Job.t()]
+  @spec vertices(__MODULE__.t()) :: [Lightning.Workflows.Job.t()]
   def vertices(%__MODULE__{digraph: g, jobs: jobs}) do
     :digraph_utils.topsort(g)
     |> Enum.map(fn {id} ->

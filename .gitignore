@@ -58,3 +58,4 @@ priv/openfn
 .elixir_ls
 
 .env
+.env.dev

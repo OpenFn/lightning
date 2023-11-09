@@ -8,7 +8,13 @@ defmodule Lightning.ModelHelpers do
   > NOTE: It may be preferable to use `to_map/1` instead of this function.
   > as it is clearer about what the differences are between the two models.
   """
-  def unload_relation(model, field) do
+  def unload_relations(model, fields) when is_list(fields) do
+    Enum.reduce(fields, model, fn field, acc_model ->
+      unload_relation(acc_model, field)
+    end)
+  end
+
+  def unload_relation(model, field) when is_atom(field) do
     model
     |> Map.replace(field, model.__struct__.__struct__ |> Map.get(field))
   end

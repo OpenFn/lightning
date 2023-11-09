@@ -56,7 +56,7 @@ defmodule LightningWeb.WorkflowLive.JobView do
   attr :project, :map, required: true
   attr :close_url, :any, required: true
   attr :socket, :any, required: true
-  attr :follow_run_id, :any, default: nil
+  attr :follow_attempt_id, :any, default: nil
 
   slot :footer
 
@@ -118,13 +118,13 @@ defmodule LightningWeb.WorkflowLive.JobView do
         panel_title="Output & Logs"
         class="border h-full"
       >
-        <%= if @follow_run_id do %>
+        <%= if @follow_attempt_id do %>
           <div class="h-full">
             <%= live_render(
               @socket,
               LightningWeb.RunLive.RunViewerLive,
-              id: "run-viewer-#{@follow_run_id}",
-              session: %{"run_id" => @follow_run_id},
+              id: "run-viewer-#{@follow_attempt_id}",
+              session: %{"attempt_id" => @follow_attempt_id},
               sticky: true,
               container: {:div, class: "h-full"}
             ) %>

@@ -2,10 +2,7 @@
   <p>Hi <%= @recipient.first_name %>,</p>
   <p>
     Work order <code><%= @work_order_id %></code>
-    failed for workflow "<%= @workflow_name %>".
-  </p>
-  <p>
-    Click <a href={@run_url}>here</a> to inspect the run or view the logs below.
+    attempt failed for workflow "<%= @workflow_name %>".
   </p>
   <%= if @count > 1 do %>
     <p>
@@ -15,9 +12,13 @@
     </p>
   <% end %>
   <p>
+    Attempt <%= @attempt_id %> failed. View the logs below:
+    <%!-- Click <a href={@attempt_url}>here</a> to inspect the attempt or view the logs below. --%>
+  </p>
+  <p>
     <pre style="background-color: #ededed; padding: 16px; margin: 8px 0">
-      <%= Enum.map(@run.log_lines, fn(log_line) -> %>
-        <%= log_line.body %>
+      <%= Enum.map(@attempt_logs, fn(log) -> %>
+        <%= log.message %>
       <% end) %>
     </pre>
   </p>

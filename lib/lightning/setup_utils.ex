@@ -2,6 +2,7 @@ defmodule Lightning.SetupUtils do
   @moduledoc """
   SetupUtils encapsulates logic for setting up initial data for various sites.
   """
+
   alias Lightning.{
     Projects,
     Accounts,
@@ -9,8 +10,7 @@ defmodule Lightning.SetupUtils do
     Workflows,
     Repo,
     Credentials,
-    AttemptRun,
-    WorkOrderService,
+    WorkOrders,
     VersionControl
   }
 
@@ -60,7 +60,7 @@ defmodule Lightning.SetupUtils do
       project: dhis2_project,
       workflow: dhis2_workflow,
       jobs: dhis2_jobs,
-      workorders: [successful_dhis2_workorder, failure_dhis2_workorder]
+      workorders: [failure_dhis2_workorder]
     } =
       create_dhis2_project([
         %{user_id: admin.id, role: :admin}
@@ -73,7 +73,6 @@ defmodule Lightning.SetupUtils do
       workflows: [openhie_workflow, dhis2_workflow],
       workorders: [
         openhie_workorder,
-        successful_dhis2_workorder,
         failure_dhis2_workorder
       ]
     }
@@ -82,7 +81,9 @@ defmodule Lightning.SetupUtils do
   defp to_log_lines(log) do
     log
     |> String.split("\n")
-    |> Enum.map(fn log -> %{body: log} end)
+    |> Enum.map(fn log ->
+      %{message: log, timestamp: DateTime.utc_now()}
+    end)
   end
 
   defp create_dhis2_credential(project, user_id) do
@@ -190,7 +191,7 @@ defmodule Lightning.SetupUtils do
         workflow_id: workflow.id
       })
 
-    {:ok, job_1_edge} =
+    {:ok, _job_1_edge} =
       Workflows.create_edge(%{
         workflow_id: workflow.id,
         source_trigger: source_trigger,
@@ -255,10 +256,22 @@ defmodule Lightning.SetupUtils do
       target_job_id: job_3.id
     })
 
+    input_dataclip =
+      create_dataclip(%{
+        body: %{
+          data: %{},
+          references: [
+            %{}
+          ]
+        },
+        project_id: project.id,
+        type: :http_request
+      })
+
     run_params = [
       %{
         job_id: job_2.id,
-        exit_code: 0,
+        exit_reason: "success",
         log_lines:
           to_log_lines("""
           -- THIS IS ONLY A SAMPLE --
@@ -309,7 +322,7 @@ defmodule Lightning.SetupUtils do
       },
       %{
         job_id: job_3.id,
-        exit_code: 0,
+        exit_reason: "success",
         log_lines:
           to_log_lines("""
           -- THIS IS ONLY A SAMPLE --
@@ -407,25 +420,12 @@ defmodule Lightning.SetupUtils do
       }
     ]
 
-    output_dataclip_id =
-      create_dataclip(%{
-        body: %{
-          data: %{
-            age_in_months: 19,
-            name: "Genevieve Wimplemews"
-          }
-        },
-        project_id: project.id,
-        type: :http_request
-      }).id
-
     {:ok, workorder} =
       create_workorder(
-        :webhook,
-        job_1_edge,
-        ~s[{"age_in_months": 19, "name": "Genevieve Wimplemews"}],
-        run_params,
-        output_dataclip_id
+        workflow,
+        source_trigger,
+        input_dataclip,
+        run_params
       )
 
     %{
@@ -471,7 +471,7 @@ defmodule Lightning.SetupUtils do
         workflow_id: openhie_workflow.id
       })
 
-    {:ok, openhie_root_edge} =
+    {:ok, _openhie_root_edge} =
       Workflows.create_edge(%{
         workflow_id: openhie_workflow.id,
         condition: :always,
@@ -534,13 +534,6 @@ defmodule Lightning.SetupUtils do
         workflow_id: openhie_workflow.id
       })
 
-    dataclip =
-      create_dataclip(%{
-        body: %{data: %{}, references: []},
-        project_id: openhie_project.id,
-        type: :http_request
-      })
-
     {:ok, _failed_upload} =
       Workflows.create_edge(%{
         workflow_id: openhie_workflow.id,
@@ -549,10 +542,32 @@ defmodule Lightning.SetupUtils do
         source_job_id: send_to_openhim.id
       })
 
+    http_body = %{
+      "formId" => "early_enrollment",
+      "patientId" => 1234,
+      "patientData" => %{"name" => "Wally", "surname" => "Robertson"}
+    }
+
+    dataclip =
+      create_dataclip(%{
+        body: %{data: http_body},
+        project_id: openhie_project.id,
+        type: :http_request
+      })
+
+    output_dataclip_payload = %{
+      body: %{data: http_body, references: []},
+      project_id: openhie_project.id,
+      type: :run_result
+    }
+
+    [output_dataclip_1, output_dataclip_2, output_dataclip_3] =
+      Enum.map(1..3, fn _n -> create_dataclip(output_dataclip_payload) end)
+
     run_params = [
       %{
-        job_id: send_to_openhim.id,
-        exit_code: 0,
+        job_id: fhir_standard_data.id,
+        exit_reason: "success",
         log_lines:
           to_log_lines("""
           -- THIS IS ONLY A SAMPLE --
@@ -573,14 +588,41 @@ defmodule Lightning.SetupUtils do
           [CLI] ✔ Writing output to /tmp/output-1686840746-126941-i2yb2g.json
           [CLI] ✔ Done in 223ms! ✨
           """),
-        started_at: DateTime.utc_now() |> DateTime.add(-45, :second),
-        finished_at: DateTime.utc_now() |> DateTime.add(-40, :second),
+        started_at: DateTime.utc_now() |> DateTime.add(1, :second),
+        finished_at: DateTime.utc_now() |> DateTime.add(2, :second),
         input_dataclip_id: dataclip.id,
-        output_dataclip_id: dataclip.id
+        output_dataclip_id: output_dataclip_1.id
+      },
+      %{
+        job_id: send_to_openhim.id,
+        exit_reason: "success",
+        log_lines:
+          to_log_lines("""
+          -- THIS IS ONLY A SAMPLE --
+          [CLI] ℹ Versions:
+               ▸ node.js                  18.12.0
+               ▸ cli                      0.0.32
+               ▸ runtime                  0.0.20
+               ▸ compiler                 0.0.26
+               ▸ @openfn/language-http    4.2.6
+          [CLI] ✔ Loaded state from /tmp/state-1686840746-126941-1hou2fm.json
+          [CLI] ℹ Loaded typedefs for @openfn/language-http@latest
+          [CMP] ℹ Added import statement for @openfn/language-http
+          [CMP] ℹ Added export * statement for @openfn/language-http
+          [CLI] ✔ Compiled job from /tmp/expression-1686840746-126941-1wuk06h.js
+          [R/T] ℹ Resolved adaptor @openfn/language-http to version 4.2.6
+          [R/T] ✔ Operation 1 complete in 0ms
+          [CLI] ✔ Writing output to /tmp/output-1686840746-126941-i2yb2g.json
+          [CLI] ✔ Done in 223ms! ✨
+          """),
+        started_at: DateTime.utc_now() |> DateTime.add(3, :second),
+        finished_at: DateTime.utc_now() |> DateTime.add(4, :second),
+        input_dataclip_id: output_dataclip_1.id,
+        output_dataclip_id: output_dataclip_2.id
       },
       %{
         job_id: notify_upload_successful.id,
-        exit_code: 0,
+        exit_reason: "success",
         log_lines:
           to_log_lines("""
           -- THIS IS ONLY A SAMPLE --
@@ -600,27 +642,19 @@ defmodule Lightning.SetupUtils do
           [CLI] ✔ Writing output to /tmp/output-1686840747-126941-16ewhef.json
           [CLI] ✔ Done in 209ms! ✨
           """),
-        started_at: DateTime.utc_now() |> DateTime.add(-35, :second),
-        finished_at: DateTime.utc_now() |> DateTime.add(-30, :second),
-        input_dataclip_id: dataclip.id,
-        output_dataclip_id: dataclip.id
+        started_at: DateTime.utc_now() |> DateTime.add(5, :second),
+        finished_at: DateTime.utc_now() |> DateTime.add(6, :second),
+        input_dataclip_id: output_dataclip_2.id,
+        output_dataclip_id: output_dataclip_3.id
       }
     ]
 
-    output_dataclip_id =
-      create_dataclip(%{
-        body: %{data: %{}, references: []},
-        project_id: openhie_project.id,
-        type: :http_request
-      }).id
-
     {:ok, openhie_workorder} =
       create_workorder(
-        :webhook,
-        openhie_root_edge,
-        ~s[{}],
-        run_params,
-        output_dataclip_id
+        openhie_workflow,
+        openhie_trigger,
+        dataclip,
+        run_params
       )
 
     %{
@@ -674,7 +708,7 @@ defmodule Lightning.SetupUtils do
         workflow_id: dhis2_workflow.id
       })
 
-    {:ok, root_edge} =
+    {:ok, _root_edge} =
       Workflows.create_edge(%{
         workflow_id: dhis2_workflow.id,
         condition: :always,
@@ -756,90 +790,42 @@ defmodule Lightning.SetupUtils do
           ]
         },
         project_id: dhis2_project.id,
-        type: :http_request
+        type: :run_result
       })
-
-    run_params = [
-      %{
-        job_id: upload_to_google_sheet.id,
-        exit_code: 0,
-        log_lines:
-          to_log_lines("""
-          -- THIS IS ONLY A SAMPLE --
-          [CLI] ℹ Versions:
-               ▸ node.js                  18.12.0
-               ▸ cli                      0.0.32
-               ▸ runtime                  0.0.21
-               ▸ compiler                 0.0.26
-               ▸ @openfn/language-http    4.2.6
-          [CLI] ✔ Loaded state from /tmp/state-1686840343-126941-92qxs9.json
-          [CMP] ℹ Added import statement for @openfn/language-http
-          [CMP] ℹ Added export * statement for @openfn/language-http
-          [CLI] ✔ Compiled job from /tmp/expression-1686840343-126941-1pnt7u5.js
-          [R/T] ℹ Resolved adaptor @openfn/language-http to version 4.2.6
-          [R/T] ✔ Operation 1 complete in 0ms
-          [CLI] ✔ Writing output to /tmp/output-1686840343-126941-1hb3ve5.json
-          [CLI] ✔ Done in 216ms! ✨
-          """),
-        started_at: DateTime.utc_now() |> DateTime.add(-45, :second),
-        finished_at: DateTime.utc_now() |> DateTime.add(-40, :second),
-        input_dataclip_id: input_dataclip.id,
-        output_dataclip_id: output_dataclip.id
-      }
-    ]
-
-    output_dataclip_id =
-      create_dataclip(%{
-        body: %{
-          data: %{
-            attributes: [
-              %{
-                attribute: "zDhUuAYrxNC",
-                created: "2016-08-03T23:49:43.309",
-                displayName: "Last name",
-                lastUpdated: "2016-08-03T23:49:43.309",
-                value: "Kelly",
-                valueType: "TEXT"
-              },
-              %{
-                attribute: "w75KJ2mc4zz",
-                code: "MMD_PER_NAM",
-                created: "2016-08-03T23:49:43.308",
-                displayName: "First name",
-                lastUpdated: "2016-08-03T23:49:43.308",
-                value: "John",
-                valueType: "TEXT"
-              }
-            ],
-            created: "2014-03-06T05:49:28.256",
-            createdAtClient: "2014-03-06T05:49:28.256",
-            lastUpdated: "2016-08-03T23:49:43.309",
-            orgUnit: "DiszpKrYNg8",
-            trackedEntityInstance: "PQfMcpmXeFE",
-            trackedEntityType: "nEenWmSyUEp"
-          },
-          references: [
-            %{}
-          ]
-        },
-        project_id: dhis2_project.id,
-        type: :http_request
-      }).id
-
-    {:ok, successful_dhis2_workorder} =
-      create_workorder(
-        :cron,
-        root_edge,
-        ~s[{"data": {}, "references": \[\]}],
-        run_params,
-        output_dataclip_id
-      )
 
     # Make it fail for demo purposes
     run_params = [
       %{
+        job_id: get_dhis2_data.id,
+        exit_reason: "success",
+        log_lines:
+          to_log_lines("""
+            -- THIS IS ONLY A SAMPLE --
+            [CLI] ✔ Compiled job from /tmp/expression-1686836010-94749-1cn5qct.js
+            [R/T] ℹ Resolved adaptor @openfn/language-dhis2@latest to version 3.2.11
+            [R/T] ✔ Operation 1 complete in 0ms
+            [CLI] ✔ Writing output to /tmp/output-1686836010-94749-1v3ppcw.json
+            [CLI] ✔ Done in 179ms! ✨
+            -- THIS IS ONLY A SAMPLE --
+            [CLI] ℹ Versions:
+                 ▸ node.js                   18.12.0
+                 ▸ cli                       0.0.32
+                 ▸ runtime                   0.0.20
+                 ▸ compiler                  0.0.26
+                 ▸ @openfn/language-dhis2@latest            3.2.11
+            [CLI] ✔ Loaded state from /tmp/state-1686836010-94749-17tka8f.json
+            [CLI] ℹ Loaded typedefs for @openfn/language-dhis2@latest
+            [CMP] ℹ Added import statement for @openfn/language-dhis2@latest
+            [CMP] ℹ Added export * statement for @openfn/language-dhis2@latest
+          """),
+        started_at: DateTime.utc_now() |> DateTime.add(1, :second),
+        finished_at: DateTime.utc_now() |> DateTime.add(2, :second),
+        input_dataclip_id: input_dataclip.id,
+        output_dataclip_id: output_dataclip.id
+      },
+      %{
         job_id: upload_to_google_sheet.id,
-        exit_code: 1,
+        exit_reason: "fail",
         log_lines:
           to_log_lines("""
           -- THIS IS ONLY A SAMPLE --
@@ -857,49 +843,53 @@ defmodule Lightning.SetupUtils do
           [CLI] ✘ Error: 503 Service Unavailable, please try again later
           [CLI] ✘ Took 1.634s.
           """),
-        started_at: DateTime.utc_now() |> DateTime.add(-45, :second),
-        finished_at: DateTime.utc_now() |> DateTime.add(-40, :second),
-        input_dataclip_id: input_dataclip.id
+        started_at: DateTime.utc_now() |> DateTime.add(3, :second),
+        finished_at: DateTime.utc_now() |> DateTime.add(4, :second),
+        input_dataclip_id: output_dataclip.id
       }
     ]
 
     {:ok, failure_dhis2_workorder} =
       create_workorder(
-        :cron,
-        root_edge,
-        ~s[{"data": {}, "references": \[\]}],
-        run_params,
-        output_dataclip_id
+        dhis2_workflow,
+        dhis_trigger,
+        input_dataclip,
+        run_params
       )
 
     %{
       project: dhis2_project,
       workflow: dhis2_workflow,
-      workorders: [successful_dhis2_workorder, failure_dhis2_workorder],
+      workorders: [failure_dhis2_workorder],
       jobs: [get_dhis2_data, upload_to_google_sheet]
     }
   end
 
   def tear_down(opts \\ [destroy_super: false]) do
+    delete_other_tables([
+      "oban_jobs",
+      "oban_peers",
+      "trigger_webhook_auth_methods"
+    ])
+
     delete_all_entities([
       Lightning.Attempt,
       Lightning.AttemptRun,
       Lightning.AuthProviders.AuthConfig,
-      Lightning.Credentials.Audit,
+      Lightning.Auditing.Model,
       Lightning.Projects.ProjectCredential,
       Lightning.WorkOrder,
       Lightning.InvocationReason,
       Lightning.Invocation.Run,
       Lightning.Credentials.Credential,
-      Lightning.Jobs.Job,
-      Lightning.Jobs.Trigger,
+      Lightning.Workflows.Job,
+      Lightning.Workflows.Trigger,
+      Lightning.Workflows.WebhookAuthMethod,
       Lightning.Workflows.Workflow,
       Lightning.Projects.ProjectUser,
       Lightning.Invocation.Dataclip,
       Lightning.Projects.Project
     ])
-
-    delete_other_tables(["oban_jobs", "oban_peers"])
 
     if opts[:destroy_super] do
       Repo.delete_all(Lightning.Accounts.User)
@@ -919,80 +909,64 @@ defmodule Lightning.SetupUtils do
     end)
   end
 
-  defp create_workorder(trigger, edge, dataclip, run_params, output_dataclip_id) do
-    WorkOrderService.multi_for(
-      trigger,
-      edge,
-      dataclip
-      |> Jason.decode!()
-    )
-    |> add_and_update_runs(run_params, output_dataclip_id)
-    |> Repo.transaction()
-  end
+  defp create_workorder(
+         workflow,
+         trigger,
+         input_dataclip,
+         run_params
+       ) do
+    attempt_finished_at =
+      DateTime.utc_now()
+      |> DateTime.add(length(run_params) * 2, :second)
 
-  def add_and_update_runs(multi, run_params, output_dataclip_id)
-      when is_list(run_params) do
-    multi =
-      multi
-      |> Multi.run(:run, fn repo, %{attempt_run: attempt_run} ->
-        {:ok, Ecto.assoc(attempt_run, :run) |> repo.one!()}
-      end)
-      |> Multi.update("update_run", fn %{run: run} ->
-        # Change the timestamps, logs, exit_code etc
-        run
-        |> Repo.preload(:log_lines)
-        |> Run.changeset(%{
-          exit_code: 0,
-          log_lines:
-            to_log_lines("""
-            -- THIS IS ONLY A SAMPLE --
-            [CLI] ℹ Versions:
-                 ▸ node.js                   18.12.0
-                 ▸ cli                       0.0.32
-                 ▸ runtime                   0.0.20
-                 ▸ compiler                  0.0.26
-                 ▸ #{adaptor_for_log(run)}            3.2.11
-            [CLI] ✔ Loaded state from /tmp/state-1686836010-94749-17tka8f.json
-            [CLI] ℹ Loaded typedefs for #{adaptor_for_log(run)}
-            [CMP] ℹ Added import statement for #{adaptor_for_log(run)}
-            [CMP] ℹ Added export * statement for #{adaptor_for_log(run)}
-            [CLI] ✔ Compiled job from /tmp/expression-1686836010-94749-1cn5qct.js
-            [R/T] ℹ Resolved adaptor #{adaptor_for_log(run)} to version 3.2.11
-            [R/T] ✔ Operation 1 complete in 0ms
-            [CLI] ✔ Writing output to /tmp/output-1686836010-94749-1v3ppcw.json
-            [CLI] ✔ Done in 179ms! ✨
-            """)
-            |> Enum.with_index()
-            |> Enum.map(fn {log, index} -> {index, log} end)
-            |> Enum.into(%{}),
-          started_at: DateTime.utc_now() |> DateTime.add(-55, :second),
-          finished_at: DateTime.utc_now() |> DateTime.add(-50, :second),
-          output_dataclip_id: output_dataclip_id
+    [%{exit_reason: final_run_exit_reason} | _rest] = Enum.reverse(run_params)
+
+    {:ok, %{workorder: workorder, attempt: attempt}} =
+      Multi.new()
+      |> Multi.insert(
+        :workorder,
+        WorkOrders.build_for(trigger, %{
+          workflow: workflow,
+          dataclip: input_dataclip,
+          last_activity: attempt_finished_at
         })
-      end)
+      )
+      |> Multi.update(:attempt, fn %{workorder: %{attempts: [attempt]}} ->
+        runs =
+          Enum.map(run_params, fn params ->
+            log_lines =
+              Enum.map(params.log_lines, fn line ->
+                Map.merge(line, %{attempt_id: attempt.id})
+              end)
 
-    run_params
-    |> Enum.with_index()
-    |> Enum.reduce(multi, fn {params, i}, multi ->
-      multi
-      |> Multi.insert("attempt_run_#{i}", fn %{
-                                               attempt: attempt,
-                                               dataclip: _dataclip
-                                             } ->
-        run = Run.new(params)
-        AttemptRun.new(attempt, run)
+            params
+            |> Map.merge(%{log_lines: log_lines})
+            |> Run.new()
+          end)
+
+        attempt
+        |> Repo.preload([:runs])
+        |> Ecto.Changeset.change(%{
+          state:
+            if(final_run_exit_reason == "success", do: :success, else: :failed),
+          claimed_at: DateTime.utc_now() |> DateTime.add(1, :second),
+          started_at: DateTime.utc_now() |> DateTime.add(1, :second),
+          finished_at: attempt_finished_at
+        })
+        |> Ecto.Changeset.put_assoc(:runs, runs)
       end)
-    end)
+      |> Repo.transaction()
+
+    Lightning.WorkOrders.update_state(attempt)
+
+    workorder
+    |> Ecto.Changeset.change(last_activity: attempt_finished_at)
+    |> Repo.update()
   end
 
   defp create_dataclip(params) do
     {:ok, dataclip} = Lightning.Invocation.create_dataclip(params)
 
     dataclip
-  end
-
-  defp adaptor_for_log(run) do
-    run_with_job = Repo.preload(run, :job)
-    run_with_job.job.adaptor
   end
 end

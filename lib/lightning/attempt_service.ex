@@ -142,8 +142,7 @@ defmodule Lightning.AttemptService do
           %{
             work_order_id: work_order.id,
             reason_id: Map.fetch!(reasons_map, run.id),
-            inserted_at: now,
-            updated_at: now
+            inserted_at: now
           }
         end)
       end,
@@ -214,8 +213,7 @@ defmodule Lightning.AttemptService do
       %{
         attempt_id: attempt_id,
         run_id: run.id,
-        inserted_at: timestamp,
-        updated_at: timestamp
+        inserted_at: timestamp
       }
     end)
   end

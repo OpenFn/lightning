@@ -4,7 +4,6 @@ defmodule LightningWeb.RunLive.ComponentsTest do
   import Phoenix.LiveViewTest
 
   alias LightningWeb.RunLive.Components
-  import Lightning.InvocationFixtures
 
   import Lightning.Factories
 
@@ -13,7 +12,7 @@ defmodule LightningWeb.RunLive.ComponentsTest do
       assert render_component(
                &LightningWeb.RunLive.Components.run_viewer/1,
                run:
-                 insert(:run, exit_code: 1, output_dataclip_id: nil)
+                 insert(:run, exit_reason: "fail", output_dataclip_id: nil)
                  |> Lightning.Repo.preload(:log_lines)
              ) =~
                "This run failed"
@@ -28,21 +27,20 @@ defmodule LightningWeb.RunLive.ComponentsTest do
 
       assert render_component(&LightningWeb.RunLive.Components.run_viewer/1,
                run:
-                 insert(:run, exit_code: 0, output_dataclip_id: nil)
+                 insert(:run, exit_reason: "success", output_dataclip_id: nil)
                  |> Lightning.Repo.preload(:log_lines)
              ) =~
                "There is no output for this run"
 
       run =
-        run_fixture(
-          exit_code: 0,
-          output_dataclip_id:
-            insert(:dataclip,
+        insert(:run,
+          exit_reason: "success",
+          output_dataclip:
+            build(:dataclip,
               type: :run_result,
               body: %{name: "dataclip_body"}
-            ).id
+            )
         )
-        |> Lightning.Repo.preload(:output_dataclip)
 
       assert render_component(&LightningWeb.RunLive.Components.run_viewer/1,
                run: run |> Lightning.Repo.preload(:log_lines)
@@ -52,24 +50,49 @@ defmodule LightningWeb.RunLive.ComponentsTest do
   end
 
   test "run_list_item component" do
-    reason = insert(:reason, type: :webhook)
+    %{triggers: [trigger], jobs: jobs} =
+      workflow = insert(:complex_workflow)
 
-    attempt =
-      insert(:attempt,
-        work_order: build(:workorder, reason: reason),
-        runs: [
-          build(:run),
-          build(:run, finished_at: DateTime.utc_now(), exit_code: 0),
-          build(:run, finished_at: DateTime.utc_now())
-        ],
-        reason: reason
+    [job_1, job_2, job_3 | _] = jobs
+
+    dataclip = insert(:dataclip)
+    output_dataclip = insert(:dataclip)
+
+    %{attempts: [attempt]} =
+      insert(:workorder,
+        workflow: workflow,
+        trigger: trigger,
+        dataclip: dataclip,
+        attempts: [
+          %{
+            state: :failed,
+            dataclip: dataclip,
+            starting_trigger: trigger,
+            runs: [
+              insert(:run,
+                job: job_1,
+                input_dataclip: dataclip,
+                output_dataclip: output_dataclip,
+                exit_reason: nil
+              ),
+              insert(:run,
+                job: job_2,
+                input_dataclip: output_dataclip,
+                exit_reason: "success"
+              ),
+              insert(:run,
+                job: job_3,
+                exit_reason: "fail",
+                finished_at: build(:timestamp)
+              )
+            ]
+          }
+        ]
       )
 
-    first_run = attempt.runs |> List.first()
-    second_run = attempt.runs |> Enum.at(1)
-    third_run = attempt.runs |> List.last()
+    [first_run, second_run, third_run] = attempt.runs
 
-    project_id = first_run.job.workflow.project_id
+    project_id = workflow.project_id
 
     html =
       render_component(&Components.run_list_item/1,
@@ -136,21 +159,28 @@ defmodule LightningWeb.RunLive.ComponentsTest do
   end
 
   test "no rerun button is displayed when user can't rerun a job" do
-    reason = insert(:reason, type: :webhook)
+    %{triggers: [trigger]} = workflow = insert(:simple_workflow)
 
-    attempt =
-      build(:attempt,
-        work_order: build(:workorder, reason: reason),
-        runs: [
-          build(:run),
-          build(:run, finished_at: DateTime.utc_now(), exit_code: 0),
-          build(:run, finished_at: DateTime.utc_now())
-        ],
-        reason: reason
+    dataclip = insert(:dataclip)
+
+    %{attempts: [attempt]} =
+      insert(:workorder,
+        workflow: workflow,
+        trigger: trigger,
+        dataclip: dataclip,
+        state: :failed
       )
-      |> insert()
+      |> with_attempt(
+        state: :failed,
+        dataclip: dataclip,
+        starting_trigger: trigger,
+        finished_at: build(:timestamp),
+        runs: [
+          build(:run, finished_at: DateTime.utc_now(), exit_reason: "success")
+        ]
+      )
 
-    run = attempt.runs |> List.first()
+    run = List.first(attempt.runs)
 
     project_id = run.job.workflow.project_id
 
@@ -227,9 +257,9 @@ defmodule LightningWeb.RunLive.ComponentsTest do
                "24000 ms"
 
       assert html
-             |> Floki.find("div#exit-code-#{run.id} > div:nth-child(2)")
+             |> Floki.find("div#exit-reason-#{run.id} > div:nth-child(2)")
              |> Floki.text() =~
-               "?"
+               "running"
     end
 
     test "with pending run" do
@@ -254,9 +284,9 @@ defmodule LightningWeb.RunLive.ComponentsTest do
       #  ~r/25\d\d\d ms/
 
       assert html
-             |> Floki.find("div#exit-code-#{run.id} > div:nth-child(2)")
+             |> Floki.find("div#exit-reason-#{run.id} > div:nth-child(2)")
              |> Floki.text() =~
-               "?"
+               "running"
     end
 
     test "with unstarted run" do
@@ -275,9 +305,9 @@ defmodule LightningWeb.RunLive.ComponentsTest do
              |> Floki.text() =~ "Not started."
 
       assert html
-             |> Floki.find("div#exit-code-#{run.id} > div:nth-child(2)")
+             |> Floki.find("div#exit-reason-#{run.id} > div:nth-child(2)")
              |> Floki.text() =~
-               "?"
+               "running"
     end
   end
 end

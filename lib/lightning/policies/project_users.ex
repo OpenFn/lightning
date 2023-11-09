@@ -23,6 +23,8 @@ defmodule Lightning.Policies.ProjectUsers do
           | :edit_failure_alerts
           | :edit_project_description
           | :provision_project
+          | :create_webhook_auth_method
+          | :edit_webhook_auth_method
 
   @doc """
   authorize/3 takes an action, a user, and a project. It checks the user's role
@@ -78,7 +80,9 @@ defmodule Lightning.Policies.ProjectUsers do
              :delete_workflow,
              :run_job,
              :rerun_job,
-             :provision_project
+             :provision_project,
+             :create_webhook_auth_method,
+             :edit_webhook_auth_method
            ],
       do: project_user.role in [:owner, :admin, :editor]
 end

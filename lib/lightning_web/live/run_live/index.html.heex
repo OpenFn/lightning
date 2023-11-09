@@ -134,7 +134,9 @@
                     phx-click-away={hide_dropdown("status_filter_dropdown")}
                   >
                     <div class="py-1" role="none">
-                      <div class="px-4 py-1 text-gray-500 text-sm">Workflow</div>
+                      <div class="px-4 py-1 text-gray-500 text-sm">
+                        Workorder
+                      </div>
                       <!-- Active: "bg-gray-100 text-gray-900", Not Active: "text-gray-700" -->
                       <%= for status <- @statuses do %>
                         <div class="px-4 py-1 text-gray-700 text-sm">
@@ -647,7 +649,7 @@
                     <div>
                       <p class="text-sm text-gray-500 mb-1">Work Order</p>
                       <span class="text-gray-700 mt-2 font-medium">
-                        RECIEVED AT
+                        RECEIVED AT
                       </span>
                     </div>
                   </div>
@@ -705,7 +707,6 @@
                   data-entity="work_order_list"
                   class="bg-white divide-y divide-gray-200 text-gray-500"
                 >
-                  <!-- Table Row 1-->
                   <%= for wo <- @page.entries do %>
                     <.live_component
                       module={LightningWeb.RunLive.WorkOrderComponent}

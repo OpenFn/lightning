@@ -7,7 +7,7 @@ defmodule Lightning.InvocationReasons do
   alias Lightning.Repo
   alias Lightning.InvocationReason
   alias Lightning.Invocation.{Run, Dataclip}
-  alias Lightning.Jobs.Trigger
+  alias Lightning.Workflows.Trigger
 
   @type reason_type :: :manual | :retry | Trigger.t()
 

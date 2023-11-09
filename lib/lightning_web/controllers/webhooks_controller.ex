@@ -3,69 +3,51 @@ defmodule LightningWeb.WebhooksController do
 
   require OpenTelemetry.Tracer
 
-  alias Lightning.{Workflows, WorkOrderService, Jobs}
+  alias Lightning.Workflows
+  alias Lightning.WorkOrders
 
-  # this gets hit when someone asks to run a workflow by API
   @spec create(Plug.Conn.t(), %{path: binary()}) :: Plug.Conn.t()
   def create(conn, %{"path" => path}) do
-    source_trigger_id = path |> List.last()
+    path = Enum.join(path, "/")
+    start_opts = %{path: path}
 
-    :telemetry.span(
-      [:lightning, :workorder, :webhook],
-      %{source_trigger_id: source_trigger_id},
-      fn ->
-        {result, metadata} =
-          OpenTelemetry.Tracer.with_span "lightning.api.webhook",
-                                         %{
-                                           attributes: %{
-                                             source_trigger_id: source_trigger_id
-                                           }
-                                         } do
-            path
-            |> Enum.join("/")
-            |> Workflows.get_edge_by_webhook()
-            |> case do
-              nil ->
-                {
-                  put_status(conn, :not_found) |> json(%{}),
-                  %{status: :not_found}
-                }
+    :telemetry.span([:lightning, :workorder, :webhook], start_opts, fn ->
+      {conn, metadata} =
+        OpenTelemetry.Tracer.with_span "lightning.api.webhook", %{
+          attributes: start_opts
+        } do
+          conn = handle_create(conn)
+          {conn, %{status: Plug.Conn.Status.reason_atom(conn.status)}}
+        end
 
-              %Workflows.Edge{target_job: %Jobs.Job{enabled: false}} ->
-                {
-                  put_status(conn, :forbidden)
-                  |> json(%{
-                    message:
-                      "Unable to process request, trigger is disabled. Enable it on OpenFn to allow requests to this endpoint."
-                  }),
-                  %{status: :forbidden}
-                }
+      {conn, start_opts |> Map.merge(metadata)}
+    end)
+  end
 
-              edge ->
-                {:ok, %{work_order: work_order, attempt_run: attempt_run}} =
-                  WorkOrderService.create_webhook_workorder(
-                    edge,
-                    conn.body_params
-                  )
+  defp handle_create(conn) do
+    case conn.assigns.trigger do
+      nil ->
+        conn |> put_status(:not_found) |> json(%{"error" => "Webhook not found"})
 
-                resp = %{
-                  work_order_id: work_order.id,
-                  run_id: attempt_run.run_id,
-                  attempt_id: attempt_run.attempt_id
-                }
+      %Workflows.Trigger{enabled: true} = trigger ->
+        {:ok, work_order} =
+          WorkOrders.create_for(trigger,
+            workflow: trigger.workflow,
+            dataclip: %{
+              body: conn.body_params,
+              type: :http_request,
+              project_id: trigger.workflow.project_id
+            }
+          )
 
-                {
-                  conn |> json(resp),
-                  %{status: :ok}
-                }
-            end
-          end
+        conn |> json(%{work_order_id: work_order.id})
 
-        {
-          result,
-          %{source_trigger_id: source_trigger_id} |> Map.merge(metadata)
-        }
-      end
-    )
+      _disabled ->
+        put_status(conn, :forbidden)
+        |> json(%{
+          message:
+            "Unable to process request, trigger is disabled. Enable it on OpenFn to allow requests to this endpoint."
+        })
+    end
   end
 end

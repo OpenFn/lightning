@@ -3,9 +3,10 @@ defmodule Lightning.WorkOrders.Manual do
   A model is used to build WorkOrders with custom input data.
   """
   @type t :: %__MODULE__{
+          workflow: Lightning.Workflows.Workflow.t(),
           project: Lightning.Projects.Project.t(),
-          job: Lightning.Jobs.Job.t(),
-          user: Lightning.Accounts.User.t(),
+          job: Lightning.Workflows.Job.t(),
+          created_by: Lightning.Accounts.User.t(),
           dataclip_id: String.t(),
           body: String.t(),
           is_persisted: boolean()
@@ -13,54 +14,35 @@ defmodule Lightning.WorkOrders.Manual do
 
   use Ecto.Schema
 
+  alias Lightning.Validators
+
   import Ecto.Changeset
 
   @primary_key false
   embedded_schema do
+    embeds_one :workflow, Lightning.Workflows.Workflow
     embeds_one :project, Lightning.Projects.Project
-    embeds_one :user, Lightning.Accounts.User
-    embeds_one :job, Lightning.Jobs.Job
+    embeds_one :created_by, Lightning.Accounts.User
+    embeds_one :job, Lightning.Workflows.Job
     field :is_persisted, :boolean
     field :dataclip_id, Ecto.UUID
     field :body, :string
   end
 
-  def changeset(%{project: project, job: job, user: user}, attrs) do
-    %__MODULE__{}
-    |> cast(attrs, [:body, :dataclip_id])
-    |> put_embed(:project, project)
-    |> put_embed(:job, job)
-    |> put_embed(:user, user)
-    |> validate_required([:project, :job, :user])
+  def new(params, attrs \\ []) do
+    struct(__MODULE__, attrs)
+    |> cast(params, [:dataclip_id, :body])
+    |> validate_required([:project, :job, :created_by, :workflow])
     |> remove_body_if_dataclip_present()
-    |> validate_change(:body, fn
-      _, nil ->
-        []
-
-      _, body ->
-        case Jason.decode(body) do
-          {:ok, _} ->
-            []
-
-          {:error, _} ->
-            [{:body, "Invalid JSON"}]
-        end
-    end)
-    |> Lightning.Validators.validate_one_required(
-      [:dataclip_id, :body],
-      "Either a dataclip or a custom body must be present."
-    )
-    |> Lightning.Validators.validate_exclusive(
-      [:dataclip_id, :body],
-      "Dataclip and custom body are mutually exclusive."
-    )
-    |> then(fn changeset ->
-      case get_field(changeset, :job) do
+    |> validate_body_or_dataclip()
+    |> validate_json(:body)
+    |> validate_change(:workflow, fn _, workflow ->
+      case workflow do
         %{__meta__: %{state: :built}} ->
-          changeset |> add_error(:job, "Workflow must be saved first.")
+          [:workflow, "Workflow must be saved first."]
 
         _ ->
-          changeset
+          []
       end
     end)
   end
@@ -70,5 +52,30 @@ defmodule Lightning.WorkOrders.Manual do
       nil -> changeset
       _ -> Ecto.Changeset.delete_change(changeset, :body)
     end
+  end
+
+  defp validate_json(changeset, field) do
+    case get_change(changeset, field) do
+      nil ->
+        changeset
+
+      body ->
+        case Jason.decode(body) do
+          {:ok, _} -> changeset
+          {:error, _} -> add_error(changeset, field, "Invalid JSON")
+        end
+    end
+  end
+
+  defp validate_body_or_dataclip(changeset) do
+    changeset
+    |> Validators.validate_one_required(
+      [:dataclip_id, :body],
+      "Either a dataclip or a custom body must be present."
+    )
+    |> Validators.validate_exclusive(
+      [:dataclip_id, :body],
+      "Dataclip and custom body are mutually exclusive."
+    )
   end
 end

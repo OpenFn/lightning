@@ -140,7 +140,7 @@ defmodule LightningWeb.WorkflowNewLive.WorkflowParamsTest do
                    "adaptor" => "@openfn/language-common@latest",
                    "body" => "",
                    "project_credential_id" => nil,
-                   "enabled" => "true",
+                   "enabled" => true,
                    "errors" => %{"body" => ["can't be blank"]},
                    "name" => "job-3",
                    "id" => ^job_3_id
@@ -220,10 +220,6 @@ defmodule LightningWeb.WorkflowNewLive.WorkflowParamsTest do
     } do
       assert WorkflowParams.to_patches(original_params, params) ==
                [
-                 # Remove when https://github.com/corka149/jsonpatch/issues/16
-                 # is fixed and released.
-                 %{op: "add", path: "/project_id", value: nil},
-                 %{op: "add", path: "/name", value: nil},
                  %{op: "remove", path: "/jobs/1"},
                  %{op: "remove", path: "/jobs/0"}
                ]

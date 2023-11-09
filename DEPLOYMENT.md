@@ -7,8 +7,9 @@ See below for technical considerations and instructions.
 
 ## Encryption
 
-Lightning enforces encryption at rest for Credentials, for which an encryption
-key must be provided when running in production.
+Lightning enforces encryption at rest for credentials, TOTP backup codes, and
+webhook trigger authentication methods, for which an encryption key must be
+provided when running in production.
 
 The key is expected to be a randomized set of bytes, 32 long; and Base64 encoded
 when setting the environment variable.
@@ -23,6 +24,20 @@ mix lightning.gen_encryption_key
 
 Copy your key _(NOT THIS ONE)_ and set it as `PRIMARY_ENCRYPTION_KEY` in your
 environment.
+
+## Workers
+
+Lightning uses external worker processes for executing Attempts. There are three
+settings required to configure worker authentication.
+
+- `ATTEMPTS_PRIVATE_KEY`
+- `WORKER_SECRET`
+- `LIGHTNING_PUBLIC_KEY`
+
+You can use the `mix lightning.gen_worker_keys` task to generate these for
+convenience.
+
+For more information see the [Workers](WORKERS.md) documentation.
 
 ## Environment Variables
 

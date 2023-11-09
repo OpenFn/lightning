@@ -6,8 +6,7 @@ defmodule LightningWeb.DataclipLiveTest do
   import Lightning.Factories
 
   defp create_dataclip(%{project: project}) do
-    dataclip = dataclip_fixture(project_id: project.id)
-    %{dataclip: dataclip}
+    %{dataclip: insert(:dataclip, body: %{}, project: project)}
   end
 
   setup :register_and_log_in_user

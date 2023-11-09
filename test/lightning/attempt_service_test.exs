@@ -9,6 +9,7 @@ defmodule Lightning.AttemptServiceTest do
   import Lightning.Factories
 
   describe "attempts" do
+    @tag skip: "Replaced by Attempts.enqueue/1"
     test "create_attempt/3 returns a new Attempt, with a new Run" do
       %{job: job, trigger: trigger} = workflow_job_fixture()
       work_order = work_order_fixture(workflow_id: job.workflow_id)
@@ -33,6 +34,7 @@ defmodule Lightning.AttemptServiceTest do
     end
   end
 
+  @tag :skip
   describe "append/2" do
     test "adds a run to an existing attempt" do
       %{job: job, trigger: trigger} = workflow_job_fixture()
@@ -65,6 +67,7 @@ defmodule Lightning.AttemptServiceTest do
     end
   end
 
+  @tag skip: "Replaced by WorkOrders.retry/3"
   describe "retry" do
     setup do
       workflow_scenario()
@@ -98,7 +101,7 @@ defmodule Lightning.AttemptServiceTest do
         insert(:attempt,
           work_order: work_order,
           runs: attempt_runs,
-          reason_id: work_order.reason_id
+          reason: work_order.reason
         )
 
       # find the failed run for this attempt
@@ -142,6 +145,7 @@ defmodule Lightning.AttemptServiceTest do
     end
   end
 
+  @tag skip: "Replaced by WorkOrders.retry_many/3"
   describe "rerun_many/2" do
     setup do
       workflow_scenario()

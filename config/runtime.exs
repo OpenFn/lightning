@@ -5,16 +5,18 @@ import Config
 # system starts, so it is typically used to load production configuration
 # and secrets from environment variables or elsewhere. Do not define
 # any compile-time configuration in here, as it won't be applied.
-# The block below contains prod specific runtime configuration.
+
+# Use Vapor to load configuration from environment variables, files, etc.
+# Then merge the resulting configuration into the Application config.
+env_config = Vapor.load!(Lightning.Env)
+
+env_config
+|> Enum.each(fn {k, v} -> config(:lightning, k, v |> Enum.into([])) end)
 
 # Start the phoenix server if environment is set and running in a release
 if System.get_env("PHX_SERVER") && System.get_env("RELEASE_NAME") do
   config :lightning, LightningWeb.Endpoint, server: true
 end
-
-image_tag = System.get_env("IMAGE_TAG")
-branch = System.get_env("BRANCH")
-commit = System.get_env("COMMIT")
 
 decoded_cert =
   System.get_env("GITHUB_CERT")
@@ -57,6 +59,10 @@ config :lightning, :github_app,
   app_id: github_app_id,
   app_name: github_app_name
 
+image_tag = System.get_env("IMAGE_TAG")
+branch = System.get_env("BRANCH")
+commit = System.get_env("COMMIT")
+
 config :lightning, :image_info,
   image_tag: image_tag,
   branch: branch,
@@ -80,7 +86,7 @@ config :lightning,
       Application.get_env(:lightning, :schemas_path) || "./priv"
 
 base_oban_cron = [
-  {"* * * * *", Lightning.Jobs.Scheduler},
+  {"* * * * *", Lightning.Workflows.Scheduler},
   {"* * * * *", ObanPruner},
   {"0 10 * * *", Lightning.DigestEmailWorker,
    args: %{"type" => "daily_project_digest"}},
@@ -95,8 +101,11 @@ conditional_cron =
     do:
       base_oban_cron ++
         [
+          {"0 2 * * *", Lightning.WebhookAuthMethods,
+           args: %{"type" => "purge_deleted"}},
           {"0 2 * * *", Lightning.Credentials,
            args: %{"type" => "purge_deleted"}},
+          {"*/5 * * * *", Lightning.Janitor},
           {"0 2 * * *", Lightning.Accounts, args: %{"type" => "purge_deleted"}},
           {"0 2 * * *", Lightning.Projects, args: %{"type" => "purge_deleted"}}
         ],

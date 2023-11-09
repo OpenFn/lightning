@@ -269,7 +269,7 @@ defmodule LightningWeb.JobLive.CronSetupComponent do
       )
 
     params =
-      build_params_for_field(
+      LightningWeb.Utils.build_params_for_field(
         socket.assigns.form,
         :cron_expression,
         cron_expression
@@ -278,11 +278,6 @@ defmodule LightningWeb.JobLive.CronSetupComponent do
     socket.assigns.on_change.(params)
 
     {:noreply, socket |> assign(:cron_data, cron_data)}
-  end
-
-  defp build_params_for_field(form, field, value) do
-    name = Phoenix.HTML.Form.input_name(form, field)
-    Plug.Conn.Query.decode_pair({name, value}, %{})
   end
 
   def frequency_field(assigns) do

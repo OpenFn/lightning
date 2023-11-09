@@ -12,9 +12,9 @@ defmodule Lightning.Workflows.Edge do
   import Ecto.Changeset
   import Lightning.Validators
 
+  alias Lightning.Workflows.Job
+  alias Lightning.Workflows.Trigger
   alias Lightning.Workflows.Workflow
-  alias Lightning.Jobs.Job
-  alias Lightning.Jobs.Trigger
 
   @type edge_condition() :: :always | :on_job_success | :on_job_failure
   @type t() :: %__MODULE__{

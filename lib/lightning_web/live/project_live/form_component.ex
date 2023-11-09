@@ -12,9 +12,10 @@ defmodule LightningWeb.ProjectLive.FormComponent do
   """
   use LightningWeb, :live_component
 
-  alias Lightning.Repo
   alias Lightning.Accounts.UserNotifier
   alias Lightning.Projects
+  alias Lightning.Repo
+
   import LightningWeb.Components.Form
 
   import Ecto.Changeset, only: [fetch_field!: 2, put_assoc: 3]
@@ -189,6 +190,13 @@ defmodule LightningWeb.ProjectLive.FormComponent do
       {:error, %Ecto.Changeset{} = changeset} ->
         {:noreply, assign(socket, changeset: changeset)}
     end
+  end
+
+  defp user_name_for_id(users, user_id) do
+    users
+    |> Enum.find_value(fn {name, id} ->
+      if id == user_id, do: name
+    end)
   end
 
   # TODO: Determine the list of users to notify into the Project context

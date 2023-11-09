@@ -1,6 +1,7 @@
 import React, { memo } from 'react';
 import { Position } from 'reactflow';
 import { ClockIcon, GlobeAltIcon } from '@heroicons/react/24/outline';
+import { lockClosedIcon } from '../components/trigger-icons';
 import cronstrue from 'cronstrue';
 
 import PlusButton from '../components/PlusButton';
@@ -11,7 +12,8 @@ type TriggerMeta = {
   label: string;
   sublabel?: string;
   tooltip?: string;
-  icon?: typeof ClockIcon | typeof GlobeAltIcon;
+  primaryIcon?: typeof ClockIcon | typeof GlobeAltIcon;
+  secondaryIcon?: typeof lockClosedIcon;
 };
 
 const TriggerNode = ({
@@ -20,7 +22,7 @@ const TriggerNode = ({
 }): JSX.Element => {
   // Do not remove yet, we might need this snippet of code when implementing issue #1121
   // const toolbar = () => props.data?.allowPlaceholder && <PlusButton />;
-  const { label, sublabel, tooltip, icon } = getTriggerMeta(
+  const { label, sublabel, tooltip, primaryIcon, secondaryIcon } = getTriggerMeta(
     props.data as Lightning.TriggerNode
   );
   return (
@@ -30,7 +32,8 @@ const TriggerNode = ({
       label={label}
       sublabel={sublabel}
       tooltip={tooltip}
-      icon={icon}
+      primaryIcon={primaryIcon}
+      secondaryIcon={secondaryIcon}
       sourcePosition={sourcePosition}
       interactive={props.data.trigger.type === 'webhook'}
       // TODO: put back the toolbar when implementing issue #1121
@@ -50,16 +53,18 @@ function getTriggerMeta(trigger: Lightning.TriggerNode): TriggerMeta {
         label: 'Webhook trigger',
         sublabel: `On each request received`,
         tooltip: 'Click to copy webhook URL',
-        icon: <GlobeAltIcon />,
+        primaryIcon: <GlobeAltIcon />,
+        secondaryIcon: trigger.has_auth_method ? lockClosedIcon : null,
       };
     case 'cron':
       try {
         return {
           label: 'Cron trigger',
           sublabel: cronstrue.toString(trigger.cron_expression),
-          icon: <ClockIcon />,
+          primaryIcon: <ClockIcon />,
+          secondaryIcon: null,
         };
-      } catch (_error) {}
+      } catch (_error) { }
   }
   return { label: '', sublabel: '' };
 }

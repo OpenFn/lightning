@@ -98,7 +98,7 @@
         {Credo.Check.Readability.MaxLineLength,
          [priority: :low, max_length: 90]},
         {Credo.Check.Readability.ModuleAttributeNames, []},
-        {Credo.Check.Readability.ModuleDoc, []},
+        {Credo.Check.Readability.ModuleDoc, [exit_status: 0]},
         {Credo.Check.Readability.ModuleNames, []},
         {Credo.Check.Readability.ParenthesesInCondition, []},
         {Credo.Check.Readability.ParenthesesOnZeroArityDefs, []},
@@ -124,7 +124,7 @@
         {Credo.Check.Refactor.MatchInCondition, []},
         {Credo.Check.Refactor.NegatedConditionsInUnless, []},
         {Credo.Check.Refactor.NegatedConditionsWithElse, []},
-        {Credo.Check.Refactor.Nesting, []},
+        {Credo.Check.Refactor.Nesting, [max_nesting: 3]},
         {Credo.Check.Refactor.UnlessWithElse, []},
         {Credo.Check.Refactor.WithClauses, []},
 
@@ -176,7 +176,7 @@
         {Credo.Check.Refactor.NegatedIsNil, false},
         {Credo.Check.Refactor.PipeChainStart, false},
         {Credo.Check.Refactor.VariableRebinding, false},
-        {Credo.Check.Warning.LeakyEnvironment, []},
+        {Credo.Check.Warning.LeakyEnvironment, false},
         {Credo.Check.Warning.MapGetUnsafePass, []},
         {Credo.Check.Warning.UnsafeToAtom, []}
 

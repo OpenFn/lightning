@@ -1,4 +1,4 @@
-defmodule Lightning.Workorders.SearchParams do
+defmodule Lightning.WorkOrders.SearchParams do
   @moduledoc """
   This module is used to parse search parameters for workorders and provide
   a query to the database.
@@ -9,12 +9,10 @@ defmodule Lightning.Workorders.SearchParams do
   use Ecto.Schema
   import Ecto.Changeset
 
-  alias Lightning.Workorders.SearchParams
-
-  @statuses ~w(success failure pending timeout crash)
+  @statuses ~w(success failed pending killed crashed running)
   @search_fields ~w(body log)
 
-  @type t :: %SearchParams{
+  @type t :: %__MODULE__{
           status: [String.t()],
           search_fields: [String.t()],
           search_term: String.t(),

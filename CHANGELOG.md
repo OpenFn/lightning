@@ -10,8 +10,19 @@ and this project adheres to
 
 ### Added
 
+- Webhook Authentication Methods database and CRUD operations
+  [#1152](https://github.com/OpenFn/Lightning/issues/1152)
+- Creation and Edit of webhook webhook authentication methods UI
+  [#1149](https://github.com/OpenFn/Lightning/issues/1149)
+- Add webhook authentication methods overview methods in the canvas
+  [#1153](https://github.com/OpenFn/Lightning/issues/1153)
+- Add icon on the canvas for triggers that have authentication enabled
+  [#1157](https://github.com/OpenFn/Lightning/issues/1157)
+- Require password/2FA code before showing password and API Key for webhook auth
+  methods [#1200](https://github.com/OpenFn/Lightning/issues/1200)
 - Restrict live dashboard access to only superusers, enable DB information and
-  OS information [#1170](https://github.com/OpenFn/Lightning/issues/1170)
+  OS information [#1170](https://github.com/OpenFn/Lightning/issues/1170) OS
+  information [#1170](https://github.com/OpenFn/Lightning/issues/1170)
 - Expose additional metrics to LiveDashboard
   [#1171](https://github.com/OpenFn/Lightning/issues/1171)
 - Add plumbing to dump Lightning metrics during load testing
@@ -23,9 +34,9 @@ and this project adheres to
 - Add a OpenTelemetry trace example
   [#1189](https://github.com/OpenFn/Lightning/issues/1189)
 - Add plumbing to support the use of PromEx
-  [1199](https://github.com/OpenFn/Lightning/issues/1199)
-- Add warning text to PromEx config
-  [1222](https://github.com/OpenFn/Lightning/issues/1222)
+  [#1199](https://github.com/OpenFn/Lightning/issues/1199)
+- Add warning text to PromEx config 
+  [#1222] (https://github.com/OpenFn/Lightning/issues/1222)
 - Track and filter on webhook controller state in :telemetry metrics
   [#1192](https://github.com/OpenFn/Lightning/issues/1192)
 - Secure PromEx metrics endpoint by default
@@ -35,10 +46,13 @@ and this project adheres to
 
 - Updated vulnerable JS libraries, `postcss` and `semver`
   [#1176](https://github.com/OpenFn/Lightning/issues/1176)
-- Update "Delete" to "Delete Job" on Job panel and include javascript deletion confirmation
-  [#1105](https://github.com/OpenFn/Lightning/issues/1105)
+- Update "Delete" to "Delete Job" on Job panel and include javascript deletion
+  confirmation [#1105](https://github.com/OpenFn/Lightning/issues/1105)
 
 ### Fixed
+
+- [#1140](https://github.com/OpenFn/Lightning/issues/1140) Adaptor icons load
+  gracefully
 
 ## [v0.9.3] - 2023-09-27
 
@@ -46,6 +60,8 @@ and this project adheres to
 
 - Add ellipsis when adaptor name is longer than the container allows
   [#1095](https://github.com/OpenFn/Lightning/issues/1095)
+- Webhook Authentication Methods database and CRUD operations
+  [#1152](https://github.com/OpenFn/Lightning/issues/1152)
 
 ### Changed
 
@@ -320,7 +336,7 @@ the Nodes and Edges [epic](https://github.com/OpenFn/Lightning/issues/793).
 - In `v0.7.0` we change the underlying workflow building and execution
   infrastructure to align with a standard "nodes and edges" design for directed
   acyclic graphs (DAGs). Make sure to run the migrations!
-  [793](<(https://github.com/OpenFn/Lightning/issues/793)>)
+  [793](https://github.com/OpenFn/Lightning/issues/793)
 
 ### Fixed
 

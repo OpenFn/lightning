@@ -23,12 +23,19 @@ defmodule LightningWeb.ChannelCase do
       import Phoenix.ChannelTest
       import LightningWeb.ChannelCase
 
+      import Mox
+
       # The default endpoint for testing
       @endpoint LightningWeb.Endpoint
     end
   end
 
   setup tags do
+    # Mox.stub_with(Lightning.Config.Mock, Lightning.Config.Stub)
+    # Application.put_env(:lightning, Lightning.Config, Lightning.Config.Mock)
+    Mox.stub_with(Lightning.Mock, Lightning.Stub)
+    # Application.put_env(:lightning, Lightning, Lightning.Mock)
+
     pid =
       Ecto.Adapters.SQL.Sandbox.start_owner!(Lightning.Repo,
         shared: not tags[:async]
