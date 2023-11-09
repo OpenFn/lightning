@@ -18,6 +18,7 @@ defmodule Lightning.Invocation.Run do
   @type t :: %__MODULE__{
           __meta__: Ecto.Schema.Metadata.t(),
           id: Ecto.UUID.t() | nil,
+          exit_reason: String.t() | nil,
           job: Job.t() | Ecto.Association.NotLoaded.t() | nil
         }
 

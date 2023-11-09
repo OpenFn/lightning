@@ -39,7 +39,7 @@ defmodule Lightning.Invocation.Query do
   @doc """
   The last run for a job for a particular exit reason, used in scheduler
   """
-  @spec runs_with_reason(Ecto.Queryable.t(), integer()) :: Ecto.Queryable.t()
+  @spec runs_with_reason(Ecto.Queryable.t(), String.t()) :: Ecto.Queryable.t()
   def runs_with_reason(query, exit_reason) do
     from(q in query, where: q.exit_reason == ^exit_reason)
   end

@@ -13,14 +13,12 @@ defmodule Lightning.Workflows.Scheduler do
 
   require Logger
 
-  alias Lightning.{
-    Invocation,
-    Repo,
-    WorkOrders,
-    Workflows
-  }
-
+  alias Lightning.Invocation
   alias Lightning.Invocation.Dataclip
+  alias Lightning.Repo
+  alias Lightning.WorkOrders
+  alias Lightning.Workflows
+  alias Lightning.Workflows.Edge
 
   @impl Oban.Worker
   def perform(%Oban.Job{}), do: enqueue_cronjobs()
@@ -35,15 +33,11 @@ defmodule Lightning.Workflows.Scheduler do
   def enqueue_cronjobs(date_time) do
     date_time
     |> Workflows.get_edges_for_cron_execution()
-    |> Enum.each(fn edge ->
-      {:ok, _workorder} = invoke_cronjob(edge)
-    end)
-
-    :ok
+    |> Enum.each(&invoke_cronjob/1)
   end
 
-  @spec invoke_cronjob(Lightning.Workflows.Edge.t()) :: {:ok | :error, map()}
-  defp invoke_cronjob(%{target_job: job, source_trigger: trigger} = _edge) do
+  @spec invoke_cronjob(Edge.t()) :: {:ok, map()} | {:error, map()}
+  defp invoke_cronjob(%Edge{target_job: job, source_trigger: trigger}) do
     case last_state_for_job(job.id) do
       nil ->
         Logger.debug(fn ->
@@ -67,10 +61,10 @@ defmodule Lightning.Workflows.Scheduler do
           |> Dataclip.new()
           |> Repo.insert!()
 
-        WorkOrders.create_for(trigger, %{
+        WorkOrders.create_for(trigger,
           dataclip: dataclip,
           workflow: job.workflow
-        })
+        )
 
       dataclip ->
         Logger.debug(fn ->
@@ -79,10 +73,10 @@ defmodule Lightning.Workflows.Scheduler do
           # coveralls-ignore-stop
         end)
 
-        WorkOrders.create_for(trigger, %{
+        WorkOrders.create_for(trigger,
           dataclip: dataclip,
           workflow: job.workflow
-        })
+        )
     end
   end
 
