@@ -291,8 +291,6 @@ defmodule Lightning.Projects do
     )
   end
 
-
-
   def project_runs_query(project) do
     from(r in Run,
       join: j in assoc(r, :job),
