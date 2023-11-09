@@ -11,7 +11,6 @@ defmodule LightningWeb.RunLive.Index do
   alias Lightning.Policies.Permissions
   alias Lightning.Policies.ProjectUsers
   alias Lightning.WorkOrders
-  alias Lightning.WorkOrderService
   alias Lightning.WorkOrders.SearchParams
   alias LightningWeb.RunLive.Components
   alias Phoenix.LiveView.JS
@@ -37,7 +36,7 @@ defmodule LightningWeb.RunLive.Index do
 
   @impl true
   def mount(params, _session, socket) do
-    WorkOrderService.subscribe(socket.assigns.project.id)
+    WorkOrders.subscribe(socket.assigns.project.id)
 
     workflows =
       Lightning.Workflows.get_workflows_for(socket.assigns.project)
@@ -176,26 +175,74 @@ defmodule LightningWeb.RunLive.Index do
 
   @impl true
   def handle_info(
-        {_, %Lightning.WorkOrders.Events.AttemptCreated{attempt: attempt}},
+        %Lightning.WorkOrders.Events.AttemptCreated{attempt: attempt},
         socket
       ) do
-    send_update(LightningWeb.RunLive.WorkOrderComponent,
-      id: attempt.work_order_id
-    )
+    attempt =
+      Lightning.Repo.preload(
+        attempt,
+        [work_order: [:workflow, attempts: [runs: :job]]],
+        force: true
+      )
 
-    {:noreply, socket}
+    {:noreply,
+     assign(socket,
+       page: update_page_workorder(socket.assigns.page, attempt.work_order)
+     )}
   end
 
   @impl true
   def handle_info(
-        {_, %Lightning.WorkOrders.Events.AttemptUpdated{attempt: attempt}},
+        %Lightning.WorkOrders.Events.AttemptUpdated{attempt: attempt},
         socket
       ) do
-    send_update(LightningWeb.RunLive.WorkOrderComponent,
-      id: attempt.work_order_id
-    )
+    attempt =
+      Lightning.Repo.preload(
+        attempt,
+        [work_order: [:workflow, attempts: [runs: :job]]],
+        force: true
+      )
 
-    {:noreply, socket}
+    {:noreply,
+     assign(socket,
+       page: update_page_workorder(socket.assigns.page, attempt.work_order)
+     )}
+  end
+
+  @impl true
+  def handle_info(
+        %Lightning.WorkOrders.Events.WorkOrderCreated{work_order: work_order},
+        %{assigns: assigns} = socket
+      ) do
+    params =
+      assigns.filters
+      |> Map.merge(%{"workorder_id" => work_order.id})
+      |> SearchParams.new()
+
+    page_result = Invocation.search_workorders(assigns.project, params)
+
+    page = %{
+      assigns.page
+      | entries: page_result.entries ++ assigns.page.entries,
+        page_size: assigns.page.page_size + page_result.total_entries,
+        total_entries: assigns.page.total_entries + page_result.total_entries
+    }
+
+    {:noreply, assign(socket, page: page)}
+  end
+
+  @impl true
+  def handle_info(
+        %Lightning.WorkOrders.Events.WorkOrderUpdated{work_order: work_order},
+        socket
+      ) do
+    work_order =
+      Lightning.Repo.preload(work_order, [:workflow, attempts: [runs: :job]],
+        force: true
+      )
+
+    {:noreply,
+     assign(socket, page: update_page_workorder(socket.assigns.page, work_order))}
   end
 
   @impl true
@@ -373,5 +420,18 @@ defmodule LightningWeb.RunLive.Index do
 
   defp maybe_humanize_date(date) do
     date && Timex.format!(date, "{D}/{M}/{YY}")
+  end
+
+  defp update_page_workorder(page, workorder) do
+    entries =
+      Enum.reduce(page.entries, [], fn entry, acc ->
+        if entry.id == workorder.id do
+          [workorder | acc]
+        else
+          [entry | acc]
+        end
+      end)
+
+    %{page | entries: Enum.reverse(entries)}
   end
 end

@@ -31,6 +31,7 @@ defmodule Lightning.WorkOrdersTest do
       workflow: workflow,
       trigger: trigger
     } do
+      Lightning.WorkOrders.subscribe(workflow.project_id)
       dataclip = insert(:dataclip)
 
       {:ok, workorder} =
@@ -44,6 +45,12 @@ defmodule Lightning.WorkOrdersTest do
       [attempt] = workorder.attempts
 
       assert attempt.starting_trigger.id == trigger.id
+
+      workorder_id = workorder.id
+
+      assert_received %Lightning.WorkOrders.Events.WorkOrderCreated{
+        work_order: %{id: ^workorder_id}
+      }
     end
 
     @tag trigger_type: :cron
@@ -51,6 +58,8 @@ defmodule Lightning.WorkOrdersTest do
       workflow: workflow,
       trigger: trigger
     } do
+      Lightning.WorkOrders.subscribe(workflow.project_id)
+
       dataclip = insert(:dataclip)
 
       {:ok, workorder} =
@@ -64,6 +73,12 @@ defmodule Lightning.WorkOrdersTest do
       [attempt] = workorder.attempts
 
       assert attempt.starting_trigger.id == trigger.id
+
+      workorder_id = workorder.id
+
+      assert_received %Lightning.WorkOrders.Events.WorkOrderCreated{
+        work_order: %{id: ^workorder_id}
+      }
     end
 
     test "creating a manual workorder", %{workflow: workflow, job: job} do
@@ -89,6 +104,12 @@ defmodule Lightning.WorkOrdersTest do
       assert attempt.created_by.id == user.id
 
       assert_received %Lightning.WorkOrders.Events.AttemptCreated{}
+
+      workorder_id = workorder.id
+
+      assert_received %Lightning.WorkOrders.Events.WorkOrderCreated{
+        work_order: %{id: ^workorder_id}
+      }
     end
   end
 

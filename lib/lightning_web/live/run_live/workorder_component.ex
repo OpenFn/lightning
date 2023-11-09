@@ -2,7 +2,6 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
   @moduledoc """
   Workorder component
   """
-  alias Lightning.Invocation
   use Phoenix.Component
   use LightningWeb, :live_component
   import LightningWeb.RunLive.Components
@@ -86,26 +85,6 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
     {:noreply, assign(socket, :entry_selected, !assigns[:entry_selected])}
   end
 
-  @impl true
-  def update_many(assigns_sockets) do
-    ids = Enum.map(assigns_sockets, fn {assigns, _socket} -> assigns.id end)
-
-    work_orders =
-      Invocation.get_workorders_by_ids(ids)
-      |> Invocation.with_attempts()
-      |> Lightning.Repo.all()
-      |> Map.new(fn %{id: id} = wo -> {id, wo} end)
-
-    Enum.map(assigns_sockets, fn {assigns, socket} ->
-      socket =
-        assign(socket, assigns)
-        |> assign(:work_order, work_orders[assigns.id])
-
-      update(socket.assigns, socket)
-      |> then(fn {:ok, socket} -> socket end)
-    end)
-  end
-
   attr :show_details, :boolean, default: false
   attr :show_prev_attempts, :boolean, default: false
   attr :entry_selected, :boolean, default: false
@@ -114,6 +93,7 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
   def render(assigns) do
     ~H"""
     <div
+      id={"workorder-#{@work_order.id}"}
       data-entity="work_order"
       role="rowgroup"
       class={if @entry_selected, do: "bg-gray-50", else: "bg-white"}

@@ -43,7 +43,7 @@ defmodule Lightning.WorkOrder do
     belongs_to :dataclip, Dataclip
 
     belongs_to :reason, InvocationReason
-    has_many :attempts, Attempt
+    has_many :attempts, Attempt, preload_order: [desc: :inserted_at]
     has_many :jobs, through: [:workflow, :jobs]
 
     timestamps(type: :utc_datetime_usec)

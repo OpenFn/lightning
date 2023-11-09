@@ -52,32 +52,32 @@ defmodule Lightning.WorkOrders do
   import Ecto.Query
   import Lightning.Validators
 
-  @pubsub Lightning.PubSub
-
   @type work_order_option ::
           {:workflow, Workflow.t()}
           | {:dataclip, Dataclip.t()}
           | {:created_by, User.t()}
 
-  # @doc """
-  # Create a new Workorder.
-  #
-  # **For a webhook**
-  #     create(trigger, workflow: workflow, dataclip: dataclip)
-  #
-  # **For a user**
-  #     create(job, workflow: workflow, dataclip: dataclip, user: user)
-  # """
+  @doc """
+  Create a new Workorder.
+
+  **For a webhook**
+      create_for(trigger, workflow: workflow, dataclip: dataclip)
+
+  **For a user**
+      create_for(job, workflow: workflow, dataclip: dataclip, user: user)
+  """
   @spec create_for(Trigger.t() | Job.t(), [work_order_option()]) ::
           {:ok, WorkOrder.t()} | {:error, Ecto.Changeset.t(WorkOrder.t())}
   def create_for(%Trigger{} = trigger, opts) do
     build_for(trigger, opts |> Map.new())
     |> Repo.insert()
+    |> maybe_broadcast_workorder_creation()
   end
 
   def create_for(%Job{} = job, opts) do
     build_for(job, opts |> Map.new())
     |> Repo.insert()
+    |> maybe_broadcast_workorder_creation()
   end
 
   def create_for(%Manual{} = manual) do
@@ -90,13 +90,28 @@ defmodule Lightning.WorkOrders do
         created_by: manual.created_by
       })
     end)
-    |> Multi.run(:broadcast, fn _repo, %{workorder: %{attempts: [attempt]}} ->
-      {:ok, Events.attempt_created(manual.project.id, attempt)}
+    |> Multi.run(:broadcast, fn _repo,
+                                %{workorder: %{attempts: [attempt]} = workorder} ->
+      Events.work_order_created(manual.project.id, workorder)
+      Events.attempt_created(manual.project.id, attempt)
+      {:ok, nil}
     end)
     |> Repo.transaction()
     |> case do
       {:ok, %{workorder: workorder}} ->
         {:ok, workorder}
+    end
+  end
+
+  defp maybe_broadcast_workorder_creation(result) do
+    case result do
+      {:ok, workorder} ->
+        workflow = workorder |> Repo.preload(:workflow) |> Map.get(:workflow)
+        Events.work_order_created(workflow.project_id, workorder)
+        {:ok, workorder}
+
+      other ->
+        other
     end
   end
 
@@ -224,7 +239,20 @@ defmodule Lightning.WorkOrders do
     |> validate_required_assoc(:work_order)
     |> validate_required_assoc(:created_by)
     |> Attempts.enqueue()
-    |> maybe_broadcast()
+    |> then(fn
+      {:ok, attempt} ->
+        updated_attempt = Repo.preload(attempt, work_order: :workflow)
+
+        Events.attempt_created(
+          updated_attempt.work_order.workflow.project_id,
+          attempt
+        )
+
+        {:ok, attempt}
+
+      other ->
+        other
+    end)
   end
 
   def retry(%Attempt{id: attempt_id}, %Run{id: run_id}, opts) do
@@ -334,8 +362,12 @@ defmodule Lightning.WorkOrders do
       select: wo,
       update: [set: [state: s.state, last_activity: ^DateTime.utc_now()]]
     )
-    |> Repo.update_all([])
-    |> then(fn {_, [wo]} -> {:ok, wo} end)
+    |> Repo.update_all([], returning: true)
+    |> then(fn {_, [wo]} ->
+      updated_wo = Repo.preload(wo, :workflow)
+      Events.work_order_updated(updated_wo.workflow.project_id, updated_wo)
+      {:ok, wo}
+    end)
   end
 
   @doc """
@@ -356,23 +388,5 @@ defmodule Lightning.WorkOrders do
     |> Repo.one()
   end
 
-  def subscribe(project_id) do
-    Events.subscribe(project_id)
-  end
-
-  defp maybe_broadcast({:ok, attempt} = result) do
-    workflow = attempt |> Repo.preload(:workflow) |> Map.get(:workflow)
-
-    Phoenix.PubSub.broadcast(
-      @pubsub,
-      topic(workflow.project_id),
-      {__MODULE__, %Events.AttemptCreated{attempt: attempt}}
-    )
-
-    result
-  end
-
-  defp maybe_broadcast(result), do: result
-
-  defp topic(project_id), do: "project:#{project_id}"
+  defdelegate subscribe(project_id), to: Events
 end

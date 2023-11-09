@@ -900,6 +900,199 @@ defmodule LightningWeb.RunWorkOrderTest do
     end
   end
 
+  describe "Events" do
+    test "WorkOrders.Events.AttemptCreated", %{
+      conn: conn,
+      project: project
+    } do
+      workflow = insert(:workflow, project: project)
+      trigger = insert(:trigger, type: :webhook, workflow: workflow)
+      job = insert(:job, workflow: workflow)
+
+      dataclip = insert(:dataclip)
+
+      work_order =
+        insert(:workorder,
+          workflow: workflow,
+          trigger: trigger,
+          dataclip: dataclip,
+          attempts: [
+            build(:attempt,
+              dataclip: dataclip,
+              starting_trigger: trigger,
+              runs: [
+                build(:run,
+                  job: job,
+                  exit_reason: "success",
+                  started_at: build(:timestamp),
+                  finished_at: build(:timestamp)
+                )
+              ]
+            )
+          ]
+        )
+
+      {:ok, view, _html} =
+        live(conn, Routes.project_run_index_path(conn, :index, project.id))
+
+      attempt =
+        insert(:attempt,
+          work_order: work_order,
+          dataclip: dataclip,
+          starting_job: job
+        )
+
+      view |> element("#toggle_details_for_#{work_order.id}") |> render_click()
+
+      refute has_element?(view, "#attempt_#{attempt.id}")
+
+      Lightning.WorkOrders.Events.attempt_created(project.id, attempt)
+
+      # Force Re-render to ensure the event is included
+      render(view)
+
+      assert has_element?(view, "#attempt_#{attempt.id}")
+    end
+
+    test "WorkOrders.Events.AttemptUpdated", %{
+      conn: conn,
+      project: project
+    } do
+      workflow = insert(:workflow, project: project)
+      trigger = insert(:trigger, type: :webhook, workflow: workflow)
+      job_1 = insert(:job, workflow: workflow)
+      job_2 = insert(:job, workflow: workflow)
+
+      dataclip = insert(:dataclip)
+
+      work_order =
+        insert(:workorder,
+          workflow: workflow,
+          trigger: trigger,
+          dataclip: dataclip
+        )
+
+      attempt =
+        insert(:attempt,
+          work_order: work_order,
+          dataclip: dataclip,
+          starting_trigger: trigger
+        )
+
+      run_1 =
+        insert(:run,
+          job: job_1,
+          attempts: [attempt],
+          exit_reason: "success",
+          started_at: build(:timestamp),
+          finished_at: build(:timestamp)
+        )
+
+      {:ok, view, _html} =
+        live(conn, Routes.project_run_index_path(conn, :index, project.id))
+
+      run_2 =
+        insert(:run,
+          job: job_2,
+          attempts: [attempt],
+          exit_reason: "success",
+          started_at: build(:timestamp),
+          finished_at: build(:timestamp)
+        )
+
+      view |> element("#toggle_details_for_#{work_order.id}") |> render_click()
+
+      assert has_element?(view, "#run-#{run_1.id}")
+      refute has_element?(view, "#run-#{run_2.id}")
+
+      Lightning.WorkOrders.Events.attempt_updated(project.id, attempt)
+
+      # Force Re-render to ensure the event is included
+      render(view)
+
+      assert has_element?(view, "#run-#{run_1.id}")
+      assert has_element?(view, "#run-#{run_2.id}")
+    end
+
+    test "WorkOrders.Events.WorkOrderCreated", %{
+      conn: conn,
+      project: project
+    } do
+      workflow_1 = insert(:workflow, project: project)
+      trigger_1 = insert(:trigger, type: :webhook, workflow: workflow_1)
+      job_1 = insert(:job, workflow: workflow_1)
+      dataclip_1 = insert(:dataclip, project: project)
+
+      workflow_2 = insert(:workflow, project: project)
+      trigger_2 = insert(:trigger, type: :webhook, workflow: workflow_2)
+      job_2 = insert(:job, workflow: workflow_2)
+      dataclip_2 = insert(:dataclip, project: project)
+
+      # filter by workflow
+      {:ok, view, _html} =
+        live(
+          conn,
+          Routes.project_run_index_path(conn, :index, project.id,
+            filters: %{workflow_id: workflow_1.id}
+          )
+        )
+
+      work_order_1 =
+        insert(:workorder,
+          workflow: workflow_1,
+          trigger: trigger_1,
+          dataclip: dataclip_1,
+          attempts: [
+            build(:attempt,
+              dataclip: dataclip_1,
+              starting_trigger: trigger_1,
+              runs: [
+                build(:run,
+                  job: job_1,
+                  exit_reason: "success",
+                  started_at: build(:timestamp),
+                  finished_at: build(:timestamp)
+                )
+              ]
+            )
+          ]
+        )
+
+      work_order_2 =
+        insert(:workorder,
+          workflow: workflow_2,
+          trigger: trigger_2,
+          dataclip: dataclip_2,
+          attempts: [
+            build(:attempt,
+              dataclip: dataclip_2,
+              starting_trigger: trigger_2,
+              runs: [
+                build(:run,
+                  job: job_2,
+                  exit_reason: "success",
+                  started_at: build(:timestamp),
+                  finished_at: build(:timestamp)
+                )
+              ]
+            )
+          ]
+        )
+
+      refute has_element?(view, "#workorder-#{work_order_1.id}")
+      refute has_element?(view, "#workorder-#{work_order_2.id}")
+
+      Lightning.WorkOrders.Events.work_order_created(project.id, work_order_2)
+      Lightning.WorkOrders.Events.work_order_created(project.id, work_order_1)
+
+      # Force Re-render to ensure the event is included
+      render(view)
+
+      assert has_element?(view, "#workorder-#{work_order_1.id}")
+      refute has_element?(view, "#workorder-#{work_order_2.id}")
+    end
+  end
+
   def search_for(view, term, types) when types == [] do
     search_for(view, term, [:body, :log])
   end
