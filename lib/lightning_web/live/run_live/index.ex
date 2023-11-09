@@ -246,26 +246,6 @@ defmodule LightningWeb.RunLive.Index do
   end
 
   @impl true
-  def handle_info(
-        {:selection_toggled, {workorder, selected?}},
-        %{assigns: assigns} = socket
-      ) do
-    selected_workorder = %Lightning.WorkOrder{
-      id: workorder.id,
-      workflow_id: workorder.workflow_id
-    }
-
-    work_orders =
-      if selected? do
-        [selected_workorder | assigns.selected_work_orders]
-      else
-        assigns.selected_work_orders -- [selected_workorder]
-      end
-
-    {:noreply, assign(socket, selected_work_orders: work_orders)}
-  end
-
-  @impl true
   def handle_event(
         "rerun",
         %{"attempt_id" => attempt_id, "run_id" => run_id},
@@ -319,6 +299,41 @@ defmodule LightningWeb.RunLive.Index do
   end
 
   def handle_event(
+        "toggle_selection",
+        %{
+          "workorder_id" => workorder_id,
+          "selected" => selected?
+        },
+        %{assigns: assigns} = socket
+      ) do
+    selected? = String.to_existing_atom(selected?)
+
+    work_orders =
+      if selected? do
+        workorder =
+          Enum.find(assigns.page.entries, fn wo ->
+            wo.id == workorder_id
+          end)
+
+        selected_workorder = %Lightning.WorkOrder{
+          id: workorder.id,
+          workflow_id: workorder.workflow_id
+        }
+
+        [selected_workorder | assigns.selected_work_orders]
+      else
+        {_wo, rest} =
+          Enum.split_with(assigns.selected_work_orders, fn wo ->
+            wo.id == workorder_id
+          end)
+
+        rest
+      end
+
+    {:noreply, assign(socket, selected_work_orders: work_orders)}
+  end
+
+  def handle_event(
         "toggle_all_selections",
         %{"all_selections" => selection},
         %{assigns: %{page: page}} = socket
@@ -334,8 +349,6 @@ defmodule LightningWeb.RunLive.Index do
         []
       end
 
-    update_component_selections(page.entries, selection)
-
     {:noreply, assign(socket, selected_work_orders: work_orders)}
   end
 
@@ -343,9 +356,7 @@ defmodule LightningWeb.RunLive.Index do
     apply_filters(Map.merge(socket.assigns.filters, filters), socket)
   end
 
-  defp apply_filters(filters, %{assigns: assigns} = socket) do
-    update_component_selections(assigns.page.entries, false)
-
+  defp apply_filters(filters, socket) do
     {:noreply,
      socket
      |> assign(filters_changeset: filters_changeset(filters))
@@ -406,16 +417,6 @@ defmodule LightningWeb.RunLive.Index do
 
   defp selected_workorder_count(selected_orders) do
     Enum.count(selected_orders)
-  end
-
-  defp update_component_selections(entries, selection) do
-    for entry <- entries do
-      send_update(LightningWeb.RunLive.WorkOrderComponent,
-        id: entry.id,
-        entry_selected: selection,
-        event: :selection_toggled
-      )
-    end
   end
 
   defp maybe_humanize_date(date) do
