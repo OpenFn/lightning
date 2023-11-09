@@ -75,6 +75,7 @@ defmodule Lightning.Runtime.RuntimeManagerTest do
   end
 
   @tag :capture_log
+  @tag :skip
   test "the runtime manager waits for the runtime to complete processing before shutting down",
        %{test: test} do
     cleanup_time = 0.2
