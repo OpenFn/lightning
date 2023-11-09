@@ -573,6 +573,62 @@ defmodule LightningWeb.RunWorkOrderTest do
       refute workflow_displayed(view, "workflow 1")
       refute workflow_displayed(view, "workflow 2")
     end
+
+    test "bulk select isn't available when there's no workorder matching the filter",
+         %{
+           conn: conn,
+           project: project
+         } do
+      workflow = insert(:workflow, project: project, name: "workflow 1")
+      trigger = insert(:trigger, type: :webhook, workflow: workflow)
+
+      job =
+        insert(:job,
+          workflow: workflow,
+          body: ~s[fn(state => { return {...state, extra: "data"} })]
+        )
+
+      dataclip = insert(:dataclip)
+
+      insert(:workorder,
+        workflow: workflow,
+        trigger: trigger,
+        dataclip: dataclip,
+        last_activity: DateTime.utc_now(),
+        attempts: [
+          build(:attempt,
+            starting_trigger: trigger,
+            dataclip: dataclip,
+            runs: [
+              build(:run,
+                job: job,
+                input_dataclip: dataclip,
+                started_at: build(:timestamp),
+                finished_at: build(:timestamp),
+                exit_reason: "success"
+              )
+            ]
+          )
+        ]
+      )
+
+      workflow_two = insert(:workflow, project: project, name: "workflow 2")
+
+      {:ok, view, _html} =
+        live(conn, Routes.project_run_index_path(conn, :index, project.id))
+
+      view
+      |> element("#select-workflow-#{workflow.id}")
+      |> render_click()
+
+      assert has_element?(view, "#select_all")
+
+      view
+      |> element("#select-workflow-#{workflow_two.id}")
+      |> render_click()
+
+      refute has_element?(view, "#select_all")
+    end
   end
 
   describe "Show" do

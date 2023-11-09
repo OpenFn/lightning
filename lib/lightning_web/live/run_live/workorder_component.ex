@@ -14,22 +14,13 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
       ) do
     {:ok,
      socket
+     |> assign(assigns)
      |> assign(project: project, can_rerun_job: can_rerun_job)
-     |> set_entry_selection(assigns)
      |> set_work_order_details(work_order)}
   end
 
   def update(%{work_order: work_order} = assigns, socket) do
-    {:ok,
-     socket |> set_work_order_details(work_order) |> set_entry_selection(assigns)}
-  end
-
-  def update(%{event: :selection_toggled, entry_selected: selection}, socket) do
-    {:ok, assign(socket, entry_selected: selection)}
-  end
-
-  defp set_entry_selection(socket, assigns) do
-    assign(socket, entry_selected: assigns[:entry_selected] || false)
+    {:ok, socket |> assign(assigns) |> set_work_order_details(work_order)}
   end
 
   defp set_work_order_details(socket, work_order) do
@@ -104,19 +95,33 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
           class="col-span-3 py-1 px-4 text-sm font-normal text-left rtl:text-right text-gray-500"
         >
           <div class="flex gap-4 items-center">
-            <.form
-              :let={f}
-              for={selection_params(@work_order, @entry_selected)}
+            <form
               phx-change="toggle_selection"
-              phx-target={@myself}
               id={"selection-form-#{@work_order.id}"}
             >
-              <%= Phoenix.HTML.Form.checkbox(f, :selected,
-                id: "select_#{@work_order.id}",
-                class:
-                  "left-4 top-1/2 h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-600"
-              ) %>
-            </.form>
+              <input
+                type="hidden"
+                id={"id_#{@work_order.id}"}
+                name="workorder_id"
+                value={@work_order.id}
+              />
+
+              <input
+                type="hidden"
+                id={"unselect_#{@work_order.id}"}
+                name="selected"
+                value="false"
+              />
+
+              <input
+                type="checkbox"
+                id={"select_#{@work_order.id}"}
+                name="selected"
+                class="left-4 top-1/2 h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-600"
+                value="true"
+                {if @entry_selected, do: [checked: "checked"], else: []}
+              />
+            </form>
             <button
               id={"toggle_details_for_#{@work_order.id}"}
               class="w-auto rounded-full p-3 hover:bg-gray-100"
@@ -248,9 +253,5 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
       <% end %>
     </div>
     """
-  end
-
-  defp selection_params(work_order, selected) do
-    %{"id" => work_order.id, "selected" => selected}
   end
 end
