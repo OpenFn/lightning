@@ -586,6 +586,7 @@
                       <div class="">
                         <.form
                           :let={f}
+                          :if={@page.entries != []}
                           for={
                             %{
                               "all_selections" =>
@@ -707,16 +708,16 @@
                   data-entity="work_order_list"
                   class="bg-white divide-y divide-gray-200 text-gray-500"
                 >
-                  <%= for entry <- @page.entries do %>
+                  <%= for workorder <- @page.entries do %>
                     <.live_component
                       module={LightningWeb.RunLive.WorkOrderComponent}
-                      id={entry.id}
-                      work_order={entry}
+                      id={workorder.id}
+                      work_order={workorder}
                       project={@project}
                       can_rerun_job={@can_rerun_job}
                       entry_selected={
                         Enum.any?(@selected_work_orders, fn wo ->
-                          wo.id == entry.id
+                          wo.id == workorder.id
                         end)
                       }
                     />

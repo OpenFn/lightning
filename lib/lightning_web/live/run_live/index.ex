@@ -396,7 +396,7 @@ defmodule LightningWeb.RunLive.Index do
   end
 
   defp all_selected?(work_orders, entries) do
-    entries != [] && Enum.count(work_orders) == Enum.count(entries)
+    Enum.count(work_orders) == Enum.count(entries)
   end
 
   defp partially_selected?(work_orders, entries) do
