@@ -49,12 +49,12 @@ defmodule LightningWeb.Plugs.WebhookAuth do
   Assuming a request with the path `/i/some_webhook`:
 
   ### Webhook Found and Authenticated
-  ```
-  iex> LightningWeb.Plugs.WebhookAuth.call(conn, [])
-  %Plug.Conn{status: 200, ...}
 
-  iex> LightningWeb.Plugs.WebhookAuth.call(conn, [])
-  %Plug.Conn{status: 404, ...}
+      iex> LightningWeb.Plugs.WebhookAuth.call(conn, [])
+      %Plug.Conn{status: 200, ...}
+
+      iex> LightningWeb.Plugs.WebhookAuth.call(conn, [])
+      %Plug.Conn{status: 404, ...}
   """
   def call(conn, _opts) do
     case conn.path_info do

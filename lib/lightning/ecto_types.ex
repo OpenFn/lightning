@@ -73,6 +73,9 @@ defmodule Lightning.LogMessage do
   > While this type allows JSON objects to be sent, the model will always return
   > strings. This type is a stand-in until we want to add a JSONB column to the
   > underlying table.
+
+  In the case of JSON objects we serialize them to a string, and in the case of
+  arrays we serialize them individually and join them with a space.
   """
   use Ecto.Type
   def type, do: :string
