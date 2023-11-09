@@ -456,6 +456,7 @@ defmodule Lightning.Credentials do
   @spec maybe_refresh_token(nil | Lightning.Credentials.Credential.t()) ::
           {:error, :invalid_config}
           | {:ok, Lightning.Credentials.Credential.t()}
+          | {:ok, nil}
   def maybe_refresh_token(%Credential{schema: "googlesheets"} = credential) do
     token_body = Google.TokenBody.new(credential.body)
 

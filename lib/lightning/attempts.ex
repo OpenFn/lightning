@@ -61,7 +61,7 @@ defmodule Lightning.Attempts do
 
       Lightning.Attempts.get(id, include: [:workflow])
   """
-  @spec get(Ecto.UUID.t(), [{:include, [atom() | {atom(), [atom()]}]}]) ::
+  @spec get(Ecto.UUID.t(), [{:include, term()}]) ::
           Attempt.t() | nil
   def get(id, opts \\ []) do
     preloads = opts |> Keyword.get(:include, [])
@@ -76,6 +76,13 @@ defmodule Lightning.Attempts do
   def get_dataclip_body(%Attempt{} = attempt) do
     from(d in Ecto.assoc(attempt, :dataclip),
       select: type(d.body, :string)
+    )
+    |> Repo.one()
+  end
+
+  def get_credential(%Attempt{} = attempt, id) do
+    from(c in Ecto.assoc(attempt, [:workflow, :jobs, :credential]),
+      where: c.id == ^id
     )
     |> Repo.one()
   end

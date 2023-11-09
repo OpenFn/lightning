@@ -48,19 +48,17 @@ defmodule Lightning.Credentials.Credential do
   end
 
   defp validate_transfer_ownership(changeset) do
-    user_id = get_field(changeset, :user_id)
-    credential_id = get_field(changeset, :id)
+    if changed?(changeset, :user_id) && get_field(changeset, :id) do
+      user_id = get_field(changeset, :user_id)
+      credential_id = get_field(changeset, :id)
 
-    if credential_id != nil do
       diff =
         Lightning.Credentials.invalid_projects_for_user(
           credential_id,
           user_id
         )
 
-      if Enum.empty?(diff) do
-        changeset
-      else
+      if Enum.any?(diff) do
         owner = Lightning.Accounts.get_user!(user_id)
 
         diff_projects_names =
@@ -74,6 +72,8 @@ defmodule Lightning.Credentials.Credential do
           :user_id,
           "Invalid owner: #{owner.first_name} #{owner.last_name} doesn't have access to #{Enum.join(diff_projects_names, ", ")}. Please grant them access or select another owner."
         )
+      else
+        changeset
       end
     else
       changeset

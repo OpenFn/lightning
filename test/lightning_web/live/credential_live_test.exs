@@ -563,6 +563,7 @@ defmodule LightningWeb.CredentialLiveTest do
     setup do
       bypass = Bypass.open()
 
+      # TODO: replace this with a proper Mock via Lightning.Config
       Lightning.ApplicationHelpers.put_temporary_env(:lightning, :oauth_clients,
         google: [
           client_id: "foo",
@@ -925,6 +926,11 @@ defmodule LightningWeb.CredentialLiveTest do
   describe "googlesheets credential (when client is not available)" do
     @tag :capture_log
     test "shows a warning that Google Sheets isn't available", %{conn: conn} do
+      # TODO: replace this with a proper Mock via Lightning.Config
+      Lightning.ApplicationHelpers.put_temporary_env(:lightning, :oauth_clients,
+        google: []
+      )
+
       {:ok, index_live, _html} = live(conn, ~p"/credentials")
 
       {:ok, new_live, _html} =
