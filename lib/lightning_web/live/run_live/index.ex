@@ -185,12 +185,10 @@ defmodule LightningWeb.RunLive.Index do
         force: true
       )
 
-    send_update(LightningWeb.RunLive.WorkOrderComponent,
-      id: attempt.work_order_id,
-      work_order: attempt.work_order
-    )
-
-    {:noreply, socket}
+    {:noreply,
+     assign(socket,
+       page: update_page_workorder(socket.assigns.page, attempt.work_order)
+     )}
   end
 
   @impl true
@@ -205,12 +203,10 @@ defmodule LightningWeb.RunLive.Index do
         force: true
       )
 
-    send_update(LightningWeb.RunLive.WorkOrderComponent,
-      id: attempt.work_order_id,
-      work_order: attempt.work_order
-    )
-
-    {:noreply, socket}
+    {:noreply,
+     assign(socket,
+       page: update_page_workorder(socket.assigns.page, attempt.work_order)
+     )}
   end
 
   @impl true
@@ -245,12 +241,8 @@ defmodule LightningWeb.RunLive.Index do
         force: true
       )
 
-    send_update(LightningWeb.RunLive.WorkOrderComponent,
-      id: work_order.id,
-      work_order: work_order
-    )
-
-    {:noreply, socket}
+    {:noreply,
+     assign(socket, page: update_page_workorder(socket.assigns.page, work_order))}
   end
 
   @impl true
@@ -428,5 +420,18 @@ defmodule LightningWeb.RunLive.Index do
 
   defp maybe_humanize_date(date) do
     date && Timex.format!(date, "{D}/{M}/{YY}")
+  end
+
+  defp update_page_workorder(page, workorder) do
+    entries =
+      Enum.reduce(page.entries, [], fn entry, acc ->
+        if entry.id == workorder.id do
+          [workorder | acc]
+        else
+          [entry | acc]
+        end
+      end)
+
+    %{page | entries: Enum.reverse(entries)}
   end
 end
