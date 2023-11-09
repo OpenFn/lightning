@@ -211,10 +211,15 @@ defmodule Lightning.MixProject do
         Workflows: [
           ~r/Lightning.Workflow/
         ],
-        Other: [
-          ~r/Lightning.Graph/,
+        "Custom Data Types": [
           ~r/Lightning.LogMessage/,
           ~r/Lightning.UnixDateTime/
+        ],
+        Web: [
+          ~r/LightningWeb/
+        ],
+        Other: [
+          ~r/Lightning.Graph/
         ]
       ]
     ]
