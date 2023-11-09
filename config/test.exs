@@ -1,5 +1,7 @@
 import Config
 
+config :ex_unit, :assert_receive_timeout, 500
+
 # Only in tests, remove the complexity from the password hashing algorithm
 config :bcrypt_elixir, :log_rounds, 1
 
