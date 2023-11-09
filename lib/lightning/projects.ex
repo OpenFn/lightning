@@ -12,8 +12,6 @@ defmodule Lightning.Projects do
   alias Lightning.AttemptRun
   alias Lightning.Workflows.Trigger
   alias Lightning.Workflows.Job
-  alias Lightning.Workflows.Edge
-
   alias Lightning.Projects.ProjectUser
   alias Lightning.Repo
 
@@ -293,12 +291,7 @@ defmodule Lightning.Projects do
     )
   end
 
-  def project_edges_query(project) do
-    from(e in Edge,
-      join: w in assoc(e, :workflow),
-      where: w.project_id == ^project.id
-    )
-  end
+
 
   def project_runs_query(project) do
     from(r in Run,

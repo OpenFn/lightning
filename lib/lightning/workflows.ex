@@ -163,7 +163,7 @@ defmodule Lightning.Workflows do
 
   """
   def mark_for_deletion(workflow, _attrs \\ %{}) do
-    workflow_jobs_query =
+    _workflow_jobs_query =
       from(j in Lightning.Workflows.Job,
         where: j.workflow_id == ^workflow.id
       )
