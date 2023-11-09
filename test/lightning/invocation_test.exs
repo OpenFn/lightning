@@ -576,6 +576,34 @@ defmodule Lightning.InvocationTest do
              end)
     end
 
+    test "filters workorders by workorder id" do
+      project = insert(:project)
+
+      workflow = insert(:workflow, project: project, name: "workflow-1")
+
+      workorder_1 = insert(:workorder, workflow: workflow, state: :success)
+
+      workorder_2 = insert(:workorder, workflow: workflow, state: :success)
+
+      page_result =
+        Lightning.Invocation.search_workorders(
+          project,
+          SearchParams.new(%{"workorder_id" => workorder_1.id})
+        )
+
+      assert [entry] = page_result.entries
+      assert entry.id == workorder_1.id
+
+      page_result =
+        Lightning.Invocation.search_workorders(
+          project,
+          SearchParams.new(%{"workorder_id" => workorder_2.id})
+        )
+
+      assert [entry] = page_result.entries
+      assert entry.id == workorder_2.id
+    end
+
     test "filters workorders by last_activity" do
       project = insert(:project)
       _dataclip = insert(:dataclip)

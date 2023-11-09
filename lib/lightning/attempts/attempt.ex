@@ -56,7 +56,10 @@ defmodule Lightning.Attempt do
     has_one :workflow, through: [:work_order, :workflow]
 
     has_many :log_lines, LogLine
-    many_to_many :runs, Run, join_through: AttemptRun
+
+    many_to_many :runs, Run,
+      join_through: AttemptRun,
+      preload_order: [asc: :finished_at]
 
     field :state, Ecto.Enum,
       values:

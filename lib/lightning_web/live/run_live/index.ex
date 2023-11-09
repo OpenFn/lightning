@@ -179,8 +179,10 @@ defmodule LightningWeb.RunLive.Index do
         socket
       ) do
     attempt =
-      Lightning.Repo.preload(attempt,
-        work_order: [:workflow, attempts: [runs: :job]]
+      Lightning.Repo.preload(
+        attempt,
+        [work_order: [:workflow, attempts: [runs: :job]]],
+        force: true
       )
 
     send_update(LightningWeb.RunLive.WorkOrderComponent,
@@ -197,8 +199,10 @@ defmodule LightningWeb.RunLive.Index do
         socket
       ) do
     attempt =
-      Lightning.Repo.preload(attempt,
-        work_order: [:workflow, attempts: [runs: :job]]
+      Lightning.Repo.preload(
+        attempt,
+        [work_order: [:workflow, attempts: [runs: :job]]],
+        force: true
       )
 
     send_update(LightningWeb.RunLive.WorkOrderComponent,
@@ -237,7 +241,9 @@ defmodule LightningWeb.RunLive.Index do
         socket
       ) do
     work_order =
-      Lightning.Repo.preload(work_order, [:workflow, attempts: [runs: :job]])
+      Lightning.Repo.preload(work_order, [:workflow, attempts: [runs: :job]],
+        force: true
+      )
 
     send_update(LightningWeb.RunLive.WorkOrderComponent,
       id: work_order.id,

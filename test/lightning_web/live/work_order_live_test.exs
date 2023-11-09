@@ -939,19 +939,19 @@ defmodule LightningWeb.RunWorkOrderTest do
         insert(:attempt,
           work_order: work_order,
           dataclip: dataclip,
-          starting_trigger: trigger
+          starting_job: job
         )
 
       view |> element("#toggle_details_for_#{work_order.id}") |> render_click()
 
-      refute has_element?(view, "#attempt-#{attempt.id}")
+      refute has_element?(view, "#attempt_#{attempt.id}")
 
       Lightning.WorkOrders.Events.attempt_created(project.id, attempt)
 
-      # wait for liveview to process that event
-      Process.sleep(2)
+      # Force Re-render to ensure the event is included
+      render(view)
 
-      assert has_element?(view, "#attempt-#{attempt.id}")
+      assert has_element?(view, "#attempt_#{attempt.id}")
     end
 
     test "WorkOrders.Events.AttemptUpdated", %{
@@ -1007,8 +1007,8 @@ defmodule LightningWeb.RunWorkOrderTest do
 
       Lightning.WorkOrders.Events.attempt_updated(project.id, attempt)
 
-      # wait for liveview to process that event
-      Process.sleep(2)
+      # Force Re-render to ensure the event is included
+      render(view)
 
       assert has_element?(view, "#run-#{run_1.id}")
       assert has_element?(view, "#run-#{run_2.id}")
@@ -1085,8 +1085,8 @@ defmodule LightningWeb.RunWorkOrderTest do
       Lightning.WorkOrders.Events.work_order_created(project.id, work_order_2)
       Lightning.WorkOrders.Events.work_order_created(project.id, work_order_1)
 
-      # wait for liveview to process the events
-      Process.sleep(2)
+      # Force Re-render to ensure the event is included
+      render(view)
 
       assert has_element?(view, "#workorder-#{work_order_1.id}")
       refute has_element?(view, "#workorder-#{work_order_2.id}")
