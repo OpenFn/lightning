@@ -163,9 +163,9 @@ defmodule Lightning.Workflows do
 
   """
   def mark_for_deletion(workflow, _attrs \\ %{}) do
-    _workflow_jobs_query =
-      from(j in Lightning.Workflows.Job,
-        where: j.workflow_id == ^workflow.id
+    workflow_triggers_query =
+      from(t in Lightning.Workflows.Trigger,
+        where: t.workflow_id == ^workflow.id
       )
 
     Repo.transaction(fn ->
@@ -174,7 +174,7 @@ defmodule Lightning.Workflows do
       })
       |> Repo.update()
 
-      # Repo.update_all(workflow_jobs_query, set: [enabled: false])
+      Repo.update_all(workflow_triggers_query, set: [enabled: false])
     end)
   end
 

@@ -178,6 +178,12 @@ defmodule Lightning.WorkflowLive.Helpers do
     |> Enum.find_index(fn j -> j["id"] == job.id end)
   end
 
+  def get_index_of_edge(view, edge) do
+    :sys.get_state(view.pid).socket.assigns.workflow_params
+    |> Map.get("edges")
+    |> Enum.find_index(fn e -> e["id"] == edge.id end)
+  end
+
   def get_workflow_params(view) do
     :sys.get_state(view.pid).socket.assigns.workflow_params
   end

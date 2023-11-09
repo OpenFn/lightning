@@ -1,4 +1,6 @@
 defmodule LightningWeb.WorkflowLive.EditTest do
+  alias Lightning.Repo
+  alias Lightning.Workflows.Workflow
   use LightningWeb.ConnCase, async: true
   import Phoenix.LiveViewTest
   import Lightning.WorkflowLive.Helpers
@@ -95,7 +97,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
                 "name" => ["can't be blank"]
               }
             },
-            # %{op: "add", path: "/jobs/0/enabled", value: true},
+            %{op: "add", path: "/jobs/0/enabled", value: true},
             %{op: "add", path: "/jobs/0/body", value: ""},
             %{
               op: "add",
@@ -365,6 +367,42 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       assert view |> force_event(:validate) =~
                "You are not authorized to perform this action."
+    end
+
+    test "can enable/disable any edge between two jobs", %{
+      conn: conn,
+      project: project,
+      workflow: workflow
+    } do
+      edge =
+        Enum.find(workflow.edges, fn edge -> edge.source_job_id != nil end)
+
+      assert edge.enabled
+
+      {:ok, view, html} =
+        live(conn, ~p"/projects/#{project.id}/w/#{workflow.id}?s=#{edge.id}")
+
+      idx = get_index_of_edge(view, edge)
+
+      assert html =~ "Disable this path"
+
+      assert view
+             |> element("#workflow_edges_#{idx}_enabled")
+             |> has_element?()
+
+      view
+      |> form("#workflow-form", %{
+        "workflow" => %{"edges" => %{to_string(idx) => %{"enabled" => false}}}
+      })
+      |> render_change()
+
+      edge = Repo.reload!(edge)
+
+      refute edge.enabled
+
+      assert view
+             |> element("#workflow_edges_#{idx}_enabled[checked]")
+             |> has_element?()
     end
   end
 end
