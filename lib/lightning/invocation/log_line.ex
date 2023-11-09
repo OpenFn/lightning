@@ -1,13 +1,22 @@
 defmodule Lightning.Invocation.LogLine do
   @moduledoc """
   Ecto model for run logs.
+
+  Every log line from a worker is stored using this model.
+
+  Currently the `:message` field is a text field, however the worker sends
+  messages in a JSON format. We will at some point consider changing this to
+  a JSON field; but for now we coerce it into a string.
+
+  See [`LogMessage`](`Lightning.LogMessage`) for more information.
   """
   use Ecto.Schema
   import Ecto.Changeset
 
-  alias Lightning.Invocation.Run
   alias Lightning.Attempt
-  alias Lightning.{UnixDateTime, LogMessage}
+  alias Lightning.Invocation.Run
+  alias Lightning.LogMessage
+  alias Lightning.UnixDateTime
 
   @type t :: %__MODULE__{
           __meta__: Ecto.Schema.Metadata.t(),

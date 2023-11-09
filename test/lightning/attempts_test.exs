@@ -420,11 +420,11 @@ defmodule Lightning.AttemptsTest do
 
       {:ok, log_line} =
         Attempts.append_attempt_log(attempt, %{
-          message: [%{"foo" => "bar"}],
+          message: [%{"foo" => "bar"}, "hello there"],
           timestamp: DateTime.utc_now() |> DateTime.to_unix(:millisecond)
         })
 
-      assert log_line.message == [%{"foo" => "bar"}] |> Jason.encode!()
+      assert log_line.message == ~s<{"foo":"bar"} hello there>
 
       {:ok, log_line} =
         Attempts.append_attempt_log(attempt, %{
@@ -432,7 +432,7 @@ defmodule Lightning.AttemptsTest do
           timestamp: DateTime.utc_now() |> DateTime.to_unix(:millisecond)
         })
 
-      assert log_line.message == %{"foo" => "bar"} |> Jason.encode!()
+      assert log_line.message == ~s<{"foo":"bar"}>
     end
   end
 end

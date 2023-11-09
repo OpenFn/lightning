@@ -1,6 +1,11 @@
 import tippy, { Instance as TippyInstance } from 'tippy.js';
 import { PhoenixHook } from './PhoenixHook';
 
+import LogLineHighlight from './LogLineHighlight';
+import ElapsedIndicator from './ElapsedIndicator';
+
+export { LogLineHighlight, ElapsedIndicator };
+
 export const ShowActionsOnRowHover = {
   mounted() {
     this.el.addEventListener('mouseenter', e => {

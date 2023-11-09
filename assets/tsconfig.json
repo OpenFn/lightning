@@ -1,10 +1,10 @@
 {
   "compilerOptions": {
-    "target": "es6",
+    "target": "ES6",
     "module": "NodeNext",
-    "moduleResolution": "Node",
+    "moduleResolution": "Node16",
     "rootDir": "../",
-    "lib": ["ES2022", "DOM"],
+    "lib": ["dom", "ES2022"],
     "jsx": "react",
     "strict": true,
     "esModuleInterop": true,
@@ -12,6 +12,7 @@
     "checkJs": true,
     "resolveJsonModule": true,
     "skipLibCheck": true,
+    "noEmit": true,
     "forceConsistentCasingInFileNames": true
   },
   "include": ["js/**/*"],

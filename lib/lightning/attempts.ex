@@ -196,6 +196,12 @@ defmodule Lightning.Attempts do
     |> Repo.one()
   end
 
+  def get_log_lines(attempt) do
+    Ecto.assoc(attempt, :log_lines)
+    |> order_by([l], asc: l.timestamp)
+    |> Repo.stream()
+  end
+
   defp adaptor do
     Lightning.Config.attempts_adaptor()
   end

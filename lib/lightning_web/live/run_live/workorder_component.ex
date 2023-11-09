@@ -2,8 +2,8 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
   @moduledoc """
   Workorder component
   """
-  use Phoenix.Component
   use LightningWeb, :live_component
+
   import LightningWeb.RunLive.Components
 
   @impl true
