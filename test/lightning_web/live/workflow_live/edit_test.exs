@@ -5,8 +5,10 @@ defmodule LightningWeb.WorkflowLive.EditTest do
   import Lightning.WorkflowsFixtures
   import Lightning.JobsFixtures
   import Lightning.Factories
+  import Ecto.Query
 
   alias LightningWeb.CredentialLiveHelpers
+  alias Lightning.Workflows.Workflow
 
   setup :register_and_log_in_user
   setup :create_project_for_current_user
@@ -118,9 +120,11 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       refute workflow_name == "", "the workflow should have a pre-filled name"
 
       assert view |> element("#workflow_name_form") |> render() =~ workflow_name
+
       assert view |> save_is_disabled?()
 
-      view |> fill_workflow_name("My Workflow")
+      workflow_name = "My Workflow"
+      view |> fill_workflow_name(workflow_name)
 
       assert view |> save_is_disabled?()
 
@@ -160,7 +164,18 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       view |> click_save()
 
-      refute view |> has_pending_changes()
+      assert %{id: workflow_id} =
+               Lightning.Repo.one(
+                 from w in Workflow,
+                   where:
+                     w.project_id == ^project.id and
+                       w.name ==
+                         ^workflow_name
+               )
+
+      #
+      %{"info" => "Workflow saved"} =
+        assert_redirected(view, ~p"/projects/#{project.id}/w/#{workflow_id}")
     end
 
     @tag role: :viewer

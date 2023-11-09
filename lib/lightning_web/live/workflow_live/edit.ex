@@ -546,7 +546,11 @@ defmodule LightningWeb.WorkflowLive.Edit do
   end
 
   def handle_event("save", params, socket) do
-    %{workflow_params: initial_params, can_edit_job: can_edit_job} =
+    %{
+      project: project,
+      workflow_params: initial_params,
+      can_edit_job: can_edit_job
+    } =
       socket.assigns
 
     if can_edit_job do
@@ -554,33 +558,35 @@ defmodule LightningWeb.WorkflowLive.Edit do
         case params do
           %{"workflow" => params} ->
             WorkflowParams.apply_form_params(
-              socket.assigns.workflow_params,
+              initial_params,
               params
             )
 
           %{} ->
-            socket.assigns.workflow_params
+            initial_params
         end
 
-      socket = socket |> apply_params(next_params)
+      %{assigns: %{changeset: changeset}} =
+        socket = socket |> apply_params(next_params)
 
-      socket =
-        Lightning.Repo.insert_or_update(socket.assigns.changeset)
-        |> case do
-          {:ok, workflow} ->
-            socket
-            |> assign_workflow(workflow)
-            |> put_flash(:info, "Workflow saved")
+      Lightning.Repo.insert_or_update(changeset)
+      |> case do
+        {:ok, workflow} ->
+          {:noreply,
+           socket
+           |> assign_workflow(workflow)
+           |> put_flash(:info, "Workflow saved")
+           |> push_patches_applied(initial_params)
+           |> on_new_navigate_to_edit(project, workflow)}
 
-          {:error, changeset} ->
-            socket
-            |> assign_changeset(changeset)
-            |> mark_validated()
-            |> put_flash(:error, "Workflow could not be saved")
-        end
-        |> push_patches_applied(initial_params)
-
-      {:noreply, socket}
+        {:error, changeset} ->
+          {:noreply,
+           socket
+           |> assign_changeset(changeset)
+           |> mark_validated()
+           |> put_flash(:error, "Workflow could not be saved")
+           |> push_patches_applied(initial_params)}
+      end
     else
       {:noreply,
        socket
@@ -992,5 +998,14 @@ defmodule LightningWeb.WorkflowLive.Edit do
       <%= render_slot(@inner_block) %>
     </div>
     """
+  end
+
+  defp on_new_navigate_to_edit(socket, %{id: project_id}, %{id: workflow_id}) do
+    if socket.assigns.live_action == :new do
+      socket
+      |> push_navigate(to: ~p"/projects/#{project_id}/w/#{workflow_id}")
+    else
+      socket
+    end
   end
 end
