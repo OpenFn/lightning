@@ -91,7 +91,7 @@ defmodule Lightning.AttemptServiceTest do
         Enum.map([jobs.a, jobs.b, jobs.c, jobs.e, jobs.f], fn j ->
           %{
             job_id: j.id,
-            input_dataclip_id: dataclip.id,
+            input_dataclip_id: dataclip.id
           }
         end) ++
           [%{job_id: jobs.d.id, input_dataclip_id: dataclip.id}]
@@ -164,7 +164,7 @@ defmodule Lightning.AttemptServiceTest do
         Enum.map([jobs.a, jobs.b, jobs.c, jobs.e, jobs.f], fn j ->
           %{
             job_id: j.id,
-            input_dataclip_id: dataclip.id,
+            input_dataclip_id: dataclip.id
           }
         end) ++
           [%{job_id: jobs.d.id, input_dataclip_id: dataclip.id}]
@@ -343,7 +343,7 @@ defmodule Lightning.AttemptServiceTest do
         Enum.map([jobs.a, jobs.b, jobs.c, jobs.e, jobs.f], fn j ->
           %{
             job_id: j.id,
-            input_dataclip_id: dataclip2.id,
+            input_dataclip_id: dataclip2.id
           }
         end)
 
