@@ -225,7 +225,12 @@ defmodule Lightning.FailureAlertTest do
           %{"token" => Workers.generate_attempt_token(attempt)}
         )
 
-      _ref = push(socket, "attempt:complete", %{"reason" => "crash"})
+      _ref =
+        push(socket, "attempt:complete", %{
+          "reason" => "crash",
+          "error_type" => "RuntimeCrash",
+          "error_message" => nil
+        })
 
       Process.sleep(250)
 

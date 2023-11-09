@@ -18,7 +18,7 @@ defmodule Lightning.Janitor do
 
   require Logger
 
-  alias Lightning.{Repo, Attempt}
+  alias Lightning.Repo
   alias Lightning.Attempts
 
   @doc """
@@ -40,7 +40,9 @@ defmodule Lightning.Janitor do
     |> Repo.all()
     |> Enum.each(fn att ->
       Logger.error(fn -> "Detected lost attempt: #{inspect(att)}" end)
-      Attempt.complete(att, :lost)
+      Attempts.complete_attempt(att, {:lost, "Lost", nil})
+      # TODO - Implement this in https://github.com/OpenFn/Lightning/issues/1348
+      # Attempts.mark_unfinished_runs_lost(att)
     end)
   end
 end

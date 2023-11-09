@@ -62,8 +62,17 @@ defmodule LightningWeb.AttemptChannel do
   end
 
   def handle_in("attempt:complete", payload, socket) do
+    %{
+      "reason" => reason,
+      "error_type" => error_type,
+      "error_message" => error_message
+    } =
+      payload
+
     socket.assigns.attempt
-    |> Attempts.complete_attempt(map_rtm_reason_state(payload))
+    |> Attempts.complete_attempt(
+      {map_rtm_reason_state(reason), error_type, error_message}
+    )
     |> case do
       {:ok, attempt} ->
         # TODO: Turn FailureAlerter into an Oban worker and process async
@@ -176,16 +185,15 @@ defmodule LightningWeb.AttemptChannel do
     )
   end
 
-  defp map_rtm_reason_state(%{"reason" => reason}) do
+  defp map_rtm_reason_state(reason) do
     case reason do
       "ok" -> :success
-      "cancel" -> :cancelled
       "fail" -> :failed
-      "kill" -> :killed
       "crash" -> :crashed
+      "cancel" -> :cancelled
+      "kill" -> :killed
+      "exception" -> :exception
       unknown -> unknown
     end
   end
-
-  defp map_rtm_reason_state(_payload), do: nil
 end

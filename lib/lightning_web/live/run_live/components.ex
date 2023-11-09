@@ -63,32 +63,7 @@ defmodule LightningWeb.RunLive.Components do
         class="col-span-3 py-2 text-sm font-normal text-left rtl:text-right text-gray-500"
       >
         <div class="flex pl-28">
-          <%= case @run.exit_reason do %>
-            <% "fail" -> %>
-              <%= if @run.finished_at do %>
-                <Heroicons.x_circle
-                  solid
-                  class="mr-1.5 h-5 w-5 flex-shrink-0 text-red-500"
-                />
-              <% else %>
-                <Heroicons.ellipsis_horizontal_circle
-                  solid
-                  class="mr-1.5 h-5 w-5 flex-shrink-0 text-gray-500"
-                />
-              <% end %>
-            <% "success" -> %>
-              <Heroicons.check_circle
-                solid
-                class="mr-1.5 h-5 w-5 flex-shrink-0 text-green-500"
-              />
-            <% nil -> %>
-              <Heroicons.clock
-                solid
-                class="mr-1.5 h-5 w-5 flex-shrink-0 text-gray-500"
-              />
-            <% val -> %>
-              <%= val %>
-          <% end %>
+          <.run_icon reason={@run.exit_reason} error_type={@run.error_type} />
           <div class="text-gray-800 flex gap-2 text-sm">
             <.link
               navigate={show_run_url(@project_id, @run.id)}
@@ -99,7 +74,7 @@ defmodule LightningWeb.RunLive.Components do
             </.link>
             <%= if @is_clone do %>
               <div class="flex gap-1">
-                <Heroicons.document_duplicate
+                <Heroicons.forward
                   solid
                   class="mr-1.5 mt-1 h-3 w-3 flex-shrink-0 text-gray-500"
                 />
@@ -316,7 +291,7 @@ defmodule LightningWeb.RunLive.Components do
           run.finished_at |> Calendar.strftime("%c.%f %Z")
 
         run.started_at ->
-          "Running..."
+          "n/a"
 
         true ->
           "Not started."
@@ -328,7 +303,7 @@ defmodule LightningWeb.RunLive.Components do
           "#{DateTime.diff(run.finished_at, run.started_at, :millisecond)} ms"
 
         run.started_at ->
-          "..."
+          "n/a"
 
         true ->
           "Not started."
@@ -361,7 +336,7 @@ defmodule LightningWeb.RunLive.Components do
         id={"job-credential-#{@run.id}"}
       >
         <div class="basis-1/2 font-semibold text-secondary-700">Credential</div>
-        <div class="basis-1/2 text-right"><%= @run_credential || "n/a" %></div>
+        <div class="basis-1/2 text-right"><%= @run_credential || "none" %></div>
       </div>
       <div
         class="flex gap-4 flex-row text-xs lg:text-sm"
@@ -376,19 +351,11 @@ defmodule LightningWeb.RunLive.Components do
       </div>
       <div class="flex flex-row text-xs lg:text-sm" id={"exit-reason-#{@run.id}"}>
         <div class="basis-1/2 font-semibold text-secondary-700">Exit Reason</div>
-        <div class="basis-1/2 text-right">
-          <%= case @run.exit_reason do %>
-            <% "fail" -> %>
-              <.failure_pill class="font-mono font-bold">fail</.failure_pill>
-            <% "success" -> %>
-              <.success_pill class="font-mono font-bold">success</.success_pill>
-            <% nil -> %>
-              <.pending_pill class="font-mono font-bold">running</.pending_pill>
-            <% val -> %>
-              <.other_state_pill class="font-mono font-bold">
-                <%= val %>
-              </.other_state_pill>
-          <% end %>
+        <div class="basis-1/2 text-right font-mono">
+          <%= if @run.finished_at,
+            do: @run.error_type || "Success",
+            else: "Running" %>
+          <.run_icon reason={@run.exit_reason} error_type={@run.error_type} />
         </div>
       </div>
     </div>
@@ -581,69 +548,47 @@ defmodule LightningWeb.RunLive.Components do
     |> JS.set_attribute({"data-active", "true"}, to: "[data-section=#{section}]")
   end
 
-  # -------------------- Status Pills -------------------
+  def run_icon(%{reason: reason, error_type: error_type} = assigns) do
+    [icon, classes] =
+      case {reason, error_type} do
+        {nil, _any} -> [:pending, "text-gray-400"]
+        {"success", _any} -> [:success, "text-green-500"]
+        {"fail", _any} -> [:fail, "text-red-500"]
+        {"crash", _any} -> [:crash, "text-orange-800"]
+        {"cancel", _any} -> [:cancel, "text-grey-600"]
+        {"kill", "SecurityError"} -> [:shield, "text-yellow-800"]
+        {"kill", "ImportError"} -> [:shield, "text-yellow-800"]
+        {"kill", "TimeoutError"} -> [:circle_ex, "text-yellow-800"]
+        {"kill", "OomError"} -> [:circle_ex, "text-yellow-800"]
+        {"exception", ""} -> [:triangle_ex, "text-black-800"]
+      end
 
-  @base_classes ~w[
-    my-auto whitespace-nowrap rounded-full
-    py-2 px-4 text-center align-baseline text-xs font-medium leading-none
-  ]
-
-  def failure_pill(assigns) do
-    assigns = assigns |> apply_classes(~w[text-red-800 bg-red-200])
-
-    ~H"""
-    <span class={@classes}>
-      <%= render_slot(@inner_block) %>
-    </span>
-    """
-  end
-
-  def killed_pill(assigns) do
-    assigns = assigns |> apply_classes(~w[text-yellow-800 bg-yellow-200])
-
-    ~H"""
-    <span class={@classes}>
-      <%= render_slot(@inner_block) %>
-    </span>
-    """
-  end
-
-  def success_pill(assigns) do
     assigns =
-      assigns
-      |> apply_classes(~w[bg-green-200 text-green-800])
+      assign(assigns,
+        icon: icon,
+        classes: ["mr-1.5 h-5 w-5 flex-shrink-0 inline", classes]
+      )
 
     ~H"""
-    <span class={@classes}>
-      <%= render_slot(@inner_block) %>
-    </span>
+    <%= case @icon do %>
+      <% :pending -> %>
+        <Heroicons.clock solid class={@classes} />
+      <% :success -> %>
+        <Heroicons.check_circle solid class={@classes} />
+      <% :fail -> %>
+        <Heroicons.x_circle solid class={@classes} />
+      <% :crash -> %>
+        <Heroicons.x_circle solid class={@classes} />
+      <% :cancel -> %>
+        <Heroicons.no_symbol solid class={@classes} />
+      <% :shield -> %>
+        <Heroicons.shield_exclamation solid class={@classes} />
+      <% :circle_ex -> %>
+        <Heroicons.exclamation_circle solid class={@classes} />
+      <% :traingle_ex -> %>
+        <Heroicons.exclamation_triangle solid class={@classes} />
+    <% end %>
     """
-  end
-
-  def pending_pill(assigns) do
-    assigns = assigns |> apply_classes(~w[bg-gray-200 text-gray-800])
-
-    ~H"""
-    <span class={@classes}>
-      <%= render_slot(@inner_block) %>
-    </span>
-    """
-  end
-
-  def other_state_pill(assigns) do
-    assigns = assigns |> apply_classes(~w[bg-black text-white])
-
-    ~H"""
-    <span class={@classes}>
-      <%= render_slot(@inner_block) %>
-    </span>
-    """
-  end
-
-  defp apply_classes(assigns, classes) do
-    assign(assigns,
-      classes: @base_classes ++ classes ++ List.wrap(assigns[:class])
-    )
   end
 
   # BULK RERUN

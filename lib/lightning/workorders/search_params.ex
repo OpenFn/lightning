@@ -9,7 +9,7 @@ defmodule Lightning.WorkOrders.SearchParams do
   use Ecto.Schema
   import Ecto.Changeset
 
-  @statuses ~w(success failed pending killed crashed running)
+  @statuses ~w(pending running success failed crashed killed cancelled lost exception)
   @search_fields ~w(body log)
 
   @type t :: %__MODULE__{

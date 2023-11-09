@@ -130,6 +130,8 @@ defmodule Lightning.Attempts.Handlers do
       field :output_dataclip, :string
       field :output_dataclip_id, Ecto.UUID
       field :reason, :string
+      field :error_type, :string
+      field :error_message, :string
       field :run_id, Ecto.UUID
       field :finished_at, :utc_datetime_usec
     end
@@ -141,6 +143,8 @@ defmodule Lightning.Attempts.Handlers do
         :output_dataclip_id,
         :project_id,
         :reason,
+        :error_type,
+        :error_message,
         :run_id
       ])
       |> put_change(:finished_at, DateTime.utc_now())
@@ -191,9 +195,14 @@ defmodule Lightning.Attempts.Handlers do
       })
     end
 
-    defp update_run(run, complete_run) do
+    defp update_run(run, %{
+           reason: reason,
+           error_type: error_type,
+           error_message: error_message,
+           output_dataclip_id: output_dataclip_id
+         }) do
       run
-      |> Run.finished(complete_run.output_dataclip_id, complete_run.reason)
+      |> Run.finished(output_dataclip_id, {reason, error_type, error_message})
       |> Repo.update()
     end
   end

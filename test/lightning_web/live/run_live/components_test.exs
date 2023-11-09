@@ -105,7 +105,7 @@ defmodule LightningWeb.RunLive.ComponentsTest do
 
     assert html
            |> Floki.find(
-             ~s{svg[class="mr-1.5 h-5 w-5 flex-shrink-0 text-gray-500"]}
+             ~s{svg[class="mr-1.5 h-5 w-5 flex-shrink-0 inline text-gray-400"]}
            )
            |> Enum.any?()
 
@@ -126,7 +126,7 @@ defmodule LightningWeb.RunLive.ComponentsTest do
 
     assert html
            |> Floki.find(
-             ~s{svg[class="mr-1.5 h-5 w-5 flex-shrink-0 text-green-500"]}
+             ~s{svg[class="mr-1.5 h-5 w-5 flex-shrink-0 inline text-green-500"]}
            )
            |> Enum.any?()
 
@@ -147,7 +147,7 @@ defmodule LightningWeb.RunLive.ComponentsTest do
 
     assert html
            |> Floki.find(
-             ~s{svg[class="mr-1.5 h-5 w-5 flex-shrink-0 text-red-500"]}
+             ~s{svg[class="mr-1.5 h-5 w-5 flex-shrink-0 inline text-red-500"]}
            )
            |> Enum.any?()
 
@@ -259,7 +259,7 @@ defmodule LightningWeb.RunLive.ComponentsTest do
       assert html
              |> Floki.find("div#exit-reason-#{run.id} > div:nth-child(2)")
              |> Floki.text() =~
-               "running"
+               "Success"
     end
 
     test "with pending run" do
@@ -274,11 +274,11 @@ defmodule LightningWeb.RunLive.ComponentsTest do
 
       assert html
              |> Floki.find("div#finished-at-#{run.id} > div:nth-child(2)")
-             |> Floki.text() =~ "Running..."
+             |> Floki.text() =~ "n/a"
 
       assert html
              |> Floki.find("div#ran-for-#{run.id} > div:nth-child(2)")
-             |> Floki.text() =~ "..."
+             |> Floki.text() =~ "n/a"
 
       # TODO: add a timer that counts up from run.started_at
       #  ~r/25\d\d\d ms/
@@ -286,7 +286,7 @@ defmodule LightningWeb.RunLive.ComponentsTest do
       assert html
              |> Floki.find("div#exit-reason-#{run.id} > div:nth-child(2)")
              |> Floki.text() =~
-               "running"
+               "Running"
     end
 
     test "with unstarted run" do
@@ -307,7 +307,7 @@ defmodule LightningWeb.RunLive.ComponentsTest do
       assert html
              |> Floki.find("div#exit-reason-#{run.id} > div:nth-child(2)")
              |> Floki.text() =~
-               "running"
+               "Running"
     end
   end
 end

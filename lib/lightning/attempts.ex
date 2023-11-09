@@ -92,8 +92,8 @@ defmodule Lightning.Attempts do
     |> update_attempt()
   end
 
-  def complete_attempt(attempt, new_state) do
-    Attempt.complete(attempt, new_state)
+  def complete_attempt(attempt, {new_state, error_type, error_message}) do
+    Attempt.complete(attempt, {new_state, error_type, error_message})
     |> case do
       %{valid?: false} = changeset ->
         {:error, changeset}
@@ -102,6 +102,11 @@ defmodule Lightning.Attempts do
         changeset |> update_attempt()
     end
   end
+
+  # TODO - Implement this in https://github.com/OpenFn/Lightning/issues/1348
+  # def mark_unfinished_runs_lost(attempt) do
+  # for each run in this attempt call `complete_run` with exit_reason: "lost"
+  # end
 
   def update_attempt(%Ecto.Changeset{data: %Attempt{}} = changeset) do
     attempt_id = Ecto.Changeset.get_field(changeset, :id)

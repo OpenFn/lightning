@@ -24,12 +24,15 @@ defmodule LightningWeb.RunLive.Index do
     date_before: :utc_datetime,
     wo_date_after: :utc_datetime,
     wo_date_before: :utc_datetime,
+    pending: :boolean,
+    running: :boolean,
     success: :boolean,
     failed: :boolean,
-    killed: :boolean,
     crashed: :boolean,
-    pending: :boolean,
-    running: :boolean
+    cancelled: :boolean,
+    killed: :boolean,
+    exception: :boolean,
+    lost: :boolean
   }
 
   on_mount {LightningWeb.Hooks, :project_scope}
@@ -51,12 +54,15 @@ defmodule LightningWeb.RunLive.Index do
       )
 
     statuses = [
+      %{id: :pending, label: "Pending", value: true},
+      %{id: :running, label: "Running", value: true},
       %{id: :success, label: "Success", value: true},
       %{id: :failed, label: "Failed", value: true},
-      %{id: :running, label: "Running", value: true},
-      %{id: :killed, label: "Killed", value: true},
       %{id: :crashed, label: "Crashed", value: true},
-      %{id: :pending, label: "Pending", value: true}
+      %{id: :cancelled, label: "Cancelled", value: true},
+      %{id: :killed, label: "Killed", value: true},
+      %{id: :exception, label: "Exception", value: true},
+      %{id: :lost, label: "Lost", value: true}
     ]
 
     search_fields = [
@@ -98,12 +104,15 @@ defmodule LightningWeb.RunLive.Index do
       "date_before" => "",
       "wo_date_after" => "",
       "wo_date_before" => "",
-      "failed" => "true",
-      "crashed" => "true",
-      "killed" => "true",
       "pending" => "true",
       "running" => "true",
-      "success" => "true"
+      "success" => "true",
+      "failed" => "true",
+      "crashed" => "true",
+      "cancelled" => "true",
+      "killed" => "true",
+      "exception" => "true",
+      "lost" => "true"
     }
 
   @impl true

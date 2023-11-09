@@ -26,6 +26,9 @@ defmodule Lightning.Invocation.Run do
   @foreign_key_type :binary_id
   schema "runs" do
     field :exit_reason, :string
+    field :error_type, :string
+    # TODO: add now, later, or never?
+    # field :error_message, :string
     field :finished_at, :utc_datetime_usec
     field :started_at, :utc_datetime_usec
     belongs_to :job, Job
@@ -49,11 +52,17 @@ defmodule Lightning.Invocation.Run do
     |> validate()
   end
 
-  def finished(run, output_dataclip_id, exit_reason) do
+  def finished(
+        run,
+        output_dataclip_id,
+        # Should this be a specified type?
+        {exit_reason, error_type, _error_message}
+      ) do
     change(run, %{
       finished_at: DateTime.utc_now(),
       output_dataclip_id: output_dataclip_id,
-      exit_reason: exit_reason
+      exit_reason: exit_reason,
+      error_type: error_type
     })
     |> validate_required([:finished_at, :output_dataclip_id, :exit_reason])
   end
@@ -79,6 +88,7 @@ defmodule Lightning.Invocation.Run do
     |> cast(attrs, [
       :id,
       :exit_reason,
+      :error_type,
       :started_at,
       :finished_at,
       :job_id,
