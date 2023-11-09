@@ -375,11 +375,11 @@ set as the previous Run for the new unsaved Run.</p>
   </a>
   <span class="text">Examples</span>
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">create_attempt</span><span class="p" data-group-id="6581336515-1">(</span><span class="p" data-group-id="6581336515-2">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">value</span><span class="p" data-group-id="6581336515-2">}</span><span class="p" data-group-id="6581336515-1">)</span><span class="w">
-</span><span class="p" data-group-id="6581336515-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="6581336515-4">%</span><span class="nc" data-group-id="6581336515-4">Attempt</span><span class="p" data-group-id="6581336515-4">{</span><span class="p" data-group-id="6581336515-4">}</span><span class="p" data-group-id="6581336515-3">}</span><span class="w">
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">create_attempt</span><span class="p" data-group-id="9894845796-1">(</span><span class="p" data-group-id="9894845796-2">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">value</span><span class="p" data-group-id="9894845796-2">}</span><span class="p" data-group-id="9894845796-1">)</span><span class="w">
+</span><span class="p" data-group-id="9894845796-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="9894845796-4">%</span><span class="nc" data-group-id="9894845796-4">Attempt</span><span class="p" data-group-id="9894845796-4">{</span><span class="p" data-group-id="9894845796-4">}</span><span class="p" data-group-id="9894845796-3">}</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">create_attempt</span><span class="p" data-group-id="6581336515-5">(</span><span class="p" data-group-id="6581336515-6">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">bad_value</span><span class="p" data-group-id="6581336515-6">}</span><span class="p" data-group-id="6581336515-5">)</span><span class="w">
-</span><span class="p" data-group-id="6581336515-7">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="6581336515-8">%</span><span class="nc" data-group-id="6581336515-8">Ecto.Changeset</span><span class="p" data-group-id="6581336515-8">{</span><span class="p" data-group-id="6581336515-8">}</span><span class="p" data-group-id="6581336515-7">}</span></code></pre>
+</span><span class="gp unselectable">iex&gt; </span><span class="n">create_attempt</span><span class="p" data-group-id="9894845796-5">(</span><span class="p" data-group-id="9894845796-6">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">bad_value</span><span class="p" data-group-id="9894845796-6">}</span><span class="p" data-group-id="9894845796-5">)</span><span class="w">
+</span><span class="p" data-group-id="9894845796-7">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="9894845796-8">%</span><span class="nc" data-group-id="9894845796-8">Ecto.Changeset</span><span class="p" data-group-id="9894845796-8">{</span><span class="p" data-group-id="9894845796-8">}</span><span class="p" data-group-id="9894845796-7">}</span></code></pre>
   </section>
 </section>
 <section class="detail" id="get_for_rerun/2">
@@ -413,7 +413,7 @@ set as the previous Run for the new unsaved Run.</p>
     </a>
     <h1 class="signature" translate="no">get_last_attempt_for(run)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/attempt_service.ex#L364" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/attempt_service.ex#L362" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -457,7 +457,7 @@ set as the previous Run for the new unsaved Run.</p>
     </a>
     <h1 class="signature" translate="no">list_for_rerun_from_job(order_ids, job_id)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/attempt_service.ex#L327" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/attempt_service.ex#L325" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -489,7 +489,7 @@ of workorder ids that are associated to the given Job</p>
     </a>
     <h1 class="signature" translate="no">list_for_rerun_from_start(order_ids)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/attempt_service.ex#L271" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/attempt_service.ex#L270" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
