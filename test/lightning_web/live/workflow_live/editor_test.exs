@@ -240,7 +240,10 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       |> render_submit()
 
       assert [run_viewer] = live_children(view)
-      assert run_viewer |> render() =~ "State: Pending"
+
+      assert run_viewer
+             |> element("li:nth-child(3) dd", "pending")
+             |> has_element?()
     end
   end
 
