@@ -241,8 +241,13 @@ defmodule Lightning.WorkOrders do
     |> Attempts.enqueue()
     |> then(fn
       {:ok, attempt} ->
-        workflow = attempt |> Repo.preload(:workflow) |> Map.get(:workflow)
-        Events.attempt_created(workflow.project_id, attempt)
+        updated_attempt = Repo.preload(attempt, work_order: :workflow)
+
+        Events.attempt_created(
+          updated_attempt.work_order.workflow.project_id,
+          attempt
+        )
+
         {:ok, attempt}
 
       other ->
@@ -357,10 +362,10 @@ defmodule Lightning.WorkOrders do
       select: wo,
       update: [set: [state: s.state, last_activity: ^DateTime.utc_now()]]
     )
-    |> Repo.update_all([])
+    |> Repo.update_all([], returning: true)
     |> then(fn {_, [wo]} ->
-      workflow = wo |> Repo.preload(:workflow) |> Map.get(:workflow)
-      Events.work_order_updated(workflow.project_id, wo)
+      updated_wo = Repo.preload(wo, :workflow)
+      Events.work_order_updated(updated_wo.workflow.project_id, updated_wo)
       {:ok, wo}
     end)
   end

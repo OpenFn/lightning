@@ -348,7 +348,7 @@ defmodule Lightning.Invocation do
       as: :workflow,
       where: workflow.project_id == ^project_id,
       select: workorder,
-      preload: [workflow: workflow, attempts: [:runs]],
+      preload: [workflow: workflow, attempts: [runs: :job]],
       order_by: [desc_nulls_first: workorder.last_activity],
       distinct: true
     )
