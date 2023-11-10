@@ -295,7 +295,11 @@ if config_env() == :test do
   # When running tests, set the number of database connections to the number
   # of cores available.
   config :lightning, Lightning.Repo,
-    pool_size: :erlang.system_info(:schedulers_online) + 4
+    pool_size: :erlang.system_info(:schedulers_online) + 8
+
+  config :ex_unit,
+    assert_receive_timeout:
+      System.get_env("ASSERT_RECEIVE_TIMEOUT", "500") |> String.to_integer()
 end
 
 release =

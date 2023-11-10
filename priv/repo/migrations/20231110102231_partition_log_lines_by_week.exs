@@ -35,14 +35,14 @@ defmodule Lightning.Repo.Migrations.PartitionLogLinesByWeek do
     """)
 
     execute("""
-    CREATE TABLE public.log_lines (
-    id uuid NOT NULL,
-    message text NOT NULL,
-    run_id uuid,
-    "timestamp" timestamp(6) without time zone NOT NULL,
-    attempt_id uuid,
-    level character varying(255),
-    source character varying(255)
+    CREATE TABLE log_lines (
+      id uuid NOT NULL,
+      message text NOT NULL,
+      run_id uuid,
+      "timestamp" timestamp(6) without time zone NOT NULL,
+      attempt_id uuid,
+      level character varying(255),
+      source character varying(255)
     ) PARTITION BY HASH(attempt_id)
     """)
 
@@ -56,40 +56,40 @@ defmodule Lightning.Repo.Migrations.PartitionLogLinesByWeek do
 
     execute("""
     CREATE INDEX log_lines_id_index
-    ON public.log_lines
+    ON log_lines
     USING hash (id)
     """)
 
     execute("""
     CREATE INDEX log_lines_attempt_id_index
-    ON public.log_lines
+    ON log_lines
     USING hash (attempt_id)
     """)
 
     execute("""
     CREATE INDEX log_lines_run_id_index
-    ON public.log_lines
+    ON log_lines
     USING hash (run_id)
     """)
 
     execute("""
     CREATE INDEX log_lines_timestamp_index
-    ON public.log_lines (timestamp ASC)
+    ON log_lines (timestamp ASC)
     """)
 
     execute("""
-    ALTER TABLE public.log_lines
+    ALTER TABLE log_lines
     ADD CONSTRAINT log_lines_attempt_id_fkey
     FOREIGN KEY (attempt_id)
-    REFERENCES public.attempts(id)
+    REFERENCES attempts(id)
     ON DELETE CASCADE
     """)
 
     execute("""
-    ALTER TABLE public.log_lines
+    ALTER TABLE log_lines
     ADD CONSTRAINT log_lines_run_id_fkey
     FOREIGN KEY (run_id)
-    REFERENCES public.runs(id)
+    REFERENCES runs(id)
     ON DELETE CASCADE
     """)
   end
@@ -98,7 +98,7 @@ defmodule Lightning.Repo.Migrations.PartitionLogLinesByWeek do
     manage_partitions(@num_partitions, &drop_partition/2)
 
     execute("""
-    DROP TABLE IF EXISTS public.log_lines
+    DROP TABLE IF EXISTS log_lines
     """)
 
     execute("""

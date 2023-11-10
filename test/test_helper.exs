@@ -11,13 +11,10 @@ Mimic.copy(Lightning.FailureEmail)
 Mimic.copy(Lightning.WorkOrderService)
 Mimic.copy(Mix.Tasks.Lightning.InstallSchemas)
 
-assert_receive_timeout =
-  System.get_env("ASSERT_RECEIVE_TIMEOUT", "100") |> String.to_integer()
-
-ExUnit.configure(
-  formatters: [JUnitFormatter, ExUnit.CLIFormatter],
-  assert_receive_timeout: assert_receive_timeout
-)
+# Other ExUnit configuration can be found in `config/runtime.exs`,
+# for example to change the `assert_receive` timeout, configure it using the
+# `ASSERT_RECEIVE_TIMEOUT` environment variable.
+ExUnit.configure(formatters: [JUnitFormatter, ExUnit.CLIFormatter])
 
 ExUnit.start()
 Ecto.Adapters.SQL.Sandbox.mode(Lightning.Repo, :manual)
