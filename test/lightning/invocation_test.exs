@@ -708,12 +708,11 @@ defmodule Lightning.InvocationTest do
           "run_id" => Ecto.UUID.generate()
         })
 
-      %Lightning.Invocation.LogLine{
-        attempt: attempt,
+      Lightning.Invocation.LogLine.new(attempt, %{
         run: run,
         message: "Sadio Mane is playing in Senegal and Al Nasr",
         timestamp: Timex.now()
-      }
+      })
       |> Repo.insert!()
 
       assert Lightning.Invocation.search_workorders(
@@ -759,11 +758,7 @@ defmodule Lightning.InvocationTest do
     test "logs_for_run/1 returns an array of the logs for a given run" do
       run =
         insert(:run,
-          log_lines: [
-            %{message: "Hello", timestamp: build(:timestamp)},
-            %{message: "I am a", timestamp: build(:timestamp)},
-            %{message: "log", timestamp: build(:timestamp)}
-          ]
+          log_lines: ["Hello", "I am a", "log"] |> Enum.map(&build_log_map/1)
         )
 
       log_lines = Invocation.logs_for_run(run)
@@ -780,11 +775,7 @@ defmodule Lightning.InvocationTest do
     test "assemble_logs_for_run/1 returns a string representation of the logs for a run" do
       run =
         insert(:run,
-          log_lines: [
-            %{message: "Hello", timestamp: build(:timestamp)},
-            %{message: "I am a", timestamp: build(:timestamp)},
-            %{message: "log", timestamp: build(:timestamp)}
-          ]
+          log_lines: ["Hello", "I am a", "log"] |> Enum.map(&build_log_map/1)
         )
 
       log_string = Invocation.assemble_logs_for_run(run)
@@ -794,6 +785,10 @@ defmodule Lightning.InvocationTest do
 
     test "assemble_logs_for_run/1 returns nil when given a nil run" do
       assert Invocation.assemble_logs_for_run(nil) == nil
+    end
+
+    defp build_log_map(message) do
+      %{id: Ecto.UUID.generate(), message: message, timestamp: build(:timestamp)}
     end
   end
 end

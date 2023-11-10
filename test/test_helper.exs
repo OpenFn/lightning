@@ -11,6 +11,9 @@ Mimic.copy(Lightning.FailureEmail)
 Mimic.copy(Lightning.WorkOrderService)
 Mimic.copy(Mix.Tasks.Lightning.InstallSchemas)
 
+# Other ExUnit configuration can be found in `config/runtime.exs`,
+# for example to change the `assert_receive` timeout, configure it using the
+# `ASSERT_RECEIVE_TIMEOUT` environment variable.
 ExUnit.configure(formatters: [JUnitFormatter, ExUnit.CLIFormatter])
 
 ExUnit.start()
