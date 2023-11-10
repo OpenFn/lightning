@@ -66,27 +66,6 @@ defmodule Lightning.WorkflowsTest do
       assert workflow.name == "some-updated-name"
     end
 
-    test "delete_workflow/1 deletes the workflow" do
-      workflow = insert(:workflow)
-
-      job_1 = insert(:job, name: "job 1", workflow: workflow)
-      job_2 = insert(:job, name: "job 2", workflow: workflow)
-
-      assert {:ok, %Workflows.Workflow{}} = Workflows.delete_workflow(workflow)
-
-      assert_raise Ecto.NoResultsError, fn ->
-        Workflows.get_workflow!(workflow.id)
-      end
-
-      assert_raise Ecto.NoResultsError, fn ->
-        Jobs.get_job!(job_1.id)
-      end
-
-      assert_raise Ecto.NoResultsError, fn ->
-        Jobs.get_job!(job_2.id)
-      end
-    end
-
     test "change_workflow/1 returns a workflow changeset" do
       workflow = insert(:workflow)
       assert %Ecto.Changeset{} = Workflows.change_workflow(workflow)

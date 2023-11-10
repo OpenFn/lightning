@@ -100,6 +100,10 @@ bearing with us as we move towards our first stable Lightning release.)
   [#1254](https://github.com/OpenFn/Lightning/issues/1254)
 - Remove foreign key from `attempts` in preparation for partitioning
   `work_orders` [#1254](https://github.com/OpenFn/Lightning/issues/1254)
+- Remove `Workflows.delete_workflow`. It is no longer in use and would
+  require modification to not leave orphaned attempts given the removal
+  of the foreign key from `attempts`.
+  [#1254](https://github.com/OpenFn/Lightning/issues/1254)
 
 ### Changed
 
