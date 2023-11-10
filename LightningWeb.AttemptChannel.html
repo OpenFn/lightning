@@ -13,7 +13,7 @@
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-EPF2X7PV.js"></script>
-    <script src="dist/sidebar_items-A3F98E06.js"></script>
+    <script src="dist/sidebar_items-70C55CE0.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -163,6 +163,17 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
+        <a href="#handle_in/3" translate="no">handle_in(binary, payload, socket)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>For the time being, calls to <code class="inline">fetch:dataclip</code> will return dataclips that are
+preformatted for use as &quot;initial state&quot; in an attempt.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
         <a href="#start_link/1" translate="no">start_link(triplet)</a>
 
       </div>
@@ -202,6 +213,31 @@ Pages
   <section class="docstring">
 
 
+  </section>
+</section>
+<section class="detail" id="handle_in/3">
+
+  <div class="detail-header">
+    <a href="#handle_in/3" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">handle_in(binary, payload, socket)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/channels/attempt_channel.ex#L50" class="icon-action" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+<p>For the time being, calls to <code class="inline">fetch:dataclip</code> will return dataclips that are
+preformatted for use as &quot;initial state&quot; in an attempt.</p><p>This means that the body of http requests will be nested inside a &quot;data&quot; key.</p><p>There is an open discussion on the community that may impact how we
+store HTTP requests in the database as dataclips and how we send the body
+of those HTTP requests to the worker to use as initial state.</p>
   </section>
 </section>
 <section class="detail" id="start_link/1">

@@ -13,7 +13,7 @@
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-EPF2X7PV.js"></script>
-    <script src="dist/sidebar_items-A3F98E06.js"></script>
+    <script src="dist/sidebar_items-70C55CE0.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -161,16 +161,6 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#attempt_state_pill/1" translate="no">attempt_state_pill(assigns)</a>
-
-      </div>
-
-        <div class="summary-synopsis"><h2>Attributes</h2><ul><li><code class="inline">state</code> (<code class="inline">:atom</code>) (required)</li></ul></div>
-
-    </div>
-
-    <div class="summary-row">
-      <div class="summary-signature">
         <a href="#detail_list/1" translate="no">detail_list(assigns)</a>
 
       </div>
@@ -196,6 +186,16 @@ Pages
       </div>
 
         <div class="summary-synopsis"><p>Renders out a log line stream</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#state_pill/1" translate="no">state_pill(assigns)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><h2>Attributes</h2><ul><li><code class="inline">state</code> (<code class="inline">:atom</code>) (required)</li></ul></div>
 
     </div>
 
@@ -238,34 +238,6 @@ Pages
   <span class="text">Attributes</span>
 </h2>
 <ul><li><code class="inline">attempt</code> (<code class="inline">:map</code>) (required)</li><li><code class="inline">class</code> (<code class="inline">:string</code>) - Defaults to <code class="inline">&quot;&quot;</code>.</li></ul>
-  </section>
-</section>
-<section class="detail" id="attempt_state_pill/1">
-
-  <div class="detail-header">
-    <a href="#attempt_state_pill/1" class="detail-link" title="Link to this function">
-      <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
-    </a>
-    <h1 class="signature" translate="no">attempt_state_pill(assigns)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/attempt_live/components.ex#L118" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
-
-
-  </div>
-
-  <section class="docstring">
-
-<h2 id="attempt_state_pill/1-attributes" class="section-heading">
-  <a href="#attempt_state_pill/1-attributes" class="hover-link">
-    <i class="ri-link-m" aria-hidden="true"></i>
-  </a>
-  <span class="text">Attributes</span>
-</h2>
-<ul><li><code class="inline">state</code> (<code class="inline">:atom</code>) (required)</li></ul>
   </section>
 </section>
 <section class="detail" id="detail_list/1">
@@ -356,6 +328,43 @@ Pages
   <span class="text">Attributes</span>
 </h2>
 <ul><li><code class="inline">id</code> (<code class="inline">:string</code>) (required)</li><li><code class="inline">stream</code> (<code class="inline">:list</code>) (required)</li><li><code class="inline">class</code> (<code class="inline">:string</code>) - Defaults to <code class="inline">nil</code>.</li></ul>
+  </section>
+</section>
+<section class="detail" id="state_pill/1">
+
+  <div class="detail-header">
+    <a href="#state_pill/1" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">state_pill(assigns)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/attempt_live/components.ex#L123" class="icon-action" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> state_pill(%{:state =&gt; <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">any</a>(), optional(<a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">any</a>()) =&gt; <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">any</a>()}) ::
+  <a href="https://hexdocs.pm/phoenix_live_view/0.20.1/Phoenix.LiveView.Rendered.html#t:t/0">Phoenix.LiveView.Rendered.t</a>()</pre>
+
+          <pre translate="no"><span class="attribute">@spec</span> state_pill(<a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>()) :: <a href="https://hexdocs.pm/phoenix_live_view/0.20.1/Phoenix.LiveView.Rendered.html#t:t/0">Phoenix.LiveView.Rendered.t</a>()</pre>
+
+      </div>
+
+<h2 id="state_pill/1-attributes" class="section-heading">
+  <a href="#state_pill/1-attributes" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
+  </a>
+  <span class="text">Attributes</span>
+</h2>
+<ul><li><code class="inline">state</code> (<code class="inline">:atom</code>) (required)</li></ul>
   </section>
 </section>
 
