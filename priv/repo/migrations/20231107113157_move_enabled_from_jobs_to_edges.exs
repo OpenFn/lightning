@@ -36,7 +36,7 @@ defmodule Lightning.Repo.Migrations.MoveEnabledFromJobsToEdges do
           )
         else
           # Get the `enabled` value from the corresponding job
-          job =
+          job_enabled? =
             Lightning.Repo.one(
               from(j in "jobs",
                 where: j.id == ^edge.target_job_id,
@@ -47,7 +47,7 @@ defmodule Lightning.Repo.Migrations.MoveEnabledFromJobsToEdges do
           # Set the edge's enabled value to the job's enabled value
           Lightning.Repo.update_all(
             from(e in "workflow_edges", where: e.id == ^edge.id),
-            set: [enabled: job.enabled]
+            set: [enabled: job_enabled?]
           )
         end
       end)
