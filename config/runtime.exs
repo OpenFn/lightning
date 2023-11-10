@@ -59,6 +59,10 @@ config :lightning, :github_app,
   app_id: github_app_id,
   app_name: github_app_name
 
+if System.get_env("MANUAL_RUNTIME_MANAGER") == "true" do
+  config :lightning, Lightning.Runtime.RuntimeManager, start: false
+end
+
 image_tag = System.get_env("IMAGE_TAG")
 branch = System.get_env("BRANCH")
 commit = System.get_env("COMMIT")

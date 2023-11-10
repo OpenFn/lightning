@@ -46,6 +46,13 @@ defmodule Lightning.Runtime.RuntimeManager do
   @impl true
   def init(_args) do
     if config()[:start] do
+      # If you are starting an instance of ws-worker via this Runtime Manager,
+      # we are assuming that you're in dev mode and have want mix phx.server
+      # to manage your NodeJs worker app, which is configured to run on port
+      # 2222. Since it's not always possible to kill that app, we'll ensure it's
+      # dead here in startup.
+      System.shell("kill $(lsof -n -i :2222 | grep LISTEN | awk '{print $2}')")
+
       Process.flag(:trap_exit, true)
       {:ok, %__MODULE__{}, {:continue, :start_runtime}}
     else

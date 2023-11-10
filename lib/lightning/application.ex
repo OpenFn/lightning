@@ -94,8 +94,6 @@ defmodule Lightning.Application do
       # {Lightning.Worker, arg}
     ]
 
-    System.shell("kill $(lsof -n -i :2222 | grep LISTEN | awk '{print $2}')")
-
     # See https://hexdocs.pm/elixir/Supervisor.html
     # for other strategies and supported options
     opts = [strategy: :one_for_one, name: Lightning.Supervisor]
