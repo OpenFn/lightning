@@ -20,10 +20,12 @@ defmodule Lightning.Attempt do
 
   @final_states [
     :success,
-    :cancelled,
     :failed,
+    :crashed,
+    :cancelled,
     :killed,
-    :crashed
+    :exception,
+    :lost
   ]
 
   @doc """
@@ -72,6 +74,8 @@ defmodule Lightning.Attempt do
           @final_states
         ),
       default: :available
+
+    field :error_type, :string
 
     field :claimed_at, :utc_datetime_usec
     field :started_at, :utc_datetime_usec
@@ -141,18 +145,26 @@ defmodule Lightning.Attempt do
     end)
   end
 
-  def complete(attempt, state) do
+  def complete(
+        attempt,
+        {state, error_type, _error_message} = _payload
+      ) do
     attempt
     |> cast(%{state: state}, [:state])
     |> validate_required([:state])
     |> validate_inclusion(:state, @final_states)
-    |> then(fn %{data: %{state: previous_state}} = changeset ->
-      if previous_state == :started do
+    |> then(fn %{data: %{state: previous_state, error_type: previous_error}} =
+                 changeset ->
+      if previous_state == :started and previous_error == nil do
         changeset
         |> change(finished_at: DateTime.utc_now())
+        |> change(error_type: error_type)
       else
         changeset
-        |> add_error(:state, "cannot complete attempt that is not started")
+        |> add_error(
+          :state,
+          "cannot complete attempt that is not started or has error"
+        )
       end
     end)
   end

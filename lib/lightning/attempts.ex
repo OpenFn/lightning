@@ -73,9 +73,24 @@ defmodule Lightning.Attempts do
     |> Repo.one()
   end
 
+  @doc """
+  Returns only the dataclip body as a string
+  """
   def get_dataclip_body(%Attempt{} = attempt) do
     from(d in Ecto.assoc(attempt, :dataclip),
       select: type(d.body, :string)
+    )
+    |> Repo.one()
+  end
+
+  @doc """
+  Returns a tuple with {type, string} so that initial state can be created for
+  the worker. See LightingWeb.AttemptChannel.handle_in("fetch:dataclip", _, _)
+  for more details.
+  """
+  def get_dataclip_for_worker(%Attempt{} = attempt) do
+    from(d in Ecto.assoc(attempt, :dataclip),
+      select: {d.type, type(d.body, :string)}
     )
     |> Repo.one()
   end
@@ -92,8 +107,8 @@ defmodule Lightning.Attempts do
     |> update_attempt()
   end
 
-  def complete_attempt(attempt, new_state) do
-    Attempt.complete(attempt, new_state)
+  def complete_attempt(attempt, {new_state, error_type, error_message}) do
+    Attempt.complete(attempt, {new_state, error_type, error_message})
     |> case do
       %{valid?: false} = changeset ->
         {:error, changeset}
@@ -102,6 +117,11 @@ defmodule Lightning.Attempts do
         changeset |> update_attempt()
     end
   end
+
+  # TODO - Implement this in https://github.com/OpenFn/Lightning/issues/1348
+  # def mark_unfinished_runs_lost(attempt) do
+  # for each run in this attempt call `complete_run` with exit_reason: "lost"
+  # end
 
   def update_attempt(%Ecto.Changeset{data: %Attempt{}} = changeset) do
     attempt_id = Ecto.Changeset.get_field(changeset, :id)

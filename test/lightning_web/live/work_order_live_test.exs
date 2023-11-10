@@ -100,7 +100,7 @@ defmodule LightningWeb.RunWorkOrderTest do
               job: job,
               started_at: build(:timestamp),
               finished_at: build(:timestamp),
-              exit_reason: "failed",
+              exit_reason: "fail",
               input_dataclip: dataclip
             )
           ]
@@ -719,7 +719,7 @@ defmodule LightningWeb.RunWorkOrderTest do
 
       assert html
              |> Floki.find("div#exit-reason-#{run.id} > div:nth-child(2)")
-             |> Floki.text() =~ "success"
+             |> Floki.text() =~ "Success"
     end
 
     test "run_details component with pending run" do
@@ -736,18 +736,18 @@ defmodule LightningWeb.RunWorkOrderTest do
 
       assert html
              |> Floki.find("div#finished-at-#{run.id} > div:nth-child(2)")
-             |> Floki.text() =~ "Running..."
+             |> Floki.text() =~ "n/a"
 
       assert html
              |> Floki.find("div#ran-for-#{run.id} > div:nth-child(2)")
-             |> Floki.text() =~ "..."
+             |> Floki.text() =~ "n/a"
 
       # TODO: add a timer that counts up from run.started_at
       #  ~r/25\d\d\d ms/
 
       assert html
              |> Floki.find("div#exit-reason-#{run.id} > div:nth-child(2)")
-             |> Floki.text() =~ "running"
+             |> Floki.text() =~ "Running"
     end
 
     test "by default only the latest attempt is present when there are multiple attempts",
@@ -907,7 +907,7 @@ defmodule LightningWeb.RunWorkOrderTest do
           runs:
             build_list(1, :run, %{
               job: job,
-              exit_reason: "failed",
+              exit_reason: "fail",
               started_at: now |> Timex.shift(seconds: -40),
               finished_at: now |> Timex.shift(seconds: -20),
               input_dataclip: dataclip

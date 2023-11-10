@@ -103,7 +103,13 @@ defmodule LightningWeb.AttemptChannelTest do
       user = insert(:user)
 
       project = insert(:project, project_users: [%{user: user}])
-      dataclip = insert(:dataclip, body: %{"foo" => "bar"}, project: project)
+
+      dataclip =
+        insert(:dataclip,
+          type: :http_request,
+          body: %{"foo" => "bar"},
+          project: project
+        )
 
       trigger = build(:trigger, type: :webhook, enabled: true)
 
@@ -177,7 +183,8 @@ defmodule LightningWeb.AttemptChannelTest do
         socket: socket,
         attempt: attempt,
         workflow: workflow,
-        credential: credential
+        credential: credential,
+        dataclip: dataclip
       }
     end
 
@@ -234,7 +241,24 @@ defmodule LightningWeb.AttemptChannelTest do
              }
     end
 
-    test "fetch:dataclip", %{socket: socket} do
+    test "fetch:dataclip handles all types", %{
+      socket: socket,
+      dataclip: dataclip
+    } do
+      ref = push(socket, "fetch:dataclip", %{})
+
+      assert_reply ref, :ok, {:binary, ~s<{\"data\": {\"foo\": \"bar\"}}>}
+
+      Ecto.Changeset.change(dataclip, type: :run_result)
+      |> Repo.update()
+
+      ref = push(socket, "fetch:dataclip", %{})
+
+      assert_reply ref, :ok, {:binary, ~s<{"foo": "bar"}>}
+
+      Ecto.Changeset.change(dataclip, type: :saved_input)
+      |> Repo.update()
+
       ref = push(socket, "fetch:dataclip", %{})
 
       assert_reply ref, :ok, {:binary, ~s<{"foo": "bar"}>}
@@ -523,11 +547,20 @@ defmodule LightningWeb.AttemptChannelTest do
 
     @tag attempt_state: :claimed
     test "attempt:complete when claimed", %{socket: socket} do
-      ref = push(socket, "attempt:complete", %{"reason" => "ok"})
+      ref =
+        push(socket, "attempt:complete", %{
+          "reason" => "success",
+          "error_type" => nil,
+          "error_message" => nil
+        })
 
       assert_reply ref, :error, errors
 
-      assert errors == %{state: ["cannot complete attempt that is not started"]}
+      assert errors == %{
+               state: [
+                 "cannot complete attempt that is not started or has error"
+               ]
+             }
     end
 
     @tag attempt_state: :started
@@ -536,7 +569,13 @@ defmodule LightningWeb.AttemptChannelTest do
       attempt: attempt,
       work_order: work_order
     } do
-      ref = push(socket, "attempt:complete", %{"reason" => "ok"})
+      ref =
+        push(socket, "attempt:complete", %{
+          "reason" => "success",
+          "error_type" => nil,
+          "error_message" => nil
+        })
+
       assert_reply ref, :ok, nil
 
       assert %{state: :success} = Lightning.Repo.reload!(attempt)
@@ -549,7 +588,13 @@ defmodule LightningWeb.AttemptChannelTest do
       attempt: attempt,
       work_order: work_order
     } do
-      ref = push(socket, "attempt:complete", %{"reason" => "cancel"})
+      ref =
+        push(socket, "attempt:complete", %{
+          "reason" => "cancel",
+          "error_type" => nil,
+          "error_message" => nil
+        })
+
       assert_reply ref, :ok, nil
 
       assert %{state: :cancelled} = Lightning.Repo.reload!(attempt)
@@ -562,7 +607,13 @@ defmodule LightningWeb.AttemptChannelTest do
       attempt: attempt,
       work_order: work_order
     } do
-      ref = push(socket, "attempt:complete", %{"reason" => "fail"})
+      ref =
+        push(socket, "attempt:complete", %{
+          "reason" => "fail",
+          "error_type" => "UserError",
+          "error_message" => nil
+        })
+
       assert_reply ref, :ok, nil
 
       assert %{state: :failed} = Lightning.Repo.reload!(attempt)
@@ -575,7 +626,13 @@ defmodule LightningWeb.AttemptChannelTest do
       attempt: attempt,
       work_order: work_order
     } do
-      ref = push(socket, "attempt:complete", %{"reason" => "crash"})
+      ref =
+        push(socket, "attempt:complete", %{
+          "reason" => "crash",
+          "error_type" => "RuntimeCrash",
+          "error_message" => nil
+        })
+
       assert_reply ref, :ok, nil
 
       assert %{state: :crashed} = Lightning.Repo.reload!(attempt)
@@ -588,7 +645,13 @@ defmodule LightningWeb.AttemptChannelTest do
       attempt: attempt,
       work_order: work_order
     } do
-      ref = push(socket, "attempt:complete", %{"reason" => "kill"})
+      ref =
+        push(socket, "attempt:complete", %{
+          "reason" => "kill",
+          "error_type" => "TimeoutError",
+          "error_message" => nil
+        })
+
       assert_reply ref, :ok, nil
 
       assert %{state: :killed} = Lightning.Repo.reload!(attempt)

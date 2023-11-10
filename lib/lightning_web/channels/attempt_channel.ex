@@ -4,6 +4,8 @@ defmodule LightningWeb.AttemptChannel do
   """
   use LightningWeb, :channel
 
+  require Jason.Helpers
+
   alias Lightning.Attempts
   alias Lightning.Credentials
   alias Lightning.Repo
@@ -62,8 +64,17 @@ defmodule LightningWeb.AttemptChannel do
   end
 
   def handle_in("attempt:complete", payload, socket) do
+    %{
+      "reason" => reason,
+      "error_type" => error_type,
+      "error_message" => error_message
+    } =
+      payload
+
     socket.assigns.attempt
-    |> Attempts.complete_attempt(map_rtm_reason_state(payload))
+    |> Attempts.complete_attempt(
+      {map_rtm_reason_state(reason), error_type, error_message}
+    )
     |> case do
       {:ok, attempt} ->
         # TODO: Turn FailureAlerter into an Oban worker and process async
@@ -109,11 +120,23 @@ defmodule LightningWeb.AttemptChannel do
     {:reply, {:error, %{errors: %{id: ["This field can't be blank."]}}}, socket}
   end
 
+  @doc """
+  For the time being, calls to `fetch:dataclip` will return dataclips that are
+  preformatted for use as "initial state" in an attempt.
+
+  This means that the body of http requests will be nested inside a "data" key.
+
+  There is an open discussion on the community that may impact how we
+  store HTTP requests in the database as dataclips and how we send the body
+  of those HTTP requests to the worker to use as initial state.
+  """
   def handle_in("fetch:dataclip", _, socket) do
+    {type, raw_body} = Attempts.get_dataclip_for_worker(socket.assigns.attempt)
+
     body =
-      Attempts.get_dataclip_body(socket.assigns.attempt)
-      |> Jason.Fragment.new()
-      |> Phoenix.json_library().encode_to_iodata!()
+      if type == :http_request,
+        do: "{\"data\": " <> raw_body <> "}",
+        else: raw_body
 
     {:reply, {:ok, {:binary, body}}, socket}
   end
@@ -176,16 +199,15 @@ defmodule LightningWeb.AttemptChannel do
     )
   end
 
-  defp map_rtm_reason_state(%{"reason" => reason}) do
+  defp map_rtm_reason_state(reason) do
     case reason do
       "ok" -> :success
-      "cancel" -> :cancelled
       "fail" -> :failed
-      "kill" -> :killed
       "crash" -> :crashed
+      "cancel" -> :cancelled
+      "kill" -> :killed
+      "exception" -> :exception
       unknown -> unknown
     end
   end
-
-  defp map_rtm_reason_state(_payload), do: nil
 end

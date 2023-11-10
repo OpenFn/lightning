@@ -72,7 +72,7 @@ defmodule LightningWeb.AttemptLive.Components do
       </.list_item>
       <.list_item>
         <:label>State</:label>
-        <:value><.attempt_state_pill state={@attempt.state} /></:value>
+        <:value><.state_pill state={@attempt.state} /></:value>
       </.list_item>
     </.detail_list>
     """
@@ -115,16 +115,28 @@ defmodule LightningWeb.AttemptLive.Components do
 
   attr :state, :atom, required: true
 
-  def attempt_state_pill(%{state: state} = assigns) do
+  @spec state_pill(%{:state => any(), optional(any()) => any()}) ::
+          Phoenix.LiveView.Rendered.t()
+  @spec state_pill(map()) :: Phoenix.LiveView.Rendered.t()
+  # it's not really that complex!
+  # credo:disable-for-next-line
+  def state_pill(%{state: state} = assigns) do
     [text, classes] =
       case state do
-        :available -> ["pending", "bg-gray-200 text-gray-800"]
-        :claimed -> ["starting", "bg-yellow-200 text-yellow-800"]
-        :started -> ["running", "bg-blue-200 text-blue-800"]
-        :success -> ["success", "bg-green-200 text-green-800"]
-        :failed -> ["failed", "bg-red-200 text-red-800"]
-        :killed -> ["killed", "bg-yellow-200 text-yellow-800"]
-        :crashed -> ["crashed", "bg-black text-white"]
+        # only workorder states...
+        :pending -> ["Pending", "bg-gray-200 text-gray-800"]
+        :running -> ["Running", "bg-blue-200 text-blue-800"]
+        # attempt & workorder states...
+        :available -> ["Pending", "bg-gray-200 text-gray-800"]
+        :claimed -> ["Starting", "bg-blue-200 text-blue-800"]
+        :started -> ["Running", "bg-blue-200 text-blue-800"]
+        :success -> ["Success", "bg-green-200 text-green-800"]
+        :failed -> ["Failed", "bg-red-200 text-red-800"]
+        :crashed -> ["Crashed", "bg-orange-200 text-orange-800"]
+        :cancelled -> ["Cancelled", "bg-gray-500 text-gray-800"]
+        :killed -> ["Killed", "bg-yellow-200 text-yellow-800"]
+        :exception -> ["Exception", "bg-gray-800 text-white"]
+        :lost -> ["Lost", "bg-gray-800 text-white"]
       end
 
     assigns = assign(assigns, text: text, classes: classes)
@@ -136,15 +148,4 @@ defmodule LightningWeb.AttemptLive.Components do
     </span>
     """
   end
-
-  # TODO: remove this if it's not necessary
-  # this was written to fix a bug where log lines would appear incorrectly
-  # defp spaces_to_nbsp(str) when is_binary(str) do
-  #   str
-  #   |> String.codepoints()
-  #   |> Enum.map(fn
-  #     " " -> raw("&nbsp;")
-  #     c -> c
-  #   end)
-  # end
 end

@@ -5,6 +5,7 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
   use LightningWeb, :live_component
 
   import LightningWeb.RunLive.Components
+  import LightningWeb.AttemptLive.Components
 
   @impl true
   def update(
@@ -185,20 +186,7 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
           class="py-1 px-4 text-sm font-normal text-left rtl:text-right text-gray-500"
           role="cell"
         >
-          <%= case @work_order.state do %>
-            <% :success -> %>
-              <.success_pill>Success</.success_pill>
-            <% :failed -> %>
-              <.failure_pill>Failed</.failure_pill>
-            <% :killed -> %>
-              <.killed_pill>Killed</.killed_pill>
-            <% :pending -> %>
-              <.pending_pill>Pending</.pending_pill>
-            <% state -> %>
-              <.other_state_pill>
-                <%= state |> Atom.to_string() |> String.capitalize() %>
-              </.other_state_pill>
-          <% end %>
+          <.state_pill state={@work_order.state} />
         </div>
       </div>
       <%= if @show_details do %>

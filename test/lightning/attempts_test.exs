@@ -286,9 +286,11 @@ defmodule Lightning.AttemptsTest do
         work_order_for(trigger, workflow: workflow, dataclip: dataclip)
         |> insert()
 
-      {:error, changeset} = Attempts.complete_attempt(attempt, "success")
+      {:error, changeset} =
+        Attempts.complete_attempt(attempt, {"success", nil, nil})
 
-      assert {:state, {"cannot complete attempt that is not started", []}} in changeset.errors
+      assert {:state,
+              {"cannot complete attempt that is not started or has error", []}} in changeset.errors
 
       {:ok, attempt} =
         Repo.update(attempt |> Ecto.Changeset.change(state: :claimed))
@@ -301,7 +303,7 @@ defmodule Lightning.AttemptsTest do
 
       Lightning.WorkOrders.subscribe(workflow.project_id)
 
-      {:ok, attempt} = Attempts.complete_attempt(attempt, "success")
+      {:ok, attempt} = Attempts.complete_attempt(attempt, {"success", nil, nil})
 
       assert attempt.state == :success
       assert DateTime.utc_now() >= attempt.finished_at
@@ -327,7 +329,7 @@ defmodule Lightning.AttemptsTest do
         |> Repo.update()
 
       {:error, changeset} =
-        Attempts.complete_attempt(attempt, nil)
+        Attempts.complete_attempt(attempt, {nil, nil, nil})
 
       assert changeset.errors == [
                state: {"can't be blank", [validation: :required]}
@@ -348,7 +350,7 @@ defmodule Lightning.AttemptsTest do
         |> Repo.update()
 
       {:error, changeset} =
-        Attempts.complete_attempt(attempt, "some_unknown_state")
+        Attempts.complete_attempt(attempt, {"some_unknown_state", nil, nil})
 
       assert [
                state:
