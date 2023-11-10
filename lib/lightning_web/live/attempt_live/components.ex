@@ -125,7 +125,7 @@ defmodule LightningWeb.AttemptLive.Components do
       case state do
         # only workorder states...
         :pending -> ["Pending", "bg-gray-200 text-gray-800"]
-        :running -> ["Running", "bg-gray-200 text-gray-800"]
+        :running -> ["Running", "bg-blue-200 text-blue-800"]
         # attempt & workorder states...
         :available -> ["Pending", "bg-gray-200 text-gray-800"]
         :claimed -> ["Starting", "bg-blue-200 text-blue-800"]
