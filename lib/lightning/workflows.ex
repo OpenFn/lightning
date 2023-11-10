@@ -87,22 +87,6 @@ defmodule Lightning.Workflows do
   end
 
   @doc """
-  Deletes a workflow.
-
-  ## Examples
-
-      iex> delete_workflow(workflow)
-      {:ok, %Workflow{}}
-
-      iex> delete_workflow(workflow)
-      {:error, %Ecto.Changeset{}}
-
-  """
-  def delete_workflow(%Workflow{} = workflow) do
-    Repo.delete(workflow)
-  end
-
-  @doc """
   Returns an `%Ecto.Changeset{}` for tracking workflow changes.
 
   ## Examples
