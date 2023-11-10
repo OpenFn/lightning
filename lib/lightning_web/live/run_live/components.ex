@@ -74,8 +74,8 @@ defmodule LightningWeb.RunLive.Components do
             </.link>
             <%= if @is_clone do %>
               <div class="flex gap-1">
-                <Heroicons.forward
-                  solid
+                <Heroicons.paper_clip
+                  mini
                   class="mr-1.5 mt-1 h-3 w-3 flex-shrink-0 text-gray-500"
                 />
               </div>
