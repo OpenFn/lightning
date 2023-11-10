@@ -1,6 +1,5 @@
 defmodule LightningWeb.WorkflowLive.EditTest do
   alias Lightning.Repo
-  alias Lightning.Workflows.Workflow
   use LightningWeb.ConnCase, async: true
   import Phoenix.LiveViewTest
   import Lightning.WorkflowLive.Helpers

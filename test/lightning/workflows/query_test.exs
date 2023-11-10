@@ -70,25 +70,25 @@ defmodule Lightning.Workflows.QueryTest do
         enabled: false
       })
 
-      _disabled_cronjob =
+      disabled_cronjob =
         insert(:job, workflow: trigger.workflow)
 
       insert(:edge, %{
         source_trigger: trigger,
-        target_job: _disabled_cronjob,
-        workflow: _disabled_cronjob.workflow,
+        target_job: disabled_cronjob,
+        workflow: disabled_cronjob.workflow,
         enabled: true
       })
 
       webhook_trigger = insert(:trigger, type: :webhook)
 
-      _non_cron_job =
+      non_cron_job =
         insert(:job, workflow: webhook_trigger.workflow)
 
       insert(:edge, %{
         source_trigger: webhook_trigger,
-        target_job: _non_cron_job,
-        workflow: _non_cron_job.workflow,
+        target_job: non_cron_job,
+        workflow: non_cron_job.workflow,
         enabled: true
       })
 
