@@ -217,7 +217,6 @@ defmodule Lightning.SetupUtilsTest do
                });
              """
 
-      # assert job_3.enabled
       assert job_3.adaptor == "@openfn/language-dhis2@latest"
 
       runs =
@@ -534,7 +533,6 @@ defmodule Lightning.SetupUtilsTest do
              fn(state => state);
              """
 
-      # assert notify_upload_successful.enabled
       assert notify_upload_successful.adaptor == "@openfn/language-http@latest"
 
       assert notify_upload_failed.name == "Notify CHW upload failed"

@@ -36,7 +36,7 @@ defmodule Lightning.Workflows.Query do
     from(e in Edge,
       join: j in assoc(e, :target_job),
       join: t in assoc(e, :source_trigger),
-      where: t.type == :cron and t.enabled and e.enabled,
+      where: t.type == :cron and t.enabled,
       preload: [:source_trigger, [target_job: :workflow]]
     )
   end

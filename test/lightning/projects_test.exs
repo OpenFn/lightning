@@ -452,28 +452,18 @@ defmodule Lightning.ProjectsTest do
 
       %{project: project} = full_project_fixture()
 
-      workflows =
-        Projects.project_workflows_query(project)
-        |> Repo.all()
-        |> Repo.preload(:triggers)
+      project_triggers = Projects.project_triggers_query(project) |> Repo.all()
 
-      assert Enum.all?(workflows, fn workflow ->
-               Enum.all?(workflow.triggers, & &1.enabled)
-             end)
+      assert Enum.all?(project_triggers, & &1.enabled)
 
       assert project.scheduled_deletion == nil
 
       now = DateTime.utc_now() |> DateTime.add(-1, :second)
       {:ok, project} = Projects.schedule_project_deletion(project)
 
-      workflows =
-        Projects.project_workflows_query(project)
-        |> Repo.all()
-        |> Repo.preload(:triggers)
+      project_triggers = Projects.project_triggers_query(project) |> Repo.all()
 
-      assert Enum.all?(workflows, fn workflow ->
-               Enum.all?(workflow.triggers, &(&1.enabled == false))
-             end)
+      assert Enum.all?(project_triggers, &(!&1.enabled))
 
       assert project.scheduled_deletion != nil
       assert Timex.diff(project.scheduled_deletion, now, :days) == days

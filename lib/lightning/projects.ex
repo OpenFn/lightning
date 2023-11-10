@@ -465,11 +465,11 @@ defmodule Lightning.Projects do
       end
 
     Repo.transaction(fn ->
-      workflows = project_workflows_query(project) |> Repo.all()
+      triggers = project_triggers_query(project) |> Repo.all()
 
-      workflows
-      |> Enum.each(fn workflow ->
-        Lightning.Workflows.mark_for_deletion(workflow)
+      triggers
+      |> Enum.each(fn trigger ->
+        Lightning.Workflows.update_trigger(trigger, %{"enabled" => false})
       end)
 
       project =

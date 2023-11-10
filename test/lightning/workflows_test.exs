@@ -128,7 +128,7 @@ defmodule Lightning.WorkflowsTest do
           target_job: job_1
         })
 
-      # Disabled Job
+      # Jobs can't be disabled
       insert(:job, %{
         workflow: t2.workflow
       })
