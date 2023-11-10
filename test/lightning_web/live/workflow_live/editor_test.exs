@@ -6,6 +6,8 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
   import Lightning.WorkflowLive.Helpers
   import Lightning.Factories
 
+  import Ecto.Query
+
   alias Lightning.Invocation
 
   setup :register_and_log_in_user
@@ -151,8 +153,6 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       project: p,
       workflow: w
     } do
-      import Ecto.Query
-
       job = w.jobs |> hd
 
       {:ok, view, _html} =
@@ -244,6 +244,62 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       assert run_viewer
              |> element("li:nth-child(3) dd", "Pending")
              |> has_element?()
+    end
+
+    test "the new dataclip is selected after running job", %{
+      conn: conn,
+      project: p,
+      workflow: w
+    } do
+      job = w.jobs |> hd
+
+      existing_dataclip = insert(:dataclip, project: p)
+
+      insert(:workorder,
+        workflow: w,
+        dataclip: existing_dataclip,
+        attempts: [
+          build(:attempt,
+            dataclip: existing_dataclip,
+            starting_job: job,
+            runs: [build(:run, job: job, input_dataclip: existing_dataclip)]
+          )
+        ]
+      )
+
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{p}/w/#{w}?#{[s: job, m: "expand"]}")
+
+      body = %{"val" => Ecto.UUID.generate()}
+
+      dataclip_query =
+        where(
+          Lightning.Invocation.Dataclip,
+          [d],
+          d.type == :saved_input and
+            d.project_id == ^p.id
+        )
+
+      refute Lightning.Repo.exists?(dataclip_query)
+      refute render(view) =~ body["val"]
+
+      view
+      |> form("#manual-job-#{job.id} form", %{
+        manual: %{body: Jason.encode!(body)}
+      })
+      |> render_submit()
+
+      assert render(view) =~ body["val"]
+
+      new_dataclip = Lightning.Repo.one(dataclip_query)
+
+      element =
+        view
+        |> element(
+          "select#manual_run_form_dataclip_id  option[value='#{new_dataclip.id}']"
+        )
+
+      assert render(element) =~ "selected"
     end
   end
 

@@ -700,10 +700,17 @@ defmodule LightningWeb.WorkflowLive.Edit do
           selectable_dataclips: []
         )
 
-      %{selected_job: job, selection_mode: "expand"} when not is_nil(job) ->
+      %{selected_job: job, selection_mode: "expand"} = assigns
+      when not is_nil(job) ->
+        dataclip =
+          assigns[:follow_attempt_id] &&
+            Lightning.Invocation.get_dataclip_for_attempt(
+              assigns[:follow_attempt_id]
+            )
+
         changeset =
           WorkOrders.Manual.new(
-            %{},
+            %{dataclip_id: dataclip && dataclip.id},
             project: socket.assigns.project,
             workflow: socket.assigns.workflow,
             job: socket.assigns.selected_job,
@@ -717,10 +724,25 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
         socket
         |> assign_manual_run_form(changeset)
-        |> assign(selectable_dataclips: selectable_dataclips)
+        |> assign(
+          selectable_dataclips:
+            maybe_add_attempt_dataclip(selectable_dataclips, dataclip)
+        )
 
       _ ->
         socket
+    end
+  end
+
+  defp maybe_add_attempt_dataclip(selectable_dataclips, nil) do
+    selectable_dataclips
+  end
+
+  defp maybe_add_attempt_dataclip(selectable_dataclips, dataclip) do
+    if Enum.find(selectable_dataclips, fn dc -> dc.id == dataclip.id end) do
+      selectable_dataclips
+    else
+      [dataclip | selectable_dataclips]
     end
   end
 
