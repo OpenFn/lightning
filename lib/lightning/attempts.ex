@@ -73,9 +73,24 @@ defmodule Lightning.Attempts do
     |> Repo.one()
   end
 
+  @doc """
+  Returns only the dataclip body as a string
+  """
   def get_dataclip_body(%Attempt{} = attempt) do
     from(d in Ecto.assoc(attempt, :dataclip),
       select: type(d.body, :string)
+    )
+    |> Repo.one()
+  end
+
+  @doc """
+  Returns a tuple with {type, string} so that initial state can be created for
+  the worker. See LightingWeb.AttemptChannel.handle_in("fetch:dataclip", _, _)
+  for more details.
+  """
+  def get_dataclip_for_worker(%Attempt{} = attempt) do
+    from(d in Ecto.assoc(attempt, :dataclip),
+      select: {d.type, type(d.body, :string)}
     )
     |> Repo.one()
   end

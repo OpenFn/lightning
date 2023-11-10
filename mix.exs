@@ -74,7 +74,7 @@ defmodule Lightning.MixProject do
       {:hackney, "~> 1.18"},
       {:heroicons, "~> 0.5.3"},
       {:httpoison, "~> 1.8"},
-      {:jason, "~> 1.2"},
+      {:jason, "~> 1.4"},
       {:joken, "~> 2.6.0"},
       {:jsonpatch, "~> 1.0.2"},
       {:junit_formatter, "~> 3.0", only: [:test]},
