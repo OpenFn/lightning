@@ -117,7 +117,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       workflow_name = view |> get_workflow_params() |> Map.get("name")
 
-      refute workflow_name == "", "the workflow should have a pre-filled name"
+      assert workflow_name == ""
 
       assert view |> element("#workflow_name_form") |> render() =~ workflow_name
 
