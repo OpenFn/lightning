@@ -77,7 +77,7 @@ defmodule Lightning.Workflows.QueryTest do
         source_trigger: trigger,
         target_job: _disabled_cronjob,
         workflow: _disabled_cronjob.workflow,
-        enabled: false
+        enabled: true
       })
 
       webhook_trigger = insert(:trigger, type: :webhook)
