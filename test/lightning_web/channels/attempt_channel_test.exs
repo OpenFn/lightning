@@ -226,6 +226,7 @@ defmodule LightningWeb.AttemptChannelTest do
             :source_trigger_id,
             :source_job_id,
             :condition,
+            :enabled,
             :target_job_id
           ])
         )

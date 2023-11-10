@@ -86,7 +86,6 @@ defmodule LightningWeb.WorkflowNewLive.WorkflowParams do
             :name,
             :adaptor,
             :body,
-            :enabled,
             :project_credential_id
           ]),
         triggers:
@@ -106,6 +105,7 @@ defmodule LightningWeb.WorkflowNewLive.WorkflowParams do
             :id,
             :source_trigger_id,
             :source_job_id,
+            :enabled,
             :condition,
             :target_job_id
           ])

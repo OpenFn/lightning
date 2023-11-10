@@ -28,21 +28,22 @@ defmodule Lightning.Workflows.QueryTest do
           enabled: true
         })
 
-      job = insert(:job, enabled: true, workflow: trigger.workflow)
+      job = insert(:job, workflow: trigger.workflow)
 
       insert(:edge, %{
         source_trigger: trigger,
         target_job: job,
-        workflow: job.workflow
+        workflow: job.workflow,
+        enabled: true
       })
 
       _disabled_cronjob =
-        insert(:job, enabled: false, workflow: trigger.workflow)
+        insert(:job, workflow: trigger.workflow)
 
       webhook_trigger = insert(:trigger, type: :webhook)
 
       _non_cron_job =
-        insert(:job, enabled: true, workflow: webhook_trigger.workflow)
+        insert(:job, workflow: webhook_trigger.workflow)
 
       jobs =
         Query.enabled_cron_jobs_by_edge()
@@ -60,21 +61,36 @@ defmodule Lightning.Workflows.QueryTest do
           enabled: false
         })
 
-      job = insert(:job, enabled: true, workflow: trigger.workflow)
+      job = insert(:job, workflow: trigger.workflow)
 
       insert(:edge, %{
         source_trigger: trigger,
         target_job: job,
-        workflow: job.workflow
+        workflow: job.workflow,
+        enabled: true
       })
 
-      _disabled_cronjob =
-        insert(:job, enabled: false, workflow: trigger.workflow)
+      disabled_cronjob =
+        insert(:job, workflow: trigger.workflow)
+
+      insert(:edge, %{
+        source_trigger: trigger,
+        target_job: disabled_cronjob,
+        workflow: disabled_cronjob.workflow,
+        enabled: true
+      })
 
       webhook_trigger = insert(:trigger, type: :webhook)
 
-      _non_cron_job =
-        insert(:job, enabled: true, workflow: webhook_trigger.workflow)
+      non_cron_job =
+        insert(:job, workflow: webhook_trigger.workflow)
+
+      insert(:edge, %{
+        source_trigger: webhook_trigger,
+        target_job: non_cron_job,
+        workflow: non_cron_job.workflow,
+        enabled: true
+      })
 
       jobs =
         Query.enabled_cron_jobs_by_edge()

@@ -26,8 +26,7 @@ defmodule Lightning.ExportUtils do
       adaptor: job.adaptor,
       body: job.body,
       credential: nil,
-      globals: [],
-      enabled: job.enabled
+      globals: []
     }
   end
 
@@ -54,6 +53,7 @@ defmodule Lightning.ExportUtils do
       source_trigger: find_trigger_name(edge, triggers),
       target_job: target_name,
       condition: edge.condition |> Atom.to_string(),
+      enabled: edge.enabled,
       node_type: :edge
     }
   end
@@ -68,7 +68,8 @@ defmodule Lightning.ExportUtils do
       source_job: source_job,
       target_job: target_job,
       condition: edge.condition |> Atom.to_string(),
-      node_type: :edge
+      node_type: :edge,
+      enabled: edge.enabled
     }
   end
 
@@ -82,9 +83,9 @@ defmodule Lightning.ExportUtils do
     ordering_map = %{
       project: [:name, :description, :credentials, :globals, :workflows],
       workflow: [:name, :jobs, :triggers, :edges],
-      job: [:name, :adaptor, :enabled, :credential, :globals, :body],
+      job: [:name, :adaptor, :credential, :globals, :body],
       trigger: [:type, :cron_expression],
-      edge: [:source_trigger, :source_job, :target_job, :condition]
+      edge: [:source_trigger, :source_job, :target_job, :condition, :enabled]
     }
 
     map

@@ -89,7 +89,6 @@ defmodule Lightning.JobsFixtures do
       attrs
       |> Enum.into(%{
         body: "fn(state => state)",
-        enabled: true,
         name: "some name",
         adaptor: "@openfn/language-common",
         workflow: workflow,
@@ -102,7 +101,7 @@ defmodule Lightning.JobsFixtures do
       insert(:trigger,
         workflow: attrs[:workflow],
         type: :webhook,
-        enabled: attrs[:enabled]
+        enabled: true
       )
 
     e =
@@ -110,7 +109,8 @@ defmodule Lightning.JobsFixtures do
         workflow: attrs[:workflow],
         source_trigger: t,
         target_job: job,
-        condition: :always
+        condition: :always,
+        enabled: true
       )
 
     %{job: job, edge: e, trigger: t, workflow: workflow}

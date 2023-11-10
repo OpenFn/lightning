@@ -50,6 +50,8 @@ and this project adheres to
   [#1176](https://github.com/OpenFn/Lightning/issues/1176)
 - Update "Delete" to "Delete Job" on Job panel and include javascript deletion
   confirmation [#1105](https://github.com/OpenFn/Lightning/issues/1105)
+- Move "Enabled" property from "Jobs" to "Edges" 
+   [#895](https://github.com/OpenFn/Lightning/issues/895)
 
 ### Fixed
 

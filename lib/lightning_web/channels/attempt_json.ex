@@ -36,6 +36,7 @@ defmodule LightningWeb.AttemptJson do
       "source_trigger_id" => edge.source_trigger_id,
       "source_job_id" => edge.source_job_id,
       "condition" => edge.condition,
+      "enabled" => edge.enabled,
       "target_job_id" => edge.target_job_id
     }
   end

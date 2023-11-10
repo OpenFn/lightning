@@ -21,6 +21,7 @@ defmodule Lightning.Workflows.Edge do
           __meta__: Ecto.Schema.Metadata.t(),
           id: Ecto.UUID.t() | nil,
           condition: edge_condition(),
+          enabled: boolean(),
           workflow: nil | Workflow.t() | Ecto.Association.NotLoaded.t(),
           source_job: nil | Job.t() | Ecto.Association.NotLoaded.t(),
           source_trigger: nil | Trigger.t() | Ecto.Association.NotLoaded.t(),
@@ -38,6 +39,8 @@ defmodule Lightning.Workflows.Edge do
     belongs_to :target_job, Job
 
     field :condition, Ecto.Enum, values: @conditions
+
+    field :enabled, :boolean, default: true
 
     field :delete, :boolean, virtual: true
 
@@ -57,6 +60,7 @@ defmodule Lightning.Workflows.Edge do
       :source_job_id,
       :source_trigger_id,
       :condition,
+      :enabled,
       :target_job_id
     ])
     |> validate()

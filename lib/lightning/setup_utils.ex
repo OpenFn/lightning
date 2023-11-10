@@ -185,7 +185,7 @@ defmodule Lightning.SetupUtils do
           });
         """,
         adaptor: "@openfn/language-common@latest",
-        enabled: true,
+        # enabled: true,
         workflow_id: workflow.id
       })
 
@@ -199,7 +199,8 @@ defmodule Lightning.SetupUtils do
       Workflows.create_edge(%{
         workflow_id: workflow.id,
         source_trigger: source_trigger,
-        target_job: job_1
+        target_job: job_1,
+        enabled: true
       })
 
     {:ok, job_2} =
@@ -212,7 +213,7 @@ defmodule Lightning.SetupUtils do
           });
         """,
         adaptor: "@openfn/language-common@latest",
-        enabled: true,
+        # enabled: true,
         workflow_id: workflow.id
       })
 
@@ -220,7 +221,8 @@ defmodule Lightning.SetupUtils do
       workflow_id: workflow.id,
       source_job: job_1,
       condition: :on_job_success,
-      target_job_id: job_2.id
+      target_job_id: job_2.id,
+      enabled: true
     })
 
     user_id = List.first(project_users).user_id
@@ -247,7 +249,7 @@ defmodule Lightning.SetupUtils do
           });
         """,
         adaptor: "@openfn/language-dhis2@latest",
-        enabled: true,
+        # enabled: true,
         workflow_id: workflow.id,
         project_credential_id:
           List.first(dhis2_credential.project_credentials).id
@@ -257,7 +259,8 @@ defmodule Lightning.SetupUtils do
       workflow_id: workflow.id,
       source_job: job_2,
       condition: :on_job_success,
-      target_job_id: job_3.id
+      target_job_id: job_3.id,
+      enabled: true
     })
 
     input_dataclip =
@@ -471,7 +474,7 @@ defmodule Lightning.SetupUtils do
         fn(state => state);
         """,
         adaptor: "@openfn/language-http@latest",
-        enabled: true,
+        # enabled: true,
         workflow_id: openhie_workflow.id
       })
 
@@ -480,7 +483,8 @@ defmodule Lightning.SetupUtils do
         workflow_id: openhie_workflow.id,
         condition: :always,
         source_trigger: openhie_trigger,
-        target_job: fhir_standard_data
+        target_job: fhir_standard_data,
+        enabled: true
       })
 
     {:ok, send_to_openhim} =
@@ -492,7 +496,7 @@ defmodule Lightning.SetupUtils do
         fn(state => state);
         """,
         adaptor: "@openfn/language-http@latest",
-        enabled: true,
+        # enabled: true,
         workflow_id: openhie_workflow.id
       })
 
@@ -501,7 +505,8 @@ defmodule Lightning.SetupUtils do
         workflow_id: openhie_workflow.id,
         condition: :on_job_success,
         target_job_id: send_to_openhim.id,
-        source_job_id: fhir_standard_data.id
+        source_job_id: fhir_standard_data.id,
+        enabled: true
       })
 
     {:ok, notify_upload_successful} =
@@ -513,7 +518,7 @@ defmodule Lightning.SetupUtils do
         fn(state => state);
         """,
         adaptor: "@openfn/language-http@latest",
-        enabled: true,
+        # enabled: true,
         workflow_id: openhie_workflow.id
       })
 
@@ -522,7 +527,8 @@ defmodule Lightning.SetupUtils do
         workflow_id: openhie_workflow.id,
         condition: :on_job_success,
         target_job_id: notify_upload_successful.id,
-        source_job_id: send_to_openhim.id
+        source_job_id: send_to_openhim.id,
+        enabled: true
       })
 
     {:ok, notify_upload_failed} =
@@ -534,7 +540,7 @@ defmodule Lightning.SetupUtils do
         fn(state => state);
         """,
         adaptor: "@openfn/language-http@latest",
-        enabled: true,
+        # enabled: true,
         workflow_id: openhie_workflow.id
       })
 
@@ -543,7 +549,8 @@ defmodule Lightning.SetupUtils do
         workflow_id: openhie_workflow.id,
         condition: :on_job_failure,
         target_job_id: notify_upload_failed.id,
-        source_job_id: send_to_openhim.id
+        source_job_id: send_to_openhim.id,
+        enabled: true
       })
 
     http_body = %{
@@ -699,7 +706,7 @@ defmodule Lightning.SetupUtils do
         get('trackedEntityInstances/PQfMcpmXeFE');
         """,
         adaptor: "@openfn/language-dhis2@latest",
-        enabled: true,
+        # enabled: true,
         workflow_id: dhis2_workflow.id,
         project_credential_id:
           List.first(dhis2_credential.project_credentials).id
@@ -717,7 +724,8 @@ defmodule Lightning.SetupUtils do
         workflow_id: dhis2_workflow.id,
         condition: :always,
         source_trigger: dhis_trigger,
-        target_job: get_dhis2_data
+        target_job: get_dhis2_data,
+        enabled: true
       })
 
     {:ok, upload_to_google_sheet} =
@@ -729,7 +737,7 @@ defmodule Lightning.SetupUtils do
         fn(state => state);
         """,
         adaptor: "@openfn/language-http@latest",
-        enabled: true,
+        # enabled: true,
         workflow_id: dhis2_workflow.id
       })
 
@@ -738,7 +746,8 @@ defmodule Lightning.SetupUtils do
         workflow_id: dhis2_workflow.id,
         condition: :on_job_success,
         target_job_id: upload_to_google_sheet.id,
-        source_job_id: get_dhis2_data.id
+        source_job_id: get_dhis2_data.id,
+        enabled: true
       })
 
     input_dataclip =

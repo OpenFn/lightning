@@ -114,7 +114,7 @@ defmodule Lightning.Projects.Provisioner do
 
   defp job_changeset(job, attrs) do
     job
-    |> cast(attrs, [:id, :name, :body, :enabled, :adaptor, :delete])
+    |> cast(attrs, [:id, :name, :body, :adaptor, :delete])
     |> validate_required([:id])
     |> unique_constraint(:id, name: :jobs_pkey)
     |> Job.validate()
@@ -147,6 +147,7 @@ defmodule Lightning.Projects.Provisioner do
       :id,
       :source_job_id,
       :source_trigger_id,
+      :enabled,
       :condition,
       :target_job_id,
       :delete

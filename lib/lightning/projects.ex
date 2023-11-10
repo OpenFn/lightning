@@ -465,11 +465,11 @@ defmodule Lightning.Projects do
       end
 
     Repo.transaction(fn ->
-      jobs = project_jobs_query(project) |> Repo.all()
+      triggers = project_triggers_query(project) |> Repo.all()
 
-      jobs
-      |> Enum.each(fn job ->
-        Lightning.Jobs.update_job(job, %{"enabled" => false})
+      triggers
+      |> Enum.each(fn trigger ->
+        Lightning.Workflows.update_trigger(trigger, %{"enabled" => false})
       end)
 
       project =

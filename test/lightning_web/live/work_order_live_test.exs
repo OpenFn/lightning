@@ -778,7 +778,6 @@ defmodule LightningWeb.RunWorkOrderTest do
       job =
         insert(:job, %{
           body: "fn(state => state)",
-          enabled: true,
           name: "some name",
           adaptor: "@openfn/language-common",
           workflow: workflow,
@@ -795,7 +794,8 @@ defmodule LightningWeb.RunWorkOrderTest do
         workflow: workflow,
         source_trigger: trigger,
         target_job: job,
-        condition: :always
+        condition: :always,
+        enabled: true
       )
 
       dataclip = insert(:dataclip, project: project)
@@ -864,7 +864,6 @@ defmodule LightningWeb.RunWorkOrderTest do
       job =
         insert(:job, %{
           body: "fn(state => state)",
-          enabled: true,
           name: "some name",
           adaptor: "@openfn/language-common",
           workflow: workflow,
@@ -881,7 +880,8 @@ defmodule LightningWeb.RunWorkOrderTest do
         workflow: workflow,
         source_trigger: trigger,
         target_job: job,
-        condition: :always
+        condition: :always,
+        enabled: true
       )
 
       dataclip = insert(:dataclip, project: project)

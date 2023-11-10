@@ -170,5 +170,36 @@ defmodule Lightning.Workflows.EdgeTest do
                 ]}
              } in changeset.errors
     end
+
+    test "new edges are enabled by default" do
+      changeset =
+        Edge.changeset(%Edge{}, %{
+          workflow_id: Ecto.UUID.generate(),
+          target_job_id: Ecto.UUID.generate(),
+          condition: :on_job_success
+        })
+
+      assert changeset.valid?
+
+      assert changeset.data.enabled ||
+               Map.get(changeset.changes, :enabled, true),
+             "New edges should be enabled by default"
+    end
+
+    test "edges with source_trigger_id should be enabled" do
+      changeset =
+        Edge.changeset(%Edge{}, %{
+          workflow_id: Ecto.UUID.generate(),
+          source_trigger_id: Ecto.UUID.generate(),
+          target_job_id: Ecto.UUID.generate(),
+          condition: :always
+        })
+
+      assert changeset.valid?
+
+      assert changeset.data.enabled ||
+               Map.get(changeset.changes, :enabled, true),
+             "Edges with a source_trigger_id should always be enabled"
+    end
   end
 end

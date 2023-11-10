@@ -185,7 +185,6 @@ defmodule Lightning.SetupUtilsTest do
                });
              """
 
-      assert job_1.enabled
       assert job_1.adaptor == "@openfn/language-common@latest"
 
       assert job_2.name == "Job 2 - Convert data to DHIS2 format"
@@ -197,7 +196,6 @@ defmodule Lightning.SetupUtilsTest do
                });
              """
 
-      assert job_2.enabled
       assert job_2.adaptor == "@openfn/language-common@latest"
 
       assert job_3.name == "Job 3 - Upload to DHIS2"
@@ -219,7 +217,6 @@ defmodule Lightning.SetupUtilsTest do
                });
              """
 
-      assert job_3.enabled
       assert job_3.adaptor == "@openfn/language-dhis2@latest"
 
       runs =
@@ -520,7 +517,6 @@ defmodule Lightning.SetupUtilsTest do
              fn(state => state);
              """
 
-      assert fhir_standard_data.enabled
       assert fhir_standard_data.adaptor == "@openfn/language-http@latest"
 
       assert send_to_openhim.name == "Send to OpenHIM to route to SHR"
@@ -529,7 +525,6 @@ defmodule Lightning.SetupUtilsTest do
              fn(state => state);
              """
 
-      assert send_to_openhim.enabled
       assert send_to_openhim.adaptor == "@openfn/language-http@latest"
 
       assert notify_upload_successful.name == "Notify CHW upload successful"
@@ -538,7 +533,6 @@ defmodule Lightning.SetupUtilsTest do
              fn(state => state);
              """
 
-      assert notify_upload_successful.enabled
       assert notify_upload_successful.adaptor == "@openfn/language-http@latest"
 
       assert notify_upload_failed.name == "Notify CHW upload failed"
@@ -547,7 +541,6 @@ defmodule Lightning.SetupUtilsTest do
              fn(state => state);
              """
 
-      assert notify_upload_failed.enabled
       assert notify_upload_failed.adaptor == "@openfn/language-http@latest"
 
       runs =
@@ -759,7 +752,6 @@ defmodule Lightning.SetupUtilsTest do
              get('trackedEntityInstances/PQfMcpmXeFE');
              """
 
-      assert get_dhis2_data.enabled
       assert get_dhis2_data.adaptor == "@openfn/language-dhis2@latest"
 
       assert upload_to_google_sheet.name == "Upload to Google Sheet"
@@ -768,7 +760,6 @@ defmodule Lightning.SetupUtilsTest do
              fn(state => state);
              """
 
-      assert upload_to_google_sheet.enabled
       assert upload_to_google_sheet.adaptor == "@openfn/language-http@latest"
 
       runs =

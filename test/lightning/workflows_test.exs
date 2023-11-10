@@ -8,6 +8,8 @@ defmodule Lightning.WorkflowsTest do
     Jobs
   }
 
+  alias Lightning.Workflows.Trigger
+
   describe "workflows" do
     test "list_workflows/0 returns all workflows" do
       workflow = insert(:workflow)
@@ -126,9 +128,7 @@ defmodule Lightning.WorkflowsTest do
           target_job: job_1
         })
 
-      # Disabled Job
       insert(:job, %{
-        enabled: false,
         workflow: t2.workflow
       })
 
@@ -389,29 +389,27 @@ defmodule Lightning.WorkflowsTest do
     end
 
     test "mark_for_deletion/2", %{project: project, w1: w1, w2: w2} do
-      results = Workflows.get_workflows_for(project)
+      workflows = Workflows.get_workflows_for(project)
 
-      assert length(results) == 2
+      assert length(workflows) == 2
 
       assert w1.deleted_at == nil
-
       assert w2.deleted_at == nil
 
-      job_1 = insert(:job, name: "job 1", workflow: w1)
-      job_2 = insert(:job, name: "job 2", workflow: w1)
+      %{id: trigger_1_id} = insert(:trigger, workflow: w1, enabled: true)
+      %{id: trigger_2_id} = insert(:trigger, workflow: w1, enabled: true)
 
-      # mark delete at request of a workflows and disable all associated jobs
+      # request workflow deletion (and disable all associated triggers)
       assert {:ok, _workflow} = Workflows.mark_for_deletion(w1)
 
       assert Workflows.get_workflow!(w1.id).deleted_at != nil
-
       assert Workflows.get_workflow!(w2.id).deleted_at == nil
 
+      # check that get_workflows_for/1 doesn't return those marked for deletion
       assert length(Workflows.get_workflows_for(project)) == 1
 
-      assert Jobs.get_job!(job_1.id).enabled == false
-
-      assert Jobs.get_job!(job_2.id).enabled == false
+      assert Repo.get(Trigger, trigger_1_id) |> Map.get(:enabled) == false
+      assert Repo.get(Trigger, trigger_2_id) |> Map.get(:enabled) == false
     end
   end
 end

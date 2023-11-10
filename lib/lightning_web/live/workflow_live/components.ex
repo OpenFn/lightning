@@ -224,9 +224,7 @@ defmodule LightningWeb.WorkflowLive.Components do
     ~H"""
     <div class="md:grid md:grid-cols-6 md:gap-4 p-2 @container">
       <% Phoenix.HTML.Form.hidden_inputs_for(@form) %>
-      <div class="col-span-6">
-        <Form.check_box form={@form} field={:enabled} disabled={!@editable} />
-      </div>
+      <div class="col-span-6"></div>
       <div class="col-span-6 @md:col-span-4">
         <Form.text_field
           form={@form}
@@ -283,7 +281,9 @@ defmodule LightningWeb.WorkflowLive.Components do
   def trigger_form(%{form: form} = assigns) do
     assigns =
       assign(assigns,
-        type: form.source |> Ecto.Changeset.get_field(:type),
+        type:
+          form.source
+          |> Ecto.Changeset.get_field(:type),
         trigger_enabled: Map.get(form.params, "enabled", form.data.enabled)
       )
 
@@ -457,7 +457,7 @@ defmodule LightningWeb.WorkflowLive.Components do
   attr :disabled, :boolean, required: true
   attr :cancel_url, :string, required: true
 
-  def edge_form(assigns) do
+  def edge_form(%{form: form} = assigns) do
     edge_options =
       case assigns.form.source |> Ecto.Changeset.apply_changes() do
         %{source_trigger_id: nil, source_job_id: job_id}
@@ -476,7 +476,13 @@ defmodule LightningWeb.WorkflowLive.Components do
           []
       end
 
-    assigns = assigns |> assign(:edge_options, edge_options)
+    assigns =
+      assigns
+      |> assign(:edge_options, edge_options)
+      |> assign(
+        :edge_enabled,
+        Map.get(form.params, "enabled", form.data.enabled)
+      )
 
     ~H"""
     <% Phoenix.HTML.Form.hidden_inputs_for(@form) %>
@@ -505,6 +511,18 @@ defmodule LightningWeb.WorkflowLive.Components do
         values={@edge_options}
         disabled={@disabled}
       />
+      <div class="mt-7 border-t flex flex-col justify-between">
+        <h2 class=" flex mt-3">
+          <Form.check_box
+            form={@form}
+            field={:enabled}
+            label="Disable this path"
+            checked_value={false}
+            unchecked_value={true}
+            value={@edge_enabled}
+          />
+        </h2>
+      </div>
     <% end %>
     """
   end
