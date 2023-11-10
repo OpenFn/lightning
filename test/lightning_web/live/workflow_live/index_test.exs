@@ -78,18 +78,11 @@ defmodule LightningWeb.WorkflowLive.IndexTest do
     } do
       {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/w")
 
-      assert view
-             |> has_link?(
-               ~p"/projects/#{project.id}/w/new",
-               "Create new workflow"
-             )
-
-      {:ok, _view, html} =
+      {:ok, _, html} =
         view
-        |> click_create_workflow()
-        # click create workflow redirects to ~p"/projects/8d498ad1-5ee0-4378-b687-805640b751df/w/new"
+        |> form("#create_workflow_name_form", %{workflow_name: "New workflow"})
+        |> render_submit()
         |> follow_redirect(conn)
-        # then because user is redirected back to ~p"/projects/8d498ad1-5ee0-4378-b687-805640b751df/w" due to lack of permission
         |> follow_redirect(conn)
 
       assert html =~ "You are not authorized to perform this action."
@@ -101,13 +94,19 @@ defmodule LightningWeb.WorkflowLive.IndexTest do
       project: project
     } do
       {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/w")
+      query_params = %{name: "New workflow"}
+      query_string = URI.encode_query(query_params)
 
-      {:ok, view, _html} =
+      {:ok, _, html} =
         view
-        |> click_create_workflow()
-        |> follow_redirect(conn, "/projects/#{project.id}/w/new")
+        |> form("#create_workflow_name_form", %{workflow_name: "New workflow"})
+        |> render_submit()
+        |> follow_redirect(
+          conn,
+          "/projects/#{project.id}/w/new?#{query_string}"
+        )
 
-      assert view |> element("div[id^=workflow-edit-]") |> has_element?()
+      assert html =~ "New workflow"
     end
 
     test "only users with MFA enabled can create workflows for a project with MFA requirement",

@@ -62,11 +62,11 @@ defmodule LightningWeb.WorkflowLive.Index do
 
     {:ok,
      socket
-     |> workflow_modal_form()
      |> assign(
        can_delete_workflow: can_delete_workflow,
        can_create_workflow: can_create_workflow
-     )}
+     )
+     |> workflow_modal_assign()}
   end
 
   @impl true
@@ -94,7 +94,7 @@ defmodule LightningWeb.WorkflowLive.Index do
     if changeset.valid? do
       navigate_to_new_workflow(socket, workflow_name)
     else
-      {:noreply, update_form(socket, changeset)}
+      {:noreply, assign_form(socket, changeset)}
     end
   end
 
@@ -125,15 +125,25 @@ defmodule LightningWeb.WorkflowLive.Index do
   end
 
   @impl true
-  def handle_event("validate", %{"workflow_name" => workflow_name}, socket) do
-    IO.inspect(workflow_name, label: "Name workflow")
+  def handle_event(
+        "validate_workflow_name",
+        %{"workflow_name" => workflow_name},
+        socket
+      ) do
     changeset = validate_workflow(workflow_name, socket)
 
-    socket =
-      socket
-      |> assign(:isButtonDisabled, not changeset.valid?)
+    {:noreply,
+     socket
+     |> assign(:isButtonDisabled, not changeset.valid?)
+     |> assign_form(changeset)}
+  end
 
-    {:noreply, assign(socket, form: to_form(changeset, as: :input_form))}
+  defp workflow_modal_assign(socket) do
+    changeset = validate_workflow_name(@form_fields)
+
+    socket
+    |> assign(:form, to_form(changeset, as: :input_form))
+    |> assign(:isButtonDisabled, not changeset.valid?)
   end
 
   defp validate_workflow(workflow_name, socket) do
@@ -152,7 +162,7 @@ defmodule LightningWeb.WorkflowLive.Index do
      )}
   end
 
-  defp update_form(socket, changeset) do
+  defp assign_form(socket, changeset) do
     assign(socket, :form, to_form(changeset, as: :input_form))
   end
 
@@ -182,13 +192,5 @@ defmodule LightningWeb.WorkflowLive.Index do
 
   defp validate_workflow_name(workflow, attrs \\ %{}) do
     changeset(workflow, attrs)
-  end
-
-  defp workflow_modal_form(socket) do
-    changeset = validate_workflow_name(@form_fields)
-
-    socket
-    |> assign(:form, to_form(changeset, as: :input_form))
-    |> assign(:isButtonDisabled, not changeset.valid?)
   end
 end

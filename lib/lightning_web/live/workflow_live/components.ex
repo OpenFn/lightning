@@ -767,19 +767,18 @@ defmodule LightningWeb.WorkflowLive.Components do
         </div>
       </:title>
       <.form
-        :let={f}
         for={@form}
-        phx-change="validate"
+        phx-change="validate_workflow_name"
         phx-submit="create_work_flow"
+        id="create_workflow_name_form"
         class="w-11/12 mx-auto"
       >
         <.input
-          field={f[:name]}
+          field={@form[:name]}
           type="text"
           label="Workflow Name"
           name="workflow_name"
         />
-        <%= inspect(@form.source.valid?) %>
 
         <.modal_footer>
           <div class="flex gap-x-5 justify-end relative">
@@ -792,6 +791,7 @@ defmodule LightningWeb.WorkflowLive.Components do
             <span class="group">
               <button
                 disabled={@isButtonDisabled}
+                id="workflow_button"
                 type="submit"
                 class=" justify-center rounded-md bg-primary-600 disabled:bg-primary-300 px-6 py-3 text-sm font-semibold text-white shadow-sm hover:bg-primary-500 disabled:outline-0 focus:outline-2 focus:outline-indigo-600 focus:outline-offset-2 active:outlin-2 active:outline-indigo-600 active:outline-offset-2"
               >

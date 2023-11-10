@@ -442,6 +442,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
        selection_mode: nil,
        query_params: %{"s" => nil, "m" => nil, "a" => nil},
        workflow: nil,
+       workflow_name: "",
        workflow_params: %{}
      )}
   end
@@ -454,14 +455,14 @@ defmodule LightningWeb.WorkflowLive.Edit do
      |> maybe_show_manual_run()}
   end
 
-  def apply_action(socket, :new, %{"name" => workflow_name}) do
+  def apply_action(socket, :new, params) do
     if socket.assigns.workflow do
       socket
     else
       socket
       |> assign_workflow(%Workflow{
         project_id: socket.assigns.project.id,
-        name: workflow_name,
+        name: params["name"],
         id: Ecto.UUID.generate()
       })
     end
