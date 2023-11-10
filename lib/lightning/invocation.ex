@@ -62,6 +62,17 @@ defmodule Lightning.Invocation do
   def get_dataclip_details!(id),
     do: Repo.get!(Query.dataclip_with_body(), id)
 
+  @spec get_dataclip_for_attempt(attempt_id :: Ecto.UUID.t()) ::
+          Dataclip.t() | nil
+  def get_dataclip_for_attempt(attempt_id) do
+    query =
+      from d in Query.dataclip_with_body(),
+        join: a in Lightning.Attempt,
+        on: a.dataclip_id == d.id and a.id == ^attempt_id
+
+    Repo.one(query)
+  end
+
   @doc """
   Gets a single dataclip.
 

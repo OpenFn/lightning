@@ -35,7 +35,7 @@ and this project adheres to
   [#1189](https://github.com/OpenFn/Lightning/issues/1189)
 - Add plumbing to support the use of PromEx
   [#1199](https://github.com/OpenFn/Lightning/issues/1199)
-- Add warning text to PromEx config 
+- Add warning text to PromEx config
   [#1222](https://github.com/OpenFn/Lightning/issues/1222)
 - Track and filter on webhook controller state in :telemetry metrics
   [#1192](https://github.com/OpenFn/Lightning/issues/1192)
@@ -50,13 +50,15 @@ and this project adheres to
   [#1176](https://github.com/OpenFn/Lightning/issues/1176)
 - Update "Delete" to "Delete Job" on Job panel and include javascript deletion
   confirmation [#1105](https://github.com/OpenFn/Lightning/issues/1105)
-- Move "Enabled" property from "Jobs" to "Edges" 
-   [#895](https://github.com/OpenFn/Lightning/issues/895)
+- Move "Enabled" property from "Jobs" to "Edges"
+  [#895](https://github.com/OpenFn/Lightning/issues/895)
 
 ### Fixed
 
 - [#1140](https://github.com/OpenFn/Lightning/issues/1140) Adaptor icons load
   gracefully
+- [#1283](https://github.com/OpenFn/Lightning/issues/1283) Selected dataclip
+  gets lost when starting a manual workorder from the inspector interface
 
 ## [v0.9.3] - 2023-09-27
 
