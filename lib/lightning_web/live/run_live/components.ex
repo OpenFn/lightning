@@ -548,6 +548,13 @@ defmodule LightningWeb.RunLive.Components do
     |> JS.set_attribute({"data-active", "true"}, to: "[data-section=#{section}]")
   end
 
+  @spec run_icon(%{
+          :error_type => any(),
+          :reason => nil | <<_::32, _::_*8>>,
+          optional(any()) => any()
+        }) :: Phoenix.LiveView.Rendered.t()
+  # it's not really that complex!
+  # credo:disable-for-next-line
   def run_icon(%{reason: reason, error_type: error_type} = assigns) do
     [icon, classes] =
       case {reason, error_type} do

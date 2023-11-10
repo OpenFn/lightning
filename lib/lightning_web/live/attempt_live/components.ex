@@ -115,6 +115,11 @@ defmodule LightningWeb.AttemptLive.Components do
 
   attr :state, :atom, required: true
 
+  @spec state_pill(%{:state => any(), optional(any()) => any()}) ::
+          Phoenix.LiveView.Rendered.t()
+  @spec state_pill(map()) :: Phoenix.LiveView.Rendered.t()
+  # it's not really that complex!
+  # credo:disable-for-next-line
   def state_pill(%{state: state} = assigns) do
     [text, classes] =
       case state do
