@@ -101,10 +101,11 @@ defmodule LightningWeb.WorkflowLive.Components do
   def create_workflow_card(assigns) do
     ~H"""
     <div>
-      <.link
-        navigate={~p"/projects/#{@project.id}/w/new"}
+      <button
+        phx-click={show_modal("workflow_modal")}
         class="col-span-1 rounded-md"
         role={@can_create_workflow && "button"}
+        id="open-modal-button"
       >
         <div class={"flex flex-1 items-center justify-between truncate rounded-md border border-gray-200 text-white " <> (if @can_create_workflow, do: "bg-primary-600 hover:bg-primary-700", else: "bg-gray-400")}>
           <div class="flex-1 truncate px-4 py-2 text-sm">
@@ -119,7 +120,7 @@ defmodule LightningWeb.WorkflowLive.Components do
             </div>
           </div>
         </div>
-      </.link>
+      </button>
     </div>
     """
   end
@@ -745,6 +746,67 @@ defmodule LightningWeb.WorkflowLive.Components do
         </div>
       </div>
     </div>
+    """
+  end
+
+  def create_workflow_modal(assigns) do
+    ~H"""
+    <.modal id="workflow_modal" width="w-full max-w-xl">
+      <:title>
+        <div class="flex justify-between">
+          Let's get started
+          <button
+            phx-click={hide_modal("workflow_modal")}
+            type="button"
+            class="rounded-md bg-white text-gray-400 hover:text-gray-500 focus:outline-none"
+            aria-label={gettext("close")}
+          >
+            <span class="sr-only">Close</span>
+            <Heroicons.x_mark solid class="h-5 w-5 stroke-current" />
+          </button>
+        </div>
+      </:title>
+      <.form
+        :let={f}
+        for={@form}
+        phx-change="validate"
+        phx-submit="create_work_flow"
+        class="w-11/12 mx-auto"
+      >
+        <.input
+          field={f[:name]}
+          type="text"
+          label="Workflow Name"
+          name="workflow_name"
+        />
+        <%= inspect(@form.source.valid?) %>
+
+        <.modal_footer>
+          <div class="flex gap-x-5 justify-end relative">
+            <.link
+              class="justify-center rounded-md bg-white px-4 py-3 text-sm font-semibold text-gray-500 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:mt-0 sm:w-auto"
+              phx-click={hide_modal("workflow_modal")}
+            >
+              Cancel
+            </.link>
+            <span class="group">
+              <button
+                disabled={@isButtonDisabled}
+                type="submit"
+                class=" justify-center rounded-md bg-primary-600 disabled:bg-primary-300 px-6 py-3 text-sm font-semibold text-white shadow-sm hover:bg-primary-500 disabled:outline-0 focus:outline-2 focus:outline-indigo-600 focus:outline-offset-2 active:outlin-2 active:outline-indigo-600 active:outline-offset-2"
+              >
+                Create Workflow
+                <%= if @isButtonDisabled do %>
+                  <span class="invisible group-hover:visible w-36 py-1 px-3 bg-[#030712] absolute  rounded-md -translate-y-16 -translate-x-32">
+                    A workflow name is required
+                  </span>
+                <% end %>
+              </button>
+            </span>
+          </div>
+        </.modal_footer>
+      </.form>
+    </.modal>
     """
   end
 end
