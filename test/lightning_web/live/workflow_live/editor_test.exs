@@ -300,6 +300,12 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
         )
 
       assert render(element) =~ "selected"
+
+      refute view
+             |> element(
+               ~s{button[type='submit'][form='manual_run_form'][disabled]}
+             )
+             |> has_element?()
     end
   end
 

@@ -121,7 +121,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
                       form={@manual_run_form.id}
                       disabled={@save_and_run_disabled}
                     >
-                      <.icon name="hero-play-solid" class="w-4 h-4" /> Save + Run
+                      <.icon name="hero-play-solid" class="w-4 h-4" /> Save & Run
                     </.button>
                   </div>
 
@@ -762,7 +762,16 @@ defmodule LightningWeb.WorkflowLive.Edit do
         can_edit_job: can_edit_job,
         can_run_job: can_run_job
       } ->
-        manual_run_form.source.errors |> Enum.any?() or
+        form_valid =
+          if manual_run_form.source.errors == [
+               created_by: {"can't be blank", [validation: :required]}
+             ] and Map.get(manual_run_form.params, "dataclip_id") do
+            true
+          else
+            !Enum.any?(manual_run_form.source.errors)
+          end
+
+        !form_valid or
           !changeset.valid? or
           !(can_edit_job or can_run_job)
     end
