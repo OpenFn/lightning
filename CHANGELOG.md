@@ -8,8 +8,61 @@ and this project adheres to
 
 ## [Unreleased]
 
+### 🚨 Breaking change warning! 🚨
+
+This release will contain breaking changes as we've significantly improved both
+the workflow building and execution systems.
+
+#### Nodes and edges
+
+Before, workflows were represented as a list of jobs and triggers. For greater
+flexibility and control of complex workflows, we've moved towards a more robust
+"nodes and edges" approach. Where jobs in a workflow (a node) can be connected
+by edges.
+
+Triggers still exist, but live "outside" the directed acyclic graph (DAG) and
+are used to automatically create workorders and attempts.
+
+We've provided migrations that bring `v0.9.3` workflows in line with the
+`v0.10.0` requirements.
+
+#### Scalable workers
+
+Before, Lightning spawned child processes to execute attempts in sand-boxed
+NodeVMs on the same server. This created inefficiencies and security
+vulnerabilities. Now, the Lightning web server adds attempts to a queue and
+multiple worker applications can pull from that queue to process work.
+
+In dev mode, this all happens automatically and on one machine, but in most
+high-availability production environments the workers will be on another server.
+
+Attempts are now handled entirely by the workers, and they report back to
+Lightning. Exit reasons, final attempt states, error types and error messages
+are either entirely new or handled differently now, but we have provided
+migration scripts that will work to bring _most_ `v0.9.3` runs, attempts, and
+workorders up to `v0.10.0`, though the granularity of `v0.9.3` states and exits
+will be less than `v0.10.0` and the final states are not guaranteed to be
+accurate for workflows with multiple branches and leaf nodes with varying exit
+reasons.
+
+The migration scripts can be run with a single function call in SetupUtils from
+a connect `iex` session:
+
+```
+Lightning.SetupUtils.approximate_state_for_attempts_and_workorders()
+```
+
+Note that (like lots of _other_ functionality in `SetupUtils`, calling this
+function is a destructive action and you should only do it if you've backed up
+your data and you know what you're doing.)
+
+As always, we recommend backing up your data before migrating. (And thanks for
+bearing with us as we move towards our first stable Lightning release.)
+
 ### Added
 
+- Migration helper code to move from `v0.9.3` to `v0.10.0` added to SetupUtils
+  [#1363](https://github.com/OpenFn/Lightning/issues/1363)
 - Option to start with `RTM=false iex -S mix phx.server` for opting out of the
   dev-mode automatic runtime manager.
 - Webhook Authentication Methods database and CRUD operations

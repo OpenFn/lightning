@@ -985,4 +985,114 @@ defmodule Lightning.SetupUtils do
 
     dataclip
   end
+
+  @doc """
+  This is a helper function that can be used to aid instance administrators in
+  migrating from v0.9.3 to v0.10.0.
+
+  While the final state of an attempt is now handled by the worker, this script
+  can be called once after migration (with no workers attached) to provide an
+  approximate final state for attempts that were finished before the migration.
+  """
+  def approximate_state_for_attempts_and_workorders do
+    # Set attempts state by exit_reason of their last run.
+    Repo.query!("""
+    UPDATE attempts
+    SET state = (
+      SELECT
+        DISTINCT ON
+        (a.id) CASE
+          WHEN runs.exit_reason = 'success' THEN 'success'
+          ELSE 'failed'
+        END
+      FROM
+        runs
+      JOIN attempt_runs ar ON
+        ar.run_id = runs.id
+      JOIN attempts a ON
+        a.id = ar.attempt_id
+      WHERE
+        a.id = attempts.id
+      ORDER BY
+        a.id ASC,
+        runs.finished_at DESC
+    )
+    WHERE attempts.state NOT IN ('available', 'claimed', 'started');
+    """)
+
+    # Set attempts finished_at by finished at of their last run.
+    Repo.query!("""
+    UPDATE attempts
+    SET finished_at = (
+      SELECT
+        DISTINCT ON
+        (a.id) runs.finished_at
+      FROM
+        runs
+      JOIN attempt_runs ar ON
+        ar.run_id = runs.id
+      JOIN attempts a ON
+        a.id = ar.attempt_id
+      WHERE
+        a.id = attempts.id
+      ORDER BY
+        a.id ASC,
+        runs.finished_at DESC
+    ) WHERE attempts.state NOT IN ('available', 'claimed', 'started');
+    """)
+
+    # Set attempts error type to a generic, pre v0.10.0 error.
+    Repo.query!("""
+    UPDATE attempts
+    SET error_type = 'Error'
+    WHERE error_type IS NULL
+    AND state = 'failed';
+    """)
+
+    # Set runs error type to a generic, pre v0.10.0 error.
+    Repo.query!("""
+    UPDATE runs
+    SET error_type = 'Error'
+    WHERE error_type IS NULL
+    AND exit_reason = 'fail';
+    """)
+
+    # Set state for workorders by the state from their last attempts.
+    Repo.query!("""
+    UPDATE work_orders
+    SET state = (
+      SELECT
+        DISTINCT ON
+        (a.work_order_id) a.state
+      FROM
+        attempts a
+      WHERE
+        a.work_order_id = work_orders.id
+      ORDER BY
+        a.work_order_id ASC,
+        a.finished_at DESC
+    )
+    WHERE work_orders.state NOT IN ('available', 'claimed', 'started');
+    """)
+
+    # Set last activity for workorders by the last finished_at from attempts.
+    Repo.query!("""
+    UPDATE
+      work_orders
+    SET
+      last_activity = (
+      SELECT
+        DISTINCT ON
+        (a.work_order_id) a.finished_at
+      FROM
+        attempts a
+      WHERE
+        a.work_order_id = work_orders.id
+      ORDER BY
+        a.work_order_id ASC,
+        a.finished_at DESC
+      )
+    WHERE work_orders.state NOT IN ('available', 'claimed', 'started');
+    """)
+  end
 end
