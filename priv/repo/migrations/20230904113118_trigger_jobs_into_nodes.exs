@@ -15,42 +15,6 @@ defmodule Lightning.Repo.Migrations.TriggerJobsIntoNodes do
       add :created_by_id, references(:users, type: :binary_id, on_delete: :delete_all), null: true
     end
 
-    # Delete attempts that the starting node or dataclip can't easily be found
-    execute(
-      """
-        WITH flat_attempts AS (
-          SELECT a.id,
-            ir.type,
-            ir.trigger_id AS starting_trigger_id,
-            CASE
-              WHEN ir.trigger_id IS NULL THEN r.job_id
-              ELSE NULL
-            END AS starting_job_id,
-            ir.dataclip_id
-          FROM attempts a
-            JOIN invocation_reasons ir ON ir.id = a.reason_id
-            LEFT JOIN (
-              SELECT DISTINCT ON (attempt_id) attempt_id,
-                run_id
-              FROM attempt_runs
-              ORDER BY attempt_id,
-                inserted_at ASC
-            ) AS ar
-            LEFT JOIN runs r ON r.id = ar.run_id ON a.id = ar.attempt_id
-        )
-        DELETE FROM attempts
-        WHERE id IN
-          (
-            SELECT id
-            FROM flat_attempts fa
-            WHERE
-            (fa.starting_trigger_id IS NULL AND fa.starting_job_id IS NULL)
-            OR fa.dataclip_id IS NULL
-          );
-      """,
-      ""
-    )
-
     execute """
             WITH flat_attempts AS (
               SELECT a.id,
@@ -60,15 +24,19 @@ defmodule Lightning.Repo.Migrations.TriggerJobsIntoNodes do
                   WHEN ir.trigger_id IS NULL THEN r.job_id
                   ELSE NULL
                 END AS starting_job_id,
-                ir.dataclip_id
+                COALESCE(ir.dataclip_id, ir_runs.input_dataclip_id) as dataclip_id
               FROM attempts a
                 JOIN invocation_reasons ir ON ir.id = a.reason_id
+                LEFT JOIN runs ir_runs ON ir.run_id = ir_runs.id
                 LEFT JOIN (
                   SELECT DISTINCT ON (attempt_id) attempt_id,
                     run_id
                   FROM attempt_runs
+                  JOIN attempts ON attempts.id = attempt_runs.attempt_id
+                  JOIN runs ON runs.id = attempt_runs.run_id
+                  WHERE runs.inserted_at >= attempts.inserted_at
                   ORDER BY attempt_id,
-                    inserted_at ASC
+                    attempt_runs.inserted_at ASC
                 ) AS ar
                 LEFT JOIN runs r ON r.id = ar.run_id ON a.id = ar.attempt_id
             )

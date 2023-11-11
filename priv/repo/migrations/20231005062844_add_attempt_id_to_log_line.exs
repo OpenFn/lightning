@@ -15,8 +15,11 @@ defmodule Lightning.Repo.Migrations.AddAttemptIdToLogLine do
     execute """
             UPDATE log_lines
             SET attempt_id = (
-              SELECT attempt_id FROM attempt_runs
-              WHERE attempt_runs.run_id = log_lines.run_id
+              SELECT attempt_id from runs
+              JOIN attempt_runs ar ON ar.run_id = runs.id
+              JOIN attempts a ON a.id = ar.attempt_id
+              WHERE runs.inserted_at >= a.inserted_at
+              AND runs.id = log_lines.run_id
             )
             """,
             ""
