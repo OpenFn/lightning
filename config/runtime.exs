@@ -59,7 +59,7 @@ config :lightning, :github_app,
   app_id: github_app_id,
   app_name: github_app_name
 
-if System.get_env("MANUAL_RUNTIME_MANAGER") == "true" do
+if System.get_env("RTM") == "false" do
   config :lightning, Lightning.Runtime.RuntimeManager, start: false
 end
 

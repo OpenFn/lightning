@@ -10,6 +10,8 @@ and this project adheres to
 
 ### Added
 
+- Option to start with `RTM=false iex -S mix phx.server` for opting out of the
+  dev-mode automatic runtime manager.
 - Webhook Authentication Methods database and CRUD operations
   [#1152](https://github.com/OpenFn/Lightning/issues/1152)
 - Creation and Edit of webhook webhook authentication methods UI
