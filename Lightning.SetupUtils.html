@@ -13,7 +13,7 @@
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-EPF2X7PV.js"></script>
-    <script src="dist/sidebar_items-3D59B477.js"></script>
+    <script src="dist/sidebar_items-4E736BD5.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -155,6 +155,17 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
+        <a href="#approximate_state_for_attempts_and_workorders/0" translate="no">approximate_state_for_attempts_and_workorders()</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>This is a helper function that can be used to aid instance administrators in
+migrating from v0.9.3 to v0.10.0.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
         <a href="#create_dhis2_project/1" translate="no">create_dhis2_project(project_users)</a>
 
       </div>
@@ -216,6 +227,31 @@ Pages
       <span class="text">Functions</span>
     </h1>
     <div class="functions-list">
+<section class="detail" id="approximate_state_for_attempts_and_workorders/0">
+
+  <div class="detail-header">
+    <a href="#approximate_state_for_attempts_and_workorders/0" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">approximate_state_for_attempts_and_workorders()</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/setup_utils.ex#L997" class="icon-action" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+<p>This is a helper function that can be used to aid instance administrators in
+migrating from v0.9.3 to v0.10.0.</p><p>While the final state of an attempt is now handled by the worker, this script
+can be called once after migration (with no workers attached) to provide an
+approximate final state for attempts that were finished before the migration.</p>
+  </section>
+</section>
 <section class="detail" id="create_dhis2_project/1">
 
   <div class="detail-header">
