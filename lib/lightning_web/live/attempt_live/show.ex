@@ -7,6 +7,8 @@ defmodule LightningWeb.AttemptLive.Show do
 
   import LightningWeb.AttemptLive.Components
 
+  on_mount {LightningWeb.Hooks, :project_scope}
+
   @impl true
   def render(assigns) do
     ~H"""
@@ -29,15 +31,27 @@ defmodule LightningWeb.AttemptLive.Show do
           <.detail_list>
             <.list_item>
               <:label>Attempt ID</:label>
-              <:value><%= String.slice(attempt.id, 0..7) %></:value>
+              <:value>
+                <%= display_short_uuid(attempt.id) %>
+              </:value>
             </.list_item>
             <.list_item>
               <:label>Elapsed time</:label>
-              <:value>7s</:value>
+              <:value>
+                <%= cond do %>
+                  <% is_nil(attempt.started_at) -> %>
+                    Unknown
+                  <% is_nil(attempt.finished_at) -> %>
+                    Still running...
+                  <% true -> %>
+                    <%= DateTime.to_unix(attempt.finished_at, :millisecond) -
+                      DateTime.to_unix(attempt.started_at, :millisecond) %> ms
+                <% end %>
+              </:value>
             </.list_item>
             <.list_item>
               <:label>Exit reason</:label>
-              <:value>Running...</:value>
+              <:value><.state_pill state={attempt.state} /></:value>
             </.list_item>
           </.detail_list>
 

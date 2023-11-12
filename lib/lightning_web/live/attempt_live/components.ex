@@ -57,7 +57,7 @@ defmodule LightningWeb.AttemptLive.Components do
     <.detail_list class={@class}>
       <.list_item>
         <:label>Attempt ID</:label>
-        <:value><%= String.slice(@attempt.id, 0..7) %></:value>
+        <:value><%= display_short_uuid(@attempt.id) %></:value>
       </.list_item>
       <.list_item>
         <:label>Elapsed time</:label>

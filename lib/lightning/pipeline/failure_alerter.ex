@@ -20,6 +20,7 @@ defmodule Lightning.FailureAlerter do
         "workflow_name" => workflow.name,
         "work_order_id" => attempt.work_order_id,
         "attempt_id" => attempt.id,
+        "project_id" => workflow.project_id,
         "attempt_logs" => attempt.log_lines,
         "recipient" => user
       }
@@ -32,14 +33,15 @@ defmodule Lightning.FailureAlerter do
         "workflow_name" => workflow_name,
         "work_order_id" => work_order_id,
         "attempt_id" => attempt_id,
+        "project_id" => project_id,
         "attempt_logs" => attempt_logs,
         "recipient" => recipient
       }) do
     [time_scale: time_scale, rate_limit: rate_limit] =
       Application.fetch_env!(:lightning, __MODULE__)
 
-    # TODO: add this when https://github.com/OpenFn/Lightning/pull/1304 is merged.
-    # attempt_url = LightningWeb.RouteHelpers.show_attempt_url(project_id, run_id)
+    attempt_url =
+      LightningWeb.RouteHelpers.show_attempt_url(project_id, attempt_id)
 
     # rate limiting per workflow AND user
     bucket_key = "#{workflow_id}::#{recipient.id}"
@@ -57,8 +59,7 @@ defmodule Lightning.FailureAlerter do
           time_scale: time_scale,
           rate_limit: rate_limit,
           attempt_id: attempt_id,
-          # TODO: add this when https://github.com/OpenFn/Lightning/pull/1304 is merged.
-          # attempt_url: attempt_url,
+          attempt_url: attempt_url,
           attempt_logs: attempt_logs,
           workflow_name: workflow_name,
           workflow_id: workflow_id,

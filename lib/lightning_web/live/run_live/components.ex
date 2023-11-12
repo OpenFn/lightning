@@ -196,7 +196,7 @@ defmodule LightningWeb.RunLive.Components do
     ~H"""
     <div class="flex flex-col h-full ">
       <div class="flex-0">
-        <.run_details run={@run} />
+        <.run_details run={@run} project_id={@project_id} />
         <.toggle_bar class="mt-4 items-end" phx-mounted={show_section("log")}>
           <%= if @show_input_dataclip do %>
             <.toggle_item data-section="input" phx-click={switch_section("input")}>
@@ -316,17 +316,37 @@ defmodule LightningWeb.RunLive.Components do
 
     run_job = get_in(run, [Access.key!(:job), Access.key(:name, run.job_id)])
 
+    run_attempts =
+      run.attempts
+      |> Enum.sort_by(& &1.inserted_at, NaiveDateTime)
+      |> Enum.map(fn a -> a.id end)
+
     assigns =
       assigns
       |> assign(
         run_finished_at: run_finished_at,
         run_credential: run_credential,
         run_job: run_job,
-        ran_for: ran_for
+        ran_for: ran_for,
+        run_attempts: run_attempts
       )
 
     ~H"""
     <div class="flex flex-col gap-2">
+      <div class="flex gap-4 flex-row text-xs lg:text-sm" id={"job-#{@run.id}"}>
+        <div class="basis-1/2 font-semibold text-secondary-700">Attempt(s)</div>
+        <div class="basis-1/2 text-right">
+          <%= for att <- @run_attempts do %>
+            <span class="font-normal text-xs whitespace-nowrap text-ellipsis
+                            bg-gray-200 p-1 rounded-md font-mono text-indigo-400 hover:underline
+                            underline-offset-2 hover:text-indigo-500">
+              <.link navigate={~p"/projects/#{@project_id}/attempts/#{att}"}>
+                <%= display_short_uuid(att) %>
+              </.link>
+            </span>
+          <% end %>
+        </div>
+      </div>
       <div class="flex gap-4 flex-row text-xs lg:text-sm" id={"job-#{@run.id}"}>
         <div class="basis-1/2 font-semibold text-secondary-700">Job</div>
         <div class="basis-1/2 text-right"><%= @run_job %></div>

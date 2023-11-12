@@ -35,6 +35,7 @@ defmodule LightningWeb.RunLive.Show do
           [output_dataclip: ^Invocation.Query.dataclip_with_body()],
           [input_dataclip: ^Invocation.Query.dataclip_with_body()],
           :job,
+          :attempts,
           [credential: [:user]]
         ]
       )
@@ -57,6 +58,7 @@ defmodule LightningWeb.RunLive.Show do
       <LayoutComponents.centered>
         <LightningWeb.RunLive.Components.run_viewer
           run={@run}
+          project_id={@project.id}
           show_input_dataclip={true}
         />
       </LayoutComponents.centered>

@@ -139,7 +139,7 @@ defmodule Lightning.Attempt do
         changeset
         |> add_error(
           :state,
-          "cannot complete attempt that is not in a claimed state"
+          "cannot start attempt that is not in a claimed state"
         )
       end
     end)
@@ -155,7 +155,8 @@ defmodule Lightning.Attempt do
     |> validate_inclusion(:state, @final_states)
     |> then(fn %{data: %{state: previous_state, error_type: previous_error}} =
                  changeset ->
-      if previous_state == :started and previous_error == nil do
+      if Enum.member?([:claimed, :started], previous_state) and
+           previous_error == nil do
         changeset
         |> change(finished_at: DateTime.utc_now())
         |> change(error_type: error_type)
@@ -163,7 +164,7 @@ defmodule Lightning.Attempt do
         changeset
         |> add_error(
           :state,
-          "cannot complete attempt that is not started or has error"
+          "cannot complete attempt that has not yet been claimed or has error"
         )
       end
     end)
