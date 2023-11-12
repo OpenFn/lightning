@@ -703,7 +703,8 @@ defmodule LightningWeb.RunWorkOrderTest do
 
       html =
         render_component(&LightningWeb.RunLive.Components.run_details/1,
-          run: run
+          run: run |> Lightning.Repo.preload(:attempts),
+          project_id: "4adf2644-ed4e-4f97-a24c-ab35b3cb1efa"
         )
         |> Floki.parse_fragment!()
 
@@ -730,7 +731,8 @@ defmodule LightningWeb.RunWorkOrderTest do
 
       html =
         render_component(&LightningWeb.RunLive.Components.run_details/1,
-          run: run
+          run: run |> Lightning.Repo.preload(:attempts),
+          project_id: "4adf2644-ed4e-4f97-a24c-ab35b3cb1efa"
         )
         |> Floki.parse_fragment!()
 

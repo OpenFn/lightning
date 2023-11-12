@@ -39,8 +39,18 @@ defmodule Lightning.Janitor do
     Attempts.Query.lost(now)
     |> Repo.all()
     |> Enum.each(fn att ->
-      Logger.error(fn -> "Detected lost attempt: #{inspect(att)}" end)
-      Attempts.complete_attempt(att, {:lost, "Lost", nil})
+      error_type =
+        case att.state do
+          :claimed -> "LostAfterClaim"
+          :started -> "LostAfterStart"
+          _other -> "UnknownReason"
+        end
+
+      Logger.warning(fn ->
+        "Detected lost attempt with reason #{error_type}: #{inspect(att)}"
+      end)
+
+      Attempts.complete_attempt(att, {:lost, error_type, nil})
       # TODO - Implement this in https://github.com/OpenFn/Lightning/issues/1348
       # Attempts.mark_unfinished_runs_lost(att)
     end)

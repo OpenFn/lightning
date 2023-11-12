@@ -141,14 +141,21 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
                 <%= @workflow_name %>
               </h1>
               <span class="mt-2 text-gray-700">
-                <%= display_short_uuid(@work_order.id) %> .
+                <span
+                  title={@work_order.dataclip_id}
+                  class="font-normal text-xs whitespace-nowrap text-ellipsis
+                    rounded-md font-mono inline-block"
+                >
+                  <%= display_short_uuid(@work_order.dataclip_id) %>
+                </span>
+                &bull;
                 <.link navigate={
                   ~p"/projects/#{@work_order.workflow.project_id}/dataclips/#{@work_order.dataclip_id}/edit"
                 }>
                   <span
                     title={@work_order.dataclip_id}
                     class="font-normal text-xs whitespace-nowrap text-ellipsis
-                            bg-gray-200 p-1 rounded-md font-mono text-indigo-400 hover:underline
+                            p-1 rounded-md font-mono text-indigo-400 hover:underline
                             underline-offset-2 hover:text-indigo-500"
                   >
                     <%= display_short_uuid(@work_order.dataclip_id) %>
@@ -190,53 +197,67 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
         </div>
       </div>
       <%= if @show_details do %>
-        <%= if length(@attempts) == 1 do %>
-          <.attempt_item
-            can_rerun_job={@can_rerun_job}
-            attempt={hd(@attempts)}
-            project={@project}
-          />
-        <% else %>
-          <%= for {attempt, index} <- @attempts |> Enum.reverse() |> Enum.with_index(1) |> Enum.reverse() do %>
-            <div
-              id={"attempt_#{attempt.id}"}
-              class={
-                if index != Enum.count(@attempts) and !@show_prev_attempts,
-                  do: "hidden",
-                  else: ""
-              }
-            >
-              <div>
-                <div class="flex gap-2 items-center bg-gray-300 pl-28 ">
-                  <p class="text-sm py-2 text-gray-800">
-                    Attempt <%= index %> of <%= Enum.count(@attempts) %>
-                  </p>
-                  <div class="text-sm">
-                    <%= attempt.state %>
-                    <%= if attempt.finished_at do %>
+        <%= for {attempt, index} <- @attempts |> Enum.reverse() |> Enum.with_index(1) |> Enum.reverse() do %>
+          <div
+            id={"attempt_#{attempt.id}"}
+            class={
+              if index != Enum.count(@attempts) and !@show_prev_attempts,
+                do: "hidden",
+                else: ""
+            }
+          >
+            <div>
+              <div class="flex gap-1 items-center bg-gray-200 pl-28 text-xs py-2">
+                <div>
+                  <.link navigate={
+                    ~p"/projects/#{@project.id}/attempts/#{attempt.id}"
+                  }>
+                    <span
+                      title={attempt.id}
+                      class="font-normal text-xs whitespace-nowrap text-ellipsis
+                            inline-block rounded-md font-mono
+                            text-indigo-400 hover:underline underline-offset-2
+                            hover:text-indigo-500"
+                    >
+                      <%= display_short_uuid(attempt.id) %>
+                    </span>
+                  </.link>
+                  <%= case attempt.state do %>
+                    <% :available -> %>
+                      enqueued @ <.timestamp timestamp={attempt.inserted_at} />
+                    <% :claimed -> %>
+                      claimed @ <.timestamp timestamp={attempt.claimed_at} />
+                    <% :started -> %>
+                      started @ <.timestamp timestamp={attempt.started_at} />
+                    <% _state -> %>
+                      <%= attempt.state %> @
                       <.timestamp timestamp={attempt.finished_at} />
-                    <% end %>
-                  </div>
-                  <a
-                    :if={index == Enum.count(@attempts)}
-                    id={"toggle_attempts_for_#{@work_order.id}"}
-                    href="#"
-                    class="text-sm ml-4 text-blue-600"
-                    phx-click="toggle_attempts"
-                    phx-target={@myself}
-                  >
-                    <%= if @show_prev_attempts, do: "Hide", else: "Show" %> previous attempts
-                  </a>
+                  <% end %>
                 </div>
+                <p class="text-gray-800">
+                  <%= if Enum.count(@attempts) > 1 do %>
+                    - attempt <%= index %> of <%= Enum.count(@attempts) %>
+                    <a
+                      :if={index == Enum.count(@attempts)}
+                      id={"toggle_attempts_for_#{@work_order.id}"}
+                      href="#"
+                      class="text-blue-600"
+                      phx-click="toggle_attempts"
+                      phx-target={@myself}
+                    >
+                      <%= if @show_prev_attempts, do: "hide", else: "show" %> previous
+                    </a>
+                  <% end %>
+                </p>
               </div>
-
-              <.attempt_item
-                can_rerun_job={@can_rerun_job}
-                attempt={attempt}
-                project={@project}
-              />
             </div>
-          <% end %>
+
+            <.attempt_item
+              can_rerun_job={@can_rerun_job}
+              attempt={attempt}
+              project={@project}
+            />
+          </div>
         <% end %>
       <% end %>
     </div>

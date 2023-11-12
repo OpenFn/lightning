@@ -558,9 +558,7 @@ defmodule LightningWeb.AttemptChannelTest do
       assert_reply ref, :error, errors
 
       assert errors == %{
-               state: [
-                 "cannot complete attempt that is not started or has error"
-               ]
+               state: ["cannot complete attempt that has not been started"]
              }
     end
 
