@@ -252,14 +252,16 @@ defmodule LightningWeb.RunLive.Components do
                   }
                 }
               />
-            <% @run.exit_reason != "success" -> %>
+            <% is_nil(@run.output_dataclip_id) && @run.exit_reason == "success" -> %>
               <.dataclip_view
                 dataclip={nil}
                 no_dataclip_message={
                   %{
-                    label: "This run failed",
+                    label: "There is no output for this run",
                     description:
-                      "There is no output. See the logs for more information"
+                      "This run succeeded but there's no final state. Check your
+                      job expression to ensure that the final operation returns
+                      something."
                   }
                 }
               />
@@ -270,7 +272,8 @@ defmodule LightningWeb.RunLive.Components do
                   %{
                     label: "There is no output for this run",
                     description:
-                      "Check your job expression to ensure that the final operation returns something."
+                      "Certain errors are severe enough that the worker can't
+                      return a final state."
                   }
                 }
               />

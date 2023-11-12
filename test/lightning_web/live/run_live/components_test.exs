@@ -17,7 +17,7 @@ defmodule LightningWeb.RunLive.ComponentsTest do
                  |> Lightning.Repo.preload(:attempts),
                project_id: "4adf2644-ed4e-4f97-a24c-ab35b3cb1efa"
              ) =~
-               "This run failed"
+               "Certain errors are severe enough that the worker"
 
       assert render_component(
                &LightningWeb.RunLive.Components.run_viewer/1,
