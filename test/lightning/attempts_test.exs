@@ -290,7 +290,8 @@ defmodule Lightning.AttemptsTest do
         Attempts.complete_attempt(attempt, {"success", nil, nil})
 
       assert {:state,
-              {"cannot complete attempt that is not started or has error", []}} in changeset.errors
+              {"cannot complete attempt that has not yet been claimed or has error",
+               []}} in changeset.errors
 
       {:ok, attempt} =
         Repo.update(attempt |> Ecto.Changeset.change(state: :claimed))
