@@ -41,6 +41,7 @@ export const styleNode = (node: Flow.Node) => {
 
 export const styleEdge = (edge: Flow.Edge) => {
   edge.style = {
+    strokeWidth: '2',
     stroke: edge.selected ? EDGE_COLOR_SELECTED : EDGE_COLOR,
   };
 
@@ -52,6 +53,7 @@ export const styleEdge = (edge: Flow.Edge) => {
   if (edge.markerEnd) {
     edge.markerEnd = {
       ...edge.markerEnd,
+      width: 15,
       color: edge.selected ? EDGE_COLOR_SELECTED : EDGE_COLOR,
     };
   }

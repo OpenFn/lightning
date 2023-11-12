@@ -114,6 +114,8 @@ bearing with us as we move towards our first stable Lightning release.)
   gracefully
 - [#1283](https://github.com/OpenFn/Lightning/issues/1283) Selected dataclip
   gets lost when starting a manual workorder from the inspector interface
+- Ensure that the whole edge when selected is highlighted
+  [#1160](https://github.com/OpenFn/Lightning/issues/1160)
 
 ## [v0.9.3] - 2023-09-27
 
