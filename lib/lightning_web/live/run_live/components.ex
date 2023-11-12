@@ -452,6 +452,7 @@ defmodule LightningWeb.RunLive.Components do
     lines =
       if dataclip do
         dataclip.body
+        |> maybe_nest(dataclip.type)
         |> Jason.encode!()
         |> Jason.Formatter.pretty_print()
         |> String.split("\n")
@@ -469,16 +470,27 @@ defmodule LightningWeb.RunLive.Components do
       end)
 
     ~H"""
-    <%= if @dataclip do %>
-      <.log_view log={@lines} />
-    <% else %>
-      <.no_dataclip_message
-        label={@no_dataclip_message.label}
-        description={@no_dataclip_message.description}
-      />
-    <% end %>
+    <div class="flex">
+      <div class="w-full h-full relative z-0">
+        <%= if @dataclip do %>
+          <.log_view log={@lines} />
+          <div class="absolute flex justify-right items-right z-10 right-1.5 top-1.5
+          text-gray-400 font-mono text-xs">
+            type: <%= @dataclip.type %>
+          </div>
+        <% else %>
+          <.no_dataclip_message
+            label={@no_dataclip_message.label}
+            description={@no_dataclip_message.description}
+          />
+        <% end %>
+      </div>
+    </div>
     """
   end
+
+  defp maybe_nest(body, :http_request), do: Map.new(data: body)
+  defp maybe_nest(body_string, _type), do: body_string
 
   @spec no_dataclip_message(any) :: Phoenix.LiveView.Rendered.t()
   def no_dataclip_message(assigns) do
