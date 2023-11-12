@@ -1,5 +1,5 @@
 import React, { FC } from 'react';
-import { BezierEdge, EdgeProps, EdgeLabelRenderer } from 'reactflow';
+import { SmoothStepEdge, EdgeProps, EdgeLabelRenderer } from 'reactflow';
 import { labelStyles } from '../styles';
 
 const CustomEdge: FC<EdgeProps> = props => {
@@ -12,7 +12,7 @@ const CustomEdge: FC<EdgeProps> = props => {
   const labelY = (sourceY + targetY) / 2;
   return (
     <>
-      <BezierEdge {...stepEdgeProps} />
+      <SmoothStepEdge {...stepEdgeProps} />
       {label && (
         <EdgeLabelRenderer>
           <div

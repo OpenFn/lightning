@@ -36,5 +36,13 @@ export default (model: Flow.Model, newSelection?: string) => {
     return item;
   }
 
-  return updatedModel;
+  // Must put selected edge LAST to ensure it stays on top.
+  const sortedModel = {
+    ...updatedModel,
+    edges: updatedModel.edges.sort((x, y) => {
+      return x.selected - y.selected;
+    }),
+  };
+
+  return sortedModel;
 };
