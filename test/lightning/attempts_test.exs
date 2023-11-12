@@ -289,9 +289,7 @@ defmodule Lightning.AttemptsTest do
       {:error, changeset} =
         Attempts.complete_attempt(attempt, {"success", nil, nil})
 
-      assert {:state,
-              {"cannot complete attempt that has not yet been claimed or has error",
-               []}} in changeset.errors
+      assert {:state, {"cannot complete attempt that has not been started", []}} in changeset.errors
 
       {:ok, attempt} =
         Repo.update(attempt |> Ecto.Changeset.change(state: :claimed))
@@ -314,6 +312,48 @@ defmodule Lightning.AttemptsTest do
       assert_received %Lightning.WorkOrders.Events.WorkOrderUpdated{
         work_order: %{id: ^workorder_id}
       }
+    end
+
+    test "blocks completion from :available if new state is :lost" do
+      dataclip = insert(:dataclip)
+      %{triggers: [trigger]} = workflow = insert(:simple_workflow)
+
+      %{attempts: [attempt]} =
+        work_order_for(trigger, workflow: workflow, dataclip: dataclip)
+        |> insert()
+
+      {:ok, attempt} =
+        attempt
+        |> Ecto.Changeset.change(state: :available)
+        |> Repo.update()
+
+      {:error, changeset} =
+        Attempts.complete_attempt(attempt, {:lost, "Lost", nil})
+
+      assert changeset.errors == [
+               state:
+                 {"cannot mark attempt lost that has not been claimed by a worker",
+                  []}
+             ]
+    end
+
+    test "allows completion from :claimed if new state is :lost" do
+      dataclip = insert(:dataclip)
+      %{triggers: [trigger]} = workflow = insert(:simple_workflow)
+
+      %{attempts: [attempt]} =
+        work_order_for(trigger, workflow: workflow, dataclip: dataclip)
+        |> insert()
+
+      {:ok, attempt} =
+        attempt
+        |> Ecto.Changeset.change(state: :claimed)
+        |> Repo.update()
+
+      {:ok, attempt} =
+        Attempts.complete_attempt(attempt, {:lost, "Lost", nil})
+
+      assert attempt.state == :lost
     end
 
     test "returns error if state is not present" do

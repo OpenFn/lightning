@@ -145,29 +145,60 @@ defmodule Lightning.Attempt do
     end)
   end
 
-  def complete(
-        attempt,
-        {state, error_type, _error_message} = _payload
-      ) do
+  @spec complete(
+          {map(), map()}
+          | %{
+              :__struct__ =>
+                atom() | %{:__changeset__ => map(), optional(any()) => any()},
+              optional(atom()) => any()
+            },
+          {any(), any(), any()}
+        ) :: Ecto.Changeset.t()
+  def complete(attempt, {state, error_type, _error_message}) do
     attempt
     |> cast(%{state: state}, [:state])
     |> validate_required([:state])
     |> validate_inclusion(:state, @final_states)
-    |> then(fn %{data: %{state: previous_state, error_type: previous_error}} =
-                 changeset ->
-      if Enum.member?([:claimed, :started], previous_state) and
-           previous_error == nil do
-        changeset
-        |> change(finished_at: DateTime.utc_now())
-        |> change(error_type: error_type)
-      else
-        changeset
-        |> add_error(
-          :state,
-          "cannot complete attempt that has not yet been claimed or has error"
-        )
+    |> cast(%{error_type: error_type}, [:error_type])
+    |> validate_state_change()
+  end
+
+  defp validate_state_change(%{data: previous, changes: changes} = changeset) do
+    %{state: previous_state, error_type: previous_error} = previous
+
+    add_timestamp = change(changeset, finished_at: DateTime.utc_now())
+
+    if is_nil(previous_error) do
+      case changes do
+        %{state: :lost} ->
+          if Enum.member?([:claimed, :started], previous_state) do
+            add_timestamp
+          else
+            changeset
+            |> add_error(
+              :state,
+              "cannot mark attempt lost that has not been claimed by a worker"
+            )
+          end
+
+        %{state: _any_other} ->
+          if previous_state == :started do
+            add_timestamp
+          else
+            changeset
+            |> add_error(
+              :state,
+              "cannot complete attempt that has not been started"
+            )
+          end
+
+        _other ->
+          changeset
       end
-    end)
+    else
+      changeset
+      |> add_error(:state, "cannot complete attempt that already has an error")
+    end
   end
 
   defp validate(changeset) do

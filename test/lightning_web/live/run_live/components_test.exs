@@ -14,6 +14,8 @@ defmodule LightningWeb.RunLive.ComponentsTest do
                run:
                  insert(:run, exit_reason: "fail", output_dataclip_id: nil)
                  |> Lightning.Repo.preload(:log_lines)
+                 |> Lightning.Repo.preload(:attempts),
+               project_id: "4adf2644-ed4e-4f97-a24c-ab35b3cb1efa"
              ) =~
                "This run failed"
 
@@ -22,6 +24,8 @@ defmodule LightningWeb.RunLive.ComponentsTest do
                run:
                  insert(:run, output_dataclip_id: nil)
                  |> Lightning.Repo.preload(:log_lines)
+                 |> Lightning.Repo.preload(:attempts),
+               project_id: "4adf2644-ed4e-4f97-a24c-ab35b3cb1efa"
              ) =~
                "This run has not yet finished."
 
@@ -29,6 +33,8 @@ defmodule LightningWeb.RunLive.ComponentsTest do
                run:
                  insert(:run, exit_reason: "success", output_dataclip_id: nil)
                  |> Lightning.Repo.preload(:log_lines)
+                 |> Lightning.Repo.preload(:attempts),
+               project_id: "4adf2644-ed4e-4f97-a24c-ab35b3cb1efa"
              ) =~
                "There is no output for this run"
 
@@ -43,7 +49,11 @@ defmodule LightningWeb.RunLive.ComponentsTest do
         )
 
       assert render_component(&LightningWeb.RunLive.Components.run_viewer/1,
-               run: run |> Lightning.Repo.preload(:log_lines)
+               run:
+                 run
+                 |> Lightning.Repo.preload(:log_lines)
+                 |> Lightning.Repo.preload(:attempts),
+               project_id: "4adf2644-ed4e-4f97-a24c-ab35b3cb1efa"
              ) =~
                "dataclip_body"
     end
@@ -243,7 +253,10 @@ defmodule LightningWeb.RunLive.ComponentsTest do
       run = insert(:run, started_at: started_at, finished_at: finished_at)
 
       html =
-        render_component(&Components.run_details/1, run: run)
+        render_component(&Components.run_details/1,
+          run: run |> Lightning.Repo.preload(:attempts),
+          project_id: "4adf2644-ed4e-4f97-a24c-ab35b3cb1efa"
+        )
         |> Floki.parse_fragment!()
 
       assert html
@@ -269,7 +282,10 @@ defmodule LightningWeb.RunLive.ComponentsTest do
       run = insert(:run, started_at: started_at)
 
       html =
-        render_component(&Components.run_details/1, run: run)
+        render_component(&Components.run_details/1,
+          run: run |> Lightning.Repo.preload(:attempts),
+          project_id: "4adf2644-ed4e-4f97-a24c-ab35b3cb1efa"
+        )
         |> Floki.parse_fragment!()
 
       assert html
@@ -293,7 +309,10 @@ defmodule LightningWeb.RunLive.ComponentsTest do
       run = insert(:run)
 
       html =
-        render_component(&Components.run_details/1, run: run)
+        render_component(&Components.run_details/1,
+          run: run |> Lightning.Repo.preload(:attempts),
+          project_id: "4adf2644-ed4e-4f97-a24c-ab35b3cb1efa"
+        )
         |> Floki.parse_fragment!()
 
       assert html

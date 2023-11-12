@@ -186,6 +186,7 @@ defmodule LightningWeb.RunLive.Components do
 
   # --------------- Run Details ---------------
   attr :run, :any, required: true
+  attr :project_id, :string, required: true
   attr :show_input_dataclip, :boolean
   attr :class, :string, default: nil
 
@@ -283,6 +284,7 @@ defmodule LightningWeb.RunLive.Components do
   end
 
   attr :run, :any, required: true
+  attr :project_id, :string, required: true
 
   def run_details(%{run: run} = assigns) do
     run_finished_at =
