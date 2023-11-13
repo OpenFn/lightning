@@ -768,44 +768,34 @@ defmodule LightningWeb.WorkflowLive.Components do
       </:title>
       <.form
         for={@form}
-        phx-change="validate_workflow_name"
+        id={@form.id}
+        phx-change="validate_workflow"
         phx-submit="create_work_flow"
-        id="create_workflow_name_form"
-        class="w-11/12 mx-auto"
+        class="mx-6"
       >
-        <.input
-          field={@form[:name]}
-          type="text"
-          label="Workflow Name"
-          name="workflow_name"
-        />
-
-        <.modal_footer>
-          <div class="flex gap-x-5 justify-end relative">
-            <.link
-              class="justify-center rounded-md bg-white px-4 py-3 text-sm font-semibold text-gray-500 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:mt-0 sm:w-auto"
-              phx-click={hide_modal("workflow_modal")}
-            >
-              Cancel
-            </.link>
-            <span class="group">
-              <button
-                disabled={@isButtonDisabled}
-                id="workflow_button"
-                type="submit"
-                class=" justify-center rounded-md bg-primary-600 disabled:bg-primary-300 px-6 py-3 text-sm font-semibold text-white shadow-sm hover:bg-primary-500 disabled:outline-0 focus:outline-2 focus:outline-indigo-600 focus:outline-offset-2 active:outlin-2 active:outline-indigo-600 active:outline-offset-2"
-              >
-                Create Workflow
-                <%= if @isButtonDisabled do %>
-                  <span class="invisible group-hover:visible w-36 py-1 px-3 bg-[#030712] absolute  rounded-md -translate-y-16 -translate-x-32">
-                    A workflow name is required
-                  </span>
-                <% end %>
-              </button>
-            </span>
-          </div>
-        </.modal_footer>
+        <.input field={@form[:name]} type="text" label="Workflow Name" />
       </.form>
+      <:footer class="mx-6 mt-6">
+        <div class="flex gap-x-5 justify-end relative">
+          <.link
+            class="justify-center rounded-md bg-white px-4 py-3 text-sm font-semibold text-gray-500 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:mt-0 sm:w-auto"
+            phx-click={hide_modal("workflow_modal")}
+          >
+            Cancel
+          </.link>
+          <span class="group">
+            <button
+              disabled={not @form.source.valid?}
+              id="workflow_button"
+              form={@form.id}
+              type="submit"
+              class=" justify-center rounded-md bg-primary-600 disabled:bg-primary-300 px-6 py-3 text-sm font-semibold text-white shadow-sm hover:bg-primary-500 disabled:outline-0 focus:outline-2 focus:outline-indigo-600 focus:outline-offset-2 active:outlin-2 active:outline-indigo-600 active:outline-offset-2"
+            >
+              Create Workflow
+            </button>
+          </span>
+        </div>
+      </:footer>
     </.modal>
     """
   end

@@ -371,7 +371,7 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodModalComponent do
         <% end %>
       </ul>
     </div>
-    <.modal_footer>
+    <.modal_footer class="mt-6 mx-6">
       <div class="sm:flex sm:flex-row-reverse">
         <button
           type="button"
@@ -450,7 +450,7 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodModalComponent do
         </:action>
       </LightningWeb.WorkflowLive.Components.webhook_auth_methods_table>
     </div>
-    <.modal_footer>
+    <.modal_footer class="mt-6 mx-6">
       <div class="flex justify-between content-center ">
         <div class="flex flex-wrap items-center">
           <.link
@@ -535,7 +535,7 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodModalComponent do
           </span>
         </label>
       </div>
-      <.modal_footer>
+      <.modal_footer class="mx-6 mt-6">
         <button
           type="submit"
           disabled={
