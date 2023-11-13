@@ -38,19 +38,23 @@ defmodule LightningWeb.RunLive.Index do
   on_mount {LightningWeb.Hooks, :project_scope}
 
   @impl true
-  def mount(params, _session, socket) do
-    WorkOrders.subscribe(socket.assigns.project.id)
+  def mount(
+        params,
+        _session,
+        %{assigns: %{current_user: current_user, project: project}} = socket
+      ) do
+    WorkOrders.subscribe(project.id)
 
     workflows =
-      Lightning.Workflows.get_workflows_for(socket.assigns.project)
+      Lightning.Workflows.get_workflows_for(project)
       |> Enum.map(&{&1.name || "Untitled", &1.id})
 
     can_rerun_job =
       ProjectUsers
       |> Permissions.can?(
         :rerun_job,
-        socket.assigns.current_user,
-        socket.assigns.project
+        current_user,
+        project
       )
 
     statuses = [
@@ -82,13 +86,7 @@ defmodule LightningWeb.RunLive.Index do
        work_orders: [],
        selected_work_orders: [],
        can_rerun_job: can_rerun_job,
-       pagination_path:
-         &Routes.project_run_index_path(
-           socket,
-           :index,
-           socket.assigns.project,
-           &1
-         ),
+       pagination_path: &pagination_path(socket, project, &1),
        filters: params["filters"]
      )}
   end
@@ -116,15 +114,26 @@ defmodule LightningWeb.RunLive.Index do
     }
 
   @impl true
-  def handle_params(params, _url, socket) do
+  def handle_params(
+        params,
+        _url,
+        %{
+          assigns: %{
+            filters: filters,
+            live_action: live_action,
+            project: project
+          }
+        } = socket
+      ) do
     {:noreply,
      socket
      |> assign(
        page_title: "History",
        run: %Run{},
-       filters_changeset: filters_changeset(socket.assigns.filters)
+       filters_changeset: filters_changeset(filters),
+       pagination_path: &pagination_path(socket, project, &1, filters)
      )
-     |> apply_action(socket.assigns.live_action, params)}
+     |> apply_action(live_action, params)}
   end
 
   defp apply_action(socket, :index, params) do
@@ -443,5 +452,14 @@ defmodule LightningWeb.RunLive.Index do
       end)
 
     %{page | entries: Enum.reverse(entries)}
+  end
+
+  defp pagination_path(socket, project, route_params, filters \\ %{}) do
+    Routes.project_run_index_path(
+      socket,
+      :index,
+      project,
+      Keyword.merge(route_params, filters: filters)
+    )
   end
 end
