@@ -94,7 +94,7 @@ defmodule Lightning.LogMessage do
      |> IO.iodata_to_binary()}
   end
 
-  def cast(d) when is_map(d) or is_list(d) do
+  def cast(d) when is_map(d) or is_list(d) or is_nil(d) do
     Jason.encode(d)
   end
 
