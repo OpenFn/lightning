@@ -80,7 +80,7 @@ defmodule LightningWeb.WorkflowLive.IndexTest do
 
       {:ok, _, html} =
         view
-        |> form("#create_workflow_name_form", %{workflow_name: "New workflow"})
+        |> form("#new_workflow", new_workflow: %{name: "New workflow"})
         |> render_submit()
         |> follow_redirect(conn)
         |> follow_redirect(conn)
@@ -99,7 +99,7 @@ defmodule LightningWeb.WorkflowLive.IndexTest do
 
       {:ok, _, html} =
         view
-        |> form("#create_workflow_name_form", %{workflow_name: "New workflow"})
+        |> form("#new_workflow", new_workflow: %{name: "New workflow"})
         |> render_submit()
         |> follow_redirect(
           conn,
