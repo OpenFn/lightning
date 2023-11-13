@@ -10,10 +10,10 @@ defmodule Lightning.Repo.Migrations.DropFkAttemptsWorkorders do
 
   def down do
     execute("""
-    ALTER TABLE public.attempts                                                                     
+    ALTER TABLE attempts                                                                     
     ADD CONSTRAINT attempts_work_order_id_fkey                                                      
     FOREIGN KEY (work_order_id)                                                                     
-    REFERENCES public.work_orders(id)                                                               
+    REFERENCES work_orders(id)                                                               
     ON DELETE CASCADE                                                                               
     """)
   end
