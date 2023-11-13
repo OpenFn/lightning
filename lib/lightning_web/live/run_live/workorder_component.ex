@@ -142,7 +142,7 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
               </h1>
               <span class="mt-2 text-gray-700">
                 <span
-                  title={@work_order.dataclip_id}
+                  title={@work_order.id}
                   class="font-normal text-xs whitespace-nowrap text-ellipsis
                     rounded-md font-mono inline-block"
                 >
