@@ -75,6 +75,44 @@ defmodule Lightning.Runtime.RuntimeManagerTest do
   end
 
   @tag :capture_log
+  test "the runtime manager reports if the server is already shutdown" do
+    server =
+      start_supervised!(
+        {RuntimeManager, [[name: :test_exit]]},
+        restart: :temporary
+      )
+
+    Process.monitor(server)
+
+    state = :sys.get_state(server)
+    test_state = %{state | runtime_port: state.runtime_port, shutdown: true}
+    expected_state = %{test_state | runtime_port: nil, runtime_os_pid: nil}
+
+    assert {:noreply, ^expected_state} =
+             RuntimeManager.handle_info(
+               {:EXIT, state.runtime_port, :normal},
+               test_state
+             )
+  end
+
+  test "handling the `handle_info` fallthrough case" do
+    server =
+      start_supervised!(
+        {RuntimeManager, [[name: :test_exit]]},
+        restart: :temporary
+      )
+
+    Process.monitor(server)
+    test_state = %{some: :data}
+
+    assert {:stop, :a_good_reason, ^test_state} =
+             RuntimeManager.handle_info(
+               {:EXIT, "ignored", :a_good_reason},
+               test_state
+             )
+  end
+
+  @tag :capture_log
   @tag :skip
   test "the runtime manager waits for the runtime to complete processing before shutting down",
        %{test: test} do
