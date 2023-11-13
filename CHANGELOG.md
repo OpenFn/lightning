@@ -123,6 +123,8 @@ bearing with us as we move towards our first stable Lightning release.)
   [#1160](https://github.com/OpenFn/Lightning/issues/1160)
 - Fix "Reconfigure Github" button in Project Settings
   [#1386](https://github.com/OpenFn/Lightning/issues/1386)
+- Make janitor also clean up runs inside an attempt
+  [#1348](https://github.com/OpenFn/Lightning/issues/1348)
 
 ## [v0.9.3] - 2023-09-27
 

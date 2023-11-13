@@ -18,9 +18,12 @@ defmodule Lightning.Attempts do
                 {:ok, Lightning.Attempt.t()}
   end
 
+  require Logger
+
   alias Lightning.Attempt
   alias Lightning.Attempts.Events
   alias Lightning.Attempts.Handlers
+
   alias Lightning.Repo
 
   import Ecto.Query
@@ -107,6 +110,8 @@ defmodule Lightning.Attempts do
     |> update_attempt()
   end
 
+  @spec complete_attempt(Attempt.t(), {atom(), binary() | nil, binary() | nil}) ::
+          {:ok, Attempt.t()} | {:error, Ecto.Changeset.t(Attempt.t())}
   def complete_attempt(attempt, {new_state, error_type, error_message}) do
     Attempt.complete(attempt, {new_state, error_type, error_message})
     |> case do
@@ -118,11 +123,8 @@ defmodule Lightning.Attempts do
     end
   end
 
-  # TODO - Implement this in https://github.com/OpenFn/Lightning/issues/1348
-  # def mark_unfinished_runs_lost(attempt) do
-  # for each run in this attempt call `complete_run` with exit_reason: "lost"
-  # end
-
+  @spec update_attempt(Ecto.Changeset.t(Attempt.t())) ::
+          {:ok, Attempt.t()} | {:error, Ecto.Changeset.t(Attempt.t())}
   def update_attempt(%Ecto.Changeset{data: %Attempt{}} = changeset) do
     attempt_id = Ecto.Changeset.get_field(changeset, :id)
 
@@ -213,6 +215,31 @@ defmodule Lightning.Attempts do
           {:ok, Lightning.Invocation.Run.t()} | {:error, Ecto.Changeset.t()}
   def complete_run(params) do
     Handlers.CompleteRun.call(params)
+  end
+
+  @spec mark_attempt_lost(Lightning.Attempt.t()) ::
+          {:ok, any()} | {:error, any()}
+  def mark_attempt_lost(%Attempt{} = attempt) do
+    error_type =
+      case attempt.state do
+        :claimed -> "LostAfterClaim"
+        :started -> "LostAfterStart"
+        _other -> "UnknownReason"
+      end
+
+    Logger.warning(fn ->
+      "Detected lost attempt with reason #{error_type}: #{inspect(attempt)}"
+    end)
+
+    Repo.transaction(fn ->
+      complete_attempt(attempt, {:lost, error_type, nil})
+
+      Ecto.assoc(attempt, :runs)
+      |> where([r], is_nil(r.exit_reason))
+      |> Repo.update_all(
+        set: [exit_reason: "lost", finished_at: DateTime.utc_now()]
+      )
+    end)
   end
 
   defdelegate subscribe(attempt), to: Events

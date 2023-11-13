@@ -482,4 +482,45 @@ defmodule Lightning.AttemptsTest do
       assert log_line.message == ~s<{"foo":"bar"}>
     end
   end
+
+  describe "mark_unfinished_runs_lost/1" do
+    @tag :capture_log
+    test "marks unfinished runs as lost" do
+      %{triggers: [trigger]} = workflow = insert(:simple_workflow)
+      dataclip = insert(:dataclip)
+
+      work_order =
+        insert(:workorder,
+          workflow: workflow,
+          trigger: trigger,
+          dataclip: dataclip
+        )
+
+      attempt =
+        insert(:attempt,
+          work_order: work_order,
+          starting_trigger: trigger,
+          dataclip: dataclip
+        )
+
+      finished_run =
+        insert(:run,
+          attempts: [attempt],
+          finished_at: DateTime.utc_now(),
+          exit_reason: "success"
+        )
+
+      unfinished_run = insert(:run, attempts: [attempt])
+
+      Attempts.mark_attempt_lost(attempt)
+
+      reloaded_finished_run = Repo.get(Invocation.Run, finished_run.id)
+      reloaded_unfinished_run = Repo.get(Invocation.Run, unfinished_run.id)
+
+      assert reloaded_finished_run.exit_reason == "success"
+      assert reloaded_unfinished_run.exit_reason == "lost"
+
+      assert reloaded_unfinished_run.finished_at != nil
+    end
+  end
 end
