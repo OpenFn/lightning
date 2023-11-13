@@ -1,9 +1,11 @@
 defmodule Lightning.AttemptsTest do
   alias Lightning.Invocation
   use Lightning.DataCase, async: true
+  import Lightning.AccountsFixtures
   import Lightning.Factories
 
   alias Lightning.WorkOrders
+  alias Lightning.Attempt
   alias Lightning.Attempts
 
   describe "enqueue/1" do
@@ -554,5 +556,147 @@ defmodule Lightning.AttemptsTest do
 
       assert reloaded_unfinished_run.finished_at != nil
     end
+  end
+
+  describe "delete/1" do
+    test "deletes the attempt" do
+      attempt_1 = insert_attempt()
+      attempt_2 = insert_attempt()
+
+      Attempts.delete(attempt_1)
+
+      assert only_record_for_type?(attempt_2)
+    end
+
+    test "deletes any associated attempt runs" do
+      attempt_1 = insert_attempt()
+      attempt_2 = insert_attempt()
+
+      _attempt_run_1_1 = insert_attempt_run(attempt_1)
+      _attempt_run_1_2 = insert_attempt_run(attempt_1)
+      attempt_run_2 = insert_attempt_run(attempt_2)
+
+      Attempts.delete(attempt_1)
+
+      assert only_record_for_type?(attempt_run_2)
+    end
+
+    test "deletes any associated log lines" do
+      attempt_1 = build_list(2, :log_line) |> insert_attempt()
+
+      attempt_2 = insert_attempt()
+      log_line_2_1 = insert(:log_line, attempt: attempt_2)
+
+      Attempts.delete(attempt_1)
+
+      assert only_record_for_type?(log_line_2_1)
+    end
+
+    test "returns indication of success" do
+      attempt_1 = insert_attempt()
+      _attempt_2 = insert_attempt()
+
+      {:ok, %Attempt{id: id}} = Attempts.delete(attempt_1)
+
+      assert id == attempt_1.id
+    end
+
+    test "rolls back changes on failure" do
+      attempt = insert_attempt()
+      attempt_run = insert_attempt_run(attempt)
+      log_line = insert(:log_line, attempt: attempt)
+
+      Repo.delete(attempt)
+
+      assert_raise Ecto.StaleEntryError, ~r/stale struct/, fn ->
+        Attempts.delete(attempt)
+      end
+
+      assert only_record_for_type?(attempt_run)
+
+      assert only_record_for_type?(log_line)
+    end
+
+    defp insert_attempt(log_lines \\ []) do
+      insert(:attempt,
+        created_by: build(:user),
+        work_order: build(:workorder),
+        dataclip: build(:dataclip),
+        starting_job: build(:job),
+        log_lines: log_lines
+      )
+    end
+  end
+
+  describe "delete_for_user" do
+    test "removes any Attempt and associated AttemptRun records" do
+      user_1 = user_fixture()
+      user_2 = user_fixture()
+
+      attempt_1 = insert_attempt_for_user(user_1)
+      attempt_2 = insert_attempt_for_user(user_1)
+      attempt_3 = insert_attempt_for_user(user_2)
+
+      _attempt_run_1_1 = insert_attempt_run(attempt_1)
+      _attempt_run_1_2 = insert_attempt_run(attempt_1)
+      _attempt_run_2_1 = insert_attempt_run(attempt_2)
+      attempt_run_3_1 = insert_attempt_run(attempt_3)
+
+      Attempts.delete_for_user(user_1)
+
+      assert only_record_for_type?(attempt_3)
+
+      assert only_record_for_type?(attempt_run_3_1)
+    end
+
+    test "removes any associated LogLine records" do
+      user_1 = user_fixture()
+      user_2 = user_fixture()
+
+      insert_attempt_for_user(user_1, build_list(2, :log_line))
+      insert_attempt_for_user(user_1, build_list(2, :log_line))
+
+      attempt_3 = insert_attempt_for_user(user_2)
+      log_line_3_1 = insert(:log_line, attempt: attempt_3)
+
+      Attempts.delete_for_user(user_1)
+
+      assert only_record_for_type?(log_line_3_1)
+    end
+
+    test "indicates a successful deletion" do
+      user_1 = user_fixture()
+      user_2 = user_fixture()
+
+      insert_attempt_for_user(user_1)
+      insert_attempt_for_user(user_1)
+      insert_attempt_for_user(user_2)
+
+      {:ok, {num_deletions, _}} = Attempts.delete_for_user(user_1)
+
+      assert num_deletions == 2
+    end
+
+    test "behaves correctly if there are no attempts for the user" do
+      user_1 = user_fixture()
+
+      {:ok, {num_deletions, _}} = Attempts.delete_for_user(user_1)
+
+      assert num_deletions == 0
+    end
+
+    defp insert_attempt_for_user(user, log_lines \\ []) do
+      insert(:attempt,
+        created_by: user,
+        work_order: build(:workorder),
+        dataclip: build(:dataclip),
+        starting_job: build(:job),
+        log_lines: log_lines
+      )
+    end
+  end
+
+  defp insert_attempt_run(attempt) do
+    insert(:attempt_run, attempt: attempt, run: build(:run))
   end
 end

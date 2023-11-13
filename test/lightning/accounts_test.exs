@@ -1267,35 +1267,29 @@ defmodule Lightning.AccountsTest do
       user_1 = user_fixture()
       user_2 = user_fixture()
 
-      attempt_1 = insert_attempt(user_1)
-      attempt_2 = insert_attempt(user_1)
+      _attempt_1 = insert_attempt(user_1)
+      _attempt_2 = insert_attempt(user_1)
       attempt_3 = insert_attempt(user_2)
-
-      _attempt_run_1_1 = insert_attempt_run(attempt_1)
-      _attempt_run_1_2 = insert_attempt_run(attempt_1)
-      _attempt_run_2_1 = insert_attempt_run(attempt_2)
-      attempt_run_3_1 = insert_attempt_run(attempt_3)
 
       Accounts.delete_user(user_1)
 
       assert only_record_for_type?(attempt_3)
-
-      assert only_record_for_type?(attempt_run_3_1)
     end
 
-    test "removes any associated LogLine records" do
-      user_1 = user_fixture()
-      user_2 = user_fixture()
+    test "rolls back any changes on failure" do
+      user = user_fixture()
 
-      insert_attempt(user_1, build_list(2, :log_line))
-      insert_attempt(user_1, build_list(2, :log_line))
+      attempt = insert_attempt(user)
 
-      attempt_3 = insert_attempt(user_2)
-      log_line_3_1 = insert(:log_line, attempt: attempt_3)
+      broken_user =
+        user
+        |> Map.merge(%{__meta__: %Ecto.Schema.Metadata{state: :deleted}})
 
-      Accounts.delete_user(user_1)
+      assert_raise Postgrex.Error, ~r/.+/, fn ->
+        Accounts.delete_user(broken_user)
+      end
 
-      assert only_record_for_type?(log_line_3_1)
+      assert only_record_for_type?(attempt)
     end
 
     defp insert_attempt(user, log_lines \\ []) do
@@ -1306,10 +1300,6 @@ defmodule Lightning.AccountsTest do
         starting_job: build(:job),
         log_lines: log_lines
       )
-    end
-
-    defp insert_attempt_run(attempt) do
-      insert(:attempt_run, attempt: attempt, run: build(:run))
     end
   end
 

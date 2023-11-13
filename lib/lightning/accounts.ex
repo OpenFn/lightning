@@ -19,6 +19,7 @@ defmodule Lightning.Accounts do
     UserNotifier
   }
 
+  alias Lightning.Attempts
   alias Lightning.Credentials
 
   require Logger
@@ -551,7 +552,17 @@ defmodule Lightning.Accounts do
 
   """
   def delete_user(%User{} = user) do
-    Repo.delete(user)
+    result =
+      Ecto.Multi.new()
+      |> Ecto.Multi.run(:attempts, fn _, _ -> Attempts.delete_for_user(user) end)
+      |> Ecto.Multi.delete(:user, user)
+      |> Repo.transaction()
+
+    case result do
+      {:ok, %{user: deleted_user}} -> {:ok, deleted_user}
+      # Not tested
+      {:error, _, changeset} -> {:error, changeset}
+    end
   end
 
   @doc """

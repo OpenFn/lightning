@@ -52,7 +52,6 @@ defmodule Lightning.Attempts.Queue do
 
   @impl true
   def dequeue(attempt) do
-    attempt
-    |> Repo.delete()
+    Attempts.delete(attempt)
   end
 end
