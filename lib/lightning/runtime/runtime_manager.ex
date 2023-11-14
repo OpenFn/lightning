@@ -34,9 +34,9 @@ defmodule Lightning.Runtime.RuntimeManager do
   """
 
   defmodule RuntimeClient do
-    @callback start_runtime(state :: Map.t()) :: state :: Map.t()
+    @callback start_runtime(state :: map()) :: state :: map()
 
-    @callback stop_runtime(state :: Map.t()) :: any()
+    @callback stop_runtime(state :: map()) :: any()
   end
 
   use GenServer, restart: :transient, shutdown: 10_000
