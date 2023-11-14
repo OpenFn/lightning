@@ -97,7 +97,7 @@ NodeJS v17 [changed](https://github.com/nodejs/node/pull/39987) how DNS name res
 If you experience this, try specifying the IPv4 loopback address explicitly when starting your worker, as shown below.
 
 ```
-pnpm start:prod -l ws://localhost:4000/worker
+pnpm start:prod -l ws://127.0.0.1:4000/worker
 ```
 
 If interested, you can directly inspect what Node returns for `localhost` by running the following command:
