@@ -555,10 +555,19 @@ defmodule LightningWeb.AttemptChannelTest do
           "error_message" => nil
         })
 
+      assert_reply ref, :ok, nil
+
+      ref =
+        push(socket, "attempt:complete", %{
+          "reason" => "failed",
+          "error_type" => nil,
+          "error_message" => nil
+        })
+
       assert_reply ref, :error, errors
 
       assert errors == %{
-               state: ["cannot complete attempt that has not been started"]
+               state: ["already in completed state"]
              }
     end
 

@@ -130,19 +130,7 @@ defmodule Lightning.Attempt do
       state: :started,
       started_at: DateTime.utc_now()
     )
-    |> then(fn changeset ->
-      previous_state = changeset.data |> Map.get(:state)
-
-      if previous_state == :claimed do
-        changeset
-      else
-        changeset
-        |> add_error(
-          :state,
-          "cannot start attempt that is not in a claimed state"
-        )
-      end
-    end)
+    |> validate_state_change()
   end
 
   @spec complete(
@@ -157,47 +145,37 @@ defmodule Lightning.Attempt do
   def complete(attempt, {state, error_type, _error_message}) do
     attempt
     |> cast(%{state: state}, [:state])
+    |> put_change(:finished_at, DateTime.utc_now())
     |> validate_required([:state])
     |> validate_inclusion(:state, @final_states)
     |> cast(%{error_type: error_type}, [:error_type])
     |> validate_state_change()
   end
 
-  defp validate_state_change(%{data: previous, changes: changes} = changeset) do
-    %{state: previous_state, error_type: previous_error} = previous
+  defp validate_state_change(changeset) do
+    {changeset.data |> Map.get(:state), get_field(changeset, :state)}
+    |> case do
+      {:available, :claimed} ->
+        changeset
 
-    add_timestamp = change(changeset, finished_at: DateTime.utc_now())
+      {:available, to} ->
+        changeset
+        |> add_error(
+          :state,
+          "cannot mark attempt #{to} that has not been claimed by a worker"
+        )
 
-    if is_nil(previous_error) do
-      case changes do
-        %{state: :lost} ->
-          if Enum.member?([:claimed, :started], previous_state) do
-            add_timestamp
-          else
-            changeset
-            |> add_error(
-              :state,
-              "cannot mark attempt lost that has not been claimed by a worker"
-            )
-          end
+      {:claimed, :started} ->
+        changeset |> validate_required([:started_at])
 
-        %{state: _any_other} ->
-          if previous_state == :started do
-            add_timestamp
-          else
-            changeset
-            |> add_error(
-              :state,
-              "cannot complete attempt that has not been started"
-            )
-          end
+      {from, to} when from in @final_states and to in @final_states ->
+        add_error(changeset, :state, "already in completed state")
 
-        _other ->
-          changeset
-      end
-    else
-      changeset
-      |> add_error(:state, "cannot complete attempt that already has an error")
+      {from, to} when from in [:claimed, :started] and to in @final_states ->
+        changeset |> validate_required([:finished_at])
+
+      {from, to} when from == to ->
+        changeset
     end
   end
 

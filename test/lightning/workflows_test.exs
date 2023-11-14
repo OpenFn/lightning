@@ -3,11 +3,7 @@ defmodule Lightning.WorkflowsTest do
 
   import Lightning.Factories
 
-  alias Lightning.{
-    Workflows,
-    Jobs
-  }
-
+  alias Lightning.Workflows
   alias Lightning.Workflows.Trigger
 
   describe "workflows" do
