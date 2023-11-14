@@ -13,7 +13,7 @@
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-EPF2X7PV.js"></script>
-    <script src="dist/sidebar_items-14F3911E.js"></script>
+    <script src="dist/sidebar_items-4A975F77.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -166,7 +166,7 @@ workorders up to <code class="inline">v0.10.0</code>, though the granularity of 
 will be less than <code class="inline">v0.10.0</code> and the final states are not guaranteed to be
 accurate for workflows with multiple branches and leaf nodes with varying exit
 reasons.</p><p>The migration scripts can be run with a single function call in SetupUtils from
-a connect <code class="inline">iex</code> session:</p><pre><code class="makeup elixir" translate="no"><span class="nc">Lightning.SetupUtils</span><span class="o">.</span><span class="n">approximate_state_for_attempts_and_workorders</span><span class="p" data-group-id="4953509147-1">(</span><span class="p" data-group-id="4953509147-1">)</span></code></pre><p>Note that (like lots of <em>other</em> functionality in <code class="inline">SetupUtils</code>, calling this
+a connect <code class="inline">iex</code> session:</p><pre><code class="makeup elixir" translate="no"><span class="nc">Lightning.SetupUtils</span><span class="o">.</span><span class="n">approximate_state_for_attempts_and_workorders</span><span class="p" data-group-id="7935601870-1">(</span><span class="p" data-group-id="7935601870-1">)</span></code></pre><p>Note that (like lots of <em>other</em> functionality in <code class="inline">SetupUtils</code>, calling this
 function is a destructive action and you should only do it if you've backed up
 your data and you know what you're doing.)</p><p>As always, we recommend backing up your data before migrating. (And thanks for
 bearing with us as we move towards our first stable Lightning release.)</p><h3 id="added" class="section-heading">
@@ -194,6 +194,10 @@ information <a href="https://github.com/OpenFn/Lightning/issues/1170">#1170</a><
 <a href="https://github.com/OpenFn/Lightning/issues/1222">#1222</a></li><li>Track and filter on webhook controller state in :telemetry metrics
 <a href="https://github.com/OpenFn/Lightning/issues/1192">#1192</a></li><li>Secure PromEx metrics endpoint by default
 <a href="https://github.com/OpenFn/Lightning/issues/1223">#1223</a></li><li>Partition <code class="inline">log_lines</code> table based on <code class="inline">attempt_id</code>
+<a href="https://github.com/OpenFn/Lightning/issues/1254">#1254</a></li><li>Remove foreign key from <code class="inline">attempts</code> in preparation for partitioning
+<code class="inline">work_orders</code> <a href="https://github.com/OpenFn/Lightning/issues/1254">#1254</a></li><li>Remove <code class="inline">Workflows.delete_workflow</code>. It is no longer in use and would
+require modification to not leave orphaned attempts given the removal
+of the foreign key from <code class="inline">attempts</code>.
 <a href="https://github.com/OpenFn/Lightning/issues/1254">#1254</a></li></ul><h3 id="changed" class="section-heading">
   <a href="#changed" class="hover-link">
     <i class="ri-link-m" aria-hidden="true"></i>
