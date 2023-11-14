@@ -1,6 +1,11 @@
 defmodule LightningWeb.AttemptJson do
+  @moduledoc false
+
+  alias Lightning.AdaptorRegistry
   alias Lightning.Attempt
-  alias Lightning.Workflows.{Trigger, Edge, Job}
+  alias Lightning.Workflows.Edge
+  alias Lightning.Workflows.Job
+  alias Lightning.Workflows.Trigger
 
   def render(%Attempt{} = attempt) do
     %{
@@ -23,7 +28,7 @@ defmodule LightningWeb.AttemptJson do
   def render(%Job{} = job) do
     %{
       "id" => job.id,
-      "adaptor" => job.adaptor,
+      "adaptor" => AdaptorRegistry.resolve_adaptor(job.adaptor),
       "credential_id" => get_credential_id(job),
       "body" => job.body,
       "name" => job.name

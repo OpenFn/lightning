@@ -214,7 +214,7 @@ defmodule LightningWeb.AttemptChannelTest do
             "name" => job.name,
             "body" => job.body,
             "credential_id" => credential.id,
-            "adaptor" => job.adaptor
+            "adaptor" => "@openfn/language-common@1.6.2"
           }
         ]
 
