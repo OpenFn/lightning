@@ -1274,10 +1274,54 @@ defmodule Lightning.AccountsTest do
     end
   end
 
-  test "delete_user/1 deletes the user" do
-    user = user_fixture()
-    assert {:ok, %User{}} = Accounts.delete_user(user)
-    assert_raise Ecto.NoResultsError, fn -> Accounts.get_user!(user.id) end
+  describe "delete_user/1" do
+    test "delete_user/1 deletes the user" do
+      user = user_fixture()
+      assert {:ok, %User{}} = Accounts.delete_user(user)
+      assert_raise Ecto.NoResultsError, fn -> Accounts.get_user!(user.id) end
+    end
+
+    test "removes any associated Attempt and AttemptRun records" do
+      user_1 = user_fixture()
+      user_2 = user_fixture()
+
+      attempt_1 = insert(:attempt_with_dependencies, created_by: user_1)
+      attempt_2 = insert(:attempt_with_dependencies, created_by: user_1)
+      attempt_3 = insert(:attempt_with_dependencies, created_by: user_2)
+
+      _attempt_run_1_1 = insert(:attempt_run_with_run, attempt: attempt_1)
+      _attempt_run_1_2 = insert(:attempt_run_with_run, attempt: attempt_1)
+      _attempt_run_2_1 = insert(:attempt_run_with_run, attempt: attempt_2)
+      attempt_run_3_1 = insert(:attempt_run_with_run, attempt: attempt_3)
+
+      Accounts.delete_user(user_1)
+
+      assert only_record_for_type?(attempt_3)
+
+      assert only_record_for_type?(attempt_run_3_1)
+    end
+
+    test "removes any associated LogLine records" do
+      user_1 = user_fixture()
+      user_2 = user_fixture()
+
+      insert(:attempt_with_dependencies,
+        created_by: user_1,
+        log_lines: build_list(2, :log_line)
+      )
+
+      insert(:attempt_with_dependencies,
+        created_by: user_1,
+        log_lines: build_list(2, :log_line)
+      )
+
+      attempt_3 = insert(:attempt_with_dependencies, created_by: user_2)
+      log_line_3_1 = insert(:log_line, attempt: attempt_3)
+
+      Accounts.delete_user(user_1)
+
+      assert only_record_for_type?(log_line_3_1)
+    end
   end
 
   describe "scheduling a user for deletion" do

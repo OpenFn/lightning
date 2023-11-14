@@ -57,4 +57,14 @@ defmodule Lightning.DataCase do
       end)
     end)
   end
+
+  @doc """
+  Checks that the provided record is the only record of that type persisted in
+  the database.
+  """
+  def only_record_for_type?(expected_instance) do
+    %type{} = expected_instance
+
+    Lightning.Repo.all(type) |> Enum.map(& &1.id) == [expected_instance.id]
+  end
 end

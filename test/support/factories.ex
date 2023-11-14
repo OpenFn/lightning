@@ -77,21 +77,43 @@ defmodule Lightning.Factories do
 
   def log_line_factory do
     %Lightning.Invocation.LogLine{
+      id: Ecto.UUID.generate(),
       message: sequence(:log_line, &"somelog#{&1}"),
       timestamp: build(:timestamp)
     }
   end
 
-  def attempt_factory() do
+  def attempt_factory do
     %Lightning.Attempt{
       id: fn -> Ecto.UUID.generate() end
     }
+  end
+
+  def attempt_with_dependencies_factory do
+    struct!(
+      attempt_factory(),
+      %{
+        created_by: build(:user),
+        work_order: build(:workorder),
+        dataclip: build(:dataclip),
+        starting_job: build(:job)
+      }
+    )
   end
 
   def attempt_run_factory do
     %Lightning.AttemptRun{
       id: fn -> Ecto.UUID.generate() end
     }
+  end
+
+  def attempt_run_with_run_factory do
+    struct!(
+      attempt_run_factory(),
+      %{
+        run: build(:run)
+      }
+    )
   end
 
   def reason_factory do

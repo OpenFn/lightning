@@ -156,11 +156,62 @@ defmodule Lightning.JobsTest do
       job = insert(:job)
       assert {:error, %Ecto.Changeset{}} = Jobs.update_job(job, @invalid_attrs)
     end
+  end
 
+  describe "delete_job/1" do
     test "delete_job/1 deletes the job" do
       job = insert(:job)
       assert {:ok, %Job{}} = Jobs.delete_job(job)
       assert_raise Ecto.NoResultsError, fn -> Jobs.get_job!(job.id) end
+    end
+
+    test "delete_job/1 deletes associated attempts and attempt runs" do
+      job_1 = insert(:job)
+      job_2 = insert(:job)
+
+      attempt_1_1 = insert(:attempt_with_dependencies, starting_job: job_1)
+      attempt_1_2 = insert(:attempt_with_dependencies, starting_job: job_1)
+      attempt_2_1 = insert(:attempt_with_dependencies, starting_job: job_2)
+
+      _attempt_run_1_1_1 = insert(:attempt_run_with_run, attempt: attempt_1_1)
+      _attempt_run_1_1_2 = insert(:attempt_run_with_run, attempt: attempt_1_1)
+      _attempt_run_1_2_1 = insert(:attempt_run_with_run, attempt: attempt_1_2)
+      attempt_run_2_1_1 = insert(:attempt_run_with_run, attempt: attempt_2_1)
+
+      Jobs.delete_job(job_1)
+
+      assert only_record_for_type?(attempt_2_1)
+
+      assert only_record_for_type?(attempt_run_2_1_1)
+    end
+
+    test "deletes any associated LogLine entries" do
+      job_1 = insert(:job)
+      job_2 = insert(:job)
+
+      insert(
+        :attempt_with_dependencies,
+        starting_job: job_1,
+        log_lines: build_list(2, :log_line)
+      )
+
+      insert(
+        :attempt_with_dependencies,
+        starting_job: job_1,
+        log_lines: build_list(2, :log_line)
+      )
+
+      attempt_2_1 =
+        insert(
+          :attempt_with_dependencies,
+          starting_job: job_2
+        )
+
+      log_line_2_1_1 = insert(:log_line, attempt: attempt_2_1)
+
+      Jobs.delete_job(job_1)
+
+      assert only_record_for_type?(log_line_2_1_1)
     end
 
     test "delete_job/1 can't delete job with downstream jobs" do

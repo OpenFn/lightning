@@ -237,6 +237,9 @@ defmodule Lightning.ProjectsTest do
 
       p1_dataclip = insert(:dataclip, body: %{foo: "bar"}, project: p1)
 
+      p1_run_1 = insert(:run, input_dataclip: p1_dataclip, job: e1.target_job)
+      p1_run_2 = insert(:run, input_dataclip: p1_dataclip, job: e1.target_job)
+
       insert(:workorder,
         trigger: t1,
         dataclip: p1_dataclip,
@@ -245,22 +248,24 @@ defmodule Lightning.ProjectsTest do
           build(:attempt,
             starting_trigger: e1.source_trigger,
             dataclip: p1_dataclip,
-            runs: [
-              build(:run, input_dataclip: p1_dataclip, job: e1.target_job)
-            ]
+            runs: [p1_run_1],
+            log_lines: build_list(2, :log_line, run: p1_run_1)
           ),
           build(:attempt,
             starting_trigger: e1.source_trigger,
             dataclip: p1_dataclip,
             created_by: p1_user,
-            runs: [
-              build(:run, input_dataclip: p1_dataclip, job: e1.target_job)
-            ]
+            runs: [p1_run_2],
+            log_lines: build_list(2, :log_line, run: p1_run_1)
           )
         ]
       )
 
       p2_dataclip = insert(:dataclip, body: %{foo: "bar"}, project: p2)
+
+      p2_run = insert(:run, input_dataclip: p2_dataclip, job: e2.target_job)
+
+      p2_log_line = build(:log_line, run: p2_run)
 
       insert(:workorder,
         trigger: t2,
@@ -270,9 +275,8 @@ defmodule Lightning.ProjectsTest do
           build_list(1, :attempt,
             starting_trigger: e2.source_trigger,
             dataclip: p2_dataclip,
-            runs: [
-              build(:run, input_dataclip: p2_dataclip, job: e2.target_job)
-            ]
+            runs: [p2_run],
+            log_lines: [p2_log_line]
           )
       )
 
@@ -310,6 +314,9 @@ defmodule Lightning.ProjectsTest do
       assert jobs_query |> Repo.aggregate(:count, :id) == 5,
              "There should be only five jobs"
 
+      assert Repo.all(Lightning.Invocation.LogLine)
+             |> Enum.count() == 5
+
       assert {:ok, %Project{}} = Projects.delete_project(p1)
 
       assert runs_query |> Repo.aggregate(:count, :id) == 0
@@ -327,6 +334,8 @@ defmodule Lightning.ProjectsTest do
       assert workflows_query |> Repo.aggregate(:count, :id) == 0
 
       assert jobs_query |> Repo.aggregate(:count, :id) == 0
+
+      assert only_record_for_type?(p2_log_line)
 
       assert_raise Ecto.NoResultsError, fn ->
         Projects.get_project!(p1.id)
