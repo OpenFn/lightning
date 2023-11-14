@@ -121,7 +121,6 @@ LightningWeb.API.ProjectController.html
 LightningWeb.API.ProvisioningController.html
 LightningWeb.API.RunController.html
 LightningWeb.AttemptChannel.html
-LightningWeb.AttemptJson.html
 LightningWeb.AttemptLive.AttemptViewerLive.html
 LightningWeb.AttemptLive.Components.html
 LightningWeb.AttemptLive.Show.html
@@ -243,8 +242,8 @@ dist/merriweather-latin-ext-300-normal-K6L27CZ5.woff2
 dist/merriweather-vietnamese-300-italic-EHHNZPUO.woff2
 dist/merriweather-vietnamese-300-normal-U376L4Z4.woff2
 dist/remixicon-NKANDIL5.woff2
-dist/search_data-E145D580.js
-dist/sidebar_items-AB657A57.js
+dist/search_data-21235DAF.js
+dist/sidebar_items-14F3911E.js
 index.html
 provisioning.html
 readme.html
