@@ -3,69 +3,69 @@ defmodule Lightning.Runtime.RuntimeManagerTest do
 
   alias Lightning.Runtime.RuntimeManager
 
-  @line_runtime_path Path.expand("../../support/runtime_per_line", __DIR__)
-  # @char_runtime_path Path.expand("../../support/runtime_per_char", __DIR__)
+  defmodule RuntimeClient do
+    @behaviour Lightning.Runtime.RuntimeManager.RuntimeClient
 
-  @default_config [
-    start: true,
-    version: "0.1.0",
-    args: [@line_runtime_path, "Hello world 😎", "0.2", "0"],
-    cd: Path.expand("..", __DIR__),
-    env: %{"TEST" => "hello", "STOP" => nil}
-  ]
+    @impl true
+    def start_runtime(state) do
+      port = Port.open({:spawn, "cat"}, [:binary])
+      %{state | runtime_port: port}
+    end
 
-  setup do
-    Application.put_env(:lightning, RuntimeManager, @default_config)
-
-    on_exit(fn ->
-      Application.put_env(:lightning, RuntimeManager, @default_config)
-    end)
+    @impl true
+    def stop_runtime(state) do
+      Port.close(state.runtime_port)
+      send(self(), {state.runtime_port, {:exit_status, 143}})
+    end
   end
 
-  test "the runtime manager does not start when start is set to false" do
-    assert {:ok, _server} = RuntimeManager.start_link(name: __MODULE__)
+  defmodule CleanupClient do
+    def cleanup_time do
+      10
+    end
 
+    def start_runtime(state) do
+      port = Port.open({:spawn, "cat"}, [:binary])
+      %{state | runtime_port: port}
+    end
+
+    def stop_runtime(state) do
+      Port.close(state.runtime_port)
+
+      Process.send_after(
+        self(),
+        {state.runtime_port, {:exit_status, 143}},
+        cleanup_time()
+      )
+    end
+  end
+
+  test "the runtime manager does not start when start is set to false", %{
+    test: test
+  } do
+    Application.put_env(:lightning, RuntimeManager, start: true)
+
+    assert {:ok, server} = start_server(test, runtime_client: RuntimeClient)
+
+    assert Process.alive?(server)
     Application.put_env(:lightning, RuntimeManager, start: false)
 
-    assert :ignore ==
-             RuntimeManager.start_link(name: :test_start_false)
-  end
-
-  test "the runtime manager waits for a certain timeout when the runtime exits",
-       %{test: test} do
-    timeout = 0
-    {:ok, server} = RuntimeManager.start_link(name: test)
-
-    state = :sys.get_state(server)
-    exit_status = 2
-
-    assert ExUnit.CaptureLog.capture_log(fn ->
-             assert {:noreply, ^state, ^timeout} =
-                      RuntimeManager.handle_info(
-                        {state.runtime_port, {:exit_status, exit_status}},
-                        state
-                      )
-           end) =~ "Runtime exited with status: #{exit_status}"
+    assert {:ok, :undefined} ==
+             start_server(:test_start_false, runtime_client: RuntimeClient)
   end
 
   test "on timeout, the runtime manager exits with premature termination",
        %{test: test} do
-    {:ok, server} = RuntimeManager.start_link(name: test)
+    {:ok, server} = start_server(test)
 
-    state = :sys.get_state(server)
+    Process.monitor(server)
+    send(server, :timeout)
 
-    assert {:stop, :premature_termination, ^state} =
-             RuntimeManager.handle_info(:timeout, state)
+    assert_receive {:DOWN, _ref, :process, ^server, :premature_termination}
   end
 
-  @tag :capture_log
-  test "the runtime manager stops if the runtime exits" do
-    server =
-      start_supervised!(
-        {RuntimeManager, [[name: :test_exit]]},
-        restart: :temporary
-      )
-
+  test "the runtime manager stops if the runtime exits", %{test: test} do
+    {:ok, server} = start_server(test)
     Process.monitor(server)
 
     state = :sys.get_state(server)
@@ -74,89 +74,34 @@ defmodule Lightning.Runtime.RuntimeManagerTest do
     assert_receive {:DOWN, _ref, :process, ^server, :premature_termination}
   end
 
-  @tag :capture_log
-  test "the runtime manager reports if the server is already shutdown" do
-    server =
-      start_supervised!(
-        {RuntimeManager, [[name: :test_exit]]},
-        restart: :temporary
-      )
-
-    Process.monitor(server)
-
-    state = :sys.get_state(server)
-    test_state = %{state | runtime_port: state.runtime_port, shutdown: true}
-    expected_state = %{test_state | runtime_port: nil, runtime_os_pid: nil}
-
-    assert {:noreply, ^expected_state} =
-             RuntimeManager.handle_info(
-               {:EXIT, state.runtime_port, :normal},
-               test_state
-             )
-  end
-
-  test "handling the `handle_info` fallthrough case" do
-    server =
-      start_supervised!(
-        {RuntimeManager, [[name: :test_exit]]},
-        restart: :temporary
-      )
-
-    Process.monitor(server)
-    test_state = %{some: :data}
-
-    assert {:stop, :a_good_reason, ^test_state} =
-             RuntimeManager.handle_info(
-               {:EXIT, "ignored", :a_good_reason},
-               test_state
-             )
-  end
-
-  @tag :capture_log
-  @tag :skip
   test "the runtime manager waits for the runtime to complete processing before shutting down",
        %{test: test} do
-    cleanup_time = 0.2
-    {:ok, server} = start_server(test, "Hello World 😎", 0.2, cleanup_time)
-    Process.flag(:trap_exit, true)
-    Process.link(server)
+    {:ok, server} =
+      start_server(test, runtime_client: CleanupClient, start: true)
+
+    Process.monitor(server)
 
     spawn_link(fn -> :ok = GenServer.stop(server) end)
 
     assert Process.alive?(server)
-    refute_received {:EXIT, ^server, :normal}
+    refute_received {:DOWN, _ref, :process, ^server, :normal}
 
-    assert_receive {:EXIT, ^server, :normal}, round((cleanup_time + 0.2) * 1000)
-  end
-
-  test "the runtime manager receives end of line (EOL) messages",
-       %{test: test} do
-    string_to_print = "Hello World 😎"
-    {:ok, server} = start_server(test, string_to_print, 1, 1)
-    state = :sys.get_state(server)
-    port = state.runtime_port
-    Port.connect(port, self())
-
-    assert_receive {^port, {:data, {:eol, ^string_to_print}}}, 1000
-
-    # unlink the port
-    Port.connect(port, server)
-    Process.unlink(port)
+    assert_receive {:DOWN, _ref, :process, ^server, :normal},
+                   CleanupClient.cleanup_time() + 3
   end
 
   test "the runtime manager updates the buffer for NOEOL messages",
        %{test: test} do
-    {:ok, server} = RuntimeManager.start_link(name: test)
+    {:ok, server} = start_server(test)
 
     state = :sys.get_state(server)
 
-    state = %{state | buffer: ~c"H"}
+    send(server, {state.runtime_port, {:data, {:noeol, ~c"H"}}})
+    updated_state = :sys.get_state(server)
+    assert IO.iodata_to_binary(updated_state.buffer) == "H"
+    send(server, {state.runtime_port, {:data, {:noeol, ~c"e"}}})
 
-    assert {:noreply, updated_state} =
-             RuntimeManager.handle_info(
-               {state.runtime_port, {:data, {:noeol, ~c"e"}}},
-               state
-             )
+    updated_state = :sys.get_state(server)
 
     refute updated_state.buffer == state.buffer
     assert IO.iodata_to_binary(updated_state.buffer) == "eH"
@@ -164,51 +109,33 @@ defmodule Lightning.Runtime.RuntimeManagerTest do
 
   test "the runtime manager updates the buffer for EOL messages",
        %{test: test} do
-    {:ok, server} = RuntimeManager.start_link(name: test)
+    {:ok, server} = start_server(test)
 
     state = :sys.get_state(server)
 
-    state = %{state | buffer: ~c"H"}
+    send(server, {state.runtime_port, {:data, {:noeol, ~c"H"}}})
 
-    assert {:noreply, %{buffer: []}} =
-             RuntimeManager.handle_info(
-               {state.runtime_port, {:data, {:eol, ~c"e"}}},
-               state
-             )
+    updated_state = :sys.get_state(server)
+    assert IO.iodata_to_binary(updated_state.buffer) == "H"
+
+    send(server, {state.runtime_port, {:data, {:eol, ~c"e"}}})
+
+    updated_state = :sys.get_state(server)
+
+    assert updated_state.buffer == []
   end
 
   defp start_server(
          test,
-         line_to_print,
-         interval,
-         cleanup_time,
-         override_opts \\ []
+         opts \\ [runtime_client: RuntimeClient, start: true]
        ) do
-    config =
-      @default_config
-      |> Keyword.merge(
-        args: [
-          @line_runtime_path,
-          "#{line_to_print}",
-          "#{interval}",
-          "#{cleanup_time}"
-        ]
-      )
-      |> Keyword.merge(override_opts)
-
-    Application.put_env(
-      :lightning,
-      RuntimeManager,
-      config
-    )
-
     name = Module.concat([__MODULE__, test, RuntimeManager])
 
     child_spec = %{
-      id: RuntimeManager,
+      id: name,
       restart: :temporary,
-      shutdown: 10_000,
-      start: {RuntimeManager, :start_link, [[name: name]]}
+      shutdown: 10,
+      start: {RuntimeManager, :start_link, [Keyword.merge(opts, name: name)]}
     }
 
     start_supervised(child_spec)

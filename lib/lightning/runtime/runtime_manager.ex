@@ -33,58 +33,59 @@ defmodule Lightning.Runtime.RuntimeManager do
 
   """
 
+  defmodule RuntimeClient do
+    @callback start_runtime(state :: Map.t()) :: state :: Map.t()
+
+    @callback stop_runtime(state :: Map.t()) :: any()
+  end
+
   use GenServer, restart: :transient, shutdown: 10_000
   require Logger
 
   defstruct runtime_port: nil,
             runtime_os_pid: nil,
-            shutdown: false,
+            runtime_client: nil,
             buffer: []
 
-  @sigterm_status 143
+  @behaviour RuntimeClient
 
-  @impl true
-  def init(_args) do
-    if config()[:start] do
-      # If you are starting an instance of ws-worker via this Runtime Manager,
-      # we are assuming that you're in dev mode and have want mix phx.server
-      # to manage your NodeJs worker app, which is configured to run on port
-      # 2222. Since it's not always possible to kill that app, we'll ensure it's
-      # dead here in startup.
-      System.shell("kill $(lsof -n -i :2222 | grep LISTEN | awk '{print $2}')")
+  def start_link(args) do
+    {name, args} = Keyword.pop(args, :name, __MODULE__)
+    start_args = Keyword.merge(config(), args)
+    GenServer.start_link(__MODULE__, start_args, name: name)
+  end
 
+  @impl GenServer
+  def init(args) do
+    {start, args} = Keyword.pop(args, :start, false)
+
+    if start do
       Process.flag(:trap_exit, true)
-      {:ok, %__MODULE__{}, {:continue, :start_runtime}}
+      module = Keyword.get(args, :runtime_client, __MODULE__)
+      {:ok, %__MODULE__{runtime_client: module}, {:continue, :start_runtime}}
     else
       :ignore
     end
   end
 
-  def start_link(args) do
-    {name, args} = Keyword.pop(args, :name, __MODULE__)
-    GenServer.start_link(__MODULE__, args, name: name)
+  @impl GenServer
+  def handle_continue(:start_runtime, %{runtime_client: runtime_client} = state) do
+    {:noreply, runtime_client.start_runtime(state)}
   end
 
-  defp config do
-    Application.get_env(:lightning, __MODULE__, [])
-  end
-
-  @impl true
-  def handle_continue(:start_runtime, state) do
-    {:noreply, start_runtime(state)}
-  end
-
-  @impl true
+  @impl GenServer
   def handle_info({port, {:exit_status, status}}, %{runtime_port: port} = state) do
     Logger.error("Runtime exited with status: #{status}")
     # Data may arrive after exit status on line mode
-    {:noreply, %{state | shutdown: status == @sigterm_status}, 0}
+    {:noreply, state, 0}
   end
 
+  @impl GenServer
   def handle_info(:timeout, state) do
     {:stop, :premature_termination, state}
   end
 
+  @impl GenServer
   def handle_info(
         {port, {:data, {:noeol, data}}},
         %{runtime_port: port, buffer: buffer} = state
@@ -92,6 +93,7 @@ defmodule Lightning.Runtime.RuntimeManager do
     {:noreply, %{state | buffer: [data | buffer]}}
   end
 
+  @impl GenServer
   def handle_info(
         {port, {:data, {:eol, data}}},
         %{runtime_port: port, buffer: buffer} = state
@@ -100,6 +102,7 @@ defmodule Lightning.Runtime.RuntimeManager do
     {:noreply, %{state | buffer: []}}
   end
 
+  @impl GenServer
   def handle_info(
         {port, {:data, {_, data}}},
         %{runtime_port: port, buffer: buffer} = state
@@ -108,68 +111,48 @@ defmodule Lightning.Runtime.RuntimeManager do
     {:stop, :premature_termination, %{state | buffer: []}}
   end
 
+  @impl GenServer
   def handle_info(
         {:EXIT, port, reason},
-        %{runtime_port: port, shutdown: shutdown?} = state
+        %{runtime_port: port} = state
       ) do
     Logger.debug("Runtime port was stopped with reason: #{reason}")
 
-    if shutdown? do
-      {:noreply, %{state | runtime_port: nil, runtime_os_pid: nil}}
-    else
-      {:stop, :premature_termination, state}
-    end
+    {:stop, :premature_termination, state}
   end
 
+  @impl GenServer
   def handle_info({:EXIT, _pid, reason}, state) do
     {:stop, reason, state}
   end
 
-  @impl true
-  def terminate(reason, %{shutdown: shutdown?} = state) do
-    unless shutdown? do
-      Task.async(fn ->
-        port = state.runtime_port
-        os_pid = state.runtime_os_pid
-
-        if reason not in [:timeout, :premature_termination] and
-             state.runtime_port do
-          Port.connect(port, self())
-          System.cmd("kill", ["-TERM", "#{os_pid}"])
-          handle_pending_msg(port, state.buffer)
-        end
-      end)
-      |> Task.await(:infinity)
-    end
+  @impl GenServer
+  def terminate(
+        reason,
+        %{runtime_client: runtime_client} = state
+      ) do
+    Task.async(fn ->
+      if reason not in [:timeout, :premature_termination] and
+           state.runtime_port do
+        Port.connect(state.runtime_port, self())
+        runtime_client.stop_runtime(state)
+        handle_pending_msg(state.runtime_port, state.buffer)
+      end
+    end)
+    |> Task.await(:infinity)
 
     state
   end
 
-  defp handle_pending_msg(port, buffer) do
-    receive do
-      {^port, {:exit_status, status}} ->
-        receive do
-          {^port, {:data, {_, data}}} ->
-            log_buffer([data | buffer])
-            status
-        after
-          0 -> status
-        end
+  @impl RuntimeClient
+  def start_runtime(state) do
+    # If you are starting an instance of ws-worker via this Runtime Manager,
+    # we are assuming that you're in dev mode and have want mix phx.server
+    # to manage your NodeJs worker app, which is configured to run on port
+    # 2222. Since it's not always possible to kill that app, we'll ensure it's
+    # dead here in startup.
+    System.shell("kill $(lsof -n -i :2222 | grep LISTEN | awk '{print $2}')")
 
-      {^port, {:data, {:noeol, data}}} ->
-        handle_pending_msg(port, [data | buffer])
-
-      {^port, {:data, {:eol, data}}} ->
-        log_buffer([data | buffer])
-        handle_pending_msg(port, [])
-    end
-  end
-
-  defp log_buffer(buffer) do
-    buffer |> Enum.reverse() |> IO.iodata_to_binary() |> Logger.info()
-  end
-
-  defp start_runtime(state) do
     config = config()
     {args, start_opts} = Keyword.pop(config, :args, [])
     start_opts = Keyword.take(start_opts, [:cd, :env])
@@ -201,6 +184,39 @@ defmodule Lightning.Runtime.RuntimeManager do
     :persistent_term.put(:runtime_os_pid, os_pid)
 
     %{state | runtime_port: port, runtime_os_pid: os_pid}
+  end
+
+  @impl RuntimeClient
+  def stop_runtime(state) do
+    System.cmd("kill", ["-TERM", "#{state.runtime_os_pid}"])
+  end
+
+  defp config do
+    Application.get_env(:lightning, __MODULE__, [])
+  end
+
+  defp handle_pending_msg(port, buffer) do
+    receive do
+      {^port, {:exit_status, status}} ->
+        receive do
+          {^port, {:data, {_, data}}} ->
+            log_buffer([data | buffer])
+            status
+        after
+          0 -> status
+        end
+
+      {^port, {:data, {:noeol, data}}} ->
+        handle_pending_msg(port, [data | buffer])
+
+      {^port, {:data, {:eol, data}}} ->
+        log_buffer([data | buffer])
+        handle_pending_msg(port, [])
+    end
+  end
+
+  defp log_buffer(buffer) do
+    buffer |> Enum.reverse() |> IO.iodata_to_binary() |> Logger.info()
   end
 
   defp port_init(command) when is_binary(command) do
