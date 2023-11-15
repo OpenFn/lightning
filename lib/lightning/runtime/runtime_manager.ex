@@ -151,7 +151,9 @@ defmodule Lightning.Runtime.RuntimeManager do
     # to manage your NodeJs worker app, which is configured to run on port
     # 2222. Since it's not always possible to kill that app, we'll ensure it's
     # dead here in startup.
-    System.shell("kill $(lsof -n -i :2222 | grep LISTEN | awk '{print $2}')")
+    # EDIT: This is no longer needed when using: `node ./node_modules/.bin/worker`
+    # Source: https://stackoverflow.com/questions/75594758/sigterm-not-intercepted-by-the-handler-in-nodejs-app
+    # System.shell("kill $(lsof -n -i :2222 | grep LISTEN | awk '{print $2}')")
 
     config = config()
     {args, start_opts} = Keyword.pop(config, :args, [])
