@@ -6,7 +6,6 @@ defmodule LightningWeb.ProjectLive.DeleteConnectionModal do
   attr :id, :string, required: true
   attr :show, :boolean, default: false
   attr :on_cancel, JS, default: %JS{}
-  slot :inner_block, required: true
 
   def modal(assigns) do
     ~H"""

@@ -100,10 +100,9 @@ bearing with us as we move towards our first stable Lightning release.)
   [#1254](https://github.com/OpenFn/Lightning/issues/1254)
 - Remove foreign key from `attempts` in preparation for partitioning
   `work_orders` [#1254](https://github.com/OpenFn/Lightning/issues/1254)
-- Remove `Workflows.delete_workflow`. It is no longer in use and would
-  require modification to not leave orphaned attempts given the removal
-  of the foreign key from `attempts`.
-  [#1254](https://github.com/OpenFn/Lightning/issues/1254)
+- Remove `Workflows.delete_workflow`. It is no longer in use and would require
+  modification to not leave orphaned attempts given the removal of the foreign
+  key from `attempts`. [#1254](https://github.com/OpenFn/Lightning/issues/1254)
 
 ### Changed
 
@@ -122,6 +121,8 @@ bearing with us as we move towards our first stable Lightning release.)
   gets lost when starting a manual workorder from the inspector interface
 - Ensure that the whole edge when selected is highlighted
   [#1160](https://github.com/OpenFn/Lightning/issues/1160)
+- Fix "Reconfigure Github" button in Project Settings
+  [#1386](https://github.com/OpenFn/Lightning/issues/1386)
 
 ## [v0.9.3] - 2023-09-27
 
