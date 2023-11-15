@@ -61,6 +61,8 @@ bearing with us as we move towards our first stable Lightning release.)
 
 ### Added
 
+- Added a hover effect on copy and add button for adaptors examples
+  [#1297](https://github.com/OpenFn/Lightning/issues/1297)
 - Migration helper code to move from `v0.9.3` to `v0.10.0` added to SetupUtils
   [#1363](https://github.com/OpenFn/Lightning/issues/1363)
 - Option to start with `RTM=false iex -S mix phx.server` for opting out of the
@@ -100,10 +102,9 @@ bearing with us as we move towards our first stable Lightning release.)
   [#1254](https://github.com/OpenFn/Lightning/issues/1254)
 - Remove foreign key from `attempts` in preparation for partitioning
   `work_orders` [#1254](https://github.com/OpenFn/Lightning/issues/1254)
-- Remove `Workflows.delete_workflow`. It is no longer in use and would
-  require modification to not leave orphaned attempts given the removal
-  of the foreign key from `attempts`.
-  [#1254](https://github.com/OpenFn/Lightning/issues/1254)
+- Remove `Workflows.delete_workflow`. It is no longer in use and would require
+  modification to not leave orphaned attempts given the removal of the foreign
+  key from `attempts`. [#1254](https://github.com/OpenFn/Lightning/issues/1254)
 
 ### Changed
 
