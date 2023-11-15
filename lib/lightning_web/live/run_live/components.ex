@@ -74,10 +74,17 @@ defmodule LightningWeb.RunLive.Components do
             </.link>
             <%= if @is_clone do %>
               <div class="flex gap-1">
-                <Heroicons.paper_clip
-                  mini
-                  class="mr-1.5 mt-1 h-3 w-3 flex-shrink-0 text-gray-500"
-                />
+                <span
+                  class="cursor-pointer"
+                  id={"clone_" <> @attempt.id <> "_" <> @run.id}
+                  aria-label="This run was originally executed in a previous attempt. In this attempt, it has been skipped; the original output has been used as the starting point for downstream jobs."
+                  phx-hook="Tooltip"
+                >
+                  <Heroicons.paper_clip
+                    mini
+                    class="mr-1.5 mt-1 h-3 w-3 flex-shrink-0 text-gray-500"
+                  />
+                </span>
               </div>
             <% end %>
             <div class="flex gap-1">
