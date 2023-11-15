@@ -59,6 +59,7 @@ defmodule Lightning.Invocation.LogLine do
   def changeset(log_line, attrs) do
     log_line
     |> cast(attrs, [:message, :timestamp, :run_id, :attempt_id, :level, :source])
+    |> redact_password(:message)
     |> validate()
   end
 
