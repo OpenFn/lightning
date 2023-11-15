@@ -74,8 +74,6 @@ Lightning.PromEx.html
 Lightning.Release.html
 Lightning.Repo.html
 Lightning.RunSearchForm.html
-Lightning.Runtime.ChildProcess.html
-Lightning.Runtime.Handler.html
 Lightning.Runtime.LogAgent.StringBuffer.html
 Lightning.Runtime.LogAgent.html
 Lightning.Runtime.Result.html
@@ -243,8 +241,8 @@ dist/merriweather-latin-ext-300-normal-K6L27CZ5.woff2
 dist/merriweather-vietnamese-300-italic-EHHNZPUO.woff2
 dist/merriweather-vietnamese-300-normal-U376L4Z4.woff2
 dist/remixicon-NKANDIL5.woff2
-dist/search_data-CCC0AF8A.js
-dist/sidebar_items-DD656553.js
+dist/search_data-55DE1BC5.js
+dist/sidebar_items-C887857A.js
 index.html
 provisioning.html
 readme.html
