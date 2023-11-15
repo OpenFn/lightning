@@ -125,7 +125,7 @@ defmodule LightningWeb.EndToEndTest do
         workflow_job_fixture(
           project: project,
           name: "1st-job",
-          adaptor: "@openfn/language-http@latest",
+          adaptor: "@openfn/language-http@5.0",
           body: webhook_expression(),
           project_credential: project_credential
         )
@@ -133,7 +133,7 @@ defmodule LightningWeb.EndToEndTest do
       flow_job =
         insert(:job,
           name: "2nd-job",
-          adaptor: "@openfn/language-http@latest",
+          adaptor: "@openfn/language-http@5.0",
           body: flow_expression(),
           workflow: workflow,
           project_credential: project_credential
@@ -149,7 +149,7 @@ defmodule LightningWeb.EndToEndTest do
       catch_job =
         insert(:job,
           name: "3rd-job",
-          adaptor: "@openfn/language-http@latest",
+          adaptor: "@openfn/language-http@5.0",
           body: catch_expression(),
           workflow: workflow,
           project_credential: project_credential
