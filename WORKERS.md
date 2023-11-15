@@ -88,19 +88,29 @@ This is used by workers to verify Attempt Tokens coming from Lightning.
 
 ### Problems with NodeJS DNS name resolution
 
-NodeJS v17 [changed](https://github.com/nodejs/node/pull/39987) how DNS name resolution is handled. In earlier versions, Node would reorder DNS lookup results so IPv4 addresses came before IPv6 addresses. In v17, Node started returning addresses in the same order provided by the resolver. The net effect is that your workers might fail to connect to Lightning if the native DNS resolver on your system is returning the loopback IPv6 address (`::1`) before the IPv4 address (`127.0.0.1`). In these cases, your worker might report an error similar to the following:
- 
- ```
- CRITICAL ERROR: could not connect to lightning at ws://localhost:4000/worker
- ```
-
-If you experience this, try specifying the IPv4 loopback address explicitly when starting your worker, as shown below.
+NodeJS v17 [changed](https://github.com/nodejs/node/pull/39987) how DNS name
+resolution is handled. In earlier versions, Node would reorder DNS lookup
+results so IPv4 addresses came before IPv6 addresses. In v17, Node started
+returning addresses in the same order provided by the resolver. The net effect
+is that your workers might fail to connect to Lightning if the native DNS
+resolver on your system is returning the loopback IPv6 address (`::1`) before
+the IPv4 address (`127.0.0.1`). In these cases, your worker might report an
+error similar to the following:
 
 ```
-pnpm start:prod -l ws://127.0.0.1:4000/worker
+CRITICAL ERROR: could not connect to lightning at ws://localhost:4000/worker
 ```
 
-If interested, you can directly inspect what Node returns for `localhost` by running the following command:
+If you experience this, it can be helpful to set the `NODE_OPTIONS` environment
+variable as shown below. This will force pre-v17 behavior of returning
+IPv4 addresses first.
+
+```
+NODE_OPTIONS=--dns-result-order=ipv4first
+```
+
+You can directly inspect what IP address Node returns for `localhost` by
+running the following command:
 
 ```
 node -e 'dns.lookup("localhost", console.log)'
