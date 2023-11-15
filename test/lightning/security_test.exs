@@ -7,18 +7,39 @@ defmodule Lightning.SecurityTest do
 
   describe "redact_password/1" do
     test "replaces the password with ***" do
-      id = Ecto.UUID.generate()
       message = ~S[{"a":1, "password":"secret"}]
       timestamp = DateTime.utc_now()
 
-      assert ~S[{"a":1, "password":"***"}] ==
-               %LogLine{id: id}
+      assert %Changeset{
+               changes: %{
+                 message: ~S[{"a":1, "password":"***"}],
+                 timestamp: ^timestamp
+               }
+             } =
+               %LogLine{id: Ecto.UUID.generate()}
                |> Changeset.cast(%{message: message, timestamp: timestamp}, [
                  :message,
                  :timestamp
                ])
                |> Security.redact_password(:message)
-               |> Changeset.get_change(:message)
+    end
+
+    test "does not change the field when it is not the password" do
+      message = ~S[{"a":1, "otherfield":"password"}]
+      timestamp = DateTime.utc_now()
+
+      assert %Changeset{
+               changes: %{
+                 message: ^message,
+                 timestamp: ^timestamp
+               }
+             } =
+               %LogLine{id: Ecto.UUID.generate()}
+               |> Changeset.cast(%{message: message, timestamp: timestamp}, [
+                 :message,
+                 :timestamp
+               ])
+               |> Security.redact_password(:message)
     end
   end
 end

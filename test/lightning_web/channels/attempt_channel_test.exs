@@ -420,7 +420,7 @@ defmodule LightningWeb.AttemptChannelTest do
       %{socket: socket, attempt: attempt, workflow: workflow}
     end
 
-    test "attempt:log message can't be blank", %{
+    test "attempt:log missing message can't be blank", %{
       socket: socket,
       attempt: attempt,
       workflow: workflow
@@ -447,6 +447,36 @@ defmodule LightningWeb.AttemptChannelTest do
       assert_reply ref, :error, errors
 
       assert errors == %{message: ["This field can't be blank."]}
+    end
+
+    test "attempt:log nil message can't be blank", %{
+      socket: socket,
+      attempt: attempt,
+      workflow: workflow
+    } do
+      # { id, job_id, input_dataclip_id }
+      run_id = Ecto.UUID.generate()
+      [job] = workflow.jobs
+
+      ref =
+        push(socket, "run:start", %{
+          "run_id" => run_id,
+          "job_id" => job.id,
+          "input_dataclip_id" => attempt.dataclip_id
+        })
+
+      assert_reply ref, :ok, _
+
+      ref =
+        push(socket, "attempt:log", %{
+          # we expect a 16 character string for microsecond resolution
+          "timestamp" => "1699444653874088",
+          "message" => nil
+        })
+
+      assert_reply ref, :error, errors
+
+      assert errors == %{errors: %{message: ["This field can't be blank."]}}
     end
 
     test "attempt:log timestamp is handled at microsecond resolution", %{

@@ -48,14 +48,10 @@ defmodule LightningWeb.AttemptChannel do
 
   @impl true
   def handle_in("fetch:attempt", _, socket) do
-    # IO.write(:stderr, "fetch:attempt #{socket.assigns.attempt.id}\n")
-
     {:reply, {:ok, AttemptJson.render(socket.assigns.attempt)}, socket}
   end
 
   def handle_in("attempt:start", _, socket) do
-    # IO.write(:stderr, "start:attempt #{socket.assigns.attempt.id}\n")
-
     socket.assigns.attempt
     |> Attempts.start_attempt()
     |> case do
