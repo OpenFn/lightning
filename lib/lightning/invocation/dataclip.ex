@@ -51,8 +51,26 @@ defmodule Lightning.Invocation.Dataclip do
   def new(attrs \\ %{}) do
     change(%__MODULE__{id: Ecto.UUID.generate()}, attrs)
     |> change(attrs)
+    |> redact_password()
     |> validate()
   end
+
+  defp redact_password(
+         %Ecto.Changeset{
+           valid?: true,
+           changes: %{
+             body: %{"configuration" => %{"password" => _password}} = body
+           }
+         } =
+           changeset
+       ) do
+    body =
+      update_in(body, ["configuration", "password"], fn _any -> "***" end)
+
+    put_change(changeset, :body, body)
+  end
+
+  defp redact_password(changeset), do: changeset
 
   @doc false
   def changeset(dataclip, attrs) do
