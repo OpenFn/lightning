@@ -50,6 +50,61 @@ defmodule LightningWeb.EndToEndTest do
       assert run.exit_reason == "success"
     end
 
+    test "complete an attempt on a complex workflow with parallel jobs", %{
+      conn: conn
+    } do
+      project = insert(:project)
+
+      %{triggers: [%{id: webhook_trigger_id}]} =
+        insert(:complex_workflow, project: project)
+
+      # Post to webhook
+      webhook_body = %{"x" => 1}
+      conn = post(conn, "/i/#{webhook_trigger_id}", webhook_body)
+
+      assert %{"work_order_id" => wo_id} = json_response(conn, 200)
+
+      assert %{attempts: [%{id: attempt_id}]} =
+               WorkOrders.get(wo_id, include: [:attempts])
+
+      assert %{runs: []} = Attempts.get(attempt_id, include: [:runs])
+
+      assert %{attempts: [%{id: attempt_id}]} =
+               WorkOrders.get(wo_id, include: [:attempts])
+
+      # wait to complete
+      assert Enum.any?(1..100, fn _i ->
+               Process.sleep(50)
+               %{state: state} = Attempts.get(attempt_id)
+               state == :success
+             end)
+
+      assert %{state: :success} = WorkOrders.get(wo_id)
+
+      %{entries: runs} = Invocation.list_runs_for_project(project)
+
+      # runs with unique outputs and all succeed
+      assert Enum.count(runs) == 7
+      assert Enum.count(runs, & &1.output_dataclip_id) == 7
+      assert Enum.all?(runs, fn run -> run.exit_reason == "success" end)
+
+      # first run has the webhook body as input
+      [first_run | runs] = Enum.reverse(runs)
+      assert webhook_body == select_dataclip_body(first_run.input_dataclip_id)
+
+      # the other 6 runs produce the same input and output on x twice
+      # (2 branches that doubles x value three times)
+      assert runs
+             |> Enum.map(&select_dataclip_body(&1.input_dataclip_id)["x"])
+             |> Enum.frequencies()
+             |> Enum.all?(fn {_x, count} -> count == 2 end)
+
+      assert runs
+             |> Enum.map(&select_dataclip_body(&1.output_dataclip_id)["x"])
+             |> Enum.frequencies()
+             |> Enum.all?(fn {_x, count} -> count == 2 end)
+    end
+
     test "the whole thing", %{conn: conn} do
       project = insert(:project)
 
