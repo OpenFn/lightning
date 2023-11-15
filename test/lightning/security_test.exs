@@ -24,21 +24,19 @@ defmodule Lightning.SecurityTest do
                |> Security.redact_password(:message)
     end
 
-    test "does not change the field when it is not the password" do
-      message = ~S[{"a":1, "otherfield":"password"}]
+    test "doesn't add change when the changeset is invalid" do
+      message = ~S[{"a":1, "password":"same value"}]
       timestamp = DateTime.utc_now()
 
       assert %Changeset{
                changes: %{
-                 message: ^message,
                  timestamp: ^timestamp
                }
              } =
                %LogLine{id: Ecto.UUID.generate()}
-               |> Changeset.cast(%{message: message, timestamp: timestamp}, [
-                 :message,
-                 :timestamp
-               ])
+               |> Changeset.cast(%{timestamp: timestamp}, [:timestamp])
+               |> Map.put(:valid?, false)
+               |> Changeset.cast(%{message: message}, [:message])
                |> Security.redact_password(:message)
     end
   end

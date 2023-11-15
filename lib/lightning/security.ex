@@ -25,5 +25,5 @@ defmodule Lightning.Security do
     end
   end
 
-  def redact_password(changeset), do: changeset
+  def redact_password(changeset, _field), do: changeset
 end
