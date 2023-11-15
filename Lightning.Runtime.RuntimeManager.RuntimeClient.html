@@ -7,7 +7,7 @@
     <meta name="generator" content="ExDoc v0.30.9">
     <meta name="project" content="Lightning v0.10.0-pre9">
 
-    <title>Lightning.Vault — Lightning v0.10.0-pre9</title>
+    <title>Lightning.Runtime.RuntimeManager.RuntimeClient — Lightning v0.10.0-pre9</title>
     <link rel="stylesheet" href="dist/html-elixir-XFYN5IVA.css" />
 
 
@@ -21,7 +21,7 @@
 
 
   </head>
-  <body data-type="modules" class="page-module">
+  <body data-type="modules" class="page-behaviour">
     <script>
 
       try {
@@ -125,20 +125,16 @@ Pages
 </button>
 
 
-    <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/vault.ex#L1" title="View Source" class="icon-action" rel="help">
+    <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runtime/runtime_manager.ex#L36" title="View Source" class="icon-action" rel="help">
       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
       <span class="sr-only">View Source</span>
     </a>
 
-  <span translate="no">Lightning.Vault</span> 
+  <span translate="no">Lightning.Runtime.RuntimeManager.RuntimeClient</span> <small>behaviour</small>
   <small class="app-vsn" translate="no">(Lightning v0.10.0-pre9)</small>
 
 </h1>
 
-
-  <section id="moduledoc">
-<p>Module for handling the encryption and decryption of database fields.</p>
-  </section>
 
 
   <section id="summary" class="details-list">
@@ -148,24 +144,22 @@ Pages
       </a>
       <span class="text">Summary</span>
     </h1>
-<div class="summary-functions summary">
+<div class="summary-callbacks summary">
   <h2>
-    <a href="#functions">Functions</a>
+    <a href="#callbacks">Callbacks</a>
   </h2>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#child_spec/1" translate="no">child_spec(init_arg)</a>
+        <a href="#c:start_runtime/1" translate="no">start_runtime(state)</a>
 
       </div>
-
-        <div class="summary-synopsis"><p>Returns a specification to start this module under a supervisor.</p></div>
 
     </div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#start_link/1" translate="no">start_link(config \\ [])</a>
+        <a href="#c:stop_runtime/1" translate="no">stop_runtime(state)</a>
 
       </div>
 
@@ -176,24 +170,24 @@ Pages
   </section>
 
 
-  <section id="functions" class="details-list">
+  <section id="callbacks" class="details-list">
     <h1 class="section-heading">
-      <a class="hover-link" href="#functions">
+      <a class="hover-link" href="#callbacks">
         <i class="ri-link-m" aria-hidden="true"></i>
       </a>
-      <span class="text">Functions</span>
+      <span class="text">Callbacks</span>
     </h1>
-    <div class="functions-list">
-<section class="detail" id="child_spec/1">
+    <div class="callbacks-list">
+<section class="detail" id="c:start_runtime/1">
 
   <div class="detail-header">
-    <a href="#child_spec/1" class="detail-link" title="Link to this function">
+    <a href="#c:start_runtime/1" class="detail-link" title="Link to this callback">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
+      <span class="sr-only">Link to this callback</span>
     </a>
-    <h1 class="signature" translate="no">child_spec(init_arg)</h1>
+    <h1 class="signature" translate="no">start_runtime(state)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/vault.ex#L5" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runtime/runtime_manager.ex#L37" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -203,21 +197,25 @@ Pages
 
   <section class="docstring">
 
-<p>Returns a specification to start this module under a supervisor.</p><p>See <a href="https://hexdocs.pm/elixir/Supervisor.html"><code class="inline">Supervisor</code></a>.</p>
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@callback</span> start_runtime(state :: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>()) :: state :: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>()</pre>
+
+      </div>
+
+
   </section>
 </section>
-<section class="detail" id="start_link/1">
-
-    <span id="start_link/0"></span>
+<section class="detail" id="c:stop_runtime/1">
 
   <div class="detail-header">
-    <a href="#start_link/1" class="detail-link" title="Link to this function">
+    <a href="#c:stop_runtime/1" class="detail-link" title="Link to this callback">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
+      <span class="sr-only">Link to this callback</span>
     </a>
-    <h1 class="signature" translate="no">start_link(config \\ [])</h1>
+    <h1 class="signature" translate="no">stop_runtime(state)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/vault.ex#L5" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runtime/runtime_manager.ex#L39" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -226,6 +224,12 @@ Pages
   </div>
 
   <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@callback</span> stop_runtime(state :: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>()) :: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">any</a>()</pre>
+
+      </div>
 
 
   </section>
