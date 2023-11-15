@@ -13,7 +13,7 @@
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-EPF2X7PV.js"></script>
-    <script src="dist/sidebar_items-FF9027AB.js"></script>
+    <script src="dist/sidebar_items-DD656553.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -241,6 +241,14 @@ for more details.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
+        <a href="#mark_attempt_lost/1" translate="no">mark_attempt_lost(attempt)</a>
+
+      </div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
         <a href="#start_attempt/1" translate="no">start_attempt(attempt)</a>
 
       </div>
@@ -305,7 +313,7 @@ for more details.</p></div>
     </a>
     <h1 class="signature" translate="no">append_attempt_log(attempt, params)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/attempts.ex#L172" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/attempts.ex#L174" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -327,7 +335,7 @@ for more details.</p></div>
     </a>
     <h1 class="signature" translate="no">complete_attempt(attempt, arg)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/attempts.ex#L110" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/attempts.ex#L115" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -336,6 +344,17 @@ for more details.</p></div>
   </div>
 
   <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> complete_attempt(
+  <a href="Lightning.Attempt.html#t:t/0">Lightning.Attempt.t</a>(),
+  {<a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">atom</a>(), <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">binary</a>() | nil, <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">binary</a>() | nil}
+) ::
+  {:ok, <a href="Lightning.Attempt.html#t:t/0">Lightning.Attempt.t</a>()}
+  | {:error, <a href="https://hexdocs.pm/ecto/3.10.3/Ecto.Changeset.html#t:t/1">Ecto.Changeset.t</a>(<a href="Lightning.Attempt.html#t:t/0">Lightning.Attempt.t</a>())}</pre>
+
+      </div>
 
 
   </section>
@@ -349,7 +368,7 @@ for more details.</p></div>
     </a>
     <h1 class="signature" translate="no">complete_run(params)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/attempts.ex#L214" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/attempts.ex#L216" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -378,7 +397,7 @@ for more details.</p></div>
     </a>
     <h1 class="signature" translate="no">enqueue(attempt)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/attempts.ex#L34" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/attempts.ex#L37" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -402,7 +421,7 @@ for more details.</p></div>
     </a>
     <h1 class="signature" translate="no">get(id, opts \\ [])</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/attempts.ex#L66" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/attempts.ex#L69" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -418,7 +437,7 @@ for more details.</p></div>
 
       </div>
 
-<p>Get an Attempt by id.</p><p>Optionally preload associations by passing a list of atoms to <code class="inline">:include</code>.</p><pre><code class="makeup elixir" translate="no"><span class="nc">Lightning.Attempts</span><span class="o">.</span><span class="n">get</span><span class="p" data-group-id="5868847474-1">(</span><span class="n">id</span><span class="p">,</span><span class="w"> </span><span class="ss">include</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="5868847474-2">[</span><span class="ss">:workflow</span><span class="p" data-group-id="5868847474-2">]</span><span class="p" data-group-id="5868847474-1">)</span></code></pre>
+<p>Get an Attempt by id.</p><p>Optionally preload associations by passing a list of atoms to <code class="inline">:include</code>.</p><pre><code class="makeup elixir" translate="no"><span class="nc">Lightning.Attempts</span><span class="o">.</span><span class="n">get</span><span class="p" data-group-id="6330461532-1">(</span><span class="n">id</span><span class="p">,</span><span class="w"> </span><span class="ss">include</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="6330461532-2">[</span><span class="ss">:workflow</span><span class="p" data-group-id="6330461532-2">]</span><span class="p" data-group-id="6330461532-1">)</span></code></pre>
   </section>
 </section>
 <section class="detail" id="get_credential/2">
@@ -430,7 +449,7 @@ for more details.</p></div>
     </a>
     <h1 class="signature" translate="no">get_credential(attempt, id)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/attempts.ex#L98" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/attempts.ex#L101" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -452,7 +471,7 @@ for more details.</p></div>
     </a>
     <h1 class="signature" translate="no">get_dataclip_body(attempt)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/attempts.ex#L79" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/attempts.ex#L82" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -474,7 +493,7 @@ for more details.</p></div>
     </a>
     <h1 class="signature" translate="no">get_dataclip_for_worker(attempt)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/attempts.ex#L91" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/attempts.ex#L94" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -498,7 +517,7 @@ for more details.</p>
     </a>
     <h1 class="signature" translate="no">get_log_lines(attempt)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/attempts.ex#L226" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/attempts.ex#L253" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -520,7 +539,7 @@ for more details.</p>
     </a>
     <h1 class="signature" translate="no">get_project_id_for_attempt(attempt)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/attempts.ex#L220" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/attempts.ex#L247" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -529,6 +548,34 @@ for more details.</p>
   </div>
 
   <section class="docstring">
+
+
+  </section>
+</section>
+<section class="detail" id="mark_attempt_lost/1">
+
+  <div class="detail-header">
+    <a href="#mark_attempt_lost/1" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">mark_attempt_lost(attempt)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/attempts.ex#L222" class="icon-action" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> mark_attempt_lost(<a href="Lightning.Attempt.html#t:t/0">Lightning.Attempt.t</a>()) :: {:ok, <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">any</a>()} | {:error, <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">any</a>()}</pre>
+
+      </div>
 
 
   </section>
@@ -542,7 +589,7 @@ for more details.</p>
     </a>
     <h1 class="signature" translate="no">start_attempt(attempt)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/attempts.ex#L105" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/attempts.ex#L108" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -564,7 +611,7 @@ for more details.</p>
     </a>
     <h1 class="signature" translate="no">start_run(params)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/attempts.ex#L208" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/attempts.ex#L210" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -593,7 +640,7 @@ for more details.</p>
     </a>
     <h1 class="signature" translate="no">subscribe(attempt)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/attempts.ex#L218" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/attempts.ex#L245" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -615,7 +662,7 @@ for more details.</p>
     </a>
     <h1 class="signature" translate="no">update_attempt(changeset)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/attempts.ex#L126" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/attempts.ex#L128" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -624,6 +671,14 @@ for more details.</p>
   </div>
 
   <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> update_attempt(<a href="https://hexdocs.pm/ecto/3.10.3/Ecto.Changeset.html#t:t/1">Ecto.Changeset.t</a>(<a href="Lightning.Attempt.html#t:t/0">Lightning.Attempt.t</a>())) ::
+  {:ok, <a href="Lightning.Attempt.html#t:t/0">Lightning.Attempt.t</a>()}
+  | {:error, <a href="https://hexdocs.pm/ecto/3.10.3/Ecto.Changeset.html#t:t/1">Ecto.Changeset.t</a>(<a href="Lightning.Attempt.html#t:t/0">Lightning.Attempt.t</a>())}</pre>
+
+      </div>
 
 
   </section>
@@ -637,7 +692,7 @@ for more details.</p>
     </a>
     <h1 class="signature" translate="no">update_attempts(update_query, updates)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/attempts.ex#L152" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/attempts.ex#L154" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
