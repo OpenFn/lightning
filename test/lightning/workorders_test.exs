@@ -87,7 +87,13 @@ defmodule Lightning.WorkOrdersTest do
       Lightning.WorkOrders.subscribe(workflow.project_id)
 
       assert {:ok, manual} =
-               Lightning.WorkOrders.Manual.new(%{"body" => ~s({"foo": "bar"})},
+               Lightning.WorkOrders.Manual.new(
+                 %{
+                   "body" =>
+                     Jason.encode!(%{
+                       "configuration" => %{"password" => "secret"}
+                     })
+                 },
                  workflow: workflow,
                  project: workflow.project,
                  job: job,
@@ -99,7 +105,10 @@ defmodule Lightning.WorkOrdersTest do
       assert [attempt] = workorder.attempts
 
       assert workorder.dataclip.type == :saved_input
-      assert workorder.dataclip.body == %{"foo" => "bar"}
+
+      assert workorder.dataclip.body == %{
+               "configuration" => %{"password" => "***"}
+             }
 
       assert attempt.created_by.id == user.id
 
