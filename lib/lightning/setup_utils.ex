@@ -934,50 +934,59 @@ defmodule Lightning.SetupUtils do
 
     [%{exit_reason: final_run_exit_reason} | _rest] = Enum.reverse(run_params)
 
-    {:ok, %{workorder: workorder, attempt: attempt}} =
-      Multi.new()
-      |> Multi.insert(
-        :workorder,
-        WorkOrders.build_for(trigger, %{
-          workflow: workflow,
-          dataclip: input_dataclip,
-          last_activity: attempt_finished_at
-        })
-      )
-      |> Multi.update(:attempt, fn %{workorder: %{attempts: [attempt]}} ->
-        runs =
-          Enum.map(run_params, fn params ->
-            log_lines =
-              Enum.map(params.log_lines, fn line ->
-                Map.merge(line, %{
-                  id: Ecto.UUID.generate(),
-                  attempt_id: attempt.id
-                })
-              end)
+    Multi.new()
+    |> Multi.insert(
+      :workorder,
+      WorkOrders.build_for(trigger, %{
+        workflow: workflow,
+        dataclip: input_dataclip,
+        last_activity: attempt_finished_at
+      })
+    )
+    |> Multi.update(:attempt, fn %{workorder: %{attempts: [attempt]}} ->
+      runs =
+        Enum.map(run_params, fn params ->
+          log_lines =
+            Enum.map(params.log_lines, fn line ->
+              Map.merge(line, %{
+                id: Ecto.UUID.generate(),
+                attempt_id: attempt.id
+              })
+            end)
 
-            params
-            |> Map.merge(%{log_lines: log_lines})
-            |> Run.new()
-          end)
+          params
+          |> Map.merge(%{log_lines: log_lines})
+          |> Run.new()
+        end)
 
-        attempt
-        |> Repo.preload([:runs])
-        |> Ecto.Changeset.change(%{
-          state:
-            if(final_run_exit_reason == "success", do: :success, else: :failed),
-          claimed_at: DateTime.utc_now() |> DateTime.add(1, :second),
-          started_at: DateTime.utc_now() |> DateTime.add(1, :second),
-          finished_at: attempt_finished_at
-        })
-        |> Ecto.Changeset.put_assoc(:runs, runs)
-      end)
-      |> Repo.transaction()
+      attempt
+      |> Repo.preload([:runs])
+      |> Ecto.Changeset.change(%{
+        state:
+          if(final_run_exit_reason == "success", do: :success, else: :failed),
+        claimed_at: DateTime.utc_now() |> DateTime.add(1, :second),
+        started_at: DateTime.utc_now() |> DateTime.add(1, :second),
+        finished_at: attempt_finished_at
+      })
+      |> Ecto.Changeset.put_assoc(:runs, runs)
+    end)
+    |> Multi.update(:workorder_status, fn %{
+                                            workorder: workorder,
+                                            attempt: attempt
+                                          } ->
+      Ecto.Changeset.change(workorder, %{
+        state: attempt.state,
+        last_activity: attempt_finished_at
+      })
+    end)
+    |> Repo.transaction()
+    |> case do
+      {:ok, %{workorder: workorder}} ->
+        {:ok, workorder}
 
-    Lightning.WorkOrders.update_state(attempt)
-
-    workorder
-    |> Ecto.Changeset.change(last_activity: attempt_finished_at)
-    |> Repo.update()
+      {:error, _operation, failed_value, _changes} ->
+        {:error, failed_value}
+    end
   end
 
   defp create_dataclip(params) do
