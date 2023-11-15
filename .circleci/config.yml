@@ -60,6 +60,7 @@ jobs:
 
       - run: mix local.hex --force
       - run: mix local.rebar --force
+      - run: cd assets && npm install
       - run: MIX_ENV=test mix do deps.get --only test, deps.compile, compile
       - run: MIX_ENV=test mix lightning.install_runtime
 
