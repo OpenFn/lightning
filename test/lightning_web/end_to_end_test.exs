@@ -302,7 +302,6 @@ defmodule LightningWeb.EndToEndTest do
 
   defp start_runtime_manager(_context) do
     rtm_args = "node ./node_modules/.bin/worker -- --backoff 0.5/5"
-    # rtm_args = "npm exec @openfn/ws-worker -- --backoff 0.5/5"
 
     Application.put_env(:lightning, RuntimeManager,
       start: true,
@@ -311,12 +310,6 @@ defmodule LightningWeb.EndToEndTest do
     )
 
     {:ok, rtm_server} = RuntimeManager.start_link(name: E2ETestRuntimeManager)
-    # start_supervised(%{
-    #   id: E2ETestRuntimeManager,
-    #   restart: :temporary,
-    #   shutdown: 30_000,
-    #   start: {RuntimeManager, :start_link, [[name: E2ETestRuntimeManager]]}
-    # })
 
     running =
       Enum.any?(1..20, fn _i ->
