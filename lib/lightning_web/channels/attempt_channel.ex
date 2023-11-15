@@ -166,10 +166,15 @@ defmodule LightningWeb.AttemptChannel do
     end
   end
 
-  def handle_in("run:complete", payload, socket) do
+  def handle_in(
+        "run:complete",
+        %{"reason" => reason} = payload,
+        socket
+      ) do
     %{
       "attempt_id" => socket.assigns.attempt.id,
-      "project_id" => socket.assigns.project_id
+      "project_id" => socket.assigns.project_id,
+      "reason" => "#{map_rtm_reason_state(reason)}"
     }
     |> Enum.into(payload)
     |> Attempts.complete_run()
@@ -180,6 +185,12 @@ defmodule LightningWeb.AttemptChannel do
       {:ok, run} ->
         {:reply, {:ok, %{run_id: run.id}}, socket}
     end
+  end
+
+  def handle_in("attempt:log", %{"message" => message}, socket)
+      when message == nil or message == [nil] do
+    {:reply, {:error, %{errors: %{message: ["This field can't be blank."]}}},
+     socket}
   end
 
   def handle_in("attempt:log", payload, socket) do
