@@ -297,15 +297,22 @@ defmodule LightningWeb.EndToEndTest do
       cd: Path.expand("../../assets", __DIR__)
     )
 
-    {:ok, rtm_server} = RuntimeManager.start_link(name: TestRuntimeManager)
+    {:ok, rtm_server} =
+      start_supervised(%{
+        id: E2ETestRuntimeManager,
+        restart: :temporary,
+        shutdown: 30_000,
+        start: {RuntimeManager, :start_link, [[name: E2ETestRuntimeManager]]}
+      })
 
-    Enum.any?(1..10, fn _i ->
-      Process.sleep(100)
-      %{runtime_port: port} = :sys.get_state(rtm_server)
-      port != nil
-    end)
+    running =
+      Enum.any?(1..20, fn _i ->
+        Process.sleep(50)
+        %{runtime_port: port} = :sys.get_state(rtm_server)
+        port != nil
+      end)
 
-    :ok
+    if running, do: :ok, else: :error
   end
 
   defp select_dataclip_body(uuid) do
