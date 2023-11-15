@@ -312,7 +312,18 @@ defmodule Lightning.Factories do
     jobs =
       build_list(7, :job,
         name: fn -> sequence(:name, &"Job-#{&1}") end,
-        body: ~s[fn(state => { return {...state, extra: "data"} })],
+        body: fn ->
+          sequence(
+            :body,
+            &"""
+            fn(state => {
+              state.x = (state.x || state.data.x) * 2;
+              console.log({output: '#{&1}'});
+              return {...state, extra: 'data'};
+            });
+            """
+          )
+        end,
         workflow: nil
       )
 
