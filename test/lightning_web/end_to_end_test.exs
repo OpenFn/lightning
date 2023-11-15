@@ -18,6 +18,38 @@ defmodule LightningWeb.EndToEndTest do
   describe "webhook triggered attempts" do
     setup :register_and_log_in_superuser
 
+    test "complete an attempt on a simple workflow", %{conn: conn} do
+      project = insert(:project)
+
+      %{triggers: [%{id: webhook_trigger_id}]} =
+        insert(:simple_workflow, project: project)
+
+      # Post to webhook
+      conn = post(conn, "/i/#{webhook_trigger_id}", %{"a" => 1})
+
+      assert %{"work_order_id" => wo_id} = json_response(conn, 200)
+
+      assert %{attempts: [%{id: attempt_id}]} =
+               WorkOrders.get(wo_id, include: [:attempts])
+
+      assert %{runs: []} = Attempts.get(attempt_id, include: [:runs])
+
+      assert %{attempts: [%{id: attempt_id}]} =
+               WorkOrders.get(wo_id, include: [:attempts])
+
+      # wait to complete
+      assert Enum.any?(1..100, fn _i ->
+               Process.sleep(50)
+               %{state: state} = Attempts.get(attempt_id)
+               state == :success
+             end)
+
+      assert %{state: :success, attempts: [%{runs: [run]}]} =
+               WorkOrders.get(wo_id, include: [attempts: [:runs]])
+
+      assert run.exit_reason == "success"
+    end
+
     test "the whole thing", %{conn: conn} do
       project = insert(:project)
 
