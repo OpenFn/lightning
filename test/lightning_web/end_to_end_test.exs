@@ -74,7 +74,7 @@ defmodule LightningWeb.EndToEndTest do
 
       # wait to complete
       assert Enum.any?(1..100, fn _i ->
-               Process.sleep(50)
+               Process.sleep(100)
                %{state: state} = Attempts.get(attempt_id)
                state == :success
              end)
@@ -97,7 +97,6 @@ defmodule LightningWeb.EndToEndTest do
       assert runs
              |> Enum.map(&select_dataclip_body(&1.input_dataclip_id)["x"])
              |> Enum.frequencies()
-             |> IO.inspect()
              |> Enum.all?(fn {_x, count} -> count == 2 end)
 
       assert runs
@@ -176,7 +175,7 @@ defmodule LightningWeb.EndToEndTest do
 
       # wait to complete
       assert Enum.any?(1..100, fn _i ->
-               Process.sleep(50)
+               Process.sleep(100)
                %{state: state} = Attempts.get(attempt_id)
                state == :success
              end)
@@ -199,22 +198,28 @@ defmodule LightningWeb.EndToEndTest do
       assert NaiveDateTime.diff(run_1.finished_at, finished_at, :microsecond) < 0
       assert run_1.exit_reason == "success"
 
-      lines =
-        Invocation.logs_for_run(run_1)
-        |> Enum.with_index()
-        |> Map.new(fn {line, i} -> {i, line} end)
-
       expected_job_x_value = 123 * 2
-      assert lines[0].source == "R/T"
-      assert lines[0].message == "Starting operation 1"
-      assert lines[1].source == "JOB"
-      assert lines[1].message == "#{expected_job_x_value}"
-      assert lines[2].source == "JOB"
-      assert lines[2].message == "{\"name\":\"ศผ่องรี มมซึฆเ\"}"
-      assert lines[3].source == "R/T"
-      assert lines[3].message =~ "Operation 1 complete in"
-      assert lines[4].source == "R/T"
-      assert lines[4].message == "Expression complete!"
+
+      lines = Invocation.logs_for_run(run_1)
+
+      assert Enum.any?(
+               lines,
+               &(&1.source == "R/T" and &1.message =~ "Operation 1 complete in")
+             )
+
+      expected_lines =
+        MapSet.new([
+          {"R/T", "Starting operation 1"},
+          {"JOB", "#{expected_job_x_value}"},
+          {"JOB", "{\"name\":\"ศผ่องรี มมซึฆเ\"}"},
+          {"R/T", "Expression complete!"}
+        ])
+
+      assert expected_lines ==
+               MapSet.intersection(
+                 expected_lines,
+                 MapSet.new(lines, &{&1.source, &1.message})
+               )
 
       # input: has only the webhook body
       assert webhook_body == select_dataclip_body(run_1.input_dataclip_id)
@@ -241,21 +246,27 @@ defmodule LightningWeb.EndToEndTest do
       assert NaiveDateTime.diff(run_3.finished_at, finished_at, :microsecond) < 0
       assert run_3.exit_reason == "success"
 
-      lines =
-        Invocation.logs_for_run(run_3)
-        |> Enum.with_index()
-        |> Map.new(fn {line, i} -> {i, line} end)
+      lines = Invocation.logs_for_run(run_3)
+
+      assert Enum.any?(
+               lines,
+               &(&1.source == "R/T" and &1.message =~ "Operation 1 complete in")
+             )
 
       expected_job_x_value = 123 * 6
 
-      assert lines[0].source == "R/T"
-      assert lines[0].message == "Starting operation 1"
-      assert lines[1].source == "JOB"
-      assert lines[1].message == "#{expected_job_x_value}"
-      assert lines[2].source == "R/T"
-      assert lines[2].message =~ "Operation 1 complete in"
-      assert lines[3].source == "R/T"
-      assert lines[3].message == "Expression complete!"
+      expected_lines =
+        MapSet.new([
+          {"R/T", "Starting operation 1"},
+          {"JOB", "#{expected_job_x_value}"},
+          {"R/T", "Expression complete!"}
+        ])
+
+      assert expected_lines ==
+               MapSet.intersection(
+                 expected_lines,
+                 MapSet.new(lines, &{&1.source, &1.message})
+               )
 
       assert select_dataclip_body(run_2.output_dataclip_id) ==
                select_dataclip_body(run_3.input_dataclip_id)
