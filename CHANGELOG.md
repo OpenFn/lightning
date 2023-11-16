@@ -103,6 +103,8 @@ bearing with us as we move towards our first stable Lightning release.)
 - Remove `Workflows.delete_workflow`. It is no longer in use and would require
   modification to not leave orphaned attempts given the removal of the foreign
   key from `attempts`. [#1254](https://github.com/OpenFn/Lightning/issues/1254)
+- Show tooltip for cloned runs in history page
+  [#1327](https://github.com/OpenFn/Lightning/issues/1327)
 
 ### Changed
 
