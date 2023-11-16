@@ -241,6 +241,25 @@ defmodule Lightning.AttemptsTest do
                  run_id: run.id
                })
     end
+
+    test "with an unexisting run returns an error changeset" do
+      dataclip = insert(:dataclip)
+      %{triggers: [trigger]} = workflow = insert(:simple_workflow)
+
+      %{attempts: [attempt]} =
+        work_order_for(trigger, workflow: workflow, dataclip: dataclip)
+        |> insert()
+
+      assert {:error, %Ecto.Changeset{errors: [run_id: {"not found", []}]}} =
+               Attempts.complete_run(%{
+                 run_id: Ecto.UUID.generate(),
+                 reason: "success",
+                 output_dataclip: ~s({"foo": "bar"}),
+                 output_dataclip_id: Ecto.UUID.generate(),
+                 attempt_id: attempt.id,
+                 project_id: workflow.project_id
+               })
+    end
   end
 
   describe "start_attempt/1" do

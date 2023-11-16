@@ -172,9 +172,10 @@ defmodule Lightning.Attempts.Handlers do
           update_run(run, complete_run)
         else
           nil ->
-            %Run{}
-            |> change()
-            |> add_error(:run_id, "not found")
+            {:error,
+             %Run{}
+             |> change()
+             |> add_error(:run_id, "not found")}
 
           error ->
             error
