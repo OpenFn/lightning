@@ -15,6 +15,16 @@ defmodule LightningWeb.Hooks do
   this is for liveviews that may or may not have a `project_id` depending on
   usage - like `DashboardLive`.
   """
+  def on_mount(
+        :project_scope,
+        _params,
+        _session,
+        %{assigns: %{current_user: nil}} = socket
+      ) do
+    # redirect if there's no current user
+    {:halt, redirect(socket, to: "/")}
+  end
+
   def on_mount(:project_scope, %{"project_id" => project_id}, _session, socket) do
     %{current_user: current_user} = socket.assigns
 
