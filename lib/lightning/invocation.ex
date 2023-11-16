@@ -5,6 +5,7 @@ defmodule Lightning.Invocation do
 
   import Ecto.Query, warn: false
   import Lightning.Helpers, only: [coerce_json_field: 2]
+
   alias Lightning.WorkOrder
   alias Lightning.WorkOrders.SearchParams
   alias Lightning.Repo
@@ -335,12 +336,19 @@ defmodule Lightning.Invocation do
 
   def search_workorders_query(
         %Project{id: project_id},
-        %SearchParams{} = search_params
+        %SearchParams{status: status_list} = search_params
       ) do
+    status_filter =
+      if SearchParams.all_statuses_set?(search_params) do
+        []
+      else
+        status_list
+      end
+
     base_query(project_id)
     |> filter_by_workorder_id(search_params.workorder_id)
     |> filter_by_workflow_id(search_params.workflow_id)
-    |> filter_by_statuses(search_params.status)
+    |> filter_by_statuses(status_filter)
     |> filter_by_wo_date_after(search_params.wo_date_after)
     |> filter_by_wo_date_before(search_params.wo_date_before)
     |> filter_by_date_after(search_params.date_after)
