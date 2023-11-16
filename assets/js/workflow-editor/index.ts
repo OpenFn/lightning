@@ -10,16 +10,10 @@ import {
   createWorkflowStore,
 } from './store';
 
-type AttributeMutationRecord = MutationRecord & {
-  attributeName: string;
-  oldValue: string;
-};
-
 type WorkflowEditorEntrypoint = PhoenixHook<
   {
     _isMounting: boolean;
     _pendingWorker: Promise<void>;
-    _updateBaseUrl: (e: CustomEvent<{ detail: { href: string } }>) => void;
     abortController: AbortController | null;
     component: ReturnType<typeof mount> | null;
     componentModule: Promise<{ mount: typeof mount }>;
@@ -39,7 +33,7 @@ type WorkflowEditorEntrypoint = PhoenixHook<
     workflowStore: ReturnType<typeof createWorkflowStore>;
     observer: MutationObserver | null;
     setupObserver(): void;
-    baseUrl: string | null;
+    baseUrl: Promise<URL>;
   },
   { baseUrl: string | null }
 >;
@@ -73,14 +67,21 @@ const createNewWorkflow = () => {
 
 export default {
   mounted(this: WorkflowEditorEntrypoint) {
+    let setBaseUrl: (href: URL) => void;
+
+    this.baseUrl = new Promise(resolve => {
+      setBaseUrl = resolve;
+    });
+
     // Listen to navigation events, so we can update the base url that is used
     // to build urls to different nodes in the workflow.
-    this._updateBaseUrl = e => {
-      this.baseUrl = e.detail.href;
-    };
-    window.addEventListener('phx:navigate', this._updateBaseUrl);
-
-    this.baseUrl = window.location.href;
+    this.handleEvent<{ to: string; kind: string }>(
+      'page-loading-stop',
+      ({ to, kind }) => {
+        console.log('page-loading-stop', { to, kind });
+        if (kind === 'initial') setBaseUrl(new URL(to));
+      }
+    );
 
     console.debug('WorkflowEditor hook mounted');
 
@@ -110,9 +111,10 @@ export default {
       this.workflowStore.getState().applyPatches(response.patches);
     });
 
-    this.handleEvent('navigate', (e: { href: string }) => {
-      const id = new URL(e.href, window.location.href).searchParams.get('s');
-      this.component?.render(id);
+    this.handleEvent<{ href: string; patch: boolean }>('navigate', e => {
+      const id = new URL(e.href).searchParams.get('s');
+
+      if (id && e.patch && this.component) this.component.render(id);
     });
 
     // Get the initial data from the server
@@ -135,38 +137,43 @@ export default {
     }
   },
   onSelectionChange(id?: string) {
-    const currentUrl = new URL(this.baseUrl!);
-    const nextUrl = new URL(currentUrl);
+    (async () => {
+      console.log('onSelectionChange', id);
 
-    const idExists = this.getItem(id);
-    if (!idExists) {
-      nextUrl.searchParams.delete('s');
-      nextUrl.searchParams.delete('m');
-      nextUrl.searchParams.set('placeholder', true);
-    } else {
-      console.log({ idExists, baseUrl: this.baseUrl, nextUrl });
+      const currentUrl = await this.baseUrl;
+      const nextUrl = new URL(currentUrl);
 
-      nextUrl.searchParams.delete('placeholder');
-      if (!id) {
-        console.debug('Unselecting');
+      console.log({ idExists: this.getItem(id) });
 
+      const idExists = this.getItem(id);
+      if (!idExists) {
         nextUrl.searchParams.delete('s');
         nextUrl.searchParams.delete('m');
+        nextUrl.searchParams.set('placeholder', 'true');
       } else {
-        console.debug('Selecting', id);
+        console.log({ idExists, baseUrl: this.baseUrl, nextUrl });
 
-        nextUrl.searchParams.set('s', id);
+        nextUrl.searchParams.delete('placeholder');
+        if (!id) {
+          console.debug('Unselecting');
+
+          nextUrl.searchParams.delete('s');
+          nextUrl.searchParams.delete('m');
+        } else {
+          console.debug('Selecting', id);
+
+          nextUrl.searchParams.set('s', id);
+        }
       }
-    }
 
-    if (
-      currentUrl.searchParams.toString() !== nextUrl.searchParams.toString()
-    ) {
-      this.liveSocket.pushHistoryPatch(nextUrl.toString(), 'push', this.el);
-    }
+      if (
+        currentUrl.searchParams.toString() !== nextUrl.searchParams.toString()
+      ) {
+        this.liveSocket.pushHistoryPatch(nextUrl.toString(), 'push', this.el);
+      }
+    })();
   },
   destroyed() {
-    window.removeEventListener('phx:navigate', this._updateBaseUrl);
     this.component?.unmount();
     this.abortController?.abort();
     this.observer?.disconnect();
