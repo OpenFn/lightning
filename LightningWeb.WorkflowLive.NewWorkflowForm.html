@@ -7,7 +7,7 @@
     <meta name="generator" content="ExDoc v0.30.9">
     <meta name="project" content="Lightning v0.10.0-pre9">
 
-    <title>Lightning.Attempts.Events — Lightning v0.10.0-pre9</title>
+    <title>LightningWeb.WorkflowLive.NewWorkflowForm — Lightning v0.10.0-pre9</title>
     <link rel="stylesheet" href="dist/html-elixir-XFYN5IVA.css" />
 
 
@@ -125,12 +125,12 @@ Pages
 </button>
 
 
-    <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/attempts/events.ex#L1" title="View Source" class="icon-action" rel="help">
+    <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/workflow_live/new_workflow_form.ex#L1" title="View Source" class="icon-action" rel="help">
       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
       <span class="sr-only">View Source</span>
     </a>
 
-  <span translate="no">Lightning.Attempts.Events</span> 
+  <span translate="no">LightningWeb.WorkflowLive.NewWorkflowForm</span> 
   <small class="app-vsn" translate="no">(Lightning v0.10.0-pre9)</small>
 
 </h1>
@@ -151,7 +151,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#attempt_updated/1" translate="no">attempt_updated(attempt)</a>
+        <a href="#validate/2" translate="no">validate(attrs, project_id)</a>
 
       </div>
 
@@ -159,23 +159,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#log_appended/1" translate="no">log_appended(log_line)</a>
-
-      </div>
-
-    </div>
-
-    <div class="summary-row">
-      <div class="summary-signature">
-        <a href="#run_started/2" translate="no">run_started(attempt_id, run)</a>
-
-      </div>
-
-    </div>
-
-    <div class="summary-row">
-      <div class="summary-signature">
-        <a href="#subscribe/1" translate="no">subscribe(attempt)</a>
+        <a href="#validate_for_save/1" translate="no">validate_for_save(changeset)</a>
 
       </div>
 
@@ -194,16 +178,16 @@ Pages
       <span class="text">Functions</span>
     </h1>
     <div class="functions-list">
-<section class="detail" id="attempt_updated/1">
+<section class="detail" id="validate/2">
 
   <div class="detail-header">
-    <a href="#attempt_updated/1" class="detail-link" title="Link to this function">
+    <a href="#validate/2" class="detail-link" title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">attempt_updated(attempt)</h1>
+    <h1 class="signature" translate="no">validate(attrs, project_id)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/attempts/events.ex#L24" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/workflow_live/new_workflow_form.ex#L8" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -216,60 +200,16 @@ Pages
 
   </section>
 </section>
-<section class="detail" id="log_appended/1">
+<section class="detail" id="validate_for_save/1">
 
   <div class="detail-header">
-    <a href="#log_appended/1" class="detail-link" title="Link to this function">
+    <a href="#validate_for_save/1" class="detail-link" title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">log_appended(log_line)</h1>
+    <h1 class="signature" translate="no">validate_for_save(changeset)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/attempts/events.ex#L31" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
-
-
-  </div>
-
-  <section class="docstring">
-
-
-  </section>
-</section>
-<section class="detail" id="run_started/2">
-
-  <div class="detail-header">
-    <a href="#run_started/2" class="detail-link" title="Link to this function">
-      <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
-    </a>
-    <h1 class="signature" translate="no">run_started(attempt_id, run)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/attempts/events.ex#L17" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
-
-
-  </div>
-
-  <section class="docstring">
-
-
-  </section>
-</section>
-<section class="detail" id="subscribe/1">
-
-  <div class="detail-header">
-    <a href="#subscribe/1" class="detail-link" title="Link to this function">
-      <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
-    </a>
-    <h1 class="signature" translate="no">subscribe(attempt)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/attempts/events.ex#L38" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/workflow_live/new_workflow_form.ex#L15" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>

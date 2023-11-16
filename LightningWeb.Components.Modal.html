@@ -13,7 +13,7 @@
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-EPF2X7PV.js"></script>
-    <script src="dist/sidebar_items-E3DD3739.js"></script>
+    <script src="dist/sidebar_items-2A4A0E5C.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -168,7 +168,7 @@ replace the existing modal implementations.</p>
 
       </div>
 
-        <div class="summary-synopsis"><h2>Attributes</h2><ul><li><code class="inline">id</code> (<code class="inline">:string</code>) (required)</li><li><code class="inline">show</code> (<code class="inline">:boolean</code>) - Defaults to <code class="inline">false</code>.</li><li><code class="inline">type</code> (<code class="inline">:string</code>) - Defaults to <code class="inline">&quot;default&quot;</code>.</li><li><code class="inline">position</code> (<code class="inline">:string</code>) - Defaults to <code class="inline">&quot;relative&quot;</code>.</li><li><code class="inline">width</code> (<code class="inline">:string</code>) - Defaults to <code class="inline">&quot;max-w-3xl&quot;</code>.</li><li><code class="inline">on_close</code> (<a href="https://hexdocs.pm/phoenix_live_view/0.20.1/Phoenix.LiveView.JS.html"><code class="inline">Phoenix.LiveView.JS</code></a>) - Defaults to <code class="inline">%Phoenix.LiveView.JS{ops: []}</code>.</li><li><code class="inline">on_open</code> (<a href="https://hexdocs.pm/phoenix_live_view/0.20.1/Phoenix.LiveView.JS.html"><code class="inline">Phoenix.LiveView.JS</code></a>) - Defaults to <code class="inline">%Phoenix.LiveView.JS{ops: []}</code>.</li><li>Global attributes are accepted.</li></ul><h2>Slots</h2><ul><li><code class="inline">inner_block</code> (required)</li><li><code class="inline">title</code></li><li><code class="inline">subtitle</code></li><li><code class="inline">footer</code></li></ul></div>
+        <div class="summary-synopsis"><h2>Attributes</h2><ul><li><code class="inline">id</code> (<code class="inline">:string</code>) (required)</li><li><code class="inline">show</code> (<code class="inline">:boolean</code>) - Defaults to <code class="inline">false</code>.</li><li><code class="inline">type</code> (<code class="inline">:string</code>) - Defaults to <code class="inline">&quot;default&quot;</code>.</li><li><code class="inline">position</code> (<code class="inline">:string</code>) - Defaults to <code class="inline">&quot;relative&quot;</code>.</li><li><code class="inline">width</code> (<code class="inline">:string</code>) - Defaults to <code class="inline">&quot;max-w-3xl&quot;</code>.</li><li><code class="inline">on_close</code> (<a href="https://hexdocs.pm/phoenix_live_view/0.20.1/Phoenix.LiveView.JS.html"><code class="inline">Phoenix.LiveView.JS</code></a>) - Defaults to <code class="inline">%Phoenix.LiveView.JS{ops: []}</code>.</li><li><code class="inline">on_open</code> (<a href="https://hexdocs.pm/phoenix_live_view/0.20.1/Phoenix.LiveView.JS.html"><code class="inline">Phoenix.LiveView.JS</code></a>) - Defaults to <code class="inline">%Phoenix.LiveView.JS{ops: []}</code>.</li><li>Global attributes are accepted.</li></ul><h2>Slots</h2><ul><li><code class="inline">inner_block</code> (required)</li><li><code class="inline">title</code></li><li><code class="inline">subtitle</code></li><li><code class="inline">footer</code> - Accepts attributes:<ul><li><code class="inline">class</code> (<code class="inline">:string</code>)</li></ul></li></ul></div>
 
     </div>
 
@@ -177,6 +177,8 @@ replace the existing modal implementations.</p>
         <a href="#modal_footer/1" translate="no">modal_footer(assigns)</a>
 
       </div>
+
+        <div class="summary-synopsis"><h2>Attributes</h2><ul><li><code class="inline">class</code> (<code class="inline">:any</code>) - Defaults to <code class="inline">&quot;&quot;</code>.</li></ul><h2>Slots</h2><ul><li><code class="inline">inner_block</code> (required)</li></ul></div>
 
     </div>
 
@@ -212,7 +214,7 @@ replace the existing modal implementations.</p>
     </a>
     <h1 class="signature" translate="no">hide_modal(js \\ %JS{}, id)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/components/modal.ex#L112" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/components/modal.ex#L122" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -234,7 +236,7 @@ replace the existing modal implementations.</p>
     </a>
     <h1 class="signature" translate="no">modal(assigns)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/components/modal.ex#L27" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/components/modal.ex#L30" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -256,7 +258,7 @@ replace the existing modal implementations.</p>
   </a>
   <span class="text">Slots</span>
 </h2>
-<ul><li><code class="inline">inner_block</code> (required)</li><li><code class="inline">title</code></li><li><code class="inline">subtitle</code></li><li><code class="inline">footer</code></li></ul>
+<ul><li><code class="inline">inner_block</code> (required)</li><li><code class="inline">title</code></li><li><code class="inline">subtitle</code></li><li><code class="inline">footer</code> - Accepts attributes:<ul><li><code class="inline">class</code> (<code class="inline">:string</code>)</li></ul></li></ul>
   </section>
 </section>
 <section class="detail" id="modal_footer/1">
@@ -268,7 +270,7 @@ replace the existing modal implementations.</p>
     </a>
     <h1 class="signature" translate="no">modal_footer(assigns)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/components/modal.ex#L84" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/components/modal.ex#L94" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -278,7 +280,19 @@ replace the existing modal implementations.</p>
 
   <section class="docstring">
 
-
+<h2 id="modal_footer/1-attributes" class="section-heading">
+  <a href="#modal_footer/1-attributes" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
+  </a>
+  <span class="text">Attributes</span>
+</h2>
+<ul><li><code class="inline">class</code> (<code class="inline">:any</code>) - Defaults to <code class="inline">&quot;&quot;</code>.</li></ul><h2 id="modal_footer/1-slots" class="section-heading">
+  <a href="#modal_footer/1-slots" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
+  </a>
+  <span class="text">Slots</span>
+</h2>
+<ul><li><code class="inline">inner_block</code> (required)</li></ul>
   </section>
 </section>
 <section class="detail" id="show_modal/2">
@@ -292,7 +306,7 @@ replace the existing modal implementations.</p>
     </a>
     <h1 class="signature" translate="no">show_modal(js \\ %JS{}, id)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/components/modal.ex#L93" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/components/modal.ex#L103" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
