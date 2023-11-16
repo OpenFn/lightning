@@ -160,27 +160,24 @@ defmodule Lightning.Attempts.Handlers do
     end
 
     def call(params) do
-      with {:ok, complete_run} <-
-             new(params)
-             |> apply_action(:validate) do
+      with {:ok, complete_run} <- new(params) |> apply_action(:validate) do
         update(complete_run)
       end
     end
 
     defp update(complete_run) do
       Repo.transact(fn ->
-        case get_run(complete_run.run_id) do
+        with {:ok, _} <- to_dataclip(complete_run) |> Repo.insert(),
+             %Run{} = run <- get_run(complete_run.run_id) do
+          update_run(run, complete_run)
+        else
           nil ->
-            # Return an error changeset when the run is not found
             %Run{}
             |> change()
-            |> put_change(:exit_reason, "error")
-            |> put_change(:error_type, "Run not found")
+            |> add_error(:run_id, "not found")
 
-          run ->
-            with {:ok, _} <- to_dataclip(complete_run) |> Repo.insert() do
-              update_run(run, complete_run)
-            end
+          error ->
+            error
         end
       end)
     end
