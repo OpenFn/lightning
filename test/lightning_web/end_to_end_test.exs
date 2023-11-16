@@ -5,11 +5,15 @@ defmodule LightningWeb.EndToEndTest do
   import Lightning.JobsFixtures
   import Lightning.Factories
 
+  alias Lightning.Attempt
   alias Lightning.Attempts
+  alias Lightning.Attempts.Events
   alias Lightning.Invocation
   alias Lightning.Repo
   alias Lightning.WorkOrders
   alias Lightning.Runtime.RuntimeManager
+
+  require Attempt
 
   setup_all context do
     start_runtime_manager(context)
@@ -18,6 +22,7 @@ defmodule LightningWeb.EndToEndTest do
   describe "webhook triggered attempts" do
     setup :register_and_log_in_superuser
 
+    @tag timeout: 120_000
     test "complete an attempt on a complex workflow with parallel jobs", %{
       conn: conn
     } do
@@ -37,15 +42,23 @@ defmodule LightningWeb.EndToEndTest do
 
       assert %{runs: []} = Attempts.get(attempt_id, include: [:runs])
 
-      assert %{attempts: [%{id: attempt_id}]} =
+      assert %{attempts: [attempt]} =
                WorkOrders.get(wo_id, include: [:attempts])
 
       # wait to complete
-      assert Enum.any?(1..300, fn _i ->
-               Process.sleep(200)
-               %{state: state} = Attempts.get(attempt_id)
-               state == :success
-             end)
+      Events.subscribe(attempt)
+
+      Enum.any?(1..100, fn _i ->
+        receive do
+          %Events.AttemptUpdated{attempt: %{state: state}}
+          when state in Attempt.final_states() ->
+            assert state == :success
+            true
+
+          _other_msg ->
+            false
+        end
+      end)
 
       assert %{state: :success} = WorkOrders.get(wo_id)
 
@@ -75,6 +88,7 @@ defmodule LightningWeb.EndToEndTest do
       assert %{state: :success} = WorkOrders.get(wo_id)
     end
 
+    @tag timeout: 120_000
     test "the whole thing", %{conn: conn} do
       project = insert(:project)
 
@@ -95,7 +109,7 @@ defmodule LightningWeb.EndToEndTest do
         workflow_job_fixture(
           project: project,
           name: "1st-job",
-          adaptor: "@openfn/language-http@lastest",
+          adaptor: "@openfn/language-http@latest",
           body: webhook_expression(),
           project_credential: project_credential
         )
@@ -103,7 +117,7 @@ defmodule LightningWeb.EndToEndTest do
       flow_job =
         insert(:job,
           name: "2nd-job",
-          adaptor: "@openfn/language-http@lastest",
+          adaptor: "@openfn/language-http@latest",
           body: flow_expression(),
           workflow: workflow,
           project_credential: project_credential
@@ -119,7 +133,7 @@ defmodule LightningWeb.EndToEndTest do
       catch_job =
         insert(:job,
           name: "3rd-job",
-          adaptor: "@openfn/language-http@lastest",
+          adaptor: "@openfn/language-http@latest",
           body: catch_expression(),
           workflow: workflow,
           project_credential: project_credential
@@ -138,22 +152,30 @@ defmodule LightningWeb.EndToEndTest do
 
       assert %{"work_order_id" => wo_id} = json_response(conn, 200)
 
-      assert %{attempts: [%{id: attempt_id}]} =
+      assert %{attempts: [attempt]} =
                WorkOrders.get(wo_id, include: [:attempts])
 
-      assert %{runs: []} = Attempts.get(attempt_id, include: [:runs])
+      assert %{runs: []} = Attempts.get(attempt.id, include: [:runs])
 
       # wait to complete
-      assert Enum.any?(1..300, fn _i ->
-               Process.sleep(200)
-               %{state: state} = Attempts.get(attempt_id)
-               state == :success
-             end)
+      Events.subscribe(attempt)
+
+      Enum.any?(1..100, fn _i ->
+        receive do
+          %Events.AttemptUpdated{attempt: %{state: state}}
+          when state in Attempt.final_states() ->
+            assert state == :success
+            true
+
+          _other_msg ->
+            false
+        end
+      end)
 
       assert %{state: :success} = WorkOrders.get(wo_id)
 
       # All runs are associated with the same project and attempt and proper job
-      %{runs: runs} = Attempts.get(attempt_id, include: [:runs])
+      %{runs: runs} = Attempts.get(attempt.id, include: [:runs])
 
       %{entries: [run_3, run_2, run_1]} =
         Invocation.list_runs_for_project(project)
@@ -163,7 +185,7 @@ defmodule LightningWeb.EndToEndTest do
 
       # Alls runs have consistent finish_at, exit_reason and dataclips
       %{claimed_at: claimed_at, finished_at: finished_at} =
-        Attempts.get(attempt_id)
+        Attempts.get(attempt.id)
 
       # Run 1 succeeds with webhook_body as input
       assert NaiveDateTime.diff(run_1.finished_at, claimed_at, :microsecond) > 0
