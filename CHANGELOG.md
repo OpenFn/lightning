@@ -61,6 +61,8 @@ bearing with us as we move towards our first stable Lightning release.)
 
 ### Added
 
+- Fix flaky job name input behavior on error
+  [#1218](https://github.com/OpenFn/Lightning/issues/1218)
 - Migration helper code to move from `v0.9.3` to `v0.10.0` added to SetupUtils
   [#1363](https://github.com/OpenFn/Lightning/issues/1363)
 - Option to start with `RTM=false iex -S mix phx.server` for opting out of the
