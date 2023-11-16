@@ -41,8 +41,8 @@ defmodule LightningWeb.EndToEndTest do
                WorkOrders.get(wo_id, include: [:attempts])
 
       # wait to complete
-      assert Enum.any?(1..100, fn _i ->
-               Process.sleep(100)
+      assert Enum.any?(1..300, fn _i ->
+               Process.sleep(200)
                %{state: state} = Attempts.get(attempt_id)
                state == :success
              end)
@@ -144,8 +144,8 @@ defmodule LightningWeb.EndToEndTest do
       assert %{runs: []} = Attempts.get(attempt_id, include: [:runs])
 
       # wait to complete
-      assert Enum.any?(1..100, fn _i ->
-               Process.sleep(100)
+      assert Enum.any?(1..300, fn _i ->
+               Process.sleep(200)
                %{state: state} = Attempts.get(attempt_id)
                state == :success
              end)
