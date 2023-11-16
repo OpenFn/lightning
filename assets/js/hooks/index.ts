@@ -89,8 +89,12 @@ export const Tooltip = {
     }
 
     let content = this.el.ariaLabel;
+    let placement = this.el.dataset.placement
+      ? this.el.dataset.placement
+      : 'top';
     this._tippyInstance = tippy(this.el, {
       content: content,
+      placement: placement,
     });
   },
   destroyed() {

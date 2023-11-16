@@ -79,6 +79,7 @@ defmodule LightningWeb.RunLive.Components do
                   id={"clone_" <> @attempt.id <> "_" <> @run.id}
                   aria-label="This run was originally executed in a previous attempt. In this attempt, it has been skipped; the original output has been used as the starting point for downstream jobs."
                   phx-hook="Tooltip"
+                  data-placement="right"
                 >
                   <Heroicons.paper_clip
                     mini
