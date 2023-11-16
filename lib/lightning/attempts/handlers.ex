@@ -167,8 +167,8 @@ defmodule Lightning.Attempts.Handlers do
 
     defp update(complete_run) do
       Repo.transact(fn ->
-        with {:ok, _} <- to_dataclip(complete_run) |> Repo.insert(),
-             %Run{} = run <- get_run(complete_run.run_id) do
+        with %Run{} = run <- get_run(complete_run.run_id),
+             {:ok, _} <- to_dataclip(complete_run) |> Repo.insert() do
           update_run(run, complete_run)
         else
           nil ->
