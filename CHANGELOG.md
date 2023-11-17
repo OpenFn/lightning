@@ -61,6 +61,8 @@ bearing with us as we move towards our first stable Lightning release.)
 
 ### Added
 
+- Added a hover effect on copy and add button for adaptors examples
+  [#1297](https://github.com/OpenFn/Lightning/issues/1297)
 - Migration helper code to move from `v0.9.3` to `v0.10.0` added to SetupUtils
   [#1363](https://github.com/OpenFn/Lightning/issues/1363)
 - Option to start with `RTM=false iex -S mix phx.server` for opting out of the
@@ -105,6 +107,8 @@ bearing with us as we move towards our first stable Lightning release.)
   key from `attempts`. [#1254](https://github.com/OpenFn/Lightning/issues/1254)
 - Show tooltip for cloned runs in history page
   [#1327](https://github.com/OpenFn/Lightning/issues/1327)
+- Have user create workflow name before moving to the canvas
+  [#1103](https://github.com/OpenFn/Lightning/issues/1103)
 
 ### Changed
 

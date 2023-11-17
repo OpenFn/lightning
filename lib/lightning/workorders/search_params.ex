@@ -10,7 +10,14 @@ defmodule Lightning.WorkOrders.SearchParams do
   import Ecto.Changeset
 
   @statuses ~w(pending running success failed crashed killed cancelled lost exception)
+  @statuses_set MapSet.new(@statuses, fn x -> String.to_existing_atom(x) end)
   @search_fields ~w(body log)
+
+  defmacro status_list() do
+    quote do
+      unquote(@statuses)
+    end
+  end
 
   @type t :: %__MODULE__{
           status: [String.t()],
@@ -64,6 +71,10 @@ defmodule Lightning.WorkOrders.SearchParams do
     end)
   end
 
+  def all_statuses_set?(%{status: status_list}) do
+    MapSet.equal?(@statuses_set, MapSet.new(status_list))
+  end
+
   defp from_uri(params) do
     statuses =
       Enum.map(params, fn {key, value} ->
@@ -71,7 +82,7 @@ defmodule Lightning.WorkOrders.SearchParams do
           key
         end
       end)
-      |> Enum.filter(fn v -> v end)
+      |> Enum.reject(&is_nil/1)
 
     search_fields =
       Enum.map(params, fn {key, value} ->
@@ -79,7 +90,7 @@ defmodule Lightning.WorkOrders.SearchParams do
           key
         end
       end)
-      |> Enum.filter(fn v -> v end)
+      |> Enum.reject(&is_nil/1)
 
     params
     |> Map.put_new("status", statuses)

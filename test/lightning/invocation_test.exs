@@ -9,6 +9,8 @@ defmodule Lightning.InvocationTest do
   alias Lightning.Invocation.Run
   alias Lightning.Repo
 
+  require SearchParams
+
   defp build_workflow(opts) do
     job = build(:job)
     trigger = build(:trigger)
@@ -336,7 +338,74 @@ defmodule Lightning.InvocationTest do
   end
 
   describe "search_workorders/3" do
-    test "returns paginated workorders" do
+    test "filters workorders by two statuses" do
+      project = insert(:project)
+      workflow = insert(:workflow, project: project)
+
+      insert_list(3, :workorder, workflow: workflow, state: :pending)
+      insert_list(2, :workorder, workflow: workflow, state: :crashed)
+      insert_list(2, :workorder, workflow: workflow, state: :failed)
+      insert_list(1, :workorder, workflow: workflow, state: :pending)
+      insert_list(1, :workorder, workflow: workflow, state: :crashed)
+
+      assert %{
+               page_number: 1,
+               page_size: 10,
+               total_entries: 7,
+               total_pages: 1,
+               entries: entries
+             } =
+               Lightning.Invocation.search_workorders(
+                 project,
+                 SearchParams.new(%{"status" => ["pending", "crashed"]}),
+                 %{
+                   page: 1,
+                   page_size: 10
+                 }
+               )
+
+      assert %{
+               :pending => 4,
+               :crashed => 3
+             } = Enum.map(entries, & &1.state) |> Enum.frequencies()
+    end
+
+    test "filters workorders by all statuses" do
+      project = insert(:project)
+      workflow = insert(:workflow, project: project)
+
+      count =
+        SearchParams.status_list()
+        |> Enum.map(fn status ->
+          insert(:workorder, workflow: workflow, state: status)
+        end)
+        |> Enum.count()
+
+      assert %{
+               page_number: 1,
+               page_size: 10,
+               total_entries: ^count,
+               total_pages: 1,
+               entries: entries
+             } =
+               Lightning.Invocation.search_workorders(
+                 project,
+                 SearchParams.new(%{"status" => SearchParams.status_list()}),
+                 %{
+                   page: 1,
+                   page_size: 10
+                 }
+               )
+
+      assert SearchParams.status_list() |> Enum.frequencies() ==
+               Enum.map(entries, & &1.state)
+               |> Enum.frequencies()
+               |> Map.new(fn {status, count} ->
+                 {Atom.to_string(status), count}
+               end)
+    end
+
+    test "returns a sequence of workorders pages" do
       project = insert(:project)
       workflow = insert(:workflow, project: project)
 
@@ -751,6 +820,30 @@ defmodule Lightning.InvocationTest do
                    "search_fields" => ["log"]
                  })
                ).entries
+    end
+  end
+
+  describe "search_workorders_query/2" do
+    test "ignores status filter when all statuses are queried" do
+      project = insert(:project)
+
+      query =
+        Lightning.Invocation.search_workorders_query(
+          project,
+          SearchParams.new(%{"status" => ["pending"]})
+        )
+
+      {sql, _value} = Repo.to_sql(:all, query)
+      assert sql =~ ~S["state" = ]
+
+      query =
+        Lightning.Invocation.search_workorders_query(
+          project,
+          SearchParams.new(%{"status" => SearchParams.status_list()})
+        )
+
+      {sql, _value} = Repo.to_sql(:all, query)
+      refute sql =~ ~S["state" = ]
     end
   end
 
