@@ -42,9 +42,21 @@ defmodule LightningWeb.WorkflowNewLive.WorkflowParams do
   Produce a new set of params by applying the given patches to the current parms
   """
   def apply_patches(current_params, patches) do
+    IO.inspect(current_params,
+      label: ">>>>>>>>>>>>>>Current>>>>>>>>>>>>>>>>>>>>>>>>>>>"
+    )
+
+    IO.inspect(patches,
+      label: "+++++++++++++++++Incoming Patches++++++++++++++++"
+    )
+
     Jsonpatch.apply_patch(
       patches |> Enum.map(&Jsonpatch.Mapper.from_map/1),
       current_params
+    )
+    |> IO.inspect(
+      label:
+        "]]]]]]]]]]]]]]]]]]]]]]]]Final Patch[[[[[[[[[[[[[[[[[[]]]]]]]]]]]]]]]]]]"
     )
   end
 
@@ -56,8 +68,9 @@ defmodule LightningWeb.WorkflowNewLive.WorkflowParams do
   introduced by a changeset.
   """
   def to_patches(initial_params, target_params) do
+    
     Jsonpatch.diff(initial_params, target_params)
-    |> Jsonpatch.Mapper.to_map()
+    |> Jsonpatch.Mapper.to_map()|>IO.inspect(label: "??????????????????To Patch???????????????????")
   end
 
   @doc """

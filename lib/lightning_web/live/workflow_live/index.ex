@@ -41,6 +41,7 @@ defmodule LightningWeb.WorkflowLive.Index do
 
   @impl true
   def mount(_params, _session, socket) do
+    # IO.inspect(socket,label: "Testing Index")
     can_create_workflow =
       ProjectUsers
       |> Permissions.can?(

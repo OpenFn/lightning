@@ -14,6 +14,7 @@ const model = (model: Flow.Model) => {
   };
 
   model.nodes.forEach(node => {
+    console.log(node,"Rendering node")
     const wfNode: Partial<Lightning.JobNode> = {
       id: node.id,
       name: node.data?.name,
@@ -50,7 +51,6 @@ const model = (model: Flow.Model) => {
 
     workflow.edges.push(wfEdge as Lightning.Edge);
   });
-
   return workflow;
 };
 

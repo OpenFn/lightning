@@ -427,6 +427,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
   @impl true
   def mount(_params, _session, socket) do
+    IO.inspect(socket, label: "Testing Edit")
+
     {:ok,
      socket
      |> authorize()
@@ -449,6 +451,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
   @impl true
   def handle_params(params, _url, socket) do
+    IO.inspect(socket.assigns.live_action, label: "Live Action Test")
+
     {:noreply,
      apply_action(socket, socket.assigns.live_action, params)
      |> apply_query_params(params)
@@ -490,6 +494,10 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
   @impl true
   def handle_event("get-initial-state", _params, socket) do
+    IO.inspect(socket.assigns.workflow_params,
+      label: "========Initial State================="
+    )
+
     {:noreply,
      socket
      |> push_event("current-workflow-params", %{
@@ -596,6 +604,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
   end
 
   def handle_event("push-change", %{"patches" => patches}, socket) do
+    IO.inspect(patches, label: "===========Testing Patches==============")
     # Apply the incoming patches to the current workflow params producing a new
     # set of params.
     {:ok, params} =
@@ -855,7 +864,11 @@ defmodule LightningWeb.WorkflowLive.Edit do
         |> Map.put("project_id", socket.assigns.project.id)
       )
 
-    socket |> assign_changeset(changeset)
+    socket
+    |> assign_changeset(changeset)
+    |> IO.inspect(
+      label: "}}}}}}}}}}}}}}}Query params{{{{{{{{{{{{{{{{[]}}}}}}}}}}}}}}}}"
+    )
   end
 
   defp apply_query_params(socket, params) do
