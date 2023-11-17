@@ -476,7 +476,7 @@ defmodule LightningWeb.AttemptChannelTest do
 
       assert_reply ref, :error, errors
 
-      assert errors == %{errors: %{message: ["This field can't be blank."]}}
+      assert errors == %{message: ["This field can't be blank."]}
     end
 
     test "attempt:log timestamp is handled at microsecond resolution", %{

@@ -11,7 +11,7 @@ defmodule Lightning.Security do
   @spec redact_password(Changeset.t(), atom()) :: Changeset.t()
   def redact_password(%Changeset{valid?: true} = changeset, field) do
     with {:ok, str_to_redact} <- Changeset.fetch_change(changeset, field),
-         true <- String.valid?(str_to_redact) do
+         true <- is_binary(str_to_redact) and String.valid?(str_to_redact) do
       redacted =
         String.replace(
           str_to_redact,
