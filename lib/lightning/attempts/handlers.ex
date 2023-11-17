@@ -180,7 +180,7 @@ defmodule Lightning.Attempts.Handlers do
         else
           nil ->
             {:error,
-             %Run{}
+             complete_run
              |> change()
              |> add_error(:run_id, "not found")}
 
