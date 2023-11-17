@@ -91,6 +91,7 @@ defmodule Lightning.WorkOrdersTest do
                  %{
                    "body" =>
                      Jason.encode!(%{
+                       "key_left" => "value_left",
                        "configuration" => %{"password" => "secret"}
                      })
                  },
@@ -107,7 +108,7 @@ defmodule Lightning.WorkOrdersTest do
       assert workorder.dataclip.type == :saved_input
 
       assert workorder.dataclip.body == %{
-               "configuration" => %{"password" => "***"}
+               "key_left" => "value_left"
              }
 
       assert attempt.created_by.id == user.id

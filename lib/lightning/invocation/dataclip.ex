@@ -59,13 +59,12 @@ defmodule Lightning.Invocation.Dataclip do
          %Ecto.Changeset{
            valid?: true,
            changes: %{
-             body: %{"configuration" => %{"password" => _password}} = body
+             body: body
            }
          } =
            changeset
        ) do
-    body =
-      update_in(body, ["configuration", "password"], fn _any -> "***" end)
+    body = Map.delete(body, "configuration")
 
     put_change(changeset, :body, body)
   end

@@ -187,12 +187,6 @@ defmodule LightningWeb.AttemptChannel do
     end
   end
 
-  def handle_in("attempt:log", %{"message" => message}, socket)
-      when message == nil or message == [nil] do
-    {:reply, {:error, %{errors: %{message: ["This field can't be blank."]}}},
-     socket}
-  end
-
   def handle_in("attempt:log", payload, socket) do
     Attempts.append_attempt_log(socket.assigns.attempt, payload)
     |> case do
