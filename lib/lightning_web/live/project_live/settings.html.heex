@@ -74,7 +74,7 @@
             <div>
               <h6 class="font-medium text-black">Project Identity</h6>
               <small class="block my-1 text-xs text-gray-600">
-                This metadata helps you idenity the types of workflows managed in this project and the people that have access.
+                This metadata helps you identify the types of workflows managed in this project and the people that have access.
               </small>
             </div>
             <.form
@@ -677,39 +677,30 @@
                         <small>
                           Need to change the repository or branch?
                         </small>
-                        <button
-                          type="button"
-                          phx-click="reinstall_clip"
-                          phx-value-id={@project.id}
-                          class="my-2 text-xs text-primary-600"
-                        >
+                        <.button phx-click="reinstall_app">
                           Re-configure your Github permissions (admin access required)
-                        </button>
+                        </.button>
                       </div>
                       <div>
                         <small>
                           No longer need to sync your project?
                         </small>
-                        <button
-                          type="button"
+                        <.button
                           phx-click={
                             LightningWeb.Components.Modal.show_modal(
                               "delete_connection_modal"
                             )
                           }
                           phx-value-id={@project.id}
-                          class="my-2 text-xs text-danger-500"
                         >
                           Remove github connection
-                        </button>
+                        </.button>
                       </div>
                     </div>
                   </div>
                 </.form>
               </div>
-              <DeleteConnectionModal.modal id="delete_connection_modal">
-                <span> Here is the stuff</span>
-              </DeleteConnectionModal.modal>
+              <DeleteConnectionModal.modal id="delete_connection_modal" />
             </div>
             <div :if={!@can_install_github} class="bg-white p-4 rounded-md">
               <h6 class="font-medium text-black">

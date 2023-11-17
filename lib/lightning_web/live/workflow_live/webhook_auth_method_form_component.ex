@@ -245,7 +245,7 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodFormComponent do
           </.label>
           <.input type="text" field={f[:confirmation]} />
         </div>
-        <.modal_footer>
+        <.modal_footer class="mx-6 mt-6">
           <div class="sm:flex sm:flex-row-reverse">
             <button
               id="delete_trigger_auth_methods_button"
@@ -309,7 +309,7 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodFormComponent do
           </div>
           <.input type="text" field={f[:code]} label="2FA Code" inputmode="numeric" />
         </div>
-        <.modal_footer>
+        <.modal_footer class="mx-6 mt-6">
           <div class="sm:flex sm:flex-row-reverse">
             <button
               type="submit"
@@ -402,7 +402,7 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodFormComponent do
               />
           <% end %>
         </div>
-        <.modal_footer>
+        <.modal_footer class="mx-6 mt-6">
           <div class="sm:flex sm:flex-row-reverse">
             <button
               type="submit"

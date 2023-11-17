@@ -6,6 +6,8 @@ defmodule LightningWeb.WorkflowLive.Index do
 
   alias Lightning.Workflows
   alias Lightning.Policies.{Permissions, ProjectUsers}
+  alias LightningWeb.WorkflowLive.NewWorkflowForm
+
   import LightningWeb.WorkflowLive.Components
 
   attr :can_create_workflow, :boolean
@@ -30,6 +32,7 @@ defmodule LightningWeb.WorkflowLive.Index do
             workflows={@workflows}
             project={@project}
           />
+          <.create_workflow_modal form={@form} />
         </LayoutComponents.centered>
       </div>
     </LayoutComponents.page_content>
@@ -59,6 +62,9 @@ defmodule LightningWeb.WorkflowLive.Index do
      |> assign(
        can_delete_workflow: can_delete_workflow,
        can_create_workflow: can_create_workflow
+     )
+     |> assign_workflow_form(
+       NewWorkflowForm.validate(%{}, socket.assigns.project.id)
      )}
   end
 
@@ -77,6 +83,31 @@ defmodule LightningWeb.WorkflowLive.Index do
   end
 
   @impl true
+  def handle_event("validate_workflow", %{"new_workflow" => params}, socket) do
+    changeset =
+      NewWorkflowForm.validate(params, socket.assigns.project.id)
+      |> Map.put(:action, :validate)
+
+    {:noreply, socket |> assign_workflow_form(changeset)}
+  end
+
+  def handle_event("create_work_flow", %{"new_workflow" => params}, socket) do
+    changeset =
+      params
+      |> NewWorkflowForm.validate(socket.assigns.project.id)
+      |> NewWorkflowForm.validate_for_save()
+
+    if changeset.valid? do
+      {:noreply,
+       push_navigate(socket,
+         to:
+           ~p"/projects/#{socket.assigns.project}/w/new?#{%{name: Ecto.Changeset.get_field(changeset, :name)}}"
+       )}
+    else
+      {:noreply, socket |> assign_workflow_form(changeset)}
+    end
+  end
+
   def handle_event("delete_workflow", %{"id" => id}, socket) do
     if socket.assigns.can_delete_workflow do
       Workflows.get_workflow!(id)
@@ -100,5 +131,9 @@ defmodule LightningWeb.WorkflowLive.Index do
        socket
        |> put_flash(:error, "You are not authorized to perform this action.")}
     end
+  end
+
+  defp assign_workflow_form(socket, changeset) do
+    socket |> assign(form: to_form(changeset, as: :new_workflow))
   end
 end

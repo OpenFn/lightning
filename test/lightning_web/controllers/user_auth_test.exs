@@ -106,7 +106,7 @@ defmodule LightningWeb.UserAuthTest do
       refute get_session(conn, :user_token)
       refute conn.cookies[@remember_me_cookie]
       assert %{max_age: 0} = conn.resp_cookies[@remember_me_cookie]
-      assert redirected_to(conn) == "/"
+      assert redirected_to(conn) == "/users/log_in"
       refute Accounts.get_user_by_session_token(user_token)
     end
 
@@ -128,7 +128,7 @@ defmodule LightningWeb.UserAuthTest do
       conn = conn |> fetch_cookies() |> UserAuth.log_out_user()
       refute get_session(conn, :user_token)
       assert %{max_age: 0} = conn.resp_cookies[@remember_me_cookie]
-      assert redirected_to(conn) == "/"
+      assert redirected_to(conn) == "/users/log_in"
     end
   end
 
@@ -197,8 +197,8 @@ defmodule LightningWeb.UserAuthTest do
       assert conn.halted
       assert redirected_to(conn) == Routes.user_session_path(conn, :new)
 
-      assert Phoenix.Flash.get(conn.assigns.flash, :error) ==
-               "You must log in to access this page."
+      # flash message disabled
+      assert Phoenix.Flash.get(conn.assigns.flash, :error) |> is_nil()
     end
 
     test "returns a 401 on json requests if user is not authenticated", %{

@@ -293,4 +293,15 @@ defmodule Lightning.Workflows do
     |> Trigger.changeset(attrs)
     |> Repo.update()
   end
+
+  @doc """
+    Check if workflow exist
+  """
+  def workflow_exists?(project_id, workflow_name) do
+    query =
+      from w in Workflow,
+        where: w.project_id == ^project_id and w.name == ^workflow_name
+
+    Repo.exists?(query)
+  end
 end

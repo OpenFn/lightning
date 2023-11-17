@@ -367,7 +367,7 @@ defmodule Lightning.WebhookAuthMethodsTest do
     end
   end
 
-  describe "find_by_id!/2" do
+  describe "find_by_id!/1" do
     test "retrieves the auth method by id" do
       auth_method = insert(:webhook_auth_method)
 
