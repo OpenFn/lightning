@@ -41,7 +41,7 @@ return <span>
 const PreButton = ({ label, onClick, tooltip }: PreButtonFunctionProps) => 
   // TODO give some kind of feedback on click
   <button
-    className="rounded-md bg-slate-300 text-white px-2 py-1 mr-1 text-xs"
+    className="rounded-md bg-slate-300 text-white px-2 py-1 mr-1 text-xs hover:bg-primary-600"
     title={tooltip || ''}
     onClick={onClick}>
     {label}
