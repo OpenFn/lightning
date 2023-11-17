@@ -7,6 +7,8 @@ defmodule LightningWeb.Hooks do
   import Phoenix.LiveView
   import Phoenix.Component
 
+  use LightningWeb, :verified_routes
+
   @doc """
   Finds and assigns a project to the socket, if a user doesn't have access
   they are redirected and shown a 'No Access' screen via a `:nav` flash message.
@@ -15,6 +17,7 @@ defmodule LightningWeb.Hooks do
   this is for liveviews that may or may not have a `project_id` depending on
   usage - like `DashboardLive`.
   """
+
   def on_mount(
         :project_scope,
         _params,
@@ -22,7 +25,7 @@ defmodule LightningWeb.Hooks do
         %{assigns: %{current_user: nil}} = socket
       ) do
     # redirect if there's no current user
-    {:halt, redirect(socket, to: "/")}
+    {:halt, redirect(socket, to: ~p"/users/log_in")}
   end
 
   def on_mount(:project_scope, %{"project_id" => project_id}, _session, socket) do
@@ -41,7 +44,7 @@ defmodule LightningWeb.Hooks do
 
     cond do
       can_access_project and project.requires_mfa and !current_user.mfa_enabled ->
-        {:halt, redirect(socket, to: "/mfa_required")}
+        {:halt, redirect(socket, to: ~p"/mfa_required")}
 
       can_access_project ->
         {:cont,
