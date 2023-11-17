@@ -136,42 +136,33 @@ defmodule LightningWeb.RunLive.Index do
      |> apply_action(live_action, params)}
   end
 
-  defp apply_action(socket, :index, params) do
-    provided_filters = Map.get(params, "filters", %{})
+  defp apply_action(socket, :index, page_params) do
+    %{project: project} = socket.assigns
 
+    span_metadata = %{
+      project_id: project.id,
+      provided_filters: Map.get(page_params, "filters", %{})
+    }
+
+    # must return a socket
     :telemetry.span(
       [:lightning, :ui, :projects, :history],
-      %{
-        project_id: socket.assigns.project.id,
-        provided_filters: provided_filters
-      },
+      span_metadata,
       fn ->
-        filters =
-          Map.get(params, "filters", init_filters()) |> SearchParams.new()
+        search_params =
+          Map.get(page_params, "filters", init_filters())
+          |> SearchParams.new()
 
-        result =
-          socket
-          |> assign(
-            selected_work_orders: [],
-            page:
-              Invocation.search_workorders(
-                socket.assigns.project,
-                filters,
-                params
-              ),
-            filters_changeset:
-              params
-              |> Map.get("filters", init_filters())
-              |> filters_changeset()
+        search_result =
+          Invocation.search_workorders(
+            socket.assigns.project,
+            search_params,
+            page_params
           )
 
-        {
-          result,
-          %{
-            project_id: socket.assigns.project.id,
-            provided_filters: provided_filters
-          }
-        }
+        result_socket = assign(socket, page: search_result)
+
+        {result_socket, span_metadata}
       end
     )
   end
@@ -351,19 +342,16 @@ defmodule LightningWeb.RunLive.Index do
     {:noreply, assign(socket, selected_work_orders: work_orders)}
   end
 
-  def handle_event("apply_filters", %{"filters" => filters}, socket) do
-    apply_filters(Map.merge(socket.assigns.filters, filters), socket)
-  end
+  def handle_event("apply_filters", %{"filters" => new_filters}, socket) do
+    %{filters: prev_filters, project: project} = socket.assigns
+    filters = Map.merge(prev_filters, new_filters)
 
-  defp apply_filters(filters, socket) do
     {:noreply,
      socket
      |> assign(filters_changeset: filters_changeset(filters))
      |> assign(selected_work_orders: [])
      |> assign(filters: filters)
-     |> push_patch(
-       to: ~p"/projects/#{socket.assigns.project.id}/runs?#{%{filters: filters}}"
-     )}
+     |> push_patch(to: ~p"/projects/#{project.id}/runs?#{%{filters: filters}}")}
   end
 
   defp handle_bulk_rerun(socket, %{"type" => "selected", "job" => job_id}) do

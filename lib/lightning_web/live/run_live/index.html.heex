@@ -34,10 +34,9 @@
                     >
                       <span>
                         <%= if workflow_id = get_change(@filters_changeset, :workflow_id) do %>
-                          <%= Enum.find(@workflows, fn {_name, id} ->
-                            id == workflow_id
-                          end)
-                          |> elem(0) %>
+                          <%= Enum.find_value(@workflows, fn {name, id} ->
+                            if id == workflow_id, do: name
+                          end) %>
                         <% else %>
                           Any
                         <% end %>
@@ -308,10 +307,9 @@
         <div class="mt-2">
           <%= if workflow_id = get_change(@filters_changeset, :workflow_id) do %>
             <span class="inline-flex items-center gap-x-0.5 rounded-md bg-blue-100 px-2 py-1 text-xs font-medium text-blue-700">
-              Workflow: <%= Enum.find(@workflows, fn {_name, id} ->
-                id == workflow_id
-              end)
-              |> elem(0) %>
+              Workflow: <%= Enum.find_value(@workflows, fn {name, id} ->
+                if id == workflow_id, do: name
+              end) %>
               <.form
                 :let={f}
                 for={@filters_changeset}
