@@ -706,20 +706,28 @@
                   data-entity="work_order_list"
                   class="bg-white divide-y divide-gray-200 text-gray-500"
                 >
-                  <%= for workorder <- @page.entries do %>
-                    <.live_component
-                      module={LightningWeb.RunLive.WorkOrderComponent}
-                      id={workorder.id}
-                      work_order={workorder}
-                      project={@project}
-                      can_rerun_job={@can_rerun_job}
-                      entry_selected={
-                        Enum.any?(@selected_work_orders, fn wo ->
-                          wo.id == workorder.id
-                        end)
-                      }
-                    />
-                  <% end %>
+                  <.async_result :let={searched_page} assign={@async_page}>
+                    <:loading>
+                      <LightningWeb.RunLive.WorkOrderLoading.filler />
+                    </:loading>
+                    <:failed :let={_reason}>
+                      there was an error loading the work orders
+                    </:failed>
+                    <%= for workorder <- searched_page.entries do %>
+                      <.live_component
+                        module={LightningWeb.RunLive.WorkOrderComponent}
+                        id={workorder.id}
+                        work_order={workorder}
+                        project={@project}
+                        can_rerun_job={@can_rerun_job}
+                        entry_selected={
+                          Enum.any?(@selected_work_orders, fn wo ->
+                            wo.id == workorder.id
+                          end)
+                        }
+                      />
+                    <% end %>
+                  </.async_result>
                 </div>
               </div>
 

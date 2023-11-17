@@ -13,7 +13,9 @@ defmodule LightningWeb.RunLive.Index do
   alias Lightning.WorkOrders
   alias Lightning.WorkOrders.SearchParams
   alias LightningWeb.RunLive.Components
+
   alias Phoenix.LiveView.JS
+  alias Phoenix.LiveView.AsyncResult
 
   @filters_types %{
     search_term: :string,
@@ -114,37 +116,37 @@ defmodule LightningWeb.RunLive.Index do
     }
 
   @impl true
-  def handle_params(
-        params,
-        _url,
-        %{
-          assigns: %{
-            filters: filters,
-            live_action: live_action,
-            project: project
-          }
-        } = socket
-      ) do
+  def handle_params(params, _url, socket) do
+    %{filters: filters, project: project} = socket.assigns
+
     {:noreply,
      socket
      |> assign(
        page_title: "History",
        run: %Run{},
        filters_changeset: filters_changeset(filters),
-       pagination_path: &pagination_path(socket, project, &1, filters)
+       pagination_path: &pagination_path(socket, project, &1, filters),
+       page: %{
+         entries: [],
+         page_size: 0,
+         total_entries: 0,
+         page_number: 1,
+         total_pages: 0
+       },
+       async_page: AsyncResult.loading()
      )
-     |> apply_action(live_action, params)}
+     |> start_async(:load_page, fn ->
+       monitored_search(project, params)
+     end)}
   end
 
-  defp apply_action(socket, :index, page_params) do
-    %{project: project} = socket.assigns
-
+  # returns the search result
+  defp monitored_search(project, page_params) do
     span_metadata = %{
       project_id: project.id,
       provided_filters: Map.get(page_params, "filters", %{})
     }
 
-    # must return a socket
     :telemetry.span(
       [:lightning, :ui, :projects, :history],
       span_metadata,
@@ -155,16 +157,25 @@ defmodule LightningWeb.RunLive.Index do
 
         search_result =
           Invocation.search_workorders(
-            socket.assigns.project,
+            project,
             search_params,
             page_params
           )
 
-        result_socket = assign(socket, page: search_result)
-
-        {result_socket, span_metadata}
+        {search_result, span_metadata}
       end
     )
+  end
+
+  def handle_async(:load_page, {:ok, searched_page}, socket) do
+    %{async_page: async_page} = socket.assigns
+
+    {:noreply,
+     socket
+     |> assign(
+       page: searched_page,
+       async_page: AsyncResult.ok(async_page, searched_page)
+     )}
   end
 
   def checked(changeset, id) do
@@ -187,10 +198,14 @@ defmodule LightningWeb.RunLive.Index do
         %Lightning.WorkOrders.Events.AttemptCreated{attempt: attempt},
         socket
       ) do
-    {:noreply,
-     assign(socket,
-       page: update_page_workorder(socket.assigns.page, attempt)
-     )}
+    %{work_order: work_order} =
+      Lightning.Repo.preload(
+        attempt,
+        [work_order: [:workflow, attempts: [runs: :job]]],
+        force: true
+      )
+
+    {:noreply, update_page(socket, work_order)}
   end
 
   @impl true
@@ -198,10 +213,14 @@ defmodule LightningWeb.RunLive.Index do
         %Lightning.WorkOrders.Events.AttemptUpdated{attempt: attempt},
         socket
       ) do
-    {:noreply,
-     assign(socket,
-       page: update_page_workorder(socket.assigns.page, attempt)
-     )}
+    %{work_order: work_order} =
+      Lightning.Repo.preload(
+        attempt,
+        [work_order: [:workflow, attempts: [runs: :job]]],
+        force: true
+      )
+
+    {:noreply, update_page(socket, work_order)}
   end
 
   @impl true
@@ -231,8 +250,12 @@ defmodule LightningWeb.RunLive.Index do
         %Lightning.WorkOrders.Events.WorkOrderUpdated{work_order: work_order},
         socket
       ) do
-    {:noreply,
-     assign(socket, page: update_page_workorder(socket.assigns.page, work_order))}
+    work_order =
+      Lightning.Repo.preload(work_order, [:workflow, attempts: [runs: :job]],
+        force: true
+      )
+
+    {:noreply, update_page(socket, work_order)}
   end
 
   @impl true
@@ -348,8 +371,6 @@ defmodule LightningWeb.RunLive.Index do
 
     {:noreply,
      socket
-     |> assign(filters_changeset: filters_changeset(filters))
-     |> assign(selected_work_orders: [])
      |> assign(filters: filters)
      |> push_patch(to: ~p"/projects/#{project.id}/runs?#{%{filters: filters}}")}
   end
@@ -410,18 +431,27 @@ defmodule LightningWeb.RunLive.Index do
     date && Timex.format!(date, "{D}/{M}/{YY}")
   end
 
-  defp update_page_workorder(page, attempt_or_workorder) do
-    entries =
-      Enum.reduce(page.entries, [], fn wo_entry, acc ->
-        if wo_entry.id == workorder_id(attempt_or_workorder) do
-          workorder = workorder_with_runs(attempt_or_workorder)
-          [workorder | acc]
-        else
-          [wo_entry | acc]
-        end
-      end)
+  defp update_page(socket, workorder) do
+    %{page: page, async_page: async_page} = socket.assigns
 
-    %{page | entries: Enum.reverse(entries)}
+    updated_page = %{page | entries: update_workorder(page.entries, workorder)}
+
+    assign(socket,
+      async_page: AsyncResult.ok(async_page, updated_page),
+      page: updated_page
+    )
+  end
+
+  defp update_workorder(entries, workorder) do
+    entries
+    |> Enum.reduce([], fn entry, acc ->
+      if entry.id == workorder.id do
+        [workorder | acc]
+      else
+        [entry | acc]
+      end
+    end)
+    |> Enum.reverse()
   end
 
   defp workorder_id(attempt_or_workorder) do
