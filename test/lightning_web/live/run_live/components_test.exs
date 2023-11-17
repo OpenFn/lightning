@@ -166,6 +166,58 @@ defmodule LightningWeb.RunLive.ComponentsTest do
              ~s{a[href="#{LightningWeb.RouteHelpers.show_run_url(project_id, third_run.id)}"]}
            )
            |> Enum.any?()
+
+    # Rerun attempt
+    last_run = List.last(attempt.runs)
+
+    attempt2 =
+      insert(:attempt,
+        state: :started,
+        work_order_id: attempt.work_order_id,
+        dataclip: dataclip,
+        starting_job: last_run.job,
+        runs: attempt.runs -- [last_run]
+      )
+
+    attempt2_last_run =
+      insert(:run,
+        attempts: [attempt2],
+        job: job_3,
+        exit_reason: nil,
+        finished_at: nil
+      )
+
+    first_run = hd(attempt2.runs)
+
+    html =
+      render_component(&Components.run_list_item/1,
+        run: first_run,
+        attempt: attempt2,
+        project_id: project_id,
+        can_rerun_job: true
+      )
+
+    assert html
+           |> Floki.parse_fragment!()
+           |> Floki.find(~s{span[id="clone_#{attempt2.id}_#{first_run.id}"]})
+           |> Enum.any?()
+
+    assert html =~ "This run was originally executed in a previous attempt"
+
+    html =
+      render_component(&Components.run_list_item/1,
+        run: attempt2_last_run,
+        attempt: attempt2,
+        project_id: project_id,
+        can_rerun_job: true
+      )
+
+    refute html
+           |> Floki.parse_fragment!()
+           |> Floki.find(~s{span[id="clone_#{attempt2.id}_#{first_run.id}"]})
+           |> Enum.any?()
+
+    refute html =~ "This run was originally executed in a previous attempt"
   end
 
   test "no rerun button is displayed when user can't rerun a job" do
