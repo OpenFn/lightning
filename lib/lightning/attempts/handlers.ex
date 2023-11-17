@@ -99,14 +99,8 @@ defmodule Lightning.Attempts.Handlers do
           # Verify that all of the required entities exist with a single query,
           # then reduce the results into a single changeset by adding errors for
           # any columns/ids that are null.
-          from(a in Attempt,
-            where: a.id == ^attempt_id,
-            left_join: w in assoc(a, :workflow),
-            left_join: j in assoc(w, :jobs),
-            on: j.id == ^job_id,
-            select: %{attempt_id: a.id, job_id: j.id}
-          )
-          |> Repo.one()
+          attempt_id
+          |> fetch_existing_job(job_id)
           |> Enum.reduce(changeset, fn {k, v}, changeset ->
             if is_nil(v) do
               add_error(changeset, k, "does not exist")
@@ -115,6 +109,19 @@ defmodule Lightning.Attempts.Handlers do
             end
           end)
       end
+    end
+
+    defp fetch_existing_job(attempt_id, job_id) do
+      query =
+        from(a in Attempt,
+          where: a.id == ^attempt_id,
+          left_join: w in assoc(a, :workflow),
+          left_join: j in assoc(w, :jobs),
+          on: j.id == ^job_id,
+          select: %{attempt_id: a.id, job_id: j.id}
+        )
+
+      Repo.one(query) || %{attempt_id: nil, job_id: nil}
     end
   end
 

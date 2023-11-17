@@ -169,10 +169,23 @@ defmodule Lightning.AttemptsTest do
           "attempt_id" => attempt.id,
           "job_id" => Ecto.UUID.generate(),
           "input_dataclip_id" => dataclip.id,
-          "run_id" => _run_id = Ecto.UUID.generate()
+          "run_id" => Ecto.UUID.generate()
         })
 
       assert {:job_id, {"does not exist", []}} in changeset.errors
+      refute {:attempt_id, {"does not exist", []}} in changeset.errors
+
+      # both attempt_id and job_id doesn't exist
+      {:error, changeset} =
+        Attempts.start_run(%{
+          "attempt_id" => Ecto.UUID.generate(),
+          "job_id" => Ecto.UUID.generate(),
+          "input_dataclip_id" => dataclip.id,
+          "run_id" => Ecto.UUID.generate()
+        })
+
+      assert {:job_id, {"does not exist", []}} in changeset.errors
+      assert {:attempt_id, {"does not exist", []}} in changeset.errors
 
       Lightning.WorkOrders.subscribe(workflow.project_id)
 
