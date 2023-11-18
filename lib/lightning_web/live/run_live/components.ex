@@ -640,7 +640,7 @@ defmodule LightningWeb.RunLive.Components do
         <Heroicons.shield_exclamation solid class={@classes} />
       <% :circle_ex -> %>
         <Heroicons.exclamation_circle solid class={@classes} />
-      <% :traingle_ex -> %>
+      <% :triangle_ex -> %>
         <Heroicons.exclamation_triangle solid class={@classes} />
     <% end %>
     """
