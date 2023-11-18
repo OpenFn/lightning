@@ -19,9 +19,13 @@ defmodule Lightning.Attempts.QueryTest do
         )
 
       now = DateTime.utc_now()
+      max_run_duration = Application.get_env(:lightning, :max_run_duration)
       grace_period = Lightning.Config.grace_period()
 
-      earliest_acceptable_start = DateTime.add(now, grace_period)
+      assert grace_period == max_run_duration * 0.2
+
+      cutoff_age_in_seconds =
+        ((grace_period + max_run_duration) / 1000) |> trunc()
 
       attempt_to_be_marked_lost =
         insert(:attempt,
@@ -29,7 +33,9 @@ defmodule Lightning.Attempts.QueryTest do
           starting_trigger: trigger,
           dataclip: dataclip,
           state: :claimed,
-          claimed_at: DateTime.add(earliest_acceptable_start, -10)
+          claimed_at:
+            DateTime.add(now, -cutoff_age_in_seconds)
+            |> DateTime.add(-2)
         )
 
       _crashed_but_NOT_lost =
@@ -38,7 +44,9 @@ defmodule Lightning.Attempts.QueryTest do
           starting_trigger: trigger,
           dataclip: dataclip,
           state: :crashed,
-          claimed_at: DateTime.add(earliest_acceptable_start, -10)
+          claimed_at:
+            DateTime.add(now, -cutoff_age_in_seconds)
+            |> DateTime.add(-2)
         )
 
       _another_attempt =
@@ -47,7 +55,9 @@ defmodule Lightning.Attempts.QueryTest do
           starting_trigger: trigger,
           dataclip: dataclip,
           state: :claimed,
-          claimed_at: DateTime.add(earliest_acceptable_start, 10)
+          claimed_at:
+            DateTime.add(now, -cutoff_age_in_seconds)
+            |> DateTime.add(2)
         )
 
       lost_attempts =
