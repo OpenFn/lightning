@@ -121,10 +121,12 @@ bearing with us as we move towards our first stable Lightning release.)
 
 ### Fixed
 
-- [#1140](https://github.com/OpenFn/Lightning/issues/1140) Adaptor icons load
-  gracefully
-- [#1283](https://github.com/OpenFn/Lightning/issues/1283) Selected dataclip
-  gets lost when starting a manual workorder from the inspector interface
+- Fixed janitor lost query calculation
+  [#1400](https://github.com/OpenFn/Lightning/issues/1400)
+- Adaptor icons load gracefully
+  [#1140](https://github.com/OpenFn/Lightning/issues/1140)
+- Selected dataclip gets lost when starting a manual workorder from the
+  inspector interface [#1283](https://github.com/OpenFn/Lightning/issues/1283)
 - Ensure that the whole edge when selected is highlighted
   [#1160](https://github.com/OpenFn/Lightning/issues/1160)
 - Fix "Reconfigure Github" button in Project Settings
@@ -150,13 +152,10 @@ bearing with us as we move towards our first stable Lightning release.)
 
 - Fix long name on workflow cards
   [#1102](https://github.com/OpenFn/Lightning/issues/1102)
-
 - Fix highlighted Edge can get out of sync with selected Edge
   [#1099](https://github.com/OpenFn/Lightning/issues/1099)
-
 - Creating a new user without a password fails and there is no user feedback
   [#731](https://github.com/OpenFn/Lightning/issues/731)
-
 - Crash when setting up version control
   [#1112](https://github.com/OpenFn/Lightning/issues/1112)
 
@@ -182,7 +181,6 @@ bearing with us as we move towards our first stable Lightning release.)
 
 - Modified audit trail to handle lots of different kind of audit events
   [#271](https://github.com/OpenFn/Lightning/issues/271)/[#44](https://github.com/OpenFn/Lightning/issues/44)
-
 - Fix randomly unresponsive job panel after job deletion
   [#1113](https://github.com/OpenFn/Lightning/issues/1113)
 
