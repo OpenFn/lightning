@@ -615,6 +615,7 @@ defmodule LightningWeb.RunLive.Components do
         {"kill", "TimeoutError"} -> [:circle_ex, "text-yellow-800"]
         {"kill", "OomError"} -> [:circle_ex, "text-yellow-800"]
         {"exception", ""} -> [:triangle_ex, "text-black-800"]
+        {"lost", _nil} -> [:triangle_ex, "text-black-800"]
       end
 
     assigns =
