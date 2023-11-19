@@ -387,9 +387,10 @@ defmodule LightningWeb.RunLive.Components do
       <div class="flex flex-row text-xs lg:text-sm" id={"exit-reason-#{@run.id}"}>
         <div class="basis-1/2 font-semibold text-secondary-700">Exit Reason</div>
         <div class="basis-1/2 text-right font-mono">
-          <%= if @run.finished_at,
-            do: @run.error_type || "Success",
-            else: "Running" %>
+          <%= if is_nil(@run.exit_reason),
+            do: "Running",
+            else: upcase_first(@run.exit_reason) %>
+          <%= unless is_nil(@run.error_type), do: ": #{@run.error_type}" %>
           <.run_icon reason={@run.exit_reason} error_type={@run.error_type} />
         </div>
       </div>

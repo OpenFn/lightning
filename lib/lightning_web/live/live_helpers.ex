@@ -140,6 +140,11 @@ defmodule LightningWeb.LiveHelpers do
     uuid_string |> String.slice(0..7)
   end
 
+  def upcase_first(nil), do: nil
+
+  def upcase_first(<<first::utf8, rest::binary>>),
+    do: String.upcase(<<first::utf8>>) <> rest
+
   def fade_in(opts \\ []) do
     Keyword.put(
       opts,

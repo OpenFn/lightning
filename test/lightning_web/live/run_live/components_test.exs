@@ -302,7 +302,12 @@ defmodule LightningWeb.RunLive.ComponentsTest do
       started_at = now |> Timex.shift(seconds: -25)
       finished_at = now |> Timex.shift(seconds: -1)
 
-      run = insert(:run, started_at: started_at, finished_at: finished_at)
+      run =
+        insert(:run,
+          started_at: started_at,
+          finished_at: finished_at,
+          exit_reason: "success"
+        )
 
       html =
         render_component(&Components.run_details/1,
@@ -321,10 +326,15 @@ defmodule LightningWeb.RunLive.ComponentsTest do
              |> Floki.text() =~
                "24000 ms"
 
-      assert html
-             |> Floki.find("div#exit-reason-#{run.id} > div:nth-child(2)")
-             |> Floki.text() =~
-               "Success"
+      div =
+        html
+        |> Floki.find("div#exit-reason-#{run.id} > div:nth-child(2)")
+        |> Floki.text()
+
+      assert div =~ "Success"
+
+      # We don't show error_type (with a " : ") on success.
+      refute div =~ " : "
     end
 
     test "with pending run" do
@@ -355,6 +365,62 @@ defmodule LightningWeb.RunLive.ComponentsTest do
              |> Floki.find("div#exit-reason-#{run.id} > div:nth-child(2)")
              |> Floki.text() =~
                "Running"
+    end
+
+    test "with failed run also shows error type" do
+      now = Timex.now()
+
+      started_at = now |> Timex.shift(seconds: -25)
+
+      run =
+        insert(:run,
+          started_at: started_at,
+          finished_at: started_at,
+          exit_reason: "fail",
+          error_type: "JobError"
+        )
+
+      html =
+        render_component(&Components.run_details/1,
+          run: run |> Lightning.Repo.preload(:attempts),
+          project_id: "4adf2644-ed4e-4f97-a24c-ab35b3cb1efa"
+        )
+        |> Floki.parse_fragment!()
+
+      div =
+        html
+        |> Floki.find("div#exit-reason-#{run.id} > div:nth-child(2)")
+        |> Floki.text()
+
+      assert div =~ "Fail"
+      assert div =~ "JobError"
+    end
+
+    test "with lost run" do
+      now = Timex.now()
+
+      started_at = now |> Timex.shift(minutes: -25)
+      run = insert(:run, started_at: started_at, exit_reason: "lost")
+
+      html =
+        render_component(&Components.run_details/1,
+          run: run |> Lightning.Repo.preload(:attempts),
+          project_id: "4adf2644-ed4e-4f97-a24c-ab35b3cb1efa"
+        )
+        |> Floki.parse_fragment!()
+
+      assert html
+             |> Floki.find("div#finished-at-#{run.id} > div:nth-child(2)")
+             |> Floki.text() =~ "n/a"
+
+      assert html
+             |> Floki.find("div#ran-for-#{run.id} > div:nth-child(2)")
+             |> Floki.text() =~ "n/a"
+
+      assert html
+             |> Floki.find("div#exit-reason-#{run.id} > div:nth-child(2)")
+             |> Floki.text() =~
+               "Lost"
     end
 
     test "with unstarted run" do
