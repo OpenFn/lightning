@@ -133,6 +133,8 @@ bearing with us as we move towards our first stable Lightning release.)
   [#1386](https://github.com/OpenFn/Lightning/issues/1386)
 - Make janitor also clean up runs inside an attempt
   [#1348](https://github.com/OpenFn/Lightning/issues/1348)
+- Fix inconsistency in ordering of child nodes in the workflow diagram
+  [#1406](https://github.com/OpenFn/Lightning/issues/1406)
 - Modify CompleteRun to return error changeset when run not found
   [#1393](https://github.com/OpenFn/Lightning/issues/1393)
 
