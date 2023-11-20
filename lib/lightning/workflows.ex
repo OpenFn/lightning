@@ -8,16 +8,6 @@ defmodule Lightning.Workflows do
   alias Lightning.Projects.Project
   alias Lightning.Workflows.{Edge, Job, Workflow, Trigger, Trigger, Query}
 
-  # def test_workflow(workflow_id) do
-  #   Workflow
-  #   |> Repo.get!(workflow_id)
-  #   |> Repo.preload([
-  #     :edges,
-  #     triggers: Trigger.with_auth_methods_query(),
-  #     jobs: jobs_ordered_subquery()
-  #   ])
-  # end
-
   @doc """
   Returns the list of workflows.
 
