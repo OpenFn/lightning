@@ -7,7 +7,7 @@
     <meta name="generator" content="ExDoc v0.30.9">
     <meta name="project" content="Lightning v0.10.0-pre13">
 
-    <title>Lightning.Runtime.RunSpec — Lightning v0.10.0-pre13</title>
+    <title>Lightning.Security — Lightning v0.10.0-pre13</title>
     <link rel="stylesheet" href="dist/html-elixir-XFYN5IVA.css" />
 
 
@@ -125,19 +125,19 @@ Pages
 </button>
 
 
-    <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runtime/run_spec.ex#L1" title="View Source" class="icon-action" rel="help">
+    <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/security.ex#L1" title="View Source" class="icon-action" rel="help">
       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
       <span class="sr-only">View Source</span>
     </a>
 
-  <span translate="no">Lightning.Runtime.RunSpec</span> 
+  <span translate="no">Lightning.Security</span> 
   <small class="app-vsn" translate="no">(Lightning v0.10.0-pre13)</small>
 
 </h1>
 
 
   <section id="moduledoc">
-<p>A struct containing all the parameters required to execute a Job.</p>
+<p>Security helpers.</p>
   </section>
 
 
@@ -148,20 +148,6 @@ Pages
       </a>
       <span class="text">Summary</span>
     </h1>
-<div class="summary-types summary">
-  <h2>
-    <a href="#types">Types</a>
-  </h2>
-
-    <div class="summary-row">
-      <div class="summary-signature">
-        <a href="#t:t/0" translate="no">t()</a>
-
-      </div>
-
-    </div>
-
-</div>
 <div class="summary-functions summary">
   <h2>
     <a href="#functions">Functions</a>
@@ -169,9 +155,12 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#new/1" translate="no">new(fields \\ [])</a>
+        <a href="#redact_password/2" translate="no">redact_password(changeset, field)</a>
 
       </div>
+
+        <div class="summary-synopsis"><p>Redact a password inside a json on a changeset field.
+If the field has a valid string value &quot;password&quot;:&quot;thesecret&quot; becomes &quot;password&quot;:&quot;<em>*</em>&quot;.</p></div>
 
     </div>
 
@@ -180,24 +169,24 @@ Pages
   </section>
 
 
-  <section id="types" class="details-list">
+  <section id="functions" class="details-list">
     <h1 class="section-heading">
-      <a class="hover-link" href="#types">
+      <a class="hover-link" href="#functions">
         <i class="ri-link-m" aria-hidden="true"></i>
       </a>
-      <span class="text">Types</span>
+      <span class="text">Functions</span>
     </h1>
-    <div class="types-list">
-<section class="detail" id="t:t/0">
+    <div class="functions-list">
+<section class="detail" id="redact_password/2">
 
   <div class="detail-header">
-    <a href="#t:t/0" class="detail-link" title="Link to this type">
+    <a href="#redact_password/2" class="detail-link" title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this type</span>
+      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">t()</h1>
+    <h1 class="signature" translate="no">redact_password(changeset, field)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runtime/run_spec.ex#L5" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/security.ex#L12" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -209,58 +198,12 @@ Pages
 
       <div class="specs">
 
-          <pre translate="no"><span class="attribute">@type</span> t() :: %Lightning.Runtime.RunSpec{
-  adaptor: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>(),
-  adaptors_path: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>(),
-  env: nil | %{required(<a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">binary</a>()) =&gt; <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">binary</a>()},
-  expression_path: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>(),
-  final_state_path: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>(),
-  memory_limit: nil | <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">integer</a>(),
-  no_console: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">boolean</a>(),
-  state_path: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>(),
-  test_mode: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">boolean</a>(),
-  timeout: nil | <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">integer</a>()
-}</pre>
+          <pre translate="no"><span class="attribute">@spec</span> redact_password(<a href="https://hexdocs.pm/ecto/3.10.3/Ecto.Changeset.html#t:t/0">Ecto.Changeset.t</a>(), <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">atom</a>()) :: <a href="https://hexdocs.pm/ecto/3.10.3/Ecto.Changeset.html#t:t/0">Ecto.Changeset.t</a>()</pre>
 
       </div>
 
-
-  </section>
-</section>
-
-    </div>
-  </section>
-
-  <section id="functions" class="details-list">
-    <h1 class="section-heading">
-      <a class="hover-link" href="#functions">
-        <i class="ri-link-m" aria-hidden="true"></i>
-      </a>
-      <span class="text">Functions</span>
-    </h1>
-    <div class="functions-list">
-<section class="detail" id="new/1">
-
-    <span id="new/0"></span>
-
-  <div class="detail-header">
-    <a href="#new/1" class="detail-link" title="Link to this function">
-      <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
-    </a>
-    <h1 class="signature" translate="no">new(fields \\ [])</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runtime/run_spec.ex#L32" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
-
-
-  </div>
-
-  <section class="docstring">
-
-
+<p>Redact a password inside a json on a changeset field.
+If the field has a valid string value &quot;password&quot;:&quot;thesecret&quot; becomes &quot;password&quot;:&quot;<em>*</em>&quot;.</p>
   </section>
 </section>
 
