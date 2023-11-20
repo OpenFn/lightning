@@ -14,7 +14,6 @@ const model = (model: Flow.Model) => {
   };
 
   model.nodes.forEach(node => {
-    console.log(node,"Rendering node")
     const wfNode: Partial<Lightning.JobNode> = {
       id: node.id,
       name: node.data?.name,
