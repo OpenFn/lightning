@@ -47,7 +47,7 @@ defmodule Lightning.Workflows.Job do
 
     field :delete, :boolean, virtual: true
 
-    timestamps()
+    timestamps(type: :naive_datetime_usec)
   end
 
   def new(attrs \\ %{}) do

@@ -129,7 +129,6 @@ export default {
     if (id) {
       const { jobs, triggers, edges } = this.workflowStore.getState();
       const everything = [...jobs, ...triggers, ...edges];
-      console.log(everything,"Everything")
       for (const i of everything) {
         if (id === i.id) {
           return i;
@@ -201,7 +200,6 @@ export default {
   pushPendingChange(pendingChange, abortController?) {
     return new Promise((resolve, reject) => {
       console.debug('pushing change', pendingChange);
-      console.log(pendingChange,"pushing changes")
       // How do we _undo_ the change if it fails?
       this.pushEventTo<PendingAction, { patches: Patch[] }>(
         this.el,
@@ -224,7 +222,6 @@ export default {
   },
   handleWorkflowParams({ workflow_params: payload }) {
     this.workflowStore.setState(_state => payload);
-    console.log(payload,"Initial params")
 
     if (!payload.triggers.length && !payload.jobs.length) {
       // Create a placeholder chart and push it back up to the server

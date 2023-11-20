@@ -8,6 +8,16 @@ defmodule Lightning.Workflows do
   alias Lightning.Projects.Project
   alias Lightning.Workflows.{Edge, Job, Workflow, Trigger, Trigger, Query}
 
+  # def test_workflow(workflow_id) do
+  #   Workflow
+  #   |> Repo.get!(workflow_id)
+  #   |> Repo.preload([
+  #     :edges,
+  #     triggers: Trigger.with_auth_methods_query(),
+  #     jobs: jobs_ordered_subquery()
+  #   ])
+  # end
+
   @doc """
   Returns the list of workflows.
 
@@ -292,6 +302,14 @@ defmodule Lightning.Workflows do
     trigger
     |> Trigger.changeset(attrs)
     |> Repo.update()
+  end
+
+  @doc """
+  A way to ensure the consistency of nodes.
+  This query orders jobs based on their `inserted_at` timestamps in ascending order
+  """
+  def jobs_ordered_subquery do
+    from(j in Job, order_by: [asc: j.inserted_at], preload: [:credential])
   end
 
   @doc """
