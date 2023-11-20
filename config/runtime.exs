@@ -236,7 +236,16 @@ config :lightning, LightningWeb.Endpoint,
   ]
 
 if log_level = System.get_env("LOG_LEVEL") do
-  config :logger, level: log_level |> String.to_atom()
+  allowed_log_levels =
+    ~w[emergency alert critical error warning warn notice info debug]
+
+  if log_level in allowed_log_levels do
+    config :logger, level: log_level |> String.to_atom()
+  else
+    raise """
+    Invalid LOG_LEVEL, must be on of #{allowed_log_levels |> Enum.join(", ")}
+    """
+  end
 end
 
 if config_env() == :prod do
