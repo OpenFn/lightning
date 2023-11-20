@@ -32,6 +32,7 @@ config :lightning, Lightning.Vault,
 # you can enable the server option below.
 config :lightning, LightningWeb.Endpoint,
   url: [host: "localhost", port: 4002],
+  http: [port: 4002],
   secret_key_base:
     "/8zedVJLxvmGGFoRExE3e870g7CGZZQ1Vq11A5MbQGPKOpK57MahVsPW6Wkkv61n",
   server: true
@@ -61,7 +62,7 @@ config :lightning,
   adaptor_icons_path: "test/fixtures/adaptors/icons"
 
 # Print only warnings and errors during test
-config :logger, level: :debug
+config :logger, level: :warning
 
 # Initialize plugs at runtime for faster test compilation
 config :phoenix, :plug_init_mode, :runtime

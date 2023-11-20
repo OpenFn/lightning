@@ -319,7 +319,7 @@ defmodule Lightning.AttemptsTest do
         |> insert()
 
       {:error, changeset} =
-        Attempts.complete_attempt(attempt, {"success", nil, nil})
+        Attempts.complete_attempt(attempt, %{state: :success})
 
       assert {:state,
               {"cannot mark attempt success that has not been claimed by a worker",
@@ -336,7 +336,7 @@ defmodule Lightning.AttemptsTest do
 
       Lightning.WorkOrders.subscribe(workflow.project_id)
 
-      {:ok, attempt} = Attempts.complete_attempt(attempt, {"success", nil, nil})
+      {:ok, attempt} = Attempts.complete_attempt(attempt, %{state: :success})
 
       assert attempt.state == :success
       assert DateTime.utc_now() >= attempt.finished_at
@@ -362,7 +362,7 @@ defmodule Lightning.AttemptsTest do
         |> Repo.update()
 
       {:error, changeset} =
-        Attempts.complete_attempt(attempt, {:lost, "Lost", nil})
+        Attempts.complete_attempt(attempt, %{state: :lost, error_type: "Lost"})
 
       assert changeset.errors == [
                state:
@@ -385,7 +385,7 @@ defmodule Lightning.AttemptsTest do
         |> Repo.update()
 
       {:ok, attempt} =
-        Attempts.complete_attempt(attempt, {:lost, "Lost", nil})
+        Attempts.complete_attempt(attempt, %{state: :lost, error_type: "Lost"})
 
       assert attempt.state == :lost
     end
@@ -404,7 +404,7 @@ defmodule Lightning.AttemptsTest do
         |> Repo.update()
 
       {:error, changeset} =
-        Attempts.complete_attempt(attempt, {nil, nil, nil})
+        Attempts.complete_attempt(attempt, %{})
 
       assert changeset.errors == [
                state: {"can't be blank", [validation: :required]}
@@ -425,7 +425,7 @@ defmodule Lightning.AttemptsTest do
         |> Repo.update()
 
       {:error, changeset} =
-        Attempts.complete_attempt(attempt, {"some_unknown_state", nil, nil})
+        Attempts.complete_attempt(attempt, %{state: "some_unknown_state"})
 
       assert [
                state:

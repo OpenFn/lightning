@@ -5,6 +5,16 @@ defmodule Lightning.Invocation.Run do
   A run represents the work initiated for a Job with an input dataclip.
   Once completed (successfully) it will have an `output_dataclip` associated
   with it as well.
+
+  When a run finished, it's `:exit_reason` is set to one of following strings:
+
+  -  `"success"`
+  -  `"fail"`
+  -  `"crash"`
+  -  `"cancel"`
+  -  `"kill"`
+  -  `"exception"`
+  -  `"lost"`
   """
   use Ecto.Schema
   import Ecto.Changeset
