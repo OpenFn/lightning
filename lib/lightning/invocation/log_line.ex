@@ -70,7 +70,7 @@ defmodule Lightning.Invocation.LogLine do
     |> assoc_constraint(:run)
     |> assoc_constraint(:attempt)
     |> validate_change(:message, fn _, message ->
-      if is_nil(message) or message == [nil] do
+      if is_nil(message) do
         [message: "can't be nil"]
       else
         []

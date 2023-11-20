@@ -12,6 +12,9 @@ defmodule Lightning.EctoTypesTest do
     test "can be cast from a list" do
       assert {:ok, ~s<Hello, world! {"foo":"bar"} null>} =
                LogMessage.cast(["Hello, world!", %{"foo" => "bar"}, nil])
+
+      assert {:ok, ~s<null>} =
+               LogMessage.cast([nil])
     end
 
     test "can be cast from a map" do
