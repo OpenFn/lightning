@@ -708,10 +708,13 @@
                 >
                   <.async_result :let={searched_page} assign={@async_page}>
                     <:loading>
-                      <LightningWeb.RunLive.WorkOrderLoading.filler />
+                      <Components.async_filler
+                        message="Loading work orders ..."
+                        class="animate-pulse"
+                      />
                     </:loading>
                     <:failed :let={_reason}>
-                      there was an error loading the work orders
+                      <Components.async_filler message="There was an error loading the work orders" />
                     </:failed>
                     <%= for workorder <- searched_page.entries do %>
                       <.live_component
