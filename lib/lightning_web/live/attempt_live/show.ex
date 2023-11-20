@@ -143,6 +143,13 @@ defmodule LightningWeb.AttemptLive.Show do
     {:noreply, socket}
   end
 
+  def handle_async(:log_lines, {:exit, reason}, socket) do
+    %{log_lines: log_lines} = socket.assigns
+
+    {:noreply,
+     assign(socket, :log_lines, AsyncResult.failed(log_lines, {:exit, reason}))}
+  end
+
   def loading_filler(assigns) do
     ~H"""
     <.detail_list class="animate-pulse">

@@ -5,7 +5,6 @@ defmodule LightningWeb.RunLive.Index do
   use LightningWeb, :live_view
 
   import Ecto.Changeset, only: [get_change: 2]
-
   alias Lightning.Invocation
   alias Lightning.Invocation.Run
   alias Lightning.Policies.Permissions
@@ -35,6 +34,14 @@ defmodule LightningWeb.RunLive.Index do
     killed: :boolean,
     exception: :boolean,
     lost: :boolean
+  }
+
+  @empty_page %{
+    entries: [],
+    page_size: 0,
+    total_entries: 0,
+    page_number: 1,
+    total_pages: 0
   }
 
   on_mount {LightningWeb.Hooks, :project_scope}
@@ -126,16 +133,10 @@ defmodule LightningWeb.RunLive.Index do
        run: %Run{},
        filters_changeset: filters_changeset(filters),
        pagination_path: &pagination_path(socket, project, &1, filters),
-       page: %{
-         entries: [],
-         page_size: 0,
-         total_entries: 0,
-         page_number: 1,
-         total_pages: 0
-       },
+       page: @empty_page,
        async_page: AsyncResult.loading()
      )
-     |> start_async(:load_page, fn ->
+     |> start_async(:load_workorders, fn ->
        monitored_search(project, params)
      end)}
   end
@@ -167,7 +168,7 @@ defmodule LightningWeb.RunLive.Index do
     )
   end
 
-  def handle_async(:load_page, {:ok, searched_page}, socket) do
+  def handle_async(:load_workorders, {:ok, searched_page}, socket) do
     %{async_page: async_page} = socket.assigns
 
     {:noreply,
@@ -175,6 +176,17 @@ defmodule LightningWeb.RunLive.Index do
      |> assign(
        page: searched_page,
        async_page: AsyncResult.ok(async_page, searched_page)
+     )}
+  end
+
+  def handle_async(:load_workorders, {:exit, reason}, socket) do
+    %{async_page: async_page} = socket.assigns
+
+    {:noreply,
+     socket
+     |> assign(
+       page: @empty_page,
+       async_page: AsyncResult.failed(async_page, {:exit, reason})
      )}
   end
 
