@@ -166,7 +166,7 @@ workorders up to <code class="inline">v0.10.0</code>, though the granularity of 
 will be less than <code class="inline">v0.10.0</code> and the final states are not guaranteed to be
 accurate for workflows with multiple branches and leaf nodes with varying exit
 reasons.</p><p>The migration scripts can be run with a single function call in SetupUtils from
-a connect <code class="inline">iex</code> session:</p><pre><code class="makeup elixir" translate="no"><span class="nc">Lightning.SetupUtils</span><span class="o">.</span><span class="n">approximate_state_for_attempts_and_workorders</span><span class="p" data-group-id="0274404412-1">(</span><span class="p" data-group-id="0274404412-1">)</span></code></pre><p>Note that (like lots of <em>other</em> functionality in <code class="inline">SetupUtils</code>, calling this
+a connect <code class="inline">iex</code> session:</p><pre><code class="makeup elixir" translate="no"><span class="nc">Lightning.SetupUtils</span><span class="o">.</span><span class="n">approximate_state_for_attempts_and_workorders</span><span class="p" data-group-id="8102167908-1">(</span><span class="p" data-group-id="8102167908-1">)</span></code></pre><p>Note that (like lots of <em>other</em> functionality in <code class="inline">SetupUtils</code>, calling this
 function is a destructive action and you should only do it if you've backed up
 your data and you know what you're doing.)</p><p>As always, we recommend backing up your data before migrating. (And thanks for
 bearing with us as we move towards our first stable Lightning release.)</p><h3 id="added" class="section-heading">
@@ -221,7 +221,8 @@ confirmation <a href="https://github.com/OpenFn/Lightning/issues/1105">#1105</a>
 inspector interface <a href="https://github.com/OpenFn/Lightning/issues/1283">#1283</a></li><li>Ensure that the whole edge when selected is highlighted
 <a href="https://github.com/OpenFn/Lightning/issues/1160">#1160</a></li><li>Fix &quot;Reconfigure Github&quot; button in Project Settings
 <a href="https://github.com/OpenFn/Lightning/issues/1386">#1386</a></li><li>Make janitor also clean up runs inside an attempt
-<a href="https://github.com/OpenFn/Lightning/issues/1348">#1348</a></li></ul><h2 id="v0-9-3-2023-09-27" class="section-heading">
+<a href="https://github.com/OpenFn/Lightning/issues/1348">#1348</a></li><li>Modify CompleteRun to return error changeset when run not found
+<a href="https://github.com/OpenFn/Lightning/issues/1393">#1393</a></li></ul><h2 id="v0-9-3-2023-09-27" class="section-heading">
   <a href="#v0-9-3-2023-09-27" class="hover-link">
     <i class="ri-link-m" aria-hidden="true"></i>
   </a>
