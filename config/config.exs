@@ -10,7 +10,9 @@ import Config
 config :lightning,
   ecto_repos: [Lightning.Repo]
 
-config :lightning, Lightning.Repo, types: Lightning.PostgrexTypes
+config :lightning, Lightning.Repo,
+  types: Lightning.PostgrexTypes,
+  log: :debug
 
 config :hammer,
   backend:
