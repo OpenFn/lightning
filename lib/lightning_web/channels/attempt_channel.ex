@@ -166,15 +166,10 @@ defmodule LightningWeb.AttemptChannel do
     end
   end
 
-  def handle_in(
-        "run:complete",
-        %{"reason" => reason} = payload,
-        socket
-      ) do
+  def handle_in("run:complete", payload, socket) do
     %{
       "attempt_id" => socket.assigns.attempt.id,
-      "project_id" => socket.assigns.project_id,
-      "reason" => "#{map_rtm_reason_state(reason)}"
+      "project_id" => socket.assigns.project_id
     }
     |> Enum.into(payload)
     |> Attempts.complete_run()

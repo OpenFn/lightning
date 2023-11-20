@@ -225,7 +225,7 @@ defmodule LightningWeb.EndToEndTest do
       # #  Run 2 should fail but not expose a secret
       assert NaiveDateTime.diff(run_2.finished_at, claimed_at, :microsecond) > 0
       assert NaiveDateTime.diff(run_2.finished_at, finished_at, :microsecond) < 0
-      assert run_2.exit_reason == "failed"
+      assert run_2.exit_reason == "fail"
 
       log = Invocation.assemble_logs_for_run(run_2)
 
