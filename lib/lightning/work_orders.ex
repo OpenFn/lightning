@@ -228,30 +228,23 @@ defmodule Lightning.WorkOrders do
         end)
       end)
 
-    Attempt.new(%{priority: :immediate})
-    |> put_assoc(:created_by, attrs[:created_by])
-    |> put_assoc(:work_order, attempt.work_order)
-    |> put_change(:dataclip_id, run.input_dataclip_id)
-    |> put_assoc(:work_order, attempt.work_order)
-    |> put_assoc(:starting_job, run.job)
-    |> put_assoc(:runs, runs)
-    |> validate_required(:dataclip_id)
-    |> validate_required_assoc(:work_order)
-    |> validate_required_assoc(:created_by)
-    |> Attempts.enqueue()
-    |> then(fn
-      {:ok, attempt} ->
-        updated_attempt = Repo.preload(attempt, work_order: :workflow)
+    changeset =
+      Attempt.new(%{priority: :immediate})
+      |> put_assoc(:created_by, attrs[:created_by])
+      |> put_assoc(:work_order, attempt.work_order)
+      |> put_change(:dataclip_id, run.input_dataclip_id)
+      |> put_assoc(:work_order, attempt.work_order)
+      |> put_assoc(:starting_job, run.job)
+      |> put_assoc(:runs, runs)
+      |> validate_required(:dataclip_id)
+      |> validate_required_assoc(:work_order)
+      |> validate_required_assoc(:created_by)
 
-        Events.attempt_created(
-          updated_attempt.work_order.workflow.project_id,
-          attempt
-        )
-
+    Repo.transact(fn ->
+      with {:ok, attempt} <- Attempts.enqueue(changeset),
+           {:ok, _workorder} <- update_state(attempt) do
         {:ok, attempt}
-
-      other ->
-        other
+      end
     end)
   end
 

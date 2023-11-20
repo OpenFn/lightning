@@ -232,6 +232,49 @@ defmodule Lightning.WorkOrdersTest do
       runs = Ecto.assoc(retry_attempt, :runs) |> Repo.all()
       assert runs |> Enum.map(& &1.id) == [first_run.id]
     end
+
+    test "updates workorder state", %{
+      workflow: workflow,
+      trigger: trigger,
+      jobs: [job | _rest]
+    } do
+      user = insert(:user)
+      dataclip = insert(:dataclip)
+      # create existing complete attempt
+      %{attempts: [attempt]} =
+        workorder =
+        insert(:workorder,
+          workflow: workflow,
+          trigger: trigger,
+          dataclip: dataclip,
+          state: :failed,
+          attempts: [
+            %{
+              state: :failed,
+              dataclip: dataclip,
+              starting_trigger: trigger,
+              runs: [
+                run = insert(:run, job: job, input_dataclip: dataclip)
+              ]
+            }
+          ]
+        )
+
+      assert workorder.state == :failed
+      Lightning.WorkOrders.subscribe(workflow.project_id)
+
+      {:ok, _attempt} = WorkOrders.retry(attempt, run, created_by: user)
+
+      updated_workorder = Lightning.Repo.get(Lightning.WorkOrder, workorder.id)
+
+      assert updated_workorder.state == :pending
+
+      workorder_id = workorder.id
+
+      assert_received %Lightning.WorkOrders.Events.WorkOrderUpdated{
+        work_order: %{id: ^workorder_id}
+      }
+    end
   end
 
   describe "retry_many/3" do
