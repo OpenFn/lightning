@@ -70,8 +70,9 @@ defmodule Lightning.Invocation.LogLine do
     |> assoc_constraint(:run)
     |> assoc_constraint(:attempt)
     |> validate_change(:message, fn _, message ->
-      if is_nil(message) do
-        [message: "can't be nil"]
+      # cast converts [nil] into "null"
+      if message == "null" do
+        [message: "This field can't be blank."]
       else
         []
       end
