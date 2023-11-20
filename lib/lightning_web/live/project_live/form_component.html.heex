@@ -7,8 +7,8 @@
     phx-change="validate"
     phx-submit="save"
   >
-    <div class="grid grid-cols-6 gap-6">
-      <div class="col-span-3">
+    <div class="flex items-end gap-6">
+      <div class="w-3/6">
         <%= Phoenix.HTML.Form.label(f, :name,
           class: "block text-sm font-medium text-secondary-700 mb-2"
         ) %>
@@ -19,81 +19,35 @@
           value: Phoenix.HTML.Form.input_value(f, :name)
         ) %>
         <.old_error field={f[:name]} />
-        <br />
-        <div class="inline-block pl-2">
-          <%= if (@changeset.valid?) do %>
-            Your project will be named <span class="font-mono border rounded-md p-1 bg-yellow-100 border-slate-300">
-          <%= @name %></span>.
-          <% end %>
-        </div>
       </div>
-      <div class="col-span-3">
-        <%= Phoenix.HTML.Form.label(f, :project_users, "Members",
-          class: "block text-sm font-medium text-secondary-700 mb-2"
-        ) %>
-
-        <div class="flex w-full items-center gap-2 pb-3">
-          <div class="grow">
-            <.select
-              phx-hook="AssocListChange"
-              phx-target={@myself}
-              id="member_list"
-            >
-              <option>Select a user</option>
-              <%= Phoenix.HTML.Form.options_for_select(
-                @available_users,
-                @selected_member
-              ) %>
-            </.select>
-          </div>
-          <div class="grow-0 items-right">
-            <.button
-              disabled={@selected_member == ""}
-              phx-target={@myself}
-              phx-value-userid={@selected_member}
-              phx-click="add_new_member"
-            >
-              Add
-            </.button>
-          </div>
-        </div>
-
-        <.inputs_for :let={member_form} field={f[:project_users]}>
-          <%= if member_form[:delete].value != true do %>
-            <div class="flex w-full gap-2 items-center pb-2">
-              <div class="grow">
-                <%= user_name_for_id(@all_users, member_form[:user_id]) %>
-                <.old_error field={member_form[:project_id]} />
-              </div>
-              <div class="grow-0 items-right">
-                <.select_field
-                  form={member_form}
-                  name={:role}
-                  id="role"
-                  values={["owner", "admin", "editor", "viewer"]}
-                />
-              </div>
-              <div class="grow-0 items-right">
-                <.button
-                  phx-target={@myself}
-                  phx-value-index={member_form.index}
-                  phx-click="delete_member"
-                >
-                  Remove
-                </.button>
-              </div>
-            </div>
-          <% end %>
-          <.input type="hidden" field={member_form[:user_id]} />
-          <.input type="hidden" field={member_form[:delete]} />
-        </.inputs_for>
-      </div>
-      <div class="col-span-6">
-        <div class="hidden sm:block" aria-hidden="true">
-          <div class="border-t border-secondary-200"></div>
-        </div>
+      <div class="pl-2">
+        <%= if (@changeset.valid?) do %>
+          Your project will be named <span class="font-mono border rounded-md p-1 bg-yellow-100 border-slate-300">
+      <%= @name %></span>.
+        <% end %>
       </div>
     </div>
+    <.new_table
+      id="project_users"
+      rows={Phoenix.HTML.Form.inputs_for(f, :project_users)}
+    >
+      <:col :let={form} label="NAME"><%= full_user_name(form.data.user) %></:col>
+      <:col :let={form} label="EMAIL"><%= form.data.user.email %></:col>
+      <:col :let={form} label="NO ACCESS">
+        <%= Phoenix.HTML.Form.radio_button(form, :role, nil,
+          class: "h-4 w-4 border-gray-300 text-indigo-600 focus:ring-indigo-600"
+        ) %>
+      </:col>
+      <:col
+        :let={form}
+        :for={role <- ["owner", "admin", "editor", "viewer"]}
+        label={String.upcase(role)}
+      >
+        <%= Phoenix.HTML.Form.radio_button(form, :role, role,
+          class: "h-4 w-4 border-gray-300 text-indigo-600 focus:ring-indigo-600"
+        ) %>
+      </:col>
+    </.new_table>
 
     <div class="mt-2">
       <span>

@@ -25,7 +25,27 @@ defmodule LightningWeb.ProjectLive.FormComponent do
         %{project: project, users: users} = assigns,
         socket
       ) do
-    changeset = Projects.change_project(project)
+    project_users_ids = Enum.map(project.project_users, & &1.user_id)
+
+    users_without_access =
+      Enum.reject(users, fn user -> user.id in project_users_ids end)
+
+    p_users_without_access =
+      Enum.map(users_without_access, fn user ->
+        %Lightning.Projects.ProjectUser{user_id: user.id, user: user}
+      end)
+
+    all_project_users = project.project_users ++ p_users_without_access
+
+    project_users =
+      Enum.sort_by(
+        all_project_users,
+        fn p_user -> p_user.user.first_name end,
+        :asc
+      )
+
+    changeset =
+      Projects.change_project(%{project | project_users: project_users})
 
     all_users = users |> Enum.map(&{"#{&1.first_name} #{&1.last_name}", &1.id})
 
@@ -235,5 +255,9 @@ defmodule LightningWeb.ProjectLive.FormComponent do
 
   defp coerce_raw_name_to_safe_name(%{} = params) do
     params
+  end
+
+  defp full_user_name(user) do
+    "#{user.first_name} #{user.last_name}"
   end
 end
