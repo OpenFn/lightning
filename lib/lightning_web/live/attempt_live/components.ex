@@ -1,60 +1,12 @@
 defmodule LightningWeb.AttemptLive.Components do
   use LightningWeb, :component
 
-  @doc """
-  Renders out a log line stream
-  """
-
-  attr :id, :string, required: true
-  attr :stream, :list, required: true
-  attr :class, :string, default: nil
-
-  def log_view(assigns) do
-    ~H"""
-    <div
-      class={[
-        "rounded-md text-slate-200 bg-slate-700 border-slate-300 shadow-sm
-         font-mono proportional-nums w-full text-sm overflow-y-auto
-         overscroll-contain scroll-smooth",
-        @class
-      ]}
-      id={"log-lines-#{@id}"}
-      phx-update="stream"
-    >
-      <div
-        id="empty-log-lines"
-        class="hidden only:block m-2 relative block rounded-md
-               border-2 border-dashed border-gray-500 p-12 text-center"
-      >
-        Nothing yet...
-      </div>
-      <div
-        :for={{dom_id, log_line} <- @stream}
-        class="group flex flex-row hover:bg-slate-600
-              first:hover:rounded-tr-md first:hover:rounded-tl-md
-              last:hover:rounded-br-md last:hover:rounded-bl-md "
-        data-run-id={log_line.run_id}
-        id={dom_id}
-      >
-        <div class="line-log-level grow-0 border-r border-slate-500 align-top
-                px-2 text-right text-slate-400 inline-block
-                group-hover:text-slate-300 group-first:pt-2 group-last:pb-2">
-          <%= log_line.source %>
-        </div>
-        <div data-log-line class="grow pl-2 group-first:pt-2 group-last:pb-2">
-          <pre class="whitespace-pre-line break-all"><%= log_line.message %></pre>
-        </div>
-      </div>
-    </div>
-    """
-  end
-
   attr :attempt, :map, required: true
   attr :class, :string, default: ""
 
   def attempt_detail(assigns) do
     ~H"""
-    <.detail_list class={@class}>
+    <.detail_list id={"attempt-detail-#{@attempt.id}"} class={@class}>
       <.list_item>
         <:label>Attempt ID</:label>
         <:value><%= display_short_uuid(@attempt.id) %></:value>
@@ -86,10 +38,11 @@ defmodule LightningWeb.AttemptLive.Components do
 
   slot :inner_block
   attr :class, :string, default: ""
+  attr :rest, :global
 
   def detail_list(assigns) do
     ~H"""
-    <ul role="list" class={["divide-y divide-gray-200", @class]}>
+    <ul {@rest} role="list" class={["divide-y divide-gray-200", @class]}>
       <%= render_slot(@inner_block) %>
     </ul>
     """
@@ -147,5 +100,76 @@ defmodule LightningWeb.AttemptLive.Components do
       <%= @text %>
     </span>
     """
+  end
+
+  attr :run, Lightning.Invocation.Run, required: true
+  attr :class, :string, default: ""
+
+  def run_state_circle(%{run: run} = assigns) do
+    assigns =
+      assigns
+      |> update(:class, fn class ->
+        [
+          class,
+          case run.exit_reason do
+            "success" -> ["bg-green-200 text-green-800"]
+            "fail" -> ["bg-red-200 text-red-800"]
+            "crash" -> ["bg-orange-200 text-orange-800"]
+            "cancel" -> ["bg-gray-500 text-gray-800"]
+            "kill" -> ["bg-yellow-200 text-yellow-800"]
+            "exception" -> ["bg-gray-800 text-white"]
+            "lost" -> ["bg-gray-800 text-white"]
+            _ -> ["bg-blue-200 text-blue-800"]
+          end
+        ]
+      end)
+
+    ~H"""
+    <span class={[
+      "h-8 w-8 rounded-full",
+      "flex items-center justify-center",
+      "ring-8 ring-secondary-100",
+      @class
+    ]}>
+      <.run_state_icon run={@run} class="h-6 w-6" />
+    </span>
+    """
+  end
+
+  attr :run, Lightning.Invocation.Run, required: true
+  attr :class, :string, default: "h-4 w-4"
+
+  # credo:disable-for-next-line
+  def run_state_icon(%{run: run} = assigns) do
+    assigns = assign(assigns, title: run.exit_reason)
+
+    case {run.exit_reason, run.error_type} do
+      {"success", _} ->
+        ~H[<.icon title={@title} name="hero-check-circle" class={@class} />]
+
+      {"fail", _} ->
+        ~H[<.icon title={@title} name="hero-x-circle" class={@class} />]
+
+      {"crash", _} ->
+        ~H[<.icon title={@title} name="hero-x-circle" class={@class} />]
+
+      {"cancel", _} ->
+        ~H[<.icon title={@title} name="hero-check-circle" class={@class} />]
+
+      {"kill", error_type} when error_type in ["SecurityError", "ImportError"] ->
+        ~H[<.icon title={@title} name="hero-shield-exclamation" class={@class} />]
+
+      {"kill", _} ->
+        ~H[<.icon title={@title} name="hero-exclamation-circle" class={@class} />]
+
+      {"exception", _} ->
+        ~H[<.icon title={@title} name="hero-exclamation-triangle" class={@class} />]
+
+      {"lost", _} ->
+        ~H[<.icon title={@title} name="hero-exclamation-triangle" class={@class} />]
+
+      _ ->
+        ~H[<.icon title="running" name="hero-ellipsis-horizontal" class={@class} />]
+    end
   end
 end

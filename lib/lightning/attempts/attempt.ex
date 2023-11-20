@@ -130,25 +130,20 @@ defmodule Lightning.Attempt do
     |> validate_state_change()
   end
 
-  @spec complete(
-          {map(), map()}
-          | %{
-              :__struct__ =>
-                atom() | %{:__changeset__ => map(), optional(any()) => any()},
-              optional(atom()) => any()
-            },
-          {any(), any(), any()}
-        ) :: Ecto.Changeset.t()
-  def complete(attempt, {state, error_type, _error_message}) do
+  @spec complete(%__MODULE__{}, %{optional(any()) => any()}) ::
+          Ecto.Changeset.t()
+  def complete(attempt, params) do
     attempt
-    |> cast(%{state: state}, [:state])
+    |> change()
+    |> put_change(:state, nil)
+    |> cast(params, [:state, :error_type])
     |> put_change(:finished_at, DateTime.utc_now())
     |> validate_required([:state])
     |> validate_inclusion(:state, @final_states)
-    |> cast(%{error_type: error_type}, [:error_type])
     |> validate_state_change()
   end
 
+  # credo:disable-for-next-line
   defp validate_state_change(changeset) do
     {changeset.data |> Map.get(:state), get_field(changeset, :state)}
     |> case do
@@ -172,6 +167,9 @@ defmodule Lightning.Attempt do
         changeset |> validate_required([:finished_at])
 
       {from, to} when from == to ->
+        changeset
+
+      {_from, _to} ->
         changeset
     end
   end

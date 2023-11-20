@@ -169,9 +169,12 @@ defmodule LightningWeb.LayoutComponents do
     """
   end
 
+  attr :class, :string, default: ""
+  slot :inner_block, required: true
+
   def centered(assigns) do
     ~H"""
-    <div class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+    <div class={["max-w-7xl mx-auto py-6 sm:px-6 lg:px-8", @class]}>
       <%= render_slot(@inner_block) %>
     </div>
     """

@@ -208,6 +208,8 @@ defmodule LightningWeb.Router do
       pipe_through :browser
 
       forward "/mailbox", Plug.Swoosh.MailboxPreview
+
+      live "/components", LightningWeb.Dev.ComponentsLive, :index
     end
   end
 

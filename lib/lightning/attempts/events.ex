@@ -4,6 +4,11 @@ defmodule Lightning.Attempts.Events do
     defstruct run: nil
   end
 
+  defmodule RunCompleted do
+    @moduledoc false
+    defstruct run: nil
+  end
+
   defmodule AttemptUpdated do
     @moduledoc false
     defstruct attempt: nil
@@ -18,6 +23,13 @@ defmodule Lightning.Attempts.Events do
     Lightning.broadcast(
       topic(attempt_id),
       %RunStarted{run: run}
+    )
+  end
+
+  def run_completed(attempt_id, run) do
+    Lightning.broadcast(
+      topic(attempt_id),
+      %RunCompleted{run: run}
     )
   end
 

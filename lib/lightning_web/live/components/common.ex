@@ -316,39 +316,30 @@ defmodule LightningWeb.Components.Common do
 
   attr :id, :string, required: true
   attr :default_hash, :string, required: true
-  attr :orientation, :string, required: true
+  attr :orientation, :string, required: true, values: ["horizontal", "vertical"]
   slot :inner_block, required: true
 
   def tab_bar(assigns) do
-    horizontal_classes = ~w[
-      flex
-      gap-x-8
-      gap-y-2
-      border-b
-      border-gray-200
-      dark:border-gray-600
-    ]
+    assigns =
+      assigns
+      |> assign(
+        class:
+          case assigns[:orientation] do
+            "horizontal" ->
+              ~w[border-b border-gray-200 dark:border-gray-600 flex gap-x-4 gap-y-2]
 
-    vertical_classes = ~w[
-      nav
-      nav-tabs
-      gap-y-2
-      flex
-      flex-col
-      flex-wrap
-      list-none mr-4
-    ]
+            "vertical" ->
+              ~w[flex flex-col flex-wrap gap-y-2 list-none mr-4 nav nav-tabs]
+          end
+      )
 
     ~H"""
     <div
       id={"tab-bar-#{@id}"}
-      class={
-        if @orientation == "horizontal",
-          do: horizontal_classes,
-          else: vertical_classes
-      }
+      class={@class}
       data-active-classes="border-b-2 border-primary-500 text-primary-600"
       data-inactive-classes="border-b-2 border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-600 hover:border-gray-300"
+      data-disabled-classes="border-b-2 border-transparent text-gray-500 hover:cursor-not-allowed"
       data-default-hash={@default_hash}
       phx-hook="TabSelector"
     >
@@ -374,55 +365,66 @@ defmodule LightningWeb.Components.Common do
   end
 
   attr :hash, :string, required: true
-  attr :orientation, :string, required: true
+  attr :orientation, :string, required: true, values: ["horizontal", "vertical"]
+  attr :disabled, :boolean, default: false
   slot :inner_block, required: true
 
   def tab_item(assigns) do
-    vertical_classes = ~w[
-      nav-link
-      pr-3
-      py-2
-      font-medium
-      text-sm
-      border-b-2
-      border-transparent
-      text-gray-500
-      hover:border-gray-300
-      hover:text-gray-600
-      hover:border-gray-300
-    ]
-
-    horizontal_classes = ~w[
-      whitespace-nowrap
-      flex
-      items-center
-      py-3
-      px-3
-      font-medium
-      text-sm
-      border-b-2
-      border-transparent
-      text-gray-500
-      hover:border-gray-300
-      hover:text-gray-600
-      hover:border-gray-300
-    ]
+    assigns =
+      assigns
+      |> assign(
+        base_classes: ~w[
+          border-b-2
+          border-transparent
+          font-medium
+          text-gray-500
+          text-sm
+        ],
+        orientation_classes:
+          case assigns[:orientation] do
+            "horizontal" -> ~w[
+              px-2
+              py-2
+            ]
+            "vertical" -> ~w[
+              flex
+              items-center
+              px-3
+              py-3
+              whitespace-nowrap
+            ]
+          end,
+        disabled_classes: ~w[hover:cursor-not-allowed],
+        enabled_classes: ~w[
+          hover:border-gray-300
+          hover:border-gray-300
+          hover:text-gray-600
+        ]
+      )
 
     ~H"""
-    <a
-      id={"tab-item-#{@hash}"}
-      class={
-        if @orientation == "horizontal",
-          do: horizontal_classes,
-          else: vertical_classes
-      }
-      data-hash={@hash}
-      lv-keep-class
-      phx-click={switch_tabs(@hash)}
-      href={"##{@hash}"}
-    >
-      <%= render_slot(@inner_block) %>
-    </a>
+    <%= if @disabled do %>
+      <span
+        id={"tab-item-#{@hash}"}
+        class={[@base_classes, @orientation_classes, @disabled_classes]}
+        data-disabled
+        data-hash={@hash}
+        lv-keep-class
+      >
+        <%= render_slot(@inner_block) %>
+      </span>
+    <% else %>
+      <a
+        id={"tab-item-#{@hash}"}
+        class={[@base_classes, @orientation_classes, @enabled_classes]}
+        data-hash={@hash}
+        lv-keep-class
+        phx-click={switch_tabs(@hash)}
+        href={"##{@hash}"}
+      >
+        <%= render_slot(@inner_block) %>
+      </a>
+    <% end %>
     """
   end
 
@@ -430,8 +432,8 @@ defmodule LightningWeb.Components.Common do
     JS.hide(to: "[data-panel-hash]:not([data-panel-hash=#{hash}])")
     |> JS.show(
       to: "[data-panel-hash=#{hash}]",
-      transition: {"ease-out duration-300", "opacity-0", "opacity-100"},
-      time: 300
+      transition: {"ease-in duration-150 delay-50", "opacity-0", "opacity-100"},
+      time: 200
     )
   end
 end

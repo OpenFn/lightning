@@ -193,8 +193,37 @@ div[id^='tippy-'] {
   transform: rotate(-90deg) !important;
 }
 
-div.line-log-level::before {
-  content: attr(data-log-level);
+div.line-num::before {
+  content: attr(data-line-number);
   padding-left: 0.1em;
   max-width: min-content;
+}
+
+/* Wrapped styles for LogViewer to make the resulting HTML more compact */
+.log-viewer__prefix {
+  @apply border-r
+  border-slate-500/75
+    px-2 
+    text-right
+  text-slate-400
+  group-data-[highlight]:border-yellow-400
+    group-data-[highlight]:border-r-2
+    group-data-[highlight]:pr-[calc(0.5rem-1px)]
+  group-hover:bg-slate-600/75
+  group-hover:text-slate-300 
+    group-first:pt-[0.1rem];
+
+  &::before {
+    content: attr(data-line-prefix);
+    padding-left: 0.1em;
+    max-width: min-content;
+  }
+}
+
+.log-viewer__message {
+  @apply px-2
+ group-hover:bg-slate-600/50 
+   cursor-text 
+ selection:bg-slate-500/50
+   group-first:pt-[0.1rem];
 }
