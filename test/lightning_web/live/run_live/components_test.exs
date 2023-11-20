@@ -119,11 +119,7 @@ defmodule LightningWeb.RunLive.ComponentsTest do
            )
            |> Enum.any?()
 
-    assert html
-           |> Floki.find(
-             ~s{a[href="#{LightningWeb.RouteHelpers.show_run_url(project_id, first_run.id)}"]}
-           )
-           |> Enum.any?()
+    assert has_attempt_run_link?(html, workflow.project, attempt, first_run)
 
     html =
       render_component(&Components.run_list_item/1,
@@ -140,11 +136,7 @@ defmodule LightningWeb.RunLive.ComponentsTest do
            )
            |> Enum.any?()
 
-    assert html
-           |> Floki.find(
-             ~s{a[href="#{LightningWeb.RouteHelpers.show_run_url(project_id, second_run.id)}"]}
-           )
-           |> Enum.any?()
+    assert has_attempt_run_link?(html, workflow.project, attempt, second_run)
 
     html =
       render_component(&Components.run_list_item/1,
@@ -161,11 +153,7 @@ defmodule LightningWeb.RunLive.ComponentsTest do
            )
            |> Enum.any?()
 
-    assert html
-           |> Floki.find(
-             ~s{a[href="#{LightningWeb.RouteHelpers.show_run_url(project_id, third_run.id)}"]}
-           )
-           |> Enum.any?()
+    assert has_attempt_run_link?(html, workflow.project, attempt, third_run)
 
     # Rerun attempt
     last_run = List.last(attempt.runs)
@@ -456,5 +444,13 @@ defmodule LightningWeb.RunLive.ComponentsTest do
              |> Floki.text() =~
                "Running"
     end
+  end
+
+  defp has_attempt_run_link?(html, project, attempt, run) do
+    html
+    |> Floki.find(
+      ~s{a[href='#{~p"/projects/#{project}/attempts/#{attempt}?#{%{r: run.id}}"}']}
+    )
+    |> Enum.any?()
   end
 end

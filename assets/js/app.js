@@ -28,11 +28,9 @@ import topbar from '../vendor/topbar';
 import * as Hooks from './hooks';
 import JobEditor from './job-editor';
 import JobEditorResizer from './job-editor-resizer/mount';
-import TabSelector from './tab-selector';
 import WorkflowEditor from './workflow-editor';
 
 let hooks = {
-  TabSelector,
   JobEditor,
   JobEditorResizer,
   WorkflowEditor,

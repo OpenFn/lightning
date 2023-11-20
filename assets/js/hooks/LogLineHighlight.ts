@@ -2,29 +2,23 @@ import { PhoenixHook } from './PhoenixHook';
 
 const LogLineHighlight = {
   mounted() {
-    console.log(this.el.dataset);
-
     this.highlightRows();
   },
   updated() {
-    console.log({updated: this.el.dataset['selectedRunId']});
-    
     this.highlightRows();
   },
   highlightRows() {
-    const selectedRunId = this.el.dataset['selectedRunId'];
-    this.el.querySelectorAll('[data-run-id]').forEach(el => {
-      let runId = (el as HTMLElement).dataset['runId'];
+    const highlightId = this.el.dataset['highlightId'];
+    this.el.querySelectorAll('[data-highlight-id]').forEach(el => {
+      let elementHighlightId = (el as HTMLElement).dataset['highlightId'];
 
-      if (runId === selectedRunId) {
-        el.classList.add('bg-slate-600');
+      if (elementHighlightId === highlightId) {
+        el.setAttribute('data-highlight', '');
       } else {
-        el.classList.remove('bg-slate-600');
+        el.removeAttribute('data-highlight');
       }
     });
   },
-} as PhoenixHook<{
-  highlightRows: () => void;
-}>;
+} as PhoenixHook<{ highlightRows: () => void }, { highlightId: null | string }>;
 
 export default LogLineHighlight;
