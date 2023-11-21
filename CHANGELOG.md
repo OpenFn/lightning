@@ -8,6 +8,11 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Changed
+
+- Incorrect wording on the "Delete" tooltip
+  [#1313](https://github.com/OpenFn/Lightning/issues/1313)
+
 ### 🚨 Breaking change warning! 🚨
 
 This release will contain breaking changes as we've significantly improved both
