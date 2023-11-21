@@ -14,6 +14,17 @@ and this project adheres to
 
 ### Fixed
 
+## [v0.10.1] - 2023-11-21
+
+### Added
+
+### Changed
+
+### Fixed
+
+- Workorder ID was not displayed properly in history page
+  [#1423](https://github.com/OpenFn/Lightning/issues/1423)
+
 ## [v0.10.0] - 2023-11-21
 
 ### 🚨 Breaking change warning! 🚨
