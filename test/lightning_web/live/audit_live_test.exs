@@ -4,6 +4,8 @@ defmodule LightningWeb.AuditLiveTest do
   import Phoenix.LiveViewTest
   import Lightning.CredentialsFixtures
 
+  alias LightningWeb.LiveHelpers
+
   describe "Index as a regular user" do
     setup :register_and_log_in_user
 
@@ -43,7 +45,7 @@ defmodule LightningWeb.AuditLiveTest do
       # Assert that the table works for users that still exist.
       assert html =~ user.first_name
       assert html =~ user.email
-      assert html =~ LightningWeb.LiveHelpers.display_short_uuid(credential.id)
+      assert html =~ LiveHelpers.display_short_uuid(credential.id)
       assert html =~ "created"
       assert html =~ "No changes"
       refute html =~ "nil"
@@ -51,7 +53,7 @@ defmodule LightningWeb.AuditLiveTest do
       # Assert that the table works for users that have been deleted.
       assert html =~ "created"
       assert html =~ "(User deleted)"
-      assert html =~ LightningWeb.LiveHelpers.display_short_uuid(deleted_user_id)
+      assert html =~ LiveHelpers.display_short_uuid(deleted_user_id)
     end
   end
 end

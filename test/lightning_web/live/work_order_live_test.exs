@@ -3,10 +3,10 @@ defmodule LightningWeb.RunWorkOrderTest do
   use LightningWeb.ConnCase, async: true
 
   import Phoenix.LiveViewTest
+  import Lightning.Factories
 
   alias Lightning.WorkOrders.SearchParams
-
-  import Lightning.Factories
+  alias LightningWeb.LiveHelpers
 
   setup :register_and_log_in_user
   setup :create_project_for_current_user
@@ -117,22 +117,33 @@ defmodule LightningWeb.RunWorkOrderTest do
         |> render()
 
       assert table =~ workflow.name
-      assert table =~ "#{dataclip.id}"
+      assert table =~ LiveHelpers.display_short_uuid(work_order.id)
+      assert table =~ LiveHelpers.display_short_uuid(dataclip.id)
+
+      refute table =~ LiveHelpers.display_short_uuid(attempt_id)
 
       # toggle work_order details
       # TODO move to test work_order_component
 
-      assert view
-             |> element(
-               "section#inner_content div[data-entity='work_order_list'] > div:first-child button[phx-click='toggle_details']"
-             )
-             |> render_click() =~ "attempt-#{attempt_id}"
+      expanded =
+        view
+        |> element(
+          "section#inner_content div[data-entity='work_order_list'] > div:first-child button[phx-click='toggle_details']"
+        )
+        |> render_click()
 
-      refute view
-             |> element(
-               "section#inner_content div[data-entity='work_order_list'] > div:first-child button[phx-click='toggle_details']"
-             )
-             |> render_click() =~ "attempt-#{attempt_id}"
+      assert expanded =~ "attempt-#{attempt_id}"
+      assert expanded =~ LiveHelpers.display_short_uuid(attempt_id)
+
+      collapsed_again =
+        view
+        |> element(
+          "section#inner_content div[data-entity='work_order_list'] > div:first-child button[phx-click='toggle_details']"
+        )
+        |> render_click()
+
+      refute collapsed_again =~ "attempt-#{attempt_id}"
+      refute collapsed_again =~ LiveHelpers.display_short_uuid(attempt_id)
     end
   end
 
