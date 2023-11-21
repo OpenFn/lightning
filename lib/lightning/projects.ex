@@ -19,7 +19,6 @@ defmodule Lightning.Projects do
   alias Lightning.Accounts.User
   alias Lightning.ExportUtils
   alias Lightning.Workflows.Workflow
-  alias Lightning.InvocationReason
   alias Lightning.Invocation.{Run, Dataclip}
   alias Lightning.WorkOrder
 
@@ -204,13 +203,9 @@ defmodule Lightning.Projects do
 
       project_workorders_query(project) |> Repo.delete_all()
 
-      project_run_invocation_reasons(project) |> Repo.delete_all()
-
       project_runs_query(project) |> Repo.delete_all()
 
       project_jobs_query(project) |> Repo.delete_all()
-
-      project_trigger_invocation_reason(project) |> Repo.delete_all()
 
       project_triggers_query(project) |> Repo.delete_all()
 
@@ -219,8 +214,6 @@ defmodule Lightning.Projects do
       project_users_query(project) |> Repo.delete_all()
 
       project_credentials_query(project) |> Repo.delete_all()
-
-      project_dataclip_invocation_reason(project) |> Repo.delete_all()
 
       project_dataclips_query(project) |> Repo.delete_all()
 
@@ -234,30 +227,6 @@ defmodule Lightning.Projects do
 
       project
     end)
-  end
-
-  def project_trigger_invocation_reason(project) do
-    from(ir in InvocationReason,
-      join: tr in assoc(ir, :trigger),
-      join: w in assoc(tr, :workflow),
-      where: w.project_id == ^project.id
-    )
-  end
-
-  def project_dataclip_invocation_reason(project) do
-    from(ir in InvocationReason,
-      join: d in assoc(ir, :dataclip),
-      where: d.project_id == ^project.id
-    )
-  end
-
-  def project_run_invocation_reasons(project) do
-    from(ir in InvocationReason,
-      join: r in assoc(ir, :run),
-      join: j in assoc(r, :job),
-      join: w in assoc(j, :workflow),
-      where: w.project_id == ^project.id
-    )
   end
 
   def project_attempts_query(project) do

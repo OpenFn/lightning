@@ -2,7 +2,6 @@ defmodule Lightning.AccountsTest do
   use Lightning.DataCase, async: true
 
   alias Lightning.AccountsFixtures
-  alias Lightning.InvocationFixtures
   alias Lightning.Credentials
   alias Lightning.Jobs
   alias Lightning.JobsFixtures
@@ -16,11 +15,28 @@ defmodule Lightning.AccountsTest do
   import Lightning.Factories
   import Ecto.Query
 
-  test "has_activity_in_projects?/1 returns true if user is has activity in a project (is associated to invocation reasons) and false otherwise." do
+  test "has_activity_in_projects?/1 returns true if user has activity in a project (is associated with an attempt) and false otherwise." do
     user = AccountsFixtures.user_fixture()
     another_user = AccountsFixtures.user_fixture()
 
-    InvocationFixtures.reason_fixture(user_id: user.id)
+    workflow = insert(:workflow)
+    trigger = insert(:trigger, workflow: workflow)
+    dataclip = insert(:dataclip)
+
+    work_order =
+      insert(:workorder,
+        workflow: workflow,
+        trigger: trigger,
+        dataclip: dataclip
+      )
+
+    _attempt =
+      insert(:attempt,
+        created_by: user,
+        work_order: work_order,
+        starting_trigger: trigger,
+        dataclip: dataclip
+      )
 
     assert Accounts.has_activity_in_projects?(user)
     refute Accounts.has_activity_in_projects?(another_user)
@@ -586,23 +602,38 @@ defmodule Lightning.AccountsTest do
   end
 
   describe "The default Oban function Accounts.perform/1" do
-    test "prevents users that are still linked to an invocation reason from being deleted" do
+    test "prevents users that are still linked to an attempt from being deleted" do
       user =
         user_fixture(
           scheduled_deletion: DateTime.utc_now() |> Timex.shift(seconds: -10)
         )
 
-      InvocationFixtures.reason_fixture(user_id: user.id)
+      workflow = insert(:workflow)
+      trigger = insert(:trigger, workflow: workflow)
+      dataclip = insert(:dataclip)
 
-      assert 1 = Repo.all(User) |> Enum.count()
+      work_order =
+        insert(:workorder,
+          workflow: workflow,
+          trigger: trigger,
+          dataclip: dataclip
+        )
+
+      _attempt =
+        insert(:attempt,
+          created_by: user,
+          work_order: work_order,
+          starting_trigger: trigger,
+          dataclip: dataclip
+        )
+
+      assert 1 == Repo.all(User) |> Enum.count()
 
       {:ok, %{users_deleted: users_deleted}} =
         Accounts.perform(%Oban.Job{args: %{"type" => "purge_deleted"}})
 
-      # We still have one user in database
       assert 1 == Repo.all(User) |> Enum.count()
 
-      # No user has been deleted
       assert 0 == users_deleted |> Enum.count()
     end
 

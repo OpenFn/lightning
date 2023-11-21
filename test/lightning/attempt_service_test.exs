@@ -11,25 +11,23 @@ defmodule Lightning.AttemptServiceTest do
   describe "attempts" do
     @tag skip: "Replaced by Attempts.enqueue/1"
     test "create_attempt/3 returns a new Attempt, with a new Run" do
-      %{job: job, trigger: trigger} = workflow_job_fixture()
+      %{job: job, trigger: _trigger} = workflow_job_fixture()
       work_order = work_order_fixture(workflow_id: job.workflow_id)
-      reason = reason_fixture(trigger_id: trigger.id)
+      dataclip = dataclip_fixture()
 
       job_id = job.id
       work_order_id = work_order.id
-      reason_id = reason.id
-      data_clip_id = reason.dataclip_id
+      data_clip_id = dataclip.id
 
       assert {:ok,
               %Attempt{
                 work_order_id: ^work_order_id,
-                reason_id: ^reason_id,
                 runs: [%Run{job_id: ^job_id, input_dataclip_id: ^data_clip_id}]
               }} =
                AttemptService.create_attempt(
                  work_order,
                  job,
-                 reason
+                 dataclip
                )
     end
   end
@@ -41,7 +39,7 @@ defmodule Lightning.AttemptServiceTest do
       work_order = work_order_fixture(workflow_id: job.workflow_id)
       dataclip = dataclip_fixture()
 
-      reason =
+      _reason =
         reason_fixture(
           trigger_id: trigger.id,
           dataclip_id: dataclip.id
@@ -49,8 +47,7 @@ defmodule Lightning.AttemptServiceTest do
 
       attempt =
         %Attempt{
-          work_order_id: work_order.id,
-          reason_id: reason.id
+          work_order_id: work_order.id
         }
         |> Repo.insert!()
 

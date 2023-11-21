@@ -1,11 +1,11 @@
 defmodule LightningWeb.UserLiveTest do
   alias Lightning.AccountsFixtures
-  alias Lightning.InvocationFixtures
   use LightningWeb.ConnCase, async: true
 
   import Lightning.{AccountsFixtures}
   import Phoenix.LiveViewTest
   import Swoosh.TestAssertions
+  import Lightning.Factories
 
   @create_attrs %{
     email: "test@example.com",
@@ -240,7 +240,23 @@ defmodule LightningWeb.UserLiveTest do
           scheduled_deletion: Timex.now() |> Timex.shift(days: 7)
         )
 
-      InvocationFixtures.reason_fixture(user_id: user.id)
+      workflow = insert(:workflow)
+      trigger = insert(:trigger, workflow: workflow)
+      dataclip = insert(:dataclip)
+
+      work_order =
+        insert(:workorder,
+          workflow: workflow,
+          trigger: trigger,
+          dataclip: dataclip
+        )
+
+      insert(:attempt,
+        created_by: user,
+        work_order: work_order,
+        starting_trigger: trigger,
+        dataclip: dataclip
+      )
 
       {:ok, index_live, _html} = live(conn, Routes.user_index_path(conn, :index))
 
