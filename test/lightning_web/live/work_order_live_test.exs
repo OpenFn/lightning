@@ -9,6 +9,10 @@ defmodule LightningWeb.RunWorkOrderTest do
   alias Lightning.WorkOrders.SearchParams
   alias LightningWeb.LiveHelpers
 
+  alias Phoenix.LiveView.AsyncResult
+
+  import Lightning.Factories
+
   setup :register_and_log_in_user
   setup :create_project_for_current_user
 
@@ -927,6 +931,30 @@ defmodule LightningWeb.RunWorkOrderTest do
       assert has_element?(view, "#attempt_#{attempt_1.id}.hidden")
       refute has_element?(view, "#attempt_#{attempt_2.id}.hidden")
       assert has_element?(view, "#attempt_#{attempt_2.id}")
+    end
+  end
+
+  describe "handle_async/3" do
+    test "with exit error", %{conn: conn, project: project} do
+      {:ok, view, _html} =
+        live(conn, Routes.project_run_index_path(conn, :index, project.id))
+
+      %{socket: socket} = :sys.get_state(view.pid)
+      initial_async = AsyncResult.loading()
+
+      assert {:noreply, %{assigns: assigns}} =
+               LightningWeb.RunLive.Index.handle_async(
+                 :load_workorders,
+                 {:exit, "some reason"},
+                 Map.merge(socket, %{
+                   assigns: Map.put(socket.assigns, :async_page, initial_async)
+                 })
+               )
+
+      assert %{page: %{total_pages: 0}, async_page: async_page} = assigns
+
+      assert async_page ==
+               AsyncResult.failed(initial_async, {:exit, "some reason"})
     end
   end
 
