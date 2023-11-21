@@ -181,18 +181,16 @@ defmodule LightningWeb.RunWorkOrderTest do
           "run_id" => Ecto.UUID.generate()
         })
 
-      {:ok, view, _html} =
+      {:ok, _view, html} =
         live(conn, Routes.project_run_index_path(conn, :index, project.id))
 
-      div =
-        view
-        |> element(
-          "section#inner_content div[data-entity='work_order_list'] > div:first-child"
-        )
-        |> render()
+      work_order_list =
+        html
+        |> Floki.parse_fragment!()
+        |> Floki.find("div[data-entity='work_order_list'] > div:first-child")
 
-      assert div =~ "animate-pulse"
-      assert div =~ "Loading work orders ..."
+      assert work_order_list =~ "animate-pulse"
+      assert work_order_list =~ "Loading work orders ..."
     end
 
     test "Search form is displayed", %{
