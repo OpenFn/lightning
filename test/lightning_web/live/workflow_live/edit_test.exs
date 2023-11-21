@@ -359,7 +359,8 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       assert view |> delete_job_button_is_disabled?(job_a)
 
-      assert html =~ "You can&#39;t delete the first job of a workflow"
+      assert html =~
+               "This job cannot be deleted since it has following jobs associated to it."
 
       assert view |> force_event(:delete_node, job_a) =~
                "Delete all descendant jobs first"
