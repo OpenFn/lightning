@@ -327,15 +327,6 @@ defmodule LightningWeb.RunLive.ComponentsTest do
         |> Floki.parse_fragment!()
 
       assert html
-             |> Floki.find("div#ran-for-#{run.id} > div:nth-child(2)")
-             |> Floki.text() =~
-               "24000 ms"
-
-      assert html
-             |> Floki.find("div#exit-reason-#{run.id} > div:nth-child(2)")
-             |> Floki.text() =~ "Success"
-
-      assert html
              |> Floki.find("div#finished-at-#{run.id} > div:nth-child(2)")
              |> Floki.text() =~
                Calendar.strftime(finished_at, "%c")

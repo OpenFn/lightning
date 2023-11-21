@@ -149,7 +149,7 @@ defmodule LightningWeb.RunWorkOrderTest do
   end
 
   describe "Search and Filtering" do
-    test "Starts by rendering an animated loading of work orders", %{
+    test "starts by rendering an animated loading of work orders", %{
       conn: conn,
       project: project
     } do
@@ -582,9 +582,7 @@ defmodule LightningWeb.RunWorkOrderTest do
         })
 
       {:ok, view, _html} =
-        live(conn, Routes.project_run_index_path(conn, :index, project.id))
-
-      render_async(view)
+        live_async(conn, Routes.project_run_index_path(conn, :index, project.id))
 
       div =
         view
