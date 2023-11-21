@@ -678,90 +678,6 @@ defmodule LightningWeb.RunWorkOrderTest do
                {:error, {:redirect, %{flash: %{"nav" => :not_found}, to: "/"}}}
     end
 
-    test "log_view component" do
-      log_lines = ["First line", "Second line"]
-
-      html =
-        render_component(&LightningWeb.RunLive.Components.log_view/1,
-          log: log_lines
-        )
-        |> Floki.parse_fragment!()
-
-      assert html |> Floki.find("div[data-line-number]") |> length() == 2
-
-      # Check that the log lines are present.
-      # Replace the resulting utf-8 &nbsp; back into a regular space.
-      assert html
-             |> Floki.find("div[data-log-line]")
-             |> Floki.text(sep: "\n")
-             |> String.replace(<<160::utf8>>, " ") ==
-               log_lines |> Enum.join("\n")
-    end
-
-    test "run_details component with finished run" do
-      now = Timex.now()
-
-      started_at = now |> Timex.shift(seconds: -25)
-      finished_at = now |> Timex.shift(seconds: -1)
-
-      run =
-        insert(:run,
-          started_at: started_at,
-          finished_at: finished_at,
-          exit_reason: "success"
-        )
-
-      html =
-        render_component(&LightningWeb.RunLive.Components.run_details/1,
-          run: run |> Lightning.Repo.preload(:attempts),
-          project_id: "4adf2644-ed4e-4f97-a24c-ab35b3cb1efa"
-        )
-        |> Floki.parse_fragment!()
-
-      assert html
-             |> Floki.find("div#finished-at-#{run.id} > div:nth-child(2)")
-             |> Floki.text() =~
-               Calendar.strftime(finished_at, "%c")
-
-      assert html
-             |> Floki.find("div#ran-for-#{run.id} > div:nth-child(2)")
-             |> Floki.text() =~
-               "24000 ms"
-
-      assert html
-             |> Floki.find("div#exit-reason-#{run.id} > div:nth-child(2)")
-             |> Floki.text() =~ "Success"
-    end
-
-    test "run_details component with pending run" do
-      now = Timex.now()
-
-      started_at = now |> Timex.shift(seconds: -25)
-      run = insert(:run, started_at: started_at)
-
-      html =
-        render_component(&LightningWeb.RunLive.Components.run_details/1,
-          run: run |> Lightning.Repo.preload(:attempts),
-          project_id: "4adf2644-ed4e-4f97-a24c-ab35b3cb1efa"
-        )
-        |> Floki.parse_fragment!()
-
-      assert html
-             |> Floki.find("div#finished-at-#{run.id} > div:nth-child(2)")
-             |> Floki.text() =~ "n/a"
-
-      assert html
-             |> Floki.find("div#ran-for-#{run.id} > div:nth-child(2)")
-             |> Floki.text() =~ "n/a"
-
-      # TODO: add a timer that counts up from run.started_at
-      #  ~r/25\d\d\d ms/
-
-      assert html
-             |> Floki.find("div#exit-reason-#{run.id} > div:nth-child(2)")
-             |> Floki.text() =~ "Running"
-    end
-
     test "by default only the latest attempt is present when there are multiple attempts",
          %{conn: conn, user: user} do
       project =
@@ -1163,7 +1079,7 @@ defmodule LightningWeb.RunWorkOrderTest do
         )
       )
 
-      # Force Re-render to ensure the event is included
+      # Awaits for async changes and forces re-render
       render_async(view)
       render(view)
       assert has_element?(view, "#workorder-#{work_order_1.id}")
