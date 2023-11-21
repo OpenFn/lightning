@@ -80,17 +80,6 @@ defmodule LightningWeb.AttemptLive.AttemptViewerLive do
     {:noreply, socket}
   end
 
-  def handle_async(:initial_log_lines, {:exit, reason}, socket) do
-    %{initial_log_lines: initial_log_lines} = socket.assigns
-
-    {:noreply,
-     assign(
-       socket,
-       :initial_log_lines,
-       AsyncResult.failed(initial_log_lines, {:exit, reason})
-     )}
-  end
-
   @impl true
   def handle_info(%Attempts.Events.RunStarted{run: run}, socket) do
     {:noreply, socket |> maybe_set_selected_run_id([run])}
