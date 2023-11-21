@@ -295,14 +295,6 @@ defmodule Lightning.Workflows do
   end
 
   @doc """
-  A way to ensure the consistency of nodes.
-  This query orders jobs based on their `inserted_at` timestamps in ascending order
-  """
-  def jobs_ordered_subquery do
-    from(j in Job, order_by: [asc: j.inserted_at], preload: [:credential])
-  end
-
-  @doc """
     Check if workflow exist
   """
   def workflow_exists?(project_id, workflow_name) do
@@ -311,5 +303,13 @@ defmodule Lightning.Workflows do
         where: w.project_id == ^project_id and w.name == ^workflow_name
 
     Repo.exists?(query)
+  end
+
+  @doc """
+  A way to ensure the consistency of nodes.
+  This query orders jobs based on their `inserted_at` timestamps in ascending order
+  """
+  def jobs_ordered_subquery do
+    from(j in Job, order_by: [asc: j.inserted_at])
   end
 end

@@ -481,7 +481,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
           |> Lightning.Repo.preload([
             :edges,
             triggers: Trigger.with_auth_methods_query(),
-            jobs: Workflows.jobs_ordered_subquery()
+            jobs: {Workflows.jobs_ordered_subquery(), [:credential]}
           ])
 
         socket |> assign_workflow(workflow) |> assign(page_title: workflow.name)
