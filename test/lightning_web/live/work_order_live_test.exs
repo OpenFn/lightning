@@ -184,13 +184,17 @@ defmodule LightningWeb.RunWorkOrderTest do
       {:ok, _view, html} =
         live(conn, Routes.project_run_index_path(conn, :index, project.id))
 
+      # render element is flaky due to async so it parses the html
       work_order_list =
         html
         |> Floki.parse_fragment!()
         |> Floki.find("div[data-entity='work_order_list'] > div:first-child")
+        |> hd()
 
-      assert work_order_list =~ "animate-pulse"
-      assert work_order_list =~ "Loading work orders ..."
+      assert Floki.attribute(work_order_list, "class") |> hd() =~ "animate-pulse"
+
+      assert Floki.children(work_order_list) |> Floki.text() =~
+               "Loading work orders ..."
     end
 
     test "Search form is displayed", %{
