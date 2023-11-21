@@ -160,7 +160,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
           phx-change="validate"
         >
           <.single_inputs_for
-            :let={{jf, has_child_edges, is_first_job, tooltip_message}}
+            :let={{jf, has_child_edges, is_first_job}}
             :if={@selected_job}
             form={@workflow_form}
             field={:jobs}
@@ -201,7 +201,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
                         phx-value-id={@selected_job.id}
                         class="focus:ring-red-500 bg-red-600 hover:bg-red-700 disabled:bg-red-300"
                         disabled={!@can_edit_job or has_child_edges or is_first_job}
-                        tooltip={tooltip_message}
+                        tooltip={deletion_tooltip_message(@has_multiple_jobs)}
                         data-confirm="Are you sure you want to delete this Job?"
                       >
                         Delete Job
@@ -290,11 +290,11 @@ defmodule LightningWeb.WorkflowLive.Edit do
     """
   end
 
-  defp deletion_tooltip_message(is_first_job) do
-    if is_first_job do
-      "You can't delete the first job of a workflow"
-    else
+  defp deletion_tooltip_message(has_multiple_jobs) do
+    if has_multiple_jobs do
       "This job cannot be deleted since it has following jobs associated to it."
+    else
+      "You can't delete the first job of a workflow"
     end
   end
 
@@ -357,15 +357,14 @@ defmodule LightningWeb.WorkflowLive.Edit do
       |> assign(
         forms: forms,
         has_child_edges: has_child_edges,
-        is_first_job: is_first_job,
-        tooltip_message: deletion_tooltip_message(is_first_job)
+        is_first_job: is_first_job
       )
 
     ~H"""
     <%= for f <- @forms do %>
       <%= render_slot(
         @inner_block,
-        {f, @has_child_edges, @is_first_job, @tooltip_message}
+        {f, @has_child_edges, @is_first_job}
       ) %>
     <% end %>
     """
@@ -867,7 +866,12 @@ defmodule LightningWeb.WorkflowLive.Edit do
         |> Map.put("project_id", socket.assigns.project.id)
       )
 
-    socket |> assign_changeset(changeset)
+    has_multiple_jobs =
+      length(Ecto.Changeset.get_field(changeset, :jobs)) > 1
+
+    socket
+    |> assign_changeset(changeset)
+    |> assign(:has_multiple_jobs, has_multiple_jobs)
   end
 
   defp apply_query_params(socket, params) do
