@@ -28,6 +28,7 @@ defmodule LightningWeb.CoreComponents do
 
   slot :col, required: true do
     attr :label, :string
+    attr :label_class, :string
   end
 
   slot :action, doc: "the slot for showing user actions in the last table column"
@@ -46,7 +47,9 @@ defmodule LightningWeb.CoreComponents do
               scope="col"
               class="px-3 py-3.5 text-left text-sm font-semibold text-gray-500"
             >
-              <%= col[:label] %>
+              <div class={col[:label_class]}>
+                <%= col[:label] %>
+              </div>
             </th>
             <th
               :if={@action != []}
@@ -64,7 +67,7 @@ defmodule LightningWeb.CoreComponents do
             class=""
           >
             <td
-              :for={{col, i} <- Enum.with_index(@col)}
+              :for={col <- @col}
               phx-click={@row_click && @row_click.(row)}
               class={[
                 "whitespace-nowrap px-3 py-4 text-sm text-gray-500",

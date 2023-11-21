@@ -35,6 +35,7 @@ defmodule Lightning.Projects.ProjectUser do
   schema "project_users" do
     belongs_to :user, User
     belongs_to :project, Project
+    field :delete, :boolean, virtual: true
     field :failure_alert, :boolean, default: true
     field :role, RolesEnum, default: :editor
     field :digest, DigestEnum, default: :weekly
@@ -45,7 +46,14 @@ defmodule Lightning.Projects.ProjectUser do
   @doc false
   def changeset(project_user, attrs) do
     project_user
-    |> cast(attrs, [:user_id, :project_id, :role, :digest, :failure_alert])
+    |> cast(attrs, [
+      :delete,
+      :user_id,
+      :project_id,
+      :role,
+      :digest,
+      :failure_alert
+    ])
     |> validate_required([:user_id])
     |> unique_constraint([:project_id, :user_id],
       message: "user already a member of this project."
@@ -54,20 +62,10 @@ defmodule Lightning.Projects.ProjectUser do
   end
 
   defp maybe_remove_user(changeset) do
-    role = get_param(changeset, :role)
-
-    if changeset.valid? && to_string(role) == "" do
-      if get_field(changeset, :id) do
-        %{changeset | action: :delete}
-      else
-        %{changeset | action: :ignore}
-      end
+    if get_change(changeset, :delete) do
+      %{changeset | action: :delete}
     else
       changeset
     end
-  end
-
-  defp get_param(changeset, field) do
-    changeset.params[field] || changeset.params[to_string(field)]
   end
 end

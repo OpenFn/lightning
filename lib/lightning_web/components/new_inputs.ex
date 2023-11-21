@@ -257,6 +257,17 @@ defmodule LightningWeb.Components.NewInputs do
     """
   end
 
+  def input(%{type: "hidden"} = assigns) do
+    ~H"""
+    <input
+      type="hidden"
+      name={@name}
+      id={@id}
+      value={Phoenix.HTML.Form.normalize_value(@type, @value)}
+    />
+    """
+  end
+
   # All other inputs text, datetime-local, url etc. are handled here...
   def input(assigns) do
     ~H"""

@@ -6,7 +6,7 @@
     phx-target={@myself}
     phx-change="validate"
   >
-    <div class="flex items-end gap-6">
+    <div class="flex items-end gap-2">
       <div class="w-3/6">
         <%= Phoenix.HTML.Form.label(f, :name,
           class: "block text-sm font-medium text-secondary-700 mb-2"
@@ -19,7 +19,7 @@
         ) %>
         <.old_error field={f[:name]} />
       </div>
-      <div class="pl-2">
+      <div class="">
         <%= if (@changeset.valid?) do %>
           Your project will be named <span class="font-mono border rounded-md p-1 bg-yellow-100 border-slate-300">
       <%= @name %></span>.
@@ -27,6 +27,13 @@
       </div>
     </div>
   </.form>
+  <div class="sm:flex sm:items-center mt-8">
+    <div class="sm:flex-auto">
+      <h1 class="text-base font-semibold leading-6 text-gray-600">
+        Manage project users
+      </h1>
+    </div>
+  </div>
   <.form
     :let={f}
     for={@changeset}
@@ -35,7 +42,7 @@
     phx-submit="save"
   >
     <%= Phoenix.HTML.Form.hidden_input(f, :name) %>
-    <div class="mt-8 flow-root">
+    <div class="mt-2 flow-root">
       <div class="-mx-4 -my-2 overflow-x-auto sm:-mx-6 lg:-mx-8">
         <div class="inline-block min-w-full py-2 align-middle sm:px-6 lg:px-8">
           <.new_table
@@ -51,33 +58,38 @@
           >
             <:col :let={form} label="NAME">
               <%= full_user_name(form.data.user) %>
-              <%= Phoenix.HTML.Form.hidden_input(form, :id) %>
-              <%= Phoenix.HTML.Form.hidden_input(form, :user_id) %>
+              <.input :if={form.data.id} type="hidden" field={form[:id]} />
+              <.input type="hidden" field={form[:user_id]} />
             </:col>
             <:col :let={form} label="EMAIL">
               <%= form.data.user.email %>
             </:col>
-            <:col :let={form} label="NO ACCESS">
-              <%= Phoenix.HTML.Form.radio_button(form, :role, nil,
-                class:
-                  "h-4 w-4 border-gray-300 text-indigo-600 focus:ring-indigo-600"
-              ) %>
+            <:col :let={form} label="NO ACCESS" label_class="text-center">
+              <div class="text-center">
+                <%= Phoenix.HTML.Form.radio_button(form, :role, nil,
+                  class:
+                    "h-4 w-4 border-gray-300 text-indigo-600 focus:ring-indigo-600"
+                ) %>
+              </div>
             </:col>
             <:col
               :let={form}
               :for={role <- ["owner", "admin", "editor", "viewer"]}
               label={String.upcase(role)}
+              label_class="text-center"
             >
-              <%= Phoenix.HTML.Form.radio_button(form, :role, role,
-                class:
-                  "h-4 w-4 border-gray-300 text-indigo-600 focus:ring-indigo-600"
-              ) %>
+              <div class="text-center">
+                <%= Phoenix.HTML.Form.radio_button(form, :role, role,
+                  class:
+                    "h-4 w-4 border-gray-300 text-indigo-600 focus:ring-indigo-600"
+                ) %>
+              </div>
             </:col>
           </.new_table>
         </div>
       </div>
     </div>
-    <div class="mt-2">
+    <div class="mt-4">
       <span>
         <.link
           navigate={Routes.project_index_path(@socket, :index)}

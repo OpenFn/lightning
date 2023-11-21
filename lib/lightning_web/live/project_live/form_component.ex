@@ -51,6 +51,7 @@ defmodule LightningWeb.ProjectLive.FormComponent do
      socket
      |> assign(assigns)
      |> assign(:changeset, changeset)
+     |> assign(:project_users, project_users)
      |> assign(
        :name,
        Projects.url_safe_project_name(fetch_field!(changeset, :name))
@@ -58,10 +59,17 @@ defmodule LightningWeb.ProjectLive.FormComponent do
   end
 
   @impl true
-  def handle_event("validate", %{"project" => project_params}, socket) do
+  def handle_event(
+        "validate",
+        %{"project" => project_params},
+        %{assigns: assigns} = socket
+      ) do
+    # we update the project here so that we can mantain the users in the changeset after validation
+    project = %{assigns.project | project_users: assigns.project_users}
+
     changeset =
-      socket.assigns.changeset
-      |> Projects.Project.changeset(
+      project
+      |> Projects.change_project(
         project_params
         |> coerce_raw_name_to_safe_name()
       )
@@ -74,7 +82,25 @@ defmodule LightningWeb.ProjectLive.FormComponent do
   end
 
   def handle_event("save", %{"project" => project_params}, socket) do
-    save_project(socket, socket.assigns.action, project_params)
+    # Drop non-persited project users without role
+    users =
+      Enum.reject(project_params["project_users"] || %{}, fn {_key, params} ->
+        is_nil(params["id"]) and params["role"] == ""
+      end)
+
+    users_params =
+      Enum.map(users, fn {index, params} ->
+        if params["role"] == "" do
+          {index, Map.merge(params, %{"delete" => "true"})}
+        else
+          {index, params}
+        end
+      end)
+      |> Enum.into(%{})
+
+    params = Map.merge(project_params, %{"project_users" => users_params})
+
+    save_project(socket, socket.assigns.action, params)
   end
 
   defp save_project(socket, :edit, project_params) do
@@ -131,7 +157,7 @@ defmodule LightningWeb.ProjectLive.FormComponent do
     added_project_users =
       project_users_params
       |> Map.values()
-      |> Enum.filter(fn pu -> pu["role"] != "" end)
+      |> Enum.filter(fn pu -> pu["delete"] != "true" end)
       |> Enum.map(fn pu -> pu["user_id"] end)
 
     added_project_users -- existing_project_users
