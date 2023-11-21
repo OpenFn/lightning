@@ -33,6 +33,7 @@ defmodule Lightning.ExportUtils do
   defp trigger_to_treenode(trigger) do
     base = %{
       id: trigger.id,
+      enabled: trigger.enabled,
       name: Atom.to_string(trigger.type),
       node_type: :trigger,
       type: Atom.to_string(trigger.type)
@@ -84,7 +85,7 @@ defmodule Lightning.ExportUtils do
       project: [:name, :description, :credentials, :globals, :workflows],
       workflow: [:name, :jobs, :triggers, :edges],
       job: [:name, :adaptor, :credential, :globals, :body],
-      trigger: [:type, :cron_expression],
+      trigger: [:type, :cron_expression, :enabled],
       edge: [:source_trigger, :source_job, :target_job, :condition, :enabled]
     }
 
