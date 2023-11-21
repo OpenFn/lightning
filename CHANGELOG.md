@@ -8,6 +8,14 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Added
+
+### Changed
+
+### Fixed
+
+## [v0.10.0] - 2023-11-21
+
 ### 🚨 Breaking change warning! 🚨
 
 This release will contain breaking changes as we've significantly improved both
