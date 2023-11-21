@@ -273,19 +273,29 @@ defmodule LightningWeb.RunLive.ComponentsTest do
            |> Enum.any?()
   end
 
-  test "log_view component" do
-    log_lines = ["First line", "Second line"]
+  describe "log_view component" do
+    test "with no log lines" do
+      html =
+        render_component(&Components.log_view/1, log: [])
+        |> Floki.parse_fragment!()
 
-    html =
-      render_component(&Components.log_view/1, log: log_lines)
-      |> Floki.parse_fragment!()
+      assert html |> Floki.find("div[data-line-number]") |> length() == 0
+    end
 
-    assert html |> Floki.find("div[data-line-number]") |> length() ==
-             length(log_lines)
+    test "with log lines" do
+      log_lines = ["First line", "Second line"]
 
-    # Check that the log lines are present.
-    # Replace the resulting utf-8 &nbsp; back into a regular space.
-    assert log_lines_from_html(html) == log_lines |> Enum.join("\n")
+      html =
+        render_component(&Components.log_view/1, log: log_lines)
+        |> Floki.parse_fragment!()
+
+      assert html |> Floki.find("div[data-line-number]") |> length() ==
+               length(log_lines)
+
+      # Check that the log lines are present.
+      # Replace the resulting utf-8 &nbsp; back into a regular space.
+      assert log_lines_from_html(html) == log_lines |> Enum.join("\n")
+    end
   end
 
   defp log_lines_from_html(html) do
@@ -315,6 +325,15 @@ defmodule LightningWeb.RunLive.ComponentsTest do
           project_id: "4adf2644-ed4e-4f97-a24c-ab35b3cb1efa"
         )
         |> Floki.parse_fragment!()
+
+      assert html
+             |> Floki.find("div#ran-for-#{run.id} > div:nth-child(2)")
+             |> Floki.text() =~
+               "24000 ms"
+
+      assert html
+             |> Floki.find("div#exit-reason-#{run.id} > div:nth-child(2)")
+             |> Floki.text() =~ "Success"
 
       assert html
              |> Floki.find("div#finished-at-#{run.id} > div:nth-child(2)")
