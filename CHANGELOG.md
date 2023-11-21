@@ -63,6 +63,8 @@ bearing with us as we move towards our first stable Lightning release.)
 
 - Fix flaky job name input behavior on error
   [#1218](https://github.com/OpenFn/Lightning/issues/1218)
+- Added a hover effect on copy and add button for adaptors examples
+  [#1297](https://github.com/OpenFn/Lightning/issues/1297)
 - Migration helper code to move from `v0.9.3` to `v0.10.0` added to SetupUtils
   [#1363](https://github.com/OpenFn/Lightning/issues/1363)
 - Option to start with `RTM=false iex -S mix phx.server` for opting out of the
@@ -105,6 +107,8 @@ bearing with us as we move towards our first stable Lightning release.)
 - Remove `Workflows.delete_workflow`. It is no longer in use and would require
   modification to not leave orphaned attempts given the removal of the foreign
   key from `attempts`. [#1254](https://github.com/OpenFn/Lightning/issues/1254)
+- Show tooltip for cloned runs in history page
+  [#1327](https://github.com/OpenFn/Lightning/issues/1327)
 - Have user create workflow name before moving to the canvas
   [#1103](https://github.com/OpenFn/Lightning/issues/1103)
 
@@ -119,16 +123,20 @@ bearing with us as we move towards our first stable Lightning release.)
 
 ### Fixed
 
-- [#1140](https://github.com/OpenFn/Lightning/issues/1140) Adaptor icons load
-  gracefully
-- [#1283](https://github.com/OpenFn/Lightning/issues/1283) Selected dataclip
-  gets lost when starting a manual workorder from the inspector interface
+- Fixed janitor lost query calculation
+  [#1400](https://github.com/OpenFn/Lightning/issues/1400)
+- Adaptor icons load gracefully
+  [#1140](https://github.com/OpenFn/Lightning/issues/1140)
+- Selected dataclip gets lost when starting a manual workorder from the
+  inspector interface [#1283](https://github.com/OpenFn/Lightning/issues/1283)
 - Ensure that the whole edge when selected is highlighted
   [#1160](https://github.com/OpenFn/Lightning/issues/1160)
 - Fix "Reconfigure Github" button in Project Settings
   [#1386](https://github.com/OpenFn/Lightning/issues/1386)
 - Make janitor also clean up runs inside an attempt
   [#1348](https://github.com/OpenFn/Lightning/issues/1348)
+- Modify CompleteRun to return error changeset when run not found
+  [#1393](https://github.com/OpenFn/Lightning/issues/1393)
 
 ## [v0.9.3] - 2023-09-27
 
@@ -148,13 +156,10 @@ bearing with us as we move towards our first stable Lightning release.)
 
 - Fix long name on workflow cards
   [#1102](https://github.com/OpenFn/Lightning/issues/1102)
-
 - Fix highlighted Edge can get out of sync with selected Edge
   [#1099](https://github.com/OpenFn/Lightning/issues/1099)
-
 - Creating a new user without a password fails and there is no user feedback
   [#731](https://github.com/OpenFn/Lightning/issues/731)
-
 - Crash when setting up version control
   [#1112](https://github.com/OpenFn/Lightning/issues/1112)
 
@@ -180,7 +185,6 @@ bearing with us as we move towards our first stable Lightning release.)
 
 - Modified audit trail to handle lots of different kind of audit events
   [#271](https://github.com/OpenFn/Lightning/issues/271)/[#44](https://github.com/OpenFn/Lightning/issues/44)
-
 - Fix randomly unresponsive job panel after job deletion
   [#1113](https://github.com/OpenFn/Lightning/issues/1113)
 

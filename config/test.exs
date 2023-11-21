@@ -34,7 +34,7 @@ config :lightning, LightningWeb.Endpoint,
   url: [host: "localhost", port: 4002],
   secret_key_base:
     "/8zedVJLxvmGGFoRExE3e870g7CGZZQ1Vq11A5MbQGPKOpK57MahVsPW6Wkkv61n",
-  server: false
+  server: true
 
 # In test we don't send emails.
 config :lightning, Lightning.Mailer, adapter: Swoosh.Adapters.Test

@@ -74,10 +74,20 @@ defmodule LightningWeb.RunLive.Components do
             </.link>
             <%= if @is_clone do %>
               <div class="flex gap-1">
-                <Heroicons.paper_clip
-                  mini
-                  class="mr-1.5 mt-1 h-3 w-3 flex-shrink-0 text-gray-500"
-                />
+                <span
+                  class="cursor-pointer"
+                  id={"clone_" <> @attempt.id <> "_" <> @run.id}
+                  aria-label="This run was originally executed in a previous attempt.
+                    It was skipped in this attempt; the original output has been
+                    used as the starting point for downstream jobs."
+                  phx-hook="Tooltip"
+                  data-placement="right"
+                >
+                  <Heroicons.paper_clip
+                    mini
+                    class="mr-1.5 mt-1 h-3 w-3 flex-shrink-0 text-gray-500"
+                  />
+                </span>
               </div>
             <% end %>
             <div class="flex gap-1">
@@ -377,9 +387,10 @@ defmodule LightningWeb.RunLive.Components do
       <div class="flex flex-row text-xs lg:text-sm" id={"exit-reason-#{@run.id}"}>
         <div class="basis-1/2 font-semibold text-secondary-700">Exit Reason</div>
         <div class="basis-1/2 text-right font-mono">
-          <%= if @run.finished_at,
-            do: @run.error_type || "Success",
-            else: "Running" %>
+          <%= if is_nil(@run.exit_reason),
+            do: "Running",
+            else: upcase_first(@run.exit_reason) %>
+          <%= unless is_nil(@run.error_type), do: ": #{@run.error_type}" %>
           <.run_icon reason={@run.exit_reason} error_type={@run.error_type} />
         </div>
       </div>
@@ -605,6 +616,7 @@ defmodule LightningWeb.RunLive.Components do
         {"kill", "TimeoutError"} -> [:circle_ex, "text-yellow-800"]
         {"kill", "OomError"} -> [:circle_ex, "text-yellow-800"]
         {"exception", ""} -> [:triangle_ex, "text-black-800"]
+        {"lost", _nil} -> [:triangle_ex, "text-black-800"]
       end
 
     assigns =
@@ -629,7 +641,7 @@ defmodule LightningWeb.RunLive.Components do
         <Heroicons.shield_exclamation solid class={@classes} />
       <% :circle_ex -> %>
         <Heroicons.exclamation_circle solid class={@classes} />
-      <% :traingle_ex -> %>
+      <% :triangle_ex -> %>
         <Heroicons.exclamation_triangle solid class={@classes} />
     <% end %>
     """

@@ -166,6 +166,58 @@ defmodule LightningWeb.RunLive.ComponentsTest do
              ~s{a[href="#{LightningWeb.RouteHelpers.show_run_url(project_id, third_run.id)}"]}
            )
            |> Enum.any?()
+
+    # Rerun attempt
+    last_run = List.last(attempt.runs)
+
+    attempt2 =
+      insert(:attempt,
+        state: :started,
+        work_order_id: attempt.work_order_id,
+        dataclip: dataclip,
+        starting_job: last_run.job,
+        runs: attempt.runs -- [last_run]
+      )
+
+    attempt2_last_run =
+      insert(:run,
+        attempts: [attempt2],
+        job: job_3,
+        exit_reason: nil,
+        finished_at: nil
+      )
+
+    first_run = hd(attempt2.runs)
+
+    html =
+      render_component(&Components.run_list_item/1,
+        run: first_run,
+        attempt: attempt2,
+        project_id: project_id,
+        can_rerun_job: true
+      )
+
+    assert html
+           |> Floki.parse_fragment!()
+           |> Floki.find(~s{span[id="clone_#{attempt2.id}_#{first_run.id}"]})
+           |> Enum.any?()
+
+    assert html =~ "This run was originally executed in a previous attempt"
+
+    html =
+      render_component(&Components.run_list_item/1,
+        run: attempt2_last_run,
+        attempt: attempt2,
+        project_id: project_id,
+        can_rerun_job: true
+      )
+
+    refute html
+           |> Floki.parse_fragment!()
+           |> Floki.find(~s{span[id="clone_#{attempt2.id}_#{first_run.id}"]})
+           |> Enum.any?()
+
+    refute html =~ "This run was originally executed in a previous attempt"
   end
 
   test "no rerun button is displayed when user can't rerun a job" do
@@ -250,7 +302,12 @@ defmodule LightningWeb.RunLive.ComponentsTest do
       started_at = now |> Timex.shift(seconds: -25)
       finished_at = now |> Timex.shift(seconds: -1)
 
-      run = insert(:run, started_at: started_at, finished_at: finished_at)
+      run =
+        insert(:run,
+          started_at: started_at,
+          finished_at: finished_at,
+          exit_reason: "success"
+        )
 
       html =
         render_component(&Components.run_details/1,
@@ -269,10 +326,15 @@ defmodule LightningWeb.RunLive.ComponentsTest do
              |> Floki.text() =~
                "24000 ms"
 
-      assert html
-             |> Floki.find("div#exit-reason-#{run.id} > div:nth-child(2)")
-             |> Floki.text() =~
-               "Success"
+      div =
+        html
+        |> Floki.find("div#exit-reason-#{run.id} > div:nth-child(2)")
+        |> Floki.text()
+
+      assert div =~ "Success"
+
+      # We don't show error_type (with a " : ") on success.
+      refute div =~ " : "
     end
 
     test "with pending run" do
@@ -303,6 +365,62 @@ defmodule LightningWeb.RunLive.ComponentsTest do
              |> Floki.find("div#exit-reason-#{run.id} > div:nth-child(2)")
              |> Floki.text() =~
                "Running"
+    end
+
+    test "with failed run also shows error type" do
+      now = Timex.now()
+
+      started_at = now |> Timex.shift(seconds: -25)
+
+      run =
+        insert(:run,
+          started_at: started_at,
+          finished_at: started_at,
+          exit_reason: "fail",
+          error_type: "JobError"
+        )
+
+      html =
+        render_component(&Components.run_details/1,
+          run: run |> Lightning.Repo.preload(:attempts),
+          project_id: "4adf2644-ed4e-4f97-a24c-ab35b3cb1efa"
+        )
+        |> Floki.parse_fragment!()
+
+      div =
+        html
+        |> Floki.find("div#exit-reason-#{run.id} > div:nth-child(2)")
+        |> Floki.text()
+
+      assert div =~ "Fail"
+      assert div =~ "JobError"
+    end
+
+    test "with lost run" do
+      now = Timex.now()
+
+      started_at = now |> Timex.shift(minutes: -25)
+      run = insert(:run, started_at: started_at, exit_reason: "lost")
+
+      html =
+        render_component(&Components.run_details/1,
+          run: run |> Lightning.Repo.preload(:attempts),
+          project_id: "4adf2644-ed4e-4f97-a24c-ab35b3cb1efa"
+        )
+        |> Floki.parse_fragment!()
+
+      assert html
+             |> Floki.find("div#finished-at-#{run.id} > div:nth-child(2)")
+             |> Floki.text() =~ "n/a"
+
+      assert html
+             |> Floki.find("div#ran-for-#{run.id} > div:nth-child(2)")
+             |> Floki.text() =~ "n/a"
+
+      assert html
+             |> Floki.find("div#exit-reason-#{run.id} > div:nth-child(2)")
+             |> Floki.text() =~
+               "Lost"
     end
 
     test "with unstarted run" do

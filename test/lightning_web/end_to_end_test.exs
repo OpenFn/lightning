@@ -1,173 +1,278 @@
 # This module will be re-introduced in https://github.com/OpenFn/Lightning/issues/1143
 defmodule LightningWeb.EndToEndTest do
-  use LightningWeb.ConnCase, async: true
-  use Oban.Testing, repo: Lightning.Repo
+  use LightningWeb.ConnCase, async: false
 
   import Lightning.JobsFixtures
   import Lightning.Factories
 
+  alias Lightning.Attempt
+  alias Lightning.Attempts
+  alias Lightning.Attempts.Events
   alias Lightning.Invocation
+  alias Lightning.Repo
+  alias Lightning.WorkOrders
+  alias Lightning.Runtime.RuntimeManager
 
-  import Ecto.Query
+  require Attempt
 
-  setup :register_and_log_in_superuser
-
-  defmacrop assert_has_expected_version?(string, dep) do
-    quote do
-      case unquote(dep) do
-        :node ->
-          assert unquote(string) =~ ~r/(?=.*node.js)(?=.*18.17)/
-
-        :cli ->
-          assert unquote(string) =~ ~r/(?=.*cli)(?=.*0.0.35)/
-
-        :runtime ->
-          assert unquote(string) =~ ~r/(?=.*runtime)(?=.*0.0.21)/
-
-        :compiler ->
-          assert unquote(string) =~ ~r/(?=.*compiler)(?=.*0.0.29)/
-
-        :adaptor ->
-          assert unquote(string) =~ ~r/(?=.*language-http)(?=.*5.)/
-      end
-    end
+  setup_all context do
+    start_runtime_manager(context)
   end
 
-  # workflow runs webhook then flow job
-  @tag :skip
-  test "the whole thing", %{conn: conn} do
-    project = insert(:project)
+  describe "webhook triggered attempts" do
+    setup :register_and_log_in_superuser
 
-    project_credential =
-      insert(:project_credential,
-        credential: %{
-          name: "test credential",
-          body: %{"username" => "quux", "password" => "immasecret"}
-        },
-        project: project
-      )
+    @tag timeout: 120_000
+    test "complete an attempt on a complex workflow with parallel jobs", %{
+      conn: conn
+    } do
+      project = insert(:project)
 
-    %{
-      job: first_job = %{workflow: workflow},
-      trigger: webhook_trigger,
-      edge: _edge
-    } =
-      workflow_job_fixture(
-        project: project,
-        name: "1st-job",
-        adaptor: "@openfn/language-http",
-        body: webhook_expression(),
-        project_credential: project_credential
-      )
+      %{triggers: [%{id: webhook_trigger_id}]} =
+        insert(:complex_workflow, project: project)
 
-    flow_job =
-      insert(:job,
-        name: "2nd-job",
-        adaptor: "@openfn/language-http",
-        body: flow_expression(),
-        workflow: workflow,
-        project_credential: project_credential
-      )
+      # Post to webhook
+      webhook_body = %{"x" => 1}
+      conn = post(conn, "/i/#{webhook_trigger_id}", webhook_body)
 
-    insert(:edge, %{
-      workflow: workflow,
-      source_job_id: first_job.id,
-      target_job_id: flow_job.id,
-      condition: :on_job_success
-    })
+      assert %{"work_order_id" => wo_id} = json_response(conn, 200)
 
-    catch_job =
-      insert(:job,
-        name: "3rd-job",
-        adaptor: "@openfn/language-http",
-        body: catch_expression(),
-        workflow: workflow,
-        project_credential: project_credential
-      )
+      assert %{attempts: [%{id: attempt_id}]} =
+               WorkOrders.get(wo_id, include: [:attempts])
 
-    insert(:edge, %{
-      source_job_id: flow_job.id,
-      workflow: workflow,
-      target_job_id: catch_job.id,
-      condition: :on_job_failure
-    })
+      assert %{runs: []} = Attempts.get(attempt_id, include: [:runs])
 
-    Oban.Testing.with_testing_mode(:manual, fn ->
-      message = %{"a" => 1}
+      assert %{attempts: [attempt]} =
+               WorkOrders.get(wo_id, include: [:attempts])
 
-      conn = post(conn, "/i/#{webhook_trigger.id}", message)
+      # wait to complete
+      Events.subscribe(attempt)
 
-      assert %{"run_id" => run_id, "attempt_id" => attempt_id} =
-               json_response(conn, 200)
+      Enum.any?(1..100, fn _i ->
+        receive do
+          %Events.AttemptUpdated{attempt: %{state: state}}
+          when state in Attempt.final_states() ->
+            assert state == :success
+            true
 
-      attempt_run =
-        Lightning.Repo.get_by(Lightning.AttemptRun,
-          run_id: run_id,
-          attempt_id: attempt_id
-        )
-
-      assert_enqueued(
-        worker: Lightning.Pipeline,
-        args: %{attempt_run_id: attempt_run.id}
-      )
-
-      from(r in Lightning.Invocation.Run, where: r.id == ^attempt_run.run_id)
-      |> Lightning.Repo.all()
-      |> then(fn [r] ->
-        p =
-          Ecto.assoc(r, [:job, :project])
-          |> Lightning.Repo.one!()
-
-        assert p.id == project.id, "run is associated with a different project"
+          _other_msg ->
+            false
+        end
       end)
 
-      # All runs should use Oban
-      assert %{success: 3, cancelled: 0, discard: 0, failure: 0, snoozed: 0} ==
-               Oban.drain_queue(Oban, queue: :runs, with_recursion: true)
+      assert %{state: :success} = WorkOrders.get(wo_id)
 
-      [run_3, run_2, run_1] = Invocation.list_runs_for_project(project).entries
+      %{entries: runs} = Invocation.list_runs_for_project(project)
 
-      # Run 1 should succeed and use the appropriate packages
-      assert run_1.finished_at != nil
+      # runs with unique outputs and all succeed
+      assert Enum.count(runs) == 7
+      assert Enum.count(runs, & &1.output_dataclip_id) == 7
+      assert Enum.all?(runs, fn run -> run.exit_reason == "success" end)
 
-      assert Invocation.assemble_logs_for_run(run_1) =~ "Done in"
+      # first run has the webhook body as input
+      [first_run | runs] = Enum.reverse(runs)
+      assert webhook_body == select_dataclip_body(first_run.input_dataclip_id)
 
-      r1_logs =
-        Invocation.logs_for_run(run_1)
-        |> Enum.map(fn line -> line.body end)
+      # the other 6 runs produce the same input and output on x twice
+      # (2 branches that doubles x value three times)
+      assert runs
+             |> Enum.map(&select_dataclip_body(&1.input_dataclip_id)["x"])
+             |> Enum.frequencies()
+             |> Enum.all?(fn {_x, count} -> count == 2 end)
 
-      # Check that versions are accurate and printed at the top of each run
-      assert Enum.at(r1_logs, 0) == "[CLI] ℹ Versions:"
-      Enum.at(r1_logs, 1) |> assert_has_expected_version?(:node)
-      Enum.at(r1_logs, 2) |> assert_has_expected_version?(:cli)
-      Enum.at(r1_logs, 3) |> assert_has_expected_version?(:runtime)
-      Enum.at(r1_logs, 4) |> assert_has_expected_version?(:compiler)
-      Enum.at(r1_logs, 5) |> assert_has_expected_version?(:adaptor)
+      assert runs
+             |> Enum.map(&select_dataclip_body(&1.output_dataclip_id)["x"])
+             |> Enum.frequencies()
+             |> Enum.all?(fn {_x, count} -> count == 2 end)
 
-      assert Enum.at(r1_logs, 11) =~ "[JOB] ℹ 2"
-      assert Enum.at(r1_logs, 12) =~ "[JOB] ℹ {\"name\":\"ศผ่องรี มมซึฆเ\"}"
-      assert Enum.at(r1_logs, 13) =~ "[R/T] ✔ Operation 1 complete in"
-      assert Enum.at(r1_logs, 15) =~ "[CLI] ✔ Done in"
+      assert %{state: :success} = WorkOrders.get(wo_id)
+    end
+
+    @tag timeout: 120_000
+    test "the whole thing", %{conn: conn} do
+      project = insert(:project)
+
+      project_credential =
+        insert(:project_credential,
+          credential: %{
+            name: "test credential",
+            body: %{"username" => "quux", "password" => "immasecret"}
+          },
+          project: project
+        )
+
+      %{
+        job: first_job = %{workflow: workflow},
+        trigger: webhook_trigger,
+        edge: _edge
+      } =
+        workflow_job_fixture(
+          project: project,
+          name: "1st-job",
+          adaptor: "@openfn/language-http@latest",
+          body: webhook_expression(),
+          project_credential: project_credential
+        )
+
+      flow_job =
+        insert(:job,
+          name: "2nd-job",
+          adaptor: "@openfn/language-http@latest",
+          body: flow_expression(),
+          workflow: workflow,
+          project_credential: project_credential
+        )
+
+      insert(:edge, %{
+        workflow: workflow,
+        source_job_id: first_job.id,
+        target_job_id: flow_job.id,
+        condition: :on_job_success
+      })
+
+      catch_job =
+        insert(:job,
+          name: "3rd-job",
+          adaptor: "@openfn/language-http@latest",
+          body: catch_expression(),
+          workflow: workflow,
+          project_credential: project_credential
+        )
+
+      insert(:edge, %{
+        source_job_id: flow_job.id,
+        workflow: workflow,
+        target_job_id: catch_job.id,
+        condition: :on_job_failure
+      })
+
+      webhook_body = %{"fieldOne" => 123, "fieldTwo" => "some string"}
+
+      conn = post(conn, "/i/#{webhook_trigger.id}", webhook_body)
+
+      assert %{"work_order_id" => wo_id} = json_response(conn, 200)
+
+      assert %{attempts: [attempt]} =
+               WorkOrders.get(wo_id, include: [:attempts])
+
+      assert %{runs: []} = Attempts.get(attempt.id, include: [:runs])
+
+      # wait to complete
+      Events.subscribe(attempt)
+
+      Enum.any?(1..100, fn _i ->
+        receive do
+          %Events.AttemptUpdated{attempt: %{state: state}}
+          when state in Attempt.final_states() ->
+            assert state == :success
+            true
+
+          _other_msg ->
+            false
+        end
+      end)
+
+      assert %{state: :success} = WorkOrders.get(wo_id)
+
+      # All runs are associated with the same project and attempt and proper job
+      %{runs: runs} = Attempts.get(attempt.id, include: [:runs])
+
+      %{entries: [run_3, run_2, run_1]} =
+        Invocation.list_runs_for_project(project)
+
+      assert MapSet.new(runs, & &1.id) ==
+               MapSet.new([run_1, run_2, run_3], & &1.id)
+
+      # Alls runs have consistent finish_at, exit_reason and dataclips
+      %{claimed_at: claimed_at, finished_at: finished_at} =
+        Attempts.get(attempt.id)
+
+      # Run 1 succeeds with webhook_body as input
+      assert NaiveDateTime.diff(run_1.finished_at, claimed_at, :microsecond) > 0
+      assert NaiveDateTime.diff(run_1.finished_at, finished_at, :microsecond) < 0
+      assert run_1.exit_reason == "success"
+
+      expected_job_x_value = 123 * 2
+
+      lines = Invocation.logs_for_run(run_1)
+
+      assert Enum.any?(
+               lines,
+               &(&1.source == "R/T" and &1.message =~ "Operation 1 complete in")
+             )
+
+      expected_lines =
+        MapSet.new([
+          {"R/T", "Starting operation 1"},
+          {"JOB", "#{expected_job_x_value}"},
+          {"JOB", "{\"name\":\"ศผ่องรี มมซึฆเ\"}"},
+          {"R/T", "Expression complete!"}
+        ])
+
+      assert expected_lines ==
+               MapSet.intersection(
+                 expected_lines,
+                 MapSet.new(lines, &{&1.source, &1.message})
+               )
+
+      # input: has only the webhook body
+      assert webhook_body == select_dataclip_body(run_1.input_dataclip_id)
+
+      # output: data unchanged by the job and x is updated
+      assert %{"data" => ^webhook_body, "x" => ^expected_job_x_value} =
+               select_dataclip_body(run_1.output_dataclip_id)
 
       # #  Run 2 should fail but not expose a secret
-      assert run_2.finished_at != nil
-      assert run_2.exit_reason == :failed
+      assert NaiveDateTime.diff(run_2.finished_at, claimed_at, :microsecond) > 0
+      assert NaiveDateTime.diff(run_2.finished_at, finished_at, :microsecond) < 0
+      assert run_2.exit_reason == "fail"
 
       log = Invocation.assemble_logs_for_run(run_2)
+
       assert log =~ ~S[{"password":"***","username":"quux"}]
-      assert log =~ ~S[Error in runtime execution!]
+      assert log =~ ~S"Check state.errors"
+
+      assert select_dataclip_body(run_1.output_dataclip_id) ==
+               select_dataclip_body(run_2.input_dataclip_id)
 
       #  Run 3 should succeed and log "6"
-      assert run_3.finished_at != nil
+      assert NaiveDateTime.diff(run_3.finished_at, claimed_at, :microsecond) > 0
+      assert NaiveDateTime.diff(run_3.finished_at, finished_at, :microsecond) < 0
+      assert run_3.exit_reason == "success"
 
-      log = Invocation.assemble_logs_for_run(run_3)
-      assert log =~ "[JOB] ℹ 6"
-    end)
+      lines = Invocation.logs_for_run(run_3)
+
+      assert Enum.any?(
+               lines,
+               &(&1.source == "R/T" and &1.message =~ "Operation 1 complete in")
+             )
+
+      expected_job_x_value = 123 * 6
+
+      expected_lines =
+        MapSet.new([
+          {"R/T", "Starting operation 1"},
+          {"JOB", "#{expected_job_x_value}"},
+          {"R/T", "Expression complete!"}
+        ])
+
+      assert expected_lines ==
+               MapSet.intersection(
+                 expected_lines,
+                 MapSet.new(lines, &{&1.source, &1.message})
+               )
+
+      assert select_dataclip_body(run_2.output_dataclip_id) ==
+               select_dataclip_body(run_3.input_dataclip_id)
+
+      assert %{"data" => ^webhook_body, "x" => ^expected_job_x_value} =
+               select_dataclip_body(run_3.output_dataclip_id)
+    end
   end
 
   defp webhook_expression do
     "fn(state => {
-      state.x = state.data.a * 2;
+      state.x = state.data.fieldOne * 2;
       console.log(state.x);
       console.log({name: 'ศผ่องรี มมซึฆเ'})
       return state;
@@ -178,7 +283,7 @@ defmodule LightningWeb.EndToEndTest do
     "fn(state => {
       console.log(state.configuration);
       throw 'fail!'
-    })"
+    });"
   end
 
   defp catch_expression do
@@ -187,5 +292,39 @@ defmodule LightningWeb.EndToEndTest do
       console.log(state.x);
       return state;
     });"
+  end
+
+  defp start_runtime_manager(_context) do
+    rtm_args = "node ./node_modules/.bin/worker -- --backoff 0.5/5"
+
+    Application.put_env(:lightning, RuntimeManager,
+      start: true,
+      args: String.split(rtm_args),
+      cd: Path.expand("../../assets", __DIR__)
+    )
+
+    {:ok, rtm_server} = RuntimeManager.start_link(name: E2ETestRuntimeManager)
+
+    running =
+      Enum.any?(1..20, fn _i ->
+        Process.sleep(50)
+        %{runtime_port: port} = :sys.get_state(rtm_server)
+        port != nil
+      end)
+
+    if running, do: :ok, else: :error
+  end
+
+  defp select_dataclip_body(uuid) do
+    {:ok, %{rows: [[body]]}} =
+      Ecto.Adapters.SQL.query(
+        Repo,
+        "SELECT BODY FROM DATACLIPS WHERE ID=$1",
+        [
+          Ecto.UUID.dump!(uuid)
+        ]
+      )
+
+    body
   end
 end

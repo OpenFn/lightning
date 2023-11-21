@@ -1,6 +1,7 @@
 defmodule LightningWeb.AttemptChannelTest do
   use LightningWeb.ChannelCase
 
+  alias Lightning.Invocation.Run
   alias Lightning.Workers
 
   import Lightning.Factories
@@ -362,7 +363,11 @@ defmodule LightningWeb.AttemptChannelTest do
       assert_reply ref, :ok, %{run_id: ^run_id}, 1_000
     end
 
-    test "run:complete", %{socket: socket, attempt: attempt, workflow: workflow} do
+    test "run:complete succeeds with normal reason", %{
+      socket: socket,
+      attempt: attempt,
+      workflow: workflow
+    } do
       [job] = workflow.jobs
       %{id: run_id} = run = insert(:run, attempts: [attempt], job: job)
 
@@ -375,6 +380,27 @@ defmodule LightningWeb.AttemptChannelTest do
         })
 
       assert_reply ref, :ok, %{run_id: ^run_id}
+      assert %{exit_reason: "normal"} = Repo.get(Run, run.id)
+    end
+
+    test "run:complete succeeds preserving present tense reason", %{
+      socket: socket,
+      attempt: attempt,
+      workflow: workflow
+    } do
+      [job] = workflow.jobs
+      %{id: run_id} = run = insert(:run, attempts: [attempt], job: job)
+
+      ref =
+        push(socket, "run:complete", %{
+          "run_id" => run.id,
+          "output_dataclip_id" => Ecto.UUID.generate(),
+          "output_dataclip" => ~s({"foo": "bar"}),
+          "reason" => "fail"
+        })
+
+      assert_reply ref, :ok, %{run_id: ^run_id}
+      assert %{exit_reason: "fail"} = Repo.get(Run, run.id)
     end
   end
 
@@ -420,7 +446,7 @@ defmodule LightningWeb.AttemptChannelTest do
       %{socket: socket, attempt: attempt, workflow: workflow}
     end
 
-    test "attempt:log message can't be blank", %{
+    test "attempt:log missing message can't be blank", %{
       socket: socket,
       attempt: attempt,
       workflow: workflow
@@ -442,6 +468,66 @@ defmodule LightningWeb.AttemptChannelTest do
         push(socket, "attempt:log", %{
           # we expect a 16 character string for microsecond resolution
           "timestamp" => "1699444653874088"
+        })
+
+      assert_reply ref, :error, errors
+
+      assert errors == %{message: ["This field can't be blank."]}
+    end
+
+    test "attempt:log message can't be nil", %{
+      socket: socket,
+      attempt: attempt,
+      workflow: workflow
+    } do
+      # { id, job_id, input_dataclip_id }
+      run_id = Ecto.UUID.generate()
+      [job] = workflow.jobs
+
+      ref =
+        push(socket, "run:start", %{
+          "run_id" => run_id,
+          "job_id" => job.id,
+          "input_dataclip_id" => attempt.dataclip_id
+        })
+
+      assert_reply ref, :ok, _
+
+      ref =
+        push(socket, "attempt:log", %{
+          # we expect a 16 character string for microsecond resolution
+          "timestamp" => "1699444653874088",
+          "message" => nil
+        })
+
+      assert_reply ref, :error, errors
+
+      assert errors == %{message: ["This field can't be blank."]}
+    end
+
+    test "attempt:log message can't be [nil]", %{
+      socket: socket,
+      attempt: attempt,
+      workflow: workflow
+    } do
+      # { id, job_id, input_dataclip_id }
+      run_id = Ecto.UUID.generate()
+      [job] = workflow.jobs
+
+      ref =
+        push(socket, "run:start", %{
+          "run_id" => run_id,
+          "job_id" => job.id,
+          "input_dataclip_id" => attempt.dataclip_id
+        })
+
+      assert_reply ref, :ok, _
+
+      ref =
+        push(socket, "attempt:log", %{
+          # we expect a 16 character string for microsecond resolution
+          "timestamp" => "1699444653874088",
+          "message" => [nil]
         })
 
       assert_reply ref, :error, errors
