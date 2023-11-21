@@ -14,6 +14,17 @@ and this project adheres to
 
 ### Fixed
 
+## [v0.10.2] - 2023-11-21
+
+### Added
+
+### Changed
+
+- Added `max_frame_size` to the Cowboy websockets protocol options in an attempt
+  to address [#1421](https://github.com/OpenFn/Lightning/issues/1421)
+
+### Fixed
+
 ## [v0.10.1] - 2023-11-21
 
 ### Added
