@@ -34,38 +34,44 @@ defmodule LightningWeb.CoreComponents do
 
   def new_table(assigns) do
     ~H"""
-    <div id={@id} class="overflow-y-auto px-4 sm:overflow-visible sm:px-0">
-      <table class="mt-11 w-[40rem] sm:w-full">
-        <thead class="text-left text-[0.8125rem] leading-6 text-zinc-500">
+    <div
+      id={@id}
+      class="overflow-hidden shadow ring-1 ring-black ring-opacity-5 sm:rounded-lg"
+    >
+      <table class="min-w-full divide-y divide-gray-300">
+        <thead class="">
           <tr>
-            <th :for={col <- @col} class="p-0 pb-4 pr-6 font-normal">
+            <th
+              :for={col <- @col}
+              scope="col"
+              class="px-3 py-3.5 text-left text-sm font-semibold text-gray-500"
+            >
               <%= col[:label] %>
             </th>
-            <th class="relative p-0 pb-4">
+            <th
+              :if={@action != []}
+              scope="col"
+              class="relative py-3.5 pl-3 pr-4 sm:pr-6"
+            >
               <span class="sr-only">Actions</span>
             </th>
           </tr>
         </thead>
-        <tbody class="relative divide-y divide-zinc-100 border-t border-zinc-200 text-sm leading-6 text-zinc-700">
+        <tbody class="divide-y divide-gray-200 bg-white">
           <tr
             :for={row <- @rows}
             id={"#{@id}-#{Phoenix.Param.to_param(row)}"}
-            class="relative group hover:bg-zinc-50"
+            class=""
           >
             <td
               :for={{col, i} <- Enum.with_index(@col)}
               phx-click={@row_click && @row_click.(row)}
-              class={["p-0", @row_click && "hover:cursor-pointer"]}
+              class={[
+                "whitespace-nowrap px-3 py-4 text-sm text-gray-500",
+                @row_click && "hover:cursor-pointer"
+              ]}
             >
-              <div :if={i == 0}>
-                <span class="absolute h-full w-4 top-0 -left-4 group-hover:bg-zinc-50 sm:rounded-l-xl" />
-                <span class="absolute h-full w-4 top-0 -right-4 group-hover:bg-zinc-50 sm:rounded-r-xl" />
-              </div>
-              <div class="block py-4 pr-6">
-                <span class={["relative", i == 0 && "font-semibold text-zinc-900"]}>
-                  <%= render_slot(col, row) %>
-                </span>
-              </div>
+              <%= render_slot(col, row) %>
             </td>
             <td :if={@action != []} class="p-0 w-14">
               <div class="relative whitespace-nowrap py-4 text-right text-sm font-medium">

@@ -5,7 +5,6 @@
     id="project-form"
     phx-target={@myself}
     phx-change="validate"
-    phx-submit="save"
   >
     <div class="flex items-end gap-6">
       <div class="w-3/6">
@@ -27,28 +26,57 @@
         <% end %>
       </div>
     </div>
-    <.new_table
-      id="project_users"
-      rows={Phoenix.HTML.Form.inputs_for(f, :project_users)}
-    >
-      <:col :let={form} label="NAME"><%= full_user_name(form.data.user) %></:col>
-      <:col :let={form} label="EMAIL"><%= form.data.user.email %></:col>
-      <:col :let={form} label="NO ACCESS">
-        <%= Phoenix.HTML.Form.radio_button(form, :role, nil,
-          class: "h-4 w-4 border-gray-300 text-indigo-600 focus:ring-indigo-600"
-        ) %>
-      </:col>
-      <:col
-        :let={form}
-        :for={role <- ["owner", "admin", "editor", "viewer"]}
-        label={String.upcase(role)}
-      >
-        <%= Phoenix.HTML.Form.radio_button(form, :role, role,
-          class: "h-4 w-4 border-gray-300 text-indigo-600 focus:ring-indigo-600"
-        ) %>
-      </:col>
-    </.new_table>
-
+  </.form>
+  <.form
+    :let={f}
+    for={@changeset}
+    id="project-users-form"
+    phx-target={@myself}
+    phx-submit="save"
+  >
+    <%= Phoenix.HTML.Form.hidden_input(f, :name) %>
+    <div class="mt-8 flow-root">
+      <div class="-mx-4 -my-2 overflow-x-auto sm:-mx-6 lg:-mx-8">
+        <div class="inline-block min-w-full py-2 align-middle sm:px-6 lg:px-8">
+          <.new_table
+            id="project_users_table"
+            rows={
+              Phoenix.HTML.FormData.to_form(
+                f.source,
+                f,
+                :project_users,
+                f.options
+              )
+            }
+          >
+            <:col :let={form} label="NAME">
+              <%= full_user_name(form.data.user) %>
+              <%= Phoenix.HTML.Form.hidden_input(form, :id) %>
+              <%= Phoenix.HTML.Form.hidden_input(form, :user_id) %>
+            </:col>
+            <:col :let={form} label="EMAIL">
+              <%= form.data.user.email %>
+            </:col>
+            <:col :let={form} label="NO ACCESS">
+              <%= Phoenix.HTML.Form.radio_button(form, :role, nil,
+                class:
+                  "h-4 w-4 border-gray-300 text-indigo-600 focus:ring-indigo-600"
+              ) %>
+            </:col>
+            <:col
+              :let={form}
+              :for={role <- ["owner", "admin", "editor", "viewer"]}
+              label={String.upcase(role)}
+            >
+              <%= Phoenix.HTML.Form.radio_button(form, :role, role,
+                class:
+                  "h-4 w-4 border-gray-300 text-indigo-600 focus:ring-indigo-600"
+              ) %>
+            </:col>
+          </.new_table>
+        </div>
+      </div>
+    </div>
     <div class="mt-2">
       <span>
         <.link
