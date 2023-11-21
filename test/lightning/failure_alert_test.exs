@@ -4,6 +4,7 @@ defmodule Lightning.FailureAlertTest do
   import Lightning.Factories
   import Lightning.Helpers, only: [ms_to_human: 1]
   import Swoosh.TestAssertions
+  import ExUnit.Assertions
 
   alias Lightning.Repo
   alias Lightning.Workers
@@ -232,9 +233,8 @@ defmodule Lightning.FailureAlertTest do
           "error_message" => nil
         })
 
-      Process.sleep(250)
-
-      assert_email_sent(subject: "\"workflow-a\" failed.")
+      assert_receive {:email, %Swoosh.Email{subject: "\"workflow-a\" failed."}},
+                     1_000
     end
   end
 end
