@@ -17,7 +17,7 @@ type ValidationResult = {
 const iconBaseStyle = 'mx-1';
 const iconNormalStyle =
   iconBaseStyle + ' text-primary-500 hover:text-primary-900';
-const iconErrorStyle = iconBaseStyle + 'text-red-500 hover:text-red-600';
+const iconErrorStyle = iconBaseStyle + ' text-red-500 hover:text-red-600';
 
 // Dispatch an event up to the WorkflowDiagram
 // This works better than interfacing to the store correctly

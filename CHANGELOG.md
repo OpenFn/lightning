@@ -61,6 +61,8 @@ bearing with us as we move towards our first stable Lightning release.)
 
 ### Added
 
+- Fix flaky job name input behavior on error
+  [#1218](https://github.com/OpenFn/Lightning/issues/1218)
 - Added a hover effect on copy and add button for adaptors examples
   [#1297](https://github.com/OpenFn/Lightning/issues/1297)
 - Migration helper code to move from `v0.9.3` to `v0.10.0` added to SetupUtils
