@@ -166,7 +166,7 @@ workorders up to <code class="inline">v0.10.0</code>, though the granularity of 
 will be less than <code class="inline">v0.10.0</code> and the final states are not guaranteed to be
 accurate for workflows with multiple branches and leaf nodes with varying exit
 reasons.</p><p>The migration scripts can be run with a single function call in SetupUtils from
-a connect <code class="inline">iex</code> session:</p><pre><code class="makeup elixir" translate="no"><span class="nc">Lightning.SetupUtils</span><span class="o">.</span><span class="n">approximate_state_for_attempts_and_workorders</span><span class="p" data-group-id="8340329543-1">(</span><span class="p" data-group-id="8340329543-1">)</span></code></pre><p>Note that (like lots of <em>other</em> functionality in <code class="inline">SetupUtils</code>, calling this
+a connect <code class="inline">iex</code> session:</p><pre><code class="makeup elixir" translate="no"><span class="nc">Lightning.SetupUtils</span><span class="o">.</span><span class="n">approximate_state_for_attempts_and_workorders</span><span class="p" data-group-id="9883304151-1">(</span><span class="p" data-group-id="9883304151-1">)</span></code></pre><p>Note that (like lots of <em>other</em> functionality in <code class="inline">SetupUtils</code>, calling this
 function is a destructive action and you should only do it if you've backed up
 your data and you know what you're doing.)</p><p>As always, we recommend backing up your data before migrating. (And thanks for
 bearing with us as we move towards our first stable Lightning release.)</p><h3 id="added" class="section-heading">
@@ -175,7 +175,8 @@ bearing with us as we move towards our first stable Lightning release.)</p><h3 i
   </a>
   <span class="text">Added</span>
 </h3>
-<ul><li>Added a hover effect on copy and add button for adaptors examples
+<ul><li>Fix flaky job name input behavior on error
+<a href="https://github.com/OpenFn/Lightning/issues/1218">#1218</a></li><li>Added a hover effect on copy and add button for adaptors examples
 <a href="https://github.com/OpenFn/Lightning/issues/1297">#1297</a></li><li>Migration helper code to move from <code class="inline">v0.9.3</code> to <code class="inline">v0.10.0</code> added to SetupUtils
 <a href="https://github.com/OpenFn/Lightning/issues/1363">#1363</a></li><li>Option to start with <code class="inline">RTM=false iex -S mix phx.server</code> for opting out of the
 dev-mode automatic runtime manager.</li><li>Webhook Authentication Methods database and CRUD operations
