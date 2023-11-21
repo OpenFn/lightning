@@ -238,23 +238,16 @@ defmodule LightningWeb.RunLive.Index do
   @impl true
   def handle_info(
         %Lightning.WorkOrders.Events.WorkOrderCreated{work_order: work_order},
-        %{assigns: assigns} = socket
+        socket
       ) do
-    params =
-      assigns.filters
-      |> Map.merge(%{"workorder_id" => work_order.id})
-      |> SearchParams.new()
+    %{project: project, filters: filters} = socket.assigns
 
-    page_result = Invocation.search_workorders(assigns.project, params)
+    filters = Map.merge(filters, %{"workorder_id" => work_order.id})
 
-    page = %{
-      assigns.page
-      | entries: page_result.entries ++ assigns.page.entries,
-        page_size: assigns.page.page_size + page_result.total_entries,
-        total_entries: assigns.page.total_entries + page_result.total_entries
-    }
-
-    {:noreply, assign(socket, page: page)}
+    {:noreply,
+     push_patch(socket,
+       to: ~p"/projects/#{project.id}/runs?#{%{filters: filters}}"
+     )}
   end
 
   @impl true
