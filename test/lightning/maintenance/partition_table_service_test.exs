@@ -34,7 +34,7 @@ defmodule Lightning.PartitionTableServiceTest do
     test "removes obsolete partitions" do
       parent = "work_orders"
 
-      now = DateTime.now!("Etc/UTC")
+      now = DateTime.utc_now()
 
       drop_range_partitions(parent)
 
@@ -75,7 +75,7 @@ defmodule Lightning.PartitionTableServiceTest do
   end
 
   test "tables_to_add returns tables that do not already exist" do
-    now = DateTime.now!("Etc/UTC")
+    now = DateTime.utc_now()
 
     parent = "work_orders"
 
@@ -109,7 +109,7 @@ defmodule Lightning.PartitionTableServiceTest do
   end
 
   test "add_headroom - all" do
-    now = DateTime.now!("Etc/UTC")
+    now = DateTime.utc_now()
 
     parent = "work_orders"
 
@@ -129,7 +129,7 @@ defmodule Lightning.PartitionTableServiceTest do
   end
 
   test "add_headroom - parent specified" do
-    now = DateTime.now!("Etc/UTC")
+    now = DateTime.utc_now()
 
     parent = "work_orders"
 
@@ -152,7 +152,7 @@ defmodule Lightning.PartitionTableServiceTest do
   test "remove_empty" do
     parent = "work_orders"
 
-    now = DateTime.now!("Etc/UTC")
+    now = DateTime.utc_now()
 
     drop_range_partitions(parent)
 
@@ -167,7 +167,7 @@ defmodule Lightning.PartitionTableServiceTest do
 
     generate_partitions(-6..3, now, parent)
 
-    weeks_ago = Timex.shift(DateTime.utc_now(), weeks: -2)
+    weeks_ago = DateTime.add(DateTime.utc_now(), -2 * 7, :day)
 
     Service.remove_empty(parent, weeks_ago)
 

@@ -22,7 +22,7 @@ defmodule Lightning.PartitionTableService do
   @impl Oban.Worker
   def perform(%Oban.Job{args: %{"drop_older_than" => %{"weeks" => weeks}}})
       when is_integer(weeks) do
-    upper_bound = Timex.shift(DateTime.utc_now(), weeks: weeks)
+    upper_bound = DateTime.add(DateTime.utc_now(), weeks * 7, :day)
 
     remove_empty("work_orders", upper_bound)
   end
