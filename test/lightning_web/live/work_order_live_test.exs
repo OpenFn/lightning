@@ -1,10 +1,11 @@
 defmodule LightningWeb.RunWorkOrderTest do
-  alias Lightning.Attempts
-  use LightningWeb.ConnCase, async: true
+  use LightningWeb.ConnCase, async: false
 
   import Phoenix.LiveViewTest
   import Lightning.Factories
 
+  alias Lightning.Attempts
+  alias Lightning.WorkOrders.Events
   alias Lightning.WorkOrders.SearchParams
   alias LightningWeb.LiveHelpers
 
@@ -26,7 +27,7 @@ defmodule LightningWeb.RunWorkOrderTest do
         )
 
       {:ok, _view, html} =
-        live(conn, Routes.project_run_index_path(conn, :index, project.id))
+        live_async(conn, Routes.project_run_index_path(conn, :index, project.id))
 
       assert html =~ "History"
 
@@ -107,7 +108,7 @@ defmodule LightningWeb.RunWorkOrderTest do
         )
 
       {:ok, view, html} =
-        live(conn, Routes.project_run_index_path(conn, :index, project.id))
+        live_async(conn, Routes.project_run_index_path(conn, :index, project.id))
 
       assert html =~ "History"
 
@@ -181,7 +182,7 @@ defmodule LightningWeb.RunWorkOrderTest do
         })
 
       {:ok, view, html} =
-        live(conn, Routes.project_run_index_path(conn, :index, project.id))
+        live_async(conn, Routes.project_run_index_path(conn, :index, project.id))
 
       assert html =~ "Status"
 
@@ -288,19 +289,15 @@ defmodule LightningWeb.RunWorkOrderTest do
         })
 
       {:ok, view, _html} =
-        live(conn, Routes.project_run_index_path(conn, :index, project.id))
+        live_async(conn, Routes.project_run_index_path(conn, :index, project.id))
 
-      div =
-        view
-        |> element(
-          "section#inner_content div[data-entity='work_order_list'] > div:first-child > div:last-child"
-        )
-        |> render()
-
-      assert div =~ "Failed"
+      assert view
+             |> element(
+               "section#inner_content div[data-entity='work_order_list'] > div:first-child > div:last-child"
+             )
+             |> render() =~ "Failed"
 
       # uncheck :failure
-
       view
       |> form("#run-filter-form", filters: %{"failed" => "false"})
       |> render_submit()
@@ -538,6 +535,8 @@ defmodule LightningWeb.RunWorkOrderTest do
 
       {:ok, view, _html} =
         live(conn, Routes.project_run_index_path(conn, :index, project.id))
+
+      render_async(view)
 
       div =
         view
@@ -837,7 +836,7 @@ defmodule LightningWeb.RunWorkOrderTest do
         )
 
       {:ok, view, _html} =
-        live(
+        live_async(
           conn,
           Routes.project_run_index_path(conn, :index, project.id)
         )
@@ -943,7 +942,7 @@ defmodule LightningWeb.RunWorkOrderTest do
         )
 
       {:ok, view, _html} =
-        live(
+        live_async(
           conn,
           Routes.project_run_index_path(conn, :index, project.id)
         )
@@ -969,7 +968,7 @@ defmodule LightningWeb.RunWorkOrderTest do
     end
   end
 
-  describe "Events" do
+  describe "handle_info/2" do
     test "WorkOrders.Events.AttemptCreated", %{
       conn: conn,
       project: project
@@ -1002,7 +1001,7 @@ defmodule LightningWeb.RunWorkOrderTest do
         )
 
       {:ok, view, _html} =
-        live(conn, Routes.project_run_index_path(conn, :index, project.id))
+        live_async(conn, Routes.project_run_index_path(conn, :index, project.id))
 
       attempt =
         insert(:attempt,
@@ -1015,7 +1014,7 @@ defmodule LightningWeb.RunWorkOrderTest do
 
       refute has_element?(view, "#attempt_#{attempt.id}")
 
-      Lightning.WorkOrders.Events.attempt_created(project.id, attempt)
+      Events.attempt_created(project.id, attempt)
 
       # Force Re-render to ensure the event is included
       render(view)
@@ -1058,7 +1057,7 @@ defmodule LightningWeb.RunWorkOrderTest do
         )
 
       {:ok, view, _html} =
-        live(conn, Routes.project_run_index_path(conn, :index, project.id))
+        live_async(conn, Routes.project_run_index_path(conn, :index, project.id))
 
       run_2 =
         insert(:run,
@@ -1074,7 +1073,7 @@ defmodule LightningWeb.RunWorkOrderTest do
       assert has_element?(view, "#run-#{run_1.id}")
       refute has_element?(view, "#run-#{run_2.id}")
 
-      Lightning.WorkOrders.Events.attempt_updated(project.id, attempt)
+      Events.attempt_updated(project.id, attempt)
 
       # Force Re-render to ensure the event is included
       render(view)
@@ -1099,11 +1098,9 @@ defmodule LightningWeb.RunWorkOrderTest do
 
       # filter by workflow
       {:ok, view, _html} =
-        live(
+        live_async(
           conn,
-          Routes.project_run_index_path(conn, :index, project.id,
-            filters: %{workflow_id: workflow_1.id}
-          )
+          Routes.project_run_index_path(conn, :index, project.id)
         )
 
       work_order_1 =
@@ -1151,14 +1148,39 @@ defmodule LightningWeb.RunWorkOrderTest do
       refute has_element?(view, "#workorder-#{work_order_1.id}")
       refute has_element?(view, "#workorder-#{work_order_2.id}")
 
-      Lightning.WorkOrders.Events.work_order_created(project.id, work_order_2)
-      Lightning.WorkOrders.Events.work_order_created(project.id, work_order_1)
+      %{filters: filters} = get_assigns(view)
+
+      Events.subscribe(project.id)
+
+      Events.work_order_created(project.id, work_order_1)
+      %{id: wo_id} = work_order_1
+      assert_received %Events.WorkOrderCreated{work_order: %{id: ^wo_id}}
+
+      assert_patch(
+        view,
+        Routes.project_run_index_path(conn, :index, project.id,
+          filters: Map.put(filters, "workorder_id", wo_id)
+        )
+      )
 
       # Force Re-render to ensure the event is included
+      render_async(view)
       render(view)
-
       assert has_element?(view, "#workorder-#{work_order_1.id}")
-      refute has_element?(view, "#workorder-#{work_order_2.id}")
+
+      # repeat same test for another workorder
+      Events.work_order_created(project.id, work_order_2)
+      %{id: wo_id} = work_order_2
+      assert_received %Events.WorkOrderCreated{work_order: %{id: ^wo_id}}
+
+      assert_patch(
+        view,
+        Routes.project_run_index_path(conn, :index, project.id,
+          filters: Map.put(filters, "workorder_id", wo_id)
+        )
+      )
+
+      assert has_element?(view, "#workorder-#{work_order_2.id}")
     end
   end
 
@@ -1179,6 +1201,10 @@ defmodule LightningWeb.RunWorkOrderTest do
       filters: filter_attrs
     )
     |> render_submit()
+
+    render_async(view)
+
+    :ok
   end
 
   def workflow_displayed(view, name) do
@@ -1455,7 +1481,7 @@ defmodule LightningWeb.RunWorkOrderTest do
       )
 
       {:ok, view, _html} =
-        live(
+        live_async(
           conn,
           Routes.project_run_index_path(conn, :index, project.id,
             filters: %{
@@ -1799,7 +1825,7 @@ defmodule LightningWeb.RunWorkOrderTest do
         )
 
       {:ok, view, html} =
-        live(
+        live_async(
           conn,
           Routes.project_run_index_path(conn, :index, project.id,
             filters: %{
@@ -1827,8 +1853,7 @@ defmodule LightningWeb.RunWorkOrderTest do
       |> form("#selection-form-#{work_order_3.id}")
       |> render_change(%{selected: false})
 
-      updated_html = render(view)
-      assert updated_html =~ "Rerun from..."
+      assert render_async(view) =~ "Rerun from..."
     end
 
     @tag role: :viewer
@@ -1878,6 +1903,8 @@ defmodule LightningWeb.RunWorkOrderTest do
         )
 
       {:ok, view, html} = live(conn, path)
+
+      render_async(view)
 
       refute html =~
                "Find all runs that include this step, and rerun from there"
