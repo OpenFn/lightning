@@ -1,10 +1,24 @@
 defmodule LightningWeb.RunLive.Components do
   @moduledoc false
-  alias Lightning.Invocation
   use LightningWeb, :component
+
   import LightningWeb.RouteHelpers
+
+  alias Lightning.Invocation
   alias Lightning.WorkOrders.SearchParams
+
   alias Phoenix.LiveView.JS
+
+  attr :message, :string, required: true
+  attr :class, :string, default: ""
+
+  def async_filler(assigns) do
+    ~H"""
+    <div data-entity="work_order" class={["bg-gray-50", @class]}>
+      <div class="py-3 text-center text-gray-500"><%= @message %></div>
+    </div>
+    """
+  end
 
   attr :project, :map, required: true
   attr :attempt, :map, required: true

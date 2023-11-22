@@ -31,6 +31,7 @@ defmodule LightningWeb.ConnCase do
 
       alias LightningWeb.Router.Helpers, as: Routes
 
+      import Lightning.LiveViewHelpers
       import Lightning.ModelHelpers
       import Plug.HTML
     end

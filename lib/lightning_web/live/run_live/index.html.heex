@@ -34,10 +34,7 @@
                     >
                       <span>
                         <%= if workflow_id = get_change(@filters_changeset, :workflow_id) do %>
-                          <%= Enum.find(@workflows, fn {_name, id} ->
-                            id == workflow_id
-                          end)
-                          |> elem(0) %>
+                          <%= find_workflow_name(@workflows, workflow_id) %>
                         <% else %>
                           Any
                         <% end %>
@@ -308,10 +305,7 @@
         <div class="mt-2">
           <%= if workflow_id = get_change(@filters_changeset, :workflow_id) do %>
             <span class="inline-flex items-center gap-x-0.5 rounded-md bg-blue-100 px-2 py-1 text-xs font-medium text-blue-700">
-              Workflow: <%= Enum.find(@workflows, fn {_name, id} ->
-                id == workflow_id
-              end)
-              |> elem(0) %>
+              Workflow: <%= find_workflow_name(@workflows, workflow_id) %>
               <.form
                 :let={f}
                 for={@filters_changeset}
@@ -708,20 +702,31 @@
                   data-entity="work_order_list"
                   class="bg-white divide-y divide-gray-200 text-gray-500"
                 >
-                  <%= for workorder <- @page.entries do %>
-                    <.live_component
-                      module={LightningWeb.RunLive.WorkOrderComponent}
-                      id={workorder.id}
-                      work_order={workorder}
-                      project={@project}
-                      can_rerun_job={@can_rerun_job}
-                      entry_selected={
-                        Enum.any?(@selected_work_orders, fn wo ->
-                          wo.id == workorder.id
-                        end)
-                      }
-                    />
-                  <% end %>
+                  <.async_result :let={searched_page} assign={@async_page}>
+                    <:loading>
+                      <Components.async_filler
+                        message="Loading work orders ..."
+                        class="animate-pulse"
+                      />
+                    </:loading>
+                    <:failed :let={_reason}>
+                      <Components.async_filler message="There was an error loading the work orders" />
+                    </:failed>
+                    <%= for workorder <- searched_page.entries do %>
+                      <.live_component
+                        module={LightningWeb.RunLive.WorkOrderComponent}
+                        id={workorder.id}
+                        work_order={workorder}
+                        project={@project}
+                        can_rerun_job={@can_rerun_job}
+                        entry_selected={
+                          Enum.any?(@selected_work_orders, fn wo ->
+                            wo.id == workorder.id
+                          end)
+                        }
+                      />
+                    <% end %>
+                  </.async_result>
                 </div>
               </div>
 
