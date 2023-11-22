@@ -3,10 +3,10 @@ defmodule LightningWeb.RunWorkOrderTest do
   use LightningWeb.ConnCase, async: true
 
   import Phoenix.LiveViewTest
+  import Lightning.Factories
 
   alias Lightning.WorkOrders.SearchParams
-
-  import Lightning.Factories
+  alias LightningWeb.LiveHelpers
 
   setup :register_and_log_in_user
   setup :create_project_for_current_user
@@ -117,22 +117,33 @@ defmodule LightningWeb.RunWorkOrderTest do
         |> render()
 
       assert table =~ workflow.name
-      assert table =~ "#{dataclip.id}"
+      assert table =~ LiveHelpers.display_short_uuid(work_order.id)
+      assert table =~ LiveHelpers.display_short_uuid(dataclip.id)
+
+      refute table =~ LiveHelpers.display_short_uuid(attempt_id)
 
       # toggle work_order details
       # TODO move to test work_order_component
 
-      assert view
-             |> element(
-               "section#inner_content div[data-entity='work_order_list'] > div:first-child button[phx-click='toggle_details']"
-             )
-             |> render_click() =~ "attempt-#{attempt_id}"
+      expanded =
+        view
+        |> element(
+          "section#inner_content div[data-entity='work_order_list'] > div:first-child button[phx-click='toggle_details']"
+        )
+        |> render_click()
 
-      refute view
-             |> element(
-               "section#inner_content div[data-entity='work_order_list'] > div:first-child button[phx-click='toggle_details']"
-             )
-             |> render_click() =~ "attempt-#{attempt_id}"
+      assert expanded =~ "attempt-#{attempt_id}"
+      assert expanded =~ LiveHelpers.display_short_uuid(attempt_id)
+
+      collapsed_again =
+        view
+        |> element(
+          "section#inner_content div[data-entity='work_order_list'] > div:first-child button[phx-click='toggle_details']"
+        )
+        |> render_click()
+
+      refute collapsed_again =~ "attempt-#{attempt_id}"
+      refute collapsed_again =~ LiveHelpers.display_short_uuid(attempt_id)
     end
   end
 
@@ -1343,29 +1354,30 @@ defmodule LightningWeb.RunWorkOrderTest do
 
       dataclip = insert(:dataclip, project: project)
 
-      work_order_b =
-        insert(:workorder,
+      other_4_work_orders =
+        insert_list(4, :workorder,
           workflow: workflow,
           trigger: trigger,
-          dataclip: dataclip
+          dataclip: dataclip,
+          attempts: [
+            build(:attempt,
+              id: nil,
+              starting_trigger: trigger,
+              dataclip: dataclip,
+              finished_at: build(:timestamp),
+              state: :success,
+              runs: [
+                %{
+                  job: job_b,
+                  started_at: build(:timestamp),
+                  finished_at: build(:timestamp),
+                  exit_reason: "success",
+                  input_dataclip: dataclip
+                }
+              ]
+            )
+          ]
         )
-
-      insert(:attempt,
-        work_order: work_order_b,
-        starting_trigger: trigger,
-        dataclip: dataclip,
-        finished_at: build(:timestamp),
-        state: :success,
-        runs: [
-          %{
-            job: job_b,
-            started_at: build(:timestamp),
-            finished_at: build(:timestamp),
-            exit_reason: "success",
-            input_dataclip: dataclip
-          }
-        ]
-      )
 
       path =
         Routes.project_run_index_path(conn, :index, project.id,
@@ -1385,10 +1397,10 @@ defmodule LightningWeb.RunWorkOrderTest do
       result = render_click(view, "bulk-rerun", %{type: "all"})
       {:ok, view, html} = follow_redirect(result, conn)
 
-      assert html =~ "New attempts enqueued for 2 workorders"
+      assert html =~ "New attempts enqueued for 5 workorders"
 
       view
-      |> form("#selection-form-#{work_order_b.id}")
+      |> form("#selection-form-#{hd(other_4_work_orders).id}")
       |> render_change(%{selected: true})
 
       result = render_click(view, "bulk-rerun", %{type: "selected"})

@@ -291,6 +291,7 @@ if config_env() == :prod do
     url: [host: host, port: url_port, scheme: url_scheme],
     secret_key_base: secret_key_base,
     check_origin: origins,
+    protocol_options: [max_frame_size: 10_000_000],
     server: true
 
   # ## Using releases

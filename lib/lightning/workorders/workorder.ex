@@ -7,7 +7,7 @@ defmodule Lightning.WorkOrder do
   import Ecto.Changeset
   alias Lightning.Workflows.{Workflow, Trigger}
   alias Lightning.Invocation.Dataclip
-  alias Lightning.{InvocationReason, Attempt}
+  alias Lightning.{Attempt}
 
   require Attempt
 
@@ -16,8 +16,7 @@ defmodule Lightning.WorkOrder do
           id: Ecto.UUID.t() | nil,
           trigger: Trigger.t() | Ecto.Association.NotLoaded.t(),
           dataclip: Dataclip.t() | Ecto.Association.NotLoaded.t(),
-          workflow: Workflow.t() | Ecto.Association.NotLoaded.t(),
-          reason: InvocationReason.t() | Ecto.Association.NotLoaded.t()
+          workflow: Workflow.t() | Ecto.Association.NotLoaded.t()
         }
 
   @primary_key {:id, :binary_id, autogenerate: true}
@@ -42,7 +41,6 @@ defmodule Lightning.WorkOrder do
     belongs_to :trigger, Trigger
     belongs_to :dataclip, Dataclip
 
-    belongs_to :reason, InvocationReason
     has_many :attempts, Attempt, preload_order: [desc: :inserted_at]
     has_many :jobs, through: [:workflow, :jobs]
 
@@ -57,8 +55,8 @@ defmodule Lightning.WorkOrder do
   @doc false
   def changeset(attempt, attrs) do
     attempt
-    |> cast(attrs, [:state, :last_activity, :reason_id, :workflow_id])
-    |> validate_required([:state, :last_activity, :reason_id, :workflow_id])
+    |> cast(attrs, [:state, :last_activity, :workflow_id])
+    |> validate_required([:state, :last_activity, :workflow_id])
     |> validate()
   end
 

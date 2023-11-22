@@ -146,7 +146,7 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
                   class="font-normal text-xs whitespace-nowrap text-ellipsis
                     rounded-md font-mono inline-block"
                 >
-                  <%= display_short_uuid(@work_order.dataclip_id) %>
+                  <%= display_short_uuid(@work_order.id) %>
                 </span>
                 &bull;
                 <.link navigate={

@@ -9,11 +9,5 @@ defmodule Lightning.Invocation.WorkOrderTest do
 
       assert errors[:workflow_id] == ["can't be blank"]
     end
-
-    test "must have a reason" do
-      errors = WorkOrder.changeset(%WorkOrder{}, %{}) |> errors_on()
-
-      assert errors[:reason_id] == ["can't be blank"]
-    end
   end
 end
