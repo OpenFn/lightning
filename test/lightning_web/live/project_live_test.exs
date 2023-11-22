@@ -919,7 +919,7 @@ defmodule LightningWeb.ProjectLiveTest do
 
     test "project members can edit their own digest frequency and failure alert settings",
          %{conn: conn, user: authenticated_user} do
-      unauthenticated_user = user_fixture()
+      unauthenticated_user = user_fixture(first_name: "Bob")
 
       {:ok, project} =
         Lightning.Projects.create_project(%{
