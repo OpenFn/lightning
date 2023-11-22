@@ -44,4 +44,10 @@ defmodule Lightning.ModelHelpers do
     |> Enum.map(fn field -> {field, model |> Map.get(field)} end)
     |> Enum.into(%{})
   end
+
+  def count_for(query) do
+    import Ecto.Query
+
+    select(query, count()) |> Lightning.Repo.one!()
+  end
 end
