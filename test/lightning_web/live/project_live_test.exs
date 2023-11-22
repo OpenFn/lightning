@@ -726,7 +726,7 @@ defmodule LightningWeb.ProjectLiveTest do
       project: project
     } do
       project_user =
-        Lightning.Projects.get_project_with_users!(project.id).project_users
+        Lightning.Projects.get_project_users!(project.id)
         |> List.first()
 
       {:ok, _view, html} =

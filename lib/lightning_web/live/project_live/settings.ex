@@ -24,7 +24,7 @@ defmodule LightningWeb.ProjectLive.Settings do
   @impl true
   def mount(_params, _session, socket) do
     project_users =
-      Projects.get_project_with_users!(socket.assigns.project.id).project_users
+      Projects.get_project_users!(socket.assigns.project.id)
 
     credentials = Credentials.list_credentials(socket.assigns.project)
     auth_methods = WebhookAuthMethods.list_for_project(socket.assigns.project)
@@ -464,7 +464,7 @@ defmodule LightningWeb.ProjectLive.Settings do
          socket
          |> assign(
            :project_users,
-           Projects.get_project_with_users!(socket.assigns.project.id).project_users
+           Projects.get_project_users!(socket.assigns.project.id)
          )
          |> put_flash(:info, "Project user updated successfuly")}
 
