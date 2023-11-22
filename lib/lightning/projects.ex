@@ -15,7 +15,7 @@ defmodule Lightning.Projects do
   alias Lightning.Projects.ProjectUser
   alias Lightning.Repo
 
-  alias Lightning.Projects.{Project, ProjectCredential}
+  alias Lightning.Projects.{Project, ProjectCredential, ProjectUser}
   alias Lightning.Accounts.User
   alias Lightning.ExportUtils
   alias Lightning.Workflows.Workflow
@@ -119,6 +119,19 @@ defmodule Lightning.Projects do
   def get_project_with_users!(id) do
     from(p in Project, where: p.id == ^id, preload: [project_users: :user])
     |> Repo.one!()
+  end
+
+  @doc """
+  Get all project users for a given project
+  """
+  def get_project_users!(id) do
+    from(pu in ProjectUser,
+      join: u in assoc(pu, :user),
+      where: pu.project_id == ^id,
+      order_by: u.first_name,
+      preload: [user: u]
+    )
+    |> Repo.all()
   end
 
   @doc """

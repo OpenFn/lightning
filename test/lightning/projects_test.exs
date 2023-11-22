@@ -4,6 +4,7 @@ defmodule Lightning.ProjectsTest do
   alias Lightning.Projects.ProjectUser
   alias Lightning.Projects
   alias Lightning.Projects.Project
+  alias Lightning.Accounts.User
 
   import Lightning.ProjectsFixtures
   import Lightning.AccountsFixtures
@@ -56,6 +57,25 @@ defmodule Lightning.ProjectsTest do
         |> Repo.preload(project_users: [:user])
 
       assert Projects.get_project_with_users!(project.id) == project
+    end
+
+    test "get_project_users!/1 returns the project users in order of first name" do
+      user_a = user_fixture(first_name: "Anna")
+      user_b = user_fixture(first_name: "Bob")
+
+      project =
+        project_fixture(
+          project_users: [
+            %{user_id: user_a.id},
+            %{user_id: user_b.id}
+          ]
+        )
+
+      assert [
+               %ProjectUser{user: %User{first_name: "Anna"}},
+               %ProjectUser{user: %User{first_name: "Bob"}}
+             ] =
+               Projects.get_project_users!(project.id)
     end
 
     test "get_project_user!/1 returns the project_user with given id" do

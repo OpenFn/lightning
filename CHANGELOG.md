@@ -15,6 +15,8 @@ and this project adheres to
 
 ### Changed
 
+- Sort project collaborators by first name
+  [#1326](https://github.com/OpenFn/Lightning/issues/1326)
 - Workorders will now be set in a "pending" state when retries are enqueued.
   [#1340](https://github.com/OpenFn/Lightning/issues/1340)
 
