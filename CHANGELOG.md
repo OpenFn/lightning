@@ -12,6 +12,9 @@ and this project adheres to
 
 ### Changed
 
+- Workorders will now be set in a "pending" state when retries are enqueued.
+  [#1340](https://github.com/OpenFn/Lightning/issues/1340)
+
 ### Fixed
 
 ## [v0.10.2] - 2023-11-21
@@ -167,8 +170,6 @@ bearing with us as we move towards our first stable Lightning release.)
   [#1348](https://github.com/OpenFn/Lightning/issues/1348)
 - Modify CompleteRun to return error changeset when run not found
   [#1393](https://github.com/OpenFn/Lightning/issues/1393)
-- Pending state on WO doesn't appear until retries are claimed
-  [#1340](https://github.com/OpenFn/Lightning/issues/1340)
 
 ## [v0.9.3] - 2023-09-27
 
