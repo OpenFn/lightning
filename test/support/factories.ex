@@ -89,31 +89,10 @@ defmodule Lightning.Factories do
     }
   end
 
-  def attempt_with_dependencies_factory do
-    struct!(
-      attempt_factory(),
-      %{
-        created_by: build(:user),
-        work_order: build(:workorder),
-        dataclip: build(:dataclip),
-        starting_job: build(:job)
-      }
-    )
-  end
-
   def attempt_run_factory do
     %Lightning.AttemptRun{
       id: fn -> Ecto.UUID.generate() end
     }
-  end
-
-  def attempt_run_with_run_factory do
-    struct!(
-      attempt_run_factory(),
-      %{
-        run: build(:run)
-      }
-    )
   end
 
   def reason_factory do
