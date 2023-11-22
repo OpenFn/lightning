@@ -1354,29 +1354,30 @@ defmodule LightningWeb.RunWorkOrderTest do
 
       dataclip = insert(:dataclip, project: project)
 
-      work_order_b =
-        insert(:workorder,
+      other_4_work_orders =
+        insert_list(4, :workorder,
           workflow: workflow,
           trigger: trigger,
-          dataclip: dataclip
+          dataclip: dataclip,
+          attempts: [
+            build(:attempt,
+              id: nil,
+              starting_trigger: trigger,
+              dataclip: dataclip,
+              finished_at: build(:timestamp),
+              state: :success,
+              runs: [
+                %{
+                  job: job_b,
+                  started_at: build(:timestamp),
+                  finished_at: build(:timestamp),
+                  exit_reason: "success",
+                  input_dataclip: dataclip
+                }
+              ]
+            )
+          ]
         )
-
-      insert(:attempt,
-        work_order: work_order_b,
-        starting_trigger: trigger,
-        dataclip: dataclip,
-        finished_at: build(:timestamp),
-        state: :success,
-        runs: [
-          %{
-            job: job_b,
-            started_at: build(:timestamp),
-            finished_at: build(:timestamp),
-            exit_reason: "success",
-            input_dataclip: dataclip
-          }
-        ]
-      )
 
       path =
         Routes.project_run_index_path(conn, :index, project.id,
@@ -1396,10 +1397,10 @@ defmodule LightningWeb.RunWorkOrderTest do
       result = render_click(view, "bulk-rerun", %{type: "all"})
       {:ok, view, html} = follow_redirect(result, conn)
 
-      assert html =~ "New attempts enqueued for 2 workorders"
+      assert html =~ "New attempts enqueued for 5 workorders"
 
       view
-      |> form("#selection-form-#{work_order_b.id}")
+      |> form("#selection-form-#{hd(other_4_work_orders).id}")
       |> render_change(%{selected: true})
 
       result = render_click(view, "bulk-rerun", %{type: "selected"})

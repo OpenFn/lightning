@@ -12,6 +12,9 @@ and this project adheres to
 
 ### Changed
 
+- Workorders will now be set in a "pending" state when retries are enqueued.
+  [#1340](https://github.com/OpenFn/Lightning/issues/1340)
+
 ### Fixed
 
 ## [v0.10.2] - 2023-11-21

@@ -196,16 +196,9 @@ defmodule LightningWeb.RunLive.Index do
         %Lightning.WorkOrders.Events.AttemptCreated{attempt: attempt},
         socket
       ) do
-    attempt =
-      Lightning.Repo.preload(
-        attempt,
-        [work_order: [:workflow, attempts: [runs: :job]]],
-        force: true
-      )
-
     {:noreply,
      assign(socket,
-       page: update_page_workorder(socket.assigns.page, attempt.work_order)
+       page: update_page_workorder(socket.assigns.page, attempt)
      )}
   end
 
@@ -214,16 +207,9 @@ defmodule LightningWeb.RunLive.Index do
         %Lightning.WorkOrders.Events.AttemptUpdated{attempt: attempt},
         socket
       ) do
-    attempt =
-      Lightning.Repo.preload(
-        attempt,
-        [work_order: [:workflow, attempts: [runs: :job]]],
-        force: true
-      )
-
     {:noreply,
      assign(socket,
-       page: update_page_workorder(socket.assigns.page, attempt.work_order)
+       page: update_page_workorder(socket.assigns.page, attempt)
      )}
   end
 
@@ -254,11 +240,6 @@ defmodule LightningWeb.RunLive.Index do
         %Lightning.WorkOrders.Events.WorkOrderUpdated{work_order: work_order},
         socket
       ) do
-    work_order =
-      Lightning.Repo.preload(work_order, [:workflow, attempts: [runs: :job]],
-        force: true
-      )
-
     {:noreply,
      assign(socket, page: update_page_workorder(socket.assigns.page, work_order))}
   end
@@ -441,17 +422,45 @@ defmodule LightningWeb.RunLive.Index do
     date && Timex.format!(date, "{D}/{M}/{YY}")
   end
 
-  defp update_page_workorder(page, workorder) do
+  defp update_page_workorder(page, attempt_or_workorder) do
     entries =
-      Enum.reduce(page.entries, [], fn entry, acc ->
-        if entry.id == workorder.id do
+      Enum.reduce(page.entries, [], fn wo_entry, acc ->
+        if wo_entry.id == workorder_id(attempt_or_workorder) do
+          workorder = workorder_with_runs(attempt_or_workorder)
           [workorder | acc]
         else
-          [entry | acc]
+          [wo_entry | acc]
         end
       end)
 
     %{page | entries: Enum.reverse(entries)}
+  end
+
+  defp workorder_id(attempt_or_workorder) do
+    if is_struct(attempt_or_workorder, Lightning.WorkOrder) do
+      attempt_or_workorder.id
+    else
+      attempt_or_workorder.work_order_id
+    end
+  end
+
+  defp workorder_with_runs(attempt_or_workorder) do
+    if is_struct(attempt_or_workorder, Lightning.WorkOrder) do
+      Lightning.Repo.preload(
+        attempt_or_workorder,
+        [:workflow, attempts: [runs: :job]],
+        force: true
+      )
+    else
+      attempt =
+        Lightning.Repo.preload(
+          attempt_or_workorder,
+          [work_order: [:workflow, attempts: [runs: :job]]],
+          force: true
+        )
+
+      attempt.work_order
+    end
   end
 
   defp pagination_path(socket, project, route_params, filters \\ %{}) do
