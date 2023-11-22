@@ -9,7 +9,6 @@ defmodule Lightning.Attempt do
   import Lightning.Validators
 
   alias Lightning.Accounts.User
-  alias Lightning.InvocationReason
   alias Lightning.WorkOrder
   alias Lightning.Invocation.Run
   alias Lightning.Invocation.LogLine
@@ -40,7 +39,6 @@ defmodule Lightning.Attempt do
   @type t :: %__MODULE__{
           __meta__: Ecto.Schema.Metadata.t(),
           id: Ecto.UUID.t() | nil,
-          reason: InvocationReason.t() | Ecto.Association.NotLoaded.t(),
           work_order: WorkOrder.t() | Ecto.Association.NotLoaded.t()
         }
 
@@ -48,7 +46,6 @@ defmodule Lightning.Attempt do
   @foreign_key_type :binary_id
   schema "attempts" do
     belongs_to :work_order, WorkOrder
-    belongs_to :reason, InvocationReason
 
     belongs_to :starting_job, Job
     belongs_to :starting_trigger, Trigger
@@ -117,9 +114,9 @@ defmodule Lightning.Attempt do
   @doc false
   def changeset(attempt, attrs) do
     attempt
-    |> cast(attrs, [:reason_id, :work_order_id, :priority])
+    |> cast(attrs, [:work_order_id, :priority])
     |> cast_assoc(:runs, required: false)
-    |> validate_required([:reason_id, :work_order_id])
+    |> validate_required([:work_order_id])
     |> assoc_constraint(:work_order)
     |> validate()
   end

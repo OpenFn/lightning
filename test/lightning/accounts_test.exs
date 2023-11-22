@@ -2,7 +2,6 @@ defmodule Lightning.AccountsTest do
   use Lightning.DataCase, async: true
 
   alias Lightning.AccountsFixtures
-  alias Lightning.InvocationFixtures
   alias Lightning.Credentials
   alias Lightning.Jobs
   alias Lightning.JobsFixtures
@@ -14,13 +13,29 @@ defmodule Lightning.AccountsTest do
   alias Lightning.Accounts.{User, UserBackupCode, UserToken, UserTOTP}
   import Lightning.AccountsFixtures
   import Lightning.Factories
-  import Ecto.Query
 
-  test "has_activity_in_projects?/1 returns true if user is has activity in a project (is associated to invocation reasons) and false otherwise." do
+  test "has_activity_in_projects?/1 returns true if user has activity in a project (is associated with an attempt) and false otherwise." do
     user = AccountsFixtures.user_fixture()
     another_user = AccountsFixtures.user_fixture()
 
-    InvocationFixtures.reason_fixture(user_id: user.id)
+    workflow = insert(:workflow)
+    trigger = insert(:trigger, workflow: workflow)
+    dataclip = insert(:dataclip)
+
+    work_order =
+      insert(:workorder,
+        workflow: workflow,
+        trigger: trigger,
+        dataclip: dataclip
+      )
+
+    _attempt =
+      insert(:attempt,
+        created_by: user,
+        work_order: work_order,
+        starting_trigger: trigger,
+        dataclip: dataclip
+      )
 
     assert Accounts.has_activity_in_projects?(user)
     refute Accounts.has_activity_in_projects?(another_user)
@@ -492,13 +507,13 @@ defmodule Lightning.AccountsTest do
         project_users: [%{user_id: user_2.id}]
       })
 
-      assert 2 == Repo.all(ProjectUser) |> Enum.count()
-      assert 2 == Repo.all(User) |> Enum.count()
+      assert count_for(ProjectUser) == 2
+      assert count_for(User) == 2
 
       :ok = Accounts.purge_user(user_1.id)
 
-      assert 1 == Repo.all(ProjectUser) |> Enum.count()
-      assert 1 == Repo.all(User) |> Enum.count()
+      assert count_for(ProjectUser) == 1
+      assert count_for(User) == 1
 
       remaining_projs = Repo.all(ProjectUser)
       remaining_users = Repo.all(User)
@@ -571,11 +586,11 @@ defmodule Lightning.AccountsTest do
       CredentialsFixtures.credential_fixture(user_id: user_1.id)
       CredentialsFixtures.credential_fixture(user_id: user_2.id)
 
-      assert 3 == Repo.all(Credentials.Credential) |> Enum.count()
+      assert count_for(Credentials.Credential) == 3
 
       :ok = Accounts.purge_user(user_1.id)
 
-      assert 1 == Repo.all(Credentials.Credential) |> Enum.count()
+      assert count_for(Credentials.Credential) == 1
 
       refute Repo.all(Credentials.Credential)
              |> Enum.any?(fn x -> x.user_id == user_1.id end)
@@ -586,28 +601,43 @@ defmodule Lightning.AccountsTest do
   end
 
   describe "The default Oban function Accounts.perform/1" do
-    test "prevents users that are still linked to an invocation reason from being deleted" do
+    test "prevents users that are still linked to an attempt from being deleted" do
       user =
         user_fixture(
           scheduled_deletion: DateTime.utc_now() |> Timex.shift(seconds: -10)
         )
 
-      InvocationFixtures.reason_fixture(user_id: user.id)
+      workflow = insert(:workflow)
+      trigger = insert(:trigger, workflow: workflow)
+      dataclip = insert(:dataclip)
 
-      assert 1 = Repo.all(User) |> Enum.count()
+      work_order =
+        insert(:workorder,
+          workflow: workflow,
+          trigger: trigger,
+          dataclip: dataclip
+        )
+
+      _attempt =
+        insert(:attempt,
+          created_by: user,
+          work_order: work_order,
+          starting_trigger: trigger,
+          dataclip: dataclip
+        )
+
+      assert count_for(User) == 1
 
       {:ok, %{users_deleted: users_deleted}} =
         Accounts.perform(%Oban.Job{args: %{"type" => "purge_deleted"}})
 
-      # We still have one user in database
-      assert 1 == Repo.all(User) |> Enum.count()
+      assert count_for(User) == 1
 
-      # No user has been deleted
-      assert 0 == users_deleted |> Enum.count()
+      assert users_deleted |> Enum.count() == 0
     end
 
     test "removes all users past deletion date when called with type 'purge_deleted'" do
-      user_to_delete =
+      %{id: id_of_deleted} =
         user_fixture(
           scheduled_deletion: DateTime.utc_now() |> Timex.shift(seconds: -10)
         )
@@ -616,15 +646,8 @@ defmodule Lightning.AccountsTest do
         scheduled_deletion: DateTime.utc_now() |> Timex.shift(seconds: 10)
       )
 
-      count_before = Repo.all(User) |> Enum.count()
-
-      {:ok, %{users_deleted: users_deleted}} =
+      {:ok, %{users_deleted: [%{id: ^id_of_deleted}]}} =
         Accounts.perform(%Oban.Job{args: %{"type" => "purge_deleted"}})
-
-      assert count_before - 1 == Repo.all(User) |> Enum.count()
-      assert 1 == users_deleted |> Enum.count()
-
-      assert user_to_delete.id == users_deleted |> Enum.at(0) |> Map.get(:id)
     end
 
     test "removes user from project users before deleting them" do
