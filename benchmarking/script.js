@@ -5,11 +5,20 @@ const webhookURL =
   'http://localhost:4000/i/cae544ab-03dc-4ccc-a09c-fb4edb255d7a';
 
 export const options = {
-  stages: [
-    { duration: '30s', target: 10 },
-    { duration: '1m30s', target: 50 },
-    { duration: '20s', target: 0 },
-  ],
+  discardResponseBodies: true,
+  scenarios: {
+    webhookRequests: {
+      executor: 'ramping-arrival-rate',
+      startRate: 1,
+      timeUnit: '1s',
+      preAllocatedVUs: 50,
+      stages: [
+        { duration: '30s', target: 50 }, // go from 1 to 50 rps in the first 30 seconds
+        { duration: '1m30s', target: 50 }, // hold at 50 rps for 1.5 minutes
+        { duration: '20s', target: 0 }, // ramp down back to 0 rps over the last 30 seconds
+      ],
+    },
+  },
   thresholds: {
     http_req_failed: ['rate<0.0001'], // http errors should be less than 0.01%
     http_req_duration: [

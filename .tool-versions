@@ -1,4 +1,4 @@
 erlang 26.0.2
 elixir 1.15.4-otp-26
 nodejs 18.17.1
-k6 0.43.1
+k6 0.47.0
