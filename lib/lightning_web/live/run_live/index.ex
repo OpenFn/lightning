@@ -380,6 +380,14 @@ defmodule LightningWeb.RunLive.Index do
      |> push_patch(to: ~p"/projects/#{project.id}/runs?#{%{filters: filters}}")}
   end
 
+  defp find_workflow_name(workflows, workflow_id) do
+    Enum.find_value(workflows, fn {name, id} ->
+      if id == workflow_id do
+        name
+      end
+    end)
+  end
+
   defp handle_bulk_rerun(socket, %{"type" => "selected", "job" => job_id}) do
     socket.assigns.selected_work_orders
     |> WorkOrders.retry_many(job_id, created_by: socket.assigns.current_user)

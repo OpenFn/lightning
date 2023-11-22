@@ -4,7 +4,6 @@ defmodule Lightning.FailureAlertTest do
   import Lightning.Factories
   import Lightning.Helpers, only: [ms_to_human: 1]
   import Swoosh.TestAssertions
-  import ExUnit.Assertions
 
   alias Lightning.Repo
   alias Lightning.Workers
