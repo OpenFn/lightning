@@ -459,33 +459,6 @@ defmodule LightningWeb.RunLive.Index do
     |> Enum.reverse()
   end
 
-  defp workorder_id(attempt_or_workorder) do
-    if is_struct(attempt_or_workorder, Lightning.WorkOrder) do
-      attempt_or_workorder.id
-    else
-      attempt_or_workorder.work_order_id
-    end
-  end
-
-  defp workorder_with_runs(attempt_or_workorder) do
-    if is_struct(attempt_or_workorder, Lightning.WorkOrder) do
-      Lightning.Repo.preload(
-        attempt_or_workorder,
-        [:workflow, attempts: [runs: :job]],
-        force: true
-      )
-    else
-      attempt =
-        Lightning.Repo.preload(
-          attempt_or_workorder,
-          [work_order: [:workflow, attempts: [runs: :job]]],
-          force: true
-        )
-
-      attempt.work_order
-    end
-  end
-
   defp pagination_path(socket, project, route_params, filters \\ %{}) do
     Routes.project_run_index_path(
       socket,
