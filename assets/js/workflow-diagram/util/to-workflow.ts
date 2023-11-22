@@ -50,7 +50,6 @@ const model = (model: Flow.Model) => {
 
     workflow.edges.push(wfEdge as Lightning.Edge);
   });
-
   return workflow;
 };
 

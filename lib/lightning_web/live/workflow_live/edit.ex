@@ -481,7 +481,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
           |> Lightning.Repo.preload([
             :edges,
             triggers: Trigger.with_auth_methods_query(),
-            jobs: [:credential]
+            jobs: {Workflows.jobs_ordered_subquery(), [:credential]}
           ])
 
         socket |> assign_workflow(workflow) |> assign(page_title: workflow.name)
@@ -855,7 +855,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
         |> Map.put("project_id", socket.assigns.project.id)
       )
 
-    socket |> assign_changeset(changeset)
+    socket
+    |> assign_changeset(changeset)
   end
 
   defp apply_query_params(socket, params) do
