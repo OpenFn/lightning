@@ -170,6 +170,8 @@ bearing with us as we move towards our first stable Lightning release.)
   [#1348](https://github.com/OpenFn/Lightning/issues/1348)
 - Modify CompleteRun to return error changeset when run not found
   [#1393](https://github.com/OpenFn/Lightning/issues/1393)
+- Fix inconsistency in ordering of child nodes in the workflow diagram
+  [#1406](https://github.com/OpenFn/Lightning/issues/1406)
 
 ## [v0.9.3] - 2023-09-27
 
