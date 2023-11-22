@@ -10,6 +10,7 @@ defmodule LightningWeb.RunLive.Index do
   alias Lightning.Policies.Permissions
   alias Lightning.Policies.ProjectUsers
   alias Lightning.WorkOrders
+  alias Lightning.WorkOrders.Events
   alias Lightning.WorkOrders.SearchParams
   alias LightningWeb.RunLive.Components
 
@@ -206,10 +207,8 @@ defmodule LightningWeb.RunLive.Index do
       )
 
   @impl true
-  def handle_info(
-        %Lightning.WorkOrders.Events.AttemptCreated{attempt: attempt},
-        socket
-      ) do
+  def handle_info(%mod{attempt: attempt}, socket)
+      when mod in [Events.AttemptCreated, Events.AttemptUpdated] do
     %{work_order: work_order} =
       Lightning.Repo.preload(
         attempt,
@@ -222,22 +221,7 @@ defmodule LightningWeb.RunLive.Index do
 
   @impl true
   def handle_info(
-        %Lightning.WorkOrders.Events.AttemptUpdated{attempt: attempt},
-        socket
-      ) do
-    %{work_order: work_order} =
-      Lightning.Repo.preload(
-        attempt,
-        [work_order: [:workflow, attempts: [runs: :job]]],
-        force: true
-      )
-
-    {:noreply, update_page(socket, work_order)}
-  end
-
-  @impl true
-  def handle_info(
-        %Lightning.WorkOrders.Events.WorkOrderCreated{work_order: work_order},
+        %Events.WorkOrderCreated{work_order: work_order},
         socket
       ) do
     %{project: project, filters: filters} = socket.assigns
@@ -252,7 +236,7 @@ defmodule LightningWeb.RunLive.Index do
 
   @impl true
   def handle_info(
-        %Lightning.WorkOrders.Events.WorkOrderUpdated{work_order: work_order},
+        %Events.WorkOrderUpdated{work_order: work_order},
         socket
       ) do
     work_order =
@@ -270,7 +254,7 @@ defmodule LightningWeb.RunLive.Index do
         socket
       ) do
     if socket.assigns.can_rerun_job do
-      Lightning.WorkOrders.retry(attempt_id, run_id,
+      WorkOrders.retry(attempt_id, run_id,
         created_by: socket.assigns.current_user
       )
 
