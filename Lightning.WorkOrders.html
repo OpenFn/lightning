@@ -403,7 +403,7 @@ Workorder.</p>
 
       </div>
 
-<p>Create a new Workorder.</p><p><strong>For a webhook</strong></p><pre><code class="makeup elixir" translate="no"><span class="n">create_for</span><span class="p" data-group-id="1599581252-1">(</span><span class="n">trigger</span><span class="p">,</span><span class="w"> </span><span class="ss">workflow</span><span class="p">:</span><span class="w"> </span><span class="n">workflow</span><span class="p">,</span><span class="w"> </span><span class="ss">dataclip</span><span class="p">:</span><span class="w"> </span><span class="n">dataclip</span><span class="p" data-group-id="1599581252-1">)</span></code></pre><p><strong>For a user</strong></p><pre><code class="makeup elixir" translate="no"><span class="n">create_for</span><span class="p" data-group-id="5949749280-1">(</span><span class="n">job</span><span class="p">,</span><span class="w"> </span><span class="ss">workflow</span><span class="p">:</span><span class="w"> </span><span class="n">workflow</span><span class="p">,</span><span class="w"> </span><span class="ss">dataclip</span><span class="p">:</span><span class="w"> </span><span class="n">dataclip</span><span class="p">,</span><span class="w"> </span><span class="ss">user</span><span class="p">:</span><span class="w"> </span><span class="n">user</span><span class="p" data-group-id="5949749280-1">)</span></code></pre>
+<p>Create a new Workorder.</p><p><strong>For a webhook</strong></p><pre><code class="makeup elixir" translate="no"><span class="n">create_for</span><span class="p" data-group-id="5680314209-1">(</span><span class="n">trigger</span><span class="p">,</span><span class="w"> </span><span class="ss">workflow</span><span class="p">:</span><span class="w"> </span><span class="n">workflow</span><span class="p">,</span><span class="w"> </span><span class="ss">dataclip</span><span class="p">:</span><span class="w"> </span><span class="n">dataclip</span><span class="p" data-group-id="5680314209-1">)</span></code></pre><p><strong>For a user</strong></p><pre><code class="makeup elixir" translate="no"><span class="n">create_for</span><span class="p" data-group-id="2239884510-1">(</span><span class="n">job</span><span class="p">,</span><span class="w"> </span><span class="ss">workflow</span><span class="p">:</span><span class="w"> </span><span class="n">workflow</span><span class="p">,</span><span class="w"> </span><span class="ss">dataclip</span><span class="p">:</span><span class="w"> </span><span class="n">dataclip</span><span class="p">,</span><span class="w"> </span><span class="ss">user</span><span class="p">:</span><span class="w"> </span><span class="n">user</span><span class="p" data-group-id="2239884510-1">)</span></code></pre>
   </section>
 </section>
 <section class="detail" id="get/2">
@@ -417,7 +417,7 @@ Workorder.</p>
     </a>
     <h1 class="signature" translate="no">get(id, opts \\ [])</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/work_orders.ex#L381" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/work_orders.ex#L374" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -433,7 +433,7 @@ Workorder.</p>
 
       </div>
 
-<p>Get a Workorder by id.</p><p>Optionally preload associations by passing a list of atoms to <code class="inline">:include</code>.</p><pre><code class="makeup elixir" translate="no"><span class="nc">Lightning.WorkOrders</span><span class="o">.</span><span class="n">get</span><span class="p" data-group-id="3578312679-1">(</span><span class="n">id</span><span class="p">,</span><span class="w"> </span><span class="ss">include</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="3578312679-2">[</span><span class="ss">:attempts</span><span class="p" data-group-id="3578312679-2">]</span><span class="p" data-group-id="3578312679-1">)</span></code></pre>
+<p>Get a Workorder by id.</p><p>Optionally preload associations by passing a list of atoms to <code class="inline">:include</code>.</p><pre><code class="makeup elixir" translate="no"><span class="nc">Lightning.WorkOrders</span><span class="o">.</span><span class="n">get</span><span class="p" data-group-id="0250147711-1">(</span><span class="n">id</span><span class="p">,</span><span class="w"> </span><span class="ss">include</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="0250147711-2">[</span><span class="ss">:attempts</span><span class="p" data-group-id="0250147711-2">]</span><span class="p" data-group-id="0250147711-1">)</span></code></pre>
   </section>
 </section>
 <section class="detail" id="retry/3">
@@ -485,7 +485,7 @@ retried.</p>
     </a>
     <h1 class="signature" translate="no">retry_many(workorders, opts)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/work_orders.ex#L303" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/work_orders.ex#L296" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -516,7 +516,7 @@ retried.</p>
     </a>
     <h1 class="signature" translate="no">retry_many(workorders, job_id, opts)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/work_orders.ex#L267" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/work_orders.ex#L260" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -548,7 +548,7 @@ retried.</p>
     </a>
     <h1 class="signature" translate="no">subscribe(project_id)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/work_orders.ex#L391" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/work_orders.ex#L384" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -570,7 +570,7 @@ retried.</p>
     </a>
     <h1 class="signature" translate="no">update_state(attempt)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/work_orders.ex#L355" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/work_orders.ex#L348" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
