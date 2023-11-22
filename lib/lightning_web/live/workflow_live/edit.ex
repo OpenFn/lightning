@@ -292,9 +292,9 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
   defp deletion_tooltip_message(has_multiple_jobs) do
     if has_multiple_jobs do
-      "This job cannot be deleted since it has following jobs associated to it."
+      "You can't delete a job that has downstream jobs flowing from it."
     else
-      "You can't delete the first job of a workflow"
+      "You can't delete the only job in a workflow."
     end
   end
 
