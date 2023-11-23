@@ -22,6 +22,9 @@ and this project adheres to
 
 ### Fixed
 
+- Create new workflow button sizing regression
+  [#1405](https://github.com/OpenFn/Lightning/issues/1405)
+
 ## [v0.10.2] - 2023-11-21
 
 ### Added
@@ -177,8 +180,6 @@ bearing with us as we move towards our first stable Lightning release.)
   [#1348](https://github.com/OpenFn/Lightning/issues/1348)
 - Modify CompleteRun to return error changeset when run not found
   [#1393](https://github.com/OpenFn/Lightning/issues/1393)
-- Create new workflow button sizing regression
-  [#1405](https://github.com/OpenFn/Lightning/issues/1405)
 - Drop invocation reasons from DB
   [#1412](https://github.com/OpenFn/Lightning/issues/1412)
 - Fix inconsistency in ordering of child nodes in the workflow diagram
