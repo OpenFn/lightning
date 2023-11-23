@@ -1,6 +1,4 @@
 defmodule Lightning.InvocationFixtures do
-  import Lightning.Factories
-
   @moduledoc """
   This module defines test helpers for creating
   entities via the `Lightning.Invocation` context.
@@ -41,40 +39,10 @@ defmodule Lightning.InvocationFixtures do
           project_id: Keyword.get(attrs, :project_id)
         ).id
       end)
-      |> Keyword.put_new_lazy(:reason_id, fn ->
-        reason_fixture(project_id: Keyword.get(attrs, :project_id)).id
-      end)
       |> Enum.into(%{})
       |> Lightning.WorkOrderService.create_work_order()
 
     work_order
-  end
-
-  @doc """
-  Generate an reason.
-  """
-  def reason_fixture(attrs \\ []) when is_list(attrs) do
-    attrs =
-      attrs
-      |> Keyword.put_new_lazy(:project_id, fn ->
-        Lightning.ProjectsFixtures.project_fixture().id
-      end)
-
-    {:ok, reason} =
-      attrs
-      |> Keyword.put_new_lazy(:dataclip_id, fn ->
-        dataclip_fixture(project_id: Keyword.get(attrs, :project_id)).id
-      end)
-      |> Keyword.put_new_lazy(:trigger_id, fn ->
-        # DEPRECATED: remove me
-        insert(:trigger).id
-      end)
-      |> Enum.into(%{
-        type: :webhook
-      })
-      |> Lightning.InvocationReasons.create_reason()
-
-    reason
   end
 
   @doc """

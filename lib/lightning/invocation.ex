@@ -506,7 +506,7 @@ defmodule Lightning.Invocation do
         preload: [runs: ^runs_query]
       )
 
-    dataclips_query =
+    _dataclips_query =
       from(d in Lightning.Invocation.Dataclip,
         select: %{id: d.id, type: d.type}
       )
@@ -514,10 +514,6 @@ defmodule Lightning.Invocation do
     # we can use a ^custom_query to control (order_by ...) the way preloading is done
     from(wo in query,
       preload: [
-        reason:
-          ^from(r in Lightning.InvocationReason,
-            preload: [dataclip: ^dataclips_query]
-          ),
         workflow:
           ^from(wf in Lightning.Workflows.Workflow,
             select: %{id: wf.id, name: wf.name, project_id: wf.project_id}

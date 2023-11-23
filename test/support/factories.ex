@@ -94,10 +94,6 @@ defmodule Lightning.Factories do
     }
   end
 
-  def reason_factory do
-    %Lightning.InvocationReason{}
-  end
-
   def credential_factory do
     %Lightning.Credentials.Credential{}
   end
