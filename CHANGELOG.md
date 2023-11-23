@@ -154,6 +154,10 @@ bearing with us as we move towards our first stable Lightning release.)
   [#1327](https://github.com/OpenFn/Lightning/issues/1327)
 - Have user create workflow name before moving to the canvas
   [#1103](https://github.com/OpenFn/Lightning/issues/1103)
+- Remove FK relationship between `attempt_runs` and `attempts` as well as FK
+  relationship between `log_lines` and `attempts`. Add explicit delete
+  functionality to compensate for the lost `DELETE CASCADE` behaviour.
+  [#1254](https://github.com/OpenFn/Lightning/issues/1254)
 
 ### Changed
 
