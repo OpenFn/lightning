@@ -1208,6 +1208,12 @@ defmodule LightningWeb.RunWorkOrderTest do
       trigger = insert(:trigger, type: :webhook, workflow: workflow)
       job_a = insert(:job, workflow: workflow)
 
+      insert(:edge,
+        workflow: workflow,
+        source_trigger: trigger,
+        target_job: job_a
+      )
+
       dataclip = insert(:dataclip)
 
       work_order =
@@ -1402,6 +1408,7 @@ defmodule LightningWeb.RunWorkOrderTest do
       render_change(view, "toggle_all_selections", %{all_selections: true})
       result = render_click(view, "bulk-rerun", %{type: "all"})
       {:ok, view, html} = follow_redirect(result, conn)
+      render_async(view)
 
       assert html =~ "New attempts enqueued for 5 workorders"
 
@@ -1887,11 +1894,11 @@ defmodule LightningWeb.RunWorkOrderTest do
       render_async(view)
 
       refute html =~
-               "Find all runs that include this step, and rerun from there"
+               "Find all runs that include this step and rerun from there"
 
       assert render_change(view, "toggle_all_selections", %{
                all_selections: true
-             }) =~ "Find all runs that include this step, and rerun from there"
+             }) =~ "Find all runs that include this step and rerun from there"
 
       view
       |> form("#select-job-for-rerun-form")
@@ -1903,6 +1910,8 @@ defmodule LightningWeb.RunWorkOrderTest do
 
       assert html =~
                "New attempts enqueued for 2 workorders"
+
+      render_async(view)
 
       view
       |> form("#selection-form-#{work_order_1.id}")
@@ -1917,7 +1926,8 @@ defmodule LightningWeb.RunWorkOrderTest do
 
       {:ok, _view, html} = follow_redirect(result, conn)
 
-      assert html =~ "New attempt enqueued for 1 workorder"
+      # this is zero because the previous retried attempt has no run
+      assert html =~ "New attempt enqueued for 0 workorder"
     end
 
     test "jobs on the modal are updated every time the selected workflow is changed",
