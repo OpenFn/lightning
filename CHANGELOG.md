@@ -19,6 +19,8 @@ and this project adheres to
   [#1326](https://github.com/OpenFn/Lightning/issues/1326)
 - Workorders will now be set in a "pending" state when retries are enqueued.
   [#1340](https://github.com/OpenFn/Lightning/issues/1340)
+- Avoid printing 2FA codes by default
+  [#1322](https://github.com/OpenFn/Lightning/issues/1322)
 
 ### Fixed
 
