@@ -135,6 +135,8 @@ bearing with us as we move towards our first stable Lightning release.)
   [#1348](https://github.com/OpenFn/Lightning/issues/1348)
 - Modify CompleteRun to return error changeset when run not found
   [#1393](https://github.com/OpenFn/Lightning/issues/1393)
+- Create new workflow button sizing regression
+  [#1405](https://github.com/OpenFn/Lightning/issues/1405)
 
 ## [v0.9.3] - 2023-09-27
 
