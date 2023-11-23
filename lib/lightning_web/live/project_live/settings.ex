@@ -198,6 +198,11 @@ defmodule LightningWeb.ProjectLive.Settings do
     {:noreply, assign(socket, :project_changeset, changeset)}
   end
 
+  # validate without input can be ignored
+  def handle_event("validate", _params, socket) do
+    {:noreply, socket}
+  end
+
   def handle_event("save", %{"project" => project_params}, socket) do
     if can_edit_project(socket.assigns) do
       save_project(socket, project_params)
