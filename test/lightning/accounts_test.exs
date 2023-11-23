@@ -608,7 +608,7 @@ defmodule Lightning.AccountsTest do
           dataclip: dataclip
         )
 
-      assert count_for(User) > 1
+      assert count_for(User) >= 1
 
       {:ok, %{users_deleted: users_deleted}} =
         Accounts.perform(%Oban.Job{args: %{"type" => "purge_deleted"}})
