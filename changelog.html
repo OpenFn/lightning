@@ -163,7 +163,8 @@ and this project adheres to
   </a>
   <span class="text">Fixed</span>
 </h3>
-<h2 id="v0-10-2-2023-11-21" class="section-heading">
+<ul><li>Create new workflow button sizing regression
+<a href="https://github.com/OpenFn/Lightning/issues/1405">#1405</a></li></ul><h2 id="v0-10-2-2023-11-21" class="section-heading">
   <a href="#v0-10-2-2023-11-21" class="hover-link">
     <i class="ri-link-m" aria-hidden="true"></i>
   </a>
@@ -243,7 +244,7 @@ workorders up to <code class="inline">v0.10.0</code>, though the granularity of 
 will be less than <code class="inline">v0.10.0</code> and the final states are not guaranteed to be
 accurate for workflows with multiple branches and leaf nodes with varying exit
 reasons.</p><p>The migration scripts can be run with a single function call in SetupUtils from
-a connect <code class="inline">iex</code> session:</p><pre><code class="makeup elixir" translate="no"><span class="nc">Lightning.SetupUtils</span><span class="o">.</span><span class="n">approximate_state_for_attempts_and_workorders</span><span class="p" data-group-id="8561345749-1">(</span><span class="p" data-group-id="8561345749-1">)</span></code></pre><p>Note that (like lots of <em>other</em> functionality in <code class="inline">SetupUtils</code>, calling this
+a connect <code class="inline">iex</code> session:</p><pre><code class="makeup elixir" translate="no"><span class="nc">Lightning.SetupUtils</span><span class="o">.</span><span class="n">approximate_state_for_attempts_and_workorders</span><span class="p" data-group-id="7198008862-1">(</span><span class="p" data-group-id="7198008862-1">)</span></code></pre><p>Note that (like lots of <em>other</em> functionality in <code class="inline">SetupUtils</code>, calling this
 function is a destructive action and you should only do it if you've backed up
 your data and you know what you're doing.)</p><p>As always, we recommend backing up your data before migrating. (And thanks for
 bearing with us as we move towards our first stable Lightning release.)</p><h3 id="added-3" class="section-heading">
@@ -301,8 +302,7 @@ inspector interface <a href="https://github.com/OpenFn/Lightning/issues/1283">#1
 <a href="https://github.com/OpenFn/Lightning/issues/1160">#1160</a></li><li>Fix &quot;Reconfigure Github&quot; button in Project Settings
 <a href="https://github.com/OpenFn/Lightning/issues/1386">#1386</a></li><li>Make janitor also clean up runs inside an attempt
 <a href="https://github.com/OpenFn/Lightning/issues/1348">#1348</a></li><li>Modify CompleteRun to return error changeset when run not found
-<a href="https://github.com/OpenFn/Lightning/issues/1393">#1393</a></li><li>Create new workflow button sizing regression
-<a href="https://github.com/OpenFn/Lightning/issues/1405">#1405</a></li><li>Drop invocation reasons from DB
+<a href="https://github.com/OpenFn/Lightning/issues/1393">#1393</a></li><li>Drop invocation reasons from DB
 <a href="https://github.com/OpenFn/Lightning/issues/1412">#1412</a></li><li>Fix inconsistency in ordering of child nodes in the workflow diagram
 <a href="https://github.com/OpenFn/Lightning/issues/1406">#1406</a></li></ul><h2 id="v0-9-3-2023-09-27" class="section-heading">
   <a href="#v0-9-3-2023-09-27" class="hover-link">
