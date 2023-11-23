@@ -103,12 +103,12 @@ defmodule LightningWeb.WorkflowLive.Components do
     <div>
       <button
         phx-click={show_modal("workflow_modal")}
-        class="col-span-1 rounded-md"
+        class="col-span-1 w-full rounded-md"
         role={@can_create_workflow && "button"}
         id="open-modal-button"
       >
         <div class={"flex flex-1 items-center justify-between truncate rounded-md border border-gray-200 text-white " <> (if @can_create_workflow, do: "bg-primary-600 hover:bg-primary-700", else: "bg-gray-400")}>
-          <div class="flex-1 truncate px-4 py-2 text-sm">
+          <div class="flex-1 truncate px-4 py-2 text-sm text-left">
             <span class="font-medium">
               Create new workflow
             </span>
