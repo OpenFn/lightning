@@ -102,7 +102,7 @@ defmodule Lightning.Policies.ProjectUserPermissionsTest do
   end
 
   describe "Project users with the :viewer role" do
-    test "cannot create / delete workflows, create / edit / delete / run / rerun jobs, and edit the project name or description",
+    test "cannot create / delete workflows, create / edit / run / rerun jobs, and edit the project name or description",
          %{
            project: project,
            viewer: viewer
@@ -110,7 +110,6 @@ defmodule Lightning.Policies.ProjectUserPermissionsTest do
       ~w(
         create_job
         create_workflow
-        delete_job
         delete_workflow
         edit_job
         edit_project_description
@@ -123,7 +122,7 @@ defmodule Lightning.Policies.ProjectUserPermissionsTest do
   end
 
   describe "Project users with the :editor role" do
-    test "can create / delete workflows and create / edit / delete / run / rerun jobs in the project",
+    test "can create / delete workflows and create / edit / run / rerun jobs in the project",
          %{
            project: project,
            editor: editor
@@ -131,7 +130,6 @@ defmodule Lightning.Policies.ProjectUserPermissionsTest do
       ~w(
         create_job
         create_workflow
-        delete_job
         delete_workflow
         edit_job
         provision_project
@@ -153,7 +151,7 @@ defmodule Lightning.Policies.ProjectUserPermissionsTest do
   end
 
   describe "Project users with the :admin role" do
-    test "can create / delete workflows, create / edit / delete / run / rerun jobs, edit the project name, and edit the project description.",
+    test "can create / delete workflows, create / edit / run / rerun jobs, edit the project name, and edit the project description.",
          %{
            project: project,
            admin: admin
@@ -161,7 +159,6 @@ defmodule Lightning.Policies.ProjectUserPermissionsTest do
       ~w(
           create_job
           create_workflow
-          delete_job
           delete_workflow
           edit_job
           edit_project_description
@@ -174,7 +171,7 @@ defmodule Lightning.Policies.ProjectUserPermissionsTest do
   end
 
   describe "Project users with the :owner role" do
-    test "can create / delete workflows, create / edit / delete / run / rerun jobs, edit the project name, and edit the project description.",
+    test "can create / delete workflows, create / edit / run / rerun jobs, edit the project name, and edit the project description.",
          %{
            project: project,
            owner: owner
@@ -182,7 +179,6 @@ defmodule Lightning.Policies.ProjectUserPermissionsTest do
       ~w(
         create_job
         create_workflow
-        delete_job
         delete_workflow
         edit_job
         edit_project_description

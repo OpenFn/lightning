@@ -156,36 +156,6 @@ defmodule Lightning.JobsTest do
       job = insert(:job)
       assert {:error, %Ecto.Changeset{}} = Jobs.update_job(job, @invalid_attrs)
     end
-
-    test "delete_job/1 deletes the job" do
-      job = insert(:job)
-      assert {:ok, %Job{}} = Jobs.delete_job(job)
-      assert_raise Ecto.NoResultsError, fn -> Jobs.get_job!(job.id) end
-    end
-
-    test "delete_job/1 can't delete job with downstream jobs" do
-      job = insert(:job)
-
-      {:ok, job1} =
-        Jobs.create_job(%{
-          body: "some body",
-          name: "some name",
-          adaptor: "@openfn/language-common",
-          workflow_id: job.workflow_id
-        })
-
-      insert(:edge, %{
-        condition: :on_job_success,
-        source_job: job,
-        target_job: job1,
-        workflow: job.workflow
-      })
-
-      {:error, changeset} = Jobs.delete_job(job)
-
-      assert %{workflow: ["This job is associated with downstream jobs"]} =
-               errors_on(changeset)
-    end
   end
 
   describe "create_job/1" do

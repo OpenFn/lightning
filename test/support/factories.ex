@@ -77,12 +77,13 @@ defmodule Lightning.Factories do
 
   def log_line_factory do
     %Lightning.Invocation.LogLine{
+      id: Ecto.UUID.generate(),
       message: sequence(:log_line, &"somelog#{&1}"),
       timestamp: build(:timestamp)
     }
   end
 
-  def attempt_factory() do
+  def attempt_factory do
     %Lightning.Attempt{
       id: fn -> Ecto.UUID.generate() end
     }
