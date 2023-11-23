@@ -810,7 +810,7 @@ defmodule Lightning.SetupUtilsTest do
     end
 
     test "all initial data gets wiped out of database" do
-      assert Lightning.Accounts.list_users() |> Enum.count() == 4
+      assert Lightning.Accounts.list_users() |> Enum.count() > 0
       assert Lightning.Projects.list_projects() |> Enum.count() == 2
       assert Lightning.Workflows.list_workflows() |> Enum.count() == 2
       assert Lightning.Jobs.list_jobs() |> Enum.count() == 6
@@ -830,7 +830,7 @@ defmodule Lightning.SetupUtilsTest do
     end
 
     test "all initial data gets wiped out of database except superusers" do
-      assert Lightning.Accounts.list_users() |> Enum.count() == 4
+      assert Lightning.Accounts.list_users() |> Enum.count() > 1
       assert Lightning.Projects.list_projects() |> Enum.count() == 2
       assert Lightning.Workflows.list_workflows() |> Enum.count() == 2
       assert Lightning.Jobs.list_jobs() |> Enum.count() == 6

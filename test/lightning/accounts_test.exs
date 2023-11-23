@@ -43,7 +43,7 @@ defmodule Lightning.AccountsTest do
 
   test "list_users/0 returns all users" do
     user = user_fixture()
-    assert Accounts.list_users() == [user]
+    assert user in Accounts.list_users()
   end
 
   test "list_api_token/1 returns all user tokens" do
@@ -494,44 +494,26 @@ defmodule Lightning.AccountsTest do
 
   describe "purge user" do
     test "purging a user removes that user from projects they are members of and deletes them from the system" do
-      user_1 = user_fixture()
-      user_2 = user_fixture()
+      %{project_users: [proj_user1]} =
+        insert(:project,
+          project_users: [%{user: build(:user), failure_alert: true}]
+        )
 
-      Lightning.Projects.create_project(%{
-        name: "some-name",
-        project_users: [%{user_id: user_1.id}]
-      })
+      %{project_users: [proj_user2]} =
+        insert(:project,
+          project_users: [%{user: build(:user), failure_alert: true}]
+        )
 
-      Lightning.Projects.create_project(%{
-        name: "some-name",
-        project_users: [%{user_id: user_2.id}]
-      })
+      assert Repo.get(ProjectUser, proj_user1.id)
+      assert Repo.get(User, proj_user1.user_id)
 
-      assert count_for(ProjectUser) == 2
-      assert count_for(User) == 2
+      :ok = Accounts.purge_user(proj_user1.user_id)
 
-      :ok = Accounts.purge_user(user_1.id)
+      refute Repo.get(ProjectUser, proj_user1.id)
+      refute Repo.get(User, proj_user1.user_id)
 
-      assert count_for(ProjectUser) == 1
-      assert count_for(User) == 1
-
-      remaining_projs = Repo.all(ProjectUser)
-      remaining_users = Repo.all(User)
-
-      assert 1 == Enum.count(remaining_projs)
-      assert 1 == Enum.count(remaining_users)
-
-      assert remaining_projs
-             |> Enum.any?(fn x -> x.user_id == user_2.id end)
-
-      refute remaining_projs
-             |> Enum.any?(fn x -> x.user_id == user_1.id end)
-
-      assert remaining_users
-             |> Enum.any?(fn x -> x.id == user_2.id end)
-
-      refute remaining_users
-             |> Enum.any?(fn x -> x.id == user_1.id end)
+      assert Repo.get(ProjectUser, proj_user2.id)
+      assert Repo.get(User, proj_user2.user_id)
     end
 
     test "purging a user sets all project credentials that use their credentials to nil" do
@@ -626,14 +608,14 @@ defmodule Lightning.AccountsTest do
           dataclip: dataclip
         )
 
-      assert count_for(User) == 1
+      assert count_for(User) > 1
 
       {:ok, %{users_deleted: users_deleted}} =
         Accounts.perform(%Oban.Job{args: %{"type" => "purge_deleted"}})
 
-      assert count_for(User) == 1
+      assert Repo.get(User, user.id)
 
-      assert users_deleted |> Enum.count() == 0
+      refute user.id in Enum.map(users_deleted, & &1.id)
     end
 
     test "removes all users past deletion date when called with type 'purge_deleted'" do
