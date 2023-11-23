@@ -201,7 +201,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
                         phx-value-id={@selected_job.id}
                         class="focus:ring-red-500 bg-red-600 hover:bg-red-700 disabled:bg-red-300"
                         disabled={!@can_edit_job or has_child_edges or is_first_job}
-                        tooltip="You can't delete the first job of a workflow"
+                        tooltip={deletion_tooltip_message(@has_multiple_jobs)}
                         data-confirm="Are you sure you want to delete this Job?"
                       >
                         Delete Job
@@ -290,6 +290,14 @@ defmodule LightningWeb.WorkflowLive.Edit do
     """
   end
 
+  defp deletion_tooltip_message(has_multiple_jobs) do
+    if has_multiple_jobs do
+      "You can't delete a job that has downstream jobs flowing from it."
+    else
+      "You can't delete the only job in a workflow."
+    end
+  end
+
   defp expand_job_editor(assigns) do
     is_empty = editor_is_empty(assigns.form, assigns.job)
 
@@ -354,7 +362,10 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
     ~H"""
     <%= for f <- @forms do %>
-      <%= render_slot(@inner_block, {f, @has_child_edges, @is_first_job}) %>
+      <%= render_slot(
+        @inner_block,
+        {f, @has_child_edges, @is_first_job}
+      ) %>
     <% end %>
     """
   end
@@ -855,8 +866,12 @@ defmodule LightningWeb.WorkflowLive.Edit do
         |> Map.put("project_id", socket.assigns.project.id)
       )
 
+    has_multiple_jobs =
+      length(Ecto.Changeset.get_field(changeset, :jobs)) > 1
+
     socket
     |> assign_changeset(changeset)
+    |> assign(:has_multiple_jobs, has_multiple_jobs)
   end
 
   defp apply_query_params(socket, params) do

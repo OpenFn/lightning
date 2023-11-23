@@ -304,7 +304,10 @@ defmodule LightningWeb.WorkflowLive.EditTest do
     end
 
     @tag role: :editor
-    test "can't the first job of a workflow", %{conn: conn, project: project} do
+    test "", %{
+      conn: conn,
+      project: project
+    } do
       trigger = build(:trigger, type: :webhook)
 
       job =
@@ -327,7 +330,51 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       assert view |> delete_job_button_is_disabled?(job)
 
       assert view |> force_event(:delete_node, job) =~
-               "You can&#39;t delete the first job of a workflow."
+               "You can&#39;t delete the only job in a workflow."
+    end
+
+    @tag role: :editor
+    test "can't delete any job that has downstream jobs",
+         %{
+           conn: conn,
+           project: project
+         } do
+      trigger = build(:trigger, type: :webhook)
+
+      [job_a, job_b, job_c] = build_list(3, :job)
+
+      workflow =
+        build(:workflow)
+        |> with_job(job_a)
+        |> with_job(job_b)
+        |> with_job(job_c)
+        |> with_trigger(trigger)
+        |> with_edge({trigger, job_a})
+        |> with_edge({job_a, job_b})
+        |> with_edge({job_b, job_c})
+        |> insert()
+
+      {:ok, view, html} =
+        live(conn, ~p"/projects/#{project}/w/#{workflow}?s=#{job_a}")
+
+      assert view |> delete_job_button_is_disabled?(job_a)
+
+      assert html =~
+               "You can&#39;t delete a job that has downstream jobs flowing from it."
+
+      assert view |> force_event(:delete_node, job_a) =~
+               "Delete all descendant jobs first"
+
+      {:ok, view, html} =
+        live(conn, ~p"/projects/#{project}/w/#{workflow}?s=#{job_b}")
+
+      assert view |> delete_job_button_is_disabled?(job_b)
+
+      assert html =~
+               "You can&#39;t delete a job that has downstream jobs flowing from it."
+
+      assert view |> force_event(:delete_node, job_a) =~
+               "Delete all descendant jobs first"
     end
 
     @tag role: :viewer

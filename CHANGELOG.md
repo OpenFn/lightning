@@ -158,6 +158,8 @@ bearing with us as we move towards our first stable Lightning release.)
   confirmation [#1105](https://github.com/OpenFn/Lightning/issues/1105)
 - Move "Enabled" property from "Jobs" to "Edges"
   [#895](https://github.com/OpenFn/Lightning/issues/895)
+- Incorrect wording on the "Delete" tooltip
+  [#1313](https://github.com/OpenFn/Lightning/issues/1313)
 
 ### Fixed
 
