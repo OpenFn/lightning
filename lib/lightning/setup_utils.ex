@@ -892,7 +892,6 @@ defmodule Lightning.SetupUtils do
       Lightning.Auditing.Model,
       Lightning.Projects.ProjectCredential,
       Lightning.WorkOrder,
-      Lightning.InvocationReason,
       Lightning.Invocation.Run,
       Lightning.Credentials.Credential,
       Lightning.Workflows.Job,

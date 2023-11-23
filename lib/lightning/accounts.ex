@@ -25,9 +25,9 @@ defmodule Lightning.Accounts do
 
   def has_activity_in_projects?(%User{id: id} = _user) do
     count =
-      from(invocation_reason in Lightning.InvocationReason,
-        where: invocation_reason.user_id == ^id,
-        select: count(invocation_reason.id)
+      from(attempt in Lightning.Attempt,
+        where: attempt.created_by_id == ^id,
+        select: count(attempt.id)
       )
       |> Repo.one()
 
@@ -67,9 +67,9 @@ defmodule Lightning.Accounts do
   @impl Oban.Worker
   def perform(%Oban.Job{args: %{"type" => "purge_deleted"}}) do
     users_with_activities =
-      from(invocation_reason in Lightning.InvocationReason,
+      from(attempt in Lightning.Attempt,
         join: user in Lightning.Accounts.User,
-        on: invocation_reason.user_id == user.id,
+        on: attempt.created_by_id == user.id,
         select: user.id,
         distinct: true
       )

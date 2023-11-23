@@ -33,7 +33,7 @@ type WorkflowEditorEntrypoint = PhoenixHook<
     workflowStore: ReturnType<typeof createWorkflowStore>;
     observer: MutationObserver | null;
     setupObserver(): void;
-    baseUrl: Promise<URL>;
+    hasLoaded: Promise<URL>;
   },
   { baseUrl: string | null }
 >;
@@ -67,10 +67,10 @@ const createNewWorkflow = () => {
 
 export default {
   mounted(this: WorkflowEditorEntrypoint) {
-    let setBaseUrl: (href: URL) => void;
+    let setHasLoaded: (href: URL) => void;
 
-    this.baseUrl = new Promise(resolve => {
-      setBaseUrl = resolve;
+    this.hasLoaded = new Promise(resolve => {
+      setHasLoaded = resolve;
     });
 
     // Listen to navigation events, so we can update the base url that is used
@@ -79,7 +79,7 @@ export default {
       'page-loading-stop',
       ({ to, kind }) => {
         console.log('page-loading-stop', { to, kind });
-        if (kind === 'initial') setBaseUrl(new URL(to));
+        if (kind === 'initial') setHasLoaded(new URL(to));
       }
     );
 
@@ -138,12 +138,11 @@ export default {
   },
   onSelectionChange(id?: string) {
     (async () => {
-      console.log('onSelectionChange', id);
+      console.debug('onSelectionChange', id);
 
-      const currentUrl = await this.baseUrl;
+      await this.hasLoaded;
+      const currentUrl = new URL(window.location.href);
       const nextUrl = new URL(currentUrl);
-
-      console.log({ idExists: this.getItem(id) });
 
       const idExists = this.getItem(id);
       if (!idExists) {
@@ -151,8 +150,6 @@ export default {
         nextUrl.searchParams.delete('m');
         nextUrl.searchParams.set('placeholder', 'true');
       } else {
-        console.log({ idExists, baseUrl: this.baseUrl, nextUrl });
-
         nextUrl.searchParams.delete('placeholder');
         if (!id) {
           console.debug('Unselecting');

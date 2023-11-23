@@ -2,7 +2,6 @@ defmodule Lightning.AccountsTest do
   use Lightning.DataCase, async: true
 
   alias Lightning.AccountsFixtures
-  alias Lightning.InvocationFixtures
   alias Lightning.Credentials
   alias Lightning.Jobs
   alias Lightning.JobsFixtures
@@ -14,13 +13,29 @@ defmodule Lightning.AccountsTest do
   alias Lightning.Accounts.{User, UserBackupCode, UserToken, UserTOTP}
   import Lightning.AccountsFixtures
   import Lightning.Factories
-  import Ecto.Query
 
-  test "has_activity_in_projects?/1 returns true if user is has activity in a project (is associated to invocation reasons) and false otherwise." do
+  test "has_activity_in_projects?/1 returns true if user has activity in a project (is associated with an attempt) and false otherwise." do
     user = AccountsFixtures.user_fixture()
     another_user = AccountsFixtures.user_fixture()
 
-    InvocationFixtures.reason_fixture(user_id: user.id)
+    workflow = insert(:workflow)
+    trigger = insert(:trigger, workflow: workflow)
+    dataclip = insert(:dataclip)
+
+    work_order =
+      insert(:workorder,
+        workflow: workflow,
+        trigger: trigger,
+        dataclip: dataclip
+      )
+
+    _attempt =
+      insert(:attempt,
+        created_by: user,
+        work_order: work_order,
+        starting_trigger: trigger,
+        dataclip: dataclip
+      )
 
     assert Accounts.has_activity_in_projects?(user)
     refute Accounts.has_activity_in_projects?(another_user)
@@ -492,13 +507,13 @@ defmodule Lightning.AccountsTest do
         project_users: [%{user_id: user_2.id}]
       })
 
-      assert 2 == Repo.all(ProjectUser) |> Enum.count()
-      assert 2 == Repo.all(User) |> Enum.count()
+      assert count_for(ProjectUser) == 2
+      assert count_for(User) == 2
 
       :ok = Accounts.purge_user(user_1.id)
 
-      assert 1 == Repo.all(ProjectUser) |> Enum.count()
-      assert 1 == Repo.all(User) |> Enum.count()
+      assert count_for(ProjectUser) == 1
+      assert count_for(User) == 1
 
       remaining_projs = Repo.all(ProjectUser)
       remaining_users = Repo.all(User)
@@ -571,11 +586,11 @@ defmodule Lightning.AccountsTest do
       CredentialsFixtures.credential_fixture(user_id: user_1.id)
       CredentialsFixtures.credential_fixture(user_id: user_2.id)
 
-      assert 3 == Repo.all(Credentials.Credential) |> Enum.count()
+      assert count_for(Credentials.Credential) == 3
 
       :ok = Accounts.purge_user(user_1.id)
 
-      assert 1 == Repo.all(Credentials.Credential) |> Enum.count()
+      assert count_for(Credentials.Credential) == 1
 
       refute Repo.all(Credentials.Credential)
              |> Enum.any?(fn x -> x.user_id == user_1.id end)
@@ -586,28 +601,43 @@ defmodule Lightning.AccountsTest do
   end
 
   describe "The default Oban function Accounts.perform/1" do
-    test "prevents users that are still linked to an invocation reason from being deleted" do
+    test "prevents users that are still linked to an attempt from being deleted" do
       user =
         user_fixture(
           scheduled_deletion: DateTime.utc_now() |> Timex.shift(seconds: -10)
         )
 
-      InvocationFixtures.reason_fixture(user_id: user.id)
+      workflow = insert(:workflow)
+      trigger = insert(:trigger, workflow: workflow)
+      dataclip = insert(:dataclip)
 
-      assert 1 = Repo.all(User) |> Enum.count()
+      work_order =
+        insert(:workorder,
+          workflow: workflow,
+          trigger: trigger,
+          dataclip: dataclip
+        )
+
+      _attempt =
+        insert(:attempt,
+          created_by: user,
+          work_order: work_order,
+          starting_trigger: trigger,
+          dataclip: dataclip
+        )
+
+      assert count_for(User) == 1
 
       {:ok, %{users_deleted: users_deleted}} =
         Accounts.perform(%Oban.Job{args: %{"type" => "purge_deleted"}})
 
-      # We still have one user in database
-      assert 1 == Repo.all(User) |> Enum.count()
+      assert count_for(User) == 1
 
-      # No user has been deleted
-      assert 0 == users_deleted |> Enum.count()
+      assert users_deleted |> Enum.count() == 0
     end
 
     test "removes all users past deletion date when called with type 'purge_deleted'" do
-      user_to_delete =
+      %{id: id_of_deleted} =
         user_fixture(
           scheduled_deletion: DateTime.utc_now() |> Timex.shift(seconds: -10)
         )
@@ -616,15 +646,8 @@ defmodule Lightning.AccountsTest do
         scheduled_deletion: DateTime.utc_now() |> Timex.shift(seconds: 10)
       )
 
-      count_before = Repo.all(User) |> Enum.count()
-
-      {:ok, %{users_deleted: users_deleted}} =
+      {:ok, %{users_deleted: [%{id: ^id_of_deleted}]}} =
         Accounts.perform(%Oban.Job{args: %{"type" => "purge_deleted"}})
-
-      assert count_before - 1 == Repo.all(User) |> Enum.count()
-      assert 1 == users_deleted |> Enum.count()
-
-      assert user_to_delete.id == users_deleted |> Enum.at(0) |> Map.get(:id)
     end
 
     test "removes user from project users before deleting them" do
@@ -1251,10 +1274,61 @@ defmodule Lightning.AccountsTest do
     end
   end
 
-  test "delete_user/1 deletes the user" do
-    user = user_fixture()
-    assert {:ok, %User{}} = Accounts.delete_user(user)
-    assert_raise Ecto.NoResultsError, fn -> Accounts.get_user!(user.id) end
+  describe "delete_user/1" do
+    test "delete_user/1 deletes the user" do
+      user = user_fixture()
+      assert {:ok, %User{}} = Accounts.delete_user(user)
+      assert_raise Ecto.NoResultsError, fn -> Accounts.get_user!(user.id) end
+    end
+
+    test "removes any associated Attempt and AttemptRun records" do
+      user_1 = user_fixture()
+      user_2 = user_fixture()
+
+      attempt_1 = insert_attempt(user_1)
+      attempt_2 = insert_attempt(user_1)
+      attempt_3 = insert_attempt(user_2)
+
+      _attempt_run_1_1 = insert_attempt_run(attempt_1)
+      _attempt_run_1_2 = insert_attempt_run(attempt_1)
+      _attempt_run_2_1 = insert_attempt_run(attempt_2)
+      attempt_run_3_1 = insert_attempt_run(attempt_3)
+
+      Accounts.delete_user(user_1)
+
+      assert only_record_for_type?(attempt_3)
+
+      assert only_record_for_type?(attempt_run_3_1)
+    end
+
+    test "removes any associated LogLine records" do
+      user_1 = user_fixture()
+      user_2 = user_fixture()
+
+      insert_attempt(user_1, build_list(2, :log_line))
+      insert_attempt(user_1, build_list(2, :log_line))
+
+      attempt_3 = insert_attempt(user_2)
+      log_line_3_1 = insert(:log_line, attempt: attempt_3)
+
+      Accounts.delete_user(user_1)
+
+      assert only_record_for_type?(log_line_3_1)
+    end
+
+    defp insert_attempt(user, log_lines \\ []) do
+      insert(:attempt,
+        created_by: user,
+        work_order: build(:workorder),
+        dataclip: build(:dataclip),
+        starting_job: build(:job),
+        log_lines: log_lines
+      )
+    end
+
+    defp insert_attempt_run(attempt) do
+      insert(:attempt_run, attempt: attempt, run: build(:run))
+    end
   end
 
   describe "scheduling a user for deletion" do

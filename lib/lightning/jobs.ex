@@ -156,39 +156,6 @@ defmodule Lightning.Jobs do
   end
 
   @doc """
-  Deletes a job.
-
-  ## Examples
-
-      iex> delete_job(job)
-      {:ok, %Job{}}
-
-      iex> delete_job(job)
-      {:error, %Ecto.Changeset{}}
-
-  """
-  def delete_job(%Job{} = job) do
-    changeset = job |> Ecto.Changeset.change()
-
-    get_downstream_jobs_for(job)
-    |> case do
-      [_ | _] ->
-        error =
-          Ecto.Changeset.add_error(
-            changeset,
-            :workflow,
-            "This job is associated with downstream jobs"
-          )
-
-        {:error, error}
-
-      _ ->
-        changeset
-        |> Repo.delete()
-    end
-  end
-
-  @doc """
   Returns an `%Ecto.Changeset{}` for tracking job changes.
 
   ## Examples

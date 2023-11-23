@@ -8,6 +8,44 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Added
+
+- Async loading on the history page to improve UX on long DB queries
+  [#1279](https://github.com/OpenFn/Lightning/issues/1279)
+
+### Changed
+
+- Sort project collaborators by first name
+  [#1326](https://github.com/OpenFn/Lightning/issues/1326)
+- Workorders will now be set in a "pending" state when retries are enqueued.
+  [#1340](https://github.com/OpenFn/Lightning/issues/1340)
+
+### Fixed
+
+## [v0.10.2] - 2023-11-21
+
+### Added
+
+### Changed
+
+- Added `max_frame_size` to the Cowboy websockets protocol options in an attempt
+  to address [#1421](https://github.com/OpenFn/Lightning/issues/1421)
+
+### Fixed
+
+## [v0.10.1] - 2023-11-21
+
+### Added
+
+### Changed
+
+### Fixed
+
+- Workorder ID was not displayed properly in history page
+  [#1423](https://github.com/OpenFn/Lightning/issues/1423)
+
+## [v0.10.0] - 2023-11-21
+
 ### 🚨 Breaking change warning! 🚨
 
 This release will contain breaking changes as we've significantly improved both
@@ -61,6 +99,8 @@ bearing with us as we move towards our first stable Lightning release.)
 
 ### Added
 
+- Fix flaky job name input behavior on error
+  [#1218](https://github.com/OpenFn/Lightning/issues/1218)
 - Added a hover effect on copy and add button for adaptors examples
   [#1297](https://github.com/OpenFn/Lightning/issues/1297)
 - Migration helper code to move from `v0.9.3` to `v0.10.0` added to SetupUtils
@@ -118,6 +158,8 @@ bearing with us as we move towards our first stable Lightning release.)
   confirmation [#1105](https://github.com/OpenFn/Lightning/issues/1105)
 - Move "Enabled" property from "Jobs" to "Edges"
   [#895](https://github.com/OpenFn/Lightning/issues/895)
+- Incorrect wording on the "Delete" tooltip
+  [#1313](https://github.com/OpenFn/Lightning/issues/1313)
 
 ### Fixed
 
@@ -137,6 +179,10 @@ bearing with us as we move towards our first stable Lightning release.)
   [#1393](https://github.com/OpenFn/Lightning/issues/1393)
 - Create new workflow button sizing regression
   [#1405](https://github.com/OpenFn/Lightning/issues/1405)
+- Drop invocation reasons from DB
+  [#1412](https://github.com/OpenFn/Lightning/issues/1412)
+- Fix inconsistency in ordering of child nodes in the workflow diagram
+  [#1406](https://github.com/OpenFn/Lightning/issues/1406)
 
 ## [v0.9.3] - 2023-09-27
 

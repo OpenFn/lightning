@@ -32,6 +32,7 @@ workflows:
     triggers:
       webhook:
         type: webhook
+        enabled: true
     edges:
       webhook->webhook-job:
         source_trigger: webhook
@@ -69,6 +70,7 @@ workflows:
       cron:
         type: cron
         cron_expression: '0 23 * * *'
+        enabled: true
     edges:
       cron->some-cronjob:
         source_trigger: cron

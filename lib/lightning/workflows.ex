@@ -304,4 +304,12 @@ defmodule Lightning.Workflows do
 
     Repo.exists?(query)
   end
+
+  @doc """
+  A way to ensure the consistency of nodes.
+  This query orders jobs based on their `inserted_at` timestamps in ascending order
+  """
+  def jobs_ordered_subquery do
+    from(j in Job, order_by: [asc: j.inserted_at])
+  end
 end

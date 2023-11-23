@@ -1,10 +1,15 @@
 defmodule LightningWeb.RunWorkOrderTest do
-  alias Lightning.Attempts
-  use LightningWeb.ConnCase, async: true
+  use LightningWeb.ConnCase, async: false
 
   import Phoenix.LiveViewTest
+  import Lightning.Factories
 
+  alias Lightning.Attempts
+  alias Lightning.WorkOrders.Events
   alias Lightning.WorkOrders.SearchParams
+  alias LightningWeb.LiveHelpers
+
+  alias Phoenix.LiveView.AsyncResult
 
   import Lightning.Factories
 
@@ -26,7 +31,7 @@ defmodule LightningWeb.RunWorkOrderTest do
         )
 
       {:ok, _view, html} =
-        live(conn, Routes.project_run_index_path(conn, :index, project.id))
+        live_async(conn, Routes.project_run_index_path(conn, :index, project.id))
 
       assert html =~ "History"
 
@@ -107,7 +112,7 @@ defmodule LightningWeb.RunWorkOrderTest do
         )
 
       {:ok, view, html} =
-        live(conn, Routes.project_run_index_path(conn, :index, project.id))
+        live_async(conn, Routes.project_run_index_path(conn, :index, project.id))
 
       assert html =~ "History"
 
@@ -117,26 +122,85 @@ defmodule LightningWeb.RunWorkOrderTest do
         |> render()
 
       assert table =~ workflow.name
-      assert table =~ "#{dataclip.id}"
+      assert table =~ LiveHelpers.display_short_uuid(work_order.id)
+      assert table =~ LiveHelpers.display_short_uuid(dataclip.id)
+
+      refute table =~ LiveHelpers.display_short_uuid(attempt_id)
 
       # toggle work_order details
       # TODO move to test work_order_component
 
-      assert view
-             |> element(
-               "section#inner_content div[data-entity='work_order_list'] > div:first-child button[phx-click='toggle_details']"
-             )
-             |> render_click() =~ "attempt-#{attempt_id}"
+      expanded =
+        view
+        |> element(
+          "section#inner_content div[data-entity='work_order_list'] > div:first-child button[phx-click='toggle_details']"
+        )
+        |> render_click()
 
-      refute view
-             |> element(
-               "section#inner_content div[data-entity='work_order_list'] > div:first-child button[phx-click='toggle_details']"
-             )
-             |> render_click() =~ "attempt-#{attempt_id}"
+      assert expanded =~ "attempt-#{attempt_id}"
+      assert expanded =~ LiveHelpers.display_short_uuid(attempt_id)
+
+      collapsed_again =
+        view
+        |> element(
+          "section#inner_content div[data-entity='work_order_list'] > div:first-child button[phx-click='toggle_details']"
+        )
+        |> render_click()
+
+      refute collapsed_again =~ "attempt-#{attempt_id}"
+      refute collapsed_again =~ LiveHelpers.display_short_uuid(attempt_id)
     end
   end
 
   describe "Search and Filtering" do
+    test "starts by rendering an animated loading of work orders", %{
+      conn: conn,
+      project: project
+    } do
+      workflow = insert(:workflow, project: project)
+      trigger = insert(:trigger, type: :webhook, workflow: workflow)
+      job = insert(:job, workflow: workflow)
+
+      dataclip = insert(:dataclip)
+
+      work_order =
+        insert(:workorder,
+          workflow: workflow,
+          trigger: trigger,
+          dataclip: dataclip
+        )
+
+      attempt =
+        insert(:attempt,
+          work_order: work_order,
+          dataclip: dataclip,
+          starting_trigger: trigger
+        )
+
+      {:ok, _run} =
+        Attempts.start_run(%{
+          "attempt_id" => attempt.id,
+          "job_id" => job.id,
+          "input_dataclip_id" => dataclip.id,
+          "run_id" => Ecto.UUID.generate()
+        })
+
+      {:ok, _view, html} =
+        live(conn, Routes.project_run_index_path(conn, :index, project.id))
+
+      # render element is flaky due to async so it parses the html
+      work_order_list =
+        html
+        |> Floki.parse_fragment!()
+        |> Floki.find("div[data-entity='work_order_list'] > div:first-child")
+        |> hd()
+
+      assert Floki.attribute(work_order_list, "class") |> hd() =~ "animate-pulse"
+
+      assert Floki.children(work_order_list) |> Floki.text() =~
+               "Loading work orders ..."
+    end
+
     test "Search form is displayed", %{
       conn: conn,
       project: project
@@ -170,7 +234,7 @@ defmodule LightningWeb.RunWorkOrderTest do
         })
 
       {:ok, view, html} =
-        live(conn, Routes.project_run_index_path(conn, :index, project.id))
+        live_async(conn, Routes.project_run_index_path(conn, :index, project.id))
 
       assert html =~ "Status"
 
@@ -277,19 +341,15 @@ defmodule LightningWeb.RunWorkOrderTest do
         })
 
       {:ok, view, _html} =
-        live(conn, Routes.project_run_index_path(conn, :index, project.id))
+        live_async(conn, Routes.project_run_index_path(conn, :index, project.id))
 
-      div =
-        view
-        |> element(
-          "section#inner_content div[data-entity='work_order_list'] > div:first-child > div:last-child"
-        )
-        |> render()
-
-      assert div =~ "Failed"
+      assert view
+             |> element(
+               "section#inner_content div[data-entity='work_order_list'] > div:first-child > div:last-child"
+             )
+             |> render() =~ "Failed"
 
       # uncheck :failure
-
       view
       |> form("#run-filter-form", filters: %{"failed" => "false"})
       |> render_submit()
@@ -526,7 +586,7 @@ defmodule LightningWeb.RunWorkOrderTest do
         })
 
       {:ok, view, _html} =
-        live(conn, Routes.project_run_index_path(conn, :index, project.id))
+        live_async(conn, Routes.project_run_index_path(conn, :index, project.id))
 
       div =
         view
@@ -668,90 +728,6 @@ defmodule LightningWeb.RunWorkOrderTest do
                {:error, {:redirect, %{flash: %{"nav" => :not_found}, to: "/"}}}
     end
 
-    test "log_view component" do
-      log_lines = ["First line", "Second line"]
-
-      html =
-        render_component(&LightningWeb.RunLive.Components.log_view/1,
-          log: log_lines
-        )
-        |> Floki.parse_fragment!()
-
-      assert html |> Floki.find("div[data-line-number]") |> length() == 2
-
-      # Check that the log lines are present.
-      # Replace the resulting utf-8 &nbsp; back into a regular space.
-      assert html
-             |> Floki.find("div[data-log-line]")
-             |> Floki.text(sep: "\n")
-             |> String.replace(<<160::utf8>>, " ") ==
-               log_lines |> Enum.join("\n")
-    end
-
-    test "run_details component with finished run" do
-      now = Timex.now()
-
-      started_at = now |> Timex.shift(seconds: -25)
-      finished_at = now |> Timex.shift(seconds: -1)
-
-      run =
-        insert(:run,
-          started_at: started_at,
-          finished_at: finished_at,
-          exit_reason: "success"
-        )
-
-      html =
-        render_component(&LightningWeb.RunLive.Components.run_details/1,
-          run: run |> Lightning.Repo.preload(:attempts),
-          project_id: "4adf2644-ed4e-4f97-a24c-ab35b3cb1efa"
-        )
-        |> Floki.parse_fragment!()
-
-      assert html
-             |> Floki.find("div#finished-at-#{run.id} > div:nth-child(2)")
-             |> Floki.text() =~
-               Calendar.strftime(finished_at, "%c")
-
-      assert html
-             |> Floki.find("div#ran-for-#{run.id} > div:nth-child(2)")
-             |> Floki.text() =~
-               "24000 ms"
-
-      assert html
-             |> Floki.find("div#exit-reason-#{run.id} > div:nth-child(2)")
-             |> Floki.text() =~ "Success"
-    end
-
-    test "run_details component with pending run" do
-      now = Timex.now()
-
-      started_at = now |> Timex.shift(seconds: -25)
-      run = insert(:run, started_at: started_at)
-
-      html =
-        render_component(&LightningWeb.RunLive.Components.run_details/1,
-          run: run |> Lightning.Repo.preload(:attempts),
-          project_id: "4adf2644-ed4e-4f97-a24c-ab35b3cb1efa"
-        )
-        |> Floki.parse_fragment!()
-
-      assert html
-             |> Floki.find("div#finished-at-#{run.id} > div:nth-child(2)")
-             |> Floki.text() =~ "n/a"
-
-      assert html
-             |> Floki.find("div#ran-for-#{run.id} > div:nth-child(2)")
-             |> Floki.text() =~ "n/a"
-
-      # TODO: add a timer that counts up from run.started_at
-      #  ~r/25\d\d\d ms/
-
-      assert html
-             |> Floki.find("div#exit-reason-#{run.id} > div:nth-child(2)")
-             |> Floki.text() =~ "Running"
-    end
-
     test "by default only the latest attempt is present when there are multiple attempts",
          %{conn: conn, user: user} do
       project =
@@ -826,7 +802,7 @@ defmodule LightningWeb.RunWorkOrderTest do
         )
 
       {:ok, view, _html} =
-        live(
+        live_async(
           conn,
           Routes.project_run_index_path(conn, :index, project.id)
         )
@@ -932,7 +908,7 @@ defmodule LightningWeb.RunWorkOrderTest do
         )
 
       {:ok, view, _html} =
-        live(
+        live_async(
           conn,
           Routes.project_run_index_path(conn, :index, project.id)
         )
@@ -958,7 +934,31 @@ defmodule LightningWeb.RunWorkOrderTest do
     end
   end
 
-  describe "Events" do
+  describe "handle_async/3" do
+    test "with exit error", %{conn: conn, project: project} do
+      {:ok, view, _html} =
+        live(conn, Routes.project_run_index_path(conn, :index, project.id))
+
+      %{socket: socket} = :sys.get_state(view.pid)
+      initial_async = AsyncResult.loading()
+
+      assert {:noreply, %{assigns: assigns}} =
+               LightningWeb.RunLive.Index.handle_async(
+                 :load_workorders,
+                 {:exit, "some reason"},
+                 Map.merge(socket, %{
+                   assigns: Map.put(socket.assigns, :async_page, initial_async)
+                 })
+               )
+
+      assert %{page: %{total_pages: 0}, async_page: async_page} = assigns
+
+      assert async_page ==
+               AsyncResult.failed(initial_async, {:exit, "some reason"})
+    end
+  end
+
+  describe "handle_info/2" do
     test "WorkOrders.Events.AttemptCreated", %{
       conn: conn,
       project: project
@@ -991,7 +991,7 @@ defmodule LightningWeb.RunWorkOrderTest do
         )
 
       {:ok, view, _html} =
-        live(conn, Routes.project_run_index_path(conn, :index, project.id))
+        live_async(conn, Routes.project_run_index_path(conn, :index, project.id))
 
       attempt =
         insert(:attempt,
@@ -1004,7 +1004,7 @@ defmodule LightningWeb.RunWorkOrderTest do
 
       refute has_element?(view, "#attempt_#{attempt.id}")
 
-      Lightning.WorkOrders.Events.attempt_created(project.id, attempt)
+      Events.attempt_created(project.id, attempt)
 
       # Force Re-render to ensure the event is included
       render(view)
@@ -1047,7 +1047,7 @@ defmodule LightningWeb.RunWorkOrderTest do
         )
 
       {:ok, view, _html} =
-        live(conn, Routes.project_run_index_path(conn, :index, project.id))
+        live_async(conn, Routes.project_run_index_path(conn, :index, project.id))
 
       run_2 =
         insert(:run,
@@ -1063,7 +1063,7 @@ defmodule LightningWeb.RunWorkOrderTest do
       assert has_element?(view, "#run-#{run_1.id}")
       refute has_element?(view, "#run-#{run_2.id}")
 
-      Lightning.WorkOrders.Events.attempt_updated(project.id, attempt)
+      Events.attempt_updated(project.id, attempt)
 
       # Force Re-render to ensure the event is included
       render(view)
@@ -1088,11 +1088,9 @@ defmodule LightningWeb.RunWorkOrderTest do
 
       # filter by workflow
       {:ok, view, _html} =
-        live(
+        live_async(
           conn,
-          Routes.project_run_index_path(conn, :index, project.id,
-            filters: %{workflow_id: workflow_1.id}
-          )
+          Routes.project_run_index_path(conn, :index, project.id)
         )
 
       work_order_1 =
@@ -1140,14 +1138,39 @@ defmodule LightningWeb.RunWorkOrderTest do
       refute has_element?(view, "#workorder-#{work_order_1.id}")
       refute has_element?(view, "#workorder-#{work_order_2.id}")
 
-      Lightning.WorkOrders.Events.work_order_created(project.id, work_order_2)
-      Lightning.WorkOrders.Events.work_order_created(project.id, work_order_1)
+      %{filters: filters} = get_assigns(view)
 
-      # Force Re-render to ensure the event is included
+      Events.subscribe(project.id)
+
+      Events.work_order_created(project.id, work_order_1)
+      %{id: wo_id} = work_order_1
+      assert_received %Events.WorkOrderCreated{work_order: %{id: ^wo_id}}
+
+      assert_patch(
+        view,
+        Routes.project_run_index_path(conn, :index, project.id,
+          filters: Map.put(filters, "workorder_id", wo_id)
+        )
+      )
+
+      # Awaits for async changes and forces re-render
+      render_async(view)
       render(view)
-
       assert has_element?(view, "#workorder-#{work_order_1.id}")
-      refute has_element?(view, "#workorder-#{work_order_2.id}")
+
+      # repeat same test for another workorder
+      Events.work_order_created(project.id, work_order_2)
+      %{id: wo_id} = work_order_2
+      assert_received %Events.WorkOrderCreated{work_order: %{id: ^wo_id}}
+
+      assert_patch(
+        view,
+        Routes.project_run_index_path(conn, :index, project.id,
+          filters: Map.put(filters, "workorder_id", wo_id)
+        )
+      )
+
+      assert has_element?(view, "#workorder-#{work_order_2.id}")
     end
   end
 
@@ -1168,6 +1191,10 @@ defmodule LightningWeb.RunWorkOrderTest do
       filters: filter_attrs
     )
     |> render_submit()
+
+    render_async(view)
+
+    :ok
   end
 
   def workflow_displayed(view, name) do
@@ -1343,29 +1370,30 @@ defmodule LightningWeb.RunWorkOrderTest do
 
       dataclip = insert(:dataclip, project: project)
 
-      work_order_b =
-        insert(:workorder,
+      other_4_work_orders =
+        insert_list(4, :workorder,
           workflow: workflow,
           trigger: trigger,
-          dataclip: dataclip
+          dataclip: dataclip,
+          attempts: [
+            build(:attempt,
+              id: nil,
+              starting_trigger: trigger,
+              dataclip: dataclip,
+              finished_at: build(:timestamp),
+              state: :success,
+              runs: [
+                %{
+                  job: job_b,
+                  started_at: build(:timestamp),
+                  finished_at: build(:timestamp),
+                  exit_reason: "success",
+                  input_dataclip: dataclip
+                }
+              ]
+            )
+          ]
         )
-
-      insert(:attempt,
-        work_order: work_order_b,
-        starting_trigger: trigger,
-        dataclip: dataclip,
-        finished_at: build(:timestamp),
-        state: :success,
-        runs: [
-          %{
-            job: job_b,
-            started_at: build(:timestamp),
-            finished_at: build(:timestamp),
-            exit_reason: "success",
-            input_dataclip: dataclip
-          }
-        ]
-      )
 
       path =
         Routes.project_run_index_path(conn, :index, project.id,
@@ -1385,10 +1413,10 @@ defmodule LightningWeb.RunWorkOrderTest do
       result = render_click(view, "bulk-rerun", %{type: "all"})
       {:ok, view, html} = follow_redirect(result, conn)
 
-      assert html =~ "New attempts enqueued for 2 workorders"
+      assert html =~ "New attempts enqueued for 5 workorders"
 
       view
-      |> form("#selection-form-#{work_order_b.id}")
+      |> form("#selection-form-#{hd(other_4_work_orders).id}")
       |> render_change(%{selected: true})
 
       result = render_click(view, "bulk-rerun", %{type: "selected"})
@@ -1443,7 +1471,7 @@ defmodule LightningWeb.RunWorkOrderTest do
       )
 
       {:ok, view, _html} =
-        live(
+        live_async(
           conn,
           Routes.project_run_index_path(conn, :index, project.id,
             filters: %{
@@ -1787,7 +1815,7 @@ defmodule LightningWeb.RunWorkOrderTest do
         )
 
       {:ok, view, html} =
-        live(
+        live_async(
           conn,
           Routes.project_run_index_path(conn, :index, project.id,
             filters: %{
@@ -1815,8 +1843,7 @@ defmodule LightningWeb.RunWorkOrderTest do
       |> form("#selection-form-#{work_order_3.id}")
       |> render_change(%{selected: false})
 
-      updated_html = render(view)
-      assert updated_html =~ "Rerun from..."
+      assert render_async(view) =~ "Rerun from..."
     end
 
     @tag role: :viewer
@@ -1866,6 +1893,8 @@ defmodule LightningWeb.RunWorkOrderTest do
         )
 
       {:ok, view, html} = live(conn, path)
+
+      render_async(view)
 
       refute html =~
                "Find all runs that include this step, and rerun from there"
