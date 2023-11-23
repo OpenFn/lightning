@@ -676,25 +676,29 @@
                       <div>
                         <small>
                           Need to change the repository or branch?
+                          <button
+                            class="text-primary-600"
+                            phx-click="reinstall_app"
+                          >
+                            Re-configure your Github permissions (admin access required)
+                          </button>
                         </small>
-                        <.button phx-click="reinstall_app">
-                          Re-configure your Github permissions (admin access required)
-                        </.button>
                       </div>
                       <div>
                         <small>
                           No longer need to sync your project?
+                          <button
+                            class="text-red-500"
+                            phx-click={
+                              LightningWeb.Components.Modal.show_modal(
+                                "delete_connection_modal"
+                              )
+                            }
+                            phx-value-id={@project.id}
+                          >
+                            Remove github connection
+                          </button>
                         </small>
-                        <.button
-                          phx-click={
-                            LightningWeb.Components.Modal.show_modal(
-                              "delete_connection_modal"
-                            )
-                          }
-                          phx-value-id={@project.id}
-                        >
-                          Remove github connection
-                        </.button>
                       </div>
                     </div>
                   </div>
