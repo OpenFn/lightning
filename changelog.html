@@ -243,7 +243,7 @@ workorders up to <code class="inline">v0.10.0</code>, though the granularity of 
 will be less than <code class="inline">v0.10.0</code> and the final states are not guaranteed to be
 accurate for workflows with multiple branches and leaf nodes with varying exit
 reasons.</p><p>The migration scripts can be run with a single function call in SetupUtils from
-a connect <code class="inline">iex</code> session:</p><pre><code class="makeup elixir" translate="no"><span class="nc">Lightning.SetupUtils</span><span class="o">.</span><span class="n">approximate_state_for_attempts_and_workorders</span><span class="p" data-group-id="5290726229-1">(</span><span class="p" data-group-id="5290726229-1">)</span></code></pre><p>Note that (like lots of <em>other</em> functionality in <code class="inline">SetupUtils</code>, calling this
+a connect <code class="inline">iex</code> session:</p><pre><code class="makeup elixir" translate="no"><span class="nc">Lightning.SetupUtils</span><span class="o">.</span><span class="n">approximate_state_for_attempts_and_workorders</span><span class="p" data-group-id="7633003637-1">(</span><span class="p" data-group-id="7633003637-1">)</span></code></pre><p>Note that (like lots of <em>other</em> functionality in <code class="inline">SetupUtils</code>, calling this
 function is a destructive action and you should only do it if you've backed up
 your data and you know what you're doing.)</p><p>As always, we recommend backing up your data before migrating. (And thanks for
 bearing with us as we move towards our first stable Lightning release.)</p><h3 id="added-3" class="section-heading">
@@ -287,7 +287,8 @@ key from <code class="inline">attempts</code>. <a href="https://github.com/OpenF
 <ul><li>Updated vulnerable JS libraries, <code class="inline">postcss</code> and <code class="inline">semver</code>
 <a href="https://github.com/OpenFn/Lightning/issues/1176">#1176</a></li><li>Update &quot;Delete&quot; to &quot;Delete Job&quot; on Job panel and include javascript deletion
 confirmation <a href="https://github.com/OpenFn/Lightning/issues/1105">#1105</a></li><li>Move &quot;Enabled&quot; property from &quot;Jobs&quot; to &quot;Edges&quot;
-<a href="https://github.com/OpenFn/Lightning/issues/895">#895</a></li></ul><h3 id="fixed-3" class="section-heading">
+<a href="https://github.com/OpenFn/Lightning/issues/895">#895</a></li><li>Incorrect wording on the &quot;Delete&quot; tooltip
+<a href="https://github.com/OpenFn/Lightning/issues/1313">#1313</a></li></ul><h3 id="fixed-3" class="section-heading">
   <a href="#fixed-3" class="hover-link">
     <i class="ri-link-m" aria-hidden="true"></i>
   </a>
