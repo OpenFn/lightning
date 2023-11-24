@@ -661,33 +661,46 @@ defmodule Lightning.WebhookAuthMethods do
   def schedule_for_deletion(%WebhookAuthMethod{} = webhook_auth_method,
         actor: %User{} = user
       ) do
-    deletion_date = scheduled_deletion_date()
+    # Check if the webhook_auth_method is already scheduled for deletion
+    if webhook_auth_method.scheduled_deletion do
+      # Return an error changeset if already scheduled for deletion
+      changeset =
+        WebhookAuthMethod.changeset(webhook_auth_method, %{})
+        |> Ecto.Changeset.add_error(
+          :scheduled_deletion,
+          "already scheduled for deletion"
+        )
 
-    Multi.new()
-    |> Multi.update(
-      :auth_method,
-      WebhookAuthMethod.changeset(webhook_auth_method, %{
-        "deleted" => deletion_date
-      })
-    )
-    |> Multi.insert(:audit, fn %{auth_method: auth_method} ->
-      WebhookAuthMethodAudit.event(
-        "deleted",
-        auth_method.id,
-        user.id,
-        %{
-          before: %{scheduled_deletion: nil},
-          after: %{scheduled_deletion: deletion_date}
-        }
+      {:error, changeset}
+    else
+      deletion_date = scheduled_deletion_date()
+
+      Multi.new()
+      |> Multi.update(
+        :auth_method,
+        WebhookAuthMethod.changeset(webhook_auth_method, %{
+          "scheduled_deletion" => deletion_date
+        })
       )
-    end)
-    |> Repo.transaction()
-    |> case do
-      {:ok, %{auth_method: auth_method}} ->
-        {:ok, auth_method}
+      |> Multi.insert(:audit, fn %{auth_method: auth_method} ->
+        WebhookAuthMethodAudit.event(
+          "deleted",
+          auth_method.id,
+          user.id,
+          %{
+            before: %{scheduled_deletion: nil},
+            after: %{scheduled_deletion: deletion_date}
+          }
+        )
+      end)
+      |> Repo.transaction()
+      |> case do
+        {:ok, %{auth_method: auth_method}} ->
+          {:ok, auth_method}
 
-      {:error, :auth_method, changeset, _changes} ->
-        {:error, changeset}
+        {:error, :auth_method, changeset, _changes} ->
+          {:error, changeset}
+      end
     end
   end
 

@@ -394,4 +394,77 @@ defmodule Lightning.WebhookAuthMethodsTest do
              )
     end
   end
+
+  test "schedule_for_deletion/2 schedules a webhook auth method for deletion" do
+    user = insert(:user)
+    webhook_auth_method = insert(:webhook_auth_method)
+
+    assert webhook_auth_method.scheduled_deletion == nil
+
+    days = Application.get_env(:lightning, :purge_deleted_after_days, 0)
+    now = DateTime.utc_now() |> DateTime.truncate(:second)
+
+    {:ok, changeset} =
+      Lightning.WebhookAuthMethods.schedule_for_deletion(webhook_auth_method,
+        actor: user
+      )
+
+    assert changeset.scheduled_deletion != nil
+
+    assert Timex.diff(changeset.scheduled_deletion, now, :days) ==
+             days
+
+    # Check for audit log entry
+    audit =
+      Lightning.Auditing.list_all()
+      |> Enum.find(fn audit ->
+        audit.item_id == changeset.id and
+          audit.event == "deleted" and
+          audit.item_type == "webhook_auth_method"
+      end)
+
+    assert audit
+    assert audit.actor_id == user.id
+    assert audit.changes.before == %{"scheduled_deletion" => nil}
+
+    # Truncate the fractional seconds from the audit log and append 'Z' for UTC
+    audit_scheduled_deletion =
+      String.split(audit.changes.after["scheduled_deletion"], ".")
+      |> List.first()
+      |> Kernel.<>("Z")
+
+    # Assertion
+    assert %{"scheduled_deletion" => audit_scheduled_deletion} == %{
+             "scheduled_deletion" =>
+               DateTime.to_iso8601(changeset.scheduled_deletion)
+           }
+  end
+
+  test "schedule_for_deletion/2 returns error when webhook auth method is already scheduled for deletion" do
+    user = insert(:user)
+
+    webhook_auth_method =
+      insert(:webhook_auth_method, scheduled_deletion: DateTime.utc_now())
+
+    initial_audit_entries_count =
+      Lightning.Auditing.list_all()
+      |> Enum.count(fn audit ->
+        audit.item_id == webhook_auth_method.id and audit.event == "deleted"
+      end)
+
+    result =
+      Lightning.WebhookAuthMethods.schedule_for_deletion(webhook_auth_method,
+        actor: user
+      )
+
+    assert {:error, _changeset} = result
+
+    final_audit_entries_count =
+      Lightning.Auditing.list_all()
+      |> Enum.count(fn audit ->
+        audit.item_id == webhook_auth_method.id and audit.event == "deleted"
+      end)
+
+    assert final_audit_entries_count == initial_audit_entries_count
+  end
 end
