@@ -8,6 +8,8 @@ defmodule Lightning.AttemptsTest do
   alias Lightning.Attempt
   alias Lightning.Attempts
 
+  setup :verify_on_exit!
+
   describe "enqueue/1" do
     test "enqueues an attempt" do
       dataclip = insert(:dataclip)
@@ -601,6 +603,20 @@ defmodule Lightning.AttemptsTest do
       assert id == attempt_1.id
     end
 
+    test "returns indication of failure" do
+      attempt = insert_attempt()
+
+      Lightning.Mock
+      |> expect(
+        :transaction,
+        fn %Ecto.Multi{} -> {:error, :does_not_matter, {:fake, :data}} end
+      )
+
+      response = Attempts.delete(attempt, &mock_transaction_handler/1)
+
+      assert response == {:error, {:fake, :data}}
+    end
+
     test "rolls back changes on failure" do
       attempt = insert_attempt()
       attempt_run = insert_attempt_run(attempt)
@@ -677,6 +693,21 @@ defmodule Lightning.AttemptsTest do
       assert num_deletions == 2
     end
 
+    test "indicates if the deletion failed" do
+      user = user_fixture()
+      insert_attempt_for_user(user)
+
+      Lightning.Mock
+      |> expect(
+        :transaction,
+        fn %Ecto.Multi{} -> {:error, :does_not_matter, {:fake, :data}} end
+      )
+
+      response = Attempts.delete_for_user(user, &mock_transaction_handler/1)
+
+      assert response == {:error, {:fake, :data}}
+    end
+
     test "behaves correctly if there are no attempts for the user" do
       user_1 = user_fixture()
 
@@ -698,5 +729,9 @@ defmodule Lightning.AttemptsTest do
 
   defp insert_attempt_run(attempt) do
     insert(:attempt_run, attempt: attempt, run: build(:run))
+  end
+
+  defp mock_transaction_handler(%Ecto.Multi{} = multi) do
+    Lightning.Mock.transaction(multi)
   end
 end

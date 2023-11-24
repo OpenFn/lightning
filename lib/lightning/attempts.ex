@@ -258,7 +258,10 @@ defmodule Lightning.Attempts do
     |> Repo.stream()
   end
 
-  def delete(%Attempt{} = attempt) do
+  def delete(
+        %Attempt{} = attempt,
+        transaction_handler \\ &transaction_handler/1
+      ) do
     result =
       Ecto.Multi.new()
       |> Ecto.Multi.delete_all(
@@ -267,27 +270,33 @@ defmodule Lightning.Attempts do
       )
       |> Ecto.Multi.delete_all(:log_lines, Ecto.assoc(attempt, :log_lines))
       |> Ecto.Multi.delete(:attempt, attempt)
-      |> Repo.transaction()
+      |> transaction_handler.()
 
     case result do
       {:ok, %{attempt: modified_attempt}} -> {:ok, modified_attempt}
-      # Not tested
       {:error, _, changeset} -> {:error, changeset}
     end
   end
 
-  def delete_for_user(%User{} = user) do
+  def delete_for_user(
+        %User{} = user,
+        transaction_handler \\ &transaction_handler/1
+      ) do
     attempts =
       from(a in Attempt, where: a.created_by_id == ^user.id) |> Repo.all()
 
-    delete_attempts(attempts)
+    delete_attempts(attempts, transaction_handler)
   end
 
-  defp delete_attempts(attempts) when attempts == [] do
+  defp transaction_handler(%Ecto.Multi{} = multi) do
+    Lightning.transaction(multi)
+  end
+
+  defp delete_attempts(attempts, _transaction_handler) when attempts == [] do
     {:ok, {0, nil}}
   end
 
-  defp delete_attempts(attempts) when attempts != [] do
+  defp delete_attempts(attempts, transaction_handler) when attempts != [] do
     attempt_ids = attempts |> Enum.map(& &1.id)
 
     result =
@@ -304,12 +313,10 @@ defmodule Lightning.Attempts do
         :attempts,
         from(a in Attempt, where: a.id in ^attempt_ids)
       )
-      # Not tested
-      |> Repo.transaction()
+      |> transaction_handler.()
 
     case result do
       {:ok, %{attempts: deleted_attempts}} -> {:ok, deleted_attempts}
-      # Not tested
       {:error, _, changeset} -> {:error, changeset}
     end
   end

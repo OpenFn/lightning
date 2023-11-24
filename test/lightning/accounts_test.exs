@@ -14,6 +14,8 @@ defmodule Lightning.AccountsTest do
   import Lightning.AccountsFixtures
   import Lightning.Factories
 
+  setup :verify_on_exit!
+
   test "has_activity_in_projects?/1 returns true if user has activity in a project (is associated with an attempt) and false otherwise." do
     user = AccountsFixtures.user_fixture()
     another_user = AccountsFixtures.user_fixture()
@@ -1290,6 +1292,24 @@ defmodule Lightning.AccountsTest do
       end
 
       assert only_record_for_type?(attempt)
+    end
+
+    test "indicates failure" do
+      user_1 = user_fixture()
+
+      transaction_handler = fn multi ->
+        Lightning.Mock.transaction(multi)
+      end
+
+      Lightning.Mock
+      |> expect(
+        :transaction,
+        fn %Ecto.Multi{} -> {:error, :does_not_matter, {:fake, :data}} end
+      )
+
+      response = Accounts.delete_user(user_1, transaction_handler)
+
+      assert response == {:error, {:fake, :data}}
     end
 
     defp insert_attempt(user, log_lines \\ []) do

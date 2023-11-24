@@ -11,6 +11,11 @@ defmodule Lightning.Stub do
   @impl true
   def subscribe(topic), do: Lightning.API.subscribe(topic)
 
+  @impl true
+  def transaction(fun_or_multi) do
+    Lightning.Repo.transaction(fun_or_multi)
+  end
+
   @doc """
   Resets the current time to the current time.
   """
