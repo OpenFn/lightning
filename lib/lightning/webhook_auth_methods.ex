@@ -663,7 +663,6 @@ defmodule Lightning.WebhookAuthMethods do
       ) do
     # Check if the webhook_auth_method is already scheduled for deletion
     if webhook_auth_method.scheduled_deletion do
-      # Return an error changeset if already scheduled for deletion
       changeset =
         WebhookAuthMethod.changeset(webhook_auth_method, %{})
         |> Ecto.Changeset.add_error(
