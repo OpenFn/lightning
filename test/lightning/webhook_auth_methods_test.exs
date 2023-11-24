@@ -467,4 +467,21 @@ defmodule Lightning.WebhookAuthMethodsTest do
 
     assert final_audit_entries_count == initial_audit_entries_count
   end
+
+  test "schedule_for_deletion/2 returns error with invalid changeset" do
+    user = insert(:user)
+
+    auth_method =
+      insert(:webhook_auth_method, name: nil, username: nil, password: nil)
+
+    result =
+      Lightning.WebhookAuthMethods.schedule_for_deletion(
+        auth_method,
+        actor: user
+      )
+
+    assert {:error, %Ecto.Changeset{} = changeset} = result
+
+    assert changeset.valid? == false
+  end
 end
