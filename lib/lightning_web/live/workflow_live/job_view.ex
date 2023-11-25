@@ -71,7 +71,7 @@ defmodule LightningWeb.WorkflowLive.JobView do
     <.container id={"job-edit-view-#{@job.id}"}>
       <:top>
         <div class="flex h-14 place-content-stretch ">
-          <div class="basis-1/3    min-w-0 overflow-hidden 	flex items-center justify-around	 pl-4 ">
+          <div class="basis-1/3 flex items-center gap-4 pl-4 ">
             <.adaptor_block adaptor={@job.adaptor} />
             <.credential_block credential={@job.credential} />
           </div>
@@ -146,7 +146,7 @@ defmodule LightningWeb.WorkflowLive.JobView do
 
   defp credential_block(assigns) do
     ~H"""
-    <div class="flex  items-center gap-2  mr-2 whitespace-nowrap 	">
+    <div class="flex  items-center gap-2   whitespace-nowrap 	">
       <%= if @credential do %>
         <Heroicons.lock_closed class="w-6 h-6 text-gray-500" />
 
@@ -180,7 +180,7 @@ defmodule LightningWeb.WorkflowLive.JobView do
       )
 
     ~H"""
-    <div class="grid grid-rows-2 grid-flow-col ml-2 whitespace-nowrap ">
+    <div class="grid grid-rows-2 grid-flow-col  whitespace-nowrap ">
       <div class="row-span-2 flex items-center mr-2">
         <Heroicons.cube class="w-6 h-6 text-gray-500" />
       </div>
