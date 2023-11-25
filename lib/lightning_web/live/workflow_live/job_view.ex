@@ -70,8 +70,8 @@ defmodule LightningWeb.WorkflowLive.JobView do
     ~H"""
     <.container id={"job-edit-view-#{@job.id}"}>
       <:top>
-        <div class="flex h-14 place-content-stretch">
-          <div class="basis-1/3 flex items-center gap-4 pl-4">
+        <div class="flex h-14 place-content-stretch ">
+          <div class="basis-1/3    min-w-0 overflow-hidden 	flex items-center justify-around	 pl-4 ">
             <.adaptor_block adaptor={@job.adaptor} />
             <.credential_block credential={@job.credential} />
           </div>
@@ -146,12 +146,18 @@ defmodule LightningWeb.WorkflowLive.JobView do
 
   defp credential_block(assigns) do
     ~H"""
-    <div class="flex items-center gap-2">
+    <div class="flex  items-center gap-2  mr-2 whitespace-nowrap 	">
       <%= if @credential do %>
         <Heroicons.lock_closed class="w-6 h-6 text-gray-500" />
-        <span class="text-xs text-gray-500 font-semibold grow">
-          <%= @credential.name %>
-        </span>
+
+        <div class="group cursor-default flex items-center ">
+          <span class="text-xs text-gray-500 font-semibold truncate w-48">
+            <%= @credential.name %>
+          </span>
+          <div class="absolute top-11 left-96 hidden group-hover:flex bg-black text-white text-xs rounded py-1 px-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-100 transform -translate-x-1/2">
+            <%= @credential.name %>
+          </div>
+        </div>
       <% else %>
         <Heroicons.lock_open class="w-6 h-6 text-gray-500" />
         <span class="text-xs text-gray-500 font-semibold grow">
@@ -174,12 +180,18 @@ defmodule LightningWeb.WorkflowLive.JobView do
       )
 
     ~H"""
-    <div class="grid grid-rows-2 grid-flow-col">
+    <div class="grid grid-rows-2 grid-flow-col ml-2 whitespace-nowrap ">
       <div class="row-span-2 flex items-center mr-2">
         <Heroicons.cube class="w-6 h-6 text-gray-500" />
       </div>
-      <div class="text-xs text-gray-500 font-semibold">
-        <%= @package_name %>
+
+      <div class="group cursor-default flex items-center ">
+        <span class="text-xs text-gray-500 font-semibold truncate w-48">
+          <%= @package_name %>
+        </span>
+        <div class="absolute top-11 left-16 ml-2 hidden group-hover:flex bg-black text-white text-xs rounded py-1 px-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-100">
+          <%= @package_name %>
+        </div>
       </div>
       <div class="text-xs text-gray-500 font-semibold font-mono">
         <%= @version %>
