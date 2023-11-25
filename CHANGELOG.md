@@ -21,6 +21,8 @@ and this project adheres to
   [#1094](https://github.com/OpenFn/Lightning/issues/1094)
 - Temporary fix to superuser UI for managing project users
   [#1145](https://github.com/OpenFn/Lightning/issues/1145)
+- Fix for adding ellipses on credential info on job editor heading
+  [#1428](https://github.com/OpenFn/Lightning/issues/1428)
 
 ## [v0.10.3] - 2023-11-28
 
