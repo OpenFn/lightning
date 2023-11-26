@@ -4,6 +4,7 @@ import { getRectOfNodes, Node, ReactFlowInstance } from 'reactflow';
 
 import { FIT_PADDING, NODE_HEIGHT, NODE_WIDTH } from './constants';
 import { Flow, Positions } from './types';
+import { styleItem } from './styles';
 
 const layout = tree<Node>()
   // the node size configures the spacing between the nodes ([width, height])
@@ -17,7 +18,18 @@ const calculateLayout = async (
   flow: ReactFlowInstance,
   duration: number | false = 500
 ): Promise<Positions> => {
-  const { nodes, edges } = model;
+  // TODO: there's gotta be a better way to style w/o relying on updates/clicks
+  let { nodes, edges } = model;
+
+  nodes = nodes.map(n => styleItem(n));
+  edges = edges.map(e => {
+    const source = nodes.find(x => x.id == e.source);
+    if (source.type == 'trigger') {
+      e.data.enabled = source?.data.enabled;
+    }
+    return styleItem(e);
+  });
+
   const hierarchy = stratify<Node>()
     .id(d => d.id)
     // get the id of each node by searching through the edges
@@ -106,13 +118,15 @@ export const animate = (
       if (elapsed > duration) {
         // we are moving the nodes to their destination
         // this needs to happen to avoid glitches
-        const finalNodes = transitions.map(({ node, to }) => ({
-          ...node,
-          position: {
-            x: to.x,
-            y: to.y,
-          },
-        }));
+        const finalNodes = transitions.map(({ node, to }) =>
+          styleItem({
+            ...node,
+            position: {
+              x: to.x,
+              y: to.y,
+            },
+          })
+        );
 
         setModel({ edges: to.edges, nodes: finalNodes });
 
