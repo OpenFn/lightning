@@ -108,15 +108,13 @@ export const animate = (
       if (elapsed > duration) {
         // we are moving the nodes to their destination
         // this needs to happen to avoid glitches
-        const finalNodes = transitions.map(({ node, to }) =>
-          styleItem({
-            ...node,
-            position: {
-              x: to.x,
-              y: to.y,
-            },
-          })
-        );
+        const finalNodes = transitions.map(({ node, to }) => ({
+          ...node,
+          position: {
+            x: to.x,
+            y: to.y,
+          },
+        }));
 
         setModel({ edges: to.edges, nodes: finalNodes });
 
