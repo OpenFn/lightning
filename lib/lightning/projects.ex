@@ -19,7 +19,7 @@ defmodule Lightning.Projects do
   alias Lightning.Accounts.User
   alias Lightning.ExportUtils
   alias Lightning.Workflows.Workflow
-  alias Lightning.Invocation.{Run, Dataclip}
+  alias Lightning.Invocation.{Run, Dataclip, LogLine}
   alias Lightning.WorkOrder
 
   require Logger
@@ -210,6 +210,8 @@ defmodule Lightning.Projects do
     end)
 
     Repo.transaction(fn ->
+      project_log_lines_query(project) |> Repo.delete_all()
+
       project_attempts_query(project) |> Repo.delete_all()
 
       project_attempt_run_query(project) |> Repo.delete_all()
@@ -253,6 +255,15 @@ defmodule Lightning.Projects do
   def project_attempt_run_query(project) do
     from(ar in AttemptRun,
       join: att in assoc(ar, :attempt),
+      join: wo in assoc(att, :work_order),
+      join: w in assoc(wo, :workflow),
+      where: w.project_id == ^project.id
+    )
+  end
+
+  def project_log_lines_query(project) do
+    from(ll in LogLine,
+      join: att in assoc(ll, :attempt),
       join: wo in assoc(att, :work_order),
       join: w in assoc(wo, :workflow),
       where: w.project_id == ^project.id
