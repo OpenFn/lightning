@@ -10,6 +10,8 @@ and this project adheres to
 
 ### Added
 
+- Dimmed/greyed out triggers and edges on the canvas when they are disabled
+  [#1464](https://github.com/OpenFn/Lightning/issues/1464)
 - Async loading on the history page to improve UX on long DB queries
   [#1279](https://github.com/OpenFn/Lightning/issues/1279)
 
