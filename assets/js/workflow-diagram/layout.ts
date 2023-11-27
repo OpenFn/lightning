@@ -18,17 +18,7 @@ const calculateLayout = async (
   flow: ReactFlowInstance,
   duration: number | false = 500
 ): Promise<Positions> => {
-  // TODO: there's gotta be a better way to style w/o relying on updates/clicks
-  let { nodes, edges } = model;
-
-  nodes = nodes.map(n => styleItem(n));
-  edges = edges.map(e => {
-    const source = nodes.find(x => x.id == e.source);
-    if (source.type == 'trigger') {
-      e.data.enabled = source?.data.enabled;
-    }
-    return styleItem(e);
-  });
+  const { nodes, edges } = model;
 
   const hierarchy = stratify<Node>()
     .id(d => d.id)
