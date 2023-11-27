@@ -563,7 +563,6 @@ defmodule Lightning.Accounts do
 
     case result do
       {:ok, %{user: deleted_user}} -> {:ok, deleted_user}
-      # Not tested
       {:error, _, changeset} -> {:error, changeset}
     end
   end
