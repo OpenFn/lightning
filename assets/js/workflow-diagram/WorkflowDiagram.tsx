@@ -39,11 +39,23 @@ export default React.forwardRef<HTMLElement, WorkflowDiagramProps>(
 
     const [model, setModel] = useState<Flow.Model>({ nodes: [], edges: [] });
 
+    const isPlaceholder = model.nodes.filter(n => n.type === 'placeholder')
+
     const updateSelection = useCallback(
       (id?: string) => {
+        console.log(placeholders, 'pcs')
+        console.log(selection, 'node')
+        console.log(chartCache.current.lastSelection, 'last')
+        console.log(id, 'id')
+        console.log(isPlaceholder)
+
         if (id !== selection) {
-          onSelectionChange(id);
+          // console.log('what does this mean ')
         }
+        if (isPlaceholder.length > 0) {
+          console.log('close placeholder')
+        }
+        onSelectionChange(id);
       },
       [onSelectionChange, selection]
     );
@@ -58,6 +70,8 @@ export default React.forwardRef<HTMLElement, WorkflowDiagramProps>(
       store,
       requestSelectionChange
     );
+
+    // console.log(placeholders, 'placeholders')
 
     const workflow = useStore(
       store!,

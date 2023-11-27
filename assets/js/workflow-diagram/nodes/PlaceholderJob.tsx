@@ -96,6 +96,7 @@ const PlaceholderJobNode = ({ id, selected }: NodeProps<NodeData>) => {
   }, [textRef]);
 
   const handleCancel = useCallback(() => {
+
     if (textRef.current) {
       dispatch(textRef.current, 'cancel-placeholder', { id });
     }
