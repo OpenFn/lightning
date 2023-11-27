@@ -503,7 +503,7 @@ defmodule LightningWeb.WorkflowLive.Components do
         disabled={true}
       />
       <div class="max-w-xl text-sm text-gray-500 mt-2">
-        <p>Jobs connected to a trigger are always run.</p>
+        <p>This path will be active if its trigger is enabled.</p>
       </div>
     <% else %>
       <Form.select_field
