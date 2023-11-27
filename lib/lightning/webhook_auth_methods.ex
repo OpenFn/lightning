@@ -659,9 +659,8 @@ defmodule Lightning.WebhookAuthMethods do
   @spec schedule_for_deletion(WebhookAuthMethod.t(), actor: User.t()) ::
           {:ok, WebhookAuthMethod.t()} | {:error, Ecto.Changeset.t()}
   def schedule_for_deletion(%WebhookAuthMethod{} = webhook_auth_method,
-        actor: %User{} = user
+        actor: %User{id: user_id}
       ) do
-    # Check if the webhook_auth_method is already scheduled for deletion
     if webhook_auth_method.scheduled_deletion do
       changeset =
         WebhookAuthMethod.changeset(webhook_auth_method, %{})
@@ -685,7 +684,7 @@ defmodule Lightning.WebhookAuthMethods do
         WebhookAuthMethodAudit.event(
           "deleted",
           auth_method.id,
-          user.id,
+          user_id,
           %{
             before: %{scheduled_deletion: nil},
             after: %{scheduled_deletion: deletion_date}
