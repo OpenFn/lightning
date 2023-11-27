@@ -255,7 +255,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
             field={:edges}
             id={@selected_edge.id}
           >
-            <.panel id={"edge-pane-#{@selected_edge.id}"} cancel_url="?" title="Edge">
+            <.panel id={"edge-pane-#{@selected_edge.id}"} cancel_url="?" title="Path">
               <div class="w-auto h-full" id={"edge-pane-#{@workflow.id}"}>
                 <!-- Show only the currently selected one -->
                 <.edge_form
