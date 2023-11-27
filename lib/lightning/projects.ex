@@ -221,18 +221,18 @@ defmodule Lightning.Projects do
       project_runs_query(project) |> Repo.delete_all()
 
       project_jobs_query(project) |> Repo.delete_all()
+      #
+      # project_triggers_query(project) |> Repo.delete_all()
+      #
+      # project_workflows_query(project) |> Repo.delete_all()
+      #
+      # project_users_query(project) |> Repo.delete_all()
+      #
+      # project_credentials_query(project) |> Repo.delete_all()
+      #
+      # project_dataclips_query(project) |> Repo.delete_all()
 
-      project_triggers_query(project) |> Repo.delete_all()
-
-      project_workflows_query(project) |> Repo.delete_all()
-
-      project_users_query(project) |> Repo.delete_all()
-
-      project_credentials_query(project) |> Repo.delete_all()
-
-      project_dataclips_query(project) |> Repo.delete_all()
-
-      {:ok, project} = Repo.delete(project)
+      # {:ok, project} = Repo.delete(project)
 
       Logger.debug(fn ->
         # coveralls-ignore-start

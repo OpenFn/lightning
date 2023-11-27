@@ -267,7 +267,7 @@ defmodule Lightning.ProjectsTest do
 
       p2_log_line = build(:log_line, run: p2_run)
 
-      insert(:workorder,
+      p2_workorder = insert(:workorder,
         trigger: t2,
         workflow: w2,
         dataclip: p2_dataclip,
@@ -321,7 +321,15 @@ defmodule Lightning.ProjectsTest do
 
       assert {:ok, %Project{}} = Projects.delete_project(p1)
 
-      assert runs_query |> Repo.aggregate(:count, :id) == 0
+      # IO.inspect(p2_run, label: :highlander)
+      #
+      # Repo.all(Lightning.Invocation.Run) |> IO.inspect()
+
+      assert only_record_for_type?(p2_run)
+
+      assert only_record_for_type?(p2_workorder)
+
+      assert only_record_for_type?(e2.target_job)
 
       assert work_order_query |> Repo.aggregate(:count, :id) == 0
 
