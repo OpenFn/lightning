@@ -212,9 +212,9 @@ defmodule Lightning.Projects do
     Repo.transaction(fn ->
       project_log_lines_query(project) |> Repo.delete_all()
 
-      project_attempts_query(project) |> Repo.delete_all()
-
       project_attempt_run_query(project) |> Repo.delete_all()
+
+      project_attempts_query(project) |> Repo.delete_all()
 
       project_workorders_query(project) |> Repo.delete_all()
 

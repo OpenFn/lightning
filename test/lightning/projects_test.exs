@@ -280,6 +280,8 @@ defmodule Lightning.ProjectsTest do
           )
       )
 
+      p2_attempt_run = Repo.get_by(Lightning.AttemptRun, run_id: p2_run.id)
+
       runs_query = Lightning.Projects.project_runs_query(p1)
 
       work_order_query = Lightning.Projects.project_workorders_query(p1)
@@ -325,7 +327,7 @@ defmodule Lightning.ProjectsTest do
 
       assert attempt_query |> Repo.aggregate(:count, :id) == 0
 
-      assert attempt_run_query |> Repo.aggregate(:count, :id) == 0
+      assert only_record_for_type?(p2_attempt_run)
 
       assert pu_query |> Repo.aggregate(:count, :id) == 0
 
