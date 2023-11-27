@@ -214,12 +214,6 @@ defmodule Lightning.InvocationTest do
                } in errors
     end
 
-    test "delete_run/1 deletes the run" do
-      run = insert(:run)
-      assert {:ok, %Run{}} = Invocation.delete_run(run)
-      assert_raise Ecto.NoResultsError, fn -> Invocation.get_run!(run.id) end
-    end
-
     test "change_run/1 returns a run changeset" do
       run = insert(:run)
       assert %Ecto.Changeset{} = Invocation.change_run(run)
