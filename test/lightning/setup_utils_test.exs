@@ -814,6 +814,7 @@ defmodule Lightning.SetupUtilsTest do
       assert Lightning.Projects.list_projects() |> Enum.count() == 2
       assert Lightning.Workflows.list_workflows() |> Enum.count() == 2
       assert Lightning.Jobs.list_jobs() |> Enum.count() == 6
+      assert Repo.all(Lightning.Invocation.Run) |> Enum.count() == 5
 
       assert Repo.all(Lightning.Invocation.LogLine)
              |> Enum.count() > 0
@@ -824,6 +825,7 @@ defmodule Lightning.SetupUtilsTest do
       assert Lightning.Projects.list_projects() |> Enum.count() == 0
       assert Lightning.Workflows.list_workflows() |> Enum.count() == 0
       assert Lightning.Jobs.list_jobs() |> Enum.count() == 0
+      assert Repo.all(Lightning.Invocation.Run) |> Enum.count() == 0
 
       assert Repo.all(Lightning.Invocation.LogLine)
              |> Enum.count() == 0
@@ -834,6 +836,7 @@ defmodule Lightning.SetupUtilsTest do
       assert Lightning.Projects.list_projects() |> Enum.count() == 2
       assert Lightning.Workflows.list_workflows() |> Enum.count() == 2
       assert Lightning.Jobs.list_jobs() |> Enum.count() == 6
+      assert Repo.all(Lightning.Invocation.Run) |> Enum.count() == 5
 
       assert Repo.all(Lightning.Invocation.LogLine)
              |> Enum.count() > 0
@@ -844,6 +847,7 @@ defmodule Lightning.SetupUtilsTest do
       assert Lightning.Projects.list_projects() |> Enum.count() == 0
       assert Lightning.Workflows.list_workflows() |> Enum.count() == 0
       assert Lightning.Jobs.list_jobs() |> Enum.count() == 0
+      assert Repo.all(Lightning.Invocation.Run) |> Enum.count() == 0
 
       assert Repo.all(Lightning.Invocation.LogLine)
              |> Enum.count() == 0
