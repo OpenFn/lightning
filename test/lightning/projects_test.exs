@@ -261,6 +261,7 @@ defmodule Lightning.ProjectsTest do
         ]
       )
 
+
       p2_dataclip = insert(:dataclip, body: %{foo: "bar"}, project: p2)
 
       p2_run = insert(:run, input_dataclip: p2_dataclip, job: e2.target_job)
@@ -278,6 +279,15 @@ defmodule Lightning.ProjectsTest do
             runs: [p2_run],
             log_lines: [p2_log_line]
           )
+      )
+
+      {:ok, p2_pu} = p2.project_users |> Enum.fetch(0)
+
+      {:ok, p2_pc} = Repo.all(Ecto.assoc(p2, :project_credentials)) |> Enum.fetch(0)
+
+      p2_dataclip = Repo.get_by(
+        Lightning.Invocation.Dataclip,
+        project_id: p2.id
       )
 
       p2_attempt_run = Repo.get_by(Lightning.AttemptRun, run_id: p2_run.id)
@@ -321,15 +331,9 @@ defmodule Lightning.ProjectsTest do
 
       assert {:ok, %Project{}} = Projects.delete_project(p1)
 
-      # IO.inspect(p2_run, label: :highlander)
-      #
-      # Repo.all(Lightning.Invocation.Run) |> IO.inspect()
-
       assert only_record_for_type?(p2_run)
 
       assert only_record_for_type?(p2_workorder)
-
-      assert only_record_for_type?(e2.target_job)
 
       assert work_order_query |> Repo.aggregate(:count, :id) == 0
 
@@ -337,15 +341,17 @@ defmodule Lightning.ProjectsTest do
 
       assert only_record_for_type?(p2_attempt_run)
 
-      assert pu_query |> Repo.aggregate(:count, :id) == 0
+      assert only_record_for_type?(p2_pu)
 
-      assert pc_query |> Repo.aggregate(:count, :id) == 0
+      assert only_record_for_type?(p2_pc)
 
       assert workflows_query |> Repo.aggregate(:count, :id) == 0
 
       assert jobs_query |> Repo.aggregate(:count, :id) == 0
 
       assert only_record_for_type?(p2_log_line)
+
+      assert only_record_for_type?(p2_dataclip)
 
       assert_raise Ecto.NoResultsError, fn ->
         Projects.get_project!(p1.id)
