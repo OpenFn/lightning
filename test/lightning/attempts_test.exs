@@ -292,7 +292,7 @@ defmodule Lightning.AttemptsTest do
 
       {:ok, attempt} = Attempts.start_attempt(attempt)
 
-      assert attempt.started_at <= DateTime.utc_now()
+      assert DateTime.compare(attempt.started_at, DateTime.utc_now()) == :lt
 
       workorder_id = workorder.id
 
