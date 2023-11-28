@@ -7,6 +7,7 @@ defmodule Lightning.Config do
 
     @callback attempt_token_signer() :: Joken.Signer.t()
     @callback worker_token_signer() :: Joken.Signer.t()
+    @callback worker_secret() :: binary() | nil
     @callback attempts_adaptor() :: module()
     @callback grace_period() :: integer()
 
@@ -19,11 +20,7 @@ defmodule Lightning.Config do
     end
 
     def worker_token_signer() do
-      Joken.Signer.create(
-        "HS256",
-        Application.get_env(:lightning, :workers, [])
-        |> Keyword.get(:worker_secret)
-      )
+      Joken.Signer.create("HS256", worker_secret())
     end
 
     def attempts_adaptor() do
@@ -32,6 +29,11 @@ defmodule Lightning.Config do
         :attempts_module,
         Lightning.Attempts.Queue
       )
+    end
+
+    def worker_secret() do
+      Application.get_env(:lightning, :workers, [])
+      |> Keyword.get(:worker_secret)
     end
 
     @doc """
@@ -68,6 +70,11 @@ defmodule Lightning.Config do
   @impl true
   def attempts_adaptor() do
     impl().attempts_adaptor()
+  end
+
+  @impl true
+  def worker_secret() do
+    impl().worker_secret()
   end
 
   @impl true
