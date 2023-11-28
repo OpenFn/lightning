@@ -225,12 +225,12 @@ defmodule Lightning.SetupUtilsTest do
       first_run =
         runs
         |> Enum.at(0)
-        |> Repo.preload([:input_dataclip, :output_dataclip, :previous])
+        |> Repo.preload([:input_dataclip, :output_dataclip])
 
       last_run =
         runs
         |> Enum.at(1)
-        |> Repo.preload([:input_dataclip, :output_dataclip, :previous])
+        |> Repo.preload([:input_dataclip, :output_dataclip])
 
       # first run is older than second run
       assert DateTime.diff(
@@ -549,17 +549,17 @@ defmodule Lightning.SetupUtilsTest do
       first_run =
         runs
         |> Enum.at(0)
-        |> Repo.preload([:input_dataclip, :output_dataclip, :previous])
+        |> Repo.preload([:input_dataclip, :output_dataclip])
 
       second_run =
         runs
         |> Enum.at(1)
-        |> Repo.preload([:input_dataclip, :output_dataclip, :previous])
+        |> Repo.preload([:input_dataclip, :output_dataclip])
 
       last_run =
         runs
         |> Enum.at(2)
-        |> Repo.preload([:input_dataclip, :output_dataclip, :previous])
+        |> Repo.preload([:input_dataclip, :output_dataclip])
 
       # first run is older than second run
       assert DateTime.diff(
@@ -768,7 +768,7 @@ defmodule Lightning.SetupUtilsTest do
       failed_run =
         runs
         |> Enum.at(1)
-        |> Repo.preload([:input_dataclip, :output_dataclip, :previous])
+        |> Repo.preload([:input_dataclip, :output_dataclip])
 
       assert failed_run.exit_reason == "fail"
 

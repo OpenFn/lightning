@@ -47,8 +47,6 @@ defmodule Lightning.Invocation.Run do
     belongs_to :input_dataclip, Dataclip
     belongs_to :output_dataclip, Dataclip
 
-    belongs_to :previous, __MODULE__
-
     has_many :log_lines, LogLine, preload_order: [asc: :timestamp]
 
     many_to_many :attempts, Attempt, join_through: AttemptRun
