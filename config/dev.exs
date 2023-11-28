@@ -38,8 +38,7 @@ config :lightning, Lightning.Vault,
 
 config :lightning, Lightning.Runtime.RuntimeManager,
   start: true,
-  args: ~w(node ./node_modules/.bin/worker -- --backoff 0.5/5),
-  cd: Path.expand("../assets", __DIR__)
+  env: [{"NODE_OPTIONS", "--dns-result-order=ipv4first"}]
 
 # ## SSL Support
 #
