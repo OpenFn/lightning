@@ -36,6 +36,8 @@ and this project adheres to
 
 - Create new workflow button sizing regression
   [#1405](https://github.com/OpenFn/Lightning/issues/1405)
+- Tooltip text clears later than the background
+  [#1094](https://github.com/OpenFn/Lightning/issues/1094)
 
 ## [v0.10.2] - 2023-11-21
 

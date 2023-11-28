@@ -95,6 +95,7 @@ export const Tooltip = {
     this._tippyInstance = tippy(this.el, {
       content: content,
       placement: placement,
+      animation: false,
     });
   },
   destroyed() {
