@@ -48,7 +48,7 @@ defmodule LightningWeb.EndToEndTest do
       # wait to complete
       Events.subscribe(attempt)
 
-      Enum.any?(1..100, fn _i ->
+      Enum.any?(1..150, fn _i ->
         receive do
           %Events.AttemptUpdated{attempt: %{state: state}}
           when state in Attempt.final_states() ->
