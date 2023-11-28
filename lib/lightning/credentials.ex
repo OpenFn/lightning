@@ -124,9 +124,15 @@ defmodule Lightning.Credentials do
     changeset = %Credential{} |> change_credential(attrs) |> cast_body_change()
 
     Multi.new()
-    |> Multi.insert(:credential, changeset)
+    |> Multi.insert(
+      :credential,
+      changeset
+    )
     |> Multi.insert(:audit, fn %{credential: credential} ->
-      Audit.event("created", credential.id, credential.user_id)
+      Audit.event("created", credential.id, credential.user_id, %{
+        before: nil,
+        after: Map.take(changeset.changes, Credential.__schema__(:fields))
+      })
     end)
     |> Repo.transaction()
     |> case do
