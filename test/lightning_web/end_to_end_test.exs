@@ -295,15 +295,15 @@ defmodule LightningWeb.EndToEndTest do
   end
 
   defp start_runtime_manager(_context) do
-    rtm_args = "node ./node_modules/.bin/worker -- --backoff 0.5/5"
+    opts =
+      Application.get_env(:lightning, RuntimeManager)
+      |> Keyword.merge(
+        name: E2ETestRuntimeManager,
+        start: true,
+        worker_secret: Lightning.Config.worker_secret()
+      )
 
-    Application.put_env(:lightning, RuntimeManager,
-      start: true,
-      args: String.split(rtm_args),
-      cd: Path.expand("../../assets", __DIR__)
-    )
-
-    {:ok, rtm_server} = RuntimeManager.start_link(name: E2ETestRuntimeManager)
+    {:ok, rtm_server} = RuntimeManager.start_link(opts)
 
     running =
       Enum.any?(1..20, fn _i ->

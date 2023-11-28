@@ -32,6 +32,76 @@ defmodule Lightning.Runtime.RuntimeManager do
 
 
   """
+  defmodule Config do
+    @moduledoc false
+
+    defstruct backoff: [min: 0.5, max: 5],
+              env: [],
+              ws_url: "ws://localhost:4000/worker",
+              cmd: ~w(node ./node_modules/.bin/worker),
+              cd: Path.expand("../../../assets", __DIR__),
+              worker_secret: nil,
+              capacity: 5,
+              repo_dir: nil
+
+    @doc """
+    Parses the keyword list of start arguments and returns a tuple,
+    the first element being the config struct and the second element
+    being the remaining arguments.
+    """
+    def parse(args) do
+      config =
+        struct(
+          __MODULE__,
+          Application.get_env(:lightning, __MODULE__, [])
+          |> Keyword.merge(args)
+        )
+
+      {_, args} = args |> Keyword.split(config |> Map.keys())
+
+      {config, args}
+    end
+
+    def to_args(config) do
+      config.cmd
+      |> Enum.concat(
+        config
+        |> Map.from_struct()
+        |> Enum.flat_map(&to_arg/1)
+        |> Enum.reject(&is_nil/1)
+      )
+    end
+
+    def to_env(config) do
+      (config.env ++ [{"WORKER_SECRET", config.worker_secret}])
+      |> Enum.map(fn
+        {k, nil} ->
+          {String.to_charlist(k), false}
+
+        {k, v} ->
+          {String.to_charlist(k), String.to_charlist(v)}
+      end)
+    end
+
+    defp to_arg({k, v}) do
+      case {k, v} do
+        {:backoff, v} ->
+          ~w(--backoff #{v[:min]}/#{v[:max]})
+
+        {:ws_url, v} ->
+          ~w(--lightning #{v})
+
+        {:capacity, v} ->
+          ~w(--capacity #{v})
+
+        {:repo_dir, v} when is_binary(v) ->
+          ~w(--repo-dir #{v})
+
+        _ ->
+          [nil]
+      end
+    end
+  end
 
   defmodule RuntimeClient do
     @callback start_runtime(state :: map()) :: state :: map()
@@ -44,15 +114,24 @@ defmodule Lightning.Runtime.RuntimeManager do
 
   defstruct runtime_port: nil,
             runtime_os_pid: nil,
-            runtime_client: nil,
-            buffer: []
+            runtime_client: __MODULE__,
+            buffer: [],
+            config: nil
 
   @behaviour RuntimeClient
 
   def start_link(args) do
     {name, args} = Keyword.pop(args, :name, __MODULE__)
-    start_args = Keyword.merge(config(), args)
-    GenServer.start_link(__MODULE__, start_args, name: name)
+
+    args =
+      Application.get_env(:lightning, __MODULE__, [])
+      |> Keyword.merge(args)
+
+    {config, start_args} = Config.parse(args)
+
+    GenServer.start_link(__MODULE__, Keyword.put(start_args, :config, config),
+      name: name
+    )
   end
 
   @impl GenServer
@@ -61,8 +140,9 @@ defmodule Lightning.Runtime.RuntimeManager do
 
     if start do
       Process.flag(:trap_exit, true)
-      module = Keyword.get(args, :runtime_client, __MODULE__)
-      {:ok, %__MODULE__{runtime_client: module}, {:continue, :start_runtime}}
+      state = struct(__MODULE__, args)
+
+      {:ok, state, {:continue, :start_runtime}}
     else
       :ignore
     end
@@ -155,31 +235,20 @@ defmodule Lightning.Runtime.RuntimeManager do
     # Source: https://stackoverflow.com/questions/75594758/sigterm-not-intercepted-by-the-handler-in-nodejs-app
     # System.shell("kill $(lsof -n -i :2222 | grep LISTEN | awk '{print $2}')")
 
-    config = config()
-    {args, start_opts} = Keyword.pop(config, :args, [])
-    start_opts = Keyword.take(start_opts, [:cd, :env])
-
     wrapper = Application.app_dir(:lightning, "priv/runtime/port_wrapper")
     init_cmd = port_init(wrapper)
 
     opts =
-      cmd_opts(
-        start_opts,
-        [
-          :use_stdio,
-          :exit_status,
-          :binary,
-          :hide,
-          args: args,
-          line: 1024,
-          env: [
-            {~c"WORKER_SECRET",
-             Application.get_env(:lightning, :workers, [])
-             |> Keyword.get(:worker_secret)
-             |> to_charlist()}
-          ]
-        ]
-      )
+      [
+        :use_stdio,
+        :exit_status,
+        :binary,
+        :hide,
+        cd: state.config.cd,
+        args: state.config |> Config.to_args(),
+        line: 1024,
+        env: state.config |> Config.to_env()
+      ]
 
     port = Port.open(init_cmd, opts)
     {:os_pid, os_pid} = Port.info(port, :os_pid)
@@ -191,10 +260,6 @@ defmodule Lightning.Runtime.RuntimeManager do
   @impl RuntimeClient
   def stop_runtime(state) do
     System.cmd("kill", ["-TERM", "#{state.runtime_os_pid}"])
-  end
-
-  defp config do
-    Application.get_env(:lightning, __MODULE__, [])
   end
 
   defp handle_pending_msg(port, buffer) do
@@ -232,23 +297,5 @@ defmodule Lightning.Runtime.RuntimeManager do
       end
 
     {:spawn_executable, cmd}
-  end
-
-  defp cmd_opts([{:cd, bin} | t], opts) when is_binary(bin),
-    do: cmd_opts(t, [{:cd, bin} | opts])
-
-  defp cmd_opts([{:env, enum} | t], opts),
-    do: cmd_opts(t, [{:env, validate_env(enum)} | opts])
-
-  defp cmd_opts([], opts), do: opts
-
-  defp validate_env(enum) do
-    Enum.map(enum, fn
-      {k, nil} ->
-        {String.to_charlist(k), false}
-
-      {k, v} ->
-        {String.to_charlist(k), String.to_charlist(v)}
-    end)
   end
 end
