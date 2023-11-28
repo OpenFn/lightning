@@ -1027,9 +1027,27 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
   defp box_loader(assigns) do
     ~H"""
-    <span class="inline-block top-[50%] w-10 h-10 relative border-4
-                 border-gray-400 animate-spin-pause">
-      <span class="align-top inline-block w-full bg-gray-400 animate-fill-up"></span>
+    <span class="inline-block top-[50%] relative">
+      <div class="flex items-center justify-center">
+        <span class="relative inline-flex">
+          <button
+            type="button"
+            class="inline-flex items-center px-4 py-2 font-semibold leading-6
+            text-sm shadow rounded-md bg-white dark:bg-slate-800
+            transition ease-in-out duration-150 cursor-not-allowed ring-1
+            ring-slate-900/10 dark:ring-slate-200/20"
+            disabled=""
+          >
+            Loading workflow
+          </button>
+          <span class="flex absolute h-3 w-3 top-0 right-0 -mt-1 -mr-1">
+            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary-400 opacity-75">
+            </span>
+            <span class="relative inline-flex rounded-full h-3 w-3 bg-primary-500">
+            </span>
+          </span>
+        </span>
+      </div>
     </span>
     """
   end
