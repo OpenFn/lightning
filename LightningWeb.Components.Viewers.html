@@ -7,7 +7,7 @@
     <meta name="generator" content="ExDoc v0.30.9">
     <meta name="project" content="Lightning v0.10.3">
 
-    <title>Lightning.Workflows.Query — Lightning v0.10.3</title>
+    <title>LightningWeb.Components.Viewers — Lightning v0.10.3</title>
     <link rel="stylesheet" href="dist/html-elixir-XFYN5IVA.css" />
 
 
@@ -125,19 +125,22 @@ Pages
 </button>
 
 
-    <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/query.ex#L1" title="View Source" class="icon-action" rel="help">
+    <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/components/viewers.ex#L1" title="View Source" class="icon-action" rel="help">
       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
       <span class="sr-only">View Source</span>
     </a>
 
-  <span translate="no">Lightning.Workflows.Query</span> 
+  <span translate="no">LightningWeb.Components.Viewers</span> 
   <small class="app-vsn" translate="no">(Lightning v0.10.3)</small>
 
 </h1>
 
 
   <section id="moduledoc">
-<p>Query module for finding Jobs.</p>
+<p>Components for rendering Logs and Dataclips.</p><blockquote><h4 class="info">Scrolling can be tricky</h4><p>We seldom know how long a log or a dataclip will be, and we want to
+be able to contain the element in a fixed height container.
+In some situations wrapping the component in a <code class="inline">div</code> with <code class="inline">inline-flex</code>
+class will help with scrolling.</p></blockquote>
   </section>
 
 
@@ -155,23 +158,21 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#enabled_cron_jobs_by_edge/0" translate="no">enabled_cron_jobs_by_edge()</a>
+        <a href="#dataclip_viewer/1" translate="no">dataclip_viewer(assigns)</a>
 
       </div>
 
-        <div class="summary-synopsis"><p>Returns active jobs with their cron triggers for use in the cron scheduling
-service.</p></div>
+        <div class="summary-synopsis"><h2>Attributes</h2><ul><li><code class="inline">id</code> (<code class="inline">:string</code>) (required)</li><li><code class="inline">stream</code> (<code class="inline">:list</code>) (required) - A stream of lines to render. In the shape of <code class="inline">%{id: String.t(), line: String.t(), index: integer()}</code>.</li><li><code class="inline">class</code> (<code class="inline">:string</code>) - Additional classes to add to the log viewer container. Defaults to <code class="inline">nil</code>.</li></ul></div>
 
     </div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#jobs_for/1" translate="no">jobs_for(user)</a>
+        <a href="#log_viewer/1" translate="no">log_viewer(assigns)</a>
 
       </div>
 
-        <div class="summary-synopsis"><p>Returns all jobs accessible to a user, via their projects
-or all jobs in a given project.</p></div>
+        <div class="summary-synopsis"><p>Renders out a log line stream</p></div>
 
     </div>
 
@@ -188,16 +189,16 @@ or all jobs in a given project.</p></div>
       <span class="text">Functions</span>
     </h1>
     <div class="functions-list">
-<section class="detail" id="enabled_cron_jobs_by_edge/0">
+<section class="detail" id="dataclip_viewer/1">
 
   <div class="detail-header">
-    <a href="#enabled_cron_jobs_by_edge/0" class="detail-link" title="Link to this function">
+    <a href="#dataclip_viewer/1" class="detail-link" title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">enabled_cron_jobs_by_edge()</h1>
+    <h1 class="signature" translate="no">dataclip_viewer(assigns)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/query.ex#L35" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/components/viewers.ex#L95" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -207,26 +208,25 @@ or all jobs in a given project.</p></div>
 
   <section class="docstring">
 
-      <div class="specs">
-
-          <pre translate="no"><span class="attribute">@spec</span> enabled_cron_jobs_by_edge() :: <a href="https://hexdocs.pm/ecto/3.10.3/Ecto.Queryable.html#t:t/0">Ecto.Queryable.t</a>()</pre>
-
-      </div>
-
-<p>Returns active jobs with their cron triggers for use in the cron scheduling
-service.</p>
+<h2 id="dataclip_viewer/1-attributes" class="section-heading">
+  <a href="#dataclip_viewer/1-attributes" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
+  </a>
+  <span class="text">Attributes</span>
+</h2>
+<ul><li><code class="inline">id</code> (<code class="inline">:string</code>) (required)</li><li><code class="inline">stream</code> (<code class="inline">:list</code>) (required) - A stream of lines to render. In the shape of <code class="inline">%{id: String.t(), line: String.t(), index: integer()}</code>.</li><li><code class="inline">class</code> (<code class="inline">:string</code>) - Additional classes to add to the log viewer container. Defaults to <code class="inline">nil</code>.</li></ul>
   </section>
 </section>
-<section class="detail" id="jobs_for/1">
+<section class="detail" id="log_viewer/1">
 
   <div class="detail-header">
-    <a href="#jobs_for/1" class="detail-link" title="Link to this function">
+    <a href="#log_viewer/1" class="detail-link" title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">jobs_for(user)</h1>
+    <h1 class="signature" translate="no">log_viewer(assigns)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/query.ex#L16" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/components/viewers.ex#L44" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -236,16 +236,24 @@ service.</p>
 
   <section class="docstring">
 
-      <div class="specs">
-
-          <pre translate="no"><span class="attribute">@spec</span> jobs_for(<a href="Lightning.Accounts.User.html#t:t/0">Lightning.Accounts.User.t</a>()) :: <a href="https://hexdocs.pm/ecto/3.10.3/Ecto.Queryable.html#t:t/0">Ecto.Queryable.t</a>()</pre>
-
-          <pre translate="no"><span class="attribute">@spec</span> jobs_for(<a href="Lightning.Projects.Project.html#t:t/0">Lightning.Projects.Project.t</a>()) :: <a href="https://hexdocs.pm/ecto/3.10.3/Ecto.Queryable.html#t:t/0">Ecto.Queryable.t</a>()</pre>
-
-      </div>
-
-<p>Returns all jobs accessible to a user, via their projects
-or all jobs in a given project.</p>
+<p>Renders out a log line stream</p><p>Internally it uses the <code class="inline">LogLineHighlight</code> hook to highlight the log line
+with the <code class="inline">highlight_id</code> attribute.</p><h2 id="log_viewer/1-example" class="section-heading">
+  <a href="#log_viewer/1-example" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
+  </a>
+  <span class="text">Example</span>
+</h2>
+<pre><code class="makeup elixir" translate="no"><span class="o">&lt;</span><span class="nc">Viewers</span><span class="o">.</span><span class="n">log_viewer</span><span class="w">
+  </span><span class="n">id</span><span class="o">=</span><span class="s">&quot;log-viewer-data&quot;</span><span class="w">
+  </span><span class="n">stream</span><span class="o">=</span><span class="p" data-group-id="1225772371-1">{</span><span class="na">@log_lines</span><span class="p" data-group-id="1225772371-1">}</span><span class="w">
+  </span><span class="n">highlight_id</span><span class="o">=</span><span class="p" data-group-id="1225772371-2">{</span><span class="na">@selected_run_id</span><span class="p" data-group-id="1225772371-2">}</span><span class="w">
+</span><span class="o">/</span><span class="o">&gt;</span></code></pre><h2 id="log_viewer/1-attributes" class="section-heading">
+  <a href="#log_viewer/1-attributes" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
+  </a>
+  <span class="text">Attributes</span>
+</h2>
+<ul><li><code class="inline">id</code> (<code class="inline">:string</code>) (required)</li><li><code class="inline">stream</code> (<code class="inline">:list</code>) (required) - A stream of <a href="Lightning.Invocation.LogLine.html"><code class="inline">Lightning.Invocation.LogLine</code></a> structs.</li><li><code class="inline">highlight_id</code> (<code class="inline">:string</code>) - The id of the log line to highlight, matching the <code class="inline">run_id</code> field. Defaults to <code class="inline">nil</code>.</li><li><code class="inline">class</code> (<code class="inline">:string</code>) - Additional classes to add to the log viewer container. Defaults to <code class="inline">nil</code>.</li></ul>
   </section>
 </section>
 

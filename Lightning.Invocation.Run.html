@@ -13,7 +13,7 @@
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-EPF2X7PV.js"></script>
-    <script src="dist/sidebar_items-7AA7551C.js"></script>
+    <script src="dist/sidebar_items-C5BA1067.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -139,7 +139,7 @@ Pages
   <section id="moduledoc">
 <p>Ecto model for Runs.</p><p>A run represents the work initiated for a Job with an input dataclip.
 Once completed (successfully) it will have an <code class="inline">output_dataclip</code> associated
-with it as well.</p>
+with it as well.</p><p>When a run finished, it's <code class="inline">:exit_reason</code> is set to one of following strings:</p><ul><li> <code class="inline">&quot;success&quot;</code></li><li> <code class="inline">&quot;fail&quot;</code></li><li> <code class="inline">&quot;crash&quot;</code></li><li> <code class="inline">&quot;cancel&quot;</code></li><li> <code class="inline">&quot;kill&quot;</code></li><li> <code class="inline">&quot;exception&quot;</code></li><li> <code class="inline">&quot;lost&quot;</code></li></ul>
   </section>
 
 
@@ -226,7 +226,7 @@ This is used to create new runs for retrys.</p></div>
     </a>
     <h1 class="signature" translate="no">t()</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation/run.ex#L18" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation/run.ex#L28" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -287,7 +287,7 @@ This is used to create new runs for retrys.</p></div>
     </a>
     <h1 class="signature" translate="no">finished(run, output_dataclip_id, arg)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation/run.ex#L55" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation/run.ex#L65" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -311,7 +311,7 @@ This is used to create new runs for retrys.</p></div>
     </a>
     <h1 class="signature" translate="no">new(attrs \\ %{})</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation/run.ex#L49" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation/run.ex#L59" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -333,7 +333,7 @@ This is used to create new runs for retrys.</p></div>
     </a>
     <h1 class="signature" translate="no">new_from(run)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation/run.ex#L75" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation/run.ex#L85" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -362,7 +362,7 @@ This is used to create new runs for retrys.</p>
     </a>
     <h1 class="signature" translate="no">validate(changeset)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation/run.ex#L104" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation/run.ex#L114" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>

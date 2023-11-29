@@ -13,7 +13,7 @@
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-EPF2X7PV.js"></script>
-    <script src="dist/sidebar_items-7AA7551C.js"></script>
+    <script src="dist/sidebar_items-C5BA1067.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -169,7 +169,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#complete/2" translate="no">complete(attempt, arg)</a>
+        <a href="#complete/2" translate="no">complete(attempt, params)</a>
 
       </div>
 
@@ -292,9 +292,9 @@ Pages
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">complete(attempt, arg)</h1>
+    <h1 class="signature" translate="no">complete(attempt, params)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/attempts/attempt.ex#L142" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/attempts/attempt.ex#L135" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -307,13 +307,31 @@ Pages
       <div class="specs">
 
           <pre translate="no"><span class="attribute">@spec</span> complete(
-  {<a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>(), <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>()}
-  | %{
-      :__struct__ =&gt;
-        <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">atom</a>() | %{:__changeset__ =&gt; <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>(), optional(<a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">any</a>()) =&gt; <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">any</a>()},
-      optional(<a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">atom</a>()) =&gt; <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">any</a>()
-    },
-  {<a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">any</a>(), <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">any</a>(), <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">any</a>()}
+  %Lightning.Attempt{
+    __meta__: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
+    claimed_at: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
+    created_by: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
+    created_by_id: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
+    dataclip: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
+    dataclip_id: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
+    error_type: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
+    finished_at: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
+    id: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
+    inserted_at: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
+    log_lines: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
+    priority: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
+    runs: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
+    started_at: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
+    starting_job: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
+    starting_job_id: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
+    starting_trigger: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
+    starting_trigger_id: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
+    state: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
+    work_order: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
+    work_order_id: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
+    workflow: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>()
+  },
+  %{optional(<a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">any</a>()) =&gt; <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">any</a>()}
 ) :: <a href="https://hexdocs.pm/ecto/3.10.3/Ecto.Changeset.html#t:t/0">Ecto.Changeset.t</a>()</pre>
 
       </div>
