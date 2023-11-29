@@ -272,7 +272,7 @@ workorders up to <code class="inline">v0.10.0</code>, though the granularity of 
 will be less than <code class="inline">v0.10.0</code> and the final states are not guaranteed to be
 accurate for workflows with multiple branches and leaf nodes with varying exit
 reasons.</p><p>The migration scripts can be run with a single function call in SetupUtils from
-a connect <code class="inline">iex</code> session:</p><pre><code class="makeup elixir" translate="no"><span class="nc">Lightning.SetupUtils</span><span class="o">.</span><span class="n">approximate_state_for_attempts_and_workorders</span><span class="p" data-group-id="7786258797-1">(</span><span class="p" data-group-id="7786258797-1">)</span></code></pre><p>Note that (like lots of <em>other</em> functionality in <code class="inline">SetupUtils</code>, calling this
+a connect <code class="inline">iex</code> session:</p><pre><code class="makeup elixir" translate="no"><span class="nc">Lightning.SetupUtils</span><span class="o">.</span><span class="n">approximate_state_for_attempts_and_workorders</span><span class="p" data-group-id="5228152953-1">(</span><span class="p" data-group-id="5228152953-1">)</span></code></pre><p>Note that (like lots of <em>other</em> functionality in <code class="inline">SetupUtils</code>, calling this
 function is a destructive action and you should only do it if you've backed up
 your data and you know what you're doing.)</p><p>As always, we recommend backing up your data before migrating. (And thanks for
 bearing with us as we move towards our first stable Lightning release.)</p><h3 id="added-4" class="section-heading">
@@ -307,7 +307,8 @@ information <a href="https://github.com/OpenFn/Lightning/issues/1170">#1170</a><
 modification to not leave orphaned attempts given the removal of the foreign
 key from <code class="inline">attempts</code>. <a href="https://github.com/OpenFn/Lightning/issues/1254">#1254</a></li><li>Show tooltip for cloned runs in history page
 <a href="https://github.com/OpenFn/Lightning/issues/1327">#1327</a></li><li>Have user create workflow name before moving to the canvas
-<a href="https://github.com/OpenFn/Lightning/issues/1103">#1103</a></li></ul><h3 id="changed-4" class="section-heading">
+<a href="https://github.com/OpenFn/Lightning/issues/1103">#1103</a></li><li>Allow PromEx authorization to be disabled
+<a href="https://github.com/OpenFn/Lightning/issues/1483">#1483</a></li></ul><h3 id="changed-4" class="section-heading">
   <a href="#changed-4" class="hover-link">
     <i class="ri-link-m" aria-hidden="true"></i>
   </a>
