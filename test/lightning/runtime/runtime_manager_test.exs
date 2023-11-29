@@ -43,15 +43,16 @@ defmodule Lightning.Runtime.RuntimeManagerTest do
   test "the runtime manager does not start when start is set to false", %{
     test: test
   } do
-    Application.put_env(:lightning, RuntimeManager, start: true)
-
-    assert {:ok, server} = start_server(test, runtime_client: RuntimeClient)
+    assert {:ok, server} =
+             start_server(test, runtime_client: RuntimeClient, start: true)
 
     assert Process.alive?(server)
-    Application.put_env(:lightning, RuntimeManager, start: false)
 
     assert {:ok, :undefined} ==
-             start_server(:test_start_false, runtime_client: RuntimeClient)
+             start_server(:test_start_false,
+               runtime_client: RuntimeClient,
+               start: false
+             )
   end
 
   test "on timeout, the runtime manager exits with premature termination",
