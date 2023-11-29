@@ -147,15 +147,13 @@ defmodule LightningWeb.EndToEndTest do
 
       assert %{"work_order_id" => wo_id} = json_response(conn, 200)
 
-      assert %{attempts: [attempt]} =
+      assert %{attempts: [%{id: attempt_id} = attempt]} =
                WorkOrders.get(wo_id, include: [:attempts])
 
       assert %{runs: []} = Attempts.get(attempt.id, include: [:runs])
 
       # wait to complete
       Events.subscribe(attempt)
-
-      attempt_id = attempt.id
 
       assert_receive %Events.AttemptUpdated{
                        attempt: %{id: ^attempt_id, state: :success}
