@@ -43,8 +43,8 @@ defmodule Lightning.Attempts.Queue do
       {:ok, %{attempts: {_, attempts}}} ->
         {:ok, attempts}
 
-      {:error, _} = e ->
-        e
+      {:error, _op, changeset, _changes} ->
+        {:error, changeset}
     end
   end
 

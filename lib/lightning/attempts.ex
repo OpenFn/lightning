@@ -144,7 +144,7 @@ defmodule Lightning.Attempts do
       {:ok, %{attempts: {1, [attempt]}}} ->
         {:ok, attempt}
 
-      {:error, changeset} ->
+      {:error, _op, changeset, _changes} ->
         {:error, changeset}
     end
   end
