@@ -147,7 +147,7 @@ defmodule LightningWeb.EndToEndTest do
 
       assert %{"work_order_id" => wo_id} = json_response(conn, 200)
 
-      assert %{attempts: [attempt]} =
+      assert %{attempts: [%{id: attempt_id} = attempt]} =
                WorkOrders.get(wo_id, include: [:attempts])
 
       assert %{runs: []} = Attempts.get(attempt.id, include: [:runs])
@@ -155,12 +155,23 @@ defmodule LightningWeb.EndToEndTest do
       # wait to complete
       Events.subscribe(attempt)
 
-      attempt_id = attempt.id
+      Enum.reduce_while(1..100, 0, fn _i, acc ->
+        receive do
+          %Events.AttemptUpdated{
+            attempt: %{id: ^attempt_id, state: :success}
+          } ->
+            {:halt, acc}
 
-      assert_receive %Events.AttemptUpdated{
-                       attempt: %{id: ^attempt_id, state: :success}
-                     },
-                     115_000
+          _other ->
+            {:cont, acc + 1}
+        end
+      end)
+      |> IO.inspect(label: :count)
+
+      # assert_receive %Events.AttemptUpdated{
+      #                  attempt: %{id: ^attempt_id, state: :success}
+      #                },
+      #                115_000
 
       assert %{state: :success} = WorkOrders.get(wo_id)
 
