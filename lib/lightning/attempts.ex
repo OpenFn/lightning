@@ -140,9 +140,7 @@ defmodule Lightning.Attempts do
       |> join(:inner, [a], s in fragment(~s("subset")), on: a.id == s.id)
       |> select([a, _], a)
 
-    update_attempts(update_query, changeset)
-    |> Repo.transaction()
-    |> case do
+    case update_attempts(update_query, changeset) do
       {:ok, %{attempts: {1, [attempt]}}} ->
         {:ok, attempt}
 
@@ -163,11 +161,15 @@ defmodule Lightning.Attempts do
     |> Ecto.Multi.run(:post, fn _, %{attempts: {_, attempts}} ->
       Enum.each(attempts, fn attempt ->
         {:ok, _} = Lightning.WorkOrders.update_state(attempt)
-
-        Events.attempt_updated(attempt)
       end)
 
       {:ok, nil}
+    end)
+    |> Repo.transaction()
+    |> tap(fn result ->
+      with {:ok, %{attempts: {_n, attempts}}} <- result do
+        Enum.each(attempts, &Events.attempt_updated/1)
+      end
     end)
   end
 
