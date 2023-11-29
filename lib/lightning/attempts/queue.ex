@@ -37,16 +37,14 @@ defmodule Lightning.Attempts.Queue do
       |> where([a, x], a.id == x.id)
       |> select([a, _], a)
 
-    Attempts.update_attempts(query,
-      set: [state: :claimed, claimed_at: DateTime.utc_now()]
-    )
-    |> Repo.transaction()
-    |> case do
+    case Attempts.update_attempts(query,
+           set: [state: :claimed, claimed_at: DateTime.utc_now()]
+         ) do
       {:ok, %{attempts: {_, attempts}}} ->
         {:ok, attempts}
 
-      {:error, _} = e ->
-        e
+      {:error, _op, changeset, _changes} ->
+        {:error, changeset}
     end
   end
 
