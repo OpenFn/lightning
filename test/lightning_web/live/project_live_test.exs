@@ -141,10 +141,12 @@ defmodule LightningWeb.ProjectLiveTest do
       assert html =~
                "Export your project as code, to save this version or edit your project locally"
 
-      assert index_live |> element("a", "Export project") |> has_element?()
+      assert index_live
+             |> element(~s{a[target="_blank"]}, "Export project")
+             |> has_element?()
 
       assert index_live
-             |> element("a", "Export project")
+             |> element(~s{a[target="_blank"]}, "Export project")
              |> render_click()
              |> follow_redirect(conn, "/download/yaml?id=#{project.id}")
     end

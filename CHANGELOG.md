@@ -38,6 +38,8 @@ and this project adheres to
 
 - Create new workflow button sizing regression
   [#1405](https://github.com/OpenFn/Lightning/issues/1405)
+- Exporting project breaks the navigation of the page
+  [#1440](https://github.com/OpenFn/Lightning/issues/1440)
 
 ## [v0.10.2] - 2023-11-21
 
