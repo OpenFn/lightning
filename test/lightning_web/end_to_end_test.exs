@@ -155,23 +155,10 @@ defmodule LightningWeb.EndToEndTest do
       # wait to complete
       Events.subscribe(attempt)
 
-      Enum.reduce_while(1..100, 0, fn _i, acc ->
-        receive do
-          %Events.AttemptUpdated{
-            attempt: %{id: ^attempt_id, state: :success}
-          } ->
-            {:halt, acc}
-
-          _other ->
-            {:cont, acc + 1}
-        end
-      end)
-      |> IO.inspect(label: :count)
-
-      # assert_receive %Events.AttemptUpdated{
-      #                  attempt: %{id: ^attempt_id, state: :success}
-      #                },
-      #                115_000
+      assert_receive %Events.AttemptUpdated{
+                       attempt: %{id: ^attempt_id, state: :success}
+                     },
+                     115_000
 
       assert %{state: :success} = WorkOrders.get(wo_id)
 
