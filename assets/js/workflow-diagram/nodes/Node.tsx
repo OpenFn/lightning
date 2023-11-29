@@ -47,7 +47,9 @@ const Label: React.FC<LabelProps> = ({ children, hasErrors = false }) => {
 
   if (children && (children as any).length) {
     return (
-      <p className={`line-clamp-2 align-left text-m ${textColorClass}`}>
+      <p
+        className={`line-clamp-2 align-left text-m max-w-[275px] text-ellipsis overflow-hidden ${textColorClass}`}
+      >
         {children}
       </p>
     );
