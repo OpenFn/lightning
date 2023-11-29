@@ -168,6 +168,8 @@ bearing with us as we move towards our first stable Lightning release.)
   [#1327](https://github.com/OpenFn/Lightning/issues/1327)
 - Have user create workflow name before moving to the canvas
   [#1103](https://github.com/OpenFn/Lightning/issues/1103)
+- Allow PromEx authorization to be disabled
+  [#1483](https://github.com/OpenFn/Lightning/issues/1483)
 
 ### Changed
 
