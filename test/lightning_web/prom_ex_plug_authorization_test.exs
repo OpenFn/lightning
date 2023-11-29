@@ -5,8 +5,9 @@ defmodule LightningWeb.PromExPlugAuthorizationTest do
     token = "foo-bar-baz"
 
     update_promex_config(
-      metrics_endpoint_token: token,
-      metrics_endpoint_scheme: "http"
+      metrics_endpoint_authorization_required: true,
+      metrics_endpoint_scheme: "http",
+      metrics_endpoint_token: token
     )
 
     %{conn: conn, token: token}
@@ -41,7 +42,7 @@ defmodule LightningWeb.PromExPlugAuthorizationTest do
   test "returns false if authorization header contains incorrect bearer token",
        %{conn: conn, token: token} do
     new_conn =
-      conn |> Plug.Conn.put_req_header("authorization", "Basic not-#{token}")
+      conn |> Plug.Conn.put_req_header("authorization", "Bearer not-#{token}")
 
     result = LightningWeb.PromExPlugAuthorization.call(new_conn, nil)
 
@@ -60,6 +61,21 @@ defmodule LightningWeb.PromExPlugAuthorizationTest do
     result = LightningWeb.PromExPlugAuthorization.call(new_conn, nil)
 
     refute result
+  end
+
+  test "does not validate token and scheme if auth is not required",
+       %{conn: conn, token: token} do
+    update_promex_config(
+      metrics_endpoint_authorization_required: false,
+      metrics_endpoint_scheme: "https"
+    )
+
+    new_conn =
+      conn |> Plug.Conn.put_req_header("authorization", "Bearer not-#{token}")
+
+    result = LightningWeb.PromExPlugAuthorization.call(new_conn, nil)
+
+    assert result
   end
 
   defp update_promex_config(overrides) do

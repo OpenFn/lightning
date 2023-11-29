@@ -349,6 +349,8 @@ config :lightning, Lightning.PromEx,
   ],
   metrics_server: :disabled,
   datasource_id: System.get_env("PROMEX_DATASOURCE_ID") || "",
+  metrics_endpoint_authorization_required:
+    System.get_env("PROMEX_METRICS_ENDPOINT_AUTHORIZATION_REQUIRED") != "no",
   metrics_endpoint_token:
     System.get_env("PROMEX_METRICS_ENDPOINT_TOKEN") ||
       :crypto.strong_rand_bytes(100),
