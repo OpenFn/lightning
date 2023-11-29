@@ -703,6 +703,12 @@ defmodule LightningWeb.WorkflowLive.Edit do
     {:noreply, handle_new_params(socket, params)}
   end
 
+  @impl true
+  def handle_info({:forward, mod, opts}, socket) do
+    send_update(mod, opts)
+    {:noreply, socket}
+  end
+
   defp maybe_show_manual_run(socket) do
     case socket.assigns do
       %{selected_job: nil} ->
