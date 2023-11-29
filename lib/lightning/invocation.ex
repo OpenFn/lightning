@@ -13,6 +13,8 @@ defmodule Lightning.Invocation do
   alias Lightning.Invocation.{Dataclip, Run, Query}
   alias Lightning.Projects.Project
 
+  @workorders_search_timeout 30_000
+
   @doc """
   Returns the list of dataclips.
 
@@ -329,6 +331,13 @@ defmodule Lightning.Invocation do
         %SearchParams{} = search_params,
         params \\ %{}
       ) do
+    params =
+      update_in(
+        params,
+        [:options],
+        &Keyword.put(&1 || [], :timeout, search_workorders_timeout())
+      )
+
     project
     |> search_workorders_query(search_params)
     |> Repo.paginate(params)
@@ -536,4 +545,12 @@ defmodule Lightning.Invocation do
   @spec assemble_logs_for_run(Run.t()) :: binary()
   def assemble_logs_for_run(%Run{} = run),
     do: logs_for_run(run) |> Enum.map_join("\n", fn log -> log.message end)
+
+  @timeout_key {__MODULE__, :workorders_timeout}
+  defp search_workorders_timeout() do
+    with nil <- :persistent_term.get(@timeout_key, nil) do
+      :persistent_term.put(@timeout_key, @workorders_search_timeout)
+      @workorders_search_timeout
+    end
+  end
 end
