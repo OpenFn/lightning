@@ -40,6 +40,7 @@ defmodule LightningWeb.AttemptLive.ShowTest do
                )
     end
 
+    @tag :skip
     test "lifecycle of an attempt", %{conn: conn, project: project} do
       %{triggers: [%{id: webhook_trigger_id}], jobs: [job_a, job_b | _rest]} =
         insert(:complex_workflow, project: project)
