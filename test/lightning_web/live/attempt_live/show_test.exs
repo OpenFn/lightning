@@ -78,9 +78,11 @@ defmodule LightningWeb.AttemptLive.ShowTest do
 
       Lightning.Attempts.start_attempt(attempt)
 
+      render_async(view)
+
       assert view
              |> element("#attempt-detail-#{attempt_id}")
-             |> render_async() =~ "Running",
+             |> render() =~ "Running",
              "has running state"
 
       refute view
@@ -110,9 +112,11 @@ defmodule LightningWeb.AttemptLive.ShowTest do
       view |> select_run(attempt, job_a.name)
 
       # Check that the input dataclip is rendered
+      render_async(view)
+
       assert view
              |> element("#run-input-#{run.id}")
-             |> render_async()
+             |> render()
              |> Floki.parse_fragment!()
              |> Floki.text() =~ ~s({  "x": 1})
 
