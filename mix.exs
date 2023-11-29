@@ -39,7 +39,10 @@ defmodule Lightning.MixProject do
   def application do
     [
       mod: {Lightning.Application, [:timex]},
-      extra_applications: [:logger, :runtime_tools, :os_mon]
+      extra_applications: [:logger, :runtime_tools, :os_mon],
+      start_phases: [
+        ensure_db_config: []
+      ]
     ]
   end
 

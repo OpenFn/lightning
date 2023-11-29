@@ -168,6 +168,8 @@ bearing with us as we move towards our first stable Lightning release.)
   [#1327](https://github.com/OpenFn/Lightning/issues/1327)
 - Have user create workflow name before moving to the canvas
   [#1103](https://github.com/OpenFn/Lightning/issues/1103)
+- Partition `work_orders` by week and year and add functionality to maintain
+  the partitions.  [#1254](https://github.com/OpenFn/Lightning/issues/1254)
 
 ### Changed
 
