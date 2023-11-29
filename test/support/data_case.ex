@@ -24,6 +24,8 @@ defmodule Lightning.DataCase do
       import Ecto.Changeset
       import Ecto.Query
 
+      import Mox
+
       import Lightning.ModelHelpers
 
       import Lightning.DataCase
@@ -33,6 +35,8 @@ defmodule Lightning.DataCase do
   end
 
   setup tags do
+    Mox.stub_with(Lightning.Mock, Lightning.Stub)
+
     pid =
       Ecto.Adapters.SQL.Sandbox.start_owner!(Lightning.Repo,
         shared: not tags[:async]

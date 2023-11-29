@@ -16,6 +16,11 @@ defmodule Lightning do
     @callback current_time() :: DateTime.t()
     @callback broadcast(binary(), {atom(), any()}) :: :ok | {:error, term()}
     @callback subscribe(binary()) :: :ok | {:error, term()}
+    @callback transaction(fun_or_multi :: (... -> any()) | Ecto.Multi.t()) ::
+                {:ok, any()}
+                | {:error, any()}
+                | {:error, Ecto.Multi.name(), any(),
+                   %{required(Ecto.Multi.name()) => any()}}
 
     @pubsub Lightning.PubSub
 
@@ -29,6 +34,10 @@ defmodule Lightning do
 
     def subscribe(topic) do
       Phoenix.PubSub.subscribe(@pubsub, topic)
+    end
+
+    def transaction(fun_or_multi) do
+      Lightning.Repo.transaction(fun_or_multi)
     end
   end
 
@@ -45,6 +54,11 @@ defmodule Lightning do
 
   @impl true
   def subscribe(topic), do: impl().subscribe(topic)
+
+  @impl true
+  def transaction(fun_or_multi) do
+    impl().transaction(fun_or_multi)
+  end
 
   defp impl() do
     Application.get_env(:lightning, __MODULE__, API)

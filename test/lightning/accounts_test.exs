@@ -14,6 +14,8 @@ defmodule Lightning.AccountsTest do
   import Lightning.AccountsFixtures
   import Lightning.Factories
 
+  setup :verify_on_exit!
+
   test "has_activity_in_projects?/1 returns true if user has activity in a project (is associated with an attempt) and false otherwise." do
     user = AccountsFixtures.user_fixture()
     another_user = AccountsFixtures.user_fixture()
@@ -1267,35 +1269,47 @@ defmodule Lightning.AccountsTest do
       user_1 = user_fixture()
       user_2 = user_fixture()
 
-      attempt_1 = insert_attempt(user_1)
-      attempt_2 = insert_attempt(user_1)
+      _attempt_1 = insert_attempt(user_1)
+      _attempt_2 = insert_attempt(user_1)
       attempt_3 = insert_attempt(user_2)
-
-      _attempt_run_1_1 = insert_attempt_run(attempt_1)
-      _attempt_run_1_2 = insert_attempt_run(attempt_1)
-      _attempt_run_2_1 = insert_attempt_run(attempt_2)
-      attempt_run_3_1 = insert_attempt_run(attempt_3)
 
       Accounts.delete_user(user_1)
 
       assert only_record_for_type?(attempt_3)
-
-      assert only_record_for_type?(attempt_run_3_1)
     end
 
-    test "removes any associated LogLine records" do
+    test "rolls back any changes on failure" do
+      user = user_fixture()
+
+      attempt = insert_attempt(user)
+
+      broken_user =
+        user
+        |> Map.merge(%{__meta__: %Ecto.Schema.Metadata{state: :deleted}})
+
+      assert_raise Postgrex.Error, ~r/.+/, fn ->
+        Accounts.delete_user(broken_user)
+      end
+
+      assert only_record_for_type?(attempt)
+    end
+
+    test "indicates failure" do
       user_1 = user_fixture()
-      user_2 = user_fixture()
 
-      insert_attempt(user_1, build_list(2, :log_line))
-      insert_attempt(user_1, build_list(2, :log_line))
+      transaction_handler = fn multi ->
+        Lightning.Mock.transaction(multi)
+      end
 
-      attempt_3 = insert_attempt(user_2)
-      log_line_3_1 = insert(:log_line, attempt: attempt_3)
+      Lightning.Mock
+      |> expect(
+        :transaction,
+        fn %Ecto.Multi{} -> {:error, :does_not_matter, {:fake, :data}} end
+      )
 
-      Accounts.delete_user(user_1)
+      response = Accounts.delete_user(user_1, transaction_handler)
 
-      assert only_record_for_type?(log_line_3_1)
+      assert response == {:error, {:fake, :data}}
     end
 
     defp insert_attempt(user, log_lines \\ []) do
@@ -1306,10 +1320,6 @@ defmodule Lightning.AccountsTest do
         starting_job: build(:job),
         log_lines: log_lines
       )
-    end
-
-    defp insert_attempt_run(attempt) do
-      insert(:attempt_run, attempt: attempt, run: build(:run))
     end
   end
 
