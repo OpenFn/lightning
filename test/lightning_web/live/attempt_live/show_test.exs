@@ -116,7 +116,7 @@ defmodule LightningWeb.AttemptLive.ShowTest do
 
       assert view
              |> element("#run-input-#{run.id}")
-             |> render()
+             |> render_async()
              |> Floki.parse_fragment!()
              |> Floki.text() =~ ~s({  "x": 1})
 
