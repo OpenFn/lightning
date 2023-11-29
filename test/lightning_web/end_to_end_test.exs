@@ -48,17 +48,12 @@ defmodule LightningWeb.EndToEndTest do
       # wait to complete
       Events.subscribe(attempt)
 
-      Enum.any?(1..100, fn _i ->
-        receive do
-          %Events.AttemptUpdated{attempt: %{state: state}}
-          when state in Attempt.final_states() ->
-            assert state == :success
-            true
+      attempt_id = attempt.id
 
-          _other_msg ->
-            false
-        end
-      end)
+      assert_receive %Events.AttemptUpdated{
+                       attempt: %{id: ^attempt_id, state: :success}
+                     },
+                     115_000
 
       assert %{state: :success} = WorkOrders.get(wo_id)
 
@@ -160,17 +155,12 @@ defmodule LightningWeb.EndToEndTest do
       # wait to complete
       Events.subscribe(attempt)
 
-      Enum.any?(1..100, fn _i ->
-        receive do
-          %Events.AttemptUpdated{attempt: %{state: state}}
-          when state in Attempt.final_states() ->
-            assert state == :success
-            true
+      attempt_id = attempt.id
 
-          _other_msg ->
-            false
-        end
-      end)
+      assert_receive %Events.AttemptUpdated{
+                       attempt: %{id: ^attempt_id, state: :success}
+                     },
+                     115_000
 
       assert %{state: :success} = WorkOrders.get(wo_id)
 
@@ -300,7 +290,9 @@ defmodule LightningWeb.EndToEndTest do
       |> Keyword.merge(
         name: E2ETestRuntimeManager,
         start: true,
-        worker_secret: Lightning.Config.worker_secret()
+        worker_secret: Lightning.Config.worker_secret(),
+        ws_url: "ws://localhost:4002/worker",
+        port: Enum.random(2223..3333)
       )
 
     {:ok, rtm_server} = RuntimeManager.start_link(opts)
