@@ -828,7 +828,7 @@ defmodule Lightning.InvocationTest do
 
       SearchParams.status_list()
       |> Enum.map(fn status ->
-        insert_list(500, :workorder, workflow: workflow, state: status)
+        insert_list(1_000, :workorder, workflow: workflow, state: status)
       end)
 
       try do
@@ -838,7 +838,7 @@ defmodule Lightning.InvocationTest do
           %{
             page: 1,
             page_size: 10,
-            options: [timeout: 10]
+            options: [timeout: 20]
           }
         )
       rescue
