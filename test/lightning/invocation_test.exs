@@ -822,7 +822,6 @@ defmodule Lightning.InvocationTest do
                ).entries
     end
 
-    # @tag skip: true
     test "filters workorders sets timeout" do
       project = insert(:project)
       workflow = insert(:workflow, project: project)

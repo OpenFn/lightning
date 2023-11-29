@@ -11,6 +11,7 @@ and this project adheres to
 ### Added
 
 ### Changed
+- Increased History search timeout to 30s
 
 ### Fixed
 - Tooltip text clears later than the background
@@ -833,7 +834,6 @@ the Nodes and Edges [epic](https://github.com/OpenFn/Lightning/issues/793).
 - Set log level to info
 - Add Beta checkbox to register page
 - User roles and permissions
-- Increased History search timeout to 30s
 
 ### Fixed
 
