@@ -821,6 +821,32 @@ defmodule Lightning.InvocationTest do
                  })
                ).entries
     end
+
+    # @tag skip: true
+    test "filters workorders sets timeout" do
+      project = insert(:project)
+      workflow = insert(:workflow, project: project)
+
+      SearchParams.status_list()
+      |> Enum.map(fn status ->
+        insert_list(500, :workorder, workflow: workflow, state: status)
+      end)
+
+      try do
+        Lightning.Invocation.search_workorders(
+          project,
+          SearchParams.new(%{"status" => SearchParams.status_list()}),
+          %{
+            page: 1,
+            page_size: 10,
+            options: [timeout: 10]
+          }
+        )
+      rescue
+        e in [DBConnection.ConnectionError] ->
+          assert e.message =~ "timeout"
+      end
+    end
   end
 
   describe "search_workorders_query/2" do
