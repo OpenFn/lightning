@@ -36,13 +36,14 @@ defmodule Lightning.Runtime.RuntimeManager do
     @moduledoc false
 
     defstruct backoff: [min: 0.5, max: 5],
-              env: [],
-              ws_url: "ws://localhost:4000/worker",
-              cmd: ~w(node ./node_modules/.bin/worker),
-              cd: Path.expand("../../../assets", __DIR__),
-              worker_secret: nil,
               capacity: 5,
-              repo_dir: nil
+              cd: Path.expand("../../../assets", __DIR__),
+              cmd: ~w(node ./node_modules/.bin/worker),
+              env: [],
+              port: 2222,
+              repo_dir: nil,
+              worker_secret: nil,
+              ws_url: "ws://localhost:4000/worker"
 
     @doc """
     Parses the keyword list of start arguments and returns a tuple,
@@ -88,14 +89,17 @@ defmodule Lightning.Runtime.RuntimeManager do
         {:backoff, v} ->
           ~w(--backoff #{v[:min]}/#{v[:max]})
 
-        {:ws_url, v} ->
-          ~w(--lightning #{v})
-
         {:capacity, v} ->
           ~w(--capacity #{v})
 
+        {:port, v} when is_integer(v) ->
+          ~w(--port #{v})
+
         {:repo_dir, v} when is_binary(v) ->
           ~w(--repo-dir #{v})
+
+        {:ws_url, v} ->
+          ~w(--lightning #{v})
 
         _ ->
           [nil]
