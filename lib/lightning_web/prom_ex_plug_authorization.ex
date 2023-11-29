@@ -9,14 +9,18 @@ defmodule LightningWeb.PromExPlugAuthorization do
   def call(conn, _vars) do
     config = Application.get_env(:lightning, Lightning.PromEx)
 
-    valid_token?(
-      Plug.Conn.get_req_header(conn, "authorization"),
-      config[:metrics_endpoint_token]
-    ) &&
-      valid_scheme?(
-        Atom.to_string(conn.scheme),
-        config[:metrics_endpoint_scheme]
-      )
+    if config[:metrics_endpoint_authorization_required] do
+      valid_token?(
+        Plug.Conn.get_req_header(conn, "authorization"),
+        config[:metrics_endpoint_token]
+      ) &&
+        valid_scheme?(
+          Atom.to_string(conn.scheme),
+          config[:metrics_endpoint_scheme]
+        )
+    else
+      true
+    end
   end
 
   defp valid_token?(["Bearer " <> provided_token], expected_token) do
