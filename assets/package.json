@@ -35,7 +35,7 @@
     "zustand": "^4.3.7"
   },
   "devDependencies": {
-    "@openfn/ws-worker": "^0.2.9",
+    "@openfn/ws-worker": "^0.2.11",
     "@types/marked": "^4.0.8",
     "@types/react": "^18.0.15",
     "@types/react-dom": "^18.0.6",
