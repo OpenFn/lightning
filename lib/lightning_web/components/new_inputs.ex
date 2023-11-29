@@ -382,4 +382,13 @@ defmodule LightningWeb.Components.NewInputs do
   def translate_errors(errors, field) when is_list(errors) do
     for {^field, {msg, opts}} <- errors, do: translate_error({msg, opts})
   end
+
+  @doc """
+  Translates the errors for a given Ecto Changeset
+  """
+  def translate_errors(changeset) do
+    Ecto.Changeset.traverse_errors(changeset, fn {msg, opts} ->
+      translate_error({msg, opts})
+    end)
+  end
 end
