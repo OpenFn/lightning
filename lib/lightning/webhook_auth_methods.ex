@@ -655,15 +655,54 @@ defmodule Lightning.WebhookAuthMethods do
       {:error, %Ecto.Changeset{}}
       ```
   """
-  @spec schedule_for_deletion(WebhookAuthMethod.t()) ::
-          {:ok, WebhookAuthMethod.t()} | {:error, Ecto.Changeset.t()}
-  def schedule_for_deletion(%WebhookAuthMethod{} = webhook_auth_method) do
-    deletion_date = scheduled_deletion_date()
 
-    WebhookAuthMethod.changeset(webhook_auth_method, %{
-      "scheduled_deletion" => deletion_date
-    })
-    |> Repo.update()
+  @spec schedule_for_deletion(WebhookAuthMethod.t(), actor: User.t()) ::
+          {:ok, WebhookAuthMethod.t()} | {:error, Ecto.Changeset.t()}
+  def schedule_for_deletion(%WebhookAuthMethod{} = webhook_auth_method,
+        actor: %User{id: user_id}
+      ) do
+    if webhook_auth_method.scheduled_deletion do
+      changeset =
+        WebhookAuthMethod.changeset(webhook_auth_method, %{})
+        |> Ecto.Changeset.add_error(
+          :scheduled_deletion,
+          "already scheduled for deletion"
+        )
+
+      {:error, changeset}
+    else
+      deletion_date = scheduled_deletion_date()
+
+      Multi.new()
+      |> Multi.update(
+        :auth_method,
+        WebhookAuthMethod.changeset(webhook_auth_method, %{
+          "scheduled_deletion" => deletion_date
+        })
+      )
+      |> Multi.insert(:audit, fn %{auth_method: auth_method} ->
+        WebhookAuthMethodAudit.event(
+          "deleted",
+          auth_method.id,
+          user_id,
+          %{
+            before: %{scheduled_deletion: nil},
+            after: %{scheduled_deletion: deletion_date}
+          }
+        )
+      end)
+      |> Repo.transaction()
+      |> case do
+        {:ok, %{auth_method: auth_method}} ->
+          {:ok, auth_method}
+
+        {:error, :auth_method, changeset, _} ->
+          {:error, changeset}
+
+        {:error, :audit, changeset, _} ->
+          {:error, changeset}
+      end
+    end
   end
 
   defp scheduled_deletion_date do
