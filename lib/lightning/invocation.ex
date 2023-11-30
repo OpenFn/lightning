@@ -280,22 +280,6 @@ defmodule Lightning.Invocation do
   end
 
   @doc """
-  Deletes a run.
-
-  ## Examples
-
-      iex> delete_run(run)
-      {:ok, %Run{}}
-
-      iex> delete_run(run)
-      {:error, %Ecto.Changeset{}}
-
-  """
-  def delete_run(%Run{} = run) do
-    Repo.delete(run)
-  end
-
-  @doc """
   Returns an `%Ecto.Changeset{}` for tracking run changes.
 
   ## Examples

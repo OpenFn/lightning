@@ -47,8 +47,6 @@ defmodule Lightning.Invocation.Run do
     belongs_to :input_dataclip, Dataclip
     belongs_to :output_dataclip, Dataclip
 
-    belongs_to :previous, __MODULE__
-
     has_many :log_lines, LogLine, preload_order: [asc: :timestamp]
 
     many_to_many :attempts, Attempt, join_through: AttemptRun
@@ -75,21 +73,6 @@ defmodule Lightning.Invocation.Run do
       error_type: error_type
     })
     |> validate_required([:finished_at, :output_dataclip_id, :exit_reason])
-  end
-
-  @doc """
-  Creates a new Run changeset, but copies over certain fields.
-  This is used to create new runs for retrys.
-  """
-  @spec new_from(run :: __MODULE__.t()) :: Ecto.Changeset.t(__MODULE__.t())
-  def new_from(%__MODULE__{} = run) do
-    attrs =
-      [:job_id, :input_dataclip_id, :previous_id]
-      |> Enum.reduce(%{}, fn key, acc ->
-        Map.put(acc, key, Map.get(run, key))
-      end)
-
-    new(attrs)
   end
 
   @doc false
