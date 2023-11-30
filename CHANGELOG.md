@@ -11,9 +11,12 @@ and this project adheres to
 ### Added
 
 ### Changed
+
 - Increased History search timeout to 30s
+  [#1461](https://github.com/OpenFn/Lightning/issues/1461)
 
 ### Fixed
+
 - Tooltip text clears later than the background
   [#1094](https://github.com/OpenFn/Lightning/issues/1094)
 
