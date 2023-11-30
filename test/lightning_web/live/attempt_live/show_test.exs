@@ -40,7 +40,6 @@ defmodule LightningWeb.AttemptLive.ShowTest do
                )
     end
 
-    @tag :skip
     test "lifecycle of an attempt", %{conn: conn, project: project} do
       %{triggers: [%{id: webhook_trigger_id}], jobs: [job_a, job_b | _rest]} =
         insert(:complex_workflow, project: project)
@@ -79,11 +78,9 @@ defmodule LightningWeb.AttemptLive.ShowTest do
 
       Lightning.Attempts.start_attempt(attempt)
 
-      render_async(view)
-
       assert view
              |> element("#attempt-detail-#{attempt_id}")
-             |> render() =~ "Running",
+             |> render_async() =~ "Running",
              "has running state"
 
       refute view
@@ -113,11 +110,9 @@ defmodule LightningWeb.AttemptLive.ShowTest do
       view |> select_run(attempt, job_a.name)
 
       # Check that the input dataclip is rendered
-      render_async(view)
-
       assert view
              |> element("#run-input-#{run.id}")
-             |> render()
+             |> render_async()
              |> Floki.parse_fragment!()
              |> Floki.text() =~ ~s({  "x": 1})
 
@@ -229,15 +224,17 @@ defmodule LightningWeb.AttemptLive.ShowTest do
   defp output_is_empty?(view, run) do
     view
     |> element("#run-output-#{run.id}")
-    |> render_async()
-    |> Floki.parse_fragment!()
-    |> Floki.text() =~
-      ~r/^[\n\s]+Nothing yet\.\.\.[\n\s]+$/
+    |> has_nothing_yet?()
   end
 
   defp log_is_empty?(view, attempt) do
     view
     |> element("#attempt-log-#{attempt.id}")
+    |> has_nothing_yet?()
+  end
+
+  defp has_nothing_yet?(elem) do
+    elem
     |> render_async()
     |> Floki.parse_fragment!()
     |> Floki.text() =~

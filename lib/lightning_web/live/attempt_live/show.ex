@@ -180,7 +180,8 @@ defmodule LightningWeb.AttemptLive.Show do
     %{selected_run: selected_run} = socket.assigns
 
     if selected_run && socket.assigns.input_dataclip == false do
-      Task.start(fn ->
+      socket
+      |> assign_async(:input_dataclip, fn ->
         lines =
           from(d in Ecto.assoc(selected_run, :input_dataclip),
             select: d.body
@@ -194,9 +195,9 @@ defmodule LightningWeb.AttemptLive.Show do
           end)
 
         send(live_view_pid, {:input_dataclip, lines})
-      end)
 
-      socket |> assign(:input_dataclip, true)
+        {:ok, %{input_dataclip: selected_run.id}}
+      end)
     else
       socket
     end
@@ -209,13 +210,14 @@ defmodule LightningWeb.AttemptLive.Show do
 
     if selected_run && selected_run.output_dataclip_id &&
          socket.assigns.output_dataclip == false do
-      Task.start(fn ->
+      socket
+      |> assign_async(:output_dataclip, fn ->
         lines = get_output_dataclip_lines(selected_run)
 
         send(live_view_pid, {:output_dataclip, lines})
-      end)
 
-      socket |> assign(:output_dataclip, true)
+        {:ok, %{output_dataclip: selected_run.id}}
+      end)
     else
       socket
     end
