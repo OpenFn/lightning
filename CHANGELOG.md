@@ -19,6 +19,11 @@ and this project adheres to
 
 - Fix for liveview crash when token expires or gets deleted after mount
   [#1318](https://github.com/OpenFn/Lightning/issues/1318)
+- Remove two obsolete methods related to Run: `Lightning.Invocation.delete_run`
+  and `Lightning.Invocation.Run.new_from`.
+  [#1254](https://github.com/OpenFn/Lightning/issues/1254)
+- Remove obsolete field `previous_id` from `runs` table.
+  [#1254](https://github.com/OpenFn/Lightning/issues/1254)
 
 ## [v0.10.4] - 2023-11-30
 
@@ -194,11 +199,6 @@ bearing with us as we move towards our first stable Lightning release.)
   [#1103](https://github.com/OpenFn/Lightning/issues/1103)
 - Allow PromEx authorization to be disabled
   [#1483](https://github.com/OpenFn/Lightning/issues/1483)
-- Remove two obsolete methods related to Run: `Lightning.Invocation.delete_run`
-  and `Lightning.Invocation.Run.new_from`.
-  [#1254](https://github.com/OpenFn/Lightning/issues/1254)
-- Remove obsolete field `previous_id` from `runs` table.
-  [#1254](https://github.com/OpenFn/Lightning/issues/1254)
 
 ### Changed
 
