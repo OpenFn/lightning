@@ -12,6 +12,9 @@ and this project adheres to
 
 ### Changed
 
+- Limit entries count on term work orders search
+  [#1461](https://github.com/OpenFn/Lightning/issues/1461)
+
 ### Fixed
 
 - Use checkbox on boolean credential fields

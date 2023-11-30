@@ -14,6 +14,7 @@ defmodule Lightning.Invocation do
   alias Lightning.Projects.Project
 
   @workorders_search_timeout 30_000
+  @workorders_count_limit 50
 
   @doc """
   Returns the list of dataclips.
@@ -312,16 +313,23 @@ defmodule Lightning.Invocation do
 
   def search_workorders(
         %Project{} = project,
-        %SearchParams{} = search_params,
+        %SearchParams{search_term: search_term} = search_params,
         params \\ %{}
       ) do
     params =
       update_in(
         params,
         [:options],
-        fn
-          nil -> [timeout: @workorders_search_timeout]
-          options -> options
+        fn options ->
+          [timeout: @workorders_search_timeout]
+          |> Keyword.merge(options || [])
+          |> then(fn options ->
+            if search_term do
+              Keyword.put(options, :limit, @workorders_count_limit)
+            else
+              options
+            end
+          end)
         end
       )
 
