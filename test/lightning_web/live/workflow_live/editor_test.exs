@@ -317,6 +317,7 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       project: project,
       workflow: workflow
     } do
+      project_credential = insert(:project_credential, project: project)
       job = workflow.jobs |> hd()
 
       {:ok, view, _html} =
@@ -332,6 +333,26 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
              |> render_click("request_metadata", %{})
 
       assert_push_event(view, "metadata_ready", %{"error" => "no_credential"})
+
+      view
+      |> form("#workflow-form",
+        workflow: %{
+          jobs: %{
+            "0" => %{
+              "project_credential_id" => project_credential.id
+            }
+          }
+        }
+      )
+      |> render_change()
+
+      assert view
+             |> with_target("#job-editor-pane-#{job.id}")
+             |> render_click("request_metadata", %{})
+
+      assert_push_event(view, "metadata_ready", %{
+        "error" => "no_metadata_function"
+      })
     end
   end
 end

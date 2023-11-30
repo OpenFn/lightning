@@ -96,7 +96,7 @@ defmodule Lightning.Factories do
   end
 
   def credential_factory do
-    %Lightning.Credentials.Credential{}
+    %Lightning.Credentials.Credential{body: %{}}
   end
 
   def project_credential_factory do
