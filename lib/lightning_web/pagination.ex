@@ -89,25 +89,31 @@ defmodule LightningWeb.Pagination do
     |> Enum.filter(& &1)
   end
 
+  attr :async_page, Phoenix.LiveView.AsyncResult, default: nil
+
   def pagination_bar(assigns) do
     ~H"""
     <div class="bg-white px-4 py-3 flex items-center justify-between border-t border-secondary-200 sm:px-6">
       <div>
-        <%= if @page.total_entries == 0 do %>
-          <p class="text-sm text-secondary-700">No results found</p>
+        <%= if @async_page == Phoenix.LiveView.AsyncResult.loading() do %>
+          <p class="text-sm text-secondary-700"></p>
         <% else %>
-          <p class="text-sm text-secondary-700">
-            Showing
-            <span class="font-medium">
-              <%= @page.page_number * @page.page_size - @page.page_size + 1 %>
-            </span>
-            to
-            <span class="font-medium">
-              <%= min(@page.page_number * @page.page_size, @page.total_entries) %>
-            </span>
-            of <span class="font-medium"><%= @page.total_entries %></span>
-            total results
-          </p>
+          <%= if @page.total_entries == 0 do %>
+            <p class="text-sm text-secondary-700">No results found</p>
+          <% else %>
+            <p class="text-sm text-secondary-700">
+              Showing
+              <span class="font-medium">
+                <%= @page.page_number * @page.page_size - @page.page_size + 1 %>
+              </span>
+              to
+              <span class="font-medium">
+                <%= min(@page.page_number * @page.page_size, @page.total_entries) %>
+              </span>
+              of <span class="font-medium"><%= @page.total_entries %></span>
+              total results
+            </p>
+          <% end %>
         <% end %>
       </div>
       <nav

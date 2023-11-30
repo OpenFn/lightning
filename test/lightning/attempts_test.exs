@@ -4,6 +4,7 @@ defmodule Lightning.AttemptsTest do
   import Lightning.Factories
 
   alias Lightning.WorkOrders
+  alias Lightning.Attempt
   alias Lightning.Attempts
 
   describe "enqueue/1" do
@@ -290,9 +291,10 @@ defmodule Lightning.AttemptsTest do
 
       Lightning.WorkOrders.subscribe(workflow.project_id)
 
-      {:ok, attempt} = Attempts.start_attempt(attempt)
+      assert {:ok, %Attempt{started_at: started_at}} =
+               Attempts.start_attempt(attempt)
 
-      assert attempt.started_at <= DateTime.utc_now()
+      assert DateTime.compare(started_at, DateTime.utc_now()) == :lt
 
       workorder_id = workorder.id
 
