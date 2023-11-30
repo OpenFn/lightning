@@ -17,6 +17,9 @@ and this project adheres to
 
 ### Fixed
 
+- Fix for liveview crash when token expires or gets deleted after mount
+  [#1318](https://github.com/OpenFn/Lightning/issues/1318)
+
 ## [v0.10.4] - 2023-11-30
 
 ### Added
