@@ -289,7 +289,6 @@ defmodule LightningWeb.EndToEndTest do
         name: E2ETestRuntimeManager,
         start: true,
         worker_secret: Lightning.Config.worker_secret(),
-        ws_url: "ws://localhost:4002/worker",
         port: Enum.random(2223..3333)
       )
 
