@@ -68,6 +68,16 @@ defmodule LightningWeb.OidcController do
       code: code
     )
 
-    html(conn, "<html><body>You may close this window</body></html>")
+    html(conn, """
+      <html>
+        <body>
+          <script type="text/javascript">
+            window.onload = function() {
+              window.close();
+            }
+          </script>
+        </body>
+      </html>
+    """)
   end
 end

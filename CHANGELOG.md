@@ -46,6 +46,8 @@ and this project adheres to
 
 - Create new workflow button sizing regression
   [#1405](https://github.com/OpenFn/Lightning/issues/1405)
+- Google credential creation  and automatic closing of oAuth tab  
+  [#1109](https://github.com/OpenFn/Lightning/issues/1109)
 - Exporting project breaks the navigation of the page
   [#1440](https://github.com/OpenFn/Lightning/issues/1440)
 
