@@ -23,6 +23,8 @@ and this project adheres to
   [#1145](https://github.com/OpenFn/Lightning/issues/1145)
 - Fix for adding ellipses on credential info on job editor heading
   [#1428](https://github.com/OpenFn/Lightning/issues/1428)
+- Fix for liveview crash when token expires or gets deleted after mount
+  [#1394](https://github.com/OpenFn/Lightning/issues/1394)
 
 ## [v0.10.3] - 2023-11-28
 
@@ -46,7 +48,7 @@ and this project adheres to
 
 - Create new workflow button sizing regression
   [#1405](https://github.com/OpenFn/Lightning/issues/1405)
-- Google credential creation  and automatic closing of oAuth tab  
+- Google credential creation  and automatic closing of oAuth tab
   [#1109](https://github.com/OpenFn/Lightning/issues/1109)
 - Exporting project breaks the navigation of the page
   [#1440](https://github.com/OpenFn/Lightning/issues/1440)
