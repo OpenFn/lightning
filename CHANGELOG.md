@@ -23,6 +23,9 @@ and this project adheres to
   [#1145](https://github.com/OpenFn/Lightning/issues/1145)
 - Fix for adding ellipses on credential info on job editor heading
   [#1428](https://github.com/OpenFn/Lightning/issues/1428)
+- Enable user to reauthorize and obtain a new refresh token.
+  [#1495](https://github.com/OpenFn/Lightning/issues/1495)
+
 
 ## [v0.10.3] - 2023-11-28
 
