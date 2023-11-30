@@ -185,20 +185,14 @@ url_scheme = System.get_env("URL_SCHEME", "https")
 # given, otherwise it uses the existing config and lastly defaults to 4000.
 
 port =
-  case config_env() do
-    :test ->
-      Application.get_env(:lightning, LightningWeb.Endpoint)[:url][:port]
-
-    _dev_prod ->
-      (System.get_env("PORT") ||
-         Application.get_env(:lightning, LightningWeb.Endpoint)
-         |> Keyword.get(:http, port: nil)
-         |> Keyword.get(:port) ||
-         4000)
-      |> case do
-        p when is_binary(p) -> String.to_integer(p)
-        p when is_integer(p) -> p
-      end
+  (System.get_env("PORT") ||
+     Application.get_env(:lightning, LightningWeb.Endpoint)
+     |> Keyword.get(:http, port: nil)
+     |> Keyword.get(:port) ||
+     4000)
+  |> case do
+    p when is_binary(p) -> String.to_integer(p)
+    p when is_integer(p) -> p
   end
 
 # Use the `PRIMARY_ENCRYPTION_KEY` env variable if available, else fall back
