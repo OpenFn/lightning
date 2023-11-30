@@ -13,7 +13,7 @@
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-EPF2X7PV.js"></script>
-    <script src="dist/sidebar_items-F0DC7DF9.js"></script>
+    <script src="dist/sidebar_items-41E444EA.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -187,17 +187,6 @@ with it as well.</p><p>When a run finished, it's <code class="inline">:exit_reas
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#new_from/1" translate="no">new_from(run)</a>
-
-      </div>
-
-        <div class="summary-synopsis"><p>Creates a new Run changeset, but copies over certain fields.
-This is used to create new runs for retrys.</p></div>
-
-    </div>
-
-    <div class="summary-row">
-      <div class="summary-signature">
         <a href="#validate/1" translate="no">validate(changeset)</a>
 
       </div>
@@ -255,8 +244,6 @@ This is used to create new runs for retrys.</p></div>
   log_lines: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
   output_dataclip: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
   output_dataclip_id: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
-  previous: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
-  previous_id: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
   started_at: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
   updated_at: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>()
 }</pre>
@@ -287,7 +274,7 @@ This is used to create new runs for retrys.</p></div>
     </a>
     <h1 class="signature" translate="no">finished(run, output_dataclip_id, arg)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation/run.ex#L65" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation/run.ex#L63" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -311,7 +298,7 @@ This is used to create new runs for retrys.</p></div>
     </a>
     <h1 class="signature" translate="no">new(attrs \\ %{})</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation/run.ex#L59" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation/run.ex#L57" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -322,35 +309,6 @@ This is used to create new runs for retrys.</p></div>
   <section class="docstring">
 
 
-  </section>
-</section>
-<section class="detail" id="new_from/1">
-
-  <div class="detail-header">
-    <a href="#new_from/1" class="detail-link" title="Link to this function">
-      <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
-    </a>
-    <h1 class="signature" translate="no">new_from(run)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation/run.ex#L85" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
-
-
-  </div>
-
-  <section class="docstring">
-
-      <div class="specs">
-
-          <pre translate="no"><span class="attribute">@spec</span> new_from(run :: <a href="#t:t/0">t</a>()) :: <a href="https://hexdocs.pm/ecto/3.10.3/Ecto.Changeset.html#t:t/1">Ecto.Changeset.t</a>(<a href="#t:t/0">t</a>())</pre>
-
-      </div>
-
-<p>Creates a new Run changeset, but copies over certain fields.
-This is used to create new runs for retrys.</p>
   </section>
 </section>
 <section class="detail" id="validate/1">
@@ -362,7 +320,7 @@ This is used to create new runs for retrys.</p>
     </a>
     <h1 class="signature" translate="no">validate(changeset)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation/run.ex#L114" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation/run.ex#L97" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>

@@ -13,7 +13,7 @@
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-EPF2X7PV.js"></script>
-    <script src="dist/sidebar_items-F0DC7DF9.js"></script>
+    <script src="dist/sidebar_items-41E444EA.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -220,7 +220,8 @@ and this project adheres to
   <span class="text">Fixed</span>
 </h3>
 <ul><li>Create new workflow button sizing regression
-<a href="https://github.com/OpenFn/Lightning/issues/1405">#1405</a></li><li>Google credential creation and automatic closing of oAuth tab<br/><a href="https://github.com/OpenFn/Lightning/issues/1109">#1109</a></li><li>Exporting project breaks the navigation of the page
+<a href="https://github.com/OpenFn/Lightning/issues/1405">#1405</a></li><li>Google credential creation and automatic closing of oAuth tab
+<a href="https://github.com/OpenFn/Lightning/issues/1109">#1109</a></li><li>Exporting project breaks the navigation of the page
 <a href="https://github.com/OpenFn/Lightning/issues/1440">#1440</a></li></ul><h2 id="v0-10-2-2023-11-21" class="section-heading">
   <a href="#v0-10-2-2023-11-21" class="hover-link">
     <i class="ri-link-m" aria-hidden="true"></i>
@@ -301,7 +302,7 @@ workorders up to <code class="inline">v0.10.0</code>, though the granularity of 
 will be less than <code class="inline">v0.10.0</code> and the final states are not guaranteed to be
 accurate for workflows with multiple branches and leaf nodes with varying exit
 reasons.</p><p>The migration scripts can be run with a single function call in SetupUtils from
-a connect <code class="inline">iex</code> session:</p><pre><code class="makeup elixir" translate="no"><span class="nc">Lightning.SetupUtils</span><span class="o">.</span><span class="n">approximate_state_for_attempts_and_workorders</span><span class="p" data-group-id="5090905552-1">(</span><span class="p" data-group-id="5090905552-1">)</span></code></pre><p>Note that (like lots of <em>other</em> functionality in <code class="inline">SetupUtils</code>, calling this
+a connect <code class="inline">iex</code> session:</p><pre><code class="makeup elixir" translate="no"><span class="nc">Lightning.SetupUtils</span><span class="o">.</span><span class="n">approximate_state_for_attempts_and_workorders</span><span class="p" data-group-id="6611055176-1">(</span><span class="p" data-group-id="6611055176-1">)</span></code></pre><p>Note that (like lots of <em>other</em> functionality in <code class="inline">SetupUtils</code>, calling this
 function is a destructive action and you should only do it if you've backed up
 your data and you know what you're doing.)</p><p>As always, we recommend backing up your data before migrating. (And thanks for
 bearing with us as we move towards our first stable Lightning release.)</p><h3 id="added-5" class="section-heading">
@@ -337,7 +338,10 @@ modification to not leave orphaned attempts given the removal of the foreign
 key from <code class="inline">attempts</code>. <a href="https://github.com/OpenFn/Lightning/issues/1254">#1254</a></li><li>Show tooltip for cloned runs in history page
 <a href="https://github.com/OpenFn/Lightning/issues/1327">#1327</a></li><li>Have user create workflow name before moving to the canvas
 <a href="https://github.com/OpenFn/Lightning/issues/1103">#1103</a></li><li>Allow PromEx authorization to be disabled
-<a href="https://github.com/OpenFn/Lightning/issues/1483">#1483</a></li></ul><h3 id="changed-5" class="section-heading">
+<a href="https://github.com/OpenFn/Lightning/issues/1483">#1483</a></li><li>Remove two obsolete methods related to Run: <code class="inline">Lightning.Invocation.delete_run</code>
+and <code class="inline">Lightning.Invocation.Run.new_from</code>.
+<a href="https://github.com/OpenFn/Lightning/issues/1254">#1254</a></li><li>Remove obsolete field <code class="inline">previous_id</code> from <code class="inline">runs</code> table.
+<a href="https://github.com/OpenFn/Lightning/issues/1254">#1254</a></li></ul><h3 id="changed-5" class="section-heading">
   <a href="#changed-5" class="hover-link">
     <i class="ri-link-m" aria-hidden="true"></i>
   </a>
