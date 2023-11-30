@@ -350,9 +350,14 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
              |> with_target("#job-editor-pane-#{job.id}")
              |> render_click("request_metadata", %{})
 
-      assert_push_event(view, "metadata_ready", %{
-        "error" => "no_metadata_function"
-      })
+      assert_push_event(
+        view,
+        "metadata_ready",
+        %{
+          "error" => "no_metadata_function"
+        },
+        1000
+      )
     end
   end
 end
