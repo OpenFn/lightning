@@ -194,7 +194,7 @@ and this project adheres to
   <span class="text">Fixed</span>
 </h3>
 <ul><li>Create new workflow button sizing regression
-<a href="https://github.com/OpenFn/Lightning/issues/1405">#1405</a></li><li>Exporting project breaks the navigation of the page
+<a href="https://github.com/OpenFn/Lightning/issues/1405">#1405</a></li><li>Google credential creation  and automatic closing of oAuth tab<br/><a href="https://github.com/OpenFn/Lightning/issues/1109">#1109</a></li><li>Exporting project breaks the navigation of the page
 <a href="https://github.com/OpenFn/Lightning/issues/1440">#1440</a></li></ul><h2 id="v0-10-2-2023-11-21" class="section-heading">
   <a href="#v0-10-2-2023-11-21" class="hover-link">
     <i class="ri-link-m" aria-hidden="true"></i>
@@ -275,7 +275,7 @@ workorders up to <code class="inline">v0.10.0</code>, though the granularity of 
 will be less than <code class="inline">v0.10.0</code> and the final states are not guaranteed to be
 accurate for workflows with multiple branches and leaf nodes with varying exit
 reasons.</p><p>The migration scripts can be run with a single function call in SetupUtils from
-a connect <code class="inline">iex</code> session:</p><pre><code class="makeup elixir" translate="no"><span class="nc">Lightning.SetupUtils</span><span class="o">.</span><span class="n">approximate_state_for_attempts_and_workorders</span><span class="p" data-group-id="2329575100-1">(</span><span class="p" data-group-id="2329575100-1">)</span></code></pre><p>Note that (like lots of <em>other</em> functionality in <code class="inline">SetupUtils</code>, calling this
+a connect <code class="inline">iex</code> session:</p><pre><code class="makeup elixir" translate="no"><span class="nc">Lightning.SetupUtils</span><span class="o">.</span><span class="n">approximate_state_for_attempts_and_workorders</span><span class="p" data-group-id="5970825297-1">(</span><span class="p" data-group-id="5970825297-1">)</span></code></pre><p>Note that (like lots of <em>other</em> functionality in <code class="inline">SetupUtils</code>, calling this
 function is a destructive action and you should only do it if you've backed up
 your data and you know what you're doing.)</p><p>As always, we recommend backing up your data before migrating. (And thanks for
 bearing with us as we move towards our first stable Lightning release.)</p><h3 id="added-4" class="section-heading">
