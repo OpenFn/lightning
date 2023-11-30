@@ -283,20 +283,13 @@ defmodule LightningWeb.EndToEndTest do
   end
 
   defp start_runtime_manager(_context) do
-    ws_url =
-      struct!(
-        URI,
-        LightningWeb.Endpoint.config(:url) ++ [scheme: "ws", path: "/worker"]
-      )
-      |> URI.to_string()
-
     opts =
       Application.get_env(:lightning, RuntimeManager)
       |> Keyword.merge(
         name: E2ETestRuntimeManager,
         start: true,
         worker_secret: Lightning.Config.worker_secret(),
-        ws_url: ws_url,
+        ws_url: "ws://localhost:4002/worker",
         port: Enum.random(2223..3333)
       )
 
