@@ -696,7 +696,10 @@ defmodule Lightning.WebhookAuthMethods do
         {:ok, %{auth_method: auth_method}} ->
           {:ok, auth_method}
 
-        {:error, :auth_method, changeset, _changes} ->
+        {:error, :auth_method, changeset, _} ->
+          {:error, changeset}
+
+        {:error, :audit, changeset, _} ->
           {:error, changeset}
       end
     end
