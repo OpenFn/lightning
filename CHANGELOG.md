@@ -14,7 +14,6 @@ and this project adheres to
 
 - Increased History search timeout to 30s
   [#1461](https://github.com/OpenFn/Lightning/issues/1461)
-
 - Use dynamic Endpoint config only on prod
   [#1494](https://github.com/OpenFn/Lightning/pull/1494)
   
