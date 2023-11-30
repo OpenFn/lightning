@@ -19,6 +19,8 @@ and this project adheres to
 
 - Tooltip text clears later than the background
   [#1094](https://github.com/OpenFn/Lightning/issues/1094)
+- Temporary fix to superuser UI for managing project users
+  [#1145](https://github.com/OpenFn/Lightning/issues/1145)
 
 ## [v0.10.3] - 2023-11-28
 

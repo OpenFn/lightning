@@ -43,17 +43,29 @@ defmodule Lightning.Projects.ProjectUser do
     timestamps()
   end
 
-  def changeset(comment, %{"delete" => "true"}) do
-    %{change(comment, delete: true) | action: :delete}
-  end
-
   @doc false
   def changeset(project_user, attrs) do
     project_user
-    |> cast(attrs, [:user_id, :project_id, :role, :digest, :failure_alert])
+    |> cast(attrs, [
+      :delete,
+      :user_id,
+      :project_id,
+      :role,
+      :digest,
+      :failure_alert
+    ])
     |> validate_required([:user_id])
     |> unique_constraint([:project_id, :user_id],
       message: "user already a member of this project."
     )
+    |> maybe_remove_user()
+  end
+
+  defp maybe_remove_user(changeset) do
+    if get_change(changeset, :delete) do
+      %{changeset | action: :delete}
+    else
+      changeset
+    end
   end
 end

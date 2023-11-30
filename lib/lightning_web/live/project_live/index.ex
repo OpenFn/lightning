@@ -52,7 +52,7 @@ defmodule LightningWeb.ProjectLive.Index do
     |> assign(
       page_title: "New Project",
       active_menu_item: :projects,
-      project: %Lightning.Projects.Project{},
+      project: %Lightning.Projects.Project{project_users: []},
       users: Lightning.Accounts.list_users()
     )
   end
