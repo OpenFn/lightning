@@ -2,6 +2,7 @@ defmodule LightningWeb.AttemptLive.AttemptViewerLive do
   use LightningWeb, {:live_view, container: {:div, []}}
 
   import LightningWeb.AttemptLive.Components
+  alias LightningWeb.Components.Viewers
   alias Lightning.Attempts
 
   alias Lightning.Repo
@@ -18,7 +19,7 @@ defmodule LightningWeb.AttemptLive.AttemptViewerLive do
         data-selected-run-id={@selected_run_id}
         class="flex-1 max-h-full min-h-0 flex flex-col"
       >
-        <.log_view
+        <Viewers.log_viewer
           id={@attempt.id}
           stream={@streams.log_lines}
           class="flex-0 max-h-full"
@@ -93,6 +94,8 @@ defmodule LightningWeb.AttemptLive.AttemptViewerLive do
 
   @impl true
   def handle_info(%Attempts.Events.RunStarted{run: run}, socket) do
+    # TODO: add the run to a list of runs in assigns, preseeded with the
+    # attempts' runs (if any)
     {:noreply, socket |> maybe_set_selected_run_id([run])}
   end
 

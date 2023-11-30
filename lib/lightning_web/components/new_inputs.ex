@@ -257,6 +257,17 @@ defmodule LightningWeb.Components.NewInputs do
     """
   end
 
+  def input(%{type: "hidden"} = assigns) do
+    ~H"""
+    <input
+      type="hidden"
+      name={@name}
+      id={@id}
+      value={Phoenix.HTML.Form.normalize_value(@type, @value)}
+    />
+    """
+  end
+
   # All other inputs text, datetime-local, url etc. are handled here...
   def input(assigns) do
     ~H"""
@@ -336,10 +347,11 @@ defmodule LightningWeb.Components.NewInputs do
   """
   attr :name, :string, required: true
   attr :class, :string, default: nil
+  attr :rest, :global
 
   def icon(%{name: "hero-" <> _} = assigns) do
     ~H"""
-    <span class={[@name, @class]} />
+    <span class={[@name, @class]} {@rest} />
     """
   end
 

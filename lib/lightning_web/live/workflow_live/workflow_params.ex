@@ -95,7 +95,8 @@ defmodule LightningWeb.WorkflowNewLive.WorkflowParams do
             :id,
             :type,
             :cron_expression,
-            :has_auth_method
+            :has_auth_method,
+            :enabled
           ]),
         edges:
           changeset

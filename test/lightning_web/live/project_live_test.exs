@@ -64,7 +64,7 @@ defmodule LightningWeb.ProjectLiveTest do
       |> render_change()
 
       index_live
-      |> form("#project-form")
+      |> form("#project-users-form")
       |> render_submit()
 
       assert_patch(index_live, Routes.project_index_path(conn, :index))
@@ -72,7 +72,8 @@ defmodule LightningWeb.ProjectLiveTest do
     end
 
     test "saves new project", %{conn: conn} do
-      user = user_fixture()
+      # this makes it first in the list
+      user = insert(:user, first_name: "1")
 
       {:ok, index_live, _html} =
         live(conn, Routes.project_index_path(conn, :index))
@@ -91,15 +92,13 @@ defmodule LightningWeb.ProjectLiveTest do
       |> render_change()
 
       index_live
-      |> element("#member_list")
-      |> render_hook("select_item", %{"id" => user.id})
-
-      assert index_live
-             |> element("button", "Add")
-             |> render_click() =~ "editor"
-
-      index_live
-      |> form("#project-form")
+      |> form("#project-users-form",
+        project: %{
+          "project_users" => %{
+            "0" => %{"user_id" => user.id, "role" => "editor"}
+          }
+        }
+      )
       |> render_submit()
 
       assert_patch(index_live, Routes.project_index_path(conn, :index))
@@ -141,10 +140,12 @@ defmodule LightningWeb.ProjectLiveTest do
       assert html =~
                "Export your project as code, to save this version or edit your project locally"
 
-      assert index_live |> element("a", "Export project") |> has_element?()
+      assert index_live
+             |> element(~s{a[target="_blank"]}, "Export project")
+             |> has_element?()
 
       assert index_live
-             |> element("a", "Export project")
+             |> element(~s{a[target="_blank"]}, "Export project")
              |> render_click()
              |> follow_redirect(conn, "/download/yaml?id=#{project.id}")
     end
@@ -292,26 +293,42 @@ defmodule LightningWeb.ProjectLiveTest do
       refute index_live |> element("project-#{project.id}") |> has_element?()
     end
 
-    test "Edits a project", %{conn: conn} do
-      user = user_fixture()
-      project = project_fixture()
+    test "Edits a project", %{conn: conn, user: superuser} do
+      # the alphabetical order here is important. In the page, the users are ordered alphabeticaly
+      superuser
+      |> Ecto.Changeset.change(%{first_name: "1"})
+      |> Lightning.Repo.update!()
+
+      user1 = insert(:user, first_name: "2")
+      user2 = insert(:user, first_name: "3")
+      project = insert(:project)
 
       {:ok, view, _html} = live(conn, ~p"/settings/projects/#{project.id}")
 
+      # notice the order. We've skipped `0` who's the superadmin. Changing this order will fail the test
       view
-      |> element("#member_list")
-      |> render_hook("select_item", %{"id" => user.id})
-
-      assert view
-             |> element("button", "Add")
-             |> render_click() =~ "editor"
-
-      view
-      |> form("#project-form")
+      |> form("#project-users-form",
+        project: %{
+          "project_users" => %{
+            "1" => %{"user_id" => user1.id, "role" => "editor"},
+            "2" => %{"user_id" => user2.id, "role" => "viewer"}
+          }
+        }
+      )
       |> render_submit()
 
       assert_patch(view, ~p"/settings/projects")
       assert render(view) =~ "Project updated successfully"
+
+      updated_project =
+        Lightning.Repo.preload(project, [:project_users], force: true)
+
+      assert Enum.count(updated_project.project_users) == 2
+
+      for p_user <- updated_project.project_users do
+        assert p_user.user_id in [user1.id, user2.id]
+        refute p_user.user_id == superuser.id
+      end
     end
   end
 
@@ -319,25 +336,25 @@ defmodule LightningWeb.ProjectLiveTest do
     setup :register_and_log_in_user
 
     test "Access project settings page", %{conn: conn, user: user} do
-      another_user = user_fixture()
+      another_user = insert(:user)
 
-      {:ok, project_1} =
-        Lightning.Projects.create_project(%{
+      project_1 =
+        insert(:project,
           name: "project-1",
           project_users: [%{user_id: user.id}]
-        })
+        )
 
-      {:ok, project_2} =
-        Lightning.Projects.create_project(%{
+      project_2 =
+        insert(:project,
           name: "project-2",
           project_users: [%{user_id: user.id}]
-        })
+        )
 
-      {:ok, project_3} =
-        Lightning.Projects.create_project(%{
+      project_3 =
+        insert(:project,
           name: "project-3",
           project_users: [%{user_id: another_user.id}]
-        })
+        )
 
       {:ok, view, _html} = live(conn, ~p"/projects/#{project_1}/w")
 

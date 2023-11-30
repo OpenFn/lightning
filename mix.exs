@@ -4,7 +4,7 @@ defmodule Lightning.MixProject do
   def project do
     [
       app: :lightning,
-      version: "0.10.2",
+      version: "0.10.3",
       elixir: "~> 1.15",
       elixirc_paths: elixirc_paths(Mix.env()),
       elixirc_options: [
@@ -105,7 +105,8 @@ defmodule Lightning.MixProject do
       {:postgrex, ">= 0.0.0"},
       {:prom_ex, "~> 1.8.0"},
       {:rambo, "~> 0.3.4"},
-      {:scrivener_ecto, "~> 2.7"},
+      {:scrivener_ecto,
+       git: "https://github.com/OpenFn/scrivener_ecto.git", ref: "444b7505"},
       {:sentry, "~> 8.0"},
       {:sobelow, "~> 0.13.0", only: [:test, :dev]},
       {:sweet_xml, "~> 0.7.1", only: [:test]},

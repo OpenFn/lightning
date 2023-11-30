@@ -48,17 +48,12 @@ defmodule LightningWeb.EndToEndTest do
       # wait to complete
       Events.subscribe(attempt)
 
-      Enum.any?(1..100, fn _i ->
-        receive do
-          %Events.AttemptUpdated{attempt: %{state: state}}
-          when state in Attempt.final_states() ->
-            assert state == :success
-            true
+      attempt_id = attempt.id
 
-          _other_msg ->
-            false
-        end
-      end)
+      assert_receive %Events.AttemptUpdated{
+                       attempt: %{id: ^attempt_id, state: :success}
+                     },
+                     115_000
 
       assert %{state: :success} = WorkOrders.get(wo_id)
 
@@ -152,7 +147,7 @@ defmodule LightningWeb.EndToEndTest do
 
       assert %{"work_order_id" => wo_id} = json_response(conn, 200)
 
-      assert %{attempts: [attempt]} =
+      assert %{attempts: [%{id: attempt_id} = attempt]} =
                WorkOrders.get(wo_id, include: [:attempts])
 
       assert %{runs: []} = Attempts.get(attempt.id, include: [:runs])
@@ -160,17 +155,10 @@ defmodule LightningWeb.EndToEndTest do
       # wait to complete
       Events.subscribe(attempt)
 
-      Enum.any?(1..100, fn _i ->
-        receive do
-          %Events.AttemptUpdated{attempt: %{state: state}}
-          when state in Attempt.final_states() ->
-            assert state == :success
-            true
-
-          _other_msg ->
-            false
-        end
-      end)
+      assert_receive %Events.AttemptUpdated{
+                       attempt: %{id: ^attempt_id, state: :success}
+                     },
+                     115_000
 
       assert %{state: :success} = WorkOrders.get(wo_id)
 
@@ -295,15 +283,24 @@ defmodule LightningWeb.EndToEndTest do
   end
 
   defp start_runtime_manager(_context) do
-    rtm_args = "node ./node_modules/.bin/worker -- --backoff 0.5/5"
+    ws_url =
+      struct!(
+        URI,
+        LightningWeb.Endpoint.config(:url) ++ [scheme: "ws", path: "/worker"]
+      )
+      |> URI.to_string()
 
-    Application.put_env(:lightning, RuntimeManager,
-      start: true,
-      args: String.split(rtm_args),
-      cd: Path.expand("../../assets", __DIR__)
-    )
+    opts =
+      Application.get_env(:lightning, RuntimeManager)
+      |> Keyword.merge(
+        name: E2ETestRuntimeManager,
+        start: true,
+        worker_secret: Lightning.Config.worker_secret(),
+        ws_url: ws_url,
+        port: Enum.random(2223..3333)
+      )
 
-    {:ok, rtm_server} = RuntimeManager.start_link(name: E2ETestRuntimeManager)
+    {:ok, rtm_server} = RuntimeManager.start_link(opts)
 
     running =
       Enum.any?(1..20, fn _i ->

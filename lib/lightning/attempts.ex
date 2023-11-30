@@ -110,10 +110,10 @@ defmodule Lightning.Attempts do
     |> update_attempt()
   end
 
-  @spec complete_attempt(Attempt.t(), {atom(), binary() | nil, binary() | nil}) ::
+  @spec complete_attempt(Attempt.t(), %{optional(any()) => any()}) ::
           {:ok, Attempt.t()} | {:error, Ecto.Changeset.t(Attempt.t())}
-  def complete_attempt(attempt, {new_state, error_type, error_message}) do
-    Attempt.complete(attempt, {new_state, error_type, error_message})
+  def complete_attempt(attempt, params) do
+    Attempt.complete(attempt, params)
     |> case do
       %{valid?: false} = changeset ->
         {:error, changeset}
@@ -140,13 +140,11 @@ defmodule Lightning.Attempts do
       |> join(:inner, [a], s in fragment(~s("subset")), on: a.id == s.id)
       |> select([a, _], a)
 
-    update_attempts(update_query, changeset)
-    |> Repo.transaction()
-    |> case do
+    case update_attempts(update_query, changeset) do
       {:ok, %{attempts: {1, [attempt]}}} ->
         {:ok, attempt}
 
-      {:error, changeset} ->
+      {:error, _op, changeset, _changes} ->
         {:error, changeset}
     end
   end
@@ -163,11 +161,15 @@ defmodule Lightning.Attempts do
     |> Ecto.Multi.run(:post, fn _, %{attempts: {_, attempts}} ->
       Enum.each(attempts, fn attempt ->
         {:ok, _} = Lightning.WorkOrders.update_state(attempt)
-
-        Events.attempt_updated(attempt)
       end)
 
       {:ok, nil}
+    end)
+    |> Repo.transaction()
+    |> tap(fn result ->
+      with {:ok, %{attempts: {_n, attempts}}} <- result do
+        Enum.each(attempts, &Events.attempt_updated/1)
+      end
     end)
   end
 
@@ -232,7 +234,7 @@ defmodule Lightning.Attempts do
     end)
 
     Repo.transaction(fn ->
-      complete_attempt(attempt, {:lost, error_type, nil})
+      complete_attempt(attempt, %{state: :lost, error_type: error_type})
 
       Ecto.assoc(attempt, :runs)
       |> where([r], is_nil(r.exit_reason))
@@ -250,9 +252,9 @@ defmodule Lightning.Attempts do
     |> Repo.one()
   end
 
-  def get_log_lines(attempt) do
+  def get_log_lines(attempt, order \\ :asc) do
     Ecto.assoc(attempt, :log_lines)
-    |> order_by([l], asc: l.timestamp)
+    |> order_by([{^order, :timestamp}])
     |> Repo.stream()
   end
 

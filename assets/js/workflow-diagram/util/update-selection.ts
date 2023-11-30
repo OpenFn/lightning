@@ -1,4 +1,4 @@
-import { styleItem } from '../styles';
+import { sortOrderForSvg, styleItem } from '../styles';
 import { Flow } from '../types';
 
 /**
@@ -21,27 +21,17 @@ export default (model: Flow.Model, newSelection?: string) => {
   // we have no way of knowing whether the selection is a node or id
   // so we have to do both
   function updateItem(item: Flow.Edge | Flow.Node) {
-    if (item.selected && item.id !== newSelection) {
-      return styleItem({
-        ...item,
-        selected: false,
-      });
-    }
-    if (item.id === newSelection) {
-      return styleItem({
-        ...item,
-        selected: true,
-      });
-    }
+    return styleItem({
+      ...item,
+      selected: item.id === newSelection,
+    });
     return item;
   }
 
   // Must put selected edge LAST to ensure it stays on top.
   const sortedModel = {
     ...updatedModel,
-    edges: updatedModel.edges.sort((x, y) => {
-      return x.selected - y.selected;
-    }),
+    edges: updatedModel.edges.sort(sortOrderForSvg),
   };
 
   return sortedModel;

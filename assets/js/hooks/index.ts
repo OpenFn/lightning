@@ -3,8 +3,9 @@ import { PhoenixHook } from './PhoenixHook';
 
 import LogLineHighlight from './LogLineHighlight';
 import ElapsedIndicator from './ElapsedIndicator';
+import TabSelector from './TabSelector';
 
-export { LogLineHighlight, ElapsedIndicator };
+export { LogLineHighlight, ElapsedIndicator, TabSelector };
 
 export const ShowActionsOnRowHover = {
   mounted() {
@@ -95,6 +96,7 @@ export const Tooltip = {
     this._tippyInstance = tippy(this.el, {
       content: content,
       placement: placement,
+      animation: false,
     });
   },
   destroyed() {

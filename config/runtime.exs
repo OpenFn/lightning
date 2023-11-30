@@ -183,6 +183,7 @@ url_scheme = System.get_env("URL_SCHEME", "https")
 
 # The webserver port will always prefer and environment variable _when_
 # given, otherwise it uses the existing config and lastly defaults to 4000.
+
 port =
   (System.get_env("PORT") ||
      Application.get_env(:lightning, LightningWeb.Endpoint)
@@ -349,6 +350,8 @@ config :lightning, Lightning.PromEx,
   ],
   metrics_server: :disabled,
   datasource_id: System.get_env("PROMEX_DATASOURCE_ID") || "",
+  metrics_endpoint_authorization_required:
+    System.get_env("PROMEX_METRICS_ENDPOINT_AUTHORIZATION_REQUIRED") != "no",
   metrics_endpoint_token:
     System.get_env("PROMEX_METRICS_ENDPOINT_TOKEN") ||
       :crypto.strong_rand_bytes(100),

@@ -13,11 +13,13 @@ export namespace Lightning {
 
   export interface CronTrigger extends Node {
     type: 'cron';
+    enabled: boolean;
     cron_expression: string;
   }
 
   export interface WebhookTrigger extends Node {
     has_auth_method: boolean;
+    enabled: boolean;
     type: 'webhook';
     webhook_url: string;
   }
@@ -31,11 +33,13 @@ export namespace Lightning {
 
   export interface Edge {
     id: string;
+    has_auth_method: boolean;
     source_job_id?: string;
     source_trigger_id?: string;
     target_job_id?: string;
     name: string;
     condition?: string;
+    edge?: boolean;
     error_path?: boolean;
     errors: any;
   }

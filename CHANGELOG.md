@@ -10,6 +10,26 @@ and this project adheres to
 
 ### Added
 
+### Changed
+
+- Increased History search timeout to 30s
+  [#1461](https://github.com/OpenFn/Lightning/issues/1461)
+
+### Fixed
+
+- Tooltip text clears later than the background
+  [#1094](https://github.com/OpenFn/Lightning/issues/1094)
+- Temporary fix to superuser UI for managing project users
+  [#1145](https://github.com/OpenFn/Lightning/issues/1145)
+- Fix for adding ellipses on credential info on job editor heading
+  [#1428](https://github.com/OpenFn/Lightning/issues/1428)
+
+## [v0.10.3] - 2023-11-28
+
+### Added
+
+- Dimmed/greyed out triggers and edges on the canvas when they are disabled
+  [#1464](https://github.com/OpenFn/Lightning/issues/1464)
 - Async loading on the history page to improve UX on long DB queries
   [#1279](https://github.com/OpenFn/Lightning/issues/1279)
 
@@ -28,7 +48,8 @@ and this project adheres to
   [#1405](https://github.com/OpenFn/Lightning/issues/1405)
 - Google credential creation  and automatic closing of oAuth tab  
   [#1109](https://github.com/OpenFn/Lightning/issues/1109)
-
+- Exporting project breaks the navigation of the page
+  [#1440](https://github.com/OpenFn/Lightning/issues/1440)
 
 ## [v0.10.2] - 2023-11-21
 
@@ -157,6 +178,8 @@ bearing with us as we move towards our first stable Lightning release.)
   [#1327](https://github.com/OpenFn/Lightning/issues/1327)
 - Have user create workflow name before moving to the canvas
   [#1103](https://github.com/OpenFn/Lightning/issues/1103)
+- Allow PromEx authorization to be disabled
+  [#1483](https://github.com/OpenFn/Lightning/issues/1483)
 
 ### Changed
 

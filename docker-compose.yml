@@ -52,7 +52,7 @@ services:
       - '${LIGHTNING_EXTERNAL_PORT:-127.0.0.1:${PORT}}:${URL_PORT}'
 
   worker:
-    image: 'ws-worker:latest'
+    image: 'openfn/ws-worker:latest'
     deploy:
       resources:
         limits:

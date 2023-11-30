@@ -2,8 +2,6 @@ defmodule LightningWeb.RunLive.Components do
   @moduledoc false
   use LightningWeb, :component
 
-  import LightningWeb.RouteHelpers
-
   alias Lightning.Invocation
   alias Lightning.WorkOrders.SearchParams
 
@@ -80,8 +78,9 @@ defmodule LightningWeb.RunLive.Components do
           <.run_icon reason={@run.exit_reason} error_type={@run.error_type} />
           <div class="text-gray-800 flex gap-2 text-sm">
             <.link
-              navigate={show_run_url(@project_id, @run.id)}
-              target="_blank"
+              navigate={
+                ~p"/projects/#{@project_id}/attempts/#{@attempt}?#{%{r: @run.id}}"
+              }
               class="hover:underline hover:underline-offset-2"
             >
               <span><%= @run.job.name %></span>

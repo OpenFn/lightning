@@ -32,9 +32,15 @@ config :lightning, Lightning.Vault,
 # you can enable the server option below.
 config :lightning, LightningWeb.Endpoint,
   url: [host: "localhost", port: 4002],
+  http: [port: 4002],
   secret_key_base:
     "/8zedVJLxvmGGFoRExE3e870g7CGZZQ1Vq11A5MbQGPKOpK57MahVsPW6Wkkv61n",
   server: true
+
+config :lightning, Lightning.Runtime.RuntimeManager,
+  start: false,
+  ws_url: "ws://localhost:4002/worker",
+  env: [{"NODE_OPTIONS", "--dns-result-order=ipv4first"}]
 
 # In test we don't send emails.
 config :lightning, Lightning.Mailer, adapter: Swoosh.Adapters.Test
@@ -54,8 +60,6 @@ config :lightning, Lightning.FailureAlerter,
 config :lightning,
   schemas_path: "test/fixtures/schemas",
   adaptor_icons_path: "test/fixtures/adaptors/icons"
-
-config :lightning, Lightning.Runtime.RuntimeManager, start: false
 
 # Print only warnings and errors during test
 config :logger, level: :warning

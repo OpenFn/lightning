@@ -19,20 +19,23 @@ defmodule LightningWeb.WorkerChannel do
 
   @impl true
   def handle_in("claim", %{"demand" => demand}, socket) do
-    attempts =
-      Attempts.claim(demand)
-      |> then(fn {:ok, attempts} ->
-        attempts
-        |> Enum.map(fn attempt ->
-          token = Lightning.Workers.generate_attempt_token(attempt)
+    case Attempts.claim(demand) do
+      {:ok, attempts} ->
+        attempts =
+          attempts
+          |> Enum.map(fn attempt ->
+            token = Lightning.Workers.generate_attempt_token(attempt)
 
-          %{
-            "id" => attempt.id,
-            "token" => token
-          }
-        end)
-      end)
+            %{
+              "id" => attempt.id,
+              "token" => token
+            }
+          end)
 
-    {:reply, {:ok, %{attempts: attempts}}, socket}
+        {:reply, {:ok, %{attempts: attempts}}, socket}
+
+      {:error, changeset} ->
+        {:reply, {:error, LightningWeb.ChangesetJSON.error(changeset)}, socket}
+    end
   end
 end
