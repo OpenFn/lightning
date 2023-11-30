@@ -90,6 +90,8 @@ defmodule LightningWeb.Pagination do
   end
 
   attr :async_page, Phoenix.LiveView.AsyncResult, default: nil
+  attr :page, :map, required: true
+  attr :url, :any, required: true
 
   def pagination_bar(assigns) do
     ~H"""
