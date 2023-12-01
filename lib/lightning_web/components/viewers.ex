@@ -47,8 +47,9 @@ defmodule LightningWeb.Components.Viewers do
       class={[
         "rounded-md shadow-sm bg-slate-700 border-slate-300",
         "text-slate-200 text-sm font-mono proportional-nums w-full",
-        "overflow-y-auto overscroll-contain scroll-smooth",
+        "overscroll-contain scroll-smooth",
         "grid grid-flow-row-dense grid-cols-[min-content_1fr]",
+        "log-viewer",
         @class
       ]}
       id={@id}
@@ -63,9 +64,9 @@ defmodule LightningWeb.Components.Viewers do
         id={dom_id}
       >
         <div class="log-viewer__prefix" data-line-prefix={log_line.source}></div>
-        <div data-log-line class="log-viewer__message">
-          <pre class="whitespace-break-spaces"><%= log_line.message %></pre>
-        </div>
+        <span data-log-line class="log-viewer__message">
+          <pre><%= log_line.message %></pre>
+        </span>
       </div>
       <div
         id={"#{@id}-nothing-yet"}
@@ -98,8 +99,9 @@ defmodule LightningWeb.Components.Viewers do
       class={[
         "rounded-md shadow-sm bg-slate-700 border-slate-300",
         "text-slate-200 text-sm font-mono proportional-nums w-full",
-        "overflow-y-auto overscroll-contain scroll-smooth",
+        "overscroll-contain scroll-smooth",
         "grid grid-flow-row-dense grid-cols-[min-content_1fr]",
+        "log-viewer",
         @class
       ]}
       id={@id}
