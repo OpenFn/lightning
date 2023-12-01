@@ -162,6 +162,25 @@ defmodule Lightning.Credentials do
     end
   end
 
+  @doc """
+  Creates a credential schema from credential json schema.
+  """
+  @spec get_schema(String.t()) :: Credentials.Schema.t()
+  # false positive, it's safe file path (path from config)
+  # sobelow_skip ["Traversal.FileModule"]
+  def get_schema(schema_name) do
+    {:ok, schemas_path} = Application.fetch_env(:lightning, :schemas_path)
+
+    File.read("#{schemas_path}/#{schema_name}.json")
+    |> case do
+      {:ok, raw_json} ->
+        Credentials.Schema.new(raw_json, schema_name)
+
+      {:error, reason} ->
+        raise "Error reading credential schema. Got: #{reason |> inspect()}"
+    end
+  end
+
   defp derive_events(
          multi,
          %Ecto.Changeset{data: %Credential{}} = changeset

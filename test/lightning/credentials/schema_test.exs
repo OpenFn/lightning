@@ -1,6 +1,7 @@
 defmodule Lightning.Credentials.SchemaTest do
   use Lightning.DataCase, async: true
 
+  alias Lightning.Credentials
   alias Lightning.Credentials.Schema
   alias Lightning.Credentials.SchemaDocument
 
@@ -21,12 +22,12 @@ defmodule Lightning.Credentials.SchemaTest do
           },
           "hostUrl": {
             "type": "string",
-            "description": "The password used to log in",
+            "description": "The host URL",
             "format": "uri"
           },
           "number": {
             "type": "integer",
-            "description": "A number to log in"
+            "description": "Any other number field"
           }
         },
         "type": "object",
@@ -69,7 +70,7 @@ defmodule Lightning.Credentials.SchemaTest do
 
   describe "validate/2" do
     test "returns a changeset with 2 expected formats" do
-      schema = Schema.new(postgres_schema_json(), "postgres")
+      schema = Credentials.get_schema("postgresql")
 
       changeset =
         Ecto.Changeset.put_change(
@@ -84,6 +85,41 @@ defmodule Lightning.Credentials.SchemaTest do
                errors,
                &(&1 == {:host, {"expected to be a URI or an IPv4 address", []}})
              )
+    end
+
+    test "returns a changeset with 1 expected format and 2 allowed types" do
+      schema = Credentials.get_schema("http")
+
+      changeset =
+        Ecto.Changeset.put_change(
+          %Ecto.Changeset{data: %{}, types: schema.types},
+          :baseUrl,
+          "not a uri"
+        )
+
+      assert %Ecto.Changeset{errors: errors} = Schema.validate(changeset, schema)
+
+      assert Enum.any?(
+               errors,
+               &(&1 == {:baseUrl, {"expected to be a URI", []}})
+             )
+    end
+
+    test "returns a changeset with no expected format and 2 allowed types" do
+      schema = Credentials.get_schema("dhis2")
+
+      changeset =
+        Ecto.Changeset.put_change(
+          %Ecto.Changeset{data: %{}, types: schema.types},
+          :apiVersion,
+          "v2"
+        )
+
+      assert %Ecto.Changeset{errors: errors} = Schema.validate(changeset, schema)
+
+      refute Enum.find(errors, fn {field, {_message, _list}} ->
+               field == "apiVersion"
+             end)
     end
   end
 
@@ -131,92 +167,5 @@ defmodule Lightning.Credentials.SchemaTest do
 
       assert changeset.valid?
     end
-  end
-
-  defp postgres_schema_json do
-    """
-    {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "properties": {
-        "host": {
-          "title": "Host",
-          "type": "string",
-          "description": "Postgres instance host URL or IP address",
-          "minLength": 1,
-          "anyOf": [
-            {
-              "format": "uri"
-            },
-            {
-              "format": "ipv4"
-            }
-          ],
-          "examples": [
-            "https://some-host.compute-1.amazonaws.com",
-            "201.220.61.246"
-          ]
-        },
-        "port": {
-          "title": "Port",
-          "type": "integer",
-          "default": 5432,
-          "description": "Database instance port",
-          "minLength": 1,
-          "examples": [
-            5432
-          ]
-        },
-        "database": {
-          "title": "Database",
-          "type": "string",
-          "description": "The database name",
-          "minLength": 1,
-          "examples": [
-            "demo-db"
-          ]
-        },
-        "user": {
-          "title": "User",
-          "type": "string",
-          "description": "User name",
-          "minLength": 1,
-          "examples": [
-            "admin"
-          ]
-        },
-        "password": {
-          "title": "Password",
-          "type": "string",
-          "description": "Password",
-          "writeOnly": true,
-          "minLength": 1,
-          "examples": [
-            "@super(!)Secretpass"
-          ]
-        },
-        "ssl": {
-          "title": "Use SSL",
-          "type": "boolean",
-          "examples": [
-            true
-          ]
-        },
-        "allowSelfSignedCert": {
-          "title": "Allow self-signed certificate",
-          "type": "boolean",
-          "examples": [
-            true
-          ]
-        }
-      },
-      "type": "object",
-      "additionalProperties": true,
-      "required": [
-        "host",
-        "port",
-        "database"
-      ]
-    }
-    """
   end
 end
