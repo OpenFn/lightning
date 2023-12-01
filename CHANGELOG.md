@@ -14,6 +14,9 @@ and this project adheres to
 
 ### Fixed
 
+- Use checkbox on boolean credential fields
+  [#1430](https://github.com/OpenFn/Lightning/issues/1430)
+
 ## [v0.10.5] - 2023-12-03
 
 ### Added
@@ -22,11 +25,11 @@ and this project adheres to
 
 - Only add history page filters when needed for simpler multi-select status
   interface and shorter page URLs
-  [#1331](https://github.com/OpenFn/Lightning/pull/1331)
+  [#1331](https://github.com/OpenFn/Lightning/issues/1331)
 - Use dynamic Endpoint config only on prod
-  [#1494](https://github.com/OpenFn/Lightning/pull/1494)
+  [#1435](https://github.com/OpenFn/Lightning/issues/1435)
 - Validate schema field with any of expected values
-  [#1502](https://github.com/OpenFn/Lightning/pull/1502)
+  [#1502](https://github.com/OpenFn/Lightning/issues/1502)
 
 ### Fixed
 
