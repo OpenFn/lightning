@@ -162,7 +162,12 @@ defmodule Lightning.WebhookAuthMethods do
     Multi.new()
     |> Multi.insert(:auth_method, changeset)
     |> Multi.insert(:audit, fn %{auth_method: auth_method} ->
-      WebhookAuthMethodAudit.event("created", auth_method.id, user.id)
+      WebhookAuthMethodAudit.event("created", auth_method.id, user.id, %{
+        before: %{name: nil},
+        after: %{
+          name: auth_method.name
+        }
+      })
     end)
     |> Repo.transaction()
     |> case do
