@@ -24,6 +24,8 @@ and this project adheres to
   [#1254](https://github.com/OpenFn/Lightning/issues/1254)
 - Remove obsolete field `previous_id` from `runs` table.
   [#1254](https://github.com/OpenFn/Lightning/issues/1254)
+- Fix for missing data in 'created' audit trail events for webhook auth methods
+  [#1500](https://github.com/OpenFn/Lightning/issues/1500)
 
 ## [v0.10.4] - 2023-11-30
 
