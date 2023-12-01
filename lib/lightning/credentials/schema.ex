@@ -76,12 +76,40 @@ defmodule Lightning.Credentials.Schema do
     |> Enum.any?(fn required_field -> field == required_field end)
   end
 
+  defp error_to_changeset(
+         %{
+           path: path,
+           error: %Validator.Error.AnyOf{invalid: alternatives}
+         },
+         changeset
+       ) do
+    formats =
+      Enum.map(alternatives, fn %{errors: [%{error: %{expected: format}}]} ->
+        format
+      end)
+
+    error_to_changeset(
+      %{path: path, error: %{any_of: MapSet.new(formats)}},
+      changeset
+    )
+  end
+
   defp error_to_changeset(%{path: path, error: error}, changeset) do
     field = String.slice(path, 2..-1) |> String.to_existing_atom()
 
     case error do
       %{expected: "uri"} ->
         Changeset.add_error(changeset, field, "expected to be a URI")
+
+      %{any_of: formats} ->
+        formats =
+          formats
+          |> Enum.map_join(" or ", fn
+            "uri" -> "a URI"
+            <<"ipv", char>> -> "an IPv#{char - ?0} address"
+          end)
+
+        Changeset.add_error(changeset, field, "expected to be #{formats}")
 
       %{missing: fields} ->
         Enum.reduce(fields, changeset, fn field, changeset ->

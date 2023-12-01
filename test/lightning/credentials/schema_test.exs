@@ -67,6 +67,26 @@ defmodule Lightning.Credentials.SchemaTest do
     end
   end
 
+  describe "validate/2" do
+    test "returns a changeset with error text" do
+      schema = Schema.new(postgres_schema_json(), "postgres")
+
+      changeset =
+        Ecto.Changeset.put_change(
+          %Ecto.Changeset{data: %{}, types: schema.types},
+          :host,
+          "l"
+        )
+
+      assert %Ecto.Changeset{errors: errors} = Schema.validate(changeset, schema)
+
+      assert Enum.any?(
+               errors,
+               &(&1 == {:host, {"expected to be an IPv4 address or a URI", []}})
+             )
+    end
+  end
+
   describe "SchemaDocument.changeset/3" do
     setup %{schema_map: schema_map} do
       %{schema: Schema.new(schema_map, "test")}
@@ -111,5 +131,92 @@ defmodule Lightning.Credentials.SchemaTest do
 
       assert changeset.valid?
     end
+  end
+
+  defp postgres_schema_json do
+    """
+    {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "properties": {
+        "host": {
+          "title": "Host",
+          "type": "string",
+          "description": "Postgres instance host URL or IP address",
+          "minLength": 1,
+          "anyOf": [
+            {
+              "format": "uri"
+            },
+            {
+              "format": "ipv4"
+            }
+          ],
+          "examples": [
+            "https://some-host.compute-1.amazonaws.com",
+            "201.220.61.246"
+          ]
+        },
+        "port": {
+          "title": "Port",
+          "type": "integer",
+          "default": 5432,
+          "description": "Database instance port",
+          "minLength": 1,
+          "examples": [
+            5432
+          ]
+        },
+        "database": {
+          "title": "Database",
+          "type": "string",
+          "description": "The database name",
+          "minLength": 1,
+          "examples": [
+            "demo-db"
+          ]
+        },
+        "user": {
+          "title": "User",
+          "type": "string",
+          "description": "User name",
+          "minLength": 1,
+          "examples": [
+            "admin"
+          ]
+        },
+        "password": {
+          "title": "Password",
+          "type": "string",
+          "description": "Password",
+          "writeOnly": true,
+          "minLength": 1,
+          "examples": [
+            "@super(!)Secretpass"
+          ]
+        },
+        "ssl": {
+          "title": "Use SSL",
+          "type": "boolean",
+          "examples": [
+            true
+          ]
+        },
+        "allowSelfSignedCert": {
+          "title": "Allow self-signed certificate",
+          "type": "boolean",
+          "examples": [
+            true
+          ]
+        }
+      },
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "host",
+        "port",
+        "database"
+      ]
+    }
+    """
   end
 end
