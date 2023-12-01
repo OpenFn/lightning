@@ -465,7 +465,8 @@ defmodule LightningWeb.WorkflowLive.Components do
         when not is_nil(job_id) ->
           [
             "On Success": "on_job_success",
-            "On Failure": "on_job_failure"
+            "On Failure": "on_job_failure",
+            Always: "always"
           ]
 
         %{source_trigger_id: trigger_id} when not is_nil(trigger_id) ->
@@ -495,7 +496,7 @@ defmodule LightningWeb.WorkflowLive.Components do
       for={Phoenix.HTML.Form.input_id(@form, :condition)}
     />
     <.old_error field={@form[:condition]} />
-    <%= if Phoenix.HTML.Form.input_value(@form, :condition) == :always do %>
+    <%= if Phoenix.HTML.Form.input_value(@form, :source_trigger_id) do %>
       <Form.select_field
         form={@form}
         name={:condition}
