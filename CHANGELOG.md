@@ -14,6 +14,8 @@ and this project adheres to
 
 - Use dynamic Endpoint config only on prod
   [#1494](https://github.com/OpenFn/Lightning/pull/1494)
+- Validate schema field with any of expected values
+  [#1502](https://github.com/OpenFn/Lightning/pull/1502)  
 
 ### Fixed
 

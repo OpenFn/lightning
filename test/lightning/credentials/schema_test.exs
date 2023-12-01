@@ -1,6 +1,7 @@
 defmodule Lightning.Credentials.SchemaTest do
   use Lightning.DataCase, async: true
 
+  alias Lightning.Credentials
   alias Lightning.Credentials.Schema
   alias Lightning.Credentials.SchemaDocument
 
@@ -21,12 +22,12 @@ defmodule Lightning.Credentials.SchemaTest do
           },
           "hostUrl": {
             "type": "string",
-            "description": "The password used to log in",
+            "description": "The host URL",
             "format": "uri"
           },
           "number": {
             "type": "integer",
-            "description": "A number to log in"
+            "description": "Any other number field"
           }
         },
         "type": "object",
@@ -64,6 +65,61 @@ defmodule Lightning.Credentials.SchemaTest do
              }
 
       assert schema.fields == [:username, :password, :hostUrl, :number]
+    end
+  end
+
+  describe "validate/2" do
+    test "returns a changeset with 2 expected formats" do
+      schema = Credentials.get_schema("postgresql")
+
+      changeset =
+        Ecto.Changeset.put_change(
+          %Ecto.Changeset{data: %{}, types: schema.types},
+          :host,
+          "l"
+        )
+
+      assert %Ecto.Changeset{errors: errors} = Schema.validate(changeset, schema)
+
+      assert Enum.any?(
+               errors,
+               &(&1 == {:host, {"expected to be a URI or an IPv4 address", []}})
+             )
+    end
+
+    test "returns a changeset with 1 expected format and 2 allowed types" do
+      schema = Credentials.get_schema("http")
+
+      changeset =
+        Ecto.Changeset.put_change(
+          %Ecto.Changeset{data: %{}, types: schema.types},
+          :baseUrl,
+          "not a uri"
+        )
+
+      assert %Ecto.Changeset{errors: errors} = Schema.validate(changeset, schema)
+
+      assert Enum.any?(
+               errors,
+               &(&1 == {:baseUrl, {"expected to be a URI", []}})
+             )
+    end
+
+    test "returns a changeset with no expected format and 2 allowed types" do
+      schema = Credentials.get_schema("dhis2")
+
+      changeset =
+        Ecto.Changeset.put_change(
+          %Ecto.Changeset{data: %{}, types: schema.types},
+          :apiVersion,
+          "v2"
+        )
+
+      assert %Ecto.Changeset{errors: errors} = Schema.validate(changeset, schema)
+
+      refute Enum.find(errors, fn {field, {_message, _list}} ->
+               field == "apiVersion"
+             end)
     end
   end
 
