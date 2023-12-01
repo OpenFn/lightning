@@ -68,20 +68,20 @@ defmodule LightningWeb.RunLive.Index do
       )
 
     statuses = [
-      %{id: :pending, label: "Pending", value: true},
-      %{id: :running, label: "Running", value: true},
-      %{id: :success, label: "Success", value: true},
-      %{id: :failed, label: "Failed", value: true},
-      %{id: :crashed, label: "Crashed", value: true},
-      %{id: :cancelled, label: "Cancelled", value: true},
-      %{id: :killed, label: "Killed", value: true},
-      %{id: :exception, label: "Exception", value: true},
-      %{id: :lost, label: "Lost", value: true}
+      %{id: :pending, label: "Pending"},
+      %{id: :running, label: "Running"},
+      %{id: :success, label: "Success"},
+      %{id: :failed, label: "Failed"},
+      %{id: :crashed, label: "Crashed"},
+      %{id: :cancelled, label: "Cancelled"},
+      %{id: :killed, label: "Killed"},
+      %{id: :exception, label: "Exception"},
+      %{id: :lost, label: "Lost"}
     ]
 
     search_fields = [
-      %{id: :body, label: "Input", value: true},
-      %{id: :log, label: "Logs", value: true}
+      %{id: :body, label: "Input"},
+      %{id: :log, label: "Logs"}
     ]
 
     params = Map.put_new(params, "filters", init_filters())
@@ -111,16 +111,7 @@ defmodule LightningWeb.RunLive.Index do
         Timex.now() |> Timex.shift(days: -30) |> DateTime.to_string(),
       "date_before" => "",
       "wo_date_after" => "",
-      "wo_date_before" => "",
-      "pending" => "true",
-      "running" => "true",
-      "success" => "true",
-      "failed" => "true",
-      "crashed" => "true",
-      "cancelled" => "true",
-      "killed" => "true",
-      "exception" => "true",
-      "lost" => "true"
+      "wo_date_before" => ""
     }
 
   @impl true
@@ -191,14 +182,24 @@ defmodule LightningWeb.RunLive.Index do
      )}
   end
 
-  def checked(changeset, id) do
+  @doc """
+  Takes a changeset used for querying workorders and checks to see if the given
+  filter is present in that changeset. Returns true or false.
+  """
+  def is_checked(changeset, id) do
     case Ecto.Changeset.fetch_field(changeset, id) do
-      value when value in [:error, {:changes, true}] -> true
-      _ -> false
+      value when value in [{:changes, true}] ->
+        true
+
+      _ ->
+        false
     end
   end
 
-  defp filters_changeset(params),
+  @doc """
+  Creates a changeset based on given parameters and the fixed workorder filter types.
+  """
+  def filters_changeset(params),
     do:
       Ecto.Changeset.cast(
         {%{}, @filters_types},
@@ -356,7 +357,10 @@ defmodule LightningWeb.RunLive.Index do
 
   def handle_event("apply_filters", %{"filters" => new_filters}, socket) do
     %{filters: prev_filters, project: project} = socket.assigns
-    filters = Map.merge(prev_filters, new_filters)
+
+    filters =
+      Map.merge(prev_filters, new_filters)
+      |> Map.reject(fn {_k, v} -> Enum.member?(["false", ""], v) end)
 
     {:noreply,
      socket

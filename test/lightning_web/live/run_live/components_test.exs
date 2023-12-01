@@ -4,6 +4,7 @@ defmodule LightningWeb.RunLive.ComponentsTest do
   import Phoenix.LiveViewTest
 
   alias LightningWeb.RunLive.Components
+  alias LightningWeb.RunLive.Index
 
   import Lightning.Factories
 
@@ -57,6 +58,42 @@ defmodule LightningWeb.RunLive.ComponentsTest do
              ) =~
                "dataclip_body"
     end
+  end
+
+  test "is_checked returns true if a specified filter is part of a filter changeset" do
+    changeset =
+      Index.filters_changeset(%{
+        "body" => "true",
+        "date_after" => "2023-11-02T13:02",
+        "date_before" => "",
+        "log" => "true",
+        "search_term" => "",
+        "success" => "true",
+        "wo_date_after" => "",
+        "wo_date_before" => "",
+        "workflow_id" => ""
+      })
+
+    assert Index.is_checked(changeset, :body) == true
+    assert Index.is_checked(changeset, :success) == true
+    assert Index.is_checked(changeset, :failed) == false
+
+    unchecking_changeset =
+      Index.filters_changeset(%{
+        "body" => "true",
+        "date_after" => "2023-11-02T13:02",
+        "date_before" => "",
+        "log" => "true",
+        "search_term" => "",
+        "success" => "false",
+        "wo_date_after" => "",
+        "wo_date_before" => "",
+        "workflow_id" => ""
+      })
+
+    assert Index.is_checked(unchecking_changeset, :search_term) == false
+    assert Index.is_checked(unchecking_changeset, :body) == true
+    assert Index.is_checked(unchecking_changeset, :success) == false
   end
 
   test "run_list_item component" do

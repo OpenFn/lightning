@@ -238,29 +238,29 @@ defmodule LightningWeb.RunWorkOrderTest do
 
       assert html =~ "Status"
 
-      assert view
-             |> element("input#run-filter-form_success[checked]")
-             |> has_element?()
+      status_filters = [
+        "success",
+        "failed",
+        "running",
+        "crashed",
+        "pending",
+        "killed",
+        "failed"
+      ]
 
-      assert view
-             |> element("input#run-filter-form_failed[checked]")
-             |> has_element?()
+      assert status_filters
+             |> Enum.all?(fn f ->
+               view
+               |> element("input#workorder-filter-form_#{f}")
+               |> has_element?()
+             end)
 
-      assert view
-             |> element("input#run-filter-form_running[checked]")
-             |> has_element?()
-
-      assert view
-             |> element("input#run-filter-form_crashed[checked]")
-             |> has_element?()
-
-      assert view
-             |> element("input#run-filter-form_pending[checked]")
-             |> has_element?()
-
-      assert view
-             |> element("input#run-filter-form_killed[checked]")
-             |> has_element?()
+      assert status_filters
+             |> Enum.any?(fn f ->
+               view
+               |> element("input#workorder-filter-form_#{f}[checked]")
+               |> has_element?()
+             end) == false
 
       assert view
              |> element("input#run-search-form_search_term")
@@ -306,7 +306,7 @@ defmodule LightningWeb.RunWorkOrderTest do
              |> has_element?()
     end
 
-    test "Workorder with failed status shows when option checked", %{
+    test "Work Order with failed status shows when option checked", %{
       conn: conn,
       project: project
     } do
@@ -351,7 +351,7 @@ defmodule LightningWeb.RunWorkOrderTest do
 
       # uncheck :failure
       view
-      |> form("#run-filter-form", filters: %{"failed" => "false"})
+      |> form("#workorder-filter-form", filters: %{"failed" => "false"})
       |> render_submit()
 
       refute view
@@ -363,7 +363,7 @@ defmodule LightningWeb.RunWorkOrderTest do
       # recheck failure
 
       view
-      |> form("#run-filter-form", filters: %{"failed" => "true"})
+      |> form("#workorder-filter-form", filters: %{"failed" => "true"})
       |> render_submit()
 
       div =
