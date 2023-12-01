@@ -182,11 +182,7 @@ defmodule Lightning.WorkOrders do
   @spec retry(
           Attempt.t() | Ecto.UUID.t(),
           Run.t() | Ecto.UUID.t(),
-          [
-            work_order_option(),
-            ...
-          ]
-          | []
+          [work_order_option(), ...]
         ) ::
           {:ok, Attempt.t()} | {:error, Ecto.Changeset.t(Attempt.t())}
   def retry(attempt, run, opts)
@@ -241,52 +237,6 @@ defmodule Lightning.WorkOrders do
     retry(attempt_id, run_id, opts)
   end
 
-  @spec retry(
-          Attempt.t() | Ecto.UUID.t(),
-          [
-            work_order_option(),
-            ...
-          ]
-          | []
-        ) ::
-          {:ok, Attempt.t()} | {:error, Ecto.Changeset.t(Attempt.t())}
-
-  def retry(attempt_id, opts) when is_binary(attempt_id) do
-    attrs = Map.new(opts)
-
-    attempt =
-      from(a in Attempt,
-        where: a.id == ^attempt_id,
-        preload: [
-          :work_order,
-          :dataclip,
-          :starting_job,
-          starting_trigger: [edges: :target_job]
-        ]
-      )
-      |> Repo.one()
-
-    starting_job =
-      if job = attempt.starting_job do
-        job
-      else
-        [edge] = attempt.starting_trigger.edges
-        edge.target_job
-      end
-
-    do_retry(
-      attempt.work_order,
-      attempt.dataclip,
-      starting_job,
-      [],
-      attrs[:created_by]
-    )
-  end
-
-  def retry(%Attempt{id: attempt_id}, opts) do
-    retry(attempt_id, opts)
-  end
-
   defp do_retry(workorder, dataclip, starting_job, runs, creating_user) do
     changeset =
       Attempt.new(%{priority: :immediate})
@@ -310,7 +260,7 @@ defmodule Lightning.WorkOrders do
   @spec retry_many(
           [WorkOrder.t(), ...],
           job_id :: Ecto.UUID.t(),
-          [work_order_option(), ...] | []
+          [work_order_option(), ...]
         ) :: {:ok, count :: integer()}
   def retry_many([%WorkOrder{} | _rest] = workorders, job_id, opts) do
     orders_ids = Enum.map(workorders, & &1.id)
@@ -345,9 +295,10 @@ defmodule Lightning.WorkOrders do
 
   @spec retry_many(
           [WorkOrder.t(), ...] | [AttemptRun.t(), ...],
-          [work_order_option(), ...] | []
+          [work_order_option(), ...]
         ) :: {:ok, count :: integer()}
   def retry_many([%WorkOrder{} | _rest] = workorders, opts) do
+    attrs = Map.new(opts)
     orders_ids = Enum.map(workorders, & &1.id)
 
     attempt_numbers_query =
@@ -370,12 +321,37 @@ defmodule Lightning.WorkOrders do
         on: att.id == attn.id,
         join: wo in assoc(att, :work_order),
         where: attn.row_num == 1,
-        order_by: [asc: wo.inserted_at]
+        order_by: [asc: wo.inserted_at],
+        preload: [
+          :dataclip,
+          :starting_job,
+          work_order: wo,
+          starting_trigger: [edges: :target_job]
+        ]
       )
 
-    first_attempts_query
-    |> Repo.all()
-    |> retry_many(opts)
+    attempts = Repo.all(first_attempts_query)
+
+    for attempt <- attempts do
+      starting_job =
+        if job = attempt.starting_job do
+          job
+        else
+          [edge] = attempt.starting_trigger.edges
+          edge.target_job
+        end
+
+      {:ok, _} =
+        do_retry(
+          attempt.work_order,
+          attempt.dataclip,
+          starting_job,
+          [],
+          attrs[:created_by]
+        )
+    end
+
+    {:ok, length(attempts)}
   end
 
   def retry_many([%AttemptRun{} | _rest] = attempt_runs, opts) do
@@ -384,14 +360,6 @@ defmodule Lightning.WorkOrders do
     end
 
     {:ok, length(attempt_runs)}
-  end
-
-  def retry_many([%Attempt{} | _rest] = attempts, opts) do
-    for attempt <- attempts do
-      {:ok, _} = retry(attempt.id, opts)
-    end
-
-    {:ok, length(attempts)}
   end
 
   def retry_many([], _opts) do
