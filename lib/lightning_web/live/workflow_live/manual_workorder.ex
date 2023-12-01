@@ -80,7 +80,7 @@ defmodule LightningWeb.WorkflowLive.ManualWorkorder do
           disabled={@disabled}
           class="h-full pb-2"
           phx-debounce="300"
-          phx-hook="dataClipEditor"
+          phx-hook="BlurDataclipEditor"
         />
       </div>
     </.form>

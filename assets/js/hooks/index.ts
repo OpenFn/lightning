@@ -131,19 +131,16 @@ export const collapsiblePanel = {
   },
 } as PhoenixHook;
 
-
-export const dataClipEditor = {
+export const BlurDataclipEditor = {
   mounted() {
     this.el.addEventListener('keydown', event => {
-      if (event.key === "Escape") {
+      if (event.key === 'Escape') {
         document.activeElement.blur();
-        event.stopImmediatePropagation()
+        event.stopImmediatePropagation();
       }
     });
-  }
+  },
 } as PhoenixHook;
-
-
 
 /**
  * Factory function to create a hook for listening to specific key combinations.
