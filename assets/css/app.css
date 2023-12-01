@@ -226,4 +226,9 @@ div.line-num::before {
    cursor-text 
  selection:bg-slate-500/50
    group-first:pt-[0.1rem];
+
+  > pre {
+    @apply whitespace-break-spaces;
+    @apply break-all;
+  }
 }

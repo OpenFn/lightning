@@ -172,4 +172,102 @@ defmodule LightningWeb.AttemptLive.Components do
         ~H[<.icon title="running" name="hero-ellipsis-horizontal" class={@class} />]
     end
   end
+
+  @doc """
+  Renders a list of runs for the attempt
+  """
+  attr :runs, :list, required: true
+  attr :rest, :global
+  slot :inner_block, required: true
+
+  def step_list(assigns) do
+    ~H"""
+    <ul {@rest} role="list" class="-mb-8">
+      <li :for={run <- @runs} data-run-id={run.id} class="group">
+        <div class="relative pb-8">
+          <span
+            class="absolute left-4 top-4 -ml-px h-full w-0.5 bg-gray-200 group-last:hidden"
+            aria-hidden="true"
+          >
+          </span>
+          <%= render_slot(@inner_block, run) %>
+        </div>
+      </li>
+    </ul>
+    """
+  end
+
+  attr :run, Lightning.Invocation.Run, required: true
+  attr :selected, :boolean, default: false
+  attr :class, :string, default: ""
+
+  def step_item(assigns) do
+    ~H"""
+    <div class={[
+      "relative flex space-x-3",
+      @selected &&
+        "rounded-full outline outline-2 outline-primary-500 outline-offset-4",
+      @class
+    ]}>
+      <div>
+        <.run_state_circle run={@run} />
+      </div>
+      <div class="flex min-w-0 flex-1 justify-between space-x-4 pt-1.5 pr-1.5">
+        <div>
+          <p class="text-sm text-gray-900">
+            <%= @run.job.name %>
+          </p>
+        </div>
+        <div class="whitespace-nowrap text-right text-sm text-gray-500">
+          <.run_duration run={@run} />
+        </div>
+      </div>
+    </div>
+    """
+  end
+
+  defp run_duration(assigns) do
+    ~H"""
+    <%= cond do %>
+      <% is_nil(@run.started_at) -> %>
+        Unknown
+      <% is_nil(@run.finished_at) -> %>
+        Running...
+      <% true -> %>
+        <%= DateTime.to_unix(@run.finished_at, :millisecond) -
+          DateTime.to_unix(@run.started_at, :millisecond) %> ms
+    <% end %>
+    """
+  end
+
+  def loading_filler(assigns) do
+    ~H"""
+    <.detail_list class="animate-pulse">
+      <.list_item>
+        <:label>
+          <span class="inline-block bg-slate-500 rounded-full h-3 w-16">&nbsp;</span>
+        </:label>
+        <:value>
+          <span class="inline-block bg-slate-500 rounded-full h-3 w-24"></span>
+        </:value>
+      </.list_item>
+      <.list_item>
+        <:label>
+          <span class="inline-block bg-slate-500 rounded-full h-3 w-12">&nbsp;</span>
+        </:label>
+        <:value>
+          <span class="inline-block bg-slate-500 rounded-full h-3 w-12"></span>
+        </:value>
+      </.list_item>
+      <.list_item>
+        <:label>
+          <span class="inline-block bg-slate-500 rounded-full h-3 w-12">&nbsp;</span>
+        </:label>
+        <:value>
+          <span class="inline-block bg-slate-500 rounded-full h-3 w-24"></span>
+        </:value>
+      </.list_item>
+    </.detail_list>
+    """
+  end
 end

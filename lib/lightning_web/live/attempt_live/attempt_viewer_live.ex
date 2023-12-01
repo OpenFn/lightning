@@ -5,123 +5,140 @@ defmodule LightningWeb.AttemptLive.AttemptViewerLive do
   alias LightningWeb.Components.Viewers
   alias Lightning.Attempts
 
-  alias Lightning.Repo
   alias Phoenix.LiveView.AsyncResult
+  alias LightningWeb.AttemptLive.Streaming
 
   @impl true
   def render(assigns) do
     ~H"""
-    <div class="flex flex-col h-full min-h-0">
-      <.attempt_detail class="flex-0" attempt={@attempt} />
-      <div
-        phx-hook="LogLineHighlight"
-        id={"attempt-log-#{@attempt.id}"}
-        data-selected-run-id={@selected_run_id}
-        class="flex-1 max-h-full min-h-0 flex flex-col"
-      >
-        <Viewers.log_viewer
-          id={@attempt.id}
-          stream={@streams.log_lines}
-          class="flex-0 max-h-full"
-        />
-      </div>
+    <div class="@container/viewer h-full">
+      <.async_result :let={attempt} assign={@attempt}>
+        <:loading>
+          <.loading_filler />
+        </:loading>
+        <:failed :let={_reason}>
+          there was an error loading the attemptanization
+        </:failed>
+
+        <div class="flex @5xl/viewer:gap-6 h-full @5xl/viewer:flex-row flex-col">
+          <div class="flex-none flex gap-6 @5xl/viewer:flex-col flex-row">
+            <.attempt_detail attempt={attempt} class="flex-1 @5xl/viewer:flex-none" />
+
+            <.step_list
+              :let={run}
+              id={"step-list-#{attempt.id}"}
+              runs={@runs}
+              class="flex-1"
+            >
+              <.step_item
+                run={run}
+                selected={run.id == @selected_run_id}
+                class="cursor-default"
+              />
+            </.step_list>
+          </div>
+          <div class="grow-0 flex flex-col gap-4 min-h-0">
+            <Common.tab_bar orientation="horizontal" id="1" default_hash="log">
+              <Common.tab_item orientation="horizontal" hash="log">
+                <.icon
+                  name="hero-command-line"
+                  class="h-5 w-5 inline-block mr-1 align-middle"
+                />
+                <span class="inline-block align-middle">Log</span>
+              </Common.tab_item>
+              <Common.tab_item orientation="horizontal" hash="input">
+                <.icon
+                  name="hero-arrow-down-on-square"
+                  class="h-5 w-5 inline-block mr-1 align-middle"
+                />
+                <span class="inline-block align-middle">Input</span>
+              </Common.tab_item>
+              <Common.tab_item orientation="horizontal" hash="output">
+                <.icon
+                  name="hero-arrow-up-on-square"
+                  class="h-5 w-5 inline-block mr-1 align-middle"
+                />
+                <span class="inline-block align-middle">
+                  Output
+                </span>
+              </Common.tab_item>
+            </Common.tab_bar>
+
+            <div class="min-h-0 grow flex overflow-auto">
+              <Common.panel_content for_hash="log" class="grow overflow-auto">
+                <Viewers.log_viewer
+                  id={"attempt-log-#{attempt.id}"}
+                  class="overflow-auto h-full"
+                  highlight_id={@selected_run_id}
+                  stream={@streams.log_lines}
+                />
+              </Common.panel_content>
+              <Common.panel_content for_hash="input" class="grow overflow-auto">
+                <Viewers.dataclip_viewer
+                  id={"run-input-#{@selected_run_id}"}
+                  class="overflow-auto h-full flex"
+                  stream={@streams.input_dataclip}
+                />
+              </Common.panel_content>
+              <Common.panel_content for_hash="output" class="grow overflow-auto">
+                <Viewers.dataclip_viewer
+                  id={"run-output-#{@selected_run_id}"}
+                  class="overflow-auto h-full"
+                  stream={@streams.output_dataclip}
+                />
+              </Common.panel_content>
+            </div>
+          </div>
+        </div>
+      </.async_result>
     </div>
     """
   end
 
-  # TODO: async load the attempt
-
   @impl true
   def mount(_params, %{"attempt_id" => attempt_id} = session, socket) do
-    job_id = Map.get(session, "job_id")
-    attempt = Attempts.get(attempt_id, include: [:runs])
+    {:ok,
+     socket
+     |> assign(
+       selected_run_id: nil,
+       job_id: Map.get(session, "job_id"),
+       runs: []
+     )
+     |> stream(:log_lines, [])
+     |> stream(:input_dataclip, [])
+     |> assign(:input_dataclip, false)
+     |> stream(:output_dataclip, [])
+     |> assign(:output_dataclip, false)
+     |> assign(:attempt, AsyncResult.loading())
+     |> assign(:log_lines, AsyncResult.loading())
+     |> start_async(:attempt, fn ->
+       Attempts.get(attempt_id, include: [runs: :job])
+     end), layout: false}
+  end
 
+  use Streaming, chunk_size: 100
+
+  def handle_runs_change(socket) do
     # either a job_id or a run_id is passed in
     # if a run_id is passed in, we can hightlight the log lines immediately
     # if a job_id is passed in, we need to wait for the run to start
     # if neither is passed in, we can't highlight anything
 
-    Attempts.subscribe(attempt)
+    %{job_id: job_id, runs: runs} = socket.assigns
 
-    {:ok,
-     socket
-     |> assign(
-       attempt: attempt,
-       job_id: job_id,
-       selected_run_id: nil
-     )
-     |> maybe_set_selected_run_id(attempt.runs)
-     |> assign(:initial_log_lines, AsyncResult.loading())
-     |> start_async(:initial_log_lines, fn ->
-       {:ok, lines} =
-         Repo.transaction(fn ->
-           Attempts.get_log_lines(attempt)
-           |> Enum.reverse()
-         end)
+    selected_run_id = get_run_id_for_job_id(job_id, runs)
 
-       lines
-     end)
-     |> stream(:log_lines, []), layout: false}
+    selected_run = runs |> Enum.find(&(&1.id == selected_run_id))
+
+    socket
+    |> assign(selected_run_id: selected_run_id, selected_run: selected_run)
+    |> maybe_load_input_dataclip()
+    |> maybe_load_output_dataclip()
   end
 
-  def handle_async(:initial_log_lines, {:ok, lines}, socket) do
-    socket =
-      socket
-      |> stream(:log_lines, lines, at: 0)
-      |> then(fn socket ->
-        %{initial_log_lines: initial_log_lines} = socket.assigns
-
-        socket
-        |> assign(
-          :initial_log_lines,
-          AsyncResult.ok(initial_log_lines, Enum.any?(lines))
-        )
-      end)
-
-    {:noreply, socket}
-  end
-
-  def handle_async(:initial_log_lines, {:exit, reason}, socket) do
-    %{initial_log_lines: initial_log_lines} = socket.assigns
-
-    {:noreply,
-     assign(
-       socket,
-       :initial_log_lines,
-       AsyncResult.failed(initial_log_lines, {:exit, reason})
-     )}
-  end
-
-  @impl true
-  def handle_info(%Attempts.Events.RunStarted{run: run}, socket) do
-    # TODO: add the run to a list of runs in assigns, preseeded with the
-    # attempts' runs (if any)
-    {:noreply, socket |> maybe_set_selected_run_id([run])}
-  end
-
-  def handle_info(%Attempts.Events.AttemptUpdated{attempt: attempt}, socket) do
-    {:noreply, socket |> assign(attempt: attempt)}
-  end
-
-  def handle_info(%Attempts.Events.LogAppended{log_line: log_line}, socket) do
-    {:noreply, socket |> stream_insert(:log_lines, log_line)}
-  end
-
-  # Fallthrough in case there are events we don't care about.
-  # def handle_info(%{} = m, socket), do: {:noreply, socket}
-
-  defp maybe_set_selected_run_id(socket, runs) when is_list(runs) do
-    case socket.assigns do
-      %{job_id: job_id, selected_run_id: nil} ->
-        runs
-        |> Enum.find(&(&1.job_id == job_id))
-        |> then(fn run ->
-          selected_run_id = Map.get(run || %{}, :id)
-          socket |> assign(selected_run_id: selected_run_id)
-        end)
-
-      _ ->
-        socket
-    end
+  defp get_run_id_for_job_id(job_id, runs) do
+    runs
+    |> Enum.find(%{}, &(&1.job_id == job_id))
+    |> Map.get(:id)
   end
 end
