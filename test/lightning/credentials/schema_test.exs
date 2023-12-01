@@ -68,7 +68,7 @@ defmodule Lightning.Credentials.SchemaTest do
   end
 
   describe "validate/2" do
-    test "returns a changeset with error text" do
+    test "returns a changeset with 2 expected formats" do
       schema = Schema.new(postgres_schema_json(), "postgres")
 
       changeset =
@@ -82,7 +82,7 @@ defmodule Lightning.Credentials.SchemaTest do
 
       assert Enum.any?(
                errors,
-               &(&1 == {:host, {"expected to be an IPv4 address or a URI", []}})
+               &(&1 == {:host, {"expected to be a URI or an IPv4 address", []}})
              )
     end
   end

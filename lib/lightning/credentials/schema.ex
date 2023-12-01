@@ -43,9 +43,9 @@ defmodule Lightning.Credentials.Schema do
     |> new(name)
   end
 
-  @spec validate(changeset :: Ecto.Changeset.t(), schema :: __MODULE__.t()) ::
+  @spec validate(changeset :: Ecto.Changeset.t(), schema :: t()) ::
           Ecto.Changeset.t()
-  def validate(changeset, %__MODULE__{} = schema) do
+  def validate(changeset, schema) do
     validation =
       Validator.validate(
         schema.root,
@@ -78,9 +78,8 @@ defmodule Lightning.Credentials.Schema do
 
   defp error_to_changeset(
          %{
-           path: path,
            error: %Validator.Error.AnyOf{invalid: alternatives}
-         },
+         } = error_map,
          changeset
        ) do
     formats =
@@ -88,10 +87,9 @@ defmodule Lightning.Credentials.Schema do
         format
       end)
 
-    error_to_changeset(
-      %{path: path, error: %{any_of: MapSet.new(formats)}},
-      changeset
-    )
+    error_map
+    |> Map.put(:error, %{any_of: formats})
+    |> error_to_changeset(changeset)
   end
 
   defp error_to_changeset(%{path: path, error: error}, changeset) do
