@@ -12,6 +12,9 @@ and this project adheres to
 
 ### Changed
 
+- Only add history page filters when needed for simpler multi-select status
+  interface and shorter page URLs
+  [#1331](https://github.com/OpenFn/Lightning/pull/1331)
 - Use dynamic Endpoint config only on prod
   [#1494](https://github.com/OpenFn/Lightning/pull/1494)
 - Validate schema field with any of expected values
