@@ -82,7 +82,7 @@ defmodule LightningWeb.RunLive.RerunJobComponent do
               </h3>
               <div class="mt-2">
                 <p class="text-sm text-gray-500">
-                  Find all runs that include this step, and rerun from there
+                  Find all runs that include this step and rerun from there. (Note that if you'd like to reprocess all of the selected workorders from the start, use the "Rerun" button, not this "Rerun from" button.)
                 </p>
                 <form
                   id="select-job-for-rerun-form"

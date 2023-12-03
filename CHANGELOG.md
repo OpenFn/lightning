@@ -17,8 +17,10 @@ and this project adheres to
 
 ### Fixed
 
-- Use checkbox on boolean credential fields
+- Use checkbox on boolean credential fields rather than a text input field
   [#1430](https://github.com/OpenFn/Lightning/issues/1430)
+- Allow users to retry work orders that failed before their first run was
+  created [#1417](https://github.com/OpenFn/Lightning/issues/1417)
 
 ## [v0.10.5] - 2023-12-03
 
