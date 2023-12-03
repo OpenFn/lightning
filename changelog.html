@@ -13,7 +13,7 @@
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-EPF2X7PV.js"></script>
-    <script src="dist/sidebar_items-51E67774.js"></script>
+    <script src="dist/sidebar_items-D05C75CF.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -154,9 +154,11 @@ and this project adheres to
   </a>
   <span class="text">Changed</span>
 </h3>
-<ul><li>Use dynamic Endpoint config only on prod
+<ul><li>Only add history page filters when needed for simpler multi-select status
+interface and shorter page URLs
+<a href="https://github.com/OpenFn/Lightning/pull/1331">#1331</a></li><li>Use dynamic Endpoint config only on prod
 <a href="https://github.com/OpenFn/Lightning/pull/1494">#1494</a></li><li>Validate schema field with any of expected values
-<a href="https://github.com/OpenFn/Lightning/pull/1502">#1502</a>  </li></ul><h3 id="fixed" class="section-heading">
+<a href="https://github.com/OpenFn/Lightning/pull/1502">#1502</a></li></ul><h3 id="fixed" class="section-heading">
   <a href="#fixed" class="hover-link">
     <i class="ri-link-m" aria-hidden="true"></i>
   </a>
@@ -277,7 +279,7 @@ to address <a href="https://github.com/OpenFn/Lightning/issues/1421">#1421</a></
   </a>
   <span class="text">Fixed</span>
 </h3>
-<ul><li>Workorder ID was not displayed properly in history page
+<ul><li>Work Order ID was not displayed properly in history page
 <a href="https://github.com/OpenFn/Lightning/issues/1423">#1423</a></li></ul><h2 id="v0-10-0-2023-11-21" class="section-heading">
   <a href="#v0-10-0-2023-11-21" class="hover-link">
     <i class="ri-link-m" aria-hidden="true"></i>
@@ -308,7 +310,7 @@ workorders up to <code class="inline">v0.10.0</code>, though the granularity of 
 will be less than <code class="inline">v0.10.0</code> and the final states are not guaranteed to be
 accurate for workflows with multiple branches and leaf nodes with varying exit
 reasons.</p><p>The migration scripts can be run with a single function call in SetupUtils from
-a connect <code class="inline">iex</code> session:</p><pre><code class="makeup elixir" translate="no"><span class="nc">Lightning.SetupUtils</span><span class="o">.</span><span class="n">approximate_state_for_attempts_and_workorders</span><span class="p" data-group-id="4933404197-1">(</span><span class="p" data-group-id="4933404197-1">)</span></code></pre><p>Note that (like lots of <em>other</em> functionality in <code class="inline">SetupUtils</code>, calling this
+a connect <code class="inline">iex</code> session:</p><pre><code class="makeup elixir" translate="no"><span class="nc">Lightning.SetupUtils</span><span class="o">.</span><span class="n">approximate_state_for_attempts_and_workorders</span><span class="p" data-group-id="4071463820-1">(</span><span class="p" data-group-id="4071463820-1">)</span></code></pre><p>Note that (like lots of <em>other</em> functionality in <code class="inline">SetupUtils</code>, calling this
 function is a destructive action and you should only do it if you've backed up
 your data and you know what you're doing.)</p><p>As always, we recommend backing up your data before migrating. (And thanks for
 bearing with us as we move towards our first stable Lightning release.)</p><h3 id="added-5" class="section-heading">
@@ -1230,8 +1232,8 @@ communicate with each other.</li><li>Users can set up realtime alerts for a proj
 </h3>
 <ul><li>Better code-assist and intelliense in the Job Editor</li><li>Updated @openfn/workflow-diagram to 0.4.0</li><li>Make plus button part of job nodes in Workflow Diagram</li><li>Updated @openfn/adaptor-docs to 0.0.5</li><li>Updated @openfn/describe-package to 0.0.10</li><li>Create an follow a manual Run from the Job Inspector</li><li>View all workflows in a project on the workflows index page</li><li>Move @openfn/workflow-diagram into the application, the NPM module is now
 deprecated.</li><li>Remove workflow name from first node</li><li>Move the used parts of <code class="inline">@openfn/engine</code> into the application.</li><li>[BREAKING CHANGE] Ported <code class="inline">mix openfn.install.runtime</code> into application, use
-<code class="inline">mix lightning.install_runtime</code>.</li><li>[BREAKING CHANGE] Introduced <code class="inline">@openfn/cli</code> as the new runtime for Jobs</li><li>Rename a workflow through the page heading</li><li>Hide the dataclips tab for beta</li><li>Make adaptor default to common@latest</li><li>Remove jobs list page</li><li>Better error handling in the docs panel</li><li>Disable credential ownership transfer in dev and prod environments</li><li>Add project settings page</li><li>Change Workorder filters to apply to the aggregate state of the workorder and
-not the run directly</li><li>Enable jobs by default</li><li>Set log level to info</li><li>Add Beta checkbox to register page</li><li>User roles and permissions</li></ul><h3 id="fixed-36" class="section-heading">
+<code class="inline">mix lightning.install_runtime</code>.</li><li>[BREAKING CHANGE] Introduced <code class="inline">@openfn/cli</code> as the new runtime for Jobs</li><li>Rename a workflow through the page heading</li><li>Hide the dataclips tab for beta</li><li>Make adaptor default to common@latest</li><li>Remove jobs list page</li><li>Better error handling in the docs panel</li><li>Disable credential ownership transfer in dev and prod environments</li><li>Add project settings page</li><li>Change Work Order filters to apply to the aggregate state of the work order
+and not the run directly</li><li>Enable jobs by default</li><li>Set log level to info</li><li>Add Beta checkbox to register page</li><li>User roles and permissions</li></ul><h3 id="fixed-36" class="section-heading">
   <a href="#fixed-36" class="hover-link">
     <i class="ri-link-m" aria-hidden="true"></i>
   </a>

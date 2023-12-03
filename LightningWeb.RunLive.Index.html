@@ -13,7 +13,7 @@
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-EPF2X7PV.js"></script>
-    <script src="dist/sidebar_items-51E67774.js"></script>
+    <script src="dist/sidebar_items-D05C75CF.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -155,9 +155,11 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#checked/2" translate="no">checked(changeset, id)</a>
+        <a href="#filters_changeset/1" translate="no">filters_changeset(params)</a>
 
       </div>
+
+        <div class="summary-synopsis"><p>Creates a changeset based on given parameters and the fixed workorder filter types.</p></div>
 
     </div>
 
@@ -166,6 +168,29 @@ Pages
         <a href="#handle_async/3" translate="no">handle_async(atom, arg, socket)</a>
 
       </div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#handle_info/2" translate="no">handle_info(arg1, socket)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>When a WorkOrderCreated event is detected, we first check to see if the new
+work order is admissible on the page, given the current filters. If it is, we
+add it to the top of the page. If not, nothing happens.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#is_checked/2" translate="no">is_checked(changeset, id)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Takes a changeset used for querying workorders and checks to see if the given
+filter is present in that changeset. Returns true or false.</p></div>
 
     </div>
 
@@ -192,16 +217,38 @@ Pages
       <span class="text">Functions</span>
     </h1>
     <div class="functions-list">
-<section class="detail" id="checked/2">
+<section class="detail" id="filters_changeset/1">
 
   <div class="detail-header">
-    <a href="#checked/2" class="detail-link" title="Link to this function">
+    <a href="#filters_changeset/1" class="detail-link" title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">checked(changeset, id)</h1>
+    <h1 class="signature" translate="no">filters_changeset(params)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/run_live/index.ex#L194" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/run_live/index.ex#L202" class="icon-action" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+<p>Creates a changeset based on given parameters and the fixed workorder filter types.</p>
+  </section>
+</section>
+<section class="detail" id="handle_async/3">
+
+  <div class="detail-header">
+    <a href="#handle_async/3" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">handle_async(atom, arg, socket)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/run_live/index.ex#L163" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -214,16 +261,16 @@ Pages
 
   </section>
 </section>
-<section class="detail" id="handle_async/3">
+<section class="detail" id="handle_info/2">
 
   <div class="detail-header">
-    <a href="#handle_async/3" class="detail-link" title="Link to this function">
+    <a href="#handle_info/2" class="detail-link" title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">handle_async(atom, arg, socket)</h1>
+    <h1 class="signature" translate="no">handle_info(arg1, socket)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/run_live/index.ex#L172" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/run_live/index.ex#L211" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -233,7 +280,32 @@ Pages
 
   <section class="docstring">
 
+<p>When a WorkOrderCreated event is detected, we first check to see if the new
+work order is admissible on the page, given the current filters. If it is, we
+add it to the top of the page. If not, nothing happens.</p>
+  </section>
+</section>
+<section class="detail" id="is_checked/2">
 
+  <div class="detail-header">
+    <a href="#is_checked/2" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">is_checked(changeset, id)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/run_live/index.ex#L189" class="icon-action" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+<p>Takes a changeset used for querying workorders and checks to see if the given
+filter is present in that changeset. Returns true or false.</p>
   </section>
 </section>
 <section class="detail" id="render/1">
