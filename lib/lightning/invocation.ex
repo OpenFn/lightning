@@ -16,6 +16,8 @@ defmodule Lightning.Invocation do
   @workorders_search_timeout 30_000
   @workorders_count_limit 50
 
+  def get_workorders_count_limit, do: @workorders_count_limit
+
   @doc """
   Returns the list of dataclips.
 

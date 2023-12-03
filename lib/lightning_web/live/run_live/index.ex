@@ -92,6 +92,7 @@ defmodule LightningWeb.RunLive.Index do
        workflows: workflows,
        statuses: statuses,
        search_fields: search_fields,
+       string_search_limit: Invocation.get_workorders_count_limit(),
        active_menu_item: :runs,
        work_orders: [],
        selected_work_orders: [],

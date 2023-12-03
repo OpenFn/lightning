@@ -447,7 +447,14 @@
               <div>
                 <p class="text-xl text-gray-500 font-medium">
                   <%= if search = get_change(@filters_changeset, :search_term) do %>
-                    <%= @page.total_entries %> Work Orders with runs matching "<%= search %>"
+                    <%= @page.total_entries %><%= if @page.total_entries >=
+                                                       @string_search_limit,
+                                                     do: "+" %> work orders with runs matching "<%= search %>"
+                    <%= if @page.total_entries >= @string_search_limit do %>
+                      <span class="text-xs text-gray">
+                        (try more specific filters)
+                      </span>
+                    <% end %>
                   <% else %>
                     Work Orders
                   <% end %>
