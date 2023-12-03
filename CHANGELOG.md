@@ -17,8 +17,10 @@ and this project adheres to
 
 ### Fixed
 
-- Use checkbox on boolean credential fields
+- Use checkbox on boolean credential fields rather than a text input field
   [#1430](https://github.com/OpenFn/Lightning/issues/1430)
+- Allow users to retry work orders that failed before their first run was
+  created [#1417](https://github.com/OpenFn/Lightning/issues/1417)
 
 ## [v0.10.5] - 2023-12-03
 
@@ -63,8 +65,6 @@ and this project adheres to
   [#1145](https://github.com/OpenFn/Lightning/issues/1145)
 - Fix for adding ellipses on credential info on job editor heading
   [#1428](https://github.com/OpenFn/Lightning/issues/1428)
-- Can't retry workorders that failed without a run
-  [#1417](https://github.com/OpenFn/Lightning/issues/1417)
 
 ## [v0.10.3] - 2023-11-28
 
