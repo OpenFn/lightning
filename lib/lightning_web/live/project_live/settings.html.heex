@@ -195,11 +195,31 @@
           <% end %>
         </LightningWeb.Components.Common.panel_content>
         <LightningWeb.Components.Common.panel_content for_hash="credentials">
-          <div>
-            <h6 class="font-medium text-black">Project credentials</h6>
-            <small class="block my-1 text-xs text-gray-600">
-              View and edit credentials that are currently accesible for use in this project.
-            </small>
+          <div class="flex justify-between content-center pb-2">
+            <div class="leading-loose">
+              <h6 class="font-medium text-black">Project credentials</h6>
+              <small class="block my-1 text-xs text-gray-600">
+                View and edit credentials that are currently accesible for use in this project.
+              </small>
+            </div>
+            <div class="sm:block" aria-hidden="true">
+              <button
+                id="new-credential-button"
+                type="button"
+                phx-click={show_modal("new-credential-modal")}
+                class="rounded-md bg-indigo-600 px-2.5 py-1.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 disabled:opacity-50"
+              >
+                + New Credential
+              </button>
+              <.live_component
+                id="new-credential-modal"
+                module={LightningWeb.CredentialLive.CredentialModalComponent}
+                action={:new}
+                project={@project}
+                current_user={@current_user}
+                return_to={~p"/projects/#{@project.id}/settings#credentials"}
+              />
+            </div>
           </div>
           <div class="hidden sm:block" aria-hidden="true">
             <div class="py-2"></div>
