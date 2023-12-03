@@ -7,26 +7,26 @@ defmodule Lightning.WorkOrders do
   Workorders represent the entrypoint for a unit of work in Lightning.
   They allow you to track the status of a webhook or cron trigger.
 
-  For example if a user makes a request to a webhook endpoint, a Workorder
+  For example if a user makes a request to a webhook endpoint, a Work Order
   is created with it's associated Workflow and Dataclip.
 
-  Every Workorder has at least one Attempt, which represents a single
+  Every Work Order has at least one Attempt, which represents a single
   invocation of the Workflow. If the workflow fails, and the attempt is retried,
-  a new Attempt is created on the Workorder.
+  a new Attempt is created on the Work Order.
 
   This allows you group all the attempts for a single webhook, and track
   the success or failure of a given dataclip.
 
-  ## Creating Workorders
+  ## Creating Work Orders
 
-  Workorders can be created in three ways:
+  Work Orders can be created in three ways:
 
   1. Via a webhook trigger
   2. Via a cron trigger
   3. Manually by a user (via the UI or API)
 
-  Retries do not create new Workorders, but rather new Attempts on the existing
-  Workorder.
+  Retries do not create new Work Orders, but rather new Attempts on the existing
+  Work Order.
   """
 
   alias Lightning.AttemptRun
@@ -58,7 +58,7 @@ defmodule Lightning.WorkOrders do
           | {:created_by, User.t()}
 
   @doc """
-  Create a new Workorder.
+  Create a new Work Order.
 
   **For a webhook**
       create_for(trigger, workflow: workflow, dataclip: dataclip)
@@ -169,7 +169,7 @@ defmodule Lightning.WorkOrders do
   @doc """
   Retry an Attempt from a given run.
 
-  This will create a new Attempt on the Workorder, and enqueue it for
+  This will create a new Attempt on the Work Order, and enqueue it for
   processing.
 
   When creating a new Attempt, a graph of the workflow is created, and
@@ -364,7 +364,7 @@ defmodule Lightning.WorkOrders do
   end
 
   @doc """
-  Get a Workorder by id.
+  Get a Work Order by id.
 
   Optionally preload associations by passing a list of atoms to `:include`.
 

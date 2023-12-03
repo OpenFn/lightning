@@ -238,29 +238,29 @@ defmodule LightningWeb.RunWorkOrderTest do
 
       assert html =~ "Status"
 
-      assert view
-             |> element("input#run-filter-form_success[checked]")
-             |> has_element?()
+      status_filters = [
+        "success",
+        "failed",
+        "running",
+        "crashed",
+        "pending",
+        "killed",
+        "failed"
+      ]
 
-      assert view
-             |> element("input#run-filter-form_failed[checked]")
-             |> has_element?()
+      assert status_filters
+             |> Enum.all?(fn f ->
+               view
+               |> element("input#workorder-filter-form_#{f}")
+               |> has_element?()
+             end)
 
-      assert view
-             |> element("input#run-filter-form_running[checked]")
-             |> has_element?()
-
-      assert view
-             |> element("input#run-filter-form_crashed[checked]")
-             |> has_element?()
-
-      assert view
-             |> element("input#run-filter-form_pending[checked]")
-             |> has_element?()
-
-      assert view
-             |> element("input#run-filter-form_killed[checked]")
-             |> has_element?()
+      assert status_filters
+             |> Enum.any?(fn f ->
+               view
+               |> element("input#workorder-filter-form_#{f}[checked]")
+               |> has_element?()
+             end) == false
 
       assert view
              |> element("input#run-search-form_search_term")
@@ -306,7 +306,7 @@ defmodule LightningWeb.RunWorkOrderTest do
              |> has_element?()
     end
 
-    test "Workorder with failed status shows when option checked", %{
+    test "Work Order with failed status shows when option checked", %{
       conn: conn,
       project: project
     } do
@@ -351,7 +351,7 @@ defmodule LightningWeb.RunWorkOrderTest do
 
       # uncheck :failure
       view
-      |> form("#run-filter-form", filters: %{"failed" => "false"})
+      |> form("#workorder-filter-form", filters: %{"failed" => "false"})
       |> render_submit()
 
       refute view
@@ -363,7 +363,7 @@ defmodule LightningWeb.RunWorkOrderTest do
       # recheck failure
 
       view
-      |> form("#run-filter-form", filters: %{"failed" => "true"})
+      |> form("#workorder-filter-form", filters: %{"failed" => "true"})
       |> render_submit()
 
       div =
@@ -1090,7 +1090,9 @@ defmodule LightningWeb.RunWorkOrderTest do
       {:ok, view, _html} =
         live_async(
           conn,
-          Routes.project_run_index_path(conn, :index, project.id)
+          Routes.project_run_index_path(conn, :index, project.id,
+            filters: %{workflow_id: workflow_1.id}
+          )
         )
 
       work_order_1 =
@@ -1142,35 +1144,23 @@ defmodule LightningWeb.RunWorkOrderTest do
 
       Events.subscribe(project.id)
 
+      # send a workorder that matches the current filter criteria
       Events.work_order_created(project.id, work_order_1)
       %{id: wo_id} = work_order_1
       assert_received %Events.WorkOrderCreated{work_order: %{id: ^wo_id}}
 
-      assert_patch(
-        view,
-        Routes.project_run_index_path(conn, :index, project.id,
-          filters: Map.put(filters, "workorder_id", wo_id)
-        )
-      )
-
       # Awaits for async changes and forces re-render
       render_async(view)
       render(view)
+
       assert has_element?(view, "#workorder-#{work_order_1.id}")
 
-      # repeat same test for another workorder
+      # repeat same test for another workorder and show that it does not appear
       Events.work_order_created(project.id, work_order_2)
       %{id: wo_id} = work_order_2
       assert_received %Events.WorkOrderCreated{work_order: %{id: ^wo_id}}
 
-      assert_patch(
-        view,
-        Routes.project_run_index_path(conn, :index, project.id,
-          filters: Map.put(filters, "workorder_id", wo_id)
-        )
-      )
-
-      assert has_element?(view, "#workorder-#{work_order_2.id}")
+      refute has_element?(view, "#workorder-#{work_order_2.id}")
     end
   end
 

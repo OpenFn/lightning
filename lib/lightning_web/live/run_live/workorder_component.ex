@@ -1,6 +1,6 @@
 defmodule LightningWeb.RunLive.WorkOrderComponent do
   @moduledoc """
-  Workorder component
+  Work Order component
   """
   use LightningWeb, :live_component
 

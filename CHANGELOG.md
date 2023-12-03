@@ -12,10 +12,13 @@ and this project adheres to
 
 ### Changed
 
+- Only add history page filters when needed for simpler multi-select status
+  interface and shorter page URLs
+  [#1331](https://github.com/OpenFn/Lightning/pull/1331)
 - Use dynamic Endpoint config only on prod
   [#1494](https://github.com/OpenFn/Lightning/pull/1494)
 - Validate schema field with any of expected values
-  [#1502](https://github.com/OpenFn/Lightning/pull/1502)  
+  [#1502](https://github.com/OpenFn/Lightning/pull/1502)
 
 ### Fixed
 
@@ -95,7 +98,7 @@ and this project adheres to
 
 ### Fixed
 
-- Workorder ID was not displayed properly in history page
+- Work Order ID was not displayed properly in history page
   [#1423](https://github.com/OpenFn/Lightning/issues/1423)
 
 ## [v0.10.0] - 2023-11-21
@@ -862,8 +865,8 @@ the Nodes and Edges [epic](https://github.com/OpenFn/Lightning/issues/793).
 - Better error handling in the docs panel
 - Disable credential ownership transfer in dev and prod environments
 - Add project settings page
-- Change Workorder filters to apply to the aggregate state of the workorder and
-  not the run directly
+- Change Work Order filters to apply to the aggregate state of the work order
+  and not the run directly
 - Enable jobs by default
 - Set log level to info
 - Add Beta checkbox to register page
