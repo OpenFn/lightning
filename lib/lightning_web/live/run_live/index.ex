@@ -230,22 +230,18 @@ defmodule LightningWeb.RunLive.Index do
         %Events.WorkOrderCreated{work_order: work_order},
         %{assigns: assigns} = socket
       ) do
+    %{project: project, filters: filters} = assigns
+
     params =
-      assigns.filters
+      filters
       |> Map.merge(%{"workorder_id" => work_order.id})
       |> SearchParams.new()
 
     # Note that this may or may not contain the new work order, depending on the filters.
-    page_result = Invocation.search_workorders(assigns.project, params)
-
-    page = %{
-      assigns.page
-      | entries: page_result.entries ++ assigns.page.entries,
-        page_size: assigns.page.page_size + page_result.total_entries,
-        total_entries: assigns.page.total_entries + page_result.total_entries
-    }
-
-    {:noreply, assign(socket, page: page)}
+    case Invocation.search_workorders(project, params) do
+      %{entries: []} -> {:noreply, socket}
+      %{entries: [work_order]} -> {:noreply, append_to_page(socket, work_order)}
+    end
   end
 
   @impl true
@@ -443,6 +439,23 @@ defmodule LightningWeb.RunLive.Index do
 
   defp maybe_humanize_date(date) do
     date && Timex.format!(date, "{D}/{M}/{YY}")
+  end
+
+  defp append_to_page(socket, workorder) do
+    %{page: page, async_page: async_page} = socket.assigns
+
+    new_page =
+      %{
+        page
+        | entries: [workorder] ++ page.entries,
+          page_size: page.page_size + 1,
+          total_entries: page.total_entries + 1
+      }
+
+    assign(socket,
+      async_page: AsyncResult.ok(async_page, new_page),
+      page: new_page
+    )
   end
 
   defp update_page(socket, workorder) do

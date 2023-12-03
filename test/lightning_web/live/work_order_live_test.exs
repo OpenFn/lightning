@@ -1090,7 +1090,9 @@ defmodule LightningWeb.RunWorkOrderTest do
       {:ok, view, _html} =
         live_async(
           conn,
-          Routes.project_run_index_path(conn, :index, project.id)
+          Routes.project_run_index_path(conn, :index, project.id,
+            filters: %{workflow_id: workflow_1.id}
+          )
         )
 
       work_order_1 =
@@ -1142,6 +1144,7 @@ defmodule LightningWeb.RunWorkOrderTest do
 
       Events.subscribe(project.id)
 
+      # send a workorder that matches the current filter criteria
       Events.work_order_created(project.id, work_order_1)
       %{id: wo_id} = work_order_1
       assert_received %Events.WorkOrderCreated{work_order: %{id: ^wo_id}}
@@ -1149,21 +1152,15 @@ defmodule LightningWeb.RunWorkOrderTest do
       # Awaits for async changes and forces re-render
       render_async(view)
       render(view)
+
       assert has_element?(view, "#workorder-#{work_order_1.id}")
 
-      # repeat same test for another workorder
+      # repeat same test for another workorder and show that it does not appear
       Events.work_order_created(project.id, work_order_2)
       %{id: wo_id} = work_order_2
       assert_received %Events.WorkOrderCreated{work_order: %{id: ^wo_id}}
 
-      assert_patch(
-        view,
-        Routes.project_run_index_path(conn, :index, project.id,
-          filters: Map.put(filters, "workorder_id", wo_id)
-        )
-      )
-
-      assert has_element?(view, "#workorder-#{work_order_2.id}")
+      refute has_element?(view, "#workorder-#{work_order_2.id}")
     end
   end
 
