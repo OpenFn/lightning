@@ -12,6 +12,14 @@ and this project adheres to
 
 ### Changed
 
+### Fixed
+
+## [v0.10.5] - 2023-12-03
+
+### Added
+
+### Changed
+
 - Only add history page filters when needed for simpler multi-select status
   interface and shorter page URLs
   [#1331](https://github.com/OpenFn/Lightning/pull/1331)
