@@ -221,18 +221,31 @@ defmodule LightningWeb.RunLive.Index do
   end
 
   @impl true
+  @doc """
+  When a WorkOrderCreated event is detected, we first check to see if the new
+  work order is admissible on the page, given the current filters. If it is, we
+  add it to the top of the page. If not, nothing happens.
+  """
   def handle_info(
         %Events.WorkOrderCreated{work_order: work_order},
-        socket
+        %{assigns: assigns} = socket
       ) do
-    %{project: project, filters: filters} = socket.assigns
+    params =
+      assigns.filters
+      |> Map.merge(%{"workorder_id" => work_order.id})
+      |> SearchParams.new()
 
-    filters = Map.merge(filters, %{"workorder_id" => work_order.id})
+    # Note that this may or may not contain the new work order, depending on the filters.
+    page_result = Invocation.search_workorders(assigns.project, params)
 
-    {:noreply,
-     push_patch(socket,
-       to: ~p"/projects/#{project.id}/runs?#{%{filters: filters}}"
-     )}
+    page = %{
+      assigns.page
+      | entries: page_result.entries ++ assigns.page.entries,
+        page_size: assigns.page.page_size + page_result.total_entries,
+        total_entries: assigns.page.total_entries + page_result.total_entries
+    }
+
+    {:noreply, assign(socket, page: page)}
   end
 
   @impl true

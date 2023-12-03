@@ -1146,13 +1146,6 @@ defmodule LightningWeb.RunWorkOrderTest do
       %{id: wo_id} = work_order_1
       assert_received %Events.WorkOrderCreated{work_order: %{id: ^wo_id}}
 
-      assert_patch(
-        view,
-        Routes.project_run_index_path(conn, :index, project.id,
-          filters: Map.put(filters, "workorder_id", wo_id)
-        )
-      )
-
       # Awaits for async changes and forces re-render
       render_async(view)
       render(view)
