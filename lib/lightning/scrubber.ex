@@ -26,7 +26,7 @@ defmodule Lightning.Scrubber do
 
     @spec add_samples(state :: t(), samples()) :: t()
     def add_samples({samples}, new_samples) do
-      {samples ++ new_samples}
+      {Enum.uniq(samples ++ new_samples)}
     end
 
     @spec scrub(state :: t(), data :: String.t()) :: String.t()
@@ -50,10 +50,17 @@ defmodule Lightning.Scrubber do
 
   use Agent
 
-  @spec start_link(opts :: [samples: [String.t()], name: nil | GenServer.name()]) ::
+  @spec start_link(
+          opts :: [
+            samples: [String.t()],
+            basic_auth: [String.t()],
+            name: nil | GenServer.name()
+          ]
+        ) ::
           Agent.on_start()
   def start_link(opts) do
     samples = Keyword.get(opts, :samples, [])
+    basic_auth = Keyword.get(opts, :basic_auth, [])
 
     server_opts =
       Keyword.get(opts, :name)
@@ -66,13 +73,14 @@ defmodule Lightning.Scrubber do
       end
 
     Agent.start_link(
-      fn -> State.new(samples |> encode_samples()) end,
+      fn -> State.new(samples |> encode_samples(basic_auth)) end,
       server_opts
     )
   end
 
-  def add_samples(agent, new_samples) do
-    Agent.update(agent, &State.add_samples(&1, new_samples))
+  def add_samples(agent, new_samples, basic_auth) do
+    new_encoded_samples = encode_samples(new_samples, basic_auth)
+    Agent.update(agent, &State.add_samples(&1, new_encoded_samples))
   end
 
   def scrub(agent, lines) when is_list(lines) do
@@ -88,8 +96,10 @@ defmodule Lightning.Scrubber do
   Prepare a list of sensitive samples (strings) into a potentially bigger list
   composed of variations a sample may appear.
   """
-  @spec encode_samples(samples :: [String.t()]) :: [String.t()]
-  def encode_samples(samples) do
+  @spec encode_samples(samples :: [String.t()], basic_auth :: [String.t()]) :: [
+          String.t()
+        ]
+  def encode_samples(samples, basic_auth \\ []) do
     stringified_samples =
       samples
       |> Enum.filter(fn x -> not is_boolean(x) end)
@@ -102,6 +112,7 @@ defmodule Lightning.Scrubber do
         "#{x}:#{y}"
         |> Base.encode64()
       end)
+      |> Enum.concat(basic_auth)
 
     Enum.concat([stringified_samples, base64_secrets])
     |> Enum.sort_by(&String.length/1, :desc)

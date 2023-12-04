@@ -1,6 +1,8 @@
 defmodule Lightning.ScrubberTest do
   use ExUnit.Case, async: true
 
+  alias Lightning.Credentials
+  alias Lightning.Credentials.Credential
   alias Lightning.Scrubber
 
   describe "scrub/2" do
@@ -88,7 +90,7 @@ defmodule Lightning.ScrubberTest do
     end
   end
 
-  describe "encode_samples/1" do
+  describe "encode_samples/3" do
     test "creates base64 pairs of all samples as strings and adds them to the initial samples" do
       secrets = ["a", "secretpassword", 5432, false]
 
@@ -106,6 +108,46 @@ defmodule Lightning.ScrubberTest do
                "YTph",
                "a"
              ]
+    end
+
+    test "adds basic auth base64 composed with usernames" do
+      secrets = ["a", "secretpassword", 5432, false]
+
+      basic_auth =
+        Credentials.basic_auth_for(%Credential{
+          body: %{
+            "username" => "someuser",
+            "email" => "user@email.com",
+            "password" => "secretpassword"
+          }
+        })
+
+      assert samples =
+               Scrubber.encode_samples(
+                 secrets,
+                 basic_auth
+               )
+
+      assert MapSet.difference(
+               MapSet.new([
+                 "c2VjcmV0cGFzc3dvcmQ6c2VjcmV0cGFzc3dvcmQ=",
+                 "c2VjcmV0cGFzc3dvcmQ6NTQzMg==",
+                 "NTQzMjpzZWNyZXRwYXNzd29yZA==",
+                 "YTpzZWNyZXRwYXNzd29yZA==",
+                 "c2VjcmV0cGFzc3dvcmQ6YQ==",
+                 "secretpassword",
+                 "NTQzMjo1NDMy",
+                 "YTo1NDMy",
+                 "NTQzMjph",
+                 "5432",
+                 "YTph",
+                 "a"
+               ]),
+               MapSet.new(samples)
+             ) == MapSet.new()
+
+      assert Base.encode64("someuser:secretpassword") in samples
+      assert Base.encode64("user@email.com:secretpassword") in samples
     end
   end
 end
