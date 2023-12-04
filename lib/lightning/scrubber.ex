@@ -72,7 +72,8 @@ defmodule Lightning.Scrubber do
   end
 
   def add_samples(agent, new_samples) do
-    Agent.update(agent, &State.add_samples(&1, new_samples))
+    new_encoded_samples = encode_samples(new_samples)
+    Agent.update(agent, &State.add_samples(&1, new_encoded_samples))
   end
 
   def scrub(agent, lines) when is_list(lines) do
