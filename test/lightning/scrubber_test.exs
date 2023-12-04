@@ -28,7 +28,7 @@ defmodule Lightning.ScrubberTest do
       assert scrubbed == ["Successfully logged in as *** using ***"]
     end
 
-    test "replaces key and value secrets in a map with ***" do
+    test "replaces only value secrets in a map with ***" do
       secrets = ["password", "immasecret", "username", "quux"]
       scrubber = start_supervised!({Lightning.Scrubber, samples: secrets})
 
