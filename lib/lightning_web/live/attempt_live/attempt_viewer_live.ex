@@ -17,12 +17,18 @@ defmodule LightningWeb.AttemptLive.AttemptViewerLive do
           <.loading_filler />
         </:loading>
         <:failed :let={_reason}>
-          there was an error loading the attemptanization
+          There was an error loading the Attempt.
         </:failed>
 
         <div class="flex @5xl/viewer:gap-6 h-full @5xl/viewer:flex-row flex-col">
           <div class="flex-none flex gap-6 @5xl/viewer:flex-col flex-row">
-            <.attempt_detail attempt={attempt} class="flex-1 @5xl/viewer:flex-none" />
+            <.attempt_detail
+              show_url={
+                ~p"/projects/#{attempt.work_order.workflow.project}/attempts/#{attempt}/"
+              }
+              attempt={attempt}
+              class="flex-1 @5xl/viewer:flex-none"
+            />
 
             <.step_list
               :let={run}
@@ -112,7 +118,7 @@ defmodule LightningWeb.AttemptLive.AttemptViewerLive do
      |> assign(:attempt, AsyncResult.loading())
      |> assign(:log_lines, AsyncResult.loading())
      |> start_async(:attempt, fn ->
-       Attempts.get(attempt_id, include: [runs: :job])
+       Attempts.get(attempt_id, include: [runs: :job, workflow: :project])
      end), layout: false}
   end
 

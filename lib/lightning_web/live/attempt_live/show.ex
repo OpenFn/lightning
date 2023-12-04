@@ -92,12 +92,24 @@ defmodule LightningWeb.AttemptLive.Show do
               <Common.panel_content for_hash="input">
                 <Viewers.dataclip_viewer
                   id={"run-input-#{@selected_run_id}"}
+                  type={
+                    case @input_dataclip do
+                      %AsyncResult{ok?: true, result: %{type: type}} -> type
+                      _ -> nil
+                    end
+                  }
                   stream={@streams.input_dataclip}
                 />
               </Common.panel_content>
               <Common.panel_content for_hash="output">
                 <Viewers.dataclip_viewer
                   id={"run-output-#{@selected_run_id}"}
+                  type={
+                    case @output_dataclip do
+                      %AsyncResult{ok?: true, result: %{type: type}} -> type
+                      _ -> nil
+                    end
+                  }
                   stream={@streams.output_dataclip}
                 />
               </Common.panel_content>

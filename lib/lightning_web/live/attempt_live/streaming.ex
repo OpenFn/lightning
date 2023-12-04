@@ -25,21 +25,22 @@ defmodule LightningWeb.AttemptLive.Streaming do
     import Ecto.Query
 
     from(d in Ecto.assoc(run, field),
-      select: d.body
+      select: [:id, :type, :body]
     )
     |> Repo.one()
     |> case do
       nil ->
         []
 
-      body ->
-        body
-        |> Jason.encode!(pretty: true)
-        |> String.split("\n")
-        |> Stream.with_index(1)
-        |> Stream.map(fn {line, index} ->
-          %{id: index, line: line, index: index}
-        end)
+      dataclip = %{body: body} ->
+        {%{id: dataclip.id, run_id: run.id, type: dataclip.type},
+         body
+         |> Jason.encode!(pretty: true)
+         |> String.split("\n")
+         |> Stream.with_index(1)
+         |> Stream.map(fn {line, index} ->
+           %{id: index, line: line, index: index}
+         end)}
     end
   end
 
@@ -51,14 +52,17 @@ defmodule LightningWeb.AttemptLive.Streaming do
     if selected_run && needs_dataclip_stream?(socket, :input_dataclip) do
       socket
       |> assign_async(:input_dataclip, fn ->
-        get_dataclip_lines(selected_run, :input_dataclip)
+        {dataclip, lines} =
+          get_dataclip_lines(selected_run, :input_dataclip)
+
+        lines
         |> Stream.chunk_every(chunk_size)
         |> Stream.each(fn lines ->
           send(live_view_pid, {:input_dataclip, lines})
         end)
         |> Stream.run()
 
-        {:ok, %{input_dataclip: selected_run.id}}
+        {:ok, %{input_dataclip: dataclip}}
       end)
     else
       socket
@@ -74,14 +78,17 @@ defmodule LightningWeb.AttemptLive.Streaming do
          needs_dataclip_stream?(socket, :output_dataclip) do
       socket
       |> assign_async(:output_dataclip, fn ->
-        get_dataclip_lines(selected_run, :output_dataclip)
+        {dataclip, lines} =
+          get_dataclip_lines(selected_run, :output_dataclip)
+
+        lines
         |> Stream.chunk_every(chunk_size)
         |> Stream.each(fn lines ->
           send(live_view_pid, {:output_dataclip, lines})
         end)
         |> Stream.run()
 
-        {:ok, %{output_dataclip: selected_run.id}}
+        {:ok, %{output_dataclip: dataclip}}
       end)
     else
       socket
@@ -115,7 +122,10 @@ defmodule LightningWeb.AttemptLive.Streaming do
       %Phoenix.LiveView.AsyncResult{loading: true} ->
         false
 
-      %Phoenix.LiveView.AsyncResult{ok?: true, result: ^selected_run_id} ->
+      %Phoenix.LiveView.AsyncResult{
+        ok?: true,
+        result: %{run_id: ^selected_run_id}
+      } ->
         false
 
       _ ->
