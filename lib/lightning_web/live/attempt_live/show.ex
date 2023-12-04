@@ -160,24 +160,4 @@ defmodule LightningWeb.AttemptLive.Show do
 
     {:noreply, socket |> apply_selected_run_id(selected_run_id)}
   end
-
-  defp apply_selected_run_id(socket, id) do
-    case id do
-      nil ->
-        socket
-        |> unselect_run()
-
-      _ ->
-        socket
-        |> assign(:selected_run_id, id)
-        |> then(fn socket ->
-          if changed?(socket, :selected_run_id) do
-            reset_dataclip_streams(socket)
-          else
-            socket
-          end
-        end)
-        |> handle_runs_change()
-    end
-  end
 end

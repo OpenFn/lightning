@@ -1,7 +1,7 @@
 defmodule LightningWeb.AttemptLive.Streaming do
   alias Lightning.Repo
   import Phoenix.LiveView
-  import Phoenix.Component, only: [assign: 2]
+  import Phoenix.Component, only: [assign: 2, changed?: 2]
 
   alias Lightning.Attempts
   alias Phoenix.LiveView.AsyncResult
@@ -256,6 +256,26 @@ defmodule LightningWeb.AttemptLive.Streaming do
 
       def maybe_load_output_dataclip(socket) do
         maybe_load_output_dataclip(socket, @chunk_size)
+      end
+
+      def apply_selected_run_id(socket, id) do
+        case id do
+          nil ->
+            socket
+            |> unselect_run()
+
+          _ ->
+            socket
+            |> assign(selected_run_id: id)
+            |> then(fn socket ->
+              if changed?(socket, :selected_run_id) |> IO.inspect() do
+                reset_dataclip_streams(socket)
+              else
+                socket
+              end
+            end)
+            |> handle_runs_change()
+        end
       end
     end
   end

@@ -217,17 +217,21 @@ defmodule LightningWeb.AttemptLive.Components do
   attr :run, Lightning.Invocation.Run, required: true
   attr :selected, :boolean, default: false
   attr :class, :string, default: ""
+  attr :rest, :global
 
   def step_item(assigns) do
     ~H"""
-    <div class={[
-      "relative flex space-x-3 border-r-4",
-      if(@selected,
-        do: "border-primary-500",
-        else: "border-transparent hover:border-gray-300"
-      ),
-      @class
-    ]}>
+    <div
+      class={[
+        "relative flex space-x-3 border-r-4",
+        if(@selected,
+          do: "border-primary-500",
+          else: "border-transparent hover:border-gray-300"
+        ),
+        @class
+      ]}
+      {@rest}
+    >
       <div class="flex items-center">
         <.run_state_circle run={@run} />
       </div>
