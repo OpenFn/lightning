@@ -16,27 +16,34 @@ defmodule Lightning.Scrubber do
   """
   defmodule State do
     @moduledoc false
-    @type t :: {
-            samples :: [String.t()]
-          }
+    @typep samples :: [String.t()]
+    @type t :: {samples()}
 
     @spec new(samples :: [String.t()]) :: t()
     def new(samples) do
       {samples}
     end
 
-    @spec samples(state :: t()) :: [String.t()]
-    def samples({samples}), do: samples
+    @spec add_samples(state :: t(), samples()) :: [String.t()]
+    def add_samples({samples}, new_samples), do: {samples ++ new_samples}
 
-    @spec scrub(data :: String.t(), state :: t()) :: String.t()
+    @spec scrub(state :: t(), data :: String.t()) :: String.t()
     def scrub(nil, _state), do: nil
 
-    def scrub(string, {samples}) do
+    def scrub(string, {samples}) when is_binary(string) do
       samples
       |> Enum.reduce(string, fn x, acc ->
         String.replace(acc, x, "***", global: true)
       end)
     end
+
+    def scrub(data, state) when is_map(data) do
+      Map.new(data, fn {k, v} ->
+        {scrub(k, state), scrub(v, state)}
+      end)
+    end
+
+    def scrub(data, state), do: scrub(to_string(data), state)
   end
 
   use Agent
@@ -62,13 +69,13 @@ defmodule Lightning.Scrubber do
     )
   end
 
-  def samples(agent) do
-    Agent.get(agent, &State.samples/1)
+  def add_samples(agent, new_samples) do
+    Agent.update(agent, &State.add_samples(&1, new_samples))
   end
 
   def scrub(agent, lines) when is_list(lines) do
-    samples = samples(agent)
-    lines |> Enum.map(fn line -> State.scrub(line, {samples}) end)
+    state = Agent.get(agent, & &1)
+    lines |> Enum.map(fn line -> State.scrub(line, state) end)
   end
 
   def scrub(agent, data) do

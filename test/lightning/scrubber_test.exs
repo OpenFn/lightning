@@ -28,6 +28,17 @@ defmodule Lightning.ScrubberTest do
       assert scrubbed == ["Successfully logged in as *** using ***"]
     end
 
+    test "replaces key and value secrets in a map with ***" do
+      secrets = ["password", "immasecret"]
+      scrubber = start_supervised!({Lightning.Scrubber, samples: secrets})
+
+      scrubbed =
+        scrubber
+        |> Scrubber.scrub([%{"password" => "immasecret"}])
+
+      assert scrubbed == [%{"***" => "***"}]
+    end
+
     test "doesn't replace booleans with ***" do
       secrets = ["ip_addr", "db_name", "my_user", "my_password", 5432, false]
       scrubber = start_supervised!({Lightning.Scrubber, samples: secrets})

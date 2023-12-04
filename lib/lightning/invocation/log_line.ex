@@ -13,8 +13,6 @@ defmodule Lightning.Invocation.LogLine do
   use Ecto.Schema
   import Ecto.Changeset
 
-  import Lightning.Security, only: [redact_password: 2]
-
   alias Lightning.Attempt
   alias Lightning.Invocation.Run
   alias Lightning.LogMessage
@@ -50,7 +48,6 @@ defmodule Lightning.Invocation.LogLine do
   def new(%Attempt{} = attempt, attrs \\ %{}) do
     %__MODULE__{id: Ecto.UUID.generate()}
     |> cast(attrs, [:message, :timestamp, :run_id, :attempt_id, :level, :source])
-    |> redact_password(:message)
     |> put_assoc(:attempt, attempt)
     |> validate()
   end
@@ -59,7 +56,6 @@ defmodule Lightning.Invocation.LogLine do
   def changeset(log_line, attrs) do
     log_line
     |> cast(attrs, [:message, :timestamp, :run_id, :attempt_id, :level, :source])
-    |> redact_password(:message)
     |> validate()
   end
 
