@@ -657,31 +657,32 @@ defmodule LightningWeb.CredentialLiveTest do
 
     test "blocks credential transfer to invalid owner; allows to valid owner", %{
       conn: conn,
-      user: first_owner
+      user: first_owner,
+      credential: credential_1
     } do
-      user_2 = Lightning.AccountsFixtures.user_fixture()
-      user_3 = Lightning.AccountsFixtures.user_fixture()
+      user_2 = insert(:user)
+      user_3 = insert(:user)
 
-      {:ok, %Lightning.Projects.Project{id: project_id}} =
-        Lightning.Projects.create_project(%{
-          name: "some-name",
+      project =
+        insert(:project,
+          name: "myproject",
           project_users: [%{user_id: first_owner.id}, %{user_id: user_2.id}]
-        })
+        )
 
       credential =
-        credential_fixture(
-          user_id: first_owner.id,
+        insert(:credential,
+          user: first_owner,
           name: "the one for giving away",
           project_credentials: [
-            %{project_id: project_id}
+            %{project: project, credential: nil}
           ]
         )
 
       {:ok, index_live, html} = live(conn, ~p"/credentials")
 
       # both credentials appear in the list
-      assert html =~ "some name"
-      assert html =~ "the one for giving away"
+      assert html =~ credential_1.name
+      assert html =~ credential.name
 
       assert html =~ first_owner.id
       assert html =~ user_2.id
@@ -711,8 +712,9 @@ defmodule LightningWeb.CredentialLiveTest do
         )
 
       # Once the transfer is made, the credential should not show up in the list
-      assert html =~ "some name"
+
       assert html =~ "Credential updated successfully"
+      assert html =~ credential_1.name
       refute html =~ "the one for giving away"
     end
   end
