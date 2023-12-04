@@ -1,0 +1,82 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "properties": {
+    "host": {
+      "title": "Host",
+      "type": "string",
+      "description": "Postgres instance host URL or IP address",
+      "minLength": 1,
+      "anyOf": [
+        {
+          "format": "uri"
+        },
+        {
+          "format": "ipv4"
+        }
+      ],
+      "examples": [
+        "https://some-host.compute-1.amazonaws.com",
+        "201.220.61.246"
+      ]
+    },
+    "port": {
+      "title": "Port",
+      "type": "integer",
+      "default": 5432,
+      "description": "Database instance port",
+      "minLength": 1,
+      "examples": [
+        5432
+      ]
+    },
+    "database": {
+      "title": "Database",
+      "type": "string",
+      "description": "The database name",
+      "minLength": 1,
+      "examples": [
+        "demo-db"
+      ]
+    },
+    "user": {
+      "title": "User",
+      "type": "string",
+      "description": "User name",
+      "minLength": 1,
+      "examples": [
+        "admin"
+      ]
+    },
+    "password": {
+      "title": "Password",
+      "type": "string",
+      "description": "Password",
+      "writeOnly": true,
+      "minLength": 1,
+      "examples": [
+        "@super(!)Secretpass"
+      ]
+    },
+    "ssl": {
+      "title": "Use SSL",
+      "type": "boolean",
+      "examples": [
+        true
+      ]
+    },
+    "allowSelfSignedCert": {
+      "title": "Allow self-signed certificate",
+      "type": "boolean",
+      "examples": [
+        true
+      ]
+    }
+  },
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "host",
+    "port",
+    "database"
+  ]
+}

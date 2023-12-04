@@ -225,12 +225,12 @@ defmodule Lightning.SetupUtilsTest do
       first_run =
         runs
         |> Enum.at(0)
-        |> Repo.preload([:input_dataclip, :output_dataclip, :previous])
+        |> Repo.preload([:input_dataclip, :output_dataclip])
 
       last_run =
         runs
         |> Enum.at(1)
-        |> Repo.preload([:input_dataclip, :output_dataclip, :previous])
+        |> Repo.preload([:input_dataclip, :output_dataclip])
 
       # first run is older than second run
       assert DateTime.diff(
@@ -549,17 +549,17 @@ defmodule Lightning.SetupUtilsTest do
       first_run =
         runs
         |> Enum.at(0)
-        |> Repo.preload([:input_dataclip, :output_dataclip, :previous])
+        |> Repo.preload([:input_dataclip, :output_dataclip])
 
       second_run =
         runs
         |> Enum.at(1)
-        |> Repo.preload([:input_dataclip, :output_dataclip, :previous])
+        |> Repo.preload([:input_dataclip, :output_dataclip])
 
       last_run =
         runs
         |> Enum.at(2)
-        |> Repo.preload([:input_dataclip, :output_dataclip, :previous])
+        |> Repo.preload([:input_dataclip, :output_dataclip])
 
       # first run is older than second run
       assert DateTime.diff(
@@ -768,7 +768,7 @@ defmodule Lightning.SetupUtilsTest do
       failed_run =
         runs
         |> Enum.at(1)
-        |> Repo.preload([:input_dataclip, :output_dataclip, :previous])
+        |> Repo.preload([:input_dataclip, :output_dataclip])
 
       assert failed_run.exit_reason == "fail"
 
@@ -814,6 +814,7 @@ defmodule Lightning.SetupUtilsTest do
       assert Lightning.Projects.list_projects() |> Enum.count() == 2
       assert Lightning.Workflows.list_workflows() |> Enum.count() == 2
       assert Lightning.Jobs.list_jobs() |> Enum.count() == 6
+      assert Repo.all(Lightning.Invocation.Run) |> Enum.count() == 5
 
       assert Repo.all(Lightning.Invocation.LogLine)
              |> Enum.count() > 0
@@ -824,6 +825,7 @@ defmodule Lightning.SetupUtilsTest do
       assert Lightning.Projects.list_projects() |> Enum.count() == 0
       assert Lightning.Workflows.list_workflows() |> Enum.count() == 0
       assert Lightning.Jobs.list_jobs() |> Enum.count() == 0
+      assert Repo.all(Lightning.Invocation.Run) |> Enum.count() == 0
 
       assert Repo.all(Lightning.Invocation.LogLine)
              |> Enum.count() == 0
@@ -834,6 +836,7 @@ defmodule Lightning.SetupUtilsTest do
       assert Lightning.Projects.list_projects() |> Enum.count() == 2
       assert Lightning.Workflows.list_workflows() |> Enum.count() == 2
       assert Lightning.Jobs.list_jobs() |> Enum.count() == 6
+      assert Repo.all(Lightning.Invocation.Run) |> Enum.count() == 5
 
       assert Repo.all(Lightning.Invocation.LogLine)
              |> Enum.count() > 0
@@ -844,6 +847,7 @@ defmodule Lightning.SetupUtilsTest do
       assert Lightning.Projects.list_projects() |> Enum.count() == 0
       assert Lightning.Workflows.list_workflows() |> Enum.count() == 0
       assert Lightning.Jobs.list_jobs() |> Enum.count() == 0
+      assert Repo.all(Lightning.Invocation.Run) |> Enum.count() == 0
 
       assert Repo.all(Lightning.Invocation.LogLine)
              |> Enum.count() == 0

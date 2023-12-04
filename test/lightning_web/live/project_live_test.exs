@@ -1486,4 +1486,56 @@ defmodule LightningWeb.ProjectLiveTest do
       assert render(view) =~ auth_method.password
     end
   end
+
+  test "authorized project users can delete a project webhook auth method",
+       %{conn: conn} do
+    project = insert(:project)
+
+    for role <- [:owner, :admin, :editor] do
+      auth_method =
+        insert(:webhook_auth_method,
+          project: project,
+          auth_type: :basic
+        )
+
+      project_user =
+        insert(:project_user,
+          role: role,
+          project: project,
+          user: build(:user)
+        )
+
+      settings_path =
+        Routes.project_project_settings_path(conn, :index, project.id)
+
+      conn = log_in_user(conn, project_user.user)
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          settings_path
+        )
+
+      assert view
+             |> element("a#delete_auth_method_link_#{auth_method.id}")
+             |> has_element?()
+
+      modal_id = "delete_auth_#{auth_method.id}_modal"
+
+      view
+      |> form("#delete_auth_method_#{modal_id}_#{auth_method.id}",
+        delete_confirmation_changeset: %{confirmation: "DELETE"}
+      )
+      |> render_submit()
+
+      flash =
+        assert_redirect(
+          view,
+          settings_path <> "#webhook_security"
+        )
+
+      assert flash["info"] ==
+               "Your Webhook Authentication method has been deleted."
+    end
+  end
 end

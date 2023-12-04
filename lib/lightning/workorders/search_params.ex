@@ -32,7 +32,7 @@ defmodule Lightning.WorkOrders.SearchParams do
 
   @primary_key false
   embedded_schema do
-    field(:status, {:array, :string}, default: @statuses)
+    field(:status, {:array, :string})
     field(:search_fields, {:array, :string}, default: @search_fields)
     field(:search_term, :string)
     field(:workflow_id, :binary_id)
@@ -99,7 +99,6 @@ defmodule Lightning.WorkOrders.SearchParams do
 
   def to_uri_params(search_params) do
     search_params
-    |> merge_fields(@statuses)
     |> merge_fields(@search_fields)
     |> dates_to_string()
   end

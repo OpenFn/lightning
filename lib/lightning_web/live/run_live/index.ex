@@ -68,20 +68,20 @@ defmodule LightningWeb.RunLive.Index do
       )
 
     statuses = [
-      %{id: :pending, label: "Pending", value: true},
-      %{id: :running, label: "Running", value: true},
-      %{id: :success, label: "Success", value: true},
-      %{id: :failed, label: "Failed", value: true},
-      %{id: :crashed, label: "Crashed", value: true},
-      %{id: :cancelled, label: "Cancelled", value: true},
-      %{id: :killed, label: "Killed", value: true},
-      %{id: :exception, label: "Exception", value: true},
-      %{id: :lost, label: "Lost", value: true}
+      %{id: :pending, label: "Pending"},
+      %{id: :running, label: "Running"},
+      %{id: :success, label: "Success"},
+      %{id: :failed, label: "Failed"},
+      %{id: :crashed, label: "Crashed"},
+      %{id: :cancelled, label: "Cancelled"},
+      %{id: :killed, label: "Killed"},
+      %{id: :exception, label: "Exception"},
+      %{id: :lost, label: "Lost"}
     ]
 
     search_fields = [
-      %{id: :body, label: "Input", value: true},
-      %{id: :log, label: "Logs", value: true}
+      %{id: :body, label: "Input"},
+      %{id: :log, label: "Logs"}
     ]
 
     params = Map.put_new(params, "filters", init_filters())
@@ -92,6 +92,7 @@ defmodule LightningWeb.RunLive.Index do
        workflows: workflows,
        statuses: statuses,
        search_fields: search_fields,
+       string_search_limit: Invocation.get_workorders_count_limit(),
        active_menu_item: :runs,
        work_orders: [],
        selected_work_orders: [],
@@ -111,16 +112,7 @@ defmodule LightningWeb.RunLive.Index do
         Timex.now() |> Timex.shift(days: -30) |> DateTime.to_string(),
       "date_before" => "",
       "wo_date_after" => "",
-      "wo_date_before" => "",
-      "pending" => "true",
-      "running" => "true",
-      "success" => "true",
-      "failed" => "true",
-      "crashed" => "true",
-      "cancelled" => "true",
-      "killed" => "true",
-      "exception" => "true",
-      "lost" => "true"
+      "wo_date_before" => ""
     }
 
   @impl true
@@ -191,14 +183,24 @@ defmodule LightningWeb.RunLive.Index do
      )}
   end
 
-  def checked(changeset, id) do
+  @doc """
+  Takes a changeset used for querying workorders and checks to see if the given
+  filter is present in that changeset. Returns true or false.
+  """
+  def is_checked(changeset, id) do
     case Ecto.Changeset.fetch_field(changeset, id) do
-      value when value in [:error, {:changes, true}] -> true
-      _ -> false
+      value when value in [{:changes, true}] ->
+        true
+
+      _ ->
+        false
     end
   end
 
-  defp filters_changeset(params),
+  @doc """
+  Creates a changeset based on given parameters and the fixed workorder filter types.
+  """
+  def filters_changeset(params),
     do:
       Ecto.Changeset.cast(
         {%{}, @filters_types},
@@ -220,18 +222,27 @@ defmodule LightningWeb.RunLive.Index do
   end
 
   @impl true
+  @doc """
+  When a WorkOrderCreated event is detected, we first check to see if the new
+  work order is admissible on the page, given the current filters. If it is, we
+  add it to the top of the page. If not, nothing happens.
+  """
   def handle_info(
         %Events.WorkOrderCreated{work_order: work_order},
-        socket
+        %{assigns: assigns} = socket
       ) do
-    %{project: project, filters: filters} = socket.assigns
+    %{project: project, filters: filters} = assigns
 
-    filters = Map.merge(filters, %{"workorder_id" => work_order.id})
+    params =
+      filters
+      |> Map.merge(%{"workorder_id" => work_order.id})
+      |> SearchParams.new()
 
-    {:noreply,
-     push_patch(socket,
-       to: ~p"/projects/#{project.id}/runs?#{%{filters: filters}}"
-     )}
+    # Note that this may or may not contain the new work order, depending on the filters.
+    case Invocation.search_workorders(project, params) do
+      %{entries: []} -> {:noreply, socket}
+      %{entries: [work_order]} -> {:noreply, append_to_page(socket, work_order)}
+    end
   end
 
   @impl true
@@ -356,7 +367,10 @@ defmodule LightningWeb.RunLive.Index do
 
   def handle_event("apply_filters", %{"filters" => new_filters}, socket) do
     %{filters: prev_filters, project: project} = socket.assigns
-    filters = Map.merge(prev_filters, new_filters)
+
+    filters =
+      Map.merge(prev_filters, new_filters)
+      |> Map.reject(fn {_k, v} -> Enum.member?(["false", ""], v) end)
 
     {:noreply,
      socket
@@ -426,6 +440,23 @@ defmodule LightningWeb.RunLive.Index do
 
   defp maybe_humanize_date(date) do
     date && Timex.format!(date, "{D}/{M}/{YY}")
+  end
+
+  defp append_to_page(socket, workorder) do
+    %{page: page, async_page: async_page} = socket.assigns
+
+    new_page =
+      %{
+        page
+        | entries: [workorder] ++ page.entries,
+          page_size: page.page_size + 1,
+          total_entries: page.total_entries + 1
+      }
+
+    assign(socket,
+      async_page: AsyncResult.ok(async_page, new_page),
+      page: new_page
+    )
   end
 
   defp update_page(socket, workorder) do

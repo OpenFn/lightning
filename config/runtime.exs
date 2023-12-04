@@ -181,20 +181,6 @@ end
 url_port = String.to_integer(System.get_env("URL_PORT", "443"))
 url_scheme = System.get_env("URL_SCHEME", "https")
 
-# The webserver port will always prefer and environment variable _when_
-# given, otherwise it uses the existing config and lastly defaults to 4000.
-
-port =
-  (System.get_env("PORT") ||
-     Application.get_env(:lightning, LightningWeb.Endpoint)
-     |> Keyword.get(:http, port: nil)
-     |> Keyword.get(:port) ||
-     4000)
-  |> case do
-    p when is_binary(p) -> String.to_integer(p)
-    p when is_integer(p) -> p
-  end
-
 # Use the `PRIMARY_ENCRYPTION_KEY` env variable if available, else fall back
 # to defaults.
 # Defaults are set for `dev` and `test` modes.
@@ -203,38 +189,6 @@ config :lightning, Lightning.Vault,
     System.get_env("PRIMARY_ENCRYPTION_KEY") ||
       Application.get_env(:lightning, Lightning.Vault, [])
       |> Keyword.get(:primary_encryption_key, nil)
-
-# Binding to loopback ipv4 address prevents access from other machines.
-# http: [ip: {0, 0, 0, 0}, port: 4000],
-# Set `http.ip` to {127, 0, 0, 1} to block access from other machines.
-# Note that this may interfere with Docker networking.
-# Enable IPv6 and bind on all interfaces.
-# Set it to {0, 0, 0, 0, 0, 0, 0, 1} for local network only access.
-# See the documentation on https://hexdocs.pm/plug_cowboy/Plug.Cowboy.html
-# for details about using IPv6 vs IPv4 and loopback vs public addresses.
-listen_address =
-  (System.get_env("LISTEN_ADDRESS") ||
-     Application.get_env(:lightning, LightningWeb.Endpoint)
-     |> Keyword.get(:http, ip: nil)
-     |> Keyword.get(:ip) ||
-     {127, 0, 0, 1})
-  |> case do
-    p when is_binary(p) ->
-      p
-      |> String.split(".")
-      |> Enum.map(&String.to_integer/1)
-      |> List.to_tuple()
-
-    p when is_tuple(p) ->
-      p
-  end
-
-config :lightning, LightningWeb.Endpoint,
-  http: [
-    ip: listen_address,
-    port: port,
-    compress: true
-  ]
 
 if log_level = System.get_env("LOG_LEVEL") do
   allowed_log_levels =
@@ -281,6 +235,13 @@ if config_env() == :prod do
       """
 
   host = System.get_env("URL_HOST") || "example.com"
+  port = String.to_integer(System.get_env("PORT") || "4000")
+
+  listen_address =
+    System.get_env("LISTEN_ADDRESS", "127.0.0.1")
+    |> String.split(".")
+    |> Enum.map(&String.to_integer/1)
+    |> List.to_tuple()
 
   origins =
     case System.get_env("ORIGINS") do
@@ -290,6 +251,11 @@ if config_env() == :prod do
 
   config :lightning, LightningWeb.Endpoint,
     url: [host: host, port: url_port, scheme: url_scheme],
+    http: [
+      ip: listen_address,
+      port: port,
+      compress: true
+    ],
     secret_key_base: secret_key_base,
     check_origin: origins,
     protocol_options: [max_frame_size: 10_000_000],
@@ -309,12 +275,14 @@ end
 if config_env() == :test do
   # When running tests, set the number of database connections to the number
   # of cores available.
+  schedulers = :erlang.system_info(:schedulers_online)
+
   config :lightning, Lightning.Repo,
-    pool_size: :erlang.system_info(:schedulers_online) + 8
+    pool_size: Enum.max([schedulers + 8, schedulers * 2])
 
   config :ex_unit,
     assert_receive_timeout:
-      System.get_env("ASSERT_RECEIVE_TIMEOUT", "500") |> String.to_integer()
+      System.get_env("ASSERT_RECEIVE_TIMEOUT", "600") |> String.to_integer()
 end
 
 release =

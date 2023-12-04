@@ -12,6 +12,52 @@ and this project adheres to
 
 ### Changed
 
+- Limit entries count on term work orders search
+  [#1461](https://github.com/OpenFn/Lightning/issues/1461)
+
+### Fixed
+
+- Use checkbox on boolean credential fields rather than a text input field
+  [#1430](https://github.com/OpenFn/Lightning/issues/1430)
+- Allow users to retry work orders that failed before their first run was
+  created [#1417](https://github.com/OpenFn/Lightning/issues/1417)
+- Fix to ensure webhook auth modal is closed when cancel or close are selected.
+  [#1508](https://github.com/OpenFn/Lightning/issues/1508)
+- Enable user to reauthorize and obtain a new refresh token.
+  [#1495](https://github.com/OpenFn/Lightning/issues/1495)
+  
+## [v0.10.5] - 2023-12-03
+
+### Added
+
+### Changed
+
+- Only add history page filters when needed for simpler multi-select status
+  interface and shorter page URLs
+  [#1331](https://github.com/OpenFn/Lightning/issues/1331)
+- Use dynamic Endpoint config only on prod
+  [#1435](https://github.com/OpenFn/Lightning/issues/1435)
+- Validate schema field with any of expected values
+  [#1502](https://github.com/OpenFn/Lightning/issues/1502)
+
+### Fixed
+
+- Fix for liveview crash when token expires or gets deleted after mount
+  [#1318](https://github.com/OpenFn/Lightning/issues/1318)
+- Remove two obsolete methods related to Run: `Lightning.Invocation.delete_run`
+  and `Lightning.Invocation.Run.new_from`.
+  [#1254](https://github.com/OpenFn/Lightning/issues/1254)
+- Remove obsolete field `previous_id` from `runs` table.
+  [#1254](https://github.com/OpenFn/Lightning/issues/1254)
+- Fix for missing data in 'created' audit trail events for webhook auth methods
+  [#1500](https://github.com/OpenFn/Lightning/issues/1500)
+
+## [v0.10.4] - 2023-11-30
+
+### Added
+
+### Changed
+
 - Increased History search timeout to 30s
   [#1461](https://github.com/OpenFn/Lightning/issues/1461)
 
@@ -23,8 +69,7 @@ and this project adheres to
   [#1145](https://github.com/OpenFn/Lightning/issues/1145)
 - Fix for adding ellipses on credential info on job editor heading
   [#1428](https://github.com/OpenFn/Lightning/issues/1428)
-- Fix to ensure webhook auth modal is closed when cancel or close are selected.
-  [#1508](https://github.com/OpenFn/Lightning/issues/1508)
+
 
 ## [v0.10.3] - 2023-11-28
 
@@ -34,6 +79,8 @@ and this project adheres to
   [#1464](https://github.com/OpenFn/Lightning/issues/1464)
 - Async loading on the history page to improve UX on long DB queries
   [#1279](https://github.com/OpenFn/Lightning/issues/1279)
+- Audit trail events for webhook auth (deletion method) change
+  [#1165](https://github.com/OpenFn/Lightning/issues/1165)
 
 ### Changed
 
@@ -48,7 +95,7 @@ and this project adheres to
 
 - Create new workflow button sizing regression
   [#1405](https://github.com/OpenFn/Lightning/issues/1405)
-- Google credential creation  and automatic closing of oAuth tab  
+- Google credential creation and automatic closing of oAuth tab
   [#1109](https://github.com/OpenFn/Lightning/issues/1109)
 - Exporting project breaks the navigation of the page
   [#1440](https://github.com/OpenFn/Lightning/issues/1440)
@@ -72,7 +119,7 @@ and this project adheres to
 
 ### Fixed
 
-- Workorder ID was not displayed properly in history page
+- Work Order ID was not displayed properly in history page
   [#1423](https://github.com/OpenFn/Lightning/issues/1423)
 
 ## [v0.10.0] - 2023-11-21
@@ -839,8 +886,8 @@ the Nodes and Edges [epic](https://github.com/OpenFn/Lightning/issues/793).
 - Better error handling in the docs panel
 - Disable credential ownership transfer in dev and prod environments
 - Add project settings page
-- Change Workorder filters to apply to the aggregate state of the workorder and
-  not the run directly
+- Change Work Order filters to apply to the aggregate state of the work order
+  and not the run directly
 - Enable jobs by default
 - Set log level to info
 - Add Beta checkbox to register page

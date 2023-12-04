@@ -85,7 +85,8 @@ defmodule Lightning.AuthProviders.Google do
     OAuth2.Client.authorize_url!(client,
       scope: scope,
       state: state,
-      access_type: "offline"
+      access_type: "offline",
+      prompt: "consent"
     )
   end
 

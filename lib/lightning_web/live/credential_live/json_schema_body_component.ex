@@ -8,7 +8,9 @@ defmodule LightningWeb.CredentialLive.JsonSchemaBodyComponent do
 
   def fieldset(%{form: form} = assigns) do
     changeset = form.source
-    schema = changeset |> Ecto.Changeset.get_field(:schema) |> get_schema()
+
+    schema =
+      changeset |> Ecto.Changeset.get_field(:schema) |> Credentials.get_schema()
 
     schema_changeset =
       create_schema_changeset(
@@ -65,21 +67,6 @@ defmodule LightningWeb.CredentialLive.JsonSchemaBodyComponent do
     """
   end
 
-  # false positive, it's a file from config
-  # sobelow_skip ["Traversal.FileModule"]
-  defp get_schema(schema_name) do
-    {:ok, schemas_path} = Application.fetch_env(:lightning, :schemas_path)
-
-    File.read("#{schemas_path}/#{schema_name}.json")
-    |> case do
-      {:ok, raw_json} ->
-        Credentials.Schema.new(raw_json, schema_name)
-
-      {:error, reason} ->
-        raise "Error reading credential schema. Got: #{reason |> inspect()}"
-    end
-  end
-
   defp create_schema_changeset(schema, params) do
     Credentials.SchemaDocument.changeset(%{}, params, schema: schema)
   end
@@ -100,7 +87,7 @@ defmodule LightningWeb.CredentialLive.JsonSchemaBodyComponent do
         %{"type" => "string", "writeOnly" => true} -> :password_input
         %{"type" => "string"} -> :text_input
         %{"type" => "integer"} -> :text_input
-        %{"type" => "boolean"} -> :text_input
+        %{"type" => "boolean"} -> :checkbox
         %{"anyOf" => [%{"type" => "string"}, %{"type" => "null"}]} -> :text_input
       end
 
@@ -116,33 +103,44 @@ defmodule LightningWeb.CredentialLive.JsonSchemaBodyComponent do
         type: type
       )
 
-    ~H"""
-    <LightningWeb.Components.Form.label_field
-      form={@form}
-      field={@field}
-      title={@title}
-    />
-    <span :if={@required} class="text-sm text-secondary-700 text-right">
-      Required
-    </span>
-    <div class="col-span-2">
-      <%= apply(Phoenix.HTML.Form, @type, [
-        @form,
-        @field,
-        [
-          value: @value || "",
-          class: ~w(mt-1 focus:ring-primary-500 focus:border-primary-500 block
-               w-full shadow-sm sm:text-sm border-secondary-300 rounded-md)
-        ]
-      ]) %>
-      <span
-        :for={error <- @errors}
-        phx-feedback_for={Phoenix.HTML.Form.input_id(@form, @field)}
-        class="block w-full text-sm text-secondary-700"
-      >
-        <%= LightningWeb.Components.NewInputs.translate_error(error) %>
+    if type == :checkbox do
+      ~H"""
+      <LightningWeb.Components.Form.check_box
+        form={@form}
+        field={@field}
+        label={@title}
+        value={@value}
+      />
+      """
+    else
+      ~H"""
+      <LightningWeb.Components.Form.label_field
+        form={@form}
+        field={@field}
+        title={@title}
+      />
+      <span :if={@required} class="text-sm text-secondary-700 text-right">
+        Required
       </span>
-    </div>
-    """
+      <div class="col-span-2">
+        <%= apply(Phoenix.HTML.Form, @type, [
+          @form,
+          @field,
+          [
+            value: @value || "",
+            class: ~w(mt-1 focus:ring-primary-500 focus:border-primary-500 block
+                 w-full shadow-sm sm:text-sm border-secondary-300 rounded-md)
+          ]
+        ]) %>
+        <span
+          :for={error <- @errors}
+          phx-feedback_for={Phoenix.HTML.Form.input_id(@form, @field)}
+          class="block w-full text-sm text-secondary-700"
+        >
+          <%= LightningWeb.Components.NewInputs.translate_error(error) %>
+        </span>
+      </div>
+      """
+    end
   end
 end

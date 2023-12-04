@@ -12,7 +12,7 @@
           <.form
             :let={f}
             for={@filters_changeset}
-            id="run-filter-form"
+            id="workorder-filter-form"
             as={:filters}
             phx-change="apply_filters"
             phx-submit="apply_filters"
@@ -99,12 +99,12 @@
                       phx-click={show_dropdown("status_filter_dropdown")}
                     >
                       <span>
-                        <%= if Enum.all?(@statuses, fn status -> checked(@filters_changeset, status.id) end) do %>
-                          Any
-                        <% else %>
+                        <%= if Enum.any?(@statuses, fn status -> is_checked(@filters_changeset, status.id) end) do %>
                           <%= Enum.count(@statuses, fn status ->
-                            checked(@filters_changeset, status.id)
+                            is_checked(@filters_changeset, status.id)
                           end) %> Selected
+                        <% else %>
+                          Any
                         <% end %>
                       </span>
                       <svg
@@ -130,19 +130,16 @@
                     id="status_filter_dropdown"
                     phx-click-away={hide_dropdown("status_filter_dropdown")}
                   >
-                    <div class="py-1" role="none">
-                      <div class="px-4 py-1 text-gray-500 text-sm">
-                        Workorder
-                      </div>
+                    <div class="pt-2 pb-1" role="none">
                       <!-- Active: "bg-gray-100 text-gray-900", Not Active: "text-gray-700" -->
                       <%= for status <- @statuses do %>
                         <div class="px-4 py-1 text-gray-700 text-sm">
                           <%= Phoenix.HTML.Form.checkbox(
                             f,
                             status.id,
-                            checked: checked(@filters_changeset, status.id),
+                            checked: is_checked(@filters_changeset, status.id),
                             class:
-                              "mb-1 mr-1/2 h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                              "mb-1 mr-1 h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
                           ) %>
                           <%= Phoenix.HTML.Form.label(f, status.label) %>
                         </div>
@@ -334,42 +331,40 @@
             </span>
           <% end %>
 
-          <%= if !Enum.all?(@statuses, fn status -> checked(@filters_changeset, status.id) end) do %>
-            <%= for status <- Enum.filter(@statuses, fn status -> checked(@filters_changeset, status.id) end)  do %>
-              <span class="inline-flex items-center gap-x-0.5 rounded-md bg-blue-100 px-2 py-1 text-xs font-medium text-blue-700">
-                Work order status: <%= status.label %>
-                <.form
-                  :let={f}
-                  for={@filters_changeset}
-                  as={:filters}
-                  class="inline"
-                  phx-submit="apply_filters"
+          <%= for status <- Enum.filter(@statuses, fn status -> is_checked(@filters_changeset, status.id) end)  do %>
+            <span class="inline-flex items-center gap-x-0.5 rounded-md bg-blue-100 px-2 py-1 text-xs font-medium text-blue-700">
+              Work order status: <%= status.label %>
+              <.form
+                :let={f}
+                for={@filters_changeset}
+                as={:filters}
+                class="inline"
+                phx-submit="apply_filters"
+              >
+                <%= Phoenix.HTML.Form.hidden_input(f, status.id,
+                  id: "workorder_status_chip_#{status.id}",
+                  value: false
+                ) %>
+                <button
+                  type="submit"
+                  class="group relative -mr-1 h-3.5 w-3.5 rounded-sm hover:bg-blue-600/20"
                 >
-                  <%= Phoenix.HTML.Form.hidden_input(f, status.id,
-                    id: "workorder_status_chip_#{status.id}",
-                    value: false
-                  ) %>
-                  <button
-                    type="submit"
-                    class="group relative -mr-1 h-3.5 w-3.5 rounded-sm hover:bg-blue-600/20"
+                  <span class="sr-only">Remove</span>
+                  <svg
+                    viewBox="0 0 14 14"
+                    class="h-3.5 w-3.5 stroke-blue-800/50 group-hover:stroke-blue-800/75"
                   >
-                    <span class="sr-only">Remove</span>
-                    <svg
-                      viewBox="0 0 14 14"
-                      class="h-3.5 w-3.5 stroke-blue-800/50 group-hover:stroke-blue-800/75"
-                    >
-                      <path d="M4 4l6 6m0-6l-6 6" />
-                    </svg>
-                    <span class="absolute -inset-1"></span>
-                  </button>
-                </.form>
-              </span>
-            <% end %>
+                    <path d="M4 4l6 6m0-6l-6 6" />
+                  </svg>
+                  <span class="absolute -inset-1"></span>
+                </button>
+              </.form>
+            </span>
           <% end %>
 
           <%= if get_change(@filters_changeset, :wo_date_after) || get_change(@filters_changeset, :wo_date_before) do %>
             <span class="inline-flex items-center gap-x-0.5 rounded-md bg-blue-100 px-2 py-1 text-xs font-medium text-blue-700">
-              Workorder: <%= @filters_changeset
+              <%= @filters_changeset
               |> get_change(:wo_date_after)
               |> maybe_humanize_date() || "*" %> - <%= @filters_changeset
               |> get_change(:wo_date_before)
@@ -452,7 +447,14 @@
               <div>
                 <p class="text-xl text-gray-500 font-medium">
                   <%= if search = get_change(@filters_changeset, :search_term) do %>
-                    <%= @page.total_entries %> Work Orders with runs matching "<%= search %>"
+                    <%= @page.total_entries %><%= if @page.total_entries >=
+                                                       @string_search_limit,
+                                                     do: "+" %> work orders with runs matching "<%= search %>"
+                    <%= if @page.total_entries >= @string_search_limit do %>
+                      <span class="text-xs text-gray">
+                        (try more specific filters)
+                      </span>
+                    <% end %>
                   <% else %>
                     Work Orders
                   <% end %>
@@ -514,7 +516,11 @@
                         <% end %>
                         <button
                           type="submit"
-                          class={"px-3 py-2 text-sm text-gray-800 dark:hover:bg-gray-800 dark:text-gray-300 hover:bg-gray-100 #{if(Enum.all?(@search_fields, fn search_field -> checked(@filters_changeset, search_field.id) end), do: "bg-gray-300")}"}
+                          class={"px-3 py-2 text-sm text-gray-800
+                            dark:hover:bg-gray-800 dark:text-gray-300
+                            hover:bg-gray-100 #{if(Enum.all?(@search_fields, fn search_field ->
+                              is_checked(@filters_changeset, search_field.id)
+                            end), do: "bg-gray-300")}"}
                         >
                           Both
                         </button>
@@ -538,7 +544,14 @@
                           ) %>
                           <button
                             type="submit"
-                            class={"px-3 py-2 text-sm text-gray-800  dark:hover:bg-gray-800 dark:text-gray-300 hover:bg-gray-100 #{if(checked(@filters_changeset, search_field.id) && !Enum.all?(@search_fields -- [search_field], fn other_field -> checked(@filters_changeset, other_field.id) end), do: "bg-gray-300")}"}
+                            class={"px-3 py-2 text-sm text-gray-800
+                              dark:hover:bg-gray-800 dark:text-gray-300
+                              hover:bg-gray-100 #{if(
+                                is_checked(@filters_changeset, search_field.id)
+                                  && !Enum.all?(@search_fields -- [search_field],
+                                fn other_field ->
+                                  is_checked(@filters_changeset, other_field.id)
+                                end), do: "bg-gray-300")}"}
                           >
                             <%= search_field.label %>
                           </button>

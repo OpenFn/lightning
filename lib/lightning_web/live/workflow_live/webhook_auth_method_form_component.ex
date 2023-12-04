@@ -116,7 +116,8 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodFormComponent do
 
     if changeset.valid? do
       case WebhookAuthMethods.schedule_for_deletion(
-             socket.assigns.webhook_auth_method
+             socket.assigns.webhook_auth_method,
+             actor: socket.assigns.current_user
            ) do
         {:ok, _} ->
           {:noreply,

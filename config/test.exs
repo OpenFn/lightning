@@ -31,7 +31,6 @@ config :lightning, Lightning.Vault,
 # We don't run a server during test. If one is required,
 # you can enable the server option below.
 config :lightning, LightningWeb.Endpoint,
-  url: [host: "localhost", port: 4002],
   http: [port: 4002],
   secret_key_base:
     "/8zedVJLxvmGGFoRExE3e870g7CGZZQ1Vq11A5MbQGPKOpK57MahVsPW6Wkkv61n",
