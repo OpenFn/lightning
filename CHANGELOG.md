@@ -14,6 +14,8 @@ and this project adheres to
 
 - Limit entries count on term work orders search
   [#1461](https://github.com/OpenFn/Lightning/issues/1461)
+- Scrub log lines using multiple credentials samples
+  [#1461](https://github.com/OpenFn/Lightning/issues/1519)
 
 ### Fixed
 
