@@ -12,6 +12,8 @@ defmodule LightningWeb.Components.Viewers do
 
   use LightningWeb, :component
 
+  alias LightningWeb.Components.Icon
+
   @doc """
   Renders out a log line stream
 
@@ -144,26 +146,9 @@ defmodule LightningWeb.Components.Viewers do
 
   defp dataclip_type(assigns) do
     assigns =
-      assign(
-        assigns,
-        :icon,
-        case assigns.type do
-          :saved_input -> "hero-pencil-square"
-          :global -> "hero-globe-alt"
-          :run_result -> "hero-document-text"
-          :http_request -> "hero-document-arrow-down"
-          nil -> nil
-        end
-      )
-      |> assign(
-        :color,
-        case assigns.type do
-          :run_result -> ~w[bg-purple-500 text-purple-900]
-          :http_request -> ~w[bg-green-500 text-green-900]
-          :global -> ~w[bg-blue-500 text-blue-900]
-          :saved_input -> ~w[bg-yellow-500 text-yellow-900]
-          _ -> []
-        end
+      assign(assigns,
+        icon: Icon.dataclip_icon_class(assigns.type),
+        color: Icon.dataclip_icon_color(assigns.type)
       )
 
     ~H"""

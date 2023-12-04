@@ -228,6 +228,7 @@ defmodule LightningWeb.AttemptLive.ShowTest do
     elem
     |> render_async()
     |> Floki.parse_fragment!()
+    |> Floki.filter_out("[id$='-type']")
     |> Floki.text() =~
       ~r/^[\n\s]+Nothing yet\.\.\.[\n\s]+$/
   end

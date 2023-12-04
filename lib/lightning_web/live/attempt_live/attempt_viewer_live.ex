@@ -22,13 +22,50 @@ defmodule LightningWeb.AttemptLive.AttemptViewerLive do
 
         <div class="flex @5xl/viewer:gap-6 h-full @5xl/viewer:flex-row flex-col">
           <div class="flex-none flex gap-6 @5xl/viewer:flex-col flex-row">
-            <.attempt_detail
-              show_url={
-                ~p"/projects/#{attempt.work_order.workflow.project}/attempts/#{attempt}/"
-              }
-              attempt={attempt}
-              class="flex-1 @5xl/viewer:flex-none"
-            />
+            <.detail_list id={"attempt-detail-#{attempt.id}"}>
+              <.list_item>
+                <:label>Work Order</:label>
+                <:value>
+                  <.link
+                    navigate={
+                      ~p"/projects/#{attempt.work_order.workflow.project}/runs?#{%{filters: %{workorder_id: attempt.work_order.id}}}"
+                    }
+                    class="hover:underline hover:text-primary-900 whitespace-nowrap text-ellipsis"
+                  >
+                    <span class="whitespace-nowrap text-ellipsis">
+                      <%= display_short_uuid(attempt.work_order_id) %>
+                    </span>
+                    <.icon name="hero-arrow-up-right" class="h-2 w-2 float-right" />
+                  </.link>
+                </:value>
+              </.list_item>
+              <.list_item>
+                <:label>Attempt</:label>
+                <:value>
+                  <.link
+                    navigate={
+                      ~p"/projects/#{attempt.work_order.workflow.project}/attempts/#{attempt}"
+                    }
+                    class="hover:underline hover:text-primary-900 whitespace-nowrap text-ellipsis"
+                  >
+                    <span class="whitespace-nowrap text-ellipsis">
+                      <%= display_short_uuid(attempt.id) %>
+                    </span>
+                    <.icon name="hero-arrow-up-right" class="h-2 w-2 float-right" />
+                  </.link>
+                </:value>
+              </.list_item>
+              <.list_item>
+                <:label>Elapsed</:label>
+                <:value>
+                  <.elapsed_indicator attempt={attempt} />
+                </:value>
+              </.list_item>
+              <.list_item>
+                <:label>State</:label>
+                <:value><.state_pill state={attempt.state} /></:value>
+              </.list_item>
+            </.detail_list>
 
             <.step_list
               :let={run}
@@ -38,8 +75,10 @@ defmodule LightningWeb.AttemptLive.AttemptViewerLive do
             >
               <.step_item
                 run={run}
+                phx-click="select_run"
+                phx-value-id={run.id}
                 selected={run.id == @selected_run_id}
-                class="cursor-default"
+                class="cursor-pointer"
               />
             </.step_list>
           </div>
@@ -82,6 +121,12 @@ defmodule LightningWeb.AttemptLive.AttemptViewerLive do
               <Common.panel_content for_hash="input" class="grow overflow-auto">
                 <Viewers.dataclip_viewer
                   id={"run-input-#{@selected_run_id}"}
+                  type={
+                    case @input_dataclip do
+                      %AsyncResult{ok?: true, result: %{type: type}} -> type
+                      _ -> nil
+                    end
+                  }
                   class="overflow-auto h-full flex"
                   stream={@streams.input_dataclip}
                 />
@@ -89,6 +134,12 @@ defmodule LightningWeb.AttemptLive.AttemptViewerLive do
               <Common.panel_content for_hash="output" class="grow overflow-auto">
                 <Viewers.dataclip_viewer
                   id={"run-output-#{@selected_run_id}"}
+                  type={
+                    case @output_dataclip do
+                      %AsyncResult{ok?: true, result: %{type: type}} -> type
+                      _ -> nil
+                    end
+                  }
                   class="overflow-auto h-full"
                   stream={@streams.output_dataclip}
                 />
@@ -122,6 +173,11 @@ defmodule LightningWeb.AttemptLive.AttemptViewerLive do
      end), layout: false}
   end
 
+  @impl true
+  def handle_event("select_run", %{"id" => id}, socket) do
+    {:noreply, socket |> apply_selected_run_id(id)}
+  end
+
   use Streaming, chunk_size: 100
 
   def handle_runs_change(socket) do
@@ -132,7 +188,8 @@ defmodule LightningWeb.AttemptLive.AttemptViewerLive do
 
     %{job_id: job_id, runs: runs} = socket.assigns
 
-    selected_run_id = get_run_id_for_job_id(job_id, runs)
+    selected_run_id =
+      socket.assigns.selected_run_id || get_run_id_for_job_id(job_id, runs)
 
     selected_run = runs |> Enum.find(&(&1.id == selected_run_id))
 

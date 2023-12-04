@@ -34,7 +34,29 @@ defmodule LightningWeb.AttemptLive.Show do
 
           <div class="flex gap-6 @5xl/main:flex-row flex-col">
             <div class="basis-1/3 flex-none flex gap-6 @5xl/main:flex-col flex-row">
-              <.attempt_detail attempt={attempt} class="flex-1 @5xl/main:flex-none" />
+              <.detail_list
+                id={"attempt-detail-#{attempt.id}"}
+                class="flex-1 @5xl/main:flex-none"
+              >
+                <.list_item>
+                  <:label>Attempt</:label>
+                  <:value>
+                    <span class="whitespace-nowrap text-ellipsis">
+                      <%= display_short_uuid(attempt.id) %>
+                    </span>
+                  </:value>
+                </.list_item>
+                <.list_item>
+                  <:label>Elapsed</:label>
+                  <:value>
+                    <.elapsed_indicator attempt={attempt} />
+                  </:value>
+                </.list_item>
+                <.list_item>
+                  <:label>State</:label>
+                  <:value><.state_pill state={attempt.state} /></:value>
+                </.list_item>
+              </.detail_list>
 
               <.step_list
                 :let={run}
@@ -159,25 +181,5 @@ defmodule LightningWeb.AttemptLive.Show do
     selected_run_id = Map.get(params, "r")
 
     {:noreply, socket |> apply_selected_run_id(selected_run_id)}
-  end
-
-  defp apply_selected_run_id(socket, id) do
-    case id do
-      nil ->
-        socket
-        |> unselect_run()
-
-      _ ->
-        socket
-        |> assign(:selected_run_id, id)
-        |> then(fn socket ->
-          if changed?(socket, :selected_run_id) do
-            reset_dataclip_streams(socket)
-          else
-            socket
-          end
-        end)
-        |> handle_runs_change()
-    end
   end
 end

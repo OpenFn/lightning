@@ -1,49 +1,16 @@
 defmodule LightningWeb.AttemptLive.Components do
   use LightningWeb, :component
 
-  attr :show_url, :string, default: nil, required: false
-  attr :attempt, :map, required: true
-  attr :class, :string, default: ""
+  attr :attempt, Lightning.Attempt, required: true
 
-  def attempt_detail(assigns) do
+  def elapsed_indicator(assigns) do
     ~H"""
-    <.detail_list id={"attempt-detail-#{@attempt.id}"} class={@class}>
-      <.list_item>
-        <:label>Attempt ID</:label>
-        <:value>
-          <%= if @show_url do %>
-            <.link
-              navigate={@show_url}
-              class="hover:underline hover:text-primary-900 whitespace-nowrap text-ellipsis"
-            >
-              <span class="whitespace-nowrap text-ellipsis">
-                <%= display_short_uuid(@attempt.id) %>
-              </span>
-              <.icon name="hero-arrow-up-right" class="h-2 w-2 float-right" />
-            </.link>
-          <% else %>
-            <span class="whitespace-nowrap text-ellipsis">
-              <%= display_short_uuid(@attempt.id) %>
-            </span>
-          <% end %>
-        </:value>
-      </.list_item>
-      <.list_item>
-        <:label>Elapsed time</:label>
-        <:value>
-          <div
-            phx-hook="ElapsedIndicator"
-            data-start-time={as_timestamp(@attempt.started_at)}
-            data-finish-time={as_timestamp(@attempt.finished_at)}
-            id={"elapsed-indicator-#{@attempt.id}"}
-          />
-        </:value>
-      </.list_item>
-      <.list_item>
-        <:label>State</:label>
-        <:value><.state_pill state={@attempt.state} /></:value>
-      </.list_item>
-    </.detail_list>
+    <div
+      phx-hook="ElapsedIndicator"
+      data-start-time={as_timestamp(@attempt.started_at)}
+      data-finish-time={as_timestamp(@attempt.finished_at)}
+      id={"elapsed-indicator-#{@attempt.id}"}
+    />
     """
   end
 
@@ -59,7 +26,11 @@ defmodule LightningWeb.AttemptLive.Components do
 
   def detail_list(assigns) do
     ~H"""
-    <ul {@rest} role="list" class={["divide-y divide-gray-200", @class]}>
+    <ul
+      {@rest}
+      role="list"
+      class={["flex-1 @5xl/viewer:flex-none", "divide-y divide-gray-200", @class]}
+    >
       <%= render_slot(@inner_block) %>
     </ul>
     """
@@ -71,8 +42,8 @@ defmodule LightningWeb.AttemptLive.Components do
   def list_item(assigns) do
     ~H"""
     <li class="px-4 py-4 sm:px-0">
-      <div class="flex justify-between">
-        <dt class="font-medium">
+      <div class="flex justify-between items-baseline text-sm @md/viewer:text-base">
+        <dt class="font-medium items-center">
           <%= render_slot(@label) %>
         </dt>
         <dd class="text-gray-900 font-mono">
@@ -217,17 +188,21 @@ defmodule LightningWeb.AttemptLive.Components do
   attr :run, Lightning.Invocation.Run, required: true
   attr :selected, :boolean, default: false
   attr :class, :string, default: ""
+  attr :rest, :global
 
   def step_item(assigns) do
     ~H"""
-    <div class={[
-      "relative flex space-x-3 border-r-4",
-      if(@selected,
-        do: "border-primary-500",
-        else: "border-transparent hover:border-gray-300"
-      ),
-      @class
-    ]}>
+    <div
+      class={[
+        "relative flex space-x-3 border-r-4",
+        if(@selected,
+          do: "border-primary-500",
+          else: "border-transparent hover:border-gray-300"
+        ),
+        @class
+      ]}
+      {@rest}
+    >
       <div class="flex items-center">
         <.run_state_circle run={@run} />
       </div>
