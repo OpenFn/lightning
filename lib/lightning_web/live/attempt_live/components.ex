@@ -1,6 +1,7 @@
 defmodule LightningWeb.AttemptLive.Components do
   use LightningWeb, :component
 
+  attr :show_url, :string, default: nil, required: false
   attr :attempt, :map, required: true
   attr :class, :string, default: ""
 
@@ -9,7 +10,23 @@ defmodule LightningWeb.AttemptLive.Components do
     <.detail_list id={"attempt-detail-#{@attempt.id}"} class={@class}>
       <.list_item>
         <:label>Attempt ID</:label>
-        <:value><%= display_short_uuid(@attempt.id) %></:value>
+        <:value>
+          <%= if @show_url do %>
+            <.link
+              navigate={@show_url}
+              class="hover:underline hover:text-primary-900 whitespace-nowrap text-ellipsis"
+            >
+              <span class="whitespace-nowrap text-ellipsis">
+                <%= display_short_uuid(@attempt.id) %>
+              </span>
+              <.icon name="hero-arrow-up-right" class="h-2 w-2 float-right" />
+            </.link>
+          <% else %>
+            <span class="whitespace-nowrap text-ellipsis">
+              <%= display_short_uuid(@attempt.id) %>
+            </span>
+          <% end %>
+        </:value>
       </.list_item>
       <.list_item>
         <:label>Elapsed time</:label>

@@ -108,7 +108,7 @@ defmodule Lightning.Invocation.Dataclip do
     |> validate_by_type()
   end
 
-  def get_types do
+  def source_types do
     @source_types
   end
 end

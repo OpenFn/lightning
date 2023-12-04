@@ -9,7 +9,7 @@ defmodule LightningWeb.DataclipLive.FormComponent do
 
   @impl true
   def update(%{dataclip: dataclip, project: project} = assigns, socket) do
-    types = Lightning.Invocation.Dataclip.get_types()
+    types = Lightning.Invocation.Dataclip.source_types()
 
     changeset =
       Invocation.change_dataclip(dataclip, %{"project_id" => project.id})

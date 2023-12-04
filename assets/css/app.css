@@ -200,14 +200,6 @@ div.line-num::before {
 }
 
 /* Wrapped styles for LogViewer to make the resulting HTML more compact */
-.log-viewer > .group:nth-of-type(2) > * {
-  @apply pt-[0.25rem];
-}
-
-.log-viewer > .group:last-of-type > * {
-  @apply pb-[0.25rem];
-}
-
 .log-viewer__prefix {
   @apply border-r
   border-slate-500/75
@@ -218,7 +210,9 @@ div.line-num::before {
     group-data-[highlight]:border-r-2
     group-data-[highlight]:pr-[calc(0.5rem-1px)]
   group-hover:bg-slate-600/75
-  group-hover:text-slate-300;
+  group-hover:text-slate-300
+    font-mono 
+    proportional-nums;
 
   &::before {
     content: attr(data-line-prefix);
@@ -228,11 +222,10 @@ div.line-num::before {
 }
 
 .log-viewer__message {
-  @apply px-2
- group-hover:bg-slate-600/50 
-   cursor-text 
- selection:bg-slate-500/50
-   group-first:pt-[0.1rem];
+  @apply px-2 group-hover:bg-slate-600/50 
+   cursor-text selection:bg-slate-500/50
+   group-first:pt-[0.1rem] 
+   font-mono proportional-nums;
 
   > pre {
     @apply whitespace-break-spaces;

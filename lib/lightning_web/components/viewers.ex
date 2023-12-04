@@ -93,20 +93,26 @@ defmodule LightningWeb.Components.Viewers do
     default: nil,
     doc: "Additional classes to add to the log viewer container"
 
+  attr :type, :atom,
+    default: nil,
+    values: [nil | Lightning.Invocation.Dataclip.source_types()]
+
   def dataclip_viewer(assigns) do
     ~H"""
     <div
       class={[
         "rounded-md shadow-sm bg-slate-700 border-slate-300",
-        "text-slate-200 text-sm font-mono proportional-nums w-full",
+        "text-slate-200 text-sm w-full",
         "overscroll-contain scroll-smooth",
         "grid grid-flow-row-dense grid-cols-[min-content_1fr]",
-        "log-viewer",
+        "min-h-[2rem]",
+        "log-viewer relative",
         @class
       ]}
       id={@id}
       phx-update="stream"
     >
+      <.dataclip_type :if={@type} type={@type} id={"#{@id}-type"} />
       <div
         :for={{dom_id, %{line: line, index: index}} <- @stream}
         class="group contents"
@@ -125,6 +131,54 @@ defmodule LightningWeb.Components.Viewers do
         ]}
       >
         Nothing yet...
+      </div>
+    </div>
+    """
+  end
+
+  attr :id, :string, required: true
+
+  attr :type, :atom,
+    default: nil,
+    values: [nil | Lightning.Invocation.Dataclip.source_types()]
+
+  defp dataclip_type(assigns) do
+    assigns =
+      assign(
+        assigns,
+        :icon,
+        case assigns.type do
+          :saved_input -> "hero-pencil-square"
+          :global -> "hero-globe-alt"
+          :run_result -> "hero-document-text"
+          :http_request -> "hero-document-arrow-down"
+          nil -> nil
+        end
+      )
+      |> assign(
+        :color,
+        case assigns.type do
+          :run_result -> ~w[bg-purple-500 text-purple-900]
+          :http_request -> ~w[bg-green-500 text-green-900]
+          :global -> ~w[bg-blue-500 text-blue-900]
+          :saved_input -> ~w[bg-yellow-500 text-yellow-900]
+          _ -> []
+        end
+      )
+
+    ~H"""
+    <div
+      id={@id}
+      class={[
+        "absolute top-0 right-0 flex items-center gap-2 group"
+      ]}
+    >
+      <div class="hidden group-hover:block font-mono"><%= @type %></div>
+      <div class={[
+        "rounded-bl-md rounded-tr-md rounded-br-md p-1 opacity-70 group-hover:opacity-100 content-center",
+        @color
+      ]}>
+        <.icon :if={@icon} name={@icon} class="h-6 w-6 inline-block align-middle" />
       </div>
     </div>
     """
