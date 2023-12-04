@@ -49,6 +49,7 @@ defmodule LightningWeb.Components.Viewers do
         "text-slate-200 text-sm font-mono proportional-nums w-full",
         "overscroll-contain scroll-smooth",
         "grid grid-flow-row-dense grid-cols-[min-content_1fr]",
+        "log-viewer",
         @class
       ]}
       id={@id}

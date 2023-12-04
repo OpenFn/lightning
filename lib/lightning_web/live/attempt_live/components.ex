@@ -204,12 +204,14 @@ defmodule LightningWeb.AttemptLive.Components do
   def step_item(assigns) do
     ~H"""
     <div class={[
-      "relative flex space-x-3",
-      @selected &&
-        "rounded-full outline outline-2 outline-primary-500 outline-offset-4",
+      "relative flex space-x-3 border-r-4",
+      if(@selected,
+        do: "border-primary-500",
+        else: "border-transparent hover:border-gray-300"
+      ),
       @class
     ]}>
-      <div>
+      <div class="flex items-center">
         <.run_state_circle run={@run} />
       </div>
       <div class="flex min-w-0 flex-1 justify-between space-x-4 pt-1.5 pr-1.5">
