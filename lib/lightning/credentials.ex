@@ -128,12 +128,7 @@ defmodule Lightning.Credentials do
       :credential,
       changeset
     )
-    |> Multi.insert(:audit, fn %{credential: credential} ->
-      Audit.event("created", credential.id, credential.user_id, %{
-        before: nil,
-        after: Map.take(changeset.changes, Credential.__schema__(:fields))
-      })
-    end)
+    |> derive_events(changeset)
     |> Repo.transaction()
     |> case do
       {:error, _op, changeset, _changes} ->
@@ -245,7 +240,8 @@ defmodule Lightning.Credentials do
 
   defp derive_events(
          multi,
-         %Ecto.Changeset{data: %Credential{}} = changeset
+         %Ecto.Changeset{data: %Credential{__meta__: %{state: state}}} =
+           changeset
        ) do
     case changeset.changes do
       map when map_size(map) == 0 ->
@@ -263,7 +259,7 @@ defmodule Lightning.Credentials do
           :audit,
           fn %{credential: credential} ->
             Audit.event(
-              "updated",
+              if(state == :built, do: "created", else: "updated"),
               credential.id,
               credential.user_id,
               changeset

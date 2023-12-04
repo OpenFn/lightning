@@ -186,10 +186,15 @@ defmodule Lightning.Auditing.Model do
       |> MapSet.intersection(change_keys)
       |> MapSet.to_list()
 
-    changes = %{
-      before: Map.take(data, field_keys),
-      after: Map.take(changes, field_keys)
-    }
+    before_change = Map.take(data, field_keys)
+
+    after_change = Map.take(changes, field_keys)
+
+    changes =
+      %{
+        before: if(event == "created", do: nil, else: before_change),
+        after: if(after_change === %{}, do: nil, else: after_change)
+      }
 
     audit_changeset(item_type, event, item_id, actor_id, changes)
   end
