@@ -195,7 +195,6 @@ defmodule LightningWeb.CredentialLive.FormComponent do
           project_credentials ++ [pc]
         end
       end)
-      |> IO.inspect()
 
     changeset =
       socket.assigns.changeset

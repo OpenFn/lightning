@@ -8,6 +8,8 @@ defmodule LightningWeb.CredentialLiveTest do
   import Lightning.CredentialsFixtures
   import Lightning.Factories
 
+  import Ecto.Query
+
   alias Lightning.Credentials
 
   @create_attrs %{
@@ -23,7 +25,7 @@ defmodule LightningWeb.CredentialLiveTest do
   @invalid_attrs %{name: "this won't work", body: nil}
 
   defp create_credential(%{user: user}) do
-    credential = credential_fixture(user_id: user.id)
+    credential = insert(:credential, user: user)
     %{credential: credential}
   end
 
@@ -508,6 +510,126 @@ defmodule LightningWeb.CredentialLiveTest do
       assert flash == %{"info" => "Credential updated successfully"}
 
       assert html =~ "some updated name"
+    end
+
+    test "adds new project with access", %{
+      conn: conn,
+      user: user
+    } do
+      project =
+        insert(:project, project_users: [build(:project_user, user: user)])
+
+      credential =
+        insert(:credential,
+          name: "my-credential",
+          schema: "http",
+          body: %{"username" => "test", "password" => "test"},
+          user: user
+        )
+
+      audit_events_query =
+        from(a in Lightning.Credentials.Audit.base_query(),
+          where: a.item_id == ^credential.id,
+          select: {a.event, type(a.changes, :map)}
+        )
+
+      assert Lightning.Repo.all(audit_events_query) == []
+
+      {:ok, view, _html} = live(conn, ~p"/credentials/#{credential.id}")
+
+      view
+      |> element("#project_list")
+      |> render_change(selected_project: %{"id" => project.id})
+
+      view
+      |> element("#add-new-project-button")
+      |> render_click()
+
+      view |> form("#credential-form") |> render_submit()
+
+      assert_redirected(view, ~p"/credentials")
+
+      audit_events = Lightning.Repo.all(audit_events_query)
+
+      assert Enum.count(audit_events) == 2
+
+      assert {"updated", _changes} =
+               Enum.find(audit_events, fn {event, _changes} ->
+                 event == "updated"
+               end)
+
+      assert {"added_to_project", _changes} =
+               Enum.find(audit_events, fn {event, _changes} ->
+                 event == "added_to_project"
+               end)
+    end
+
+    test "removes project with access", %{
+      conn: conn,
+      user: user
+    } do
+      project =
+        insert(:project, project_users: [build(:project_user, user: user)])
+
+      credential =
+        insert(:credential,
+          name: "my-credential",
+          schema: "http",
+          body: %{"username" => "test", "password" => "test"},
+          user: user
+        )
+
+      insert(:project_credential, project: project, credential: credential)
+
+      audit_events_query =
+        from(a in Lightning.Credentials.Audit.base_query(),
+          where: a.item_id == ^credential.id,
+          select: {a.event, type(a.changes, :map)}
+        )
+
+      assert Lightning.Repo.all(audit_events_query) == []
+
+      {:ok, view, _html} = live(conn, ~p"/credentials/#{credential.id}")
+
+      view
+      |> element("#project_list")
+      |> render_change(selected_project: %{"id" => project.id})
+
+      view
+      |> element("#delete-project-#{project.id}")
+      |> render_click()
+
+      view |> form("#credential-form") |> render_submit()
+
+      assert_redirected(view, ~p"/credentials")
+
+      audit_events = Lightning.Repo.all(audit_events_query)
+
+      assert Enum.count(audit_events) == 2
+
+      assert {"updated", _changes} =
+               Enum.find(audit_events, fn {event, _changes} ->
+                 event == "updated"
+               end)
+
+      assert {"removed_from_project", _changes} =
+               Enum.find(audit_events, fn {event, _changes} ->
+                 event == "removed_from_project"
+               end)
+    end
+
+    test "users can only edit their own credentials", %{
+      conn: conn
+    } do
+      # some credential for another user
+      credential = CredentialsFixtures.credential_fixture()
+
+      {:ok, _view, html} =
+        live(conn, ~p"/credentials/#{credential.id}")
+        |> follow_redirect(conn)
+        |> follow_redirect(conn)
+
+      assert html =~ "Sorry, we can&#39;t find anything here for you."
     end
 
     test "marks a credential for use in a 'production' system", %{
