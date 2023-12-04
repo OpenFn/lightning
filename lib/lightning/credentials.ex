@@ -438,13 +438,22 @@ defmodule Lightning.Credentials do
     end
   end
 
-  def usernames_for(%Credential{body: body}) when is_map(body) do
-    body
-    |> Map.take(["username", "email"])
-    |> Map.values()
+  def basic_auth_for(%Credential{body: body}) when is_map(body) do
+    usernames =
+      body
+      |> Map.take(["username", "email"])
+      |> Map.values()
+
+    password = Map.get(body, "password", "")
+
+    usernames
+    |> Enum.zip(List.duplicate(password, length(usernames)))
+    |> Enum.map(fn {username, password} ->
+      Base.encode64("#{username}:#{password}")
+    end)
   end
 
-  def usernames_for(_credential), do: []
+  def basic_auth_for(_credential), do: []
 
   @doc """
   Given a credential and a user, returns a list of invalid projects—i.e., those

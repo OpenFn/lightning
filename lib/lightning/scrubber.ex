@@ -53,14 +53,14 @@ defmodule Lightning.Scrubber do
   @spec start_link(
           opts :: [
             samples: [String.t()],
-            usernames: [String.t()],
+            basic_auth: [String.t()],
             name: nil | GenServer.name()
           ]
         ) ::
           Agent.on_start()
   def start_link(opts) do
     samples = Keyword.get(opts, :samples, [])
-    usernames = Keyword.get(opts, :usernames, [])
+    basic_auth = Keyword.get(opts, :basic_auth, [])
 
     server_opts =
       Keyword.get(opts, :name)
@@ -73,13 +73,13 @@ defmodule Lightning.Scrubber do
       end
 
     Agent.start_link(
-      fn -> State.new(samples |> encode_samples(usernames)) end,
+      fn -> State.new(samples |> encode_samples(basic_auth)) end,
       server_opts
     )
   end
 
-  def add_samples(agent, new_samples, usernames) do
-    new_encoded_samples = encode_samples(new_samples, usernames)
+  def add_samples(agent, new_samples, basic_auth) do
+    new_encoded_samples = encode_samples(new_samples, basic_auth)
     Agent.update(agent, &State.add_samples(&1, new_encoded_samples))
   end
 
@@ -96,10 +96,10 @@ defmodule Lightning.Scrubber do
   Prepare a list of sensitive samples (strings) into a potentially bigger list
   composed of variations a sample may appear.
   """
-  @spec encode_samples(samples :: [String.t()], usernames :: [String.t()]) :: [
+  @spec encode_samples(samples :: [String.t()], basic_auth :: [String.t()]) :: [
           String.t()
         ]
-  def encode_samples(samples, usernames) do
+  def encode_samples(samples, basic_auth \\ []) do
     stringified_samples =
       samples
       |> Enum.filter(fn x -> not is_boolean(x) end)
@@ -107,12 +107,12 @@ defmodule Lightning.Scrubber do
 
     base64_secrets =
       stringified_samples
-      |> Enum.concat(usernames)
       |> cartesian_pairs()
       |> Enum.map(fn [x, y] ->
         "#{x}:#{y}"
         |> Base.encode64()
       end)
+      |> Enum.concat(basic_auth)
 
     Enum.concat([stringified_samples, base64_secrets])
     |> Enum.sort_by(&String.length/1, :desc)
