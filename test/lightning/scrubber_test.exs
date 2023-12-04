@@ -29,14 +29,22 @@ defmodule Lightning.ScrubberTest do
     end
 
     test "replaces key and value secrets in a map with ***" do
-      secrets = ["password", "immasecret"]
+      secrets = ["password", "immasecret", "username", "quux"]
       scrubber = start_supervised!({Lightning.Scrubber, samples: secrets})
 
       scrubbed =
         scrubber
-        |> Scrubber.scrub([%{"password" => "immasecret"}])
+        |> Scrubber.scrub([
+          %{
+            "password" => "immasecret",
+            "username" => "quux",
+            "fieldA" => "valueA"
+          }
+        ])
 
-      assert scrubbed == [%{"***" => "***"}]
+      assert scrubbed == [
+               %{"password" => "***", "username" => "***", "fieldA" => "valueA"}
+             ]
     end
 
     test "doesn't replace booleans with ***" do

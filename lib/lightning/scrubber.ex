@@ -39,7 +39,7 @@ defmodule Lightning.Scrubber do
 
     def scrub(data, state) when is_map(data) do
       Map.new(data, fn {k, v} ->
-        {scrub(k, state), scrub(v, state)}
+        {k, scrub(v, state)}
       end)
     end
 
