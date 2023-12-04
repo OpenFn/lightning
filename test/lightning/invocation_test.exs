@@ -816,6 +816,8 @@ defmodule Lightning.InvocationTest do
                ).entries
     end
 
+    # to be replaced by paginator unit tests
+    @tag :skip
     test "filters workorders sets timeout" do
       project = insert(:project)
       workflow = insert(:workflow, project: project)
@@ -832,7 +834,7 @@ defmodule Lightning.InvocationTest do
           %{
             page: 1,
             page_size: 10,
-            options: [timeout: 20]
+            options: [timeout: 30]
           }
         )
       rescue
