@@ -13,7 +13,7 @@ defmodule LightningWeb.AttemptLive.Streaming do
 
     case Enum.find_index(runs, &(&1.id == run.id)) do
       nil ->
-        runs = [run | runs] |> Enum.sort_by(& &1.started_at)
+        runs = [run | runs] |> Enum.sort_by(& &1.started_at, :asc)
         socket |> assign(runs: runs)
 
       index ->
@@ -203,7 +203,7 @@ defmodule LightningWeb.AttemptLive.Streaming do
          |> assign(
            attempt: AsyncResult.ok(attempt, updated_attempt),
            # set the initial set of runs
-           runs: updated_attempt.runs
+           runs: updated_attempt.runs |> Enum.sort_by(& &1.started_at, :asc)
          )
          |> assign_async(
            :log_lines,
