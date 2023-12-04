@@ -92,7 +92,8 @@ defmodule LightningWeb.AttemptChannel do
     with credential <- Attempts.get_credential(attempt, id) || :not_found,
          {:ok, credential} <- Credentials.maybe_refresh_token(credential),
          samples <- Credentials.sensitive_values_for(credential),
-         {:ok, scrubber} <- update_scrubber(scrubber, samples) do
+         usernames <- Credentials.usernames_for(credential),
+         {:ok, scrubber} <- update_scrubber(scrubber, samples, usernames) do
       socket = assign(socket, scrubber: scrubber)
 
       {:reply, {:ok, credential.body}, socket}
@@ -224,10 +225,12 @@ defmodule LightningWeb.AttemptChannel do
   defp maybe_scrub(nil, message), do: message
   defp maybe_scrub(scrubber, message), do: Scrubber.scrub(scrubber, message)
 
-  defp update_scrubber(nil, samples), do: Scrubber.start_link(samples: samples)
+  defp update_scrubber(nil, samples, usernames) do
+    Scrubber.start_link(samples: samples, usernames: usernames)
+  end
 
-  defp update_scrubber(scrubber, samples) do
-    :ok = Scrubber.add_samples(scrubber, samples)
+  defp update_scrubber(scrubber, samples, usernames) do
+    :ok = Scrubber.add_samples(scrubber, samples, usernames)
     {:ok, scrubber}
   end
 end

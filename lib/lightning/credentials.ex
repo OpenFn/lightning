@@ -438,6 +438,14 @@ defmodule Lightning.Credentials do
     end
   end
 
+  def usernames_for(%Credential{body: body}) when is_map(body) do
+    body
+    |> Map.take(["username", "email"])
+    |> Map.values()
+  end
+
+  def usernames_for(_credential), do: []
+
   @doc """
   Given a credential and a user, returns a list of invalid projects—i.e., those
   that the credential is shared with but that the user does not have access to.

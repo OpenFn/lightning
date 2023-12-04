@@ -285,7 +285,7 @@ defmodule LightningWeb.EndToEndTest do
       console.log(state.x);
       console.log('quux is on the safelist')
       console.log('but immasecret should be scrubbed');
-      console.log('along with its encoded form aW1tYXNlY3JldA==');
+      console.log('along with its encoded form #{Base.encode64("quux:immasecret")}');
       return state;
     });"
   end
