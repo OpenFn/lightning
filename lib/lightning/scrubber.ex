@@ -25,7 +25,9 @@ defmodule Lightning.Scrubber do
     end
 
     @spec add_samples(state :: t(), samples()) :: t()
-    def add_samples({samples}, new_samples), do: {samples ++ new_samples}
+    def add_samples({samples}, new_samples) do
+      {samples ++ new_samples}
+    end
 
     @spec scrub(state :: t(), data :: String.t()) :: String.t()
     def scrub(nil, _state), do: nil
