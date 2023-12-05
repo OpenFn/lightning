@@ -10,6 +10,9 @@ and this project adheres to
 
 ### Added
 
+- Improved UI when manually creating Attempts via the Job Editor
+  [#1474](https://github.com/OpenFn/Lightning/issues/1474)
+
 ### Changed
 
 ### Fixed
@@ -39,7 +42,7 @@ and this project adheres to
   [#1508](https://github.com/OpenFn/Lightning/issues/1508)
 - Enable user to reauthorize and obtain a new refresh token.
   [#1495](https://github.com/OpenFn/Lightning/issues/1495)
-  
+
 ## [v0.10.5] - 2023-12-03
 
 ### Added
@@ -83,7 +86,6 @@ and this project adheres to
   [#1145](https://github.com/OpenFn/Lightning/issues/1145)
 - Fix for adding ellipses on credential info on job editor heading
   [#1428](https://github.com/OpenFn/Lightning/issues/1428)
-
 
 ## [v0.10.3] - 2023-11-28
 
