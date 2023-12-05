@@ -7,24 +7,7 @@ defmodule LightningWeb.WebhooksController do
   alias Lightning.WorkOrders
 
   @spec create(Plug.Conn.t(), %{path: binary()}) :: Plug.Conn.t()
-  def create(conn, %{"path" => path}) do
-    path = Enum.join(path, "/")
-    start_opts = %{path: path}
-
-    :telemetry.span([:lightning, :workorder, :webhook], start_opts, fn ->
-      {conn, metadata} =
-        OpenTelemetry.Tracer.with_span "lightning.api.webhook", %{
-          attributes: start_opts
-        } do
-          conn = handle_create(conn)
-          {conn, %{status: Plug.Conn.Status.reason_atom(conn.status)}}
-        end
-
-      {conn, start_opts |> Map.merge(metadata)}
-    end)
-  end
-
-  defp handle_create(conn) do
+  def create(conn, _params) do
     case conn.assigns.trigger do
       nil ->
         conn |> put_status(:not_found) |> json(%{"error" => "Webhook not found"})
