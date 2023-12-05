@@ -592,10 +592,6 @@ defmodule LightningWeb.CredentialLiveTest do
       {:ok, view, _html} = live(conn, ~p"/credentials/#{credential.id}")
 
       view
-      |> element("#project_list")
-      |> render_change(selected_project: %{"id" => project.id})
-
-      view
       |> element("#delete-project-#{project.id}")
       |> render_click()
 
@@ -616,6 +612,66 @@ defmodule LightningWeb.CredentialLiveTest do
                Enum.find(audit_events, fn {event, _changes} ->
                  event == "removed_from_project"
                end)
+    end
+
+    test "users can add and remove existing project credentials successfully", %{
+      conn: conn,
+      user: user
+    } do
+      project =
+        insert(:project, project_users: [build(:project_user, user: user)])
+
+      credential =
+        insert(:credential,
+          name: "my-credential",
+          schema: "http",
+          body: %{"username" => "test", "password" => "test"},
+          user: user
+        )
+
+      insert(:project_credential, project: project, credential: credential)
+
+      {:ok, view, _html} = live(conn, ~p"/credentials/#{credential.id}")
+
+      # Try adding an existing project credential
+      view
+      |> element("#project_list")
+      |> render_change(selected_project: %{"id" => project.id})
+
+      html =
+        view
+        |> element("#add-new-project-button")
+        |> render_click()
+
+      assert html =~ project.name,
+             "adding an existing project doesn't break anything"
+
+      assert has_element?(view, "#delete-project-#{project.id}")
+
+      # Let's remove the project and add it back again
+
+      view
+      |> element("#delete-project-#{project.id}")
+      |> render_click()
+
+      refute has_element?(view, "#delete-project-#{project.id}"),
+             "project is removed from list"
+
+      # now let's add it back
+      view
+      |> element("#project_list")
+      |> render_change(selected_project: %{"id" => project.id})
+
+      view
+      |> element("#add-new-project-button")
+      |> render_click()
+
+      assert has_element?(view, "#delete-project-#{project.id}"),
+             "project is added back"
+
+      view |> form("#credential-form") |> render_submit()
+
+      assert_redirected(view, ~p"/credentials")
     end
 
     test "users can only edit their own credentials", %{
