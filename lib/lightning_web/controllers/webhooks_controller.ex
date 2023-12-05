@@ -8,10 +8,6 @@ defmodule LightningWeb.WebhooksController do
 
   @spec create(Plug.Conn.t(), %{path: binary()}) :: Plug.Conn.t()
   def create(conn, _params) do
-    handle_create(conn)
-  end
-
-  defp handle_create(conn) do
     case conn.assigns.trigger do
       nil ->
         conn |> put_status(:not_found) |> json(%{"error" => "Webhook not found"})
