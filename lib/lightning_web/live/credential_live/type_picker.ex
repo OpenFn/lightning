@@ -12,7 +12,6 @@ defmodule LightningWeb.CredentialLive.TypePicker do
         as={:type}
         phx-target={@myself}
         phx-change="type_changed"
-        phx-submit="confirm_type"
       >
         <div class="grid grid-cols-2 md:grid-cols-4 gap-4 overflow-auto max-h-99">
           <div :for={{name, key} <- @type_options} class="flex items-center pt-2">
@@ -84,6 +83,7 @@ defmodule LightningWeb.CredentialLive.TypePicker do
 
   @impl true
   def handle_event("type_changed", %{"type" => %{"selected" => type}}, socket) do
-    {:noreply, socket |> assign(selected: type)}
+    send(self(), {:credential_type_changed, type})
+    {:noreply, socket}
   end
 end

@@ -1,8 +1,9 @@
 defmodule LightningWeb.CredentialLive.CredentialModalComponent do
   @moduledoc false
-  alias Phoenix.LiveView.JS
+  alias Lightning.Credentials
   use LightningWeb, :live_component
 
+  alias Phoenix.LiveView.JS
   alias Lightning.Credentials.Credential
 
   @impl true
@@ -16,6 +17,8 @@ defmodule LightningWeb.CredentialLive.CredentialModalComponent do
     |> assign(is_form_valid: false)
     |> assign(action: :new)
   end
+
+
 
   @impl true
   def render(assigns) do
@@ -48,14 +51,8 @@ defmodule LightningWeb.CredentialLive.CredentialModalComponent do
           module={LightningWeb.CredentialLive.FormComponent}
           id={:new}
           action={:new}
-          credential={
-            %Credential{
-              user_id: assigns.current_user.id,
-              project_credentials: [
-                %Lightning.Projects.ProjectCredential{project_id: @project.id}
-              ]
-            }
-          }
+          type={@selected_credential_type}
+          credential={@credential}
           projects={[]}
           project={@project}
           on_save={nil}
@@ -65,6 +62,9 @@ defmodule LightningWeb.CredentialLive.CredentialModalComponent do
           <div class="sm:flex sm:flex-row-reverse">
             <button
               type="submit"
+              disabled={!@selected_credential_type}
+              phx-click="credential_type_selected"
+              phx-target={@myself}
               class="inline-flex w-full justify-center rounded-md disabled:bg-primary-300 bg-primary-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary-500 sm:ml-3 sm:w-auto"
             >
               Configure credential

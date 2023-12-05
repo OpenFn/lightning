@@ -104,7 +104,8 @@ defmodule LightningWeb.ProjectLive.Settings do
        branches: [],
        loading_branches: false,
        github_enabled: VersionControl.github_enabled?(),
-       can_install_github: can_install_github(socket)
+       can_install_github: can_install_github(socket),
+       selected_credential_type: nil
      )}
   end
 
@@ -450,6 +451,10 @@ defmodule LightningWeb.ProjectLive.Settings do
       _ ->
         {:noreply, socket}
     end
+  end
+
+  def handle_info({:credential_type_changed, type}, socket) do
+    {:noreply, socket |> assign(:selected_credential_type, type)}
   end
 
   defp error_message(error) do
