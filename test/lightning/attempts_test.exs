@@ -440,7 +440,7 @@ defmodule Lightning.AttemptsTest do
     end
   end
 
-  describe "append_attempt_log/1" do
+  describe "append_attempt_log/3" do
     test "adds a log line to an attempt" do
       dataclip = insert(:dataclip)
       %{triggers: [trigger], jobs: [job]} = workflow = insert(:simple_workflow)

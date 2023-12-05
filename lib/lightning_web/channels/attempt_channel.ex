@@ -9,6 +9,7 @@ defmodule LightningWeb.AttemptChannel do
   alias Lightning.Attempts
   alias Lightning.Credentials
   alias Lightning.Repo
+  alias Lightning.Scrubber
   alias Lightning.Workers
   alias LightningWeb.AttemptJson
 
@@ -31,7 +32,8 @@ defmodule LightningWeb.AttemptChannel do
          claims: claims,
          id: id,
          attempt: attempt,
-         project_id: project_id
+         project_id: project_id,
+         scrubber: nil
        })}
     else
       {:error, :not_found} ->
@@ -85,22 +87,27 @@ defmodule LightningWeb.AttemptChannel do
   end
 
   def handle_in("fetch:credential", %{"id" => id}, socket) do
-    Attempts.get_credential(socket.assigns.attempt, id)
-    |> Credentials.cast_body()
-    |> Credentials.maybe_refresh_token()
-    |> case do
-      {:ok, nil} ->
+    %{attempt: attempt, scrubber: scrubber} = socket.assigns
+
+    with credential <- Attempts.get_credential(attempt, id) || :not_found,
+         credential <- Credentials.cast_body(credential),
+         {:ok, credential} <- Credentials.maybe_refresh_token(credential),
+         samples <- Credentials.sensitive_values_for(credential),
+         basic_auth <- Credentials.basic_auth_for(credential),
+         {:ok, scrubber} <- update_scrubber(scrubber, samples, basic_auth) do
+      socket = assign(socket, scrubber: scrubber)
+
+      {:reply, {:ok, credential.body}, socket}
+    else
+      :not_found ->
         {:reply, {:error, %{errors: %{id: ["Credential not found!"]}}}, socket}
 
-      {:ok, credential} ->
-        {:reply, {:ok, credential.body}, socket}
-
-      e ->
+      {:error, error} ->
         Logger.error(fn ->
           """
           Something went wrong when fetching or refreshing a credential.
 
-          #{inspect(e)}
+          #{inspect(error)}
           """
         end)
 
@@ -178,7 +185,9 @@ defmodule LightningWeb.AttemptChannel do
   end
 
   def handle_in("attempt:log", payload, socket) do
-    Attempts.append_attempt_log(socket.assigns.attempt, payload)
+    %{attempt: attempt, scrubber: scrubber} = socket.assigns
+
+    Attempts.append_attempt_log(attempt, payload, scrubber)
     |> case do
       {:error, changeset} ->
         {:reply, {:error, LightningWeb.ChangesetJSON.error(changeset)}, socket}
@@ -210,5 +219,17 @@ defmodule LightningWeb.AttemptChannel do
         unknown -> unknown
       end
     )
+  end
+
+  defp update_scrubber(nil, samples, basic_auth) do
+    Scrubber.start_link(
+      samples: samples,
+      basic_auth: basic_auth
+    )
+  end
+
+  defp update_scrubber(scrubber, samples, basic_auth) do
+    :ok = Scrubber.add_samples(scrubber, samples, basic_auth)
+    {:ok, scrubber}
   end
 end

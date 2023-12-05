@@ -492,6 +492,23 @@ defmodule Lightning.Credentials do
     end
   end
 
+  def basic_auth_for(%Credential{body: body}) when is_map(body) do
+    usernames =
+      body
+      |> Map.take(["username", "email"])
+      |> Map.values()
+
+    password = Map.get(body, "password", "")
+
+    usernames
+    |> Enum.zip(List.duplicate(password, length(usernames)))
+    |> Enum.map(fn {username, password} ->
+      Base.encode64("#{username}:#{password}")
+    end)
+  end
+
+  def basic_auth_for(_credential), do: []
+
   @doc """
   Given a credential and a user, returns a list of invalid projects—i.e., those
   that the credential is shared with but that the user does not have access to.
@@ -526,10 +543,8 @@ defmodule Lightning.Credentials do
   end
 
   # TODO: this doesn't need to be Google specific. It should work for any standard OAuth2 credential.
-  @spec maybe_refresh_token(nil | Lightning.Credentials.Credential.t()) ::
-          {:error, :invalid_config}
-          | {:ok, Lightning.Credentials.Credential.t()}
-          | {:ok, nil}
+  @spec maybe_refresh_token(Lightning.Credentials.Credential.t()) ::
+          {:error, any()} | {:ok, Lightning.Credentials.Credential.t()}
   def maybe_refresh_token(%Credential{schema: "googlesheets"} = credential) do
     token_body = Google.TokenBody.new(credential.body)
 
@@ -548,7 +563,6 @@ defmodule Lightning.Credentials do
   end
 
   def maybe_refresh_token(%Credential{} = credential), do: {:ok, credential}
-  def maybe_refresh_token(nil), do: {:ok, nil}
 
   defp still_fresh(
          %{expires_at: expires_at},

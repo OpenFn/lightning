@@ -23,6 +23,7 @@ defmodule Lightning.Attempts do
   alias Lightning.Attempt
   alias Lightning.Attempts.Events
   alias Lightning.Attempts.Handlers
+  alias Lightning.Invocation.LogLine
 
   alias Lightning.Repo
 
@@ -173,12 +174,9 @@ defmodule Lightning.Attempts do
     end)
   end
 
-  def append_attempt_log(attempt, params) do
-    alias Lightning.Invocation.LogLine
-    import Ecto.Changeset
-
-    LogLine.new(attempt, params)
-    |> validate_change(:run_id, fn _, run_id ->
+  def append_attempt_log(attempt, params, scrubber \\ nil) do
+    LogLine.new(attempt, params, scrubber)
+    |> Ecto.Changeset.validate_change(:run_id, fn _, run_id ->
       if is_nil(run_id) do
         []
       else
