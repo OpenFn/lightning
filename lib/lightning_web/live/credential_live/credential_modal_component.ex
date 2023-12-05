@@ -18,8 +18,6 @@ defmodule LightningWeb.CredentialLive.CredentialModalComponent do
     |> assign(action: :new)
   end
 
-
-
   @impl true
   def render(assigns) do
     ~H"""
