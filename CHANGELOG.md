@@ -14,6 +14,8 @@ and this project adheres to
 
 - Limit entries count on term work orders search
   [#1461](https://github.com/OpenFn/Lightning/issues/1461)
+- Enhance UX to prevent modal closure when Monaco/Dataclip editor is focused
+  [#1510](https://github.com/OpenFn/Lightning/pull/1510)
 
 ### Fixed
 
@@ -35,8 +37,6 @@ and this project adheres to
   [#1435](https://github.com/OpenFn/Lightning/issues/1435)
 - Validate schema field with any of expected values
   [#1502](https://github.com/OpenFn/Lightning/issues/1502)
-- Enhance UX to prevent modal closure when Monaco/Dataclip editor is focused
-  [#1510](https://github.com/OpenFn/Lightning/pull/1510)
 
 ### Fixed
 
