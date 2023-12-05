@@ -16,6 +16,8 @@ and this project adheres to
   [#1461](https://github.com/OpenFn/Lightning/issues/1461)
 - Scrub log lines using multiple credentials samples
   [#1461](https://github.com/OpenFn/Lightning/issues/1519)
+- Remove custom telemetry plumbing.
+  [1259](https://github.com/OpenFn/Lightning/issues/1259)
 
 ### Fixed
 
@@ -23,7 +25,11 @@ and this project adheres to
   [#1430](https://github.com/OpenFn/Lightning/issues/1430)
 - Allow users to retry work orders that failed before their first run was
   created [#1417](https://github.com/OpenFn/Lightning/issues/1417)
-
+- Fix to ensure webhook auth modal is closed when cancel or close are selected.
+  [#1508](https://github.com/OpenFn/Lightning/issues/1508)
+- Enable user to reauthorize and obtain a new refresh token.
+  [#1495](https://github.com/OpenFn/Lightning/issues/1495)
+  
 ## [v0.10.5] - 2023-12-03
 
 ### Added
@@ -67,8 +73,6 @@ and this project adheres to
   [#1145](https://github.com/OpenFn/Lightning/issues/1145)
 - Fix for adding ellipses on credential info on job editor heading
   [#1428](https://github.com/OpenFn/Lightning/issues/1428)
-- Enable user to reauthorize and obtain a new refresh token.
-  [#1495](https://github.com/OpenFn/Lightning/issues/1495)
 
 
 ## [v0.10.3] - 2023-11-28

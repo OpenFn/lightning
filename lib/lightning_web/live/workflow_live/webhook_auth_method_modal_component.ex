@@ -279,7 +279,10 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodModalComponent do
             </span>
 
             <button
-              phx-click="close_webhook_modal"
+              phx-click={
+                JS.hide(to: "#webhooks_auth_method_modal")
+                |> JS.push("close_webhook_modal")
+              }
               phx-target={@myself}
               type="button"
               class="rounded-md bg-white text-gray-400 hover:text-gray-500 focus:outline-none"
