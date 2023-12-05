@@ -13,12 +13,11 @@ defmodule Lightning.Invocation.LogLine do
   use Ecto.Schema
   import Ecto.Changeset
 
-  import Lightning.Security, only: [redact_password: 2]
-
   alias Lightning.Attempt
   alias Lightning.Invocation.Run
   alias Lightning.LogMessage
   alias Lightning.UnixDateTime
+  alias Lightning.Scrubber
 
   @type t :: %__MODULE__{
           __meta__: Ecto.Schema.Metadata.t(),
@@ -47,23 +46,14 @@ defmodule Lightning.Invocation.LogLine do
     field :timestamp, UnixDateTime
   end
 
-  def new(%Attempt{} = attempt, attrs \\ %{}) do
+  def new(%Attempt{} = attempt, attrs \\ %{}, scrubber) do
     %__MODULE__{id: Ecto.UUID.generate()}
     |> cast(attrs, [:message, :timestamp, :run_id, :attempt_id, :level, :source])
-    |> redact_password(:message)
     |> put_assoc(:attempt, attempt)
-    |> validate()
+    |> validate(scrubber)
   end
 
-  @doc false
-  def changeset(log_line, attrs) do
-    log_line
-    |> cast(attrs, [:message, :timestamp, :run_id, :attempt_id, :level, :source])
-    |> redact_password(:message)
-    |> validate()
-  end
-
-  def validate(changeset) do
+  def validate(changeset, scrubber \\ nil) do
     changeset
     |> validate_required([:message, :timestamp])
     |> validate_length(:source, max: 8)
@@ -77,5 +67,15 @@ defmodule Lightning.Invocation.LogLine do
         []
       end
     end)
+    |> maybe_scrub(scrubber)
   end
+
+  defp maybe_scrub(%Ecto.Changeset{valid?: true} = changeset, scrubber)
+       when scrubber != nil do
+    {:ok, message} = fetch_change(changeset, :message)
+    scrubbed = Scrubber.scrub(scrubber, message)
+    put_change(changeset, :message, scrubbed)
+  end
+
+  defp maybe_scrub(changeset, _scrubber), do: changeset
 end

@@ -241,6 +241,12 @@ defmodule LightningWeb.EndToEndTest do
         MapSet.new([
           {"R/T", "Starting operation 1"},
           {"JOB", "#{expected_job_x_value}"},
+          # Check to ensure that an inadvertantly exposed secret from job 2 is
+          # still scrubbed properly in job 3.
+          {"JOB", "quux is on the safelist"},
+          {"JOB", "but *** should be scrubbed"},
+          {"JOB", "along with its encoded form ***"},
+          {"JOB", "and its basic auth form ***"},
           {"R/T", "Expression complete!"}
         ])
 
@@ -278,6 +284,10 @@ defmodule LightningWeb.EndToEndTest do
     "fn(state => {
       state.x = state.x * 3;
       console.log(state.x);
+      console.log('quux is on the safelist')
+      console.log('but immasecret should be scrubbed');
+      console.log('along with its encoded form #{Base.encode64("immasecret")}');
+      console.log('and its basic auth form #{Base.encode64("quux:immasecret")}');
       return state;
     });"
   end

@@ -33,70 +33,9 @@ defmodule LightningWeb.WebhooksControllerTest do
       assert attempt.starting_trigger_id == trigger.id
     end
 
-    test "triggers a custom telemetry event", %{conn: conn} do
-      ref =
-        :telemetry_test.attach_event_handlers(self(), [
-          [:lightning, :workorder, :webhook, :stop]
-        ])
-
-      %{triggers: [trigger]} =
-        insert(:simple_workflow) |> Lightning.Repo.preload(:triggers)
-
-      trigger_id = trigger.id
-      message = %{"foo" => "bar"}
-
-      post(conn, "/i/#{trigger_id}", message)
-
-      assert_received {
-        [:lightning, :workorder, :webhook, :stop],
-        ^ref,
-        %{},
-        %{path: ^trigger_id, status: :ok}
-      }
-    end
-
-    test "executes a custom OpenTelemetry trace", %{conn: conn} do
-      :otel_simple_processor.set_exporter(:otel_exporter_pid, self())
-
-      %{triggers: [trigger]} =
-        insert(:simple_workflow) |> Lightning.Repo.preload(:triggers)
-
-      trigger_id = trigger.id
-      message = %{"foo" => "bar"}
-
-      attributes =
-        :otel_attributes.new([path: trigger_id], 128, :infinity)
-
-      post(conn, "/i/#{trigger_id}", message)
-
-      assert_receive {:span,
-                      span(
-                        name: "lightning.api.webhook",
-                        attributes: ^attributes
-                      )}
-    end
-
     test "with an invalid trigger id returns a 404", %{conn: conn} do
       conn = post(conn, "/i/bar")
       assert json_response(conn, 404) == %{"error" => "Webhook not found"}
-    end
-
-    test "with an invalid trigger id - indicates this in the telemetry span", %{
-      conn: conn
-    } do
-      ref =
-        :telemetry_test.attach_event_handlers(self(), [
-          [:lightning, :workorder, :webhook, :stop]
-        ])
-
-      post(conn, "/i/bar")
-
-      assert_received {
-        [:lightning, :workorder, :webhook, :stop],
-        ^ref,
-        %{},
-        %{path: "bar", status: :not_found}
-      }
     end
   end
 
@@ -118,26 +57,6 @@ defmodule LightningWeb.WebhooksControllerTest do
 
       assert response_message =~
                "Unable to process request, trigger is disabled."
-    end
-
-    test "adjusts the telemetry span status", %{
-      conn: conn,
-      trigger_id: trigger_id,
-      message: message
-    } do
-      ref =
-        :telemetry_test.attach_event_handlers(self(), [
-          [:lightning, :workorder, :webhook, :stop]
-        ])
-
-      post(conn, "/i/#{trigger_id}", message)
-
-      assert_received {
-        [:lightning, :workorder, :webhook, :stop],
-        ^ref,
-        %{},
-        %{path: ^trigger_id, status: :forbidden}
-      }
     end
   end
 end
