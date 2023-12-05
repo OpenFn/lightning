@@ -33,7 +33,9 @@ defmodule Lightning.Scrubber do
       |> then(fn samples -> {samples} end)
     end
 
-    @spec scrub(state :: t(), data :: String.t()) :: String.t()
+    @spec scrub(state :: t(), data :: String.t() | nil) :: String.t()
+    def scrub(_state, nil), do: nil
+
     def scrub({samples}, string) when is_binary(string) do
       samples
       |> Enum.reduce(string, fn x, acc ->
