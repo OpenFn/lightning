@@ -12,6 +12,14 @@ and this project adheres to
 
 ### Changed
 
+### Fixed
+
+## [v0.10.6] - 12-05-2023
+
+### Added
+
+### Changed
+
 - Limit entries count on term work orders search
   [#1461](https://github.com/OpenFn/Lightning/issues/1461)
 - Scrub log lines using multiple credentials samples
