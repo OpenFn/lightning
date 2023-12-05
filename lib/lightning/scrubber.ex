@@ -34,9 +34,7 @@ defmodule Lightning.Scrubber do
     end
 
     @spec scrub(state :: t(), data :: String.t()) :: String.t()
-    def scrub(nil, _state), do: nil
-
-    def scrub(string, {samples}) when is_binary(string) do
+    def scrub({samples}, string) when is_binary(string) do
       samples
       |> Enum.reduce(string, fn x, acc ->
         String.replace(acc, x, "***", global: true)
@@ -85,11 +83,11 @@ defmodule Lightning.Scrubber do
 
   def scrub(agent, lines) when is_list(lines) do
     state = Agent.get(agent, & &1)
-    lines |> Enum.map(fn line -> State.scrub(line, state) end)
+    lines |> Enum.map(fn line -> State.scrub(state, line) end)
   end
 
   def scrub(agent, data) do
-    agent |> Agent.get(&State.scrub(data, &1))
+    agent |> Agent.get(&State.scrub(&1, data))
   end
 
   @doc """
