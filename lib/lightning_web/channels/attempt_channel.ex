@@ -185,9 +185,8 @@ defmodule LightningWeb.AttemptChannel do
 
   def handle_in("attempt:log", payload, socket) do
     %{attempt: attempt, scrubber: scrubber} = socket.assigns
-    payload = Map.update(payload, "message", nil, &maybe_scrub(scrubber, &1))
 
-    Attempts.append_attempt_log(attempt, payload)
+    Attempts.append_attempt_log(attempt, payload, scrubber)
     |> case do
       {:error, changeset} ->
         {:reply, {:error, LightningWeb.ChangesetJSON.error(changeset)}, socket}
@@ -220,10 +219,6 @@ defmodule LightningWeb.AttemptChannel do
       end
     )
   end
-
-  defp maybe_scrub(_scrubber, nil), do: nil
-  defp maybe_scrub(nil, message), do: message
-  defp maybe_scrub(scrubber, message), do: Scrubber.scrub(scrubber, message)
 
   defp update_scrubber(nil, samples, basic_auth) do
     Scrubber.start_link(

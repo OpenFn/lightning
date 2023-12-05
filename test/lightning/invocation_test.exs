@@ -771,12 +771,12 @@ defmodule Lightning.InvocationTest do
           "run_id" => Ecto.UUID.generate()
         })
 
-      Lightning.Invocation.LogLine.new(attempt, %{
+      insert(:log_line,
+        attempt: attempt,
         run: run,
-        message: "Sadio Mane is playing in Senegal and Al Nasr",
+        message: "Sadio Mane is playing in Senegal",
         timestamp: Timex.now()
-      })
-      |> Repo.insert!()
+      )
 
       assert Lightning.Invocation.search_workorders(
                project,
