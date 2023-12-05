@@ -21,6 +21,8 @@ defmodule Lightning.Credentials do
   alias Lightning.Credentials.SensitiveValues
   alias Lightning.Projects.Project
 
+  require Logger
+
   @doc """
   Perform, when called with %{"type" => "purge_deleted"}
   will find credentials that are ready for permanent deletion, set their bodies to null, and attempt to purge them.
@@ -119,7 +121,7 @@ defmodule Lightning.Credentials do
 
   """
   def create_credential(attrs \\ %{}) do
-    changeset = %Credential{} |> change_credential(attrs) |> apply_body_changes()
+    changeset = %Credential{} |> change_credential(attrs) |> cast_body_change()
 
     Multi.new()
     |> Multi.insert(:credential, changeset)
@@ -149,7 +151,7 @@ defmodule Lightning.Credentials do
 
   """
   def update_credential(%Credential{} = credential, attrs) do
-    changeset = credential |> change_credential(attrs) |> apply_body_changes()
+    changeset = credential |> change_credential(attrs) |> cast_body_change()
 
     Multi.new()
     |> Multi.update(:credential, changeset)
@@ -183,26 +185,33 @@ defmodule Lightning.Credentials do
     end
   end
 
+  @doc """
+  Updates credential body with a typed body based on credential schema
+  """
+  def cast_body(%Credential{body: body, schema: schema_name} = credential) do
+    case put_typed_body(body, schema_name) do
+      {:ok, updated_body} ->
+        Map.put(credential, :body, updated_body)
+
+      {:error, %Ecto.Changeset{errors: errors}} ->
+        Logger.warning(fn ->
+          "Casting credential body failed with reason: #{inspect(errors)}"
+        end)
+
+        credential
+    end
+  end
+
   # Casts the credential body attributes to the types declared on the schema.
-  defp apply_body_changes(
+  defp cast_body_change(
          %Ecto.Changeset{
            valid?: true,
            changes: %{body: body, schema: schema_name}
          } = changeset
        )
        when schema_name != "raw" do
-    schema = get_schema(schema_name)
-
-    body
-    |> SchemaDocument.changeset(schema: schema)
-    |> Ecto.Changeset.apply_action(:insert)
-    |> case do
-      {:ok, typed_body} ->
-        updated_body =
-          Enum.into(typed_body, body, fn {field, typed_value} ->
-            {to_string(field), typed_value}
-          end)
-
+    case put_typed_body(body, schema_name) do
+      {:ok, updated_body} ->
         Ecto.Changeset.put_change(changeset, :body, updated_body)
 
       {:error, _reason} ->
@@ -210,7 +219,21 @@ defmodule Lightning.Credentials do
     end
   end
 
-  defp apply_body_changes(changeset), do: changeset
+  defp cast_body_change(changeset), do: changeset
+
+  defp put_typed_body(body, schema_name) do
+    schema = get_schema(schema_name)
+
+    with changeset <- SchemaDocument.changeset(body, schema: schema),
+         {:ok, typed_body} <- Ecto.Changeset.apply_action(changeset, :insert) do
+      updated_body =
+        Enum.into(typed_body, body, fn {field, typed_value} ->
+          {to_string(field), typed_value}
+        end)
+
+      {:ok, updated_body}
+    end
+  end
 
   defp derive_events(
          multi,

@@ -100,20 +100,7 @@ defmodule LightningWeb.AttemptChannelTest do
   end
 
   describe "fetching attempt data" do
-    setup do
-      user = insert(:user)
-
-      project = insert(:project, project_users: [%{user: user}])
-
-      dataclip =
-        insert(:dataclip,
-          type: :http_request,
-          body: %{"foo" => "bar"},
-          project: project
-        )
-
-      trigger = build(:trigger, type: :webhook, enabled: true)
-
+    defp set_google_credential(_context) do
       expires_at =
         DateTime.utc_now()
         |> DateTime.add(-299, :second)
@@ -126,68 +113,21 @@ defmodule LightningWeb.AttemptChannelTest do
         "scope" => "https://www.googleapis.com/auth/spreadsheets"
       }
 
-      job =
-        build(:job,
-          body: ~s[fn(state => { return {...state, extra: "data"} })],
-          project_credential: %{
-            credential:
-              credential =
-                insert(:credential,
-                  name: "Test Googlesheets Credential",
-                  user: user,
-                  body: credential_body,
-                  schema: "googlesheets"
-                )
-          }
+      user = insert(:user)
+
+      credential =
+        insert(:credential,
+          name: "Test Googlesheets Credential",
+          user: user,
+          body: credential_body,
+          schema: "googlesheets"
         )
 
-      workflow =
-        %{triggers: [trigger]} =
-        build(:workflow)
-        |> with_trigger(trigger)
-        |> with_job(job)
-        |> with_edge({trigger, job})
-        |> insert()
-
-      work_order =
-        insert(:workorder,
-          workflow: workflow,
-          trigger: trigger,
-          dataclip: dataclip
-        )
-
-      attempt =
-        insert(:attempt,
-          work_order: work_order,
-          starting_trigger: trigger,
-          dataclip: dataclip
-        )
-
-      Lightning.Stub.reset_time()
-
-      {:ok, bearer, _} =
-        Workers.Token.generate_and_sign(
-          %{},
-          Lightning.Config.worker_token_signer()
-        )
-
-      {:ok, %{}, socket} =
-        LightningWeb.WorkerSocket
-        |> socket("socket_id", %{token: bearer})
-        |> subscribe_and_join(
-          LightningWeb.AttemptChannel,
-          "attempt:#{attempt.id}",
-          %{"token" => Workers.generate_attempt_token(attempt)}
-        )
-
-      %{
-        socket: socket,
-        attempt: attempt,
-        workflow: workflow,
-        credential: credential,
-        dataclip: dataclip
-      }
+      {:ok, credential: credential, user: user}
     end
+
+    setup :set_google_credential
+    setup :create_socket_and_attempt
 
     test "fetch:attempt", %{
       socket: socket,
@@ -295,6 +235,46 @@ defmodule LightningWeb.AttemptChannelTest do
         "refresh_token" => "1//03dATMQTmE5NSCgYIARAAGAMSNwF",
         "scope" => "https://www.googleapis.com/auth/spreadsheets"
       }
+    end
+  end
+
+  describe "cast credential types" do
+    defp set_postgresql_credential(_context) do
+      credential =
+        insert(:credential,
+          name: "Test Postgres",
+          body: %{
+            user: "user1",
+            password: "pass1",
+            host: "https://dbhost",
+            port: "5000",
+            database: "test_db",
+            ssl: "true",
+            allowSelfSignedCert: "false"
+          },
+          schema: "postgresql"
+        )
+
+      {:ok, credential: credential, user: insert(:user)}
+    end
+
+    setup :set_postgresql_credential
+    setup :create_socket_and_attempt
+
+    test "fetch:credential", %{socket: socket, credential: credential} do
+      ref = push(socket, "fetch:credential", %{"id" => credential.id})
+
+      assert_reply ref,
+                   :ok,
+                   %{
+                     "allowSelfSignedCert" => false,
+                     "database" => "test_db",
+                     "host" => "https://dbhost",
+                     "password" => "pass1",
+                     "port" => 5000,
+                     "ssl" => true,
+                     "user" => "user1"
+                   }
     end
   end
 
@@ -751,6 +731,72 @@ defmodule LightningWeb.AttemptChannelTest do
       assert %{state: :killed} = Lightning.Repo.reload!(attempt)
       assert %{state: :killed} = Lightning.Repo.reload!(work_order)
     end
+  end
+
+  defp create_socket_and_attempt(%{credential: credential, user: user}) do
+    project = insert(:project, project_users: [%{user: user}])
+
+    dataclip =
+      insert(:dataclip,
+        type: :http_request,
+        body: %{"foo" => "bar"},
+        project: project
+      )
+
+    trigger = build(:trigger, type: :webhook, enabled: true)
+
+    job =
+      build(:job,
+        body: ~s[fn(state => { return {...state, extra: "data"} })],
+        project_credential: %{credential: credential}
+      )
+
+    workflow =
+      %{triggers: [trigger]} =
+      build(:workflow)
+      |> with_trigger(trigger)
+      |> with_job(job)
+      |> with_edge({trigger, job})
+      |> insert()
+
+    work_order =
+      insert(:workorder,
+        workflow: workflow,
+        trigger: trigger,
+        dataclip: dataclip
+      )
+
+    attempt =
+      insert(:attempt,
+        work_order: work_order,
+        starting_trigger: trigger,
+        dataclip: dataclip
+      )
+
+    Lightning.Stub.reset_time()
+
+    {:ok, bearer, _} =
+      Workers.Token.generate_and_sign(
+        %{},
+        Lightning.Config.worker_token_signer()
+      )
+
+    {:ok, %{}, socket} =
+      LightningWeb.WorkerSocket
+      |> socket("socket_id", %{token: bearer})
+      |> subscribe_and_join(
+        LightningWeb.AttemptChannel,
+        "attempt:#{attempt.id}",
+        %{"token" => Workers.generate_attempt_token(attempt)}
+      )
+
+    %{
+      socket: socket,
+      attempt: attempt,
+      workflow: workflow,
+      credential: credential,
+      dataclip: dataclip
+    }
   end
 
   defp stringify_keys(map) do

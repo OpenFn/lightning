@@ -86,6 +86,7 @@ defmodule LightningWeb.AttemptChannel do
 
   def handle_in("fetch:credential", %{"id" => id}, socket) do
     Attempts.get_credential(socket.assigns.attempt, id)
+    |> Credentials.cast_body()
     |> Credentials.maybe_refresh_token()
     |> case do
       {:ok, nil} ->
