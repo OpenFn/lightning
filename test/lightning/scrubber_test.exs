@@ -30,25 +30,6 @@ defmodule Lightning.ScrubberTest do
       assert scrubbed == ["Successfully logged in as *** using ***"]
     end
 
-    test "replaces only value secrets in a map with ***" do
-      secrets = ["password", "immasecret", "username", "quux"]
-      scrubber = start_supervised!({Lightning.Scrubber, samples: secrets})
-
-      scrubbed =
-        scrubber
-        |> Scrubber.scrub([
-          %{
-            "password" => "immasecret",
-            "username" => "quux",
-            "fieldA" => "valueA"
-          }
-        ])
-
-      assert scrubbed == [
-               %{"password" => "***", "username" => "***", "fieldA" => "valueA"}
-             ]
-    end
-
     test "doesn't replace booleans with ***" do
       secrets = ["ip_addr", "db_name", "my_user", "my_password", 5432, false]
       scrubber = start_supervised!({Lightning.Scrubber, samples: secrets})
@@ -87,6 +68,42 @@ defmodule Lightning.ScrubberTest do
         |> Scrubber.scrub("The password is secretpassword")
 
       assert scrubbed == "The p***ssword is ***"
+    end
+  end
+
+  describe "add_samples/3" do
+    test "updates the scrubber samples" do
+      secrets = ["secretpassword"]
+      basic_auth1 = Base.encode64("quux:secretpassword")
+
+      scrubber =
+        start_supervised!(
+          {Lightning.Scrubber, samples: secrets, basic_auth: [basic_auth1]}
+        )
+
+      assert Scrubber.samples(scrubber) ==
+               [
+                 "c2VjcmV0cGFzc3dvcmQ6c2VjcmV0cGFzc3dvcmQ=",
+                 basic_auth1,
+                 "c2VjcmV0cGFzc3dvcmQ=",
+                 "secretpassword"
+               ]
+
+      basic_auth2 = Base.encode64("quux:imasecret")
+
+      assert :ok = Scrubber.add_samples(scrubber, ["imasecret"], [basic_auth2])
+
+      assert Scrubber.samples(scrubber) ==
+               [
+                 "c2VjcmV0cGFzc3dvcmQ6c2VjcmV0cGFzc3dvcmQ=",
+                 basic_auth1,
+                 "aW1hc2VjcmV0OmltYXNlY3JldA==",
+                 "c2VjcmV0cGFzc3dvcmQ=",
+                 basic_auth2,
+                 "secretpassword",
+                 "aW1hc2VjcmV0",
+                 "imasecret"
+               ]
     end
   end
 

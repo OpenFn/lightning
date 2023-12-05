@@ -26,7 +26,11 @@ defmodule Lightning.Scrubber do
 
     @spec add_samples(state :: t(), samples()) :: t()
     def add_samples({samples}, new_samples) do
-      {Enum.uniq(samples ++ new_samples)}
+      [samples, new_samples]
+      |> Enum.concat()
+      |> Enum.uniq()
+      |> Enum.sort_by(&String.length/1, :desc)
+      |> then(fn samples -> {samples} end)
     end
 
     @spec scrub(state :: t(), data :: String.t()) :: String.t()
@@ -38,14 +42,6 @@ defmodule Lightning.Scrubber do
         String.replace(acc, x, "***", global: true)
       end)
     end
-
-    def scrub(data, state) when is_map(data) do
-      Map.new(data, fn {k, v} ->
-        {k, scrub(v, state)}
-      end)
-    end
-
-    def scrub(data, state), do: scrub(to_string(data), state)
   end
 
   use Agent
@@ -76,6 +72,10 @@ defmodule Lightning.Scrubber do
       fn -> State.new(samples |> encode_samples(basic_auth)) end,
       server_opts
     )
+  end
+
+  def samples(agent) do
+    Agent.get(agent, & &1) |> elem(0)
   end
 
   def add_samples(agent, new_samples, basic_auth) do
