@@ -117,16 +117,13 @@ defmodule Lightning.Credentials do
   """
   def create_credential(attrs \\ %{}) do
     Multi.new()
-    |> Multi.insert(
-      :credential,
-      Credential.changeset(%Credential{}, attrs |> coerce_json_field("body"))
-    )
+    |> Multi.insert(:credential, change_credential(%Credential{}, attrs))
     |> Multi.insert(:audit, fn %{credential: credential} ->
       Audit.event("created", credential.id, credential.user_id)
     end)
     |> Repo.transaction()
     |> case do
-      {:error, :credential, changeset, _changes} ->
+      {:error, _op, changeset, _changes} ->
         {:error, changeset}
 
       {:ok, %{credential: credential}} ->
