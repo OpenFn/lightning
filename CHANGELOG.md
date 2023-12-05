@@ -14,6 +14,8 @@ and this project adheres to
 
 - Limit entries count on term work orders search
   [#1461](https://github.com/OpenFn/Lightning/issues/1461)
+- Remove custom telemetry plumbing.
+  [1259](https://github.com/OpenFn/Lightning/issues/1259)
 
 ### Fixed
 
