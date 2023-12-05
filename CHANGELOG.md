@@ -18,6 +18,8 @@ and this project adheres to
   [#1519](https://github.com/OpenFn/Lightning/issues/1519)
 - Remove custom telemetry plumbing.
   [1259](https://github.com/OpenFn/Lightning/issues/1259)
+- Enhance UX to prevent modal closure when Monaco/Dataclip editor is focused
+  [#1510](https://github.com/OpenFn/Lightning/pull/1510)
 
 ### Fixed
 
