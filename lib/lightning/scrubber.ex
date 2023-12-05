@@ -113,6 +113,10 @@ defmodule Lightning.Scrubber do
         |> Base.encode64()
       end)
       |> Enum.concat(basic_auth)
+      |> Enum.concat(
+        stringified_samples
+        |> Enum.map(fn x -> Base.encode64(x) end)
+      )
 
     Enum.concat([stringified_samples, base64_secrets])
     |> Enum.sort_by(&String.length/1, :desc)

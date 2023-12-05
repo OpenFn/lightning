@@ -100,12 +100,15 @@ defmodule Lightning.ScrubberTest do
                "NTQzMjpzZWNyZXRwYXNzd29yZA==",
                "YTpzZWNyZXRwYXNzd29yZA==",
                "c2VjcmV0cGFzc3dvcmQ6YQ==",
+               "c2VjcmV0cGFzc3dvcmQ=",
                "secretpassword",
                "NTQzMjo1NDMy",
                "YTo1NDMy",
                "NTQzMjph",
+               "NTQzMg==",
                "5432",
                "YTph",
+               "YQ==",
                "a"
              ]
     end
