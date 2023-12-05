@@ -202,14 +202,11 @@ defmodule Lightning.Credentials do
     end
   end
 
-  # Casts the credential body attributes to the types declared on the schema.
   defp cast_body_change(
-         %Ecto.Changeset{
-           valid?: true,
-           changes: %{body: body, schema: schema_name}
-         } = changeset
-       )
-       when schema_name != "raw" do
+         %Ecto.Changeset{valid?: true, changes: %{body: body}} = changeset
+       ) do
+    schema_name = Ecto.Changeset.get_field(changeset, :schema)
+
     case put_typed_body(body, schema_name) do
       {:ok, updated_body} ->
         Ecto.Changeset.put_change(changeset, :body, updated_body)
@@ -220,6 +217,8 @@ defmodule Lightning.Credentials do
   end
 
   defp cast_body_change(changeset), do: changeset
+
+  defp put_typed_body(body, "raw"), do: {:ok, body}
 
   defp put_typed_body(body, schema_name) do
     schema = get_schema(schema_name)
