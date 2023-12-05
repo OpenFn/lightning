@@ -1,5 +1,7 @@
 defmodule LightningWeb.WorkflowLive.Edit do
   @moduledoc false
+  alias Phoenix.LiveView.JS
+  alias LightningWeb.Components.Modal
   use LightningWeb, :live_view
 
   alias Lightning.Policies.Permissions
@@ -152,6 +154,46 @@ defmodule LightningWeb.WorkflowLive.Edit do
             <.box_loader />
           </div>
         </div>
+        <%= if @selected_job do %>
+          <.live_component
+            id="new-credential-modal"
+            module={LightningWeb.CredentialLive.FormComponent}
+            action={:new}
+            credential_type={@selected_credential_type}
+            credential={
+              %Lightning.Credentials.Credential{
+                user_id: @current_user.id,
+                project_credentials: [
+                  %Lightning.Projects.ProjectCredential{
+                    project_id: @project.id
+                  }
+                ]
+              }
+            }
+            current_user={@current_user}
+            projects={[]}
+            project={@project}
+            show_project_credentials={false}
+            on_save={
+              fn credential ->
+                form =
+                  single_inputs_for(@workflow_form, :jobs, @selected_job.id)
+
+                params =
+                  LightningWeb.Utils.build_params_for_field(
+                    form,
+                    :project_credential_id,
+                    credential.project_credentials |> Enum.at(0) |> Map.get(:id)
+                  )
+
+                send_form_changed(params)
+              end
+            }
+            return_to={
+              ~p"/projects/#{@project.id}/w/#{@workflow.id}?s=#{@selected_job.id}"
+            }
+          />
+        <% end %>
         <.form
           id="workflow-form"
           for={@workflow_form}
@@ -454,7 +496,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
        query_params: %{"s" => nil, "m" => nil, "a" => nil},
        workflow: nil,
        workflow_name: "",
-       workflow_params: %{}
+       workflow_params: %{},
+       selected_credential_type: nil
      )}
   end
 
@@ -703,10 +746,13 @@ defmodule LightningWeb.WorkflowLive.Edit do
     {:noreply, handle_new_params(socket, params)}
   end
 
-  @impl true
   def handle_info({:forward, mod, opts}, socket) do
     send_update(mod, opts)
     {:noreply, socket}
+  end
+
+  def handle_info({:credential_type_changed, type}, socket) do
+    {:noreply, socket |> assign(:selected_credential_type, type)}
   end
 
   defp maybe_show_manual_run(socket) do

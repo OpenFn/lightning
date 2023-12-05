@@ -261,26 +261,15 @@ defmodule LightningWeb.CredentialLive.FormComponent do
         />
         <.modal_footer class="mt-6 mx-6">
           <div class="sm:flex sm:flex-row-reverse">
-            <%= if @type do %>
-              <button
-                type="submit"
-                phx-target={@myself}
-                class="inline-flex w-full justify-center rounded-md disabled:bg-primary-300 bg-primary-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary-500 sm:ml-3 sm:w-auto"
-              >
-                Save
-              </button>
-            <% else %>
-              <button
-                type="submit"
-                disabled={!@credential_type}
-                phx-click="credential_type_selected"
-                phx-target={@myself}
-                class="inline-flex w-full justify-center rounded-md disabled:bg-primary-300 bg-primary-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary-500 sm:ml-3 sm:w-auto"
-              >
-                Configure credential
-              </button>
-            <% end %>
-
+            <button
+              type="submit"
+              disabled={!@credential_type}
+              phx-click="credential_type_selected"
+              phx-target={@myself}
+              class="inline-flex w-full justify-center rounded-md disabled:bg-primary-300 bg-primary-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary-500 sm:ml-3 sm:w-auto"
+            >
+              Configure credential
+            </button>
             <button
               type="button"
               phx-click={JS.navigate(@return_to)}
@@ -387,26 +376,13 @@ defmodule LightningWeb.CredentialLive.FormComponent do
           </.form_component>
           <.modal_footer class="mt-6 mx-6">
             <div class="sm:flex sm:flex-row-reverse">
-              <%= if @type do %>
-                <button
-                  type="submit"
-                  disabled={!@changeset.valid?}
-                  class="inline-flex w-full justify-center rounded-md disabled:bg-primary-300 bg-primary-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary-500 sm:ml-3 sm:w-auto"
-                >
-                  Save
-                </button>
-              <% else %>
-                <button
-                  type="submit"
-                  disabled={!@credential_type}
-                  phx-click="credential_type_selected"
-                  phx-target={@myself}
-                  class="inline-flex w-full justify-center rounded-md disabled:bg-primary-300 bg-primary-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary-500 sm:ml-3 sm:w-auto"
-                >
-                  Configure credential
-                </button>
-              <% end %>
-
+              <button
+                type="submit"
+                disabled={!@changeset.valid?}
+                class="inline-flex w-full justify-center rounded-md disabled:bg-primary-300 bg-primary-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary-500 sm:ml-3 sm:w-auto"
+              >
+                Save
+              </button>
               <button
                 type="button"
                 phx-click={JS.navigate(@return_to)}
@@ -570,9 +546,11 @@ defmodule LightningWeb.CredentialLive.FormComponent do
     end
   end
 
-  defp save_credential(socket, :new, credential_params) do
-    %{changeset: changeset, type: schema_name} = socket.assigns
-
+  defp save_credential(
+         %{changeset: changeset, type: schema_name} = socket,
+         :new,
+         credential_params
+       ) do
     user_id = Ecto.Changeset.fetch_field!(changeset, :user_id)
 
     project_credentials =

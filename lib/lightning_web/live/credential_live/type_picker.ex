@@ -14,7 +14,7 @@ defmodule LightningWeb.CredentialLive.TypePicker do
         phx-change="type_changed"
       >
         <div class="grid grid-cols-2 md:grid-cols-4 gap-4 overflow-auto max-h-99">
-          <div :for={{name, key} <- @type_options} class="flex items-center pt-2">
+          <div :for={{name, key} <- @type_options} class="flex items-center p-2">
             <%= Phoenix.HTML.Form.radio_button(f, :selected, key,
               class: "h-4 w-4 border-gray-300 text-indigo-600 focus:ring-indigo-500"
             ) %>

@@ -261,8 +261,8 @@
                 <.td>
                   <%= if credential.user_id == @current_user.id do %>
                     <span>
-                      <.link navigate={
-                        Routes.credential_edit_path(@socket, :edit, credential)
+                      <.link phx-click={
+                        show_modal("edit-credential-#{credential.id}-modal")
                       }>
                         Edit
                       </.link>
@@ -270,6 +270,19 @@
                   <% end %>
                 </.td>
               </.tr>
+              <.live_component
+                id={"edit-credential-#{credential.id}-modal"}
+                module={LightningWeb.CredentialLive.FormComponent}
+                action={:edit}
+                credential_type={nil}
+                credential={
+                  credential |> Lightning.Repo.preload(:project_credentials)
+                }
+                projects={[]}
+                project={@project}
+                show_project_credentials={false}
+                return_to={~p"/projects/#{@project.id}/settings#credentials"}
+              />
             <% end %>
           </.table>
         </LightningWeb.Components.Common.panel_content>
