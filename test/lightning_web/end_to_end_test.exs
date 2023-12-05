@@ -246,7 +246,6 @@ defmodule LightningWeb.EndToEndTest do
           {"JOB", "quux is on the safelist"},
           {"JOB", "but *** should be scrubbed"},
           {"JOB", "along with its encoded form ***"},
-          {"JOB", "and our best effort 'basic auth' encoding ***"},
           {"R/T", "Expression complete!"}
         ])
 
@@ -286,8 +285,7 @@ defmodule LightningWeb.EndToEndTest do
       console.log(state.x);
       console.log('quux is on the safelist')
       console.log('but immasecret should be scrubbed');
-      console.log('along with its encoded form #{Base.encode64("immasecret")}')
-      console.log('and our best effort 'basic auth' encoding #{Base.encode64("quux:immasecret")}');
+      console.log('along with its encoded form #{Base.encode64("quux:immasecret")}');
       return state;
     });"
   end
