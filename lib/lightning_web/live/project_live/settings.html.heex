@@ -212,11 +212,10 @@
                 + New Credential
               </button>
               <.live_component
-                module={LightningWeb.CredentialLive.FormComponent}
                 id="new-credential-modal"
+                module={LightningWeb.CredentialLive.FormComponent}
                 action={:new}
-                type={@selected_credential_type}
-                selected_credential_type={@selected_credential_type}
+                credential_type={@selected_credential_type}
                 credential={
                   %Lightning.Credentials.Credential{
                     user_id: @current_user.id,
@@ -227,31 +226,11 @@
                     ]
                   }
                 }
-                return_to={~p"/projects/#{@project.id}/settings#credentials"}
                 projects={[]}
                 project={@project}
-                on_save={nil}
                 show_project_credentials={false}
-              />
-              <%!-- <.live_component
-                id="new-credential-modal"
-                module={LightningWeb.CredentialLive.CredentialModalComponent}
-                action={:new}
-                project={@project}
-                current_user={@current_user}
-                selected_credential_type={@selected_credential_type}
-                credential={
-                  %Lightning.Credentials.Credential{
-                    user_id: @current_user.id,
-                    project_credentials: [
-                      %Lightning.Projects.ProjectCredential{
-                        project_id: @project.id
-                      }
-                    ]
-                  }
-                }
                 return_to={~p"/projects/#{@project.id}/settings#credentials"}
-              /> --%>
+              />
             </div>
           </div>
           <div class="hidden sm:block" aria-hidden="true">

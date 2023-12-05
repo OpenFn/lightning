@@ -2,7 +2,6 @@ defmodule LightningWeb.CredentialLive.FormComponent do
   @moduledoc """
   Form Component for working with a single Credential
   """
-  alias Phoenix.LiveView.JS
   use LightningWeb, :live_component
 
   alias Lightning.Credentials
@@ -13,345 +12,23 @@ defmodule LightningWeb.CredentialLive.FormComponent do
     GoogleSheetsComponent
   }
 
+  alias Phoenix.LiveView.JS
+
   import Ecto.Changeset, only: [fetch_field!: 2, put_assoc: 3]
 
-  # NOTE: this function is sometimes called from inside a Task and therefore
-  # requires a `pid`
-  defp update_body(pid, id, body) do
-    send_update(pid, __MODULE__, id: id, body: body)
-  end
-
-  @impl true
-  def render(%{type: nil} = assigns) do
-    ~H"""
-    <div class="text-xs">
-      <.modal
-        id={@id}
-        phx-fragment-match={show_modal(@id)}
-        phx-hook="FragmentMatch"
-        width="min-w-1/3 max-w-full"
-      >
-        <:title>
-          <div class="flex justify-between">
-            <span class="font-bold">
-              Add a credential
-            </span>
-            <button
-              phx-click="close_modal"
-              phx-target={@myself}
-              type="button"
-              class="rounded-md bg-white text-gray-400 hover:text-gray-500 focus:outline-none"
-              aria-label={gettext("close")}
-            >
-              <span class="sr-only">Close</span>
-              <Heroicons.x_mark solid class="h-5 w-5 stroke-current" />
-            </button>
-          </div>
-        </:title>
-        <.live_component
-          module={LightningWeb.CredentialLive.TypePicker}
-          id={"#{@id}-type-picker"}
-          on_confirm="type_selected"
-          phx_target={@myself}
-        />
-        <.modal_footer class="mt-6 mx-6">
-          <div class="sm:flex sm:flex-row-reverse">
-            <%= if @type do %>
-              <button
-                type="submit"
-                phx-target={@myself}
-                class="inline-flex w-full justify-center rounded-md disabled:bg-primary-300 bg-primary-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary-500 sm:ml-3 sm:w-auto"
-              >
-                Save
-              </button>
-            <% else %>
-              <button
-                type="submit"
-                disabled={!@selected_credential_type}
-                phx-click="credential_type_selected"
-                phx-target={@myself}
-                class="inline-flex w-full justify-center rounded-md disabled:bg-primary-300 bg-primary-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary-500 sm:ml-3 sm:w-auto"
-              >
-                Configure credential
-              </button>
-            <% end %>
-
-            <button
-              type="button"
-              phx-click={JS.navigate(@return_to)}
-              class="mt-3 inline-flex w-full justify-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:mt-0 sm:w-auto"
-            >
-              Cancel
-            </button>
-          </div>
-        </.modal_footer>
-      </.modal>
-    </div>
-    """
-  end
-
-  def render(%{type: _} = assigns) do
-    ~H"""
-    <div class="mt-10 sm:mt-0">
-      <.modal
-        id={@id}
-        phx-fragment-match={show_modal(@id)}
-        phx-hook="FragmentMatch"
-        width="min-w-1/3 max-w-full"
-      >
-        <:title>
-          <div class="flex justify-between">
-            <span class="font-bold">
-              Add a credential
-            </span>
-            <button
-              phx-click="close_modal"
-              phx-target={@myself}
-              type="button"
-              class="rounded-md bg-white text-gray-400 hover:text-gray-500 focus:outline-none"
-              aria-label={gettext("close")}
-            >
-              <span class="sr-only">Close</span>
-              <Heroicons.x_mark solid class="h-5 w-5 stroke-current" />
-            </button>
-          </div>
-        </:title>
-        <.form
-          :let={f}
-          for={@changeset}
-          id="credential-form"
-          phx-target={@myself}
-          phx-change="validate"
-          phx-submit="save"
-        >
-          <.form_component
-            :let={{fieldset, valid?}}
-            form={f}
-            type={@type}
-            update_body={@update_body}
-          >
-            <div class="space-y-6 bg-white px-4 py-5 sm:p-6">
-              <fieldset>
-                <div class="space-y-4">
-                  <div>
-                    <LightningWeb.Components.Form.text_field form={f} field={:name} />
-                  </div>
-                  <div>
-                    <LightningWeb.Components.Form.check_box
-                      form={f}
-                      field={:production}
-                    />
-                  </div>
-                </div>
-              </fieldset>
-              <div class="space-y-4">
-                <div class="hidden sm:block" aria-hidden="true">
-                  <div class="border-t border-secondary-200"></div>
-                </div>
-                <%= fieldset %>
-              </div>
-
-              <div :if={@show_project_credentials} class="space-y-4">
-                <div class="hidden sm:block" aria-hidden="true">
-                  <div class="border-t border-secondary-200 mb-6"></div>
-                </div>
-                <fieldset>
-                  <legend class="contents text-base font-medium text-gray-900">
-                    Project Access
-                  </legend>
-                  <p class="text-sm text-gray-500">
-                    Control which projects have access to this credentials
-                  </p>
-                  <div class="mt-4">
-                    <.project_credentials
-                      form={f}
-                      projects={@all_projects}
-                      selected={@selected_project}
-                      phx_target={@myself}
-                    />
-                  </div>
-                </fieldset>
-              </div>
-              <div
-                :if={@action == :edit and @allow_credential_transfer}
-                class="space-y-4"
-              >
-                <.credential_transfer form={f} users={@users} />
-              </div>
-            </div>
-          </.form_component>
-          <.modal_footer class="mt-6 mx-6">
-            <div class="sm:flex sm:flex-row-reverse">
-              <%= if @type do %>
-                <button
-                  type="submit"
-                  phx-target={@myself}
-                  class="inline-flex w-full justify-center rounded-md disabled:bg-primary-300 bg-primary-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary-500 sm:ml-3 sm:w-auto"
-                >
-                  Save
-                </button>
-              <% else %>
-                <button
-                  type="submit"
-                  disabled={!@selected_credential_type}
-                  phx-click="credential_type_selected"
-                  phx-target={@myself}
-                  class="inline-flex w-full justify-center rounded-md disabled:bg-primary-300 bg-primary-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary-500 sm:ml-3 sm:w-auto"
-                >
-                  Configure credential
-                </button>
-              <% end %>
-
-              <button
-                type="button"
-                phx-click={JS.navigate(@return_to)}
-                class="mt-3 inline-flex w-full justify-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:mt-0 sm:w-auto"
-              >
-                Cancel
-              </button>
-            </div>
-          </.modal_footer>
-        </.form>
-      </.modal>
-    </div>
-    """
-  end
-
-  @doc """
-  Switcher components for different types of credentials.
-  """
-
-  attr(:type, :string, required: true)
-  attr(:form, :map, required: true)
-  attr(:update_body, :any, required: false)
-  slot(:inner_block)
-
-  def form_component(%{type: "googlesheets"} = assigns) do
-    ~H"""
-    <GoogleSheetsComponent.fieldset :let={l} form={@form} update_body={@update_body}>
-      <%= render_slot(@inner_block, l) %>
-    </GoogleSheetsComponent.fieldset>
-    """
-  end
-
-  def form_component(%{type: "raw"} = assigns) do
-    ~H"""
-    <RawBodyComponent.fieldset :let={l} form={@form}>
-      <%= render_slot(@inner_block, l) %>
-    </RawBodyComponent.fieldset>
-    """
-  end
-
-  def form_component(%{type: _schema} = assigns) do
-    ~H"""
-    <JsonSchemaBodyComponent.fieldset :let={l} form={@form}>
-      <%= render_slot(@inner_block, l) %>
-    </JsonSchemaBodyComponent.fieldset>
-    """
-  end
-
-  attr(:form, :map, required: true)
-  attr(:projects, :list, required: true)
-  attr(:selected, :map, required: true)
-  attr(:phx_target, :any, default: nil)
-
-  def project_credentials(assigns) do
-    ~H"""
-    <div class="col-span-3">
-      <%= Phoenix.HTML.Form.label(@form, :project_credentials, "Project Access",
-        class: "block text-sm font-medium text-secondary-700"
-      ) %>
-
-      <div class="flex w-full items-center gap-2 pb-3 mt-1">
-        <div class="grow">
-          <LightningWeb.Components.Form.select_field
-            form={:selected_project}
-            name={:id}
-            values={@projects}
-            value={@selected}
-            prompt=""
-            phx-change="select_item"
-            phx-target={@phx_target}
-            id="project_list"
-          />
-        </div>
-        <div class="grow-0 items-right">
-          <.button
-            disabled={@selected == ""}
-            phx-target={@phx_target}
-            phx-value-projectid={@selected}
-            phx-click="add_new_project"
-          >
-            Add
-          </.button>
-        </div>
-      </div>
-
-      <.inputs_for :let={project_credential} field={@form[:project_credentials]}>
-        <%= if project_credential[:delete].value != true do %>
-          <div class="flex w-full gap-2 items-center pb-2">
-            <div class="grow">
-              <%= project_name(@projects, project_credential[:project_id].value) %>
-              <.old_error field={project_credential[:project_id]} />
-            </div>
-            <div class="grow-0 items-right">
-              <.button
-                phx-target={@phx_target}
-                phx-value-index={project_credential.index}
-                phx-click="delete_project"
-              >
-                Remove
-              </.button>
-            </div>
-          </div>
-        <% end %>
-        <.input type="hidden" field={project_credential[:project_id]} />
-        <.input type="hidden" field={project_credential[:delete]} />
-      </.inputs_for>
-    </div>
-    """
-  end
-
-  defp project_name(projects, id) do
-    Enum.find_value(projects, fn {name, project_id} ->
-      if project_id == id, do: name
-    end)
-  end
-
-  attr(:users, :list, required: true)
-  attr(:form, :map, required: true)
-
-  def credential_transfer(assigns) do
-    ~H"""
-    <div class="hidden sm:block" aria-hidden="true">
-      <div class="border-t border-secondary-200 mb-6"></div>
-    </div>
-    <fieldset>
-      <legend class="contents text-base font-medium text-gray-900">
-        Transfer Ownership
-      </legend>
-      <p class="text-sm text-gray-500">
-        Assign ownership of this credential to someone else.
-      </p>
-      <div class="mt-4">
-        <%= Phoenix.HTML.Form.label(@form, :owner,
-          class: "block text-sm font-medium text-secondary-700"
-        ) %>
-        <LightningWeb.Components.Form.select_field
-          form={@form}
-          name={:user_id}
-          values={@users}
-        />
-        <.old_error field={@form[:user_id]} />
-      </div>
-    </fieldset>
-    """
-  end
+  @valid_assigns [
+    :id,
+    :action,
+    :credential,
+    :projects,
+    :on_save,
+    :button,
+    :show_project_credentials,
+    :return_to
+  ]
 
   @impl true
   def mount(socket) do
-    IO.inspect(socket.assigns, label: "mount")
-
     allow_credential_transfer =
       Application.fetch_env!(:lightning, LightningWeb)
       |> Keyword.get(:allow_credential_transfer)
@@ -366,21 +43,8 @@ defmodule LightningWeb.CredentialLive.FormComponent do
      )}
   end
 
-  @valid_assigns [
-    :id,
-    :action,
-    :credential,
-    :projects,
-    :on_save,
-    :button,
-    :show_project_credentials,
-    :return_to
-  ]
-
   @impl true
   def update(%{body: body}, socket) do
-    IO.inspect(socket.assigns, label: "first_update")
-
     {:ok,
      socket
      |> update(:changeset, fn changeset, %{credential: credential} ->
@@ -393,13 +57,12 @@ defmodule LightningWeb.CredentialLive.FormComponent do
   end
 
   def update(%{projects: projects} = assigns, socket) do
-    IO.inspect(assigns, label: "second_update")
     pid = self()
 
     {:ok,
      socket
      |> assign(type: nil)
-     |> assign(selected_credential_type: assigns.selected_credential_type)
+     |> assign(credential_type: assigns.credential_type)
      |> assign(
        assigns
        |> Map.filter(&match?({k, _} when k in @valid_assigns, &1))
@@ -552,15 +215,343 @@ defmodule LightningWeb.CredentialLive.FormComponent do
   def handle_event("credential_type_selected", _, socket) do
     changeset =
       Credentials.change_credential(socket.assigns.credential, %{
-        schema: socket.assigns.selected_credential_type
+        schema: socket.assigns.credential_type
       })
 
     {:noreply,
      socket
      |> assign(
-       type: socket.assigns.selected_credential_type,
+       type: socket.assigns.credential_type,
        changeset: changeset
      )}
+  end
+
+  @impl true
+  def render(%{type: nil} = assigns) do
+    ~H"""
+    <div class="text-xs">
+      <.modal
+        id={@id}
+        phx-fragment-match={show_modal(@id)}
+        phx-hook="FragmentMatch"
+        width="min-w-1/3 max-w-full"
+      >
+        <:title>
+          <div class="flex justify-between">
+            <span class="font-bold">
+              Add a credential
+            </span>
+            <button
+              phx-click="close_modal"
+              phx-target={@myself}
+              type="button"
+              class="rounded-md bg-white text-gray-400 hover:text-gray-500 focus:outline-none"
+              aria-label={gettext("close")}
+            >
+              <span class="sr-only">Close</span>
+              <Heroicons.x_mark solid class="h-5 w-5 stroke-current" />
+            </button>
+          </div>
+        </:title>
+        <.live_component
+          module={LightningWeb.CredentialLive.TypePicker}
+          id={"#{@id}-type-picker"}
+          on_confirm="type_selected"
+          phx_target={@myself}
+        />
+        <.modal_footer class="mt-6 mx-6">
+          <div class="sm:flex sm:flex-row-reverse">
+            <%= if @type do %>
+              <button
+                type="submit"
+                phx-target={@myself}
+                class="inline-flex w-full justify-center rounded-md disabled:bg-primary-300 bg-primary-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary-500 sm:ml-3 sm:w-auto"
+              >
+                Save
+              </button>
+            <% else %>
+              <button
+                type="submit"
+                disabled={!@credential_type}
+                phx-click="credential_type_selected"
+                phx-target={@myself}
+                class="inline-flex w-full justify-center rounded-md disabled:bg-primary-300 bg-primary-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary-500 sm:ml-3 sm:w-auto"
+              >
+                Configure credential
+              </button>
+            <% end %>
+
+            <button
+              type="button"
+              phx-click={JS.navigate(@return_to)}
+              class="mt-3 inline-flex w-full justify-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:mt-0 sm:w-auto"
+            >
+              Cancel
+            </button>
+          </div>
+        </.modal_footer>
+      </.modal>
+    </div>
+    """
+  end
+
+  def render(%{type: _} = assigns) do
+    ~H"""
+    <div class="mt-10 sm:mt-0">
+      <.modal
+        id={@id}
+        phx-fragment-match={show_modal(@id)}
+        phx-hook="FragmentMatch"
+        width="min-w-1/3 max-w-full"
+      >
+        <:title>
+          <div class="flex justify-between">
+            <span class="font-bold">
+              Add a credential
+            </span>
+            <button
+              phx-click="close_modal"
+              phx-target={@myself}
+              type="button"
+              class="rounded-md bg-white text-gray-400 hover:text-gray-500 focus:outline-none"
+              aria-label={gettext("close")}
+            >
+              <span class="sr-only">Close</span>
+              <Heroicons.x_mark solid class="h-5 w-5 stroke-current" />
+            </button>
+          </div>
+        </:title>
+        <.form
+          :let={f}
+          for={@changeset}
+          id="credential-form"
+          phx-target={@myself}
+          phx-change="validate"
+          phx-submit="save"
+        >
+          <.form_component
+            :let={{fieldset, _valid?}}
+            form={f}
+            type={@type}
+            update_body={@update_body}
+          >
+            <div class="space-y-6 bg-white px-4 py-5 sm:p-6">
+              <fieldset>
+                <div class="space-y-4">
+                  <div>
+                    <LightningWeb.Components.Form.text_field form={f} field={:name} />
+                  </div>
+                  <div>
+                    <LightningWeb.Components.Form.check_box
+                      form={f}
+                      field={:production}
+                    />
+                  </div>
+                </div>
+              </fieldset>
+              <div class="space-y-4">
+                <div class="hidden sm:block" aria-hidden="true">
+                  <div class="border-t border-secondary-200"></div>
+                </div>
+                <%= fieldset %>
+              </div>
+
+              <div :if={@show_project_credentials} class="space-y-4">
+                <div class="hidden sm:block" aria-hidden="true">
+                  <div class="border-t border-secondary-200 mb-6"></div>
+                </div>
+                <fieldset>
+                  <legend class="contents text-base font-medium text-gray-900">
+                    Project Access
+                  </legend>
+                  <p class="text-sm text-gray-500">
+                    Control which projects have access to this credentials
+                  </p>
+                  <div class="mt-4">
+                    <.project_credentials
+                      form={f}
+                      projects={@all_projects}
+                      selected={@selected_project}
+                      phx_target={@myself}
+                    />
+                  </div>
+                </fieldset>
+              </div>
+              <div
+                :if={@action == :edit and @allow_credential_transfer}
+                class="space-y-4"
+              >
+                <.credential_transfer form={f} users={@users} />
+              </div>
+            </div>
+          </.form_component>
+          <.modal_footer class="mt-6 mx-6">
+            <div class="sm:flex sm:flex-row-reverse">
+              <%= if @type do %>
+                <button
+                  type="submit"
+                  disabled={!@changeset.valid?}
+                  class="inline-flex w-full justify-center rounded-md disabled:bg-primary-300 bg-primary-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary-500 sm:ml-3 sm:w-auto"
+                >
+                  Save
+                </button>
+              <% else %>
+                <button
+                  type="submit"
+                  disabled={!@credential_type}
+                  phx-click="credential_type_selected"
+                  phx-target={@myself}
+                  class="inline-flex w-full justify-center rounded-md disabled:bg-primary-300 bg-primary-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary-500 sm:ml-3 sm:w-auto"
+                >
+                  Configure credential
+                </button>
+              <% end %>
+
+              <button
+                type="button"
+                phx-click={JS.navigate(@return_to)}
+                class="mt-3 inline-flex w-full justify-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:mt-0 sm:w-auto"
+              >
+                Cancel
+              </button>
+            </div>
+          </.modal_footer>
+        </.form>
+      </.modal>
+    </div>
+    """
+  end
+
+  attr :type, :string, required: true
+  attr :form, :map, required: true
+  attr :update_body, :any, required: false
+  slot :inner_block
+  attr :projects, :list, required: true
+  attr :selected, :map, required: true
+  attr :phx_target, :any, default: nil
+  attr :users, :list, required: true
+
+  @doc """
+  Switcher components for different types of credentials.
+  """
+  def form_component(%{type: "googlesheets"} = assigns) do
+    ~H"""
+    <GoogleSheetsComponent.fieldset :let={l} form={@form} update_body={@update_body}>
+      <%= render_slot(@inner_block, l) %>
+    </GoogleSheetsComponent.fieldset>
+    """
+  end
+
+  def form_component(%{type: "raw"} = assigns) do
+    ~H"""
+    <RawBodyComponent.fieldset :let={l} form={@form}>
+      <%= render_slot(@inner_block, l) %>
+    </RawBodyComponent.fieldset>
+    """
+  end
+
+  def form_component(%{type: _schema} = assigns) do
+    ~H"""
+    <JsonSchemaBodyComponent.fieldset :let={l} form={@form}>
+      <%= render_slot(@inner_block, l) %>
+    </JsonSchemaBodyComponent.fieldset>
+    """
+  end
+
+  def project_credentials(assigns) do
+    ~H"""
+    <div class="col-span-3">
+      <%= Phoenix.HTML.Form.label(@form, :project_credentials, "Project Access",
+        class: "block text-sm font-medium text-secondary-700"
+      ) %>
+
+      <div class="flex w-full items-center gap-2 pb-3 mt-1">
+        <div class="grow">
+          <LightningWeb.Components.Form.select_field
+            form={:selected_project}
+            name={:id}
+            values={@projects}
+            value={@selected}
+            prompt=""
+            phx-change="select_item"
+            phx-target={@phx_target}
+            id="project_list"
+          />
+        </div>
+        <div class="grow-0 items-right">
+          <.button
+            disabled={@selected == ""}
+            phx-target={@phx_target}
+            phx-value-projectid={@selected}
+            phx-click="add_new_project"
+          >
+            Add
+          </.button>
+        </div>
+      </div>
+
+      <.inputs_for :let={project_credential} field={@form[:project_credentials]}>
+        <%= if project_credential[:delete].value != true do %>
+          <div class="flex w-full gap-2 items-center pb-2">
+            <div class="grow">
+              <%= project_name(@projects, project_credential[:project_id].value) %>
+              <.old_error field={project_credential[:project_id]} />
+            </div>
+            <div class="grow-0 items-right">
+              <.button
+                phx-target={@phx_target}
+                phx-value-index={project_credential.index}
+                phx-click="delete_project"
+              >
+                Remove
+              </.button>
+            </div>
+          </div>
+        <% end %>
+        <.input type="hidden" field={project_credential[:project_id]} />
+        <.input type="hidden" field={project_credential[:delete]} />
+      </.inputs_for>
+    </div>
+    """
+  end
+
+  def credential_transfer(assigns) do
+    ~H"""
+    <div class="hidden sm:block" aria-hidden="true">
+      <div class="border-t border-secondary-200 mb-6"></div>
+    </div>
+    <fieldset>
+      <legend class="contents text-base font-medium text-gray-900">
+        Transfer Ownership
+      </legend>
+      <p class="text-sm text-gray-500">
+        Assign ownership of this credential to someone else.
+      </p>
+      <div class="mt-4">
+        <%= Phoenix.HTML.Form.label(@form, :owner,
+          class: "block text-sm font-medium text-secondary-700"
+        ) %>
+        <LightningWeb.Components.Form.select_field
+          form={@form}
+          name={:user_id}
+          values={@users}
+        />
+        <.old_error field={@form[:user_id]} />
+      </div>
+    </fieldset>
+    """
+  end
+
+  # NOTE: this function is sometimes called from inside a Task and therefore
+  # requires a `pid`
+  defp update_body(pid, id, body) do
+    send_update(pid, __MODULE__, id: id, body: body)
+  end
+
+  defp project_name(projects, id) do
+    Enum.find_value(projects, fn {name, project_id} ->
+      if project_id == id, do: name
+    end)
   end
 
   defp save_credential(socket, :edit, credential_params) do
