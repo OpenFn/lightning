@@ -771,12 +771,12 @@ defmodule Lightning.InvocationTest do
           "run_id" => Ecto.UUID.generate()
         })
 
-      Lightning.Invocation.LogLine.new(attempt, %{
+      insert(:log_line,
+        attempt: attempt,
         run: run,
-        message: "Sadio Mane is playing in Senegal and Al Nasr",
+        message: "Sadio Mane is playing in Senegal",
         timestamp: Timex.now()
-      })
-      |> Repo.insert!()
+      )
 
       assert Lightning.Invocation.search_workorders(
                project,
@@ -816,6 +816,8 @@ defmodule Lightning.InvocationTest do
                ).entries
     end
 
+    # to be replaced by paginator unit tests
+    @tag :skip
     test "filters workorders sets timeout" do
       project = insert(:project)
       workflow = insert(:workflow, project: project)
@@ -832,7 +834,7 @@ defmodule Lightning.InvocationTest do
           %{
             page: 1,
             page_size: 10,
-            options: [timeout: 20]
+            options: [timeout: 30]
           }
         )
       rescue
