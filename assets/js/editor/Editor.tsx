@@ -167,7 +167,6 @@ export default function Editor({
   const handleEditorDidMount = useCallback(
     (editor: any, monaco: typeof Monaco) => {
       setMonaco(monaco);
-      
 
       editor.addCommand(
         monaco.KeyCode.Escape,
@@ -176,7 +175,6 @@ export default function Editor({
         },
         '!suggestWidgetVisible'
       );
-      
 
       editor.addCommand(
         // https://microsoft.github.io/monaco-editor/typedoc/classes/KeyMod.html

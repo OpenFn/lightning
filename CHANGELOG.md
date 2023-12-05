@@ -50,7 +50,6 @@ and this project adheres to
 - Fix for missing data in 'created' audit trail events for webhook auth methods
   [#1500](https://github.com/OpenFn/Lightning/issues/1500)
 
-
 ## [v0.10.4] - 2023-11-30
 
 ### Added
