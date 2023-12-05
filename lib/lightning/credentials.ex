@@ -15,7 +15,10 @@ defmodule Lightning.Credentials do
   alias Lightning.Repo
   alias Ecto.Multi
 
-  alias Lightning.Credentials.{Audit, Credential, SensitiveValues}
+  alias Lightning.Credentials.Audit
+  alias Lightning.Credentials.Credential
+  alias Lightning.Credentials.SchemaDocument
+  alias Lightning.Credentials.SensitiveValues
   alias Lightning.Projects.Project
 
   @doc """
@@ -116,8 +119,10 @@ defmodule Lightning.Credentials do
 
   """
   def create_credential(attrs \\ %{}) do
+    changeset = %Credential{} |> change_credential(attrs) |> apply_body_changes()
+
     Multi.new()
-    |> Multi.insert(:credential, change_credential(%Credential{}, attrs))
+    |> Multi.insert(:credential, changeset)
     |> Multi.insert(:audit, fn %{credential: credential} ->
       Audit.event("created", credential.id, credential.user_id)
     end)
@@ -144,7 +149,7 @@ defmodule Lightning.Credentials do
 
   """
   def update_credential(%Credential{} = credential, attrs) do
-    changeset = change_credential(credential, attrs)
+    changeset = credential |> change_credential(attrs) |> apply_body_changes()
 
     Multi.new()
     |> Multi.update(:credential, changeset)
@@ -177,6 +182,35 @@ defmodule Lightning.Credentials do
         raise "Error reading credential schema. Got: #{reason |> inspect()}"
     end
   end
+
+  # Casts the credential body attributes to the types declared on the schema.
+  defp apply_body_changes(
+         %Ecto.Changeset{
+           valid?: true,
+           changes: %{body: body, schema: schema_name}
+         } = changeset
+       )
+       when schema_name != "raw" do
+    schema = get_schema(schema_name)
+
+    body
+    |> SchemaDocument.changeset(schema: schema)
+    |> Ecto.Changeset.apply_action(:insert)
+    |> case do
+      {:ok, typed_body} ->
+        updated_body =
+          Enum.into(typed_body, body, fn {field, typed_value} ->
+            {to_string(field), typed_value}
+          end)
+
+        Ecto.Changeset.put_change(changeset, :body, updated_body)
+
+      {:error, _reason} ->
+        Ecto.Changeset.add_error(changeset, :body, "Invalid body types")
+    end
+  end
+
+  defp apply_body_changes(changeset), do: changeset
 
   defp derive_events(
          multi,

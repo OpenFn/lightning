@@ -477,9 +477,8 @@ defmodule LightningWeb.CredentialLive.FormComponent do
 
     credential_params
     |> Map.put("user_id", user_id)
-    |> Map.put("schema", socket.assigns.type)
+    |> Map.put("schema", schema_name)
     |> Map.put("project_credentials", project_credentials)
-    |> apply_body_changes(schema_name)
     |> Credentials.create_credential()
     |> case do
       {:ok, credential} ->
@@ -495,29 +494,6 @@ defmodule LightningWeb.CredentialLive.FormComponent do
 
       {:error, %Ecto.Changeset{} = changeset} ->
         {:noreply, assign(socket, :changeset, changeset)}
-    end
-  end
-
-  defp apply_body_changes(credential_params, "raw"), do: credential_params
-
-  defp apply_body_changes(%{"body" => body} = credential_params, schema_name) do
-    schema = Credentials.get_schema(schema_name)
-
-    body
-    |> Credentials.SchemaDocument.changeset(schema: schema)
-    |> Ecto.Changeset.apply_action(:insert)
-    |> case do
-      {:ok, typed_body} ->
-        Map.update(credential_params, "body", body, fn body ->
-          Enum.into(typed_body, body, fn {field, typed_value} ->
-            {to_string(field), typed_value}
-          end)
-        end)
-
-      {:error, _untyped_changeset} ->
-        # dynamic changeset is ignored since it's without struct is not accepted by the form
-        # i.e typed values are used only for insert, for validation untyped is enough
-        credential_params
     end
   end
 
