@@ -13,7 +13,10 @@ defmodule LightningWeb.AttemptLive.Streaming do
 
     case Enum.find_index(runs, &(&1.id == run.id)) do
       nil ->
-        runs = [run | runs] |> Enum.sort_by(& &1.started_at, :asc)
+        runs =
+          [run | runs]
+          |> sort_runs()
+
         socket |> assign(runs: runs)
 
       index ->
@@ -110,6 +113,13 @@ defmodule LightningWeb.AttemptLive.Streaming do
       output_dataclip: false
     )
     |> reset_dataclip_streams()
+  end
+
+  def sort_runs(runs) do
+    runs
+    |> Enum.sort(fn x, y ->
+      DateTime.compare(x.started_at, y.started_at) == :lt
+    end)
   end
 
   defp needs_dataclip_stream?(socket, assign) do
@@ -213,7 +223,7 @@ defmodule LightningWeb.AttemptLive.Streaming do
          |> assign(
            attempt: AsyncResult.ok(attempt, updated_attempt),
            # set the initial set of runs
-           runs: updated_attempt.runs |> Enum.sort_by(& &1.started_at, :asc)
+           runs: updated_attempt.runs |> sort_runs()
          )
          |> assign_async(
            :log_lines,
