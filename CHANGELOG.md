@@ -85,6 +85,8 @@ and this project adheres to
   [#1254](https://github.com/OpenFn/Lightning/issues/1254)
 - Fix for missing data in 'created' audit trail events for webhook auth methods
   [#1500](https://github.com/OpenFn/Lightning/issues/1500)
+- Adjusted z-index for Monaco Editor's sibling element to resolve layout conflict
+  [#1329](https://github.com/OpenFn/Lightning/issues/1329)
 
 ## [v0.10.4] - 2023-11-30
 
