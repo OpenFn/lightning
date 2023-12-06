@@ -322,9 +322,9 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
           project: project,
           credential:
             build(:credential,
-              schema: "dhis2",
+              schema: "http",
               body: %{
-                hostUrl: "http://localhost:4002",
+                baseUrl: "http://localhost:4002",
                 username: "test",
                 password: "test"
               }
@@ -363,6 +363,7 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
              |> with_target("#job-editor-pane-#{job.id}")
              |> render_click("request_metadata", %{})
 
+      # set timeout to 60 secs because of CI
       assert_push_event(
         view,
         "metadata_ready",
