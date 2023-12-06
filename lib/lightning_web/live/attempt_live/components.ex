@@ -174,9 +174,15 @@ defmodule LightningWeb.AttemptLive.Components do
   slot :inner_block, required: true
 
   def step_list(assigns) do
+    sorted_runs =
+      assigns.runs
+      |> Enum.sort(fn x, y ->
+        DateTime.compare(x.inserted_at, y.inserted_at) == :lt
+      end)
+
     ~H"""
     <ul {@rest} role="list" class="-mb-8">
-      <li :for={run <- @runs} data-run-id={run.id} class="group">
+      <li :for={run <- sorted_runs} data-run-id={run.id} class="group">
         <div class="relative pb-8">
           <span
             class="absolute left-4 top-4 -ml-px h-full w-0.5 bg-gray-200 group-last:hidden"
