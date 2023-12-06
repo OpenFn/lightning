@@ -32,6 +32,8 @@ defmodule LightningWeb.Components.Modal do
     <div
       id={@id}
       phx-mounted={@show && show_modal(@id)}
+      phx-on-close={hide_modal(@id)}
+      phx-hook="ModalHook"
       class={"#{@position} z-50 hidden"}
       {@rest}
     >

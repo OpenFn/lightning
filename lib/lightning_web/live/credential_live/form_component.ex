@@ -230,12 +230,7 @@ defmodule LightningWeb.CredentialLive.FormComponent do
   def render(%{type: nil} = assigns) do
     ~H"""
     <div class="text-xs">
-      <.modal
-        id={@id}
-        phx-fragment-match={show_modal(@id)}
-        phx-hook="FragmentMatch"
-        width="min-w-1/3 max-w-full"
-      >
+      <.modal id={@id} width="min-w-1/3 max-w-full">
         <:title>
           <div class="flex justify-between">
             <span class="font-bold">
@@ -287,12 +282,7 @@ defmodule LightningWeb.CredentialLive.FormComponent do
   def render(%{type: _} = assigns) do
     ~H"""
     <div class="mt-10 sm:mt-0">
-      <.modal
-        id={@id}
-        phx-fragment-match={show_modal(@id)}
-        phx-hook="FragmentMatch"
-        width="min-w-1/3 max-w-full"
-      >
+      <.modal id={@id} width="min-w-1/3 max-w-full">
         <:title>
           <div class="flex justify-between">
             <span class="font-bold">
@@ -568,7 +558,7 @@ defmodule LightningWeb.CredentialLive.FormComponent do
       {:ok, credential} ->
         if socket.assigns[:on_save] do
           socket.assigns[:on_save].(credential)
-          {:noreply, socket}
+          {:noreply, push_event(socket, "close_modal", %{})}
         else
           {:noreply,
            socket

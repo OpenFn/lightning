@@ -7,6 +7,14 @@ import TabSelector from './TabSelector';
 
 export { LogLineHighlight, ElapsedIndicator, TabSelector };
 
+export const ModalHook = {
+  mounted() {
+    this.handleEvent('close_modal', () => {
+      this.liveSocket.execJS(this.el, this.el.getAttribute('phx-on-close'));
+    });
+  },
+} as PhoenixHook;
+
 export const ShowActionsOnRowHover = {
   mounted() {
     this.el.addEventListener('mouseenter', e => {
