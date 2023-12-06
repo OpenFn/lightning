@@ -1,19 +1,7 @@
 defmodule LightningWeb.ChangesetView do
   use LightningWeb, :view
 
-  @doc """
-  Traverses and translates changeset errors.
-
-  See `Ecto.Changeset.traverse_errors/2` and
-  `LightningWeb.ErrorHelpers.translate_error/1` for more details.
-  """
-  def translate_errors(changeset) do
-    Ecto.Changeset.traverse_errors(changeset, fn {msg, opts} ->
-      Enum.reduce(opts, msg, fn {key, value}, acc ->
-        String.replace(acc, "%{#{key}}", to_string(value))
-      end)
-    end)
-  end
+  import LightningWeb.CoreComponents, only: [translate_errors: 1]
 
   def render("error.json", %{changeset: changeset}) do
     # When encoded, the changeset returns its errors
