@@ -10,6 +10,8 @@ and this project adheres to
 
 ### Added
 
+- Improved UI when manually creating Attempts via the Job Editor
+  [#1474](https://github.com/OpenFn/Lightning/issues/1474)
 - Increased the maximum inbound webhook request size to 10MB and added
   protection against _very large_ payloads with a 100MB "max_skip_body_length"
   [#1247](https://github.com/OpenFn/Lightning/issues/1247)

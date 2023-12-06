@@ -119,16 +119,14 @@ defmodule LightningWeb.WorkflowLive.JobView do
         class="border h-full"
       >
         <%= if @follow_attempt_id do %>
-          <div class="h-full">
-            <%= live_render(
-              @socket,
-              LightningWeb.AttemptLive.AttemptViewerLive,
-              id: "attempt-viewer-#{@follow_attempt_id}",
-              session: %{"attempt_id" => @follow_attempt_id, "job_id" => @job.id},
-              sticky: true,
-              container: {:div, class: "h-full"}
-            ) %>
-          </div>
+          <%= live_render(
+            @socket,
+            LightningWeb.AttemptLive.AttemptViewerLive,
+            id: "attempt-viewer-#{@follow_attempt_id}",
+            session: %{"attempt_id" => @follow_attempt_id, "job_id" => @job.id},
+            sticky: true,
+            container: {:div, class: "h-full"}
+          ) %>
         <% else %>
           <div class="w-1/2 h-16 text-center m-auto pt-4">
             <div class="text-gray-500 pb-2">

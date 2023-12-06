@@ -326,7 +326,7 @@ defmodule LightningWeb.Components.Common do
         class:
           case assigns[:orientation] do
             "horizontal" ->
-              ~w[border-b border-gray-200 dark:border-gray-600 flex gap-x-4 gap-y-2]
+              ~w[border-b border-gray-200 dark:border-gray-600 flex flex-initial gap-x-4 gap-y-2]
 
             "vertical" ->
               ~w[flex flex-col flex-wrap gap-y-2 list-none mr-4 nav nav-tabs]
@@ -349,12 +349,13 @@ defmodule LightningWeb.Components.Common do
   end
 
   attr :for_hash, :string, required: true
+  attr :class, :string, default: "flex"
   slot :inner_block, required: true
 
   def panel_content(assigns) do
     ~H"""
     <div
-      class="h-[calc(100%-0.4rem)]"
+      class={@class}
       data-panel-hash={@for_hash}
       style="display: none;"
       lv-keep-style

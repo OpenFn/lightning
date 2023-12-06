@@ -16,28 +16,19 @@ defmodule LightningWeb.AttemptLive.ShowTest do
         insert(:simple_workflow, project: project)
 
       # Post to webhook
-      assert %{"work_order_id" => wo_id} =
-               post(conn, "/i/#{webhook_trigger_id}", %{"x" => 1})
-               |> json_response(200)
+      assert post(conn, "/i/#{webhook_trigger_id}", %{"x" => 1})
+             |> json_response(200)
 
-      %{attempts: [%{id: attempt_id}]} =
-        WorkOrders.get(wo_id, include: [:attempts])
-
+      # Fetch an attempt that doesn't exist
       {:ok, view, _html} =
-        live(conn, ~p"/projects/#{project.id}/attempts/#{attempt_id}")
+        live(conn, ~p"/projects/#{project.id}/attempts/#{Ecto.UUID.generate()}")
+
+      view |> render_async()
 
       %{socket: socket} = :sys.get_state(view.pid)
-      initial_async = AsyncResult.loading()
-      expected_async = AsyncResult.failed(initial_async, {:exit, "some reason"})
 
-      assert {:noreply, %{assigns: %{log_lines: ^expected_async}}} =
-               LightningWeb.AttemptLive.Show.handle_async(
-                 :log_lines,
-                 {:exit, "some reason"},
-                 Map.merge(socket, %{
-                   assigns: Map.put(socket.assigns, :log_lines, initial_async)
-                 })
-               )
+      assert %AsyncResult{ok?: false, failed: :not_found} =
+               socket.assigns.attempt
     end
 
     test "lifecycle of an attempt", %{conn: conn, project: project} do
@@ -237,6 +228,7 @@ defmodule LightningWeb.AttemptLive.ShowTest do
     elem
     |> render_async()
     |> Floki.parse_fragment!()
+    |> Floki.filter_out("[id$='-type']")
     |> Floki.text() =~
       ~r/^[\n\s]+Nothing yet\.\.\.[\n\s]+$/
   end

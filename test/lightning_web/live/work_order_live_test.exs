@@ -1140,8 +1140,6 @@ defmodule LightningWeb.RunWorkOrderTest do
       refute has_element?(view, "#workorder-#{work_order_1.id}")
       refute has_element?(view, "#workorder-#{work_order_2.id}")
 
-      %{filters: filters} = get_assigns(view)
-
       Events.subscribe(project.id)
 
       # send a workorder that matches the current filter criteria
