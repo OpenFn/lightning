@@ -198,9 +198,9 @@ defmodule Lightning.Credentials do
         |> change_credential(%{body: changed_body})
         |> Repo.update!()
 
-      {{:error, %Ecto.Changeset{errors: errors}}} ->
+      {:error, %Ecto.Changeset{errors: errors}} ->
         Logger.warning(fn ->
-          "Casting credential body failed with reason: #{inspect(errors)}"
+          "Casting credential on migration failed with reason: #{inspect(errors)}"
         end)
     end
   end
