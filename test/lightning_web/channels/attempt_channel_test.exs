@@ -240,9 +240,15 @@ defmodule LightningWeb.AttemptChannelTest do
 
   describe "cast credential types" do
     defp set_postgresql_credential(_context) do
-      credential =
-        insert(:credential,
+      user = insert(:user)
+
+      # TODO - roger, if we want to check that the casting works could we use it
+      # here and verify that the output is valid for the worker? the below test
+      # now passes.
+      {:ok, credential} =
+        Lightning.Credentials.create_credential(%{
           name: "Test Postgres",
+          user_id: user.id,
           body: %{
             user: "user1",
             password: "pass1",
@@ -253,9 +259,9 @@ defmodule LightningWeb.AttemptChannelTest do
             allowSelfSignedCert: "false"
           },
           schema: "postgresql"
-        )
+        })
 
-      {:ok, credential: credential, user: insert(:user)}
+      {:ok, credential: credential, user: user}
     end
 
     setup :set_postgresql_credential
@@ -267,12 +273,12 @@ defmodule LightningWeb.AttemptChannelTest do
       assert_reply ref,
                    :ok,
                    %{
-                     "allowSelfSignedCert" => "false",
+                     "allowSelfSignedCert" => false,
                      "database" => "test_db",
                      "host" => "https://dbhost",
                      "password" => "pass1",
-                     "port" => "5000",
-                     "ssl" => "true",
+                     "port" => 5000,
+                     "ssl" => true,
                      "user" => "user1"
                    }
     end

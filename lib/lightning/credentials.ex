@@ -210,9 +210,18 @@ defmodule Lightning.Credentials do
        ) do
     schema_name = Ecto.Changeset.get_field(changeset, :schema)
 
+    # TODO - roger remove after confirmation?
+    IO.inspect(body, label: "incoming body")
+    IO.inspect(schema_name, label: "incoming schema")
+
     case put_typed_body(body, schema_name) do
       {:ok, updated_body} ->
+        # TODO - roger to remove after confirming approach
+        IO.inspect(updated_body, label: "output of put_typed_body")
+
         Ecto.Changeset.put_change(changeset, :body, updated_body)
+        # TODO - roger to remove after confirming approach
+        |> IO.inspect(label: "output of put change")
 
       {:error, _reason} ->
         Ecto.Changeset.add_error(changeset, :body, "Invalid body types")
@@ -221,8 +230,10 @@ defmodule Lightning.Credentials do
 
   defp cast_body_change(changeset), do: changeset
 
+  # TODO - FOR DISUSSION - does this mean that we can't use booleans or integers in raw credentials anymore?
   defp put_typed_body(body, "raw"), do: {:ok, body}
 
+  # TODO - roger i think we need tests for this function
   defp put_typed_body(body, schema_name) do
     schema = get_schema(schema_name)
 
@@ -230,7 +241,8 @@ defmodule Lightning.Credentials do
          {:ok, typed_body} <- Ecto.Changeset.apply_action(changeset, :insert) do
       updated_body =
         Enum.into(typed_body, body, fn {field, typed_value} ->
-          {to_string(field), typed_value}
+          # TODO - roger i removed the "to string here" and it seems to work better
+          {field, typed_value}
         end)
 
       {:ok, updated_body}
