@@ -7,7 +7,7 @@
     <meta name="generator" content="ExDoc v0.30.9">
     <meta name="project" content="Lightning v0.10.6">
 
-    <title>Lightning.Workflows.Trigger — Lightning v0.10.6</title>
+    <title>LightningWeb.AttemptLive.Streaming — Lightning v0.10.6</title>
     <link rel="stylesheet" href="dist/html-elixir-XFYN5IVA.css" />
 
 
@@ -125,33 +125,16 @@ Pages
 </button>
 
 
-    <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/trigger.ex#L1" title="View Source" class="icon-action" rel="help">
+    <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/attempt_live/streaming.ex#L1" title="View Source" class="icon-action" rel="help">
       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
       <span class="sr-only">View Source</span>
     </a>
 
-  <span translate="no">Lightning.Workflows.Trigger</span> 
+  <span translate="no">LightningWeb.AttemptLive.Streaming</span> 
   <small class="app-vsn" translate="no">(Lightning v0.10.6)</small>
 
 </h1>
 
-
-  <section id="moduledoc">
-<p>Ecto model for Triggers.</p><p>Triggers represent the criteria in which a Job might be invoked.</p><h2 id="module-types" class="section-heading">
-  <a href="#module-types" class="hover-link">
-    <i class="ri-link-m" aria-hidden="true"></i>
-  </a>
-  <span class="text">Types</span>
-</h2>
-<h3 id="module-webhook-default" class="section-heading">
-  <a href="#module-webhook-default" class="hover-link">
-    <i class="ri-link-m" aria-hidden="true"></i>
-  </a>
-  <span class="text">Webhook (default)</span>
-</h3>
-<p>A webhook trigger allows a Job to invoked (via <a href="Lightning.Invocation.html"><code class="inline">Lightning.Invocation</code></a>) when it's
-endpoint is called.</p>
-  </section>
 
 
   <section id="summary" class="details-list">
@@ -161,28 +144,6 @@ endpoint is called.</p>
       </a>
       <span class="text">Summary</span>
     </h1>
-<div class="summary-types summary">
-  <h2>
-    <a href="#types">Types</a>
-  </h2>
-
-    <div class="summary-row">
-      <div class="summary-signature">
-        <a href="#t:t/0" translate="no">t()</a>
-
-      </div>
-
-    </div>
-
-    <div class="summary-row">
-      <div class="summary-signature">
-        <a href="#t:trigger_type/0" translate="no">trigger_type()</a>
-
-      </div>
-
-    </div>
-
-</div>
 <div class="summary-functions summary">
   <h2>
     <a href="#functions">Functions</a>
@@ -190,7 +151,7 @@ endpoint is called.</p>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#new/1" translate="no">new(attrs)</a>
+        <a href="#add_or_update_run/2" translate="no">add_or_update_run(socket, run)</a>
 
       </div>
 
@@ -198,7 +159,7 @@ endpoint is called.</p>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#validate/1" translate="no">validate(changeset)</a>
+        <a href="#get_dataclip_lines/2" translate="no">get_dataclip_lines(run, field)</a>
 
       </div>
 
@@ -206,7 +167,39 @@ endpoint is called.</p>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#with_auth_methods_query/0" translate="no">with_auth_methods_query()</a>
+        <a href="#maybe_load_input_dataclip/2" translate="no">maybe_load_input_dataclip(socket, chunk_size)</a>
+
+      </div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#maybe_load_output_dataclip/2" translate="no">maybe_load_output_dataclip(socket, chunk_size)</a>
+
+      </div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#reset_dataclip_streams/1" translate="no">reset_dataclip_streams(socket)</a>
+
+      </div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#sort_runs/1" translate="no">sort_runs(runs)</a>
+
+      </div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#unselect_run/1" translate="no">unselect_run(socket)</a>
 
       </div>
 
@@ -216,90 +209,6 @@ endpoint is called.</p>
 
   </section>
 
-
-  <section id="types" class="details-list">
-    <h1 class="section-heading">
-      <a class="hover-link" href="#types">
-        <i class="ri-link-m" aria-hidden="true"></i>
-      </a>
-      <span class="text">Types</span>
-    </h1>
-    <div class="types-list">
-<section class="detail" id="t:t/0">
-
-  <div class="detail-header">
-    <a href="#t:t/0" class="detail-link" title="Link to this type">
-      <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this type</span>
-    </a>
-    <h1 class="signature" translate="no">t()</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/trigger.ex#L20" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
-
-
-  </div>
-
-  <section class="docstring">
-
-      <div class="specs">
-
-          <pre translate="no"><span class="attribute">@type</span> t() :: %Lightning.Workflows.Trigger{
-  __meta__: <a href="https://hexdocs.pm/ecto/3.10.3/Ecto.Schema.Metadata.html#t:t/0">Ecto.Schema.Metadata.t</a>(),
-  comment: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
-  cron_expression: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
-  custom_path: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
-  delete: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
-  edges: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
-  enabled: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
-  has_auth_method: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
-  id: <a href="https://hexdocs.pm/ecto/3.10.3/Ecto.UUID.html#t:t/0">Ecto.UUID.t</a>() | nil,
-  inserted_at: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
-  type: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
-  updated_at: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
-  webhook_auth_methods: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
-  workflow: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
-  workflow_id: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>()
-}</pre>
-
-      </div>
-
-
-  </section>
-</section>
-<section class="detail" id="t:trigger_type/0">
-
-  <div class="detail-header">
-    <a href="#t:trigger_type/0" class="detail-link" title="Link to this type">
-      <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this type</span>
-    </a>
-    <h1 class="signature" translate="no">trigger_type()</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/trigger.ex#L27" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
-
-
-  </div>
-
-  <section class="docstring">
-
-      <div class="specs">
-
-          <pre translate="no"><span class="attribute">@type</span> trigger_type() :: :webhook | :cron</pre>
-
-      </div>
-
-
-  </section>
-</section>
-
-    </div>
-  </section>
 
   <section id="functions" class="details-list">
     <h1 class="section-heading">
@@ -309,16 +218,16 @@ endpoint is called.</p>
       <span class="text">Functions</span>
     </h1>
     <div class="functions-list">
-<section class="detail" id="new/1">
+<section class="detail" id="add_or_update_run/2">
 
   <div class="detail-header">
-    <a href="#new/1" class="detail-link" title="Link to this function">
+    <a href="#add_or_update_run/2" class="detail-link" title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">new(attrs)</h1>
+    <h1 class="signature" translate="no">add_or_update_run(socket, run)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/trigger.ex#L51" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/attempt_live/streaming.ex#L9" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -331,16 +240,16 @@ endpoint is called.</p>
 
   </section>
 </section>
-<section class="detail" id="validate/1">
+<section class="detail" id="get_dataclip_lines/2">
 
   <div class="detail-header">
-    <a href="#validate/1" class="detail-link" title="Link to this function">
+    <a href="#get_dataclip_lines/2" class="detail-link" title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">validate(changeset)</h1>
+    <h1 class="signature" translate="no">get_dataclip_lines(run, field)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/trigger.ex#L75" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/attempt_live/streaming.ex#L27" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -353,16 +262,104 @@ endpoint is called.</p>
 
   </section>
 </section>
-<section class="detail" id="with_auth_methods_query/0">
+<section class="detail" id="maybe_load_input_dataclip/2">
 
   <div class="detail-header">
-    <a href="#with_auth_methods_query/0" class="detail-link" title="Link to this function">
+    <a href="#maybe_load_input_dataclip/2" class="detail-link" title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">with_auth_methods_query()</h1>
+    <h1 class="signature" translate="no">maybe_load_input_dataclip(socket, chunk_size)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/trigger.ex#L124" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/attempt_live/streaming.ex#L50" class="icon-action" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+
+  </section>
+</section>
+<section class="detail" id="maybe_load_output_dataclip/2">
+
+  <div class="detail-header">
+    <a href="#maybe_load_output_dataclip/2" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">maybe_load_output_dataclip(socket, chunk_size)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/attempt_live/streaming.ex#L75" class="icon-action" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+
+  </section>
+</section>
+<section class="detail" id="reset_dataclip_streams/1">
+
+  <div class="detail-header">
+    <a href="#reset_dataclip_streams/1" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">reset_dataclip_streams(socket)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/attempt_live/streaming.ex#L101" class="icon-action" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+
+  </section>
+</section>
+<section class="detail" id="sort_runs/1">
+
+  <div class="detail-header">
+    <a href="#sort_runs/1" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">sort_runs(runs)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/attempt_live/streaming.ex#L118" class="icon-action" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+
+  </section>
+</section>
+<section class="detail" id="unselect_run/1">
+
+  <div class="detail-header">
+    <a href="#unselect_run/1" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">unselect_run(socket)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/attempt_live/streaming.ex#L107" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
