@@ -82,7 +82,7 @@ defmodule LightningWeb.AttemptLive.AttemptViewerLive do
               />
             </.step_list>
           </div>
-          <div class="grow-0 flex flex-col gap-4 min-h-0">
+          <div class="grow flex flex-col gap-4 min-h-0">
             <Common.tab_bar orientation="horizontal" id="1" default_hash="log">
               <Common.tab_item orientation="horizontal" hash="log">
                 <.icon
@@ -127,7 +127,7 @@ defmodule LightningWeb.AttemptLive.AttemptViewerLive do
                       _ -> nil
                     end
                   }
-                  class="overflow-auto h-full flex"
+                  class="overflow-auto h-full"
                   stream={@streams.input_dataclip}
                 />
               </Common.panel_content>

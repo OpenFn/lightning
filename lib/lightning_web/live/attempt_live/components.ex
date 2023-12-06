@@ -47,7 +47,7 @@ defmodule LightningWeb.AttemptLive.Components do
     <li class="px-4 py-4 sm:px-0">
       <div class="flex justify-between items-baseline text-sm @md/viewer:text-base">
         <%= for label <- @label do %>
-          <dt class={["font-medium items-center", label[:class] |> IO.inspect()]}>
+          <dt class={["font-medium items-center", label[:class]]}>
             <%= render_slot(label) %>
           </dt>
         <% end %>

@@ -101,38 +101,41 @@ defmodule LightningWeb.Components.Viewers do
 
   def dataclip_viewer(assigns) do
     ~H"""
-    <div
-      class={[
-        "rounded-md shadow-sm bg-slate-700 border-slate-300",
-        "text-slate-200 text-sm w-full",
-        "overscroll-contain scroll-smooth",
-        "grid grid-flow-row-dense grid-cols-[min-content_1fr]",
-        "min-h-[2rem]",
-        "log-viewer relative",
-        @class
-      ]}
-      id={@id}
-      phx-update="stream"
-    >
+    <div class={[
+      "rounded-md shadow-sm bg-slate-700 border-slate-300",
+      "text-slate-200 text-sm w-full h-full relative",
+      @class
+    ]}>
       <.dataclip_type :if={@type} type={@type} id={"#{@id}-type"} />
       <div
-        :for={{dom_id, %{line: line, index: index}} <- @stream}
-        class="group contents"
-        id={dom_id}
-      >
-        <div class="log-viewer__prefix" data-line-prefix={index}></div>
-        <div data-log-line class="log-viewer__message">
-          <pre class="whitespace-break-spaces"><%= line %></pre>
-        </div>
-      </div>
-      <div
-        id={"#{@id}-nothing-yet"}
         class={[
-          "hidden only:block m-2 relative block rounded-md",
-          "border-2 border-dashed border-gray-500 p-12 text-center col-span-full"
+          "overscroll-contain scroll-smooth",
+          "grid grid-flow-row-dense grid-cols-[min-content_1fr]",
+          "min-h-[2rem]",
+          "log-viewer relative"
         ]}
+        id={@id}
+        phx-update="stream"
       >
-        Nothing yet...
+        <div
+          :for={{dom_id, %{line: line, index: index}} <- @stream}
+          class="group contents"
+          id={dom_id}
+        >
+          <div class="log-viewer__prefix" data-line-prefix={index}></div>
+          <div data-log-line class="log-viewer__message">
+            <pre class="whitespace-break-spaces"><%= line %></pre>
+          </div>
+        </div>
+        <div
+          id={"#{@id}-nothing-yet"}
+          class={[
+            "hidden only:block m-2 relative block rounded-md",
+            "border-2 border-dashed border-gray-500 p-12 text-center col-span-full"
+          ]}
+        >
+          Nothing yet...
+        </div>
       </div>
     </div>
     """
@@ -155,7 +158,7 @@ defmodule LightningWeb.Components.Viewers do
     <div
       id={@id}
       class={[
-        "absolute top-0 right-0 flex items-center gap-2 group"
+        "absolute top-0 right-0 flex items-center gap-2 group z-10"
       ]}
     >
       <div class="hidden group-hover:block font-mono"><%= @type %></div>
