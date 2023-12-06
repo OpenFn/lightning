@@ -4,7 +4,7 @@ defmodule LightningWeb.WorkflowNewLive.WorkflowParams do
 
   The front end editor uses JSON patches to represent changes to the workflow.
   """
-  import LightningWeb.UserAuth, only: [fetch_current_user: 2]
+  import LightningWeb.CoreComponents, only: [translate_errors: 1]
 
   @doc """
   Produce a new set of params by applying the given form params to the current

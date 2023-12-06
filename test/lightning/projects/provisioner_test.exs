@@ -4,6 +4,7 @@ defmodule Lightning.Projects.ProvisionerTest do
   alias Lightning.Projects.Provisioner
   alias Lightning.ProjectsFixtures
   import Lightning.Factories
+  import LightningWeb.CoreComponents, only: [translate_error: 1]
 
   describe "parse_document/2 with a new project" do
     test "with invalid data" do
@@ -384,7 +385,7 @@ defmodule Lightning.Projects.ProvisionerTest do
   defp flatten_errors(changeset) do
     Ecto.Changeset.traverse_errors(
       changeset,
-      &LightningWeb.Components.NewInputs.translate_error/1
+      &translate_error/1
     )
   end
 

@@ -7,6 +7,8 @@ defmodule LightningWeb.Components.NewInputs do
 
   use Phoenix.Component
 
+  import LightningWeb.CoreComponents, only: [translate_error: 1]
+
   @doc """
   Renders a button.
 
