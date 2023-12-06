@@ -289,12 +289,11 @@ defmodule Lightning.CredentialsTest do
       assert audit_event.changes.before |> is_nil()
       assert audit_event.changes.after["name"] == credential.name
 
-      {:ok, saved_body} =
-        audit_event.changes.after["body"]
-        |> Base.decode64!()
-        |> Lightning.Encrypted.Map.load()
-
-      assert saved_body == credential.body
+      # If we decode and then decrypt the audit trail event with, we'll see the
+      # raw credential body again.
+      assert audit_event.changes.after["body"]
+             |> Base.decode64!()
+             |> Lightning.Encrypted.Map.load() == {:ok, credential.body}
     end
 
     test "saves the body casting non string fields" do
