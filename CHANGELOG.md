@@ -17,6 +17,9 @@ and this project adheres to
 
 ### Fixed
 
+- Adjusted z-index for Monaco Editor's sibling element to resolve layout
+  conflict [#1329](https://github.com/OpenFn/Lightning/issues/1329)
+
 ## [v0.11.0] - 2023-12-06
 
 ### Added

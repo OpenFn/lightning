@@ -180,7 +180,7 @@ export default ({
         </div>
         <div
           className={`${
-            showPanel ? 'flex flex-col flex-1 overflow-auto' : ''
+            showPanel ? 'flex flex-1 flex-col z-10 overflow-auto' : ''
           } bg-white`}
         >
           <div
