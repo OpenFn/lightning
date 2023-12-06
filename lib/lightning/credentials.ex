@@ -185,20 +185,23 @@ defmodule Lightning.Credentials do
     end
   end
 
-  @doc """
-  Updates credential body with a typed body based on credential schema
-  """
-  def cast_body(%Credential{body: body, schema: schema_name} = credential) do
+  # Migration only
+  def migrate_credential_body(
+        %Credential{body: body, schema: schema_name} = credential
+      ) do
     case put_typed_body(body, schema_name) do
-      {:ok, updated_body} ->
-        Map.put(credential, :body, updated_body)
+      {:ok, ^body} ->
+        :ok
 
-      {:error, %Ecto.Changeset{errors: errors}} ->
+      {:ok, changed_body} ->
+        credential
+        |> change_credential(%{body: changed_body})
+        |> Repo.update!()
+
+      {{:error, %Ecto.Changeset{errors: errors}}} ->
         Logger.warning(fn ->
           "Casting credential body failed with reason: #{inspect(errors)}"
         end)
-
-        credential
     end
   end
 

@@ -97,129 +97,6 @@ defmodule Lightning.CredentialsTest do
       assert {:error, %Ecto.Changeset{}} =
                Credentials.create_credential(@invalid_attrs)
     end
-  end
-
-  describe "update_credential/2" do
-    test "succeeds with valid data" do
-      user = user_fixture()
-
-      {:ok, %Lightning.Projects.Project{id: project_id}} =
-        Lightning.Projects.create_project(%{
-          name: "some-name",
-          project_users: [%{user_id: user.id}]
-        })
-
-      credential =
-        credential_fixture(
-          user_id: user.id,
-          project_credentials: [
-            %{project_id: project_id}
-          ]
-        )
-
-      original_project_credential =
-        Enum.at(credential.project_credentials, 0)
-        |> Map.from_struct()
-
-      new_project = project_fixture()
-
-      update_attrs = %{
-        body: %{},
-        name: "some updated name",
-        project_credentials: [
-          original_project_credential,
-          %{project_id: new_project.id}
-        ]
-      }
-
-      assert {:ok, %Credential{} = credential} =
-               Credentials.update_credential(credential, update_attrs)
-
-      assert credential.body == %{}
-      assert credential.name == "some updated name"
-
-      audit_events =
-        from(a in Audit.base_query(),
-          where: a.item_id == ^credential.id,
-          select: {a.event, type(a.changes, :map)}
-        )
-        |> Repo.all()
-
-      assert {"created", %{"after" => nil, "before" => nil}} in audit_events
-
-      assert {"updated",
-              %{
-                "before" => %{"name" => "some name"},
-                "after" => %{"name" => "some updated name"}
-              }} in audit_events
-
-      assert {"added_to_project",
-              %{
-                "before" => %{"project_id" => nil},
-                "after" => %{"project_id" => new_project.id}
-              }} in audit_events
-    end
-
-    test "casts body to typed fields" do
-      user = user_fixture()
-
-      {:ok, %Lightning.Projects.Project{id: project_id}} =
-        Lightning.Projects.create_project(%{
-          name: "some-name",
-          project_users: [%{user_id: user.id}]
-        })
-
-      credential =
-        insert(:credential,
-          name: "Test Postgres",
-          user_id: user.id,
-          body: %{
-            user: "user1",
-            password: "pass1",
-            host: "https://dbhost",
-            database: "test_db",
-            port: "5000",
-            ssl: "true",
-            allowSelfSignedCert: "false"
-          },
-          project_credentials: [
-            %{project_id: project_id}
-          ],
-          schema: "postgresql"
-        )
-
-      new_body_attrs = %{
-        "user" => "user1",
-        "password" => "pass1",
-        "host" => "https://dbhost",
-        "database" => "test_db",
-        "port" => "5002",
-        "ssl" => "true",
-        "allowSelfSignedCert" => "false"
-      }
-
-      assert {:ok, %Credential{body: updated_body}} =
-               Credentials.update_credential(credential, %{
-                 body: new_body_attrs
-               })
-
-      assert updated_body ==
-               Map.merge(new_body_attrs, %{
-                 "port" => 5002,
-                 "ssl" => true,
-                 "allowSelfSignedCert" => false
-               })
-    end
-
-    test "returns error changeset with invalid data" do
-      user = user_fixture()
-      credential = credential_fixture(user_id: user.id)
-
-      assert {:error, %Ecto.Changeset{}} =
-               Credentials.update_credential(credential, @invalid_attrs)
-
-      assert credential == Credentials.get_credential!(credential.id)
-    end
 
     test "delete_credential/1 deletes a credential and removes it from associated jobs and projects" do
       user = user_fixture()
@@ -405,6 +282,174 @@ defmodule Lightning.CredentialsTest do
                user_id_3
              ) ==
                [project_id]
+    end
+  end
+
+  describe "update_credential/2" do
+    test "succeeds with valid data" do
+      user = user_fixture()
+
+      {:ok, %Lightning.Projects.Project{id: project_id}} =
+        Lightning.Projects.create_project(%{
+          name: "some-name",
+          project_users: [%{user_id: user.id}]
+        })
+
+      credential =
+        credential_fixture(
+          user_id: user.id,
+          project_credentials: [
+            %{project_id: project_id}
+          ]
+        )
+
+      original_project_credential =
+        Enum.at(credential.project_credentials, 0)
+        |> Map.from_struct()
+
+      new_project = project_fixture()
+
+      update_attrs = %{
+        body: %{},
+        name: "some updated name",
+        project_credentials: [
+          original_project_credential,
+          %{project_id: new_project.id}
+        ]
+      }
+
+      assert {:ok, %Credential{} = credential} =
+               Credentials.update_credential(credential, update_attrs)
+
+      assert credential.body == %{}
+      assert credential.name == "some updated name"
+
+      audit_events =
+        from(a in Audit.base_query(),
+          where: a.item_id == ^credential.id,
+          select: {a.event, type(a.changes, :map)}
+        )
+        |> Repo.all()
+
+      assert {"created", %{"after" => nil, "before" => nil}} in audit_events
+
+      assert {"updated",
+              %{
+                "before" => %{"name" => "some name"},
+                "after" => %{"name" => "some updated name"}
+              }} in audit_events
+
+      assert {"added_to_project",
+              %{
+                "before" => %{"project_id" => nil},
+                "after" => %{"project_id" => new_project.id}
+              }} in audit_events
+    end
+
+    test "casts body to field types based on schema" do
+      user = user_fixture()
+
+      {:ok, %Lightning.Projects.Project{id: project_id}} =
+        Lightning.Projects.create_project(%{
+          name: "some-name",
+          project_users: [%{user_id: user.id}]
+        })
+
+      credential =
+        insert(:credential,
+          name: "Test Postgres",
+          user_id: user.id,
+          body: %{
+            user: "user1",
+            password: "pass1",
+            host: "https://dbhost",
+            database: "test_db",
+            port: "5000",
+            ssl: "true",
+            allowSelfSignedCert: "false"
+          },
+          project_credentials: [
+            %{project_id: project_id}
+          ],
+          schema: "postgresql"
+        )
+
+      new_body_attrs = %{
+        "user" => "user1",
+        "password" => "pass1",
+        "host" => "https://dbhost",
+        "database" => "test_db",
+        "port" => "5002",
+        "ssl" => "true",
+        "allowSelfSignedCert" => "false"
+      }
+
+      assert {:ok, %Credential{body: updated_body}} =
+               Credentials.update_credential(credential, %{
+                 body: new_body_attrs
+               })
+
+      assert updated_body ==
+               Map.merge(new_body_attrs, %{
+                 "port" => 5002,
+                 "ssl" => true,
+                 "allowSelfSignedCert" => false
+               })
+    end
+
+    test "returns error changeset with invalid data" do
+      user = user_fixture()
+      credential = credential_fixture(user_id: user.id)
+
+      assert {:error, %Ecto.Changeset{}} =
+               Credentials.update_credential(credential, @invalid_attrs)
+
+      assert credential == Credentials.get_credential!(credential.id)
+    end
+  end
+
+  describe "migrate_credential_body/1" do
+    test "casts body to field types based on schema" do
+      user = user_fixture()
+
+      {:ok, %Lightning.Projects.Project{id: project_id}} =
+        Lightning.Projects.create_project(%{
+          name: "some-name",
+          project_users: [%{user_id: user.id}]
+        })
+
+      body = %{
+        "user" => "user1",
+        "password" => "pass1",
+        "host" => "https://dbhost",
+        "database" => "test_db",
+        "port" => "5000",
+        "ssl" => "true",
+        "allowSelfSignedCert" => "false"
+      }
+
+      %{id: id} =
+        insert(:credential,
+          name: "Test Postgres",
+          user_id: user.id,
+          body: body,
+          project_credentials: [
+            %{project_id: project_id}
+          ],
+          schema: "postgresql"
+        )
+
+      assert %Credential{body: updated_body} =
+               Repo.all(Credential)
+               |> Enum.find(&(&1.id == id))
+               |> Credentials.migrate_credential_body()
+
+      assert updated_body ==
+               Map.merge(body, %{
+                 "port" => 5000,
+                 "ssl" => true,
+                 "allowSelfSignedCert" => false
+               })
     end
   end
 
