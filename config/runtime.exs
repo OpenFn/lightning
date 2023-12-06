@@ -265,7 +265,8 @@ if config_env() == :prod do
     check_origin: origins,
     http: [
       protocol_options: [
-        max_frame_size: 10_000_000,
+        max_frame_size:
+          Application.get_env(:lightning, :max_dataclip_size, 10_000_000),
         # Not that if a request is more than 10x the max dataclip size, we cut
         # the connection immediately to prevent memory issues via the
         # :max_skip_body_length setting.
