@@ -267,12 +267,12 @@ defmodule LightningWeb.AttemptChannelTest do
       assert_reply ref,
                    :ok,
                    %{
-                     "allowSelfSignedCert" => false,
+                     "allowSelfSignedCert" => "false",
                      "database" => "test_db",
                      "host" => "https://dbhost",
                      "password" => "pass1",
-                     "port" => 5000,
-                     "ssl" => true,
+                     "port" => "5000",
+                     "ssl" => "true",
                      "user" => "user1"
                    }
     end

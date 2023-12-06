@@ -90,7 +90,6 @@ defmodule LightningWeb.AttemptChannel do
     %{attempt: attempt, scrubber: scrubber} = socket.assigns
 
     with credential <- Attempts.get_credential(attempt, id) || :not_found,
-         credential <- Credentials.cast_body(credential),
          {:ok, credential} <- Credentials.maybe_refresh_token(credential),
          samples <- Credentials.sensitive_values_for(credential),
          basic_auth <- Credentials.basic_auth_for(credential),
