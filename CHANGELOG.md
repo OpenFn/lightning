@@ -10,6 +10,9 @@ and this project adheres to
 
 ### Added
 
+- Add ellipsis for long job names on the canvas
+  [#1217](https://github.com/OpenFn/Lightning/issues/1217)
+
 ### Changed
 
 ### Fixed
@@ -111,8 +114,6 @@ and this project adheres to
   [#1279](https://github.com/OpenFn/Lightning/issues/1279)
 - Audit trail events for webhook auth (deletion method) change
   [#1165](https://github.com/OpenFn/Lightning/issues/1165)
-- Add ellipsis for long job names on the canvas
-  [#1217](https://github.com/OpenFn/Lightning/issues/1217)
 
 ### Changed
 
