@@ -44,6 +44,17 @@ For more information see the [Workers](WORKERS.md) documentation.
 Note that for secure deployments, it's recommended to use a combination of
 `secrets` and `configMaps` to generate secure environment variables.
 
+### Limits
+
+- `MAX_RUN_DURATION` - the maximum time (in milliseconds) that jobs are allowed
+  to run (keep this below your termination_grace_period if using kubernetes)
+- `MAX_DATACLIP_SIZE` - the maximum size (in bytes) of a dataclip created via
+  the webhook trigger URL for a job. This limits the max request size via the
+  JSON plug and may (in future) limit the size of dataclips that can be stored
+  as run_results via the websocket connection from a worker.
+
+### Other config
+
 - `ADAPTORS_PATH` - where you store your locally installed adaptors
 - `DISABLE_DB_SSL` - in production the use of an SSL conntection to Postgres is
   required by default, setting this to `"true"` allows unencrypted connections
@@ -55,8 +66,6 @@ Note that for secure deployments, it's recommended to use a combination of
 - `LISTEN_ADDRESS`" - the address the web server should bind to, defaults to
   `127.0.0.1` to block access from other machines.
 - `LOG_LEVEL` - how noisy you want the logs to be (e.g. `debug`, `info`)
-- `MAX_RUN_DURATION` - the maximum time (in milliseconds) that jobs are allowed
-  to run (keep this below your termination_grace_period if using kubernetes)
 - `MIX_ENV` - your mix env, likely `prod` for deployment
 - `NODE_ENV` - node env, likely `production` for deployment
 - `ORIGINS` - the allowed origins for web traffic to the backend

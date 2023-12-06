@@ -1,32 +1,16 @@
 defmodule LightningWeb.AttemptLive.Components do
   use LightningWeb, :component
 
-  attr :attempt, :map, required: true
-  attr :class, :string, default: ""
+  attr :attempt, Lightning.Attempt, required: true
 
-  def attempt_detail(assigns) do
+  def elapsed_indicator(assigns) do
     ~H"""
-    <.detail_list id={"attempt-detail-#{@attempt.id}"} class={@class}>
-      <.list_item>
-        <:label>Attempt ID</:label>
-        <:value><%= display_short_uuid(@attempt.id) %></:value>
-      </.list_item>
-      <.list_item>
-        <:label>Elapsed time</:label>
-        <:value>
-          <div
-            phx-hook="ElapsedIndicator"
-            data-start-time={as_timestamp(@attempt.started_at)}
-            data-finish-time={as_timestamp(@attempt.finished_at)}
-            id={"elapsed-indicator-#{@attempt.id}"}
-          />
-        </:value>
-      </.list_item>
-      <.list_item>
-        <:label>State</:label>
-        <:value><.state_pill state={@attempt.state} /></:value>
-      </.list_item>
-    </.detail_list>
+    <div
+      phx-hook="ElapsedIndicator"
+      data-start-time={as_timestamp(@attempt.started_at)}
+      data-finish-time={as_timestamp(@attempt.finished_at)}
+      id={"elapsed-indicator-#{@attempt.id}"}
+    />
     """
   end
 
@@ -42,22 +26,31 @@ defmodule LightningWeb.AttemptLive.Components do
 
   def detail_list(assigns) do
     ~H"""
-    <ul {@rest} role="list" class={["divide-y divide-gray-200", @class]}>
+    <ul
+      {@rest}
+      role="list"
+      class={["flex-1 @5xl/viewer:flex-none", "divide-y divide-gray-200", @class]}
+    >
       <%= render_slot(@inner_block) %>
     </ul>
     """
   end
 
-  slot :label
+  slot :label do
+    attr :class, :string
+  end
+
   slot :value
 
   def list_item(assigns) do
     ~H"""
     <li class="px-4 py-4 sm:px-0">
-      <div class="flex justify-between">
-        <dt class="font-medium">
-          <%= render_slot(@label) %>
-        </dt>
+      <div class="flex justify-between items-baseline text-sm @md/viewer:text-base">
+        <%= for label <- @label do %>
+          <dt class={["font-medium items-center", label[:class]]}>
+            <%= render_slot(label) %>
+          </dt>
+        <% end %>
         <dd class="text-gray-900 font-mono">
           <%= render_slot(@value) %>
         </dd>
@@ -171,5 +164,109 @@ defmodule LightningWeb.AttemptLive.Components do
       _ ->
         ~H[<.icon title="running" name="hero-ellipsis-horizontal" class={@class} />]
     end
+  end
+
+  @doc """
+  Renders a list of runs for the attempt
+  """
+  attr :runs, :list, required: true
+  attr :rest, :global
+  slot :inner_block, required: true
+
+  def step_list(assigns) do
+    ~H"""
+    <ul {@rest} role="list" class="-mb-8">
+      <li :for={run <- @runs} data-run-id={run.id} class="group">
+        <div class="relative pb-8">
+          <span
+            class="absolute left-4 top-4 -ml-px h-full w-0.5 bg-gray-200 group-last:hidden"
+            aria-hidden="true"
+          >
+          </span>
+          <%= render_slot(@inner_block, run) %>
+        </div>
+      </li>
+    </ul>
+    """
+  end
+
+  attr :run, Lightning.Invocation.Run, required: true
+  attr :selected, :boolean, default: false
+  attr :class, :string, default: ""
+  attr :rest, :global
+
+  def step_item(assigns) do
+    ~H"""
+    <div
+      class={[
+        "relative flex space-x-3 border-r-4",
+        if(@selected,
+          do: "border-primary-500",
+          else: "border-transparent hover:border-gray-300"
+        ),
+        @class
+      ]}
+      {@rest}
+    >
+      <div class="flex items-center">
+        <.run_state_circle run={@run} />
+      </div>
+      <div class="flex min-w-0 flex-1 justify-between space-x-4 pt-1.5 pr-1.5">
+        <div>
+          <p class="text-sm text-gray-900">
+            <%= @run.job.name %>
+          </p>
+        </div>
+        <div class="whitespace-nowrap text-right text-sm text-gray-500">
+          <.run_duration run={@run} />
+        </div>
+      </div>
+    </div>
+    """
+  end
+
+  defp run_duration(assigns) do
+    ~H"""
+    <%= cond do %>
+      <% is_nil(@run.started_at) -> %>
+        Unknown
+      <% is_nil(@run.finished_at) -> %>
+        Running...
+      <% true -> %>
+        <%= DateTime.to_unix(@run.finished_at, :millisecond) -
+          DateTime.to_unix(@run.started_at, :millisecond) %> ms
+    <% end %>
+    """
+  end
+
+  def loading_filler(assigns) do
+    ~H"""
+    <.detail_list class="animate-pulse">
+      <.list_item>
+        <:label>
+          <span class="inline-block bg-slate-500 rounded-full h-3 w-16">&nbsp;</span>
+        </:label>
+        <:value>
+          <span class="inline-block bg-slate-500 rounded-full h-3 w-24"></span>
+        </:value>
+      </.list_item>
+      <.list_item>
+        <:label>
+          <span class="inline-block bg-slate-500 rounded-full h-3 w-12">&nbsp;</span>
+        </:label>
+        <:value>
+          <span class="inline-block bg-slate-500 rounded-full h-3 w-12"></span>
+        </:value>
+      </.list_item>
+      <.list_item>
+        <:label>
+          <span class="inline-block bg-slate-500 rounded-full h-3 w-12">&nbsp;</span>
+        </:label>
+        <:value>
+          <span class="inline-block bg-slate-500 rounded-full h-3 w-24"></span>
+        </:value>
+      </.list_item>
+    </.detail_list>
+    """
   end
 end

@@ -10,6 +10,34 @@ and this project adheres to
 
 ### Added
 
+- Add ellipsis for long job names on the canvas
+  [#1217](https://github.com/OpenFn/Lightning/issues/1217)
+
+### Changed
+
+### Fixed
+
+## [v0.11.0] - 2023-12-06
+
+### Added
+
+- Improved UI when manually creating Attempts via the Job Editor
+  [#1474](https://github.com/OpenFn/Lightning/issues/1474)
+- Increased the maximum inbound webhook request size to 10MB and added
+  protection against _very large_ payloads with a 100MB "max_skip_body_length"
+  [#1247](https://github.com/OpenFn/Lightning/issues/1247)
+
+### Changed
+
+- Use the internal port of the web container for the worker configuration in
+  docker-compose setup. [#1485](https://github.com/OpenFn/Lightning/pull/1485)
+
+### Fixed
+
+## [v0.10.6] - 2023-12-05
+
+### Added
+
 ### Changed
 
 - Limit entries count on term work orders search
@@ -18,6 +46,8 @@ and this project adheres to
   [#1519](https://github.com/OpenFn/Lightning/issues/1519)
 - Remove custom telemetry plumbing.
   [1259](https://github.com/OpenFn/Lightning/issues/1259)
+- Enhance UX to prevent modal closure when Monaco/Dataclip editor is focused
+  [#1510](https://github.com/OpenFn/Lightning/pull/1510)
 
 ### Fixed
 
@@ -29,9 +59,9 @@ and this project adheres to
   [#1508](https://github.com/OpenFn/Lightning/issues/1508)
 - Enable user to reauthorize and obtain a new refresh token.
   [#1495](https://github.com/OpenFn/Lightning/issues/1495)
-- Strings get sent to the worker where booleans should
+- Save credential body with types declared on schema
   [#1518](https://github.com/OpenFn/Lightning/issues/1518)
-  
+
 ## [v0.10.5] - 2023-12-03
 
 ### Added
@@ -75,7 +105,6 @@ and this project adheres to
   [#1145](https://github.com/OpenFn/Lightning/issues/1145)
 - Fix for adding ellipses on credential info on job editor heading
   [#1428](https://github.com/OpenFn/Lightning/issues/1428)
-
 
 ## [v0.10.3] - 2023-11-28
 

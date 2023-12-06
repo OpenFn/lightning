@@ -3,6 +3,8 @@ defmodule LightningWeb.CredentialLive.JsonSchemaBodyComponent do
 
   alias Lightning.Credentials
 
+  import LightningWeb.CoreComponents, only: [translate_error: 1]
+
   attr :form, :map, required: true
   slot :inner_block
 
@@ -129,7 +131,7 @@ defmodule LightningWeb.CredentialLive.JsonSchemaBodyComponent do
           [
             value: @value || "",
             class: ~w(mt-1 focus:ring-primary-500 focus:border-primary-500 block
-                 w-full shadow-sm sm:text-sm border-secondary-300 rounded-md)
+               w-full shadow-sm sm:text-sm border-secondary-300 rounded-md)
           ]
         ]) %>
         <span
@@ -137,7 +139,7 @@ defmodule LightningWeb.CredentialLive.JsonSchemaBodyComponent do
           phx-feedback_for={Phoenix.HTML.Form.input_id(@form, @field)}
           class="block w-full text-sm text-secondary-700"
         >
-          <%= LightningWeb.Components.NewInputs.translate_error(error) %>
+          <%= translate_error(error) %>
         </span>
       </div>
       """

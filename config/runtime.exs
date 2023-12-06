@@ -158,6 +158,11 @@ config :lightning,
        |> String.to_integer()
 
 config :lightning,
+       :max_dataclip_size,
+       System.get_env("MAX_DATACLIP_SIZE", "10000000")
+       |> String.to_integer()
+
+config :lightning,
        :queue_result_retention_period,
        System.get_env("QUEUE_RESULT_RETENTION_PERIOD", "60")
        |> String.to_integer()
@@ -258,7 +263,17 @@ if config_env() == :prod do
     ],
     secret_key_base: secret_key_base,
     check_origin: origins,
-    protocol_options: [max_frame_size: 10_000_000],
+    http: [
+      protocol_options: [
+        max_frame_size:
+          Application.get_env(:lightning, :max_dataclip_size, 10_000_000),
+        # Not that if a request is more than 10x the max dataclip size, we cut
+        # the connection immediately to prevent memory issues via the
+        # :max_skip_body_length setting.
+        max_skip_body_length:
+          Application.get_env(:lightning, :max_dataclip_size, 10_000_000) * 10
+      ]
+    ],
     server: true
 
   # ## Using releases

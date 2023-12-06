@@ -169,6 +169,14 @@ export default function Editor({
       setMonaco(monaco);
 
       editor.addCommand(
+        monaco.KeyCode.Escape,
+        () => {
+          document.activeElement.blur();
+        },
+        '!suggestWidgetVisible'
+      );
+
+      editor.addCommand(
         // https://microsoft.github.io/monaco-editor/typedoc/classes/KeyMod.html
         // https://microsoft.github.io/monaco-editor/typedoc/enums/KeyCode.html
         monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter,
