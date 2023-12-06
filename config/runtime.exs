@@ -266,7 +266,7 @@ if config_env() == :prod do
     http: [
       protocol_options: [
         max_frame_size: 10_000_000,
-        # Not that if a request is more than 5x the max dataclip size, we cut
+        # Not that if a request is more than 10x the max dataclip size, we cut
         # the connection immediately to prevent memory issues via the
         # :max_skip_body_length setting.
         max_skip_body_length:

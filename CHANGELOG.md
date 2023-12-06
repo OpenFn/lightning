@@ -10,6 +10,10 @@ and this project adheres to
 
 ### Added
 
+- Increased the maximum inbound webhook request size to 10MB and added
+  protection against _very large_ payloads with a 100MB "max_skip_body_length"
+  [#1247](https://github.com/OpenFn/Lightning/issues/1247)
+
 ### Changed
 
 - Use the internal port of the web container for the worker configuration in
