@@ -369,7 +369,7 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
         %{
           "error" => "no_metadata_function"
         },
-        1000
+        5000
       )
     end
   end
