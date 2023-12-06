@@ -39,9 +39,25 @@ defmodule LightningWeb.AttemptLive.Show do
                 class="flex-1 @5xl/main:flex-none"
               >
                 <.list_item>
+                  <:label>Work Order</:label>
+                  <:value>
+                    <.link
+                      navigate={
+                        ~p"/projects/#{@project}/runs?#{%{filters: %{workorder_id: attempt.work_order_id}}}"
+                      }
+                      class="hover:underline hover:text-primary-900 whitespace-nowrap text-ellipsis"
+                    >
+                      <span class="whitespace-nowrap text-ellipsis">
+                        <%= display_short_uuid(attempt.work_order_id) %>
+                      </span>
+                      <.icon name="hero-arrow-up-right" class="h-2 w-2 float-right" />
+                    </.link>
+                  </:value>
+                </.list_item>
+                <.list_item>
                   <:label>Attempt</:label>
                   <:value>
-                    <span class="whitespace-nowrap text-ellipsis">
+                    <span class="whitespace-nowrap text-ellipsis pr-2">
                       <%= display_short_uuid(attempt.id) %>
                     </span>
                   </:value>

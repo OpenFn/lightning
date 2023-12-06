@@ -36,16 +36,21 @@ defmodule LightningWeb.AttemptLive.Components do
     """
   end
 
-  slot :label
+  slot :label do
+    attr :class, :string
+  end
+
   slot :value
 
   def list_item(assigns) do
     ~H"""
     <li class="px-4 py-4 sm:px-0">
       <div class="flex justify-between items-baseline text-sm @md/viewer:text-base">
-        <dt class="font-medium items-center">
-          <%= render_slot(@label) %>
-        </dt>
+        <%= for label <- @label do %>
+          <dt class={["font-medium items-center", label[:class] |> IO.inspect()]}>
+            <%= render_slot(label) %>
+          </dt>
+        <% end %>
         <dd class="text-gray-900 font-mono">
           <%= render_slot(@value) %>
         </dd>

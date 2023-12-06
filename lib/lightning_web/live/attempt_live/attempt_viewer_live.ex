@@ -24,13 +24,13 @@ defmodule LightningWeb.AttemptLive.AttemptViewerLive do
           <div class="flex-none flex gap-6 @5xl/viewer:flex-col flex-row">
             <.detail_list id={"attempt-detail-#{attempt.id}"}>
               <.list_item>
-                <:label>Work Order</:label>
+                <:label class="whitespace-nowrap">Work Order</:label>
                 <:value>
                   <.link
                     navigate={
                       ~p"/projects/#{attempt.work_order.workflow.project}/runs?#{%{filters: %{workorder_id: attempt.work_order.id}}}"
                     }
-                    class="hover:underline hover:text-primary-900 whitespace-nowrap text-ellipsis"
+                    class="hover:underline hover:text-primary-900"
                   >
                     <span class="whitespace-nowrap text-ellipsis">
                       <%= display_short_uuid(attempt.work_order_id) %>
