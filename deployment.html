@@ -163,14 +163,29 @@ convenience.</p><p>For more information see the <a href="workers.html">Workers</
   <span class="text">Environment Variables</span>
 </h2>
 <p>Note that for secure deployments, it's recommended to use a combination of
-<code class="inline">secrets</code> and <code class="inline">configMaps</code> to generate secure environment variables.</p><ul><li><code class="inline">ADAPTORS_PATH</code> - where you store your locally installed adaptors</li><li><code class="inline">DISABLE_DB_SSL</code> - in production the use of an SSL conntection to Postgres is
+<code class="inline">secrets</code> and <code class="inline">configMaps</code> to generate secure environment variables.</p><h3 id="limits" class="section-heading">
+  <a href="#limits" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
+  </a>
+  <span class="text">Limits</span>
+</h3>
+<ul><li><code class="inline">MAX_RUN_DURATION</code> - the maximum time (in milliseconds) that jobs are allowed
+to run (keep this below your termination_grace_period if using kubernetes)</li><li><code class="inline">MAX_DATACLIP_SIZE</code> - the maximum size (in bytes) of a dataclip created via
+the webhook trigger URL for a job. This limits the max request size via the
+JSON plug and may (in future) limit the size of dataclips that can be stored
+as run_results via the websocket connection from a worker.</li></ul><h3 id="other-config" class="section-heading">
+  <a href="#other-config" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
+  </a>
+  <span class="text">Other config</span>
+</h3>
+<ul><li><code class="inline">ADAPTORS_PATH</code> - where you store your locally installed adaptors</li><li><code class="inline">DISABLE_DB_SSL</code> - in production the use of an SSL conntection to Postgres is
 required by default, setting this to <code class="inline">&quot;true&quot;</code> allows unencrypted connections
 to the database. This is strongly discouraged in real production environment.</li><li><code class="inline">K8S_HEADLESS_SERVICE</code> - this environment variable is automatically set if
 you're running on GKE and it is used to establish an Erlang node cluster. Note
 that if you're <em>not</em> using Kubernetes, the &quot;gossip&quot; strategy is used for
 establish clusters.</li><li><code class="inline">LISTEN_ADDRESS</code>&quot; - the address the web server should bind to, defaults to
-<code class="inline">127.0.0.1</code> to block access from other machines.</li><li><code class="inline">LOG_LEVEL</code> - how noisy you want the logs to be (e.g. <code class="inline">debug</code>, <code class="inline">info</code>)</li><li><code class="inline">MAX_RUN_DURATION</code> - the maximum time (in milliseconds) that jobs are allowed
-to run (keep this below your termination_grace_period if using kubernetes)</li><li><code class="inline">MIX_ENV</code> - your mix env, likely <code class="inline">prod</code> for deployment</li><li><code class="inline">NODE_ENV</code> - node env, likely <code class="inline">production</code> for deployment</li><li><code class="inline">ORIGINS</code> - the allowed origins for web traffic to the backend</li><li><code class="inline">PORT</code> - the port your Phoenix app runs on</li><li><code class="inline">PRIMARY_ENCRYPTION_KEY</code> - a base64 encoded 32 character long string. See
+<code class="inline">127.0.0.1</code> to block access from other machines.</li><li><code class="inline">LOG_LEVEL</code> - how noisy you want the logs to be (e.g. <code class="inline">debug</code>, <code class="inline">info</code>)</li><li><code class="inline">MIX_ENV</code> - your mix env, likely <code class="inline">prod</code> for deployment</li><li><code class="inline">NODE_ENV</code> - node env, likely <code class="inline">production</code> for deployment</li><li><code class="inline">ORIGINS</code> - the allowed origins for web traffic to the backend</li><li><code class="inline">PORT</code> - the port your Phoenix app runs on</li><li><code class="inline">PRIMARY_ENCRYPTION_KEY</code> - a base64 encoded 32 character long string. See
 <a href="#encryption">Encryption</a>.</li><li><code class="inline">SCHEMAS_PATH</code> - path to the credential schemas that provide forms for
 different adaptors</li><li><code class="inline">SECRET_KEY_BASE</code> - a secret key used as a base to generate secrets for
 encrypting and signing data.</li><li><code class="inline">SENTRY_DSN</code> - if using Sentry for error monitoring, your DSN</li><li><code class="inline">URL_HOST</code> - the host, used for writing urls (e.g., <code class="inline">demo.openfn.org</code>)</li><li><code class="inline">URL_PORT</code> - the port, usually <code class="inline">443</code> for production</li><li><code class="inline">URL_SCHEME</code> - the scheme for writing urls, (e.g., <code class="inline">https</code>)</li></ul><h3 id="google" class="section-heading">
