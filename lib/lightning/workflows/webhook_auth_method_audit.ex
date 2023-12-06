@@ -12,4 +12,15 @@ defmodule Lightning.Workflows.WebhookAuthMethodAudit do
       "removed_from_trigger",
       "deleted"
     ]
+
+  def update_changes(changes) when is_map(changes) do
+    Enum.into(changes, %{}, fn
+      {key, val} when key in [:username, :password, :api_key] ->
+        {:ok, encrypted_val} = Lightning.Encrypted.Binary.dump(val)
+        {key, Base.encode64(encrypted_val)}
+
+      other ->
+        other
+    end)
+  end
 end

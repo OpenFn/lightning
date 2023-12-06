@@ -162,12 +162,7 @@ defmodule Lightning.WebhookAuthMethods do
     Multi.new()
     |> Multi.insert(:auth_method, changeset)
     |> Multi.insert(:audit, fn %{auth_method: auth_method} ->
-      WebhookAuthMethodAudit.event("created", auth_method.id, user.id, %{
-        before: %{name: nil},
-        after: %{
-          name: auth_method.name
-        }
-      })
+      WebhookAuthMethodAudit.event("created", auth_method.id, user.id, changeset)
     end)
     |> Repo.transaction()
     |> case do
@@ -182,14 +177,15 @@ defmodule Lightning.WebhookAuthMethods do
   @spec create_auth_method(Trigger.t(), map(), actor: User.t()) ::
           {:ok, WebhookAuthMethod.t()} | {:error, Ecto.Changeset.t()}
   def create_auth_method(%Trigger{} = trigger, params, actor: %User{} = user) do
-    Multi.new()
-    |> Multi.insert(:auth_method, fn _changes ->
+    changeset =
       %WebhookAuthMethod{}
       |> WebhookAuthMethod.changeset(params)
       |> Ecto.Changeset.put_assoc(:triggers, [trigger])
-    end)
+
+    Multi.new()
+    |> Multi.insert(:auth_method, changeset)
     |> Multi.insert(:created_audit, fn %{auth_method: auth_method} ->
-      WebhookAuthMethodAudit.event("created", auth_method.id, user.id)
+      WebhookAuthMethodAudit.event("created", auth_method.id, user.id, changeset)
     end)
     |> Multi.insert(:add_to_trigger_audit, fn %{auth_method: auth_method} ->
       WebhookAuthMethodAudit.event(
