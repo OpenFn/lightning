@@ -4,7 +4,7 @@ defmodule LightningWeb.WorkflowNewLive.WorkflowParams do
 
   The front end editor uses JSON patches to represent changes to the workflow.
   """
-  alias LightningWeb.Components.NewInputs
+  import LightningWeb.UserAuth, only: [fetch_current_user: 2]
 
   @doc """
   Produce a new set of params by applying the given form params to the current
@@ -133,10 +133,7 @@ defmodule LightningWeb.WorkflowNewLive.WorkflowParams do
       end)
 
     to_serializable(model, fields)
-    |> Map.put(
-      :errors,
-      NewInputs.translate_errors(changeset)
-    )
+    |> Map.put(:errors, translate_errors(changeset))
     |> Map.merge(fields_dropped_by_required)
   end
 
