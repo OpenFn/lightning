@@ -317,7 +317,20 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       project: project,
       workflow: workflow
     } do
-      project_credential = insert(:project_credential, project: project)
+      project_credential =
+        insert(:project_credential,
+          project: project,
+          credential:
+            build(:credential,
+              schema: "dhis2",
+              body: %{
+                hostUrl: "http://localhost:4002",
+                username: "test",
+                password: "test"
+              }
+            )
+        )
+
       job = workflow.jobs |> hd()
 
       {:ok, view, _html} =
