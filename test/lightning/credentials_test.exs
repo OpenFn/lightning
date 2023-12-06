@@ -97,8 +97,10 @@ defmodule Lightning.CredentialsTest do
       assert {:error, %Ecto.Changeset{}} =
                Credentials.create_credential(@invalid_attrs)
     end
+  end
 
-    test "update_credential/2 with valid data updates the credential" do
+  describe "update_credential/2" do
+    test "succeeds with valid data" do
       user = user_fixture()
 
       {:ok, %Lightning.Projects.Project{id: project_id}} =
@@ -158,7 +160,58 @@ defmodule Lightning.CredentialsTest do
               }} in audit_events
     end
 
-    test "update_credential/2 with invalid data returns error changeset" do
+    test "casts body to typed fields" do
+      user = user_fixture()
+
+      {:ok, %Lightning.Projects.Project{id: project_id}} =
+        Lightning.Projects.create_project(%{
+          name: "some-name",
+          project_users: [%{user_id: user.id}]
+        })
+
+      credential =
+        insert(:credential,
+          name: "Test Postgres",
+          user_id: user.id,
+          body: %{
+            user: "user1",
+            password: "pass1",
+            host: "https://dbhost",
+            database: "test_db",
+            port: "5000",
+            ssl: "true",
+            allowSelfSignedCert: "false"
+          },
+          project_credentials: [
+            %{project_id: project_id}
+          ],
+          schema: "postgresql"
+        )
+
+      new_body_attrs = %{
+        "user" => "user1",
+        "password" => "pass1",
+        "host" => "https://dbhost",
+        "database" => "test_db",
+        "port" => "5002",
+        "ssl" => "true",
+        "allowSelfSignedCert" => "false"
+      }
+
+      assert {:ok, %Credential{body: updated_body}} =
+               Credentials.update_credential(credential, %{
+                 body: new_body_attrs
+               })
+
+      assert updated_body ==
+               Map.merge(new_body_attrs, %{
+                 "port" => 5002,
+                 "ssl" => true,
+                 "allowSelfSignedCert" => false
+               })
+    end
+
+    test "returns error changeset with invalid data" do
       user = user_fixture()
       credential = credential_fixture(user_id: user.id)
 
