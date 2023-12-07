@@ -62,6 +62,8 @@ and this project adheres to
   [#1508](https://github.com/OpenFn/Lightning/issues/1508)
 - Enable user to reauthorize and obtain a new refresh token.
   [#1495](https://github.com/OpenFn/Lightning/issues/1495)
+- Save credential body with types declared on schema
+  [#1518](https://github.com/OpenFn/Lightning/issues/1518)
 
 ## [v0.10.5] - 2023-12-03
 

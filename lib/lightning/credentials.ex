@@ -15,8 +15,13 @@ defmodule Lightning.Credentials do
   alias Lightning.Repo
   alias Ecto.Multi
 
-  alias Lightning.Credentials.{Audit, Credential, SensitiveValues}
+  alias Lightning.Credentials.Audit
+  alias Lightning.Credentials.Credential
+  alias Lightning.Credentials.SchemaDocument
+  alias Lightning.Credentials.SensitiveValues
   alias Lightning.Projects.Project
+
+  require Logger
 
   @doc """
   Perform, when called with %{"type" => "purge_deleted"}
@@ -116,17 +121,16 @@ defmodule Lightning.Credentials do
 
   """
   def create_credential(attrs \\ %{}) do
+    changeset = %Credential{} |> change_credential(attrs) |> cast_body_change()
+
     Multi.new()
-    |> Multi.insert(
-      :credential,
-      Credential.changeset(%Credential{}, attrs |> coerce_json_field("body"))
-    )
+    |> Multi.insert(:credential, changeset)
     |> Multi.insert(:audit, fn %{credential: credential} ->
       Audit.event("created", credential.id, credential.user_id)
     end)
     |> Repo.transaction()
     |> case do
-      {:error, :credential, changeset, _changes} ->
+      {:error, _op, changeset, _changes} ->
         {:error, changeset}
 
       {:ok, %{credential: credential}} ->
@@ -147,7 +151,7 @@ defmodule Lightning.Credentials do
 
   """
   def update_credential(%Credential{} = credential, attrs) do
-    changeset = change_credential(credential, attrs)
+    changeset = credential |> change_credential(attrs) |> cast_body_change()
 
     Multi.new()
     |> Multi.update(:credential, changeset)
@@ -178,6 +182,58 @@ defmodule Lightning.Credentials do
 
       {:error, reason} ->
         raise "Error reading credential schema. Got: #{reason |> inspect()}"
+    end
+  end
+
+  # Migration only
+  def migrate_credential_body(
+        %Credential{body: body, schema: schema_name} = credential
+      ) do
+    case put_typed_body(body, schema_name) do
+      {:ok, ^body} ->
+        :ok
+
+      {:ok, changed_body} ->
+        credential
+        |> change_credential(%{body: changed_body})
+        |> Repo.update!()
+
+      {:error, %Ecto.Changeset{errors: errors}} ->
+        Logger.warning(fn ->
+          "Casting credential on migration failed with reason: #{inspect(errors)}"
+        end)
+    end
+  end
+
+  defp cast_body_change(
+         %Ecto.Changeset{valid?: true, changes: %{body: body}} = changeset
+       ) do
+    schema_name = Ecto.Changeset.get_field(changeset, :schema)
+
+    case put_typed_body(body, schema_name) do
+      {:ok, updated_body} ->
+        Ecto.Changeset.put_change(changeset, :body, updated_body)
+
+      {:error, _reason} ->
+        Ecto.Changeset.add_error(changeset, :body, "Invalid body types")
+    end
+  end
+
+  defp cast_body_change(changeset), do: changeset
+
+  defp put_typed_body(body, "raw"), do: {:ok, body}
+
+  defp put_typed_body(body, schema_name) do
+    schema = get_schema(schema_name)
+
+    with changeset <- SchemaDocument.changeset(body, schema: schema),
+         {:ok, typed_body} <- Ecto.Changeset.apply_action(changeset, :insert) do
+      updated_body =
+        Enum.into(typed_body, body, fn {field, typed_value} ->
+          {to_string(field), typed_value}
+        end)
+
+      {:ok, updated_body}
     end
   end
 

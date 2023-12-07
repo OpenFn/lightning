@@ -156,7 +156,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       view
       |> CredentialLiveHelpers.fill_credential(%{
         name: "My Credential",
-        body: %{username: "foo", password: "bar", hostUrl: "baz"}
+        body: %{username: "foo", password: "bar", hostUrl: "http://someurl"}
       })
 
       view |> CredentialLiveHelpers.click_save()

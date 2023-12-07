@@ -70,7 +70,7 @@ defmodule LightningWeb.CredentialLive.JsonSchemaBodyComponent do
   end
 
   defp create_schema_changeset(schema, params) do
-    Credentials.SchemaDocument.changeset(%{}, params, schema: schema)
+    Credentials.SchemaDocument.changeset(params, schema: schema)
   end
 
   attr :form, :map, required: true

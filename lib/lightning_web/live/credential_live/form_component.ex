@@ -465,17 +465,19 @@ defmodule LightningWeb.CredentialLive.FormComponent do
   end
 
   defp save_credential(socket, :new, credential_params) do
-    user_id = Ecto.Changeset.fetch_field!(socket.assigns.changeset, :user_id)
+    %{changeset: changeset, type: schema_name} = socket.assigns
+
+    user_id = Ecto.Changeset.fetch_field!(changeset, :user_id)
 
     project_credentials =
-      Ecto.Changeset.fetch_field!(socket.assigns.changeset, :project_credentials)
+      Ecto.Changeset.fetch_field!(changeset, :project_credentials)
       |> Enum.map(fn %{project_id: project_id} ->
         %{"project_id" => project_id}
       end)
 
     credential_params
     |> Map.put("user_id", user_id)
-    |> Map.put("schema", socket.assigns.type)
+    |> Map.put("schema", schema_name)
     |> Map.put("project_credentials", project_credentials)
     |> Credentials.create_credential()
     |> case do
@@ -491,7 +493,7 @@ defmodule LightningWeb.CredentialLive.FormComponent do
         end
 
       {:error, %Ecto.Changeset{} = changeset} ->
-        {:noreply, assign(socket, changeset: changeset)}
+        {:noreply, assign(socket, :changeset, changeset)}
     end
   end
 

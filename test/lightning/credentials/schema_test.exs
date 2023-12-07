@@ -130,7 +130,7 @@ defmodule Lightning.Credentials.SchemaTest do
 
     test "can ", %{schema: schema} do
       changeset =
-        SchemaDocument.changeset(%{}, %{"foo" => "bar", "password" => "pass"},
+        SchemaDocument.changeset(%{"foo" => "bar", "password" => "pass"},
           schema: schema
         )
 
@@ -155,7 +155,6 @@ defmodule Lightning.Credentials.SchemaTest do
 
       changeset =
         SchemaDocument.changeset(
-          %{},
           %{
             "username" => "initial",
             "password" => "pass",
