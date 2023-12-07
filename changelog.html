@@ -13,7 +13,7 @@
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-EPF2X7PV.js"></script>
-    <script src="dist/sidebar_items-B1C2A6F4.js"></script>
+    <script src="dist/sidebar_items-F08CE2DC.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -222,7 +222,8 @@ docker-compose setup. <a href="https://github.com/OpenFn/Lightning/pull/1485">#1
 <a href="https://github.com/OpenFn/Lightning/issues/1430">#1430</a></li><li>Allow users to retry work orders that failed before their first run was
 created <a href="https://github.com/OpenFn/Lightning/issues/1417">#1417</a></li><li>Fix to ensure webhook auth modal is closed when cancel or close are selected.
 <a href="https://github.com/OpenFn/Lightning/issues/1508">#1508</a></li><li>Enable user to reauthorize and obtain a new refresh token.
-<a href="https://github.com/OpenFn/Lightning/issues/1495">#1495</a></li></ul><h2 id="v0-10-5-2023-12-03" class="section-heading">
+<a href="https://github.com/OpenFn/Lightning/issues/1495">#1495</a></li><li>Save credential body with types declared on schema
+<a href="https://github.com/OpenFn/Lightning/issues/1518">#1518</a></li></ul><h2 id="v0-10-5-2023-12-03" class="section-heading">
   <a href="#v0-10-5-2023-12-03" class="hover-link">
     <i class="ri-link-m" aria-hidden="true"></i>
   </a>
@@ -396,7 +397,7 @@ workorders up to <code class="inline">v0.10.0</code>, though the granularity of 
 will be less than <code class="inline">v0.10.0</code> and the final states are not guaranteed to be
 accurate for workflows with multiple branches and leaf nodes with varying exit
 reasons.</p><p>The migration scripts can be run with a single function call in SetupUtils from
-a connect <code class="inline">iex</code> session:</p><pre><code class="makeup elixir" translate="no"><span class="nc">Lightning.SetupUtils</span><span class="o">.</span><span class="n">approximate_state_for_attempts_and_workorders</span><span class="p" data-group-id="0169197368-1">(</span><span class="p" data-group-id="0169197368-1">)</span></code></pre><p>Note that (like lots of <em>other</em> functionality in <code class="inline">SetupUtils</code>, calling this
+a connect <code class="inline">iex</code> session:</p><pre><code class="makeup elixir" translate="no"><span class="nc">Lightning.SetupUtils</span><span class="o">.</span><span class="n">approximate_state_for_attempts_and_workorders</span><span class="p" data-group-id="9896343174-1">(</span><span class="p" data-group-id="9896343174-1">)</span></code></pre><p>Note that (like lots of <em>other</em> functionality in <code class="inline">SetupUtils</code>, calling this
 function is a destructive action and you should only do it if you've backed up
 your data and you know what you're doing.)</p><p>As always, we recommend backing up your data before migrating. (And thanks for
 bearing with us as we move towards our first stable Lightning release.)</p><h3 id="added-8" class="section-heading">
