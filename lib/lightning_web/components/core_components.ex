@@ -101,9 +101,20 @@ defmodule LightningWeb.CoreComponents do
     doc:
       "a form field struct retrieved from the form, for example: @form[:email]"
 
+  attr :errors, :any, required: false
+
   def old_error(%{field: field} = assigns) do
     assigns =
       assigns |> assign(:errors, Enum.map(field.errors, &translate_error(&1)))
+
+    ~H"""
+    <.error :for={msg <- @errors}><%= msg %></.error>
+    """
+  end
+
+  def old_error(%{errors: errors} = assigns) do
+    assigns =
+      assigns |> assign(:errors, Enum.map(errors, &translate_error(&1)))
 
     ~H"""
     <.error :for={msg <- @errors}><%= msg %></.error>

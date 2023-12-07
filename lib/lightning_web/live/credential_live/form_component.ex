@@ -2,6 +2,7 @@ defmodule LightningWeb.CredentialLive.FormComponent do
   @moduledoc """
   Form Component for working with a single Credential
   """
+  alias LightningWeb.Components.NewInputs
   use LightningWeb, :live_component
 
   alias Lightning.Credentials
@@ -338,7 +339,7 @@ defmodule LightningWeb.CredentialLive.FormComponent do
               <fieldset>
                 <div class="space-y-4">
                   <div>
-                    <LightningWeb.Components.Form.text_field form={f} field={:name} />
+                    <NewInputs.input type="text" field={f[:name]} label="Name" />
                   </div>
                   <div>
                     <LightningWeb.Components.Form.check_box

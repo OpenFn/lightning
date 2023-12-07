@@ -12,6 +12,8 @@ and this project adheres to
 
 - Add ellipsis for long job names on the canvas
   [#1217](https://github.com/OpenFn/Lightning/issues/1217)
+- Fix Credential Creation Page UI
+  [#1064](https://github.com/OpenFn/Lightning/issues/1064)
 
 ### Changed
 

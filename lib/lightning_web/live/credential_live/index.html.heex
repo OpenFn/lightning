@@ -76,21 +76,21 @@
               |
             <% end %>
             <.delete_action socket={@socket} credential={credential} />
+            <.live_component
+              id={"edit-credential-#{credential.id}-modal"}
+              module={LightningWeb.CredentialLive.FormComponent}
+              action={:edit}
+              credential_type={@selected_credential_type}
+              credential={credential}
+              current_user={@current_user}
+              projects={@projects}
+              project={nil}
+              show_project_credentials={true}
+              can_create_project_credential={true}
+              return_to={~p"/credentials"}
+            />
           </.td>
         </.tr>
-        <.live_component
-          id={"edit-credential-#{credential.id}-modal"}
-          module={LightningWeb.CredentialLive.FormComponent}
-          action={:edit}
-          credential_type={@selected_credential_type}
-          credential={credential}
-          current_user={@current_user}
-          projects={@projects}
-          project={nil}
-          show_project_credentials={true}
-          can_create_project_credential={true}
-          return_to={~p"/credentials"}
-        />
       <% end %>
     </.table>
   </LayoutComponents.centered>
