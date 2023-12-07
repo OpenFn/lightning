@@ -82,7 +82,13 @@ defmodule LightningWeb.AttemptLive.Show do
                 class="flex-1"
               >
                 <.link patch={"?r=#{run.id}"} id={"select-run-#{run.id}"}>
-                  <.step_item run={run} selected={run.id == @selected_run_id} />
+                  <.step_item
+                    run={run}
+                    selected={run.id == @selected_run_id}
+                    show_inspector_link={true}
+                    attempt_id={attempt.id}
+                    project_id={@project}
+                  />
                 </.link>
               </.step_list>
             </div>
