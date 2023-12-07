@@ -102,18 +102,6 @@ defmodule Lightning.Auditing.Model do
       |> update_change(:before, update_changes_fun)
       |> update_change(:after, update_changes_fun)
     end
-
-    # defp encrypt_body(changes) when is_map(changes) do
-    #   if Map.has_key?(changes, :body) do
-    #     changes
-    #     |> Map.update(:body, nil, fn val ->
-    #       {:ok, val} = Lightning.Encrypted.Map.dump(val)
-    #       val |> Base.encode64()
-    #     end)
-    #   else
-    #     changes
-    #   end
-    # end
   end
 
   use Ecto.Schema
