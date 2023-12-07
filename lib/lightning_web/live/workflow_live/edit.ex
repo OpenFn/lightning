@@ -1,14 +1,10 @@
 defmodule LightningWeb.WorkflowLive.Edit do
   @moduledoc false
-  alias Phoenix.LiveView.JS
-  alias LightningWeb.Components.Modal
   use LightningWeb, :live_view
 
   alias Lightning.Policies.Permissions
   alias Lightning.Policies.ProjectUsers
-
   alias Lightning.WorkOrders
-
   alias Lightning.Workflows
   alias Lightning.Workflows.Job
   alias Lightning.Workflows.Trigger

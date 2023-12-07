@@ -9,26 +9,27 @@ defmodule LightningWeb.CredentialLiveHelpers do
       |> render_change()
 
     assert Floki.parse_fragment!(html)
-           |> Floki.find("input[type=radio][value=#{type}][checked]")
+           |> Floki.find("input[type=radio][value=#{type}]")
            |> Enum.any?(),
            "Expected #{type} to be selected"
   end
 
   def click_continue(live) do
     live
-    |> element("button", "Continue")
+    |> element("button", "Configure credential")
     |> render_click()
   end
 
-  def fill_credential(live, params) when is_map(params) do
+  def fill_credential(live, params, form_id \\ "#credential-form-new")
+      when is_map(params) do
     live
-    |> form("#credential-form", credential: params)
+    |> form(form_id, credential: params)
     |> render_change()
   end
 
-  def click_save(live, form_data \\ %{}) do
+  def click_save(live, form_data \\ %{}, form_id \\ "#credential-form-new") do
     live
-    |> form("#credential-form", form_data)
+    |> form(form_id, form_data)
     |> render_submit()
   end
 end

@@ -62,7 +62,7 @@ defmodule LightningWeb.CredentialLive.FormComponent do
     {:ok,
      socket
      |> assign(type: nil)
-     |> assign(credential_type: assigns.credential_type)
+     |> assign_credential_type(assigns)
      |> assign(
        assigns
        |> Map.filter(&match?({k, _} when k in @valid_assigns, &1))
@@ -97,6 +97,14 @@ defmodule LightningWeb.CredentialLive.FormComponent do
          filter_available_projects(changeset, all_projects)
        end
      )}
+  end
+
+  defp assign_credential_type(socket, assigns) do
+    if credential_type = Map.get(assigns, :credential_type, false) do
+      assign(socket, credential_type: credential_type)
+    else
+      assign(socket, credential_type: assigns.credential.schema)
+    end
   end
 
   @impl true
@@ -303,7 +311,7 @@ defmodule LightningWeb.CredentialLive.FormComponent do
         <.form
           :let={f}
           for={@changeset}
-          id="credential-form"
+          id={"credential-form-#{@credential.id || "new"}"}
           phx-target={@myself}
           phx-change="validate"
           phx-submit="save"
@@ -391,11 +399,8 @@ defmodule LightningWeb.CredentialLive.FormComponent do
   attr :type, :string, required: true
   attr :form, :map, required: true
   attr :update_body, :any, required: false
-  slot :inner_block
-  attr :projects, :list, required: true
-  attr :selected, :map, required: true
   attr :phx_target, :any, default: nil
-  attr :users, :list, required: true
+  slot :inner_block
 
   @doc """
   Switcher components for different types of credentials.
@@ -423,6 +428,11 @@ defmodule LightningWeb.CredentialLive.FormComponent do
     </JsonSchemaBodyComponent.fieldset>
     """
   end
+
+  attr :projects, :list, required: true
+  attr :selected, :map, required: true
+  attr :phx_target, :any, default: nil
+  attr :form, :map, required: true
 
   def project_credentials(assigns) do
     ~H"""
@@ -480,6 +490,9 @@ defmodule LightningWeb.CredentialLive.FormComponent do
     </div>
     """
   end
+
+  attr :users, :list, required: true
+  attr :form, :map, required: true
 
   def credential_transfer(assigns) do
     ~H"""

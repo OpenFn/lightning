@@ -76,6 +76,14 @@ defmodule LightningWeb.CredentialLive.Index do
     {:noreply, socket |> assign(:selected_credential_type, type)}
   end
 
+  @doc """
+  A generic handler for forwarding updates from PubSub
+  """
+  def handle_info({:forward, mod, opts}, socket) do
+    send_update(mod, opts)
+    {:noreply, socket}
+  end
+
   defp list_credentials(user_id) do
     Credentials.list_credentials_for_user(user_id)
     |> Enum.map(fn c ->
