@@ -189,6 +189,16 @@ defmodule LightningWeb.EndToEndTest do
                &(&1.source == "R/T" and &1.message =~ "Operation 1 complete in")
              )
 
+      version_logs =
+        lines
+        |> Enum.find(fn l -> l.source == "VER" end)
+        |> Map.get(:message)
+
+      assert version_logs =~ "▸ node.js                  18.17"
+      assert version_logs =~ "▸ worker                   0.3"
+      assert version_logs =~ "▸ engine                   0.2"
+      assert version_logs =~ "▸ @openfn/language-http    3.1.12"
+
       expected_lines =
         MapSet.new([
           {"R/T", "Starting operation 1"},
