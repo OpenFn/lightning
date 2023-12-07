@@ -15,6 +15,8 @@ and this project adheres to
 
 ### Changed
 
+- Updated CLI to 0.4.10 (fixes logging)
+
 ### Fixed
 
 - Adjusted z-index for Monaco Editor's sibling element to resolve layout
