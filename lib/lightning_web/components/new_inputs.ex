@@ -303,7 +303,8 @@ defmodule LightningWeb.Components.NewInputs do
         ]}
         {@rest}
       />
-      <div class="error-space h-6">
+
+      <div :if={Enum.any?(@errors)} class="error-space h-6">
         <.error :for={msg <- @errors}><%= msg %></.error>
       </div>
     </div>
@@ -314,11 +315,12 @@ defmodule LightningWeb.Components.NewInputs do
   Renders a label.
   """
   attr :for, :any, default: nil
+  attr :font, :string, default: "font-semibold"
   slot :inner_block, required: true
 
   def label(assigns) do
     ~H"""
-    <label for={@for} class="block text-sm font-semibold leading-6 text-slate-800">
+    <label for={@for} class={["block text-sm leading-6 text-slate-800", @font]}>
       <%= render_slot(@inner_block) %>
     </label>
     """

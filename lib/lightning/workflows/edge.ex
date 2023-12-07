@@ -29,7 +29,7 @@ defmodule Lightning.Workflows.Edge do
           delete: boolean()
         }
 
-  @conditions [:on_job_success, :on_job_failure, :always]
+  @conditions [:on_job_success, :on_job_failure, :always, :js_expression]
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id
   schema "workflow_edges" do
