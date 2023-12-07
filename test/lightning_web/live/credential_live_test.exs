@@ -356,6 +356,104 @@ defmodule LightningWeb.CredentialLiveTest do
       assert flash == %{"info" => "Credential created successfully"}
     end
 
+    test "allows the user to define and save a new postgresql credential", %{
+      conn: conn
+    } do
+      {:ok, index_live, _html} = live(conn, ~p"/credentials")
+
+      {:ok, new_live, _html} =
+        index_live
+        |> element("a", "New Credential")
+        |> render_click()
+        |> follow_redirect(conn, ~p"/credentials/new")
+
+      # Pick a type
+
+      new_live |> select_credential_type("postgresql")
+      new_live |> click_continue()
+
+      refute new_live |> has_element?("#credential-type-picker")
+
+      assert new_live |> fill_credential(%{body: %{user: ""}}) =~
+               "can&#39;t be blank"
+
+      assert new_live |> submit_disabled()
+
+      assert new_live
+             |> click_save() =~ "can&#39;t be blank"
+
+      refute_redirected(new_live, ~p"/credentials")
+
+      # Check that the fields are rendered in the same order as the JSON schema
+      inputs_in_position =
+        new_live
+        |> element("#credential-form")
+        |> render()
+        |> Floki.parse_fragment!()
+        |> Floki.attribute("input", "name")
+
+      assert inputs_in_position == [
+               "credential[name]",
+               "credential[production]",
+               "credential[production]",
+               "credential[body][host]",
+               "credential[body][port]",
+               "credential[body][database]",
+               "credential[body][user]",
+               "credential[body][password]",
+               "credential[body][ssl]",
+               "credential[body][ssl]",
+               "credential[body][allowSelfSignedCert]",
+               "credential[body][allowSelfSignedCert]"
+             ]
+
+      body = %{
+        user: "user1",
+        password: "pass1",
+        host: "not a URI",
+        database: "test_db",
+        port: "5000",
+        ssl: "true",
+        allowSelfSignedCert: "false"
+      }
+
+      credential_name = "Cast Postgres Credential"
+
+      assert new_live
+             |> fill_credential(%{
+               name: credential_name,
+               body: body
+             }) =~
+               "expected to be a URI"
+
+      assert new_live
+             |> form("#credential-form",
+               credential: %{body: %{host: "http://localhost"}}
+             )
+             |> render_change()
+
+      refute new_live |> submit_disabled()
+
+      {:ok, _index_live, html} =
+        new_live
+        |> click_save()
+        |> follow_redirect(conn, ~p"/credentials")
+
+      assert %{
+               body: %{
+                 "port" => 5000,
+                 "ssl" => true,
+                 "allowSelfSignedCert" => false
+               }
+             } =
+               Lightning.Repo.get_by(Lightning.Credentials.Credential,
+                 name: credential_name
+               )
+
+      {_path, flash} = assert_redirect(new_live)
+      assert flash == %{"info" => "Credential created successfully"}
+    end
+
     test "allows the user to define and save a new http credential", %{
       conn: conn
     } do
