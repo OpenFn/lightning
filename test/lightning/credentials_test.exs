@@ -69,35 +69,6 @@ defmodule Lightning.CredentialsTest do
       assert Credentials.get_credential!(credential.id) == credential
     end
 
-    test "create_credential/1 with valid data creates a credential" do
-      valid_attrs = %{
-        body: %{},
-        name: "some name",
-        user_id: user_fixture().id,
-        schema: "raw",
-        project_credentials: [
-          %{project_id: project_fixture().id}
-        ]
-      }
-
-      assert {:ok, %Credential{} = credential} =
-               Credentials.create_credential(valid_attrs)
-
-      assert credential.body == %{}
-      assert credential.name == "some name"
-
-      assert from(a in Audit.base_query(),
-               where: a.item_id == ^credential.id and a.event == "created"
-             )
-             |> Repo.one!(),
-             "Has exactly one 'created' event"
-    end
-
-    test "create_credential/1 with invalid data returns error changeset" do
-      assert {:error, %Ecto.Changeset{}} =
-               Credentials.create_credential(@invalid_attrs)
-    end
-
     test "delete_credential/1 deletes a credential and removes it from associated jobs and projects" do
       user = user_fixture()
 
@@ -282,6 +253,77 @@ defmodule Lightning.CredentialsTest do
                user_id_3
              ) ==
                [project_id]
+    end
+  end
+
+  describe "create_credential/1" do
+    test "suceeds with raw schema" do
+      valid_attrs = %{
+        body: %{"username" => "user", "password" => "pass"},
+        name: "some name",
+        user_id: insert(:user).id,
+        schema: "raw",
+        project_credentials: [
+          %{project_id: insert(:project).id}
+        ]
+      }
+
+      assert {:ok, %Credential{} = credential} =
+               Credentials.create_credential(valid_attrs)
+
+      assert credential.body == %{"username" => "user", "password" => "pass"}
+      assert credential.name == "some name"
+
+      assert from(a in Audit.base_query(),
+               where: a.item_id == ^credential.id and a.event == "created"
+             )
+             |> Repo.one!(),
+             "Has exactly one 'created' event"
+    end
+
+    test "saves the body casting non string fields" do
+      body = %{
+        "user" => "user1",
+        "password" => "pass1",
+        "host" => "https://dbhost",
+        "database" => "test_db",
+        "port" => "5000",
+        "ssl" => "true",
+        "allowSelfSignedCert" => "false"
+      }
+
+      valid_attrs = %{
+        body: body,
+        name: "some name",
+        user_id: insert(:user).id,
+        schema: "postgresql",
+        project_credentials: [
+          %{project_id: insert(:project).id}
+        ]
+      }
+
+      assert {:ok, %Credential{} = credential} =
+               Credentials.create_credential(valid_attrs)
+
+      assert credential.body ==
+               Map.merge(body, %{
+                 "port" => 5000,
+                 "ssl" => true,
+                 "allowSelfSignedCert" => false
+               })
+
+      assert credential.name == "some name"
+
+      assert from(a in Audit.base_query(),
+               where: a.item_id == ^credential.id and a.event == "created"
+             )
+             |> Repo.one!(),
+             "Has exactly one 'created' event"
+    end
+
+    test "suceeds with invalid data" do
+      assert {:error, %Ecto.Changeset{}} =
+               Credentials.create_credential(@invalid_attrs)
     end
   end
 
