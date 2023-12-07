@@ -1,7 +1,8 @@
 defmodule Lightning.AttemptsTest do
   alias Lightning.Invocation
-  use Lightning.DataCase, async: true
+  use Lightning.DataCase
   import Lightning.Factories
+  import Mock
 
   alias Lightning.WorkOrders
   alias Lightning.Attempt
@@ -300,6 +301,91 @@ defmodule Lightning.AttemptsTest do
 
       assert_received %Lightning.WorkOrders.Events.WorkOrderUpdated{
         work_order: %{id: ^workorder_id}
+      }
+    end
+
+    test "indicates if a response was unsuccessful" do
+      dataclip = insert(:dataclip)
+      %{triggers: [trigger]} = workflow = insert(:simple_workflow)
+
+      %{attempts: [attempt]} =
+        work_order_for(trigger, workflow: workflow, dataclip: dataclip)
+        |> insert()
+
+      {:ok, attempt} =
+        Repo.update(attempt |> Ecto.Changeset.change(state: :claimed))
+
+      with_mock(
+        Lightning.Repo,
+        transaction: fn _multi -> {:error, nil, {:change, :set}, nil} end
+      ) do
+        assert Attempts.start_attempt(attempt) == {:error, {:change, :set}}
+      end
+    end
+
+    test "triggers a metric if starting the attempt was successful" do
+      dataclip = insert(:dataclip)
+      %{triggers: [trigger]} = workflow = insert(:simple_workflow)
+
+      %{attempts: [attempt]} =
+        work_order_for(trigger, workflow: workflow, dataclip: dataclip)
+        |> insert()
+
+      {:ok, attempt} =
+        Repo.update(attempt |> Ecto.Changeset.change(state: :claimed))
+
+      ref =
+        :telemetry_test.attach_event_handlers(
+          self(),
+          [[:domain, :attempt, :queue]]
+        )
+
+      {:ok,
+       %Attempt{
+         started_at: started_at,
+         inserted_at: inserted_at
+       }} =
+        Attempts.start_attempt(attempt)
+
+      delay = DateTime.diff(started_at, inserted_at, :millisecond)
+
+      assert_received {
+        [:domain, :attempt, :queue],
+        ^ref,
+        %{delay: ^delay},
+        %{}
+      }
+    end
+
+    test "does not trigger a metric if starting the attempt was unsuccessful" do
+      dataclip = insert(:dataclip)
+      %{triggers: [trigger]} = workflow = insert(:simple_workflow)
+
+      %{attempts: [attempt]} =
+        work_order_for(trigger, workflow: workflow, dataclip: dataclip)
+        |> insert()
+
+      {:ok, attempt} =
+        Repo.update(attempt |> Ecto.Changeset.change(state: :claimed))
+
+      ref =
+        :telemetry_test.attach_event_handlers(
+          self(),
+          [[:domain, :attempt, :queue]]
+        )
+
+      with_mock(
+        Lightning.Repo,
+        transaction: fn _multi -> {:error, nil, nil, nil} end
+      ) do
+        Attempts.start_attempt(attempt)
+      end
+
+      refute_received {
+        [:domain, :attempt, :queue],
+        ^ref,
+        %{delay: _delay},
+        %{}
       }
     end
   end

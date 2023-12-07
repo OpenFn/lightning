@@ -14,6 +14,8 @@ and this project adheres to
   [#1217](https://github.com/OpenFn/Lightning/issues/1217)
 - Fix Credential Creation Page UI
   [#1064](https://github.com/OpenFn/Lightning/issues/1064)
+- Custom metric to track Attempt queue delay
+  [#1556](https://github.com/OpenFn/Lightning/issues/1556)
 
 ### Changed
 
