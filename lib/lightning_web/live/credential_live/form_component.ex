@@ -211,17 +211,17 @@ defmodule LightningWeb.CredentialLive.FormComponent do
   end
 
   def handle_event("save", %{"credential" => credential_params}, socket) do
-    if !socket.assigns.can_create_project_credential do
-      {:noreply,
-       socket
-       |> put_flash(:error, "You are not authorized to perform this action.")
-       |> push_redirect(to: socket.assigns.return_to)}
-    else
+    if socket.assigns.can_create_project_credential do
       save_credential(
         socket,
         socket.assigns.action,
         credential_params
       )
+    else
+      {:noreply,
+       socket
+       |> put_flash(:error, "You are not authorized to perform this action.")
+       |> push_redirect(to: socket.assigns.return_to)}
     end
   end
 
