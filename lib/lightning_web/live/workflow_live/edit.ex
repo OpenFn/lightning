@@ -185,6 +185,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
                 send_form_changed(params)
               end
             }
+            can_create_project_credential={@can_edit_job}
             return_to={
               ~p"/projects/#{@project.id}/w/#{@workflow.id}?s=#{@selected_job.id}"
             }

@@ -8,7 +8,6 @@ defmodule LightningWeb.CredentialLiveTest do
   import Lightning.CredentialsFixtures
   import Lightning.Factories
 
-  alias Lightning.CredentialsFixtures
   alias Lightning.Credentials
 
   @create_attrs %{
@@ -520,20 +519,6 @@ defmodule LightningWeb.CredentialLiveTest do
       assert html =~ "some updated name"
     end
 
-    test "users can only edit their own credentials", %{
-      conn: conn
-    } do
-      # some credential for another user
-      credential = CredentialsFixtures.credential_fixture()
-
-      {:ok, _view, html} =
-        live(conn, ~p"/credentials/#{credential.id}")
-        |> follow_redirect(conn)
-        |> follow_redirect(conn)
-
-      assert html =~ "Sorry, we can&#39;t find anything here for you."
-    end
-
     test "marks a credential for use in a 'production' system", %{
       conn: conn,
       credential: credential
@@ -760,19 +745,18 @@ defmodule LightningWeb.CredentialLiveTest do
 
       expires_at = DateTime.to_unix(DateTime.utc_now()) + 3600
 
-      credential =
-        credential_fixture(
-          user_id: user.id,
-          schema: "googlesheets",
-          body: %{
-            access_token: "ya29.a0AVvZ...",
-            refresh_token: "1//03vpp6Li...",
-            expires_at: expires_at,
-            scope: "scope1 scope2"
-          }
-        )
+      credential_fixture(
+        user_id: user.id,
+        schema: "googlesheets",
+        body: %{
+          access_token: "ya29.a0AVvZ...",
+          refresh_token: "1//03vpp6Li...",
+          expires_at: expires_at,
+          scope: "scope1 scope2"
+        }
+      )
 
-      {:ok, edit_live, _html} = live(conn, ~p"/credentials/#{credential.id}")
+      {:ok, edit_live, _html} = live(conn, ~p"/credentials")
 
       assert_receive {:phoenix, :send_update, _}
 
@@ -794,19 +778,18 @@ defmodule LightningWeb.CredentialLiveTest do
 
       expires_at = DateTime.to_unix(DateTime.utc_now()) + 3600
 
-      credential =
-        credential_fixture(
-          user_id: user.id,
-          schema: "googlesheets",
-          body: %{
-            access_token: "ya29.a0AVvZ...",
-            refresh_token: "",
-            expires_at: expires_at,
-            scope: "scope1 scope2"
-          }
-        )
+      credential_fixture(
+        user_id: user.id,
+        schema: "googlesheets",
+        body: %{
+          access_token: "ya29.a0AVvZ...",
+          refresh_token: "",
+          expires_at: expires_at,
+          scope: "scope1 scope2"
+        }
+      )
 
-      {:ok, edit_live, _html} = live(conn, ~p"/credentials/#{credential.id}")
+      {:ok, edit_live, _html} = live(conn, ~p"/credentials")
 
       # Wait for next `send_update` triggered by the token Task calls
       assert_receive {:plug_conn, :sent}
@@ -835,17 +818,16 @@ defmodule LightningWeb.CredentialLiveTest do
 
       expires_at = DateTime.to_unix(DateTime.utc_now()) - 50
 
-      credential =
-        credential_fixture(
-          user_id: user.id,
-          schema: "googlesheets",
-          body: %{
-            access_token: "ya29.a0AVvZ...",
-            refresh_token: "1//03vpp6Li...",
-            expires_at: expires_at,
-            scope: "scope1 scope2"
-          }
-        )
+      credential_fixture(
+        user_id: user.id,
+        schema: "googlesheets",
+        body: %{
+          access_token: "ya29.a0AVvZ...",
+          refresh_token: "1//03vpp6Li...",
+          expires_at: expires_at,
+          scope: "scope1 scope2"
+        }
+      )
 
       expect_token(
         bypass,
@@ -860,7 +842,7 @@ defmodule LightningWeb.CredentialLiveTest do
         }
       )
 
-      {:ok, edit_live, _html} = live(conn, ~p"/credentials/#{credential.id}")
+      {:ok, edit_live, _html} = live(conn, ~p"/credentials")
 
       assert wait_for_assigns(edit_live, :userinfo),
              ":userinfo has not been set yet."
@@ -892,19 +874,18 @@ defmodule LightningWeb.CredentialLiveTest do
 
       expires_at = DateTime.to_unix(DateTime.utc_now()) + 3600
 
-      credential =
-        credential_fixture(
-          user_id: user.id,
-          schema: "googlesheets",
-          body: %{
-            access_token: "ya29.a0AVvZ...",
-            refresh_token: "1//03vpp6Li...",
-            expires_at: expires_at,
-            scope: "scope1 scope2"
-          }
-        )
+      credential_fixture(
+        user_id: user.id,
+        schema: "googlesheets",
+        body: %{
+          access_token: "ya29.a0AVvZ...",
+          refresh_token: "1//03vpp6Li...",
+          expires_at: expires_at,
+          scope: "scope1 scope2"
+        }
+      )
 
-      {:ok, edit_live, _html} = live(conn, ~p"/credentials/#{credential.id}")
+      {:ok, edit_live, _html} = live(conn, ~p"/credentials")
 
       assert wait_for_assigns(edit_live, :error)
 
@@ -951,19 +932,18 @@ defmodule LightningWeb.CredentialLiveTest do
 
       expires_at = DateTime.to_unix(DateTime.utc_now()) - 50
 
-      credential =
-        credential_fixture(
-          user_id: user.id,
-          schema: "googlesheets",
-          body: %{
-            access_token: "ya29.a0AVvZ...",
-            refresh_token: "1//03vpp6Li...",
-            expires_at: expires_at,
-            scope: "scope1 scope2"
-          }
-        )
+      credential_fixture(
+        user_id: user.id,
+        schema: "googlesheets",
+        body: %{
+          access_token: "ya29.a0AVvZ...",
+          refresh_token: "1//03vpp6Li...",
+          expires_at: expires_at,
+          scope: "scope1 scope2"
+        }
+      )
 
-      {:ok, edit_live, _html} = live(conn, ~p"/credentials/#{credential.id}")
+      {:ok, edit_live, _html} = live(conn, ~p"/credentials")
 
       assert wait_for_assigns(edit_live, :error)
 

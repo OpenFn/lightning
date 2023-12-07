@@ -24,6 +24,7 @@ defmodule LightningWeb.CredentialLive.FormComponent do
     :on_save,
     :button,
     :show_project_credentials,
+    :can_create_project_credential,
     :return_to
   ]
 
@@ -63,6 +64,9 @@ defmodule LightningWeb.CredentialLive.FormComponent do
      socket
      |> assign(type: nil)
      |> assign_credential_type(assigns)
+     |> assign(
+       can_create_project_credential: assigns.can_create_project_credential
+     )
      |> assign(
        assigns
        |> Map.filter(&match?({k, _} when k in @valid_assigns, &1))
@@ -207,11 +211,18 @@ defmodule LightningWeb.CredentialLive.FormComponent do
   end
 
   def handle_event("save", %{"credential" => credential_params}, socket) do
-    save_credential(
-      socket,
-      socket.assigns.action,
-      credential_params
-    )
+    if !socket.assigns.can_create_project_credential do
+      {:noreply,
+       socket
+       |> put_flash(:error, "You are not authorized to perform this action.")
+       |> push_redirect(to: socket.assigns.return_to)}
+    else
+      save_credential(
+        socket,
+        socket.assigns.action,
+        credential_params
+      )
+    end
   end
 
   def handle_event("close_modal", _, socket) do

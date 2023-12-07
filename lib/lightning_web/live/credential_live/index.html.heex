@@ -25,6 +25,7 @@
       projects={@projects}
       project={nil}
       show_project_credentials={true}
+      can_create_project_credential={true}
       return_to={~p"/credentials"}
     />
     <%= if @live_action == :delete do %>
@@ -87,6 +88,7 @@
           projects={@projects}
           project={nil}
           show_project_credentials={true}
+          can_create_project_credential={true}
           return_to={~p"/credentials"}
         />
       <% end %>
