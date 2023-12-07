@@ -57,7 +57,18 @@ defmodule LightningWeb.Endpoint do
     parsers: [
       :urlencoded,
       :multipart,
-      {:json, length: Application.compile_env(:lightning, :max_dataclip_size)}
+      {
+        :json,
+        # TODO - Note that `get_env` works here to load and set the json plug
+        # option correctly when a system environment variable is present during
+        # startup, but the warning wants us to use compile_env instead. Using
+        # compile_env does NOT work when a system ENV is used at startup. When
+        # we turn on the credo checks for this we will need to decide what to do
+        # here... lots of people on the internet seem to disagree about the best
+        # way to dynamically configure Plug.Parsers.JSON
+        #  Application.compile_env(:lightning, :max_dataclip_size, 10_000_000)}
+        length: Application.get_env(:lightning, :max_dataclip_size)
+      }
     ],
     pass: ["*/*"],
     json_decoder: Phoenix.json_library()
