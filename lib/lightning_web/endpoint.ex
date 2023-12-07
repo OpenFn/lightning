@@ -57,9 +57,7 @@ defmodule LightningWeb.Endpoint do
     parsers: [
       :urlencoded,
       :multipart,
-      # Increase to 10MB max request size only for JSON parser
-      {:json,
-       length: Application.get_env(:lightning, :max_dataclip_size, 10_000_000)}
+      {:json, length: Application.compile_env(:lightning, :max_dataclip_size)}
     ],
     pass: ["*/*"],
     json_decoder: Phoenix.json_library()
