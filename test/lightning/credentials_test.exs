@@ -259,8 +259,8 @@ defmodule Lightning.CredentialsTest do
   describe "create_credential/1" do
     test "suceeds with raw schema" do
       valid_attrs = %{
-        body: %{"username" => "user", "password" => "pass"},
-        name: "some name",
+        body: %{"username" => "user", "password" => "pass", "port" => 5000},
+        name: "some raw credential",
         user_id: insert(:user).id,
         schema: "raw",
         project_credentials: [
@@ -271,8 +271,13 @@ defmodule Lightning.CredentialsTest do
       assert {:ok, %Credential{} = credential} =
                Credentials.create_credential(valid_attrs)
 
-      assert credential.body == %{"username" => "user", "password" => "pass"}
-      assert credential.name == "some name"
+      assert credential.body == %{
+               "username" => "user",
+               "password" => "pass",
+               "port" => 5000
+             }
+
+      assert credential.name == "some raw credential"
 
       assert from(a in Audit.base_query(),
                where: a.item_id == ^credential.id and a.event == "created"

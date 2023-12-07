@@ -434,7 +434,7 @@ defmodule LightningWeb.CredentialLiveTest do
 
       refute new_live |> submit_disabled()
 
-      {:ok, _index_live, html} =
+      {:ok, _index_live, _html} =
         new_live
         |> click_save()
         |> follow_redirect(conn, ~p"/credentials")
