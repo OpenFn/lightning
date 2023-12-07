@@ -860,6 +860,86 @@ defmodule LightningWeb.ProjectLiveTest do
       end)
     end
 
+    test "non authorized project users can't create new credentials in the project credentials page",
+         %{
+           conn: conn,
+           user: user
+         } do
+      {:ok, project} =
+        Lightning.Projects.create_project(%{
+          name: "project-1",
+          project_users: [%{user_id: user.id, role: :viewer}]
+        })
+
+      {:ok, view, html} =
+        live(
+          conn,
+          Routes.project_project_settings_path(conn, :index, project.id) <>
+            "#credentials"
+        )
+
+      credential_name = "My Credential"
+
+      refute html =~ credential_name
+
+      view |> select_credential_type("http")
+      view |> click_continue()
+
+      assert view
+             |> fill_credential(%{
+               name: credential_name,
+               body: %{
+                 username: "foo",
+                 password: "bar",
+                 baseUrl: "http://localhost"
+               }
+             })
+
+      {:ok, _view, html} =
+        view
+        |> click_save()
+        |> follow_redirect(
+          conn,
+          ~p"/projects/#{project}/settings#credentials"
+        )
+
+      assert html =~ "You are not authorized to perform this action."
+      refute html =~ credential_name
+    end
+
+    test "click on cancel button to close credential creation modal", %{
+      conn: conn,
+      user: user
+    } do
+      {:ok, project} =
+        Lightning.Projects.create_project(%{
+          name: "project-1",
+          project_users: [%{user_id: user.id, role: :viewer}]
+        })
+
+      credential_name = "My Credential"
+
+      {:ok, view, html} =
+        live(
+          conn,
+          Routes.project_project_settings_path(conn, :index, project.id) <>
+            "#credentials"
+        )
+
+      refute html =~ credential_name
+
+      {:ok, _view, html} =
+        view
+        |> element("button", "Cancel")
+        |> render_click()
+        |> follow_redirect(
+          conn,
+          ~p"/projects/#{project}/settings#credentials"
+        )
+
+      refute html =~ credential_name
+    end
+
     test "project admin can view project security page",
          %{
            conn: conn,
