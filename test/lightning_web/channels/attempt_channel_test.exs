@@ -238,8 +238,10 @@ defmodule LightningWeb.AttemptChannelTest do
     end
   end
 
-  describe "cast credential types" do
-    defp set_postgresql_credential(_context) do
+  describe "fetch:credential" do
+    test "doesn't cast credential body fields" do
+      user = insert(:user)
+
       credential =
         insert(:credential,
           name: "Test Postgres",
@@ -252,16 +254,13 @@ defmodule LightningWeb.AttemptChannelTest do
             ssl: "true",
             allowSelfSignedCert: "false"
           },
-          schema: "postgresql"
+          schema: "postgresql",
+          user: user
         )
 
-      {:ok, credential: credential, user: insert(:user)}
-    end
+      %{socket: socket} =
+        create_socket_and_attempt(%{credential: credential, user: user})
 
-    setup :set_postgresql_credential
-    setup :create_socket_and_attempt
-
-    test "fetch:credential", %{socket: socket, credential: credential} do
       ref = push(socket, "fetch:credential", %{"id" => credential.id})
 
       assert_reply ref,
@@ -273,6 +272,43 @@ defmodule LightningWeb.AttemptChannelTest do
                      "password" => "pass1",
                      "port" => "5000",
                      "ssl" => "true",
+                     "user" => "user1"
+                   }
+    end
+
+    test "returns saved credential body" do
+      user = insert(:user)
+
+      credential =
+        insert(:credential,
+          name: "Test Postgres",
+          body: %{
+            user: "user1",
+            password: "pass1",
+            host: "https://dbhost",
+            database: "test_db",
+            port: 5000,
+            ssl: true,
+            allowSelfSignedCert: false
+          },
+          schema: "postgresql",
+          user: user
+        )
+
+      %{socket: socket} =
+        create_socket_and_attempt(%{credential: credential, user: user})
+
+      ref = push(socket, "fetch:credential", %{"id" => credential.id})
+
+      assert_reply ref,
+                   :ok,
+                   %{
+                     "allowSelfSignedCert" => false,
+                     "database" => "test_db",
+                     "host" => "https://dbhost",
+                     "password" => "pass1",
+                     "port" => 5000,
+                     "ssl" => true,
                      "user" => "user1"
                    }
     end
