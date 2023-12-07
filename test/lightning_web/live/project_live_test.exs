@@ -5,6 +5,7 @@ defmodule LightningWeb.ProjectLiveTest do
   import Lightning.ProjectsFixtures
   import Lightning.AccountsFixtures
   import Lightning.Factories
+  import LightningWeb.CredentialLiveHelpers
 
   import Lightning.ApplicationHelpers,
     only: [dynamically_absorb_delay: 1, put_temporary_env: 3]
@@ -808,6 +809,55 @@ defmodule LightningWeb.ProjectLiveTest do
       assert html =~ credential.schema
       assert html =~ credential.name
       assert html =~ credential.user.email
+    end
+
+    test "authorized project users can create new credentials in the project credentials page",
+         %{
+           conn: conn,
+           user: user
+         } do
+      [:admin, :editor]
+      |> Enum.each(fn role ->
+        {:ok, project} =
+          Lightning.Projects.create_project(%{
+            name: "project-1",
+            project_users: [%{user_id: user.id, role: role}]
+          })
+
+        {:ok, view, html} =
+          live(
+            conn,
+            Routes.project_project_settings_path(conn, :index, project.id) <>
+              "#credentials"
+          )
+
+        credential_name = "My Credential"
+
+        refute html =~ credential_name
+
+        view |> select_credential_type("http")
+        view |> click_continue()
+
+        assert view
+               |> fill_credential(%{
+                 name: credential_name,
+                 body: %{
+                   username: "foo",
+                   password: "bar",
+                   baseUrl: "http://localhost"
+                 }
+               })
+
+        {:ok, _view, html} =
+          view
+          |> click_save()
+          |> follow_redirect(
+            conn,
+            ~p"/projects/#{project}/settings#credentials"
+          )
+
+        assert html =~ credential_name
+      end)
     end
 
     test "project admin can view project security page",
