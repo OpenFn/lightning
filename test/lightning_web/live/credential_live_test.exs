@@ -348,33 +348,25 @@ defmodule LightningWeb.CredentialLiveTest do
     } do
       {:ok, index_live, _html} = live(conn, ~p"/credentials")
 
-      {:ok, new_live, _html} =
-        index_live
-        |> element("button", "New Credential")
-        |> render_click()
-        |> follow_redirect(conn, ~p"/credentials/new")
+      index_live |> select_credential_type("postgresql")
+      index_live |> click_continue()
 
-      # Pick a type
+      refute index_live |> has_element?("#credential-type-picker")
 
-      new_live |> select_credential_type("postgresql")
-      new_live |> click_continue()
-
-      refute new_live |> has_element?("#credential-type-picker")
-
-      assert new_live |> fill_credential(%{body: %{user: ""}}) =~
+      assert index_live |> fill_credential(%{body: %{user: ""}}) =~
                "can&#39;t be blank"
 
-      assert new_live |> submit_disabled()
+      assert index_live |> submit_disabled()
 
-      assert new_live
+      assert index_live
              |> click_save() =~ "can&#39;t be blank"
 
-      refute_redirected(new_live, ~p"/credentials")
+      refute_redirected(index_live, ~p"/credentials")
 
       # Check that the fields are rendered in the same order as the JSON schema
       inputs_in_position =
-        new_live
-        |> element("#credential-form")
+        index_live
+        |> element("#credential-form-new")
         |> render()
         |> Floki.parse_fragment!()
         |> Floki.attribute("input", "name")
@@ -406,23 +398,23 @@ defmodule LightningWeb.CredentialLiveTest do
 
       credential_name = "Cast Postgres Credential"
 
-      assert new_live
+      assert index_live
              |> fill_credential(%{
                name: credential_name,
                body: body
              }) =~
                "expected to be a URI"
 
-      assert new_live
-             |> form("#credential-form",
+      assert index_live
+             |> form("#credential-form-new",
                credential: %{body: %{host: "http://localhost"}}
              )
              |> render_change()
 
-      refute new_live |> submit_disabled()
+      refute index_live |> submit_disabled()
 
-      {:ok, _index_live, _html} =
-        new_live
+      {:ok, _index_live, html} =
+        index_live
         |> click_save()
         |> follow_redirect(conn, ~p"/credentials")
 
@@ -437,8 +429,7 @@ defmodule LightningWeb.CredentialLiveTest do
                  name: credential_name
                )
 
-      {_path, flash} = assert_redirect(new_live)
-      assert flash == %{"info" => "Credential created successfully"}
+      assert html =~ "Credential created successfully"
     end
 
     test "allows the user to define and save a new http credential", %{

@@ -23,8 +23,6 @@ defmodule LightningWeb.Components.NewInputs do
   slot :inner_block, required: true
 
   def button(assigns) do
-    IO.inspect(assigns[:rest])
-
     ~H"""
     <.tooltip_when_disabled
       id={@rest[:id]}

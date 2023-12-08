@@ -563,7 +563,7 @@ defmodule LightningWeb.CredentialLive.FormComponent do
   end
 
   defp save_credential(
-         %{changeset: changeset, type: schema_name} = socket,
+         %{assigns: %{changeset: changeset, type: schema_name}} = socket,
          :new,
          credential_params
        ) do
