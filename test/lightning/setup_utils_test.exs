@@ -1,7 +1,6 @@
 defmodule Lightning.SetupUtilsTest do
   alias Lightning.Invocation
   use Lightning.DataCase, async: true
-  # use Mimic
 
   alias Lightning.{Accounts, Projects, Workflows, Jobs, SetupUtils}
   alias Lightning.Accounts.User
@@ -163,7 +162,13 @@ defmodule Lightning.SetupUtilsTest do
           ]
         )
 
-      workflow = Repo.preload(workflow, [:edges, :jobs, :triggers, :project])
+      workflow =
+        Repo.preload(workflow, [:edges, :triggers, :project, jobs: [:credential]])
+
+      assert workflow.jobs
+             |> Enum.find(&(&1.name =~ "Job 3"))
+             |> Map.get(:credential),
+             "Job 3 should have a credential"
 
       assert workflow.project.id == project.id
 
@@ -236,7 +241,7 @@ defmodule Lightning.SetupUtilsTest do
       assert DateTime.diff(
                first_run.finished_at,
                last_run.finished_at,
-               :second
+               :millisecond
              ) < 0
 
       assert first_run.exit_reason == "success"
@@ -258,7 +263,7 @@ defmodule Lightning.SetupUtilsTest do
                  "names" => ["Genevieve", "Wimplemews"]
                }
 
-      assert Invocation.assemble_logs_for_run(first_run) ==
+      assert Invocation.assemble_logs_for_run(first_run) <> "\n" ==
                """
                -- THIS IS ONLY A SAMPLE --
                [CLI] ℹ Versions:
@@ -319,7 +324,7 @@ defmodule Lightning.SetupUtilsTest do
                  ]
                }
 
-      assert Invocation.assemble_logs_for_run(last_run) ==
+      assert Invocation.assemble_logs_for_run(last_run) <> "\n" ==
                """
                -- THIS IS ONLY A SAMPLE --
                [CLI] ℹ Versions:
@@ -399,7 +404,7 @@ defmodule Lightning.SetupUtilsTest do
                  ]
                }
 
-      assert Invocation.assemble_logs_for_run(last_run) == """
+      assert Invocation.assemble_logs_for_run(last_run) <> "\n" == """
              -- THIS IS ONLY A SAMPLE --
              [CLI] ℹ Versions:
                   ▸ node.js                   18.12.0
@@ -565,11 +570,15 @@ defmodule Lightning.SetupUtilsTest do
       assert DateTime.diff(
                first_run.finished_at,
                second_run.finished_at,
-               :second
+               :millisecond
              ) < 0
 
       # second run is older than last run
-      assert DateTime.diff(second_run.finished_at, last_run.finished_at, :second) <
+      assert DateTime.diff(
+               second_run.finished_at,
+               last_run.finished_at,
+               :millisecond
+             ) <
                0
 
       assert first_run.exit_reason == "success"
@@ -599,7 +608,7 @@ defmodule Lightning.SetupUtilsTest do
                  "references" => []
                }
 
-      assert Invocation.assemble_logs_for_run(first_run) ==
+      assert Invocation.assemble_logs_for_run(first_run) <> "\n" ==
                """
                -- THIS IS ONLY A SAMPLE --
                [CLI] ℹ Versions:
@@ -648,7 +657,7 @@ defmodule Lightning.SetupUtilsTest do
                  "references" => []
                }
 
-      assert Invocation.assemble_logs_for_run(last_run) ==
+      assert Invocation.assemble_logs_for_run(last_run) <> "\n" ==
                """
                -- THIS IS ONLY A SAMPLE --
                [CLI] ℹ Versions:
@@ -696,24 +705,25 @@ defmodule Lightning.SetupUtilsTest do
                  "references" => []
                }
 
-      assert Invocation.assemble_logs_for_run(second_run) == """
-             -- THIS IS ONLY A SAMPLE --
-             [CLI] ℹ Versions:
-                  ▸ node.js                  18.12.0
-                  ▸ cli                      0.0.32
-                  ▸ runtime                  0.0.20
-                  ▸ compiler                 0.0.26
-                  ▸ @openfn/language-http    4.2.6
-             [CLI] ✔ Loaded state from /tmp/state-1686840746-126941-1hou2fm.json
-             [CLI] ℹ Loaded typedefs for @openfn/language-http@latest
-             [CMP] ℹ Added import statement for @openfn/language-http
-             [CMP] ℹ Added export * statement for @openfn/language-http
-             [CLI] ✔ Compiled job from /tmp/expression-1686840746-126941-1wuk06h.js
-             [R/T] ℹ Resolved adaptor @openfn/language-http to version 4.2.6
-             [R/T] ✔ Operation 1 complete in 0ms
-             [CLI] ✔ Writing output to /tmp/output-1686840746-126941-i2yb2g.json
-             [CLI] ✔ Done in 223ms! ✨
-             """
+      assert Invocation.assemble_logs_for_run(second_run) <> "\n" ==
+               """
+               -- THIS IS ONLY A SAMPLE --
+               [CLI] ℹ Versions:
+                    ▸ node.js                  18.12.0
+                    ▸ cli                      0.0.32
+                    ▸ runtime                  0.0.20
+                    ▸ compiler                 0.0.26
+                    ▸ @openfn/language-http    4.2.6
+               [CLI] ✔ Loaded state from /tmp/state-1686840746-126941-1hou2fm.json
+               [CLI] ℹ Loaded typedefs for @openfn/language-http@latest
+               [CMP] ℹ Added import statement for @openfn/language-http
+               [CMP] ℹ Added export * statement for @openfn/language-http
+               [CLI] ✔ Compiled job from /tmp/expression-1686840746-126941-1wuk06h.js
+               [R/T] ℹ Resolved adaptor @openfn/language-http to version 4.2.6
+               [R/T] ✔ Operation 1 complete in 0ms
+               [CLI] ✔ Writing output to /tmp/output-1686840746-126941-i2yb2g.json
+               [CLI] ✔ Done in 223ms! ✨
+               """
     end
 
     test "create_dhis2_project/1", %{
@@ -784,7 +794,7 @@ defmodule Lightning.SetupUtilsTest do
 
       assert failed_run.output_dataclip == nil
 
-      assert Invocation.assemble_logs_for_run(failed_run) ==
+      assert Invocation.assemble_logs_for_run(failed_run) <> "\n" ==
                """
                -- THIS IS ONLY A SAMPLE --
                [CLI] ℹ Versions:
@@ -863,10 +873,13 @@ defmodule Lightning.SetupUtilsTest do
   end
 
   defp get_runs_from_workorder(workorder, attempt_idx \\ 0) do
-    workorder
-    |> Repo.preload(attempts: [:runs])
-    |> Map.get(:attempts)
-    |> Enum.at(attempt_idx)
+    attempt_query =
+      Ecto.assoc(workorder, :attempts)
+      |> offset(^attempt_idx)
+      |> limit(1)
+
+    from(a in attempt_query, preload: [:runs])
+    |> Repo.one()
     |> Map.get(:runs)
   end
 end

@@ -205,13 +205,13 @@ defmodule Lightning.Attempts do
 
   The Run is created with and marked as started at the current time.
   """
-  @spec start_run(%{required(binary()) => Ecto.UUID.t()}) ::
+  @spec start_run(map()) ::
           {:ok, Lightning.Invocation.Run.t()} | {:error, Ecto.Changeset.t()}
   def start_run(params) do
     Handlers.StartRun.call(params)
   end
 
-  @spec complete_run(%{required(binary()) => binary()}) ::
+  @spec complete_run(map()) ::
           {:ok, Lightning.Invocation.Run.t()} | {:error, Ecto.Changeset.t()}
   def complete_run(params) do
     Handlers.CompleteRun.call(params)
