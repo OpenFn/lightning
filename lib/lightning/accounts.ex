@@ -257,8 +257,7 @@ defmodule Lightning.Accounts do
     Enum.map_reduce(backup_codes, false, fn backup, valid? ->
       if Plug.Crypto.secure_compare(backup.code, user_code) and
            is_nil(backup.used_at) do
-        {Ecto.Changeset.change(backup, %{used_at: NaiveDateTime.utc_now()}),
-         true}
+        {Ecto.Changeset.change(backup, %{used_at: DateTime.utc_now()}), true}
       else
         {backup, valid?}
       end
