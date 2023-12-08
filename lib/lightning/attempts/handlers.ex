@@ -30,9 +30,16 @@ defmodule Lightning.Attempts.Handlers do
         :attempt_id,
         :run_id,
         :job_id,
-        :input_dataclip_id
+        :input_dataclip_id,
+        :started_at
       ])
-      |> put_change(:started_at, DateTime.utc_now())
+      |> then(fn changeset ->
+        if get_change(changeset, :started_at) do
+          changeset
+        else
+          put_change(changeset, :started_at, DateTime.utc_now())
+        end
+      end)
       |> validate_required([
         :attempt_id,
         :run_id,
@@ -152,14 +159,32 @@ defmodule Lightning.Attempts.Handlers do
         :reason,
         :error_type,
         :error_message,
-        :run_id
+        :run_id,
+        :finished_at
       ])
-      |> put_change(:finished_at, DateTime.utc_now())
+      |> then(fn changeset ->
+        if get_change(changeset, :finished_at) do
+          changeset
+        else
+          put_change(changeset, :finished_at, DateTime.utc_now())
+        end
+      end)
+      |> then(fn changeset ->
+        output_dataclip_id = get_change(changeset, :output_dataclip_id)
+        output_dataclip = get_change(changeset, :output_dataclip)
+
+        case {output_dataclip, output_dataclip_id} do
+          {nil, nil} ->
+            changeset
+
+          _ ->
+            changeset
+            |> validate_required([:output_dataclip, :output_dataclip_id])
+        end
+      end)
       |> validate_required([
         :attempt_id,
         :finished_at,
-        :output_dataclip,
-        :output_dataclip_id,
         :project_id,
         :reason,
         :run_id
@@ -178,7 +203,7 @@ defmodule Lightning.Attempts.Handlers do
     defp update(complete_run) do
       Repo.transact(fn ->
         with %Run{} = run <- get_run(complete_run.run_id),
-             {:ok, _} <- to_dataclip(complete_run) |> Repo.insert() do
+             {:ok, _} <- maybe_save_dataclip(complete_run) do
           update_run(run, complete_run)
         else
           nil ->
@@ -198,7 +223,11 @@ defmodule Lightning.Attempts.Handlers do
       |> Repo.one()
     end
 
-    defp to_dataclip(%__MODULE__{
+    defp maybe_save_dataclip(%__MODULE__{output_dataclip: nil}) do
+      {:ok, nil}
+    end
+
+    defp maybe_save_dataclip(%__MODULE__{
            output_dataclip: output_dataclip,
            project_id: project_id,
            output_dataclip_id: dataclip_id
@@ -209,6 +238,7 @@ defmodule Lightning.Attempts.Handlers do
         body: output_dataclip |> Jason.decode!(),
         type: :run_result
       })
+      |> Repo.insert()
     end
 
     defp update_run(run, %{
