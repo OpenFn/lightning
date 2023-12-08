@@ -40,7 +40,7 @@ defmodule LightningWeb.JobLive.CredentialPicker do
       />
 
       <div :if={!@disabled} class="text-right">
-        <.button
+        <button
           id="new-credential-button"
           type="button"
           class="text-indigo-400 underline underline-offset-2 hover:text-indigo-500 text-xs"
@@ -48,7 +48,7 @@ defmodule LightningWeb.JobLive.CredentialPicker do
           phx-target={@myself}
         >
           New credential
-        </.button>
+        </button>
       </div>
     </div>
     """
