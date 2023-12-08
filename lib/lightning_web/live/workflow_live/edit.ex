@@ -694,6 +694,14 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
     IO.inspect(socket.assigns, label: "what do we have here?")
 
+    # TODO - get attempt.id (optional, from URL is fine)
+    # assigns.follow_attempt_id DONE!
+
+    # TODO - get attempt_run.run.input_dataclip_id (optional)
+
+    # TODO - get dataclip_id (optional, from URL is fine)
+    # assigns.selected_dataclip_id (FRANK?)
+
     socket = socket |> apply_params(workflow_params)
 
     if can_run_job && can_edit_job do
