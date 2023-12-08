@@ -915,57 +915,58 @@ defmodule Lightning.SetupUtils do
 
         Attempts.start_attempt(attempt)
 
-        run_params
-        |> Enum.reduce(%{}, fn run, previous ->
-          run_id = Ecto.UUID.generate()
+        _runs =
+          run_params
+          |> Enum.reduce(%{}, fn run, previous ->
+            run_id = Ecto.UUID.generate()
 
-          input_dataclip_id =
-            Map.get(
-              run,
-              :input_dataclip_id,
-              Map.get(previous, :output_dataclip_id, input_dataclip.id)
-            )
+            input_dataclip_id =
+              Map.get(
+                run,
+                :input_dataclip_id,
+                Map.get(previous, :output_dataclip_id, input_dataclip.id)
+              )
 
-          Attempts.start_run(%{
-            attempt_id: attempt.id,
-            run_id: run_id,
-            job_id: run.job_id,
-            input_dataclip_id: input_dataclip_id,
-            started_at: Ticker.next(ticker)
-          })
-
-          run.log_lines
-          |> Enum.each(fn line ->
-            Attempts.append_attempt_log(attempt, %{
-              run_id: run_id,
-              message: line.message,
-              timestamp: Ticker.next(ticker)
-            })
-          end)
-
-          complete_run_params =
-            %{
+            Attempts.start_run(%{
               attempt_id: attempt.id,
-              project_id: workflow.project_id,
               run_id: run_id,
-              reason: run.exit_reason,
-              finished_at: Ticker.next(ticker)
-            }
-            |> Map.merge(
-              if run[:output_dataclip] do
-                %{
-                  output_dataclip_id: Ecto.UUID.generate(),
-                  output_dataclip: run.output_dataclip
-                }
-              else
-                %{}
-              end
-            )
+              job_id: run.job_id,
+              input_dataclip_id: input_dataclip_id,
+              started_at: Ticker.next(ticker)
+            })
 
-          {:ok, run} = Attempts.complete_run(complete_run_params)
+            run.log_lines
+            |> Enum.each(fn line ->
+              Attempts.append_attempt_log(attempt, %{
+                run_id: run_id,
+                message: line.message,
+                timestamp: Ticker.next(ticker)
+              })
+            end)
 
-          run
-        end)
+            complete_run_params =
+              %{
+                attempt_id: attempt.id,
+                project_id: workflow.project_id,
+                run_id: run_id,
+                reason: run.exit_reason,
+                finished_at: Ticker.next(ticker)
+              }
+              |> Map.merge(
+                if run[:output_dataclip] do
+                  %{
+                    output_dataclip_id: Ecto.UUID.generate(),
+                    output_dataclip: run.output_dataclip
+                  }
+                else
+                  %{}
+                end
+              )
+
+            {:ok, run} = Attempts.complete_run(complete_run_params)
+
+            run
+          end)
 
         state =
           List.last(run_params)

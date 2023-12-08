@@ -16,11 +16,14 @@ and this project adheres to
 ### Changed
 
 - Updated CLI to 0.4.10 (fixes logging)
+- Changed UserBackupToken model to use UTC timestamps (6563cb77)
 
 ### Fixed
 
 - Adjusted z-index for Monaco Editor's sibling element to resolve layout
   conflict [#1329](https://github.com/OpenFn/Lightning/issues/1329)
+- Demo script sets up example Runs with their log lines in a consistant order.
+  [#1487](https://github.com/OpenFn/Lightning/issues/1487)
 
 ## [v0.11.0] - 2023-12-06
 

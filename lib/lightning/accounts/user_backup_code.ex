@@ -18,7 +18,7 @@ defmodule Lightning.Accounts.UserBackupCode do
       redact: true,
       autogenerate: {__MODULE__, :generate_backup_code, []}
 
-    field :used_at, :naive_datetime_usec
+    field :used_at, :utc_datetime_usec
     belongs_to :user, Lightning.Accounts.User
 
     timestamps()
