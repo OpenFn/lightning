@@ -7,7 +7,7 @@
     <meta name="generator" content="ExDoc v0.30.9">
     <meta name="project" content="Lightning v0.11.0">
 
-    <title>Lightning.SetupUtils — Lightning v0.11.0</title>
+    <title>Lightning.SetupUtils.Ticker — Lightning v0.11.0</title>
     <link rel="stylesheet" href="dist/html-elixir-XFYN5IVA.css" />
 
 
@@ -125,20 +125,16 @@ Pages
 </button>
 
 
-    <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/setup_utils.ex#L1" title="View Source" class="icon-action" rel="help">
+    <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/setup_utils.ex#L5" title="View Source" class="icon-action" rel="help">
       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
       <span class="sr-only">View Source</span>
     </a>
 
-  <span translate="no">Lightning.SetupUtils</span> 
+  <span translate="no">Lightning.SetupUtils.Ticker</span> 
   <small class="app-vsn" translate="no">(Lightning v0.11.0)</small>
 
 </h1>
 
-
-  <section id="moduledoc">
-<p>SetupUtils encapsulates logic for setting up initial data for various sites.</p>
-  </section>
 
 
   <section id="summary" class="details-list">
@@ -155,26 +151,17 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#approximate_state_for_attempts_and_workorders/0" translate="no">approximate_state_for_attempts_and_workorders()</a>
+        <a href="#child_spec/1" translate="no">child_spec(arg)</a>
 
       </div>
 
-        <div class="summary-synopsis"><p>This is a helper function that can be used to aid instance administrators in
-migrating from v0.9.3 to v0.10.0.</p></div>
+        <div class="summary-synopsis"><p>Returns a specification to start this module under a supervisor.</p></div>
 
     </div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#create_dhis2_project/1" translate="no">create_dhis2_project(project_users)</a>
-
-      </div>
-
-    </div>
-
-    <div class="summary-row">
-      <div class="summary-signature">
-        <a href="#create_openhie_project/1" translate="no">create_openhie_project(project_users)</a>
+        <a href="#next/1" translate="no">next(ticker)</a>
 
       </div>
 
@@ -182,7 +169,7 @@ migrating from v0.9.3 to v0.10.0.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#create_starter_project/2" translate="no">create_starter_project(name, project_users)</a>
+        <a href="#start_link/1" translate="no">start_link(start_time)</a>
 
       </div>
 
@@ -190,25 +177,7 @@ migrating from v0.9.3 to v0.10.0.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#create_users/1" translate="no">create_users(opts)</a>
-
-      </div>
-
-    </div>
-
-    <div class="summary-row">
-      <div class="summary-signature">
-        <a href="#setup_demo/1" translate="no">setup_demo(opts \\ [create_super: false])</a>
-
-      </div>
-
-        <div class="summary-synopsis"><p>Creates initial data and returns the created records.</p></div>
-
-    </div>
-
-    <div class="summary-row">
-      <div class="summary-signature">
-        <a href="#tear_down/1" translate="no">tear_down(opts \\ [destroy_super: false])</a>
+        <a href="#stop/1" translate="no">stop(pid)</a>
 
       </div>
 
@@ -227,16 +196,16 @@ migrating from v0.9.3 to v0.10.0.</p></div>
       <span class="text">Functions</span>
     </h1>
     <div class="functions-list">
-<section class="detail" id="approximate_state_for_attempts_and_workorders/0">
+<section class="detail" id="child_spec/1">
 
   <div class="detail-header">
-    <a href="#approximate_state_for_attempts_and_workorders/0" class="detail-link" title="Link to this function">
+    <a href="#child_spec/1" class="detail-link" title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">approximate_state_for_attempts_and_workorders()</h1>
+    <h1 class="signature" translate="no">child_spec(arg)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/setup_utils.ex#L1020" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/setup_utils.ex#L6" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -246,44 +215,19 @@ migrating from v0.9.3 to v0.10.0.</p></div>
 
   <section class="docstring">
 
-<p>This is a helper function that can be used to aid instance administrators in
-migrating from v0.9.3 to v0.10.0.</p><p>While the final state of an attempt is now handled by the worker, this script
-can be called once after migration (with no workers attached) to provide an
-approximate final state for attempts that were finished before the migration.</p>
+<p>Returns a specification to start this module under a supervisor.</p><p>See <a href="https://hexdocs.pm/elixir/Supervisor.html"><code class="inline">Supervisor</code></a>.</p>
   </section>
 </section>
-<section class="detail" id="create_dhis2_project/1">
+<section class="detail" id="next/1">
 
   <div class="detail-header">
-    <a href="#create_dhis2_project/1" class="detail-link" title="Link to this function">
+    <a href="#next/1" class="detail-link" title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">create_dhis2_project(project_users)</h1>
+    <h1 class="signature" translate="no">next(ticker)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/setup_utils.ex#L655" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
-
-
-  </div>
-
-  <section class="docstring">
-
-
-  </section>
-</section>
-<section class="detail" id="create_openhie_project/1">
-
-  <div class="detail-header">
-    <a href="#create_openhie_project/1" class="detail-link" title="Link to this function">
-      <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
-    </a>
-    <h1 class="signature" translate="no">create_openhie_project(project_users)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/setup_utils.ex#L435" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/setup_utils.ex#L12" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -296,16 +240,16 @@ approximate final state for attempts that were finished before the migration.</p
 
   </section>
 </section>
-<section class="detail" id="create_starter_project/2">
+<section class="detail" id="start_link/1">
 
   <div class="detail-header">
-    <a href="#create_starter_project/2" class="detail-link" title="Link to this function">
+    <a href="#start_link/1" class="detail-link" title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">create_starter_project(name, project_users)</h1>
+    <h1 class="signature" translate="no">start_link(start_time)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/setup_utils.ex#L174" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/setup_utils.ex#L8" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -318,76 +262,16 @@ approximate final state for attempts that were finished before the migration.</p
 
   </section>
 </section>
-<section class="detail" id="create_users/1">
+<section class="detail" id="stop/1">
 
   <div class="detail-header">
-    <a href="#create_users/1" class="detail-link" title="Link to this function">
+    <a href="#stop/1" class="detail-link" title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">create_users(opts)</h1>
+    <h1 class="signature" translate="no">stop(pid)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/setup_utils.ex#L124" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
-
-
-  </div>
-
-  <section class="docstring">
-
-
-  </section>
-</section>
-<section class="detail" id="setup_demo/1">
-
-    <span id="setup_demo/0"></span>
-
-  <div class="detail-header">
-    <a href="#setup_demo/1" class="detail-link" title="Link to this function">
-      <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
-    </a>
-    <h1 class="signature" translate="no">setup_demo(opts \\ [create_super: false])</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/setup_utils.ex#L49" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
-
-
-  </div>
-
-  <section class="docstring">
-
-      <div class="specs">
-
-          <pre translate="no"><span class="attribute">@spec</span> setup_demo(nil | <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">maybe_improper_list</a>() | <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>()) :: %{
-  jobs: [...],
-  projects: [<a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">atom</a>() | %{:id =&gt; <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">any</a>(), optional(<a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">any</a>()) =&gt; <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">any</a>()}, ...],
-  users: [<a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">atom</a>() | %{:id =&gt; <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">any</a>(), optional(<a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">any</a>()) =&gt; <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">any</a>()}, ...],
-  workflows: [<a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">atom</a>() | %{:id =&gt; <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">any</a>(), optional(<a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">any</a>()) =&gt; <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">any</a>()}, ...],
-  workorders: [<a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">atom</a>() | %{:id =&gt; <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">any</a>(), optional(<a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">any</a>()) =&gt; <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">any</a>()}, ...]
-}</pre>
-
-      </div>
-
-<p>Creates initial data and returns the created records.</p>
-  </section>
-</section>
-<section class="detail" id="tear_down/1">
-
-    <span id="tear_down/0"></span>
-
-  <div class="detail-header">
-    <a href="#tear_down/1" class="detail-link" title="Link to this function">
-      <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
-    </a>
-    <h1 class="signature" translate="no">tear_down(opts \\ [destroy_super: false])</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/setup_utils.ex#L846" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/setup_utils.ex#L20" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>

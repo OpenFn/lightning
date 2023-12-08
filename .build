@@ -80,6 +80,7 @@ Lightning.Runtime.RuntimeManager.html
 Lightning.SafetyString.html
 Lightning.Scrubber.html
 Lightning.Security.html
+Lightning.SetupUtils.Ticker.html
 Lightning.SetupUtils.html
 Lightning.TaskWorker.html
 Lightning.UnixDateTime.html
@@ -240,8 +241,8 @@ dist/merriweather-latin-ext-300-normal-K6L27CZ5.woff2
 dist/merriweather-vietnamese-300-italic-EHHNZPUO.woff2
 dist/merriweather-vietnamese-300-normal-U376L4Z4.woff2
 dist/remixicon-NKANDIL5.woff2
-dist/search_data-A9992E41.js
-dist/sidebar_items-F08CE2DC.js
+dist/search_data-08F5D870.js
+dist/sidebar_items-C64CC86B.js
 index.html
 provisioning.html
 readme.html

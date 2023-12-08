@@ -13,7 +13,7 @@
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-EPF2X7PV.js"></script>
-    <script src="dist/sidebar_items-F08CE2DC.js"></script>
+    <script src="dist/sidebar_items-C64CC86B.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -379,7 +379,7 @@ for more details.</p></div>
 
       <div class="specs">
 
-          <pre translate="no"><span class="attribute">@spec</span> complete_run(%{required(<a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">binary</a>()) =&gt; <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">binary</a>()}) ::
+          <pre translate="no"><span class="attribute">@spec</span> complete_run(<a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>()) ::
   {:ok, <a href="Lightning.Invocation.Run.html#t:t/0">Lightning.Invocation.Run.t</a>()} | {:error, <a href="https://hexdocs.pm/ecto/3.10.3/Ecto.Changeset.html#t:t/0">Ecto.Changeset.t</a>()}</pre>
 
       </div>
@@ -436,7 +436,7 @@ for more details.</p></div>
 
       </div>
 
-<p>Get an Attempt by id.</p><p>Optionally preload associations by passing a list of atoms to <code class="inline">:include</code>.</p><pre><code class="makeup elixir" translate="no"><span class="nc">Lightning.Attempts</span><span class="o">.</span><span class="n">get</span><span class="p" data-group-id="5415589128-1">(</span><span class="n">id</span><span class="p">,</span><span class="w"> </span><span class="ss">include</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="5415589128-2">[</span><span class="ss">:workflow</span><span class="p" data-group-id="5415589128-2">]</span><span class="p" data-group-id="5415589128-1">)</span></code></pre>
+<p>Get an Attempt by id.</p><p>Optionally preload associations by passing a list of atoms to <code class="inline">:include</code>.</p><pre><code class="makeup elixir" translate="no"><span class="nc">Lightning.Attempts</span><span class="o">.</span><span class="n">get</span><span class="p" data-group-id="9452806122-1">(</span><span class="n">id</span><span class="p">,</span><span class="w"> </span><span class="ss">include</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="9452806122-2">[</span><span class="ss">:workflow</span><span class="p" data-group-id="9452806122-2">]</span><span class="p" data-group-id="9452806122-1">)</span></code></pre>
   </section>
 </section>
 <section class="detail" id="get_credential/2">
@@ -624,7 +624,7 @@ for more details.</p>
 
       <div class="specs">
 
-          <pre translate="no"><span class="attribute">@spec</span> start_run(%{required(<a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">binary</a>()) =&gt; <a href="https://hexdocs.pm/ecto/3.10.3/Ecto.UUID.html#t:t/0">Ecto.UUID.t</a>()}) ::
+          <pre translate="no"><span class="attribute">@spec</span> start_run(<a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>()) ::
   {:ok, <a href="Lightning.Invocation.Run.html#t:t/0">Lightning.Invocation.Run.t</a>()} | {:error, <a href="https://hexdocs.pm/ecto/3.10.3/Ecto.Changeset.html#t:t/0">Ecto.Changeset.t</a>()}</pre>
 
       </div>
