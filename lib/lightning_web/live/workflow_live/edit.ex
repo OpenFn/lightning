@@ -123,7 +123,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
                       <.icon name="hero-play-solid" class="w-4 h-4" /> Save & Run
                     </.button>
                   </div>
-
                   <.with_changes_indicator changeset={@changeset}>
                     <Form.submit_button
                       class=""
@@ -693,11 +692,15 @@ defmodule LightningWeb.WorkflowLive.Edit do
       can_run_job: can_run_job
     } = socket.assigns
 
+    IO.inspect(socket.assigns, label: "what do we have here?")
+
     socket = socket |> apply_params(workflow_params)
 
     if can_run_job && can_edit_job do
       Helpers.save_and_run(
         socket.assigns.changeset,
+        # TODO - either create a new work order or create a new attempt for an
+        # existing work order
         WorkOrders.Manual.new(
           params,
           workflow: workflow,
