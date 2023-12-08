@@ -350,7 +350,7 @@ defmodule LightningWeb.CredentialLiveTest do
 
       {:ok, new_live, _html} =
         index_live
-        |> element("a", "New Credential")
+        |> element("button", "New Credential")
         |> render_click()
         |> follow_redirect(conn, ~p"/credentials/new")
 

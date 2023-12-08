@@ -51,7 +51,7 @@ defmodule LightningWeb.Components.Modal do
         tabindex="0"
       >
         <div class="flex flex-col min-h-full items-center justify-center">
-          <div class={"#{@width}"}>
+          <div class={@width}>
             <.focus_wrap
               id={"#{@id}-container"}
               phx-mounted={@show && show_modal(@on_open, @id)}

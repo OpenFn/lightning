@@ -15,7 +15,6 @@ defmodule LightningWeb.Components.NewInputs do
       <.button>Send!</.button>
       <.button phx-click="go" class="ml-2">Send!</.button>
   """
-  attr :id, :string, default: "no-id"
   attr :type, :string, default: "button", values: ["button", "submit"]
   attr :class, :string, default: nil
   attr :rest, :global, include: ~w(disabled form name value)
@@ -24,16 +23,20 @@ defmodule LightningWeb.Components.NewInputs do
   slot :inner_block, required: true
 
   def button(assigns) do
-    assigns = tooltip_when_disabled(assigns)
+    IO.inspect(assigns[:rest])
 
     ~H"""
-    <span {@span_attrs}>
+    <.tooltip_when_disabled
+      id={@rest[:id]}
+      tooltip={@tooltip}
+      disabled={@rest[:disabled]}
+    >
       <button
         type={@type}
         class={[
-          "inline-flex justify-center py-2 px-4 border border-transparent
-      shadow-sm text-sm font-medium rounded-md text-white focus:outline-none
-      focus:ring-2 focus:ring-offset-2 focus:ring-primary-500",
+          "inline-flex justify-center py-2 px-4 border border-transparent",
+          "shadow-sm text-sm font-medium rounded-md text-white focus:outline-none",
+          "focus:ring-2 focus:ring-offset-2 focus:ring-primary-500",
           "bg-primary-600 hover:bg-primary-700",
           "disabled:bg-primary-300",
           "phx-submit-loading:opacity-75 ",
@@ -43,21 +46,29 @@ defmodule LightningWeb.Components.NewInputs do
       >
         <%= render_slot(@inner_block) %>
       </button>
+    </.tooltip_when_disabled>
+    """
+  end
+
+  attr :id, :string, required: true
+  attr :disabled, :boolean, default: false
+  attr :tooltip, :string, default: nil
+
+  slot :inner_block, required: true
+
+  defp tooltip_when_disabled(%{disabled: true, tooltip: tooltip} = assigns)
+       when not is_nil(tooltip) do
+    ~H"""
+    <span id={"#{@id}-tooltip"} phx-hook="Tooltip" aria-label={@tooltip}>
+      <%= render_slot(@inner_block) %>
     </span>
     """
   end
 
   defp tooltip_when_disabled(assigns) do
-    with true <- Map.get(assigns.rest, :disabled, false),
-         tooltip when not is_nil(tooltip) <- Map.get(assigns, :tooltip) do
-      assign(assigns, :span_attrs, %{
-        "id" => assigns.id,
-        "phx-hook" => "Tooltip",
-        "aria-label" => tooltip
-      })
-    else
-      _ -> assign(assigns, :span_attrs, %{})
-    end
+    ~H"""
+    <%= render_slot(@inner_block) %>
+    """
   end
 
   @doc """

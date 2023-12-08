@@ -13,11 +13,11 @@ defmodule LightningWeb.CredentialLive.Index do
     {:ok,
      assign(
        socket,
-       :credentials,
-       list_credentials(socket.assigns.current_user.id)
-     )
-     |> assign(:active_menu_item, :credentials)
-     |> assign(selected_credential_type: nil)}
+       credentials: list_credentials(socket.assigns.current_user.id),
+       active_menu_item: :credentials,
+       selected_credential_type: nil,
+       page_title: "Credentials"
+     )}
   end
 
   @impl true
@@ -27,8 +27,7 @@ defmodule LightningWeb.CredentialLive.Index do
 
   defp apply_action(socket, :index, _params) do
     socket
-    |> assign(:page_title, "Credentials")
-    |> assign(:credential, nil)
+    |> assign(credential: nil)
   end
 
   defp apply_action(socket, :delete, %{"id" => id}) do
@@ -43,9 +42,7 @@ defmodule LightningWeb.CredentialLive.Index do
       )
 
     if can_delete_credential do
-      socket
-      |> assign(:page_title, "Credentials")
-      |> assign(:credential, credential)
+      socket |> assign(credential: credential)
     else
       socket
       |> put_flash(:error, "You can't perform this action")
@@ -65,15 +62,12 @@ defmodule LightningWeb.CredentialLive.Index do
      socket
      |> put_flash(:info, "Credential deletion canceled")
      |> push_patch(to: ~p"/credentials")
-     |> assign(
-       :credentials,
-       list_credentials(socket.assigns.current_user.id)
-     )}
+     |> assign(credentials: list_credentials(socket.assigns.current_user.id))}
   end
 
   @impl true
   def handle_info({:credential_type_changed, type}, socket) do
-    {:noreply, socket |> assign(:selected_credential_type, type)}
+    {:noreply, socket |> assign(selected_credential_type: type)}
   end
 
   @doc """
