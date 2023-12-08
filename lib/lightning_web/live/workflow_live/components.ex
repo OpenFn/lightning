@@ -826,4 +826,26 @@ defmodule LightningWeb.WorkflowLive.Components do
     </.modal>
     """
   end
+
+  def workflow_metrics(assigns) do
+    ~H"""
+    <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <.metric_card />
+      <.metric_card />
+      <.metric_card />
+      <.metric_card />
+    </div>
+    """
+  end
+
+  def metric_card(assigns) do
+    ~H"""
+    <div class="bg-white shadow rounded-lg py-2 px-4">
+      <h2 class="text-sm font-semibold text-gray-600">Title</h2>
+      <p class="text-2xl font-bold text-gray-800">
+        Body<span class="text-sm font-semibold">(optional text)</span>
+      </p>
+    </div>
+    """
+  end
 end
