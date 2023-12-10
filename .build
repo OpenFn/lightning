@@ -133,7 +133,6 @@ LightningWeb.Components.Modal.html
 LightningWeb.Components.NewInputs.html
 LightningWeb.Components.Pills.html
 LightningWeb.Components.Viewers.html
-LightningWeb.CredentialLive.Edit.html
 LightningWeb.CredentialLive.FormComponent.html
 LightningWeb.CredentialLive.GoogleSheetsComponent.html
 LightningWeb.CredentialLive.Index.html
@@ -241,8 +240,8 @@ dist/merriweather-latin-ext-300-normal-K6L27CZ5.woff2
 dist/merriweather-vietnamese-300-italic-EHHNZPUO.woff2
 dist/merriweather-vietnamese-300-normal-U376L4Z4.woff2
 dist/remixicon-NKANDIL5.woff2
-dist/search_data-08F5D870.js
-dist/sidebar_items-C64CC86B.js
+dist/search_data-9340B58C.js
+dist/sidebar_items-50C86BF3.js
 index.html
 provisioning.html
 readme.html
