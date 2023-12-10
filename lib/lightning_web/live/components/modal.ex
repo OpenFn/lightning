@@ -32,6 +32,8 @@ defmodule LightningWeb.Components.Modal do
     <div
       id={@id}
       phx-mounted={@show && show_modal(@id)}
+      phx-on-close={hide_modal(@id)}
+      phx-hook="ModalHook"
       class={"#{@position} z-50 hidden"}
       {@rest}
     >
@@ -49,7 +51,7 @@ defmodule LightningWeb.Components.Modal do
         tabindex="0"
       >
         <div class="flex flex-col min-h-full items-center justify-center">
-          <div class={"#{@width} p-4 sm:p-6 lg:py-8"}>
+          <div class={@width}>
             <.focus_wrap
               id={"#{@id}-container"}
               phx-mounted={@show && show_modal(@on_open, @id)}

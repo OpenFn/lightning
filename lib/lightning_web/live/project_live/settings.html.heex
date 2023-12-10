@@ -195,11 +195,43 @@
           <% end %>
         </LightningWeb.Components.Common.panel_content>
         <LightningWeb.Components.Common.panel_content for_hash="credentials">
-          <div>
-            <h6 class="font-medium text-black">Project credentials</h6>
-            <small class="block my-1 text-xs text-gray-600">
-              View and edit credentials that are currently accesible for use in this project.
-            </small>
+          <div class="flex justify-between content-center pb-2">
+            <div class="leading-loose">
+              <h6 class="font-medium text-black">Project credentials</h6>
+              <small class="block my-1 text-xs text-gray-600">
+                View and edit credentials that are currently accessible for use in this project.
+              </small>
+            </div>
+            <div class="sm:block" aria-hidden="true">
+              <.button
+                id="new-credential-button"
+                phx-click={show_modal("new-credential-modal")}
+                {if !@can_create_project_credential, do: [disabled: "disabled"], else: []}
+              >
+                + New Credential
+              </.button>
+              <.live_component
+                id="new-credential-modal"
+                module={LightningWeb.CredentialLive.FormComponent}
+                action={:new}
+                credential_type={@selected_credential_type}
+                credential={
+                  %Lightning.Credentials.Credential{
+                    user_id: @current_user.id,
+                    project_credentials: [
+                      %Lightning.Projects.ProjectCredential{
+                        project_id: @project.id
+                      }
+                    ]
+                  }
+                }
+                projects={[]}
+                project={@project}
+                show_project_credentials={false}
+                can_create_project_credential={@can_create_project_credential}
+                return_to={~p"/projects/#{@project.id}/settings#credentials"}
+              />
+            </div>
           </div>
           <div class="hidden sm:block" aria-hidden="true">
             <div class="py-2"></div>
@@ -229,8 +261,8 @@
                 <.td>
                   <%= if credential.user_id == @current_user.id do %>
                     <span>
-                      <.link navigate={
-                        Routes.credential_edit_path(@socket, :edit, credential)
+                      <.link phx-click={
+                        show_modal("edit-credential-#{credential.id}-modal")
                       }>
                         Edit
                       </.link>
@@ -238,6 +270,20 @@
                   <% end %>
                 </.td>
               </.tr>
+              <.live_component
+                id={"edit-credential-#{credential.id}-modal"}
+                module={LightningWeb.CredentialLive.FormComponent}
+                action={:edit}
+                credential_type={nil}
+                credential={
+                  credential |> Lightning.Repo.preload(:project_credentials)
+                }
+                projects={[]}
+                project={@project}
+                show_project_credentials={false}
+                can_create_project_credential={@can_create_project_credential}
+                return_to={~p"/projects/#{@project.id}/settings#credentials"}
+              />
             <% end %>
           </.table>
         </LightningWeb.Components.Common.panel_content>

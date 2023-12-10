@@ -23,6 +23,7 @@ defmodule Lightning.Policies.ProjectUsers do
           | :edit_project_description
           | :provision_project
           | :create_webhook_auth_method
+          | :create_project_credential
           | :edit_webhook_auth_method
 
   @doc """
@@ -80,6 +81,7 @@ defmodule Lightning.Policies.ProjectUsers do
              :rerun_job,
              :provision_project,
              :create_webhook_auth_method,
+             :create_project_credential,
              :edit_webhook_auth_method
            ],
       do: project_user.role in [:owner, :admin, :editor]

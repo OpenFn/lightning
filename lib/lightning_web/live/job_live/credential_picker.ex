@@ -41,10 +41,10 @@ defmodule LightningWeb.JobLive.CredentialPicker do
 
       <div :if={!@disabled} class="text-right">
         <button
-          id="new-credential-launcher"
+          id="new-credential-button"
           type="button"
           class="text-indigo-400 underline underline-offset-2 hover:text-indigo-500 text-xs"
-          phx-click="open_new_credential"
+          phx-click={show_modal("new-credential-modal")}
           phx-target={@myself}
         >
           New credential
@@ -90,39 +90,5 @@ defmodule LightningWeb.JobLive.CredentialPicker do
       end)
 
     {:ok, socket}
-  end
-
-  @impl true
-  def handle_event("open_new_credential", _params, socket) do
-    %{project_user: %{user: user, project: project}, form: form} = socket.assigns
-
-    LightningWeb.ModalPortal.open_modal(
-      LightningWeb.CredentialLive.CredentialEditModal,
-      %{
-        action: :new,
-        credential: %Lightning.Credentials.Credential{
-          user_id: user.id
-        },
-        current_user: user,
-        id: :new,
-        on_save: fn credential ->
-          params =
-            LightningWeb.Utils.build_params_for_field(
-              form,
-              :project_credential_id,
-              credential.project_credentials |> Enum.at(0) |> Map.get(:id)
-            )
-
-          socket.assigns.on_change.(params)
-          LightningWeb.ModalPortal.close_modal()
-        end,
-        project: project,
-        projects: [],
-        show_project_credentials: false,
-        title: "Create Credential"
-      }
-    )
-
-    {:noreply, socket}
   end
 end

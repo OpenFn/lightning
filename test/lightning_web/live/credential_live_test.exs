@@ -8,7 +8,6 @@ defmodule LightningWeb.CredentialLiveTest do
   import Lightning.CredentialsFixtures
   import Lightning.Factories
 
-  alias Lightning.CredentialsFixtures
   alias Lightning.Credentials
 
   @create_attrs %{
@@ -248,36 +247,30 @@ defmodule LightningWeb.CredentialLiveTest do
     } do
       {:ok, index_live, _html} = live(conn, ~p"/credentials")
 
-      {:ok, new_live, _html} =
-        index_live
-        |> element("a", "New Credential")
-        |> render_click()
-        |> follow_redirect(conn, ~p"/credentials/new")
+      index_live |> select_credential_type("raw")
+      index_live |> click_continue()
 
-      new_live |> select_credential_type("raw")
-      new_live |> click_continue()
+      assert index_live |> has_element?("#credential-form-new_body")
 
-      assert new_live |> has_element?("#credential-form_body")
-
-      new_live
+      index_live
       |> element("#project_list")
       |> render_change(%{"selected_project" => %{"id" => project.id}})
 
-      new_live
+      index_live
       |> element("button", "Add")
       |> render_click()
 
-      assert new_live
-             |> form("#credential-form", credential: %{name: ""})
+      assert index_live
+             |> form("#credential-form-new", credential: %{name: ""})
              |> render_change() =~ "can&#39;t be blank"
 
       {:ok, _index_live, html} =
-        new_live
-        |> form("#credential-form", credential: @create_attrs)
+        index_live
+        |> form("#credential-form-new", credential: @create_attrs)
         |> render_submit()
         |> follow_redirect(conn, ~p"/credentials")
 
-      {path, flash} = assert_redirect(new_live)
+      {path, flash} = assert_redirect(index_live)
 
       assert flash == %{"info" => "Credential created successfully"}
       assert path == "/credentials"
@@ -291,33 +284,27 @@ defmodule LightningWeb.CredentialLiveTest do
     } do
       {:ok, index_live, _html} = live(conn, ~p"/credentials")
 
-      {:ok, new_live, _html} =
-        index_live
-        |> element("a", "New Credential")
-        |> render_click()
-        |> follow_redirect(conn, ~p"/credentials/new")
-
       # Pick a type
 
-      new_live |> select_credential_type("dhis2")
-      new_live |> click_continue()
+      index_live |> select_credential_type("dhis2")
+      index_live |> click_continue()
 
-      refute new_live |> has_element?("#credential-type-picker")
+      refute index_live |> has_element?("#credential-type-picker")
 
-      assert new_live |> fill_credential(%{body: %{username: ""}}) =~
+      assert index_live |> fill_credential(%{body: %{username: ""}}) =~
                "can&#39;t be blank"
 
-      assert new_live |> submit_disabled()
+      assert index_live |> submit_disabled()
 
-      assert new_live
+      assert index_live
              |> click_save() =~ "can&#39;t be blank"
 
-      refute_redirected(new_live, ~p"/credentials")
+      refute_redirected(index_live, ~p"/credentials")
 
       # Check that the fields are rendered in the same order as the JSON schema
       inputs_in_position =
-        new_live
-        |> element("#credential-form")
+        index_live
+        |> element("#credential-form-new")
         |> render()
         |> Floki.parse_fragment!()
         |> Floki.attribute("input", "name")
@@ -332,27 +319,27 @@ defmodule LightningWeb.CredentialLiveTest do
                credential[body][apiVersion]
              )
 
-      assert new_live
+      assert index_live
              |> fill_credential(%{
                name: "My Credential",
                body: %{username: "foo", password: "bar", hostUrl: "baz"}
              }) =~
                "expected to be a URI"
 
-      assert new_live
-             |> form("#credential-form",
+      assert index_live
+             |> form("#credential-form-new",
                credential: %{body: %{hostUrl: "http://localhost"}}
              )
              |> render_change()
 
-      refute new_live |> submit_disabled()
+      refute index_live |> submit_disabled()
 
       {:ok, _index_live, _html} =
-        new_live
+        index_live
         |> click_save()
         |> follow_redirect(conn, ~p"/credentials")
 
-      {_path, flash} = assert_redirect(new_live)
+      {_path, flash} = assert_redirect(index_live)
       assert flash == %{"info" => "Credential created successfully"}
     end
 
@@ -361,33 +348,25 @@ defmodule LightningWeb.CredentialLiveTest do
     } do
       {:ok, index_live, _html} = live(conn, ~p"/credentials")
 
-      {:ok, new_live, _html} =
-        index_live
-        |> element("a", "New Credential")
-        |> render_click()
-        |> follow_redirect(conn, ~p"/credentials/new")
+      index_live |> select_credential_type("postgresql")
+      index_live |> click_continue()
 
-      # Pick a type
+      refute index_live |> has_element?("#credential-type-picker")
 
-      new_live |> select_credential_type("postgresql")
-      new_live |> click_continue()
-
-      refute new_live |> has_element?("#credential-type-picker")
-
-      assert new_live |> fill_credential(%{body: %{user: ""}}) =~
+      assert index_live |> fill_credential(%{body: %{user: ""}}) =~
                "can&#39;t be blank"
 
-      assert new_live |> submit_disabled()
+      assert index_live |> submit_disabled()
 
-      assert new_live
+      assert index_live
              |> click_save() =~ "can&#39;t be blank"
 
-      refute_redirected(new_live, ~p"/credentials")
+      refute_redirected(index_live, ~p"/credentials")
 
       # Check that the fields are rendered in the same order as the JSON schema
       inputs_in_position =
-        new_live
-        |> element("#credential-form")
+        index_live
+        |> element("#credential-form-new")
         |> render()
         |> Floki.parse_fragment!()
         |> Floki.attribute("input", "name")
@@ -419,23 +398,23 @@ defmodule LightningWeb.CredentialLiveTest do
 
       credential_name = "Cast Postgres Credential"
 
-      assert new_live
+      assert index_live
              |> fill_credential(%{
                name: credential_name,
                body: body
              }) =~
                "expected to be a URI"
 
-      assert new_live
-             |> form("#credential-form",
+      assert index_live
+             |> form("#credential-form-new",
                credential: %{body: %{host: "http://localhost"}}
              )
              |> render_change()
 
-      refute new_live |> submit_disabled()
+      refute index_live |> submit_disabled()
 
-      {:ok, _index_live, _html} =
-        new_live
+      {:ok, _index_live, html} =
+        index_live
         |> click_save()
         |> follow_redirect(conn, ~p"/credentials")
 
@@ -450,8 +429,7 @@ defmodule LightningWeb.CredentialLiveTest do
                  name: credential_name
                )
 
-      {_path, flash} = assert_redirect(new_live)
-      assert flash == %{"info" => "Credential created successfully"}
+      assert html =~ "Credential created successfully"
     end
 
     test "allows the user to define and save a new http credential", %{
@@ -459,51 +437,46 @@ defmodule LightningWeb.CredentialLiveTest do
     } do
       {:ok, index_live, _html} = live(conn, ~p"/credentials")
 
-      {:ok, new_live, _html} =
-        index_live
-        |> element("a", "New Credential")
-        |> render_click()
-        |> follow_redirect(
-          conn,
-          Routes.credential_edit_path(conn, :new)
-        )
+      index_live |> select_credential_type("http")
+      index_live |> click_continue()
 
-      new_live |> select_credential_type("http")
-      new_live |> click_continue()
-
-      assert new_live
+      assert index_live
              |> fill_credential(%{body: %{username: ""}}) =~ "can&#39;t be blank"
 
-      assert new_live |> submit_disabled()
+      assert index_live |> submit_disabled()
 
-      assert new_live
+      assert index_live
              |> click_save() =~ "can&#39;t be blank"
 
-      refute_redirected(new_live, ~p"/credentials")
+      refute_redirected(index_live, ~p"/credentials")
 
-      assert new_live
+      assert index_live
              |> fill_credential(%{
                name: "My Credential",
                body: %{username: "foo", password: "bar", baseUrl: "baz"}
              }) =~ "expected to be a URI"
 
-      assert new_live |> fill_credential(%{body: %{baseUrl: "http://localhost"}})
+      assert index_live
+             |> fill_credential(%{
+               body: %{baseUrl: "http://localhost"}
+             })
 
-      refute new_live |> submit_disabled()
+      refute index_live |> submit_disabled()
 
-      assert new_live |> fill_credential(%{body: %{baseUrl: ""}})
+      assert index_live
+             |> fill_credential(%{body: %{baseUrl: ""}})
 
-      refute new_live |> submit_disabled()
+      refute index_live |> submit_disabled()
 
       {:ok, _index_live, _html} =
-        new_live
+        index_live
         |> click_save()
         |> follow_redirect(
           conn,
           ~p"/credentials"
         )
 
-      {_path, flash} = assert_redirect(new_live)
+      {_path, flash} = assert_redirect(index_live)
       assert flash == %{"info" => "Credential created successfully"}
     end
   end
@@ -514,42 +487,27 @@ defmodule LightningWeb.CredentialLiveTest do
     test "updates a credential", %{conn: conn, credential: credential} do
       {:ok, index_live, _html} = live(conn, ~p"/credentials")
 
-      {:ok, form_live, _} =
-        index_live
-        |> element("#credential-#{credential.id} a", "Edit")
-        |> render_click()
-        |> follow_redirect(
-          conn,
-          Routes.credential_edit_path(conn, :edit, credential)
-        )
+      assert index_live
+             |> fill_credential(
+               @invalid_attrs,
+               "#credential-form-#{credential.id}"
+             ) =~
+               "can&#39;t be blank"
 
-      assert form_live |> fill_credential(@invalid_attrs) =~ "can&#39;t be blank"
-
-      refute_redirected(form_live, ~p"/credentials")
+      refute_redirected(index_live, ~p"/credentials")
 
       {:ok, _index_live, html} =
-        form_live
-        |> click_save(%{credential: @update_attrs})
+        index_live
+        |> click_save(
+          %{credential: @update_attrs},
+          "#credential-form-#{credential.id}"
+        )
         |> follow_redirect(conn, ~p"/credentials")
 
-      {_path, flash} = assert_redirect(form_live)
+      {_path, flash} = assert_redirect(index_live)
       assert flash == %{"info" => "Credential updated successfully"}
 
       assert html =~ "some updated name"
-    end
-
-    test "users can only edit their own credentials", %{
-      conn: conn
-    } do
-      # some credential for another user
-      credential = CredentialsFixtures.credential_fixture()
-
-      {:ok, _view, html} =
-        live(conn, ~p"/credentials/#{credential.id}")
-        |> follow_redirect(conn)
-        |> follow_redirect(conn)
-
-      assert html =~ "Sorry, we can&#39;t find anything here for you."
     end
 
     test "marks a credential for use in a 'production' system", %{
@@ -558,18 +516,9 @@ defmodule LightningWeb.CredentialLiveTest do
     } do
       {:ok, index_live, _html} = live(conn, ~p"/credentials")
 
-      {:ok, form_live, _} =
-        index_live
-        |> element("#credential-#{credential.id} a", "Edit")
-        |> render_click()
-        |> follow_redirect(
-          conn,
-          Routes.credential_edit_path(conn, :edit, credential)
-        )
-
       {:ok, _index_live, html} =
-        form_live
-        |> form("#credential-form",
+        index_live
+        |> form("#credential-form-#{credential.id}",
           credential: Map.put(@update_attrs, :production, true)
         )
         |> render_submit()
@@ -580,7 +529,7 @@ defmodule LightningWeb.CredentialLiveTest do
 
       assert html =~ "some updated name"
 
-      {_path, flash} = assert_redirect(form_live)
+      {_path, flash} = assert_redirect(index_live)
       assert flash == %{"info" => "Credential updated successfully"}
     end
 
@@ -612,31 +561,22 @@ defmodule LightningWeb.CredentialLiveTest do
       assert html =~ "some name"
       assert html =~ "the one for giving away"
 
-      {:ok, form_live, html} =
-        index_live
-        |> element("#credential-#{credential.id} a", "Edit")
-        |> render_click()
-        |> follow_redirect(
-          conn,
-          Routes.credential_edit_path(conn, :edit, credential)
-        )
-
       assert html =~ first_owner.id
       assert html =~ user_2.id
       assert html =~ user_3.id
 
-      assert form_live
-             |> form("#credential-form",
+      assert index_live
+             |> form("#credential-form-#{credential.id}",
                credential: Map.put(@update_attrs, :user_id, user_3.id)
              )
              |> render_change() =~ "Invalid owner"
 
       #  Can't transfer to user who doesn't have access to right projects
-      assert form_live |> submit_disabled()
+      assert index_live |> submit_disabled()
 
       {:ok, _index_live, html} =
-        form_live
-        |> form("#credential-form",
+        index_live
+        |> form("#credential-form-#{credential.id}",
           credential: %{
             body: "{\"a\":\"new_secret\"}",
             user_id: user_2.id
@@ -648,11 +588,9 @@ defmodule LightningWeb.CredentialLiveTest do
           ~p"/credentials"
         )
 
-      {_path, flash} = assert_redirect(form_live)
-      assert flash == %{"info" => "Credential updated successfully"}
-
       # Once the transfer is made, the credential should not show up in the list
       assert html =~ "some name"
+      assert html =~ "Credential updated successfully"
       refute html =~ "the one for giving away"
     end
   end
@@ -703,44 +641,35 @@ defmodule LightningWeb.CredentialLiveTest do
 
       {:ok, index_live, _html} = live(conn, ~p"/credentials")
 
-      {:ok, new_live, _html} =
-        index_live
-        |> element("a", "New Credential")
-        |> render_click()
-        |> follow_redirect(
-          conn,
-          ~p"/credentials/new"
-        )
-
       # Pick a type
 
-      new_live |> select_credential_type("googlesheets")
-      new_live |> click_continue()
+      index_live |> select_credential_type("googlesheets")
+      index_live |> click_continue()
 
-      refute new_live |> has_element?("#credential-type-picker")
+      refute index_live |> has_element?("#credential-type-picker")
 
-      new_live |> fill_credential(%{name: "My Google Sheets Credential"})
-
-      assert new_live |> submit_disabled(),
-             "Submit should be disabled since the `body` hasn't been populated correctly"
+      index_live
+      |> fill_credential(%{
+        name: "My Google Sheets Credential"
+      })
 
       # Get the state from the authorize url in order to fake the calling
       # off the action in the OidcController
       [subscription_id, mod, component_id] =
-        new_live
+        index_live
         |> get_authorize_url()
         |> get_decoded_state()
 
-      assert new_live.id == subscription_id
-      assert new_live |> element(component_id)
+      assert index_live.id == subscription_id
+      assert index_live |> element(component_id)
 
       # Click on the 'Authorize with Google button
-      new_live
+      index_live
       |> element("#google-sheets-inner-form #authorize-button")
       |> render_click()
 
       # Once authorizing the button isn't available
-      refute new_live
+      refute index_live
              |> has_element?("#google-sheets-inner-form #authorize-button")
 
       # `handle_info/2` in LightingWeb.CredentialLive.Edit forwards the data
@@ -751,26 +680,26 @@ defmodule LightningWeb.CredentialLiveTest do
       )
 
       # Wait for the userinfo endpoint to be called
-      assert wait_for_assigns(new_live, :userinfo),
+      assert wait_for_assigns(index_live, :userinfo),
              ":userinfo has not been set yet."
 
       # Rerender as the broadcast above has altered the LiveView state
-      new_live |> render()
+      index_live |> render()
 
-      assert new_live |> has_element?("span", "Test User")
+      assert index_live |> has_element?("span", "Test User")
 
-      refute new_live |> submit_disabled()
+      refute index_live |> submit_disabled()
 
       {:ok, _index_live, _html} =
-        new_live
-        |> form("#credential-form")
+        index_live
+        |> form("#credential-form-new")
         |> render_submit()
         |> follow_redirect(
           conn,
           ~p"/credentials"
         )
 
-      {_path, flash} = assert_redirect(new_live)
+      {_path, flash} = assert_redirect(index_live)
       assert flash == %{"info" => "Credential created successfully"}
 
       credential =
@@ -807,19 +736,18 @@ defmodule LightningWeb.CredentialLiveTest do
 
       expires_at = DateTime.to_unix(DateTime.utc_now()) + 3600
 
-      credential =
-        credential_fixture(
-          user_id: user.id,
-          schema: "googlesheets",
-          body: %{
-            access_token: "ya29.a0AVvZ...",
-            refresh_token: "1//03vpp6Li...",
-            expires_at: expires_at,
-            scope: "scope1 scope2"
-          }
-        )
+      credential_fixture(
+        user_id: user.id,
+        schema: "googlesheets",
+        body: %{
+          access_token: "ya29.a0AVvZ...",
+          refresh_token: "1//03vpp6Li...",
+          expires_at: expires_at,
+          scope: "scope1 scope2"
+        }
+      )
 
-      {:ok, edit_live, _html} = live(conn, ~p"/credentials/#{credential.id}")
+      {:ok, edit_live, _html} = live(conn, ~p"/credentials")
 
       assert_receive {:phoenix, :send_update, _}
 
@@ -841,19 +769,18 @@ defmodule LightningWeb.CredentialLiveTest do
 
       expires_at = DateTime.to_unix(DateTime.utc_now()) + 3600
 
-      credential =
-        credential_fixture(
-          user_id: user.id,
-          schema: "googlesheets",
-          body: %{
-            access_token: "ya29.a0AVvZ...",
-            refresh_token: "",
-            expires_at: expires_at,
-            scope: "scope1 scope2"
-          }
-        )
+      credential_fixture(
+        user_id: user.id,
+        schema: "googlesheets",
+        body: %{
+          access_token: "ya29.a0AVvZ...",
+          refresh_token: "",
+          expires_at: expires_at,
+          scope: "scope1 scope2"
+        }
+      )
 
-      {:ok, edit_live, _html} = live(conn, ~p"/credentials/#{credential.id}")
+      {:ok, edit_live, _html} = live(conn, ~p"/credentials")
 
       # Wait for next `send_update` triggered by the token Task calls
       assert_receive {:plug_conn, :sent}
@@ -882,17 +809,16 @@ defmodule LightningWeb.CredentialLiveTest do
 
       expires_at = DateTime.to_unix(DateTime.utc_now()) - 50
 
-      credential =
-        credential_fixture(
-          user_id: user.id,
-          schema: "googlesheets",
-          body: %{
-            access_token: "ya29.a0AVvZ...",
-            refresh_token: "1//03vpp6Li...",
-            expires_at: expires_at,
-            scope: "scope1 scope2"
-          }
-        )
+      credential_fixture(
+        user_id: user.id,
+        schema: "googlesheets",
+        body: %{
+          access_token: "ya29.a0AVvZ...",
+          refresh_token: "1//03vpp6Li...",
+          expires_at: expires_at,
+          scope: "scope1 scope2"
+        }
+      )
 
       expect_token(
         bypass,
@@ -907,7 +833,7 @@ defmodule LightningWeb.CredentialLiveTest do
         }
       )
 
-      {:ok, edit_live, _html} = live(conn, ~p"/credentials/#{credential.id}")
+      {:ok, edit_live, _html} = live(conn, ~p"/credentials")
 
       assert wait_for_assigns(edit_live, :userinfo),
              ":userinfo has not been set yet."
@@ -939,19 +865,18 @@ defmodule LightningWeb.CredentialLiveTest do
 
       expires_at = DateTime.to_unix(DateTime.utc_now()) + 3600
 
-      credential =
-        credential_fixture(
-          user_id: user.id,
-          schema: "googlesheets",
-          body: %{
-            access_token: "ya29.a0AVvZ...",
-            refresh_token: "1//03vpp6Li...",
-            expires_at: expires_at,
-            scope: "scope1 scope2"
-          }
-        )
+      credential_fixture(
+        user_id: user.id,
+        schema: "googlesheets",
+        body: %{
+          access_token: "ya29.a0AVvZ...",
+          refresh_token: "1//03vpp6Li...",
+          expires_at: expires_at,
+          scope: "scope1 scope2"
+        }
+      )
 
-      {:ok, edit_live, _html} = live(conn, ~p"/credentials/#{credential.id}")
+      {:ok, edit_live, _html} = live(conn, ~p"/credentials")
 
       assert wait_for_assigns(edit_live, :error)
 
@@ -998,19 +923,18 @@ defmodule LightningWeb.CredentialLiveTest do
 
       expires_at = DateTime.to_unix(DateTime.utc_now()) - 50
 
-      credential =
-        credential_fixture(
-          user_id: user.id,
-          schema: "googlesheets",
-          body: %{
-            access_token: "ya29.a0AVvZ...",
-            refresh_token: "1//03vpp6Li...",
-            expires_at: expires_at,
-            scope: "scope1 scope2"
-          }
-        )
+      credential_fixture(
+        user_id: user.id,
+        schema: "googlesheets",
+        body: %{
+          access_token: "ya29.a0AVvZ...",
+          refresh_token: "1//03vpp6Li...",
+          expires_at: expires_at,
+          scope: "scope1 scope2"
+        }
+      )
 
-      {:ok, edit_live, _html} = live(conn, ~p"/credentials/#{credential.id}")
+      {:ok, edit_live, _html} = live(conn, ~p"/credentials")
 
       assert wait_for_assigns(edit_live, :error)
 
@@ -1031,18 +955,12 @@ defmodule LightningWeb.CredentialLiveTest do
 
       {:ok, index_live, _html} = live(conn, ~p"/credentials")
 
-      {:ok, new_live, _html} =
-        index_live
-        |> element("a", "New Credential")
-        |> render_click()
-        |> follow_redirect(conn, ~p"/credentials/new")
+      index_live |> select_credential_type("googlesheets")
+      index_live |> click_continue()
 
-      new_live |> select_credential_type("googlesheets")
-      new_live |> click_continue()
+      refute index_live |> has_element?("#credential-type-picker")
 
-      refute new_live |> has_element?("#credential-type-picker")
-
-      assert new_live
+      assert index_live
              |> has_element?("#google-sheets-inner-form", "No Client Configured")
     end
   end
@@ -1083,6 +1001,6 @@ defmodule LightningWeb.CredentialLiveTest do
   end
 
   defp submit_disabled(live) do
-    live |> has_element?("button[disabled][type=submit]")
+    live |> has_element?("button[type=submit][disabled]")
   end
 end
