@@ -830,20 +830,55 @@ defmodule LightningWeb.WorkflowLive.Components do
   def workflow_metrics(assigns) do
     ~H"""
     <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-      <.metric_card />
-      <.metric_card />
-      <.metric_card />
-      <.metric_card />
+      <%= for {key,value} <- assigns.metrics do %>
+        <%= case key do %>
+          <% :total_workorders -> %>
+            <.metric_card title="Work Orders" body={value} />
+          <% :total_runs -> %>
+            <.metric_card
+              title="Runs"
+              body={Map.get(value, :completed_runs)}
+              optional_text={
+                Map.get(value, :pending_running_runs)
+                |> (to_string |> Kernel.<>(" pending"))
+              }
+            />
+          <% :successful_runs -> %>
+            <.metric_card
+              title="Successful Runs"
+              body={Map.get(value, :successful_runs)}
+              optional_text={
+                Map.get(value, :success_percentage) |> (to_string |> Kernel.<>("%"))
+              }
+            />
+          <% :failed_workorders -> %>
+            <.metric_card
+              title="Work Orders in failed state"
+              body={Map.get(value, :failed_workorders)}
+              optional_text={
+                Map.get(value, :failure_percentage) |> (to_string |> Kernel.<>("%"))
+              }
+            />
+          <% _-> %>
+        <% end %>
+      <% end %>
     </div>
     """
   end
 
+  attr :title, :string
+  attr :body, :string
+  attr :optional_text, :string, default: nil
+
   def metric_card(assigns) do
     ~H"""
     <div class="bg-white shadow rounded-lg py-2 px-4">
-      <h2 class="text-sm font-semibold text-gray-600">Title</h2>
+      <h2 class="text-sm font-semibold text-gray-600"><%= @title %></h2>
       <p class="text-2xl font-bold text-gray-800">
-        Body<span class="text-sm font-semibold">(optional text)</span>
+        <%= @body %>
+        <span :if={@optional_text} class="text-sm font-normal">
+          (<%= @optional_text %>)
+        </span>
       </p>
     </div>
     """

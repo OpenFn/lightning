@@ -7,7 +7,7 @@ defmodule LightningWeb.WorkflowLive.Index do
   alias Lightning.Workflows
   alias Lightning.Policies.{Permissions, ProjectUsers}
   alias LightningWeb.WorkflowLive.NewWorkflowForm
-
+  alias Lightning.DashboardMetrics
 
   import LightningWeb.WorkflowLive.Components
 
@@ -27,7 +27,7 @@ defmodule LightningWeb.WorkflowLive.Index do
       </:header>
       <div class="relative h-full flex">
         <LayoutComponents.centered>
-          <.workflow_metrics workflows={@workflows} project={@project} />
+          <.workflow_metrics metrics={@metrics} />
           <.workflow_list
             can_create_workflow={@can_create_workflow}
             can_delete_workflow={@can_delete_workflow}
@@ -80,6 +80,7 @@ defmodule LightningWeb.WorkflowLive.Index do
     |> assign(
       active_menu_item: :overview,
       page_title: "Dashboard",
+      metrics: DashboardMetrics.get_metrics(socket.assigns.project.id),
       workflows: Workflows.get_workflows_for(socket.assigns.project)
     )
   end
