@@ -5,6 +5,8 @@ defmodule Lightning.Auditing.Audit do
   require Ecto.Query
   require Logger
 
+  @callback update_changes(changes :: map()) :: map()
+
   # coveralls-ignore-start
   defmacro __using__(opts) do
     repo = Keyword.fetch!(opts, :repo)
@@ -16,6 +18,8 @@ defmodule Lightning.Auditing.Audit do
 
     update_changes_func =
       quote do
+        @behaviour Lightning.Auditing.Audit
+
         def update_changes(changes) do
           changes
         end
@@ -66,9 +70,7 @@ defmodule Lightning.Auditing.Audit do
         import Ecto.Query
 
         def base_query do
-          from(unquote(__MODULE__),
-            where: [item_type: unquote(item)]
-          )
+          from(unquote(__MODULE__), where: [item_type: unquote(item)])
         end
       end
 
@@ -148,7 +150,6 @@ defmodule Lightning.Auditing.Audit do
           {:ok, :no_changes}
           | {:ok, Ecto.Schema.t()}
           | {:error, Ecto.Changeset.t()}
-
   def save(:no_changes, _repo) do
     {:ok, :no_changes}
   end
@@ -173,7 +174,7 @@ defmodule Lightning.Auditing.Audit do
           Ecto.UUID.t(),
           Ecto.UUID.t(),
           Ecto.Changeset.t() | map() | nil,
-          update_changes_fun :: fun()
+          update_changes_fun :: (map() -> map())
         ) ::
           :no_changes | Ecto.Changeset.t()
 
@@ -186,14 +187,7 @@ defmodule Lightning.Auditing.Audit do
         update_fun \\ fn x -> x end
       )
 
-  def event(
-        _,
-        _,
-        _,
-        _,
-        %Ecto.Changeset{changes: changes} = _changeset,
-        _update_fun
-      )
+  def event(_, _, _, _, %Ecto.Changeset{changes: changes}, _update_fun)
       when map_size(changes) == 0 do
     :no_changes
   end

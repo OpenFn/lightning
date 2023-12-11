@@ -13,6 +13,7 @@ defmodule Lightning.Workflows.WebhookAuthMethodAudit do
       "deleted"
     ]
 
+  @impl true
   def update_changes(changes) when is_map(changes) do
     Enum.into(changes, %{}, fn
       {key, val} when key in [:username, :password, :api_key] ->
