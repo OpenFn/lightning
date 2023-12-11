@@ -337,12 +337,15 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       |> form("#workflow-form")
       |> render_submit()
 
-      assert Repo.reload!(edge_on_edit) ==
-               Map.merge(edge_on_edit, %{
-                 condition: :js_expression,
-                 js_expression_label: "My JS Expression",
-                 js_expression_body: "state.data.field === 33"
-               })
+      assert Map.delete(Repo.reload!(edge_on_edit), :updated_at) ==
+               Map.delete(
+                 Map.merge(edge_on_edit, %{
+                   condition: :js_expression,
+                   js_expression_label: "My JS Expression",
+                   js_expression_body: "state.data.field === 33"
+                 }),
+                 :updated_at
+               )
     end
 
     @tag role: :editor
