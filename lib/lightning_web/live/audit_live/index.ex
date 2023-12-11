@@ -43,8 +43,11 @@ defmodule LightningWeb.AuditLive.Index do
   end
 
   def diff(assigns) do
-    lhs = assigns.metadata.before
     rhs = assigns.metadata.after
+
+    lhs =
+      assigns.metadata.before ||
+        Enum.into(rhs, %{}, fn {key, _val} -> {key, nil} end)
 
     assigns =
       assign(assigns,

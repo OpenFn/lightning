@@ -147,17 +147,16 @@ defmodule LightningWeb.CredentialLive.FormComponent do
       fetch_field!(socket.assigns.changeset, :project_credentials)
 
     project_credentials =
-      Enum.find(project_credentials, fn pu -> pu.project_id == project_id end)
-      |> if do
-        project_credentials
-        |> Enum.map(fn pu ->
+      if Enum.find(project_credentials, fn pu -> pu.project_id == project_id end) do
+        Enum.map(project_credentials, fn pu ->
           if pu.project_id == project_id do
             Ecto.Changeset.change(pu, %{delete: false})
+          else
+            pu
           end
         end)
       else
-        project_credentials
-        |> Enum.concat([
+        Enum.concat(project_credentials, [
           %Lightning.Projects.ProjectCredential{project_id: project_id}
         ])
       end
@@ -180,27 +179,26 @@ defmodule LightningWeb.CredentialLive.FormComponent do
   end
 
   @impl true
-  def handle_event("delete_project", %{"index" => index}, socket) do
-    index = String.to_integer(index)
-
-    project_credentials_params =
+  def handle_event("delete_project", %{"projectid" => project_id}, socket) do
+    project_credentials =
       fetch_field!(socket.assigns.changeset, :project_credentials)
-      |> Enum.with_index()
-      |> Enum.reduce([], fn {pu, i}, project_credentials ->
-        if i == index do
-          if is_nil(pu.id) do
+
+    project_credentials =
+      Enum.reduce(project_credentials, [], fn pc, project_credentials ->
+        if pc.project_id == project_id do
+          if is_nil(pc.id) do
             project_credentials
           else
-            [Ecto.Changeset.change(pu, %{delete: true}) | project_credentials]
+            project_credentials ++ [Ecto.Changeset.change(pc, %{delete: true})]
           end
         else
-          [pu | project_credentials]
+          project_credentials ++ [pc]
         end
       end)
 
     changeset =
       socket.assigns.changeset
-      |> put_assoc(:project_credentials, project_credentials_params)
+      |> put_assoc(:project_credentials, project_credentials)
       |> Map.put(:action, :validate)
 
     available_projects =
@@ -464,11 +462,12 @@ defmodule LightningWeb.CredentialLive.FormComponent do
             prompt=""
             phx-change="select_item"
             phx-target={@phx_target}
-            id="project_list"
+            id={"project_list_for_#{@form[:id].value}"}
           />
         </div>
         <div class="grow-0 items-right">
           <.button
+            id={"add-new-project-button-to-#{@form[:id].value}"}
             disabled={@selected == ""}
             phx-target={@phx_target}
             phx-value-projectid={@selected}
@@ -489,7 +488,7 @@ defmodule LightningWeb.CredentialLive.FormComponent do
             <div class="grow-0 items-right">
               <.button
                 phx-target={@phx_target}
-                phx-value-index={project_credential.index}
+                phx-value-projectid={project_credential[:project_id].value}
                 phx-click="delete_project"
               >
                 Remove
@@ -498,7 +497,11 @@ defmodule LightningWeb.CredentialLive.FormComponent do
           </div>
         <% end %>
         <.input type="hidden" field={project_credential[:project_id]} />
-        <.input type="hidden" field={project_credential[:delete]} />
+        <.input
+          type="hidden"
+          field={project_credential[:delete]}
+          value={to_string(project_credential[:delete].value)}
+        />
       </.inputs_for>
     </div>
     """

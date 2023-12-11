@@ -15,6 +15,7 @@ defmodule LightningWeb.Components.NewInputs do
       <.button>Send!</.button>
       <.button phx-click="go" class="ml-2">Send!</.button>
   """
+  attr :id, :string, default: ""
   attr :type, :string, default: "button", values: ["button", "submit"]
   attr :class, :string, default: nil
   attr :rest, :global, include: ~w(disabled form name value)
@@ -30,6 +31,7 @@ defmodule LightningWeb.Components.NewInputs do
       disabled={@rest[:disabled]}
     >
       <button
+        id={@id}
         type={@type}
         class={[
           "inline-flex justify-center py-2 px-4 border border-transparent",

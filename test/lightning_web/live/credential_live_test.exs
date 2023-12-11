@@ -8,6 +8,8 @@ defmodule LightningWeb.CredentialLiveTest do
   import Lightning.CredentialsFixtures
   import Lightning.Factories
 
+  import Ecto.Query
+
   alias Lightning.Credentials
 
   @create_attrs %{
@@ -23,7 +25,7 @@ defmodule LightningWeb.CredentialLiveTest do
   @invalid_attrs %{name: "this won't work", body: nil}
 
   defp create_credential(%{user: user}) do
-    credential = credential_fixture(user_id: user.id)
+    credential = insert(:credential, user: user)
     %{credential: credential}
   end
 
@@ -253,7 +255,7 @@ defmodule LightningWeb.CredentialLiveTest do
       assert index_live |> has_element?("#credential-form-new_body")
 
       index_live
-      |> element("#project_list")
+      |> element("#project_list_for_")
       |> render_change(%{"selected_project" => %{"id" => project.id}})
 
       index_live
@@ -510,6 +512,168 @@ defmodule LightningWeb.CredentialLiveTest do
       assert html =~ "some updated name"
     end
 
+    test "adds new project with access", %{
+      conn: conn,
+      user: user
+    } do
+      project =
+        insert(:project, project_users: [build(:project_user, user: user)])
+
+      credential =
+        insert(:credential,
+          name: "my-credential",
+          schema: "http",
+          body: %{"username" => "test", "password" => "test"},
+          user: user
+        )
+
+      audit_events_query =
+        from(a in Lightning.Credentials.Audit.base_query(),
+          where: a.item_id == ^credential.id,
+          select: {a.event, type(a.changes, :map)}
+        )
+
+      assert Lightning.Repo.all(audit_events_query) == []
+
+      {:ok, view, _html} = live(conn, ~p"/credentials")
+
+      view
+      |> element("#project_list_for_#{credential.id}")
+      |> render_change(selected_project: %{"id" => project.id})
+
+      view
+      |> element("#add-new-project-button-to-#{credential.id}")
+      |> render_click()
+
+      view |> form("#credential-form-#{credential.id}") |> render_submit()
+
+      assert_redirected(view, ~p"/credentials")
+
+      audit_events = Lightning.Repo.all(audit_events_query)
+
+      assert Enum.count(audit_events) == 2
+
+      assert {"updated", _changes} =
+               Enum.find(audit_events, fn {event, _changes} ->
+                 event == "updated"
+               end)
+
+      assert {"added_to_project", _changes} =
+               Enum.find(audit_events, fn {event, _changes} ->
+                 event == "added_to_project"
+               end)
+    end
+
+    test "removes project with access", %{
+      conn: conn,
+      user: user
+    } do
+      project =
+        insert(:project, project_users: [build(:project_user, user: user)])
+
+      credential =
+        insert(:credential,
+          name: "my-credential",
+          schema: "http",
+          body: %{"username" => "test", "password" => "test"},
+          user: user
+        )
+
+      insert(:project_credential, project: project, credential: credential)
+
+      audit_events_query =
+        from(a in Lightning.Credentials.Audit.base_query(),
+          where: a.item_id == ^credential.id,
+          select: {a.event, type(a.changes, :map)}
+        )
+
+      assert Lightning.Repo.all(audit_events_query) == []
+
+      {:ok, view, _html} = live(conn, ~p"/credentials")
+
+      view
+      |> delete_credential_button(project.id)
+      |> render_click()
+
+      view |> form("#credential-form-#{credential.id}") |> render_submit()
+
+      assert_redirected(view, ~p"/credentials")
+
+      audit_events = Lightning.Repo.all(audit_events_query)
+
+      assert Enum.count(audit_events) == 2
+
+      assert {"updated", _changes} =
+               Enum.find(audit_events, fn {event, _changes} ->
+                 event == "updated"
+               end)
+
+      assert {"removed_from_project", _changes} =
+               Enum.find(audit_events, fn {event, _changes} ->
+                 event == "removed_from_project"
+               end)
+    end
+
+    test "users can add and remove existing project credentials successfully", %{
+      conn: conn,
+      user: user
+    } do
+      project =
+        insert(:project, project_users: [build(:project_user, user: user)])
+
+      credential =
+        insert(:credential,
+          name: "my-credential",
+          schema: "http",
+          body: %{"username" => "test", "password" => "test"},
+          user: user
+        )
+
+      insert(:project_credential, project: project, credential: credential)
+
+      {:ok, view, _html} = live(conn, ~p"/credentials")
+
+      # Try adding an existing project credential
+      view
+      |> element("#project_list_for_#{credential.id}")
+      |> render_change(selected_project: %{"id" => project.id})
+
+      html =
+        view
+        |> element("#add-new-project-button-to-#{credential.id}")
+        |> render_click()
+
+      assert html =~ project.name,
+             "adding an existing project doesn't break anything"
+
+      assert view |> delete_credential_button(project.id) |> has_element?()
+
+      # Let's remove the project and add it back again
+
+      view
+      |> delete_credential_button(project.id)
+      |> render_click()
+
+      refute view |> delete_credential_button(project.id) |> has_element?(),
+             "project is removed from list"
+
+      # now let's add it back
+      view
+      |> element("#project_list_for_#{credential.id}")
+      |> render_change(selected_project: %{"id" => project.id})
+
+      view
+      |> element("#add-new-project-button-to-#{credential.id}")
+      |> render_click()
+
+      assert view |> delete_credential_button(project.id) |> has_element?(),
+             "project is added back"
+
+      view |> form("#credential-form-#{credential.id}") |> render_submit()
+
+      assert_redirected(view, ~p"/credentials")
+    end
+
     test "marks a credential for use in a 'production' system", %{
       conn: conn,
       credential: credential
@@ -535,31 +699,32 @@ defmodule LightningWeb.CredentialLiveTest do
 
     test "blocks credential transfer to invalid owner; allows to valid owner", %{
       conn: conn,
-      user: first_owner
+      user: first_owner,
+      credential: credential_1
     } do
-      user_2 = Lightning.AccountsFixtures.user_fixture()
-      user_3 = Lightning.AccountsFixtures.user_fixture()
+      user_2 = insert(:user)
+      user_3 = insert(:user)
 
-      {:ok, %Lightning.Projects.Project{id: project_id}} =
-        Lightning.Projects.create_project(%{
-          name: "some-name",
+      project =
+        insert(:project,
+          name: "myproject",
           project_users: [%{user_id: first_owner.id}, %{user_id: user_2.id}]
-        })
+        )
 
       credential =
-        credential_fixture(
-          user_id: first_owner.id,
+        insert(:credential,
+          user: first_owner,
           name: "the one for giving away",
           project_credentials: [
-            %{project_id: project_id}
+            %{project: project, credential: nil}
           ]
         )
 
       {:ok, index_live, html} = live(conn, ~p"/credentials")
 
       # both credentials appear in the list
-      assert html =~ "some name"
-      assert html =~ "the one for giving away"
+      assert html =~ credential_1.name
+      assert html =~ credential.name
 
       assert html =~ first_owner.id
       assert html =~ user_2.id
@@ -589,8 +754,9 @@ defmodule LightningWeb.CredentialLiveTest do
         )
 
       # Once the transfer is made, the credential should not show up in the list
-      assert html =~ "some name"
+
       assert html =~ "Credential updated successfully"
+      assert html =~ credential_1.name
       refute html =~ "the one for giving away"
     end
   end

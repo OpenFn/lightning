@@ -50,11 +50,21 @@ defmodule Lightning.WebhookAuthMethodsTest do
       {:ok, auth_method} =
         WebhookAuthMethods.create_auth_method(valid_attrs, actor: user)
 
-      assert Repo.get_by(WebhookAuthMethodAudit.base_query(),
-               item_id: auth_method.id,
-               event: "created",
-               actor_id: user.id
-             )
+      assert audit =
+               Repo.get_by(WebhookAuthMethodAudit.base_query(),
+                 item_id: auth_method.id,
+                 actor_id: user.id
+               )
+
+      assert audit.event == "created"
+
+      assert audit.changes.before |> is_nil()
+
+      assert decode_encrypted_binary(audit.changes.after["username"]) ==
+               auth_method.username
+
+      assert decode_encrypted_binary(audit.changes.after["password"]) ==
+               auth_method.password
     end
 
     test "returns error when attributes are invalid", %{
@@ -122,11 +132,20 @@ defmodule Lightning.WebhookAuthMethodsTest do
 
       # saves 2 audit records
       # created
-      assert Repo.get_by(WebhookAuthMethodAudit.base_query(),
-               item_id: auth_method.id,
-               event: "created",
-               actor_id: user.id
-             )
+      assert audit =
+               Repo.get_by(WebhookAuthMethodAudit.base_query(),
+                 item_id: auth_method.id,
+                 event: "created",
+                 actor_id: user.id
+               )
+
+      assert audit.changes.before |> is_nil()
+
+      assert decode_encrypted_binary(audit.changes.after["username"]) ==
+               auth_method.username
+
+      assert decode_encrypted_binary(audit.changes.after["password"]) ==
+               auth_method.password
 
       # added to trigger
       added_to_trigger =
@@ -136,7 +155,7 @@ defmodule Lightning.WebhookAuthMethodsTest do
           actor_id: user.id
         )
 
-      assert added_to_trigger.changes == %Lightning.Auditing.Model.Changes{
+      assert added_to_trigger.changes == %Lightning.Auditing.Audit.Changes{
                before: %{"trigger_id" => nil},
                after: %{"trigger_id" => trigger.id}
              }
@@ -173,7 +192,7 @@ defmodule Lightning.WebhookAuthMethodsTest do
           actor_id: user.id
         )
 
-      assert audit.changes == %Lightning.Auditing.Model.Changes{
+      assert audit.changes == %Lightning.Auditing.Audit.Changes{
                before: %{"name" => auth_method.name},
                after: %{"name" => new_auth_method.name}
              }
@@ -218,7 +237,7 @@ defmodule Lightning.WebhookAuthMethodsTest do
           actor_id: user.id
         )
 
-      assert added_to_trigger.changes == %Lightning.Auditing.Model.Changes{
+      assert added_to_trigger.changes == %Lightning.Auditing.Audit.Changes{
                before: %{"trigger_id" => nil},
                after: %{"trigger_id" => trigger.id}
              }
@@ -263,7 +282,7 @@ defmodule Lightning.WebhookAuthMethodsTest do
             actor_id: user.id
           )
 
-        assert audit.changes == %Lightning.Auditing.Model.Changes{
+        assert audit.changes == %Lightning.Auditing.Audit.Changes{
                  before: %{"trigger_id" => nil},
                  after: %{"trigger_id" => trigger.id}
                }
@@ -278,7 +297,7 @@ defmodule Lightning.WebhookAuthMethodsTest do
             actor_id: user.id
           )
 
-        assert audit.changes == %Lightning.Auditing.Model.Changes{
+        assert audit.changes == %Lightning.Auditing.Audit.Changes{
                  after: %{"trigger_id" => nil},
                  before: %{"trigger_id" => trigger.id}
                }
@@ -483,5 +502,14 @@ defmodule Lightning.WebhookAuthMethodsTest do
     assert {:error, %Ecto.Changeset{} = changeset} = result
 
     assert changeset.valid? == false
+  end
+
+  defp decode_encrypted_binary(data) do
+    {:ok, val} =
+      data
+      |> Base.decode64!()
+      |> Lightning.Encrypted.Binary.load()
+
+    val
   end
 end

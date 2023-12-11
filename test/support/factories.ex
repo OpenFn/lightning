@@ -96,7 +96,11 @@ defmodule Lightning.Factories do
   end
 
   def credential_factory do
-    %Lightning.Credentials.Credential{}
+    %Lightning.Credentials.Credential{
+      body: %{},
+      schema: "raw",
+      name: sequence(:credential_name, &"credential#{&1}")
+    }
   end
 
   def project_credential_factory do
