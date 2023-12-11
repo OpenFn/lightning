@@ -49,15 +49,14 @@ defmodule Lightning.DashboardMetrics do
           completed_runs:
             sum(
               fragment(
-                "CASE WHEN ? = 'success' THEN 1 ELSE 0 END",
+                "CASE WHEN ? NOT IN ('pending', 'running') THEN 1 ELSE 0 END",
                 r.exit_reason
               )
             ),
           pending_running_runs:
             sum(
               fragment(
-                "CASE WHEN ? IS NULL OR ? NOT IN ('success') THEN 1 ELSE 0 END",
-                r.exit_reason,
+                "CASE WHEN ? IN ('pending', 'running') THEN 1 ELSE 0 END",
                 r.exit_reason
               )
             )
@@ -147,7 +146,7 @@ defmodule Lightning.DashboardMetrics do
     # Calculate the percentage
     failure_percentage =
       if failed_result > 0 and total_result > 0 do
-        failed_result / total_result * 100
+        Float.round(failed_result / total_result * 100, 2)
       else
         0
       end
