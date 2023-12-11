@@ -487,7 +487,6 @@ defmodule LightningWeb.CredentialLive.FormComponent do
             </div>
             <div class="grow-0 items-right">
               <.button
-                id={"remove-project-#{project_credential[:project_id].value}-from-#{@form[:id].value}"}
                 phx-target={@phx_target}
                 phx-value-projectid={project_credential[:project_id].value}
                 phx-click="delete_project"
@@ -498,7 +497,11 @@ defmodule LightningWeb.CredentialLive.FormComponent do
           </div>
         <% end %>
         <.input type="hidden" field={project_credential[:project_id]} />
-        <.input type="hidden" field={project_credential[:delete]} />
+        <.input
+          type="hidden"
+          field={project_credential[:delete]}
+          value={to_string(project_credential[:delete].value)}
+        />
       </.inputs_for>
     </div>
     """

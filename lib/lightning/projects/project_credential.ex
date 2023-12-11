@@ -19,7 +19,7 @@ defmodule Lightning.Projects.ProjectCredential do
   schema "project_credentials" do
     belongs_to :credential, Credential
     belongs_to :project, Project
-    field :delete, :boolean, virtual: true
+    field :delete, :boolean, virtual: true, default: false
 
     timestamps()
   end

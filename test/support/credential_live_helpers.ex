@@ -2,6 +2,11 @@ defmodule LightningWeb.CredentialLiveHelpers do
   import Phoenix.LiveViewTest
   import ExUnit.Assertions
 
+  def delete_credential_button(live, id) do
+    live
+    |> element("[phx-click='delete_project'][phx-value-projectid='#{id}']")
+  end
+
   def select_credential_type(live, type) do
     html =
       live

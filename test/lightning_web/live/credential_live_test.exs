@@ -592,7 +592,7 @@ defmodule LightningWeb.CredentialLiveTest do
       {:ok, view, _html} = live(conn, ~p"/credentials")
 
       view
-      |> element("#remove-project-#{project.id}-from-#{credential.id}")
+      |> delete_credential_button(project.id)
       |> render_click()
 
       view |> form("#credential-form-#{credential.id}") |> render_submit()
@@ -646,21 +646,15 @@ defmodule LightningWeb.CredentialLiveTest do
       assert html =~ project.name,
              "adding an existing project doesn't break anything"
 
-      assert has_element?(
-               view,
-               "#remove-project-#{project.id}-from-#{credential.id}"
-             )
+      assert view |> delete_credential_button(project.id) |> has_element?()
 
       # Let's remove the project and add it back again
 
       view
-      |> element("#remove-project-#{project.id}-from-#{credential.id}")
+      |> delete_credential_button(project.id)
       |> render_click()
 
-      refute has_element?(
-               view,
-               "#remove-project-#{project.id}-from-#{credential.id}"
-             ),
+      refute view |> delete_credential_button(project.id) |> has_element?(),
              "project is removed from list"
 
       # now let's add it back
@@ -672,10 +666,7 @@ defmodule LightningWeb.CredentialLiveTest do
       |> element("#add-new-project-button-to-#{credential.id}")
       |> render_click()
 
-      assert has_element?(
-               view,
-               "#remove-project-#{project.id}-from-#{credential.id}"
-             ),
+      assert view |> delete_credential_button(project.id) |> has_element?(),
              "project is added back"
 
       view |> form("#credential-form-#{credential.id}") |> render_submit()
