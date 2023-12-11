@@ -1,12 +1,13 @@
 defmodule LightningWeb.AttemptLive.Show do
   use LightningWeb, :live_view
 
-  alias Lightning.Attempts
   alias Phoenix.LiveView.AsyncResult
 
   import LightningWeb.AttemptLive.Components
   alias LightningWeb.Components.Viewers
   alias LightningWeb.AttemptLive.Streaming
+
+  use Streaming, chunk_size: 100
 
   on_mount {LightningWeb.Hooks, :project_scope}
 
@@ -159,8 +160,6 @@ defmodule LightningWeb.AttemptLive.Show do
     """
   end
 
-  use Streaming, chunk_size: 100
-
   @impl true
   def mount(%{"id" => id}, _session, socket) do
     {:ok,
@@ -178,7 +177,7 @@ defmodule LightningWeb.AttemptLive.Show do
      |> assign(:output_dataclip, false)
      |> assign(:attempt, AsyncResult.loading())
      |> assign(:log_lines, AsyncResult.loading())
-     |> start_async(:attempt, fn -> Attempts.get(id, include: [runs: :job]) end)}
+     |> get_attempt_async(id)}
   end
 
   def handle_runs_change(socket) do

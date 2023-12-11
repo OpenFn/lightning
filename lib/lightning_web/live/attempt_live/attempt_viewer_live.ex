@@ -3,10 +3,11 @@ defmodule LightningWeb.AttemptLive.AttemptViewerLive do
 
   import LightningWeb.AttemptLive.Components
   alias LightningWeb.Components.Viewers
-  alias Lightning.Attempts
 
   alias Phoenix.LiveView.AsyncResult
   alias LightningWeb.AttemptLive.Streaming
+
+  use Streaming, chunk_size: 100
 
   @impl true
   def render(assigns) do
@@ -28,7 +29,7 @@ defmodule LightningWeb.AttemptLive.AttemptViewerLive do
                 <:value>
                   <.link
                     navigate={
-                      ~p"/projects/#{attempt.work_order.workflow.project}/runs?#{%{filters: %{workorder_id: attempt.work_order.id}}}"
+                      ~p"/projects/#{@project}/runs?#{%{filters: %{workorder_id: attempt.work_order_id}}}"
                     }
                     class="hover:underline hover:text-primary-900"
                   >
@@ -43,9 +44,7 @@ defmodule LightningWeb.AttemptLive.AttemptViewerLive do
                 <:label>Attempt</:label>
                 <:value>
                   <.link
-                    navigate={
-                      ~p"/projects/#{attempt.work_order.workflow.project}/attempts/#{attempt}"
-                    }
+                    navigate={~p"/projects/#{@project}/attempts/#{attempt}"}
                     class="hover:underline hover:text-primary-900 whitespace-nowrap text-ellipsis"
                   >
                     <span class="whitespace-nowrap text-ellipsis">
@@ -168,17 +167,13 @@ defmodule LightningWeb.AttemptLive.AttemptViewerLive do
      |> assign(:output_dataclip, false)
      |> assign(:attempt, AsyncResult.loading())
      |> assign(:log_lines, AsyncResult.loading())
-     |> start_async(:attempt, fn ->
-       Attempts.get(attempt_id, include: [runs: :job, workflow: :project])
-     end), layout: false}
+     |> get_attempt_async(attempt_id), layout: false}
   end
 
   @impl true
   def handle_event("select_run", %{"id" => id}, socket) do
     {:noreply, socket |> apply_selected_run_id(id)}
   end
-
-  use Streaming, chunk_size: 100
 
   def handle_runs_change(socket) do
     # either a job_id or a run_id is passed in

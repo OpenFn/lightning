@@ -31,6 +31,8 @@ and this project adheres to
   [#1487](https://github.com/OpenFn/Lightning/issues/1487)
 - Initial credential creation `changes` show `after` as `null` rather a value
   [#1118](https://github.com/OpenFn/Lightning/issues/1118)
+- AttemptViewer flashing/rerendering when Jobs are running
+  [#1550](https://github.com/OpenFn/Lightning/issues/1550)
 
 ## [v0.11.0] - 2023-12-06
 
@@ -102,7 +104,6 @@ and this project adheres to
   [#1254](https://github.com/OpenFn/Lightning/issues/1254)
 - Fix for missing data in 'created' audit trail events for webhook auth methods
   [#1500](https://github.com/OpenFn/Lightning/issues/1500)
-
 
 ## [v0.10.4] - 2023-11-30
 
