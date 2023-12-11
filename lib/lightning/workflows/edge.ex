@@ -64,7 +64,9 @@ defmodule Lightning.Workflows.Edge do
       :source_trigger_id,
       :condition,
       :enabled,
-      :target_job_id
+      :target_job_id,
+      :js_expression_label,
+      :js_expression_body
     ])
     |> validate()
   end
