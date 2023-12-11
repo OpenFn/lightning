@@ -201,5 +201,107 @@ defmodule Lightning.Workflows.EdgeTest do
                Map.get(changeset.changes, :enabled, true),
              "Edges with a source_trigger_id should always be enabled"
     end
+
+    test "requires js_expression condition to have a label and js body" do
+      changeset =
+        Edge.changeset(
+          %Edge{
+            id: Ecto.UUID.generate(),
+            workflow_id: Ecto.UUID.generate(),
+            source_job_id: Ecto.UUID.generate(),
+            enabled: true
+          },
+          %{condition: :js_expression}
+        )
+
+      assert changeset.errors == [
+               js_expression_label: {"can't be blank", [validation: :required]},
+               js_expression_body: {"can't be blank", [validation: :required]}
+             ]
+    end
+
+    test "requires JS expression to have valid syntax" do
+      edge = %Edge{
+        id: Ecto.UUID.generate(),
+        workflow_id: Ecto.UUID.generate(),
+        source_job_id: Ecto.UUID.generate(),
+        enabled: true
+      }
+
+      js_attrs = %{
+        condition: :js_expression,
+        js_expression_label: "Some JS Expression"
+      }
+
+      changeset =
+        Edge.changeset(
+          edge,
+          Map.put(
+            js_attrs,
+            :js_expression_body,
+            "{ state.data.foo == ''bar' }"
+          )
+        )
+
+      assert changeset.errors == [
+               js_expression_body: {"must be a valid JavaScript expression", []}
+             ]
+
+      changeset =
+        Edge.changeset(
+          edge,
+          Map.put(
+            js_attrs,
+            :js_expression_body,
+            "{ state.data.foo == 'bar' }"
+          )
+        )
+
+      assert changeset.errors == []
+    end
+
+    test "requires JS expression to have neither import or require statements" do
+      edge = %Edge{
+        id: Ecto.UUID.generate(),
+        workflow_id: Ecto.UUID.generate(),
+        source_job_id: Ecto.UUID.generate(),
+        enabled: true
+      }
+
+      js_attrs = %{
+        condition: :js_expression,
+        js_expression_label: "Some JS Expression"
+      }
+
+      changeset =
+        Edge.changeset(
+          edge,
+          Map.put(
+            js_attrs,
+            :js_expression_body,
+            "{ var fs = require('fs'); }"
+          )
+        )
+
+      assert changeset.errors == [
+               js_expression_body:
+                 {"must not contain import or require statements", []}
+             ]
+
+      changeset =
+        Edge.changeset(
+          edge,
+          Map.put(
+            js_attrs,
+            :js_expression_body,
+            "{ var fs = import('fs'); }"
+          )
+        )
+
+      assert changeset.errors == [
+               js_expression_body:
+                 {"must not contain import or require statements", []}
+             ]
+    end
   end
 end

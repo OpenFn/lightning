@@ -96,12 +96,48 @@ defmodule Lightning.Workflows.Edge do
           message: "must be :always when source is a trigger"
         )
 
-      "js_expression" == get_field(changeset, :condition) ->
+      :js_expression == get_field(changeset, :condition) ->
         changeset
         |> validate_required([:js_expression_label, :js_expression_body])
+        |> validate_js_expression_body()
 
       true ->
         changeset
+    end
+  end
+
+  defp validate_js_expression_body(%{valid?: false} = changeset), do: changeset
+
+  defp validate_js_expression_body(changeset) do
+    js_code = get_field(changeset, :js_expression_body)
+
+    if String.contains?(js_code, [
+         "import ",
+         "import{",
+         "import(",
+         "require ",
+         "require("
+       ]) do
+      add_error(
+        changeset,
+        :js_expression_body,
+        "must not contain import or require statements"
+      )
+    else
+      js_code = "function test_syntax(state) { #{js_code} }"
+
+      System.cmd("node", ["-e", js_code], into: IO.stream())
+      |> case do
+        {_, 0} ->
+          changeset
+
+        {_, _} ->
+          add_error(
+            changeset,
+            :js_expression_body,
+            "must be a valid JavaScript expression"
+          )
+      end
     end
   end
 
