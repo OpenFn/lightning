@@ -462,12 +462,12 @@ defmodule LightningWeb.CredentialLive.FormComponent do
             prompt=""
             phx-change="select_item"
             phx-target={@phx_target}
-            id="project_list"
+            id={"project_list_for_#{@form[:id].value}"}
           />
         </div>
         <div class="grow-0 items-right">
           <.button
-            id="add-new-project-button"
+            id={"add-new-project-button-to-#{@form[:id].value}"}
             disabled={@selected == ""}
             phx-target={@phx_target}
             phx-value-projectid={@selected}
@@ -487,6 +487,7 @@ defmodule LightningWeb.CredentialLive.FormComponent do
             </div>
             <div class="grow-0 items-right">
               <.button
+                id={"remove-project-#{project_credential[:project_id].value}-from-#{@form[:id].value}"}
                 phx-target={@phx_target}
                 phx-value-projectid={project_credential[:project_id].value}
                 phx-click="delete_project"
