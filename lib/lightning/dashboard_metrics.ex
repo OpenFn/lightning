@@ -44,82 +44,58 @@ defmodule Lightning.DashboardMetrics do
         join: j in assoc(r, :job),
         join: wf in assoc(j, :workflow),
         where: wf.project_id == ^project_id,
-        group_by: r.exit_reason,
         select: %{
-          exit_reason: r.exit_reason,
-          count: count(r.id)
-        }
-      )
-
-    runs = Repo.all(query)
-
-    {completed_runs, pending_running_runs} =
-      Enum.reduce(runs, {0, 0}, fn
-        %{exit_reason: "pending"} = run, {completed, pending_running} ->
-          {completed, pending_running + run.count}
-
-        %{exit_reason: "running"} = run, {completed, pending_running} ->
-          {completed, pending_running + run.count}
-
-        run, {completed, pending_running} ->
-          {completed + run.count, pending_running}
-      end)
-
-    %{completed_runs: completed_runs, pending_running_runs: pending_running_runs}
-  end
-
-  def calculate_successful_runs_and_percentage(project_id) do
-    total_and_successful_runs_query =
-      from(
-        r in Run,
-        join: j in assoc(r, :job),
-        join: wf in assoc(j, :workflow),
-        join: p in assoc(wf, :project),
-        where: p.id == ^project_id,
-        select: %{
-          total_runs: count(r.id),
-          successful_runs:
+          completed_runs:
             sum(
               fragment(
-                "CASE WHEN ? = 'success' THEN 1 ELSE 0 END",
+                "CASE WHEN ? NOT IN ('pending', 'running') THEN 1 ELSE 0 END",
+                r.exit_reason
+              )
+            ),
+          pending_running_runs:
+            sum(
+              fragment(
+                "CASE WHEN ? IN ('pending', 'running') THEN 1 ELSE 0 END",
                 r.exit_reason
               )
             )
         }
       )
 
-    result = Repo.one(total_and_successful_runs_query)
+    Repo.one(query) || %{completed_runs: 0, pending_running_runs: 0}
+  end
 
-    success_percentage =
-      case result do
-        nil ->
-          0.0
+  def calculate_successful_runs_and_percentage(project_id) do
+    query =
+      from(
+        r in Run,
+        join: j in assoc(r, :job),
+        join: wf in assoc(j, :workflow),
+        where: wf.project_id == ^project_id,
+        select: %{
+          successful_runs:
+            count(
+              fragment(
+                "CASE WHEN ? = 'success' THEN 1 ELSE NULL END",
+                r.exit_reason
+              )
+            ),
+          success_percentage:
+            fragment(
+              "COALESCE(ROUND(100.0 * COUNT(CASE WHEN ? = 'success' THEN 1 ELSE NULL END) / NULLIF(COUNT(*), 0), 2), 0)",
+              r.exit_reason
+            )
+        }
+      )
 
-        %{} ->
-          if result.total_runs > 0 do
-            raw_percentage = result.successful_runs / result.total_runs * 100.0
-
-            if Float.round(raw_percentage, 2) == 100.0 do
-              100
-            else
-              Float.round(raw_percentage, 2)
-            end
-          else
-            0.0
-          end
-      end
-
-    %{
-      successful_runs: result.successful_runs || 0,
-      success_percentage: success_percentage
-    }
+    Repo.one(query) || %{successful_runs: 0, success_percentage: 0.0}
   end
 
   def calculate_failed_work_orders_and_percentage(project_id) do
     failed_states = [:failed, :crashed, :cancelled, :killed, :exception, :lost]
 
-    # Query for counting failed work orders
-    failed_query =
+    # Subquery for counting failed work orders
+    failed_subquery =
       from(
         wo in WorkOrder,
         join: wf in assoc(wo, :workflow),
@@ -127,35 +103,23 @@ defmodule Lightning.DashboardMetrics do
         select: count(wo.id)
       )
 
-    failed_result = Repo.one(failed_query)
+    # Main query for total work orders and calculating percentage
+    main_query =
+      from(
+        wo in WorkOrder,
+        join: wf in assoc(wo, :workflow),
+        where: wf.project_id == ^project_id,
+        select: %{
+          failed_workorders: subquery(failed_subquery),
+          failure_percentage:
+            fragment(
+              "COALESCE(ROUND(? * 100.0 / NULLIF(?, 0), 2), 0)",
+              subquery(failed_subquery),
+              count(wo.id)
+            )
+        }
+      )
 
-    # Only query total work orders if there are failed results
-    total_result =
-      if failed_result > 0 do
-        total_query =
-          from(
-            wo in WorkOrder,
-            join: wf in assoc(wo, :workflow),
-            where: wf.project_id == ^project_id,
-            select: count(wo.id)
-          )
-
-        Repo.one(total_query)
-      else
-        0
-      end
-
-    # Calculate the percentage
-    failure_percentage =
-      if failed_result > 0 and total_result > 0 do
-        Float.round(failed_result / total_result * 100, 2)
-      else
-        0
-      end
-
-    %{
-      failed_workorders: failed_result || 0,
-      failure_percentage: failure_percentage
-    }
+    Repo.one(main_query) || %{failed_workorders: 0, failure_percentage: 0.0}
   end
 end
