@@ -83,7 +83,7 @@ defmodule Lightning.ModelHelpers do
       where: r.id == ^expected_instance.id,
       left_join: others in ^model,
       on: others.id != ^expected_instance.id,
-      select: [count(r.id), count(others.id)]
+      select: [count(r.id, :distinct), count(others.id)]
     )
     |> Lightning.Repo.one!()
     |> case do
