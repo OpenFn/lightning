@@ -15,13 +15,13 @@ function getEdgeLabel(edge: Lightning.Edge) {
       label = '∞';
       break;
     case 'js_expression':
-      const cond_label = edge.js_expression_label;
+      const condition_label = edge.js_expression_label;
       
-      if (cond_label) {
-        if (cond_label.length > 16) {
-          label = cond_label.slice(0, 16) + '...';
+      if (condition_label) {
+        if (condition_label.length > 16) {
+          label = condition_label.slice(0, 16) + '...';
         } else {  
-          label = cond_label;
+          label = condition_label;
         }
       }
       break;
@@ -80,7 +80,7 @@ const fromWorkflow = (
         model.source = edge.source_trigger_id || edge.source_job_id;
         model.target = edge.target_job_id;
         model.type = 'step';
-        model.label = getEdgeLabel(edge.condition);
+        model.label = getEdgeLabel(edge);
         model.markerEnd = {
           type: 'arrowclosed',
           width: 32,
