@@ -43,27 +43,29 @@ defmodule Lightning.DashboardMetrics do
         r in Run,
         join: j in assoc(r, :job),
         join: wf in assoc(j, :workflow),
-        join: p in assoc(wf, :project),
-        where: p.id == ^project_id,
+        where: wf.project_id == ^project_id,
+        group_by: r.exit_reason,
         select: %{
-          completed_runs:
-            sum(
-              fragment(
-                "CASE WHEN ? NOT IN ('pending', 'running') THEN 1 ELSE 0 END",
-                r.exit_reason
-              )
-            ),
-          pending_running_runs:
-            sum(
-              fragment(
-                "CASE WHEN ? IN ('pending', 'running') THEN 1 ELSE 0 END",
-                r.exit_reason
-              )
-            )
+          exit_reason: r.exit_reason,
+          count: count(r.id)
         }
       )
 
-    Repo.one(query) || %{completed_runs: 0, pending_running_runs: 0}
+    runs = Repo.all(query)
+
+    {completed_runs, pending_running_runs} =
+      Enum.reduce(runs, {0, 0}, fn
+        %{exit_reason: "pending"} = run, {completed, pending_running} ->
+          {completed, pending_running + run.count}
+
+        %{exit_reason: "running"} = run, {completed, pending_running} ->
+          {completed, pending_running + run.count}
+
+        run, {completed, pending_running} ->
+          {completed + run.count, pending_running}
+      end)
+
+    %{completed_runs: completed_runs, pending_running_runs: pending_running_runs}
   end
 
   def calculate_successful_runs_and_percentage(project_id) do
