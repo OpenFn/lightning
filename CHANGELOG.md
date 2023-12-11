@@ -16,6 +16,8 @@ and this project adheres to
   [#1064](https://github.com/OpenFn/Lightning/issues/1064)
 - Custom metric to track Attempt queue delay
   [#1556](https://github.com/OpenFn/Lightning/issues/1556)
+- Allow Javascript expressions as conditions for edges
+  [#1498](https://github.com/OpenFn/Lightning/issues/1498)
 
 ### Changed
 
