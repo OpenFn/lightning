@@ -46,19 +46,9 @@ defmodule Lightning.DashboardMetrics do
         where: wf.project_id == ^project_id,
         select: %{
           completed_runs:
-            sum(
-              fragment(
-                "CASE WHEN ? NOT IN ('pending', 'running') THEN 1 ELSE 0 END",
-                r.exit_reason
-              )
-            ),
+            count(r.id) |> filter(r.exit_reason not in ["pending", "running"]),
           pending_running_runs:
-            sum(
-              fragment(
-                "CASE WHEN ? IN ('pending', 'running') THEN 1 ELSE 0 END",
-                r.exit_reason
-              )
-            )
+            count(r.id) |> filter(r.exit_reason in ["pending", "running"])
         }
       )
 
