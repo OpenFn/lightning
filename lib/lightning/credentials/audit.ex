@@ -2,7 +2,7 @@ defmodule Lightning.Credentials.Audit do
   @moduledoc """
   Model for storing changes to Credentials
   """
-  use Lightning.Auditing.Model,
+  use Lightning.Auditing.Audit,
     repo: Lightning.Repo,
     item: "credential",
     events: [

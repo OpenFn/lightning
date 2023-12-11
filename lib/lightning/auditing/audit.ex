@@ -1,4 +1,4 @@
-defmodule Lightning.Auditing.Model do
+defmodule Lightning.Auditing.Audit do
   @moduledoc """
   Macro module to add common model behaviour to a given Ecto model
   """

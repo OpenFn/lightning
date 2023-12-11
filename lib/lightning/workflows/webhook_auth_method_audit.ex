@@ -2,7 +2,7 @@ defmodule Lightning.Workflows.WebhookAuthMethodAudit do
   @moduledoc """
   Model for storing changes to WebhookAuthMethod
   """
-  use Lightning.Auditing.Model,
+  use Lightning.Auditing.Audit,
     repo: Lightning.Repo,
     item: "webhook_auth_method",
     events: [

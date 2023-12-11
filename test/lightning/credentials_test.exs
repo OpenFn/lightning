@@ -96,7 +96,7 @@ defmodule Lightning.CredentialsTest do
 
       assert {:ok,
               %{
-                audit: %Lightning.Auditing.Model{} = audit,
+                audit: %Lightning.Auditing.Audit{} = audit,
                 credential: %Credential{} = credential
               }} =
                Credentials.delete_credential(%Lightning.Credentials.Credential{

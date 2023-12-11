@@ -854,7 +854,7 @@ defmodule Lightning.SetupUtils do
       Lightning.Attempt,
       Lightning.AttemptRun,
       Lightning.AuthProviders.AuthConfig,
-      Lightning.Auditing.Model,
+      Lightning.Auditing.Audit,
       Lightning.Projects.ProjectCredential,
       Lightning.WorkOrder,
       Lightning.Invocation.Run,

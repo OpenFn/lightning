@@ -155,7 +155,7 @@ defmodule Lightning.WebhookAuthMethodsTest do
           actor_id: user.id
         )
 
-      assert added_to_trigger.changes == %Lightning.Auditing.Model.Changes{
+      assert added_to_trigger.changes == %Lightning.Auditing.Audit.Changes{
                before: %{"trigger_id" => nil},
                after: %{"trigger_id" => trigger.id}
              }
@@ -192,7 +192,7 @@ defmodule Lightning.WebhookAuthMethodsTest do
           actor_id: user.id
         )
 
-      assert audit.changes == %Lightning.Auditing.Model.Changes{
+      assert audit.changes == %Lightning.Auditing.Audit.Changes{
                before: %{"name" => auth_method.name},
                after: %{"name" => new_auth_method.name}
              }
@@ -237,7 +237,7 @@ defmodule Lightning.WebhookAuthMethodsTest do
           actor_id: user.id
         )
 
-      assert added_to_trigger.changes == %Lightning.Auditing.Model.Changes{
+      assert added_to_trigger.changes == %Lightning.Auditing.Audit.Changes{
                before: %{"trigger_id" => nil},
                after: %{"trigger_id" => trigger.id}
              }
@@ -282,7 +282,7 @@ defmodule Lightning.WebhookAuthMethodsTest do
             actor_id: user.id
           )
 
-        assert audit.changes == %Lightning.Auditing.Model.Changes{
+        assert audit.changes == %Lightning.Auditing.Audit.Changes{
                  before: %{"trigger_id" => nil},
                  after: %{"trigger_id" => trigger.id}
                }
@@ -297,7 +297,7 @@ defmodule Lightning.WebhookAuthMethodsTest do
             actor_id: user.id
           )
 
-        assert audit.changes == %Lightning.Auditing.Model.Changes{
+        assert audit.changes == %Lightning.Auditing.Audit.Changes{
                  after: %{"trigger_id" => nil},
                  before: %{"trigger_id" => trigger.id}
                }
