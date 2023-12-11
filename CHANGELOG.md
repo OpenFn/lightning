@@ -14,6 +14,8 @@ and this project adheres to
   [#1217](https://github.com/OpenFn/Lightning/issues/1217)
 - Fix Credential Creation Page UI
   [#1064](https://github.com/OpenFn/Lightning/issues/1064)
+- Populate dataclip in job inspector via URL parameter
+  [#1551](https://github.com/OpenFn/Lightning/issues/1551)
 
 ### Changed
 

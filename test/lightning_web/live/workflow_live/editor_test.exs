@@ -309,6 +309,82 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
              )
              |> has_element?()
     end
+
+    test "selects the input dataclip for the attempt run if an attempt is followed",
+         %{
+           conn: conn,
+           project: project,
+           workflow: %{jobs: [job_1, job_2 | _rest]} = workflow
+         } do
+      input_dataclip = insert(:dataclip, project: project, type: :http_request)
+
+      output_dataclip =
+        insert(:dataclip,
+          project: project,
+          type: :run_result,
+          body: %{"val" => Ecto.UUID.generate()}
+        )
+
+      %{attempts: [attempt]} =
+        insert(:workorder,
+          workflow: workflow,
+          dataclip: input_dataclip,
+          attempts: [
+            build(:attempt,
+              dataclip: input_dataclip,
+              starting_job: job_1,
+              runs: [
+                build(:run,
+                  job: job_1,
+                  input_dataclip: input_dataclip,
+                  output_dataclip: output_dataclip,
+                  started_at: build(:timestamp),
+                  finished_at: build(:timestamp),
+                  exit_reason: "success"
+                ),
+                build(:run,
+                  job: job_2,
+                  input_dataclip: output_dataclip,
+                  output_dataclip:
+                    build(:dataclip,
+                      type: :run_result,
+                      body: %{}
+                    ),
+                  started_at: build(:timestamp),
+                  finished_at: build(:timestamp),
+                  exit_reason: "success"
+                )
+              ]
+            )
+          ]
+        )
+
+      # insert 3 new dataclips
+      insert_list(3, :dataclip, project: project)
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project}/w/#{workflow}?#{[s: job_2.id, a: attempt.id, m: "expand"]}"
+        )
+
+      # the run dataclip is different from the attempt dataclip.
+      # this assertion means that the attempt dataclip won't be selected
+      refute attempt.dataclip_id == output_dataclip.id
+
+      # the form has the dataclips body
+      assert element(view, "#manual-job-#{job_2.id} form") |> render() =~
+               output_dataclip.body["val"]
+
+      # the run dataclip is selected
+      element =
+        view
+        |> element(
+          "select#manual_run_form_dataclip_id  option[value='#{output_dataclip.id}']"
+        )
+
+      assert render(element) =~ "selected"
+    end
   end
 
   describe "Editor events" do

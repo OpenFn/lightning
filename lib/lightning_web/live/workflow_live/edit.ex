@@ -2,6 +2,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
   @moduledoc false
   use LightningWeb, :live_view
 
+  alias Lightning.Invocation
   alias Lightning.Policies.Permissions
   alias Lightning.Policies.ProjectUsers
   alias Lightning.WorkOrders
@@ -765,9 +766,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
       when not is_nil(job) ->
         dataclip =
           assigns[:follow_attempt_id] &&
-            Lightning.Invocation.get_dataclip_for_attempt(
-              assigns[:follow_attempt_id]
-            )
+            get_selected_dataclip(assigns[:follow_attempt_id], job.id)
 
         changeset =
           WorkOrders.Manual.new(
@@ -779,15 +778,13 @@ defmodule LightningWeb.WorkflowLive.Edit do
           )
 
         selectable_dataclips =
-          Lightning.Invocation.list_dataclips_for_job(%Lightning.Workflows.Job{
-            id: job.id
-          })
+          Invocation.list_dataclips_for_job(%Job{id: job.id})
 
         socket
         |> assign_manual_run_form(changeset)
         |> assign(
           selectable_dataclips:
-            maybe_add_attempt_dataclip(selectable_dataclips, dataclip)
+            maybe_add_selected_dataclip(selectable_dataclips, dataclip)
         )
 
       _ ->
@@ -795,11 +792,16 @@ defmodule LightningWeb.WorkflowLive.Edit do
     end
   end
 
-  defp maybe_add_attempt_dataclip(selectable_dataclips, nil) do
+  defp get_selected_dataclip(attempt_id, job_id) do
+    Invocation.get_input_dataclip_for_attempted_job(attempt_id, job_id) ||
+      Invocation.get_dataclip_for_attempt(attempt_id)
+  end
+
+  defp maybe_add_selected_dataclip(selectable_dataclips, nil) do
     selectable_dataclips
   end
 
-  defp maybe_add_attempt_dataclip(selectable_dataclips, dataclip) do
+  defp maybe_add_selected_dataclip(selectable_dataclips, dataclip) do
     if Enum.find(selectable_dataclips, fn dc -> dc.id == dataclip.id end) do
       selectable_dataclips
     else
