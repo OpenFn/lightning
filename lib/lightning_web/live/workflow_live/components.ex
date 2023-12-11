@@ -519,10 +519,10 @@ defmodule LightningWeb.WorkflowLive.Components do
         </div>
         <%= if @form.params["condition"] == "js_expression" do %>
           <div>
-            <.label for={:condition_label} font="font-medium">
+            <.label for={:js_expression_label} font="font-medium">
               Condition label
             </.label>
-            <.input type="text" field={@form[:condition_label]} />
+            <.input type="text" field={@form[:js_expression_label]} />
           </div>
           <div>
             <.label for={:js_expression_body} font="font-medium">

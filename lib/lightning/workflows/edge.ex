@@ -16,7 +16,8 @@ defmodule Lightning.Workflows.Edge do
   alias Lightning.Workflows.Trigger
   alias Lightning.Workflows.Workflow
 
-  @type edge_condition() :: :always | :on_job_success | :on_job_failure
+  @type edge_condition() ::
+          :always | :on_job_success | :on_job_failure | :js_expression
   @type t() :: %__MODULE__{
           __meta__: Ecto.Schema.Metadata.t(),
           id: Ecto.UUID.t() | nil,
@@ -39,6 +40,8 @@ defmodule Lightning.Workflows.Edge do
     belongs_to :target_job, Job
 
     field :condition, Ecto.Enum, values: @conditions
+    field :js_expression_body, :string
+    field :js_expression_label, :string
 
     field :enabled, :boolean, default: true
 
@@ -79,21 +82,23 @@ defmodule Lightning.Workflows.Edge do
       [:source_job_id, :source_trigger_id],
       "source_job_id and source_trigger_id are mutually exclusive"
     )
-    |> validate_source_condition()
+    |> validate_condition_attributes()
     |> validate_different_nodes()
   end
 
-  defp validate_source_condition(changeset) do
-    [:source_trigger_id, :condition]
-    |> Enum.map(&get_field(changeset, &1))
-    |> case do
-      [trigger, _condition] when not is_nil(trigger) ->
+  defp validate_condition_attributes(changeset) do
+    cond do
+      nil != get_field(changeset, :source_trigger_id) ->
         changeset
         |> validate_inclusion(:condition, [:always],
           message: "must be :always when source is a trigger"
         )
 
-      _ ->
+      "js_expression" == get_field(changeset, :condition) ->
+        changeset
+        |> validate_required([:js_expression_label, :js_expression_body])
+
+      true ->
         changeset
     end
   end

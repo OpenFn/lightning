@@ -42,6 +42,8 @@ export namespace Lightning {
     edge?: boolean;
     error_path?: boolean;
     errors: any;
+    js_expression_body?: string;
+    js_expression_label?: string;
   }
 
   export type Workflow = {
