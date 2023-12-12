@@ -17,6 +17,8 @@ and this project adheres to
 
 ### Changed
 
+- Derive dataclip in inspector from the attempt & step
+  [#1551](https://github.com/OpenFn/Lightning/issues/1551)
 - Updated CLI to 0.4.10 (fixes logging)
 - Changed UserBackupToken model to use UTC timestamps (6563cb77)
 - Restore FK relationship between `work_orders` and `attempts` pending a
