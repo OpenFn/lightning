@@ -48,15 +48,9 @@ defmodule Lightning.Invocation.Dataclip do
     timestamps(type: :utc_datetime_usec)
   end
 
-  def new(attrs \\ %{})
-
-  def new(attrs) when is_list(attrs) do
-    new(Map.new(attrs))
-  end
-
-  def new(attrs) do
-    %__MODULE__{id: Ecto.UUID.generate()}
-    |> cast(attrs, [:body, :type, :project_id])
+  def new(attrs \\ %{}) do
+    change(%__MODULE__{id: Ecto.UUID.generate()})
+    |> change(attrs)
     |> remove_configuration()
     |> validate()
   end
