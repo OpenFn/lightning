@@ -109,7 +109,7 @@ defmodule Lightning.Attempts do
   def start_attempt(%Attempt{} = attempt) do
     Attempt.start(attempt)
     |> update_attempt()
-    |> track_attempt_queue_delay()
+    |> tap(&track_attempt_queue_delay/1)
   end
 
   @spec complete_attempt(Attempt.t(), %{optional(any()) => any()}) ::
@@ -261,7 +261,7 @@ defmodule Lightning.Attempts do
     Lightning.Config.attempts_adaptor()
   end
 
-  defp track_attempt_queue_delay({:ok, attempt} = update_result) do
+  defp track_attempt_queue_delay({:ok, attempt}) do
     %Attempt{inserted_at: inserted_at, started_at: started_at} = attempt
 
     delay = DateTime.diff(started_at, inserted_at, :millisecond)
@@ -271,11 +271,8 @@ defmodule Lightning.Attempts do
       %{delay: delay},
       %{}
     )
-
-    update_result
   end
 
-  defp track_attempt_queue_delay({:error, _changeset} = update_result) do
-    update_result
+  defp track_attempt_queue_delay({:error, _changeset}) do
   end
 end

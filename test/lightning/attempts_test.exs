@@ -310,9 +310,9 @@ defmodule Lightning.AttemptsTest do
     test "indicates if a response was unsuccessful", %{attempt: attempt} do
       with_mock(
         Lightning.Repo,
-        transaction: fn _multi -> {:error, nil, {:change, :set}, nil} end
+        transaction: fn _multi -> {:error, nil, %Ecto.Changeset{}, nil} end
       ) do
-        assert Attempts.start_attempt(attempt) == {:error, {:change, :set}}
+        assert Attempts.start_attempt(attempt) == {:error, %Ecto.Changeset{}}
       end
     end
 
