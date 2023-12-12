@@ -79,12 +79,12 @@ defmodule Lightning.Invocation do
     Repo.one(query)
   end
 
-  @spec get_input_dataclip_for_attempted_job(
+  @spec get_dataclip_for_attempt_and_job(
           attempt_id :: Ecto.UUID.t(),
           job_id :: Ecto.UUID.t()
         ) ::
           Dataclip.t() | nil
-  def get_input_dataclip_for_attempted_job(attempt_id, job_id) do
+  def get_dataclip_for_attempt_and_job(attempt_id, job_id) do
     query =
       from d in Query.dataclip_with_body(),
         join: r in Lightning.Invocation.Run,

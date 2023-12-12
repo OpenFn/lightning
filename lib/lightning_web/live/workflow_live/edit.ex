@@ -793,7 +793,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
   end
 
   defp get_selected_dataclip(attempt_id, job_id) do
-    Invocation.get_input_dataclip_for_attempted_job(attempt_id, job_id) ||
+    Invocation.get_dataclip_for_attempt_and_job(attempt_id, job_id) ||
       Invocation.get_dataclip_for_attempt(attempt_id)
   end
 
