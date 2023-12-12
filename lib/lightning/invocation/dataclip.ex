@@ -63,7 +63,8 @@ defmodule Lightning.Invocation.Dataclip do
            }
          } =
            changeset
-       ) do
+       )
+       when is_map(body) do
     body = Map.delete(body, "configuration")
 
     put_change(changeset, :body, body)
