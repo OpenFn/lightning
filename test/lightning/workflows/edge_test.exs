@@ -239,12 +239,12 @@ defmodule Lightning.Workflows.EdgeTest do
           Map.put(
             js_attrs,
             :js_expression_body,
-            "{ state.data.foo == ''bar' }"
+            "state.data.foo == 'bar';"
           )
         )
 
       assert changeset.errors == [
-               js_expression_body: {"must be a valid JavaScript expression", []}
+               js_expression_body: {"must not contain a statement", []}
              ]
 
       changeset =
@@ -254,6 +254,20 @@ defmodule Lightning.Workflows.EdgeTest do
             js_attrs,
             :js_expression_body,
             "{ state.data.foo == 'bar' }"
+          )
+        )
+
+      assert changeset.errors == [
+               js_expression_body: {"must not contain a statement", []}
+             ]
+
+      changeset =
+        Edge.changeset(
+          edge,
+          Map.put(
+            js_attrs,
+            :js_expression_body,
+            "state.data.foo == 'bar' || state.data.bar == 'foo'"
           )
         )
 

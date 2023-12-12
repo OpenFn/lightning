@@ -111,33 +111,23 @@ defmodule Lightning.Workflows.Edge do
   defp validate_js_expression_body(changeset) do
     js_code = get_field(changeset, :js_expression_body)
 
-    if String.contains?(js_code, [
-         "import ",
-         "import{",
-         "import(",
-         "require ",
-         "require("
-       ]) do
-      add_error(
-        changeset,
-        :js_expression_body,
-        "must not contain import or require statements"
-      )
-    else
-      js_code = "function test_syntax(state) { #{js_code} }"
+    cond do
+      String.match?(js_code, ~r/(import|require)(\(|\{| )/) ->
+        add_error(
+          changeset,
+          :js_expression_body,
+          "must not contain import or require statements"
+        )
 
-      System.cmd("node", ["-e", js_code], into: IO.stream())
-      |> case do
-        {_, 0} ->
-          changeset
+      String.match?(js_code, ~r/(;|{)/) ->
+        add_error(
+          changeset,
+          :js_expression_body,
+          "must not contain a statement"
+        )
 
-        {_, _} ->
-          add_error(
-            changeset,
-            :js_expression_body,
-            "must be a valid JavaScript expression"
-          )
-      end
+      true ->
+        changeset
     end
   end
 
