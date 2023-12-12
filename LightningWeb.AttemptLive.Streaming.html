@@ -13,7 +13,7 @@
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-EPF2X7PV.js"></script>
-    <script src="dist/sidebar_items-5DE7C530.js"></script>
+    <script src="dist/sidebar_items-34548BE1.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -159,6 +159,16 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
+        <a href="#get_attempt_async/2" translate="no">get_attempt_async(socket, attempt_id)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Starts an async process that will fetch the attempt with the given ID.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
         <a href="#get_dataclip_lines/2" translate="no">get_dataclip_lines(run, field)</a>
 
       </div>
@@ -227,7 +237,7 @@ Pages
     </a>
     <h1 class="signature" translate="no">add_or_update_run(socket, run)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/attempt_live/streaming.ex#L9" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/attempt_live/streaming.ex#L21" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -240,6 +250,35 @@ Pages
 
   </section>
 </section>
+<section class="detail" id="get_attempt_async/2">
+
+  <div class="detail-header">
+    <a href="#get_attempt_async/2" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">get_attempt_async(socket, attempt_id)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/attempt_live/streaming.ex#L14" class="icon-action" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> get_attempt_async(<a href="https://hexdocs.pm/phoenix_live_view/0.20.1/Phoenix.LiveView.Socket.html#t:t/0">Phoenix.LiveView.Socket.t</a>(), <a href="https://hexdocs.pm/ecto/3.10.3/Ecto.UUID.html#t:t/0">Ecto.UUID.t</a>()) ::
+  <a href="https://hexdocs.pm/phoenix_live_view/0.20.1/Phoenix.LiveView.Socket.html#t:t/0">Phoenix.LiveView.Socket.t</a>()</pre>
+
+      </div>
+
+<p>Starts an async process that will fetch the attempt with the given ID.</p>
+  </section>
+</section>
 <section class="detail" id="get_dataclip_lines/2">
 
   <div class="detail-header">
@@ -249,7 +288,7 @@ Pages
     </a>
     <h1 class="signature" translate="no">get_dataclip_lines(run, field)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/attempt_live/streaming.ex#L27" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/attempt_live/streaming.ex#L39" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -271,7 +310,7 @@ Pages
     </a>
     <h1 class="signature" translate="no">maybe_load_input_dataclip(socket, chunk_size)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/attempt_live/streaming.ex#L50" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/attempt_live/streaming.ex#L62" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -293,7 +332,7 @@ Pages
     </a>
     <h1 class="signature" translate="no">maybe_load_output_dataclip(socket, chunk_size)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/attempt_live/streaming.ex#L75" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/attempt_live/streaming.ex#L87" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -315,7 +354,7 @@ Pages
     </a>
     <h1 class="signature" translate="no">reset_dataclip_streams(socket)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/attempt_live/streaming.ex#L101" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/attempt_live/streaming.ex#L113" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -337,7 +376,7 @@ Pages
     </a>
     <h1 class="signature" translate="no">sort_runs(runs)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/attempt_live/streaming.ex#L118" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/attempt_live/streaming.ex#L130" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -359,7 +398,7 @@ Pages
     </a>
     <h1 class="signature" translate="no">unselect_run(socket)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/attempt_live/streaming.ex#L107" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/attempt_live/streaming.ex#L119" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
