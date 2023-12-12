@@ -29,6 +29,7 @@ export const labelStyles = (selected?: boolean, data) => {
 
   if (condition === 'js_expression') {
     return {
+      padding: '0 4px',
       height: '32px',
       border: `solid 2px ${primaryColor(selected, enabled)}`,
       borderRadius: 4,

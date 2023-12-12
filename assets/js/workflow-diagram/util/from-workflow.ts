@@ -2,7 +2,7 @@ import { Lightning, Flow, Positions } from '../types';
 import { sortOrderForSvg, styleEdge, styleItem, styleNode } from '../styles';
 
 function getEdgeLabel(edge: Lightning.Edge) {
-  let label = ' ( ) ';
+  let label = '( )';
 
   switch (edge.condition) {
     case 'on_job_success':
