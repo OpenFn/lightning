@@ -4,6 +4,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
   alias Lightning.Policies.Permissions
   alias Lightning.Policies.ProjectUsers
+  alias Lightning.Invocation.Dataclip
   alias Lightning.WorkOrders
   alias Lightning.Workflows
   alias Lightning.Workflows.Job
@@ -717,7 +718,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
          |> assign_workflow(workflow)
          |> follow_attempt(attempt)}
 
-      {:error, %Ecto.Changeset{data: %WorkOrders.Manual{}} = changeset} ->
+      {:error, %Ecto.Changeset{data: %mod{}} = changeset}
+      when mod in [WorkOrders.Manual, Dataclip] ->
         {:noreply,
          socket
          |> assign_manual_run_form(changeset)}

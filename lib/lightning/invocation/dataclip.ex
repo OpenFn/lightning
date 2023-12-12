@@ -48,14 +48,20 @@ defmodule Lightning.Invocation.Dataclip do
     timestamps(type: :utc_datetime_usec)
   end
 
-  def new(attrs \\ %{}) do
-    change(%__MODULE__{id: Ecto.UUID.generate()}, attrs)
-    |> change(attrs)
-    |> redact_password()
+  def new(attrs \\ %{})
+
+  def new(attrs) when is_list(attrs) do
+    new(Map.new(attrs))
+  end
+
+  def new(attrs) do
+    %__MODULE__{id: Ecto.UUID.generate()}
+    |> cast(attrs, [:body, :type, :project_id])
+    |> remove_configuration()
     |> validate()
   end
 
-  defp redact_password(
+  defp remove_configuration(
          %Ecto.Changeset{
            valid?: true,
            changes: %{
@@ -70,7 +76,7 @@ defmodule Lightning.Invocation.Dataclip do
     put_change(changeset, :body, body)
   end
 
-  defp redact_password(changeset), do: changeset
+  defp remove_configuration(changeset), do: changeset
 
   @doc false
   def changeset(dataclip, attrs) do
