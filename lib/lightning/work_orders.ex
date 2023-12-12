@@ -100,6 +100,9 @@ defmodule Lightning.WorkOrders do
     |> case do
       {:ok, %{workorder: workorder}} ->
         {:ok, workorder}
+
+      {:error, _op, changeset, _changes} ->
+        {:error, changeset}
     end
   end
 
