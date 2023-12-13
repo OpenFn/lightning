@@ -141,6 +141,24 @@ defmodule LightningWeb.EndToEndTest do
         condition: :on_job_failure
       })
 
+      expression1_job =
+        insert(:job,
+          name: "4th-job",
+          adaptor: "@openfn/language-http@latest",
+          body: on_js_condition_body(),
+          workflow: workflow,
+          project_credential: project_credential
+        )
+
+      insert(:edge, %{
+        source_job_id: catch_job.id,
+        workflow: workflow,
+        target_job_id: expression1_job.id,
+        condition: :js_expression,
+        js_expression_label: "less_than_1000",
+        js_expression_body: "state.x < 1000"
+      })
+
       webhook_body = %{"fieldOne" => 123, "fieldTwo" => "some string"}
 
       conn = post(conn, "/i/#{webhook_trigger.id}", webhook_body)
@@ -165,19 +183,25 @@ defmodule LightningWeb.EndToEndTest do
       # All runs are associated with the same project and attempt and proper job
       %{runs: runs} = Attempts.get(attempt.id, include: [:runs])
 
-      %{entries: [run_3, run_2, run_1]} =
-        Invocation.list_runs_for_project(project)
+      assert %{
+               total_entries: 4,
+               entries: [run_4, run_3, run_2, run_1] = entries_runs
+             } =
+               Invocation.list_runs_for_project(project)
 
       assert MapSet.new(runs, & &1.id) ==
-               MapSet.new([run_1, run_2, run_3], & &1.id)
+               MapSet.new(entries_runs, & &1.id)
 
       # Alls runs have consistent finish_at, exit_reason and dataclips
       %{claimed_at: claimed_at, finished_at: finished_at} =
         Attempts.get(attempt.id)
 
+      assert Enum.all?(runs, fn run ->
+               NaiveDateTime.after?(run_2.finished_at, claimed_at) and
+                 NaiveDateTime.before?(run_2.finished_at, finished_at)
+             end)
+
       # Run 1 succeeds with webhook_body as input
-      assert NaiveDateTime.diff(run_1.finished_at, claimed_at, :microsecond) > 0
-      assert NaiveDateTime.diff(run_1.finished_at, finished_at, :microsecond) < 0
       assert run_1.exit_reason == "success"
 
       expected_job_x_value = 123 * 2
@@ -221,8 +245,6 @@ defmodule LightningWeb.EndToEndTest do
                select_dataclip_body(run_1.output_dataclip_id)
 
       # #  Run 2 should fail but not expose a secret
-      assert NaiveDateTime.diff(run_2.finished_at, claimed_at, :microsecond) > 0
-      assert NaiveDateTime.diff(run_2.finished_at, finished_at, :microsecond) < 0
       assert run_2.exit_reason == "fail"
 
       log = Invocation.assemble_logs_for_run(run_2)
@@ -233,9 +255,7 @@ defmodule LightningWeb.EndToEndTest do
       assert select_dataclip_body(run_1.output_dataclip_id) ==
                select_dataclip_body(run_2.input_dataclip_id)
 
-      #  Run 3 should succeed and log "6"
-      assert NaiveDateTime.diff(run_3.finished_at, claimed_at, :microsecond) > 0
-      assert NaiveDateTime.diff(run_3.finished_at, finished_at, :microsecond) < 0
+      #  Run 3 should succeed and log the correct value of x
       assert run_3.exit_reason == "success"
 
       lines = Invocation.logs_for_run(run_3)
@@ -271,6 +291,14 @@ defmodule LightningWeb.EndToEndTest do
 
       assert %{"data" => ^webhook_body, "x" => ^expected_job_x_value} =
                select_dataclip_body(run_3.output_dataclip_id)
+
+      # Run 4 after the js condition should succeed and log the correct value of x
+      expected_job_x_value = expected_job_x_value * 5
+      assert run_4.exit_reason == "success"
+
+      assert Enum.any?(Invocation.logs_for_run(run_4), fn line ->
+               line.source == "JOB" and line.message =~ "#{expected_job_x_value}"
+             end)
     end
   end
 
@@ -298,6 +326,14 @@ defmodule LightningWeb.EndToEndTest do
       console.log('but immasecret should be scrubbed');
       console.log('along with its encoded form #{Base.encode64("immasecret")}');
       console.log('and its basic auth form #{Base.encode64("quux:immasecret")}');
+      return state;
+    });"
+  end
+
+  defp on_js_condition_body do
+    "fn(state => {
+      state.x = state.x * 5;
+      console.log(state.x);
       return state;
     });"
   end
