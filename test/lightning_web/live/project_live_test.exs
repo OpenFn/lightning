@@ -940,23 +940,6 @@ defmodule LightningWeb.ProjectLiveTest do
       refute html =~ credential_name
     end
 
-    test "project admin can view project security page",
-         %{
-           conn: conn,
-           user: user
-         } do
-      project = insert(:project, project_users: [%{user: user, role: :admin}])
-
-      {:ok, _view, html} =
-        live(
-          conn,
-          Routes.project_project_settings_path(conn, :index, project.id) <>
-            "#security"
-        )
-
-      assert html =~ "Multi-Factor Authentication"
-    end
-
     test "project admin can't edit project name and description with invalid data",
          %{
            conn: conn,
@@ -1144,6 +1127,42 @@ defmodule LightningWeb.ProjectLiveTest do
       assert view |> has_element?("#{form_id} option[selected]", "Daily")
     end
 
+    test "authorized project users can view project security page",
+         %{
+           conn: conn
+         } do
+      project = insert(:project)
+
+      # project editor and viewer cannot see the settings page
+      [:editor, :viewer]
+      |> Enum.each(fn role ->
+        {conn, _user} = setup_project_user(conn, project, role)
+
+        {:ok, view, html} =
+          live(
+            conn,
+            Routes.project_project_settings_path(conn, :index, project.id)
+          )
+
+        refute has_element?(view, "#tab-item-security")
+        refute html =~ "Multi-Factor Authentication"
+      end)
+
+      [:admin, :owner]
+      |> Enum.each(fn role ->
+        {conn, _user} = setup_project_user(conn, project, role)
+
+        {:ok, view, html} =
+          live(
+            conn,
+            Routes.project_project_settings_path(conn, :index, project.id)
+          )
+
+        assert has_element?(view, "#tab-item-security")
+        assert html =~ "Multi-Factor Authentication"
+      end)
+    end
+
     test "project admin can toggle MFA requirement",
          %{
            conn: conn,
@@ -1167,7 +1186,7 @@ defmodule LightningWeb.ProjectLiveTest do
              |> render_click() =~ "Project MFA requirement updated successfully"
     end
 
-    test "only users with admin level role can toggle MFA requirement", %{
+    test "project editors and viewers cannot toggle MFA requirement", %{
       conn: conn,
       user: user
     } do
