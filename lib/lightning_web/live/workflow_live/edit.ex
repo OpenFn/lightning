@@ -113,15 +113,75 @@ defmodule LightningWeb.WorkflowLive.Edit do
                     name="hero-lock-closed"
                     class="w-5 h-5 place-self-center text-gray-300"
                   />
-                  <div>
+                  <div class="inline-flex rounded-md shadow-sm">
                     <.button
                       type="submit"
-                      class="inline-flex items-center gap-x-1.5"
+                      class="relative inline-flex
+                      items-center rounded-l-md rounded-r-none
+                      px-3 py-2 text-sm font-semibold
+                      text-gray-900
+                      hover:bg-gray-50 focus:z-10"
                       form={@manual_run_form.id}
                       disabled={@save_and_run_disabled}
                     >
-                      <.icon name="hero-play-solid" class="w-4 h-4" /> Save & Run
+                      Create new work order
                     </.button>
+
+                    <div class="relative -ml-px block">
+                      <.button
+                        type="button"
+                        class="relative inline-flex items-center rounded-r-md rounded-l-none text-white pr-1 pl-1"
+                        id="option-menu-button"
+                        aria-expanded="true"
+                        aria-haspopup="true"
+                        phx-click={show_dropdown("new_attempt_menu")}
+                      >
+                        <span class="sr-only">Open options</span>
+                        <svg
+                          class="h-5 w-5"
+                          viewBox="0 0 20 20"
+                          fill="currentColor"
+                          aria-hidden="true"
+                        >
+                          <path
+                            fill-rule="evenodd"
+                            d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z"
+                            clip-rule="evenodd"
+                          />
+                        </svg>
+                      </.button>
+                      <div
+                        phx-click-away={hide_dropdown("new_attempt_menu")}
+                        id="new_attempt_menu"
+                        class="hidden absolute right-0 bottom-9 z-10 mb-2 w-80
+                          origin-bottom-right rounded-md bg-white shadow-lg focus:outline-none ring-1 ring-black ring-opacity-5"
+                        role="menu"
+                        aria-orientation="vertical"
+                        aria-labelledby="option-menu-button"
+                        tabindex="-1"
+                      >
+                        <div class="py-1" role="none">
+                          <a
+                            href="#"
+                            class="text-gray-700 block px-4 py-2 text-sm hover:bg-gray-100 hover:text-gray-900"
+                            role="menuitem"
+                            tabindex="-1"
+                            id="option-menu-item-0"
+                          >
+                            Create new attempt for this work order
+                          </a>
+                          <a
+                            href="#"
+                            class="text-gray-700 block px-4 py-2 text-sm hover:bg-gray-100 hover:text-gray-900"
+                            role="menuitem"
+                            tabindex="-1"
+                            id="option-menu-item-1"
+                          >
+                            Create new work order
+                          </a>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                   <.with_changes_indicator changeset={@changeset}>
                     <Form.submit_button
