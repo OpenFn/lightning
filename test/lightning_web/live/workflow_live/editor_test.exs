@@ -1,6 +1,5 @@
 defmodule LightningWeb.WorkflowLive.EditorTest do
   use LightningWeb.ConnCase, async: true
-  use Oban.Testing, repo: Lightning.Repo
 
   import Phoenix.LiveViewTest
   import Lightning.WorkflowLive.Helpers
@@ -232,19 +231,18 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
 
       view
       |> form("#manual-job-#{job.id} form", %{
-        "manual" => %{"body" => "["}
+        "manual" => %{"body" => "1"}
       })
       |> render_change()
 
-      view
-      |> element("#manual-job-#{job.id} form")
-      |> render_submit()
-
-      refute_enqueued(worker: Lightning.Pipeline)
-
       assert view
-             |> element("#manual-job-#{job.id} form")
-             |> render()
+             |> has_element?("#manual-job-#{job.id} form", "Must be an object")
+
+      view
+      |> form("#manual-job-#{job.id} form", %{
+        "manual" => %{"body" => "]"}
+      })
+      |> render_change()
 
       assert view |> has_element?("#manual-job-#{job.id} form", "Invalid JSON")
     end

@@ -81,7 +81,7 @@ defmodule Lightning.WorkOrdersTest do
       }
     end
 
-    test "creating a manual workorder", %{workflow: workflow, job: job} do
+    test "creates a manual workorder", %{workflow: workflow, job: job} do
       user = insert(:user)
 
       Lightning.WorkOrders.subscribe(workflow.project_id)
