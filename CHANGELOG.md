@@ -16,6 +16,8 @@ and this project adheres to
   [#1064](https://github.com/OpenFn/Lightning/issues/1064)
 - Custom metric to track Attempt queue delay
   [#1556](https://github.com/OpenFn/Lightning/issues/1556)
+- Close Placeholder Job Node When Another Node / Edge Is Clicked
+  [#1220](https://github.com/OpenFn/Lightning/issues/1220)
 
 ### Changed
 
