@@ -41,6 +41,20 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
     project: project,
     workflow: workflow
   } do
+    project_credential =
+      insert(:project_credential,
+        project: project,
+        credential:
+          build(:credential,
+            name: "dummytestcred",
+            schema: "http",
+            body: %{
+              username: "test",
+              password: "test"
+            }
+          )
+      )
+
     job = workflow.jobs |> hd()
 
     {:ok, view, _html} =
@@ -70,6 +84,32 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
     assert {"phx-hook", "JobEditor"} in actual_attrs
     assert {"phx-target", "1"} in actual_attrs
     assert {"phx-update", "ignore"} in actual_attrs
+
+    # try changing the assigned credential
+
+    credential_block =
+      element(view, "#modal-header-credential-block") |> render()
+
+    assert credential_block =~ "No Credential"
+    refute credential_block =~ project_credential.credential.name
+
+    view
+    |> form("#workflow-form",
+      workflow: %{
+        jobs: %{
+          "0" => %{
+            "project_credential_id" => project_credential.id
+          }
+        }
+      }
+    )
+    |> render_change()
+
+    credential_block =
+      element(view, "#modal-header-credential-block") |> render()
+
+    refute credential_block =~ "No Credential"
+    assert credential_block =~ project_credential.credential.name
   end
 
   describe "manual runs" do

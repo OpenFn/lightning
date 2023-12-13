@@ -1,5 +1,6 @@
 defmodule LightningWeb.WorkflowLive.JobView do
   use LightningWeb, :component
+  alias Lightning.Credentials
   alias LightningWeb.WorkflowLive.EditorPane
 
   import LightningWeb.WorkflowLive.Components
@@ -73,7 +74,9 @@ defmodule LightningWeb.WorkflowLive.JobView do
         <div class="flex h-14 place-content-stretch">
           <div class="basis-1/3 flex items-center gap-4 pl-4">
             <.adaptor_block adaptor={@job.adaptor} />
-            <.credential_block credential={@job.credential} />
+            <.credential_block credential={
+              fetch_credential(@form[:project_credential_id].value)
+            } />
           </div>
           <div class="basis-1/3 font-semibold flex items-center justify-center">
             <%= @job.name %>
@@ -144,7 +147,10 @@ defmodule LightningWeb.WorkflowLive.JobView do
 
   defp credential_block(assigns) do
     ~H"""
-    <div class="flex items-center gap-2 whitespace-nowrap">
+    <div
+      id="modal-header-credential-block"
+      class="flex items-center gap-2 whitespace-nowrap"
+    >
       <%= if @credential do %>
         <Heroicons.lock_closed class="w-6 h-6 text-gray-500" />
 
@@ -196,5 +202,10 @@ defmodule LightningWeb.WorkflowLive.JobView do
       </div>
     </div>
     """
+  end
+
+  defp fetch_credential(project_credential_id) do
+    project_credential_id &&
+      Credentials.get_credential_by_project_credential(project_credential_id)
   end
 end

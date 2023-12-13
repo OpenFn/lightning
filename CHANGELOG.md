@@ -18,6 +18,8 @@ and this project adheres to
 - Updated CLI to 0.4.10 (fixes logging)
 
 ### Fixed
+- New credential doesn't appear in inspector until refresh
+  [#1531](https://github.com/OpenFn/Lightning/issues/1531)
 - Metadata not refreshing when credential is updated
   [#791](https://github.com/OpenFn/Lightning/issues/791)
 - Adjusted z-index for Monaco Editor's sibling element to resolve layout
