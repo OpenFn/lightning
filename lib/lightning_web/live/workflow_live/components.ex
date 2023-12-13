@@ -486,6 +486,10 @@ defmodule LightningWeb.WorkflowLive.Components do
         :edge_enabled,
         Map.get(form.params, "enabled", form.data.enabled)
       )
+      |> assign(
+        :edge_condition,
+        Map.get(form.params, "condition", Atom.to_string(form.data.condition))
+      )
 
     ~H"""
     <% Phoenix.HTML.Form.hidden_inputs_for(@form) %>
@@ -517,7 +521,7 @@ defmodule LightningWeb.WorkflowLive.Components do
             disabled={@disabled}
           />
         </div>
-        <%= if @form.params["condition"] == "js_expression" do %>
+        <%= if @edge_condition == "js_expression" do %>
           <div>
             <.label for={:js_expression_label} font="font-medium">
               Condition label
