@@ -34,12 +34,6 @@ type WorkflowEditorEntrypoint = PhoenixHook<
     observer: MutationObserver | null;
     setupObserver(): void;
     hasLoaded: Promise<URL>;
-    updateUrlParameter(
-      url: URL,
-      param: string,
-      value: string | null,
-      remove: boolean
-    ): void;
     handleCancelPlaceholder(id: string): void;
     handleUrlChange(id: string | undefined): void;
   },
@@ -144,23 +138,11 @@ export default {
       }
     }
   },
-  updateUrlParameter(
-    url: URL,
-    param: string,
-    value: string | null,
-    remove: boolean
-  ): void {
-    if (remove) {
-      url.searchParams.delete(param);
-    } else {
-      url.searchParams.set(param, value as string);
-    }
-  },
   handleCancelPlaceholder(id: string): void {
     const nodeId = id.split('/')[1];
     const url = new URL(window.location.href);
-    this.updateUrlParameter(url, 'placeholder', null, true);
-    this.updateUrlParameter(url, 's', nodeId, false);
+    url.searchParams.delete('placeholder');
+    url.searchParams.set('s', nodeId);
     this.liveSocket.pushHistoryPatch(url.toString(), 'push', this.el);
   },
   handleUrlChange(id: string | undefined): void {
@@ -169,18 +151,18 @@ export default {
 
     const idExists = this.getItem(id);
     if (!idExists) {
-      this.updateUrlParameter(nextUrl, 's', null, true);
-      this.updateUrlParameter(nextUrl, 'm', null, true);
-      this.updateUrlParameter(nextUrl, 'placeholder', 'true', false);
+      nextUrl.searchParams.delete('s');
+      nextUrl.searchParams.delete('m');
+      nextUrl.searchParams.set('placeholder', 'true');
     } else {
-      this.updateUrlParameter(nextUrl, 'placeholder', null, true);
+      nextUrl.searchParams.delete('placeholder');
       if (!id) {
         console.debug('Unselecting');
-        this.updateUrlParameter(nextUrl, 's', null, true);
-        this.updateUrlParameter(nextUrl, 'm', null, true);
+        nextUrl.searchParams.delete('s');
+        nextUrl.searchParams.delete('m');
       } else {
         console.debug('Selecting', id);
-        this.updateUrlParameter(nextUrl, 's', id, false);
+        nextUrl.searchParams.set('s', id)
       }
     }
 
