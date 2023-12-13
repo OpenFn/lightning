@@ -61,7 +61,7 @@ defmodule LightningWeb.WorkflowNewLive.WorkflowParamsTest do
                    "enabled" => true,
                    "errors" => %{
                      "condition" => [
-                       "The condition must be ':always' when the source is trigger."
+                       "The condition must be ':always' or ':js_expression' when the source is trigger."
                      ]
                    },
                    "id" => _,
@@ -83,7 +83,7 @@ defmodule LightningWeb.WorkflowNewLive.WorkflowParamsTest do
                  "edges" => [
                    %{
                      "condition" => [
-                       "The condition must be ':always' when the source is trigger."
+                       "The condition must be ':always' or ':js_expression' when the source is trigger."
                      ]
                    },
                    %{}

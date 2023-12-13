@@ -296,7 +296,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       assert form_html =~ "Path"
 
       assert form_html =~
-               ~S[<option selected="selected" value="always">Always</option></select>]
+               ~S[<option selected="selected" value="always">Always</option><option value="js_expression">Matches a Javascript Expression</option></select>]
 
       edge_on_edit = Enum.at(workflow.edges, 1)
       form_html = view |> select_node(edge_on_edit)

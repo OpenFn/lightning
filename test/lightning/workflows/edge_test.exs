@@ -36,7 +36,7 @@ defmodule Lightning.Workflows.EdgeTest do
 
       assert {:condition,
               {"must be :always or :js_expression when source is a trigger",
-               [validation: :inclusion, enum: [:always]]}} in changeset.errors
+               [validation: :inclusion, enum: [:always, :js_expression]]}} in changeset.errors
     end
 
     test "can't have both source_job_id and source_trigger_id" do

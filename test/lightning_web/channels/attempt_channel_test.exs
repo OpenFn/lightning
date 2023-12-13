@@ -168,7 +168,8 @@ defmodule LightningWeb.AttemptChannelTest do
             :source_job_id,
             :condition,
             :enabled,
-            :target_job_id
+            :target_job_id,
+            :js_expression_body
           ])
         )
         |> Enum.map(&stringify_keys/1)
