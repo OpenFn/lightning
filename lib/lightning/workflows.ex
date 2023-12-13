@@ -7,6 +7,8 @@ defmodule Lightning.Workflows do
   alias Lightning.Repo
   alias Lightning.Projects.Project
   alias Lightning.Workflows.{Edge, Job, Workflow, Trigger, Trigger, Query}
+  alias Lightning.WorkOrder
+  alias Lightning.Invocation.Run
 
   @doc """
   Returns the list of workflows.
@@ -100,21 +102,121 @@ defmodule Lightning.Workflows do
   end
 
   @doc """
-  Retrieves a list of Workflows with their jobs and triggers preloaded.
+  Retrieves a list of Workflows with their jobs and triggers preloaded and metrics .
   """
   @spec get_workflows_for(Project.t()) :: [Workflow.t()]
   def get_workflows_for(%Project{} = project) do
-    get_workflows_for_query(project)
-    |> Repo.all()
+    get_workflows_for_query(project) |> Repo.all()
   end
 
   def get_workflows_for_query(%Project{} = project) do
+    thirty_days_ago = DateTime.utc_now() |> DateTime.add(-30 * 24 * 60 * 60)
+    failed_states = [:failed, :crashed, :cancelled, :killed, :exception, :lost]
+
+    failed_work_orders =
+      from wo in Lightning.WorkOrder,
+        where: wo.inserted_at > ^thirty_days_ago,
+        where: wo.state in ^failed_states,
+        group_by: wo.workflow_id,
+        select: %{
+          workflow_id: wo.workflow_id,
+          count: count(wo.id)
+        }
+
+    successful_runs =
+      from r in Run,
+        join: j in assoc(r, :job),
+        join: wf in assoc(j, :workflow),
+        where: wf.project_id == ^project.id,
+        group_by: j.workflow_id,
+        select: %{
+          workflow_id: j.workflow_id,
+          total_runs: count(r.id),
+          successful_runs:
+            count(
+              fragment(
+                "CASE WHEN ? = 'success' THEN 1 ELSE NULL END",
+                r.exit_reason
+              )
+            ),
+          success_percentage:
+            fragment(
+              "ROUND(100.0 * COUNT(CASE WHEN ? = 'success' THEN 1 ELSE NULL END) / NULLIF(COUNT(*), 0), 2)",
+              r.exit_reason
+            ),
+          last_failed_run:
+            max(
+              fragment(
+                "CASE WHEN ? NOT IN ('success', 'pending', 'running') THEN ? ELSE NULL END",
+                r.exit_reason,
+                r.inserted_at
+              )
+            )
+        }
+
+    last_work_order =
+      from wo in Lightning.WorkOrder,
+        join: w in assoc(wo, :workflow),
+        where: w.project_id == ^project.id,
+        group_by: [w.id, wo.state],
+        order_by: [desc: max(wo.inserted_at)],
+        select: %{
+          workflow_id: w.id,
+          state: wo.state,
+          max_inserted_at: max(wo.inserted_at)
+        }
+
+    work_order_count =
+      from wo in Lightning.WorkOrder,
+        where: wo.inserted_at > ^thirty_days_ago,
+        where: wo.state not in [:pending, :running],
+        group_by: wo.workflow_id,
+        select: %{workflow_id: wo.workflow_id, count: count(wo.id)}
+
     from(w in Workflow,
-      preload: [:triggers, :edges, jobs: [:credential, :workflow]],
+      left_join: lwo in subquery(last_work_order),
+      on: lwo.workflow_id == w.id,
+      left_join: wc in subquery(work_order_count),
+      on: wc.workflow_id == w.id,
+      left_join: sr in subquery(successful_runs),
+      on: sr.workflow_id == w.id,
+      left_join: fwo in subquery(failed_work_orders),
+      on: fwo.workflow_id == w.id,
       where: is_nil(w.deleted_at) and w.project_id == ^project.id,
-      order_by: [asc: w.name]
+      order_by: [asc: w.name],
+      select: w,
+      select_merge: %{
+        aggregates: %{
+          last_work_order: %{state: lwo.state, date_time: lwo.max_inserted_at},
+          total_work_orders: %{
+            count: coalesce(wc.count, 0),
+            total_runs: coalesce(sr.total_runs, 0),
+            success_percentage: coalesce(sr.success_percentage, 0.0)
+          },
+          failed_work_order: %{
+            count: coalesce(fwo.count, 0),
+            last_failed_run: sr.last_failed_run
+          }
+        }
+      },
+      preload: [:triggers, :edges, jobs: [:credential, :workflow]]
     )
   end
+
+  # def get_workflows_for_query(%Project{} = project) do
+  #   from(w in Workflow,
+  #     preload: [:triggers, :edges, jobs: [:credential, :workflow]],
+  #     where: is_nil(w.deleted_at) and w.project_id == ^project.id,
+  #     order_by: [asc: w.name]
+  #   )
+  # end
+
+  # def count_workorder_for_workflow do
+  #   work_order_count =
+  #     from wo in WorkOrder,
+  #       group_by: wo.workflow_id,
+  #       select: {wo.workflow_id, count(wo.id)}
+  # end
 
   @spec to_project_space([Workflow.t()]) :: %{}
   def to_project_space(workflows) when is_list(workflows) do

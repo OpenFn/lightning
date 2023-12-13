@@ -25,6 +25,7 @@ defmodule LightningWeb.CoreComponents do
   attr :id, :string, required: true
   attr :row_click, :any, default: nil
   attr :rows, :list, required: true
+  attr :row_class, :string, default: nil
 
   slot :col, required: true do
     attr :label, :string
@@ -60,11 +61,11 @@ defmodule LightningWeb.CoreComponents do
             </th>
           </tr>
         </thead>
-        <tbody class="divide-y divide-gray-200 bg-white">
+        <tbody class="divide-y bg-white">
           <tr
             :for={row <- @rows}
             id={"#{@id}-#{Phoenix.Param.to_param(row)}"}
-            class=""
+            class={["", @row_class]}
           >
             <td
               :for={col <- @col}
@@ -74,7 +75,9 @@ defmodule LightningWeb.CoreComponents do
                 @row_click && "hover:cursor-pointer"
               ]}
             >
-              <%= render_slot(col, row) %>
+              <div>
+                <%= render_slot(col, row) %>
+              </div>
             </td>
             <td :if={@action != []} class="p-0 w-14">
               <div class="relative whitespace-nowrap py-4 text-right text-sm font-medium">

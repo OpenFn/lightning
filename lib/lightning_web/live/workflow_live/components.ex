@@ -9,21 +9,106 @@ defmodule LightningWeb.WorkflowLive.Components do
   def workflow_list(assigns) do
     ~H"""
     <div class="w-full">
-      <div class="mt-9 grid grid-cols-1 gap-5 sm:grid-cols-2 sm:gap-6 lg:grid-cols-4">
+      <div class="mt-9 flex justify-between mb-3">
+        <h3 class="text-3xl font-bold">
+          Workflows
+          <span class="text-base font-normal">
+            (<%= length(assigns.workflows) %>)
+          </span>
+        </h3>
         <.create_workflow_card
           project={@project}
           can_create_workflow={@can_create_workflow}
         />
-        <%= for workflow <- @workflows do %>
+        <%!-- <%= for workflow <- @workflows do %>
           <.workflow_card
             can_delete_workflow={@can_delete_workflow}
             workflow={%{workflow | name: workflow.name || "Untitled"}}
             project={@project}
             trigger_enabled={Enum.any?(workflow.triggers, & &1.enabled)}
           />
-        <% end %>
+        <% end %> --%>
       </div>
+      <.workflow_table
+        workflows={@workflows}
+        can_create_workflow={@can_create_workflow}
+        can_delete_workflow={@can_delete_workflow}
+        project={@project}
+      />
     </div>
+    """
+  end
+
+  def workflow_table(assigns) do
+    ~H"""
+    <.new_table
+      id="workflows"
+      rows={@workflows}
+      row_class="hover:bg-purple-50 hover:border-l-2 hover:border-l-indigo-500"
+    >
+      <%!-- row_click={fn {_id, product} -> JS.navigate(~p"/products/#{product}") end} --%>
+      <:col :let={workflow} label_class="text-gray-700" label="Name">
+        <.workflow_card
+          can_delete_workflow={@can_delete_workflow}
+          workflow={%{workflow | name: workflow.name || "Untitled"}}
+          project={@project}
+          trigger_enabled={Enum.any?(workflow.triggers, & &1.enabled)}
+        />
+      </:col>
+      <:col :let={workflow} label_class="text-gray-700" label="Latest Work Order">
+        <div>
+          <div>
+            <%= workflow.aggregates[:last_work_order][:state] %>
+          </div>
+          <div>
+            <%= workflow.aggregates[:last_work_order][:date_time] %>
+          </div>
+        </div>
+      </:col>
+      <:col :let={workflow} label_class="text-gray-700 " label="Work Orders(30 days)">
+        <div>
+          <div>
+            <%= workflow.aggregates[:total_work_orders][:count] %>
+          </div>
+          <div>
+            (<%= workflow.aggregates[:total_work_orders][:total_runs] %> runs,
+            <span>
+              <%= workflow.aggregates[:total_work_orders][:success_percentage] %> success
+            </span>
+            )
+          </div>
+        </div>
+      </:col>
+      <:col
+        :let={workflow}
+        label_class="text-gray-700"
+        label="Work Orders in a failed state(30 days)"
+      >
+        <div>
+          <div>
+            <%= workflow.aggregates[:failed_work_order][:count] %>
+          </div>
+          <div>
+            <%= workflow.aggregates[:failed_work_order][:last_failed_run] %>
+          </div>
+        </div>
+      </:col>
+
+      <%!-- <:action :let={{_id, product}}>
+        <div class="sr-only">
+          <.link navigate={~p"/products/#{product}"}>Show</.link>
+        </div>
+        <.link patch={~p"/products/#{product}/edit"}>Edit</.link>
+      </:action>
+      <:action :let={{id, product}}>
+        <.link
+          phx-click={JS.push("delete", value: %{id: product.id}) |> hide("##{id}")}
+          data-confirm="Are you sure?"
+        >
+          Delete
+        </.link>
+      </:action> --%>
+    </.new_table>
     """
   end
 
@@ -44,40 +129,38 @@ defmodule LightningWeb.WorkflowLive.Components do
       )
 
     ~H"""
-    <div>
-      <div class="flex flex-1 items-center justify-between truncate rounded-md border border-gray-200 bg-white hover:bg-gray-50">
-        <.link
-          id={"workflow-card-#{@workflow.id}"}
-          navigate={~p"/projects/#{@project.id}/w/#{@workflow.id}"}
-          class="flex-1 rounded-md"
-          role="button"
-        >
-          <div class="px-4 py-2 text-sm">
-            <div class="flex items-center">
-              <span
-                class="flex-shrink truncate text-gray-900 hover:text-gray-600 font-medium"
-                style="max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"
-              >
-                <%= @workflow.name %>
-              </span>
-            </div>
-            <%= if @trigger_enabled do %>
-              <p class="text-gray-500 text-xs">
-                Updated <%= @relative_updated_at %>
-              </p>
-            <% else %>
-              <div class="flex items-center">
-                <div style="background: #8b5f0d" class="w-2 h-2 rounded-full"></div>
-                <div>
-                  <p class="text-[#8b5f0d] text-xs">
-                    &nbsp; Disabled
-                  </p>
-                </div>
-              </div>
-            <% end %>
+    <div class="flex flex-1 items-center  truncate ">
+      <.link
+        id={"workflow-card-#{@workflow.id}"}
+        navigate={~p"/projects/#{@project.id}/w/#{@workflow.id}"}
+        role="button"
+      >
+        <div class=" text-sm">
+          <div class="flex items-center">
+            <span
+              class="flex-shrink truncate text-gray-900 hover:text-gray-600 font-medium"
+              style="max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"
+            >
+              <%= @workflow.name %>
+            </span>
           </div>
-        </.link>
-        <div class="flex-shrink-0 pr-2">
+          <%= if @trigger_enabled do %>
+            <p class="text-gray-500 text-xs">
+              Updated <%= @relative_updated_at %>
+            </p>
+          <% else %>
+            <div class="flex items-center">
+              <div style="background: #8b5f0d" class="w-2 h-2 rounded-full"></div>
+              <div>
+                <p class="text-[#8b5f0d] text-xs">
+                  &nbsp; Disabled
+                </p>
+              </div>
+            </div>
+          <% end %>
+        </div>
+      </.link>
+      <%!-- <div class="flex-shrink-0 pr-2">
           <div
             :if={@can_delete_workflow}
             class="inline-flex h-8 w-8 items-center justify-center rounded-full text-gray-400 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
@@ -92,8 +175,7 @@ defmodule LightningWeb.WorkflowLive.Components do
               <Icon.trash class="h-5 w-5 text-slate-300 hover:text-rose-700" />
             </.link>
           </div>
-        </div>
-      </div>
+        </div> --%>
     </div>
     """
   end
@@ -112,12 +194,6 @@ defmodule LightningWeb.WorkflowLive.Components do
             <span class="font-medium">
               Create new workflow
             </span>
-            <p class="text-gray-200 text-xs">Automate a process</p>
-          </div>
-          <div class="flex-shrink-0 pr-2">
-            <div class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-transparent focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
-              <Icon.plus_circle />
-            </div>
           </div>
         </div>
       </button>
@@ -195,7 +271,8 @@ defmodule LightningWeb.WorkflowLive.Components do
               phx-hook="ClosePanelViaEscape"
               patch={@cancel_url}
               class="justify-center hover:text-gray-500"
-            >
+            >    IO.inspect(assigns.workflows, label: "Workflow list ")
+
               <Heroicons.x_mark solid class="h-4 w-4 inline-block" />
             </.link>
           </div>
