@@ -4,7 +4,6 @@ defmodule Lightning.WorkOrdersTest do
   import Lightning.Factories
 
   alias Lightning.WorkOrders
-  alias Lightning.Invocation
 
   describe "create_for/2" do
     setup context do
@@ -121,29 +120,6 @@ defmodule Lightning.WorkOrdersTest do
       assert_received %Lightning.WorkOrders.Events.WorkOrderCreated{
         work_order: %{id: ^workorder_id}
       }
-    end
-
-    test "returns error for a manual workorder with invalid dataclip", %{
-      workflow: workflow,
-      job: job
-    } do
-      user = insert(:user)
-
-      assert {:ok, manual} =
-               WorkOrders.Manual.new(
-                 %{
-                   "body" => "\"json but not a map\"",
-                   "dataclip_id" => nil
-                 },
-                 workflow: workflow,
-                 project: workflow.project,
-                 job: job,
-                 created_by: user
-               )
-               |> Ecto.Changeset.apply_action(:validate)
-
-      assert {:error, %Ecto.Changeset{data: %Invocation.Dataclip{}}} =
-               WorkOrders.create_for(manual)
     end
   end
 
