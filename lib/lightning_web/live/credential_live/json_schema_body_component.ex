@@ -3,8 +3,6 @@ defmodule LightningWeb.CredentialLive.JsonSchemaBodyComponent do
 
   alias Lightning.Credentials
 
-  import LightningWeb.CoreComponents, only: [translate_error: 1]
-
   attr :form, :map, required: true
   slot :inner_block
 
@@ -134,13 +132,9 @@ defmodule LightningWeb.CredentialLive.JsonSchemaBodyComponent do
                w-full shadow-sm sm:text-sm border-secondary-300 rounded-md)
           ]
         ]) %>
-        <span
-          :for={error <- @errors}
-          phx-feedback_for={Phoenix.HTML.Form.input_id(@form, @field)}
-          class="block w-full text-sm text-secondary-700"
-        >
-          <%= translate_error(error) %>
-        </span>
+      </div>
+      <div class="error-space h-6">
+        <LightningWeb.CoreComponents.old_error errors={@errors} />
       </div>
       """
     end

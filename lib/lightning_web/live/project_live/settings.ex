@@ -66,6 +66,14 @@ defmodule LightningWeb.ProjectLive.Settings do
         project_user
       )
 
+    can_create_project_credential =
+      Permissions.can?(
+        ProjectUsers,
+        :create_project_credential,
+        socket.assigns.current_user,
+        project_user
+      )
+
     can_edit_webhook_auth_method =
       Permissions.can?(
         ProjectUsers,
@@ -95,6 +103,7 @@ defmodule LightningWeb.ProjectLive.Settings do
        can_edit_project_name: can_edit_project_name,
        can_edit_project_description: can_edit_project_description,
        can_create_webhook_auth_method: can_create_webhook_auth_method,
+       can_create_project_credential: can_create_project_credential,
        can_edit_webhook_auth_method: can_edit_webhook_auth_method,
        show_github_setup: show_github_setup,
        show_repo_setup: show_repo_setup,
@@ -104,7 +113,8 @@ defmodule LightningWeb.ProjectLive.Settings do
        branches: [],
        loading_branches: false,
        github_enabled: VersionControl.github_enabled?(),
-       can_install_github: can_install_github(socket)
+       can_install_github: can_install_github(socket),
+       selected_credential_type: nil
      )}
   end
 
@@ -450,6 +460,10 @@ defmodule LightningWeb.ProjectLive.Settings do
       _ ->
         {:noreply, socket}
     end
+  end
+
+  def handle_info({:credential_type_changed, type}, socket) do
+    {:noreply, socket |> assign(:selected_credential_type, type)}
   end
 
   defp error_message(error) do

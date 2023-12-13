@@ -7,6 +7,7 @@ defmodule Lightning.Repo.Migrations.CastCredentialBody do
 
   def change do
     [{Lightning.Vault, Application.get_env(:lightning, Lightning.Vault, [])}]
+    |> Enum.reject(fn {mod, _} -> Process.whereis(mod) end)
     |> Supervisor.start_link(strategy: :one_for_one)
 
     Repo.transaction(fn ->

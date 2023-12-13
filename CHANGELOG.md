@@ -12,10 +12,18 @@ and this project adheres to
 
 - Add ellipsis for long job names on the canvas
   [#1217](https://github.com/OpenFn/Lightning/issues/1217)
+- Fix Credential Creation Page UI
+  [#1064](https://github.com/OpenFn/Lightning/issues/1064)
 
 ### Changed
 
+- Derive dataclip in inspector from the attempt & step
+  [#1551](https://github.com/OpenFn/Lightning/issues/1551)
 - Updated CLI to 0.4.10 (fixes logging)
+- Changed UserBackupToken model to use UTC timestamps (6563cb77)
+- Restore FK relationship between `work_orders` and `attempts` pending a
+  decision re: further partitioning.
+  [#1254](https://github.com/OpenFn/Lightning/issues/1254)
 
 ### Fixed
 - New credential doesn't appear in inspector until refresh
@@ -24,6 +32,12 @@ and this project adheres to
   [#791](https://github.com/OpenFn/Lightning/issues/791)
 - Adjusted z-index for Monaco Editor's sibling element to resolve layout
   conflict [#1329](https://github.com/OpenFn/Lightning/issues/1329)
+- Demo script sets up example Runs with their log lines in a consistant order.
+  [#1487](https://github.com/OpenFn/Lightning/issues/1487)
+- Initial credential creation `changes` show `after` as `null` rather a value
+  [#1118](https://github.com/OpenFn/Lightning/issues/1118)
+- AttemptViewer flashing/rerendering when Jobs are running
+  [#1550](https://github.com/OpenFn/Lightning/issues/1550)
 
 ## [v0.11.0] - 2023-12-06
 

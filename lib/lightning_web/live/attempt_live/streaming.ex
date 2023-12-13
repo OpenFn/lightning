@@ -6,6 +6,18 @@ defmodule LightningWeb.AttemptLive.Streaming do
   alias Lightning.Attempts
   alias Phoenix.LiveView.AsyncResult
 
+  @doc """
+  Starts an async process that will fetch the attempt with the given ID.
+  """
+  @spec get_attempt_async(Phoenix.LiveView.Socket.t(), Ecto.UUID.t()) ::
+          Phoenix.LiveView.Socket.t()
+  def get_attempt_async(socket, attempt_id) do
+    socket
+    |> start_async(:attempt, fn ->
+      Attempts.get(attempt_id, include: [runs: [:job], workflow: [:project]])
+    end)
+  end
+
   def add_or_update_run(socket, run) do
     %{runs: runs} = socket.assigns
 
@@ -223,7 +235,9 @@ defmodule LightningWeb.AttemptLive.Streaming do
          |> assign(
            attempt: AsyncResult.ok(attempt, updated_attempt),
            # set the initial set of runs
-           runs: updated_attempt.runs |> sort_runs()
+           runs: updated_attempt.runs |> sort_runs(),
+           project: updated_attempt.workflow.project,
+           workflow: updated_attempt.workflow
          )
          |> assign_async(
            :log_lines,

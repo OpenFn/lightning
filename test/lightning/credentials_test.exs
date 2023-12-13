@@ -96,7 +96,7 @@ defmodule Lightning.CredentialsTest do
 
       assert {:ok,
               %{
-                audit: %Lightning.Auditing.Model{} = audit,
+                audit: %Lightning.Auditing.Audit{} = audit,
                 credential: %Credential{} = credential
               }} =
                Credentials.delete_credential(%Lightning.Credentials.Credential{
@@ -294,11 +294,21 @@ defmodule Lightning.CredentialsTest do
 
       assert credential.name == "some raw credential"
 
-      assert from(a in Audit.base_query(),
-               where: a.item_id == ^credential.id and a.event == "created"
-             )
-             |> Repo.one!(),
+      assert audit_event =
+               from(a in Audit.base_query(),
+                 where: a.item_id == ^credential.id and a.event == "created"
+               )
+               |> Repo.one!(),
              "Has exactly one 'created' event"
+
+      assert audit_event.changes.before |> is_nil()
+      assert audit_event.changes.after["name"] == credential.name
+
+      # If we decode and then decrypt the audit trail event with, we'll see the
+      # raw credential body again.
+      assert audit_event.changes.after["body"]
+             |> Base.decode64!()
+             |> Lightning.Encrypted.Map.load() == {:ok, credential.body}
     end
 
     test "saves the body casting non string fields" do
@@ -334,14 +344,25 @@ defmodule Lightning.CredentialsTest do
 
       assert credential.name == "some name"
 
-      assert from(a in Audit.base_query(),
-               where: a.item_id == ^credential.id and a.event == "created"
-             )
-             |> Repo.one!(),
+      assert audit_event =
+               from(a in Audit.base_query(),
+                 where: a.item_id == ^credential.id and a.event == "created"
+               )
+               |> Repo.one!(),
              "Has exactly one 'created' event"
+
+      assert audit_event.changes.before |> is_nil()
+      assert audit_event.changes.after["name"] == credential.name
+
+      {:ok, saved_body} =
+        audit_event.changes.after["body"]
+        |> Base.decode64!()
+        |> Lightning.Encrypted.Map.load()
+
+      assert saved_body == credential.body
     end
 
-    test "suceeds with invalid data" do
+    test "fails with invalid data" do
       assert {:error, %Ecto.Changeset{}} =
                Credentials.create_credential(@invalid_attrs)
     end
@@ -349,19 +370,19 @@ defmodule Lightning.CredentialsTest do
 
   describe "update_credential/2" do
     test "succeeds with valid data" do
-      user = user_fixture()
+      user = insert(:user)
 
-      {:ok, %Lightning.Projects.Project{id: project_id}} =
-        Lightning.Projects.create_project(%{
-          name: "some-name",
-          project_users: [%{user_id: user.id}]
-        })
+      project =
+        insert(:project, name: "some-name", project_users: [%{user_id: user.id}])
 
       credential =
-        credential_fixture(
-          user_id: user.id,
+        insert(:credential,
+          body: %{},
+          name: "some name",
+          schema: "raw",
+          user: user,
           project_credentials: [
-            %{project_id: project_id}
+            %{project_id: project.id}
           ]
         )
 
@@ -369,7 +390,7 @@ defmodule Lightning.CredentialsTest do
         Enum.at(credential.project_credentials, 0)
         |> Map.from_struct()
 
-      new_project = project_fixture()
+      new_project = insert(:project)
 
       update_attrs = %{
         body: %{},
@@ -393,8 +414,6 @@ defmodule Lightning.CredentialsTest do
         )
         |> Repo.all()
 
-      assert {"created", %{"after" => nil, "before" => nil}} in audit_events
-
       assert {"updated",
               %{
                 "before" => %{"name" => "some name"},
@@ -409,13 +428,10 @@ defmodule Lightning.CredentialsTest do
     end
 
     test "casts body to field types based on schema" do
-      user = user_fixture()
+      user = insert(:user)
 
-      {:ok, %Lightning.Projects.Project{id: project_id}} =
-        Lightning.Projects.create_project(%{
-          name: "some-name",
-          project_users: [%{user_id: user.id}]
-        })
+      project =
+        insert(:project, name: "some-name", project_users: [%{user_id: user.id}])
 
       credential =
         insert(:credential,
@@ -431,7 +447,7 @@ defmodule Lightning.CredentialsTest do
             allowSelfSignedCert: "false"
           },
           project_credentials: [
-            %{project_id: project_id}
+            %{project_id: project.id}
           ],
           schema: "postgresql"
         )

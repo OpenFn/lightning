@@ -13,14 +13,52 @@ defmodule Lightning.Demo do
   def reset_demo do
     Lightning.Release.load_app()
 
-    # We must start our vault so (public) credentials can be built for the demo.
-    unless GenServer.whereis(Lightning.Vault),
-      do: Lightning.Vault.start_link()
+    children =
+      [
+        {Phoenix.PubSub,
+         name: Lightning.PubSub, adapter: Lightning.Demo.FakePubSub},
+        {Lightning.Vault, Application.get_env(:lightning, Lightning.Vault, [])}
+      ]
+      |> Enum.reject(fn {mod, _} -> Process.whereis(mod) end)
+
+    Supervisor.start_link(children, strategy: :one_for_one)
 
     {:ok, _, _} =
       Ecto.Migrator.with_repo(Lightning.Repo, fn _repo ->
         SetupUtils.tear_down(destroy_super: true)
         SetupUtils.setup_demo(create_super: true)
       end)
+  end
+
+  defmodule FakePubSub do
+    @moduledoc false
+
+    # FakePubSub is a Phoenix.PubSub adapter that does nothing.
+    # The purpose of this adapter is to allow the demo to run without
+    # the whole application running.
+
+    @behaviour Phoenix.PubSub.Adapter
+
+    @impl true
+    def child_spec(_opts) do
+      %{id: __MODULE__, start: {__MODULE__, :start_link, []}}
+    end
+
+    def start_link() do
+      {:ok, self()}
+    end
+
+    @impl true
+    def node_name(_), do: nil
+
+    @impl true
+    def broadcast(_, _, _, _) do
+      :ok
+    end
+
+    @impl true
+    def direct_broadcast(_, _, _, _, _) do
+      :ok
+    end
   end
 end

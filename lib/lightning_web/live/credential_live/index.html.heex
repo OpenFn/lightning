@@ -2,17 +2,32 @@
   <:header>
     <LayoutComponents.header current_user={@current_user}>
       <:title><%= @page_title %></:title>
-      <.link navigate={Routes.credential_edit_path(@socket, :new)}>
-        <Common.button>
-          <div class="h-full">
-            <Icon.plus class="h-4 w-4 inline-block" />
-            <span class="inline-block align-middle">New Credential</span>
-          </div>
-        </Common.button>
-      </.link>
+      <Common.button phx-click={show_modal("new-credential-modal")}>
+        <div class="h-full">
+          <Icon.plus class="h-4 w-4 inline-block" />
+          <span class="inline-block align-middle">New Credential</span>
+        </div>
+      </Common.button>
     </LayoutComponents.header>
   </:header>
   <LayoutComponents.centered>
+    <.live_component
+      id="new-credential-modal"
+      module={LightningWeb.CredentialLive.FormComponent}
+      action={:new}
+      credential_type={@selected_credential_type}
+      credential={
+        %Lightning.Credentials.Credential{
+          user_id: @current_user.id
+        }
+      }
+      current_user={@current_user}
+      projects={@projects}
+      project={nil}
+      show_project_credentials={true}
+      can_create_project_credential={true}
+      return_to={~p"/credentials"}
+    />
     <%= if @live_action == :delete do %>
       <.live_component
         module={LightningWeb.Components.CredentialDeletionModal}
@@ -52,8 +67,8 @@
           <.td>
             <%= if !credential.scheduled_deletion do %>
               <span>
-                <.link navigate={
-                  Routes.credential_edit_path(@socket, :edit, credential)
+                <.link phx-click={
+                  show_modal("edit-credential-#{credential.id}-modal")
                 }>
                   Edit
                 </.link>
@@ -61,6 +76,19 @@
               |
             <% end %>
             <.delete_action socket={@socket} credential={credential} />
+            <.live_component
+              id={"edit-credential-#{credential.id}-modal"}
+              module={LightningWeb.CredentialLive.FormComponent}
+              action={:edit}
+              credential_type={@selected_credential_type}
+              credential={credential}
+              current_user={@current_user}
+              projects={@projects}
+              project={nil}
+              show_project_credentials={true}
+              can_create_project_credential={true}
+              return_to={~p"/credentials"}
+            />
           </.td>
         </.tr>
       <% end %>

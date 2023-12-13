@@ -47,7 +47,7 @@ defmodule Lightning.Workflows.Job do
 
     field :delete, :boolean, virtual: true
 
-    timestamps(type: :naive_datetime_usec)
+    timestamps(type: :utc_datetime_usec)
   end
 
   def new(attrs \\ %{}) do
@@ -56,20 +56,17 @@ defmodule Lightning.Workflows.Job do
 
   @doc false
   def changeset(job, attrs) do
-    change =
-      job
-      |> cast(attrs, [
-        :id,
-        # Note: we can drop inserted_at once there's a reliable way to sort yaml for export
-        :inserted_at,
-        :name,
-        :body,
-        :adaptor,
-        :project_credential_id,
-        :workflow_id
-      ])
-
-    change
+    job
+    |> cast(attrs, [
+      :id,
+      # Note: we can drop inserted_at once there's a reliable way to sort yaml for export
+      :inserted_at,
+      :name,
+      :body,
+      :adaptor,
+      :project_credential_id,
+      :workflow_id
+    ])
     |> validate()
     |> unique_constraint(:name, name: "jobs_name_workflow_id_index")
   end

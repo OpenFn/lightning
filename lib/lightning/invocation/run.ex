@@ -72,7 +72,7 @@ defmodule Lightning.Invocation.Run do
       exit_reason: exit_reason,
       error_type: error_type
     })
-    |> validate_required([:finished_at, :output_dataclip_id, :exit_reason])
+    |> validate_required([:finished_at, :exit_reason])
   end
 
   @doc false

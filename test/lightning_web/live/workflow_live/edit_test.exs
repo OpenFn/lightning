@@ -30,10 +30,6 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       assert has_element?(view, "#job-pane-#{job.id}")
 
-      assert view
-             |> element("#new-credential-launcher", "New credential")
-             |> render_click()
-
       assert has_element?(view, "#credential-type-picker")
       view |> CredentialLiveHelpers.select_credential_type("http")
       view |> CredentialLiveHelpers.click_continue()
@@ -49,15 +45,11 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       {:ok, view, _html} =
         live(conn, ~p"/projects/#{project.id}/w/#{job.workflow_id}?s=#{job.id}")
 
-      assert view
-             |> element("#new-credential-launcher", "New credential")
-             |> render_click()
-
       view |> CredentialLiveHelpers.select_credential_type("raw")
       view |> CredentialLiveHelpers.click_continue()
 
       view
-      |> form("#credential-form",
+      |> form("#credential-form-new",
         credential: %{
           name: "newly created credential",
           body: Jason.encode!(%{"a" => 1})
@@ -145,8 +137,6 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       refute view |> selected_adaptor_version_element(job) |> render() =~
                ~r(value="@openfn/[a-z-]+@latest"),
              "should not have @latest selected by default"
-
-      view |> element("#new-credential-launcher") |> render_click()
 
       view |> CredentialLiveHelpers.select_credential_type("dhis2")
 

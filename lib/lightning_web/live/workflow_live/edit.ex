@@ -2,11 +2,10 @@ defmodule LightningWeb.WorkflowLive.Edit do
   @moduledoc false
   use LightningWeb, :live_view
 
+  alias Lightning.Invocation
   alias Lightning.Policies.Permissions
   alias Lightning.Policies.ProjectUsers
-
   alias Lightning.WorkOrders
-
   alias Lightning.Workflows
   alias Lightning.Workflows.Job
   alias Lightning.Workflows.Trigger
@@ -152,6 +151,47 @@ defmodule LightningWeb.WorkflowLive.Edit do
             <.box_loader />
           </div>
         </div>
+        <%= if @selected_job do %>
+          <.live_component
+            id="new-credential-modal"
+            module={LightningWeb.CredentialLive.FormComponent}
+            action={:new}
+            credential_type={@selected_credential_type}
+            credential={
+              %Lightning.Credentials.Credential{
+                user_id: @current_user.id,
+                project_credentials: [
+                  %Lightning.Projects.ProjectCredential{
+                    project_id: @project.id
+                  }
+                ]
+              }
+            }
+            current_user={@current_user}
+            projects={[]}
+            project={@project}
+            show_project_credentials={false}
+            on_save={
+              fn credential ->
+                form =
+                  single_inputs_for(@workflow_form, :jobs, @selected_job.id)
+
+                params =
+                  LightningWeb.Utils.build_params_for_field(
+                    form,
+                    :project_credential_id,
+                    credential.project_credentials |> Enum.at(0) |> Map.get(:id)
+                  )
+
+                send_form_changed(params)
+              end
+            }
+            can_create_project_credential={@can_edit_job}
+            return_to={
+              ~p"/projects/#{@project.id}/w/#{@workflow.id}?s=#{@selected_job.id}"
+            }
+          />
+        <% end %>
         <.form
           id="workflow-form"
           for={@workflow_form}
@@ -454,7 +494,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
        query_params: %{"s" => nil, "m" => nil, "a" => nil},
        workflow: nil,
        workflow_name: "",
-       workflow_params: %{}
+       workflow_params: %{},
+       selected_credential_type: nil
      )}
   end
 
@@ -703,10 +744,13 @@ defmodule LightningWeb.WorkflowLive.Edit do
     {:noreply, handle_new_params(socket, params)}
   end
 
-  @impl true
   def handle_info({:forward, mod, opts}, socket) do
     send_update(mod, opts)
     {:noreply, socket}
+  end
+
+  def handle_info({:credential_type_changed, type}, socket) do
+    {:noreply, socket |> assign(:selected_credential_type, type)}
   end
 
   defp maybe_show_manual_run(socket) do
@@ -722,9 +766,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
       when not is_nil(job) ->
         dataclip =
           assigns[:follow_attempt_id] &&
-            Lightning.Invocation.get_dataclip_for_attempt(
-              assigns[:follow_attempt_id]
-            )
+            get_selected_dataclip(assigns[:follow_attempt_id], job.id)
 
         changeset =
           WorkOrders.Manual.new(
@@ -736,15 +778,13 @@ defmodule LightningWeb.WorkflowLive.Edit do
           )
 
         selectable_dataclips =
-          Lightning.Invocation.list_dataclips_for_job(%Lightning.Workflows.Job{
-            id: job.id
-          })
+          Invocation.list_dataclips_for_job(%Job{id: job.id})
 
         socket
         |> assign_manual_run_form(changeset)
         |> assign(
           selectable_dataclips:
-            maybe_add_attempt_dataclip(selectable_dataclips, dataclip)
+            maybe_add_selected_dataclip(selectable_dataclips, dataclip)
         )
 
       _ ->
@@ -752,11 +792,16 @@ defmodule LightningWeb.WorkflowLive.Edit do
     end
   end
 
-  defp maybe_add_attempt_dataclip(selectable_dataclips, nil) do
+  defp get_selected_dataclip(attempt_id, job_id) do
+    Invocation.get_dataclip_for_attempt_and_job(attempt_id, job_id) ||
+      Invocation.get_dataclip_for_attempt(attempt_id)
+  end
+
+  defp maybe_add_selected_dataclip(selectable_dataclips, nil) do
     selectable_dataclips
   end
 
-  defp maybe_add_attempt_dataclip(selectable_dataclips, dataclip) do
+  defp maybe_add_selected_dataclip(selectable_dataclips, dataclip) do
     if Enum.find(selectable_dataclips, fn dc -> dc.id == dataclip.id end) do
       selectable_dataclips
     else
