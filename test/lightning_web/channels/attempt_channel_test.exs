@@ -162,15 +162,15 @@ defmodule LightningWeb.AttemptChannelTest do
       edges =
         workflow.edges
         |> Enum.map(
-          &Map.take(&1, [
-            :id,
-            :source_trigger_id,
-            :source_job_id,
-            :condition,
-            :enabled,
-            :target_job_id,
-            :js_expression_body
-          ])
+          &(Map.take(&1, [
+              :id,
+              :source_trigger_id,
+              :source_job_id,
+              :condition,
+              :enabled,
+              :target_job_id
+            ])
+            |> Map.put(:condition, "state.a == 33"))
         )
         |> Enum.map(&stringify_keys/1)
 
@@ -793,7 +793,10 @@ defmodule LightningWeb.AttemptChannelTest do
       build(:workflow)
       |> with_trigger(trigger)
       |> with_job(job)
-      |> with_edge({trigger, job})
+      |> with_edge({trigger, job}, %{
+        condition: :js_expression,
+        js_expression_body: "state.a == 33"
+      })
       |> insert()
 
     work_order =
