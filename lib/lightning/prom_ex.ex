@@ -66,12 +66,9 @@ defmodule Lightning.PromEx do
        router: LightningWeb.Router, endpoint: LightningWeb.Endpoint},
       Plugins.Ecto,
       Plugins.Oban,
-      Plugins.PhoenixLiveView
-      # Plugins.Absinthe,
-      # Plugins.Broadway,
-
+      Plugins.PhoenixLiveView,
       # Add your own PromEx metrics plugins
-      # Lightning.Users.PromExPlugin
+      Lightning.Attempts.PromExPlugin
     ]
   end
 

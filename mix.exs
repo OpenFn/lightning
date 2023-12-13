@@ -81,6 +81,7 @@ defmodule Lightning.MixProject do
       {:libcluster, "~> 3.3"},
       {:mimic, "~> 1.7.2", only: :test},
       {:mix_test_watch, "~> 1.0", only: [:test, :dev], runtime: false},
+      {:mock, "~> 0.3.8", only: :test},
       {:mox, "~> 1.0.2", only: :test},
       {:oauth2, "~> 2.1"},
       {:oban, "~> 2.13"},

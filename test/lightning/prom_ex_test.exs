@@ -30,7 +30,8 @@ defmodule Lightning.PromExTest do
        router: LightningWeb.Router, endpoint: LightningWeb.Endpoint},
       PromEx.Plugins.Ecto,
       PromEx.Plugins.Oban,
-      PromEx.Plugins.PhoenixLiveView
+      PromEx.Plugins.PhoenixLiveView,
+      Lightning.Attempts.PromExPlugin
     ]
 
     assert Lightning.PromEx.plugins() == expected
