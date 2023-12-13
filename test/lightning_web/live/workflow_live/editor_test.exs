@@ -41,6 +41,20 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
     project: project,
     workflow: workflow
   } do
+    project_credential =
+      insert(:project_credential,
+        project: project,
+        credential:
+          build(:credential,
+            name: "dummytestcred",
+            schema: "http",
+            body: %{
+              username: "test",
+              password: "test"
+            }
+          )
+      )
+
     job = workflow.jobs |> hd()
 
     {:ok, view, _html} =
@@ -70,6 +84,32 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
     assert {"phx-hook", "JobEditor"} in actual_attrs
     assert {"phx-target", "1"} in actual_attrs
     assert {"phx-update", "ignore"} in actual_attrs
+
+    # try changing the assigned credential
+
+    credential_block =
+      element(view, "#modal-header-credential-block") |> render()
+
+    assert credential_block =~ "No Credential"
+    refute credential_block =~ project_credential.credential.name
+
+    view
+    |> form("#workflow-form",
+      workflow: %{
+        jobs: %{
+          "0" => %{
+            "project_credential_id" => project_credential.id
+          }
+        }
+      }
+    )
+    |> render_change()
+
+    credential_block =
+      element(view, "#modal-header-credential-block") |> render()
+
+    refute credential_block =~ "No Credential"
+    assert credential_block =~ project_credential.credential.name
   end
 
   describe "manual runs" do
@@ -393,6 +433,20 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       project: project,
       workflow: workflow
     } do
+      project_credential =
+        insert(:project_credential,
+          project: project,
+          credential:
+            build(:credential,
+              schema: "http",
+              body: %{
+                baseUrl: "http://localhost:4002",
+                username: "test",
+                password: "test"
+              }
+            )
+        )
+
       job = workflow.jobs |> hd()
 
       {:ok, view, _html} =
@@ -408,6 +462,32 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
              |> render_click("request_metadata", %{})
 
       assert_push_event(view, "metadata_ready", %{"error" => "no_credential"})
+
+      view
+      |> form("#workflow-form",
+        workflow: %{
+          jobs: %{
+            "0" => %{
+              "project_credential_id" => project_credential.id
+            }
+          }
+        }
+      )
+      |> render_change()
+
+      assert view
+             |> with_target("#job-editor-pane-#{job.id}")
+             |> render_click("request_metadata", %{})
+
+      # set timeout to 60 secs because of CI
+      assert_push_event(
+        view,
+        "metadata_ready",
+        %{
+          "error" => "no_metadata_function"
+        },
+        60000
+      )
     end
   end
 end

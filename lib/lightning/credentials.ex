@@ -108,6 +108,15 @@ defmodule Lightning.Credentials do
   """
   def get_credential!(id), do: Repo.get!(Credential, id)
 
+  def get_credential_by_project_credential(project_credential_id) do
+    query =
+      from c in Credential,
+        join: pc in assoc(c, :project_credentials),
+        on: pc.id == ^project_credential_id
+
+    Repo.one(query)
+  end
+
   @doc """
   Creates a credential.
 

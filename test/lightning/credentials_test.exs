@@ -256,6 +256,21 @@ defmodule Lightning.CredentialsTest do
     end
   end
 
+  describe "get_credential_by_project_credential/1" do
+    test "sreturns the credential with given project_credential id" do
+      refute Credentials.get_credential_by_project_credential(
+               Ecto.UUID.generate()
+             )
+
+      project_credential = insert(:project_credential)
+
+      credential =
+        Credentials.get_credential_by_project_credential(project_credential.id)
+
+      assert credential.id == project_credential.credential.id
+    end
+  end
+
   describe "create_credential/1" do
     test "suceeds with raw schema" do
       valid_attrs = %{
