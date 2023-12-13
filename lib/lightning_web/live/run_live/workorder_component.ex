@@ -24,6 +24,10 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
     {:ok, socket |> assign(assigns) |> set_work_order_details(work_order)}
   end
 
+  def update(assigns, socket) do
+    {:ok, assign(socket, assigns)}
+  end
+
   defp set_work_order_details(socket, work_order) do
     last_run = List.last(List.first(work_order.attempts).runs)
 
