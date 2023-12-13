@@ -26,6 +26,7 @@ and this project adheres to
   [#1254](https://github.com/OpenFn/Lightning/issues/1254)
 
 ### Fixed
+
 - New credential doesn't appear in inspector until refresh
   [#1531](https://github.com/OpenFn/Lightning/issues/1531)
 - Metadata not refreshing when credential is updated
