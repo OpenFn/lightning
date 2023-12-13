@@ -55,7 +55,6 @@ const fromWorkflow = (
         model.data.allowPlaceholder = allowPlaceholder;
 
         if (type === 'trigger') {
-          console.log('trigger model', item);
           model.data.trigger = {
             type: (node as Lightning.TriggerNode).type,
             enabled: (node as Lightning.TriggerNode).enabled,
