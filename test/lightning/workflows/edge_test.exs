@@ -35,7 +35,7 @@ defmodule Lightning.Workflows.EdgeTest do
       refute changeset.valid?
 
       assert {:condition,
-              {"must be :always when source is a trigger",
+              {"must be :always or :js_expression when source is a trigger",
                [validation: :inclusion, enum: [:always]]}} in changeset.errors
     end
 

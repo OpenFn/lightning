@@ -84,25 +84,29 @@ defmodule Lightning.Workflows.Edge do
       [:source_job_id, :source_trigger_id],
       "source_job_id and source_trigger_id are mutually exclusive"
     )
-    |> validate_condition_attributes()
+    |> validate_source_condition()
+    |> validate_js_condition()
     |> validate_different_nodes()
   end
 
-  defp validate_condition_attributes(changeset) do
-    cond do
-      nil != get_field(changeset, :source_trigger_id) ->
-        changeset
-        |> validate_inclusion(:condition, [:always],
-          message: "must be :always when source is a trigger"
-        )
+  defp validate_source_condition(changeset) do
+    if nil != get_field(changeset, :source_trigger_id) do
+      changeset
+      |> validate_inclusion(:condition, [:always, :js_expression],
+        message: "must be :always or :js_expression when source is a trigger"
+      )
+    else
+      changeset
+    end
+  end
 
-      :js_expression == get_field(changeset, :condition) ->
-        changeset
-        |> validate_required([:js_expression_label, :js_expression_body])
-        |> validate_js_expression_body()
-
-      true ->
-        changeset
+  defp validate_js_condition(changeset) do
+    if :js_expression == get_field(changeset, :condition) do
+      changeset
+      |> validate_required([:js_expression_label, :js_expression_body])
+      |> validate_js_expression_body()
+    else
+      changeset
     end
   end
 

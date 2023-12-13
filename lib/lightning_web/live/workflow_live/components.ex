@@ -472,7 +472,8 @@ defmodule LightningWeb.WorkflowLive.Components do
 
         %{source_trigger_id: trigger_id} when not is_nil(trigger_id) ->
           [
-            Always: "always"
+            Always: "always",
+            "Matches a Javascript Expression": "js_expression"
           ]
 
         _ ->
@@ -494,53 +495,41 @@ defmodule LightningWeb.WorkflowLive.Components do
     ~H"""
     <% Phoenix.HTML.Form.hidden_inputs_for(@form) %>
     <.old_error field={@form[:condition]} />
+    <div class="grid grid-flow-row gap-4 auto-rows-max">
+      <div>
+        <.label for={:condition} font="font-medium">Condition</.label>
+        <.input
+          type="select"
+          field={@form[:condition]}
+          options={@edge_options}
+          disabled={@disabled}
+        />
+      </div>
+      <%= if @edge_condition == "js_expression" do %>
+        <div>
+          <.label for={:js_expression_label} font="font-medium">
+            Condition label
+          </.label>
+          <.input type="text" field={@form[:js_expression_label]} />
+        </div>
+        <div>
+          <.label for={:js_expression_body} font="font-medium">
+            JS Expression to match on output of last Step
+          </.label>
+          <.input
+            type="textarea"
+            field={@form[:js_expression_body]}
+            class="h-24"
+            phx-debounce="300"
+          />
+        </div>
+      <% end %>
+    </div>
     <%= if Phoenix.HTML.Form.input_value(@form, :source_trigger_id) do %>
-      <Form.label_field
-        form={@form}
-        field={:condition}
-        title="Condition"
-        for={Phoenix.HTML.Form.input_id(@form, :condition)}
-      />
-      <Form.select_field
-        form={@form}
-        name={:condition}
-        values={@edge_options}
-        disabled={true}
-      />
       <div class="max-w-xl text-sm text-gray-500 mt-2">
         <p>This path will be active if its trigger is enabled.</p>
       </div>
     <% else %>
-      <div class="grid grid-flow-row gap-4 auto-rows-max">
-        <div>
-          <.label for={:condition} font="font-medium">Condition</.label>
-          <.input
-            type="select"
-            field={@form[:condition]}
-            options={@edge_options}
-            disabled={@disabled}
-          />
-        </div>
-        <%= if @edge_condition == "js_expression" do %>
-          <div>
-            <.label for={:js_expression_label} font="font-medium">
-              Condition label
-            </.label>
-            <.input type="text" field={@form[:js_expression_label]} />
-          </div>
-          <div>
-            <.label for={:js_expression_body} font="font-medium">
-              JS Expression to match on output of last Step
-            </.label>
-            <.input
-              type="textarea"
-              field={@form[:js_expression_body]}
-              class="h-24"
-              phx-debounce="300"
-            />
-          </div>
-        <% end %>
-      </div>
       <div class="mt-7 border-t flex flex-col justify-between">
         <h2 class=" flex mt-3">
           <Form.check_box
