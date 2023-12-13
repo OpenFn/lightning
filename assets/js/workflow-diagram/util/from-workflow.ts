@@ -16,7 +16,7 @@ function getEdgeLabel(edge: Lightning.Edge) {
       break;
     case 'js_expression':
       const condition_label = edge.js_expression_label;
-      
+
       if (condition_label) {
         if (condition_label.length > 16) {
           label = condition_label.slice(0, 16) + '...';
@@ -68,7 +68,6 @@ const fromWorkflow = (
         model.data.allowPlaceholder = allowPlaceholder;
 
         if (type === 'trigger') {
-          console.log('trigger model', item);
           model.data.trigger = {
             type: (node as Lightning.TriggerNode).type,
             enabled: (node as Lightning.TriggerNode).enabled,

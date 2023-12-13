@@ -18,8 +18,6 @@ export const ERROR_COLOR = '#ef4444';
 export const labelStyles = (selected?: boolean, data) => {
   const { condition, enabled } = data;
 
-  console.log('labelStyles', { data });
-
   const primaryColor = (selected?: boolean, enabled?: boolean) => {
     if (enabled) return selected ? EDGE_COLOR_SELECTED : EDGE_COLOR;
     return selected ? EDGE_COLOR_SELECTED_DISABLED : EDGE_COLOR_DISABLED;
