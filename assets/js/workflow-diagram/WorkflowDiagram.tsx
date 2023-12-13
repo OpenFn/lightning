@@ -41,9 +41,10 @@ export default React.forwardRef<HTMLElement, WorkflowDiagramProps>(
 
     const updateSelection = useCallback(
       (id?: string) => {
-        if (id !== selection) {
-          onSelectionChange(id);
-        }
+        onSelectionChange(id);
+        chartCache.current.lastSelection = id?.startsWith('cancel-placeholder')
+          ? id.split('/')[1]
+          : id;
       },
       [onSelectionChange, selection]
     );
@@ -53,11 +54,11 @@ export default React.forwardRef<HTMLElement, WorkflowDiagramProps>(
       updateSelection(id);
     }, []);
 
-    const { placeholders, add: addPlaceholder } = usePlaceholders(
-      ref,
-      store,
-      requestSelectionChange
-    );
+    const {
+      placeholders,
+      add: addPlaceholder,
+      cancel: cancelPlaceholder,
+    } = usePlaceholders(ref, store, requestSelectionChange);
 
     const workflow = useStore(
       store!,
@@ -136,22 +137,38 @@ export default React.forwardRef<HTMLElement, WorkflowDiagramProps>(
       [setModel, model]
     );
 
+    const removePlaceholder = useCallback(
+      (id: string) => {
+        cancelPlaceholder(new CustomEvent('cancel-placeholder', {}));
+        updateSelection(`cancel-placeholder/${id}`);
+      },
+      [updateSelection]
+    );
+
     const handleNodeClick = useCallback(
       (event: React.MouseEvent, node: Flow.Node) => {
         if ((event.target as HTMLElement).closest('[name=add-node]')) {
           addPlaceholder(node);
         } else {
-          updateSelection(node.id);
+          if (document.getElementById('placeholder-input')) {
+            removePlaceholder(node.id);
+          } else {
+            updateSelection(node.id);
+          }
         }
       },
-      [updateSelection]
+      [updateSelection, removePlaceholder]
     );
 
     const handleEdgeClick = useCallback(
       (_event: React.MouseEvent, edge: Flow.Edge) => {
-        updateSelection(edge.id);
+        if (document.getElementById('placeholder-input')) {
+          removePlaceholder(edge.id);
+        } else {
+          updateSelection(edge.id);
+        }
       },
-      [updateSelection]
+      [updateSelection, removePlaceholder]
     );
 
     const handleBackgroundClick = useCallback(

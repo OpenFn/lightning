@@ -84,7 +84,6 @@ export default (
 
   const cancel = useCallback((evt: CustomEvent<any>) => {
     setPlaceholders({ nodes: [], edges: [] });
-    requestSelectionChange(undefined);
   }, []);
 
   useEffect(() => {
@@ -101,5 +100,5 @@ export default (
     }
   }, [commit, cancel, ref]);
 
-  return { placeholders, add };
+  return { placeholders, add, cancel };
 };

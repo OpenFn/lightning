@@ -182,6 +182,7 @@ const PlaceholderJobNode = ({ id, selected }: NodeProps<NodeData>) => {
             onClick={handleCancel}
           />
           <input
+            id="placeholder-input"
             type="text"
             ref={textRef}
             autoFocus

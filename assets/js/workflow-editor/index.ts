@@ -141,32 +141,41 @@ export default {
       console.debug('onSelectionChange', id);
 
       await this.hasLoaded;
-      const currentUrl = new URL(window.location.href);
-      const nextUrl = new URL(currentUrl);
 
-      const idExists = this.getItem(id);
-      if (!idExists) {
-        nextUrl.searchParams.delete('s');
-        nextUrl.searchParams.delete('m');
-        nextUrl.searchParams.set('placeholder', 'true');
+      if (id?.startsWith('cancel-placeholder')) {
+        const nodeId = id.split('/')[1];
+        const url = new URL(window.location.href);
+        url.searchParams.delete('placeholder');
+        url.searchParams.set('s', nodeId);
+        this.liveSocket.pushHistoryPatch(url.toString(), 'push', this.el);
       } else {
-        nextUrl.searchParams.delete('placeholder');
-        if (!id) {
-          console.debug('Unselecting');
+        const currentUrl = new URL(window.location.href);
+        const nextUrl = new URL(currentUrl);
 
+        const idExists = this.getItem(id);
+        if (!idExists) {
           nextUrl.searchParams.delete('s');
           nextUrl.searchParams.delete('m');
+          nextUrl.searchParams.set('placeholder', 'true');
         } else {
-          console.debug('Selecting', id);
+          nextUrl.searchParams.delete('placeholder');
+          if (!id) {
+            console.debug('Unselecting');
 
-          nextUrl.searchParams.set('s', id);
+            nextUrl.searchParams.delete('s');
+            nextUrl.searchParams.delete('m');
+          } else {
+            console.debug('Selecting', id);
+
+            nextUrl.searchParams.set('s', id);
+          }
         }
-      }
 
-      if (
-        currentUrl.searchParams.toString() !== nextUrl.searchParams.toString()
-      ) {
-        this.liveSocket.pushHistoryPatch(nextUrl.toString(), 'push', this.el);
+        if (
+          currentUrl.searchParams.toString() !== nextUrl.searchParams.toString()
+        ) {
+          this.liveSocket.pushHistoryPatch(nextUrl.toString(), 'push', this.el);
+        }
       }
     })();
   },
