@@ -1,4 +1,10 @@
-import React, { memo, useCallback, useRef, useState } from 'react';
+import React, {
+  SyntheticEvent,
+  memo,
+  useCallback,
+  useRef,
+  useState,
+} from 'react';
 import { Handle, NodeProps, Position } from 'reactflow';
 import {
   CheckCircleIcon,
@@ -86,20 +92,30 @@ const PlaceholderJobNode = ({ id, selected }: NodeProps<NodeData>) => {
   };
 
   // TODO what if a name hasn't been entered?
-  const handleCommit = useCallback(() => {
-    if (textRef.current) {
-      dispatch(textRef.current, 'commit-placeholder', {
-        id,
-        name: textRef.current.value,
-      });
-    }
-  }, [textRef]);
+  const handleCommit = useCallback(
+    (evt: SyntheticEvent | null) => {
+      evt?.stopPropagation();
 
-  const handleCancel = useCallback(() => {
-    if (textRef.current) {
-      dispatch(textRef.current, 'cancel-placeholder', { id });
-    }
-  }, [textRef]);
+      if (textRef.current) {
+        dispatch(textRef.current, 'commit-placeholder', {
+          id,
+          name: textRef.current.value,
+        });
+      }
+    },
+    [textRef]
+  );
+
+  const handleCancel = useCallback(
+    (evt: SyntheticEvent | null) => {
+      evt?.stopPropagation();
+
+      if (textRef.current) {
+        dispatch(textRef.current, 'cancel-placeholder', { id });
+      }
+    },
+    [textRef]
+  );
 
   return (
     <div
