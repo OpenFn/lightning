@@ -303,7 +303,6 @@ defmodule LightningWeb.Components.NewInputs do
         ]}
         {@rest}
       />
-
       <div :if={Enum.any?(@errors)} class="error-space h-6">
         <.error :for={msg <- @errors}><%= msg %></.error>
       </div>
@@ -338,7 +337,7 @@ defmodule LightningWeb.Components.NewInputs do
     ~H"""
     <p
       data-tag="error_message"
-      class="mt-3 inline-flex items-center gap-x-1.5 text-xs text-danger-600 phx-no-feedback:hidden"
+      class="mt-3 inline-flex items-center gap-x-1.5 text-xs text-danger-600"
     >
       <.icon name="hero-exclamation-circle" class="h-4 w-4" />
       <%= render_slot(@inner_block) %>
