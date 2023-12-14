@@ -12,7 +12,7 @@ import { Flow } from '../types';
  *
  * TODO: as an optimisation, consider exiting early once we've updated both selected items
  */
-export default (model: Flow.Model, newSelection?: string) => {
+export default (model: Flow.Model, newSelection: string | null) => {
   const updatedModel = {
     nodes: model.nodes.map(updateItem) as Flow.Node[],
     edges: model.edges.map(updateItem) as Flow.Edge[],
