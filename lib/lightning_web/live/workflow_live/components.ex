@@ -514,6 +514,7 @@ defmodule LightningWeb.WorkflowLive.Components do
             type="text"
             label="Condition Label"
             field={@form[:js_expression_label]}
+            maxlength="255"
           />
         </div>
         <div>
@@ -527,6 +528,7 @@ defmodule LightningWeb.WorkflowLive.Components do
               field={@form[:js_expression_body]}
               class="h-24"
               phx-debounce="300"
+              maxlength="255"
             />
           </.label>
         </div>
