@@ -877,7 +877,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
         WorkflowParams.apply_form_params(socket.assigns.workflow_params, params)
 
       socket
-      |> apply_params(next_params, get_new_params_opts(params))
+      |> apply_params(next_params, get_initial_params_opts(params))
       |> mark_validated()
       |> push_patches_applied(initial_params)
     else
@@ -886,13 +886,21 @@ defmodule LightningWeb.WorkflowLive.Edit do
     end
   end
 
-  defp get_new_params_opts(params) do
+  # Returns the index of the edge that is being edited on Path form
+  defp get_initial_params_opts(params) do
     params
     |> Map.get("edges", %{})
-    |> Map.values()
+    |> Map.to_list()
     |> then(fn
-      [%{"condition_type" => "js_expression"}] -> [new_edges: true]
-      _other -> []
+      [{index, %{"condition_type" => "js_expression"} = map}] ->
+        if map_size(Map.delete(map, "enabled")) == 1 do
+          [edge_on_edit_index: String.to_integer(index)]
+        else
+          []
+        end
+
+      _other ->
+        []
     end)
   end
 
@@ -918,8 +926,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
   end
 
   defp apply_params(socket, params, opts \\ []) do
-    new_edges? = Keyword.get(opts, :new_edges, false)
-
     # Build a new changeset from the new params
     changeset =
       socket.assigns.workflow
@@ -930,11 +936,24 @@ defmodule LightningWeb.WorkflowLive.Edit do
       )
       |> then(fn
         %Ecto.Changeset{changes: %{edges: edges} = changes} = changeset ->
-          if new_edges? do
+          new_edge_index =
+            Keyword.get(opts, :edge_on_edit_index, nil)
+
+          if new_edge_index do
+            cleared_edges =
+              edges
+              |> Enum.with_index()
+              |> Enum.map(fn
+                {edge, index} when index == new_edge_index ->
+                  %{edge | errors: []}
+
+                {edge, _index} ->
+                  edge
+              end)
+
             %{
               changeset
-              | changes:
-                  Map.put(changes, :edges, Enum.map(edges, &%{&1 | errors: []}))
+              | changes: Map.put(changes, :edges, cleared_edges)
             }
           else
             changeset
