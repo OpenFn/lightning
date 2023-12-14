@@ -584,13 +584,13 @@ defmodule Lightning.ProjectsTest do
       workflow: workflow_1,
       source_trigger: build(:trigger, workflow: workflow_1),
       target_job: workflow_1_job,
-      condition: :always
+      condition_type: :always
     )
 
     insert(:edge,
       workflow: workflow_1,
       source_job: workflow_1_job,
-      condition: :on_job_failure,
+      condition_type: :on_job_failure,
       target_job:
         insert(:job,
           name: "on fail",
@@ -604,7 +604,7 @@ defmodule Lightning.ProjectsTest do
     insert(:edge,
       workflow: workflow_1,
       source_job: workflow_1_job,
-      condition: :on_job_success,
+      condition_type: :on_job_success,
       target_job:
         insert(:job,
           name: "on success",
@@ -631,13 +631,13 @@ defmodule Lightning.ProjectsTest do
           cron_expression: "0 23 * * *"
         ),
       target_job: workflow_2_job,
-      condition: :always
+      condition_type: :always
     )
 
     insert(:edge,
       workflow: workflow_2,
       source_job: workflow_2_job,
-      condition: :on_job_success,
+      condition_type: :on_job_success,
       target_job:
         insert(:job,
           name: "on cron failure",

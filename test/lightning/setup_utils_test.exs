@@ -77,30 +77,30 @@ defmodule Lightning.SetupUtilsTest do
              end)
 
       assert Enum.find(loaded_flow.edges, fn e ->
-               e.condition == :always &&
+               e.condition_type == :always &&
                  e.target_job_id == fhir_standard_data.id
              end)
 
       assert Enum.find(loaded_flow.edges, fn e ->
-               e.condition == :on_job_success &&
+               e.condition_type == :on_job_success &&
                  e.source_job_id == fhir_standard_data.id &&
                  e.target_job_id == send_to_openhim.id
              end)
 
       assert Enum.find(loaded_flow.edges, fn e ->
-               e.condition == :on_job_success &&
+               e.condition_type == :on_job_success &&
                  e.source_job_id == fhir_standard_data.id &&
                  e.target_job_id == send_to_openhim.id
              end)
 
       assert Enum.find(loaded_flow.edges, fn e ->
-               e.condition == :on_job_success &&
+               e.condition_type == :on_job_success &&
                  e.target_job_id == notify_upload_successful.id &&
                  e.source_job_id == send_to_openhim.id
              end)
 
       assert Enum.find(loaded_flow.edges, fn e ->
-               e.condition == :on_job_failure &&
+               e.condition_type == :on_job_failure &&
                  e.target_job_id == notify_upload_failed.id &&
                  e.source_job_id == send_to_openhim.id
              end)
@@ -110,12 +110,12 @@ defmodule Lightning.SetupUtilsTest do
         |> Repo.preload([:edges, :triggers])
 
       assert Enum.find(loaded_dhis_flow.edges, fn e ->
-               e.condition == :always &&
+               e.condition_type == :always &&
                  e.target_job_id == get_dhis2_data.id
              end)
 
       assert Enum.find(loaded_dhis_flow.edges, fn e ->
-               e.condition == :on_job_success &&
+               e.condition_type == :on_job_success &&
                  e.source_job_id == get_dhis2_data.id &&
                  e.target_job_id == upload_to_google_sheet.id
              end)

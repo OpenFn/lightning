@@ -230,7 +230,7 @@ defmodule Lightning.SetupUtils do
     Workflows.create_edge(%{
       workflow_id: workflow.id,
       source_job: job_1,
-      condition: :on_job_success,
+      condition_type: :on_job_success,
       target_job_id: job_2.id,
       enabled: true
     })
@@ -270,7 +270,7 @@ defmodule Lightning.SetupUtils do
     Workflows.create_edge(%{
       workflow_id: workflow.id,
       source_job: job_2,
-      condition: :on_job_success,
+      condition_type: :on_job_success,
       target_job_id: job_3.id,
       enabled: true
     })
@@ -469,7 +469,7 @@ defmodule Lightning.SetupUtils do
     {:ok, _openhie_root_edge} =
       Workflows.create_edge(%{
         workflow_id: openhie_workflow.id,
-        condition: :always,
+        condition_type: :always,
         source_trigger: openhie_trigger,
         target_job: fhir_standard_data,
         enabled: true
@@ -517,7 +517,7 @@ defmodule Lightning.SetupUtils do
     {:ok, _send_to_openhim_edge} =
       Workflows.create_edge(%{
         workflow_id: openhie_workflow.id,
-        condition: :on_job_success,
+        condition_type: :on_job_success,
         target_job_id: send_to_openhim.id,
         source_job_id: fhir_standard_data.id,
         enabled: true
@@ -526,7 +526,7 @@ defmodule Lightning.SetupUtils do
     {:ok, _success_upload} =
       Workflows.create_edge(%{
         workflow_id: openhie_workflow.id,
-        condition: :on_job_success,
+        condition_type: :on_job_success,
         target_job_id: notify_upload_successful.id,
         source_job_id: send_to_openhim.id,
         enabled: true
@@ -535,7 +535,7 @@ defmodule Lightning.SetupUtils do
     {:ok, _failed_upload} =
       Workflows.create_edge(%{
         workflow_id: openhie_workflow.id,
-        condition: :on_job_failure,
+        condition_type: :on_job_failure,
         target_job_id: notify_upload_failed.id,
         source_job_id: send_to_openhim.id,
         enabled: true
@@ -697,7 +697,7 @@ defmodule Lightning.SetupUtils do
     {:ok, _root_edge} =
       Workflows.create_edge(%{
         workflow_id: dhis2_workflow.id,
-        condition: :always,
+        condition_type: :always,
         source_trigger: dhis_trigger,
         target_job: get_dhis2_data,
         enabled: true
@@ -719,7 +719,7 @@ defmodule Lightning.SetupUtils do
     {:ok, _success_upload} =
       Workflows.create_edge(%{
         workflow_id: dhis2_workflow.id,
-        condition: :on_job_success,
+        condition_type: :on_job_success,
         target_job_id: upload_to_google_sheet.id,
         source_job_id: get_dhis2_data.id,
         enabled: true

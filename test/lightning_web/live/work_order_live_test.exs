@@ -772,7 +772,7 @@ defmodule LightningWeb.RunWorkOrderTest do
         workflow: workflow,
         source_trigger: trigger,
         target_job: job,
-        condition: :always,
+        condition_type: :always,
         enabled: true
       )
 
@@ -858,7 +858,7 @@ defmodule LightningWeb.RunWorkOrderTest do
         workflow: workflow,
         source_trigger: trigger,
         target_job: job,
-        condition: :always,
+        condition_type: :always,
         enabled: true
       )
 

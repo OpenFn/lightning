@@ -59,7 +59,7 @@ const createNewWorkflow = () => {
       id: crypto.randomUUID(),
       source_trigger_id: triggers[0].id,
       target_job_id: jobs[0].id,
-      condition: 'always',
+      condition_type: 'always',
     },
   ];
   return { triggers, jobs, edges };

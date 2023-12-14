@@ -38,7 +38,7 @@ export const create = (parentNode: Flow.Node) => {
       type: 'step',
       source: parentNode.id,
       target: targetId,
-      data: { condition: 'on_job_success', placeholder: true },
+      data: { condition_type: 'on_job_success', placeholder: true },
     })
   );
 

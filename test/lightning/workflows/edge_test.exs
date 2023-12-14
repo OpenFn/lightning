@@ -8,7 +8,7 @@ defmodule Lightning.Workflows.EdgeTest do
       changeset =
         Edge.changeset(%Edge{}, %{
           workflow_id: Ecto.UUID.generate(),
-          condition: :on_job_success
+          condition_type: :on_job_success
         })
 
       assert changeset.valid?
@@ -20,7 +20,7 @@ defmodule Lightning.Workflows.EdgeTest do
       refute changeset.valid?
 
       assert changeset.errors == [
-               condition: {"can't be blank", [validation: :required]}
+               condition_type: {"can't be blank", [validation: :required]}
              ]
     end
 
@@ -29,12 +29,12 @@ defmodule Lightning.Workflows.EdgeTest do
         Edge.changeset(%Edge{}, %{
           workflow_id: Ecto.UUID.generate(),
           source_trigger_id: Ecto.UUID.generate(),
-          condition: "on_job_success"
+          condition_type: "on_job_success"
         })
 
       refute changeset.valid?
 
-      assert {:condition,
+      assert {:condition_type,
               {"must be :always or :js_expression when source is a trigger",
                [validation: :inclusion, enum: [:always, :js_expression]]}} in changeset.errors
     end
@@ -74,7 +74,7 @@ defmodule Lightning.Workflows.EdgeTest do
         Edge.changeset(%Edge{}, %{
           workflow_id: Ecto.UUID.generate(),
           source_job_id: job_id,
-          condition: :on_job_success,
+          condition_type: :on_job_success,
           target_job_id: job_id
         })
 
@@ -89,7 +89,7 @@ defmodule Lightning.Workflows.EdgeTest do
         Edge.changeset(%Edge{}, %{
           workflow_id: Ecto.UUID.generate(),
           source_job_id: job_id,
-          condition: :on_job_success,
+          condition_type: :on_job_success,
           target_job_id: Ecto.UUID.generate()
         })
 
@@ -103,7 +103,7 @@ defmodule Lightning.Workflows.EdgeTest do
       changeset =
         Edge.changeset(%Edge{}, %{
           workflow_id: workflow.id,
-          condition: :on_job_success,
+          condition_type: :on_job_success,
           source_job_id: job.id
         })
 
@@ -123,7 +123,7 @@ defmodule Lightning.Workflows.EdgeTest do
       changeset =
         Edge.changeset(%Edge{}, %{
           workflow_id: workflow.id,
-          condition: :on_job_success,
+          condition_type: :on_job_success,
           target_job_id: job.id
         })
 
@@ -153,7 +153,7 @@ defmodule Lightning.Workflows.EdgeTest do
       changeset =
         Edge.changeset(%Edge{}, %{
           workflow_id: workflow.id,
-          condition: :always,
+          condition_type: :always,
           source_trigger_id: trigger.id
         })
 
@@ -176,7 +176,7 @@ defmodule Lightning.Workflows.EdgeTest do
         Edge.changeset(%Edge{}, %{
           workflow_id: Ecto.UUID.generate(),
           target_job_id: Ecto.UUID.generate(),
-          condition: :on_job_success
+          condition_type: :on_job_success
         })
 
       assert changeset.valid?
@@ -192,7 +192,7 @@ defmodule Lightning.Workflows.EdgeTest do
           workflow_id: Ecto.UUID.generate(),
           source_trigger_id: Ecto.UUID.generate(),
           target_job_id: Ecto.UUID.generate(),
-          condition: :always
+          condition_type: :always
         })
 
       assert changeset.valid?
@@ -211,7 +211,7 @@ defmodule Lightning.Workflows.EdgeTest do
             source_job_id: Ecto.UUID.generate(),
             enabled: true
           },
-          %{condition: :js_expression}
+          %{condition_type: :js_expression}
         )
 
       assert changeset.errors == [
@@ -230,7 +230,7 @@ defmodule Lightning.Workflows.EdgeTest do
             enabled: true
           },
           %{
-            condition: :js_expression,
+            condition_type: :js_expression,
             js_expression_label: String.duplicate("a", 256),
             js_expression_body: String.duplicate("a", 256)
           }
@@ -261,7 +261,7 @@ defmodule Lightning.Workflows.EdgeTest do
       }
 
       js_attrs = %{
-        condition: :js_expression,
+        condition_type: :js_expression,
         js_expression_label: "Some JS Expression"
       }
 
@@ -315,7 +315,7 @@ defmodule Lightning.Workflows.EdgeTest do
       }
 
       js_attrs = %{
-        condition: :js_expression,
+        condition_type: :js_expression,
         js_expression_label: "Some JS Expression"
       }
 

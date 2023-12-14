@@ -131,7 +131,7 @@ defmodule Lightning.WorkflowsTest do
         edges: [
           %{
             source_trigger_id: trigger_id,
-            condition: :always,
+            condition_type: :always,
             target_job_id: job_id
           }
         ]
@@ -161,7 +161,7 @@ defmodule Lightning.WorkflowsTest do
           %{
             source_trigger_id: trigger_id,
             target_job_id: job_id,
-            condition: :always
+            condition_type: :always
           }
         ]
       }
@@ -178,7 +178,7 @@ defmodule Lightning.WorkflowsTest do
             id: edge.id,
             source_trigger_id: trigger_id,
             target_job_id: job_id,
-            condition: :always
+            condition_type: :always
           }
         ]
       }
@@ -272,7 +272,7 @@ defmodule Lightning.WorkflowsTest do
       insert(:edge,
         workflow: w1,
         source_job: w1_job,
-        condition: :on_job_failure,
+        condition_type: :on_job_failure,
         target_job:
           insert(:job,
             name: "on fail",
@@ -284,7 +284,7 @@ defmodule Lightning.WorkflowsTest do
       insert(:edge,
         workflow: w1,
         source_job: w1_job,
-        condition: :on_job_success,
+        condition_type: :on_job_success,
         target_job:
           insert(:job,
             name: "on success",
@@ -304,7 +304,7 @@ defmodule Lightning.WorkflowsTest do
       insert(:edge,
         workflow: w2,
         source_job: w2_job,
-        condition: :on_job_failure,
+        condition_type: :on_job_failure,
         target_job:
           insert(:job,
             name: "on fail",
