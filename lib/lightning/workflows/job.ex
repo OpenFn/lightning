@@ -41,6 +41,8 @@ defmodule Lightning.Workflows.Job do
     field :name, :string
     field :adaptor, :string, default: "@openfn/language-common@latest"
 
+    field :scheduled_deletion, :utc_datetime
+
     belongs_to :project_credential, ProjectCredential
     has_one :credential, through: [:project_credential, :credential]
     belongs_to :workflow, Workflow
@@ -66,7 +68,8 @@ defmodule Lightning.Workflows.Job do
       :body,
       :adaptor,
       :project_credential_id,
-      :workflow_id
+      :workflow_id,
+      :scheduled_deletion
     ])
     |> validate()
     |> unique_constraint(:name, name: "jobs_name_workflow_id_index")
