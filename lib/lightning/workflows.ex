@@ -7,7 +7,6 @@ defmodule Lightning.Workflows do
   alias Lightning.Repo
   alias Lightning.Projects.Project
   alias Lightning.Workflows.{Edge, Job, Workflow, Trigger, Trigger, Query}
-  alias Lightning.WorkOrder
   alias Lightning.Invocation.Run
 
   @doc """
@@ -174,6 +173,7 @@ defmodule Lightning.Workflows do
         select: %{workflow_id: wo.workflow_id, count: count(wo.id)}
 
     from(w in Workflow,
+      preload: [:triggers, :edges, jobs: [:credential, :workflow]],
       left_join: lwo in subquery(last_work_order),
       on: lwo.workflow_id == w.id,
       left_join: wc in subquery(work_order_count),
@@ -198,8 +198,7 @@ defmodule Lightning.Workflows do
             last_failed_run: sr.last_failed_run
           }
         }
-      },
-      preload: [:triggers, :edges, jobs: [:credential, :workflow]]
+      }
     )
   end
 

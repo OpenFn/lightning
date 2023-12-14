@@ -44,7 +44,7 @@ defmodule LightningWeb.WorkflowLive.Components do
     <.new_table
       id="workflows"
       rows={@workflows}
-      row_class="hover:bg-purple-50 hover:border-l-2 hover:border-l-indigo-500"
+      row_class="hover:bg-indigo-50 hover:border-l-2 hover:border-l-indigo-500"
     >
       <%!-- row_click={fn {_id, product} -> JS.navigate(~p"/products/#{product}") end} --%>
       <:col :let={workflow} label_class="text-gray-700" label="Name">
@@ -56,27 +56,35 @@ defmodule LightningWeb.WorkflowLive.Components do
         />
       </:col>
       <:col :let={workflow} label_class="text-gray-700" label="Latest Work Order">
-        <div>
-          <div>
-            <%= workflow.aggregates[:last_work_order][:state] %>
-          </div>
-          <div>
-            <%= workflow.aggregates[:last_work_order][:date_time] %>
-          </div>
-        </div>
+        <.state_card
+          state={workflow.aggregates[:last_work_order][:state]}
+          time={workflow.aggregates[:last_work_order][:date_time]}
+        />
       </:col>
       <:col :let={workflow} label_class="text-gray-700 " label="Work Orders(30 days)">
         <div>
-          <div>
-            <%= workflow.aggregates[:total_work_orders][:count] %>
-          </div>
-          <div>
-            (<%= workflow.aggregates[:total_work_orders][:total_runs] %> runs,
-            <span>
-              <%= workflow.aggregates[:total_work_orders][:success_percentage] %> success
-            </span>
-            )
-          </div>
+          <%= if workflow.aggregates[:total_work_orders][:count]> 0 do %>
+            <div class="text-indigo-700 text-lg">
+              <%= workflow.aggregates[:total_work_orders][:count] %>
+            </div>
+            <div class="text-gray-900 text-xs">
+              (<%= workflow.aggregates[:total_work_orders][:total_runs] %> runs,
+              <span>
+                <%= workflow.aggregates[:total_work_orders][:success_percentage] %>% success
+              </span>
+              )
+            </div>
+          <% else %>
+            <div class="text-gray-400 text-sm">
+              <span>
+                0
+              </span>
+              <br />
+              <span class="text-xs">
+                N/A
+              </span>
+            </div>
+          <% end %>
         </div>
       </:col>
       <:col
@@ -85,12 +93,28 @@ defmodule LightningWeb.WorkflowLive.Components do
         label="Work Orders in a failed state(30 days)"
       >
         <div>
-          <div>
-            <%= workflow.aggregates[:failed_work_order][:count] %>
-          </div>
-          <div>
-            <%= workflow.aggregates[:failed_work_order][:last_failed_run] %>
-          </div>
+          <%= if workflow.aggregates[:failed_work_order][:count] >0 do %>
+            <div class="text-indigo-700 text-lg">
+              <%= workflow.aggregates[:failed_work_order][:count] %>
+            </div>
+            <div class="text-gray-700 text-xs">
+              Latest failure <%= workflow.aggregates[:failed_work_order][
+                :last_failed_run
+              ]
+              |> Timex.Format.DateTime.Formatters.Relative.format("{relative}")
+              |> elem(1) %>
+            </div>
+          <% else %>
+            <div class="text-gray-400 text-sm">
+              <span>
+                0
+              </span>
+              <br />
+              <span class="text-xs">
+                N/A
+              </span>
+            </div>
+          <% end %>
         </div>
       </:col>
 
@@ -271,8 +295,7 @@ defmodule LightningWeb.WorkflowLive.Components do
               phx-hook="ClosePanelViaEscape"
               patch={@cancel_url}
               class="justify-center hover:text-gray-500"
-            >    IO.inspect(assigns.workflows, label: "Workflow list ")
-
+            >
               <Heroicons.x_mark solid class="h-4 w-4 inline-block" />
             </.link>
           </div>
@@ -907,56 +930,99 @@ defmodule LightningWeb.WorkflowLive.Components do
   def workflow_metrics(assigns) do
     ~H"""
     <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-      <%= for {key,value} <- assigns.metrics do %>
-        <%= case key do %>
-          <% :total_workorders -> %>
-            <.metric_card title="Work Orders" body={value} />
-          <% :total_runs -> %>
-            <.metric_card
-              title="Runs"
-              body={Map.get(value, :completed_runs)}
-              optional_text={
-                Map.get(value, :pending_running_runs)
-                |> (to_string |> Kernel.<>(" pending"))
-              }
-            />
-          <% :successful_runs -> %>
-            <.metric_card
-              title="Successful Runs"
-              body={Map.get(value, :successful_runs)}
-              optional_text={
-                Map.get(value, :success_percentage) |> (to_string |> Kernel.<>("%"))
-              }
-            />
-          <% :failed_workorders -> %>
-            <.metric_card
-              title="Work Orders in failed state"
-              body={Map.get(value, :failed_workorders)}
-              optional_text={
-                Map.get(value, :failure_percentage) |> (to_string |> Kernel.<>("%"))
-              }
-            />
-          <% _-> %>
-        <% end %>
-      <% end %>
+      <.metric_card title="Work Orders">
+        <:value><%= @metrics.work_order_metrics.total %></:value>
+      </.metric_card>
+      <.metric_card title="Runs">
+        <:value><%= @metrics.run_metrics.successful_runs %></:value>
+        <:suffix>
+          <span>(<%= @metrics.run_metrics.pending_running_runs %> pending)</span>
+        </:suffix>
+      </.metric_card>
+      <.metric_card title="Succesful Runs">
+        <:value><%= @metrics.run_metrics.completed_runs %></:value>
+        <:suffix>
+          <span>(<%= @metrics.run_metrics.success_percentage %>%)</span>
+        </:suffix>
+      </.metric_card>
+      <.metric_card title="Work Orders in failed state">
+        <:value><%= @metrics.work_order_metrics.failed %></:value>
+        <:suffix>
+          <span class="mr-10">
+            (<%= @metrics.work_order_metrics.failure_percentage %>%)
+          </span>
+          <.link class="text-indigo-700">View all</.link>
+        </:suffix>
+      </.metric_card>
     </div>
     """
   end
 
-  attr :title, :string
-  attr :body, :string
-  attr :optional_text, :string, default: nil
+  attr :title, :string, required: true
+  slot :value, required: true
+
+  slot :suffix, required: false
 
   def metric_card(assigns) do
     ~H"""
     <div class="bg-white shadow rounded-lg py-2 px-4">
       <h2 class="text-sm font-semibold text-gray-600"><%= @title %></h2>
       <p class="text-2xl font-bold text-gray-800">
-        <%= @body %>
-        <span :if={@optional_text} class="text-sm font-normal">
-          (<%= @optional_text %>)
+        <%= render_slot(@value) %>
+        <span class="text-sm font-normal">
+          <%= render_slot(@suffix) %>
         </span>
       </p>
+    </div>
+    """
+  end
+
+  def state_card(assigns) do
+    assigns =
+      assigns
+      |> assign(
+        timestamp:
+          if !is_nil(assigns.state) do
+            DateTime.to_naive(assigns.time)
+            |> Timex.Format.DateTime.Formatters.Relative.format("{relative}")
+            |> elem(1)
+          end
+      )
+
+    ~H"""
+    <div class="flex flex-col text-center">
+      <%= if @state in [:success,:failed] do %>
+        <.status_card state={@state} timestamp={@timestamp} />
+      <% else %>
+        <div class="flex items-center gap-x-2">
+          <span class="inline-block h-2 w-2 bg-gray-200 rounded-full"></span>
+          <span class="text-grey-200 italic">No work orders created yet</span>
+        </div>
+      <% end %>
+    </div>
+    """
+  end
+
+  def status_card(assigns) do
+    ~H"""
+    <div>
+      <%= if @state == :success do %>
+        <div class="flex items-center gap-x-2">
+          <span class="inline-block h-2 w-2 bg-green-600 rounded-full"></span>
+          <span class="text-green-500 font-medium">Success</span>
+        </div>
+        <span class="block text-gray-700 text-left text-xs ml-2">
+          <%= @timestamp %>
+        </span>
+      <% else %>
+        <div class="flex items-center gap-x-2">
+          <span class="inline-block h-2 w-2 bg-red-600 rounded-full"></span>
+          <span class="text-red-500 font-medium">Failure</span>
+        </div>
+        <span class="block text-gray-700 text-left text-xs ml-2">
+          <%= @timestamp %>
+        </span>
+      <% end %>
     </div>
     """
   end
