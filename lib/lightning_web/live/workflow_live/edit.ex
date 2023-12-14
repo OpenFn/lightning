@@ -877,13 +877,23 @@ defmodule LightningWeb.WorkflowLive.Edit do
         WorkflowParams.apply_form_params(socket.assigns.workflow_params, params)
 
       socket
-      |> apply_params(next_params)
+      |> apply_params(next_params, get_new_params_opts(params))
       |> mark_validated()
       |> push_patches_applied(initial_params)
     else
       socket
       |> put_flash(:error, "You are not authorized to perform this action.")
     end
+  end
+
+  defp get_new_params_opts(params) do
+    params
+    |> Map.get("edges", %{})
+    |> Map.values()
+    |> then(fn
+      [%{"condition_type" => "js_expression"}] -> [new_edges: true]
+      _other -> []
+    end)
   end
 
   defp webhook_url(trigger) do
@@ -907,7 +917,9 @@ defmodule LightningWeb.WorkflowLive.Edit do
     |> apply_params(socket.assigns.workflow_params)
   end
 
-  defp apply_params(socket, params) do
+  defp apply_params(socket, params, opts \\ []) do
+    new_edges? = Keyword.get(opts, :new_edges, false)
+
     # Build a new changeset from the new params
     changeset =
       socket.assigns.workflow
@@ -916,6 +928,21 @@ defmodule LightningWeb.WorkflowLive.Edit do
         |> set_default_adaptors()
         |> Map.put("project_id", socket.assigns.project.id)
       )
+      |> then(fn
+        %Ecto.Changeset{changes: %{edges: edges} = changes} = changeset ->
+          if new_edges? do
+            %{
+              changeset
+              | changes:
+                  Map.put(changes, :edges, Enum.map(edges, &%{&1 | errors: []}))
+            }
+          else
+            changeset
+          end
+
+        changeset ->
+          changeset
+      end)
 
     has_multiple_jobs =
       length(Ecto.Changeset.get_field(changeset, :jobs)) > 1
