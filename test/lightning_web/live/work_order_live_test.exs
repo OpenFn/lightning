@@ -74,6 +74,17 @@ defmodule LightningWeb.RunWorkOrderTest do
                id: work_order.id,
                work_order: work_order
              ) =~ work_order.dataclip_id
+
+      Lightning.Repo.delete!(job)
+
+      work_order =
+        Lightning.Repo.reload!(work_order)
+        |> Lightning.Repo.preload([:attempts, :workflow])
+
+      assert render_component(LightningWeb.RunLive.WorkOrderComponent,
+               id: work_order.id,
+               work_order: work_order
+             ) =~ work_order.dataclip_id
     end
 
     test "lists all workorders", %{
