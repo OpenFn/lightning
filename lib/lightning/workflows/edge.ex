@@ -113,17 +113,17 @@ defmodule Lightning.Workflows.Edge do
   defp validate_condition_expression(%{valid?: false} = changeset), do: changeset
 
   defp validate_condition_expression(changeset) do
-    js_code = get_field(changeset, :condition_expression)
+    js_expr = get_field(changeset, :condition_expression)
 
     cond do
-      String.match?(js_code, ~r/(import|require)(\(|\{| )/) ->
+      String.match?(js_expr, ~r/(import|require)(\(|\{| )/) ->
         add_error(
           changeset,
           :condition_expression,
           "must not contain import or require statements"
         )
 
-      String.match?(js_code, ~r/(;|{)/) ->
+      String.match?(js_expr, ~r/(;|{)/) ->
         add_error(
           changeset,
           :condition_expression,
