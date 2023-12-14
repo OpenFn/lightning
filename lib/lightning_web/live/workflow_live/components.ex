@@ -53,7 +53,7 @@ defmodule LightningWeb.WorkflowLive.Components do
     <.new_table
       id="workflows"
       rows={@workflows}
-      row_class="hover:bg-indigo-50 hover:border-l-2 hover:border-l-indigo-500"
+      row_class="group hover:bg-indigo-50 hover:border-l-2 hover:border-l-indigo-500"
     >
       <:col :let={workflow} label_class="text-gray-700" label="Name">
         <.workflow_card
@@ -146,26 +146,20 @@ defmodule LightningWeb.WorkflowLive.Components do
               </div>
             <% end %>
           </div>
-        </div>
-      </:col>
-      <:action :let={workflow}>
-        <div class="mr-4">
-          <div
-            :if={@can_delete_workflow}
-            class="inline-flex h-8 w-8 items-center justify-center rounded-full text-gray-400 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
-          >
-            <.link
-              href="#"
-              phx-click="delete_workflow"
-              phx-value-id={workflow.id}
-              data-confirm="Are you sure you'd like to delete this workflow?"
-              class="inline-flex h-8 w-8 items-center justify-center rounded-full text-gray-400 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
-            >
-              <Icon.trash class="h-5 w-5 text-slate-300 hover:text-rose-700" />
-            </.link>
+          <div class="mr-2 invisible  group-hover:visible group-hover:text-red-600 pt-2">
+            <div :if={@can_delete_workflow}>
+              <.link
+                href="#"
+                phx-click="delete_workflow"
+                phx-value-id={workflow.id}
+                data-confirm="Are you sure you'd like to delete this workflow?"
+              >
+                Delete
+              </.link>
+            </div>
           </div>
         </div>
-      </:action>
+      </:col>
     </.new_table>
     """
   end
@@ -1063,19 +1057,5 @@ defmodule LightningWeb.WorkflowLive.Components do
       <% end %>
     </div>
     """
-  end
-
-  defp filters do
-    %{
-      "date_after" =>
-        Timex.now() |> Timex.shift(days: -30) |> DateTime.to_string(),
-      "date_before" => DateTime.utc_now() |> DateTime.to_string(),
-      "failed" => "true",
-      "crashed" => "true",
-      "killed" => "true",
-      "cancelled" => "true",
-      "lost" => "true",
-      "exception" => "true"
-    }
   end
 end
