@@ -60,7 +60,7 @@ defmodule LightningWeb.WorkflowNewLive.WorkflowParamsTest do
                    "condition" => "on_job_failure",
                    "enabled" => true,
                    "errors" => %{
-                     "condition" => [
+                     "condition_type" => [
                        "The condition must be 'Always' or 'JS expression' when the source is trigger."
                      ]
                    },
@@ -82,7 +82,7 @@ defmodule LightningWeb.WorkflowNewLive.WorkflowParamsTest do
                "errors" => %{
                  "edges" => [
                    %{
-                     "condition" => [
+                     "condition_type" => [
                        "The condition must be 'Always' or 'JS expression' when the source is trigger."
                      ]
                    },
