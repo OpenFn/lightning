@@ -156,7 +156,7 @@ defmodule LightningWeb.EndToEndTest do
         target_job_id: expression1_job.id,
         condition_type: :js_expression,
         condition_label: "less_than_1000",
-        js_expression_body: "state.x < 1000"
+        condition_expression: "state.x < 1000"
       })
 
       webhook_body = %{"fieldOne" => 123, "fieldTwo" => "some string"}

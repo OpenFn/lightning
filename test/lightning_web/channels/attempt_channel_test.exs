@@ -794,7 +794,7 @@ defmodule LightningWeb.AttemptChannelTest do
       |> with_job(job)
       |> with_edge({trigger, job}, %{
         condition_type: :js_expression,
-        js_expression_body: "state.a == 33"
+        condition_expression: "state.a == 33"
       })
       |> insert()
 

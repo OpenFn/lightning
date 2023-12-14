@@ -529,7 +529,7 @@ defmodule LightningWeb.WorkflowLive.Components do
             </p>
             <.input
               type="textarea"
-              field={@form[:js_expression_body]}
+              field={@form[:condition_expression]}
               class="h-24"
               phx-debounce="300"
               maxlength="255"

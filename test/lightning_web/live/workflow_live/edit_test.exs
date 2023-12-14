@@ -326,7 +326,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
           "edges" => %{
             "1" => %{
               "condition_label" => "My JS Expression",
-              "js_expression_body" => "state.data.field === 33"
+              "condition_expression" => "state.data.field === 33"
             }
           }
         }
@@ -342,7 +342,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
                  Map.merge(edge_on_edit, %{
                    condition_type: :js_expression,
                    condition_label: "My JS Expression",
-                   js_expression_body: "state.data.field === 33"
+                   condition_expression: "state.data.field === 33"
                  }),
                  :updated_at
                )
