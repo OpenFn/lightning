@@ -155,7 +155,7 @@ defmodule LightningWeb.EndToEndTest do
         workflow: workflow,
         target_job_id: expression1_job.id,
         condition_type: :js_expression,
-        js_expression_label: "less_than_1000",
+        condition_label: "less_than_1000",
         js_expression_body: "state.x < 1000"
       })
 

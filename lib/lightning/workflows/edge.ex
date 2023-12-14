@@ -41,7 +41,7 @@ defmodule Lightning.Workflows.Edge do
 
     field :condition_type, Ecto.Enum, values: @conditions
     field :js_expression_body, :string
-    field :js_expression_label, :string
+    field :condition_label, :string
 
     field :enabled, :boolean, default: true
 
@@ -65,7 +65,7 @@ defmodule Lightning.Workflows.Edge do
       :condition_type,
       :enabled,
       :target_job_id,
-      :js_expression_label,
+      :condition_label,
       :js_expression_body
     ])
     |> validate()
@@ -103,7 +103,7 @@ defmodule Lightning.Workflows.Edge do
   defp validate_js_condition(changeset) do
     if :js_expression == get_field(changeset, :condition_type) do
       changeset
-      |> validate_required([:js_expression_label, :js_expression_body])
+      |> validate_required([:condition_label, :js_expression_body])
       |> validate_js_expression_body()
     else
       changeset
@@ -132,7 +132,7 @@ defmodule Lightning.Workflows.Edge do
 
       true ->
         changeset
-        |> validate_length(:js_expression_label, max: 255)
+        |> validate_length(:condition_label, max: 255)
         |> validate_length(:js_expression_body, max: 255)
     end
   end
