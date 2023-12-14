@@ -45,6 +45,8 @@ defmodule Lightning.Workflows.Edge do
 
     field :enabled, :boolean, default: true
 
+    field :scheduled_deletion, :utc_datetime
+
     field :delete, :boolean, virtual: true
 
     timestamps()
@@ -66,7 +68,8 @@ defmodule Lightning.Workflows.Edge do
       :enabled,
       :target_job_id,
       :condition_label,
-      :condition_expression
+      :condition_expression,
+      :scheduled_deletion
     ])
     |> validate()
   end
