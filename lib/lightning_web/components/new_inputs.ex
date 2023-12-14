@@ -315,12 +315,15 @@ defmodule LightningWeb.Components.NewInputs do
   Renders a label.
   """
   attr :for, :any, default: nil
-  attr :font, :string, default: "font-semibold"
+  attr :class, :any, default: ""
   slot :inner_block, required: true
 
   def label(assigns) do
     ~H"""
-    <label for={@for} class={["block text-sm leading-6 text-slate-800", @font]}>
+    <label
+      for={@for}
+      class={["block text-sm font-semibold leading-6 text-slate-800", @class]}
+    >
       <%= render_slot(@inner_block) %>
     </label>
     """
