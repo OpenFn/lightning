@@ -304,7 +304,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       assert form_html =~
                ~S[<option selected="selected" value="on_job_success">On Success</option>]
 
-      refute form_html =~ "Condition label"
+      refute form_html =~ "Condition Label"
 
       form_html =
         view
@@ -315,7 +315,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
         })
         |> render_change()
 
-      assert form_html =~ "Condition label"
+      assert form_html =~ "Condition Label"
 
       assert form_html =~
                ~S[<option selected="selected" value="js_expression">Matches a Javascript Expression</option>]
