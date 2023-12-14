@@ -492,18 +492,22 @@ defmodule LightningWeb.WorkflowLive.Components do
       )
       |> assign(
         :edge_condition,
-        Map.get(form.params, "condition", Atom.to_string(form.data.condition))
+        Map.get(
+          form.params,
+          "condition_type",
+          Atom.to_string(form.data.condition_type)
+        )
       )
 
     ~H"""
     <% Phoenix.HTML.Form.hidden_inputs_for(@form) %>
-    <.old_error field={@form[:condition]} />
+    <.old_error field={@form[:condition_type]} />
     <div class="grid grid-flow-row gap-4 auto-rows-max">
       <div>
         <.input
           type="select"
           label="Condition"
-          field={@form[:condition]}
+          field={@form[:condition_type]}
           options={@edge_options}
           disabled={@disabled}
         />

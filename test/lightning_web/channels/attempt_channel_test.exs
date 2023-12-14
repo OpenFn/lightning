@@ -166,7 +166,6 @@ defmodule LightningWeb.AttemptChannelTest do
               :id,
               :source_trigger_id,
               :source_job_id,
-              :condition,
               :enabled,
               :target_job_id
             ])
@@ -794,7 +793,7 @@ defmodule LightningWeb.AttemptChannelTest do
       |> with_trigger(trigger)
       |> with_job(job)
       |> with_edge({trigger, job}, %{
-        condition: :js_expression,
+        condition_type: :js_expression,
         js_expression_body: "state.a == 33"
       })
       |> insert()

@@ -84,7 +84,7 @@ defmodule Lightning.Jobs do
 
   def get_downstream_jobs_for(job_id, edge_condition) do
     downstream_query(job_id)
-    |> where([_, e], e.condition == ^edge_condition)
+    |> where([_, e], e.condition_type == ^edge_condition)
     |> Repo.all()
   end
 

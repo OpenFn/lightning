@@ -38,7 +38,7 @@ export namespace Lightning {
     source_trigger_id?: string;
     target_job_id?: string;
     name: string;
-    condition?: string;
+    condition_type?: string;
     edge?: boolean;
     error_path?: boolean;
     errors: any;

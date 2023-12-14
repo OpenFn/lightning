@@ -53,7 +53,7 @@ defmodule Lightning.ExportUtils do
       name: "#{trigger_name}->#{target_name}",
       source_trigger: find_trigger_name(edge, triggers),
       target_job: target_name,
-      condition: edge.condition |> Atom.to_string(),
+      condition_type: edge.condition_type |> Atom.to_string(),
       enabled: edge.enabled,
       node_type: :edge
     }
@@ -68,7 +68,7 @@ defmodule Lightning.ExportUtils do
       name: "#{source_job}->#{target_job}",
       source_job: source_job,
       target_job: target_job,
-      condition: edge.condition |> Atom.to_string(),
+      condition_type: edge.condition_type |> Atom.to_string(),
       node_type: :edge,
       enabled: edge.enabled
     }
@@ -86,7 +86,13 @@ defmodule Lightning.ExportUtils do
       workflow: [:name, :jobs, :triggers, :edges],
       job: [:name, :adaptor, :credential, :globals, :body],
       trigger: [:type, :cron_expression, :enabled],
-      edge: [:source_trigger, :source_job, :target_job, :condition, :enabled]
+      edge: [
+        :source_trigger,
+        :source_job,
+        :target_job,
+        :condition_type,
+        :enabled
+      ]
     }
 
     map
