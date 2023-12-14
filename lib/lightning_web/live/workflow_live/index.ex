@@ -27,7 +27,7 @@ defmodule LightningWeb.WorkflowLive.Index do
       </:header>
       <div class="relative h-full flex">
         <LayoutComponents.centered>
-          <.workflow_metrics metrics={@metrics} />
+          <.workflow_metrics metrics={@metrics} project={@project.id} />
           <.workflow_list
             can_create_workflow={@can_create_workflow}
             can_delete_workflow={@can_delete_workflow}

@@ -5,6 +5,7 @@ defmodule LightningWeb.WorkflowLive.Components do
   alias LightningWeb.Components.Form
   alias Lightning.Workflows.Trigger
   alias Phoenix.LiveView.JS
+  alias Lightning.WorkOrders.SearchParams
 
   def workflow_list(assigns) do
     ~H"""
@@ -20,14 +21,6 @@ defmodule LightningWeb.WorkflowLive.Components do
           project={@project}
           can_create_workflow={@can_create_workflow}
         />
-        <%!-- <%= for workflow <- @workflows do %>
-          <.workflow_card
-            can_delete_workflow={@can_delete_workflow}
-            workflow={%{workflow | name: workflow.name || "Untitled"}}
-            project={@project}
-            trigger_enabled={Enum.any?(workflow.triggers, & &1.enabled)}
-          />
-        <% end %> --%>
       </div>
       <.workflow_table
         workflows={@workflows}
@@ -40,32 +33,61 @@ defmodule LightningWeb.WorkflowLive.Components do
   end
 
   def workflow_table(assigns) do
+    assigns =
+      assigns
+      |> assign(
+        filters:
+          SearchParams.to_uri_params(%{
+            "date_after" => Timex.now() |> Timex.shift(months: -1),
+            "date_before" => DateTime.utc_now(),
+            "failed" => "true",
+            "crashed" => "true",
+            "killed" => "true",
+            "cancelled" => "true",
+            "lost" => "true",
+            "exception" => "true"
+          })
+      )
+
     ~H"""
     <.new_table
       id="workflows"
       rows={@workflows}
       row_class="hover:bg-indigo-50 hover:border-l-2 hover:border-l-indigo-500"
     >
-      <%!-- row_click={fn {_id, product} -> JS.navigate(~p"/products/#{product}") end} --%>
       <:col :let={workflow} label_class="text-gray-700" label="Name">
         <.workflow_card
-          can_delete_workflow={@can_delete_workflow}
           workflow={%{workflow | name: workflow.name || "Untitled"}}
           project={@project}
           trigger_enabled={Enum.any?(workflow.triggers, & &1.enabled)}
         />
       </:col>
-      <:col :let={workflow} label_class="text-gray-700" label="Latest Work Order">
+      <:col
+        :let={workflow}
+        label_class="text-gray-700 font-medium"
+        label="Latest Work Order"
+      >
         <.state_card
           state={workflow.aggregates[:last_work_order][:state]}
           time={workflow.aggregates[:last_work_order][:date_time]}
         />
       </:col>
-      <:col :let={workflow} label_class="text-gray-700 " label="Work Orders(30 days)">
-        <div>
+      <:col
+        :let={workflow}
+        label_class="text-gray-700 font-medium"
+        label="Work Orders (30 days)"
+      >
+        <div class="ml-2">
           <%= if workflow.aggregates[:total_work_orders][:count]> 0 do %>
             <div class="text-indigo-700 text-lg">
-              <%= workflow.aggregates[:total_work_orders][:count] %>
+              <.link
+                class="hover:underline"
+                navigate={
+                  ~p"/projects/#{@project.id}/runs?#{%{filters: %{workflow_id: workflow.id}}}"
+                }
+              >
+                <%= workflow.aggregates[:total_work_orders][:count] %>
+              </.link>
             </div>
             <div class="text-gray-900 text-xs">
               (<%= workflow.aggregates[:total_work_orders][:total_runs] %> runs,
@@ -89,55 +111,66 @@ defmodule LightningWeb.WorkflowLive.Components do
       </:col>
       <:col
         :let={workflow}
-        label_class="text-gray-700"
-        label="Work Orders in a failed state(30 days)"
+        label_class="text-gray-700 font-medium"
+        label="Work Orders in a failed state (30 days)"
       >
-        <div>
-          <%= if workflow.aggregates[:failed_work_order][:count] >0 do %>
-            <div class="text-indigo-700 text-lg">
-              <%= workflow.aggregates[:failed_work_order][:count] %>
-            </div>
-            <div class="text-gray-700 text-xs">
-              Latest failure <%= workflow.aggregates[:failed_work_order][
-                :last_failed_run
-              ]
-              |> Timex.Format.DateTime.Formatters.Relative.format("{relative}")
-              |> elem(1) %>
-            </div>
-          <% else %>
-            <div class="text-gray-400 text-sm">
-              <span>
-                0
-              </span>
-              <br />
-              <span class="text-xs">
-                N/A
-              </span>
-            </div>
-          <% end %>
+        <div class="flex justify-between">
+          <div class="ml-2">
+            <%= if workflow.aggregates[:failed_work_order][:count] > 0 do %>
+              <div class="text-indigo-700 text-lg">
+                <.link
+                  class="hover:underline"
+                  navigate={
+                    ~p"/projects/#{@project.id}/runs?#{%{filters: Map.merge(@filters, %{workflow_id: workflow.id})}}"
+                  }
+                >
+                  <%= workflow.aggregates[:failed_work_order][:count] %>
+                </.link>
+              </div>
+              <div class="text-gray-700 text-xs">
+                Latest failure <%= workflow.aggregates[:failed_work_order][
+                  :last_failed_run
+                ]
+                |> Timex.Format.DateTime.Formatters.Relative.format("{relative}")
+                |> elem(1) %>
+              </div>
+            <% else %>
+              <div class="text-gray-400 text-sm">
+                <span>
+                  0
+                </span>
+                <br />
+                <span class="text-xs">
+                  N/A
+                </span>
+              </div>
+            <% end %>
+          </div>
         </div>
       </:col>
-
-      <%!-- <:action :let={{_id, product}}>
-        <div class="sr-only">
-          <.link navigate={~p"/products/#{product}"}>Show</.link>
+      <:action :let={workflow}>
+        <div class="mr-4">
+          <div
+            :if={@can_delete_workflow}
+            class="inline-flex h-8 w-8 items-center justify-center rounded-full text-gray-400 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+          >
+            <.link
+              href="#"
+              phx-click="delete_workflow"
+              phx-value-id={workflow.id}
+              data-confirm="Are you sure you'd like to delete this workflow?"
+              class="inline-flex h-8 w-8 items-center justify-center rounded-full text-gray-400 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+            >
+              <Icon.trash class="h-5 w-5 text-slate-300 hover:text-rose-700" />
+            </.link>
+          </div>
         </div>
-        <.link patch={~p"/products/#{product}/edit"}>Edit</.link>
       </:action>
-      <:action :let={{id, product}}>
-        <.link
-          phx-click={JS.push("delete", value: %{id: product.id}) |> hide("##{id}")}
-          data-confirm="Are you sure?"
-        >
-          Delete
-        </.link>
-      </:action> --%>
     </.new_table>
     """
   end
 
   attr :project, :map, required: true
-  attr :can_delete_workflow, :boolean, default: false
   attr :workflow, :map, required: true
   attr :trigger_enabled, :boolean
 
@@ -184,22 +217,6 @@ defmodule LightningWeb.WorkflowLive.Components do
           <% end %>
         </div>
       </.link>
-      <%!-- <div class="flex-shrink-0 pr-2">
-          <div
-            :if={@can_delete_workflow}
-            class="inline-flex h-8 w-8 items-center justify-center rounded-full text-gray-400 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
-          >
-            <.link
-              href="#"
-              phx-click="delete_workflow"
-              phx-value-id={@workflow.id}
-              data-confirm="Are you sure you'd like to delete this workflow?"
-              class="inline-flex h-8 w-8 items-center justify-center rounded-full text-gray-400 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
-            >
-              <Icon.trash class="h-5 w-5 text-slate-300 hover:text-rose-700" />
-            </.link>
-          </div>
-        </div> --%>
     </div>
     """
   end
@@ -928,6 +945,22 @@ defmodule LightningWeb.WorkflowLive.Components do
   end
 
   def workflow_metrics(assigns) do
+    assigns =
+      assigns
+      |> assign(
+        filters:
+          SearchParams.to_uri_params(%{
+            "date_after" => Timex.now() |> Timex.shift(months: -1),
+            "date_before" => DateTime.utc_now(),
+            "failed" => "true",
+            "crashed" => "true",
+            "killed" => "true",
+            "cancelled" => "true",
+            "lost" => "true",
+            "exception" => "true"
+          })
+      )
+
     ~H"""
     <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
       <.metric_card title="Work Orders">
@@ -951,7 +984,12 @@ defmodule LightningWeb.WorkflowLive.Components do
           <span class="mr-10">
             (<%= @metrics.work_order_metrics.failure_percentage %>%)
           </span>
-          <.link class="text-indigo-700">View all</.link>
+          <.link
+            navigate={~p"/projects/#{@project}/runs?#{%{filters: @filters}}"}
+            class="text-indigo-700"
+          >
+            View all
+          </.link>
         </:suffix>
       </.metric_card>
     </div>
@@ -1025,5 +1063,19 @@ defmodule LightningWeb.WorkflowLive.Components do
       <% end %>
     </div>
     """
+  end
+
+  defp filters do
+    %{
+      "date_after" =>
+        Timex.now() |> Timex.shift(days: -30) |> DateTime.to_string(),
+      "date_before" => DateTime.utc_now() |> DateTime.to_string(),
+      "failed" => "true",
+      "crashed" => "true",
+      "killed" => "true",
+      "cancelled" => "true",
+      "lost" => "true",
+      "exception" => "true"
+    }
   end
 end
