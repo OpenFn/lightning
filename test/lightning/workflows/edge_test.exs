@@ -220,6 +220,38 @@ defmodule Lightning.Workflows.EdgeTest do
              ]
     end
 
+    test "requires js_expression label and condition to have limited length" do
+      changeset =
+        Edge.changeset(
+          %Edge{
+            id: Ecto.UUID.generate(),
+            workflow_id: Ecto.UUID.generate(),
+            source_job_id: Ecto.UUID.generate(),
+            enabled: true
+          },
+          %{
+            condition: :js_expression,
+            js_expression_label: String.duplicate("a", 256),
+            js_expression_body: String.duplicate("a", 256)
+          }
+        )
+
+      assert changeset.errors == [
+               js_expression_body: {
+                 "should be at most %{count} character(s)",
+                 [
+                   {:count, 255},
+                   {:validation, :length},
+                   {:kind, :max},
+                   {:type, :string}
+                 ]
+               },
+               js_expression_label:
+                 {"should be at most %{count} character(s)",
+                  [count: 255, validation: :length, kind: :max, type: :string]}
+             ]
+    end
+
     test "requires JS expression to have valid syntax" do
       edge = %Edge{
         id: Ecto.UUID.generate(),

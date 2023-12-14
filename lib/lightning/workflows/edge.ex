@@ -132,6 +132,8 @@ defmodule Lightning.Workflows.Edge do
 
       true ->
         changeset
+        |> validate_length(:js_expression_label, max: 255)
+        |> validate_length(:js_expression_body, max: 255)
     end
   end
 
