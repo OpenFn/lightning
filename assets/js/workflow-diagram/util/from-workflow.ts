@@ -15,7 +15,7 @@ function getEdgeLabel(edge: Lightning.Edge) {
       label = '∞';
       break;
     case 'js_expression':
-      const condition_label = edge.js_expression_label;
+      const condition_label = edge.condition_label;
 
       if (condition_label) {
         if (condition_label.length > 16) {

@@ -517,7 +517,7 @@ defmodule LightningWeb.WorkflowLive.Components do
           <.input
             type="text"
             label="Condition Label"
-            field={@form[:js_expression_label]}
+            field={@form[:condition_label]}
             maxlength="255"
           />
         </div>

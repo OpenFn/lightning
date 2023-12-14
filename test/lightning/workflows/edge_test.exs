@@ -215,7 +215,7 @@ defmodule Lightning.Workflows.EdgeTest do
         )
 
       assert changeset.errors == [
-               js_expression_label: {"can't be blank", [validation: :required]},
+               condition_label: {"can't be blank", [validation: :required]},
                js_expression_body: {"can't be blank", [validation: :required]}
              ]
     end
@@ -231,7 +231,7 @@ defmodule Lightning.Workflows.EdgeTest do
           },
           %{
             condition_type: :js_expression,
-            js_expression_label: String.duplicate("a", 256),
+            condition_label: String.duplicate("a", 256),
             js_expression_body: String.duplicate("a", 256)
           }
         )
@@ -246,7 +246,7 @@ defmodule Lightning.Workflows.EdgeTest do
                    {:type, :string}
                  ]
                },
-               js_expression_label:
+               condition_label:
                  {"should be at most %{count} character(s)",
                   [count: 255, validation: :length, kind: :max, type: :string]}
              ]
@@ -262,7 +262,7 @@ defmodule Lightning.Workflows.EdgeTest do
 
       js_attrs = %{
         condition_type: :js_expression,
-        js_expression_label: "Some JS Expression"
+        condition_label: "Some JS Expression"
       }
 
       changeset =
@@ -316,7 +316,7 @@ defmodule Lightning.Workflows.EdgeTest do
 
       js_attrs = %{
         condition_type: :js_expression,
-        js_expression_label: "Some JS Expression"
+        condition_label: "Some JS Expression"
       }
 
       changeset =
