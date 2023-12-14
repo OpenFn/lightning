@@ -40,7 +40,7 @@ defmodule Lightning.Workflows.Edge do
     belongs_to :target_job, Job
 
     field :condition_type, Ecto.Enum, values: @conditions
-    field :js_expression_body, :string
+    field :condition_expression, :string
     field :condition_label, :string
 
     field :enabled, :boolean, default: true
@@ -66,7 +66,7 @@ defmodule Lightning.Workflows.Edge do
       :enabled,
       :target_job_id,
       :condition_label,
-      :js_expression_body
+      :condition_expression
     ])
     |> validate()
   end
@@ -103,37 +103,37 @@ defmodule Lightning.Workflows.Edge do
   defp validate_js_condition(changeset) do
     if :js_expression == get_field(changeset, :condition_type) do
       changeset
-      |> validate_required([:condition_label, :js_expression_body])
-      |> validate_js_expression_body()
+      |> validate_required([:condition_label, :condition_expression])
+      |> validate_condition_expression()
     else
       changeset
     end
   end
 
-  defp validate_js_expression_body(%{valid?: false} = changeset), do: changeset
+  defp validate_condition_expression(%{valid?: false} = changeset), do: changeset
 
-  defp validate_js_expression_body(changeset) do
-    js_code = get_field(changeset, :js_expression_body)
+  defp validate_condition_expression(changeset) do
+    js_code = get_field(changeset, :condition_expression)
 
     cond do
       String.match?(js_code, ~r/(import|require)(\(|\{| )/) ->
         add_error(
           changeset,
-          :js_expression_body,
+          :condition_expression,
           "must not contain import or require statements"
         )
 
       String.match?(js_code, ~r/(;|{)/) ->
         add_error(
           changeset,
-          :js_expression_body,
+          :condition_expression,
           "must not contain a statement"
         )
 
       true ->
         changeset
         |> validate_length(:condition_label, max: 255)
-        |> validate_length(:js_expression_body, max: 255)
+        |> validate_length(:condition_expression, max: 255)
     end
   end
 

@@ -216,7 +216,7 @@ defmodule Lightning.Workflows.EdgeTest do
 
       assert changeset.errors == [
                condition_label: {"can't be blank", [validation: :required]},
-               js_expression_body: {"can't be blank", [validation: :required]}
+               condition_expression: {"can't be blank", [validation: :required]}
              ]
     end
 
@@ -232,12 +232,12 @@ defmodule Lightning.Workflows.EdgeTest do
           %{
             condition_type: :js_expression,
             condition_label: String.duplicate("a", 256),
-            js_expression_body: String.duplicate("a", 256)
+            condition_expression: String.duplicate("a", 256)
           }
         )
 
       assert changeset.errors == [
-               js_expression_body: {
+               condition_expression: {
                  "should be at most %{count} character(s)",
                  [
                    {:count, 255},
@@ -270,13 +270,13 @@ defmodule Lightning.Workflows.EdgeTest do
           edge,
           Map.put(
             js_attrs,
-            :js_expression_body,
+            :condition_expression,
             "state.data.foo == 'bar';"
           )
         )
 
       assert changeset.errors == [
-               js_expression_body: {"must not contain a statement", []}
+               condition_expression: {"must not contain a statement", []}
              ]
 
       changeset =
@@ -284,13 +284,13 @@ defmodule Lightning.Workflows.EdgeTest do
           edge,
           Map.put(
             js_attrs,
-            :js_expression_body,
+            :condition_expression,
             "{ state.data.foo == 'bar' }"
           )
         )
 
       assert changeset.errors == [
-               js_expression_body: {"must not contain a statement", []}
+               condition_expression: {"must not contain a statement", []}
              ]
 
       changeset =
@@ -298,7 +298,7 @@ defmodule Lightning.Workflows.EdgeTest do
           edge,
           Map.put(
             js_attrs,
-            :js_expression_body,
+            :condition_expression,
             "state.data.foo == 'bar' || state.data.bar == 'foo'"
           )
         )
@@ -324,13 +324,13 @@ defmodule Lightning.Workflows.EdgeTest do
           edge,
           Map.put(
             js_attrs,
-            :js_expression_body,
+            :condition_expression,
             "{ var fs = require('fs'); }"
           )
         )
 
       assert changeset.errors == [
-               js_expression_body:
+               condition_expression:
                  {"must not contain import or require statements", []}
              ]
 
@@ -339,13 +339,13 @@ defmodule Lightning.Workflows.EdgeTest do
           edge,
           Map.put(
             js_attrs,
-            :js_expression_body,
+            :condition_expression,
             "{ var fs = import('fs'); }"
           )
         )
 
       assert changeset.errors == [
-               js_expression_body:
+               condition_expression:
                  {"must not contain import or require statements", []}
              ]
     end

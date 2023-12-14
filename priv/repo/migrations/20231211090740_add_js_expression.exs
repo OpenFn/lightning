@@ -3,7 +3,7 @@ defmodule Lightning.Repo.Migrations.AddJsExpression do
 
   def change do
     alter table(:workflow_edges) do
-      add :js_expression_body, :string
+      add :condition_expression, :string
       add :condition_label, :string
     end
 
