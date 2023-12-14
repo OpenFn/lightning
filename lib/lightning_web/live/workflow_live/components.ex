@@ -538,7 +538,7 @@ defmodule LightningWeb.WorkflowLive.Components do
         </div>
       <% end %>
       <%= if Phoenix.HTML.Form.input_value(@form, :source_trigger_id) do %>
-        <div class="max-w-xl text-sm text-gray-500 mt-2">
+        <div class="max-w-xl text-sm text-gray-500 mt-3">
           <p>This path will be active if its trigger is enabled.</p>
         </div>
       <% else %>
