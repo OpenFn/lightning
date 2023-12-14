@@ -45,6 +45,8 @@ and this project adheres to
   [#1550](https://github.com/OpenFn/Lightning/issues/1550)
 - Not able to create a new Job when clicking the Check icon on the placeholder
   [#1537](https://github.com/OpenFn/Lightning/issues/1537)
+- Improve selection logic on WorkflowDiagram
+  [#1220](https://github.com/OpenFn/Lightning/issues/1220)
 
 ## [v0.11.0] - 2023-12-06
 
