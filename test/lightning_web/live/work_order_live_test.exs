@@ -932,6 +932,115 @@ defmodule LightningWeb.RunWorkOrderTest do
       refute has_element?(view, "#attempt_#{attempt_2.id}.hidden")
       assert has_element?(view, "#attempt_#{attempt_2.id}")
     end
+
+    test "workorder row gets expanded by default if workorder_id is supplied in the filter",
+         %{conn: conn, user: user} do
+      project =
+        insert(:project,
+          project_users: [%{role: :admin, user: user}]
+        )
+
+      workflow = insert(:workflow, project: project)
+
+      job =
+        insert(:job, %{
+          body: "fn(state => state)",
+          name: "some name",
+          adaptor: "@openfn/language-common",
+          workflow: workflow,
+          project_credential: nil
+        })
+
+      trigger =
+        insert(:trigger,
+          workflow: workflow,
+          type: :webhook
+        )
+
+      insert(:edge,
+        workflow: workflow,
+        source_trigger: trigger,
+        target_job: job,
+        condition: :always,
+        enabled: true
+      )
+
+      dataclip = insert(:dataclip, project: project)
+
+      workorder =
+        insert(:workorder,
+          state: :success,
+          workflow: workflow,
+          trigger: trigger,
+          dataclip: dataclip,
+          last_activity: DateTime.utc_now()
+        )
+
+      attempt_1 =
+        insert(:attempt,
+          work_order: workorder,
+          state: :failed,
+          starting_trigger: trigger,
+          inserted_at: build(:timestamp),
+          dataclip: dataclip,
+          runs:
+            build_list(1, :run, %{
+              job: job,
+              exit_reason: "fail",
+              started_at: build(:timestamp),
+              finished_at: build(:timestamp),
+              input_dataclip: dataclip
+            })
+        )
+
+      attempt_2 =
+        insert(:attempt,
+          state: :success,
+          work_order: workorder,
+          starting_job: job,
+          dataclip: dataclip,
+          runs:
+            build_list(1, :run,
+              job: job,
+              started_at: build(:timestamp),
+              finished_at: build(:timestamp),
+              input_dataclip: dataclip
+            )
+        )
+
+      {:ok, view, _html} =
+        live_async(
+          conn,
+          Routes.project_run_index_path(conn, :index, project.id)
+        )
+
+      # workorder is present
+      assert has_element?(view, "#workorder-#{workorder.id}")
+
+      # both attempts are not present
+      refute has_element?(view, "#attempt_#{attempt_1.id}")
+      refute has_element?(view, "#attempt_#{attempt_2.id}")
+
+      # lets add the workorder_id
+      {:ok, view, _html} =
+        live_async(
+          conn,
+          Routes.project_run_index_path(conn, :index, project.id,
+            filters: %{workorder_id: workorder.id}
+          )
+        )
+
+      # workorder is present
+      assert has_element?(view, "#workorder-#{workorder.id}")
+
+      # both attempts are  present
+      assert has_element?(view, "#attempt_#{attempt_1.id}")
+      assert has_element?(view, "#attempt_#{attempt_2.id}")
+
+      # both attempts are visible
+      refute has_element?(view, "#attempt_#{attempt_1.id}.hidden")
+      refute has_element?(view, "#attempt_#{attempt_2.id}.hidden")
+    end
   end
 
   describe "handle_async/3" do

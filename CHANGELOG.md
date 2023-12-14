@@ -18,6 +18,8 @@ and this project adheres to
   [#1556](https://github.com/OpenFn/Lightning/issues/1556)
 - Allow Javascript expressions as conditions for edges
   [#1498](https://github.com/OpenFn/Lightning/issues/1498)
+- Expand workorder row when a `workorder_id` is specified in the filter
+  [#1515](https://github.com/OpenFn/Lightning/issues/1515)
 
 ### Changed
 
@@ -43,6 +45,8 @@ and this project adheres to
   [#1118](https://github.com/OpenFn/Lightning/issues/1118)
 - AttemptViewer flashing/rerendering when Jobs are running
   [#1550](https://github.com/OpenFn/Lightning/issues/1550)
+- Not able to create a new Job when clicking the Check icon on the placeholder
+  [#1537](https://github.com/OpenFn/Lightning/issues/1537)
 
 ## [v0.11.0] - 2023-12-06
 

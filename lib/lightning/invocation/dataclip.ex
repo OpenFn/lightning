@@ -50,12 +50,11 @@ defmodule Lightning.Invocation.Dataclip do
 
   def new(attrs \\ %{}) do
     change(%__MODULE__{id: Ecto.UUID.generate()}, attrs)
-    |> change(attrs)
-    |> redact_password()
+    |> remove_configuration()
     |> validate()
   end
 
-  defp redact_password(
+  defp remove_configuration(
          %Ecto.Changeset{
            valid?: true,
            changes: %{
@@ -63,13 +62,16 @@ defmodule Lightning.Invocation.Dataclip do
            }
          } =
            changeset
-       ) do
+       )
+       when is_map(body) do
     body = Map.delete(body, "configuration")
 
     put_change(changeset, :body, body)
   end
 
-  defp redact_password(changeset), do: changeset
+  defp remove_configuration(changeset) do
+    add_error(changeset, :body, "must be a map")
+  end
 
   @doc false
   def changeset(dataclip, attrs) do

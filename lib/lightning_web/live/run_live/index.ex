@@ -22,6 +22,7 @@ defmodule LightningWeb.RunLive.Index do
     body: :boolean,
     log: :boolean,
     workflow_id: :string,
+    workorder_id: :string,
     date_after: :utc_datetime,
     date_before: :utc_datetime,
     wo_date_after: :utc_datetime,
@@ -117,11 +118,13 @@ defmodule LightningWeb.RunLive.Index do
 
   @impl true
   def handle_params(params, _url, socket) do
-    %{filters: filters, project: project} = socket.assigns
+    %{project: project} = socket.assigns
+    filters = Map.get(params, "filters", init_filters())
 
     {:noreply,
      socket
      |> assign(
+       filters: filters,
        page_title: "History",
        run: %Run{},
        filters_changeset: filters_changeset(filters),
@@ -169,7 +172,8 @@ defmodule LightningWeb.RunLive.Index do
      |> assign(
        page: searched_page,
        async_page: AsyncResult.ok(async_page, searched_page)
-     )}
+     )
+     |> maybe_show_selected_workorder_details()}
   end
 
   def handle_async(:load_workorders, {:exit, reason}, socket) do
@@ -489,5 +493,19 @@ defmodule LightningWeb.RunLive.Index do
       project,
       Keyword.merge(route_params, filters: filters)
     )
+  end
+
+  defp maybe_show_selected_workorder_details(socket) do
+    %{filters_changeset: changeset} = socket.assigns
+
+    if workorder_id = Ecto.Changeset.get_change(changeset, :workorder_id) do
+      send_update(LightningWeb.RunLive.WorkOrderComponent,
+        id: workorder_id,
+        show_details: true,
+        show_prev_attempts: true
+      )
+    end
+
+    socket
   end
 end

@@ -61,7 +61,8 @@ defmodule Lightning.WorkOrders.Manual do
 
       body ->
         case Jason.decode(body) do
-          {:ok, _} -> changeset
+          {:ok, body} when is_map(body) -> changeset
+          {:ok, _} -> add_error(changeset, field, "Must be an object")
           {:error, _} -> add_error(changeset, field, "Invalid JSON")
         end
     end
