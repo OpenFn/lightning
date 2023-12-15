@@ -13,7 +13,7 @@
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-EPF2X7PV.js"></script>
-    <script src="dist/sidebar_items-0DCB4E5D.js"></script>
+    <script src="dist/sidebar_items-9B0D436A.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -235,7 +235,7 @@ The target of the edge is always a job.</p>
 
       <div class="specs">
 
-          <pre translate="no"><span class="attribute">@type</span> edge_condition() :: :always | :on_job_success | :on_job_failure</pre>
+          <pre translate="no"><span class="attribute">@type</span> edge_condition() :: :always | :on_job_success | :on_job_failure | :js_expression</pre>
 
       </div>
 
@@ -251,7 +251,7 @@ The target of the edge is always a job.</p>
     </a>
     <h1 class="signature" translate="no">t()</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/edge.ex#L20" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/edge.ex#L21" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -270,6 +270,8 @@ The target of the edge is always a job.</p>
   enabled: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">boolean</a>(),
   id: <a href="https://hexdocs.pm/ecto/3.10.3/Ecto.UUID.html#t:t/0">Ecto.UUID.t</a>() | nil,
   inserted_at: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
+  js_expression_body: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
+  js_expression_label: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
   source_job:
     nil | <a href="Lightning.Workflows.Job.html#t:t/0">Lightning.Workflows.Job.t</a>() | <a href="https://hexdocs.pm/ecto/3.10.3/Ecto.Association.NotLoaded.html#t:t/0">Ecto.Association.NotLoaded.t</a>(),
   source_job_id: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
@@ -311,7 +313,7 @@ The target of the edge is always a job.</p>
     </a>
     <h1 class="signature" translate="no">changeset(edge, attrs)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/edge.ex#L55" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/edge.ex#L58" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -333,7 +335,7 @@ The target of the edge is always a job.</p>
     </a>
     <h1 class="signature" translate="no">new(attrs)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/edge.ex#L50" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/edge.ex#L53" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -355,7 +357,7 @@ The target of the edge is always a job.</p>
     </a>
     <h1 class="signature" translate="no">validate(changeset)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/edge.ex#L69" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/edge.ex#L74" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
