@@ -1,6 +1,8 @@
 defmodule LightningWeb.ProjectLiveTest do
   use LightningWeb.ConnCase, async: false
 
+  alias Lightning.Repo
+
   import Phoenix.LiveViewTest
   import Lightning.ProjectsFixtures
   import Lightning.AccountsFixtures
@@ -298,7 +300,7 @@ defmodule LightningWeb.ProjectLiveTest do
       # the alphabetical order here is important. In the page, the users are ordered alphabeticaly
       superuser
       |> Ecto.Changeset.change(%{first_name: "1"})
-      |> Lightning.Repo.update!()
+      |> Repo.update!()
 
       user1 = insert(:user, first_name: "2")
       user2 = insert(:user, first_name: "3")
@@ -322,7 +324,7 @@ defmodule LightningWeb.ProjectLiveTest do
       assert render(view) =~ "Project updated successfully"
 
       updated_project =
-        Lightning.Repo.preload(project, [:project_users], force: true)
+        Repo.preload(project, [:project_users], force: true)
 
       assert Enum.count(updated_project.project_users) == 2
 
@@ -330,6 +332,77 @@ defmodule LightningWeb.ProjectLiveTest do
         assert p_user.user_id in [user1.id, user2.id]
         refute p_user.user_id == superuser.id
       end
+    end
+  end
+
+  describe "download exported project" do
+    setup :register_and_log_in_user
+    setup :create_project_for_current_user
+
+    setup %{project: project} do
+      {:ok, workflow: insert(:simple_workflow, project: project)}
+    end
+
+    test "having edge with condition_type=always", %{
+      conn: conn,
+      project: project,
+      workflow: %{edges: [edge]}
+    } do
+      edge
+      |> Ecto.Changeset.change(%{condition_type: :always})
+      |> Lightning.Repo.update!()
+
+      response = get(conn, "/download/yaml?id=#{project.id}") |> response(200)
+
+      assert response =~ ~S[condition_type: always]
+    end
+
+    test "having edge with condition_type=on_job_success", %{
+      conn: conn,
+      project: project,
+      workflow: %{edges: [edge]}
+    } do
+      edge
+      |> Ecto.Changeset.change(%{condition_type: :on_job_success})
+      |> Lightning.Repo.update!()
+
+      response = get(conn, "/download/yaml?id=#{project.id}") |> response(200)
+
+      assert response =~ ~S[condition_type: on_job_success]
+    end
+
+    test "having edge with condition_type=on_job_failure", %{
+      conn: conn,
+      project: project,
+      workflow: %{edges: [edge]}
+    } do
+      edge
+      |> Ecto.Changeset.change(%{condition_type: :on_job_failure})
+      |> Lightning.Repo.update!()
+
+      response = get(conn, "/download/yaml?id=#{project.id}") |> response(200)
+
+      assert response =~ ~S[condition_type: on_job_failure]
+    end
+
+    test "having edge with condition_type=js_expression", %{
+      conn: conn,
+      project: project,
+      workflow: %{edges: [edge]}
+    } do
+      edge
+      |> Ecto.Changeset.change(%{
+        condition_type: :js_expression,
+        condition_label: "not underaged",
+        condition_expression: "state.data.age > 18"
+      })
+      |> Lightning.Repo.update!()
+
+      response = get(conn, "/download/yaml?id=#{project.id}") |> response(200)
+
+      assert response =~ ~S[condition_type: js_expression]
+      assert response =~ ~S[condition_label: not underaged]
+      assert response =~ ~S[condition_expression: state.data.age > 18]
     end
   end
 
