@@ -894,7 +894,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
     |> then(fn
       [{index, %{"condition_type" => "js_expression"} = map}] ->
         inputs_edited = Map.keys(map)
-        [edge_edited_input: {String.to_integer(index), inputs_edited}]
+        [edge_edited_inputs: {String.to_integer(index), inputs_edited}]
 
       _other ->
         []
@@ -934,7 +934,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
       |> then(fn
         %Ecto.Changeset{changes: %{edges: edges} = changes} = changeset ->
           {edge_edit_index, edge_edit_inputs} =
-            Keyword.get(opts, :edge_edited_input, {nil, []})
+            Keyword.get(opts, :edge_edited_inputs, {nil, []})
 
           cleared_edges =
             edges
