@@ -265,13 +265,13 @@ The target of the edge is always a job.</p>
 
           <pre translate="no"><span class="attribute">@type</span> t() :: %Lightning.Workflows.Edge{
   __meta__: <a href="https://hexdocs.pm/ecto/3.10.3/Ecto.Schema.Metadata.html#t:t/0">Ecto.Schema.Metadata.t</a>(),
-  condition: <a href="#t:edge_condition/0">edge_condition</a>(),
+  condition_expression: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
+  condition_label: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
+  condition_type: <a href="#t:edge_condition/0">edge_condition</a>(),
   delete: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">boolean</a>(),
   enabled: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">boolean</a>(),
   id: <a href="https://hexdocs.pm/ecto/3.10.3/Ecto.UUID.html#t:t/0">Ecto.UUID.t</a>() | nil,
   inserted_at: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
-  js_expression_body: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
-  js_expression_label: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
   source_job:
     nil | <a href="Lightning.Workflows.Job.html#t:t/0">Lightning.Workflows.Job.t</a>() | <a href="https://hexdocs.pm/ecto/3.10.3/Ecto.Association.NotLoaded.html#t:t/0">Ecto.Association.NotLoaded.t</a>(),
   source_job_id: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
