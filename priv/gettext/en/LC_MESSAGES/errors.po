@@ -35,8 +35,8 @@ msgstr "This credential already exists for this project."
 msgid "user already a member of this project."
 msgstr "The user is alread a member of this project."
 
-msgid "must be :always when source is a trigger"
-msgstr "The condition must be ':always' when the source is trigger."
+msgid "must be :always or :js_expression when source is a trigger"
+msgstr "The condition must be 'Always' or 'JS expression' when the source is trigger."
 
 msgid "job doesn't exist, or is not in the same workflow"
 msgstr "This job does not exist, or is not in the same workflow."

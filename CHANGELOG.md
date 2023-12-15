@@ -18,6 +18,8 @@ and this project adheres to
   [#1556](https://github.com/OpenFn/Lightning/issues/1556)
 - Expand workorder row when a `workorder_id` is specified in the filter
   [#1515](https://github.com/OpenFn/Lightning/issues/1515)
+- Allow Javascript expressions as conditions for edges
+  [#1498](https://github.com/OpenFn/Lightning/issues/1498)
 
 ### Changed
 

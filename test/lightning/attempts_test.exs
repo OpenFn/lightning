@@ -402,7 +402,7 @@ defmodule Lightning.AttemptsTest do
       {:ok, attempt} = Attempts.complete_attempt(attempt, %{state: :success})
 
       assert attempt.state == :success
-      assert DateTime.utc_now() >= attempt.finished_at
+      assert DateTime.after?(DateTime.utc_now(), attempt.finished_at)
 
       workorder_id = workorder.id
 

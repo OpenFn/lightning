@@ -35,12 +35,22 @@ defmodule LightningWeb.AttemptJson do
     }
   end
 
-  def render(%Edge{} = edge) do
+  def render(
+        %Edge{condition: condition, js_expression_body: js_expression_body} =
+          edge
+      ) do
+    condition =
+      if condition == :js_expression do
+        js_expression_body
+      else
+        condition
+      end
+
     %{
       "id" => edge.id,
       "source_trigger_id" => edge.source_trigger_id,
       "source_job_id" => edge.source_job_id,
-      "condition" => edge.condition,
+      "condition" => condition,
       "enabled" => edge.enabled,
       "target_job_id" => edge.target_job_id
     }

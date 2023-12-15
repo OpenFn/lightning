@@ -16,7 +16,7 @@ export const EDGE_COLOR_SELECTED_DISABLED = '#bdbaf3';
 export const ERROR_COLOR = '#ef4444';
 
 export const labelStyles = (selected?: boolean, data) => {
-  const { enabled } = data;
+  const { condition, enabled } = data;
 
   const primaryColor = (selected?: boolean, enabled?: boolean) => {
     if (enabled) return selected ? EDGE_COLOR_SELECTED : EDGE_COLOR;
@@ -25,17 +25,33 @@ export const labelStyles = (selected?: boolean, data) => {
 
   const backgroundColor = enabled ? 'white' : '#F6F6F6';
 
-  return {
-    width: '32px',
-    height: '32px',
-    border: `solid 2px ${primaryColor(selected, enabled)}`,
-    borderRadius: 16,
-    fontSize: 18,
-    textAlign: 'center' as const,
-    fontWeight: 700,
-    color: primaryColor(selected, enabled),
-    backgroundColor,
-  };
+  if (condition === 'js_expression') {
+    return {
+      padding: '0 4px',
+      height: '32px',
+      border: `solid 2px ${primaryColor(selected, enabled)}`,
+      borderRadius: 4,
+      display: 'inline-block',
+      fontSize: 14,
+      lineHeight: '26px',
+      textAlign: 'center' as const,
+      fontWeight: 500,
+      color: primaryColor(selected, enabled),
+      backgroundColor,
+    };
+  } else {
+    return {
+      width: '32px',
+      height: '32px',
+      border: `solid 2px ${primaryColor(selected, enabled)}`,
+      borderRadius: 16,
+      fontSize: 18,
+      textAlign: 'center' as const,
+      fontWeight: 700,
+      color: primaryColor(selected, enabled),
+      backgroundColor,
+    };
+  }
 };
 
 export const styleItem = (item: Flow.Edge | Flow.Node) => {

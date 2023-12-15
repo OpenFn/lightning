@@ -225,7 +225,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
              |> render_submit() =~ "Workflow saved"
     end
 
-    test "when a job has an empty body an error message is rendered", %{
+    test "renders error message when a job has an empty body", %{
       conn: conn,
       project: project,
       workflow: workflow
@@ -250,7 +250,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
                "The job can&#39;t be blank"
     end
 
-    test "users can edit an existing workflow", %{
+    test "allows editing job name", %{
       conn: conn,
       project: project,
       workflow: workflow
@@ -270,9 +270,82 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       assert view |> job_form_has_error(job_2, "name", "can't be blank")
       assert view |> save_is_disabled?()
 
-      assert view |> fill_job_fields(job_2, %{name: "My Other Job"})
+      new_job_name = "My Other Job"
+
+      assert view |> fill_job_fields(job_2, %{name: new_job_name}) =~
+               new_job_name
 
       assert view |> save_is_disabled?()
+    end
+
+    test "opens edge Path form and saves the JS expression", %{
+      conn: conn,
+      project: project,
+      workflow: workflow
+    } do
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project.id}/w/#{workflow.id}")
+
+      form_html = view |> select_node(Enum.at(workflow.jobs, 0))
+
+      assert form_html =~ "Job Name"
+      refute form_html =~ "Path"
+
+      form_html = view |> select_node(Enum.at(workflow.edges, 0))
+
+      assert form_html =~ "Path"
+
+      assert form_html =~
+               ~S[<option selected="selected" value="always">Always</option><option value="js_expression">Matches a Javascript Expression</option></select>]
+
+      edge_on_edit = Enum.at(workflow.edges, 1)
+      form_html = view |> select_node(edge_on_edit)
+
+      assert form_html =~
+               ~S[<option selected="selected" value="on_job_success">On Success</option>]
+
+      refute form_html =~ "Condition Label"
+
+      form_html =
+        view
+        |> form("#workflow-form", %{
+          "workflow" => %{
+            "edges" => %{"1" => %{"condition" => "js_expression"}}
+          }
+        })
+        |> render_change()
+
+      assert form_html =~ "Condition Label"
+
+      assert form_html =~
+               ~S[<option selected="selected" value="js_expression">Matches a Javascript Expression</option>]
+
+      view
+      |> form("#workflow-form", %{
+        "workflow" => %{
+          "edges" => %{
+            "1" => %{
+              "js_expression_label" => "My JS Expression",
+              "js_expression_body" => "state.data.field === 33"
+            }
+          }
+        }
+      })
+      |> render_change()
+
+      view
+      |> form("#workflow-form")
+      |> render_submit()
+
+      assert Map.delete(Repo.reload!(edge_on_edit), :updated_at) ==
+               Map.delete(
+                 Map.merge(edge_on_edit, %{
+                   condition: :js_expression,
+                   js_expression_label: "My JS Expression",
+                   js_expression_body: "state.data.field === 33"
+                 }),
+                 :updated_at
+               )
     end
 
     @tag role: :editor

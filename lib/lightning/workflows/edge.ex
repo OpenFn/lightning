@@ -16,7 +16,8 @@ defmodule Lightning.Workflows.Edge do
   alias Lightning.Workflows.Trigger
   alias Lightning.Workflows.Workflow
 
-  @type edge_condition() :: :always | :on_job_success | :on_job_failure
+  @type edge_condition() ::
+          :always | :on_job_success | :on_job_failure | :js_expression
   @type t() :: %__MODULE__{
           __meta__: Ecto.Schema.Metadata.t(),
           id: Ecto.UUID.t() | nil,
@@ -29,7 +30,7 @@ defmodule Lightning.Workflows.Edge do
           delete: boolean()
         }
 
-  @conditions [:on_job_success, :on_job_failure, :always]
+  @conditions [:on_job_success, :on_job_failure, :always, :js_expression]
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id
   schema "workflow_edges" do
@@ -39,6 +40,8 @@ defmodule Lightning.Workflows.Edge do
     belongs_to :target_job, Job
 
     field :condition, Ecto.Enum, values: @conditions
+    field :js_expression_body, :string
+    field :js_expression_label, :string
 
     field :enabled, :boolean, default: true
 
@@ -61,7 +64,9 @@ defmodule Lightning.Workflows.Edge do
       :source_trigger_id,
       :condition,
       :enabled,
-      :target_job_id
+      :target_job_id,
+      :js_expression_label,
+      :js_expression_body
     ])
     |> validate()
   end
@@ -80,21 +85,55 @@ defmodule Lightning.Workflows.Edge do
       "source_job_id and source_trigger_id are mutually exclusive"
     )
     |> validate_source_condition()
+    |> validate_js_condition()
     |> validate_different_nodes()
   end
 
   defp validate_source_condition(changeset) do
-    [:source_trigger_id, :condition]
-    |> Enum.map(&get_field(changeset, &1))
-    |> case do
-      [trigger, _condition] when not is_nil(trigger) ->
-        changeset
-        |> validate_inclusion(:condition, [:always],
-          message: "must be :always when source is a trigger"
+    if nil != get_field(changeset, :source_trigger_id) do
+      changeset
+      |> validate_inclusion(:condition, [:always, :js_expression],
+        message: "must be :always or :js_expression when source is a trigger"
+      )
+    else
+      changeset
+    end
+  end
+
+  defp validate_js_condition(changeset) do
+    if :js_expression == get_field(changeset, :condition) do
+      changeset
+      |> validate_required([:js_expression_label, :js_expression_body])
+      |> validate_js_expression_body()
+    else
+      changeset
+    end
+  end
+
+  defp validate_js_expression_body(%{valid?: false} = changeset), do: changeset
+
+  defp validate_js_expression_body(changeset) do
+    js_code = get_field(changeset, :js_expression_body)
+
+    cond do
+      String.match?(js_code, ~r/(import|require)(\(|\{| )/) ->
+        add_error(
+          changeset,
+          :js_expression_body,
+          "must not contain import or require statements"
         )
 
-      _ ->
+      String.match?(js_code, ~r/(;|{)/) ->
+        add_error(
+          changeset,
+          :js_expression_body,
+          "must not contain a statement"
+        )
+
+      true ->
         changeset
+        |> validate_length(:js_expression_label, max: 255)
+        |> validate_length(:js_expression_body, max: 255)
     end
   end
 

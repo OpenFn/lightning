@@ -109,6 +109,7 @@ defmodule LightningWeb.WorkflowNewLive.WorkflowParams do
             :source_job_id,
             :enabled,
             :condition,
+            :js_expression_label,
             :target_job_id
           ])
       }

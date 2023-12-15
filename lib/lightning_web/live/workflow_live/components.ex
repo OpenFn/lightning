@@ -180,8 +180,11 @@ defmodule LightningWeb.WorkflowLive.Components do
 
   def panel(assigns) do
     ~H"""
-    <div class="absolute right-0 sm:m-4 w-full sm:w-1/2 md:w-1/3 lg:w-1/4" id={@id}>
-      <div class="divide-y divide-gray-200 overflow-hidden rounded-lg bg-white shadow">
+    <div
+      class="absolute right-0 sm:m-4 w-full sm:w-1/2 md:w-1/3 lg:w-1/4 max-h-content"
+      id={@id}
+    >
+      <div class="divide-y divide-gray-200 rounded-lg bg-white shadow">
         <div class="flex px-4 py-5 sm:px-6">
           <div class="grow font-bold">
             <%= @title %>
@@ -460,18 +463,20 @@ defmodule LightningWeb.WorkflowLive.Components do
 
   def edge_form(%{form: form} = assigns) do
     edge_options =
-      case assigns.form.source |> Ecto.Changeset.apply_changes() do
+      case form.source |> Ecto.Changeset.apply_changes() do
         %{source_trigger_id: nil, source_job_id: job_id}
         when not is_nil(job_id) ->
           [
             "On Success": "on_job_success",
             "On Failure": "on_job_failure",
-            Always: "always"
+            Always: "always",
+            "Matches a Javascript Expression": "js_expression"
           ]
 
         %{source_trigger_id: trigger_id} when not is_nil(trigger_id) ->
           [
-            Always: "always"
+            Always: "always",
+            "Matches a Javascript Expression": "js_expression"
           ]
 
         _ ->
@@ -485,47 +490,68 @@ defmodule LightningWeb.WorkflowLive.Components do
         :edge_enabled,
         Map.get(form.params, "enabled", form.data.enabled)
       )
+      |> assign(
+        :edge_condition,
+        Map.get(form.params, "condition", Atom.to_string(form.data.condition))
+      )
 
     ~H"""
     <% Phoenix.HTML.Form.hidden_inputs_for(@form) %>
-
-    <Form.label_field
-      form={@form}
-      field={:condition}
-      title="Condition"
-      for={Phoenix.HTML.Form.input_id(@form, :condition)}
-    />
     <.old_error field={@form[:condition]} />
-    <%= if Phoenix.HTML.Form.input_value(@form, :source_trigger_id) do %>
-      <Form.select_field
-        form={@form}
-        name={:condition}
-        values={@edge_options}
-        disabled={true}
-      />
-      <div class="max-w-xl text-sm text-gray-500 mt-2">
-        <p>This path will be active if its trigger is enabled.</p>
+    <div class="grid grid-flow-row gap-4 auto-rows-max">
+      <div>
+        <.input
+          type="select"
+          label="Condition"
+          field={@form[:condition]}
+          options={@edge_options}
+          disabled={@disabled}
+        />
       </div>
-    <% else %>
-      <Form.select_field
-        form={@form}
-        name={:condition}
-        values={@edge_options}
-        disabled={@disabled}
-      />
-      <div class="mt-7 border-t flex flex-col justify-between">
-        <h2 class=" flex mt-3">
-          <Form.check_box
-            form={@form}
-            field={:enabled}
-            label="Disable this path"
-            checked_value={false}
-            unchecked_value={true}
-            value={@edge_enabled}
+      <%= if @edge_condition == "js_expression" do %>
+        <div>
+          <.input
+            type="text"
+            label="Condition Label"
+            field={@form[:js_expression_label]}
+            maxlength="255"
           />
-        </h2>
-      </div>
-    <% end %>
+        </div>
+        <div>
+          <.label>
+            JS Expression
+            <p class="font-normal text-xs text-gray-500 ">
+              To match on output of last Step
+            </p>
+            <.input
+              type="textarea"
+              field={@form[:js_expression_body]}
+              class="h-24"
+              phx-debounce="300"
+              maxlength="255"
+            />
+          </.label>
+        </div>
+      <% end %>
+      <%= if Phoenix.HTML.Form.input_value(@form, :source_trigger_id) do %>
+        <div class="max-w-xl text-sm text-gray-500 mt-2">
+          <p>This path will be active if its trigger is enabled.</p>
+        </div>
+      <% else %>
+        <div class="mt-7 border-t flex flex-col justify-between">
+          <h2 class=" flex mt-3">
+            <Form.check_box
+              form={@form}
+              field={:enabled}
+              label="Disable this path"
+              checked_value={false}
+              unchecked_value={true}
+              value={@edge_enabled}
+            />
+          </h2>
+        </div>
+      <% end %>
+    </div>
     """
   end
 

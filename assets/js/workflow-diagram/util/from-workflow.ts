@@ -1,20 +1,33 @@
 import { Lightning, Flow, Positions } from '../types';
 import { sortOrderForSvg, styleEdge, styleItem, styleNode } from '../styles';
 
-function getEdgeLabel(condition: string) {
-  if (condition) {
-    if (condition === 'on_job_success') {
-      return '✓';
-    }
-    if (condition === 'on_job_failure') {
-      return 'X';
-    }
-    if (condition === 'always') {
-      return '∞';
-    }
+function getEdgeLabel(edge: Lightning.Edge) {
+  let label = '( )';
+
+  switch (edge.condition) {
+    case 'on_job_success':
+      label = '✓';
+      break;
+    case 'on_job_failure':
+      label = 'X';
+      break;
+    case 'always':
+      label = '∞';
+      break;
+    case 'js_expression':
+      const condition_label = edge.js_expression_label;
+
+      if (condition_label) {
+        if (condition_label.length > 16) {
+          label = condition_label.slice(0, 16) + '...';
+        } else {  
+          label = condition_label;
+        }
+      }
+      break;
   }
-  // some code expression
-  return '{}';
+
+  return label;
 }
 
 const fromWorkflow = (
@@ -66,7 +79,7 @@ const fromWorkflow = (
         model.source = edge.source_trigger_id || edge.source_job_id;
         model.target = edge.target_job_id;
         model.type = 'step';
-        model.label = getEdgeLabel(edge.condition);
+        model.label = getEdgeLabel(edge);
         model.markerEnd = {
           type: 'arrowclosed',
           width: 32,
