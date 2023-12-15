@@ -175,7 +175,8 @@ conflict <a href="https://github.com/OpenFn/Lightning/issues/1329">#1329</a></li
 <a href="https://github.com/OpenFn/Lightning/issues/1487">#1487</a></li><li>Initial credential creation <code class="inline">changes</code> show <code class="inline">after</code> as <code class="inline">null</code> rather a value
 <a href="https://github.com/OpenFn/Lightning/issues/1118">#1118</a></li><li>AttemptViewer flashing/rerendering when Jobs are running
 <a href="https://github.com/OpenFn/Lightning/issues/1550">#1550</a></li><li>Not able to create a new Job when clicking the Check icon on the placeholder
-<a href="https://github.com/OpenFn/Lightning/issues/1537">#1537</a></li></ul><h2 id="v0-11-0-2023-12-06" class="section-heading">
+<a href="https://github.com/OpenFn/Lightning/issues/1537">#1537</a></li><li>Improve selection logic on WorkflowDiagram
+<a href="https://github.com/OpenFn/Lightning/issues/1220">#1220</a></li></ul><h2 id="v0-11-0-2023-12-06" class="section-heading">
   <a href="#v0-11-0-2023-12-06" class="hover-link">
     <i class="ri-link-m" aria-hidden="true"></i>
   </a>
@@ -410,7 +411,7 @@ workorders up to <code class="inline">v0.10.0</code>, though the granularity of 
 will be less than <code class="inline">v0.10.0</code> and the final states are not guaranteed to be
 accurate for workflows with multiple branches and leaf nodes with varying exit
 reasons.</p><p>The migration scripts can be run with a single function call in SetupUtils from
-a connect <code class="inline">iex</code> session:</p><pre><code class="makeup elixir" translate="no"><span class="nc">Lightning.SetupUtils</span><span class="o">.</span><span class="n">approximate_state_for_attempts_and_workorders</span><span class="p" data-group-id="2582447892-1">(</span><span class="p" data-group-id="2582447892-1">)</span></code></pre><p>Note that (like lots of <em>other</em> functionality in <code class="inline">SetupUtils</code>, calling this
+a connect <code class="inline">iex</code> session:</p><pre><code class="makeup elixir" translate="no"><span class="nc">Lightning.SetupUtils</span><span class="o">.</span><span class="n">approximate_state_for_attempts_and_workorders</span><span class="p" data-group-id="6344088711-1">(</span><span class="p" data-group-id="6344088711-1">)</span></code></pre><p>Note that (like lots of <em>other</em> functionality in <code class="inline">SetupUtils</code>, calling this
 function is a destructive action and you should only do it if you've backed up
 your data and you know what you're doing.)</p><p>As always, we recommend backing up your data before migrating. (And thanks for
 bearing with us as we move towards our first stable Lightning release.)</p><h3 id="added-8" class="section-heading">
