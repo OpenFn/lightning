@@ -198,7 +198,7 @@ defmodule LightningWeb.RunWorkOrderTest do
       assert Floki.attribute(work_order_list, "class") |> hd() =~ "animate-pulse"
 
       assert Floki.children(work_order_list) |> Floki.text() =~
-               "Loading work orders ..."
+               "Loading workorders ..."
     end
 
     test "Search form is displayed", %{

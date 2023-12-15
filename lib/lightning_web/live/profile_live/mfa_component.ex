@@ -57,7 +57,7 @@ defmodule LightningWeb.ProfileLive.MfaComponent do
       {:ok, _totp} ->
         {:noreply,
          socket
-         |> put_flash(:info, "MFA Setup successfully!")
+         |> put_flash(:info, "2FA Setup successfully!")
          |> maybe_redirect_to_backup_codes()}
 
       {:error, changeset} ->
@@ -72,7 +72,7 @@ defmodule LightningWeb.ProfileLive.MfaComponent do
       {:ok, _totp} ->
         {:noreply,
          socket
-         |> put_flash(:info, "MFA Disabled successfully!")
+         |> put_flash(:info, "2FA Disabled successfully!")
          |> push_navigate(to: ~p"/profile")}
 
       {:error, _reason} ->

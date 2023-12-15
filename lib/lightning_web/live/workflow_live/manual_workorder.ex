@@ -35,7 +35,7 @@ defmodule LightningWeb.WorkflowLive.ManualWorkorder do
             type="select"
             field={@form[:dataclip_id]}
             options={@dataclips |> Enum.map(&{&1.id, &1.id})}
-            prompt="Create a new dataclip"
+            prompt="Create a new input"
             disabled={@disabled}
           />
         </div>
@@ -44,7 +44,7 @@ defmodule LightningWeb.WorkflowLive.ManualWorkorder do
       <div class="flex-0">
         <div class="flex flex-row">
           <div class="basis-1/2 font-semibold text-secondary-700 text-xs xl:text-base">
-            Dataclip Type
+            Input Type
           </div>
           <div class="basis-1/2 text-right">
             <Common.dataclip_type_pill type={

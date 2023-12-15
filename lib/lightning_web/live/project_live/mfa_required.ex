@@ -29,6 +29,6 @@ defmodule LightningWeb.ProjectLive.MFARequired do
   end
 
   defp apply_action(socket, :index, _params) do
-    {:noreply, socket |> assign(page_title: "MFA Required for Project")}
+    {:noreply, socket |> assign(page_title: "2FA Required for Project")}
   end
 end

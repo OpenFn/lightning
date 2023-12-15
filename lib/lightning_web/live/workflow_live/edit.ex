@@ -120,7 +120,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
                       form={@manual_run_form.id}
                       disabled={@save_and_run_disabled}
                     >
-                      <.icon name="hero-play-solid" class="w-4 h-4" /> Save & Run
+                      <.icon name="hero-play-solid" class="w-4 h-4" />
+                      Save & Run from step
                     </.button>
                   </div>
 
@@ -244,7 +245,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
                         tooltip={deletion_tooltip_message(@has_multiple_jobs)}
                         data-confirm="Are you sure you want to delete this Job?"
                       >
-                        Delete Job
+                        Delete Step
                       </.button>
                     </label>
                   </div>

@@ -109,7 +109,7 @@ defmodule LightningWeb.Components.ProjectDeletionModal do
         <.p>
           Deleting this project will disable access
           for all users, and disable all jobs in the project. The whole project will be deleted
-          along with all workflows and work order history, <%= human_readable_grace_period() %>.
+          along with all workflows and workorder history, <%= human_readable_grace_period() %>.
         </.p>
         <div class="hidden sm:block" aria-hidden="true">
           <div class="py-2"></div>

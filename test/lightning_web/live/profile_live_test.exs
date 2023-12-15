@@ -276,7 +276,7 @@ defmodule LightningWeb.ProfileLiveTest do
           )
         )
 
-      assert flash["info"] == "MFA Setup successfully!"
+      assert flash["info"] == "2FA Setup successfully!"
     end
   end
 
@@ -315,7 +315,7 @@ defmodule LightningWeb.ProfileLiveTest do
       result = view |> element("#disable_mfa_button") |> render_click()
 
       {:ok, view, html} = follow_redirect(result, conn)
-      assert html =~ "MFA Disabled successfully!"
+      assert html =~ "2FA Disabled successfully!"
 
       refute render(view) =~
                "You have configured an authentication app to get two-factor authentication codes"
@@ -341,7 +341,7 @@ defmodule LightningWeb.ProfileLiveTest do
       |> render_submit()
 
       flash = assert_redirected(view, Routes.profile_edit_path(conn, :edit))
-      assert flash["info"] == "MFA Setup successfully!"
+      assert flash["info"] == "2FA Setup successfully!"
     end
   end
 end

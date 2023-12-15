@@ -173,7 +173,7 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       assert view
              |> element(
                ~s{#manual-job-#{job.id} form select[name='manual[dataclip_id]'] option},
-               "Create a new dataclip"
+               "Create a new input"
              )
              |> has_element?()
 

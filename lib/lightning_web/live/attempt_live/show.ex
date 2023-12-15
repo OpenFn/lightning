@@ -40,7 +40,7 @@ defmodule LightningWeb.AttemptLive.Show do
                 class="flex-1 @5xl/main:flex-none"
               >
                 <.list_item>
-                  <:label>Work Order</:label>
+                  <:label>WorkOrder</:label>
                   <:value>
                     <.link
                       navigate={
@@ -56,7 +56,7 @@ defmodule LightningWeb.AttemptLive.Show do
                   </:value>
                 </.list_item>
                 <.list_item>
-                  <:label>Attempt</:label>
+                  <:label>Run</:label>
                   <:value>
                     <span class="whitespace-nowrap text-ellipsis pr-2">
                       <%= display_short_uuid(attempt.id) %>
@@ -166,7 +166,7 @@ defmodule LightningWeb.AttemptLive.Show do
      socket
      |> assign(
        active_menu_item: :runs,
-       page_title: "Attempt",
+       page_title: "Run",
        selected_run_id: nil,
        runs: []
      )

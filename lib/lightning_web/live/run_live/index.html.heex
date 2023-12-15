@@ -200,7 +200,7 @@
                   >
                     <div class="py-1" role="none">
                       <div class="px-4 py-1 text-gray-500 text-sm">
-                        Work order
+                        Workorder
                       </div>
                       <div class="px-4 py-2 text-sm relative">
                         <a
@@ -333,7 +333,7 @@
 
           <%= for status <- Enum.filter(@statuses, fn status -> is_checked(@filters_changeset, status.id) end)  do %>
             <span class="inline-flex items-center gap-x-0.5 rounded-md bg-blue-100 px-2 py-1 text-xs font-medium text-blue-700">
-              Work order status: <%= status.label %>
+              Workorder status: <%= status.label %>
               <.form
                 :let={f}
                 for={@filters_changeset}
@@ -449,14 +449,14 @@
                   <%= if search = get_change(@filters_changeset, :search_term) do %>
                     <%= @page.total_entries %><%= if @page.total_entries >=
                                                        @string_search_limit,
-                                                     do: "+" %> work orders with runs matching "<%= search %>"
+                                                     do: "+" %> workorders with runs matching "<%= search %>"
                     <%= if @page.total_entries >= @string_search_limit do %>
                       <span class="text-xs text-gray">
                         (try more specific filters)
                       </span>
                     <% end %>
                   <% else %>
-                    Work Orders
+                    WorkOrders
                   <% end %>
                 </p>
               </div>
@@ -619,7 +619,7 @@
                           <div>
                             <p class="text-sm mb-1">Workflow Name</p>
                             <span class="text-gray-700 mt-2 font-medium">
-                              WORK ORDER ID &bull;
+                              WORKORDER ID &bull;
                               <span class="font-normal text-xs whitespace-nowrap text-ellipsis
                             bg-gray-200 p-1 rounded-md font-mono">
                                 INPUT
@@ -655,7 +655,7 @@
                     class="px-4 py-3.5 text-sm font-normal text-left rtl:text-right text-gray-500"
                   >
                     <div>
-                      <p class="text-sm text-gray-500 mb-1">Work Order</p>
+                      <p class="text-sm text-gray-500 mb-1">WorkOrder</p>
                       <span class="text-gray-700 mt-2 font-medium">
                         RECEIVED AT
                       </span>
@@ -667,7 +667,7 @@
                     class="px-3 py-3.5 text-sm font-normal text-left rtl:text-right text-gray-500"
                   >
                     <div>
-                      <h1 class="text-sm text-gray-500 mb-1">Work Order</h1>
+                      <h1 class="text-sm text-gray-500 mb-1">WorkOrder</h1>
                       <span class="text-gray-700 mt-2 font-medium">
                         LAST ACTIVITY
                       </span>
@@ -679,7 +679,7 @@
                     class="px-4 py-3.5 text-sm font-normal text-left rtl:text-right text-gray-500"
                   >
                     <div>
-                      <p class="text-sm text-gray-500 mb-1">Run</p>
+                      <p class="text-sm text-gray-500 mb-1">Step</p>
                       <span class="text-gray-700 mt-2 font-medium">
                         STARTED AT
                       </span>
@@ -691,7 +691,7 @@
                     class="px-4 py-3.5 text-sm font-normal text-left rtl:text-right text-gray-500"
                   >
                     <div>
-                      <p class="text-sm text-gray-500 mb-1">Run</p>
+                      <p class="text-sm text-gray-500 mb-1">Step</p>
                       <span class="text-gray-700 mt-2 font-medium">
                         FINISHED AT
                       </span>
@@ -703,7 +703,7 @@
                     class="px-4 py-3.5 text-sm font-normal text-left rtl:text-right text-gray-500"
                   >
                     <div>
-                      <p class="text-sm text-gray-500 mb-1">Work Order</p>
+                      <p class="text-sm text-gray-500 mb-1">WorkOrder</p>
                       <span class="text-gray-700 mt-2 font-medium">
                         STATUS
                       </span>
@@ -718,12 +718,12 @@
                   <.async_result :let={searched_page} assign={@async_page}>
                     <:loading>
                       <Components.async_filler
-                        message="Loading work orders ..."
+                        message="Loading workorders ..."
                         class="animate-pulse"
                       />
                     </:loading>
                     <:failed :let={_reason}>
-                      <Components.async_filler message="There was an error loading the work orders" />
+                      <Components.async_filler message="There was an error loading the workorders" />
                     </:failed>
                     <%= for workorder <- searched_page.entries do %>
                       <.live_component

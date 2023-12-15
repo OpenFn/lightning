@@ -1,6 +1,6 @@
 defmodule LightningWeb.RunLive.WorkOrderComponent do
   @moduledoc """
-  Work Order component
+  WorkOrder component
   """
   use LightningWeb, :live_component
 
@@ -240,7 +240,7 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
                 </div>
                 <p class="text-gray-800">
                   <%= if Enum.count(@attempts) > 1 do %>
-                    - attempt <%= index %> of <%= Enum.count(@attempts) %>
+                    - run <%= index %> of <%= Enum.count(@attempts) %>
                     <a
                       :if={index == Enum.count(@attempts)}
                       id={"toggle_attempts_for_#{@work_order.id}"}

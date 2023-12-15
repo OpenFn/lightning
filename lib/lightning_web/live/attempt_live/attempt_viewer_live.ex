@@ -25,7 +25,7 @@ defmodule LightningWeb.AttemptLive.AttemptViewerLive do
           <div class="flex-none flex gap-6 @5xl/viewer:flex-col flex-row">
             <.detail_list id={"attempt-detail-#{attempt.id}"}>
               <.list_item>
-                <:label class="whitespace-nowrap">Work Order</:label>
+                <:label class="whitespace-nowrap">WorkOrder</:label>
                 <:value>
                   <.link
                     navigate={
