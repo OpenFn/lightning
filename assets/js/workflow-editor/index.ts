@@ -23,7 +23,7 @@ type WorkflowEditorEntrypoint = PhoenixHook<
     ): Lightning.TriggerNode | Lightning.JobNode | Lightning.Edge | undefined;
     handleWorkflowParams(payload: { workflow_params: WorkflowProps }): void;
     maybeMountComponent(): void;
-    onSelectionChange(id?: string): void;
+    onSelectionChange(id?: string | null): void;
     pendingChanges: PendingAction[];
     processPendingChanges(): void;
     pushPendingChange(
@@ -78,12 +78,9 @@ export default {
     this.handleEvent<{ to: string; kind: string }>(
       'page-loading-stop',
       ({ to, kind }) => {
-        console.log('page-loading-stop', { to, kind });
         if (kind === 'initial') setHasLoaded(new URL(to));
       }
     );
-
-    console.debug('WorkflowEditor hook mounted');
 
     this._pendingWorker = Promise.resolve();
     this._isMounting = false;
@@ -114,7 +111,7 @@ export default {
     this.handleEvent<{ href: string; patch: boolean }>('navigate', e => {
       const id = new URL(e.href).searchParams.get('s');
 
-      if (id && e.patch && this.component) this.component.render(id);
+      if (e.patch && this.component) this.component.render(id);
     });
 
     // Get the initial data from the server
@@ -136,7 +133,7 @@ export default {
       }
     }
   },
-  onSelectionChange(id?: string) {
+  onSelectionChange(id?: string | null) {
     (async () => {
       console.debug('onSelectionChange', id);
 

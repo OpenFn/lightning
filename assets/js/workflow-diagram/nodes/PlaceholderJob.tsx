@@ -49,6 +49,10 @@ const PlaceholderJobNode = ({ id, selected }: NodeProps<NodeData>) => {
   });
 
   const handleKeyDown = (evt: React.KeyboardEvent<HTMLInputElement>) => {
+    if (evt.code === 'Escape') {
+      handleCancel();
+      return;
+    }
     if (evt.target.value.trim() === '') {
       setValidationResult({
         isValid: false,
@@ -58,9 +62,6 @@ const PlaceholderJobNode = ({ id, selected }: NodeProps<NodeData>) => {
     }
     if (evt.code === 'Enter') {
       validationResult.isValid && handleCommit();
-    }
-    if (evt.code === 'Escape') {
-      handleCancel();
     }
   };
 
@@ -93,26 +94,24 @@ const PlaceholderJobNode = ({ id, selected }: NodeProps<NodeData>) => {
 
   // TODO what if a name hasn't been entered?
   const handleCommit = useCallback(
-    (evt: SyntheticEvent | null) => {
-      evt?.stopPropagation();
-
+    (evt?: SyntheticEvent) => {
       if (textRef.current) {
         dispatch(textRef.current, 'commit-placeholder', {
           id,
           name: textRef.current.value,
         });
       }
+      evt?.stopPropagation();
     },
     [textRef]
   );
 
   const handleCancel = useCallback(
-    (evt: SyntheticEvent | null) => {
-      evt?.stopPropagation();
-
+    (evt?: SyntheticEvent) => {
       if (textRef.current) {
         dispatch(textRef.current, 'cancel-placeholder', { id });
       }
+      evt?.stopPropagation();
     },
     [textRef]
   );
