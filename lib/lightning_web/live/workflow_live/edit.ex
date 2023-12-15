@@ -877,7 +877,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
         WorkflowParams.apply_form_params(socket.assigns.workflow_params, params)
 
       socket
-      |> apply_params(next_params, get_initial_params_opts(params))
+      |> apply_params(next_params, get_params_opts_for("edges", params))
       |> mark_validated()
       |> push_patches_applied(initial_params)
     else
@@ -887,17 +887,14 @@ defmodule LightningWeb.WorkflowLive.Edit do
   end
 
   # Returns the index of the edge that is being edited on Path form
-  defp get_initial_params_opts(params) do
+  defp get_params_opts_for(workflow_attribute, params) do
     params
-    |> Map.get("edges", %{})
+    |> Map.get(workflow_attribute, %{})
     |> Map.to_list()
     |> then(fn
       [{index, %{"condition_type" => "js_expression"} = map}] ->
-        if map_size(Map.delete(map, "enabled")) == 1 do
-          [edge_on_edit_index: String.to_integer(index)]
-        else
-          []
-        end
+        inputs_edited = Map.keys(map)
+        [edge_edited_input: {String.to_integer(index), inputs_edited}]
 
       _other ->
         []
@@ -936,28 +933,24 @@ defmodule LightningWeb.WorkflowLive.Edit do
       )
       |> then(fn
         %Ecto.Changeset{changes: %{edges: edges} = changes} = changeset ->
-          new_edge_index =
-            Keyword.get(opts, :edge_on_edit_index, nil)
+          {edge_edit_index, edge_edit_inputs} =
+            Keyword.get(opts, :edge_edited_input, {nil, []})
 
-          if new_edge_index do
-            cleared_edges =
-              edges
-              |> Enum.with_index()
-              |> Enum.map(fn
-                {edge, index} when index == new_edge_index ->
-                  %{edge | errors: []}
+          cleared_edges =
+            edges
+            |> Enum.with_index()
+            |> Enum.map(fn
+              {%{errors: errors} = edge, index} when index == edge_edit_index ->
+                %{edge | errors: Keyword.take(errors, edge_edit_inputs)}
 
-                {edge, _index} ->
-                  edge
-              end)
+              {edge, _index} ->
+                edge
+            end)
 
-            %{
-              changeset
-              | changes: Map.put(changes, :edges, cleared_edges)
-            }
-          else
+          %{
             changeset
-          end
+            | changes: Map.put(changes, :edges, cleared_edges)
+          }
 
         changeset ->
           changeset
