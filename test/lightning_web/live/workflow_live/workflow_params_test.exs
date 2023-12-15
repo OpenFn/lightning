@@ -23,14 +23,14 @@ defmodule LightningWeb.WorkflowNewLive.WorkflowParamsTest do
         %{
           "id" => Ecto.UUID.generate(),
           "source_trigger_id" => trigger_1_id,
-          "condition" => "on_job_failure",
+          "condition_type" => "on_job_failure",
           "target_job_id" => job_1_id,
           "enabled" => true
         },
         %{
           "id" => Ecto.UUID.generate(),
           "source_job_id" => job_1_id,
-          "condition" => "on_job_success",
+          "condition_type" => "on_job_success",
           "target_job_id" => job_2_id,
           "enabled" => true
         }
@@ -57,10 +57,10 @@ defmodule LightningWeb.WorkflowNewLive.WorkflowParamsTest do
       assert %{
                "edges" => [
                  %{
-                   "condition" => "on_job_failure",
+                   "condition_type" => "on_job_failure",
                    "enabled" => true,
                    "errors" => %{
-                     "condition" => [
+                     "condition_type" => [
                        "The condition must be 'Always' or 'JS expression' when the source is trigger."
                      ]
                    },
@@ -70,7 +70,7 @@ defmodule LightningWeb.WorkflowNewLive.WorkflowParamsTest do
                    "target_job_id" => ^job_1_id
                  },
                  %{
-                   "condition" => "on_job_success",
+                   "condition_type" => "on_job_success",
                    "enabled" => true,
                    "errors" => %{},
                    "id" => _,
@@ -82,7 +82,7 @@ defmodule LightningWeb.WorkflowNewLive.WorkflowParamsTest do
                "errors" => %{
                  "edges" => [
                    %{
-                     "condition" => [
+                     "condition_type" => [
                        "The condition must be 'Always' or 'JS expression' when the source is trigger."
                      ]
                    },
@@ -160,7 +160,7 @@ defmodule LightningWeb.WorkflowNewLive.WorkflowParamsTest do
       assert %{
                "edges" => [
                  %{
-                   "condition" => "on_job_failure",
+                   "condition_type" => "on_job_failure",
                    "enabled" => true,
                    "errors" => %{},
                    "id" => _,
@@ -169,7 +169,7 @@ defmodule LightningWeb.WorkflowNewLive.WorkflowParamsTest do
                    "target_job_id" => ^job_1_id
                  },
                  %{
-                   "condition" => "on_job_success",
+                   "condition_type" => "on_job_success",
                    "enabled" => true,
                    "errors" => %{},
                    "id" => _,

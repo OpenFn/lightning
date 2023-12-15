@@ -24,7 +24,7 @@ const Form = ({ nodeId, store, onChange }) => {
     {item.adaptor && <p>{`adaptor: ${item.adaptor}`}</p>}
     {item.type && <p>{`type: ${item.type}`}</p>}
     {item.target_job_id ?
-     <p>{`condition: ${item.condition}`}</p>
+     <p>{`condition_type: ${item.condition_type}`}</p>
      : <p>{`expression: ${item.cronExpression || item.expression}`}</p>}
   </>);
 }

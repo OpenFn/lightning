@@ -4,7 +4,7 @@ import { sortOrderForSvg, styleEdge, styleItem, styleNode } from '../styles';
 function getEdgeLabel(edge: Lightning.Edge) {
   let label = '( )';
 
-  switch (edge.condition) {
+  switch (edge.condition_type) {
     case 'on_job_success':
       label = '✓';
       break;
@@ -15,7 +15,7 @@ function getEdgeLabel(edge: Lightning.Edge) {
       label = '∞';
       break;
     case 'js_expression':
-      const condition_label = edge.js_expression_label;
+      const condition_label = edge.condition_label;
 
       if (condition_label) {
         if (condition_label.length > 16) {
@@ -85,7 +85,7 @@ const fromWorkflow = (
           width: 32,
           height: 32,
         };
-        model.data = { condition: edge.condition, enabled: edge.enabled };
+        model.data = { condition_type: edge.condition_type, enabled: edge.enabled };
 
         // Note: we don't allow the user to disable the edge that goes from a
         // trigger to a job, but we want to show it as if it were disabled when

@@ -36,14 +36,17 @@ defmodule LightningWeb.AttemptJson do
   end
 
   def render(
-        %Edge{condition: condition, js_expression_body: js_expression_body} =
+        %Edge{
+          condition_type: condition_type,
+          condition_expression: condition_expression
+        } =
           edge
       ) do
     condition =
-      if condition == :js_expression do
-        js_expression_body
+      if condition_type == :js_expression do
+        condition_expression
       else
-        condition
+        condition_type
       end
 
     %{

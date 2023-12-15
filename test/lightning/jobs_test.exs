@@ -112,7 +112,7 @@ defmodule Lightning.JobsTest do
         source_job_id: job.id,
         workflow: job.workflow,
         target_job_id: other_job.id,
-        condition: :on_job_failure
+        condition_type: :on_job_failure
       })
 
       assert Jobs.get_downstream_jobs_for(job) == [

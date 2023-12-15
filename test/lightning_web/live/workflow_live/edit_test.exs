@@ -310,7 +310,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
         view
         |> form("#workflow-form", %{
           "workflow" => %{
-            "edges" => %{"1" => %{"condition" => "js_expression"}}
+            "edges" => %{"1" => %{"condition_type" => "js_expression"}}
           }
         })
         |> render_change()
@@ -325,8 +325,8 @@ defmodule LightningWeb.WorkflowLive.EditTest do
         "workflow" => %{
           "edges" => %{
             "1" => %{
-              "js_expression_label" => "My JS Expression",
-              "js_expression_body" => "state.data.field === 33"
+              "condition_label" => "My JS Expression",
+              "condition_expression" => "state.data.field === 33"
             }
           }
         }
@@ -340,9 +340,9 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       assert Map.delete(Repo.reload!(edge_on_edit), :updated_at) ==
                Map.delete(
                  Map.merge(edge_on_edit, %{
-                   condition: :js_expression,
-                   js_expression_label: "My JS Expression",
-                   js_expression_body: "state.data.field === 33"
+                   condition_type: :js_expression,
+                   condition_label: "My JS Expression",
+                   condition_expression: "state.data.field === 33"
                  }),
                  :updated_at
                )
@@ -465,7 +465,8 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       view |> select_node(workflow.edges |> Enum.at(0))
 
-      assert view |> input_is_disabled?("[name='workflow[edges][0][condition]']")
+      assert view
+             |> input_is_disabled?("[name='workflow[edges][0][condition_type]']")
 
       assert view |> save_is_disabled?()
       job_1 = workflow.jobs |> Enum.at(0)

@@ -53,7 +53,9 @@ defmodule LightningWeb.API.ProvisioningJSON do
 
   def as_json(%Edge{} = edge) do
     Ecto.embedded_dump(edge, :json)
-    |> Map.take(~w(id source_job_id source_trigger_id condition target_job_id)a)
+    |> Map.take(
+      ~w(id source_job_id source_trigger_id condition_type target_job_id)a
+    )
     |> drop_keys_with_nil_value()
   end
 

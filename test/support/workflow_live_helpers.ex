@@ -216,7 +216,7 @@ defmodule Lightning.WorkflowLive.Helpers do
           %{
             "id" => Ecto.UUID.generate(),
             "source_trigger_id" => trigger_id,
-            "condition" => :always,
+            "condition_type" => :always,
             "target_job_id" => job_id
           }
         ],
@@ -358,9 +358,9 @@ defmodule Lightning.WorkflowLive.Helpers do
       build(:workflow, project: project)
       |> with_job(job_1)
       |> with_trigger(trigger)
-      |> with_edge({trigger, job_1}, %{condition: :always})
+      |> with_edge({trigger, job_1}, %{condition_type: :always})
       |> with_job(job_2)
-      |> with_edge({job_1, job_2}, %{condition: :on_job_success})
+      |> with_edge({job_1, job_2}, %{condition_type: :on_job_success})
       |> insert()
 
     %{workflow: workflow |> Lightning.Repo.preload([:jobs, :triggers, :edges])}

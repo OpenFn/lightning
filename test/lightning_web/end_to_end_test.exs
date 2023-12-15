@@ -122,7 +122,7 @@ defmodule LightningWeb.EndToEndTest do
         workflow: workflow,
         source_job_id: first_job.id,
         target_job_id: flow_job.id,
-        condition: :on_job_success
+        condition_type: :on_job_success
       })
 
       catch_job =
@@ -138,7 +138,7 @@ defmodule LightningWeb.EndToEndTest do
         source_job_id: flow_job.id,
         workflow: workflow,
         target_job_id: catch_job.id,
-        condition: :on_job_failure
+        condition_type: :on_job_failure
       })
 
       expression1_job =
@@ -154,9 +154,9 @@ defmodule LightningWeb.EndToEndTest do
         source_job_id: catch_job.id,
         workflow: workflow,
         target_job_id: expression1_job.id,
-        condition: :js_expression,
-        js_expression_label: "less_than_1000",
-        js_expression_body: "state.x < 1000"
+        condition_type: :js_expression,
+        condition_label: "less_than_1000",
+        condition_expression: "state.x < 1000"
       })
 
       webhook_body = %{"fieldOne" => 123, "fieldTwo" => "some string"}

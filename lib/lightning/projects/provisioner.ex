@@ -148,8 +148,8 @@ defmodule Lightning.Projects.Provisioner do
       :source_job_id,
       :source_trigger_id,
       :enabled,
-      :condition,
-      :js_expression_label,
+      :condition_type,
+      :condition_label,
       :target_job_id,
       :delete
     ])

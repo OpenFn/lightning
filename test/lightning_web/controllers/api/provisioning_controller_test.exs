@@ -376,7 +376,7 @@ defmodule LightningWeb.API.ProvisioningControllerTest do
             %{
               "id" => job_edge_id,
               "source_job_id" => first_job_id,
-              "condition" => "on_job_success",
+              "condition_type" => "on_job_success",
               "target_job_id" => second_job_id
             }
           ]
