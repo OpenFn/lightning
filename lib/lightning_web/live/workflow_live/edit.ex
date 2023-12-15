@@ -886,7 +886,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
     end
   end
 
-  # Returns the index of the edge that is being edited on Path form
+  # Returns the inputs that have being edited on the form
   defp get_params_opts_for(workflow_attribute, params) do
     params
     |> Map.get(workflow_attribute, %{})
@@ -941,6 +941,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
             |> Enum.with_index()
             |> Enum.map(fn
               {%{errors: errors} = edge, index} when index == edge_edit_index ->
+                # ignore errors for inputs that have not been edited
                 %{edge | errors: Keyword.take(errors, edge_edit_inputs)}
 
               {edge, _index} ->
