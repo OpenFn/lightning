@@ -117,7 +117,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
                     <%!-- TODO: pass RUN id in here --%>
                     <%!-- TODO: logic -> only allow retry if selected_dataclip == run.input_dataclip --%>
                     <%= if @follow_attempt_id do %>
-                      <.button
+                      <%!-- <.button
                         phx-click="rerun"
                         phx-value-attempt_id={@follow_attempt_id}
                         phx-value-run_id={@run.id}
@@ -130,7 +130,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
                       >
                         <.icon name="hero-arrow-path-mini" class="w-4 h-4" />
                         Retry from here
-                      </.button>
+                      </.button> --%>
                       <div class="relative -ml-px block">
                         <.button
                           type="button"
