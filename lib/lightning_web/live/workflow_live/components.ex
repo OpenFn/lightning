@@ -344,19 +344,15 @@ defmodule LightningWeb.WorkflowLive.Components do
             </div>
           </div>
           <div>
-            <div
-              class="flex items-center inline-block"
-              id="webhook-authentication-tooltip-div"
-              aria-label="Add an extra layer of security with Webhook authentication."
-              phx-hook="Tooltip"
-            >
-              <span class="text-sm font-medium text-secondary-700 mr-1">
+            <div>
+              <span class="text-sm font-medium text-secondary-700">
                 Webhook Authentication
               </span>
               <span class="inline-block relative cursor-pointer">
-                <Heroicons.information_circle
-                  solid
-                  class="w-4 h-4 text-primary-600 opacity-50"
+                <Common.tooltip
+                  id="webhook-authentication-disabled-tooltip"
+                  title="Require requests to this endpoint to use specific authentication protocols."
+                  class="inline-grid"
                 />
               </span>
             </div>
