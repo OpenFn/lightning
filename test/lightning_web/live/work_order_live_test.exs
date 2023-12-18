@@ -100,6 +100,37 @@ defmodule LightningWeb.RunWorkOrderTest do
       assert rendered =~ "toggle_details_for_#{work_order.id}"
     end
 
+    test "WorkOrderComponent renders runs when details are toggled", %{
+      project: project
+    } do
+      %{jobs: [job]} = insert(:simple_workflow, project: project)
+      {work_order, _dataclip} = setup_work_order(project, job)
+
+      assert_work_order_runs(work_order, 1)
+
+      rendered =
+        render_component(LightningWeb.RunLive.WorkOrderComponent,
+          id: work_order.id,
+          work_order: work_order,
+          show_details: true,
+          project: project,
+          can_rerun_job: true
+        )
+
+      assert rendered =~ work_order.dataclip_id
+      assert rendered =~ "toggle_details_for_#{work_order.id}"
+
+      work_order.attempts
+      |> Enum.each(fn attempt ->
+        assert rendered =~ "attempt_#{attempt.id}"
+      end)
+
+      hd(work_order.attempts).runs
+      |> Enum.each(fn run ->
+        assert rendered =~ "run-#{run.id}"
+      end)
+    end
+
     test "WorkOrderComponent remains stable when associated jobs are deleted", %{
       project: project
     } do
