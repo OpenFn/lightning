@@ -14,7 +14,7 @@ defmodule LightningWeb.WorkflowLive.Components do
         <h3 class="text-3xl font-bold">
           Workflows
           <span class="text-base font-normal">
-            (<%= length(assigns.workflows) %>)
+            (<%= length(assigns.workflows_stats) %>)
           </span>
         </h3>
         <.create_workflow_card
@@ -23,7 +23,7 @@ defmodule LightningWeb.WorkflowLive.Components do
         />
       </div>
       <.workflow_table
-        workflows={@workflows}
+        workflows_stats={@workflows_stats}
         can_create_workflow={@can_create_workflow}
         can_delete_workflow={@can_delete_workflow}
         project={@project}
@@ -962,13 +962,13 @@ defmodule LightningWeb.WorkflowLive.Components do
         <:value><%= @metrics.work_order_metrics.total %></:value>
       </.metric_card>
       <.metric_card title="Runs">
-        <:value><%= @metrics.run_metrics.successful_runs %></:value>
+        <:value><%= @metrics.run_metrics.total %></:value>
         <:suffix>
-          <span>(<%= @metrics.run_metrics.pending_running_runs %> pending)</span>
+          <span>(<%= @metrics.run_metrics.pending %> pending)</span>
         </:suffix>
       </.metric_card>
       <.metric_card title="Succesful Runs">
-        <:value><%= @metrics.run_metrics.completed_runs %></:value>
+        <:value><%= @metrics.run_metrics.completed %></:value>
         <:suffix>
           <span>(<%= @metrics.run_metrics.success_percentage %>%)</span>
         </:suffix>

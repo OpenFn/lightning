@@ -7,7 +7,6 @@ defmodule Lightning.Workflows do
   alias Lightning.Repo
   alias Lightning.Projects.Project
   alias Lightning.Workflows.{Edge, Job, Workflow, Trigger, Trigger, Query}
-  alias Lightning.Invocation.Run
 
   @doc """
   Returns the list of workflows.
@@ -111,85 +110,6 @@ defmodule Lightning.Workflows do
       order_by: [asc: w.name]
     )
     |> Repo.all()
-  end
-
-  def get_workflows_stats(%Project{id: project_id}) do
-    from(w in Workflow,
-      preload: [:triggers],
-      where: w.project_id == ^project_id,
-      order_by: [asc: w.name]
-    )
-    |> Repo.all()
-    |> Enum.map(fn workflow ->
-      last_workorder = get_last_workorder(workflow)
-      workorders_count = count_workorders(workflow)
-
-      Map.merge(workflow, %{
-        last_workorder: last_workorder,
-        workorders_count: workorders_count
-      })
-    end)
-  end
-
-  def get_last_workorder(%Workflow{id: workflow_id}) do
-    thirty_days_ago = DateTime.utc_now() |> DateTime.add(-30 * 24 * 60 * 60)
-
-    from(wo in Lightning.WorkOrder,
-      where: wo.workflow_id == ^workflow_id,
-      where: wo.inserted_at > ^thirty_days_ago,
-      where: wo.state not in [:pending, :running],
-      order_by: [desc: wo.inserted_at],
-      select: %{state: wo.state, updated_at: wo.inserted_at}
-    )
-    |> limit(1)
-    |> Repo.one()
-  end
-
-  def count_workorders(%Workflow{id: workflow_id}) do
-    thirty_days_ago = DateTime.utc_now() |> DateTime.add(-30 * 24 * 60 * 60)
-
-    from(wo in Lightning.WorkOrder,
-      where: wo.workflow_id == ^workflow_id,
-      where: wo.inserted_at > ^thirty_days_ago,
-      select: wo.state
-    )
-    |> Repo.all()
-    |> Enum.group_by(fn state ->
-      cond do
-        state == :success ->
-          :success
-
-        state in [:pending, :running] ->
-          :unfinished
-
-        true ->
-          :failed
-      end
-    end)
-    |> Map.new(fn {state, list} -> {state, length(list)} end)
-  end
-
-  def count_runs(%Workflow{id: workflow_id}) do
-    thirty_days_ago = DateTime.utc_now() |> DateTime.add(-30 * 24 * 60 * 60)
-
-    from(r in Run,
-      join: j in assoc(r, :job),
-      join: wf in assoc(j, :workflow),
-      where: wf.id == ^workflow_id,
-      where: r.inserted_at > ^thirty_days_ago,
-      select: %{
-        exit_reason: r.exit_reason
-      }
-    )
-    |> Repo.all()
-    |> Enum.group_by(fn %{exit_reason: exit_reason} ->
-      if exit_reason == :success do
-        :success
-      else
-        :failed
-      end
-    end)
-    |> Enum.map(fn {state, list} -> {state, length(list)} end)
   end
 
   @spec to_project_space([Workflow.t()]) :: %{}

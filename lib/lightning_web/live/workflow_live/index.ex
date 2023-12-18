@@ -7,7 +7,7 @@ defmodule LightningWeb.WorkflowLive.Index do
   alias Lightning.Workflows
   alias Lightning.Policies.{Permissions, ProjectUsers}
   alias LightningWeb.WorkflowLive.NewWorkflowForm
-  alias Lightning.DashboardMetrics
+  alias Lightning.DashboardStats
 
   import LightningWeb.WorkflowLive.Components
 
@@ -31,7 +31,7 @@ defmodule LightningWeb.WorkflowLive.Index do
           <.workflow_list
             can_create_workflow={@can_create_workflow}
             can_delete_workflow={@can_delete_workflow}
-            workflows={@workflows}
+            workflows_stats={@workflows_stats}
             project={@project}
           />
           <.create_workflow_modal form={@form} />
@@ -77,14 +77,14 @@ defmodule LightningWeb.WorkflowLive.Index do
 
   defp apply_action(socket, :index, _params) do
     %{project: project} = socket.assigns
-    workflows = Workflows.get_workflows_stats(project)
+    workflows_stats = DashboardStats.get_stats_per_workflow(project)
 
     socket
     |> assign(
       active_menu_item: :overview,
       page_title: "Dashboard",
-      metrics: DashboardMetrics.get_metrics(project, workflows),
-      workflows: workflows
+      metrics: DashboardStats.aggregate_project_metrics(workflows_stats),
+      workflows_stats: workflows_stats
     )
   end
 
