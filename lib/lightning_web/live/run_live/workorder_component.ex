@@ -34,13 +34,14 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
     work_order_inserted_at = Calendar.strftime(work_order.inserted_at, "%c %Z")
     workflow_name = work_order.workflow.name || "Untitled"
 
-    assign_details(
-      socket,
-      work_order,
-      last_run,
-      last_run_finished_at,
-      work_order_inserted_at,
-      workflow_name
+    socket
+    |> assign(
+      work_order: work_order,
+      attempts: work_order.attempts,
+      last_run: last_run,
+      last_run_finished_at: last_run_finished_at,
+      work_order_inserted_at: work_order_inserted_at,
+      workflow_name: workflow_name
     )
   end
 
@@ -61,25 +62,6 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
       _ ->
         nil
     end
-  end
-
-  defp assign_details(
-         socket,
-         work_order,
-         last_run,
-         last_run_finished_at,
-         work_order_inserted_at,
-         workflow_name
-       ) do
-    socket
-    |> assign(
-      work_order: work_order,
-      attempts: work_order.attempts,
-      last_run: last_run,
-      last_run_finished_at: last_run_finished_at,
-      work_order_inserted_at: work_order_inserted_at,
-      workflow_name: workflow_name
-    )
   end
 
   @impl true
@@ -156,22 +138,24 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
                 {if @entry_selected, do: [checked: "checked"], else: []}
               />
             </form>
-            <button
-              id={"toggle_details_for_#{@work_order.id}"}
-              class="w-auto rounded-full p-3 hover:bg-gray-100"
-              phx-click="toggle_details"
-              phx-target={@myself}
-            >
-              <%= if get_last_run(@work_order) do %>
+            <%= if @work_order.attempts !== [] do %>
+              <button
+                id={"toggle_details_for_#{@work_order.id}"}
+                class="w-auto rounded-full p-3 hover:bg-gray-100"
+                phx-click="toggle_details"
+                phx-target={@myself}
+              >
                 <%= if @show_details do %>
                   <Heroicons.chevron_up outline class="h-4 w-4 rounded-lg" />
                 <% else %>
                   <Heroicons.chevron_down outline class="h-4 w-4 rounded-lg" />
                 <% end %>
-              <% else %>
+              </button>
+            <% else %>
+              <span class="w-auto p-3">
                 <Heroicons.minus outline class="h-4 w-4 rounded-lg" />
-              <% end %>
-            </button>
+              </span>
+            <% end %>
 
             <div class="ml-3 py-2">
               <h1 class={"text-sm mb-1 #{unless @show_details, do: "truncate"}"}>

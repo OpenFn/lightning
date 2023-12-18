@@ -16,6 +16,41 @@ defmodule LightningWeb.RunWorkOrderTest do
   setup :register_and_log_in_user
   setup :create_project_for_current_user
 
+  defp setup_work_order(project, job) do
+    dataclip = insert(:dataclip)
+    workflow = insert(:simple_workflow, project: project)
+
+    work_order =
+      insert(:workorder, workflow: workflow, dataclip: dataclip)
+      |> with_attempt(
+        starting_job: job,
+        dataclip: dataclip,
+        runs: [
+          %{
+            job: job,
+            started_at: build(:timestamp),
+            finished_at: nil,
+            exit_reason: nil,
+            input_dataclip: dataclip
+          }
+        ]
+      )
+
+    {work_order, dataclip}
+  end
+
+  defp assert_work_order_runs(work_order, expected_count) do
+    assert length(work_order.attempts) === expected_count
+
+    runs_count =
+      work_order.attempts
+      |> Enum.map(&Map.get(&1, :runs, []))
+      |> Enum.flat_map(& &1)
+      |> length()
+
+    assert runs_count === expected_count
+  end
+
   describe "Index" do
     test "only users with MFA enabled can access workorders for a project with MFA requirement",
          %{
@@ -47,33 +82,29 @@ defmodule LightningWeb.RunWorkOrderTest do
       end)
     end
 
-    test "WorkOrderComponent", %{
+    test "WorkOrderComponent renders correctly with valid data", %{
       project: project
     } do
-      %{jobs: [job]} = workflow = insert(:simple_workflow, project: project)
+      %{jobs: [job]} = insert(:simple_workflow, project: project)
+      {work_order, _dataclip} = setup_work_order(project, job)
 
-      dataclip = insert(:dataclip)
+      assert_work_order_runs(work_order, 1)
 
-      work_order =
-        insert(:workorder, workflow: workflow, dataclip: dataclip)
-        |> with_attempt(
-          starting_job: job,
-          dataclip: dataclip,
-          runs: [
-            %{
-              job: job,
-              started_at: build(:timestamp),
-              finished_at: nil,
-              exit_reason: nil,
-              input_dataclip: dataclip
-            }
-          ]
+      rendered =
+        render_component(LightningWeb.RunLive.WorkOrderComponent,
+          id: work_order.id,
+          work_order: work_order
         )
 
-      assert render_component(LightningWeb.RunLive.WorkOrderComponent,
-               id: work_order.id,
-               work_order: work_order
-             ) =~ work_order.dataclip_id
+      assert rendered =~ work_order.dataclip_id
+      assert rendered =~ "toggle_details_for_#{work_order.id}"
+    end
+
+    test "WorkOrderComponent remains stable when associated jobs are deleted", %{
+      project: project
+    } do
+      %{jobs: [job]} = insert(:simple_workflow, project: project)
+      {work_order, _dataclip} = setup_work_order(project, job)
 
       Lightning.Repo.delete!(job)
 
@@ -81,10 +112,16 @@ defmodule LightningWeb.RunWorkOrderTest do
         Lightning.Repo.reload!(work_order)
         |> Lightning.Repo.preload([:attempts, :workflow])
 
-      assert render_component(LightningWeb.RunLive.WorkOrderComponent,
-               id: work_order.id,
-               work_order: work_order
-             ) =~ work_order.dataclip_id
+      assert_work_order_runs(work_order, 0)
+
+      rendered =
+        render_component(LightningWeb.RunLive.WorkOrderComponent,
+          id: work_order.id,
+          work_order: work_order
+        )
+
+      assert rendered =~ work_order.dataclip_id
+      refute rendered =~ "toggle_details_for_#{work_order.id}"
     end
 
     test "lists all workorders", %{
