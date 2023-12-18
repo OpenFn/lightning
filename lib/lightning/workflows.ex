@@ -105,117 +105,92 @@ defmodule Lightning.Workflows do
   """
   @spec get_workflows_for(Project.t()) :: [Workflow.t()]
   def get_workflows_for(%Project{} = project) do
-    get_workflows_for_query(project) |> Repo.all()
-  end
-
-  def get_workflows_for_query(%Project{} = project) do
-    thirty_days_ago = DateTime.utc_now() |> DateTime.add(-30 * 24 * 60 * 60)
-    failed_states = [:failed, :crashed, :cancelled, :killed, :exception, :lost]
-
-    failed_work_orders =
-      from wo in Lightning.WorkOrder,
-        where: wo.inserted_at > ^thirty_days_ago,
-        where: wo.state in ^failed_states,
-        group_by: wo.workflow_id,
-        select: %{
-          workflow_id: wo.workflow_id,
-          count: count(wo.id)
-        }
-
-    successful_runs =
-      from r in Run,
-        join: j in assoc(r, :job),
-        join: wf in assoc(j, :workflow),
-        where: wf.project_id == ^project.id,
-        group_by: j.workflow_id,
-        select: %{
-          workflow_id: j.workflow_id,
-          total_runs: count(r.id),
-          successful_runs:
-            count(
-              fragment(
-                "CASE WHEN ? = 'success' THEN 1 ELSE NULL END",
-                r.exit_reason
-              )
-            ),
-          success_percentage:
-            fragment(
-              "ROUND(100.0 * COUNT(CASE WHEN ? = 'success' THEN 1 ELSE NULL END) / NULLIF(COUNT(*), 0), 2)",
-              r.exit_reason
-            ),
-          last_failed_run:
-            max(
-              fragment(
-                "CASE WHEN ? NOT IN ('success', 'pending', 'running') THEN ? ELSE NULL END",
-                r.exit_reason,
-                r.inserted_at
-              )
-            )
-        }
-
-    last_work_order =
-      from wo in Lightning.WorkOrder,
-        join: w in assoc(wo, :workflow),
-        where: w.project_id == ^project.id,
-        group_by: [w.id, wo.state],
-        order_by: [desc: max(wo.inserted_at)],
-        select: %{
-          workflow_id: w.id,
-          state: wo.state,
-          max_inserted_at: max(wo.inserted_at)
-        }
-
-    work_order_count =
-      from wo in Lightning.WorkOrder,
-        where: wo.inserted_at > ^thirty_days_ago,
-        where: wo.state not in [:pending, :running],
-        group_by: wo.workflow_id,
-        select: %{workflow_id: wo.workflow_id, count: count(wo.id)}
-
     from(w in Workflow,
       preload: [:triggers, :edges, jobs: [:credential, :workflow]],
-      left_join: lwo in subquery(last_work_order),
-      on: lwo.workflow_id == w.id,
-      left_join: wc in subquery(work_order_count),
-      on: wc.workflow_id == w.id,
-      left_join: sr in subquery(successful_runs),
-      on: sr.workflow_id == w.id,
-      left_join: fwo in subquery(failed_work_orders),
-      on: fwo.workflow_id == w.id,
       where: is_nil(w.deleted_at) and w.project_id == ^project.id,
-      order_by: [asc: w.name],
-      select: w,
-      select_merge: %{
-        aggregates: %{
-          last_work_order: %{state: lwo.state, date_time: lwo.max_inserted_at},
-          total_work_orders: %{
-            count: coalesce(wc.count, 0),
-            total_runs: coalesce(sr.total_runs, 0),
-            success_percentage: coalesce(sr.success_percentage, 0.0)
-          },
-          failed_work_order: %{
-            count: coalesce(fwo.count, 0),
-            last_failed_run: sr.last_failed_run
-          }
-        }
-      }
+      order_by: [asc: w.name]
     )
+    |> Repo.all()
   end
 
-  # def get_workflows_for_query(%Project{} = project) do
-  #   from(w in Workflow,
-  #     preload: [:triggers, :edges, jobs: [:credential, :workflow]],
-  #     where: is_nil(w.deleted_at) and w.project_id == ^project.id,
-  #     order_by: [asc: w.name]
-  #   )
-  # end
+  def get_workflows_stats(%Project{id: project_id}) do
+    from(w in Workflow,
+      preload: [:triggers],
+      where: w.project_id == ^project_id,
+      order_by: [asc: w.name]
+    )
+    |> Repo.all()
+    |> Enum.map(fn workflow ->
+      last_workorder = get_last_workorder(workflow)
+      workorders_count = count_workorders(workflow)
 
-  # def count_workorder_for_workflow do
-  #   work_order_count =
-  #     from wo in WorkOrder,
-  #       group_by: wo.workflow_id,
-  #       select: {wo.workflow_id, count(wo.id)}
-  # end
+      Map.merge(workflow, %{
+        last_workorder: last_workorder,
+        workorders_count: workorders_count
+      })
+    end)
+  end
+
+  def get_last_workorder(%Workflow{id: workflow_id}) do
+    thirty_days_ago = DateTime.utc_now() |> DateTime.add(-30 * 24 * 60 * 60)
+
+    from(wo in Lightning.WorkOrder,
+      where: wo.workflow_id == ^workflow_id,
+      where: wo.inserted_at > ^thirty_days_ago,
+      where: wo.state not in [:pending, :running],
+      order_by: [desc: wo.inserted_at],
+      select: %{state: wo.state, updated_at: wo.inserted_at}
+    )
+    |> limit(1)
+    |> Repo.one()
+  end
+
+  def count_workorders(%Workflow{id: workflow_id}) do
+    thirty_days_ago = DateTime.utc_now() |> DateTime.add(-30 * 24 * 60 * 60)
+
+    from(wo in Lightning.WorkOrder,
+      where: wo.workflow_id == ^workflow_id,
+      where: wo.inserted_at > ^thirty_days_ago,
+      select: wo.state
+    )
+    |> Repo.all()
+    |> Enum.group_by(fn state ->
+      cond do
+        state == :success ->
+          :success
+
+        state in [:pending, :running] ->
+          :unfinished
+
+        true ->
+          :failed
+      end
+    end)
+    |> Map.new(fn {state, list} -> {state, length(list)} end)
+  end
+
+  def count_runs(%Workflow{id: workflow_id}) do
+    thirty_days_ago = DateTime.utc_now() |> DateTime.add(-30 * 24 * 60 * 60)
+
+    from(r in Run,
+      join: j in assoc(r, :job),
+      join: wf in assoc(j, :workflow),
+      where: wf.id == ^workflow_id,
+      where: r.inserted_at > ^thirty_days_ago,
+      select: %{
+        exit_reason: r.exit_reason
+      }
+    )
+    |> Repo.all()
+    |> Enum.group_by(fn %{exit_reason: exit_reason} ->
+      if exit_reason == :success do
+        :success
+      else
+        :failed
+      end
+    end)
+    |> Enum.map(fn {state, list} -> {state, length(list)} end)
+  end
 
   @spec to_project_space([Workflow.t()]) :: %{}
   def to_project_space(workflows) when is_list(workflows) do

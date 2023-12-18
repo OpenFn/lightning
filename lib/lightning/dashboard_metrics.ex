@@ -1,44 +1,47 @@
 defmodule Lightning.DashboardMetrics do
+  @moduledoc false
+
+  alias Lightning.Projects.Project
   alias Lightning.Invocation.Run
   alias Lightning.Repo
 
-  alias Lightning.WorkOrder
   import Ecto.Query
 
-  def get_metrics(project_id) do
+  def get_metrics(%Project{id: project_id}, workflows) do
     %{
-      work_order_metrics: get_work_order_metrics(project_id),
+      work_order_metrics: get_work_order_metrics(workflows),
       run_metrics: get_run_metrics(project_id)
     }
   end
 
-  def get_work_order_metrics(project_id) do
-    thirty_days_ago = DateTime.utc_now() |> DateTime.add(-30 * 86400, :second)
-    failed_states = [:failed, :crashed, :cancelled, :killed, :exception, :lost]
+  defp get_work_order_metrics(workflows) do
+    Enum.reduce(workflows, %{total: 0, failed: 0}, fn %{
+                                                        workorders_count:
+                                                          workorders_count
+                                                      },
+                                                      %{
+                                                        total: acc_total,
+                                                        failed: acc_failed
+                                                      } ->
+      success = Map.get(workorders_count, :success, 0)
+      failed = Map.get(workorders_count, :failed, 0)
+      unfinished = Map.get(workorders_count, :unfinished, 0)
 
-    query =
-      from(
-        wo in WorkOrder,
-        join: wf in assoc(wo, :workflow),
-        where: wf.project_id == ^project_id,
-        where: wo.inserted_at > ^thirty_days_ago,
-        group_by: wf.project_id,
-        select: %{
-          total: count(wo.id),
-          failed: count(wo.id) |> filter(wo.state in ^failed_states),
-          failure_percentage:
-            fragment(
-              "ROUND(100.0 * ? / NULLIF(?, 0), 2)",
-              count(wo.id) |> filter(wo.state in ^failed_states),
-              count(wo.id)
-            )
-        }
-      )
+      total = success + failed + unfinished
 
-    Repo.one(query) || %{total: 0, failed: 0, failure_percentage: 0.0}
+      %{
+        total: acc_total + total,
+        failed: acc_failed + failed
+      }
+    end)
+    |> then(fn %{total: total, failed: failed} = map ->
+      failure_rate = if total > 0, do: failed / total * 100, else: 0.0
+
+      Map.put(map, :failure_percentage, failure_rate)
+    end)
   end
 
-  def get_run_metrics(project_id) do
+  defp get_run_metrics(project_id) do
     query =
       from(
         r in Run,

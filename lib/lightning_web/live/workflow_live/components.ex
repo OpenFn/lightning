@@ -128,9 +128,7 @@ defmodule LightningWeb.WorkflowLive.Components do
                 </.link>
               </div>
               <div class="text-gray-700 text-xs">
-                Latest failure <%= workflow.aggregates[:failed_work_order][
-                  :last_failed_run
-                ]
+                Latest failure <%= DateTime.utc_now()
                 |> Timex.Format.DateTime.Formatters.Relative.format("{relative}")
                 |> elem(1) %>
               </div>
@@ -937,6 +935,9 @@ defmodule LightningWeb.WorkflowLive.Components do
     </.modal>
     """
   end
+
+  attr :metrics, :map, required: true
+  attr :project, :map, required: true
 
   def workflow_metrics(assigns) do
     assigns =

@@ -76,12 +76,15 @@ defmodule LightningWeb.WorkflowLive.Index do
   end
 
   defp apply_action(socket, :index, _params) do
+    %{project: project} = socket.assigns
+    workflows = Workflows.get_workflows_stats(project)
+
     socket
     |> assign(
       active_menu_item: :overview,
       page_title: "Dashboard",
-      metrics: DashboardMetrics.get_metrics(socket.assigns.project.id),
-      workflows: Workflows.get_workflows_for(socket.assigns.project)
+      metrics: DashboardMetrics.get_metrics(project, workflows),
+      workflows: workflows
     )
   end
 
