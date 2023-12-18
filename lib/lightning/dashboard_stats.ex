@@ -9,9 +9,13 @@ defmodule Lightning.DashboardStats do
   import Ecto.Query
 
   defmodule WorkflowStats do
-    defstruct last_workorder: nil,
+    defstruct last_workorder: %{state: nil, updated_at: nil},
+              failed_workorders_count: 0,
               grouped_runs_count: %{},
               grouped_workorders_count: %{},
+              runs_count: 0,
+              runs_success_percentage: 0.0,
+              workorders_count: 0,
               workflow: %Workflow{}
   end
 
@@ -33,16 +37,35 @@ defmodule Lightning.DashboardStats do
   def get_stats_per_workflow(%Project{id: project_id}) do
     from(w in Workflow,
       preload: [:triggers],
-      where: w.project_id == ^project_id,
+      where: not is_nil(w.deleted_at) and w.project_id == ^project_id,
       order_by: [asc: w.name]
     )
     |> Repo.all()
     |> Enum.map(fn workflow ->
+      %{failed: failed_wo_count} =
+        grouped_workorders_count = count_workorders(workflow)
+
+      %{success: success_runs_count} = grouped_runs_count = count_runs(workflow)
+
+      runs_count =
+        grouped_runs_count
+        |> Enum.map(fn {_key, count} -> count end)
+        |> Enum.sum()
+
+      workorders_count =
+        grouped_workorders_count
+        |> Enum.map(fn {_key, count} -> count end)
+        |> Enum.sum()
+
       %WorkflowStats{
         workflow: workflow,
         last_workorder: get_last_workorder(workflow),
-        grouped_runs_count: count_runs(workflow),
-        grouped_workorders_count: count_workorders(workflow)
+        failed_workorders_count: failed_wo_count,
+        grouped_runs_count: grouped_runs_count,
+        grouped_workorders_count: grouped_workorders_count,
+        runs_count: runs_count,
+        runs_success_percentage: success_runs_count * 100 / runs_count,
+        workorders_count: workorders_count
       }
     end)
   end
@@ -89,7 +112,9 @@ defmodule Lightning.DashboardStats do
           :failed
       end
     end)
-    |> Map.new(fn {state, list} -> {state, length(list)} end)
+    |> Enum.into(%{success: 0, failed: 0, unfinished: 0}, fn {state, list} ->
+      {state, length(list)}
+    end)
   end
 
   defp count_runs(%Workflow{id: workflow_id}) do
@@ -112,22 +137,25 @@ defmodule Lightning.DashboardStats do
         true -> :failed
       end
     end)
-    |> Map.new(fn {state, list} -> {state, length(list)} end)
+    |> Enum.into(%{success: 0, failed: 0, pending: 0}, fn {state, list} ->
+      {state, length(list)}
+    end)
   end
 
   defp aggregate_work_order_metrics(workflows) do
     Enum.reduce(workflows, %{total: 0, failed: 0}, fn %{
                                                         grouped_workorders_count:
-                                                          workorders_count
+                                                          %{
+                                                            success: success,
+                                                            failed: failed,
+                                                            unfinished:
+                                                              unfinished
+                                                          }
                                                       },
                                                       %{
                                                         total: acc_total,
                                                         failed: acc_failed
                                                       } ->
-      success = Map.get(workorders_count, :success, 0)
-      failed = Map.get(workorders_count, :failed, 0)
-      unfinished = Map.get(workorders_count, :unfinished, 0)
-
       total = success + failed + unfinished
 
       %{
@@ -145,7 +173,14 @@ defmodule Lightning.DashboardStats do
   defp aggregate_run_metrics(workflows) do
     Enum.reduce(workflows, %{success: 0, failed: 0, pending: 0}, fn %{
                                                                       grouped_runs_count:
-                                                                        runs_count
+                                                                        %{
+                                                                          success:
+                                                                            success,
+                                                                          failed:
+                                                                            failed,
+                                                                          pending:
+                                                                            pending
+                                                                        }
                                                                     },
                                                                     %{
                                                                       success:
@@ -155,10 +190,6 @@ defmodule Lightning.DashboardStats do
                                                                       pending:
                                                                         acc_pending
                                                                     } ->
-      success = Map.get(runs_count, :success, 0)
-      failed = Map.get(runs_count, :failed, 0)
-      pending = Map.get(runs_count, :pending, 0)
-
       %{
         success: acc_success + success,
         failed: acc_failed + failed,
