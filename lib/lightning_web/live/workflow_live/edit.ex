@@ -114,10 +114,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
                     class="w-5 h-5 place-self-center text-gray-300"
                   />
                   <div class="inline-flex rounded-md shadow-sm">
-                    <%!-- TODO: pass RUN id in here --%>
-                    <%!-- TODO: logic -> only allow retry if selected_dataclip == run.input_dataclip --%>
-                    <%= if @follow_attempt_id do %>
-                      <%!-- <.button
+                    <%= if @run && @run.input_dataclip_id == @manual_run_form[:dataclip_id].value do %>
+                      <.button
                         phx-click="rerun"
                         phx-value-attempt_id={@follow_attempt_id}
                         phx-value-run_id={@run.id}
@@ -130,7 +128,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
                       >
                         <.icon name="hero-arrow-path-mini" class="w-4 h-4" />
                         Retry from here
-                      </.button> --%>
+                      </.button>
                       <div class="relative -ml-px block">
                         <.button
                           type="button"
@@ -507,7 +505,14 @@ defmodule LightningWeb.WorkflowLive.Edit do
           can_edit_job:
             Permissions.can?(ProjectUsers, :edit_job, current_user, project_user),
           can_run_job:
-            Permissions.can?(ProjectUsers, :run_job, current_user, project_user)
+            Permissions.can?(ProjectUsers, :run_job, current_user, project_user),
+          can_rerun_job:
+            Permissions.can?(
+              ProjectUsers,
+              :rerun_job,
+              current_user,
+              project_user
+            )
         )
 
       {:error, _} ->
@@ -539,7 +544,9 @@ defmodule LightningWeb.WorkflowLive.Edit do
       can_edit_job:
         Permissions.can?(ProjectUsers, :edit_job, current_user, project_user),
       can_run_job:
-        Permissions.can?(ProjectUsers, :run_job, current_user, project_user)
+        Permissions.can?(ProjectUsers, :run_job, current_user, project_user),
+      can_rerun_job:
+        Permissions.can?(ProjectUsers, :rerun_job, current_user, project_user)
     )
   end
 
@@ -552,6 +559,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
        active_menu_item: :overview,
        expanded_job: nil,
        follow_attempt_id: nil,
+       run: nil,
        manual_run_form: nil,
        page_title: "",
        selected_edge: nil,
@@ -749,10 +757,9 @@ defmodule LightningWeb.WorkflowLive.Edit do
     {:noreply, socket |> assign_manual_run_form(changeset)}
   end
 
-  @doc """
-  The retry_from_run event is for creating a new attempt for an existing work
-  order, just like clicking "rerun from here" on the history page.
-  """
+  # The retry_from_run event is for creating a new attempt for an existing work
+  # order, just like clicking "rerun from here" on the history page.
+
   @impl true
   def handle_event(
         "rerun",
@@ -760,11 +767,12 @@ defmodule LightningWeb.WorkflowLive.Edit do
         socket
       ) do
     if socket.assigns.can_rerun_job do
-      WorkOrders.retry(attempt_id, run_id,
-        created_by: socket.assigns.current_user
-      )
+      {:ok, attempt} =
+        WorkOrders.retry(attempt_id, run_id,
+          created_by: socket.assigns.current_user
+        )
 
-      {:noreply, socket}
+      {:noreply, socket |> follow_attempt(attempt)}
     else
       {:noreply,
        socket
@@ -772,10 +780,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
     end
   end
 
-  @doc """
-  The manual_run_submit event is for create a new work order from a dataclip and
-  a job.
-  """
+  # The manual_run_submit event is for create a new work order from a dataclip and
+  # a job.
   def handle_event("manual_run_submit", %{"manual" => params}, socket) do
     %{
       project: project,
@@ -874,8 +880,16 @@ defmodule LightningWeb.WorkflowLive.Edit do
         selectable_dataclips =
           Invocation.list_dataclips_for_job(%Job{id: job.id})
 
+        run =
+          assigns[:follow_attempt_id] &&
+            Invocation.get_run_for_attempt_and_job(
+              assigns[:follow_attempt_id],
+              job.id
+            )
+
         socket
         |> assign_manual_run_form(changeset)
+        |> assign(run: run)
         |> assign(
           selectable_dataclips:
             maybe_add_selected_dataclip(selectable_dataclips, dataclip)

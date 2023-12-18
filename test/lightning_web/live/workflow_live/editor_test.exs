@@ -398,7 +398,31 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
         )
 
       # insert 3 new dataclips
-      insert_list(3, :dataclip, project: project)
+      dataclips = insert_list(3, :dataclip, project: project)
+
+      # associate dataclips with job 2
+      for dataclip <- dataclips do
+        insert(:workorder,
+          workflow: workflow,
+          dataclip: dataclip,
+          attempts: [
+            build(:attempt,
+              dataclip: dataclip,
+              starting_job: job_2,
+              runs: [
+                build(:run,
+                  job: job_2,
+                  input_dataclip: dataclip,
+                  output_dataclip: nil,
+                  started_at: build(:timestamp),
+                  finished_at: nil,
+                  exit_reason: nil
+                )
+              ]
+            )
+          ]
+        )
+      end
 
       {:ok, view, _html} =
         live(
@@ -422,6 +446,125 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
         )
 
       assert render(element) =~ "selected"
+    end
+
+    test "users can retry a workorder from a followed attempt",
+         %{
+           conn: conn,
+           project: project,
+           workflow: %{jobs: [job_1, job_2 | _rest]} = workflow
+         } do
+      input_dataclip = insert(:dataclip, project: project, type: :http_request)
+
+      output_dataclip =
+        insert(:dataclip,
+          project: project,
+          type: :run_result,
+          body: %{"val" => Ecto.UUID.generate()}
+        )
+
+      %{attempts: [attempt]} =
+        workorder =
+        insert(:workorder,
+          workflow: workflow,
+          dataclip: input_dataclip,
+          attempts: [
+            build(:attempt,
+              dataclip: input_dataclip,
+              starting_job: job_1,
+              runs: [
+                build(:run,
+                  job: job_1,
+                  input_dataclip: input_dataclip,
+                  output_dataclip: output_dataclip,
+                  started_at: build(:timestamp),
+                  finished_at: build(:timestamp),
+                  exit_reason: "success"
+                ),
+                build(:run,
+                  job: job_2,
+                  input_dataclip: output_dataclip,
+                  output_dataclip:
+                    build(:dataclip,
+                      type: :run_result,
+                      body: %{}
+                    ),
+                  started_at: build(:timestamp),
+                  finished_at: build(:timestamp),
+                  exit_reason: "success"
+                )
+              ]
+            )
+          ]
+        )
+
+      # insert 3 new dataclips
+      dataclips = insert_list(3, :dataclip, project: project)
+
+      # associate dataclips with job 2
+      for dataclip <- dataclips do
+        insert(:workorder,
+          workflow: workflow,
+          dataclip: dataclip,
+          attempts: [
+            build(:attempt,
+              dataclip: dataclip,
+              starting_job: job_2,
+              runs: [
+                build(:run,
+                  job: job_2,
+                  input_dataclip: dataclip,
+                  output_dataclip: nil,
+                  started_at: build(:timestamp),
+                  finished_at: nil,
+                  exit_reason: nil
+                )
+              ]
+            )
+          ]
+        )
+      end
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project}/w/#{workflow}?#{[s: job_2.id, a: attempt.id, m: "expand"]}"
+        )
+
+      # user gets option to rerun
+      assert has_element?(view, "button", "Retry from here")
+      assert has_element?(view, "button", "Create New Work Order")
+
+      # if we choose a different dataclip, the retry button disappears
+      view
+      |> form("#manual_run_form", manual: %{dataclip_id: hd(dataclips).id})
+      |> render_change()
+
+      refute has_element?(view, "button", "Retry from here")
+      assert has_element?(view, "button", "Create New Work Order")
+
+      # if we choose the run input dataclip, the retry button becomes available
+      run = Enum.find(attempt.runs, fn run -> run.job_id == job_2.id end)
+
+      view
+      |> form("#manual_run_form", manual: %{dataclip_id: run.input_dataclip_id})
+      |> render_change()
+
+      assert has_element?(view, "button", "Retry from here")
+      assert has_element?(view, "button", "Create New Work Order")
+
+      view |> element("button", "Retry from here") |> render_click()
+
+      all_attempts =
+        Lightning.Repo.preload(workorder, [:attempts], force: true).attempts
+
+      assert Enum.count(all_attempts) == 2
+      [new_attempt] = Enum.reject(all_attempts, fn a -> a.id == attempt.id end)
+
+      html = render(view)
+
+      refute html =~ attempt.id
+      assert html =~ new_attempt.id
     end
   end
 
