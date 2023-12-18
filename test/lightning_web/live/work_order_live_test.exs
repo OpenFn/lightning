@@ -84,7 +84,7 @@ defmodule LightningWeb.RunWorkOrderTest do
   end
 
   defp format_timestamp(timestamp) do
-    Timex.format!(timestamp, "%d/%b/%y, %H:%M:%S", :strftime)
+    Timex.format!(timestamp, "%d/%b/%y, %H:%M", :strftime)
   end
 
   defp assert_work_order_runs(work_order, expected_count) do
