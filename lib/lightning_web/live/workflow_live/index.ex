@@ -78,7 +78,11 @@ defmodule LightningWeb.WorkflowLive.Index do
 
   defp apply_action(socket, :index, _params) do
     %{project: project} = socket.assigns
-    workflows_stats = DashboardStats.get_stats_per_workflow(project)
+
+    workflows_stats =
+      project
+      |> Workflows.list_project_workflows()
+      |> Enum.map(&DashboardStats.get_workflow_stats/1)
 
     socket
     |> assign(

@@ -1,7 +1,6 @@
 defmodule Lightning.DashboardStats do
   @moduledoc false
 
-  alias Lightning.Projects.Project
   alias Lightning.Invocation.Run
   alias Lightning.Repo
   alias Lightning.Workflows.Workflow
@@ -34,40 +33,32 @@ defmodule Lightning.DashboardStats do
               }
   end
 
-  def get_stats_per_workflow(%Project{id: project_id}) do
-    from(w in Workflow,
-      preload: [:triggers],
-      where: not is_nil(w.deleted_at) and w.project_id == ^project_id,
-      order_by: [asc: w.name]
-    )
-    |> Repo.all()
-    |> Enum.map(fn workflow ->
-      %{failed: failed_wo_count} =
-        grouped_workorders_count = count_workorders(workflow)
+  def get_workflow_stats(%Workflow{} = workflow) do
+    %{failed: failed_wo_count} =
+      grouped_workorders_count = count_workorders(workflow)
 
-      %{success: success_runs_count} = grouped_runs_count = count_runs(workflow)
+    %{success: success_runs_count} = grouped_runs_count = count_runs(workflow)
 
-      runs_count =
-        grouped_runs_count
-        |> Enum.map(fn {_key, count} -> count end)
-        |> Enum.sum()
+    runs_count =
+      grouped_runs_count
+      |> Enum.map(fn {_key, count} -> count end)
+      |> Enum.sum()
 
-      workorders_count =
-        grouped_workorders_count
-        |> Enum.map(fn {_key, count} -> count end)
-        |> Enum.sum()
+    workorders_count =
+      grouped_workorders_count
+      |> Enum.map(fn {_key, count} -> count end)
+      |> Enum.sum()
 
-      %WorkflowStats{
-        workflow: workflow,
-        last_workorder: get_last_workorder(workflow),
-        failed_workorders_count: failed_wo_count,
-        grouped_runs_count: grouped_runs_count,
-        grouped_workorders_count: grouped_workorders_count,
-        runs_count: runs_count,
-        runs_success_percentage: success_runs_count * 100 / runs_count,
-        workorders_count: workorders_count
-      }
-    end)
+    %WorkflowStats{
+      workflow: workflow,
+      last_workorder: get_last_workorder(workflow),
+      failed_workorders_count: failed_wo_count,
+      grouped_runs_count: grouped_runs_count,
+      grouped_workorders_count: grouped_workorders_count,
+      runs_count: runs_count,
+      runs_success_percentage: success_runs_count * 100 / runs_count,
+      workorders_count: workorders_count
+    }
   end
 
   def aggregate_project_metrics(workflows_stats) do
@@ -88,7 +79,8 @@ defmodule Lightning.DashboardStats do
       select: %{state: wo.state, updated_at: wo.inserted_at}
     )
     |> limit(1)
-    |> Repo.one()
+    |> Repo.one() ||
+      %{state: nil, updated_at: nil}
   end
 
   defp count_workorders(%Workflow{id: workflow_id}) do

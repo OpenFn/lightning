@@ -4,6 +4,7 @@ defmodule Lightning.Workflows do
   """
 
   import Ecto.Query
+
   alias Lightning.Repo
   alias Lightning.Projects.Project
   alias Lightning.Workflows.{Edge, Job, Workflow, Trigger, Trigger, Query}
@@ -19,6 +20,24 @@ defmodule Lightning.Workflows do
   """
   def list_workflows do
     Repo.all(Workflow)
+  end
+
+  @doc """
+  Returns the list of workflows of a project.
+
+  ## Examples
+
+      iex> list_project_workflows()
+      [%Workflow{}, ...]
+
+  """
+  def list_project_workflows(%Project{id: project_id}) do
+    from(w in Workflow,
+      preload: [:triggers],
+      where: is_nil(w.deleted_at) and w.project_id == ^project_id,
+      order_by: [asc: w.name]
+    )
+    |> Repo.all()
   end
 
   @doc """
