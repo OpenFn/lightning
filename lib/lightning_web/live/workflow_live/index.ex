@@ -26,18 +26,16 @@ defmodule LightningWeb.WorkflowLive.Index do
           <:title><%= @page_title %></:title>
         </LayoutComponents.header>
       </:header>
-      <div class="relative h-full flex">
-        <LayoutComponents.centered>
-          <DashboardComponents.project_metrics metrics={@metrics} project={@project} />
-          <DashboardComponents.workflow_list
-            can_create_workflow={@can_create_workflow}
-            can_delete_workflow={@can_delete_workflow}
-            workflows_stats={@workflows_stats}
-            project={@project}
-          />
-          <.create_workflow_modal form={@form} />
-        </LayoutComponents.centered>
-      </div>
+      <LayoutComponents.centered>
+        <DashboardComponents.project_metrics metrics={@metrics} project={@project} />
+        <DashboardComponents.workflow_list
+          can_create_workflow={@can_create_workflow}
+          can_delete_workflow={@can_delete_workflow}
+          workflows_stats={@workflows_stats}
+          project={@project}
+        />
+        <.create_workflow_modal form={@form} />
+      </LayoutComponents.centered>
     </LayoutComponents.page_content>
     """
   end
