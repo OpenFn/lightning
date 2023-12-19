@@ -893,8 +893,9 @@ defmodule LightningWeb.WorkflowLive.Edit do
     |> Map.to_list()
     |> then(fn
       [{index, %{"condition_type" => "js_expression"} = map}] ->
-        inputs_edited = Map.keys(map)
-        [edge_edited_inputs: {String.to_integer(index), inputs_edited}]
+        [
+          edge_edit_index: String.to_integer(index)
+        ]
 
       _other ->
         []
@@ -933,16 +934,21 @@ defmodule LightningWeb.WorkflowLive.Edit do
       )
       |> then(fn
         %Ecto.Changeset{changes: %{edges: edges} = changes} = changeset ->
-          {edge_edit_index, edge_edit_inputs} =
-            Keyword.get(opts, :edge_edited_inputs, {nil, []})
+          edge_edit_index = Keyword.get(opts, :edge_edit_index, nil)
 
           cleared_edges =
             edges
             |> Enum.with_index()
             |> Enum.map(fn
-              {%{errors: errors} = edge, index} when index == edge_edit_index ->
+              {%{errors: errors, changes: changes} = edge, index}
+              when index == edge_edit_index ->
+                errors_fields_taken =
+                  if Map.has_key?(changes, :condition_expression),
+                    do: [:condition_label],
+                    else: []
+
                 # ignore errors for inputs that have not been edited
-                %{edge | errors: Keyword.take(errors, edge_edit_inputs)}
+                %{edge | errors: Keyword.take(errors, errors_fields_taken)}
 
               {edge, _index} ->
                 edge
