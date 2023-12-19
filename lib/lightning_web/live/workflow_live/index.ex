@@ -24,6 +24,7 @@ defmodule LightningWeb.WorkflowLive.Index do
       <:header>
         <LayoutComponents.header current_user={@current_user}>
           <:title><%= @page_title %></:title>
+          <:period><small>&nbsp;(last 30 days)</small></:period>
         </LayoutComponents.header>
       </:header>
       <LayoutComponents.centered>
