@@ -49,6 +49,8 @@ defmodule Lightning.DashboardStats do
       |> Enum.map(fn {_key, count} -> count end)
       |> Enum.sum()
 
+    runs_success_percentage = success_runs_count * 100 / runs_count
+
     %WorkflowStats{
       workflow: workflow,
       last_workorder: get_last_workorder(workflow),
@@ -56,7 +58,7 @@ defmodule Lightning.DashboardStats do
       grouped_runs_count: grouped_runs_count,
       grouped_workorders_count: grouped_workorders_count,
       runs_count: runs_count,
-      runs_success_percentage: success_runs_count * 100 / runs_count,
+      runs_success_percentage: round(runs_success_percentage * 100) / 100,
       workorders_count: workorders_count
     }
   end
@@ -69,28 +71,24 @@ defmodule Lightning.DashboardStats do
   end
 
   defp get_last_workorder(%Workflow{id: workflow_id}) do
-    thirty_days_ago = DateTime.utc_now() |> DateTime.add(-30 * 24 * 60 * 60)
-
     from(wo in Lightning.WorkOrder,
       where: wo.workflow_id == ^workflow_id,
-      where: wo.inserted_at > ^thirty_days_ago,
       where: wo.state not in [:pending, :running],
       order_by: [desc: wo.inserted_at],
       select: %{state: wo.state, updated_at: wo.inserted_at}
     )
+    |> filter_days_ago(30)
     |> limit(1)
     |> Repo.one() ||
       %{state: nil, updated_at: nil}
   end
 
   defp count_workorders(%Workflow{id: workflow_id}) do
-    thirty_days_ago = DateTime.utc_now() |> DateTime.add(-30 * 24 * 60 * 60)
-
     from(wo in Lightning.WorkOrder,
       where: wo.workflow_id == ^workflow_id,
-      where: wo.inserted_at > ^thirty_days_ago,
       select: wo.state
     )
+    |> filter_days_ago(30)
     |> Repo.all()
     |> Enum.group_by(fn state ->
       cond do
@@ -110,21 +108,17 @@ defmodule Lightning.DashboardStats do
   end
 
   defp count_runs(%Workflow{id: workflow_id}) do
-    thirty_days_ago = DateTime.utc_now() |> DateTime.add(-30 * 24 * 60 * 60)
-
     from(r in Run,
       join: j in assoc(r, :job),
       join: wf in assoc(j, :workflow),
       where: wf.id == ^workflow_id,
-      where: r.inserted_at > ^thirty_days_ago,
-      select: %{
-        exit_reason: r.exit_reason
-      }
+      select: r.exit_reason
     )
+    |> filter_days_ago(30)
     |> Repo.all()
-    |> Enum.group_by(fn %{exit_reason: exit_reason} ->
+    |> Enum.group_by(fn exit_reason ->
       cond do
-        exit_reason == :success -> :success
+        exit_reason == "success" -> :success
         exit_reason == nil -> :pending
         true -> :failed
       end
@@ -158,7 +152,7 @@ defmodule Lightning.DashboardStats do
     |> then(fn %{total: total, failed: failed} = map ->
       failure_rate = if total > 0, do: failed / total * 100, else: 0.0
 
-      Map.put(map, :failure_percentage, failure_rate)
+      Map.put(map, :failure_percentage, round(failure_rate * 100) / 100)
     end)
   end
 
@@ -190,14 +184,20 @@ defmodule Lightning.DashboardStats do
     end)
     |> then(fn %{success: success, failed: failed, pending: pending} = map ->
       completed = success + failed
-      total = completed + pending
-      success_rate = if success > 0, do: failed / success * 100, else: 0.0
+      success_rate = if success > 0, do: success * 100 / completed, else: 0.0
 
       Map.merge(map, %{
         completed: completed,
-        success_percentage: success_rate,
-        total: total
+        success_percentage: round(success_rate * 100) / 100,
+        total: completed + pending
       })
     end)
+  end
+
+  def filter_days_ago(query, days) do
+    days_ago = DateTime.utc_now() |> DateTime.add(-days * 24 * 60 * 60)
+
+    query
+    |> where([r], r.inserted_at > ^days_ago)
   end
 end
