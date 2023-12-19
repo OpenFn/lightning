@@ -180,6 +180,16 @@ function createKeyCombinationHook(
 }
 
 /**
+ * Function to dispatch a click event on the provided element.
+ *
+ * @param e - The keyboard event triggering the action.
+ * @param el - The HTML element to which the action will be applied.
+ */
+function clickAction(e: KeyboardEvent, el: HTMLElement) {
+  el.dispatchEvent(new Event('click', { bubbles: true, cancelable: true }));
+}
+
+/**
  * Function to dispatch a submit event on the provided element.
  *
  * @param e - The keyboard event triggering the action.
@@ -203,6 +213,8 @@ const isCtrlOrMetaS = (e: KeyboardEvent) =>
   (e.ctrlKey || e.metaKey) && e.key === 's';
 const isCtrlOrMetaEnter = (e: KeyboardEvent) =>
   (e.ctrlKey || e.metaKey) && e.key === 'Enter';
+const isCtrlOrMetaShiftEnter = (e: KeyboardEvent) =>
+  (e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'Enter';
 const isEscape = (e: KeyboardEvent) => e.key === 'Escape';
 
 /**
@@ -216,8 +228,16 @@ export const SaveViaCtrlS = createKeyCombinationHook(
 /**
  * Hook to trigger a save and run action on the job panel when the Ctrl (or Cmd on Mac) + Enter key combination is pressed.
  */
-export const SaveAndRunViaCtrlEnter = createKeyCombinationHook(
+export const RetryViaCtrlShiftEnter = createKeyCombinationHook(
   isCtrlOrMetaEnter,
+  clickAction
+);
+
+/**
+ * Hook to trigger a retry action on the job panel when the Ctrl (or Cmd on Mac) + Shift + Enter key combination is pressed.
+ */
+export const SaveAndRunViaCtrlEnter = createKeyCombinationHook(
+  isCtrlOrMetaShiftEnter,
   submitAction
 );
 

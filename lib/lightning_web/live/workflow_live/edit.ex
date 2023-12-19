@@ -116,6 +116,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
                   <div class="inline-flex rounded-md shadow-sm">
                     <%= if @run && @run.input_dataclip_id == @manual_run_form[:dataclip_id].value do %>
                       <.button
+                        id="retry-attempt"
+                        phx-hook="RetryViaCtrlShiftEnter"
                         phx-click="rerun"
                         phx-value-attempt_id={@follow_attempt_id}
                         phx-value-run_id={@run.id}
