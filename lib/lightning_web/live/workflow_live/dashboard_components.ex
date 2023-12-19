@@ -53,7 +53,7 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
     <.new_table
       id="workflows"
       rows={@workflows}
-      row_class="group hover:bg-indigo-50 hover:border-l-2 hover:border-l-indigo-500"
+      row_class="group hover:bg-indigo-50 hover:border-l-indigo-500"
     >
       <:col :let={workflow} label_class="text-gray-700" label="Name">
         <.workflow_card
