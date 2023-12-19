@@ -9,7 +9,7 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
   def workflow_list(assigns) do
     ~H"""
     <div class="w-full">
-      <div class="mt-10 flex justify-between mb-3">
+      <div class="mt-14 flex justify-between mb-3">
         <h3 class="text-3xl font-bold">
           Workflows
           <span class="text-base font-normal">
@@ -55,7 +55,7 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
       rows={@workflows}
       row_class="group hover:bg-indigo-50 hover:border-l-indigo-500"
     >
-      <:col :let={workflow} label_class="text-gray-700" label="Name">
+      <:col :let={workflow} label_class="ml-3 text-gray-700" label="Name">
         <.workflow_card
           workflow={workflow}
           project={@project}
@@ -69,13 +69,13 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
       >
         <.state_card
           state={workflow.last_workorder.state}
-          time={workflow.last_workorder.updated_at}
+          timestamp={workflow.last_workorder.updated_at}
         />
       </:col>
       <:col
         :let={workflow}
         label_class="text-gray-700 font-medium"
-        label="Work Orders (30 days)"
+        label="Work Orders"
       >
         <div class="ml-2">
           <%= if workflow.workorders_count > 0 do %>
@@ -89,7 +89,7 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
                 <%= workflow.workorders_count %>
               </.link>
             </div>
-            <div class="text-gray-900 text-xs">
+            <div class="text-gray-500 text-xs">
               (<%= workflow.runs_count %> runs,
               <span>
                 <%= workflow.runs_success_percentage %>% success
@@ -112,7 +112,7 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
       <:col
         :let={workflow}
         label_class="text-gray-700 font-medium"
-        label="Work Orders in a failed state (30 days)"
+        label="Work Orders in a failed state"
       >
         <div class="flex justify-between">
           <div class="ml-2">
@@ -127,7 +127,7 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
                   <%= workflow.failed_workorders_count %>
                 </.link>
               </div>
-              <div class="text-gray-700 text-xs">
+              <div class="text-gray-500 text-xs">
                 Latest failure <%= workflow.last_failed_workorder.updated_at
                 |> Timex.Format.DateTime.Formatters.Relative.format!("{relative}") %>
               </div>
@@ -177,23 +177,23 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
       )
 
     ~H"""
-    <div class="flex flex-1 items-center  truncate ">
+    <div class="flex flex-1 items-center truncate">
       <.link
         id={"workflow-card-#{@workflow.id}"}
         navigate={~p"/projects/#{@project.id}/w/#{@workflow.id}"}
         role="button"
       >
-        <div class=" text-sm">
+        <div class="text-sm">
           <div class="flex items-center">
             <span
-              class="flex-shrink truncate text-gray-900 hover:text-gray-600 font-medium"
+              class="flex-shrink truncate text-gray-900 hover:text-gray-600 font-medium ml-3"
               style="max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"
             >
               <%= @workflow.name %>
             </span>
           </div>
           <%= if @trigger_enabled do %>
-            <p class="text-gray-500 text-xs">
+            <p class="text-gray-500 text-xs  ml-3">
               Updated <%= @relative_updated_at %>
             </p>
           <% else %>
@@ -254,28 +254,28 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
       )
 
     ~H"""
-    <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+    <div class="grid gap-12 md:grid-cols-2 lg:grid-cols-4">
       <.metric_card title="Work Orders">
         <:value><%= @metrics.work_order_metrics.total %></:value>
       </.metric_card>
       <.metric_card title="Runs">
         <:value><%= @metrics.run_metrics.total %></:value>
         <:suffix>
-          <span>(<%= @metrics.run_metrics.pending %> pending)</span>
+          <small>(<%= @metrics.run_metrics.pending %> pending)</small>
         </:suffix>
       </.metric_card>
       <.metric_card title="Succesful Runs">
         <:value><%= @metrics.run_metrics.completed %></:value>
         <:suffix>
-          <span>(<%= @metrics.run_metrics.success_percentage %>%)</span>
+          <small>(<%= @metrics.run_metrics.success_percentage %>%)</small>
         </:suffix>
       </.metric_card>
       <.metric_card title="Work Orders in failed state">
         <:value><%= @metrics.work_order_metrics.failed %></:value>
         <:suffix>
-          <span class="mr-10">
+          <small class="mr-10">
             (<%= @metrics.work_order_metrics.failure_percentage %>%)
-          </span>
+          </small>
           <.link
             navigate={~p"/projects/#{@project}/runs?#{%{filters: @filters}}"}
             class="text-indigo-700"
@@ -295,8 +295,8 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
 
   def metric_card(assigns) do
     ~H"""
-    <div class="bg-white shadow rounded-lg py-2 px-4">
-      <h2 class="text-sm font-semibold text-gray-600"><%= @title %></h2>
+    <div class="bg-white shadow rounded-lg py-2 px-6">
+      <h2 class="text-sm font-semibold text-gray-500"><%= @title %></h2>
       <p class="text-2xl font-bold text-gray-800">
         <%= render_slot(@value) %>
         <span class="text-sm font-normal">
@@ -311,9 +311,9 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
     assigns =
       assigns
       |> assign(
-        timestamp:
+        time:
           if !is_nil(assigns.state) do
-            DateTime.to_naive(assigns.time)
+            DateTime.to_naive(assigns.timestamp)
             |> Timex.Format.DateTime.Formatters.Relative.format!("{relative}")
           end
       )
@@ -321,7 +321,7 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
     ~H"""
     <div class="flex flex-col text-center">
       <%= if @state in [:success,:failed] do %>
-        <.status_card state={@state} timestamp={@timestamp} />
+        <.status_card state={@state} time={@time} />
       <% else %>
         <div class="flex items-center gap-x-2">
           <span class="inline-block h-2 w-2 bg-gray-200 rounded-full"></span>
@@ -340,16 +340,16 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
           <span class="inline-block h-2 w-2 bg-green-600 rounded-full"></span>
           <span class="text-green-500 font-medium">Success</span>
         </div>
-        <span class="block text-gray-700 text-left text-xs ml-2">
-          <%= @timestamp %>
+        <span class="block text-gray-700 text-left text-xs ml-4">
+          <%= @time %>
         </span>
       <% else %>
         <div class="flex items-center gap-x-2">
           <span class="inline-block h-2 w-2 bg-red-600 rounded-full"></span>
           <span class="text-red-500 font-medium">Failure</span>
         </div>
-        <span class="block text-gray-700 text-left text-xs ml-2">
-          <%= @timestamp %>
+        <span class="block text-left text-gray-500 text-xs ml-4">
+          <%= @time %>
         </span>
       <% end %>
     </div>
