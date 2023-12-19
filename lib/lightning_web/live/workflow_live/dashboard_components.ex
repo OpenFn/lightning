@@ -9,7 +9,7 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
   def workflow_list(assigns) do
     ~H"""
     <div class="w-full">
-      <div class="mt-9 flex justify-between mb-3">
+      <div class="mt-10 flex justify-between mb-3">
         <h3 class="text-3xl font-bold">
           Workflows
           <span class="text-base font-normal">
@@ -21,7 +21,7 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
           can_create_workflow={@can_create_workflow}
         />
       </div>
-      <.workflow_table
+      <.workflows_table
         workflows_stats={@workflows_stats}
         can_create_workflow={@can_create_workflow}
         can_delete_workflow={@can_delete_workflow}
@@ -31,7 +31,7 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
     """
   end
 
-  def workflow_table(%{workflows_stats: workflows_stats} = assigns) do
+  def workflows_table(%{workflows_stats: workflows_stats} = assigns) do
     assigns =
       assigns
       |> assign(
@@ -128,9 +128,8 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
                 </.link>
               </div>
               <div class="text-gray-700 text-xs">
-                Latest failure <%= DateTime.utc_now()
-                |> Timex.Format.DateTime.Formatters.Relative.format("{relative}")
-                |> elem(1) %>
+                Latest failure <%= workflow.last_failed_workorder.updated_at
+                |> Timex.Format.DateTime.Formatters.Relative.format!("{relative}") %>
               </div>
             <% else %>
               <div class="text-gray-400 text-sm">
@@ -315,8 +314,7 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
         timestamp:
           if !is_nil(assigns.state) do
             DateTime.to_naive(assigns.time)
-            |> Timex.Format.DateTime.Formatters.Relative.format("{relative}")
-            |> elem(1)
+            |> Timex.Format.DateTime.Formatters.Relative.format!("{relative}")
           end
       )
 

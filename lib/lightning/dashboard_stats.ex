@@ -9,6 +9,7 @@ defmodule Lightning.DashboardStats do
 
   defmodule WorkflowStats do
     defstruct last_workorder: %{state: nil, updated_at: nil},
+              last_failed_workorder: %{state: nil, updated_at: nil},
               failed_workorders_count: 0,
               grouped_runs_count: %{},
               grouped_workorders_count: %{},
@@ -51,9 +52,12 @@ defmodule Lightning.DashboardStats do
 
     runs_success_percentage = success_runs_count * 100 / runs_count
 
+    last_workorder = get_last_workorder(workflow)
+
     %WorkflowStats{
       workflow: workflow,
-      last_workorder: get_last_workorder(workflow),
+      last_workorder: last_workorder,
+      last_failed_workorder: get_last_failed_workorder(workflow, last_workorder),
       failed_workorders_count: failed_wo_count,
       grouped_runs_count: grouped_runs_count,
       grouped_workorders_count: grouped_workorders_count,
@@ -70,10 +74,21 @@ defmodule Lightning.DashboardStats do
     }
   end
 
-  defp get_last_workorder(%Workflow{id: workflow_id}) do
+  defp get_last_failed_workorder(workflow, %{state: :success}) do
+    get_last_workorder(workflow, [:pending, :running, :success])
+  end
+
+  defp get_last_failed_workorder(_workflow, %{state: _other} = failed_wo) do
+    failed_wo
+  end
+
+  defp get_last_workorder(
+         %Workflow{id: workflow_id},
+         excluded_states \\ [:pending, :running]
+       ) do
     from(wo in Lightning.WorkOrder,
       where: wo.workflow_id == ^workflow_id,
-      where: wo.state not in [:pending, :running],
+      where: wo.state not in ^excluded_states,
       order_by: [desc: wo.inserted_at],
       select: %{state: wo.state, updated_at: wo.inserted_at}
     )
