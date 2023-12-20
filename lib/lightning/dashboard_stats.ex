@@ -38,7 +38,8 @@ defmodule Lightning.DashboardStats do
     %{failed: failed_wo_count} =
       grouped_workorders_count = count_workorders(workflow)
 
-    %{success: success_runs_count} = grouped_runs_count = count_runs(workflow)
+    %{success: success_runs_count} =
+      grouped_runs_count = count_runs(workflow)
 
     runs_count =
       grouped_runs_count
@@ -50,7 +51,8 @@ defmodule Lightning.DashboardStats do
       |> Enum.map(fn {_key, count} -> count end)
       |> Enum.sum()
 
-    runs_success_percentage = success_runs_count * 100 / runs_count
+    runs_success_percentage =
+      if runs_count == 0, do: 0, else: success_runs_count * 100 / runs_count
 
     last_workorder = get_last_workorder(workflow)
 
