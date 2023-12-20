@@ -296,8 +296,13 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
   def metric_card(assigns) do
     ~H"""
     <div class="bg-white shadow rounded-lg py-2 px-6">
-      <h2 class="text-sm font-semibold text-gray-500"><%= @title %></h2>
-      <p class="text-2xl font-bold text-gray-800">
+      <h2
+        class="text-sm text-gray-500"
+        style="font-weight: 500; font-size: 13px; margin-bottom: 8px;"
+      >
+        <%= @title %>
+      </h2>
+      <p class="text-3xl font-bold text-gray-800">
         <%= render_slot(@value) %>
         <span class="text-sm font-normal">
           <%= render_slot(@suffix) %>
