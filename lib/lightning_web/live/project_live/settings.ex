@@ -368,9 +368,11 @@ defmodule LightningWeb.ProjectLive.Settings do
   end
 
   def handle_event("save_repo", params, socket) do
-    {:ok, _connection} =
+    %{project: project} = socket.assigns
+
+    {:ok, %{github_installation_id: github_installation_id}} =
       VersionControl.add_github_repo_and_branch(
-        socket.assigns.project.id,
+        project.id,
         params["repo"],
         params["branch"]
       )
@@ -383,7 +385,7 @@ defmodule LightningWeb.ProjectLive.Settings do
        project_repo_connection: %{
          "branch" => params["branch"],
          "repo" => params["repo"],
-         "github_installation_id" => params["github_installation_id"]
+         "github_installation_id" => github_installation_id
        }
      )}
   end
