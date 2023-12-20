@@ -166,16 +166,12 @@ defmodule LightningWeb.WorkflowLive.IndexTest do
 
       assert has_workflow_card?(view, workflow)
 
-      assert view
-             |> has_delete_workflow_link?(workflow),
-             "should have a delete link on the page"
+      assert view |> has_delete_workflow_link?(workflow)
 
       assert view |> click_delete_workflow(workflow) =~
-               "Workflow successfully deleted.",
-             "should be able to delete a workflow by sending an event"
+               "Workflow successfully deleted."
 
-      refute has_workflow_card?(view, workflow),
-             "shouldn't have the workflow card on the page"
+      refute has_workflow_card?(view, workflow)
     end
   end
 end
