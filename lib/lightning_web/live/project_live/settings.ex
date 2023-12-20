@@ -11,6 +11,7 @@ defmodule LightningWeb.ProjectLive.Settings do
   alias Lightning.Projects.ProjectUser
   alias Lightning.Policies.Permissions
   alias Lightning.Accounts.User
+  alias Lightning.Projects.Project
   alias Lightning.{Projects, Credentials}
   alias Lightning.WebhookAuthMethods
   alias Lightning.Workflows.WebhookAuthMethod
@@ -23,46 +24,48 @@ defmodule LightningWeb.ProjectLive.Settings do
 
   @impl true
   def mount(_params, _session, socket) do
-    project_users =
-      Projects.get_project_users!(socket.assigns.project.id)
+    %{project: project, current_user: current_user} = socket.assigns
 
-    credentials = Credentials.list_credentials(socket.assigns.project)
-    auth_methods = WebhookAuthMethods.list_for_project(socket.assigns.project)
+    project_users =
+      Projects.get_project_users!(project.id)
+
+    credentials = Credentials.list_credentials(project)
+    auth_methods = WebhookAuthMethods.list_for_project(project)
 
     can_delete_project =
       ProjectUsers
       |> Permissions.can?(
         :delete_project,
-        socket.assigns.current_user,
-        socket.assigns.project
+        current_user,
+        project
       )
 
     can_edit_project_name =
       ProjectUsers
       |> Permissions.can?(
         :edit_project_name,
-        socket.assigns.current_user,
-        socket.assigns.project
+        current_user,
+        project
       )
 
     can_edit_project_description =
       ProjectUsers
       |> Permissions.can?(
         :edit_project_description,
-        socket.assigns.current_user,
-        socket.assigns.project
+        current_user,
+        project
       )
 
     project_user =
       Enum.find(project_users, fn project_user ->
-        project_user.user_id == socket.assigns.current_user.id
+        project_user.user_id == current_user.id
       end)
 
     can_create_webhook_auth_method =
       Permissions.can?(
         ProjectUsers,
         :create_webhook_auth_method,
-        socket.assigns.current_user,
+        current_user,
         project_user
       )
 
@@ -70,7 +73,7 @@ defmodule LightningWeb.ProjectLive.Settings do
       Permissions.can?(
         ProjectUsers,
         :create_project_credential,
-        socket.assigns.current_user,
+        current_user,
         project_user
       )
 
@@ -78,13 +81,12 @@ defmodule LightningWeb.ProjectLive.Settings do
       Permissions.can?(
         ProjectUsers,
         :edit_webhook_auth_method,
-        socket.assigns.current_user,
+        current_user,
         project_user
       )
 
     {show_github_setup, show_repo_setup, show_sync_button,
-     project_repo_connection} =
-      repo_settings(socket)
+     project_repo_connection} = repo_settings(project)
 
     if show_repo_setup and connected?(socket) do
       collect_project_repo_connections(socket.assigns.project.id)
@@ -125,27 +127,23 @@ defmodule LightningWeb.ProjectLive.Settings do
     end
   end
 
-  defp repo_settings(socket) do
-    repo_connection =
-      VersionControl.get_repo_connection(socket.assigns.project.id)
+  defp repo_settings(%Project{id: project_id}) do
+    repo_connection = VersionControl.get_repo_connection(project_id)
 
     project_repo_connection = %{"repo" => nil, "branch" => nil}
 
     # {show_github_setup, show_repo_setup, show_sync_button}
-    repo_settings =
-      case repo_connection do
-        nil ->
-          {true, false, false, project_repo_connection}
+    case repo_connection do
+      nil ->
+        {true, false, false, project_repo_connection}
 
-        %{repo: nil} ->
-          {false, true, false, project_repo_connection}
+      %{repo: nil} ->
+        {false, true, false, project_repo_connection}
 
-        %{repo: r, branch: b, github_installation_id: g} ->
-          {false, true, true,
-           %{"repo" => r, "branch" => b, "github_installation_id" => g}}
-      end
-
-    repo_settings
+      %{repo: r, branch: b, github_installation_id: g} ->
+        {false, true, true,
+         %{"repo" => r, "branch" => b, "github_installation_id" => g}}
+    end
   end
 
   # we should only run this if repo setting is pending
@@ -180,7 +178,7 @@ defmodule LightningWeb.ProjectLive.Settings do
         assigns.can_edit_project_description
 
   @impl true
-  def handle_params(params, _url, socket) do
+  def handle_params(params, url, socket) do
     {:noreply, socket |> apply_action(socket.assigns.live_action, params)}
   end
 
