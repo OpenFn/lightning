@@ -197,7 +197,7 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
               Updated <%= @relative_updated_at %>
             </p>
           <% else %>
-            <div class="flex items-center">
+            <div class="flex items-center ml-3">
               <div style="background: #8b5f0d" class="w-2 h-2 rounded-full"></div>
               <div>
                 <p class="text-[#8b5f0d] text-xs">
