@@ -97,14 +97,11 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
               )
             </div>
           <% else %>
-            <div class="text-gray-400 text-sm mt-1">
-              <span>
-                0
-              </span>
-              <br />
-              <span class="text-xs">
-                N/A
-              </span>
+            <div class="text-gray-400 text-lg">
+              <span>0</span>
+            </div>
+            <div class="text-xs mt-1">
+              <span>N/A</span>
             </div>
           <% end %>
         </div>
