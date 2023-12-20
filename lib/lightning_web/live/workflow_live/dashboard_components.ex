@@ -89,7 +89,7 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
                 <%= workflow.workorders_count %>
               </.link>
             </div>
-            <div class="text-gray-500 text-xs">
+            <div class="text-gray-500 text-xs mt-1">
               (<%= workflow.runs_count %> runs,
               <span>
                 <%= workflow.runs_success_percentage %>% success
@@ -97,7 +97,7 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
               )
             </div>
           <% else %>
-            <div class="text-gray-400 text-sm">
+            <div class="text-gray-400 text-sm mt-1">
               <span>
                 0
               </span>
@@ -197,7 +197,7 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
               Updated <%= @relative_updated_at %>
             </p>
           <% else %>
-            <div class="flex items-center ml-3">
+            <div class="flex items-center ml-3 mt-1">
               <div style="background: #8b5f0d" class="w-2 h-2 rounded-full"></div>
               <div>
                 <p class="text-[#8b5f0d] text-xs">
@@ -345,7 +345,7 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
           <span class="inline-block h-2 w-2 bg-green-600 rounded-full"></span>
           <span class="text-green-500 font-medium">Success</span>
         </div>
-        <span class="block text-gray-700 text-left text-xs ml-4">
+        <span class="block text-left text-gray-500 text-xs ml-4 mt-1">
           <%= @time %>
         </span>
       <% else %>
@@ -353,7 +353,7 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
           <span class="inline-block h-2 w-2 bg-red-600 rounded-full"></span>
           <span class="text-red-500 font-medium">Failure</span>
         </div>
-        <span class="block text-left text-gray-500 text-xs ml-4">
+        <span class="block text-left text-gray-500 text-xs ml-4 mt-1">
           <%= @time %>
         </span>
       <% end %>
