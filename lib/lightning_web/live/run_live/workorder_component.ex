@@ -17,30 +17,22 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
      socket
      |> assign(assigns)
      |> assign(project: project, can_rerun_job: can_rerun_job)
-     |> set_work_order_details(work_order)}
+     |> set_details(work_order)}
   end
 
   def update(%{work_order: work_order} = assigns, socket) do
-    {:ok, socket |> assign(assigns) |> set_work_order_details(work_order)}
+    {:ok, socket |> assign(assigns) |> set_details(work_order)}
   end
 
   def update(assigns, socket) do
     {:ok, assign(socket, assigns)}
   end
 
-  defp set_work_order_details(socket, work_order) do
-    last_run = List.last(List.first(work_order.attempts).runs)
-
-    last_run_finished_at =
-      case last_run do
-        %{finished_at: %_{} = finished_at} ->
-          Calendar.strftime(finished_at, "%c %Z")
-
-        _ ->
-          nil
-      end
-
+  defp set_details(socket, work_order) do
+    last_run = get_last_run(work_order)
+    last_run_finished_at = format_finished_at(last_run)
     work_order_inserted_at = Calendar.strftime(work_order.inserted_at, "%c %Z")
+    workflow_name = work_order.workflow.name || "Untitled"
 
     socket
     |> assign(
@@ -49,8 +41,27 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
       last_run: last_run,
       last_run_finished_at: last_run_finished_at,
       work_order_inserted_at: work_order_inserted_at,
-      workflow_name: work_order.workflow.name || "Untitled"
+      workflow_name: workflow_name
     )
+  end
+
+  defp get_last_run(work_order) do
+    work_order.attempts
+    |> List.first()
+    |> case do
+      nil -> nil
+      attempt -> List.last(attempt.runs)
+    end
+  end
+
+  defp format_finished_at(last_run) do
+    case last_run do
+      %{finished_at: %_{} = finished_at} ->
+        Calendar.strftime(finished_at, "%c %Z")
+
+      _ ->
+        nil
+    end
   end
 
   @impl true
@@ -127,18 +138,24 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
                 {if @entry_selected, do: [checked: "checked"], else: []}
               />
             </form>
-            <button
-              id={"toggle_details_for_#{@work_order.id}"}
-              class="w-auto rounded-full p-3 hover:bg-gray-100"
-              phx-click="toggle_details"
-              phx-target={@myself}
-            >
-              <%= if @show_details do %>
-                <Heroicons.chevron_up outline class="h-4 w-4 rounded-lg" />
-              <% else %>
-                <Heroicons.chevron_down outline class="h-4 w-4 rounded-lg" />
-              <% end %>
-            </button>
+            <%= if @work_order.attempts !== [] do %>
+              <button
+                id={"toggle_details_for_#{@work_order.id}"}
+                class="w-auto rounded-full p-3 hover:bg-gray-100"
+                phx-click="toggle_details"
+                phx-target={@myself}
+              >
+                <%= if @show_details do %>
+                  <Heroicons.chevron_up outline class="h-4 w-4 rounded-lg" />
+                <% else %>
+                  <Heroicons.chevron_down outline class="h-4 w-4 rounded-lg" />
+                <% end %>
+              </button>
+            <% else %>
+              <span class="w-auto p-3">
+                <Heroicons.minus outline class="h-4 w-4 rounded-lg" />
+              </span>
+            <% end %>
 
             <div class="ml-3 py-2">
               <h1 class={"text-sm mb-1 #{unless @show_details, do: "truncate"}"}>

@@ -57,6 +57,8 @@ and this project adheres to
   [#1537](https://github.com/OpenFn/Lightning/issues/1537)
 - Improve selection logic on WorkflowDiagram
   [#1220](https://github.com/OpenFn/Lightning/issues/1220)
+- History page crashes if job is removed from workflow after it's been run
+  [#1568](https://github.com/OpenFn/Lightning/issues/1568)
 
 ## [v0.11.0] - 2023-12-06
 

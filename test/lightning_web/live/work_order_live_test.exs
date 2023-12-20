@@ -16,6 +16,89 @@ defmodule LightningWeb.RunWorkOrderTest do
   setup :register_and_log_in_user
   setup :create_project_for_current_user
 
+  defp setup_work_order(project, job) do
+    dataclip = insert(:dataclip)
+    workflow = insert(:simple_workflow, project: project)
+
+    work_order =
+      insert(:workorder, workflow: workflow, dataclip: dataclip)
+      |> with_attempt(
+        starting_job: job,
+        dataclip: dataclip,
+        runs: [
+          %{
+            job: job,
+            started_at: build(:timestamp),
+            finished_at: nil,
+            exit_reason: nil,
+            input_dataclip: dataclip
+          }
+        ]
+      )
+
+    {work_order, dataclip}
+  end
+
+  defp setup_work_order_with_multiple_attempts(
+         workflow,
+         trigger,
+         job,
+         dataclip,
+         attempts_params
+       ) do
+    work_order =
+      insert(:workorder,
+        workflow: workflow,
+        trigger: trigger,
+        dataclip: dataclip,
+        last_activity: DateTime.utc_now()
+      )
+
+    attempts =
+      Enum.map(attempts_params, fn params ->
+        insert_attempt_with_run(work_order, trigger, dataclip, job, params)
+      end)
+
+    {work_order, attempts}
+  end
+
+  defp insert_attempt_with_run(work_order, trigger, dataclip, job, opts) do
+    state = opts[:state]
+    timestamp = opts[:state_timestamp]
+
+    insert(:attempt,
+      work_order: work_order,
+      starting_trigger: trigger,
+      dataclip: dataclip,
+      state: state,
+      "#{state}_at": timestamp,
+      runs: [
+        build(:run,
+          job: job,
+          started_at: build(:timestamp),
+          finished_at: build(:timestamp),
+          input_dataclip: dataclip
+        )
+      ]
+    )
+  end
+
+  defp format_timestamp(timestamp) do
+    Timex.format!(timestamp, "%d/%b/%y, %H:%M", :strftime)
+  end
+
+  defp assert_work_order_runs(work_order, expected_count) do
+    assert length(work_order.attempts) === expected_count
+
+    runs_count =
+      work_order.attempts
+      |> Enum.map(&Map.get(&1, :runs, []))
+      |> Enum.flat_map(& &1)
+      |> length()
+
+    assert runs_count === expected_count
+  end
+
   describe "Index" do
     test "only users with MFA enabled can access workorders for a project with MFA requirement",
          %{
@@ -47,33 +130,115 @@ defmodule LightningWeb.RunWorkOrderTest do
       end)
     end
 
-    test "WorkOrderComponent", %{
+    test "WorkOrderComponent renders correctly with valid data", %{
       project: project
     } do
-      %{jobs: [job]} = workflow = insert(:simple_workflow, project: project)
+      %{jobs: [job]} = insert(:simple_workflow, project: project)
+      {work_order, _dataclip} = setup_work_order(project, job)
 
-      dataclip = insert(:dataclip)
+      assert_work_order_runs(work_order, 1)
 
-      work_order =
-        insert(:workorder, workflow: workflow, dataclip: dataclip)
-        |> with_attempt(
-          starting_job: job,
-          dataclip: dataclip,
-          runs: [
-            %{
-              job: job,
-              started_at: build(:timestamp),
-              finished_at: nil,
-              exit_reason: nil,
-              input_dataclip: dataclip
-            }
-          ]
+      rendered =
+        render_component(LightningWeb.RunLive.WorkOrderComponent,
+          id: work_order.id,
+          work_order: work_order
         )
 
-      assert render_component(LightningWeb.RunLive.WorkOrderComponent,
-               id: work_order.id,
-               work_order: work_order
-             ) =~ work_order.dataclip_id
+      assert rendered =~ work_order.dataclip_id
+      assert rendered =~ "toggle_details_for_#{work_order.id}"
+    end
+
+    test "WorkOrderComponent renders runs when details are toggled", %{
+      project: project
+    } do
+      %{jobs: [job]} = insert(:simple_workflow, project: project)
+      {work_order, _dataclip} = setup_work_order(project, job)
+
+      assert_work_order_runs(work_order, 1)
+
+      rendered =
+        render_component(LightningWeb.RunLive.WorkOrderComponent,
+          id: work_order.id,
+          work_order: work_order,
+          show_details: true,
+          project: project,
+          can_rerun_job: true
+        )
+
+      assert rendered =~ work_order.dataclip_id
+      assert rendered =~ "toggle_details_for_#{work_order.id}"
+
+      work_order.attempts
+      |> Enum.each(fn attempt ->
+        assert rendered =~ "attempt_#{attempt.id}"
+      end)
+
+      hd(work_order.attempts).runs
+      |> Enum.each(fn run ->
+        assert rendered =~ "run-#{run.id}"
+      end)
+    end
+
+    test "WorkOrderComponent remains stable when associated jobs are deleted", %{
+      project: project
+    } do
+      %{jobs: [job]} = insert(:simple_workflow, project: project)
+      {work_order, _dataclip} = setup_work_order(project, job)
+
+      Lightning.Repo.delete!(job)
+
+      work_order =
+        Lightning.Repo.reload!(work_order)
+        |> Lightning.Repo.preload([:attempts, :workflow])
+
+      assert_work_order_runs(work_order, 0)
+
+      rendered =
+        render_component(LightningWeb.RunLive.WorkOrderComponent,
+          id: work_order.id,
+          work_order: work_order
+        )
+
+      assert rendered =~ work_order.dataclip_id
+      refute rendered =~ "toggle_details_for_#{work_order.id}"
+    end
+
+    test "toggle details of a work order shows attempt state and timestamp", %{
+      conn: conn,
+      project: project
+    } do
+      workflow = insert(:workflow, project: project, name: "my workflow")
+      trigger = insert(:trigger, type: :webhook, workflow: workflow)
+      job = insert(:job, workflow: workflow)
+      dataclip = insert(:dataclip)
+
+      attempts_params = [
+        %{state: :claimed, state_timestamp: build(:timestamp)},
+        %{state: :started, state_timestamp: build(:timestamp)}
+      ]
+
+      {work_order, [attempt_1, attempt_2]} =
+        setup_work_order_with_multiple_attempts(
+          workflow,
+          trigger,
+          job,
+          dataclip,
+          attempts_params
+        )
+
+      claimed_at = format_timestamp(attempt_1.claimed_at)
+      started_at = format_timestamp(attempt_2.started_at)
+
+      {:ok, view, _html} =
+        live_async(conn, Routes.project_run_index_path(conn, :index, project.id))
+
+      rendered =
+        view |> element("#toggle_details_for_#{work_order.id}") |> render_click()
+
+      assert rendered =~ attempt_1.id
+      assert rendered =~ attempt_2.id
+      assert rendered =~ "claimed @ \n  \n      #{claimed_at}"
+      assert rendered =~ "claimed @ \n  \n      #{started_at}"
     end
 
     test "lists all workorders", %{
