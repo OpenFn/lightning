@@ -75,9 +75,7 @@ defmodule LightningWeb.CoreComponents do
                 @row_click && "hover:cursor-pointer"
               ]}
             >
-              <div>
-                <%= render_slot(col, row) %>
-              </div>
+              <%= render_slot(col, row) %>
             </td>
             <td :if={@action != []} class="p-0 w-14">
               <div class="relative whitespace-nowrap py-4 text-right text-sm font-medium">
