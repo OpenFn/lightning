@@ -129,14 +129,11 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
                 |> Timex.Format.DateTime.Formatters.Relative.format!("{relative}") %>
               </div>
             <% else %>
-              <div class="text-gray-400 text-sm">
-                <span>
-                  0
-                </span>
-                <br />
-                <span class="text-xs">
-                  N/A
-                </span>
+              <div class="text-gray-400 text-lg">
+                <span>0</span>
+              </div>
+              <div class="text-xs mt-1">
+                <span>N/A</span>
               </div>
             <% end %>
           </div>
