@@ -258,21 +258,21 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
       <.metric_card title="Runs">
         <:value><%= @metrics.run_metrics.total %></:value>
         <:suffix>
-          <small>(<%= @metrics.run_metrics.pending %> pending)</small>
+          (<%= @metrics.run_metrics.pending %> pending)
         </:suffix>
       </.metric_card>
-      <.metric_card title="Succesful Runs">
+      <.metric_card title="Successful Runs">
         <:value><%= @metrics.run_metrics.completed %></:value>
         <:suffix>
-          <small>(<%= @metrics.run_metrics.success_percentage %>%)</small>
+          (<%= @metrics.run_metrics.success_percentage %>%)
         </:suffix>
       </.metric_card>
       <.metric_card title="Work Orders in failed state">
         <:value><%= @metrics.work_order_metrics.failed %></:value>
         <:suffix>
-          <small class="mr-10">
+          <span class="mr-10">
             (<%= @metrics.work_order_metrics.failure_percentage %>%)
-          </small>
+          </span>
           <.link
             navigate={~p"/projects/#{@project}/runs?#{%{filters: @filters}}"}
             class="text-indigo-700"
@@ -301,7 +301,7 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
       </h2>
       <p class="text-3xl font-bold text-gray-800">
         <%= render_slot(@value) %>
-        <span class="text-sm font-normal">
+        <span class="text-xs font-normal">
           <%= render_slot(@suffix) %>
         </span>
       </p>
