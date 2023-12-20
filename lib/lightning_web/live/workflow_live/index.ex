@@ -82,7 +82,7 @@ defmodule LightningWeb.WorkflowLive.Index do
 
     workflows_stats =
       project
-      |> Workflows.list_project_workflows()
+      |> Workflows.get_workflows_for()
       |> Enum.map(&DashboardStats.get_workflow_stats/1)
 
     socket

@@ -25,7 +25,7 @@ defmodule LightningWeb.CoreComponents do
   attr :id, :string, required: true
   attr :row_click, :any, default: nil
   attr :rows, :list, required: true
-  attr :row_class, :string, default: nil
+  attr :row_class, :string, default: ""
 
   slot :col, required: true do
     attr :label, :string
@@ -61,11 +61,11 @@ defmodule LightningWeb.CoreComponents do
             </th>
           </tr>
         </thead>
-        <tbody class="divide-y bg-white">
+        <tbody class="divide-y divide-gray-200 bg-white">
           <tr
             :for={row <- @rows}
             id={"#{@id}-#{Phoenix.Param.to_param(row)}"}
-            class={["", @row_class]}
+            class={[@row_class]}
           >
             <td
               :for={col <- @col}

@@ -23,24 +23,6 @@ defmodule Lightning.Workflows do
   end
 
   @doc """
-  Returns the list of workflows of a project.
-
-  ## Examples
-
-      iex> list_project_workflows()
-      [%Workflow{}, ...]
-
-  """
-  def list_project_workflows(%Project{id: project_id}) do
-    from(w in Workflow,
-      preload: [:triggers],
-      where: is_nil(w.deleted_at) and w.project_id == ^project_id,
-      order_by: [asc: w.name]
-    )
-    |> Repo.all()
-  end
-
-  @doc """
   Gets a single workflow.
 
   Raises `Ecto.NoResultsError` if the Workflow does not exist.
@@ -119,7 +101,7 @@ defmodule Lightning.Workflows do
   end
 
   @doc """
-  Retrieves a list of Workflows with their jobs and triggers preloaded and metrics .
+  Retrieves a list of active Workflows with their jobs and triggers preloaded.
   """
   @spec get_workflows_for(Project.t()) :: [Workflow.t()]
   def get_workflows_for(%Project{} = project) do

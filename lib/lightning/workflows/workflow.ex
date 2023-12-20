@@ -38,8 +38,6 @@ defmodule Lightning.Workflows.Workflow do
 
     field :delete, :boolean, virtual: true
 
-    field :aggregates, :map, virtual: true
-
     timestamps()
   end
 
