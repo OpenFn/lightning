@@ -89,7 +89,7 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
                 <%= workflow.workorders_count %>
               </.link>
             </div>
-            <div class="text-gray-500 text-xs mt-1">
+            <div class="text-gray-500 text-xs">
               (<%= workflow.runs_count %> runs,
               <span>
                 <%= workflow.runs_success_percentage %>% success
@@ -100,7 +100,7 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
             <div class="text-gray-400 text-lg">
               <span>0</span>
             </div>
-            <div class="text-xs mt-1">
+            <div class="text-xs">
               <span>N/A</span>
             </div>
           <% end %>
@@ -187,7 +187,7 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
             </span>
           </div>
           <%= if @trigger_enabled do %>
-            <p class="text-gray-500 text-xs ml-3">
+            <p class="text-gray-500 text-xs ml-3 mt-1">
               Updated <%= @relative_updated_at %>
             </p>
           <% else %>
