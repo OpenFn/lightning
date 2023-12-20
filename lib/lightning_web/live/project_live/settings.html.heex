@@ -42,6 +42,7 @@
               <span class="inline-block align-middle">Collaboration</span>
             </LightningWeb.Components.Common.tab_item>
             <LightningWeb.Components.Common.tab_item
+              :if={can_edit_project(assigns)}
               orientation="vertical"
               hash="security"
             >
@@ -70,7 +71,7 @@
           <div class="hidden sm:block" aria-hidden="true">
             <div class="py-2"></div>
           </div>
-          <div id="project-settings-#" class="bg-white p-4 rounded-md">
+          <div class="bg-white p-4 rounded-md">
             <div>
               <h6 class="font-medium text-black">Project Identity</h6>
               <small class="block my-1 text-xs text-gray-600">
@@ -135,7 +136,7 @@
           <div class="hidden sm:block" aria-hidden="true">
             <div class="py-2"></div>
           </div>
-          <div id="project-settings-#" class="bg-white p-4 rounded-md">
+          <div class="bg-white p-4 rounded-md">
             <div>
               <h6 class="font-medium text-black">Export your Project</h6>
               <p class="block my-1 text-xs text-gray-600">
@@ -157,7 +158,7 @@
             <div class="hidden sm:block" aria-hidden="true">
               <div class="py-2"></div>
             </div>
-            <div id="project-settings-#" class="bg-white p-4 rounded-md">
+            <div class="bg-white p-4 rounded-md">
               <div>
                 <h6 class="font-medium text-black">The danger zone</h6>
                 <small class="block my-1 text-xs text-gray-600">
@@ -473,7 +474,10 @@
           </.table>
         </LightningWeb.Components.Common.panel_content>
 
-        <LightningWeb.Components.Common.panel_content for_hash="security">
+        <LightningWeb.Components.Common.panel_content
+          :if={can_edit_project(assigns)}
+          for_hash="security"
+        >
           <div>
             <h6 class="font-medium text-black">Project Security</h6>
             <small class="block my-1 text-xs text-gray-600">
@@ -483,64 +487,60 @@
           <div class="hidden sm:block" aria-hidden="true">
             <div class="py-2"></div>
           </div>
-          <%= if can_edit_project(assigns) do %>
-            <div id="project-settings-#" class="bg-white p-4 rounded-md">
-              <div class="flex items-center justify-between">
-                <span class="flex flex-grow flex-col">
+
+          <div class="bg-white p-4 rounded-md">
+            <div class="flex items-center justify-between">
+              <span class="flex flex-grow flex-col">
+                <span
+                  class="text-sm font-medium leading-6 text-gray-900"
+                  id="availability-label"
+                >
+                  Multi-Factor Authentication
+                </span>
+                <span class="text-sm text-gray-500" id="availability-description">
+                  Requiring multi-factor authentication (MFA) adds an
+                  additional layer of security by requiring users to enable
+                  MFA on their accounts before they are allowed access this
+                  project.
+                </span>
+              </span>
+            </div>
+            <div>
+              <h6 class="font-medium text-black"></h6>
+              <p class="block my-1 text-xs text-gray-600"></p>
+              <div class="hidden sm:block" aria-hidden="true">
+                <div class="py-2"></div>
+              </div>
+              <div class="flex items-center">
+                <button
+                  id="toggle-mfa-switch"
+                  type="button"
+                  class={"#{if @project.requires_mfa, do: "bg-indigo-600", else: "bg-gray-200"} relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:ring-offset-2"}
+                  role="switch"
+                  phx-click="toggle-mfa"
+                  aria-checked={@project.requires_mfa}
+                  aria-labelledby="require-mfa-label"
+                  aria-describedby="require-mfa-description"
+                >
                   <span
-                    class="text-sm font-medium leading-6 text-gray-900"
-                    id="availability-label"
+                    aria-hidden="true"
+                    class={"#{if @project.requires_mfa, do: "translate-x-5", else: "translate-x-0"} pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out"}
                   >
-                    Multi-Factor Authentication
                   </span>
-                  <span
-                    class="text-sm text-gray-500"
-                    id="availability-description"
-                  >
-                    Requiring multi-factor authentication (MFA) adds an
-                    additional layer of security by requiring users to enable
-                    MFA on their accounts before they are allowed access this
-                    project.
+                </button>
+                <span class="ml-3 text-sm" id="require-mfa-label">
+                  <span class="font-medium text-gray-900">Require MFA?</span>
+                  <span class="text-gray-500">
+                    <%= if @project.requires_mfa do %>
+                      (currently required for this project)
+                    <% else %>
+                      (currently optional for this project)
+                    <% end %>
                   </span>
                 </span>
               </div>
-              <div>
-                <h6 class="font-medium text-black"></h6>
-                <p class="block my-1 text-xs text-gray-600"></p>
-                <div class="hidden sm:block" aria-hidden="true">
-                  <div class="py-2"></div>
-                </div>
-                <div class="flex items-center">
-                  <button
-                    id="toggle-mfa-switch"
-                    type="button"
-                    class={"#{if @project.requires_mfa, do: "bg-indigo-600", else: "bg-gray-200"} relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:ring-offset-2"}
-                    role="switch"
-                    phx-click="toggle-mfa"
-                    aria-checked={@project.requires_mfa}
-                    aria-labelledby="require-mfa-label"
-                    aria-describedby="require-mfa-description"
-                  >
-                    <span
-                      aria-hidden="true"
-                      class={"#{if @project.requires_mfa, do: "translate-x-5", else: "translate-x-0"} pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out"}
-                    >
-                    </span>
-                  </button>
-                  <span class="ml-3 text-sm" id="require-mfa-label">
-                    <span class="font-medium text-gray-900">Require MFA?</span>
-                    <span class="text-gray-500">
-                      <%= if @project.requires_mfa do %>
-                        (currently required for this project)
-                      <% else %>
-                        (currently optional for this project)
-                      <% end %>
-                    </span>
-                  </span>
-                </div>
-              </div>
             </div>
-          <% end %>
+          </div>
         </LightningWeb.Components.Common.panel_content>
         <LightningWeb.Components.Common.panel_content for_hash="vcs">
           <%= if  @github_enabled do %>

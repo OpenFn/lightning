@@ -38,6 +38,8 @@ and this project adheres to
 - Restore FK relationship between `work_orders` and `attempts` pending a
   decision re: further partitioning.
   [#1254](https://github.com/OpenFn/Lightning/issues/1254)
+- Hide project security setting tab from non-authorized users
+  [#1477](https://github.com/OpenFn/Lightning/issues/1477)
 
 ### Fixed
 
