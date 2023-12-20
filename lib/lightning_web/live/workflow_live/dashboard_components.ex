@@ -137,7 +137,7 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
               </div>
             <% end %>
           </div>
-          <div class="mr-2 invisible  group-hover:visible group-hover:text-red-600 pt-2">
+          <div class="mr-2 invisible group-hover:visible group-hover:text-red-600 pt-2">
             <div :if={@can_delete_workflow}>
               <.link
                 href="#"

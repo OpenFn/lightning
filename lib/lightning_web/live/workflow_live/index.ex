@@ -121,7 +121,10 @@ defmodule LightningWeb.WorkflowLive.Index do
   end
 
   def handle_event("delete_workflow", %{"id" => id}, socket) do
-    if socket.assigns.can_delete_workflow do
+    %{project: project, can_delete_workflow: can_delete_workflow?} =
+      socket.assigns
+
+    if can_delete_workflow? do
       Workflows.get_workflow!(id)
       |> Workflows.mark_for_deletion()
       |> case do
@@ -129,10 +132,9 @@ defmodule LightningWeb.WorkflowLive.Index do
           {
             :noreply,
             socket
-            |> assign(
-              workflows: Workflows.get_workflows_for(socket.assigns.project)
-            )
+            |> assign(workflows: Workflows.get_workflows_for(project))
             |> put_flash(:info, "Workflow successfully deleted.")
+            |> push_patch(to: "/projects/#{project.id}/w")
           }
 
         {:error, _changeset} ->
