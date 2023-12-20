@@ -193,7 +193,7 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
             </span>
           </div>
           <%= if @trigger_enabled do %>
-            <p class="text-gray-500 text-xs  ml-3">
+            <p class="text-gray-500 text-xs ml-3">
               Updated <%= @relative_updated_at %>
             </p>
           <% else %>
@@ -298,7 +298,7 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
     <div class="bg-white shadow rounded-lg py-2 px-6">
       <h2
         class="text-sm text-gray-500"
-        style="font-weight: 500; font-size: 13px; margin-bottom: 8px;"
+        style="font-weight: 500; font-size: 13px; margin-bottom: 8px; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"
       >
         <%= @title %>
       </h2>
