@@ -31,6 +31,7 @@ defmodule LightningWeb.CredentialLive.GoogleSheetsComponent do
   import LightningWeb.OauthCredentialHelper
 
   attr :form, :map, required: true
+  attr :id, :string, required: true
   attr :update_body, :any, required: true
   slot :inner_block
 
