@@ -62,7 +62,7 @@ defmodule LightningWeb.CredentialLive.GoogleSheetsComponent do
            form: @form,
            token_body_changeset: @token_body_changeset,
            update_body: @update_body,
-           id: "google-sheets-inner-form"
+           id: "google-sheets-inner-form-#{@id}"
          ],
          {__ENV__.module, __ENV__.function, __ENV__.file, __ENV__.line}
        ), @valid?}

@@ -329,6 +329,7 @@ defmodule LightningWeb.CredentialLive.FormComponent do
         >
           <.form_component
             :let={{fieldset, _valid?}}
+            id={@credential.id || "new"}
             form={f}
             type={@type}
             update_body={@update_body}
@@ -409,6 +410,7 @@ defmodule LightningWeb.CredentialLive.FormComponent do
 
   attr :type, :string, required: true
   attr :form, :map, required: true
+  attr :id, :string, required: false
   attr :update_body, :any, required: false
   attr :phx_target, :any, default: nil
   slot :inner_block
@@ -418,7 +420,12 @@ defmodule LightningWeb.CredentialLive.FormComponent do
   """
   def form_component(%{type: "googlesheets"} = assigns) do
     ~H"""
-    <GoogleSheetsComponent.fieldset :let={l} form={@form} update_body={@update_body}>
+    <GoogleSheetsComponent.fieldset
+      :let={l}
+      id={@id}
+      form={@form}
+      update_body={@update_body}
+    >
       <%= render_slot(@inner_block, l) %>
     </GoogleSheetsComponent.fieldset>
     """
