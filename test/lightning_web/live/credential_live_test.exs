@@ -902,16 +902,17 @@ defmodule LightningWeb.CredentialLiveTest do
 
       expires_at = DateTime.to_unix(DateTime.utc_now()) + 3600
 
-      credential = credential_fixture(
-        user_id: user.id,
-        schema: "googlesheets",
-        body: %{
-          access_token: "ya29.a0AVvZ...",
-          refresh_token: "1//03vpp6Li...",
-          expires_at: expires_at,
-          scope: "scope1 scope2"
-        }
-      )
+      credential =
+        credential_fixture(
+          user_id: user.id,
+          schema: "googlesheets",
+          body: %{
+            access_token: "ya29.a0AVvZ...",
+            refresh_token: "1//03vpp6Li...",
+            expires_at: expires_at,
+            scope: "scope1 scope2"
+          }
+        )
 
       {:ok, edit_live, _html} = live(conn, ~p"/credentials")
 
