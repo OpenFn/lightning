@@ -364,7 +364,8 @@ defmodule LightningWeb.ProjectLive.Settings do
 
     {:noreply,
      socket
-     |> assign(show_github_setup: true, show_sync_button: false)}
+     |> assign(show_github_setup: true, show_sync_button: false)
+     |> push_patch(to: ~p"/projects/#{project_id}/settings#vcs")}
   end
 
   def handle_event("save_repo", params, socket) do
