@@ -14,6 +14,19 @@ and this project adheres to
 
 ### Fixed
 
+## [v0.12.1] - 2023-12-21
+
+### Added
+
+### Changed
+
+- Hide project security setting tab from non-authorized users
+  [#1477](https://github.com/OpenFn/Lightning/issues/1477)
+
+### Fixed
+
+- History page crashes if job is removed from workflow after it's been run
+  [#1568](https://github.com/OpenFn/Lightning/issues/1568)
 - Fix RuntimeError: found duplicate ID "google-sheets-inner-form" for
   GoogleSheetsComponent [#1578](https://github.com/OpenFn/Lightning/issues/1578)
 
@@ -41,8 +54,6 @@ and this project adheres to
 - Restore FK relationship between `work_orders` and `attempts` pending a
   decision re: further partitioning.
   [#1254](https://github.com/OpenFn/Lightning/issues/1254)
-- Hide project security setting tab from non-authorized users
-  [#1477](https://github.com/OpenFn/Lightning/issues/1477)
 
 ### Fixed
 
@@ -62,8 +73,6 @@ and this project adheres to
   [#1537](https://github.com/OpenFn/Lightning/issues/1537)
 - Improve selection logic on WorkflowDiagram
   [#1220](https://github.com/OpenFn/Lightning/issues/1220)
-- History page crashes if job is removed from workflow after it's been run
-  [#1568](https://github.com/OpenFn/Lightning/issues/1568)
 
 ## [v0.11.0] - 2023-12-06
 
