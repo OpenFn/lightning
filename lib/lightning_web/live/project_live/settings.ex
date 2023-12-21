@@ -178,7 +178,7 @@ defmodule LightningWeb.ProjectLive.Settings do
         assigns.can_edit_project_description
 
   @impl true
-  def handle_params(params, url, socket) do
+  def handle_params(params, _url, socket) do
     {:noreply, socket |> apply_action(socket.assigns.live_action, params)}
   end
 
