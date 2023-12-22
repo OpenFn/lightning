@@ -47,16 +47,13 @@ defmodule Lightning.ExportUtils do
   defp edge_to_treenode(%{source_job_id: nil} = edge, triggers) do
     edge = Repo.preload(edge, [:source_trigger, :target_job])
     trigger_name = edge.source_trigger.type |> Atom.to_string()
-    target_name = edge.target_job.name |> hyphenate()
+    target_job = edge.target_job.name |> hyphenate()
 
     %{
-      name: "#{trigger_name}->#{target_name}",
-      source_trigger: find_trigger_name(edge, triggers),
-      target_job: target_name,
-      condition_type: edge.condition_type |> Atom.to_string(),
-      enabled: edge.enabled,
-      node_type: :edge
+      name: "#{trigger_name}->#{target_job}",
+      source_trigger: find_trigger_name(edge, triggers)
     }
+    |> merge_edge_common_fields(edge)
   end
 
   defp edge_to_treenode(%{source_trigger_id: nil} = edge, _unused_triggers) do
@@ -66,12 +63,31 @@ defmodule Lightning.ExportUtils do
 
     %{
       name: "#{source_job}->#{target_job}",
-      source_job: source_job,
+      source_job: source_job
+    }
+    |> merge_edge_common_fields(edge)
+  end
+
+  defp merge_edge_common_fields(json, edge) do
+    target_job = edge.target_job.name |> hyphenate()
+
+    json
+    |> Map.merge(%{
       target_job: target_job,
       condition_type: edge.condition_type |> Atom.to_string(),
-      node_type: :edge,
-      enabled: edge.enabled
-    }
+      enabled: edge.enabled,
+      node_type: :edge
+    })
+    |> then(fn map ->
+      if edge.condition_type == :js_expression do
+        Map.merge(map, %{
+          condition_expression: edge.condition_expression,
+          condition_label: edge.condition_label
+        })
+      else
+        map
+      end
+    end)
   end
 
   defp find_trigger_name(edge, triggers) do
@@ -91,6 +107,8 @@ defmodule Lightning.ExportUtils do
         :source_job,
         :target_job,
         :condition_type,
+        :condition_label,
+        :condition_expression,
         :enabled
       ]
     }
