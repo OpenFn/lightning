@@ -16,6 +16,8 @@ and this project adheres to
 
 - Fix RuntimeError: found duplicate ID "google-sheets-inner-form" for
   GoogleSheetsComponent [#1578](https://github.com/OpenFn/Lightning/issues/1578)
+- Extend export script to include new JS expression edge type
+  [#1540](https://github.com/OpenFn/Lightning/issues/1540)
 
 ## [v0.12.1] - 2023-12-21
 
@@ -45,8 +47,6 @@ and this project adheres to
   [#1515](https://github.com/OpenFn/Lightning/issues/1515)
 - Allow Javascript expressions as conditions for edges
   [#1498](https://github.com/OpenFn/Lightning/issues/1498)
-- Extend export script to include new JS expression edge type
-  [#1540](https://github.com/OpenFn/Lightning/issues/1540)
 
 ### Changed
 
