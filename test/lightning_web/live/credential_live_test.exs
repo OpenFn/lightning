@@ -831,12 +831,12 @@ defmodule LightningWeb.CredentialLiveTest do
 
       # Click on the 'Authorize with Google button
       index_live
-      |> element("#google-sheets-inner-form #authorize-button")
+      |> element("#google-sheets-inner-form-new #authorize-button")
       |> render_click()
 
       # Once authorizing the button isn't available
       refute index_live
-             |> has_element?("#google-sheets-inner-form #authorize-button")
+             |> has_element?("#google-sheets-inner-form-new #authorize-button")
 
       # `handle_info/2` in LightingWeb.CredentialLive.Edit forwards the data
       # as a `send_update/3` call to the GoogleSheets component
@@ -902,23 +902,24 @@ defmodule LightningWeb.CredentialLiveTest do
 
       expires_at = DateTime.to_unix(DateTime.utc_now()) + 3600
 
-      credential_fixture(
-        user_id: user.id,
-        schema: "googlesheets",
-        body: %{
-          access_token: "ya29.a0AVvZ...",
-          refresh_token: "1//03vpp6Li...",
-          expires_at: expires_at,
-          scope: "scope1 scope2"
-        }
-      )
+      credential =
+        credential_fixture(
+          user_id: user.id,
+          schema: "googlesheets",
+          body: %{
+            access_token: "ya29.a0AVvZ...",
+            refresh_token: "1//03vpp6Li...",
+            expires_at: expires_at,
+            scope: "scope1 scope2"
+          }
+        )
 
       {:ok, edit_live, _html} = live(conn, ~p"/credentials")
 
       assert_receive {:phoenix, :send_update, _}
 
       # Wait for the userinfo endpoint to be called
-      assert wait_for_assigns(edit_live, :userinfo),
+      assert wait_for_assigns(edit_live, :userinfo, credential.id),
              ":userinfo has not been set yet."
 
       edit_live |> render()
@@ -935,16 +936,17 @@ defmodule LightningWeb.CredentialLiveTest do
 
       expires_at = DateTime.to_unix(DateTime.utc_now()) + 3600
 
-      credential_fixture(
-        user_id: user.id,
-        schema: "googlesheets",
-        body: %{
-          access_token: "ya29.a0AVvZ...",
-          refresh_token: "",
-          expires_at: expires_at,
-          scope: "scope1 scope2"
-        }
-      )
+      credential =
+        credential_fixture(
+          user_id: user.id,
+          schema: "googlesheets",
+          body: %{
+            access_token: "ya29.a0AVvZ...",
+            refresh_token: "",
+            expires_at: expires_at,
+            scope: "scope1 scope2"
+          }
+        )
 
       {:ok, edit_live, _html} = live(conn, ~p"/credentials")
 
@@ -952,7 +954,7 @@ defmodule LightningWeb.CredentialLiveTest do
       assert_receive {:plug_conn, :sent}
 
       edit_live
-      |> element("#google-sheets-inner-form")
+      |> element("#google-sheets-inner-form-#{credential.id}")
       |> render()
 
       assert edit_live |> has_element?("p", "The token is missing it's")
@@ -975,16 +977,17 @@ defmodule LightningWeb.CredentialLiveTest do
 
       expires_at = DateTime.to_unix(DateTime.utc_now()) - 50
 
-      credential_fixture(
-        user_id: user.id,
-        schema: "googlesheets",
-        body: %{
-          access_token: "ya29.a0AVvZ...",
-          refresh_token: "1//03vpp6Li...",
-          expires_at: expires_at,
-          scope: "scope1 scope2"
-        }
-      )
+      credential =
+        credential_fixture(
+          user_id: user.id,
+          schema: "googlesheets",
+          body: %{
+            access_token: "ya29.a0AVvZ...",
+            refresh_token: "1//03vpp6Li...",
+            expires_at: expires_at,
+            scope: "scope1 scope2"
+          }
+        )
 
       expect_token(
         bypass,
@@ -1001,7 +1004,7 @@ defmodule LightningWeb.CredentialLiveTest do
 
       {:ok, edit_live, _html} = live(conn, ~p"/credentials")
 
-      assert wait_for_assigns(edit_live, :userinfo),
+      assert wait_for_assigns(edit_live, :userinfo, credential.id),
              ":userinfo has not been set yet."
 
       edit_live |> render()
@@ -1031,20 +1034,21 @@ defmodule LightningWeb.CredentialLiveTest do
 
       expires_at = DateTime.to_unix(DateTime.utc_now()) + 3600
 
-      credential_fixture(
-        user_id: user.id,
-        schema: "googlesheets",
-        body: %{
-          access_token: "ya29.a0AVvZ...",
-          refresh_token: "1//03vpp6Li...",
-          expires_at: expires_at,
-          scope: "scope1 scope2"
-        }
-      )
+      credential =
+        credential_fixture(
+          user_id: user.id,
+          schema: "googlesheets",
+          body: %{
+            access_token: "ya29.a0AVvZ...",
+            refresh_token: "1//03vpp6Li...",
+            expires_at: expires_at,
+            scope: "scope1 scope2"
+          }
+        )
 
       {:ok, edit_live, _html} = live(conn, ~p"/credentials")
 
-      assert wait_for_assigns(edit_live, :error)
+      assert wait_for_assigns(edit_live, :error, credential.id)
 
       edit_live |> render()
 
@@ -1062,7 +1066,7 @@ defmodule LightningWeb.CredentialLiveTest do
 
       edit_live |> element("a", "try again.") |> render_click()
 
-      assert wait_for_assigns(edit_live, :userinfo)
+      assert wait_for_assigns(edit_live, :userinfo, credential.id)
 
       assert edit_live |> has_element?("span", "Test User")
     end
@@ -1089,20 +1093,21 @@ defmodule LightningWeb.CredentialLiveTest do
 
       expires_at = DateTime.to_unix(DateTime.utc_now()) - 50
 
-      credential_fixture(
-        user_id: user.id,
-        schema: "googlesheets",
-        body: %{
-          access_token: "ya29.a0AVvZ...",
-          refresh_token: "1//03vpp6Li...",
-          expires_at: expires_at,
-          scope: "scope1 scope2"
-        }
-      )
+      credential =
+        credential_fixture(
+          user_id: user.id,
+          schema: "googlesheets",
+          body: %{
+            access_token: "ya29.a0AVvZ...",
+            refresh_token: "1//03vpp6Li...",
+            expires_at: expires_at,
+            scope: "scope1 scope2"
+          }
+        )
 
       {:ok, edit_live, _html} = live(conn, ~p"/credentials")
 
-      assert wait_for_assigns(edit_live, :error)
+      assert wait_for_assigns(edit_live, :error, credential.id)
 
       edit_live |> render()
 
@@ -1127,16 +1132,19 @@ defmodule LightningWeb.CredentialLiveTest do
       refute index_live |> has_element?("#credential-type-picker")
 
       assert index_live
-             |> has_element?("#google-sheets-inner-form", "No Client Configured")
+             |> has_element?(
+               "#google-sheets-inner-form-new",
+               "No Client Configured"
+             )
     end
   end
 
-  defp wait_for_assigns(live, key) do
+  defp wait_for_assigns(live, key, id \\ "new") do
     Enum.reduce_while(1..10, nil, fn n, _ ->
       {_mod, assigns} =
         Lightning.LiveViewHelpers.get_component_assigns_by(
           live,
-          id: "google-sheets-inner-form"
+          id: "google-sheets-inner-form-#{id}"
         )
 
       if val = assigns[key] do
@@ -1150,7 +1158,7 @@ defmodule LightningWeb.CredentialLiveTest do
 
   defp get_authorize_url(live) do
     live
-    |> element("#google-sheets-inner-form")
+    |> element("#google-sheets-inner-form-new")
     |> render()
     |> Floki.parse_fragment!()
     |> Floki.find("a[phx-click=authorize_click]")
