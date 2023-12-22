@@ -321,28 +321,24 @@ defmodule LightningWeb.RunLive.Index do
           "workorder_id" => workorder_id,
           "selected" => selected?
         },
-        %{assigns: assigns} = socket
+        socket
       ) do
+    %{page: page, selected_work_orders: selected_work_orders} = socket.assigns
+
     selected? = String.to_existing_atom(selected?)
+    workorder = Enum.find(page.entries, &(&1.id == workorder_id))
 
     work_orders =
-      if selected? do
-        workorder =
-          Enum.find(assigns.page.entries, fn wo ->
-            wo.id == workorder_id
-          end)
-
+      if selected? and nil != workorder do
         selected_workorder = %Lightning.WorkOrder{
           id: workorder.id,
           workflow_id: workorder.workflow_id
         }
 
-        [selected_workorder | assigns.selected_work_orders]
+        [selected_workorder | selected_work_orders]
       else
         {_wo, rest} =
-          Enum.split_with(assigns.selected_work_orders, fn wo ->
-            wo.id == workorder_id
-          end)
+          Enum.split_with(selected_work_orders, &(&1.id == workorder_id))
 
         rest
       end
