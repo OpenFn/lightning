@@ -14,6 +14,9 @@ and this project adheres to
 
 ### Fixed
 
+- Fix RuntimeError: found duplicate ID "google-sheets-inner-form" for
+  GoogleSheetsComponent [#1578](https://github.com/OpenFn/Lightning/issues/1578)
+
 ## [v0.12.1] - 2023-12-21
 
 ### Added
@@ -27,8 +30,6 @@ and this project adheres to
 
 - History page crashes if job is removed from workflow after it's been run
   [#1568](https://github.com/OpenFn/Lightning/issues/1568)
-- Fix RuntimeError: found duplicate ID "google-sheets-inner-form" for
-  GoogleSheetsComponent [#1578](https://github.com/OpenFn/Lightning/issues/1578)
 
 ## [v0.12.0] - 2023-12-15
 
