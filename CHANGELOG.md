@@ -12,6 +12,8 @@ and this project adheres to
 
 ### Changed
 
+- Set ws-worker to at least v0.3.2
+
 ### Fixed
 
 - Fix RuntimeError: found duplicate ID "google-sheets-inner-form" for
