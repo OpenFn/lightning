@@ -877,13 +877,29 @@ defmodule LightningWeb.WorkflowLive.Edit do
         WorkflowParams.apply_form_params(socket.assigns.workflow_params, params)
 
       socket
-      |> apply_params(next_params)
+      |> apply_params(next_params, get_params_opts_for("edges", params))
       |> mark_validated()
       |> push_patches_applied(initial_params)
     else
       socket
       |> put_flash(:error, "You are not authorized to perform this action.")
     end
+  end
+
+  # Returns the inputs that have being edited on the form
+  defp get_params_opts_for(workflow_attribute, params) do
+    params
+    |> Map.get(workflow_attribute, %{})
+    |> Map.to_list()
+    |> then(fn
+      [{index, %{"condition_type" => "js_expression"} = map}] ->
+        [
+          edge_edit_index: String.to_integer(index)
+        ]
+
+      _other ->
+        []
+    end)
   end
 
   defp webhook_url(trigger) do
@@ -907,7 +923,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
     |> apply_params(socket.assigns.workflow_params)
   end
 
-  defp apply_params(socket, params) do
+  defp apply_params(socket, params, opts \\ []) do
     # Build a new changeset from the new params
     changeset =
       socket.assigns.workflow
@@ -916,6 +932,36 @@ defmodule LightningWeb.WorkflowLive.Edit do
         |> set_default_adaptors()
         |> Map.put("project_id", socket.assigns.project.id)
       )
+      |> then(fn
+        %Ecto.Changeset{changes: %{edges: edges} = changes} = changeset ->
+          edge_edit_index = Keyword.get(opts, :edge_edit_index, nil)
+
+          cleared_edges =
+            edges
+            |> Enum.with_index()
+            |> Enum.map(fn
+              {%{errors: errors, changes: changes} = edge, index}
+              when index == edge_edit_index ->
+                errors_fields_taken =
+                  if Map.has_key?(changes, :condition_expression),
+                    do: [:condition_label],
+                    else: []
+
+                # ignore errors for inputs that have not been edited
+                %{edge | errors: Keyword.take(errors, errors_fields_taken)}
+
+              {edge, _index} ->
+                edge
+            end)
+
+          %{
+            changeset
+            | changes: Map.put(changes, :edges, cleared_edges)
+          }
+
+        changeset ->
+          changeset
+      end)
 
     has_multiple_jobs =
       length(Ecto.Changeset.get_field(changeset, :jobs)) > 1
