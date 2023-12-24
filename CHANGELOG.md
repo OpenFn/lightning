@@ -12,6 +12,14 @@ and this project adheres to
 
 ### Changed
 
+### Fixed
+
+## [v0.12.2] - 2023-12-24
+
+### Added
+
+### Changed
+
 - Bumped worker to address occasional git install issue
   `"@openfn/ws-worker": "^0.3.2"`
 
