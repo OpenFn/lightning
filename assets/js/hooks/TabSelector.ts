@@ -46,13 +46,7 @@ export default {
 
     window.addEventListener('hashchange', this._onHashChange);
 
-    // console.log({ getHash: this.getHash(), defaultHash: this.defaultHash });
-    const panel = document.querySelector(`[data-panel-hash=${this.getHash()}]`);
-    if (panel) {
-      this.hashChanged(this.getHash());
-    } else {
-      this.hashChanged(this.defaultHash);
-    }
+    this.hashChanged(this.getHash() || this.defaultHash);
   },
   hashChanged(nextHash: string) {
     let activePanel: HTMLElement | null = null;
