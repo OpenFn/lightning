@@ -12,7 +12,8 @@ and this project adheres to
 
 ### Changed
 
-- Set ws-worker to at least v0.3.2
+- Bumped worker to address occasional git install issue
+  `"@openfn/ws-worker": "^0.3.2"`
 
 ### Fixed
 
@@ -20,6 +21,8 @@ and this project adheres to
   GoogleSheetsComponent [#1578](https://github.com/OpenFn/Lightning/issues/1578)
 - Extend export script to include new JS expression edge type
   [#1540](https://github.com/OpenFn/Lightning/issues/1540)
+- Fix regression for attempt viewer log line highlighting
+  [#1589](https://github.com/OpenFn/Lightning/issues/1589)
 
 ## [v0.12.1] - 2023-12-21
 
