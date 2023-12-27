@@ -103,7 +103,7 @@ defmodule LightningWeb.RunLive.Components do
                 </span>
               </div>
             <% end %>
-            <div class="flex gap-3">
+            <div class="flex gap-1 text-xs">
               <%= if @can_rerun_job && @run.exit_reason do %>
                 <span
                   id={@run.id}
@@ -114,20 +114,16 @@ defmodule LightningWeb.RunLive.Components do
                   title="Rerun workflow from here"
                 >
                   rerun
-                </span>
+                </span>/
               <% end %>
               <.link
-                class="inline-flex items-center gap-x-0.5 text-indigo-400 hover:text-indigo-500 cursor-pointer"
+                class="text-indigo-400 hover:underline hover:underline-offset-2 hover:text-indigo-500 cursor-pointer"
                 navigate={
                 ~p"/projects/#{@project_id}/w/#{@run.job.workflow_id}"
                   <> "?a=#{@attempt.id}&m=expand&s=#{@run.job_id}"
               }
               >
-                <.icon
-                  title="Inspect Step"
-                  name="hero-document-magnifying-glass-mini"
-                  class="h-4 w-4"
-                /> inspect
+                inspect
               </.link>
             </div>
           </div>
