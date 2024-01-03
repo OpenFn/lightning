@@ -1,7 +1,11 @@
 defmodule LightningWeb.WorkflowLive.Edit do
   @moduledoc false
-  use LightningWeb, :live_view
+  require Lightning.Attempt
+  alias Lightning.Attempt
+  alias Lightning.Repo
+  use LightningWeb, {:live_view, container: {:div, []}}
 
+  alias Lightning.Attempts
   alias Lightning.Invocation
   alias Lightning.Policies.Permissions
   alias Lightning.Policies.ProjectUsers
@@ -572,7 +576,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
        workflow: nil,
        workflow_name: "",
        workflow_params: %{},
-       selected_credential_type: nil
+       selected_credential_type: nil,
+       run_status: :undefined
      )}
   end
 
@@ -774,7 +779,10 @@ defmodule LightningWeb.WorkflowLive.Edit do
           created_by: socket.assigns.current_user
         )
 
-      {:noreply, socket |> follow_attempt(attempt)}
+      Attempts.subscribe(attempt)
+
+      {:noreply,
+       socket |> assign(run_status: :running) |> follow_attempt(attempt)}
     else
       {:noreply,
        socket
@@ -815,9 +823,12 @@ defmodule LightningWeb.WorkflowLive.Edit do
       {:ok, %{workorder: workorder, workflow: workflow}} ->
         %{attempts: [attempt]} = workorder
 
+        Attempts.subscribe(attempt)
+
         {:noreply,
          socket
          |> assign_workflow(workflow)
+         |> assign(run_status: :running)
          |> follow_attempt(attempt)}
 
       {:error, %Ecto.Changeset{data: %WorkOrders.Manual{}} = changeset} ->
@@ -853,6 +864,23 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
   def handle_info({:credential_type_changed, type}, socket) do
     {:noreply, socket |> assign(:selected_credential_type, type)}
+  end
+
+  def handle_info(
+        %Lightning.Attempts.Events.RunCompleted{run: run},
+        socket
+      ) do
+    {:noreply, socket |> assign(run: run) |> assign(run_status: :completed)}
+  end
+
+  def handle_info(
+        %Lightning.Attempts.Events.AttemptUpdated{
+          attempt: %Lightning.Attempt{state: state}
+        },
+        socket
+      )
+      when state != Attempt.final_states() do
+    {:noreply, socket |> assign(run_status: :running)}
   end
 
   defp maybe_show_manual_run(socket) do
@@ -927,6 +955,9 @@ defmodule LightningWeb.WorkflowLive.Edit do
   defp save_and_run_disabled?(attrs) do
     case attrs do
       %{manual_run_form: nil} ->
+        true
+
+      %{run_status: :running} ->
         true
 
       %{
