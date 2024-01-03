@@ -13,7 +13,7 @@ and this project adheres to
 ### Changed
 
 - Bumped worker to support edge conditions between trigger and first job
-  `"@openfn/ws-worker": "^0.3.2"`
+  `"@openfn/ws-worker": "^0.4.0"`
 
 ### Fixed
 
