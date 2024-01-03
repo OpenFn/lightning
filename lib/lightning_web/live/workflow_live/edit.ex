@@ -1,11 +1,15 @@
 defmodule LightningWeb.WorkflowLive.Edit do
   @moduledoc false
-  require Lightning.Attempt
-  alias Lightning.Attempt
-  alias Lightning.Repo
   use LightningWeb, {:live_view, container: {:div, []}}
 
+  require Lightning.Attempt
+
+  alias Lightning.Attempts.Events.RunStarted
+  alias Lightning.Attempts.Events.RunCompleted
+  alias Lightning.Attempts.Events.LogAppended
+  alias Lightning.Attempts.Events.AttemptUpdated
   alias Lightning.Attempts
+  alias Lightning.Attempt
   alias Lightning.Invocation
   alias Lightning.Policies.Permissions
   alias Lightning.Policies.ProjectUsers
@@ -118,81 +122,99 @@ defmodule LightningWeb.WorkflowLive.Edit do
                     class="w-5 h-5 place-self-center text-gray-300"
                   />
                   <div class="inline-flex rounded-md shadow-sm">
-                    <%= if @run && @run.input_dataclip_id == @manual_run_form[:dataclip_id].value do %>
+                    <%= if @follow_attempt_id && !@run do %>
                       <.button
-                        id="retry-attempt"
-                        phx-hook="RetryViaCtrlShiftEnter"
-                        phx-click="rerun"
-                        phx-value-attempt_id={@follow_attempt_id}
-                        phx-value-run_id={@run.id}
+                        id="processing"
+                        disabled="true"
                         class="relative inline-flex gap-x-1.5
+                          items-center
+                          px-3 py-2 text-sm font-semibold
+                          text-gray-900
+                          hover:bg-gray-50 focus:z-10"
+                      >
+                        <.icon
+                          name="hero-arrow-path-mini"
+                          class="w-4 h-4 animate-spin"
+                        /> Running
+                      </.button>
+                    <% else %>
+                      <%= if @run && @run.input_dataclip_id == @manual_run_form[:dataclip_id].value do %>
+                        <.button
+                          id="retry-attempt"
+                          phx-hook="RetryViaCtrlShiftEnter"
+                          phx-click="rerun"
+                          phx-value-attempt_id={@follow_attempt_id}
+                          phx-value-run_id={@run.id}
+                          class="relative inline-flex gap-x-1.5
                           items-center rounded-l-md rounded-r-none
                           px-3 py-2 text-sm font-semibold
                           text-gray-900
                           hover:bg-gray-50 focus:z-10"
-                        disabled={@save_and_run_disabled}
-                      >
-                        <.icon name="hero-arrow-path-mini" class="w-4 h-4" />
-                        Retry from here
-                      </.button>
-                      <div class="relative -ml-px block">
-                        <.button
-                          type="button"
-                          class="relative inline-flex items-center rounded-r-md rounded-l-none text-white pr-1 pl-1"
-                          id="option-menu-button"
-                          aria-expanded="true"
-                          aria-haspopup="true"
-                          phx-click={show_dropdown("new_attempt_menu")}
+                          disabled={@save_and_run_disabled}
                         >
-                          <span class="sr-only">Open options</span>
-                          <svg
-                            class="h-5 w-5"
-                            viewBox="0 0 20 20"
-                            fill="currentColor"
-                            aria-hidden="true"
-                          >
-                            <path
-                              fill-rule="evenodd"
-                              d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z"
-                              clip-rule="evenodd"
-                            />
-                          </svg>
+                          <.icon name="hero-arrow-path-mini" class="w-4 h-4" />
+                          Retry from here
                         </.button>
-                        <div
-                          role="menu"
-                          aria-orientation="vertical"
-                          aria-labelledby="option-menu-button"
-                          tabindex="-1"
-                        >
-                          <button
-                            phx-click-away={hide_dropdown("new_attempt_menu")}
-                            id="new_attempt_menu"
-                            type="submit"
-                            class={[
-                              "hidden absolute right-0 bottom-9 z-10 mb-2 w-56",
-                              "inline-flex justify-center py-2 px-4 border border-gray-50",
-                              "bg-white hover:bg-gray-100 text-gray-700 hover:text-gray-900",
-                              "shadow-md text-sm font-medium rounded-md focus:outline-none",
-                              "gap-x-1.5 items-center"
-                            ]}
-                            form={@manual_run_form.id}
+                        <div class="relative -ml-px block">
+                          <.button
+                            type="button"
+                            class="relative inline-flex items-center rounded-r-md rounded-l-none text-white pr-1 pl-1"
+                            id="option-menu-button"
+                            aria-expanded="true"
+                            aria-haspopup="true"
                             disabled={@save_and_run_disabled}
+                            phx-click={show_dropdown("new_attempt_menu")}
                           >
-                            <.icon name="hero-play-solid" class="w-4 h-4" />
-                            Create New Work Order
-                          </button>
+                            <span class="sr-only">Open options</span>
+                            <svg
+                              class="h-5 w-5"
+                              viewBox="0 0 20 20"
+                              fill="currentColor"
+                              aria-hidden="true"
+                            >
+                              <path
+                                fill-rule="evenodd"
+                                d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z"
+                                clip-rule="evenodd"
+                              />
+                            </svg>
+                          </.button>
+                          <div
+                            role="menu"
+                            aria-orientation="vertical"
+                            aria-labelledby="option-menu-button"
+                            tabindex="-1"
+                          >
+                            <button
+                              phx-click-away={hide_dropdown("new_attempt_menu")}
+                              id="new_attempt_menu"
+                              type="submit"
+                              class={[
+                                "hidden absolute right-0 bottom-9 z-10 mb-2 w-56",
+                                "inline-flex justify-center py-2 px-4 border border-gray-50",
+                                "bg-white hover:bg-gray-100 text-gray-700 hover:text-gray-900",
+                                "shadow-md text-sm font-medium rounded-md focus:outline-none",
+                                "gap-x-1.5 items-center"
+                              ]}
+                              form={@manual_run_form.id}
+                              disabled={@save_and_run_disabled}
+                            >
+                              <.icon name="hero-play-solid" class="w-4 h-4" />
+                              Create New Work Order
+                            </button>
+                          </div>
                         </div>
-                      </div>
-                    <% else %>
-                      <.button
-                        type="submit"
-                        class="inline-flex items-center gap-x-1.5"
-                        form={@manual_run_form.id}
-                        disabled={@save_and_run_disabled}
-                      >
-                        <.icon name="hero-play-solid" class="w-4 h-4" />
-                        Create New Work Order
-                      </.button>
+                      <% else %>
+                        <.button
+                          type="submit"
+                          class="inline-flex items-center gap-x-1.5"
+                          form={@manual_run_form.id}
+                          disabled={@save_and_run_disabled}
+                        >
+                          <.icon name="hero-play-solid" class="w-4 h-4" />
+                          Create New Work Order
+                        </.button>
+                      <% end %>
                     <% end %>
                   </div>
                   <.with_changes_indicator changeset={@changeset}>
@@ -774,6 +796,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
         socket
       ) do
     if socket.assigns.can_rerun_job do
+      socket = socket |> assign(run_status: :started)
+
       {:ok, attempt} =
         WorkOrders.retry(attempt_id, run_id,
           created_by: socket.assigns.current_user
@@ -781,8 +805,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
       Attempts.subscribe(attempt)
 
-      {:noreply,
-       socket |> assign(run_status: :running) |> follow_attempt(attempt)}
+      {:noreply, socket |> follow_attempt(attempt)}
     else
       {:noreply,
        socket
@@ -803,7 +826,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
       can_run_job: can_run_job
     } = socket.assigns
 
-    socket = socket |> apply_params(workflow_params)
+    socket =
+      socket |> assign(run_status: :started) |> apply_params(workflow_params)
 
     if can_run_job && can_edit_job do
       Helpers.save_and_run(
@@ -828,7 +852,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
         {:noreply,
          socket
          |> assign_workflow(workflow)
-         |> assign(run_status: :running)
          |> follow_attempt(attempt)}
 
       {:error, %Ecto.Changeset{data: %WorkOrders.Manual{}} = changeset} ->
@@ -867,21 +890,37 @@ defmodule LightningWeb.WorkflowLive.Edit do
   end
 
   def handle_info(
-        %Lightning.Attempts.Events.RunCompleted{run: run},
+        %RunStarted{run: run},
+        socket
+      ) do
+    {:noreply,
+     socket
+     |> assign(run: run)
+     |> assign(run_status: :started)}
+  end
+
+  def handle_info(
+        %RunCompleted{run: run},
         socket
       ) do
     {:noreply, socket |> assign(run: run) |> assign(run_status: :completed)}
   end
 
   def handle_info(
-        %Lightning.Attempts.Events.AttemptUpdated{
-          attempt: %Lightning.Attempt{state: state}
+        %AttemptUpdated{
+          attempt: attempt = %Attempt{state: state}
         },
         socket
-      )
-      when state != Attempt.final_states() do
-    {:noreply, socket |> assign(run_status: :running)}
+      ) do
+    run_status =
+      if state in Attempt.final_states(), do: :completed, else: :running
+
+
+    {:noreply,
+     socket |> assign(run_status: run_status) |> follow_attempt(attempt)}
   end
+
+  def handle_info(%{}, socket), do: {:noreply, socket}
 
   defp maybe_show_manual_run(socket) do
     case socket.assigns do
@@ -957,7 +996,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
       %{manual_run_form: nil} ->
         true
 
-      %{run_status: :running} ->
+      %{run_status: status} when status in [:running, :started] ->
         true
 
       %{
