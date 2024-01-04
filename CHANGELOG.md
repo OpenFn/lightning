@@ -10,6 +10,9 @@ and this project adheres to
 
 ### Added
 
+- Close the loop between History and Inspector
+  [#1524](https://github.com/OpenFn/Lightning/issues/1524)
+
 ### Changed
 
 ### Fixed
