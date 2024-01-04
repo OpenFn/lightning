@@ -241,8 +241,6 @@ export const SaveAndRunViaCtrlEnter = createKeyCombinationHook(
   submitAction
 );
 
-// export const RetryOrCreateNewWorkOrder = 
-
 /**
  * Hook to trigger a close action on the job panel when the Escape key is pressed.
  */
