@@ -2,9 +2,9 @@ defmodule Lightning.WorkOrders do
   @moduledoc """
   Context for creating WorkOrders.
 
-  ## Workorders
+  ## Work Orders
 
-  Workorders represent the entrypoint for a unit of work in Lightning.
+  Work Orders represent the entrypoint for a unit of work in Lightning.
   They allow you to track the status of a webhook or cron trigger.
 
   For example if a user makes a request to a webhook endpoint, a Work Order

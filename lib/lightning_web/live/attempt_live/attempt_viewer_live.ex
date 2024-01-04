@@ -41,7 +41,7 @@ defmodule LightningWeb.AttemptLive.AttemptViewerLive do
                 </:value>
               </.list_item>
               <.list_item>
-                <:label>Attempt</:label>
+                <:label>Run</:label>
                 <:value>
                   <.link
                     navigate={~p"/projects/#{@project}/attempts/#{attempt}"}
@@ -74,6 +74,9 @@ defmodule LightningWeb.AttemptLive.AttemptViewerLive do
             >
               <.step_item
                 run={run}
+                is_clone={
+                  DateTime.compare(run.inserted_at, attempt.inserted_at) == :lt
+                }
                 phx-click="select_run"
                 phx-value-id={run.id}
                 selected={run.id == @selected_run_id}

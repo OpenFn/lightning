@@ -230,6 +230,7 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
             <div>
               <div class="flex gap-1 items-center bg-gray-200 pl-28 text-xs py-2">
                 <div>
+                  Run
                   <.link navigate={
                     ~p"/projects/#{@project.id}/attempts/#{attempt.id}"
                   }>
@@ -243,6 +244,25 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
                       <%= display_short_uuid(attempt.id) %>
                     </span>
                   </.link>
+                  <%= if Enum.count(@attempts) > 1 do %>
+                    (<%= index %>/<%= Enum.count(@attempts) %><%= if index !=
+                                                                       Enum.count(
+                                                                         @attempts
+                                                                       ),
+                                                                     do: ")" %>
+                    <%= if index == Enum.count(@attempts) do %>
+                      <span>
+                        &bull; <a
+                          id={"toggle_attempts_for_#{@work_order.id}"}
+                          href="#"
+                          class="text-indigo-400"
+                          phx-click="toggle_attempts"
+                          phx-target={@myself}
+                        >
+                        <%= if @show_prev_attempts, do: "hide", else: "show" %> previous</a>)
+                      </span>
+                    <% end %>
+                  <% end %>
                   <%= case attempt.state do %>
                     <% :available -> %>
                       enqueued @ <.timestamp timestamp={attempt.inserted_at} />
@@ -255,21 +275,6 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
                       <.timestamp timestamp={attempt.finished_at} />
                   <% end %>
                 </div>
-                <p class="text-gray-800">
-                  <%= if Enum.count(@attempts) > 1 do %>
-                    - attempt <%= index %> of <%= Enum.count(@attempts) %>
-                    <a
-                      :if={index == Enum.count(@attempts)}
-                      id={"toggle_attempts_for_#{@work_order.id}"}
-                      href="#"
-                      class="text-blue-600"
-                      phx-click="toggle_attempts"
-                      phx-target={@myself}
-                    >
-                      <%= if @show_prev_attempts, do: "hide", else: "show" %> previous
-                    </a>
-                  <% end %>
-                </p>
               </div>
             </div>
 
