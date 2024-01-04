@@ -359,7 +359,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       # Test that the delete event doesn't work even if the button is disabled.
       assert view |> force_event(:delete_node, job_1) =~
-               "Delete all descendant jobs first."
+               "Delete all descendant steps first."
 
       view |> select_node(job_2)
       assert_patched(view, ~p"/projects/#{project}/w/#{workflow}?s=#{job_2}")
@@ -403,7 +403,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       assert view |> delete_job_button_is_disabled?(job)
 
       assert view |> force_event(:delete_node, job) =~
-               "You can&#39;t delete the only job in a workflow."
+               "You can&#39;t delete the only step in a workflow."
     end
 
     @tag role: :editor
@@ -433,10 +433,10 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       assert view |> delete_job_button_is_disabled?(job_a)
 
       assert html =~
-               "You can&#39;t delete a job that has downstream jobs flowing from it."
+               "You can&#39;t delete a step that other downstream steps depend on"
 
       assert view |> force_event(:delete_node, job_a) =~
-               "Delete all descendant jobs first"
+               "Delete all descendant steps first"
 
       {:ok, view, html} =
         live(conn, ~p"/projects/#{project}/w/#{workflow}?s=#{job_b}")
@@ -444,10 +444,10 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       assert view |> delete_job_button_is_disabled?(job_b)
 
       assert html =~
-               "You can&#39;t delete a job that has downstream jobs flowing from it."
+               "You can&#39;t delete a step that other downstream steps depend on"
 
       assert view |> force_event(:delete_node, job_a) =~
-               "Delete all descendant jobs first"
+               "Delete all descendant steps first"
     end
 
     @tag role: :viewer

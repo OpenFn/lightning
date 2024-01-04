@@ -1064,7 +1064,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
     |> Map.get(workflow_attribute, %{})
     |> Map.to_list()
     |> then(fn
-      [{index, %{"condition_type" => "js_expression"} = map}] ->
+      [{index, %{"condition_type" => "js_expression"} = _map}] ->
         [
           edge_edit_index: String.to_integer(index)
         ]
