@@ -4,12 +4,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
   require Lightning.Attempt
 
-  alias Lightning.Attempts.Events.RunStarted
   alias Lightning.Attempts.Events.RunCompleted
-  alias Lightning.Attempts.Events.LogAppended
-  alias Lightning.Attempts.Events.AttemptUpdated
   alias Lightning.Attempts
-  alias Lightning.Attempt
   alias Lightning.Invocation
   alias Lightning.Policies.Permissions
   alias Lightning.Policies.ProjectUsers
@@ -598,8 +594,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
        workflow: nil,
        workflow_name: "",
        workflow_params: %{},
-       selected_credential_type: nil,
-       run_status: :undefined
+       selected_credential_type: nil
      )}
   end
 
@@ -796,8 +791,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
         socket
       ) do
     if socket.assigns.can_rerun_job do
-      socket = socket |> assign(run_status: :started)
-
       {:ok, attempt} =
         WorkOrders.retry(attempt_id, run_id,
           created_by: socket.assigns.current_user
@@ -826,8 +819,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
       can_run_job: can_run_job
     } = socket.assigns
 
-    socket =
-      socket |> assign(run_status: :started) |> apply_params(workflow_params)
+    socket = socket |> apply_params(workflow_params)
 
     if can_run_job && can_edit_job do
       Helpers.save_and_run(
@@ -890,34 +882,30 @@ defmodule LightningWeb.WorkflowLive.Edit do
   end
 
   def handle_info(
-        %RunStarted{run: run},
-        socket
-      ) do
-    {:noreply,
-     socket
-     |> assign(run: run)
-     |> assign(run_status: :started)}
-  end
-
-  def handle_info(
         %RunCompleted{run: run},
         socket
       ) do
-    {:noreply, socket |> assign(run: run) |> assign(run_status: :completed)}
-  end
+    dataclip = Invocation.get_dataclip_details!(run.input_dataclip_id)
 
-  def handle_info(
-        %AttemptUpdated{
-          attempt: attempt = %Attempt{state: state}
-        },
-        socket
-      ) do
-    run_status =
-      if state in Attempt.final_states(), do: :completed, else: :running
+    selectable_dataclips =
+      maybe_add_selected_dataclip(
+        socket.assigns.selectable_dataclips,
+        dataclip
+      )
 
+    manual_run_form_changeset =
+      socket.assigns.manual_run_form.source
+      |> Ecto.Changeset.change(dataclip_id: run.input_dataclip_id)
+
+    manual_run_form =
+      %{socket.assigns.manual_run_form | source: manual_run_form_changeset}
+      |> to_form(id: "manual_run_form")
 
     {:noreply,
-     socket |> assign(run_status: run_status) |> follow_attempt(attempt)}
+     socket
+     |> assign(run: run)
+     |> assign(manual_run_form: manual_run_form)
+     |> assign(selectable_dataclips: selectable_dataclips)}
   end
 
   def handle_info(%{}, socket), do: {:noreply, socket}
@@ -994,9 +982,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
   defp save_and_run_disabled?(attrs) do
     case attrs do
       %{manual_run_form: nil} ->
-        true
-
-      %{run_status: status} when status in [:running, :started] ->
         true
 
       %{

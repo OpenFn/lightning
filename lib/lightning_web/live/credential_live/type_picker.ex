@@ -84,7 +84,7 @@ defmodule LightningWeb.CredentialLive.TypePicker do
   @impl true
   def handle_event(
         "type_changed",
-        %{"_target" => _target, "type" => %{"selected" => type}},
+        %{"type" => %{"selected" => type}},
         socket
       ) do
     send(self(), {:credential_type_changed, type})
