@@ -10,7 +10,10 @@ and this project adheres to
 
 ### Added
 
-- Close the loop between History and Inspector
+- Link to the job inspctor for a selected run from the history interface
+  [#1524](https://github.com/OpenFn/Lightning/issues/1524)
+- Reprocess an existing workorder from the job inspector by default (instead of
+  always creating a new workorder)
   [#1524](https://github.com/OpenFn/Lightning/issues/1524)
 
 ### Changed

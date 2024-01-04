@@ -137,7 +137,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
                       <%= if @run && @run.input_dataclip_id == @manual_run_form[:dataclip_id].value do %>
                         <.button
                           id="retry-attempt"
-                          phx-hook="RetryViaCtrlShiftEnter"
+                          phx-hook="RetryOrCreateNewWorkOrder"
+                          data-action-type="primary"
                           phx-click="rerun"
                           phx-value-attempt_id={@follow_attempt_id}
                           phx-value-run_id={@run.id}
@@ -184,6 +185,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
                             <button
                               phx-click-away={hide_dropdown("new_attempt_menu")}
                               id="new_attempt_menu"
+                              phx-hook="RetryOrCreateNewWorkOrder"
+                              data-action-type="secondary"
                               type="submit"
                               class={[
                                 "hidden absolute right-0 bottom-9 z-10 mb-2 w-56",
@@ -202,6 +205,9 @@ defmodule LightningWeb.WorkflowLive.Edit do
                         </div>
                       <% else %>
                         <.button
+                          id="save-and-run"
+                          phx-hook="RetryOrCreateNewWorkOrder"
+                          data-action-type="primary"
                           type="submit"
                           class="inline-flex items-center gap-x-1.5"
                           form={@manual_run_form.id}
@@ -884,7 +890,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
   def handle_info(
         %RunCompleted{run: run},
         socket
-      ) do
+      )
+      when run.job_id === socket.assigns.selected_job.id do
     dataclip = Invocation.get_dataclip_details!(run.input_dataclip_id)
 
     selectable_dataclips =
