@@ -111,7 +111,7 @@ defmodule LightningWeb.RunLive.Components do
                   phx-click="rerun"
                   phx-value-attempt_id={@attempt.id}
                   phx-value-run_id={@run.id}
-                  title="Retry workflow from here"
+                  title="Rerun workflow from here"
                 >
                   rerun
                 </span>/
