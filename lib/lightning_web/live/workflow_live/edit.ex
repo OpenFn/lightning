@@ -1048,21 +1048,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
     end
   end
 
-  defp get_params_opts_for(workflow_attribute, params) do
-    params
-    |> Map.get(workflow_attribute, %{})
-    |> Map.to_list()
-    |> then(fn
-      [{index, %{"condition_type" => "js_expression"} = _map}] ->
-        [
-          edge_edit_index: String.to_integer(index)
-        ]
-
-      _other ->
-        []
-    end)
-  end
-
   defp webhook_url(trigger) do
     trigger
     |> case do
