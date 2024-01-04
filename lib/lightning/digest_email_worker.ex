@@ -90,7 +90,7 @@ defmodule Lightning.DigestEmailWorker do
   end
 
   @doc """
-  Get a map of counts for successful, rerun and failed Workorders for a given workflow in a given timeframe.
+  Get a map of counts for successful, rerun and failed Work Orders for a given workflow in a given timeframe.
   """
   def get_digest_data(workflow, start_date, end_date) do
     project = Projects.get_project!(workflow.project_id)

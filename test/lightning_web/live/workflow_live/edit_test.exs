@@ -242,12 +242,12 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       view |> change_editor_text("some body")
 
       refute view |> render() =~
-               "The job can&#39;t be blank"
+               "The step can&#39;t be blank"
 
       view |> change_editor_text("")
 
       assert view |> render() =~
-               "The job can&#39;t be blank"
+               "The step can&#39;t be blank"
     end
 
     test "allows editing job name", %{

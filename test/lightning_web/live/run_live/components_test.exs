@@ -227,7 +227,7 @@ defmodule LightningWeb.RunLive.ComponentsTest do
            |> Floki.find(~s{span[id="clone_#{attempt2.id}_#{first_run.id}"]})
            |> Enum.any?()
 
-    assert html =~ "This run was originally executed in a previous attempt"
+    assert html =~ "This step was originally executed in a previous run"
 
     html =
       render_component(&Components.run_list_item/1,
@@ -242,7 +242,7 @@ defmodule LightningWeb.RunLive.ComponentsTest do
            |> Floki.find(~s{span[id="clone_#{attempt2.id}_#{first_run.id}"]})
            |> Enum.any?()
 
-    refute html =~ "This run was originally executed in a previous attempt"
+    refute html =~ "This step was originally executed in a previous run"
   end
 
   test "no rerun button is displayed when user can't rerun a job" do

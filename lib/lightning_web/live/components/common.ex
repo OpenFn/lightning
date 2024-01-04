@@ -368,6 +368,7 @@ defmodule LightningWeb.Components.Common do
   attr :hash, :string, required: true
   attr :orientation, :string, required: true, values: ["horizontal", "vertical"]
   attr :disabled, :boolean, default: false
+  attr :disabled_msg, :string, default: "Unavailable"
   slot :inner_block, required: true
 
   def tab_item(assigns) do
@@ -407,6 +408,9 @@ defmodule LightningWeb.Components.Common do
     <%= if @disabled do %>
       <span
         id={"tab-item-#{@hash}"}
+        aria-label={@disabled_msg}
+        phx-hook="Tooltip"
+        data-placement="bottom"
         class={[@base_classes, @orientation_classes, @disabled_classes]}
         data-disabled
         data-hash={@hash}

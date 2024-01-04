@@ -109,7 +109,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
                   <.save_is_blocked_error :if={
                     editor_is_empty(@workflow_form, @selected_job)
                   }>
-                    The job can't be blank
+                    The step can't be blank
                   </.save_is_blocked_error>
 
                   <.icon
@@ -337,9 +337,9 @@ defmodule LightningWeb.WorkflowLive.Edit do
                         class="focus:ring-red-500 bg-red-600 hover:bg-red-700 disabled:bg-red-300"
                         disabled={!@can_edit_job or has_child_edges or is_first_job}
                         tooltip={deletion_tooltip_message(@has_multiple_jobs)}
-                        data-confirm="Are you sure you want to delete this Job?"
+                        data-confirm="Are you sure you want to delete this step?"
                       >
-                        Delete Job
+                        Delete Step
                       </.button>
                     </label>
                   </div>
@@ -427,9 +427,9 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
   defp deletion_tooltip_message(has_multiple_jobs) do
     if has_multiple_jobs do
-      "You can't delete a job that has downstream jobs flowing from it."
+      "You can't delete a step that other downstream steps depend on."
     else
-      "You can't delete the only job in a workflow."
+      "You can't delete the only step in a workflow."
     end
   end
 
@@ -454,7 +454,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
     </.link>
 
     <.save_is_blocked_error :if={@is_empty}>
-      The job can't be blank
+      The step can't be blank
     </.save_is_blocked_error>
     """
   end
@@ -690,12 +690,12 @@ defmodule LightningWeb.WorkflowLive.Edit do
       :has_child_edges ->
         {:noreply,
          socket
-         |> put_flash(:error, "Delete all descendant jobs first.")}
+         |> put_flash(:error, "Delete all descendant steps first.")}
 
       :is_first_job ->
         {:noreply,
          socket
-         |> put_flash(:error, "You can't delete the first job of a workflow.")}
+         |> put_flash(:error, "You can't delete the first step of a workflow.")}
     end
   end
 
