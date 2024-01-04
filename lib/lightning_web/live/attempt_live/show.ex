@@ -48,11 +48,11 @@ defmodule LightningWeb.AttemptLive.Show do
                   <:label>Workflow</:label>
                   <:value>
                     <.link
-                      navigate={~p"/projects/#{@project}/w/#{attempt.workflow.id}"}
+                      navigate={~p"/projects/#{@project}/w/#{@workflow.id}"}
                       class="hover:underline hover:text-primary-900 whitespace-nowrap text-ellipsis"
                     >
                       <span class="whitespace-nowrap text-ellipsis">
-                        <%= display_short_uuid(attempt.workflow.id) %>
+                        <%= display_short_uuid(@workflow.id) %>
                       </span>
                       <.icon name="hero-arrow-up-right" class="h-2 w-2 float-right" />
                     </.link>
