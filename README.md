@@ -1,4 +1,4 @@
-# OpenFn/Lightning (beta) [![CircleCI](https://dl.circleci.com/status-badge/img/gh/OpenFn/Lightning/tree/main.svg?style=svg)](https://dl.circleci.com/status-badge/redirect/gh/OpenFn/Lightning/tree/main) [![codecov](https://codecov.io/gh/OpenFn/Lightning/branch/main/graph/badge.svg?token=FfDMxdGL3a)](https://codecov.io/gh/OpenFn/Lightning) ![Docker Pulls](https://img.shields.io/docker/pulls/openfn/lightning)
+# OpenFn/Lightning [![CircleCI](https://dl.circleci.com/status-badge/img/gh/OpenFn/Lightning/tree/main.svg?style=svg)](https://dl.circleci.com/status-badge/redirect/gh/OpenFn/Lightning/tree/main) [![codecov](https://codecov.io/gh/OpenFn/Lightning/branch/main/graph/badge.svg?token=FfDMxdGL3a)](https://codecov.io/gh/OpenFn/Lightning) ![Docker Pulls](https://img.shields.io/docker/pulls/openfn/lightning)
 
 OpenFn/Lightning is a fully open source, workflow automation platform that's
 used to automate critical business processes and integrate information systems.
@@ -22,7 +22,7 @@ Use Lightning to visually build, execute and manage workflows.
 ## Contents
 
 - [Demo](#demo)
-- [Sign up for the BETA](#register-for-a-beta-account)
+- [Use OpenFn Online](#use-openfn-online)
 - [Features](#features)
 - [Getting started](#getting-started)
   - [Run Lightning via Docker](#run-via-docker)
@@ -49,9 +49,9 @@ Explore our [demo app\*](https://demo.openfn.org/) with username:
 _\*Note that the demo app refreshes daily, so do not configure workflows you
 want to save._
 
-## Register for a Beta account
+## Use OpenFn Online
 
-Register for a Beta account at [app.openfn.org](https://app.openfn.org/) and go
+Register for an account at [app.openfn.org](https://app.openfn.org/) and go
 through the
 [quick-start guide](https://docs.openfn.org/documentation/build/lightning-quick-start)
 to get familiar with the app.
