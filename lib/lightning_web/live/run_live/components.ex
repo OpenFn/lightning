@@ -90,8 +90,8 @@ defmodule LightningWeb.RunLive.Components do
                 <span
                   class="cursor-pointer"
                   id={"clone_" <> @attempt.id <> "_" <> @run.id}
-                  aria-label="This run was originally executed in a previous attempt.
-                    It was skipped in this attempt; the original output has been
+                  aria-label="This step was originally executed in a previous run.
+                    It was skipped in this run; the original output has been
                     used as the starting point for downstream jobs."
                   phx-hook="Tooltip"
                   data-placement="right"
@@ -103,7 +103,7 @@ defmodule LightningWeb.RunLive.Components do
                 </span>
               </div>
             <% end %>
-            <div class="flex gap-1">
+            <div class="flex gap-1 text-xs leading-5">
               <%= if @can_rerun_job && @run.exit_reason do %>
                 <span
                   id={@run.id}
@@ -114,8 +114,17 @@ defmodule LightningWeb.RunLive.Components do
                   title="Rerun workflow from here"
                 >
                   rerun
-                </span>
+                </span>/
               <% end %>
+              <.link
+                class="text-indigo-400 hover:underline hover:underline-offset-2 hover:text-indigo-500 cursor-pointer"
+                navigate={
+                ~p"/projects/#{@project_id}/w/#{@run.job.workflow_id}"
+                  <> "?a=#{@attempt.id}&m=expand&s=#{@run.job_id}"
+              }
+              >
+                inspect
+              </.link>
             </div>
           </div>
         </div>

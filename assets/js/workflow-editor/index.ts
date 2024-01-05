@@ -109,7 +109,7 @@ export default {
     });
 
     this.handleEvent<{ href: string; patch: boolean }>('navigate', e => {
-      const id = new URL(e.href).searchParams.get('s');
+      const id = new URL(window.location.href).searchParams.get('s');
 
       if (e.patch && this.component) this.component.render(id);
     });

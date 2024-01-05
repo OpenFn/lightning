@@ -191,11 +191,18 @@ defmodule LightningWeb.AttemptLive.Components do
   end
 
   attr :run, Lightning.Invocation.Run, required: true
+  attr :is_clone, :boolean, default: false
+  attr :show_inspector_link, :boolean, default: false
+  attr :attempt_id, :string
+  attr :project_id, :string
   attr :selected, :boolean, default: false
   attr :class, :string, default: ""
   attr :rest, :global
 
   def step_item(assigns) do
+    # TODO - add dataclip and workorder
+    # <> "?i=DATACLIP_ID&m=expand&wo=WORKORDER_ID"
+
     ~H"""
     <div
       class={[
@@ -211,10 +218,43 @@ defmodule LightningWeb.AttemptLive.Components do
       <div class="flex items-center">
         <.run_state_circle run={@run} />
       </div>
-      <div class="flex min-w-0 flex-1 justify-between space-x-4 pt-1.5 pr-1.5">
+      <div class={[
+        "flex min-w-0 flex-1 justify-between space-x-4 pt-1.5 pr-1.5",
+        if(@is_clone, do: "opacity-50")
+      ]}>
+        <%= if @is_clone do %>
+          <div class="flex">
+            <span
+              class="cursor-pointer"
+              id={"clone_" <> @run.id}
+              aria-label="This step was originally executed in a previous attempt.
+                    It was skipped in this attempt; the original output has been
+                    used as the starting point for downstream jobs."
+              phx-hook="Tooltip"
+              data-placement="bottom"
+            >
+              <Heroicons.paper_clip
+                mini
+                class="mr-1 mt-1 h-3 w-3 flex-shrink-0 text-gray-500"
+              />
+            </span>
+          </div>
+        <% end %>
         <div>
           <p class="text-sm text-gray-900">
             <%= @run.job.name %>
+            <%= if @show_inspector_link do %>
+              <.link navigate={
+                ~p"/projects/#{@project_id}/w/#{@run.job.workflow_id}"
+                  <> "?a=#{@attempt_id}&m=expand&s=#{@run.job_id}"
+              }>
+                <.icon
+                  title="Inspect Step"
+                  name="hero-document-magnifying-glass-mini"
+                  class="h-4 w-4 mb-2 hover:text-primary-400"
+                />
+              </.link>
+            <% end %>
           </p>
         </div>
         <div class="whitespace-nowrap text-right text-sm text-gray-500">

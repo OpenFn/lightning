@@ -17,7 +17,7 @@ defmodule LightningWeb.Components.NewInputs do
   """
   attr :id, :string, default: ""
   attr :type, :string, default: "button", values: ["button", "submit"]
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global, include: ~w(disabled form name value)
   attr :tooltip, :any, default: nil
 
@@ -39,7 +39,7 @@ defmodule LightningWeb.Components.NewInputs do
           "focus:ring-2 focus:ring-offset-2 focus:ring-primary-500",
           "bg-primary-600 hover:bg-primary-700",
           "disabled:bg-primary-300",
-          "phx-submit-loading:opacity-75 ",
+          "phx-submit-loading:opacity-75",
           @class
         ]}
         {@rest}

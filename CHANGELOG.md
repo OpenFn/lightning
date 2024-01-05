@@ -10,7 +10,28 @@ and this project adheres to
 
 ### Added
 
+- Link to the job inspctor for a selected run from the history interface
+  [#1524](https://github.com/OpenFn/Lightning/issues/1524)
+- Reprocess an existing workorder from the job inspector by default (instead of
+  always creating a new workorder)
+  [#1524](https://github.com/OpenFn/Lightning/issues/1524)
+
 ### Changed
+
+- Updated naming to prepare for v2 release
+  [#1248](https://github.com/OpenFn/Lightning/issues/1248); the major change is
+  that each time a work order (the typical unit of business value for an
+  organization, e.g. "execute workflow ABC for patient 123") is executed, it is
+  called a "run". Previously, it was called an "attempt". The hierarchy is now:
+
+  ```
+  Build-Time: Projects > Workflows > Steps
+  Run-Time: Work Orders > Runs > Steps
+  ```
+
+  Note the name changes here are reflected in the UI, but not all tables/models
+  will be changed until [1571](https://github.com/OpenFn/Lightning/issues/1571)
+  is delivered.
 
 ### Fixed
 

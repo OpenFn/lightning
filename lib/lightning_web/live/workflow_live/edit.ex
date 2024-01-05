@@ -1,7 +1,11 @@
 defmodule LightningWeb.WorkflowLive.Edit do
   @moduledoc false
-  use LightningWeb, :live_view
+  use LightningWeb, {:live_view, container: {:div, []}}
 
+  require Lightning.Attempt
+
+  alias Lightning.Attempts.Events.RunCompleted
+  alias Lightning.Attempts
   alias Lightning.Invocation
   alias Lightning.Policies.Permissions
   alias Lightning.Policies.ProjectUsers
@@ -105,7 +109,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
                   <.save_is_blocked_error :if={
                     editor_is_empty(@workflow_form, @selected_job)
                   }>
-                    The job can't be blank
+                    The step can't be blank
                   </.save_is_blocked_error>
 
                   <.icon
@@ -113,17 +117,90 @@ defmodule LightningWeb.WorkflowLive.Edit do
                     name="hero-lock-closed"
                     class="w-5 h-5 place-self-center text-gray-300"
                   />
-                  <div>
+                  <div id="run-buttons" class="inline-flex rounded-md shadow-sm">
                     <.button
-                      type="submit"
-                      class="inline-flex items-center gap-x-1.5"
-                      form={@manual_run_form.id}
-                      disabled={@save_and_run_disabled}
+                      id="save-and-run"
+                      phx-hook="DefaultRunViaCtrlEnter"
+                      {if retry_from_here(@run, @manual_run_form), do:
+                        [type: "button", "phx-click": "rerun", "phx-value-attempt_id": @follow_attempt_id, "phx-value-run_id": @run.id],
+                      else:
+                          [type: "submit", form: @manual_run_form.id]}
+                      class={[
+                        "relative inline-flex items-center",
+                        retry_from_here(@run, @manual_run_form) && "rounded-r-none"
+                      ]}
+                      disabled={
+                        @save_and_run_disabled ||
+                          processing(@follow_attempt_id, @run)
+                      }
                     >
-                      <.icon name="hero-play-solid" class="w-4 h-4" /> Save & Run
+                      <%= if processing(@follow_attempt_id, @run) do %>
+                        <.icon
+                          name="hero-arrow-path-mini"
+                          class="w-4 h-4 animate-spin"
+                        /> Processing
+                      <% else %>
+                        <%= if retry_from_here(@run, @manual_run_form) do %>
+                          <.icon name="hero-arrow-path-mini" class="w-4 h-4 mr-1" />
+                          Rerun from here
+                        <% else %>
+                          <.icon name="hero-play-solid" class="w-4 h-4" />
+                          Create New Work Order
+                        <% end %>
+                      <% end %>
                     </.button>
+                    <div
+                      :if={retry_from_here(@run, @manual_run_form)}
+                      class="relative -ml-px block"
+                    >
+                      <.button
+                        type="button"
+                        class="rounded-l-none pr-1 pl-1 focus:ring-inset"
+                        id="option-menu-button"
+                        aria-expanded="true"
+                        aria-haspopup="true"
+                        disabled={@save_and_run_disabled}
+                        phx-click={show_dropdown("create-new-work-order")}
+                      >
+                        <span class="sr-only">Open options</span>
+                        <svg
+                          class="h-5 w-5"
+                          viewBox="0 0 20 20"
+                          fill="currentColor"
+                          aria-hidden="true"
+                        >
+                          <path
+                            fill-rule="evenodd"
+                            d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z"
+                            clip-rule="evenodd"
+                          />
+                        </svg>
+                      </.button>
+                      <div
+                        role="menu"
+                        aria-orientation="vertical"
+                        aria-labelledby="option-menu-button"
+                        tabindex="-1"
+                      >
+                        <button
+                          phx-click-away={hide_dropdown("create-new-work-order")}
+                          phx-hook="AltRunViaCtrlShiftEnter"
+                          id="create-new-work-order"
+                          type="submit"
+                          class={[
+                            "hidden absolute right-0 bottom-9 z-10 mb-2 w-max",
+                            "rounded-md bg-white px-4 py-2 text-sm font-semibold",
+                            "text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
+                          ]}
+                          form={@manual_run_form.id}
+                          disabled={@save_and_run_disabled}
+                        >
+                          <.icon name="hero-play-solid" class="w-4 h-4" />
+                          Create New Work Order
+                        </button>
+                      </div>
+                    </div>
                   </div>
-
                   <.with_changes_indicator changeset={@changeset}>
                     <Form.submit_button
                       class=""
@@ -242,9 +319,9 @@ defmodule LightningWeb.WorkflowLive.Edit do
                         class="focus:ring-red-500 bg-red-600 hover:bg-red-700 disabled:bg-red-300"
                         disabled={!@can_edit_job or has_child_edges or is_first_job}
                         tooltip={deletion_tooltip_message(@has_multiple_jobs)}
-                        data-confirm="Are you sure you want to delete this Job?"
+                        data-confirm="Are you sure you want to delete this step?"
                       >
-                        Delete Job
+                        Delete Step
                       </.button>
                     </label>
                   </div>
@@ -330,11 +407,16 @@ defmodule LightningWeb.WorkflowLive.Edit do
     """
   end
 
+  defp retry_from_here(run, form),
+    do: run && run.input_dataclip_id == form[:dataclip_id].value
+
+  defp processing(attempt_id, run), do: attempt_id && !run
+
   defp deletion_tooltip_message(has_multiple_jobs) do
     if has_multiple_jobs do
-      "You can't delete a job that has downstream jobs flowing from it."
+      "You can't delete a step that other downstream steps depend on."
     else
-      "You can't delete the only job in a workflow."
+      "You can't delete the only step in a workflow."
     end
   end
 
@@ -359,7 +441,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
     </.link>
 
     <.save_is_blocked_error :if={@is_empty}>
-      The job can't be blank
+      The step can't be blank
     </.save_is_blocked_error>
     """
   end
@@ -440,7 +522,14 @@ defmodule LightningWeb.WorkflowLive.Edit do
           can_edit_job:
             Permissions.can?(ProjectUsers, :edit_job, current_user, project_user),
           can_run_job:
-            Permissions.can?(ProjectUsers, :run_job, current_user, project_user)
+            Permissions.can?(ProjectUsers, :run_job, current_user, project_user),
+          can_rerun_job:
+            Permissions.can?(
+              ProjectUsers,
+              :rerun_job,
+              current_user,
+              project_user
+            )
         )
 
       {:error, _} ->
@@ -472,7 +561,9 @@ defmodule LightningWeb.WorkflowLive.Edit do
       can_edit_job:
         Permissions.can?(ProjectUsers, :edit_job, current_user, project_user),
       can_run_job:
-        Permissions.can?(ProjectUsers, :run_job, current_user, project_user)
+        Permissions.can?(ProjectUsers, :run_job, current_user, project_user),
+      can_rerun_job:
+        Permissions.can?(ProjectUsers, :rerun_job, current_user, project_user)
     )
   end
 
@@ -485,6 +576,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
        active_menu_item: :overview,
        expanded_job: nil,
        follow_attempt_id: nil,
+       run: nil,
        manual_run_form: nil,
        page_title: "",
        selected_edge: nil,
@@ -585,12 +677,12 @@ defmodule LightningWeb.WorkflowLive.Edit do
       :has_child_edges ->
         {:noreply,
          socket
-         |> put_flash(:error, "Delete all descendant jobs first.")}
+         |> put_flash(:error, "Delete all descendant steps first.")}
 
       :is_first_job ->
         {:noreply,
          socket
-         |> put_flash(:error, "You can't delete the first job of a workflow.")}
+         |> put_flash(:error, "You can't delete the first step of a workflow.")}
     end
   end
 
@@ -682,6 +774,33 @@ defmodule LightningWeb.WorkflowLive.Edit do
     {:noreply, socket |> assign_manual_run_form(changeset)}
   end
 
+  # The retry_from_run event is for creating a new attempt for an existing work
+  # order, just like clicking "rerun from here" on the history page.
+
+  @impl true
+  def handle_event(
+        "rerun",
+        %{"attempt_id" => attempt_id, "run_id" => run_id},
+        socket
+      ) do
+    if socket.assigns.can_rerun_job do
+      {:ok, attempt} =
+        WorkOrders.retry(attempt_id, run_id,
+          created_by: socket.assigns.current_user
+        )
+
+      Attempts.subscribe(attempt)
+
+      {:noreply, socket |> follow_attempt(attempt)}
+    else
+      {:noreply,
+       socket
+       |> put_flash(:error, "You are not authorized to perform this action.")}
+    end
+  end
+
+  # The manual_run_submit event is for create a new work order from a dataclip and
+  # a job.
   def handle_event("manual_run_submit", %{"manual" => params}, socket) do
     %{
       project: project,
@@ -712,6 +831,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
     |> case do
       {:ok, %{workorder: workorder, workflow: workflow}} ->
         %{attempts: [attempt]} = workorder
+
+        Attempts.subscribe(attempt)
 
         {:noreply,
          socket
@@ -753,6 +874,36 @@ defmodule LightningWeb.WorkflowLive.Edit do
     {:noreply, socket |> assign(:selected_credential_type, type)}
   end
 
+  def handle_info(
+        %RunCompleted{run: run},
+        socket
+      )
+      when run.job_id === socket.assigns.selected_job.id do
+    dataclip = Invocation.get_dataclip_details!(run.input_dataclip_id)
+
+    selectable_dataclips =
+      maybe_add_selected_dataclip(
+        socket.assigns.selectable_dataclips,
+        dataclip
+      )
+
+    manual_run_form_changeset =
+      socket.assigns.manual_run_form.source
+      |> Ecto.Changeset.change(dataclip_id: run.input_dataclip_id)
+
+    manual_run_form =
+      %{socket.assigns.manual_run_form | source: manual_run_form_changeset}
+      |> to_form(id: "manual_run_form")
+
+    {:noreply,
+     socket
+     |> assign(run: run)
+     |> assign(manual_run_form: manual_run_form)
+     |> assign(selectable_dataclips: selectable_dataclips)}
+  end
+
+  def handle_info(%{}, socket), do: {:noreply, socket}
+
   defp maybe_show_manual_run(socket) do
     case socket.assigns do
       %{selected_job: nil} ->
@@ -780,8 +931,16 @@ defmodule LightningWeb.WorkflowLive.Edit do
         selectable_dataclips =
           Invocation.list_dataclips_for_job(%Job{id: job.id})
 
+        run =
+          assigns[:follow_attempt_id] &&
+            Invocation.get_run_for_attempt_and_job(
+              assigns[:follow_attempt_id],
+              job.id
+            )
+
         socket
         |> assign_manual_run_form(changeset)
+        |> assign(run: run)
         |> assign(
           selectable_dataclips:
             maybe_add_selected_dataclip(selectable_dataclips, dataclip)
@@ -877,29 +1036,13 @@ defmodule LightningWeb.WorkflowLive.Edit do
         WorkflowParams.apply_form_params(socket.assigns.workflow_params, params)
 
       socket
-      |> apply_params(next_params, get_params_opts_for("edges", params))
+      |> apply_params(next_params)
       |> mark_validated()
       |> push_patches_applied(initial_params)
     else
       socket
       |> put_flash(:error, "You are not authorized to perform this action.")
     end
-  end
-
-  # Returns the inputs that have being edited on the form
-  defp get_params_opts_for(workflow_attribute, params) do
-    params
-    |> Map.get(workflow_attribute, %{})
-    |> Map.to_list()
-    |> then(fn
-      [{index, %{"condition_type" => "js_expression"} = map}] ->
-        [
-          edge_edit_index: String.to_integer(index)
-        ]
-
-      _other ->
-        []
-    end)
   end
 
   defp webhook_url(trigger) do
@@ -923,7 +1066,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
     |> apply_params(socket.assigns.workflow_params)
   end
 
-  defp apply_params(socket, params, opts \\ []) do
+  defp apply_params(socket, params) do
     # Build a new changeset from the new params
     changeset =
       socket.assigns.workflow
@@ -932,36 +1075,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
         |> set_default_adaptors()
         |> Map.put("project_id", socket.assigns.project.id)
       )
-      |> then(fn
-        %Ecto.Changeset{changes: %{edges: edges} = changes} = changeset ->
-          edge_edit_index = Keyword.get(opts, :edge_edit_index, nil)
-
-          cleared_edges =
-            edges
-            |> Enum.with_index()
-            |> Enum.map(fn
-              {%{errors: errors, changes: changes} = edge, index}
-              when index == edge_edit_index ->
-                errors_fields_taken =
-                  if Map.has_key?(changes, :condition_expression),
-                    do: [:condition_label],
-                    else: []
-
-                # ignore errors for inputs that have not been edited
-                %{edge | errors: Keyword.take(errors, errors_fields_taken)}
-
-              {edge, _index} ->
-                edge
-            end)
-
-          %{
-            changeset
-            | changes: Map.put(changes, :edges, cleared_edges)
-          }
-
-        changeset ->
-          changeset
-      end)
 
     has_multiple_jobs =
       length(Ecto.Changeset.get_field(changeset, :jobs)) > 1

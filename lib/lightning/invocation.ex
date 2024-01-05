@@ -95,6 +95,21 @@ defmodule Lightning.Invocation do
     Repo.one(query)
   end
 
+  @spec get_run_for_attempt_and_job(
+          attempt_id :: Ecto.UUID.t(),
+          job_id :: Ecto.UUID.t()
+        ) ::
+          Lightning.Invocation.Run.t() | nil
+  def get_run_for_attempt_and_job(attempt_id, job_id) do
+    query =
+      from r in Lightning.Invocation.Run,
+        join: a in assoc(r, :attempts),
+        on: a.id == ^attempt_id,
+        where: r.job_id == ^job_id
+
+    Repo.one(query)
+  end
+
   @doc """
   Gets a single dataclip.
 

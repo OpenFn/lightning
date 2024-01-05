@@ -20,7 +20,12 @@ defmodule LightningWeb.AttemptLive.Show do
     <LayoutComponents.page_content>
       <:header>
         <LayoutComponents.header current_user={@current_user}>
-          <:title><%= @page_title %></:title>
+          <:title>
+            <%= @page_title %>
+            <span class="pl-2 font-light">
+              <%= display_short_uuid(@id) %>
+            </span>
+          </:title>
         </LayoutComponents.header>
       </:header>
 
@@ -30,7 +35,7 @@ defmodule LightningWeb.AttemptLive.Show do
             <.loading_filler />
           </:loading>
           <:failed :let={_reason}>
-            there was an error loading the attemptanization
+            there was an error loading the run
           </:failed>
 
           <div class="flex gap-6 @5xl/main:flex-row flex-col">
@@ -39,6 +44,20 @@ defmodule LightningWeb.AttemptLive.Show do
                 id={"attempt-detail-#{attempt.id}"}
                 class="flex-1 @5xl/main:flex-none"
               >
+                <.list_item>
+                  <:label>Workflow</:label>
+                  <:value>
+                    <.link
+                      navigate={~p"/projects/#{@project}/w/#{@workflow.id}"}
+                      class="hover:underline hover:text-primary-900 whitespace-nowrap text-ellipsis"
+                    >
+                      <span class="whitespace-nowrap text-ellipsis">
+                        <%= display_short_uuid(@workflow.id) %>
+                      </span>
+                      <.icon name="hero-arrow-up-right" class="h-2 w-2 float-right" />
+                    </.link>
+                  </:value>
+                </.list_item>
                 <.list_item>
                   <:label>Work Order</:label>
                   <:value>
@@ -56,15 +75,30 @@ defmodule LightningWeb.AttemptLive.Show do
                   </:value>
                 </.list_item>
                 <.list_item>
-                  <:label>Attempt</:label>
+                  <:label>Started</:label>
                   <:value>
-                    <span class="whitespace-nowrap text-ellipsis pr-2">
-                      <%= display_short_uuid(attempt.id) %>
-                    </span>
+                    <%= if attempt.started_at,
+                      do:
+                        Timex.format!(
+                          attempt.started_at,
+                          "%d/%b/%y, %H:%M:%S",
+                          :strftime
+                        ) %>
                   </:value>
                 </.list_item>
                 <.list_item>
-                  <:label>Elapsed</:label>
+                  <:label>Finished</:label>
+                  <:value>
+                    <%= if attempt.finished_at,
+                      do:
+                        Timex.Format.DateTime.Formatters.Relative.format!(
+                          attempt.finished_at,
+                          "{relative}"
+                        ) %>
+                  </:value>
+                </.list_item>
+                <.list_item>
+                  <:label>Duration</:label>
                   <:value>
                     <.elapsed_indicator attempt={attempt} />
                   </:value>
@@ -82,7 +116,16 @@ defmodule LightningWeb.AttemptLive.Show do
                 class="flex-1"
               >
                 <.link patch={"?r=#{run.id}"} id={"select-run-#{run.id}"}>
-                  <.step_item run={run} selected={run.id == @selected_run_id} />
+                  <.step_item
+                    run={run}
+                    is_clone={
+                      DateTime.compare(run.inserted_at, attempt.inserted_at) == :lt
+                    }
+                    selected={run.id == @selected_run_id}
+                    show_inspector_link={true}
+                    attempt_id={attempt.id}
+                    project_id={@project}
+                  />
                 </.link>
               </.step_list>
             </div>
@@ -99,6 +142,7 @@ defmodule LightningWeb.AttemptLive.Show do
                   orientation="horizontal"
                   hash="input"
                   disabled={@no_run_selected?}
+                  disabled_msg="A valid step must be selected to view its input"
                 >
                   <.icon
                     name="hero-arrow-down-on-square"
@@ -110,6 +154,7 @@ defmodule LightningWeb.AttemptLive.Show do
                   orientation="horizontal"
                   hash="output"
                   disabled={@no_run_selected?}
+                  disabled_msg="A valid step (with a readable output) must be selected to view its output"
                 >
                   <.icon
                     name="hero-arrow-up-on-square"
@@ -166,7 +211,8 @@ defmodule LightningWeb.AttemptLive.Show do
      socket
      |> assign(
        active_menu_item: :runs,
-       page_title: "Attempt",
+       page_title: "Run",
+       id: id,
        selected_run_id: nil,
        runs: []
      )

@@ -41,10 +41,12 @@ defmodule LightningWeb.AttemptLive.AttemptViewerLive do
                 </:value>
               </.list_item>
               <.list_item>
-                <:label>Attempt</:label>
+                <:label>Run</:label>
                 <:value>
                   <.link
-                    navigate={~p"/projects/#{@project}/attempts/#{attempt}"}
+                    navigate={
+                      ~p"/projects/#{@project}/attempts/#{attempt}?r=#{@selected_run_id || ""}"
+                    }
                     class="hover:underline hover:text-primary-900 whitespace-nowrap text-ellipsis"
                   >
                     <span class="whitespace-nowrap text-ellipsis">
@@ -55,7 +57,18 @@ defmodule LightningWeb.AttemptLive.AttemptViewerLive do
                 </:value>
               </.list_item>
               <.list_item>
-                <:label>Elapsed</:label>
+                <:label>Started</:label>
+                <:value>
+                  <%= if attempt.started_at,
+                    do:
+                      Timex.Format.DateTime.Formatters.Relative.format!(
+                        attempt.started_at,
+                        "{relative}"
+                      ) %>
+                </:value>
+              </.list_item>
+              <.list_item>
+                <:label>Duration</:label>
                 <:value>
                   <.elapsed_indicator attempt={attempt} />
                 </:value>
@@ -74,6 +87,9 @@ defmodule LightningWeb.AttemptLive.AttemptViewerLive do
             >
               <.step_item
                 run={run}
+                is_clone={
+                  DateTime.compare(run.inserted_at, attempt.inserted_at) == :lt
+                }
                 phx-click="select_run"
                 phx-value-id={run.id}
                 selected={run.id == @selected_run_id}
