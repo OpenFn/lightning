@@ -277,7 +277,7 @@ defmodule Lightning.Factories do
     build(:workflow, attrs)
     |> with_trigger(trigger)
     |> with_job(job)
-    |> with_edge({trigger, job})
+    |> with_edge({trigger, job}, condition_type: :always)
   end
 
   def complex_workflow_factory(attrs) do
@@ -335,7 +335,7 @@ defmodule Lightning.Factories do
         workflow |> with_job(job)
       end)
     end)
-    |> with_edge({trigger, jobs |> Enum.at(0)})
+    |> with_edge({trigger, jobs |> Enum.at(0)}, condition_type: :always)
     |> with_edge({jobs |> Enum.at(0), jobs |> Enum.at(1)})
     |> with_edge({jobs |> Enum.at(1), jobs |> Enum.at(2)})
     |> with_edge({jobs |> Enum.at(2), jobs |> Enum.at(3)})
