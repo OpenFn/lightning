@@ -123,15 +123,17 @@ defmodule LightningWeb.WorkflowLive.Edit do
                     phx-hook="RunViaKeyBinding"
                   >
                     <.button
-                      id="create-or-retry-workorder"
+                      id="save-and-run"
                       {if retry_from_here(@run, @manual_run_form), do:
                         [type: "button", "phx-click": "rerun", "phx-value-attempt_id": @follow_attempt_id, "phx-value-run_id": @run.id],
                       else:
                           [type: "submit", form: @manual_run_form.id]}
-                      class={"relative inline-flex gap-x-1.5 items-center rounded-l-md
-                        rounded-r-#{if retry_from_here(@run, @manual_run_form), do: 'none', else: 'md'}
-                        px-3 py-2 text-sm font-semibold text-gray-900 hover:bg-gray-50 focus:z-10
-                        focus:outline-none outline-none focus:ring-none focus:ring-offset-none"}
+                      class={[
+                        "relative inline-flex gap-x-1.5 items-center",
+                        retry_from_here(@run, @manual_run_form) && "rounded-r-none",
+                        "px-3 py-2 text-sm font-semibold text-gray-900 hover:bg-gray-50 focus:z-10",
+                        "focus:outline-none outline-none focus:ring-none focus:ring-offset-none"
+                      ]}
                       disabled={
                         @save_and_run_disabled ||
                           processing(@follow_attempt_id, @run)
