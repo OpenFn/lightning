@@ -10,6 +10,23 @@ and this project adheres to
 
 ### Added
 
+### Changed
+
+### Fixed
+
+## [2.0.0-rc1] - 2023-01-05
+
+### Why does this repo go from `v0` to `v2.0`?
+
+Lightning is the _2nd version_ of the OpenFn platform. While much of the core
+technology is the same, there are breaking changes between `v1.105` (pre-2024)
+and `v2` ("OpenFn Lightning").
+
+For customers using OpenFn `v1`, a migration guide will be provided at
+[docs.openfn.org](https://docs.openfn.org)
+
+### Added
+
 - Link to the job inspctor for a selected run from the history interface
   [#1524](https://github.com/OpenFn/Lightning/issues/1524)
 - Reprocess an existing workorder from the job inspector by default (instead of
