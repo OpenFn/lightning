@@ -91,15 +91,14 @@ defmodule LightningWeb.AttemptLive.Show do
                   <:value>
                     <%= if attempt.finished_at,
                       do:
-                        Timex.format!(
+                        Timex.Format.DateTime.Formatters.Relative.format!(
                           attempt.finished_at,
-                          "%d/%b/%y, %H:%M:%S",
-                          :strftime
+                          "{relative}"
                         ) %>
                   </:value>
                 </.list_item>
                 <.list_item>
-                  <:label>Elapsed</:label>
+                  <:label>Duration</:label>
                   <:value>
                     <.elapsed_indicator attempt={attempt} />
                   </:value>

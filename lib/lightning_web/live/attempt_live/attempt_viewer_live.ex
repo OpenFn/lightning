@@ -55,7 +55,18 @@ defmodule LightningWeb.AttemptLive.AttemptViewerLive do
                 </:value>
               </.list_item>
               <.list_item>
-                <:label>Elapsed</:label>
+                <:label>Started</:label>
+                <:value>
+                  <%= if attempt.started_at,
+                    do:
+                      Timex.Format.DateTime.Formatters.Relative.format!(
+                        attempt.started_at,
+                        "{relative}"
+                      ) %>
+                </:value>
+              </.list_item>
+              <.list_item>
+                <:label>Duration</:label>
                 <:value>
                   <.elapsed_indicator attempt={attempt} />
                 </:value>
