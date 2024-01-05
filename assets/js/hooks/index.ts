@@ -186,7 +186,15 @@ function createKeyCombinationHook(
  * @param el - The HTML element to which the action will be applied.
  */
 function clickAction(e: KeyboardEvent, el: HTMLElement) {
-  el.dispatchEvent(new Event('click', { bubbles: true, cancelable: true }));
+  if (el.getAttribute('type') == 'submit') {
+    const formId = el.getAttribute('form');
+    const form = document.getElementById(formId);
+    form.dispatchEvent(
+      new Event('submit', { bubbles: true, cancelable: true })
+    );
+  } else {
+    el.dispatchEvent(new Event('click', { bubbles: true, cancelable: true }));
+  }
 }
 
 /**
@@ -212,17 +220,11 @@ function closeAction(e: KeyboardEvent, el: HTMLElement) {
 const isCtrlOrMetaS = (e: KeyboardEvent) =>
   (e.ctrlKey || e.metaKey) && e.key === 's';
 
-const isCtrlOrMetaEnter = (e: KeyboardEvent) => {
-  const test = (e.ctrlKey || e.metaKey) && !e.shiftKey && e.key === 'Enter';
-  console.log('cntrl-enter', test);
-  return test;
-};
+const isCtrlOrMetaEnter = (e: KeyboardEvent) =>
+  (e.ctrlKey || e.metaKey) && !e.shiftKey && e.key === 'Enter';
 
-const isCtrlOrMetaShiftEnter = (e: KeyboardEvent) => {
-  const test = (e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'Enter';
-  console.log('cntrl-shift-enter', test);
-  return test;
-};
+const isCtrlOrMetaShiftEnter = (e: KeyboardEvent) =>
+  (e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'Enter';
 
 const isEscape = (e: KeyboardEvent) => e.key === 'Escape';
 
@@ -245,14 +247,6 @@ export const DefaultRunViaCtrlEnter = createKeyCombinationHook(
 export const AltRunViaCtrlShiftEnter = createKeyCombinationHook(
   isCtrlOrMetaShiftEnter,
   clickAction
-);
-
-/**
- * Hook to trigger a retry action on the job panel when the Ctrl (or Cmd on Mac) + Shift + Enter key combination is pressed.
- */
-export const SaveAndRunViaCtrlEnter = createKeyCombinationHook(
-  isCtrlOrMetaShiftEnter,
-  submitAction
 );
 
 /**
