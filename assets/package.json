@@ -1,14 +1,11 @@
 {
-  "name": "lightning",
-  "version": "1.0.0",
-  "description": "",
+  "author": "Open Function Group, Inc.",
   "main": "js/app.js",
   "scripts": {
     "start": "node dev-server.mjs",
     "test": "npx ava ./test/index.test.ts",
     "test-report": "npx ava --tap ./test/index.test.ts | tap-xunit > ../test/reports/ava.xml"
   },
-  "author": "",
   "license": "LGPLv3",
   "dependencies": {
     "@heroicons/react": "^2.0.16",
@@ -35,7 +32,7 @@
     "zustand": "^4.3.7"
   },
   "devDependencies": {
-    "@openfn/ws-worker": "^0.3.2",
+    "@openfn/ws-worker": "^0.4.0",
     "@types/marked": "^4.0.8",
     "@types/react": "^18.0.15",
     "@types/react-dom": "^18.0.6",

@@ -52,7 +52,7 @@ defmodule LightningWeb.AttemptLive.Show do
                       class="hover:underline hover:text-primary-900 whitespace-nowrap text-ellipsis"
                     >
                       <span class="whitespace-nowrap text-ellipsis">
-                        <%= display_short_uuid(@workflow.id) %>
+                        <%= @workflow.name %>
                       </span>
                       <.icon name="hero-arrow-up-right" class="h-2 w-2 float-right" />
                     </.link>
