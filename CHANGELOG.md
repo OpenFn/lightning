@@ -14,6 +14,11 @@ and this project adheres to
 
 ### Fixed
 
+- Restored left-alignment for step list items on run detail and inspector.
+  [a6e4ada](https://github.com/OpenFn/Lightning/commit/a6e4adafd558269cfd690e7c4fdd8f9fe66c5f62)
+- Fixing attempt/run language for "skipped" tooltip on inspector.
+  [fd7dd0c](https://github.com/OpenFn/Lightning/commit/fd7dd0ca8128dfba2902e5aa6a2259e2073f0f10)
+
 ## [2.0.0-rc1] - 2023-01-05
 
 ### Why does this repo go from `v0` to `v2.0`?
