@@ -1,5 +1,6 @@
 {
   "author": "Open Function Group, Inc.",
+  "name": "lightning",
   "main": "js/app.js",
   "scripts": {
     "start": "node dev-server.mjs",
