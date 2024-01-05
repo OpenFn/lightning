@@ -24,7 +24,6 @@ defmodule LightningWeb.WorkflowLive.ManualWorkorder do
     <.form
       for={@form}
       id={@form.id}
-      phx-hook="SubmitViaCtrlEnter"
       phx-change="manual_run_change"
       phx-submit="manual_run_submit"
       class="h-full flex flex-col gap-4"

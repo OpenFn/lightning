@@ -39,7 +39,7 @@ defmodule LightningWeb.Components.NewInputs do
           "focus:ring-2 focus:ring-offset-2 focus:ring-primary-500",
           "bg-primary-600 hover:bg-primary-700",
           "disabled:bg-primary-300",
-          "phx-submit-loading:opacity-75 ",
+          "phx-submit-loading:opacity-75",
           @class
         ]}
         {@rest}

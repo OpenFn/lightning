@@ -211,10 +211,19 @@ function closeAction(e: KeyboardEvent, el: HTMLElement) {
 
 const isCtrlOrMetaS = (e: KeyboardEvent) =>
   (e.ctrlKey || e.metaKey) && e.key === 's';
-const isCtrlOrMetaEnter = (e: KeyboardEvent) =>
-  (e.ctrlKey || e.metaKey) && e.key === 'Enter';
-const isCtrlOrMetaShiftEnter = (e: KeyboardEvent) =>
-  (e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'Enter';
+
+const isCtrlOrMetaEnter = (e: KeyboardEvent) => {
+  const test = (e.ctrlKey || e.metaKey) && !e.shiftKey && e.key === 'Enter';
+  console.log('cntrl-enter', test);
+  return test;
+};
+
+const isCtrlOrMetaShiftEnter = (e: KeyboardEvent) => {
+  const test = (e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'Enter';
+  console.log('cntrl-shift-enter', test);
+  return test;
+};
+
 const isEscape = (e: KeyboardEvent) => e.key === 'Escape';
 
 /**
@@ -228,8 +237,13 @@ export const SaveViaCtrlS = createKeyCombinationHook(
 /**
  * Hook to trigger a save and run action on the job panel when the Ctrl (or Cmd on Mac) + Enter key combination is pressed.
  */
-export const RetryViaCtrlShiftEnter = createKeyCombinationHook(
+export const DefaultRunViaCtrlEnter = createKeyCombinationHook(
   isCtrlOrMetaEnter,
+  clickAction
+);
+
+export const AltRunViaCtrlShiftEnter = createKeyCombinationHook(
+  isCtrlOrMetaShiftEnter,
   clickAction
 );
 

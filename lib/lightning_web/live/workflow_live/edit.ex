@@ -117,22 +117,17 @@ defmodule LightningWeb.WorkflowLive.Edit do
                     name="hero-lock-closed"
                     class="w-5 h-5 place-self-center text-gray-300"
                   />
-                  <div
-                    id="run-buttons"
-                    class="inline-flex rounded-md shadow-sm"
-                    phx-hook="RunViaKeyBinding"
-                  >
+                  <div id="run-buttons" class="inline-flex rounded-md shadow-sm">
                     <.button
                       id="save-and-run"
+                      phx-hook="DefaultRunViaCtrlEnter"
                       {if retry_from_here(@run, @manual_run_form), do:
                         [type: "button", "phx-click": "rerun", "phx-value-attempt_id": @follow_attempt_id, "phx-value-run_id": @run.id],
                       else:
                           [type: "submit", form: @manual_run_form.id]}
                       class={[
-                        "relative inline-flex gap-x-1.5 items-center",
-                        retry_from_here(@run, @manual_run_form) && "rounded-r-none",
-                        "px-3 py-2 text-sm font-semibold text-gray-900 hover:bg-gray-50 focus:z-10",
-                        "focus:outline-none outline-none focus:ring-none focus:ring-offset-none"
+                        "relative inline-flex items-center",
+                        retry_from_here(@run, @manual_run_form) && "rounded-r-none"
                       ]}
                       disabled={
                         @save_and_run_disabled ||
@@ -146,7 +141,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
                         /> Processing
                       <% else %>
                         <%= if retry_from_here(@run, @manual_run_form) do %>
-                          <.icon name="hero-arrow-path-mini" class="w-4 h-4" />
+                          <.icon name="hero-arrow-path-mini" class="w-4 h-4 mr-1" />
                           Rerun from here
                         <% else %>
                           <.icon name="hero-play-solid" class="w-4 h-4" />
@@ -160,8 +155,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
                     >
                       <.button
                         type="button"
-                        class="relative inline-flex items-center rounded-r-md rounded-l-none text-white pr-1 pl-1
-                          focus:outline-none outline-none focus:ring-none focus:ring-offset-none"
+                        class="rounded-l-none pr-1 pl-1 focus:ring-inset"
                         id="option-menu-button"
                         aria-expanded="true"
                         aria-haspopup="true"
@@ -190,13 +184,14 @@ defmodule LightningWeb.WorkflowLive.Edit do
                       >
                         <button
                           phx-click-away={hide_dropdown("create-new-work-order")}
+                          phx-hook="AltRunViaCtrlShiftEnter"
                           id="create-new-work-order"
                           type="submit"
-                          class="hidden absolute right-0 bottom-9 z-10 mb-2 w-60
-                            inline-flex justify-center py-2 px-2 border border-gray-50
-                            bg-white hover:bg-gray-100 text-gray-700 hover:text-gray-900
-                            shadow-md text-sm font-medium rounded-md focus:outline-none
-                            gap-x-1.5 items-center outline-none focus:ring-none focus:ring-offset-none"
+                          class={[
+                            "hidden absolute right-0 bottom-9 z-10 mb-2 w-max",
+                            "rounded-md bg-white px-4 py-2 text-sm font-semibold",
+                            "text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
+                          ]}
                           form={@manual_run_form.id}
                           disabled={@save_and_run_disabled}
                         >
