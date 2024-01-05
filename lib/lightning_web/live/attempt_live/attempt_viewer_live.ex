@@ -45,7 +45,7 @@ defmodule LightningWeb.AttemptLive.AttemptViewerLive do
                 <:value>
                   <.link
                     navigate={
-                      ~p"/projects/#{@project}/attempts/#{attempt}?r=#{@selected_run_id}"
+                      ~p"/projects/#{@project}/attempts/#{attempt}?r=#{@selected_run_id || ""}"
                     }
                     class="hover:underline hover:text-primary-900 whitespace-nowrap text-ellipsis"
                   >
