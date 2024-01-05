@@ -282,7 +282,7 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       render_async(run_viewer)
 
       assert run_viewer
-             |> element("li:nth-child(4) dd", "Pending")
+             |> element("li:nth-child(5) dd", "Pending")
              |> has_element?()
     end
 
@@ -342,9 +342,7 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       assert render(element) =~ "selected"
 
       refute view
-             |> element(
-               ~s{button[type='submit'][form='manual_run_form'][disabled]}
-             )
+             |> element("save-and-run", ~c"Create New Work Order")
              |> has_element?()
     end
 
