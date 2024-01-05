@@ -532,7 +532,7 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
         )
 
       # user gets option to rerun
-      assert has_element?(view, "button", "Retry from here")
+      assert has_element?(view, "button", "Rerun from here")
       assert has_element?(view, "button", "Create New Work Order")
 
       # if we choose a different dataclip, the retry button disappears
@@ -540,7 +540,7 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       |> form("#manual_run_form", manual: %{dataclip_id: hd(dataclips).id})
       |> render_change()
 
-      refute has_element?(view, "button", "Retry from here")
+      refute has_element?(view, "button", "Rerun from here")
       assert has_element?(view, "button", "Create New Work Order")
 
       # if we choose the run input dataclip, the retry button becomes available
@@ -550,10 +550,10 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       |> form("#manual_run_form", manual: %{dataclip_id: run.input_dataclip_id})
       |> render_change()
 
-      assert has_element?(view, "button", "Retry from here")
+      assert has_element?(view, "button", "Rerun from here")
       assert has_element?(view, "button", "Create New Work Order")
 
-      view |> element("button", "Retry from here") |> render_click()
+      view |> element("button", "Rerun from here") |> render_click()
 
       all_attempts =
         Lightning.Repo.preload(workorder, [:attempts], force: true).attempts
