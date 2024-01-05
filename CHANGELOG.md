@@ -29,9 +29,11 @@ For customers using OpenFn `v1`, a migration guide will be provided at
 
 - Link to the job inspctor for a selected run from the history interface
   [#1524](https://github.com/OpenFn/Lightning/issues/1524)
-- Reprocess an existing workorder from the job inspector by default (instead of
-  always creating a new workorder)
+- Reprocess an existing work order from the job inspector by default (instead of
+  always creating a new work order)
   [#1524](https://github.com/OpenFn/Lightning/issues/1524)
+- Bumped worker to support edge conditions between trigger and first job
+  `"@openfn/ws-worker": "^0.4.0"`
 
 ### Changed
 
@@ -94,7 +96,7 @@ For customers using OpenFn `v1`, a migration guide will be provided at
   [#1064](https://github.com/OpenFn/Lightning/issues/1064)
 - Custom metric to track Attempt queue delay
   [#1556](https://github.com/OpenFn/Lightning/issues/1556)
-- Expand workorder row when a `workorder_id` is specified in the filter
+- Expand work order row when a `workorder_id` is specified in the filter
   [#1515](https://github.com/OpenFn/Lightning/issues/1515)
 - Allow Javascript expressions as conditions for edges
   [#1498](https://github.com/OpenFn/Lightning/issues/1498)
@@ -232,7 +234,7 @@ For customers using OpenFn `v1`, a migration guide will be provided at
 
 - Sort project collaborators by first name
   [#1326](https://github.com/OpenFn/Lightning/issues/1326)
-- Workorders will now be set in a "pending" state when retries are enqueued.
+- Work orders will now be set in a "pending" state when retries are enqueued.
   [#1340](https://github.com/OpenFn/Lightning/issues/1340)
 - Avoid printing 2FA codes by default
   [#1322](https://github.com/OpenFn/Lightning/issues/1322)
@@ -283,7 +285,7 @@ flexibility and control of complex workflows, we've moved towards a more robust
 by edges.
 
 Triggers still exist, but live "outside" the directed acyclic graph (DAG) and
-are used to automatically create workorders and attempts.
+are used to automatically create work orders and attempts.
 
 We've provided migrations that bring `v0.9.3` workflows in line with the
 `v0.10.0` requirements.
@@ -302,7 +304,7 @@ Attempts are now handled entirely by the workers, and they report back to
 Lightning. Exit reasons, final attempt states, error types and error messages
 are either entirely new or handled differently now, but we have provided
 migration scripts that will work to bring _most_ `v0.9.3` runs, attempts, and
-workorders up to `v0.10.0`, though the granularity of `v0.9.3` states and exits
+work orders up to `v0.10.0`, though the granularity of `v0.9.3` states and exits
 will be less than `v0.10.0` and the final states are not guaranteed to be
 accurate for workflows with multiple branches and leaf nodes with varying exit
 reasons.
@@ -393,7 +395,7 @@ bearing with us as we move towards our first stable Lightning release.)
   [#1400](https://github.com/OpenFn/Lightning/issues/1400)
 - Adaptor icons load gracefully
   [#1140](https://github.com/OpenFn/Lightning/issues/1140)
-- Selected dataclip gets lost when starting a manual workorder from the
+- Selected dataclip gets lost when starting a manual work order from the
   inspector interface [#1283](https://github.com/OpenFn/Lightning/issues/1283)
 - Ensure that the whole edge when selected is highlighted
   [#1160](https://github.com/OpenFn/Lightning/issues/1160)
@@ -525,7 +527,7 @@ bearing with us as we move towards our first stable Lightning release.)
 
 - Moved Save and Run button to bottom of the Job edit modal
   [#1026](https://github.com/OpenFn/Lightning/issues/1026)
-- Allow a manual workorder to save the workflow before creating the workorder
+- Allow a manual work order to save the workflow before creating the work order
   [#959](https://github.com/OpenFn/Lightning/issues/959)
 
 ### Fixed
@@ -639,8 +641,8 @@ bearing with us as we move towards our first stable Lightning release.)
 
 ### Changed
 
-- Unless otherwise specified, only show workorders with activity in last 14 days
-  [#968](https://github.com/OpenFn/Lightning/issues/968)
+- Unless otherwise specified, only show work orders with activity in last 14
+  days [#968](https://github.com/OpenFn/Lightning/issues/968)
 
 ### Fixed
 
@@ -733,7 +735,7 @@ the Nodes and Edges [epic](https://github.com/OpenFn/Lightning/issues/793).
 
 ### Added
 
-- Ability to rerun workorders from start by selecting one of more of them from
+- Ability to rerun work orders from start by selecting one of more of them from
   the History page and clicking the "Rerun" button.
   [#659](https://github.com/OpenFn/Lightning/issues/659)
 
@@ -1051,8 +1053,8 @@ the Nodes and Edges [epic](https://github.com/OpenFn/Lightning/issues/793).
 ### Fixed
 
 - Fixed bug that attempted to execute HTML scripts in dataclips
-- Fixed bug that prevented workorders from displaying in the order of their last
-  run, descending.
+- Fixed bug that prevented work orders from displaying in the order of their
+  last run, descending.
 - Remove alerts after set timeout or close
 
 ## [0.3.0] - 2022-11-21
@@ -1062,7 +1064,7 @@ the Nodes and Edges [epic](https://github.com/OpenFn/Lightning/issues/793).
 - Add seed data for demo site
 - Create adaptor credentials through a form
 - Configure cron expressions through a form
-- View runs grouped by workorders and attempts
+- View runs grouped by work orders and attempts
 - Run an existing Job with any dataclip uuid from the Job form
 
 ### Changed
@@ -1072,9 +1074,10 @@ the Nodes and Edges [epic](https://github.com/OpenFn/Lightning/issues/793).
 - Reverse the relationship between Jobs and Triggers. Triggers now can exist on
   their own; setting the stage for branching and merging workflows
 - Updated Elixir and frontend dependencies
-- [BREAKING CHANGE] Pipeline now uses WorkOrders, previous data is not
+- [BREAKING CHANGE] Pipeline now uses Work Orders, previous data is not
   compatible.
-- Runs, Dataclips and Attempts now all correctly use usec resolution timestamps.
+- Runs, Dataclips and Attempts now all correctly use `usec` resolution
+  timestamps.
 - Upgraded LiveView to 0.18.0
 - Upgraded Elixir to 1.14.1 and OTP 25
 - Workflow Job editor now behaves like a panel
