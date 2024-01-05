@@ -17,7 +17,7 @@ defmodule LightningWeb.Components.NewInputs do
   """
   attr :id, :string, default: ""
   attr :type, :string, default: "button", values: ["button", "submit"]
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global, include: ~w(disabled form name value)
   attr :tooltip, :any, default: nil
 
