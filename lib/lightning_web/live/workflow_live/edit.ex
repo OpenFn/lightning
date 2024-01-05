@@ -137,14 +137,14 @@ defmodule LightningWeb.WorkflowLive.Edit do
                       <%= if processing(@follow_attempt_id, @run) do %>
                         <.icon
                           name="hero-arrow-path-mini"
-                          class="w-4 h-4 animate-spin"
+                          class="w-4 h-4 animate-spin mr-1"
                         /> Processing
                       <% else %>
                         <%= if retry_from_here(@run, @manual_run_form) do %>
                           <.icon name="hero-arrow-path-mini" class="w-4 h-4 mr-1" />
                           Rerun from here
                         <% else %>
-                          <.icon name="hero-play-solid" class="w-4 h-4" />
+                          <.icon name="hero-play-solid" class="w-4 h-4 mr-1" />
                           Create New Work Order
                         <% end %>
                       <% end %>
@@ -195,7 +195,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
                           form={@manual_run_form.id}
                           disabled={@save_and_run_disabled}
                         >
-                          <.icon name="hero-play-solid" class="w-4 h-4" />
+                          <.icon name="hero-play-solid" class="w-4 h-4 mr-1" />
                           Create New Work Order
                         </button>
                       </div>
