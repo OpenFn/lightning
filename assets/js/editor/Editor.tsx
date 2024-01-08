@@ -4,6 +4,7 @@ import type { EditorProps as MonacoProps } from '@monaco-editor/react/lib/types'
 
 import { fetchDTSListing, fetchFile } from '@openfn/describe-package';
 import createCompletionProvider from './magic-completion';
+import { retryOrCreateWorkOrder } from '../common';
 
 // static imports for core lib
 import dts_es5 from './lib/es5.min.dts';
@@ -21,7 +22,7 @@ type EditorProps = {
 
 const spinner = (
   <svg
-    className="animate-spin h-5 w-5 inline-block"
+    className="inline-block h-5 w-5 animate-spin"
     xmlns="http://www.w3.org/2000/svg"
     fill="none"
     viewBox="0 0 24 24"
@@ -43,7 +44,7 @@ const spinner = (
 );
 
 const loadingIndicator = (
-  <div className="inline-block bg-vs-dark p-2">
+  <div className="bg-vs-dark inline-block p-2">
     <span className="mr-2">Loading</span>
     {spinner}
   </div>
@@ -181,10 +182,20 @@ export default function Editor({
         // https://microsoft.github.io/monaco-editor/typedoc/enums/KeyCode.html
         monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter,
         function () {
-          const manual_run_form = document.getElementById('manual_run_form')!;
-          manual_run_form.dispatchEvent(
-            new Event('submit', { bubbles: true, cancelable: true })
-          );
+          const action_button = document.getElementById('save-and-run')!;
+          retryOrCreateWorkOrder(action_button);
+        }
+      );
+
+      editor.addCommand(
+        // https://microsoft.github.io/monaco-editor/typedoc/classes/KeyMod.html
+        // https://microsoft.github.io/monaco-editor/typedoc/enums/KeyCode.html
+        monaco.KeyMod.CtrlCmd | monaco.KeyMod.Shift | monaco.KeyCode.Enter,
+        function () {
+          const action_button = document.getElementById(
+            'create-new-work-order'
+          )!;
+          retryOrCreateWorkOrder(action_button);
         }
       );
 
@@ -307,7 +318,7 @@ export default function Editor({
 
   return (
     <>
-      <div className="text-xs text-white text-right h-0 z-10 overflow-visible relative">
+      <div className="relative z-10 h-0 overflow-visible text-right text-xs text-white">
         {loading && loadingIndicator}
       </div>
       <Monaco
