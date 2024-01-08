@@ -3,6 +3,7 @@ defmodule LightningWeb.WorkflowLive.IndexTest do
   import Phoenix.LiveViewTest
 
   import Lightning.Factories
+  import Lightning.WorkflowsFixtures
   import Lightning.WorkflowLive.Helpers
 
   setup :register_and_log_in_user
@@ -45,28 +46,80 @@ defmodule LightningWeb.WorkflowLive.IndexTest do
       end)
     end
 
-    test "lists all workflows for a project", %{
+    test "shows the Dashboard for a project", %{
       conn: conn,
       project: project
     } do
-      workflow_one = insert(:workflow, project: project, name: "One")
-      workflow_two = insert(:workflow, project: project, name: "Two")
+      workflow1 =
+        complex_workflow_with_runs(
+          name: "One",
+          project: project,
+          last_workorder_failed: true
+        )
+
+      workflow2 =
+        complex_workflow_with_runs(
+          name: "Two",
+          project: project,
+          last_workorder_failed: false
+        )
 
       {:ok, view, html} = live(conn, ~p"/projects/#{project.id}/w")
 
-      assert html =~ "Create new workflow"
+      assert Regex.match?(~r/Dashboard.*h1>/s, html)
 
+      # Metrics
+      # 8 total workorders
+      # 16 total runs (2 pending, 4 failed)
+      # 10 successful runs out of 14 (71.43%)
+      # 2 work orders failed (25.0%)
+      assert Regex.match?(~r/Work Orders.*">\s*8/s, html)
+      assert Regex.match?(~r/Runs.*>\s*16.*">\s*\(2 pending\)/s, html)
+      assert Regex.match?(~r/Successful Runs.*">\s*10.*">\s*\(71.43%\)/s, html)
+
+      assert Regex.match?(
+               ~r/Work Orders in failed state.*">\s*2.*">\s*\(25.0%\)/s,
+               html
+             )
+
+      # Header
+      assert Regex.match?(~r/Workflows.*h3>/s, html)
+
+      assert Regex.match?(
+               ~r/<button.*id="open-modal-button".*Create new workflow.*button>/s,
+               html
+             )
+
+      # Workflow links
       assert view
              |> has_link?(
-               ~p"/projects/#{project.id}/w/#{workflow_one.id}",
+               ~p"/projects/#{project.id}/w/#{workflow1.id}",
                "One"
              )
 
       assert view
              |> has_link?(
-               ~p"/projects/#{project.id}/w/#{workflow_two.id}",
+               ~p"/projects/#{project.id}/w/#{workflow2.id}",
                "Two"
              )
+
+      # Work orders/runs links
+      workorders_count = 4
+
+      assert view
+             |> has_link?(
+               ~p"/projects/#{project.id}/runs?filters[workflow_id]=#{workflow1.id}",
+               "#{workorders_count}"
+             )
+
+      assert view
+             |> has_link?(
+               ~p"/projects/#{project.id}/runs?filters[workflow_id]=#{workflow2.id}",
+               "#{workorders_count}"
+             )
+
+      # 5 successful runs out of 8 (62.5%)
+      assert Regex.match?(~r/(8 runs.*62.5% success)/s, html)
     end
   end
 
@@ -147,13 +200,10 @@ defmodule LightningWeb.WorkflowLive.IndexTest do
     } do
       {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/w")
 
-      refute view
-             |> has_delete_workflow_link?(workflow),
-             "shouldn't have a delete link on the page"
+      refute view |> has_delete_workflow_link?(workflow)
 
       assert view |> render_click("delete_workflow", %{"id" => workflow.id}) =~
-               "You are not authorized to perform this action.",
-             "shouldn't be able to delete a workflow by sending an event"
+               "You are not authorized to perform this action."
     end
 
     @tag role: :editor
