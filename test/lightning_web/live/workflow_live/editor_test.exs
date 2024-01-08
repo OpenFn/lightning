@@ -398,6 +398,46 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       assert workflow.work_orders |> Enum.count() === 1
     end
 
+    test "retry a work order saves the workflow first", %{
+      conn: conn,
+      project: project,
+      workflow: %{jobs: [job_1 | _]} = workflow
+    } do
+      %{attempts: [attempt]} =
+        insert(:workorder,
+          workflow: workflow,
+          attempts: [
+            build(:attempt,
+              dataclip: build(:dataclip, type: :http_request),
+              starting_job: job_1,
+              runs: [build(:run, job: job_1)]
+            )
+          ]
+        )
+
+      assert job_1.body === "fn(state => { return {...state, extra: \"data\"} })"
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project}/w/#{workflow}?#{[s: job_1.id, a: attempt.id, m: "expand"]}"
+        )
+
+      view
+      |> change_editor_text("fn(state => state)")
+
+      view
+      |> element("#save-and-run", "Rerun from here")
+      |> render_click()
+
+      workflow =
+        Lightning.Repo.reload(workflow) |> Lightning.Repo.preload([:jobs])
+
+      job_1 = workflow.jobs |> Enum.find(fn job -> job.id === job_1.id end)
+      assert job_1.body !== "fn(state => { return {...state, extra: \"data\"} })"
+      assert job_1.body === "fn(state => state)"
+    end
+
     test "selects the input dataclip for the attempt run if an attempt is followed",
          %{
            conn: conn,
