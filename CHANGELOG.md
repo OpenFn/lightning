@@ -14,6 +14,9 @@ and this project adheres to
 
 ### Fixed
 
+- Fix failure due to creating work order from a newly created job
+  [#1572](https://github.com/OpenFn/Lightning/issues/1572)
+
 ## [2.0.0-rc2] - 2023-01-08
 
 ### Added
