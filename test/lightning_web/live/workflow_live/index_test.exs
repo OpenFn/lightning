@@ -48,7 +48,8 @@ defmodule LightningWeb.WorkflowLive.IndexTest do
 
     test "shows the Dashboard for a project", %{
       conn: conn,
-      project: project
+      project: project,
+      workflow: new_workflow
     } do
       workflow1 =
         complex_workflow_with_runs(
@@ -101,6 +102,18 @@ defmodule LightningWeb.WorkflowLive.IndexTest do
              |> has_link?(
                ~p"/projects/#{project.id}/w/#{workflow2.id}",
                "Two"
+             )
+
+      assert view
+             |> has_link?(
+               ~p"/projects/#{project.id}/w/#{new_workflow.id}",
+               new_workflow.name
+             )
+
+      refute html
+             |> has_runs_link_pattern?(
+               project,
+               "filters[workflow_id]=#{new_workflow.id}"
              )
 
       # Work orders links
@@ -165,6 +178,12 @@ defmodule LightningWeb.WorkflowLive.IndexTest do
 
       # 5 successful runs out of 8 (62.5%)
       assert Regex.match?(~r/(8 runs.*62.5% success)/s, html)
+
+      # Last workflow with placeholders
+      assert Regex.match?(
+               ~r{Two.*#{new_workflow.name}.*No work orders created yet.*0.*N/A.*0.*N/A}s,
+               html
+             )
     end
   end
 
