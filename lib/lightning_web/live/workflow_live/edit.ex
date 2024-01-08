@@ -817,7 +817,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
   def handle_event("manual_run_submit", %{"manual" => params}, socket) do
     %{
       project: project,
-      workflow: workflow,
       selected_job: selected_job,
       current_user: current_user,
       workflow_params: workflow_params,
@@ -830,13 +829,10 @@ defmodule LightningWeb.WorkflowLive.Edit do
     if can_run_job && can_edit_job do
       Helpers.save_and_run(
         socket.assigns.changeset,
-        WorkOrders.Manual.new(
-          params,
-          workflow: workflow,
-          project: project,
-          job: selected_job,
-          created_by: current_user
-        )
+        params,
+        project: project,
+        selected_job: selected_job,
+        created_by: current_user
       )
     else
       {:error, :unauthorized}

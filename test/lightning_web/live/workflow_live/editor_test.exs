@@ -8,6 +8,7 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
   import Ecto.Query
 
   alias Lightning.Invocation
+  alias Lightning.Workflows.Workflow
 
   setup :register_and_log_in_user
   setup :create_project_for_current_user
@@ -344,6 +345,57 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       refute view
              |> element("save-and-run", ~c"Create New Work Order")
              |> has_element?()
+    end
+
+    test "creating a work order from a newly created job should save the workflow first",
+         %{
+           conn: conn,
+           project: project
+         } do
+      workflow =
+        insert(:workflow, project: project)
+        |> Lightning.Repo.preload([:jobs, :work_orders])
+
+      new_job_name = "new job"
+
+      assert workflow.jobs |> Enum.count() === 0
+
+      assert workflow.jobs |> Enum.find(fn job -> job.name === new_job_name end) ===
+               nil
+
+      assert workflow.work_orders |> Enum.count() === 0
+
+      %{"value" => %{"id" => job_id}} =
+        job_patch = add_job_patch(new_job_name)
+
+      {:ok, view, _html} = live(conn, ~p"/projects/#{project}/w/#{workflow}")
+
+      # add a job to it but don't save
+      view |> push_patches_to_view([job_patch])
+
+      view |> select_node(%{id: job_id})
+
+      view |> click_edit(%{id: job_id})
+
+      view |> change_editor_text("some body")
+
+      view
+      |> form("#manual_run_form", %{
+        manual: %{body: Jason.encode!(%{})}
+      })
+      |> render_submit()
+
+      workflow =
+        Lightning.Repo.get!(Workflow, workflow.id)
+        |> Lightning.Repo.preload([:jobs, :work_orders])
+
+      assert workflow.jobs |> Enum.count() === 1
+
+      assert workflow.jobs
+             |> Enum.find(fn job -> job.name === new_job_name end)
+             |> Map.get(:name) === new_job_name
+
+      assert workflow.work_orders |> Enum.count() === 1
     end
 
     test "selects the input dataclip for the attempt run if an attempt is followed",
