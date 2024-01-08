@@ -4,6 +4,7 @@ import { PhoenixHook } from './PhoenixHook';
 import LogLineHighlight from './LogLineHighlight';
 import ElapsedIndicator from './ElapsedIndicator';
 import TabSelector from './TabSelector';
+import { initiateSaveAndRun } from '../common';
 
 export { LogLineHighlight, ElapsedIndicator, TabSelector };
 
@@ -186,15 +187,7 @@ function createKeyCombinationHook(
  * @param el - The HTML element to which the action will be applied.
  */
 function clickAction(e: KeyboardEvent, el: HTMLElement) {
-  if (el.getAttribute('type') == 'submit') {
-    const formId = el.getAttribute('form');
-    const form = document.getElementById(formId);
-    form.dispatchEvent(
-      new Event('submit', { bubbles: true, cancelable: true })
-    );
-  } else {
-    el.dispatchEvent(new Event('click', { bubbles: true, cancelable: true }));
-  }
+  initiateSaveAndRun(el);
 }
 
 /**
