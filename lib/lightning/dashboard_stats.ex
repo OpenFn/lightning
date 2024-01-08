@@ -27,7 +27,6 @@ defmodule Lightning.DashboardStats do
               },
               run_metrics: %{
                 total: 0,
-                completed: 0,
                 pending: 0,
                 success: 0,
                 success_percentage: 0.0
@@ -205,7 +204,6 @@ defmodule Lightning.DashboardStats do
       success_rate = if success > 0, do: success * 100 / completed, else: 0.0
 
       Map.merge(map, %{
-        completed: completed,
         success_percentage: round(success_rate * 100) / 100,
         total: completed + pending
       })

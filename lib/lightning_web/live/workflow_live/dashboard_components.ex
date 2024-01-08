@@ -259,7 +259,7 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
         </:suffix>
       </.metric_card>
       <.metric_card title="Successful Runs">
-        <:value><%= @metrics.run_metrics.completed %></:value>
+        <:value><%= @metrics.run_metrics.success %></:value>
         <:suffix>
           (<%= @metrics.run_metrics.success_percentage %>%)
         </:suffix>
