@@ -92,9 +92,8 @@ defmodule Lightning.DashboardStats do
       where: wo.workflow_id == ^workflow_id,
       where: wo.state not in ^excluded_states,
       order_by: [desc: wo.inserted_at],
-      select: %{state: wo.state, updated_at: wo.inserted_at}
+      select: %{state: wo.state, updated_at: wo.updated_at}
     )
-    |> filter_days_ago(30)
     |> limit(1)
     |> Repo.one() ||
       %{state: nil, updated_at: nil}
