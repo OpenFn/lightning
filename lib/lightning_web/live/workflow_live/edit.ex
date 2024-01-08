@@ -784,14 +784,27 @@ defmodule LightningWeb.WorkflowLive.Edit do
         socket
       ) do
     if socket.assigns.can_rerun_job do
-      {:ok, attempt} =
-        WorkOrders.retry(attempt_id, run_id,
-          created_by: socket.assigns.current_user
-        )
+      case Lightning.Repo.update(%{socket.assigns.changeset | action: :update}) do
+        {:ok, workflow} ->
+          {:ok, attempt} =
+            WorkOrders.retry(attempt_id, run_id,
+              created_by: socket.assigns.current_user
+            )
 
-      Attempts.subscribe(attempt)
+          Attempts.subscribe(attempt)
 
-      {:noreply, socket |> follow_attempt(attempt)}
+          {:noreply,
+           socket |> assign_workflow(workflow) |> follow_attempt(attempt)}
+
+        {:error, changeset} ->
+          {
+            :noreply,
+            socket
+            |> assign_changeset(changeset)
+            |> mark_validated()
+            |> put_flash(:error, "Workflow could not be saved")
+          }
+      end
     else
       {:noreply,
        socket
