@@ -288,13 +288,14 @@ defmodule Lightning.WorkflowLive.Helpers do
   def has_runs_link_pattern?(
         html,
         %Project{id: project_id},
-        pattern
+        pattern,
+        text \\ ""
       )
       when is_binary(html) do
     pattern = String.replace(pattern, "[", "\\[") |> String.replace("]", "\\]")
 
     Regex.match?(
-      ~r{<a href="/projects/#{project_id}/runs\?.*#{pattern}.*</a>}s,
+      ~r{<a href="/projects/#{project_id}/runs\?.*#{pattern}.*#{text}.*</a>}s,
       html
     )
   end

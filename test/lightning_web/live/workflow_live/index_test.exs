@@ -66,7 +66,7 @@ defmodule LightningWeb.WorkflowLive.IndexTest do
 
       {:ok, view, html} = live(conn, ~p"/projects/#{project.id}/w")
 
-      assert Regex.match?(~r/Dashboard.*h1>/s, html)
+      assert Regex.match?(~r{<h1.*Dashboard.*</h1>}s, html)
 
       # Metrics
       # 8 total workorders
@@ -110,7 +110,8 @@ defmodule LightningWeb.WorkflowLive.IndexTest do
       assert html
              |> has_runs_link_pattern?(
                project,
-               failed_filter_pattern
+               failed_filter_pattern,
+               "View all"
              )
 
       refute html
@@ -131,31 +132,35 @@ defmodule LightningWeb.WorkflowLive.IndexTest do
                "filters[success]=true"
              )
 
-      workorders_count = 4
+      workorders_count = "4"
 
       assert view
              |> has_link?(
                ~p"/projects/#{project.id}/runs?filters[workflow_id]=#{workflow1.id}",
-               "#{workorders_count}"
+               workorders_count
              )
 
       assert view
              |> has_link?(
                ~p"/projects/#{project.id}/runs?filters[workflow_id]=#{workflow2.id}",
-               "#{workorders_count}"
+               workorders_count
              )
 
       # Failed runs links
+      failed_runs_count = "1"
+
       assert html
              |> has_runs_link_pattern?(
                project,
-               "filters[workflow_id]=#{workflow1.id}.*#{failed_filter_pattern}"
+               "filters[workflow_id]=#{workflow1.id}.*#{failed_filter_pattern}",
+               failed_runs_count
              )
 
       assert html
              |> has_runs_link_pattern?(
                project,
-               "filters[workflow_id]=#{workflow2.id}.*#{failed_filter_pattern}"
+               "filters[workflow_id]=#{workflow2.id}.*#{failed_filter_pattern}",
+               failed_runs_count
              )
 
       # 5 successful runs out of 8 (62.5%)
