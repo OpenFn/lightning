@@ -4,7 +4,7 @@ import { PhoenixHook } from './PhoenixHook';
 import LogLineHighlight from './LogLineHighlight';
 import ElapsedIndicator from './ElapsedIndicator';
 import TabSelector from './TabSelector';
-import { retryOrCreateWorkOrder } from '../common';
+import { initiateSaveAndRun } from '../common';
 
 export { LogLineHighlight, ElapsedIndicator, TabSelector };
 
@@ -187,7 +187,7 @@ function createKeyCombinationHook(
  * @param el - The HTML element to which the action will be applied.
  */
 function clickAction(e: KeyboardEvent, el: HTMLElement) {
-  retryOrCreateWorkOrder(el);
+  initiateSaveAndRun(el);
 }
 
 /**

@@ -4,7 +4,7 @@ import type { EditorProps as MonacoProps } from '@monaco-editor/react/lib/types'
 
 import { fetchDTSListing, fetchFile } from '@openfn/describe-package';
 import createCompletionProvider from './magic-completion';
-import { retryOrCreateWorkOrder } from '../common';
+import { initiateSaveAndRun } from '../common';
 
 // static imports for core lib
 import dts_es5 from './lib/es5.min.dts';
@@ -182,8 +182,8 @@ export default function Editor({
         // https://microsoft.github.io/monaco-editor/typedoc/enums/KeyCode.html
         monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter,
         function () {
-          const action_button = document.getElementById('save-and-run')!;
-          retryOrCreateWorkOrder(action_button);
+          const actionButton = document.getElementById('save-and-run')!;
+          initiateSaveAndRun(actionButton);
         }
       );
 
@@ -192,10 +192,10 @@ export default function Editor({
         // https://microsoft.github.io/monaco-editor/typedoc/enums/KeyCode.html
         monaco.KeyMod.CtrlCmd | monaco.KeyMod.Shift | monaco.KeyCode.Enter,
         function () {
-          const action_button = document.getElementById(
+          const actionButton = document.getElementById(
             'create-new-work-order'
           )!;
-          retryOrCreateWorkOrder(action_button);
+          initiateSaveAndRun(actionButton);
         }
       );
 
