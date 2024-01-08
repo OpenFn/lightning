@@ -103,7 +103,34 @@ defmodule LightningWeb.WorkflowLive.IndexTest do
                "Two"
              )
 
-      # Work orders/runs links
+      # Work orders links
+      failed_filter_pattern =
+        "filters[cancelled]=true.*filters[crashed]=true.*filters[exception]=true.*filters[failed]=true.*filters[killed]=true.*filters[lost]=true"
+
+      assert html
+             |> has_runs_link_pattern?(
+               project,
+               failed_filter_pattern
+             )
+
+      refute html
+             |> has_runs_link_pattern?(
+               project,
+               "filters[pending]=true"
+             )
+
+      refute html
+             |> has_runs_link_pattern?(
+               project,
+               "filters[running]=true"
+             )
+
+      refute html
+             |> has_runs_link_pattern?(
+               project,
+               "filters[success]=true"
+             )
+
       workorders_count = 4
 
       assert view
@@ -116,6 +143,19 @@ defmodule LightningWeb.WorkflowLive.IndexTest do
              |> has_link?(
                ~p"/projects/#{project.id}/runs?filters[workflow_id]=#{workflow2.id}",
                "#{workorders_count}"
+             )
+
+      # Failed runs links
+      assert html
+             |> has_runs_link_pattern?(
+               project,
+               "filters[workflow_id]=#{workflow1.id}.*#{failed_filter_pattern}"
+             )
+
+      assert html
+             |> has_runs_link_pattern?(
+               project,
+               "filters[workflow_id]=#{workflow2.id}.*#{failed_filter_pattern}"
              )
 
       # 5 successful runs out of 8 (62.5%)

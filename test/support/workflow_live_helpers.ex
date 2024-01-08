@@ -4,6 +4,7 @@ defmodule Lightning.WorkflowLive.Helpers do
   import Lightning.Factories
   import ExUnit.Assertions
 
+  alias Lightning.Projects.Project
   alias Lightning.Workflows.Job
 
   # Interaction Helpers
@@ -282,6 +283,20 @@ defmodule Lightning.WorkflowLive.Helpers do
     view
     |> find_a_tag(path, text_filter)
     |> has_element?()
+  end
+
+  def has_runs_link_pattern?(
+        html,
+        %Project{id: project_id},
+        pattern
+      )
+      when is_binary(html) do
+    pattern = String.replace(pattern, "[", "\\[") |> String.replace("]", "\\]")
+
+    Regex.match?(
+      ~r{<a href="/projects/#{project_id}/runs\?.*#{pattern}.*</a>}s,
+      html
+    )
   end
 
   def has_workflow_card?(view, workflow) do
