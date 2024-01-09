@@ -9,7 +9,7 @@ defmodule Lightning.DashboardStatsTest do
   alias Lightning.DashboardStats.ProjectMetrics
 
   describe "get_workflow_stats/1" do
-    test "returns a WorkflowStats with a last work order older than 30 days" do
+    test "returns a WorkflowStats with all data bound to last 30 days" do
       dataclip = insert(:dataclip)
 
       %{id: workflow_id, triggers: [trigger]} =
@@ -23,36 +23,10 @@ defmodule Lightning.DashboardStatsTest do
         inserted_at: Timex.shift(Timex.now(), days: -33)
       )
 
-      %{updated_at: last_failed_updated_at} =
-        insert(:workorder,
-          workflow: workflow,
-          trigger: trigger,
-          dataclip: dataclip,
-          state: :failed,
-          inserted_at: Timex.shift(Timex.now(), days: -32),
-          updated_at: Timex.shift(Timex.now(), days: -32)
-        )
-
-      %{updated_at: last_updated_at} =
-        insert(:workorder,
-          workflow: workflow,
-          trigger: trigger,
-          dataclip: dataclip,
-          state: :success,
-          inserted_at: Timex.shift(Timex.now(), days: -32),
-          updated_at: Timex.shift(Timex.now(), days: -32)
-        )
-
       assert %WorkflowStats{
                workflow: %{id: ^workflow_id},
-               last_workorder: %{
-                 state: :success,
-                 updated_at: ^last_updated_at
-               },
-               last_failed_workorder: %{
-                 state: :failed,
-                 updated_at: ^last_failed_updated_at
-               },
+               last_workorder: %{state: nil, updated_at: nil},
+               last_failed_workorder: %{state: nil, updated_at: nil},
                runs_count: 0,
                runs_success_percentage: 0.0,
                workorders_count: 0

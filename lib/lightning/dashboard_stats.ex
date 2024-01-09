@@ -94,6 +94,7 @@ defmodule Lightning.DashboardStats do
       order_by: [desc: wo.inserted_at],
       select: %{state: wo.state, updated_at: wo.updated_at}
     )
+    |> filter_days_ago(30)
     |> limit(1)
     |> Repo.one() ||
       %{state: nil, updated_at: nil}
