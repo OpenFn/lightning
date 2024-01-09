@@ -1267,10 +1267,12 @@ defmodule LightningWeb.ProjectLiveTest do
 
         assert html =~ "Project settings"
 
-        refute has_element?(view, "#toggle-mfa-switch:enabled")
-        assert has_element?(view, "#toggle-mfa-switch:disabled")
+        toggle_button = element(view, "#toggle-mfa-switch")
 
-        assert render_click(view, "toggle-mfa") =~
+        assert render(toggle_button) =~
+                 "You do not have permission to perform this action"
+
+        assert render_click(toggle_button) =~
                  "You are not authorized to perform this action."
       end)
     end
