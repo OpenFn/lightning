@@ -10,6 +10,9 @@ and this project adheres to
 
 ### Added
 
+- Dashboard with project and workflow stats
+  [#755](https://github.com/OpenFn/Lightning/issues/755)
+
 ### Changed
 
 ### Fixed
