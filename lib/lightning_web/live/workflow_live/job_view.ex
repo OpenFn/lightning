@@ -205,7 +205,7 @@ defmodule LightningWeb.WorkflowLive.JobView do
   end
 
   defp fetch_credential(project_credential_id) do
-    project_credential_id &&
+    project_credential_id && byte_size(project_credential_id) > 0 &&
       Credentials.get_credential_by_project_credential(project_credential_id)
   end
 end
