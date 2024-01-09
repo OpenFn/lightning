@@ -104,7 +104,7 @@ defmodule LightningWeb.AttemptLive.Show do
                   </:value>
                 </.list_item>
                 <.list_item>
-                  <:label>State</:label>
+                  <:label>Status</:label>
                   <:value><.state_pill state={attempt.state} /></:value>
                 </.list_item>
               </.detail_list>

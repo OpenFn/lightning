@@ -22,7 +22,7 @@ defmodule LightningWeb.RunLive.RunViewerLive do
       )
 
     ~H"""
-    State: <%= @attempt_state %> Attempt ID: <%= @attempt.id %>
+    Status: <%= @attempt_state %> Attempt ID: <%= @attempt.id %>
     <%= @run && @run.id %>
     <table>
       <tbody id="log_lines" phx-update="stream">
