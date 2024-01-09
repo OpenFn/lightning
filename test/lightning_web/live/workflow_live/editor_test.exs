@@ -398,6 +398,61 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       assert workflow.work_orders |> Enum.count() === 1
     end
 
+    test "creating a workorder from a newly created workflow and job saves the workflow first",
+         %{
+           conn: conn,
+           user: user
+         } do
+      project =
+        insert(:project, project_users: [%{user_id: user.id, role: :admin}])
+
+      workflow_name = "mytest workflow"
+      job_name = "my job"
+
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project}/w/new?#{%{name: workflow_name}}")
+
+      # add a job to the workflow
+      %{"value" => %{"id" => job_id}} = job_patch = add_job_patch(job_name)
+
+      view |> push_patches_to_view([job_patch])
+
+      # select job node
+      view |> select_node(%{id: job_id})
+
+      # open the editor modal
+      view |> click_edit(%{id: job_id})
+
+      view |> change_editor_text("some body")
+
+      # no workflow exists
+      refute Lightning.Repo.get_by(Lightning.Workflows.Workflow,
+               project_id: project.id
+             )
+
+      # submit the manual run form
+      view
+      |> form("#manual_run_form", %{
+        manual: %{body: Jason.encode!(%{})}
+      })
+      |> render_submit()
+
+      # workflow has been created
+      assert workflow =
+               Lightning.Repo.get_by(Lightning.Workflows.Workflow,
+                 project_id: project.id
+               )
+               |> Lightning.Repo.preload([:jobs, :work_orders])
+
+      assert workflow.name == workflow_name
+
+      assert Enum.any?(workflow.jobs, fn job ->
+               job.id == job_id and job.name == job_name
+             end)
+
+      assert length(workflow.work_orders) == 1
+    end
+
     test "retry a work order saves the workflow first", %{
       conn: conn,
       project: project,

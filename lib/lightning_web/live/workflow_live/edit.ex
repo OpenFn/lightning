@@ -529,6 +529,20 @@ defmodule LightningWeb.WorkflowLive.Edit do
               :rerun_job,
               current_user,
               project_user
+            ),
+          can_create_webhook_auth_method:
+            Permissions.can?(
+              ProjectUsers,
+              :create_webhook_auth_method,
+              current_user,
+              project_user
+            ),
+          can_edit_webhook_auth_method:
+            Permissions.can?(
+              ProjectUsers,
+              :edit_webhook_auth_method,
+              current_user,
+              project_user
             )
         )
 
