@@ -14,6 +14,8 @@ and this project adheres to
   [#755](https://github.com/OpenFn/Lightning/issues/755)
 
 ### Changed
+- Give project editors and viewers read only access to project settings instead
+  [#1477](https://github.com/OpenFn/Lightning/issues/1477)
 
 ### Fixed
 

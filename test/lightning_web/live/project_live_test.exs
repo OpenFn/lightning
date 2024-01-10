@@ -1200,28 +1200,15 @@ defmodule LightningWeb.ProjectLiveTest do
       assert view |> has_element?("#{form_id} option[selected]", "Daily")
     end
 
-    test "authorized project users can view project security page",
+    test "all project users can view project security page",
          %{
            conn: conn
          } do
       project = insert(:project)
 
       # project editor and viewer cannot see the settings page
-      [:editor, :viewer]
-      |> Enum.each(fn role ->
-        {conn, _user} = setup_project_user(conn, project, role)
 
-        {:ok, view, html} =
-          live(
-            conn,
-            Routes.project_project_settings_path(conn, :index, project.id)
-          )
-
-        refute has_element?(view, "#tab-item-security")
-        refute html =~ "Multi-Factor Authentication"
-      end)
-
-      [:admin, :owner]
+      [:admin, :owner, :editor, :viewer]
       |> Enum.each(fn role ->
         {conn, _user} = setup_project_user(conn, project, role)
 
@@ -1280,9 +1267,12 @@ defmodule LightningWeb.ProjectLiveTest do
 
         assert html =~ "Project settings"
 
-        refute has_element?(view, "#toggle-mfa-switch")
+        toggle_button = element(view, "#toggle-mfa-switch")
 
-        assert render_click(view, "toggle-mfa") =~
+        assert render(toggle_button) =~
+                 "You do not have permission to perform this action"
+
+        assert render_click(toggle_button) =~
                  "You are not authorized to perform this action."
       end)
     end
