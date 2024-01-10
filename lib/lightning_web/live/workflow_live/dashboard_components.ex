@@ -83,7 +83,7 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
               <.link
                 class="hover:underline"
                 navigate={
-                  ~p"/projects/#{@project.id}/runs?#{%{filters: %{workflow_id: workflow.id}}}"
+                  ~p"/projects/#{@project.id}/runs?#{%{filters: Map.merge(@filters, %{workflow_id: workflow.id})}}"
                 }
               >
                 <%= workflow.workorders_count %>

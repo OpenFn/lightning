@@ -20,7 +20,7 @@ defmodule Lightning.DashboardStatsTest do
         trigger: trigger,
         dataclip: dataclip,
         state: :failed,
-        inserted_at: Timex.shift(Timex.now(), days: -33)
+        inserted_at: Timex.shift(Timex.now(), days: -31)
       )
 
       assert %WorkflowStats{

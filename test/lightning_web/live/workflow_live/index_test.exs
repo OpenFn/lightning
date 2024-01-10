@@ -147,15 +147,22 @@ defmodule LightningWeb.WorkflowLive.IndexTest do
 
       workorders_count = "4"
 
-      assert view
-             |> has_link?(
-               ~p"/projects/#{project.id}/runs?filters[workflow_id]=#{workflow1.id}",
+      date_filter =
+        Date.utc_today()
+        |> Date.add(-31)
+        |> Date.to_string()
+
+      assert html
+             |> has_runs_link_pattern?(
+               project,
+               "filters[workflow_id]=#{workflow1.id}.*filters[date_after]=#{date_filter}",
                workorders_count
              )
 
-      assert view
-             |> has_link?(
-               ~p"/projects/#{project.id}/runs?filters[workflow_id]=#{workflow2.id}",
+      assert html
+             |> has_runs_link_pattern?(
+               project,
+               "filters[workflow_id]=#{workflow2.id}.*filters[date_after]=#{date_filter}",
                workorders_count
              )
 
