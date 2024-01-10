@@ -147,22 +147,26 @@ defmodule LightningWeb.WorkflowLive.IndexTest do
 
       workorders_count = "4"
 
+      # work order date filter without status filter
       date_filter =
-        Date.utc_today()
-        |> Date.add(-31)
+        Timex.now()
+        |> Timex.shift(months: -1)
         |> Date.to_string()
+        |> then(fn date ->
+          "filters[date_after]=&amp;filters[date_before]=&amp;filters[log]=true&amp;filters[wo_date_after]=#{date}"
+        end)
 
       assert html
              |> has_runs_link_pattern?(
                project,
-               "filters[workflow_id]=#{workflow1.id}.*filters[date_after]=#{date_filter}",
+               "filters[workflow_id]=#{workflow1.id}.*#{date_filter}",
                workorders_count
              )
 
       assert html
              |> has_runs_link_pattern?(
                project,
-               "filters[workflow_id]=#{workflow2.id}.*filters[date_after]=#{date_filter}",
+               "filters[workflow_id]=#{workflow2.id}.*#{date_filter}",
                workorders_count
              )
 

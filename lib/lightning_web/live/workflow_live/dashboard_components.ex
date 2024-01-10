@@ -35,10 +35,13 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
     assigns =
       assigns
       |> assign(
-        filters:
+        wo_filters:
           SearchParams.to_uri_params(%{
-            "date_after" => Timex.now() |> Timex.shift(months: -1),
-            "date_before" => DateTime.utc_now(),
+            "wo_date_after" => Timex.now() |> Timex.shift(months: -1)
+          }),
+        failed_wo_filters:
+          SearchParams.to_uri_params(%{
+            "wo_date_after" => Timex.now() |> Timex.shift(months: -1),
             "failed" => "true",
             "crashed" => "true",
             "killed" => "true",
@@ -83,7 +86,7 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
               <.link
                 class="hover:underline"
                 navigate={
-                  ~p"/projects/#{@project.id}/runs?#{%{filters: Map.merge(@filters, %{workflow_id: workflow.id})}}"
+                  ~p"/projects/#{@project.id}/runs?#{%{filters: Map.merge(@wo_filters, %{workflow_id: workflow.id})}}"
                 }
               >
                 <%= workflow.workorders_count %>
@@ -118,7 +121,7 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
                 <.link
                   class="hover:underline"
                   navigate={
-                    ~p"/projects/#{@project.id}/runs?#{%{filters: Map.merge(@filters, %{workflow_id: workflow.id})}}"
+                    ~p"/projects/#{@project.id}/runs?#{%{filters: Map.merge(@failed_wo_filters, %{workflow_id: workflow.id})}}"
                   }
                 >
                   <%= workflow.failed_workorders_count %>
