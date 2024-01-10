@@ -4,6 +4,7 @@ defmodule Lightning.Workflows do
   """
 
   import Ecto.Query
+
   alias Lightning.Repo
   alias Lightning.Projects.Project
   alias Lightning.Workflows.{Edge, Job, Workflow, Trigger, Trigger, Query}
@@ -100,20 +101,16 @@ defmodule Lightning.Workflows do
   end
 
   @doc """
-  Retrieves a list of Workflows with their jobs and triggers preloaded.
+  Retrieves a list of active Workflows with their jobs and triggers preloaded.
   """
   @spec get_workflows_for(Project.t()) :: [Workflow.t()]
   def get_workflows_for(%Project{} = project) do
-    get_workflows_for_query(project)
-    |> Repo.all()
-  end
-
-  def get_workflows_for_query(%Project{} = project) do
     from(w in Workflow,
       preload: [:triggers, :edges, jobs: [:credential, :workflow]],
       where: is_nil(w.deleted_at) and w.project_id == ^project.id,
       order_by: [asc: w.name]
     )
+    |> Repo.all()
   end
 
   @spec to_project_space([Workflow.t()]) :: %{}

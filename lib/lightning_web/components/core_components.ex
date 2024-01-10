@@ -25,6 +25,7 @@ defmodule LightningWeb.CoreComponents do
   attr :id, :string, required: true
   attr :row_click, :any, default: nil
   attr :rows, :list, required: true
+  attr :row_class, :string, default: ""
 
   slot :col, required: true do
     attr :label, :string
@@ -64,7 +65,7 @@ defmodule LightningWeb.CoreComponents do
           <tr
             :for={row <- @rows}
             id={"#{@id}-#{Phoenix.Param.to_param(row)}"}
-            class=""
+            class={[@row_class]}
           >
             <td
               :for={col <- @col}

@@ -7,6 +7,8 @@ defmodule LightningWeb.WorkflowLive.Index do
   alias Lightning.Workflows
   alias Lightning.Policies.{Permissions, ProjectUsers}
   alias LightningWeb.WorkflowLive.NewWorkflowForm
+  alias LightningWeb.WorkflowLive.DashboardComponents
+  alias Lightning.DashboardStats
 
   import LightningWeb.WorkflowLive.Components
 
@@ -22,19 +24,21 @@ defmodule LightningWeb.WorkflowLive.Index do
       <:header>
         <LayoutComponents.header current_user={@current_user}>
           <:title><%= @page_title %></:title>
+          <:period>
+            <small style="margin-top: 12px">&nbsp;(last 30 days)</small>
+          </:period>
         </LayoutComponents.header>
       </:header>
-      <div class="relative h-full flex">
-        <LayoutComponents.centered>
-          <.workflow_list
-            can_create_workflow={@can_create_workflow}
-            can_delete_workflow={@can_delete_workflow}
-            workflows={@workflows}
-            project={@project}
-          />
-          <.create_workflow_modal form={@form} />
-        </LayoutComponents.centered>
-      </div>
+      <LayoutComponents.centered>
+        <DashboardComponents.project_metrics metrics={@metrics} project={@project} />
+        <DashboardComponents.workflow_list
+          can_create_workflow={@can_create_workflow}
+          can_delete_workflow={@can_delete_workflow}
+          workflows_stats={@workflows_stats}
+          project={@project}
+        />
+        <.create_workflow_modal form={@form} />
+      </LayoutComponents.centered>
     </LayoutComponents.page_content>
     """
   end
@@ -74,11 +78,19 @@ defmodule LightningWeb.WorkflowLive.Index do
   end
 
   defp apply_action(socket, :index, _params) do
+    %{project: project} = socket.assigns
+
+    workflows_stats =
+      project
+      |> Workflows.get_workflows_for()
+      |> Enum.map(&DashboardStats.get_workflow_stats/1)
+
     socket
     |> assign(
       active_menu_item: :overview,
-      page_title: "Workflows",
-      workflows: Workflows.get_workflows_for(socket.assigns.project)
+      page_title: "Dashboard",
+      metrics: DashboardStats.aggregate_project_metrics(workflows_stats),
+      workflows_stats: workflows_stats
     )
   end
 
@@ -109,7 +121,10 @@ defmodule LightningWeb.WorkflowLive.Index do
   end
 
   def handle_event("delete_workflow", %{"id" => id}, socket) do
-    if socket.assigns.can_delete_workflow do
+    %{project: project, can_delete_workflow: can_delete_workflow?} =
+      socket.assigns
+
+    if can_delete_workflow? do
       Workflows.get_workflow!(id)
       |> Workflows.mark_for_deletion()
       |> case do
@@ -117,10 +132,9 @@ defmodule LightningWeb.WorkflowLive.Index do
           {
             :noreply,
             socket
-            |> assign(
-              workflows: Workflows.get_workflows_for(socket.assigns.project)
-            )
+            |> assign(workflows: Workflows.get_workflows_for(project))
             |> put_flash(:info, "Workflow successfully deleted.")
+            |> push_patch(to: "/projects/#{project.id}/w")
           }
 
         {:error, _changeset} ->
