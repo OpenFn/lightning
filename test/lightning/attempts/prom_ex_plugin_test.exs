@@ -38,24 +38,26 @@ defmodule Lightning.Attempts.PromExPluginText do
   end
 
   test "polling_metrics returns a Promex Polling instance" do
-    stalled_attempt_threshold_seconds =
-      Application.get_env(:lightning, :metrics)[
-        :stalled_attempt_threshold_seconds
-      ]
+    threshold_seconds = 333
 
     expected_mfa =
       {
         Lightning.Attempts.PromExPlugin,
         :stalled_attempt_count,
-        [stalled_attempt_threshold_seconds]
+        [threshold_seconds]
       }
+
+    [stalled_attempt_polling | _] =
+      PromExPlugin.polling_metrics(
+        stalled_attempt_threshold_seconds: threshold_seconds
+      )
 
     assert %PromEx.MetricTypes.Polling{
              group_name: :lightning_attempt_polling_events,
              poll_rate: 5000,
              measurements_mfa: ^expected_mfa,
              metrics: [metric | _]
-           } = PromExPlugin.polling_metrics(%{})
+           } = stalled_attempt_polling
 
     assert %Telemetry.Metrics.LastValue{
              name: [:lightning, :attempt, :queue, :stalled, :count],

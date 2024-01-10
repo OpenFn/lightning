@@ -28,16 +28,20 @@ defmodule Lightning.Attempts.PromExPlugin do
   end
 
   @impl true
-  def polling_metrics(_opts) do
-    stalled_attempt_threshold_seconds =
-      Application.get_env(:lightning, :metrics)[
-        :stalled_attempt_threshold_seconds
-      ]
+  def polling_metrics(opts) do
+    {:ok, stalled_attempt_threshold_seconds} =
+      opts |> Keyword.fetch(:stalled_attempt_threshold_seconds)
 
+    [
+      stalled_attempt_metrics(stalled_attempt_threshold_seconds)
+    ]
+  end
+
+  defp stalled_attempt_metrics(threshold_seconds) do
     Polling.build(
       :lightning_attempt_polling_events,
       5000,
-      {__MODULE__, :stalled_attempt_count, [stalled_attempt_threshold_seconds]},
+      {__MODULE__, :stalled_attempt_count, [threshold_seconds]},
       [
         last_value(
           [:lightning, :attempt, :queue, :stalled, :count],
