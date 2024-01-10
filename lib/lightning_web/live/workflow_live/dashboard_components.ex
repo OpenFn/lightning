@@ -270,16 +270,16 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
       <.metric_card title="Work Orders in failed state">
         <:value><%= @metrics.work_order_metrics.failed %></:value>
         <:suffix>
-          <span class="mr-10">
-            (<%= @metrics.work_order_metrics.failure_percentage %>%)
-          </span>
+          (<%= @metrics.work_order_metrics.failure_percentage %>%)
+        </:suffix>
+        <:link>
           <.link
             navigate={~p"/projects/#{@project}/runs?#{%{filters: @filters}}"}
-            class="text-indigo-700"
+            class="text-indigo-700 hover:underline"
           >
             View all
           </.link>
-        </:suffix>
+        </:link>
       </.metric_card>
     </div>
     """
@@ -289,6 +289,7 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
   slot :value, required: true
 
   slot :suffix, required: false
+  slot :link, required: false
 
   def metric_card(assigns) do
     ~H"""
@@ -299,12 +300,15 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
       >
         <%= @title %>
       </h2>
-      <p class="text-3xl font-bold text-gray-800">
-        <%= render_slot(@value) %>
-        <span class="text-xs font-normal">
+      <div class="flex space-x-1 items-baseline text-3xl font-bold text-gray-800">
+        <div><%= render_slot(@value) %></div>
+        <div class="text-xs font-normal grow">
           <%= render_slot(@suffix) %>
-        </span>
-      </p>
+        </div>
+        <div class="text-xs font-normal">
+          <%= render_slot(@link) %>
+        </div>
+      </div>
     </div>
     """
   end

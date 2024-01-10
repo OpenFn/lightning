@@ -74,12 +74,16 @@ defmodule LightningWeb.WorkflowLive.IndexTest do
       # 16 total runs (2 pending, 4 failed)
       # 10 successful runs out of 14 (71.43%)
       # 2 work orders failed (25.0%)
-      assert Regex.match?(~r/Work Orders.*">\s*8/s, html)
-      assert Regex.match?(~r/Runs.*>\s*16.*">\s*\(2 pending\)/s, html)
-      assert Regex.match?(~r/Successful Runs.*">\s*10.*">\s*\(71.43%\)/s, html)
+      assert Regex.match?(~r/Work Orders.*?<div>\s*8/s, html)
+      assert Regex.match?(~r/Runs.*?<div>\s*16.*">\s*\(2 pending\)/s, html)
 
       assert Regex.match?(
-               ~r/Work Orders in failed state.*">\s*2.*">\s*\(25.0%\)/s,
+               ~r/Successful Runs.*<div>\s*10.*">\s*\(71.43%\)/s,
+               html
+             )
+
+      assert Regex.match?(
+               ~r/Work Orders in failed state.*<div>\s*2.*">\s*\(25.0%\)/s,
                html
              )
 
