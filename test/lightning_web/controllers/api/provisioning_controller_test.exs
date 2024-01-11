@@ -112,7 +112,8 @@ defmodule LightningWeb.API.ProvisioningControllerTest do
                "id" => ^edge_1_id,
                "condition_type" => "always",
                "source_trigger_id" => ^trigger_id,
-               "target_job_id" => ^job_1_id
+               "target_job_id" => ^job_1_id,
+               "enabled" => true
              } =
                edge_1_json
 
@@ -126,7 +127,8 @@ defmodule LightningWeb.API.ProvisioningControllerTest do
                "condition_label" => "sick",
                "condition_expression" => "data.illness === true",
                "source_job_id" => ^job_1_id,
-               "target_job_id" => ^job_2_id
+               "target_job_id" => ^job_2_id,
+               "enabled" => true
              } =
                edge_2_json
 
