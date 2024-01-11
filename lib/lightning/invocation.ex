@@ -474,44 +474,22 @@ defmodule Lightning.Invocation do
       :body, dynamic ->
         dynamic(
           [input_dataclip: dataclip],
-          ^dynamic or
-            fragment(
-              "CAST(? AS TEXT) iLIKE ?",
-              dataclip.body,
-              ^"%#{search_term}%"
-            )
+          ^dynamic or ilike(type(dataclip.body, :string), ^"%#{search_term}%")
         )
 
       :id, dynamic ->
         dynamic(
           [workorder: wo, attempts: att, runs: run],
-          ^dynamic or
-            fragment(
-              "CAST(? AS TEXT) iLIKE ?",
-              wo.id,
-              ^"%#{search_term}%"
-            ) or
-            fragment(
-              "CAST(? AS TEXT) iLIKE ?",
-              att.id,
-              ^"%#{search_term}%"
-            ) or
-            fragment(
-              "CAST(? AS TEXT) iLIKE ?",
-              run.id,
-              ^"%#{search_term}%"
-            )
+          ^dynamic or like(type(wo.id, :string), ^"%#{search_term}%") or
+            like(type(att.id, :string), ^"%#{search_term}%") or
+            like(type(run.id, :string), ^"%#{search_term}%")
         )
 
       :log, dynamic ->
         dynamic(
           [log_lines: log_line],
           ^dynamic or
-            fragment(
-              "CAST(? AS TEXT) iLIKE ?",
-              log_line.message,
-              ^"%#{search_term}%"
-            )
+            ilike(type(log_line.message, :string), ^"%#{search_term}%")
         )
 
       _other, dynamic ->
