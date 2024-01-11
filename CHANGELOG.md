@@ -9,13 +9,16 @@ and this project adheres to
 ## [Unreleased]
 
 ### Added
+
 - Custom metric to track stalled attempts
   [#1559](https://github.com/OpenFn/Lightning/issues/1559)
-
 - Dashboard with project and workflow stats
   [#755](https://github.com/OpenFn/Lightning/issues/755)
 
 ### Changed
+
+- Bumped CLI version to `0.4.13`
+- Bumped worker version to `0.5.0`
 - Give project editors and viewers read only access to project settings instead
   [#1477](https://github.com/OpenFn/Lightning/issues/1477)
 
