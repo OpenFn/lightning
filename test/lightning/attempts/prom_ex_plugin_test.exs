@@ -105,14 +105,16 @@ defmodule Lightning.Attempts.PromExPluginText do
   end
 
   describe "stalled_attempt_count" do
-    test "fires a metric with the count of stalled attempts" do
-      ref =
-        :telemetry_test.attach_event_handlers(
-          self(),
-          [[:lightning, :attempt, :queue, :stalled]]
-        )
+    setup do
+      %{
+        event: [:lightning, :attempt, :queue, :stalled],
+        stall_threshold_seconds: 30
+      }
+    end
 
-      stall_threshold_seconds = 30
+    test "fires a metric with the count of stalled attempts",
+         %{event: event, stall_threshold_seconds: stall_threshold_seconds} do
+      ref = :telemetry_test.attach_event_handlers(self(), [event])
 
       now = DateTime.utc_now()
       _stalled_1 = available_attempt(now, -60)
@@ -124,22 +126,17 @@ defmodule Lightning.Attempts.PromExPluginText do
       PromExPlugin.stalled_attempt_count(stall_threshold_seconds)
 
       assert_received {
-        [:lightning, :attempt, :queue, :stalled],
+        ^event,
         ^ref,
         %{count: 3},
         %{}
       }
     end
 
-    test "does not fire a metric if the Repo is not available when called" do
+    test "does not fire a metric if the Repo is not available when called",
+         %{event: event, stall_threshold_seconds: stall_threshold_seconds} do
       # This scenario occurs during server startup
-      ref =
-        :telemetry_test.attach_event_handlers(
-          self(),
-          [[:lightning, :attempt, :queue, :stalled]]
-        )
-
-      stall_threshold_seconds = 30
+      ref = :telemetry_test.attach_event_handlers(self(), [event])
 
       with_mock(
         Process,
@@ -150,7 +147,7 @@ defmodule Lightning.Attempts.PromExPluginText do
       end
 
       refute_received {
-        [:lightning, :attempt, :queue, :stalled],
+        ^event,
         ^ref,
         %{count: _count},
         %{}
@@ -237,9 +234,12 @@ defmodule Lightning.Attempts.PromExPluginText do
   end
 
   describe ".calculate_average_claim_duration" do
-    test "returns average duration for unclaimed and claimed attempts" do
-      reference = DateTime.utc_now()
-      attempt_age = 10
+    setup do
+      %{reference: DateTime.utc_now(), attempt_age: 10}
+    end
+
+    test "returns average duration for unclaimed and claimed attempts",
+         %{reference: reference, attempt_age: attempt_age} do
       threshold = reference |> DateTime.add(-attempt_age)
 
       duration_until_claimed_1 = 1
@@ -297,10 +297,8 @@ defmodule Lightning.Attempts.PromExPluginText do
       assert average_duration == expected_average_duration_ms
     end
 
-    test "returns 0 if there are no eligible attempts" do
-      reference = DateTime.utc_now()
-      attempt_age = 10
-
+    test "returns 0 if there are no eligible attempts",
+         %{reference: reference, attempt_age: attempt_age} do
       average_duration =
         PromExPlugin.calculate_average_claim_duration(reference, attempt_age)
 
