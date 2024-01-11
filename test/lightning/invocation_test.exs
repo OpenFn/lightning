@@ -736,7 +736,7 @@ defmodule Lightning.InvocationTest do
       assert found_workorder.id == wo_now.id
     end
 
-    test "filters workorders by search term on body and/or run logs" do
+    test "filters workorders by search term on body and/or run logs and/or workorder, run and attempt ID" do
       project = insert(:project)
 
       dataclip =
@@ -814,6 +814,40 @@ defmodule Lightning.InvocationTest do
                    "search_fields" => ["log"]
                  })
                ).entries
+
+      # By ID
+      assert [] ==
+               Lightning.Invocation.search_workorders(
+                 project,
+                 SearchParams.new(%{
+                   "search_term" => "nonexistentid",
+                   "search_fields" => ["id"]
+                 })
+               ).entries
+
+      # Search by Run, Workorder, Attempt IDs and their parts
+      search_ids =
+        [run.id, workorder.id, attempt.id]
+        |> Enum.map(fn uuid ->
+          [part | _t] = String.split(uuid, "-")
+          [part, uuid]
+        end)
+        |> List.flatten()
+
+      for search_id <- search_ids do
+        assert [found_workorder] =
+                 Lightning.Invocation.search_workorders(
+                   project,
+                   SearchParams.new(%{
+                     "search_term" => search_id,
+                     "search_fields" =>
+                       ["id"] ++
+                         Enum.take(["body", "log"], Enum.random([0, 1, 2]))
+                   })
+                 ).entries
+
+        assert found_workorder.id == workorder.id
+      end
     end
 
     # to be replaced by paginator unit tests

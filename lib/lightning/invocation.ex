@@ -390,7 +390,7 @@ defmodule Lightning.Invocation do
     |> filter_by_wo_date_before(search_params.wo_date_before)
     |> filter_by_date_after(search_params.date_after)
     |> filter_by_date_before(search_params.date_before)
-    |> filter_by_body_or_log(
+    |> filter_by_body_or_log_or_id(
       search_params.search_fields,
       search_params.search_term
     )
@@ -461,17 +461,73 @@ defmodule Lightning.Invocation do
     )
   end
 
-  defp filter_by_body_or_log(query, _search_fields, nil), do: query
+  defp filter_by_body_or_log_or_id(query, _search_fields, nil), do: query
 
-  defp filter_by_body_or_log(query, search_fields, search_term) do
-    case search_fields do
+  defp filter_by_body_or_log_or_id(query, search_fields, search_term) do
+    query = build_search_fields_query(query, search_fields)
+
+    case Enum.sort(search_fields) do
+      [:body, :id, :log] ->
+        from [
+               workorder: wo,
+               attempts: att,
+               runs: run,
+               input_dataclip: dataclip,
+               log_lines: log_line
+             ] in query,
+             where:
+               fragment(
+                 "CAST(? AS TEXT) iLIKE ?",
+                 dataclip.body,
+                 ^"%#{search_term}%"
+               ) or
+                 fragment(
+                   "CAST(? AS TEXT) iLIKE ?",
+                   log_line.message,
+                   ^"%#{search_term}%"
+                 ) or
+                 fragment(
+                   "CAST(? AS TEXT) iLIKE ?",
+                   wo.id,
+                   ^"%#{search_term}%"
+                 ) or
+                 fragment(
+                   "CAST(? AS TEXT) iLIKE ?",
+                   att.id,
+                   ^"%#{search_term}%"
+                 ) or
+                 fragment(
+                   "CAST(? AS TEXT) iLIKE ?",
+                   run.id,
+                   ^"%#{search_term}%"
+                 )
+
+      [:body, :id] ->
+        from [workorder: wo, attempts: att, runs: run, input_dataclip: dataclip] in query,
+          where:
+            fragment(
+              "CAST(? AS TEXT) iLIKE ?",
+              dataclip.body,
+              ^"%#{search_term}%"
+            ) or
+              fragment(
+                "CAST(? AS TEXT) iLIKE ?",
+                wo.id,
+                ^"%#{search_term}%"
+              ) or
+              fragment(
+                "CAST(? AS TEXT) iLIKE ?",
+                att.id,
+                ^"%#{search_term}%"
+              ) or
+              fragment(
+                "CAST(? AS TEXT) iLIKE ?",
+                run.id,
+                ^"%#{search_term}%"
+              )
+
       [:body, :log] ->
-        from(
-          [workorder: workorder] in query,
-          left_join: attempt in assoc(workorder, :attempts),
-          left_join: log_line in assoc(attempt, :log_lines),
-          left_join: run in assoc(attempt, :runs),
-          left_join: dataclip in assoc(run, :input_dataclip),
+        from [input_dataclip: dataclip, log_lines: log_line] in query,
           where:
             fragment(
               "CAST(? AS TEXT) iLIKE ?",
@@ -483,37 +539,107 @@ defmodule Lightning.Invocation do
                 log_line.message,
                 ^"%#{search_term}%"
               )
-        )
+
+      [:id, :log] ->
+        from [workorder: wo, attempts: att, runs: run, log_lines: log_line] in query,
+          where:
+            fragment(
+              "CAST(? AS TEXT) iLIKE ?",
+              log_line.message,
+              ^"%#{search_term}%"
+            ) or
+              fragment(
+                "CAST(? AS TEXT) iLIKE ?",
+                wo.id,
+                ^"%#{search_term}%"
+              ) or
+              fragment(
+                "CAST(? AS TEXT) iLIKE ?",
+                att.id,
+                ^"%#{search_term}%"
+              ) or
+              fragment(
+                "CAST(? AS TEXT) iLIKE ?",
+                run.id,
+                ^"%#{search_term}%"
+              )
 
       [:body] ->
-        from(
-          [workorder: workorder] in query,
-          left_join: attempt in assoc(workorder, :attempts),
-          left_join: run in assoc(attempt, :runs),
-          left_join: dataclip in assoc(run, :input_dataclip),
+        from [input_dataclip: dataclip] in query,
           where:
             fragment(
               "CAST(? AS TEXT) iLIKE ?",
               dataclip.body,
               ^"%#{search_term}%"
             )
-        )
 
       [:log] ->
-        from(
-          [workorder: workorder] in query,
-          left_join: attempt in assoc(workorder, :attempts),
-          left_join: log_line in assoc(attempt, :log_lines),
+        from [log_lines: log_line] in query,
           where:
             fragment(
               "CAST(? AS TEXT) iLIKE ?",
               log_line.message,
               ^"%#{search_term}%"
             )
-        )
 
-      true ->
+      [:id] ->
+        from [workorder: wo, attempts: att, runs: run] in query,
+          where:
+            fragment(
+              "CAST(? AS TEXT) iLIKE ?",
+              wo.id,
+              ^"%#{search_term}%"
+            ) or
+              fragment(
+                "CAST(? AS TEXT) iLIKE ?",
+                att.id,
+                ^"%#{search_term}%"
+              ) or
+              fragment(
+                "CAST(? AS TEXT) iLIKE ?",
+                run.id,
+                ^"%#{search_term}%"
+              )
+
+      _other ->
         query
+    end
+  end
+
+  defp build_search_fields_query(base_query, search_fields) do
+    Enum.reduce(search_fields, base_query, fn
+      :body, query ->
+        from [runs: run] in safe_join_runs(query),
+          left_join: dataclip in assoc(run, :input_dataclip),
+          as: :input_dataclip
+
+      :log, query ->
+        from [attempts: attempt] in safe_join_attempts(query),
+          left_join: log_line in assoc(attempt, :log_lines),
+          as: :log_lines
+
+      :id, query ->
+        safe_join_runs(query)
+    end)
+  end
+
+  defp safe_join_attempts(query) do
+    if has_named_binding?(query, :attempts) do
+      query
+    else
+      join(query, :left, [workorder: workorder], assoc(workorder, :attempts),
+        as: :attempts
+      )
+    end
+  end
+
+  defp safe_join_runs(query) do
+    if has_named_binding?(query, :runs) do
+      query
+    else
+      from [attempts: attempt] in safe_join_attempts(query),
+        left_join: run in assoc(attempt, :runs),
+        as: :runs
     end
   end
 

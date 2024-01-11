@@ -507,7 +507,7 @@
                         as={:filters}
                         phx-submit="apply_filters"
                         class="inline"
-                        id="run-both-search-form"
+                        id="run-all-search-form"
                       >
                         <%= for search_field <- @search_fields do %>
                           <%= Phoenix.HTML.Form.hidden_input(f, search_field.id,
@@ -522,7 +522,7 @@
                               is_checked(@filters_changeset, search_field.id)
                             end), do: "bg-gray-300")}"}
                         >
-                          Both
+                          All
                         </button>
                       </.form>
                       <%= for search_field <- @search_fields do %>

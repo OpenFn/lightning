@@ -12,6 +12,8 @@ and this project adheres to
 
 - Dashboard with project and workflow stats
   [#755](https://github.com/OpenFn/Lightning/issues/755)
+- Add search by ID on the history page
+  [#1468](https://github.com/OpenFn/Lightning/issues/1468)
 
 ### Changed
 - Give project editors and viewers read only access to project settings instead
