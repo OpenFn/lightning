@@ -44,6 +44,8 @@ and this project adheres to
 - Fixes on the dashboard and links
   [#1610](https://github.com/OpenFn/Lightning/issues/1610) and
   [#1608](https://github.com/OpenFn/Lightning/issues/1608)
+- Fix credential body getting leaked to sentry incase of errors
+  [#1600](https://github.com/OpenFn/Lightning/issues/1600)
 
 ## [2.0.0-rc2] - 2024-01-08
 
