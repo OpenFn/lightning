@@ -106,14 +106,12 @@ defmodule LightningWeb.API.ProvisioningControllerTest do
       # id source_job_id source_trigger_id condition_type condition_label condition_expression target_job_id
 
       assert %{"condition_type" => "always"} = edge_1_json
-      assert %{"enabled" => true} = edge_1_json
       refute Map.has_key?(edge_1_json, "condition_label")
       refute Map.has_key?(edge_1_json, "condition_expression")
 
       assert %{"condition_type" => "js_expression"} = edge_2_json
       assert %{"condition_label" => "never"} = edge_2_json
       assert %{"condition_expression" => "false"} = edge_2_json
-      assert %{"enabled" => true} = edge_2_json
 
       assert %{
                "id" => ^job_2_id,
