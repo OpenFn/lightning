@@ -145,7 +145,7 @@ defmodule Lightning.Attempts.PromExPlugin do
     |> average()
   end
 
-  defp claim_duration(attempt = %Attempt{state: :available}, reference_time) do
+  defp claim_duration(%Attempt{state: :available} = attempt, reference_time) do
     DateTime.diff(reference_time, attempt.inserted_at, :millisecond)
   end
 
