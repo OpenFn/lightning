@@ -49,6 +49,7 @@ defmodule Lightning.WorkOrders.SearchParamsTest do
                "failed" => true,
                "workflow_id" => "babd29f7-bf15-4a66-af21-51209217ebd4"
              }) == %{
+               "id" => true,
                "log" => true,
                "body" => false,
                "failed" => true,
@@ -66,6 +67,7 @@ defmodule Lightning.WorkOrders.SearchParamsTest do
       assert SearchParams.to_uri_params(%{
                "body" => true,
                "log" => false,
+               "id" => false,
                "crashed" => true,
                "date_after" => now,
                "wo_date_before" => now,
@@ -73,6 +75,7 @@ defmodule Lightning.WorkOrders.SearchParamsTest do
              }) == %{
                "body" => true,
                "log" => false,
+               "id" => false,
                "crashed" => true,
                "wo_date_after" => nil,
                "wo_date_before" => now |> DateTime.to_string(),
