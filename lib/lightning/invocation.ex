@@ -466,144 +466,58 @@ defmodule Lightning.Invocation do
   defp filter_by_body_or_log_or_id(query, search_fields, search_term) do
     query = build_search_fields_query(query, search_fields)
 
-    case Enum.sort(search_fields) do
-      [:body, :id, :log] ->
-        from [
-               workorder: wo,
-               attempts: att,
-               runs: run,
-               input_dataclip: dataclip,
-               log_lines: log_line
-             ] in query,
-             where:
-               fragment(
-                 "CAST(? AS TEXT) iLIKE ?",
-                 dataclip.body,
-                 ^"%#{search_term}%"
-               ) or
-                 fragment(
-                   "CAST(? AS TEXT) iLIKE ?",
-                   log_line.message,
-                   ^"%#{search_term}%"
-                 ) or
-                 fragment(
-                   "CAST(? AS TEXT) iLIKE ?",
-                   wo.id,
-                   ^"%#{search_term}%"
-                 ) or
-                 fragment(
-                   "CAST(? AS TEXT) iLIKE ?",
-                   att.id,
-                   ^"%#{search_term}%"
-                 ) or
-                 fragment(
-                   "CAST(? AS TEXT) iLIKE ?",
-                   run.id,
-                   ^"%#{search_term}%"
-                 )
+    from query, where: ^build_search_fields_where(search_fields, search_term)
+  end
 
-      [:body, :id] ->
-        from [workorder: wo, attempts: att, runs: run, input_dataclip: dataclip] in query,
-          where:
-            fragment(
-              "CAST(? AS TEXT) iLIKE ?",
-              dataclip.body,
-              ^"%#{search_term}%"
-            ) or
-              fragment(
-                "CAST(? AS TEXT) iLIKE ?",
-                wo.id,
-                ^"%#{search_term}%"
-              ) or
-              fragment(
-                "CAST(? AS TEXT) iLIKE ?",
-                att.id,
-                ^"%#{search_term}%"
-              ) or
-              fragment(
-                "CAST(? AS TEXT) iLIKE ?",
-                run.id,
-                ^"%#{search_term}%"
-              )
-
-      [:body, :log] ->
-        from [input_dataclip: dataclip, log_lines: log_line] in query,
-          where:
-            fragment(
-              "CAST(? AS TEXT) iLIKE ?",
-              dataclip.body,
-              ^"%#{search_term}%"
-            ) or
-              fragment(
-                "CAST(? AS TEXT) iLIKE ?",
-                log_line.message,
-                ^"%#{search_term}%"
-              )
-
-      [:id, :log] ->
-        from [workorder: wo, attempts: att, runs: run, log_lines: log_line] in query,
-          where:
-            fragment(
-              "CAST(? AS TEXT) iLIKE ?",
-              log_line.message,
-              ^"%#{search_term}%"
-            ) or
-              fragment(
-                "CAST(? AS TEXT) iLIKE ?",
-                wo.id,
-                ^"%#{search_term}%"
-              ) or
-              fragment(
-                "CAST(? AS TEXT) iLIKE ?",
-                att.id,
-                ^"%#{search_term}%"
-              ) or
-              fragment(
-                "CAST(? AS TEXT) iLIKE ?",
-                run.id,
-                ^"%#{search_term}%"
-              )
-
-      [:body] ->
-        from [input_dataclip: dataclip] in query,
-          where:
+  defp build_search_fields_where(search_fields, search_term) do
+    Enum.reduce(search_fields, dynamic(false), fn
+      :body, dynamic ->
+        dynamic(
+          [input_dataclip: dataclip],
+          ^dynamic or
             fragment(
               "CAST(? AS TEXT) iLIKE ?",
               dataclip.body,
               ^"%#{search_term}%"
             )
+        )
 
-      [:log] ->
-        from [log_lines: log_line] in query,
-          where:
-            fragment(
-              "CAST(? AS TEXT) iLIKE ?",
-              log_line.message,
-              ^"%#{search_term}%"
-            )
-
-      [:id] ->
-        from [workorder: wo, attempts: att, runs: run] in query,
-          where:
+      :id, dynamic ->
+        dynamic(
+          [workorder: wo, attempts: att, runs: run],
+          ^dynamic or
             fragment(
               "CAST(? AS TEXT) iLIKE ?",
               wo.id,
               ^"%#{search_term}%"
             ) or
-              fragment(
-                "CAST(? AS TEXT) iLIKE ?",
-                att.id,
-                ^"%#{search_term}%"
-              ) or
-              fragment(
-                "CAST(? AS TEXT) iLIKE ?",
-                run.id,
-                ^"%#{search_term}%"
-              )
+            fragment(
+              "CAST(? AS TEXT) iLIKE ?",
+              att.id,
+              ^"%#{search_term}%"
+            ) or
+            fragment(
+              "CAST(? AS TEXT) iLIKE ?",
+              run.id,
+              ^"%#{search_term}%"
+            )
+        )
 
-      _other ->
-        query
-    end
+      :log, dynamic ->
+        dynamic(
+          [log_lines: log_line],
+          ^dynamic or
+            fragment(
+              "CAST(? AS TEXT) iLIKE ?",
+              log_line.message,
+              ^"%#{search_term}%"
+            )
+        )
+
+      _other, dynamic ->
+        # Not a valid search field
+        dynamic
+    end)
   end
 
   defp build_search_fields_query(base_query, search_fields) do
