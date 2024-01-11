@@ -17,7 +17,7 @@ defmodule Lightning.Credentials.Credential do
   @foreign_key_type :binary_id
   schema "credentials" do
     field :name, :string
-    field :body, Lightning.Encrypted.Map
+    field :body, Lightning.Encrypted.Map, redact: true
     field :production, :boolean, default: false
     field :schema, :string
     field :scheduled_deletion, :utc_datetime
