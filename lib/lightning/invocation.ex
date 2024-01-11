@@ -620,6 +620,9 @@ defmodule Lightning.Invocation do
 
       :id, query ->
         safe_join_runs(query)
+
+      _other, query ->
+        query
     end)
   end
 
