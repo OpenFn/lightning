@@ -67,11 +67,7 @@ defmodule Lightning.Attempts.PromExPlugin do
   end
 
   defp trigger_stalled_attempt_metric(repo_pid, threshold_seconds) do
-    # NOTE: During local testing of server starts, having the pid was not enough
-    # a call to .get_state was also required, otherwise the metric triggers before
-    # the Repo GenServer is available.
-    #
-    :sys.get_state(repo_pid)
+    check_repo_state(repo_pid)
 
     threshold_time =
       DateTime.utc_now()
@@ -121,11 +117,7 @@ defmodule Lightning.Attempts.PromExPlugin do
   end
 
   defp trigger_attempt_claim_duration(repo_pid, attempt_age_seconds) do
-    # NOTE: During local testing of server starts, having the pid was not enough
-    # a call to .get_state was also required, otherwise the metric triggers before
-    # the Repo GenServer is available.
-    #
-    :sys.get_state(repo_pid)
+    check_repo_state(repo_pid)
 
     average_duration =
       calculate_average_claim_duration(DateTime.utc_now(), attempt_age_seconds)
@@ -167,5 +159,13 @@ defmodule Lightning.Attempts.PromExPlugin do
 
   defp average({sum, count}) do
     (sum / count) |> Float.round(0)
+  end
+
+  defp check_repo_state(repo_pid) do
+    # NOTE: During local testing of server starts, having the pid was not enough
+    # a call to .get_state was also required, otherwise the metric triggers before
+    # the Repo GenServer is available.
+
+    :sys.get_state(repo_pid)
   end
 end
