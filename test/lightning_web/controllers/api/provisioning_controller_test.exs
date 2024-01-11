@@ -5,6 +5,7 @@ defmodule LightningWeb.API.ProvisioningControllerTest do
   import Lightning.Factories
 
   alias Lightning.Workflows.Workflow
+  alias LightningWeb.API.ProvisioningJSON
 
   setup %{conn: conn} do
     {:ok, conn: put_req_header(conn, "accept", "application/json")}
@@ -27,17 +28,125 @@ defmodule LightningWeb.API.ProvisioningControllerTest do
   describe "get (with an API token)" do
     setup [:assign_bearer_for_api]
 
-    test "returns a project if user has owner access", %{
+    test "returns a new empty project", %{
+      conn: conn,
+      user: user
+    } do
+      %{id: project_id, name: project_name} =
+        insert(:project,
+          project_users: [%{user_id: user.id}]
+        )
+
+      conn = get(conn, ~p"/api/provision/#{project_id}")
+      response = json_response(conn, 200)
+
+      assert %{
+               "id" => ^project_id,
+               "name" => ^project_name,
+               "workflows" => []
+             } = response["data"]
+    end
+
+    test "returns a non empty project without credentials", %{
       conn: conn,
       user: user
     } do
       %{id: project_id, name: project_name} =
         project =
         insert(:project,
+          project_users: [%{user_id: user.id}]
+        )
+
+      project_credential =
+        insert(:project_credential,
+          credential: %{
+            name: "test credential",
+            body: %{"username" => "quux", "password" => "immasecret"}
+          },
+          project: project
+        )
+
+      %{triggers: [%{id: trigger_id} = trigger], edges: [edge_1], jobs: [job_1]} =
+        workflow =
+        insert(:simple_workflow, project: project, name: "Workflow123")
+
+      %{id: job_2_id} =
+        job_2 =
+        insert(:job,
+          workflow: workflow,
+          name: "Second Step",
+          adaptor: "@openfn/language-http@latest",
+          body: "fn(state => state.references)",
+          workflow: workflow,
+          project_credential: project_credential
+        )
+
+      edge_2 =
+        insert(:edge,
+          workflow: workflow,
+          source_trigger: trigger,
+          target_job: job_2,
+          condition_type: :js_expression,
+          condition_label: "never",
+          condition_expression: "false"
+        )
+
+      %{
+        "edges" => [edge_1_json, edge_2_json],
+        "jobs" => [_job_1, job_2_json],
+        "triggers" => [trigger_json]
+      } =
+        workflow_json =
+        workflow
+        |> Map.merge(%{jobs: [job_1, job_2], edges: [edge_1, edge_2]})
+        |> ProvisioningJSON.as_json()
+        |> Jason.encode!()
+        |> Jason.decode!()
+
+      # id source_job_id source_trigger_id condition_type condition_label condition_expression target_job_id
+
+      assert %{"condition_type" => "always"} = edge_1_json
+      refute Map.has_key?(edge_1_json, "condition_label")
+      refute Map.has_key?(edge_1_json, "condition_expression")
+
+      assert %{"condition_type" => "js_expression"} = edge_2_json
+      assert %{"condition_label" => "never"} = edge_2_json
+      assert %{"condition_expression" => "false"} = edge_2_json
+
+      assert %{
+               "id" => ^job_2_id,
+               "name" => "Second Step",
+               "adaptor" => "@openfn/language-http@latest",
+               "body" => "fn(state => state.references)"
+             } = job_2_json
+
+      assert %{
+               "id" => ^trigger_id,
+               "type" => "webhook",
+               "cron_expression" => "* * * * *",
+               "enabled" => true
+             } = trigger_json
+
+      conn = get(conn, ~p"/api/provision/#{project_id}")
+      response = json_response(conn, 200)
+
+      assert %{
+               "id" => ^project_id,
+               "name" => ^project_name,
+               "workflows" => [^workflow_json]
+             } = response["data"]
+    end
+
+    test "returns a project if user has owner access", %{
+      conn: conn,
+      user: user
+    } do
+      %{id: project_id, name: project_name} =
+        insert(:project,
           project_users: [%{user_id: user.id, role: :owner}]
         )
 
-      conn = get(conn, ~p"/api/provision/#{project.id}")
+      conn = get(conn, ~p"/api/provision/#{project_id}")
       response = json_response(conn, 200)
 
       assert %{
@@ -46,8 +155,7 @@ defmodule LightningWeb.API.ProvisioningControllerTest do
                "workflows" => workflows
              } = response["data"]
 
-      assert workflows |> Enum.all?(&match?(%{"project_id" => ^project_id}, &1)),
-             "All workflows should belong to the same project"
+      assert workflows |> Enum.all?(&match?(%{"project_id" => ^project_id}, &1))
     end
 
     test "returns a 200 if user has admin access", %{

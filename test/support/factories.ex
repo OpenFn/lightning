@@ -267,7 +267,12 @@ defmodule Lightning.Factories do
   end
 
   def simple_workflow_factory(attrs) do
-    trigger = build(:trigger, type: :webhook, enabled: true)
+    trigger =
+      build(:trigger,
+        type: :webhook,
+        enabled: true,
+        cron_expression: "* * * * *"
+      )
 
     job =
       build(:job,
