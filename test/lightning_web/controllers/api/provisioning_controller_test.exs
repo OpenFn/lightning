@@ -66,7 +66,11 @@ defmodule LightningWeb.API.ProvisioningControllerTest do
           project: project
         )
 
-      %{triggers: [%{id: trigger_id} = trigger], edges: [edge_1], jobs: [job_1]} =
+      %{
+        triggers: [%{id: trigger_id}],
+        edges: [%{id: edge_1_id} = edge_1],
+        jobs: [%{id: job_1_id} = job_1]
+      } =
         workflow =
         insert(:simple_workflow, project: project, name: "Workflow123")
 
@@ -81,14 +85,15 @@ defmodule LightningWeb.API.ProvisioningControllerTest do
           project_credential: project_credential
         )
 
-      edge_2 =
+      %{id: edge_2_id} =
+        edge_2 =
         insert(:edge,
           workflow: workflow,
-          source_trigger: trigger,
+          source_job: job_1,
           target_job: job_2,
           condition_type: :js_expression,
-          condition_label: "never",
-          condition_expression: "false"
+          condition_label: "sick",
+          condition_expression: "data.illness === true"
         )
 
       %{
@@ -103,15 +108,29 @@ defmodule LightningWeb.API.ProvisioningControllerTest do
         |> Jason.encode!()
         |> Jason.decode!()
 
-      # id source_job_id source_trigger_id condition_type condition_label condition_expression target_job_id
+      assert %{
+               "id" => ^edge_1_id,
+               "condition_type" => "always",
+               "source_trigger_id" => ^trigger_id,
+               "target_job_id" => ^job_1_id
+             } =
+               edge_1_json
 
-      assert %{"condition_type" => "always"} = edge_1_json
+      refute Map.has_key?(edge_1_json, "source_job_id")
       refute Map.has_key?(edge_1_json, "condition_label")
       refute Map.has_key?(edge_1_json, "condition_expression")
 
-      assert %{"condition_type" => "js_expression"} = edge_2_json
-      assert %{"condition_label" => "never"} = edge_2_json
-      assert %{"condition_expression" => "false"} = edge_2_json
+      assert %{
+               "id" => ^edge_2_id,
+               "condition_type" => "js_expression",
+               "condition_label" => "sick",
+               "condition_expression" => "data.illness === true",
+               "source_job_id" => ^job_1_id,
+               "target_job_id" => ^job_2_id
+             } =
+               edge_2_json
+
+      refute Map.has_key?(job_2_json, "project_credential_id")
 
       assert %{
                "id" => ^job_2_id,
