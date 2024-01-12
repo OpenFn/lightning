@@ -91,8 +91,20 @@ defmodule Lightning.MetadataService do
 
   defp get_adaptor_path(adaptor) do
     case AdaptorService.install(@adaptor_service, adaptor) do
-      {:ok, %{path: path}} when is_binary(path) -> {:ok, path}
-      _ -> {:error, Error.new("no_matching_adaptor")}
+      {:error, _} ->
+        {:error, Error.new("no_matching_adaptor")}
+
+      {:ok, %{path: path}} when is_binary(path) ->
+        {:ok, path}
+
+      other ->
+        Sentry.capture_message("AdaptorService.install failed",
+          level: "warning",
+          message: inspect(other),
+          extra: %{adaptor: adaptor}
+        )
+
+        {:error, Error.new("adaptor_service_install_error")}
     end
   end
 
