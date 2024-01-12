@@ -11,7 +11,7 @@
   "dependencies": {
     "@heroicons/react": "^2.1.1",
     "@monaco-editor/react": "^4.4.5",
-    "@openfn/describe-package": "^0.0.16",
+    "@openfn/describe-package": "^0.0.18",
     "@tailwindcss/container-queries": "^0.1.1",
     "@tailwindcss/forms": "^0.5.6",
     "classcat": "^5.0.4",
@@ -33,7 +33,7 @@
     "zustand": "^4.3.7"
   },
   "devDependencies": {
-    "@openfn/ws-worker": "^0.4.0",
+    "@openfn/ws-worker": "^0.5.0",
     "@types/marked": "^4.0.8",
     "@types/react": "^18.0.15",
     "@types/react-dom": "^18.0.6",

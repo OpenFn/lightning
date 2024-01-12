@@ -219,7 +219,7 @@ defmodule LightningWeb.AttemptLive.Components do
         <.run_state_circle run={@run} />
       </div>
       <div class={[
-        "flex min-w-0 flex-1 justify-between space-x-4 pt-1.5 pr-1.5",
+        "flex min-w-0 flex-1 space-x-1 pt-1.5 pr-1.5",
         if(@is_clone, do: "opacity-50")
       ]}>
         <%= if @is_clone do %>
@@ -240,7 +240,7 @@ defmodule LightningWeb.AttemptLive.Components do
             </span>
           </div>
         <% end %>
-        <div class="flex grow text-sm text-gray-900">
+        <div class="flex text-sm space-x-1 text-gray-900">
           <%= @run.job.name %>
           <%= if @show_inspector_link do %>
             <.link navigate={
@@ -255,7 +255,7 @@ defmodule LightningWeb.AttemptLive.Components do
             </.link>
           <% end %>
         </div>
-        <div class="whitespace-nowrap text-right text-sm text-gray-500">
+        <div class="flex-grow whitespace-nowrap text-right text-sm text-gray-500">
           <.run_duration run={@run} />
         </div>
       </div>

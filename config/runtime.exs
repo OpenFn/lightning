@@ -339,3 +339,13 @@ config :lightning, Lightning.PromEx,
     System.get_env("PROMEX_METRICS_ENDPOINT_TOKEN") ||
       :crypto.strong_rand_bytes(100),
   metrics_endpoint_scheme: System.get_env("PROMEX_ENDPOINT_SCHEME") || "https"
+
+config :lightning, :metrics,
+  stalled_attempt_threshold_seconds:
+    String.to_integer(
+      System.get_env("METRICS_STALLED_ATTEMPT_THRESHOLD_SECONDS", "3600")
+    ),
+  attempt_performance_age_seconds:
+    String.to_integer(
+      System.get_env("METRICS_ATTEMPT_PERFORMANCE_AGE_SECONDS", "300")
+    )

@@ -58,6 +58,16 @@ defmodule Lightning.PromEx do
 
   @impl true
   def plugins do
+    stalled_attempt_threshold_seconds =
+      Application.get_env(:lightning, :metrics)[
+        :stalled_attempt_threshold_seconds
+      ]
+
+    attempt_performance_age_seconds =
+      Application.get_env(:lightning, :metrics)[
+        :attempt_performance_age_seconds
+      ]
+
     [
       # PromEx built in plugins
       Plugins.Application,
@@ -68,7 +78,11 @@ defmodule Lightning.PromEx do
       Plugins.Oban,
       Plugins.PhoenixLiveView,
       # Add your own PromEx metrics plugins
-      Lightning.Attempts.PromExPlugin
+      {
+        Lightning.Attempts.PromExPlugin,
+        stalled_attempt_threshold_seconds: stalled_attempt_threshold_seconds,
+        attempt_performance_age_seconds: attempt_performance_age_seconds
+      }
     ]
   end
 

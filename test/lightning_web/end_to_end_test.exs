@@ -219,7 +219,7 @@ defmodule LightningWeb.EndToEndTest do
         |> Map.get(:message)
 
       assert version_logs =~ "▸ node.js                  18.17"
-      assert version_logs =~ "▸ worker                   0.4"
+      assert version_logs =~ "▸ worker                   0.5"
       assert version_logs =~ "▸ engine                   0.2"
       assert version_logs =~ "▸ @openfn/language-http    3.1.12"
 
