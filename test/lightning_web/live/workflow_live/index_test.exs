@@ -69,20 +69,30 @@ defmodule LightningWeb.WorkflowLive.IndexTest do
 
       assert Regex.match?(~r{<h1.*Dashboard.*</h1>}s, html)
 
+      File.write("text.html", html)
       # Metrics
       # 10 total workorders
       # 10 total attempts (4 pending)
       # 2 successful attempts out of 4 completed
       # 2 work orders failed out of 10
-      assert Regex.match?(~r/Work Orders.*?<div>\s*10/s, html)
-      assert Regex.match?(~r/Runs.*?<div>\s*10.*">\s*\(4 pending\)/s, html)
+      assert Regex.match?(~r/Work Orders.*?<div>\s*10.*\(6 pending\)/s, html)
+
+      pending_and_date_filter =
+        Timex.now()
+        |> Timex.shift(months: -1)
+        |> Date.to_string()
+        |> then(fn date ->
+          "filters[date_after]=&amp;filters[date_before]=&amp;filters[id]=true&amp;filters[log]=true&amp;filters[pending]=true&amp;filters[wo_date_after]=#{date}"
+        end)
 
       assert html
              |> has_runs_link_pattern?(
                project,
-               "filters[pending]=true",
-               "(4 pending)"
+               pending_and_date_filter,
+               "6 pending"
              )
+
+      assert Regex.match?(~r/Runs.*?<div>\s*10.*">\s*\(6 pending\)/s, html)
 
       assert Regex.match?(
                ~r/Successful Runs.*<div>\s*2.*">\s*\(50.0%\)/s,

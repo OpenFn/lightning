@@ -121,14 +121,13 @@ defmodule Lightning.DashboardStats do
     |> filter_days_ago(30)
     |> Repo.all()
     |> Enum.group_by(fn state ->
-      if state in [:success, :pending, :running] do
-        state
-      else
-        :failed
+      cond do
+        state in [:pending, :running] -> :pending
+        state == :success -> :success
+        true -> :failed
       end
     end)
-    |> Enum.into(%{success: 0, failed: 0, pending: 0, running: 0}, fn {state,
-                                                                       list} ->
+    |> Enum.into(%{success: 0, failed: 0, pending: 0}, fn {state, list} ->
       {state, length(list)}
     end)
   end
@@ -145,13 +144,11 @@ defmodule Lightning.DashboardStats do
     |> Enum.group_by(fn state ->
       cond do
         state == :success -> :success
-        state in [:available, :claimed] -> :pending
-        state == :started -> :running
+        state in [:available, :claimed, :started] -> :pending
         true -> :failed
       end
     end)
-    |> Enum.into(%{success: 0, failed: 0, pending: 0, running: 0}, fn {state,
-                                                                       list} ->
+    |> Enum.into(%{success: 0, failed: 0, pending: 0}, fn {state, list} ->
       {state, length(list)}
     end)
   end
@@ -172,8 +169,7 @@ defmodule Lightning.DashboardStats do
         true -> :failed
       end
     end)
-    |> Enum.into(%{success: 0, failed: 0, pending: 0, running: 0}, fn {state,
-                                                                       list} ->
+    |> Enum.into(%{success: 0, failed: 0, pending: 0}, fn {state, list} ->
       {state, length(list)}
     end)
   end
@@ -189,10 +185,10 @@ defmodule Lightning.DashboardStats do
            pending: acc_pending,
            total: acc_total
          } ->
-        %{success: success, failed: failed, pending: pending, running: running} =
+        %{success: success, failed: failed, pending: pending} =
           Map.get(stats, grouped_entity_count)
 
-        total = success + failed + pending + running
+        total = success + failed + pending
 
         %{
           success: acc_success + success,
