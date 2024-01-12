@@ -31,9 +31,11 @@ and this project adheres to
 - Throw an error when Lightning.MetadataService.get_adaptor_path/1 returns an
   adaptor path that is nil
   [#1601](https://github.com/OpenFn/Lightning/issues/1601)
-
 - Fix failure due to creating work order from a newly created job
   [#1572](https://github.com/OpenFn/Lightning/issues/1572)
+- Fixes on the dashboard and links
+  [#1610](https://github.com/OpenFn/Lightning/issues/1610) and
+  [#1608](https://github.com/OpenFn/Lightning/issues/1608)
 
 ## [2.0.0-rc2] - 2023-01-08
 

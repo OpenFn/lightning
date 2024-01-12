@@ -70,7 +70,7 @@ defmodule LightningWeb.RunLive.Index do
       )
 
     statuses = [
-      %{id: :pending, label: "Pending"},
+      %{id: :pending, label: "Enqueued"},
       %{id: :running, label: "Running"},
       %{id: :success, label: "Success"},
       %{id: :failed, label: "Failed"},

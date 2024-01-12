@@ -49,8 +49,8 @@ defmodule LightningWeb.AttemptLive.ShowTest do
 
       assert view
              |> element("#attempt-detail-#{attempt_id}")
-             |> render_async() =~ "Pending",
-             "has pending state"
+             |> render_async() =~ "Enqueued",
+             "has enqueued state"
 
       assert view |> log_is_empty?(attempt)
 
