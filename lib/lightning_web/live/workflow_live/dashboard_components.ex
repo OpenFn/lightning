@@ -237,7 +237,7 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
     assigns =
       assigns
       |> assign(
-        filters:
+        failed_filters:
           SearchParams.to_uri_params(%{
             "date_after" => Timex.now() |> Timex.shift(months: -1),
             "date_before" => DateTime.utc_now(),
@@ -247,6 +247,12 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
             "cancelled" => "true",
             "lost" => "true",
             "exception" => "true"
+          }),
+        pending_filters:
+          SearchParams.to_uri_params(%{
+            "date_after" => Timex.now() |> Timex.shift(months: -1),
+            "date_before" => DateTime.utc_now(),
+            "pending" => "true"
           })
       )
 
@@ -254,6 +260,14 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
     <div class="grid gap-12 md:grid-cols-2 lg:grid-cols-4">
       <.metric_card title="Work Orders">
         <:value><%= @metrics.work_order_metrics.total %></:value>
+        <:suffix>
+          <.link
+            navigate={~p"/projects/#{@project}/runs?#{%{filters: @pending_filters}}"}
+            class="text-indigo-700 hover:underline"
+          >
+            (<%= @metrics.work_order_metrics.pending %> pending)
+          </.link>
+        </:suffix>
       </.metric_card>
       <.metric_card title="Runs">
         <:value><%= @metrics.attempt_metrics.total %></:value>
@@ -274,7 +288,7 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
         </:suffix>
         <:link>
           <.link
-            navigate={~p"/projects/#{@project}/runs?#{%{filters: @filters}}"}
+            navigate={~p"/projects/#{@project}/runs?#{%{filters: @failed_filters}}"}
             class="text-indigo-700 hover:underline"
           >
             View all

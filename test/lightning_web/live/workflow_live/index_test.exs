@@ -77,6 +77,13 @@ defmodule LightningWeb.WorkflowLive.IndexTest do
       assert Regex.match?(~r/Work Orders.*?<div>\s*10/s, html)
       assert Regex.match?(~r/Runs.*?<div>\s*10.*">\s*\(4 pending\)/s, html)
 
+      assert html
+             |> has_runs_link_pattern?(
+               project,
+               "filters[pending]=true",
+               "(4 pending)"
+             )
+
       assert Regex.match?(
                ~r/Successful Runs.*<div>\s*2.*">\s*\(50.0%\)/s,
                html
@@ -85,6 +92,22 @@ defmodule LightningWeb.WorkflowLive.IndexTest do
       assert Regex.match?(
                ~r/Work Orders in failed state.*<div>\s*2.*">\s*\(20.0%\)/s,
                html
+             )
+
+      failed_filter_pattern =
+        "filters[cancelled]=true.*filters[crashed]=true.*filters[exception]=true.*filters[failed]=true.*filters[killed]=true.*filters[lost]=true"
+
+      assert html
+             |> has_runs_link_pattern?(
+               project,
+               failed_filter_pattern,
+               "View all"
+             )
+
+      refute html
+             |> has_runs_link_pattern?(
+               project,
+               "(filters[running]=true|filters[success]=true)"
              )
 
       # Header
@@ -121,34 +144,6 @@ defmodule LightningWeb.WorkflowLive.IndexTest do
              )
 
       # Work orders links
-      failed_filter_pattern =
-        "filters[cancelled]=true.*filters[crashed]=true.*filters[exception]=true.*filters[failed]=true.*filters[killed]=true.*filters[lost]=true"
-
-      assert html
-             |> has_runs_link_pattern?(
-               project,
-               failed_filter_pattern,
-               "View all"
-             )
-
-      refute html
-             |> has_runs_link_pattern?(
-               project,
-               "filters[pending]=true"
-             )
-
-      refute html
-             |> has_runs_link_pattern?(
-               project,
-               "filters[running]=true"
-             )
-
-      refute html
-             |> has_runs_link_pattern?(
-               project,
-               "filters[success]=true"
-             )
-
       workorders_count = "4"
 
       # work order date filter without status filter
@@ -176,6 +171,8 @@ defmodule LightningWeb.WorkflowLive.IndexTest do
 
       # Failed runs links
       failed_runs_count = "1"
+
+      File.write("text.html", html)
 
       assert html
              |> has_runs_link_pattern?(
