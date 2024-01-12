@@ -390,7 +390,7 @@ defmodule Lightning.Invocation do
     |> filter_by_wo_date_before(search_params.wo_date_before)
     |> filter_by_date_after(search_params.date_after)
     |> filter_by_date_before(search_params.date_before)
-    |> filter_by_body_or_log(
+    |> filter_by_body_or_log_or_id(
       search_params.search_fields,
       search_params.search_term
     )
@@ -461,59 +461,80 @@ defmodule Lightning.Invocation do
     )
   end
 
-  defp filter_by_body_or_log(query, _search_fields, nil), do: query
+  defp filter_by_body_or_log_or_id(query, _search_fields, nil), do: query
 
-  defp filter_by_body_or_log(query, search_fields, search_term) do
-    case search_fields do
-      [:body, :log] ->
-        from(
-          [workorder: workorder] in query,
-          left_join: attempt in assoc(workorder, :attempts),
-          left_join: log_line in assoc(attempt, :log_lines),
-          left_join: run in assoc(attempt, :runs),
+  defp filter_by_body_or_log_or_id(query, search_fields, search_term) do
+    query = build_search_fields_query(query, search_fields)
+
+    from query, where: ^build_search_fields_where(search_fields, search_term)
+  end
+
+  defp build_search_fields_where(search_fields, search_term) do
+    Enum.reduce(search_fields, dynamic(false), fn
+      :body, dynamic ->
+        dynamic(
+          [input_dataclip: dataclip],
+          ^dynamic or ilike(type(dataclip.body, :string), ^"%#{search_term}%")
+        )
+
+      :id, dynamic ->
+        dynamic(
+          [workorder: wo, attempts: att, runs: run],
+          ^dynamic or like(type(wo.id, :string), ^"%#{search_term}%") or
+            like(type(att.id, :string), ^"%#{search_term}%") or
+            like(type(run.id, :string), ^"%#{search_term}%")
+        )
+
+      :log, dynamic ->
+        dynamic(
+          [log_lines: log_line],
+          ^dynamic or
+            ilike(type(log_line.message, :string), ^"%#{search_term}%")
+        )
+
+      _other, dynamic ->
+        # Not a valid search field
+        dynamic
+    end)
+  end
+
+  defp build_search_fields_query(base_query, search_fields) do
+    Enum.reduce(search_fields, base_query, fn
+      :body, query ->
+        from [runs: run] in safe_join_runs(query),
           left_join: dataclip in assoc(run, :input_dataclip),
-          where:
-            fragment(
-              "CAST(? AS TEXT) iLIKE ?",
-              dataclip.body,
-              ^"%#{search_term}%"
-            ) or
-              fragment(
-                "CAST(? AS TEXT) iLIKE ?",
-                log_line.message,
-                ^"%#{search_term}%"
-              )
-        )
+          as: :input_dataclip
 
-      [:body] ->
-        from(
-          [workorder: workorder] in query,
-          left_join: attempt in assoc(workorder, :attempts),
-          left_join: run in assoc(attempt, :runs),
-          left_join: dataclip in assoc(run, :input_dataclip),
-          where:
-            fragment(
-              "CAST(? AS TEXT) iLIKE ?",
-              dataclip.body,
-              ^"%#{search_term}%"
-            )
-        )
-
-      [:log] ->
-        from(
-          [workorder: workorder] in query,
-          left_join: attempt in assoc(workorder, :attempts),
+      :log, query ->
+        from [attempts: attempt] in safe_join_attempts(query),
           left_join: log_line in assoc(attempt, :log_lines),
-          where:
-            fragment(
-              "CAST(? AS TEXT) iLIKE ?",
-              log_line.message,
-              ^"%#{search_term}%"
-            )
-        )
+          as: :log_lines
 
-      true ->
+      :id, query ->
+        safe_join_runs(query)
+
+      _other, query ->
         query
+    end)
+  end
+
+  defp safe_join_attempts(query) do
+    if has_named_binding?(query, :attempts) do
+      query
+    else
+      join(query, :left, [workorder: workorder], assoc(workorder, :attempts),
+        as: :attempts
+      )
+    end
+  end
+
+  defp safe_join_runs(query) do
+    if has_named_binding?(query, :runs) do
+      query
+    else
+      from [attempts: attempt] in safe_join_attempts(query),
+        left_join: run in assoc(attempt, :runs),
+        as: :runs
     end
   end
 

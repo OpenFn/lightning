@@ -19,6 +19,7 @@ defmodule LightningWeb.RunLive.Index do
 
   @filters_types %{
     search_term: :string,
+    id: :boolean,
     body: :boolean,
     log: :boolean,
     workflow_id: :string,
@@ -81,8 +82,9 @@ defmodule LightningWeb.RunLive.Index do
     ]
 
     search_fields = [
-      %{id: :body, label: "Input"},
-      %{id: :log, label: "Logs"}
+      %{id: :id, icon: "hero-finger-print-mini", label: "Include IDs"},
+      %{id: :body, icon: "hero-document-arrow-down", label: "Include inputs"},
+      %{id: :log, icon: "hero-bars-arrow-down-mini", label: "Include run logs"}
     ]
 
     params = Map.put_new(params, "filters", init_filters())

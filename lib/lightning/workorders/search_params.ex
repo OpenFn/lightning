@@ -11,7 +11,7 @@ defmodule Lightning.WorkOrders.SearchParams do
 
   @statuses ~w(pending running success failed crashed killed cancelled lost exception)
   @statuses_set MapSet.new(@statuses, fn x -> String.to_existing_atom(x) end)
-  @search_fields ~w(body log)
+  @search_fields ~w(id body log)
 
   defmacro status_list() do
     quote do

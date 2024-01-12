@@ -14,6 +14,8 @@ and this project adheres to
   [#1559](https://github.com/OpenFn/Lightning/issues/1559)
 - Dashboard with project and workflow stats
   [#755](https://github.com/OpenFn/Lightning/issues/755)
+- Add search by ID on the history page
+  [#1468](https://github.com/OpenFn/Lightning/issues/1468)
 - Custom metric to support autoscaling
   [#1607](https://github.com/OpenFn/Lightning/issues/1607)
 

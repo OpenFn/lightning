@@ -431,42 +431,22 @@ defmodule LightningWeb.RunWorkOrderTest do
              |> element("input#run-search-form_search_term")
              |> has_element?()
 
-      ## both log and body select
+      ## id, log and body select
       assert view
              |> element(
-               "input#run-both-search-form_body[type='hidden'][value='true']"
+               "input#run-toggle-form_body[type='checkbox'][value='true']"
              )
              |> has_element?()
 
       assert view
              |> element(
-               "input#run-both-search-form_log[type='hidden'][value='true']"
-             )
-             |> has_element?()
-
-      ## individual search for body
-      assert view
-             |> element(
-               "input#run-body-search-form_body[type='hidden'][value='true']"
+               "input#run-toggle-form_log[type='checkbox'][value='true']"
              )
              |> has_element?()
 
       assert view
              |> element(
-               "input#run-body-search-form_log[type='hidden'][value='false']"
-             )
-             |> has_element?()
-
-      ## individual search for log
-      assert view
-             |> element(
-               "input#run-log-search-form_body[type='hidden'][value='false']"
-             )
-             |> has_element?()
-
-      assert view
-             |> element(
-               "input#run-log-search-form_log[type='hidden'][value='true']"
+               "input#run-toggle-form_id[type='checkbox'][value='true']"
              )
              |> has_element?()
     end

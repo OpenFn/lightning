@@ -443,25 +443,23 @@
 
         <div>
           <div class="mt-2">
-            <div class="flex justify-between items-center">
-              <div>
-                <p class="text-xl text-gray-500 font-medium">
-                  <%= if search = get_change(@filters_changeset, :search_term) do %>
-                    <%= @page.total_entries %><%= if @page.total_entries >=
-                                                       @string_search_limit,
-                                                     do: "+" %> work orders with runs matching "<%= search %>"
-                    <%= if @page.total_entries >= @string_search_limit do %>
-                      <span class="text-xs text-gray">
-                        (try more specific filters)
-                      </span>
-                    <% end %>
-                  <% else %>
-                    Work Orders
+            <div class="flex justify-between items-end">
+              <div class="text-md text-gray-500 font-medium truncate w-full">
+                <%= if search = get_change(@filters_changeset, :search_term) do %>
+                  <%= @page.total_entries %><%= if @page.total_entries >=
+                                                     @string_search_limit,
+                                                   do: "+" %> work orders with runs matching "<%= search %>"
+                  <%= if @page.total_entries >= @string_search_limit do %>
+                    <span class="text-xs text-gray">
+                      (try more specific filters)
+                    </span>
                   <% end %>
-                </p>
+                <% else %>
+                  Work Orders
+                <% end %>
               </div>
-              <div>
-                <div class="w-full flex items-center gap-2">
+              <div class="flex w-full justify-end grow">
+                <div class="flex items-end gap-1">
                   <.form
                     :let={f}
                     for={@filters_changeset}
@@ -469,7 +467,7 @@
                     as={:filters}
                     phx-submit="apply_filters"
                   >
-                    <div class="relative rounded-md shadow-sm">
+                    <div class="relative rounded-md shadow-sm flex grow">
                       <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
                         <Heroicons.magnifying_glass class="h-5 w-5 text-gray-400" />
                       </div>
@@ -499,69 +497,44 @@
                       </div>
                     </div>
                   </.form>
-                  <div id="search_button_group" class="hidden">
-                    <div class="inline-flex overflow-hidden bg-white border divide-x rounded-lg dark:bg-gray-900 rtl:flex-row-reverse dark:border-gray-700 dark:divide-gray-700">
-                      <.form
-                        :let={f}
-                        for={@filters_changeset}
-                        as={:filters}
-                        phx-submit="apply_filters"
-                        class="inline"
-                        id="run-both-search-form"
-                      >
-                        <%= for search_field <- @search_fields do %>
-                          <%= Phoenix.HTML.Form.hidden_input(f, search_field.id,
-                            value: true
-                          ) %>
+                  <div id="search_button_group" class="hidden flex text-right">
+                    <.form
+                      :let={f}
+                      for={@filters_changeset}
+                      as={:filters}
+                      phx-change="apply_filters"
+                      class="isolate inline-flex rounded-md shadow-sm"
+                      id="run-toggle-form"
+                    >
+                      <%= for {search_field, index} <- Enum.with_index(@search_fields) do %>
+                        <%= Phoenix.HTML.Form.checkbox(f, search_field.id,
+                          class: "absolute invisible",
+                          style: "left: -9999px"
+                        ) %>
+                        <%= Phoenix.HTML.Form.label f, search_field.id, id: "search-button-#{search_field.label}",
+                          role: "button", phx_hook: "Tooltip", data: [placement: "top"],
+                          class: "relative inline-flex items-center",
+                          aria_label: search_field.label do %>
+                          <div class={"#{if(index == 0, do: "rounded-l-md", else: "-ml-px")} #{if(index == 2, do: "rounded-r-md")}
+                           ring-1 ring-inset ring-gray-300 px-3 py-2 text-sm
+                           font-semibold text-gray-500 hover:bg-gray-100 focus:z-10
+                           #{if(is_checked(@filters_changeset, search_field.id), do: "bg-gray-200", else: "bg-white")}
+                           "}>
+                            <.icon
+                              name={search_field.icon}
+                              class={"h-4 w-4 inline-block align-middle #{is_checked(@filters_changeset, search_field.id) && "text-indigo-800"}"}
+                            />
+                          </div>
                         <% end %>
-                        <button
-                          type="submit"
-                          class={"px-3 py-2 text-sm text-gray-800
-                            dark:hover:bg-gray-800 dark:text-gray-300
-                            hover:bg-gray-100 #{if(Enum.all?(@search_fields, fn search_field ->
-                              is_checked(@filters_changeset, search_field.id)
-                            end), do: "bg-gray-300")}"}
-                        >
-                          Both
-                        </button>
-                      </.form>
-                      <%= for search_field <- @search_fields do %>
-                        <.form
-                          :let={f}
-                          for={@filters_changeset}
-                          as={:filters}
-                          phx-submit="apply_filters"
-                          class="inline"
-                          id={"run-#{search_field.id}-search-form"}
-                        >
-                          <%= for other_field <- @search_fields -- [search_field] do %>
-                            <%= Phoenix.HTML.Form.hidden_input(f, other_field.id,
-                              value: false
-                            ) %>
-                          <% end %>
-                          <%= Phoenix.HTML.Form.hidden_input(f, search_field.id,
-                            value: true
-                          ) %>
-                          <button
-                            type="submit"
-                            class={"px-3 py-2 text-sm text-gray-800
-                              dark:hover:bg-gray-800 dark:text-gray-300
-                              hover:bg-gray-100 #{if(
-                                is_checked(@filters_changeset, search_field.id)
-                                  && !Enum.all?(@search_fields -- [search_field],
-                                fn other_field ->
-                                  is_checked(@filters_changeset, other_field.id)
-                                end), do: "bg-gray-300")}"}
-                          >
-                            <%= search_field.label %>
-                          </button>
-                        </.form>
                       <% end %>
-                    </div>
+                    </.form>
                     <button
                       type="submit"
                       form="run-search-form"
-                      class="rounded-md bg-indigo-600 px-5 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
+                      class="rounded-md bg-indigo-600 px-5 py-2 text-sm font-semibold
+                      text-white shadow-sm hover:bg-indigo-500 focus-visible:outline
+                      focus-visible:outline-2 focus-visible:outline-offset-2
+                      focus-visible:outline-indigo-600 truncate"
                     >
                       Search
                     </button>
