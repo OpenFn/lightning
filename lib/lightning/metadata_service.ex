@@ -91,8 +91,8 @@ defmodule Lightning.MetadataService do
 
   defp get_adaptor_path(adaptor) do
     case AdaptorService.install(@adaptor_service, adaptor) do
-      {:error, _} -> {:error, Error.new("no_matching_adaptor")}
-      {:ok, %{path: path}} -> {:ok, path}
+      {:ok, %{path: path}} when is_binary(path) -> {:ok, path}
+      _ -> {:error, Error.new("no_matching_adaptor")}
     end
   end
 
