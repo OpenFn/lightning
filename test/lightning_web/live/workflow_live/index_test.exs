@@ -70,20 +70,20 @@ defmodule LightningWeb.WorkflowLive.IndexTest do
       assert Regex.match?(~r{<h1.*Dashboard.*</h1>}s, html)
 
       # Metrics
-      # 8 total workorders
-      # 16 total runs (2 pending, 4 failed)
-      # 10 successful runs out of 14 (71.43%)
-      # 2 work orders failed (25.0%)
-      assert Regex.match?(~r/Work Orders.*?<div>\s*8/s, html)
-      assert Regex.match?(~r/Runs.*?<div>\s*16.*">\s*\(2 pending\)/s, html)
+      # 10 total workorders
+      # 10 total attempts (4 pending)
+      # 2 successful attempts out of 4 completed
+      # 2 work orders failed out of 10
+      assert Regex.match?(~r/Work Orders.*?<div>\s*10/s, html)
+      assert Regex.match?(~r/Attempts.*?<div>\s*10.*">\s*\(4 pending\)/s, html)
 
       assert Regex.match?(
-               ~r/Successful Runs.*<div>\s*10.*">\s*\(71.43%\)/s,
+               ~r/Successful Attempts.*<div>\s*2.*">\s*\(50.0%\)/s,
                html
              )
 
       assert Regex.match?(
-               ~r/Work Orders in failed state.*<div>\s*2.*">\s*\(25.0%\)/s,
+               ~r/Work Orders in failed state.*<div>\s*2.*">\s*\(20.0%\)/s,
                html
              )
 
@@ -191,8 +191,11 @@ defmodule LightningWeb.WorkflowLive.IndexTest do
                failed_runs_count
              )
 
-      # 5 successful runs out of 8 (62.5%)
-      assert Regex.match?(~r/(8 runs.*62.5% success)/s, html)
+      # ,
+      assert Regex.match?(
+               ~r/(8 runs.*#{round(5 / 7 * 100 * 100) / 100}% success)/s,
+               html
+             )
 
       # Last workflow with placeholders
       assert Regex.match?(
