@@ -443,25 +443,23 @@
 
         <div>
           <div class="mt-2">
-            <div class="flex justify-between items-center">
-              <div>
-                <p class="text-xl text-gray-500 font-medium">
-                  <%= if search = get_change(@filters_changeset, :search_term) do %>
-                    <%= @page.total_entries %><%= if @page.total_entries >=
-                                                       @string_search_limit,
-                                                     do: "+" %> work orders with runs matching "<%= search %>"
-                    <%= if @page.total_entries >= @string_search_limit do %>
-                      <span class="text-xs text-gray">
-                        (try more specific filters)
-                      </span>
-                    <% end %>
-                  <% else %>
-                    Work Orders
+            <div class="flex justify-between items-end">
+              <div class="text-md text-gray-500 font-medium truncate w-full">
+                <%= if search = get_change(@filters_changeset, :search_term) do %>
+                  <%= @page.total_entries %><%= if @page.total_entries >=
+                                                     @string_search_limit,
+                                                   do: "+" %> work orders with runs matching "<%= search %>"
+                  <%= if @page.total_entries >= @string_search_limit do %>
+                    <span class="text-xs text-gray">
+                      (try more specific filters)
+                    </span>
                   <% end %>
-                </p>
+                <% else %>
+                  Work Orders
+                <% end %>
               </div>
-              <div>
-                <div class="w-full flex items-center gap-2">
+              <div class="flex w-full justify-end grow">
+                <div class="flex items-end gap-1">
                   <.form
                     :let={f}
                     for={@filters_changeset}
@@ -469,7 +467,7 @@
                     as={:filters}
                     phx-submit="apply_filters"
                   >
-                    <div class="relative rounded-md shadow-sm">
+                    <div class="relative rounded-md shadow-sm flex grow">
                       <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
                         <Heroicons.magnifying_glass class="h-5 w-5 text-gray-400" />
                       </div>
@@ -499,9 +497,10 @@
                       </div>
                     </div>
                   </.form>
-                  <div id="search_button_group" class="hidden">
+                  <div id="search_button_group" class="hidden flex text-right">
                     <div class="inline-flex overflow-hidden bg-white border divide-x rounded-lg dark:bg-gray-900 rtl:flex-row-reverse dark:border-gray-700 dark:divide-gray-700">
-                      <.form
+                      <%!-- TODO: Frank to remove! --%>
+                      <%!-- <.form
                         :let={f}
                         for={@filters_changeset}
                         as={:filters}
@@ -522,9 +521,12 @@
                               is_checked(@filters_changeset, search_field.id)
                             end), do: "bg-gray-300")}"}
                         >
-                          All
+                          <.icon
+                            name="hero-ellipsis-horizontal-circle"
+                            class="h-3 w-3 inline-block align-middle"
+                          />
                         </button>
-                      </.form>
+                      </.form> --%>
                       <%= for search_field <- @search_fields do %>
                         <.form
                           :let={f}
@@ -552,8 +554,15 @@
                                 fn other_field ->
                                   is_checked(@filters_changeset, other_field.id)
                                 end), do: "bg-gray-300")}"}
+                            id={"search-button-#{search_field.label}"}
+                            aria-label={search_field.label}
+                            phx-hook="Tooltip"
+                            data-placement="top"
                           >
-                            <%= search_field.label %>
+                            <.icon
+                              name={search_field.icon}
+                              class={"h-4 w-4 inline-block align-middle #{is_checked(@filters_changeset, search_field.id) && "text-indigo-700"}"}
+                            />
                           </button>
                         </.form>
                       <% end %>
@@ -561,7 +570,7 @@
                     <button
                       type="submit"
                       form="run-search-form"
-                      class="rounded-md bg-indigo-600 px-5 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
+                      class="rounded-md bg-indigo-600 px-5 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 truncate"
                     >
                       Search
                     </button>

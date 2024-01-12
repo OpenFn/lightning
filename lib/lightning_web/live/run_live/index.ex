@@ -82,9 +82,9 @@ defmodule LightningWeb.RunLive.Index do
     ]
 
     search_fields = [
-      %{id: :id, label: "ID"},
-      %{id: :body, label: "Input"},
-      %{id: :log, label: "Logs"}
+      %{id: :id, icon: "hero-finger-print", label: "Work Order or Run IDs"},
+      %{id: :body, icon: "hero-arrow-down-on-square", label: "Inputs"},
+      %{id: :log, icon: "hero-bars-arrow-down", label: "Run Logs"}
     ]
 
     params = Map.put_new(params, "filters", init_filters())
