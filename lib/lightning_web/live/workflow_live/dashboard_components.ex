@@ -239,7 +239,7 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
       |> assign(
         failed_filters:
           SearchParams.to_uri_params(%{
-            "date_after" => Timex.now() |> Timex.shift(months: -1),
+            "wo_date_after" => Timex.now() |> Timex.shift(months: -1),
             "failed" => "true",
             "crashed" => "true",
             "killed" => "true",
@@ -249,8 +249,9 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
           }),
         pending_filters:
           SearchParams.to_uri_params(%{
-            "date_after" => Timex.now() |> Timex.shift(months: -1),
-            "pending" => "true"
+            "wo_date_after" => Timex.now() |> Timex.shift(months: -1),
+            "pending" => "true",
+            "running" => "true"
           })
       )
 

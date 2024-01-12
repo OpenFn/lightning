@@ -82,7 +82,7 @@ defmodule LightningWeb.WorkflowLive.IndexTest do
         |> Timex.shift(months: -1)
         |> Date.to_string()
         |> then(fn date ->
-          "filters[date_after]=&amp;filters[date_before]=&amp;filters[id]=true&amp;filters[log]=true&amp;filters[pending]=true&amp;filters[wo_date_after]=#{date}"
+          "filters[date_after]=&amp;filters[date_before]=&amp;filters[id]=true&amp;filters[log]=true&amp;filters[pending]=true&amp;filters[running]=true&amp;filters[wo_date_after]=#{date}"
         end)
 
       assert html
@@ -117,7 +117,7 @@ defmodule LightningWeb.WorkflowLive.IndexTest do
       refute html
              |> has_runs_link_pattern?(
                project,
-               "(filters[running]=true|filters[success]=true)"
+               "filters[success]=true"
              )
 
       # Header
