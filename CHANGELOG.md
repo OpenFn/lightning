@@ -28,6 +28,10 @@ and this project adheres to
 
 ### Fixed
 
+- Throw an error when Lightning.MetadataService.get_adaptor_path/1 returns an
+  adaptor path that is nil
+  [#1601](https://github.com/OpenFn/Lightning/issues/1601)
+
 - Fix failure due to creating work order from a newly created job
   [#1572](https://github.com/OpenFn/Lightning/issues/1572)
 
