@@ -507,24 +507,34 @@
                       id="run-toggle-form"
                     >
                       <%= for {search_field, index} <- Enum.with_index(@search_fields) do %>
-                        <span class={"#{if(index == 0, do: "rounded-l-md", else: "-ml-px")} #{if(index == 2, do: "rounded-r-md")} relative inline-flex items-center px-3 py-2 text-sm font-semibold text-gray-900 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-10 #{if(is_checked(@filters_changeset, search_field.id), do: "bg-gray-300", else: "bg-white")}"}>
-                          <%= Phoenix.HTML.Form.checkbox(f, search_field.id,
-                            class: "absolute invisible",
-                            style: "left: -9999px"
-                          ) %>
-                          <%= Phoenix.HTML.Form.label f, search_field.id, id: "search-button-#{search_field.label}", role: "button", phx_hook: "Tooltip", data: [placement: "top"], aria_label: search_field.label do %>
+                        <%= Phoenix.HTML.Form.checkbox(f, search_field.id,
+                          class: "absolute invisible",
+                          style: "left: -9999px"
+                        ) %>
+                        <%= Phoenix.HTML.Form.label f, search_field.id, id: "search-button-#{search_field.label}",
+                          role: "button", phx_hook: "Tooltip", data: [placement: "top"],
+                          class: "relative inline-flex items-center",
+                          aria_label: search_field.label do %>
+                          <div class={"#{if(index == 0, do: "rounded-l-md", else: "-ml-px")} #{if(index == 2, do: "rounded-r-md")}
+                           ring-1 ring-inset ring-gray-300 px-3 py-2 text-sm
+                           font-semibold text-gray-500 hover:bg-gray-100 focus:z-10
+                           #{if(is_checked(@filters_changeset, search_field.id), do: "bg-gray-200", else: "bg-white")}
+                           "}>
                             <.icon
                               name={search_field.icon}
-                              class={"h-4 w-4 inline-block align-middle #{is_checked(@filters_changeset, search_field.id) && "text-indigo-700"}"}
+                              class={"h-4 w-4 inline-block align-middle #{is_checked(@filters_changeset, search_field.id) && "text-indigo-800"}"}
                             />
-                          <% end %>
-                        </span>
+                          </div>
+                        <% end %>
                       <% end %>
                     </.form>
                     <button
                       type="submit"
                       form="run-search-form"
-                      class="rounded-md bg-indigo-600 px-5 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 truncate"
+                      class="rounded-md bg-indigo-600 px-5 py-2 text-sm font-semibold
+                      text-white shadow-sm hover:bg-indigo-500 focus-visible:outline
+                      focus-visible:outline-2 focus-visible:outline-offset-2
+                      focus-visible:outline-indigo-600 truncate"
                     >
                       Search
                     </button>
