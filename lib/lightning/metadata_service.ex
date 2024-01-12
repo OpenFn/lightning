@@ -94,7 +94,7 @@ defmodule Lightning.MetadataService do
       {:error, _} ->
         {:error, Error.new("no_matching_adaptor")}
 
-      {:ok, %{path: path}} when is_binary(path) ->
+      {:ok, %{path: path}} when not is_nil(path) ->
         {:ok, path}
 
       other ->
