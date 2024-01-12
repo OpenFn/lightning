@@ -10,6 +10,14 @@ and this project adheres to
 
 ### Added
 
+### Changed
+
+### Fixed
+
+## [v2.0.0-rc3] 2024-01-12
+
+### Added
+
 - Custom metric to track stalled attempts
   [#1559](https://github.com/OpenFn/Lightning/issues/1559)
 - Dashboard with project and workflow stats
@@ -37,7 +45,7 @@ and this project adheres to
   [#1610](https://github.com/OpenFn/Lightning/issues/1610) and
   [#1608](https://github.com/OpenFn/Lightning/issues/1608)
 
-## [2.0.0-rc2] - 2023-01-08
+## [2.0.0-rc2] - 2024-01-08
 
 ### Added
 
@@ -55,7 +63,7 @@ and this project adheres to
   getting overridden when user focuses on the Monaco editor
   [#1596](https://github.com/OpenFn/Lightning/issues/1596)
 
-## [2.0.0-rc1] - 2023-01-05
+## [2.0.0-rc1] - 2024-01-05
 
 ### Why does this repo go from `v0` to `v2.0`?
 
