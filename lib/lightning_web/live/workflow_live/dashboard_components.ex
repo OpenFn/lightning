@@ -95,7 +95,7 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
             <div class="text-gray-500 text-xs">
               (<%= workflow.runs_count %> runs,
               <span>
-                <%= workflow.runs_success_percentage %>% success
+                <%= workflow.runs_success_rate %>% success
               </span>
               )
             </div>

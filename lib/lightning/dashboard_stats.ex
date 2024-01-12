@@ -15,7 +15,7 @@ defmodule Lightning.DashboardStats do
               grouped_attempts_count: %{},
               grouped_workorders_count: %{},
               runs_count: 0,
-              runs_success_percentage: 0.0,
+              runs_success_rate: 0.0,
               workorders_count: 0,
               workflow: %Workflow{}
   end
@@ -46,7 +46,7 @@ defmodule Lightning.DashboardStats do
 
     grouped_attempts_count = count_attempts(workflow)
 
-    {runs_count, runs_success_percentage} =
+    {runs_count, runs_success_rate} =
       workflow |> count_runs() |> runs_stats()
 
     last_workorder = get_last_workorder(workflow)
@@ -59,7 +59,7 @@ defmodule Lightning.DashboardStats do
       grouped_attempts_count: grouped_attempts_count,
       grouped_workorders_count: grouped_workorders_count,
       runs_count: runs_count,
-      runs_success_percentage: round(runs_success_percentage * 100) / 100,
+      runs_success_rate: round(runs_success_rate * 100) / 100,
       workorders_count: workorders_count
     }
   end

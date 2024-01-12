@@ -28,7 +28,7 @@ defmodule Lightning.DashboardStatsTest do
                last_workorder: %{state: nil, updated_at: nil},
                last_failed_workorder: %{state: nil, updated_at: nil},
                runs_count: 0,
-               runs_success_percentage: 0.0,
+               runs_success_rate: 0.0,
                workorders_count: 0
              } = DashboardStats.get_workflow_stats(workflow)
     end
@@ -37,7 +37,7 @@ defmodule Lightning.DashboardStatsTest do
       %{id: workflow_id} =
         workflow = complex_workflow_with_runs(last_workorder_failed: true)
 
-      runs_success_percentage =
+      runs_success_rate =
         round(5 / 7 * 100 * 100) / 100
 
       assert %WorkflowStats{
@@ -48,7 +48,7 @@ defmodule Lightning.DashboardStatsTest do
                grouped_attempts_count: grouped_attempts_count,
                grouped_workorders_count: grouped_workorders_count,
                runs_count: 8,
-               runs_success_percentage: ^runs_success_percentage,
+               runs_success_rate: ^runs_success_rate,
                workorders_count: 5
              } = DashboardStats.get_workflow_stats(workflow)
 
@@ -71,7 +71,7 @@ defmodule Lightning.DashboardStatsTest do
       %{id: workflow_id} =
         workflow = complex_workflow_with_runs(last_workorder_failed: false)
 
-      runs_success_percentage = round(5 / 7 * 100 * 100) / 100
+      runs_success_rate = round(5 / 7 * 100 * 100) / 100
 
       assert %WorkflowStats{
                workflow: %{id: ^workflow_id},
@@ -81,7 +81,7 @@ defmodule Lightning.DashboardStatsTest do
                grouped_attempts_count: grouped_attempts_count,
                grouped_workorders_count: grouped_workorders_count,
                runs_count: 8,
-               runs_success_percentage: ^runs_success_percentage,
+               runs_success_rate: ^runs_success_rate,
                workorders_count: 5
              } = DashboardStats.get_workflow_stats(workflow)
 
