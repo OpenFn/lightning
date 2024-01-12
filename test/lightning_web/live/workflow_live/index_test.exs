@@ -69,7 +69,6 @@ defmodule LightningWeb.WorkflowLive.IndexTest do
 
       assert Regex.match?(~r{<h1.*Dashboard.*</h1>}s, html)
 
-      File.write("text.html", html)
       # Metrics
       # 10 total workorders
       # 10 total attempts (4 pending)
@@ -182,8 +181,6 @@ defmodule LightningWeb.WorkflowLive.IndexTest do
       # Failed runs links
       failed_runs_count = "1"
 
-      File.write("text.html", html)
-
       assert html
              |> has_runs_link_pattern?(
                project,
@@ -198,7 +195,6 @@ defmodule LightningWeb.WorkflowLive.IndexTest do
                failed_runs_count
              )
 
-      # ,
       assert Regex.match?(
                ~r/(8 steps.*#{round(5 / 7 * 100 * 100) / 100}% success)/s,
                html
