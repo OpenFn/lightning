@@ -93,7 +93,7 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
               </.link>
             </div>
             <div class="text-gray-500 text-xs">
-              (<%= workflow.runs_count %> runs,
+              (<%= workflow.runs_count %> steps,
               <span>
                 <%= workflow.runs_success_rate %>% success
               </span>
@@ -255,13 +255,13 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
       <.metric_card title="Work Orders">
         <:value><%= @metrics.work_order_metrics.total %></:value>
       </.metric_card>
-      <.metric_card title="Attempts">
+      <.metric_card title="Runs">
         <:value><%= @metrics.attempt_metrics.total %></:value>
         <:suffix>
           (<%= @metrics.attempt_metrics.pending %> pending)
         </:suffix>
       </.metric_card>
-      <.metric_card title="Successful Attempts">
+      <.metric_card title="Successful Runs">
         <:value><%= @metrics.attempt_metrics.success %></:value>
         <:suffix>
           (<%= @metrics.attempt_metrics.success_rate %>%)
