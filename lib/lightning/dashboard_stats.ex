@@ -1,6 +1,7 @@
 defmodule Lightning.DashboardStats do
   @moduledoc false
 
+  alias Lightning.Attempt
   alias Lightning.Invocation.Run
   alias Lightning.Repo
   alias Lightning.Workflows.Workflow
@@ -11,10 +12,10 @@ defmodule Lightning.DashboardStats do
     defstruct last_workorder: %{state: nil, updated_at: nil},
               last_failed_workorder: %{state: nil, updated_at: nil},
               failed_workorders_count: 0,
-              grouped_runs_count: %{},
+              grouped_attempts_count: %{},
               grouped_workorders_count: %{},
               runs_count: 0,
-              runs_success_percentage: 0.0,
+              runs_success_rate: 0.0,
               workorders_count: 0,
               workflow: %Workflow{}
   end
@@ -22,14 +23,15 @@ defmodule Lightning.DashboardStats do
   defmodule ProjectMetrics do
     defstruct work_order_metrics: %{
                 total: 0,
+                pending: 0,
                 failed: 0,
-                failure_percentage: 0.0
+                failed_percentage: 0.0
               },
-              run_metrics: %{
+              attempt_metrics: %{
                 total: 0,
                 pending: 0,
                 success: 0,
-                success_percentage: 0.0
+                success_rate: 0.0
               }
   end
 
@@ -37,21 +39,15 @@ defmodule Lightning.DashboardStats do
     %{failed: failed_wo_count} =
       grouped_workorders_count = count_workorders(workflow)
 
-    %{success: success_runs_count} =
-      grouped_runs_count = count_runs(workflow)
-
-    runs_count =
-      grouped_runs_count
-      |> Enum.map(fn {_key, count} -> count end)
-      |> Enum.sum()
-
     workorders_count =
       grouped_workorders_count
       |> Enum.map(fn {_key, count} -> count end)
       |> Enum.sum()
 
-    runs_success_percentage =
-      if runs_count == 0, do: 0, else: success_runs_count * 100 / runs_count
+    grouped_attempts_count = count_attempts(workflow)
+
+    {runs_count, runs_success_rate} =
+      workflow |> count_runs() |> runs_stats()
 
     last_workorder = get_last_workorder(workflow)
 
@@ -60,19 +56,36 @@ defmodule Lightning.DashboardStats do
       last_workorder: last_workorder,
       last_failed_workorder: get_last_failed_workorder(workflow, last_workorder),
       failed_workorders_count: failed_wo_count,
-      grouped_runs_count: grouped_runs_count,
+      grouped_attempts_count: grouped_attempts_count,
       grouped_workorders_count: grouped_workorders_count,
       runs_count: runs_count,
-      runs_success_percentage: round(runs_success_percentage * 100) / 100,
+      runs_success_rate: round(runs_success_rate * 100) / 100,
       workorders_count: workorders_count
     }
   end
 
   def aggregate_project_metrics(workflows_stats) do
     %ProjectMetrics{
-      work_order_metrics: aggregate_work_order_metrics(workflows_stats),
-      run_metrics: aggregate_run_metrics(workflows_stats)
+      work_order_metrics:
+        aggregate_metrics(workflows_stats, :grouped_workorders_count),
+      attempt_metrics:
+        aggregate_metrics(workflows_stats, :grouped_attempts_count)
     }
+  end
+
+  defp runs_stats(%{
+         success: success_count,
+         failed: failed_count,
+         pending: pending_count
+       }) do
+    runs_count = success_count + failed_count + pending_count
+
+    if runs_count == 0 do
+      {0, 0.0}
+    else
+      success_rate = success_count * 100 / (success_count + failed_count)
+      {runs_count, success_rate}
+    end
   end
 
   defp get_last_failed_workorder(workflow, %{state: :success}) do
@@ -109,17 +122,33 @@ defmodule Lightning.DashboardStats do
     |> Repo.all()
     |> Enum.group_by(fn state ->
       cond do
-        state == :success ->
-          :success
-
-        state in [:pending, :running] ->
-          :unfinished
-
-        true ->
-          :failed
+        state in [:pending, :running] -> :pending
+        state == :success -> :success
+        true -> :failed
       end
     end)
-    |> Enum.into(%{success: 0, failed: 0, unfinished: 0}, fn {state, list} ->
+    |> Enum.into(%{success: 0, failed: 0, pending: 0}, fn {state, list} ->
+      {state, length(list)}
+    end)
+  end
+
+  defp count_attempts(%Workflow{id: workflow_id}) do
+    from(a in Attempt,
+      join: wo in assoc(a, :work_order),
+      join: wf in assoc(wo, :workflow),
+      where: wf.id == ^workflow_id,
+      select: a.state
+    )
+    |> filter_days_ago(30)
+    |> Repo.all()
+    |> Enum.group_by(fn state ->
+      cond do
+        state == :success -> :success
+        state in [:available, :claimed, :started] -> :pending
+        true -> :failed
+      end
+    end)
+    |> Enum.into(%{success: 0, failed: 0, pending: 0}, fn {state, list} ->
       {state, length(list)}
     end)
   end
@@ -145,67 +174,38 @@ defmodule Lightning.DashboardStats do
     end)
   end
 
-  defp aggregate_work_order_metrics(workflows) do
-    Enum.reduce(workflows, %{total: 0, failed: 0}, fn %{
-                                                        grouped_workorders_count:
-                                                          %{
-                                                            success: success,
-                                                            failed: failed,
-                                                            unfinished:
-                                                              unfinished
-                                                          }
-                                                      },
-                                                      %{
-                                                        total: acc_total,
-                                                        failed: acc_failed
-                                                      } ->
-      total = success + failed + unfinished
+  defp aggregate_metrics(workflows, grouped_entity_count) do
+    Enum.reduce(
+      workflows,
+      %{success: 0, failed: 0, pending: 0, total: 0},
+      fn stats,
+         %{
+           success: acc_success,
+           failed: acc_failed,
+           pending: acc_pending,
+           total: acc_total
+         } ->
+        %{success: success, failed: failed, pending: pending} =
+          Map.get(stats, grouped_entity_count)
 
-      %{
-        total: acc_total + total,
-        failed: acc_failed + failed
-      }
-    end)
-    |> then(fn %{total: total, failed: failed} = map ->
-      failure_rate = if total > 0, do: failed / total * 100, else: 0.0
+        total = success + failed + pending
 
-      Map.put(map, :failure_percentage, round(failure_rate * 100) / 100)
-    end)
-  end
-
-  defp aggregate_run_metrics(workflows) do
-    Enum.reduce(workflows, %{success: 0, failed: 0, pending: 0}, fn %{
-                                                                      grouped_runs_count:
-                                                                        %{
-                                                                          success:
-                                                                            success,
-                                                                          failed:
-                                                                            failed,
-                                                                          pending:
-                                                                            pending
-                                                                        }
-                                                                    },
-                                                                    %{
-                                                                      success:
-                                                                        acc_success,
-                                                                      failed:
-                                                                        acc_failed,
-                                                                      pending:
-                                                                        acc_pending
-                                                                    } ->
-      %{
-        success: acc_success + success,
-        failed: acc_failed + failed,
-        pending: acc_pending + pending
-      }
-    end)
-    |> then(fn %{success: success, failed: failed, pending: pending} = map ->
+        %{
+          success: acc_success + success,
+          failed: acc_failed + failed,
+          pending: acc_pending + pending,
+          total: acc_total + total
+        }
+      end
+    )
+    |> then(fn %{success: success, failed: failed, total: total} = map ->
       completed = success + failed
-      success_rate = if success > 0, do: success * 100 / completed, else: 0.0
+      failed_percent = if completed > 0, do: failed * 100 / total, else: 0.0
+      success_rate = if completed > 0, do: success * 100 / completed, else: 0.0
 
       Map.merge(map, %{
-        success_percentage: round(success_rate * 100) / 100,
-        total: completed + pending
+        success_rate: round(success_rate * 100) / 100,
+        failed_percentage: round(failed_percent * 100) / 100
       })
     end)
   end

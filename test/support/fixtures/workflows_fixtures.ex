@@ -57,14 +57,45 @@ defmodule Lightning.WorkflowsFixtures do
       workflow: workflow,
       trigger: trigger,
       dataclip: build(:dataclip),
-      state: :pending
+      state: :pending,
+      attempts: [
+        %{
+          state: :available,
+          dataclip: build(:dataclip),
+          starting_trigger: trigger,
+          runs: []
+        }
+      ]
     )
 
     insert(:workorder,
       workflow: workflow,
       trigger: trigger,
       dataclip: build(:dataclip),
-      state: :running
+      state: :running,
+      attempts: [
+        %{
+          state: :claimed,
+          dataclip: build(:dataclip),
+          starting_trigger: trigger,
+          runs: []
+        }
+      ]
+    )
+
+    insert(:workorder,
+      workflow: workflow,
+      trigger: trigger,
+      dataclip: build(:dataclip),
+      state: :running,
+      attempts: [
+        %{
+          state: :started,
+          dataclip: build(:dataclip),
+          starting_trigger: trigger,
+          runs: []
+        }
+      ]
     )
 
     attempts_success = [

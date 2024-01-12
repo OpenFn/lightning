@@ -70,10 +70,10 @@ defmodule LightningWeb.AttemptLive.Components do
     [text, classes] =
       case state do
         # only workorder states...
-        :pending -> ["Pending", "bg-gray-200 text-gray-800"]
+        :pending -> ["Enqueued", "bg-gray-200 text-gray-800"]
         :running -> ["Running", "bg-blue-200 text-blue-800"]
         # attempt & workorder states...
-        :available -> ["Pending", "bg-gray-200 text-gray-800"]
+        :available -> ["Enqueued", "bg-gray-200 text-gray-800"]
         :claimed -> ["Starting", "bg-blue-200 text-blue-800"]
         :started -> ["Running", "bg-blue-200 text-blue-800"]
         :success -> ["Success", "bg-green-200 text-green-800"]

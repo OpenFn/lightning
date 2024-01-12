@@ -70,21 +70,53 @@ defmodule LightningWeb.WorkflowLive.IndexTest do
       assert Regex.match?(~r{<h1.*Dashboard.*</h1>}s, html)
 
       # Metrics
-      # 8 total workorders
-      # 16 total runs (2 pending, 4 failed)
-      # 10 successful runs out of 14 (71.43%)
-      # 2 work orders failed (25.0%)
-      assert Regex.match?(~r/Work Orders.*?<div>\s*8/s, html)
-      assert Regex.match?(~r/Runs.*?<div>\s*16.*">\s*\(2 pending\)/s, html)
+      # 10 total workorders
+      # 10 total attempts (4 pending)
+      # 2 successful attempts out of 4 completed
+      # 2 work orders failed out of 10
+      assert Regex.match?(~r/Work Orders.*?<div>\s*10.*\(6 pending\)/s, html)
+
+      pending_and_date_filter =
+        Timex.now()
+        |> Timex.shift(months: -1)
+        |> Date.to_string()
+        |> then(fn date ->
+          "filters[date_after]=&amp;filters[date_before]=&amp;filters[id]=true&amp;filters[log]=true&amp;filters[pending]=true&amp;filters[running]=true&amp;filters[wo_date_after]=#{date}"
+        end)
+
+      assert html
+             |> has_runs_link_pattern?(
+               project,
+               pending_and_date_filter,
+               "6 pending"
+             )
+
+      assert Regex.match?(~r/Runs.*?<div>\s*10.*">\s*\(6 pending\)/s, html)
 
       assert Regex.match?(
-               ~r/Successful Runs.*<div>\s*10.*">\s*\(71.43%\)/s,
+               ~r/Successful Runs.*<div>\s*2.*">\s*\(50.0%\)/s,
                html
              )
 
       assert Regex.match?(
-               ~r/Work Orders in failed state.*<div>\s*2.*">\s*\(25.0%\)/s,
+               ~r/Work Orders in failed state.*<div>\s*2.*">\s*\(20.0%\)/s,
                html
+             )
+
+      failed_filter_pattern =
+        "filters[cancelled]=true.*filters[crashed]=true.*filters[exception]=true.*filters[failed]=true.*filters[killed]=true.*filters[lost]=true"
+
+      assert html
+             |> has_runs_link_pattern?(
+               project,
+               failed_filter_pattern,
+               "View all"
+             )
+
+      refute html
+             |> has_runs_link_pattern?(
+               project,
+               "filters[success]=true"
              )
 
       # Header
@@ -121,34 +153,6 @@ defmodule LightningWeb.WorkflowLive.IndexTest do
              )
 
       # Work orders links
-      failed_filter_pattern =
-        "filters[cancelled]=true.*filters[crashed]=true.*filters[exception]=true.*filters[failed]=true.*filters[killed]=true.*filters[lost]=true"
-
-      assert html
-             |> has_runs_link_pattern?(
-               project,
-               failed_filter_pattern,
-               "View all"
-             )
-
-      refute html
-             |> has_runs_link_pattern?(
-               project,
-               "filters[pending]=true"
-             )
-
-      refute html
-             |> has_runs_link_pattern?(
-               project,
-               "filters[running]=true"
-             )
-
-      refute html
-             |> has_runs_link_pattern?(
-               project,
-               "filters[success]=true"
-             )
-
       workorders_count = "4"
 
       # work order date filter without status filter
@@ -191,8 +195,10 @@ defmodule LightningWeb.WorkflowLive.IndexTest do
                failed_runs_count
              )
 
-      # 5 successful runs out of 8 (62.5%)
-      assert Regex.match?(~r/(8 runs.*62.5% success)/s, html)
+      assert Regex.match?(
+               ~r/(8 steps.*#{round(5 / 7 * 100 * 100) / 100}% success)/s,
+               html
+             )
 
       # Last workflow with placeholders
       assert Regex.match?(

@@ -93,9 +93,9 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
               </.link>
             </div>
             <div class="text-gray-500 text-xs">
-              (<%= workflow.runs_count %> runs,
+              (<%= workflow.runs_count %> steps,
               <span>
-                <%= workflow.runs_success_percentage %>% success
+                <%= workflow.runs_success_rate %>% success
               </span>
               )
             </div>
@@ -237,16 +237,21 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
     assigns =
       assigns
       |> assign(
-        filters:
+        failed_filters:
           SearchParams.to_uri_params(%{
-            "date_after" => Timex.now() |> Timex.shift(months: -1),
-            "date_before" => DateTime.utc_now(),
+            "wo_date_after" => Timex.now() |> Timex.shift(months: -1),
             "failed" => "true",
             "crashed" => "true",
             "killed" => "true",
             "cancelled" => "true",
             "lost" => "true",
             "exception" => "true"
+          }),
+        pending_filters:
+          SearchParams.to_uri_params(%{
+            "wo_date_after" => Timex.now() |> Timex.shift(months: -1),
+            "pending" => "true",
+            "running" => "true"
           })
       )
 
@@ -254,27 +259,35 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
     <div class="grid gap-12 md:grid-cols-2 lg:grid-cols-4">
       <.metric_card title="Work Orders">
         <:value><%= @metrics.work_order_metrics.total %></:value>
+        <:suffix>
+          <.link
+            navigate={~p"/projects/#{@project}/runs?#{%{filters: @pending_filters}}"}
+            class="text-indigo-700 hover:underline"
+          >
+            (<%= @metrics.work_order_metrics.pending %> pending)
+          </.link>
+        </:suffix>
       </.metric_card>
       <.metric_card title="Runs">
-        <:value><%= @metrics.run_metrics.total %></:value>
+        <:value><%= @metrics.attempt_metrics.total %></:value>
         <:suffix>
-          (<%= @metrics.run_metrics.pending %> pending)
+          (<%= @metrics.attempt_metrics.pending %> pending)
         </:suffix>
       </.metric_card>
       <.metric_card title="Successful Runs">
-        <:value><%= @metrics.run_metrics.success %></:value>
+        <:value><%= @metrics.attempt_metrics.success %></:value>
         <:suffix>
-          (<%= @metrics.run_metrics.success_percentage %>%)
+          (<%= @metrics.attempt_metrics.success_rate %>%)
         </:suffix>
       </.metric_card>
       <.metric_card title="Work Orders in failed state">
         <:value><%= @metrics.work_order_metrics.failed %></:value>
         <:suffix>
-          (<%= @metrics.work_order_metrics.failure_percentage %>%)
+          (<%= @metrics.work_order_metrics.failed_percentage %>%)
         </:suffix>
         <:link>
           <.link
-            navigate={~p"/projects/#{@project}/runs?#{%{filters: @filters}}"}
+            navigate={~p"/projects/#{@project}/runs?#{%{filters: @failed_filters}}"}
             class="text-indigo-700 hover:underline"
           >
             View all
