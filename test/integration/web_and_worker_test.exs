@@ -1,5 +1,5 @@
 # This module will be re-introduced in https://github.com/OpenFn/Lightning/issues/1143
-defmodule LightningWeb.EndToEndTest do
+defmodule Lightning.WebAndWorkerTest do
   use LightningWeb.ConnCase, async: false
 
   import Lightning.JobsFixtures
