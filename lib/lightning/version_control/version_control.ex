@@ -101,7 +101,7 @@ defmodule Lightning.VersionControl do
     end
   end
 
-  def github_enabled?() do
+  def github_enabled? do
     Application.get_env(:lightning, :github_app, [])
     |> then(fn config ->
       Keyword.get(config, :cert) && Keyword.get(config, :app_id)

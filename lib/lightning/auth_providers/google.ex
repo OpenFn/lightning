@@ -121,7 +121,7 @@ defmodule Lightning.AuthProviders.Google do
     OAuth2.Client.get(%{client | token: token}, wellknown.userinfo_endpoint)
   end
 
-  def get_wellknown() do
+  def get_wellknown do
     config = get_config()
     wellknown_url = config[:wellknown_url]
     # TODO pass this onto a caching mechanism
@@ -134,7 +134,7 @@ defmodule Lightning.AuthProviders.Google do
     end
   end
 
-  def get_wellknown!() do
+  def get_wellknown! do
     get_wellknown()
     |> case do
       {:ok, wellknown} ->
@@ -145,7 +145,7 @@ defmodule Lightning.AuthProviders.Google do
     end
   end
 
-  def get_config() do
+  def get_config do
     Application.get_env(:lightning, :oauth_clients, google: [])
     |> Keyword.get(:google)
   end

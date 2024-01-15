@@ -35,7 +35,7 @@ defmodule Lightning.Runtime.LogAgent do
     @type t :: {buffer :: buffer(), chunk_state :: chunk_state()}
 
     @spec new() :: t()
-    def new() do
+    def new do
       {[], {"", ""}}
     end
 

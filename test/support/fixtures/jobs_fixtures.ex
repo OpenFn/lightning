@@ -36,7 +36,7 @@ defmodule Lightning.JobsFixtures do
     job
   end
 
-  defp random_name() do
+  defp random_name do
     suffix =
       Ecto.UUID.generate() |> String.split_at(5) |> then(fn {x, _} -> x end)
 

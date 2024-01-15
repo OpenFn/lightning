@@ -61,7 +61,7 @@ defmodule Mix.Tasks.Lightning.GenWorkerKeys do
     end
   end
 
-  defp create_private_key() do
+  defp create_private_key do
     filename = Path.join(System.tmp_dir!(), "jwtRSA256-private.pem")
 
     with :ok <- call_openssl(~w[genrsa -out #{filename} 2048]),
@@ -85,7 +85,7 @@ defmodule Mix.Tasks.Lightning.GenWorkerKeys do
     end
   end
 
-  defp generate_hs256_key() do
+  defp generate_hs256_key do
     32 |> :crypto.strong_rand_bytes() |> Base.encode64()
   end
 end

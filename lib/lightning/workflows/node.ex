@@ -1,7 +1,7 @@
 defmodule Lightning.Workflows.Node do
   use Ecto.Schema
 
-  alias Lightning.Jobs.Job
+  alias Lightning.Workflows.Job
   alias Lightning.Workflows.Trigger
   alias Lightning.Workflows.Workflow
 

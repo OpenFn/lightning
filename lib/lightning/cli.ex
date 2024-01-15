@@ -117,7 +117,7 @@ defmodule Lightning.CLI do
     )
   end
 
-  defp opts() do
+  defp opts do
     adaptors_path =
       Application.get_env(:lightning, :adaptor_service, [])
       |> Keyword.get(:adaptors_path)

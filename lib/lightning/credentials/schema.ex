@@ -4,8 +4,8 @@ defmodule Lightning.Credentials.Schema do
   changesets for a given schema.
   """
 
-  alias ExJsonSchema.Validator
   alias Ecto.Changeset
+  alias ExJsonSchema.Validator
 
   @type t :: %__MODULE__{
           name: String.t() | nil,

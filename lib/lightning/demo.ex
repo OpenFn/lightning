@@ -44,7 +44,7 @@ defmodule Lightning.Demo do
       %{id: __MODULE__, start: {__MODULE__, :start_link, []}}
     end
 
-    def start_link() do
+    def start_link do
       {:ok, self()}
     end
 

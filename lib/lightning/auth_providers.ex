@@ -2,12 +2,16 @@ defmodule Lightning.AuthProviders do
   @moduledoc """
   Context module for dealing with external Auth Providers.
   """
-  alias Lightning.Repo
-  alias Lightning.AuthProviders.{AuthConfig, Handler, Store, WellKnown}
   import Ecto.Query
 
+  alias Lightning.AuthProviders.AuthConfig
+  alias Lightning.AuthProviders.Handler
+  alias Lightning.AuthProviders.Store
+  alias Lightning.AuthProviders.WellKnown
+  alias Lightning.Repo
+
   @spec get_existing() :: AuthConfig.t() | nil
-  def get_existing() do
+  def get_existing do
     from(ap in AuthConfig) |> Repo.one()
   end
 
@@ -16,7 +20,7 @@ defmodule Lightning.AuthProviders do
     from(ap in AuthConfig, where: ap.name == ^name) |> Repo.one()
   end
 
-  def new() do
+  def new do
     %AuthConfig{}
   end
 
@@ -48,7 +52,7 @@ defmodule Lightning.AuthProviders do
 
   @spec get_handlers() ::
           {:ok, [Handler.t()]}
-  def get_handlers() do
+  def get_handlers do
     store_impl().get_handlers()
   end
 
@@ -105,7 +109,7 @@ defmodule Lightning.AuthProviders do
   end
 
   @spec store_impl() :: Store
-  defp store_impl() do
+  defp store_impl do
     Application.get_env(
       :lightning,
       :auth_providers_store,

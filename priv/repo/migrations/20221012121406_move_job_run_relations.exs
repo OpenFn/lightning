@@ -18,7 +18,7 @@ defmodule Lightning.Repo.Migrations.MoveJobRunRelations do
     execute(&update_runs/0, fn -> nil end)
   end
 
-  defp update_runs() do
+  defp update_runs do
     repo().query!(
       """
       UPDATE runs

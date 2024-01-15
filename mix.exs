@@ -163,7 +163,7 @@ defmodule Lightning.MixProject do
     ]
   end
 
-  defp docs() do
+  defp docs do
     [
       # The main page in the docs
       main: "readme",

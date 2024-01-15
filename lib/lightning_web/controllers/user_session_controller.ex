@@ -70,7 +70,7 @@ defmodule LightningWeb.UserSessionController do
     |> UserAuth.log_out_user()
   end
 
-  def auth_handler_url() do
+  def auth_handler_url do
     case Lightning.AuthProviders.get_handlers() do
       {:ok, []} ->
         nil
