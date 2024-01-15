@@ -1,9 +1,9 @@
 defmodule LightningWeb.API.JobController do
   use LightningWeb, :controller
 
+  alias Lightning.Jobs
   alias Lightning.Policies.Permissions
   alias Lightning.Policies.ProjectUsers
-  alias Lightning.Jobs
   alias Lightning.Workflows
 
   action_fallback LightningWeb.FallbackController

@@ -74,9 +74,9 @@ defmodule LightningWeb.RunLive.ComponentsTest do
         "workflow_id" => ""
       })
 
-    assert Index.is_checked(changeset, :body) == true
-    assert Index.is_checked(changeset, :success) == true
-    assert Index.is_checked(changeset, :failed) == false
+    assert Index.checked?(changeset, :body) == true
+    assert Index.checked?(changeset, :success) == true
+    assert Index.checked?(changeset, :failed) == false
 
     unchecking_changeset =
       Index.filters_changeset(%{
@@ -91,9 +91,9 @@ defmodule LightningWeb.RunLive.ComponentsTest do
         "workflow_id" => ""
       })
 
-    assert Index.is_checked(unchecking_changeset, :search_term) == false
-    assert Index.is_checked(unchecking_changeset, :body) == true
-    assert Index.is_checked(unchecking_changeset, :success) == false
+    assert Index.checked?(unchecking_changeset, :search_term) == false
+    assert Index.checked?(unchecking_changeset, :body) == true
+    assert Index.checked?(unchecking_changeset, :success) == false
   end
 
   test "run_list_item component" do

@@ -4,9 +4,11 @@ defmodule Lightning.VersionControl.GithubClient do
   to github from Lightning
   """
   use Tesla
-  require Logger
+
   alias Lightning.VersionControl.GithubError
   alias Lightning.VersionControl.GithubToken
+
+  require Logger
 
   plug(Tesla.Middleware.BaseUrl, "https://api.github.com")
   plug(Tesla.Middleware.JSON)

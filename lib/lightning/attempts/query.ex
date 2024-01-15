@@ -4,8 +4,9 @@ defmodule Lightning.Attempts.Query do
   """
   import Ecto.Query
 
-  require Lightning.Attempt
   alias Lightning.Attempt
+
+  require Lightning.Attempt
 
   @doc """
   Return all attempts that have been claimed by a worker before the earliest

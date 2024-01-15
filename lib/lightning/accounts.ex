@@ -8,18 +8,15 @@ defmodule Lightning.Accounts do
     max_attempts: 1
 
   import Ecto.Query, warn: false
+
   alias Ecto.Multi
-  alias Lightning.Repo
-
-  alias Lightning.Accounts.{
-    User,
-    UserBackupCode,
-    UserToken,
-    UserTOTP,
-    UserNotifier
-  }
-
+  alias Lightning.Accounts.User
+  alias Lightning.Accounts.UserBackupCode
+  alias Lightning.Accounts.UserNotifier
+  alias Lightning.Accounts.UserToken
+  alias Lightning.Accounts.UserTOTP
   alias Lightning.Credentials
+  alias Lightning.Repo
 
   require Logger
 
@@ -938,7 +935,7 @@ defmodule Lightning.Accounts do
   This triggers the setup page on fresh installs.
   """
   @spec has_one_superuser?() :: boolean()
-  def has_one_superuser?() do
+  def has_one_superuser? do
     from(u in User, select: count(), where: u.role == :superuser)
     |> Repo.one() >= 1
   end

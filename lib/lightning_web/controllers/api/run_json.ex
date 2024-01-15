@@ -1,8 +1,9 @@
 defmodule LightningWeb.API.RunJSON do
   @moduledoc false
 
-  alias LightningWeb.Router.Helpers, as: Routes
   import LightningWeb.API.Helpers
+
+  alias LightningWeb.Router.Helpers, as: Routes
 
   @fields ~w(started_at finished_at log)a
 

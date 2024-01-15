@@ -1,9 +1,9 @@
 defmodule LightningWeb.DownloadsController do
   use LightningWeb, :controller
 
-  alias Lightning.Projects
-  alias Lightning.Policies.ProjectUsers
   alias Lightning.Policies.Permissions
+  alias Lightning.Policies.ProjectUsers
+  alias Lightning.Projects
 
   action_fallback(LightningWeb.FallbackController)
 

@@ -2,12 +2,13 @@ defmodule LightningWeb.Hooks do
   @moduledoc """
   LiveView Hooks
   """
+  use LightningWeb, :verified_routes
+
+  import Phoenix.Component
+  import Phoenix.LiveView
+
   alias Lightning.Policies.Permissions
   alias Lightning.Policies.ProjectUsers
-  import Phoenix.LiveView
-  import Phoenix.Component
-
-  use LightningWeb, :verified_routes
 
   @doc """
   Finds and assigns a project to the socket, if a user doesn't have access

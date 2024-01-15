@@ -1,9 +1,10 @@
 defmodule Lightning.Attempts.Queue do
   @behaviour Lightning.Attempts.Adaptor
 
-  alias Lightning.Repo
-  alias Lightning.Attempts
   import Ecto.Query
+
+  alias Lightning.Attempts
+  alias Lightning.Repo
 
   @impl true
   def enqueue(attempt) do

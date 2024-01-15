@@ -6,8 +6,8 @@ defmodule LightningWeb.WorkflowLive.Helpers do
   alias Lightning.Repo
 
   alias Lightning.Workflows
-  alias Lightning.WorkOrders
   alias Lightning.WorkOrder
+  alias Lightning.WorkOrders
 
   @spec save_and_run(
           Ecto.Changeset.t(Workflows.Workflow.t()),

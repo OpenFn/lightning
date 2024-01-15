@@ -52,6 +52,9 @@ defmodule Lightning.AdaptorService do
   See [Version](https://hexdocs.pm/elixir/Version.html) for more details on
   matching versions.
   """
+  use Agent
+
+  require Logger
 
   defmodule Adaptor do
     @moduledoc false
@@ -186,9 +189,6 @@ defmodule Lightning.AdaptorService do
 
   @type package_spec ::
           {name :: String.t() | Regex.t(), version :: String.t() | nil}
-
-  use Agent
-  require Logger
 
   defmodule State do
     @moduledoc false

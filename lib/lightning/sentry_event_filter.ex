@@ -1,7 +1,7 @@
 defmodule Lightning.SentryEventFilter do
-  @behaviour Sentry.EventFilter
-
   @moduledoc false
+
+  @behaviour Sentry.EventFilter
 
   @ignored_exceptions [
     Phoenix.Router.NoRouteError,

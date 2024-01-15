@@ -8,10 +8,14 @@ defmodule Lightning.Workflows.Workflow do
     A plain text identifier
   """
   use Ecto.Schema
+
   import Ecto.Changeset
 
   alias Lightning.Projects.Project
-  alias Lightning.Workflows.{Job, Trigger, Edge, Trigger}
+  alias Lightning.Workflows.Edge
+  alias Lightning.Workflows.Job
+  alias Lightning.Workflows.Trigger
+  alias Lightning.Workflows.Trigger
 
   @type t :: %__MODULE__{
           __meta__: Ecto.Schema.Metadata.t(),

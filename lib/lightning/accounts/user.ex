@@ -2,12 +2,13 @@ defmodule Lightning.Accounts.User do
   @moduledoc """
   The User model.
   """
-  alias __MODULE__
-
   use Ecto.Schema
+
   import Ecto.Changeset
-  import EctoEnum
   import Ecto.Query
+  import EctoEnum
+
+  alias __MODULE__
 
   @type t :: %__MODULE__{
           id: Ecto.UUID.t() | nil

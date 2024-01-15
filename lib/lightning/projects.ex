@@ -395,7 +395,7 @@ defmodule Lightning.Projects do
     |> String.replace(~r/^\-+|\-+$/, "")
   end
 
-  def is_member_of?(%Project{id: project_id}, %User{id: user_id}) do
+  def member_of?(%Project{id: project_id}, %User{id: user_id}) do
     from(p in Project,
       join: pu in assoc(p, :project_users),
       where: pu.user_id == ^user_id and p.id == ^project_id,

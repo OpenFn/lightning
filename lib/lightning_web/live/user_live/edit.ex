@@ -5,9 +5,10 @@ defmodule LightningWeb.UserLive.Edit do
   """
   use LightningWeb, :live_view
 
-  alias Lightning.Policies.{Users, Permissions}
   alias Lightning.Accounts
   alias Lightning.Accounts.User
+  alias Lightning.Policies.Permissions
+  alias Lightning.Policies.Users
 
   @impl true
   def mount(_params, _session, socket) do

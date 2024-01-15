@@ -193,7 +193,7 @@ defmodule LightningWeb.RunLive.Index do
   Takes a changeset used for querying workorders and checks to see if the given
   filter is present in that changeset. Returns true or false.
   """
-  def is_checked(changeset, id) do
+  def checked?(changeset, id) do
     case Ecto.Changeset.fetch_field(changeset, id) do
       value when value in [{:changes, true}] ->
         true

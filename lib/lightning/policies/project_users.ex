@@ -46,7 +46,7 @@ defmodule Lightning.Policies.ProjectUsers do
   def authorize(:access_project, %User{} = user, %Project{} = project),
     do:
       is_nil(project.scheduled_deletion) and
-        Projects.is_member_of?(project, user)
+        Projects.member_of?(project, user)
 
   def authorize(:delete_project, %User{} = user, %Project{} = project),
     do: Projects.get_project_user_role(user, project) == :owner

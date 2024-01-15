@@ -22,7 +22,7 @@ defmodule LightningWeb.RouteHelpers do
     )
   end
 
-  def oidc_callback_url() do
+  def oidc_callback_url do
     Routes.oidc_url(LightningWeb.Endpoint, :new)
   end
 end

@@ -1,4 +1,13 @@
 defmodule Lightning.Attempts do
+  import Ecto.Query
+
+  alias Lightning.Attempt
+  alias Lightning.Attempts.Events
+  alias Lightning.Attempts.Handlers
+  alias Lightning.Invocation.LogLine
+  alias Lightning.Repo
+  require Logger
+
   defmodule Adaptor do
     @moduledoc """
     Behaviour for implementing an adaptor for the Lightning.Attempts module.
@@ -18,17 +27,7 @@ defmodule Lightning.Attempts do
                 {:ok, Lightning.Attempt.t()}
   end
 
-  require Logger
-
-  alias Lightning.Attempt
-  alias Lightning.Attempts.Events
-  alias Lightning.Attempts.Handlers
-  alias Lightning.Invocation.LogLine
-
-  alias Lightning.Repo
-
-  import Ecto.Query
-
+  # credo:disable-for-next-line
   @behaviour Adaptor
 
   @doc """

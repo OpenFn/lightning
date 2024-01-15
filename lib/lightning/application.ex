@@ -129,7 +129,7 @@ defmodule Lightning.Application do
     state
   end
 
-  def oban_opts() do
+  def oban_opts do
     Application.get_env(:lightning, Oban)
   end
 end

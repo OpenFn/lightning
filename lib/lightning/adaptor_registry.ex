@@ -221,7 +221,7 @@ defmodule Lightning.AdaptorRegistry do
   Fetch a list of packages for the @openfn organisation
   """
   @spec fetch() :: [map()]
-  def fetch() do
+  def fetch do
     start = DateTime.utc_now()
     Logger.debug("Fetching adaptors from NPM.")
 

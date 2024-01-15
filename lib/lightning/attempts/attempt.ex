@@ -5,17 +5,17 @@ defmodule Lightning.Attempt do
 
   """
   use Ecto.Schema
+
   import Ecto.Changeset
   import Lightning.Validators
 
   alias Lightning.Accounts.User
-  alias Lightning.WorkOrder
-  alias Lightning.Invocation.Run
-  alias Lightning.Invocation.LogLine
   alias Lightning.AttemptRun
+  alias Lightning.Invocation.LogLine
+  alias Lightning.Invocation.Run
   alias Lightning.Workflows.Job
   alias Lightning.Workflows.Trigger
-  # alias Lightning.Workflows.Node
+  alias Lightning.WorkOrder
 
   @final_states [
     :success,
