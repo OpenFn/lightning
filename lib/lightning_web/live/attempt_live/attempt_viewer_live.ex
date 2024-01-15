@@ -125,7 +125,10 @@ defmodule LightningWeb.AttemptLive.AttemptViewerLive do
             </Common.tab_bar>
 
             <div class="min-h-0 grow flex overflow-auto">
-              <Common.panel_content for_hash="log" class="grow overflow-auto rounded-md shadow-sm bg-slate-700 border-slate-300">
+              <Common.panel_content
+                for_hash="log"
+                class="grow overflow-auto rounded-md shadow-sm bg-slate-700 border-slate-300"
+              >
                 <Viewers.log_viewer
                   id={"attempt-log-#{attempt.id}"}
                   class="overflow-auto"
