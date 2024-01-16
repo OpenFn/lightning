@@ -22,6 +22,9 @@ defmodule Mix.Tasks.Lightning.GenWorkerKeys do
 
   @impl Mix.Task
   def run(_) do
+    # looks like we may need "try" with this "with"
+    # https://hexdocs.pm/credo/Credo.Check.Readability.PreferImplicitTry.html
+    # credo:disable-for-next-line
     try do
       with {:ok, private_key} <- create_private_key(),
            {:ok, public_key} <- abstract_public_key(private_key) do

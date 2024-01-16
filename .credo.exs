@@ -86,7 +86,7 @@
            [
              priority: :low,
              if_nested_deeper_than: 2,
-             if_called_more_often_than: 0
+             if_called_more_often_than: 1
            ]},
           {Credo.Check.Design.TagFIXME, []},
           # You can also customize the exit_status of each check.
@@ -164,18 +164,18 @@
           {Credo.Check.Warning.UnusedRegexOperation, []},
           {Credo.Check.Warning.UnusedStringOperation, []},
           {Credo.Check.Warning.UnusedTupleOperation, []},
-          {Credo.Check.Warning.WrongTestFileExtension, []},
+          {Credo.Check.Warning.WrongTestFileExtension, []}
           # Controversial
-          {Credo.Check.Readability.StrictModuleLayout, []},
-          {Credo.Check.Readability.MultiAlias, []},
-          {Credo.Check.Readability.SeparateAliasRequire, []},
-          # {Credo.Check.Consistency.UnusedVariableNames, []},
-          # {Credo.Check.Consistency.MultiAliasImportRequireUse, []},
-          {Credo.Check.Design.DuplicatedCode, []}
         ],
         disabled: [
           #
+          {Credo.Check.Consistency.MultiAliasImportRequireUse, []},
+          {Credo.Check.Design.DuplicatedCode, []},
+          {Credo.Check.Readability.MultiAlias, []},
+          {Credo.Check.Readability.SeparateAliasRequire, []},
+          {Credo.Check.Readability.StrictModuleLayout, []},
           # Checks scheduled for next check update (opt-in for now)
+          {Credo.Check.Consistency.UnusedVariableNames, []},
 
           #
           # Controversial and experimental checks (opt-in, just move the check to `:enabled`

@@ -157,7 +157,7 @@ defmodule Lightning.MixProject do
         "coveralls.html",
         "format --check-formatted",
         "dialyzer",
-        "credo --all",
+        "credo --strict --all",
         "sobelow"
       ]
     ]

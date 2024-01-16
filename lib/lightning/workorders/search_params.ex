@@ -13,7 +13,7 @@ defmodule Lightning.WorkOrders.SearchParams do
   @statuses_set MapSet.new(@statuses, fn x -> String.to_existing_atom(x) end)
   @search_fields ~w(id body log)
 
-  defmacro status_list() do
+  defmacro status_list do
     quote do
       unquote(@statuses)
     end

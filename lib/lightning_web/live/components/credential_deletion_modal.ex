@@ -4,8 +4,8 @@ defmodule LightningWeb.Components.CredentialDeletionModal do
   use LightningWeb, :component
   use Phoenix.LiveComponent
 
-  alias Lightning.Credentials.Credential
   alias Lightning.Credentials
+  alias Lightning.Credentials.Credential
 
   @impl true
   def update(

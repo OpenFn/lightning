@@ -5,11 +5,11 @@ defmodule LightningWeb.Plugs.WebhookAuth do
   """
   use LightningWeb, :controller
 
-  require OpenTelemetry.Tracer
-
-  alias Lightning.Workflows.WebhookAuthMethod
   alias Lightning.WebhookAuthMethods
   alias Lightning.Workflows
+  alias Lightning.Workflows.WebhookAuthMethod
+
+  require OpenTelemetry.Tracer
 
   @doc """
   Initializes the options.

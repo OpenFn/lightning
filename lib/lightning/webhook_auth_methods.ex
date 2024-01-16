@@ -24,11 +24,11 @@ defmodule Lightning.WebhookAuthMethods do
 
   alias Ecto.Multi
   alias Lightning.Accounts.User
-  alias Lightning.Workflows.Trigger
   alias Lightning.Projects.Project
+  alias Lightning.Repo
+  alias Lightning.Workflows.Trigger
   alias Lightning.Workflows.WebhookAuthMethod
   alias Lightning.Workflows.WebhookAuthMethodAudit
-  alias Lightning.Repo
 
   @doc """
   Performs cleanup of `WebhookAuthMethod` records that are marked for permanent deletion.

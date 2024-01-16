@@ -12,9 +12,10 @@ defmodule LightningWeb.AuthProvidersLive.FormComponent do
   """
   use LightningWeb, :live_component
 
+  import LightningWeb.Components.Form
+
   alias Lightning.AuthProviders
   alias Lightning.AuthProviders.AuthConfigForm
-  import LightningWeb.Components.Form
 
   @impl true
   def update(

@@ -4,7 +4,6 @@ defmodule LightningWeb.AttemptLive.AttemptViewerLive do
 
   import LightningWeb.AttemptLive.Components
 
-  alias LightningWeb.AttemptLive.Streaming
   alias LightningWeb.Components.Viewers
   alias Phoenix.LiveView.AsyncResult
 

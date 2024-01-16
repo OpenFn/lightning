@@ -2,24 +2,24 @@ defmodule LightningWeb.WorkflowLive.Edit do
   @moduledoc false
   use LightningWeb, {:live_view, container: {:div, []}}
 
-  require Lightning.Attempt
+  import LightningWeb.Components.NewInputs
+  import LightningWeb.WorkflowLive.Components
 
-  alias Lightning.Attempts.Events.RunCompleted
   alias Lightning.Attempts
+  alias Lightning.Attempts.Events.RunCompleted
   alias Lightning.Invocation
   alias Lightning.Policies.Permissions
   alias Lightning.Policies.ProjectUsers
-  alias Lightning.WorkOrders
   alias Lightning.Workflows
   alias Lightning.Workflows.Job
   alias Lightning.Workflows.Trigger
   alias Lightning.Workflows.Workflow
+  alias Lightning.WorkOrders
   alias LightningWeb.Components.Form
   alias LightningWeb.WorkflowLive.Helpers
   alias LightningWeb.WorkflowNewLive.WorkflowParams
 
-  import LightningWeb.Components.NewInputs
-  import LightningWeb.WorkflowLive.Components
+  require Lightning.Attempt
 
   on_mount {LightningWeb.Hooks, :project_scope}
 

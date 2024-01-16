@@ -413,7 +413,7 @@ In addition to our test suite, you can run the following commands:
 - `mix dialyzer`  
   Static analysis for type mismatches and other common warnings. See
   [dialyxir](https://github.com/jeremyjh/dialyxir).
-- `mix credo`  
+- `mix credo --strict --all`  
   Static analysis for consistency, and coding standards. See
   [Credo](https://github.com/rrrene/credo).
 - `mix sobelow`  

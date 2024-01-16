@@ -14,6 +14,8 @@ defmodule Lightning.Scrubber do
 
   Takes an optional `:name` key, in case you need to name the process.
   """
+  use Agent
+
   defmodule State do
     @moduledoc false
     @typep samples :: [String.t()]
@@ -43,8 +45,6 @@ defmodule Lightning.Scrubber do
       end)
     end
   end
-
-  use Agent
 
   @spec start_link(
           opts :: [

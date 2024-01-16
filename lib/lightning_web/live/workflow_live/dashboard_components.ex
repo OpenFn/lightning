@@ -5,6 +5,7 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
   alias Lightning.DashboardStats.ProjectMetrics
   alias Lightning.Projects.Project
   alias Lightning.WorkOrders.SearchParams
+  alias Timex.Format.DateTime.Formatters.Relative
 
   def workflow_list(assigns) do
     ~H"""
@@ -129,7 +130,7 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
               </div>
               <div class="text-gray-500 text-xs">
                 Latest failure <%= workflow.last_failed_workorder.updated_at
-                |> Timex.Format.DateTime.Formatters.Relative.format!("{relative}") %>
+                |> Relative.format!("{relative}") %>
               </div>
             <% else %>
               <div class="text-gray-400 text-lg">
@@ -167,7 +168,7 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
       assigns
       |> assign(
         relative_updated_at:
-          Timex.Format.DateTime.Formatters.Relative.format!(
+          Relative.format!(
             assigns.workflow.updated_at,
             "{relative}"
           )
@@ -333,7 +334,7 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
         time:
           if !is_nil(assigns.state) do
             DateTime.to_naive(assigns.timestamp)
-            |> Timex.Format.DateTime.Formatters.Relative.format!("{relative}")
+            |> Relative.format!("{relative}")
           end
       )
 

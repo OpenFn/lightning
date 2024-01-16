@@ -5,6 +5,7 @@ defmodule LightningWeb.RunLive.Index do
   use LightningWeb, :live_view
 
   import Ecto.Changeset, only: [get_change: 2]
+
   alias Lightning.Invocation
   alias Lightning.Invocation.Run
   alias Lightning.Policies.Permissions
@@ -13,9 +14,8 @@ defmodule LightningWeb.RunLive.Index do
   alias Lightning.WorkOrders.Events
   alias Lightning.WorkOrders.SearchParams
   alias LightningWeb.RunLive.Components
-
-  alias Phoenix.LiveView.JS
   alias Phoenix.LiveView.AsyncResult
+  alias Phoenix.LiveView.JS
 
   @filters_types %{
     search_term: :string,
@@ -105,7 +105,7 @@ defmodule LightningWeb.RunLive.Index do
      )}
   end
 
-  defp init_filters(),
+  defp init_filters,
     do: %{
       "workflow_id" => "",
       "search_term" => "",
