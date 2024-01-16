@@ -1028,6 +1028,8 @@ the Nodes and Edges [epic](https://github.com/OpenFn/Lightning/issues/793).
   [#536](https://github.com/OpenFn/Lightning/issues/536)
 - Function to import a project
   [#574](https://github.com/OpenFn/Lightning/issues/574)
+- Scrub run_result dataclip for UI
+  [#1606](https://github.com/OpenFn/Lightning/issues/1606)
 
 ### Changed
 

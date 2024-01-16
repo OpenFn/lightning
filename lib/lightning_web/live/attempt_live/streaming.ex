@@ -3,7 +3,11 @@ defmodule LightningWeb.AttemptLive.Streaming do
   import Phoenix.LiveView
 
   alias Lightning.Attempts
+  alias Lightning.Credentials
+  alias Lightning.Invocation.Dataclip
+  alias Lightning.Invocation.Run
   alias Lightning.Repo
+  alias Lightning.Scrubber
   alias Phoenix.LiveView.AsyncResult
 
   @doc """
@@ -47,10 +51,11 @@ defmodule LightningWeb.AttemptLive.Streaming do
       nil ->
         []
 
-      dataclip = %{body: body} ->
-        {%{id: dataclip.id, run_id: run.id, type: dataclip.type},
+      %Dataclip{id: id, body: body, type: type} ->
+        {%{id: id, run_id: run.id, type: type},
          body
          |> Jason.encode!(pretty: true)
+         |> maybe_scrub(type, run)
          |> String.split("\n")
          |> Stream.with_index(1)
          |> Stream.map(fn {line, index} ->
@@ -133,6 +138,23 @@ defmodule LightningWeb.AttemptLive.Streaming do
       DateTime.compare(x.started_at, y.started_at) == :lt
     end)
   end
+
+  defp maybe_scrub(body_str, :run_result, %Run{credential_id: credential_id})
+       when is_binary(credential_id) do
+    credential = Credentials.get_credential!(credential_id)
+    samples = Credentials.sensitive_values_for(credential)
+    basic_auth = Credentials.basic_auth_for(credential)
+
+    {:ok, scrubber} =
+      Scrubber.start_link(
+        samples: samples,
+        basic_auth: basic_auth
+      )
+
+    Scrubber.scrub(scrubber, body_str)
+  end
+
+  defp maybe_scrub(body_str, _type, _run), do: body_str
 
   defp needs_dataclip_stream?(socket, assign) do
     selected_run_id = socket.assigns.selected_run_id
