@@ -4,12 +4,9 @@ defmodule Lightning.ExportUtils do
   from a project and its workflows.
   """
 
+  alias Lightning.Projects
   alias Lightning.Repo
-
-  alias Lightning.{
-    Projects,
-    Workflows
-  }
+  alias Lightning.Workflows
 
   defp hyphenate(string) when is_binary(string) do
     string |> String.replace(" ", "-")

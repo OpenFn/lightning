@@ -1,10 +1,11 @@
 defmodule Lightning.Release do
-  require Logger
-
   @moduledoc """
   Used for executing DB release tasks when run in production without Mix
   installed.
   """
+
+  require Logger
+
   @app :lightning
   @repo Lightning.Repo
 

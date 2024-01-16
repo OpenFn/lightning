@@ -3,8 +3,10 @@ defmodule LightningWeb.AuthProvidersLive.Index do
   LiveView for listing and managing Projects
   """
   use LightningWeb, :live_view
+
   alias Lightning.AuthProviders
-  alias Lightning.Policies.{Users, Permissions}
+  alias Lightning.Policies.Permissions
+  alias Lightning.Policies.Users
 
   @impl true
   def mount(_params, _session, socket) do

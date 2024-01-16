@@ -1,9 +1,9 @@
 defmodule LightningWeb.AttemptLive.Streaming do
-  alias Lightning.Repo
-  import Phoenix.LiveView
   import Phoenix.Component, only: [assign: 2, changed?: 2]
+  import Phoenix.LiveView
 
   alias Lightning.Attempts
+  alias Lightning.Repo
   alias Phoenix.LiveView.AsyncResult
 
   @doc """

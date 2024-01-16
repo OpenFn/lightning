@@ -2,6 +2,9 @@ defmodule Lightning.MetadataService do
   @moduledoc """
   Retrieves metadata for a given credential and adaptor using the OpenFn CLI.
   """
+  alias Lightning.AdaptorService
+  alias Lightning.CLI
+  alias Lightning.Credentials.Credential
 
   defmodule Error do
     @type t :: %__MODULE__{type: String.t()}
@@ -21,10 +24,6 @@ defmodule Lightning.MetadataService do
 
   @adaptor_service :adaptor_service
   @cli_task_worker :cli_task_worker
-
-  alias Lightning.AdaptorService
-  alias Lightning.CLI
-  alias Lightning.Credentials.Credential
 
   @doc """
   Retrieve metadata for a given adaptor and credential.

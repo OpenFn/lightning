@@ -7,9 +7,10 @@ defmodule Lightning.VersionControl do
   """
 
   import Ecto.Query, warn: false
+
   alias Lightning.Repo
-  alias Lightning.VersionControl.ProjectRepoConnection
   alias Lightning.VersionControl.GithubClient
+  alias Lightning.VersionControl.ProjectRepoConnection
 
   @doc """
   Creates a connection between a project and a github repo

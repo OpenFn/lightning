@@ -5,9 +5,9 @@ defmodule Lightning.Invocation.Query do
   import Ecto.Query
 
   alias Lightning.Accounts.User
+  alias Lightning.Invocation.Dataclip
   alias Lightning.Invocation.Run
   alias Lightning.Workflows.Job
-  alias Lightning.Invocation.Dataclip
 
   @doc """
   Runs for a specific user

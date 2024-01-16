@@ -1,13 +1,12 @@
 defmodule LightningWeb.AttemptLive.AttemptViewerLive do
   use LightningWeb, {:live_view, container: {:div, []}}
+  use LightningWeb.AttemptLive.Streaming, chunk_size: 100
 
   import LightningWeb.AttemptLive.Components
-  alias LightningWeb.Components.Viewers
 
-  alias Phoenix.LiveView.AsyncResult
   alias LightningWeb.AttemptLive.Streaming
-
-  use Streaming, chunk_size: 100
+  alias LightningWeb.Components.Viewers
+  alias Phoenix.LiveView.AsyncResult
 
   @impl true
   def render(assigns) do

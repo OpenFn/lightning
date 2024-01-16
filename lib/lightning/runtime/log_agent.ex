@@ -13,6 +13,8 @@ defmodule Lightning.Runtime.LogAgent do
   "foobar" = LogAgent.process_chunk(log, {:stdout, "bar"})
   ```
   """
+  use Agent
+
   @type logline ::
           {timestamp :: integer(), type :: :stdout | :stderr, line :: binary()}
 
@@ -87,8 +89,6 @@ defmodule Lightning.Runtime.LogAgent do
       {:halt, {chunk, {"", ""}}}
     end
   end
-
-  use Agent
 
   def start_link(_ \\ []) do
     Agent.start_link(&StringBuffer.new/0)

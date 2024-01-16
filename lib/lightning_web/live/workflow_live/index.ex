@@ -2,15 +2,16 @@ defmodule LightningWeb.WorkflowLive.Index do
   @moduledoc false
   use LightningWeb, :live_view
 
-  on_mount {LightningWeb.Hooks, :project_scope}
-
-  alias Lightning.Workflows
-  alias Lightning.Policies.{Permissions, ProjectUsers}
-  alias LightningWeb.WorkflowLive.NewWorkflowForm
-  alias LightningWeb.WorkflowLive.DashboardComponents
-  alias Lightning.DashboardStats
-
   import LightningWeb.WorkflowLive.Components
+
+  alias Lightning.DashboardStats
+  alias Lightning.Policies.Permissions
+  alias Lightning.Policies.ProjectUsers
+  alias Lightning.Workflows
+  alias LightningWeb.WorkflowLive.DashboardComponents
+  alias LightningWeb.WorkflowLive.NewWorkflowForm
+
+  on_mount {LightningWeb.Hooks, :project_scope}
 
   attr :can_create_workflow, :boolean
   attr :can_delete_workflow, :boolean

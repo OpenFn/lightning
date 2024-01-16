@@ -11,14 +11,14 @@ defmodule Lightning.Workflows.Scheduler do
     # This unique period ensures that cron jobs are only enqueued once across a cluster
     unique: [period: 59]
 
-  require Logger
-
   alias Lightning.Invocation
   alias Lightning.Invocation.Dataclip
   alias Lightning.Repo
-  alias Lightning.WorkOrders
   alias Lightning.Workflows
   alias Lightning.Workflows.Edge
+  alias Lightning.WorkOrders
+
+  require Logger
 
   @impl Oban.Worker
   def perform(%Oban.Job{}), do: enqueue_cronjobs()
@@ -28,7 +28,7 @@ defmodule Lightning.Workflows.Scheduler do
   (defaults to the current time).
   """
   @spec enqueue_cronjobs(DateTime.t()) :: :ok
-  def enqueue_cronjobs(), do: enqueue_cronjobs(DateTime.utc_now())
+  def enqueue_cronjobs, do: enqueue_cronjobs(DateTime.utc_now())
 
   def enqueue_cronjobs(date_time) do
     date_time

@@ -4,9 +4,10 @@ defmodule Lightning.Policies.ProjectUsers do
   """
   @behaviour Bodyguard.Policy
 
-  alias Lightning.Projects
-  alias Lightning.Projects.{ProjectUser, Project}
   alias Lightning.Accounts.User
+  alias Lightning.Projects
+  alias Lightning.Projects.Project
+  alias Lightning.Projects.ProjectUser
 
   @type actions ::
           :run_job

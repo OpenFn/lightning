@@ -11,10 +11,14 @@ defmodule Lightning.Projects.Provisioner do
   import Ecto.Changeset
   import Ecto.Query
 
-  alias Lightning.Projects.{Project, ProjectUser}
-  alias Lightning.Workflows.{Job, Trigger, Workflow, Edge}
-  alias Lightning.Accounts.{User}
+  alias Lightning.Accounts.User
+  alias Lightning.Projects.Project
+  alias Lightning.Projects.ProjectUser
   alias Lightning.Repo
+  alias Lightning.Workflows.Edge
+  alias Lightning.Workflows.Job
+  alias Lightning.Workflows.Trigger
+  alias Lightning.Workflows.Workflow
 
   @doc """
   Import a project.

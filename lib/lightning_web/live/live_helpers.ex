@@ -4,7 +4,8 @@ defmodule LightningWeb.LiveHelpers do
   """
   import Phoenix.Component
 
-  alias LightningWeb.Components.{Common, Icon}
+  alias LightningWeb.Components.Common
+  alias LightningWeb.Components.Icon
   alias Phoenix.LiveView.JS
 
   def live_info_block(assigns) do

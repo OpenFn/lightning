@@ -4,8 +4,9 @@ defmodule LightningWeb.UserLive.Index do
   """
   use LightningWeb, :live_view
 
-  alias Lightning.Policies.{Users, Permissions}
   alias Lightning.Accounts
+  alias Lightning.Policies.Permissions
+  alias Lightning.Policies.Users
 
   @impl true
   def mount(_params, _session, socket) do

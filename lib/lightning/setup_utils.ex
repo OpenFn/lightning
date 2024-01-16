@@ -2,6 +2,19 @@ defmodule Lightning.SetupUtils do
   @moduledoc """
   SetupUtils encapsulates logic for setting up initial data for various sites.
   """
+  import Ecto.Query
+  import Ecto.Changeset
+
+  alias Lightning.Accounts
+  alias Lightning.Attempts
+  alias Lightning.Credentials
+  alias Lightning.Jobs
+  alias Lightning.Projects
+  alias Lightning.Repo
+  alias Lightning.VersionControl
+  alias Lightning.Workflows
+  alias Lightning.WorkOrders
+
   defmodule Ticker do
     use Agent
 
@@ -21,20 +34,6 @@ defmodule Lightning.SetupUtils do
       Agent.stop(pid)
     end
   end
-
-  alias Lightning.Attempts
-  alias Lightning.Accounts
-  alias Lightning.Credentials
-  alias Lightning.Jobs
-  alias Lightning.Projects
-  alias Lightning.VersionControl
-  alias Lightning.WorkOrders
-  alias Lightning.Workflows
-
-  alias Lightning.Repo
-
-  import Ecto.Query
-  import Ecto.Changeset
 
   @spec setup_demo(nil | maybe_improper_list | map) :: %{
           jobs: [...],

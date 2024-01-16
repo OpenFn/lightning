@@ -2,10 +2,10 @@ defmodule LightningWeb.UserAuth do
   @moduledoc """
   The UserAuth controller.
   """
-
-  import Plug.Conn
-  import Phoenix.Controller
   use LightningWeb, :verified_routes
+
+  import Phoenix.Controller
+  import Plug.Conn
 
   alias Lightning.Accounts
   alias LightningWeb.Router.Helpers, as: Routes

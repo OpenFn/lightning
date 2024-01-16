@@ -7,19 +7,22 @@ defmodule Lightning.Projects do
     max_attempts: 1
 
   import Ecto.Query, warn: false
+
+  alias Lightning.Accounts.User
   alias Lightning.Accounts.UserNotifier
   alias Lightning.Attempt
   alias Lightning.AttemptRun
-  alias Lightning.Workflows.Trigger
-  alias Lightning.Workflows.Job
+  alias Lightning.ExportUtils
+  alias Lightning.Invocation.Dataclip
+  alias Lightning.Invocation.Run
+  alias Lightning.Projects.Project
+  alias Lightning.Projects.ProjectCredential
+  alias Lightning.Projects.ProjectUser
   alias Lightning.Projects.ProjectUser
   alias Lightning.Repo
-
-  alias Lightning.Projects.{Project, ProjectCredential, ProjectUser}
-  alias Lightning.Accounts.User
-  alias Lightning.ExportUtils
+  alias Lightning.Workflows.Job
+  alias Lightning.Workflows.Trigger
   alias Lightning.Workflows.Workflow
-  alias Lightning.Invocation.{Run, Dataclip}
   alias Lightning.WorkOrder
 
   require Logger

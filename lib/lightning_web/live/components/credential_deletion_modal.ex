@@ -1,10 +1,10 @@
 defmodule LightningWeb.Components.CredentialDeletionModal do
   @moduledoc false
-  alias Lightning.Credentials.Credential
-  use LightningWeb, :component
 
+  use LightningWeb, :component
   use Phoenix.LiveComponent
 
+  alias Lightning.Credentials.Credential
   alias Lightning.Credentials
 
   @impl true
