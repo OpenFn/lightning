@@ -171,7 +171,7 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
                 </span>
                 &bull;
                 <.link navigate={
-                  ~p"/projects/#{@work_order.workflow.project_id}/dataclips/#{@work_order.dataclip_id}/edit"
+                  ~p"/projects/#{@work_order.workflow.project_id}/dataclips/#{@work_order.dataclip_id}/show"
                 }>
                   <span
                     title={@work_order.dataclip_id}
