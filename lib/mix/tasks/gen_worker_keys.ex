@@ -1,8 +1,10 @@
 defmodule Mix.Tasks.Lightning.GenWorkerKeys do
+  @shortdoc "Generate a set of worker keys"
   @moduledoc """
   Helper to generate the private and public keys for worker authentication
   """
-  @shortdoc "Generate a set of worker keys"
+
+  use Mix.Task
 
   @footer """
   To use these keys, use the above output to set the environment variables.
@@ -17,8 +19,6 @@ defmodule Mix.Tasks.Lightning.GenWorkerKeys do
   - LIGHTNING_PUBLIC_KEY
   - WORKER_SECRET
   """
-
-  use Mix.Task
 
   @impl Mix.Task
   def run(_) do

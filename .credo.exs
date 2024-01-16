@@ -169,11 +169,11 @@
           {Credo.Check.Consistency.MultiAliasImportRequireUse, []},
           {Credo.Check.Design.DuplicatedCode, []},
           {Credo.Check.Readability.MultiAlias, []},
-          {Credo.Check.Readability.SeparateAliasRequire, []}
+          {Credo.Check.Readability.SeparateAliasRequire, []},
+          {Credo.Check.Readability.StrictModuleLayout, []}
         ],
         disabled: [
           #
-          {Credo.Check.Readability.StrictModuleLayout, []},
           # Checks scheduled for next check update (opt-in for now)
           {Credo.Check.Consistency.UnusedVariableNames, []},
 
