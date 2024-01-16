@@ -171,13 +171,11 @@
           {Credo.Check.Design.DuplicatedCode, []},
           {Credo.Check.Readability.MultiAlias, []},
           {Credo.Check.Readability.SeparateAliasRequire, []},
-          {Credo.Check.Readability.StrictModuleLayout, []}
+          {Credo.Check.Readability.StrictModuleLayout, []},
+          # Checks scheduled for next check update (opt-in for now, will bump exit_status soon)
+          {Credo.Check.Consistency.UnusedVariableNames, [exit_status: 0]}
         ],
         disabled: [
-          #
-          # Checks scheduled for next check update (opt-in for now)
-          {Credo.Check.Consistency.UnusedVariableNames, []},
-
           #
           # Controversial and experimental checks (opt-in, just move the check to `:enabled`
           #   and be sure to use `mix credo --strict` to see low priority checks)
@@ -211,6 +209,7 @@
           {Credo.Check.Warning.MixEnv, []},
           {Credo.Check.Warning.UnsafeToAtom, []}
 
+          # Not necessary after Elixir 1.8
           # {Credo.Check.Refactor.MapInto, []},
 
           #
