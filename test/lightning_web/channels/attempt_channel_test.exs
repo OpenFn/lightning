@@ -321,10 +321,24 @@ defmodule LightningWeb.AttemptChannelTest do
       project =
         insert(:project, project_users: [%{user_id: user.id}])
 
+      credential =
+        insert(:credential,
+          name: "My Credential",
+          body: %{pin: "1234"},
+          user: user
+        )
+
+      %{id: project_credential_id} =
+        insert(:project_credential, credential: credential, project: project)
+
       dataclip = insert(:dataclip, body: %{"foo" => "bar"}, project: project)
 
-      %{triggers: [trigger]} =
+      %{triggers: [trigger], jobs: [job]} =
         workflow = insert(:simple_workflow, project: project)
+
+      Repo.update(
+        Ecto.Changeset.change(job, project_credential_id: project_credential_id)
+      )
 
       work_order =
         insert(:workorder,
@@ -357,26 +371,37 @@ defmodule LightningWeb.AttemptChannelTest do
           %{"token" => Workers.generate_attempt_token(attempt)}
         )
 
-      %{socket: socket, attempt: attempt, user: user, workflow: workflow}
+      %{
+        socket: socket,
+        attempt: attempt,
+        user: user,
+        workflow: workflow,
+        credential: credential
+      }
     end
 
     test "run:start", %{
       socket: socket,
       attempt: attempt,
-      workflow: workflow
+      workflow: workflow,
+      credential: %{id: credential_id}
     } do
       # { id, job_id, input_dataclip_id }
       run_id = Ecto.UUID.generate()
-      [job] = workflow.jobs
+      [%{id: job_id}] = workflow.jobs
 
       ref =
         push(socket, "run:start", %{
           "run_id" => run_id,
-          "job_id" => job.id,
+          "credential_id" => credential_id,
+          "job_id" => job_id,
           "input_dataclip_id" => attempt.dataclip_id
         })
 
       assert_reply ref, :ok, %{run_id: ^run_id}, 1_000
+
+      assert %{credential_id: ^credential_id, job_id: ^job_id} =
+               Repo.get!(Run, run_id)
     end
 
     test "run:complete succeeds with normal reason", %{

@@ -20,6 +20,7 @@ defmodule Lightning.Attempts.Handlers do
     embedded_schema do
       field :attempt_id, Ecto.UUID
       field :run_id, Ecto.UUID
+      field :credential_id, Ecto.UUID
       field :job_id, Ecto.UUID
       field :input_dataclip_id, Ecto.UUID
       field :started_at, :utc_datetime_usec
@@ -29,6 +30,7 @@ defmodule Lightning.Attempts.Handlers do
       cast(%__MODULE__{}, params, [
         :attempt_id,
         :run_id,
+        :credential_id,
         :job_id,
         :input_dataclip_id,
         :started_at
@@ -70,20 +72,10 @@ defmodule Lightning.Attempts.Handlers do
       end)
     end
 
-    defp to_run(%__MODULE__{} = start_run) do
-      Map.from_struct(start_run)
-      |> Enum.reduce(%{}, fn {k, v}, acc ->
-        cond do
-          k in [:input_dataclip_id, :job_id, :started_at] ->
-            Map.put(acc, k, v)
-
-          k == :run_id ->
-            Map.put(acc, :id, v)
-
-          true ->
-            acc
-        end
-      end)
+    defp to_run(%__MODULE__{run_id: run_id} = start_run) do
+      start_run
+      |> Map.take([:credential_id, :input_dataclip_id, :job_id, :started_at])
+      |> Map.put(:id, run_id)
       |> Run.new()
     end
 
