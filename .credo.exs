@@ -24,6 +24,7 @@
         included: [
           "lib/",
           "src/",
+          # TODO - enable me next
           # "test/",
           "web/",
           "apps/*/lib/",
@@ -165,7 +166,7 @@
           {Credo.Check.Warning.UnusedStringOperation, []},
           {Credo.Check.Warning.UnusedTupleOperation, []},
           {Credo.Check.Warning.WrongTestFileExtension, []},
-          # Controversial
+          # Controversial but included
           {Credo.Check.Consistency.MultiAliasImportRequireUse, []},
           {Credo.Check.Design.DuplicatedCode, []},
           {Credo.Check.Readability.MultiAlias, []},
