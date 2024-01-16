@@ -142,9 +142,7 @@ defmodule LightningWeb.Router do
 
         live "/attempts/:id", AttemptLive.Show, :show
 
-        live "/dataclips", DataclipLive.Index, :index
-        live "/dataclips/new", DataclipLive.Edit, :new
-        live "/dataclips/:id/edit", DataclipLive.Edit, :edit
+        live "/dataclips/:id/show", DataclipLive.Show, :show
 
         live "/w", WorkflowLive.Index, :index
         live "/w/new", WorkflowLive.Edit, :new
