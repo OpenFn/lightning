@@ -26,8 +26,7 @@ defmodule Lightning.Workflows.Edge do
           workflow: nil | Workflow.t() | Ecto.Association.NotLoaded.t(),
           source_job: nil | Job.t() | Ecto.Association.NotLoaded.t(),
           source_trigger: nil | Trigger.t() | Ecto.Association.NotLoaded.t(),
-          target_job: nil | Job.t() | Ecto.Association.NotLoaded.t(),
-          delete: boolean()
+          target_job: nil | Job.t() | Ecto.Association.NotLoaded.t()
         }
 
   @conditions [:on_job_success, :on_job_failure, :always, :js_expression]
@@ -46,8 +45,6 @@ defmodule Lightning.Workflows.Edge do
     field :enabled, :boolean, default: true
 
     field :scheduled_deletion, :utc_datetime
-
-    field :delete, :boolean, virtual: true
 
     timestamps()
   end

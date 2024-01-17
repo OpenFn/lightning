@@ -48,8 +48,6 @@ defmodule Lightning.Workflows.Job do
     belongs_to :workflow, Workflow
     has_one :project, through: [:workflow, :project]
 
-    field :delete, :boolean, virtual: true
-
     timestamps(type: :utc_datetime_usec)
   end
 

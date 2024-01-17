@@ -646,6 +646,26 @@ defmodule LightningWeb.WorkflowLive.Edit do
     end
   end
 
+  defp update_edge_scheduled_deletion(edge, edges_to_delete, deletion_date) do
+    if edge["id"] in Enum.map(edges_to_delete, & &1.id) do
+      Map.update(edge, "scheduled_deletion", deletion_date, fn _ ->
+        deletion_date
+      end)
+    else
+      edge
+    end
+  end
+
+  defp update_job_scheduled_deletion(job, id, deletion_date) do
+    if job["id"] === id do
+      Map.update(job, "scheduled_deletion", deletion_date, fn _ ->
+        deletion_date
+      end)
+    else
+      job
+    end
+  end
+
   @impl true
   def handle_event("get-initial-state", _params, socket) do
     {:noreply,
@@ -664,19 +684,29 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
     with true <- can_edit_job || :not_authorized,
          true <- !has_child_edges?(changeset, id) || :has_child_edges,
-         true <- !first_job?(changeset, id) || :is_first_job do
+         true <- !is_first_job?(changeset, id) || :is_first_job do
+      deletion_date = Workflows.scheduled_deletion_date()
+
       edges_to_delete =
         Ecto.Changeset.get_assoc(changeset, :edges, :struct)
         |> Enum.filter(&(&1.target_job_id == id))
 
       next_params =
-        Map.update!(initial_params, "edges", fn edges ->
+        initial_params
+        |> Map.update!("edges", fn edges ->
           edges
+          |> Enum.map(
+            &update_edge_scheduled_deletion(&1, edges_to_delete, deletion_date)
+          )
           |> Enum.reject(fn edge ->
             edge["id"] in Enum.map(edges_to_delete, & &1.id)
           end)
         end)
-        |> Map.update!("jobs", &Enum.reject(&1, fn job -> job["id"] == id end))
+        |> Map.update!("jobs", fn jobs ->
+          jobs
+          |> Enum.map(&update_job_scheduled_deletion(&1, id, deletion_date))
+          |> Enum.reject(fn job -> job["id"] == id end)
+        end)
 
       {:noreply,
        socket
@@ -720,6 +750,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
               initial_params,
               params
             )
+            |> IO.inspect()
 
           %{} ->
             initial_params
@@ -727,6 +758,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
       %{assigns: %{changeset: changeset}} =
         socket = socket |> apply_params(next_params)
+
+      IO.inspect(changeset, label: "Changeset")
 
       Lightning.Repo.insert_or_update(changeset)
       |> case do
@@ -1151,7 +1184,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
   end
 
   defp push_patches_applied(socket, initial_params) do
-    next_params = socket.assigns.workflow_params
+    next_params =
+      socket.assigns.workflow_params
 
     patches = WorkflowParams.to_patches(initial_params, next_params)
 
