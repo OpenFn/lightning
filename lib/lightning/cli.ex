@@ -108,7 +108,7 @@ defmodule Lightning.CLI do
   @doc """
   Retrieve metadata for a given adaptor and configuration.
   """
-  @spec metadata(state :: Lightning.SafeSecrets.t(), adaptor_path :: String.t()) ::
+  @spec metadata(state :: map(), adaptor_path :: String.t()) ::
           Result.t()
   def metadata(state, adaptor_path) when is_binary(adaptor_path) do
     state = Jason.encode_to_iodata!(state)
