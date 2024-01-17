@@ -252,6 +252,10 @@ defmodule Lightning.Workflows do
     |> Repo.one()
   end
 
+  def get_edge_by_target_job(%Job{id: job_id}) do
+    from(e in Edge, where: e.target_job_id == ^job_id) |> Repo.one()
+  end
+
   @doc """
   Returns a list of edges with jobs to execute, given a current timestamp in Unix. This is
   used by the scheduler, which calls this function once every minute.
@@ -313,5 +317,37 @@ defmodule Lightning.Workflows do
   """
   def jobs_ordered_subquery do
     from(j in Job, order_by: [asc: j.inserted_at])
+  end
+
+  def schedule_job_deletion(%Job{} = job) do
+    date = scheduled_deletion_date()
+
+    edge = get_edge_by_target_job(job)
+
+    Multi.new()
+    |> update_edge(edge, date)
+    |> update_job(job, date)
+    |> Repo.transaction()
+  end
+
+  defp update_edge(multi, edge, date) do
+    Multi.update(
+      multi,
+      :edge,
+      Edge.changeset(edge, %{"scheduled_deletion" => date})
+    )
+  end
+
+  defp update_job(multi, job, date) do
+    Multi.update(
+      multi,
+      :job,
+      Job.changeset(job, %{"scheduled_deletion" => date})
+    )
+  end
+
+  defp scheduled_deletion_date do
+    days = Application.get_env(:lightning, :purge_deleted_after_days, 0)
+    DateTime.utc_now() |> Timex.shift(days: days)
   end
 end
