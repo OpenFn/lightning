@@ -3,9 +3,11 @@ defmodule Lightning.Projects.Project do
   Project model
   """
   use Ecto.Schema
+
   import Ecto.Changeset
 
-  alias Lightning.Projects.{ProjectUser, ProjectCredential}
+  alias Lightning.Projects.ProjectCredential
+  alias Lightning.Projects.ProjectUser
   alias Lightning.Workflows.Workflow
 
   @type t :: %__MODULE__{

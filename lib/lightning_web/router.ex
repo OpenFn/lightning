@@ -4,9 +4,9 @@ defmodule LightningWeb.Router do
   import LightningWeb.UserAuth
   import Phoenix.LiveDashboard.Router
 
-  alias ProjectLive
-  alias JobLive
   alias CredentialLive
+  alias JobLive
+  alias ProjectLive
   alias UserLive
 
   pipeline :browser do

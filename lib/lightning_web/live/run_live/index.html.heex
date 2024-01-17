@@ -99,9 +99,9 @@
                       phx-click={show_dropdown("status_filter_dropdown")}
                     >
                       <span>
-                        <%= if Enum.any?(@statuses, fn status -> is_checked(@filters_changeset, status.id) end) do %>
+                        <%= if Enum.any?(@statuses, fn status -> checked?(@filters_changeset, status.id) end) do %>
                           <%= Enum.count(@statuses, fn status ->
-                            is_checked(@filters_changeset, status.id)
+                            checked?(@filters_changeset, status.id)
                           end) %> Selected
                         <% else %>
                           Any
@@ -137,7 +137,7 @@
                           <%= Phoenix.HTML.Form.checkbox(
                             f,
                             status.id,
-                            checked: is_checked(@filters_changeset, status.id),
+                            checked: checked?(@filters_changeset, status.id),
                             class:
                               "mb-1 mr-1 h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
                           ) %>
@@ -331,7 +331,7 @@
             </span>
           <% end %>
 
-          <%= for status <- Enum.filter(@statuses, fn status -> is_checked(@filters_changeset, status.id) end)  do %>
+          <%= for status <- Enum.filter(@statuses, fn status -> checked?(@filters_changeset, status.id) end)  do %>
             <span class="inline-flex items-center gap-x-0.5 rounded-md bg-blue-100 px-2 py-1 text-xs font-medium text-blue-700">
               Work order status: <%= status.label %>
               <.form
@@ -518,11 +518,11 @@
                           <div class={"#{if(index == 0, do: "rounded-l-md", else: "-ml-px")} #{if(index == 2, do: "rounded-r-md")}
                            ring-1 ring-inset ring-gray-300 px-3 py-2 text-sm
                            font-semibold text-gray-500 hover:bg-gray-100 focus:z-10
-                           #{if(is_checked(@filters_changeset, search_field.id), do: "bg-gray-200", else: "bg-white")}
+                           #{if(checked?(@filters_changeset, search_field.id), do: "bg-gray-200", else: "bg-white")}
                            "}>
                             <.icon
                               name={search_field.icon}
-                              class={"h-4 w-4 inline-block align-middle #{is_checked(@filters_changeset, search_field.id) && "text-indigo-800"}"}
+                              class={"h-4 w-4 inline-block align-middle #{checked?(@filters_changeset, search_field.id) && "text-indigo-800"}"}
                             />
                           </div>
                         <% end %>

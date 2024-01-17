@@ -4,21 +4,22 @@ defmodule LightningWeb.ProjectLive.Settings do
   """
 
   use LightningWeb, :live_view
-  require Logger
 
-  alias Lightning.VersionControl
-  alias Lightning.Policies.ProjectUsers
-  alias Lightning.Projects.ProjectUser
-  alias Lightning.Policies.Permissions
   alias Lightning.Accounts.User
+  alias Lightning.Credentials
+  alias Lightning.Policies.Permissions
+  alias Lightning.Policies.ProjectUsers
+  alias Lightning.Projects
   alias Lightning.Projects.Project
-  alias Lightning.{Projects, Credentials}
+  alias Lightning.Projects.ProjectUser
+  alias Lightning.VersionControl
+  alias Lightning.VersionControl.GithubError
   alias Lightning.WebhookAuthMethods
   alias Lightning.Workflows.WebhookAuthMethod
-
   alias LightningWeb.Components.Form
   alias LightningWeb.ProjectLive.DeleteConnectionModal
-  alias Lightning.VersionControl.GithubError
+
+  require Logger
 
   on_mount {LightningWeb.Hooks, :project_scope}
 

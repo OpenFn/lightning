@@ -1,10 +1,10 @@
 defmodule LightningWeb.WebhooksController do
   use LightningWeb, :controller
 
-  require OpenTelemetry.Tracer
-
   alias Lightning.Workflows
   alias Lightning.WorkOrders
+
+  require OpenTelemetry.Tracer
 
   @spec create(Plug.Conn.t(), %{path: binary()}) :: Plug.Conn.t()
   def create(conn, _params) do

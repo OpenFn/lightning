@@ -1,9 +1,9 @@
 defmodule LightningWeb.AttemptLive.Streaming do
-  alias Lightning.Repo
-  import Phoenix.LiveView
   import Phoenix.Component, only: [assign: 2, changed?: 2]
+  import Phoenix.LiveView
 
   alias Lightning.Attempts
+  alias Lightning.Repo
   alias Phoenix.LiveView.AsyncResult
 
   @doc """
@@ -166,7 +166,7 @@ defmodule LightningWeb.AttemptLive.Streaming do
     end
   end
 
-  defp handle_infos() do
+  defp handle_infos do
     quote do
       @impl true
       def handle_info({:log_line_chunk, lines}, socket) do
@@ -212,7 +212,7 @@ defmodule LightningWeb.AttemptLive.Streaming do
     end
   end
 
-  defp handle_asyncs() do
+  defp handle_asyncs do
     quote do
       def handle_async(:attempt, {:ok, nil}, socket) do
         {:noreply,
@@ -270,7 +270,7 @@ defmodule LightningWeb.AttemptLive.Streaming do
     end
   end
 
-  defp helpers() do
+  defp helpers do
     quote do
       import unquote(__MODULE__)
 

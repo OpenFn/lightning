@@ -58,7 +58,7 @@ defmodule Lightning.MixProject do
       {:bypass, "~> 2.1"},
       {:cachex, "~> 3.4"},
       {:cloak_ecto, "~> 1.2.0"},
-      {:credo, "~> 1.7.1", only: [:test, :dev]},
+      {:credo, "~> 1.7.3", only: [:test, :dev]},
       {:crontab, "~> 1.1"},
       {:dialyxir, "~> 1.4.2", only: [:test, :dev], runtime: false},
       {:ecto_enum, "~> 1.4"},
@@ -157,13 +157,13 @@ defmodule Lightning.MixProject do
         "coveralls.html",
         "format --check-formatted",
         "dialyzer",
-        "credo --all",
+        "credo --strict --all",
         "sobelow"
       ]
     ]
   end
 
-  defp docs() do
+  defp docs do
     [
       # The main page in the docs
       main: "readme",

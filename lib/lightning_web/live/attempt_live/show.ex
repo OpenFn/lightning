@@ -1,13 +1,11 @@
 defmodule LightningWeb.AttemptLive.Show do
   use LightningWeb, :live_view
-
-  alias Phoenix.LiveView.AsyncResult
+  use LightningWeb.AttemptLive.Streaming, chunk_size: 100
 
   import LightningWeb.AttemptLive.Components
-  alias LightningWeb.Components.Viewers
-  alias LightningWeb.AttemptLive.Streaming
 
-  use Streaming, chunk_size: 100
+  alias LightningWeb.Components.Viewers
+  alias Phoenix.LiveView.AsyncResult
 
   on_mount {LightningWeb.Hooks, :project_scope}
 

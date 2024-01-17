@@ -6,12 +6,13 @@ defmodule Lightning.Invocation do
   import Ecto.Query, warn: false
   import Lightning.Helpers, only: [coerce_json_field: 2]
 
+  alias Lightning.Invocation.Dataclip
+  alias Lightning.Invocation.Query
+  alias Lightning.Invocation.Run
+  alias Lightning.Projects.Project
+  alias Lightning.Repo
   alias Lightning.WorkOrder
   alias Lightning.WorkOrders.SearchParams
-  alias Lightning.Repo
-
-  alias Lightning.Invocation.{Dataclip, Run, Query}
-  alias Lightning.Projects.Project
 
   @workorders_search_timeout 30_000
   @workorders_count_limit 50

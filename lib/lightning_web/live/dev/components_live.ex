@@ -79,7 +79,7 @@ defmodule LightningWeb.Dev.ComponentsLive do
     """
   end
 
-  defp log_lines() do
+  defp log_lines do
     [
       %{source: "RUN", message: "Foo bar"},
       %{source: "RUN", message: "   Foo bar with indent"},
@@ -109,7 +109,7 @@ defmodule LightningWeb.Dev.ComponentsLive do
     end)
   end
 
-  defp dataclip() do
+  defp dataclip do
     File.read!("assets/package.json") |> String.split("\n")
   end
 end

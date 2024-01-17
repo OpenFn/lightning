@@ -1,12 +1,12 @@
 defmodule Lightning.DashboardStats do
   @moduledoc false
 
+  import Ecto.Query
+
   alias Lightning.Attempt
   alias Lightning.Invocation.Run
   alias Lightning.Repo
   alias Lightning.Workflows.Workflow
-
-  import Ecto.Query
 
   defmodule WorkflowStats do
     defstruct last_workorder: %{state: nil, updated_at: nil},

@@ -17,13 +17,15 @@ defmodule Lightning.Invocation.Run do
   -  `"lost"`
   """
   use Ecto.Schema
+
   import Ecto.Changeset
 
-  alias Lightning.Invocation.Dataclip
-  alias Lightning.Workflows.Job
+  alias Lightning.Attempt
+  alias Lightning.AttemptRun
   alias Lightning.Credentials.Credential
-  alias Lightning.{AttemptRun, Attempt}
+  alias Lightning.Invocation.Dataclip
   alias Lightning.Invocation.LogLine
+  alias Lightning.Workflows.Job
 
   @type t :: %__MODULE__{
           __meta__: Ecto.Schema.Metadata.t(),

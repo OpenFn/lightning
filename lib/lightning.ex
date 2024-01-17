@@ -19,7 +19,7 @@ defmodule Lightning do
 
     @pubsub Lightning.PubSub
 
-    def current_time() do
+    def current_time do
       DateTime.utc_now()
     end
 
@@ -32,6 +32,7 @@ defmodule Lightning do
     end
   end
 
+  # credo:disable-for-next-line
   @behaviour API
 
   @doc """
@@ -46,7 +47,7 @@ defmodule Lightning do
   @impl true
   def subscribe(topic), do: impl().subscribe(topic)
 
-  defp impl() do
+  defp impl do
     Application.get_env(:lightning, __MODULE__, API)
   end
 end

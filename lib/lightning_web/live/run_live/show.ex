@@ -4,11 +4,11 @@ defmodule LightningWeb.RunLive.Show do
   """
   use LightningWeb, :live_view
 
-  alias Lightning.Repo
+  import Ecto.Query
+
   alias Lightning.Invocation
   alias Lightning.Invocation.Run
-
-  import Ecto.Query
+  alias Lightning.Repo
 
   on_mount {LightningWeb.Hooks, :project_scope}
 

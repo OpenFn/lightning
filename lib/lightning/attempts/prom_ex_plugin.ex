@@ -1,9 +1,10 @@
 defmodule Lightning.Attempts.PromExPlugin do
   use PromEx.Plugin
 
+  import Ecto.Query
+
   alias Lightning.Attempt
   alias Lightning.Repo
-  import Ecto.Query
 
   @average_claim_event [:lightning, :attempt, :queue, :claim]
   @stalled_event [:lightning, :attempt, :queue, :stalled]

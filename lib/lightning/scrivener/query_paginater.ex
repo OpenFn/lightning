@@ -1,7 +1,8 @@
 defimpl Scrivener.Paginater, for: Ecto.Query do
   import Ecto.Query
 
-  alias Scrivener.{Config, Page}
+  alias Scrivener.Config
+  alias Scrivener.Page
 
   @moduledoc false
 

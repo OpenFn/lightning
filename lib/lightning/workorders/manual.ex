@@ -2,6 +2,13 @@ defmodule Lightning.WorkOrders.Manual do
   @moduledoc """
   A model is used to build WorkOrders with custom input data.
   """
+
+  use Ecto.Schema
+
+  import Ecto.Changeset
+
+  alias Lightning.Validators
+
   @type t :: %__MODULE__{
           workflow: Lightning.Workflows.Workflow.t(),
           project: Lightning.Projects.Project.t(),
@@ -11,12 +18,6 @@ defmodule Lightning.WorkOrders.Manual do
           body: String.t(),
           is_persisted: boolean()
         }
-
-  use Ecto.Schema
-
-  alias Lightning.Validators
-
-  import Ecto.Changeset
 
   @primary_key false
   embedded_schema do

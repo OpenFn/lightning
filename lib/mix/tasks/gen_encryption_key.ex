@@ -1,8 +1,9 @@
 defmodule Mix.Tasks.Lightning.GenEncryptionKey do
+  @shortdoc "Generate a unique Base64 encoded encryption key"
+
   @moduledoc """
   Helper to generate a unique encryption key for Vault
   """
-  @shortdoc "Generate a unique Base64 encoded encryption key"
 
   use Mix.Task
 

@@ -2,16 +2,18 @@ defmodule Lightning.Credentials.Credential do
   @moduledoc """
   The Credential model.
   """
+  use Ecto.Schema
+
+  import Ecto.Changeset
+
+  alias Lightning.Accounts.User
+  alias Lightning.Projects.ProjectCredential
+
   @type t :: %__MODULE__{
           __meta__: Ecto.Schema.Metadata.t(),
           id: Ecto.UUID.t() | nil,
           body: nil | %{}
         }
-
-  use Ecto.Schema
-  alias Lightning.Accounts.User
-  alias Lightning.Projects.ProjectCredential
-  import Ecto.Changeset
 
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id

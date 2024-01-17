@@ -332,7 +332,7 @@ defmodule Lightning.Attempts.PromExPluginText do
     )
   end
 
-  defp plugin_config() do
+  defp plugin_config do
     [
       {:attempt_performance_age_seconds, @attempt_performance_age_seconds},
       {:stalled_attempt_threshold_seconds, @stalled_attempt_threshold_seconds}

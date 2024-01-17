@@ -9,17 +9,17 @@ defmodule Lightning.Credentials do
 
   import Ecto.Query, warn: false
   import Lightning.Helpers, only: [coerce_json_field: 2]
-  alias Lightning.Accounts.UserNotifier
-  alias Lightning.Credentials
-  alias Lightning.AuthProviders.Google
-  alias Lightning.Repo
-  alias Ecto.Multi
 
+  alias Ecto.Multi
+  alias Lightning.Accounts.UserNotifier
+  alias Lightning.AuthProviders.Google
+  alias Lightning.Credentials
   alias Lightning.Credentials.Audit
   alias Lightning.Credentials.Credential
   alias Lightning.Credentials.SchemaDocument
   alias Lightning.Credentials.SensitiveValues
   alias Lightning.Projects.Project
+  alias Lightning.Repo
 
   require Logger
 

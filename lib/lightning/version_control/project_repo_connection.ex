@@ -4,10 +4,11 @@ defmodule Lightning.VersionControl.ProjectRepoConnection do
   """
 
   use Ecto.Schema
+
   import Ecto.Changeset
 
-  alias Lightning.Projects.Project
   alias Lightning.Accounts.User
+  alias Lightning.Projects.Project
 
   @type t() :: %__MODULE__{
           __meta__: Ecto.Schema.Metadata.t(),

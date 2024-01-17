@@ -1,8 +1,10 @@
 defmodule Mix.Tasks.Lightning.GenWorkerKeys do
+  @shortdoc "Generate a set of worker keys"
   @moduledoc """
   Helper to generate the private and public keys for worker authentication
   """
-  @shortdoc "Generate a set of worker keys"
+
+  use Mix.Task
 
   @footer """
   To use these keys, use the above output to set the environment variables.
@@ -18,10 +20,11 @@ defmodule Mix.Tasks.Lightning.GenWorkerKeys do
   - WORKER_SECRET
   """
 
-  use Mix.Task
-
   @impl Mix.Task
   def run(_) do
+    # looks like we may need "try" with this "with"
+    # https://hexdocs.pm/credo/Credo.Check.Readability.PreferImplicitTry.html
+    # credo:disable-for-next-line
     try do
       with {:ok, private_key} <- create_private_key(),
            {:ok, public_key} <- abstract_public_key(private_key) do
@@ -61,7 +64,7 @@ defmodule Mix.Tasks.Lightning.GenWorkerKeys do
     end
   end
 
-  defp create_private_key() do
+  defp create_private_key do
     filename = Path.join(System.tmp_dir!(), "jwtRSA256-private.pem")
 
     with :ok <- call_openssl(~w[genrsa -out #{filename} 2048]),
@@ -85,7 +88,7 @@ defmodule Mix.Tasks.Lightning.GenWorkerKeys do
     end
   end
 
-  defp generate_hs256_key() do
+  defp generate_hs256_key do
     32 |> :crypto.strong_rand_bytes() |> Base.encode64()
   end
 end

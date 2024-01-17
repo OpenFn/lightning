@@ -4,8 +4,8 @@ defmodule LightningWeb.ProjectLive.Index do
   """
   use LightningWeb, :live_view
 
-  alias Lightning.Policies.Users
   alias Lightning.Policies.Permissions
+  alias Lightning.Policies.Users
   alias Lightning.Projects
 
   @impl true

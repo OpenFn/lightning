@@ -6,10 +6,10 @@ defmodule Lightning.Attempts.Handlers do
   alias Lightning.Attempt
   alias Lightning.AttemptRun
   alias Lightning.Attempts
-  alias Lightning.WorkOrders
   alias Lightning.Invocation.Dataclip
   alias Lightning.Invocation.Run
   alias Lightning.Repo
+  alias Lightning.WorkOrders
 
   defmodule StartRun do
     use Ecto.Schema

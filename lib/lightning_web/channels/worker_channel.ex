@@ -1,6 +1,8 @@
 defmodule LightningWeb.WorkerChannel do
-  alias Lightning.{Workers, Attempts}
   use LightningWeb, :channel
+
+  alias Lightning.Attempts
+  alias Lightning.Workers
 
   @impl true
   def join("worker:queue", _payload, %{assigns: %{token: token}} = socket) do

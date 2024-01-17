@@ -1,10 +1,11 @@
 defmodule LightningWeb.OidcController do
   use LightningWeb, :controller
 
+  alias Lightning.Accounts
   alias Lightning.AuthProviders
   alias Lightning.AuthProviders.Handler
-  alias Lightning.Accounts
-  alias LightningWeb.{UserAuth, OauthCredentialHelper}
+  alias LightningWeb.OauthCredentialHelper
+  alias LightningWeb.UserAuth
 
   action_fallback LightningWeb.FallbackController
 

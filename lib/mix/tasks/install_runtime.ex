@@ -41,7 +41,7 @@ defmodule Mix.Tasks.Lightning.InstallRuntime do
     )
   end
 
-  def packages() do
+  def packages do
     ~W(
       @openfn/cli@0.4.13
       @openfn/language-common@latest

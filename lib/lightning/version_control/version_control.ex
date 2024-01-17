@@ -7,9 +7,10 @@ defmodule Lightning.VersionControl do
   """
 
   import Ecto.Query, warn: false
+
   alias Lightning.Repo
-  alias Lightning.VersionControl.ProjectRepoConnection
   alias Lightning.VersionControl.GithubClient
+  alias Lightning.VersionControl.ProjectRepoConnection
 
   @doc """
   Creates a connection between a project and a github repo
@@ -101,7 +102,7 @@ defmodule Lightning.VersionControl do
     end
   end
 
-  def github_enabled?() do
+  def github_enabled? do
     Application.get_env(:lightning, :github_app, [])
     |> then(fn config ->
       Keyword.get(config, :cert) && Keyword.get(config, :app_id)

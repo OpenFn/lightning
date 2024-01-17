@@ -12,6 +12,7 @@ defmodule LightningWeb.Components.Viewers do
 
   use LightningWeb, :component
 
+  alias Lightning.Invocation.Dataclip
   alias LightningWeb.Components.Icon
 
   @doc """
@@ -97,7 +98,7 @@ defmodule LightningWeb.Components.Viewers do
 
   attr :type, :atom,
     default: nil,
-    values: [nil | Lightning.Invocation.Dataclip.source_types()]
+    values: [nil | Dataclip.source_types()]
 
   def dataclip_viewer(assigns) do
     ~H"""
@@ -145,7 +146,7 @@ defmodule LightningWeb.Components.Viewers do
 
   attr :type, :atom,
     default: nil,
-    values: [nil | Lightning.Invocation.Dataclip.source_types()]
+    values: [nil | Dataclip.source_types()]
 
   defp dataclip_type(assigns) do
     assigns =

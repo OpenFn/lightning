@@ -1,8 +1,8 @@
 defmodule LightningWeb.RunLive.RunViewerLive do
   use LightningWeb, {:live_view, container: {:div, []}}
 
-  alias LightningWeb.RunLive.Components
   alias Lightning.Attempts
+  alias LightningWeb.RunLive.Components
 
   @impl true
   def render(assigns) do

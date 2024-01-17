@@ -4,9 +4,10 @@ defmodule Lightning.Policies.ProjectUsers do
   """
   @behaviour Bodyguard.Policy
 
-  alias Lightning.Projects
-  alias Lightning.Projects.{ProjectUser, Project}
   alias Lightning.Accounts.User
+  alias Lightning.Projects
+  alias Lightning.Projects.Project
+  alias Lightning.Projects.ProjectUser
 
   @type actions ::
           :run_job
@@ -46,7 +47,7 @@ defmodule Lightning.Policies.ProjectUsers do
   def authorize(:access_project, %User{} = user, %Project{} = project),
     do:
       is_nil(project.scheduled_deletion) and
-        Projects.is_member_of?(project, user)
+        Projects.member_of?(project, user)
 
   def authorize(:delete_project, %User{} = user, %Project{} = project),
     do: Projects.get_project_user_role(user, project) == :owner

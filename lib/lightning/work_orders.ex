@@ -28,29 +28,26 @@ defmodule Lightning.WorkOrders do
   Retries do not create new Work Orders, but rather new Attempts on the existing
   Work Order.
   """
+  import Ecto.Changeset
+  import Ecto.Query
+  import Lightning.Validators
 
-  alias Lightning.AttemptRun
   alias Ecto.Multi
   alias Lightning.Accounts.User
   alias Lightning.Attempt
+  alias Lightning.AttemptRun
   alias Lightning.Attempts
   alias Lightning.Graph
   alias Lightning.Invocation.Dataclip
   alias Lightning.Invocation.Run
   alias Lightning.Repo
-
+  alias Lightning.Workflows.Job
+  alias Lightning.Workflows.Trigger
+  alias Lightning.Workflows.Workflow
   alias Lightning.WorkOrder
   alias Lightning.WorkOrders.Events
   alias Lightning.WorkOrders.Manual
   alias Lightning.WorkOrders.Query
-
-  alias Lightning.Workflows.Job
-  alias Lightning.Workflows.Trigger
-  alias Lightning.Workflows.Workflow
-
-  import Ecto.Changeset
-  import Ecto.Query
-  import Lightning.Validators
 
   @type work_order_option ::
           {:workflow, Workflow.t()}

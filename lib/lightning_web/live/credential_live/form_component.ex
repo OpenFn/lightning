@@ -2,20 +2,16 @@ defmodule LightningWeb.CredentialLive.FormComponent do
   @moduledoc """
   Form Component for working with a single Credential
   """
-  alias LightningWeb.Components.NewInputs
   use LightningWeb, :live_component
 
-  alias Lightning.Credentials
-
-  alias LightningWeb.CredentialLive.{
-    RawBodyComponent,
-    JsonSchemaBodyComponent,
-    GoogleSheetsComponent
-  }
-
-  alias Phoenix.LiveView.JS
-
   import Ecto.Changeset, only: [fetch_field!: 2, put_assoc: 3]
+
+  alias Lightning.Credentials
+  alias LightningWeb.Components.NewInputs
+  alias LightningWeb.CredentialLive.GoogleSheetsComponent
+  alias LightningWeb.CredentialLive.JsonSchemaBodyComponent
+  alias LightningWeb.CredentialLive.RawBodyComponent
+  alias Phoenix.LiveView.JS
 
   @valid_assigns [
     :id,

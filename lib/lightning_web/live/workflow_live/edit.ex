@@ -2,24 +2,24 @@ defmodule LightningWeb.WorkflowLive.Edit do
   @moduledoc false
   use LightningWeb, {:live_view, container: {:div, []}}
 
-  require Lightning.Attempt
+  import LightningWeb.Components.NewInputs
+  import LightningWeb.WorkflowLive.Components
 
-  alias Lightning.Attempts.Events.RunCompleted
   alias Lightning.Attempts
+  alias Lightning.Attempts.Events.RunCompleted
   alias Lightning.Invocation
   alias Lightning.Policies.Permissions
   alias Lightning.Policies.ProjectUsers
-  alias Lightning.WorkOrders
   alias Lightning.Workflows
   alias Lightning.Workflows.Job
   alias Lightning.Workflows.Trigger
   alias Lightning.Workflows.Workflow
+  alias Lightning.WorkOrders
   alias LightningWeb.Components.Form
   alias LightningWeb.WorkflowLive.Helpers
   alias LightningWeb.WorkflowNewLive.WorkflowParams
 
-  import LightningWeb.Components.NewInputs
-  import LightningWeb.WorkflowLive.Components
+  require Lightning.Attempt
 
   on_mount {LightningWeb.Hooks, :project_scope}
 
@@ -466,7 +466,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
     %{form: form, field: field} = assigns
 
     has_child_edges = form.source |> has_child_edges?(assigns[:id])
-    is_first_job = form.source |> is_first_job?(assigns[:id])
+    is_first_job = form.source |> first_job?(assigns[:id])
 
     %Phoenix.HTML.FormField{field: field_name, form: parent_form} = form[field]
 
@@ -664,7 +664,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
     with true <- can_edit_job || :not_authorized,
          true <- !has_child_edges?(changeset, id) || :has_child_edges,
-         true <- !is_first_job?(changeset, id) || :is_first_job do
+         true <- !first_job?(changeset, id) || :is_first_job do
       edges_to_delete =
         Ecto.Changeset.get_assoc(changeset, :edges, :struct)
         |> Enum.filter(&(&1.target_job_id == id))
@@ -1038,7 +1038,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
     |> Enum.any?()
   end
 
-  defp is_first_job?(workflow_changeset, job_id) do
+  defp first_job?(workflow_changeset, job_id) do
     workflow_changeset
     |> get_filtered_edges(&(&1.source_trigger_id && &1.target_job_id == job_id))
     |> Enum.any?()

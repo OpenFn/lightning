@@ -6,12 +6,12 @@ defmodule Lightning.AuthProviders.Store do
   initialized we cache these in order to avoid repeatedly making HTTP requests
   to a providers API.
   """
-  alias Lightning.AuthProviders.{Handler}
+  alias Lightning.AuthProviders.Handler
 
   @type finder :: (name :: String.t() -> {:ok, Handler.t()} | {:error, term()})
 
   @spec get_handlers() :: {:ok, [Handler.t()]}
-  def get_handlers() do
+  def get_handlers do
     {:ok,
      Cachex.execute!(cache_name(), fn cache ->
        Cachex.keys!(cache) |> Enum.map(&Cachex.get!(cache, &1))

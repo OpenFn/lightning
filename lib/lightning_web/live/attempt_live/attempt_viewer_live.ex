@@ -1,13 +1,11 @@
 defmodule LightningWeb.AttemptLive.AttemptViewerLive do
   use LightningWeb, {:live_view, container: {:div, []}}
+  use LightningWeb.AttemptLive.Streaming, chunk_size: 100
 
   import LightningWeb.AttemptLive.Components
+
   alias LightningWeb.Components.Viewers
-
   alias Phoenix.LiveView.AsyncResult
-  alias LightningWeb.AttemptLive.Streaming
-
-  use Streaming, chunk_size: 100
 
   @impl true
   def render(assigns) do
@@ -125,10 +123,13 @@ defmodule LightningWeb.AttemptLive.AttemptViewerLive do
             </Common.tab_bar>
 
             <div class="min-h-0 grow flex overflow-auto">
-              <Common.panel_content for_hash="log" class="grow overflow-auto">
+              <Common.panel_content
+                for_hash="log"
+                class="grow overflow-auto rounded-md shadow-sm bg-slate-700 border-slate-300"
+              >
                 <Viewers.log_viewer
                   id={"attempt-log-#{attempt.id}"}
-                  class="overflow-auto h-full"
+                  class="overflow-auto"
                   highlight_id={@selected_run_id}
                   stream={@streams.log_lines}
                 />

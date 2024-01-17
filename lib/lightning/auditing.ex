@@ -4,9 +4,9 @@ defmodule Lightning.Auditing do
   """
 
   import Ecto.Query
-  alias Lightning.Repo
-  alias Lightning.Auditing.Audit
   alias Lightning.Accounts.User
+  alias Lightning.Auditing.Audit
+  alias Lightning.Repo
 
   def list_all(params \\ %{}) do
     from(a in Audit,

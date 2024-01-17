@@ -3,8 +3,10 @@ defmodule LightningWeb.AuditLive.Index do
   LiveView for listing Audit events
   """
   use LightningWeb, :live_view
+
   alias Lightning.Auditing
-  alias Lightning.Policies.{Users, Permissions}
+  alias Lightning.Policies.Permissions
+  alias Lightning.Policies.Users
 
   @impl true
   def mount(_params, _session, socket) do

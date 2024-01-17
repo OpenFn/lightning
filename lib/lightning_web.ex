@@ -117,21 +117,21 @@ defmodule LightningWeb do
 
       import LightningWeb.FormHelpers
       import LightningWeb.Gettext
-      alias LightningWeb.Router.Helpers, as: Routes
 
       import PetalComponents.Avatar
+      import PetalComponents.Badge
       import PetalComponents.Card
       import PetalComponents.Dropdown
       import PetalComponents.Table
-      import PetalComponents.Typography
-      import PetalComponents.Badge
       import PetalComponents.Tabs
+      import PetalComponents.Typography
 
       alias LightningWeb.Components
-      alias Components.Layout
-      alias Components.Settings
-      alias Components.Common
-      alias Components.Icon
+      alias LightningWeb.Components.Common
+      alias LightningWeb.Components.Icon
+      alias LightningWeb.Components.Layout
+      alias LightningWeb.Components.Settings
+      alias LightningWeb.Router.Helpers, as: Routes
 
       import LightningWeb.Components.Pills
 

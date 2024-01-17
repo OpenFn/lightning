@@ -4,8 +4,6 @@ defmodule LightningWeb.AttemptChannel do
   """
   use LightningWeb, :channel
 
-  require Jason.Helpers
-
   alias Lightning.Attempts
   alias Lightning.Credentials
   alias Lightning.Repo
@@ -13,6 +11,7 @@ defmodule LightningWeb.AttemptChannel do
   alias Lightning.Workers
   alias LightningWeb.AttemptJson
 
+  require Jason.Helpers
   require Logger
 
   @impl true

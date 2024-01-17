@@ -1,10 +1,10 @@
 defmodule LightningWeb.WorkflowLive.WebhookAuthMethodFormComponent do
   @moduledoc false
 
-  alias Lightning.Projects.Project
   use LightningWeb, :live_component
 
   alias Lightning.Accounts
+  alias Lightning.Projects.Project
   alias Lightning.WebhookAuthMethods
   alias Lightning.Workflows.WebhookAuthMethod
   alias Phoenix.LiveView.JS

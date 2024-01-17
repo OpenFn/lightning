@@ -1,16 +1,15 @@
 defmodule Lightning.Runtime.RuntimeManager do
-  # https://registry.npmjs.org/lightning-runtime/latest
-  @latest_version "0.1.0"
-
   @moduledoc """
   Locates and runs the Runtime server. Added in order to ease development and default installations of Lightning
+
+  # https://registry.npmjs.org/lightning-runtime/latest
 
   ## Runtime configuration
 
   Sample:
 
     config :lightining, #{__MODULE__},
-      version: "#{@latest_version}",
+      version: "0.1.0",
       start: true,
       args: ~w(js/app.js --bundle --target=es2016 --outdir=../priv/static/assets),
       cd: Path.expand("../assets", __DIR__),
@@ -29,9 +28,11 @@ defmodule Lightning.Runtime.RuntimeManager do
 
   Overriding the `:path` is not recommended, as we will automatically
   download and manage the `runtime` for you.
-
-
   """
+
+  use GenServer, restart: :transient, shutdown: 10_000
+  require Logger
+
   defmodule Config do
     @moduledoc false
 
@@ -113,15 +114,13 @@ defmodule Lightning.Runtime.RuntimeManager do
     @callback stop_runtime(state :: map()) :: any()
   end
 
-  use GenServer, restart: :transient, shutdown: 10_000
-  require Logger
-
   defstruct runtime_port: nil,
             runtime_os_pid: nil,
             runtime_client: __MODULE__,
             buffer: [],
             config: nil
 
+  # credo:disable-for-next-line
   @behaviour RuntimeClient
 
   def start_link(args) do

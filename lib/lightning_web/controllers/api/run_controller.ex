@@ -1,11 +1,11 @@
 defmodule LightningWeb.API.RunController do
   use LightningWeb, :controller
 
-  alias Lightning.Repo
-  alias Lightning.Projects.Project
+  alias Lightning.Invocation
   alias Lightning.Policies.Permissions
   alias Lightning.Policies.ProjectUsers
-  alias Lightning.Invocation
+  alias Lightning.Projects.Project
+  alias Lightning.Repo
 
   action_fallback LightningWeb.FallbackController
 

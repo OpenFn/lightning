@@ -1,8 +1,10 @@
 defmodule LightningWeb.DashboardLive.Index do
   @moduledoc false
   use LightningWeb, :live_view
+
+  alias Lightning.Policies.Permissions
+  alias Lightning.Policies.ProjectUsers
   alias Lightning.Projects
-  alias Lightning.Policies.{Permissions, ProjectUsers}
 
   on_mount {LightningWeb.Hooks, :project_scope}
 

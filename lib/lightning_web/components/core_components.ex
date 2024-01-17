@@ -7,9 +7,9 @@ defmodule LightningWeb.CoreComponents do
   # a better position to conform the more recent Phoenix conventions.
   # use Phoenix.HTML
 
-  alias Phoenix.LiveView.JS
-
   import LightningWeb.Components.NewInputs
+
+  alias Phoenix.LiveView.JS
 
   @doc ~S"""
   Renders a table with generic styling.

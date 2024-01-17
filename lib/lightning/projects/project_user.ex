@@ -3,11 +3,12 @@ defmodule Lightning.Projects.ProjectUser do
   Join table to assign users to a project
   """
   use Ecto.Schema
+
   import Ecto.Changeset
   import EctoEnum
 
-  alias Lightning.Projects.Project
   alias Lightning.Accounts.User
+  alias Lightning.Projects.Project
 
   @type t :: %__MODULE__{
           __meta__: Ecto.Schema.Metadata.t(),

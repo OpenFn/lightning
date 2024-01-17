@@ -2,8 +2,8 @@ defmodule LightningWeb.WorkflowLive.Components do
   @moduledoc false
   use LightningWeb, :component
 
-  alias LightningWeb.Components.Form
   alias Lightning.Workflows.Trigger
+  alias LightningWeb.Components.Form
   alias Phoenix.LiveView.JS
 
   attr :socket, :map, required: true

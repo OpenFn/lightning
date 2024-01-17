@@ -16,11 +16,12 @@ defmodule Lightning.Workflows.Job do
     being the default).
   """
   use Ecto.Schema
+
   import Ecto.Changeset
 
   alias Lightning.Credentials.Credential
+  alias Lightning.Projects.ProjectCredential
   alias Lightning.Workflows.Workflow
-  alias Lightning.Projects.{ProjectCredential}
 
   @type t :: %__MODULE__{
           __meta__: Ecto.Schema.Metadata.t(),

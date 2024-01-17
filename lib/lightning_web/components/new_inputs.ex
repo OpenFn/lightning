@@ -3,9 +3,9 @@ defmodule LightningWeb.Components.NewInputs do
   A temporary module that will serve as a place to put new inputs that conform
   with the newer CoreComponents conventions introduced in Phoenix 1.7.
   """
-  alias Phoenix.LiveView.JS
-
   use Phoenix.Component
+
+  alias Phoenix.LiveView.JS
 
   @doc """
   Renders a button.

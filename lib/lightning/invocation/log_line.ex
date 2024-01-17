@@ -11,13 +11,14 @@ defmodule Lightning.Invocation.LogLine do
   See [`LogMessage`](`Lightning.LogMessage`) for more information.
   """
   use Ecto.Schema
+
   import Ecto.Changeset
 
   alias Lightning.Attempt
   alias Lightning.Invocation.Run
   alias Lightning.LogMessage
-  alias Lightning.UnixDateTime
   alias Lightning.Scrubber
+  alias Lightning.UnixDateTime
 
   @type t :: %__MODULE__{
           __meta__: Ecto.Schema.Metadata.t(),

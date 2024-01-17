@@ -5,6 +5,7 @@ defmodule LightningWeb.RunLive.Index do
   use LightningWeb, :live_view
 
   import Ecto.Changeset, only: [get_change: 2]
+
   alias Lightning.Invocation
   alias Lightning.Invocation.Run
   alias Lightning.Policies.Permissions
@@ -13,9 +14,8 @@ defmodule LightningWeb.RunLive.Index do
   alias Lightning.WorkOrders.Events
   alias Lightning.WorkOrders.SearchParams
   alias LightningWeb.RunLive.Components
-
-  alias Phoenix.LiveView.JS
   alias Phoenix.LiveView.AsyncResult
+  alias Phoenix.LiveView.JS
 
   @filters_types %{
     search_term: :string,
@@ -105,7 +105,7 @@ defmodule LightningWeb.RunLive.Index do
      )}
   end
 
-  defp init_filters(),
+  defp init_filters,
     do: %{
       "workflow_id" => "",
       "search_term" => "",
@@ -193,7 +193,7 @@ defmodule LightningWeb.RunLive.Index do
   Takes a changeset used for querying workorders and checks to see if the given
   filter is present in that changeset. Returns true or false.
   """
-  def is_checked(changeset, id) do
+  def checked?(changeset, id) do
     case Ecto.Changeset.fetch_field(changeset, id) do
       value when value in [{:changes, true}] ->
         true

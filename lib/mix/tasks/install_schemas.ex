@@ -46,7 +46,7 @@ defmodule Mix.Tasks.Lightning.InstallSchemas do
     end
   end
 
-  defp schemas_path() do
+  defp schemas_path do
     Application.get_env(:lightning, :schemas_path)
   end
 

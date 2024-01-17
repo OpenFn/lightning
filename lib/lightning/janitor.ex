@@ -16,9 +16,8 @@ defmodule Lightning.Janitor do
     max_attempts: 10,
     unique: [period: 55]
 
+  alias Lightning.Attempts
   alias Lightning.Repo
-  alias Lightning.Attempts
-  alias Lightning.Attempts
 
   @doc """
   The perform function takes an `%Oban.Job`, allowing this module to be invoked

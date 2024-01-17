@@ -123,13 +123,13 @@ defmodule Lightning.CredentialsTest do
       end
 
       # no more project_credentials
-      assert length(
+      assert Enum.empty?(
                Lightning.Projects.list_project_credentials(
                  %Lightning.Projects.Project{
                    id: project_credential.project_id
                  }
                )
-             ) == 0
+             )
 
       job = Repo.get!(Lightning.Workflows.Job, job.id)
 

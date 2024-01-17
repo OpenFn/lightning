@@ -1,11 +1,11 @@
 defmodule LightningWeb.Components.CredentialDeletionModal do
   @moduledoc false
-  alias Lightning.Credentials.Credential
-  use LightningWeb, :component
 
+  use LightningWeb, :component
   use Phoenix.LiveComponent
 
   alias Lightning.Credentials
+  alias Lightning.Credentials.Credential
 
   @impl true
   def update(

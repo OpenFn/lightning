@@ -4,10 +4,13 @@ defmodule Lightning.WorkOrder do
   """
 
   use Ecto.Schema
+
   import Ecto.Changeset
-  alias Lightning.Workflows.{Workflow, Trigger}
+
+  alias Lightning.Attempt
   alias Lightning.Invocation.Dataclip
-  alias Lightning.{Attempt}
+  alias Lightning.Workflows.Trigger
+  alias Lightning.Workflows.Workflow
 
   require Attempt
 
@@ -47,7 +50,7 @@ defmodule Lightning.WorkOrder do
     timestamps(type: :utc_datetime_usec)
   end
 
-  def new() do
+  def new do
     change(%__MODULE__{}, %{id: Ecto.UUID.generate()})
     |> validate()
   end

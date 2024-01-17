@@ -25,10 +25,12 @@ defmodule LightningWeb.CredentialLive.GoogleSheetsComponent do
     back up to update the form.
   """
   use LightningWeb, :live_component
-  require Logger
+
+  import LightningWeb.OauthCredentialHelper
 
   alias Lightning.AuthProviders.Google
-  import LightningWeb.OauthCredentialHelper
+
+  require Logger
 
   attr :form, :map, required: true
   attr :id, :string, required: true
@@ -462,7 +464,7 @@ defmodule LightningWeb.CredentialLive.GoogleSheetsComponent do
     end
   end
 
-  defp build_client() do
+  defp build_client do
     Google.build_client(
       callback_url: LightningWeb.RouteHelpers.oidc_callback_url()
     )
