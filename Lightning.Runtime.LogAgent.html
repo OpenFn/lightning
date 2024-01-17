@@ -13,7 +13,7 @@
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-EPF2X7PV.js"></script>
-    <script src="dist/sidebar_items-61FE0B88.js"></script>
+    <script src="dist/sidebar_items-42BDF21E.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -138,9 +138,9 @@ Pages
 
   <section id="moduledoc">
 <p>Agent facility to consume STDOUT/STDERR byte by byte.</p><p>Since it works on a byte by byte basis, you will need to perform line-splitting
-yourself.</p><p>Usage:</p><pre><code class="makeup elixir" translate="no"><span class="p" data-group-id="9286287396-1">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="n">log</span><span class="p" data-group-id="9286287396-1">}</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">LogAgent</span><span class="o">.</span><span class="n">start_link</span><span class="p" data-group-id="9286287396-2">(</span><span class="p" data-group-id="9286287396-2">)</span><span class="w">
-</span><span class="s">&quot;foo&quot;</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">LogAgent</span><span class="o">.</span><span class="n">process_chunk</span><span class="p" data-group-id="9286287396-3">(</span><span class="n">log</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="9286287396-4">{</span><span class="ss">:stdout</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;foo&quot;</span><span class="p" data-group-id="9286287396-4">}</span><span class="p" data-group-id="9286287396-3">)</span><span class="w">
-</span><span class="s">&quot;foobar&quot;</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">LogAgent</span><span class="o">.</span><span class="n">process_chunk</span><span class="p" data-group-id="9286287396-5">(</span><span class="n">log</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="9286287396-6">{</span><span class="ss">:stdout</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;bar&quot;</span><span class="p" data-group-id="9286287396-6">}</span><span class="p" data-group-id="9286287396-5">)</span></code></pre>
+yourself.</p><p>Usage:</p><pre><code class="makeup elixir" translate="no"><span class="p" data-group-id="4841813217-1">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="n">log</span><span class="p" data-group-id="4841813217-1">}</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">LogAgent</span><span class="o">.</span><span class="n">start_link</span><span class="p" data-group-id="4841813217-2">(</span><span class="p" data-group-id="4841813217-2">)</span><span class="w">
+</span><span class="s">&quot;foo&quot;</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">LogAgent</span><span class="o">.</span><span class="n">process_chunk</span><span class="p" data-group-id="4841813217-3">(</span><span class="n">log</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="4841813217-4">{</span><span class="ss">:stdout</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;foo&quot;</span><span class="p" data-group-id="4841813217-4">}</span><span class="p" data-group-id="4841813217-3">)</span><span class="w">
+</span><span class="s">&quot;foobar&quot;</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">LogAgent</span><span class="o">.</span><span class="n">process_chunk</span><span class="p" data-group-id="4841813217-5">(</span><span class="n">log</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="4841813217-6">{</span><span class="ss">:stdout</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;bar&quot;</span><span class="p" data-group-id="4841813217-6">}</span><span class="p" data-group-id="4841813217-5">)</span></code></pre>
   </section>
 
 
@@ -226,7 +226,7 @@ yourself.</p><p>Usage:</p><pre><code class="makeup elixir" translate="no"><span 
     </a>
     <h1 class="signature" translate="no">logline()</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runtime/log_agent.ex#L16" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runtime/log_agent.ex#L18" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -289,7 +289,7 @@ yourself.</p><p>Usage:</p><pre><code class="makeup elixir" translate="no"><span 
     </a>
     <h1 class="signature" translate="no">child_spec(arg)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runtime/log_agent.ex#L91" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runtime/log_agent.ex#L16" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>

@@ -13,7 +13,7 @@
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-EPF2X7PV.js"></script>
-    <script src="dist/sidebar_items-61FE0B88.js"></script>
+    <script src="dist/sidebar_items-42BDF21E.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -155,6 +155,17 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
+        <a href="#checked?/2" translate="no">checked?(changeset, id)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Takes a changeset used for querying workorders and checks to see if the given
+filter is present in that changeset. Returns true or false.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
         <a href="#filters_changeset/1" translate="no">filters_changeset(params)</a>
 
       </div>
@@ -185,17 +196,6 @@ add it to the top of the page. If not, nothing happens.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#is_checked/2" translate="no">is_checked(changeset, id)</a>
-
-      </div>
-
-        <div class="summary-synopsis"><p>Takes a changeset used for querying workorders and checks to see if the given
-filter is present in that changeset. Returns true or false.</p></div>
-
-    </div>
-
-    <div class="summary-row">
-      <div class="summary-signature">
         <a href="#render/1" translate="no">render(assigns)</a>
 
       </div>
@@ -217,6 +217,29 @@ filter is present in that changeset. Returns true or false.</p></div>
       <span class="text">Functions</span>
     </h1>
     <div class="functions-list">
+<section class="detail" id="checked?/2">
+
+  <div class="detail-header">
+    <a href="#checked?/2" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">checked?(changeset, id)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/run_live/index.ex#L196" class="icon-action" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+<p>Takes a changeset used for querying workorders and checks to see if the given
+filter is present in that changeset. Returns true or false.</p>
+  </section>
+</section>
 <section class="detail" id="filters_changeset/1">
 
   <div class="detail-header">
@@ -283,29 +306,6 @@ filter is present in that changeset. Returns true or false.</p></div>
 <p>When a WorkOrderCreated event is detected, we first check to see if the new
 work order is admissible on the page, given the current filters. If it is, we
 add it to the top of the page. If not, nothing happens.</p>
-  </section>
-</section>
-<section class="detail" id="is_checked/2">
-
-  <div class="detail-header">
-    <a href="#is_checked/2" class="detail-link" title="Link to this function">
-      <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
-    </a>
-    <h1 class="signature" translate="no">is_checked(changeset, id)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/run_live/index.ex#L196" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
-
-
-  </div>
-
-  <section class="docstring">
-
-<p>Takes a changeset used for querying workorders and checks to see if the given
-filter is present in that changeset. Returns true or false.</p>
   </section>
 </section>
 <section class="detail" id="render/1">
