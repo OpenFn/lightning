@@ -72,7 +72,7 @@ defmodule LightningWeb.AttemptLive.AttemptViewerLive do
                 </:value>
               </.list_item>
               <.list_item>
-                <:label>Status</:label>
+                <:label>Result</:label>
                 <:value><.state_pill state={attempt.state} /></:value>
               </.list_item>
             </.detail_list>
