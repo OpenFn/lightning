@@ -1,7 +1,9 @@
 defmodule LightningWeb.AttemptLive.Streaming do
   import Phoenix.Component, only: [assign: 2, changed?: 2]
   import Phoenix.LiveView
+  import Ecto.Query
 
+  alias Lightning.AttemptRun
   alias Lightning.Attempts
   alias Lightning.Credentials
   alias Lightning.Invocation.Dataclip
@@ -139,19 +141,41 @@ defmodule LightningWeb.AttemptLive.Streaming do
     end)
   end
 
-  defp maybe_scrub(body_str, :run_result, %Run{credential_id: credential_id})
-       when is_binary(credential_id) do
-    credential = Credentials.get_credential!(credential_id)
-    samples = Credentials.sensitive_values_for(credential)
-    basic_auth = Credentials.basic_auth_for(credential)
-
-    {:ok, scrubber} =
-      Scrubber.start_link(
-        samples: samples,
-        basic_auth: basic_auth
+  defp maybe_scrub(body_str, :run_result, %Run{
+         id: run_id,
+         started_at: started_at
+       }) do
+    attempt_run =
+      from(ar in AttemptRun,
+        where: ar.run_id == ^run_id,
+        select: ar.attempt_id
       )
 
-    Scrubber.scrub(scrubber, body_str)
+    from(ar in AttemptRun,
+      join: r in assoc(ar, :run),
+      join: j in assoc(r, :job),
+      join: c in assoc(j, :credential),
+      where: ar.attempt_id in subquery(attempt_run),
+      where: r.started_at <= ^started_at,
+      select: c
+    )
+    |> Repo.all()
+    |> case do
+      [] ->
+        body_str
+
+      credentials ->
+        {:ok, scrubber} = Scrubber.start_link([])
+
+        credentials
+        |> Enum.reduce(scrubber, fn credential, scrubber ->
+          samples = Credentials.sensitive_values_for(credential)
+          basic_auth = Credentials.basic_auth_for(credential)
+          :ok = Scrubber.add_samples(scrubber, samples, basic_auth)
+          scrubber
+        end)
+        |> Scrubber.scrub(body_str)
+    end
   end
 
   defp maybe_scrub(body_str, _type, _run), do: body_str

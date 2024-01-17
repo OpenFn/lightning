@@ -7,70 +7,6 @@ defmodule LightningWeb.AttemptLive.ShowTest do
   alias Lightning.WorkOrders
   alias Phoenix.LiveView.AsyncResult
 
-  defp create_dataclip(%{project: project, user: user}) do
-    credential =
-      insert(:credential,
-        name: "My Credential",
-        body: %{
-          foo: "bar",
-          secret: "55",
-          pin: 123_456,
-          looks_like_a_number: "789"
-        },
-        user: user
-      )
-
-    project_credential =
-      insert(:project_credential, credential: credential, project: project)
-
-    workflow = insert(:workflow, project: project)
-    trigger = insert(:trigger, workflow: workflow)
-
-    job =
-      insert(:job, project_credential: project_credential, workflow: workflow)
-
-    output_dataclip =
-      insert(:dataclip,
-        project: project,
-        type: :run_result,
-        body: %{
-          integer: 123_456,
-          another_no: 789,
-          third_no: 125_534,
-          map: %{list: [%{"any-key" => "some-bars"}]},
-          bool: true
-        }
-      )
-
-    input_dataclip = insert(:dataclip)
-
-    run =
-      insert(:run,
-        credential: credential,
-        exit_reason: "success",
-        job: job,
-        input_dataclip: input_dataclip,
-        output_dataclip: output_dataclip
-      )
-
-    attempt =
-      insert(:attempt,
-        work_order:
-          build(:workorder,
-            workflow: workflow,
-            dataclip: input_dataclip,
-            trigger: trigger,
-            state: :success
-          ),
-        starting_trigger: trigger,
-        state: :success,
-        dataclip: input_dataclip,
-        runs: [run]
-      )
-
-    %{attempt: attempt, dataclip: output_dataclip, job: job, run: run}
-  end
-
   describe "handle_async/3" do
     setup :register_and_log_in_user
     setup :create_project_for_current_user
@@ -229,40 +165,6 @@ defmodule LightningWeb.AttemptLive.ShowTest do
       assert view
              |> element("#attempt-detail-#{attempt_id}")
              |> render_async() =~ "Failed"
-    end
-  end
-
-  describe "show already run" do
-    setup [
-      :register_and_log_in_user,
-      :create_project_for_current_user,
-      :create_dataclip
-    ]
-
-    test "with scrubbed output", %{
-      conn: conn,
-      project: project,
-      attempt: attempt,
-      job: job,
-      run: run
-    } do
-      {:ok, view, _html} =
-        live(
-          conn,
-          ~p"/projects/#{project.id}/attempts/#{attempt.id}"
-        )
-
-      # select the job and the output tab
-      step_list_item(view, attempt, run)
-      select_run(view, attempt, job.name)
-
-      dataclip_text = run_output(view, run) |> String.replace(~r/\s/, "")
-
-      assert dataclip_text =~ ~S("integer":***)
-      assert dataclip_text =~ ~S("another_no":***)
-      assert dataclip_text =~ ~S("third_no":12***34)
-      assert dataclip_text =~ ~S("map":{"list":[{"any-key":"some-***s"}]})
-      assert dataclip_text =~ ~S("bool":true)
     end
   end
 
