@@ -109,6 +109,9 @@ defmodule Lightning.Runtime.RuntimeManager do
   end
 
   defmodule RuntimeClient do
+    @moduledoc """
+    Behaviour for runtime clients to improve testability.
+    """
     @callback start_runtime(state :: map()) :: state :: map()
 
     @callback stop_runtime(state :: map()) :: any()

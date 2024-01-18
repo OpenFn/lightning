@@ -1,4 +1,10 @@
 defmodule Lightning.Attempts.PromExPlugin do
+  @moduledoc """
+  Metrics callbacks implementation for the PromEx plugin.
+
+  Event metrics are used to publish the dispatched events in the system.
+  Polling metrics are used to publish metrics that are calculated by polling data periodically.
+  """
   use PromEx.Plugin
 
   import Ecto.Query

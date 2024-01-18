@@ -12,6 +12,9 @@ defmodule Lightning.Attempts.Handlers do
   alias Lightning.WorkOrders
 
   defmodule StartRun do
+    @moduledoc """
+    Schema to validate the input attributes of a started run.
+    """
     use Ecto.Schema
     import Ecto.Changeset
     import Ecto.Query
@@ -133,6 +136,9 @@ defmodule Lightning.Attempts.Handlers do
   end
 
   defmodule CompleteRun do
+    @moduledoc """
+    Schema to validate the input attributes of a completed run.
+    """
     use Ecto.Schema
     import Ecto.Changeset
     import Ecto.Query

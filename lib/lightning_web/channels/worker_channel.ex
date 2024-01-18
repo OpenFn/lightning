@@ -1,4 +1,7 @@
 defmodule LightningWeb.WorkerChannel do
+  @moduledoc """
+  Websocket channel to handle when workers join or claim something to run.
+  """
   use LightningWeb, :channel
 
   alias Lightning.Attempts
