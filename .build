@@ -142,9 +142,8 @@ LightningWeb.CredentialLive.Index.html
 LightningWeb.CredentialLive.JsonSchemaBodyComponent.html
 LightningWeb.CredentialLive.RawBodyComponent.html
 LightningWeb.CredentialLive.TypePicker.html
-LightningWeb.DataclipLive.Edit.html
 LightningWeb.DataclipLive.FormComponent.html
-LightningWeb.DataclipLive.Index.html
+LightningWeb.DataclipLive.Show.html
 LightningWeb.DownloadsController.html
 LightningWeb.Endpoint.html
 LightningWeb.ErrorView.html
@@ -243,8 +242,8 @@ dist/merriweather-latin-ext-300-normal-K6L27CZ5.woff2
 dist/merriweather-vietnamese-300-italic-EHHNZPUO.woff2
 dist/merriweather-vietnamese-300-normal-U376L4Z4.woff2
 dist/remixicon-NKANDIL5.woff2
-dist/search_data-85D2AD09.js
-dist/sidebar_items-47069354.js
+dist/search_data-6EFC68BF.js
+dist/sidebar_items-1115FD7C.js
 index.html
 provisioning.html
 readme.html
