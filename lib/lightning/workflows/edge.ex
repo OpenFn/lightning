@@ -115,25 +115,16 @@ defmodule Lightning.Workflows.Edge do
   defp validate_condition_expression(changeset) do
     js_expr = get_field(changeset, :condition_expression)
 
-    cond do
-      String.match?(js_expr, ~r/(import|require)(\(|\{| )/) ->
-        add_error(
-          changeset,
-          :condition_expression,
-          "must not contain import or require statements"
-        )
-
-      String.match?(js_expr, ~r/(;|{)/) ->
-        add_error(
-          changeset,
-          :condition_expression,
-          "must not contain a statement"
-        )
-
-      true ->
-        changeset
-        |> validate_length(:condition_label, max: 255)
-        |> validate_length(:condition_expression, max: 255)
+    if String.match?(js_expr, ~r/(import\b|require\b|process\b|await\b|eval\b)/) do
+      add_error(
+        changeset,
+        :condition_expression,
+        "contains unacceptable words"
+      )
+    else
+      changeset
+      |> validate_length(:condition_label, max: 255)
+      |> validate_length(:condition_expression, max: 255)
     end
   end
 
@@ -151,7 +142,7 @@ defmodule Lightning.Workflows.Edge do
           "target_job_id must be different from source_job_id"
         )
 
-      _ ->
+      _else ->
         changeset
     end
   end
