@@ -276,7 +276,8 @@ defmodule Lightning.Workflows.EdgeTest do
         )
 
       assert changeset.errors == [
-               condition_expression: {"must not contain a statement", []}
+               condition_expression:
+                 {"must contain a single, inline Javascript statement (no ';' or '{')", []}
              ]
 
       changeset =
@@ -290,7 +291,8 @@ defmodule Lightning.Workflows.EdgeTest do
         )
 
       assert changeset.errors == [
-               condition_expression: {"must not contain a statement", []}
+               condition_expression:
+                 {"must contain a single, inline Javascript statement (no ';' or '{')", []}
              ]
 
       changeset =

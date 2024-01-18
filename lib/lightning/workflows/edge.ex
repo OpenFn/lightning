@@ -127,7 +127,7 @@ defmodule Lightning.Workflows.Edge do
         add_error(
           changeset,
           :condition_expression,
-          "must only contain a Javascript statement"
+          "must contain a single, inline Javascript statement (no ';' or '{')"
         )
 
       true ->
