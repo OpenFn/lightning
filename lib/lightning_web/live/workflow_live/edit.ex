@@ -684,7 +684,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
     with true <- can_edit_job || :not_authorized,
          true <- !has_child_edges?(changeset, id) || :has_child_edges,
-         true <- !is_first_job?(changeset, id) || :is_first_job do
+         true <- !first_job?(changeset, id) || :is_first_job do
       deletion_date = Workflows.scheduled_deletion_date()
 
       edges_to_delete =
