@@ -57,8 +57,7 @@ defmodule LightningWeb.WorkflowNewLive.WorkflowParams do
   introduced by a changeset.
   """
   def to_patches(initial_params, target_params) do
-    Jsonpatch.diff(initial_params, target_params)
-    |> Jsonpatch.Mapper.to_map()
+    Jsonpatch.diff(initial_params, target_params) |> Jsonpatch.Mapper.to_map()
   end
 
   @doc """
@@ -81,13 +80,13 @@ defmodule LightningWeb.WorkflowNewLive.WorkflowParams do
         jobs:
           changeset
           |> Ecto.Changeset.get_assoc(:jobs)
-          |> Enum.reject(&match?(%{action: :replace}, &1))
           |> to_serializable([
             :id,
             :name,
             :adaptor,
             :body,
-            :project_credential_id
+            :project_credential_id,
+            :scheduled_deletion
           ]),
         triggers:
           changeset
@@ -102,7 +101,6 @@ defmodule LightningWeb.WorkflowNewLive.WorkflowParams do
         edges:
           changeset
           |> Ecto.Changeset.get_assoc(:edges)
-          |> Enum.reject(&match?(%{action: :replace}, &1))
           |> to_serializable([
             :id,
             :source_trigger_id,
@@ -110,7 +108,8 @@ defmodule LightningWeb.WorkflowNewLive.WorkflowParams do
             :enabled,
             :condition_type,
             :condition_label,
-            :target_job_id
+            :target_job_id,
+            :scheduled_deletion
           ])
       }
     )
