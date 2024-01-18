@@ -76,7 +76,9 @@ defmodule Lightning.MetadataService do
         {:error, Error.new("no_credential")}
 
       {adaptor_path, %Credential{body: credential_body}} ->
-        {:ok, {adaptor_path, %{"configuration" => credential_body}}}
+        {:ok,
+         {adaptor_path,
+          %{"configuration" => Lightning.RedactedMap.new(credential_body)}}}
     end
   end
 
