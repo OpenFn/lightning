@@ -1,9 +1,6 @@
 msgid "can't be blank"
 msgstr "This field can't be blank."
 
-msgid "has already been taken"
-msgstr "This email address already exists."
-
 msgid "should be at least %{count} character(s)"
 msgid_plural "should be at least %{count} character(s)"
 msgstr[0] "Password minimum length is %{count} characters."
