@@ -29,9 +29,9 @@ defmodule Lightning.Workflows.Workflow do
   schema "workflows" do
     field :name, :string
 
-    has_many :edges, Edge, on_replace: :delete_if_exists
+    has_many :edges, Edge
 
-    has_many :jobs, Job, on_replace: :delete
+    has_many :jobs, Job
     has_many :triggers, Trigger
 
     has_many :work_orders, Lightning.WorkOrder
