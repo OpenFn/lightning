@@ -1,4 +1,5 @@
 defmodule Lightning.JobsTest do
+  alias Lightning.Workflows.Workflow
   use Lightning.DataCase, async: true
 
   alias Lightning.Attempt
@@ -71,6 +72,15 @@ defmodule Lightning.JobsTest do
       end
 
       assert Jobs.get_job_with_credential(Ecto.UUID.generate()) == nil
+    end
+
+    test "returns the job with the given id and its associated workflow" do
+      %{id: job_id} = insert(:job, workflow: build(:workflow))
+
+      job = Jobs.get_job(job_id)
+      assert %Job{id: ^job_id, workflow: %Workflow{}} = job
+
+      assert Jobs.get_job(Ecto.UUID.generate()) == nil
     end
 
     test "change_job/1 returns a job changeset" do

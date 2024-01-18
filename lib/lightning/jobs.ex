@@ -116,6 +116,34 @@ defmodule Lightning.Jobs do
   """
   def get_job!(id), do: Repo.get!(Job |> preload([:workflow]), id)
 
+  @doc """
+  Retrieves a job from the database by its ID, with associated workflow data preloaded.
+
+  ## Parameters
+
+    - `id`: The unique identifier of the job to retrieve.
+
+  ## Returns
+
+  Returns the job with the given ID with its associated workflow data preloaded if it exists; otherwise, returns `nil`.
+
+  ## Examples
+
+      iex> MyApp.get_job(123)
+      %MyApp.Job{
+        id: 123,
+        workflow: %MyApp.Workflow{...},
+        ...
+      }
+
+      iex> MyApp.get_job(999)
+      nil
+
+  This function is typically used when you need to access not only the job's data but also the data of the workflow associated with the job. By preloading the workflow, you avoid the N+1 query problem and ensure that the workflow data is immediately available for use without additional database queries.
+
+  """
+  def get_job(id), do: Repo.get(Job |> preload([:workflow]), id)
+
   def get_job_with_credential(id) do
     Repo.get(Job, id)
     |> Repo.preload(:credential)
