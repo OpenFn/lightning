@@ -60,6 +60,10 @@ defmodule Lightning.Helpers do
     data |> Map.from_struct() |> json_safe()
   end
 
+  def json_safe(%{microsecond: _} = map) do
+    Map.delete(map, :microsecond) |> json_safe()
+  end
+
   def json_safe(map) when is_map(map) do
     map
     |> Enum.map(fn {k, v} -> {json_safe(k), json_safe(v)} end)
