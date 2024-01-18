@@ -14,6 +14,9 @@ and this project adheres to
 
 ### Fixed
 
+- Fixed validation on Javascript edge conditions
+  [#1602](https://github.com/OpenFn/Lightning/issues/1602)
+
 ## [v2.0.0-rc3] 2024-01-12
 
 ### Added
