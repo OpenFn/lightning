@@ -14,15 +14,18 @@ and this project adheres to
   [#1606](https://github.com/OpenFn/Lightning/issues/1606)
 
 ### Changed
+
 - Do not persist the active tab setting on the job editor
   [#1504](https://github.com/OpenFn/Lightning/issues/1504)
 
 ### Fixed
+
 - Fix credential body getting leaked to sentry incase of errors
   [#1600](https://github.com/OpenFn/Lightning/issues/1600)
-
 - Fixed validation on Javascript edge conditions
   [#1602](https://github.com/OpenFn/Lightning/issues/1602)
+- Removed unused runlive code
+  [#1625](https://github.com/OpenFn/Lightning/issues/1625)
 
 ## [v2.0.0-rc3] 2024-01-12
 
