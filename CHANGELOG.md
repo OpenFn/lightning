@@ -10,6 +10,9 @@ and this project adheres to
 
 ### Added
 
+- Scrub output dataclips in the UI to avoid unintentional secret exposure
+  [#1606](https://github.com/OpenFn/Lightning/issues/1606)
+
 ### Changed
 
 ### Fixed

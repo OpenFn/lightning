@@ -1,9 +1,15 @@
 defmodule LightningWeb.AttemptLive.Streaming do
   import Phoenix.Component, only: [assign: 2, changed?: 2]
   import Phoenix.LiveView
+  import Ecto.Query
 
+  alias Lightning.AttemptRun
   alias Lightning.Attempts
+  alias Lightning.Credentials
+  alias Lightning.Invocation.Dataclip
+  alias Lightning.Invocation.Run
   alias Lightning.Repo
+  alias Lightning.Scrubber
   alias Phoenix.LiveView.AsyncResult
 
   @doc """
@@ -47,10 +53,11 @@ defmodule LightningWeb.AttemptLive.Streaming do
       nil ->
         []
 
-      dataclip = %{body: body} ->
-        {%{id: dataclip.id, run_id: run.id, type: dataclip.type},
+      %Dataclip{id: id, body: body, type: type} ->
+        {%{id: id, run_id: run.id, type: type},
          body
          |> Jason.encode!(pretty: true)
+         |> maybe_scrub(type, run)
          |> String.split("\n")
          |> Stream.with_index(1)
          |> Stream.map(fn {line, index} ->
@@ -133,6 +140,45 @@ defmodule LightningWeb.AttemptLive.Streaming do
       DateTime.compare(x.started_at, y.started_at) == :lt
     end)
   end
+
+  defp maybe_scrub(body_str, :run_result, %Run{
+         id: run_id,
+         started_at: started_at
+       }) do
+    attempt_run =
+      from(ar in AttemptRun,
+        where: ar.run_id == ^run_id,
+        select: ar.attempt_id
+      )
+
+    from(ar in AttemptRun,
+      join: r in assoc(ar, :run),
+      join: j in assoc(r, :job),
+      join: c in assoc(j, :credential),
+      where: ar.attempt_id in subquery(attempt_run),
+      where: r.started_at <= ^started_at,
+      select: c
+    )
+    |> Repo.all()
+    |> case do
+      [] ->
+        body_str
+
+      credentials ->
+        {:ok, scrubber} = Scrubber.start_link([])
+
+        credentials
+        |> Enum.reduce(scrubber, fn credential, scrubber ->
+          samples = Credentials.sensitive_values_for(credential)
+          basic_auth = Credentials.basic_auth_for(credential)
+          :ok = Scrubber.add_samples(scrubber, samples, basic_auth)
+          scrubber
+        end)
+        |> Scrubber.scrub(body_str)
+    end
+  end
+
+  defp maybe_scrub(body_str, _type, _run), do: body_str
 
   defp needs_dataclip_stream?(socket, assign) do
     selected_run_id = socket.assigns.selected_run_id
