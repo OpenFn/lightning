@@ -291,9 +291,6 @@ defmodule Lightning.Workflows.EdgeTest do
                condition_expression: {"contains unacceptable words", []}
              ]
 
-      # TODO: note that this valid expression isn't allowed. We should consider
-      # making this more relaxed later because it's not really a security, it's
-      # a way of explaining what we will and wont do to front-end users.
       changeset =
         Edge.changeset(
           edge,
@@ -301,6 +298,18 @@ defmodule Lightning.Workflows.EdgeTest do
             js_attrs,
             :condition_expression,
             "state.data.patient.status == 'processing'"
+          )
+        )
+
+      assert Enum.empty?(changeset.errors)
+
+      changeset =
+        Edge.changeset(
+          edge,
+          Map.put(
+            js_attrs,
+            :condition_expression,
+            "await state.data.myFunction();"
           )
         )
 
@@ -314,7 +323,7 @@ defmodule Lightning.Workflows.EdgeTest do
           Map.put(
             js_attrs,
             :condition_expression,
-            "await state.data.myFunction();"
+            "eval('2 + 2')"
           )
         )
 
