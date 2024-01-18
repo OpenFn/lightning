@@ -116,18 +116,11 @@ defmodule Lightning.Workflows.Edge do
     js_expr = get_field(changeset, :condition_expression)
 
     cond do
-      String.match?(js_expr, ~r/(import|require)(\(|\{| )/) ->
+      String.match?(js_expr, ~r/(import|require|process|await)(\(|\{| )/) ->
         add_error(
           changeset,
           :condition_expression,
-          "must not contain import or require statements"
-        )
-
-      String.match?(js_expr, ~r/(;|{)/) ->
-        add_error(
-          changeset,
-          :condition_expression,
-          "must contain a single, inline Javascript statement (no ';' or '{')"
+          "contains unacceptable words"
         )
 
       true ->

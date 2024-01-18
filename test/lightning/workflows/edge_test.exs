@@ -275,9 +275,20 @@ defmodule Lightning.Workflows.EdgeTest do
           )
         )
 
+      assert Enum.empty?(changeset.errors)
+
+      changeset =
+        Edge.changeset(
+          edge,
+          Map.put(
+            js_attrs,
+            :condition_expression,
+            "this.process()"
+          )
+        )
+
       assert changeset.errors == [
-               condition_expression:
-                 {"must contain a single, inline Javascript statement (no ';' or '{')", []}
+               condition_expression: {"contains unacceptable words", []}
              ]
 
       changeset =
@@ -286,13 +297,12 @@ defmodule Lightning.Workflows.EdgeTest do
           Map.put(
             js_attrs,
             :condition_expression,
-            "{ state.data.foo == 'bar' }"
+            "await state.data.myFunction();"
           )
         )
 
       assert changeset.errors == [
-               condition_expression:
-                 {"must contain a single, inline Javascript statement (no ';' or '{')", []}
+               condition_expression: {"contains unacceptable words", []}
              ]
 
       changeset =
@@ -305,7 +315,7 @@ defmodule Lightning.Workflows.EdgeTest do
           )
         )
 
-      assert changeset.errors == []
+      assert Enum.empty?(changeset.errors)
     end
 
     test "requires JS expression to have neither import or require statements" do
@@ -332,8 +342,7 @@ defmodule Lightning.Workflows.EdgeTest do
         )
 
       assert changeset.errors == [
-               condition_expression:
-                 {"must not contain import or require statements", []}
+               condition_expression: {"contains unacceptable words", []}
              ]
 
       changeset =
@@ -347,8 +356,7 @@ defmodule Lightning.Workflows.EdgeTest do
         )
 
       assert changeset.errors == [
-               condition_expression:
-                 {"must not contain import or require statements", []}
+               condition_expression: {"contains unacceptable words", []}
              ]
     end
   end
