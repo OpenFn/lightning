@@ -492,10 +492,6 @@ defmodule Lightning.Invocation do
           ^dynamic or
             ilike(type(log_line.message, :string), ^"%#{search_term}%")
         )
-
-      _other, dynamic ->
-        # Not a valid search field
-        dynamic
     end)
   end
 
@@ -513,9 +509,6 @@ defmodule Lightning.Invocation do
 
       :id, query ->
         safe_join_runs(query)
-
-      _other, query ->
-        query
     end)
   end
 
