@@ -179,8 +179,6 @@ LightningWeb.RouteHelpers.html
 LightningWeb.Router.html
 LightningWeb.RunLive.Index.html
 LightningWeb.RunLive.RerunJobComponent.html
-LightningWeb.RunLive.RunViewerLive.html
-LightningWeb.RunLive.Show.html
 LightningWeb.RunLive.WorkOrderComponent.html
 LightningWeb.Telemetry.html
 LightningWeb.TokensLive.Index.html
@@ -242,8 +240,8 @@ dist/merriweather-latin-ext-300-normal-K6L27CZ5.woff2
 dist/merriweather-vietnamese-300-italic-EHHNZPUO.woff2
 dist/merriweather-vietnamese-300-normal-U376L4Z4.woff2
 dist/remixicon-NKANDIL5.woff2
-dist/search_data-5D0A274D.js
-dist/sidebar_items-1115FD7C.js
+dist/search_data-B8AD0695.js
+dist/sidebar_items-D804BC33.js
 index.html
 provisioning.html
 readme.html
