@@ -1,6 +1,5 @@
 defmodule LightningWeb.WorkflowLive.Edit do
   @moduledoc false
-  alias Lightning.Jobs
   use LightningWeb, {:live_view, container: {:div, []}}
 
   import LightningWeb.Components.NewInputs
@@ -9,6 +8,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
   alias Lightning.Attempts
   alias Lightning.Attempts.Events.RunCompleted
   alias Lightning.Invocation
+  alias Lightning.Jobs
   alias Lightning.Policies.Permissions
   alias Lightning.Policies.ProjectUsers
   alias Lightning.Workflows
