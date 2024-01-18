@@ -29,6 +29,7 @@ export namespace Lightning {
   export interface JobNode extends Node {
     body?: string;
     adaptor?: string;
+    scheduled_deletion?: any;
   }
 
   export interface Edge {
@@ -43,6 +44,7 @@ export namespace Lightning {
     error_path?: boolean;
     errors: any;
     condition_label?: string;
+    scheduled_deletion?: any;
   }
 
   export type Workflow = {
