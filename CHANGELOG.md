@@ -14,6 +14,8 @@ and this project adheres to
   [#1606](https://github.com/OpenFn/Lightning/issues/1606)
 
 ### Changed
+- Do not persist the active tab setting on the job editor
+  [#1504](https://github.com/OpenFn/Lightning/issues/1504)
 
 ### Fixed
 - Fix credential body getting leaked to sentry incase of errors
