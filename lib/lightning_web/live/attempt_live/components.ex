@@ -242,7 +242,7 @@ defmodule LightningWeb.AttemptLive.Components do
         <% end %>
         <div class="flex text-sm space-x-1 text-gray-900">
           <%= @run.job.name %>
-          <%= if @show_inspector_link do %>
+          <%= if @show_inspector_link && !@run.job.scheduled_deletion do %>
             <.link navigate={
                 ~p"/projects/#{@project_id}/w/#{@run.job.workflow_id}"
                   <> "?a=#{@attempt_id}&m=expand&s=#{@run.job_id}"

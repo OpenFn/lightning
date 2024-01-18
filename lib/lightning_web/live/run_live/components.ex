@@ -107,24 +107,37 @@ defmodule LightningWeb.RunLive.Components do
               <%= if @can_rerun_job && @run.exit_reason do %>
                 <span
                   id={@run.id}
-                  class="text-indigo-400 hover:underline hover:underline-offset-2 hover:text-indigo-500 cursor-pointer"
-                  phx-click="rerun"
-                  phx-value-attempt_id={@attempt.id}
-                  phx-value-run_id={@run.id}
-                  title="Rerun workflow from here"
-                >
-                  rerun
-                </span>/
+                  class={
+                    if @run.job.scheduled_deletion,
+                      do: "text-indigo-300 hover:text-indigo-300 cursor-pointer",
+                      else:
+                        "text-indigo-400 hover:underline hover:underline-offset-2 hover:text-indigo-500 cursor-pointer"
+                  }
+                  {if @run.job.scheduled_deletion, do: [title: "This step has been deleted from the workflow"],
+                    else: ["phx-click": "rerun", "phx-value-attempt_id": @attempt.id,
+                      "phx-value-run_id": @run.id, title: "Rerun workflow from here"]}
+                >rerun</span>/
               <% end %>
-              <.link
-                class="text-indigo-400 hover:underline hover:underline-offset-2 hover:text-indigo-500 cursor-pointer"
-                navigate={
+              <%= if @run.job.scheduled_deletion do %>
+                <span
+                  class="text-indigo-300 hover:text-indigo-300 cursor-pointer"
+                  title="This step has been deleted from the workflow"
+                >
+                  inspect
+                </span>
+              <% else %>
+                <.link
+                  class="text-indigo-400 hover:underline hover:underline-offset-2 hover:text-indigo-500 cursor-pointer"
+                  navigate={
                 ~p"/projects/#{@project_id}/w/#{@run.job.workflow_id}"
                   <> "?a=#{@attempt.id}&m=expand&s=#{@run.job_id}"
+
               }
-              >
-                inspect
-              </.link>
+                  title="Inspect this step"
+                >
+                  inspect
+                </.link>
+              <% end %>
             </div>
           </div>
         </div>

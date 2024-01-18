@@ -1,5 +1,6 @@
 defmodule LightningWeb.WorkflowLive.Edit do
   @moduledoc false
+  alias Lightning.Jobs
   use LightningWeb, {:live_view, container: {:div, []}}
 
   import LightningWeb.Components.NewInputs
@@ -607,11 +608,34 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
   @impl true
   def handle_params(params, _url, socket) do
-    {:noreply,
-     apply_action(socket, socket.assigns.live_action, params)
-     |> apply_query_params(params)
-     |> maybe_show_manual_run()}
+    case quick_out(params) do
+      true ->
+        {:noreply, socket |> redirect(to: "/") |> put_flash(:nav, :not_found)}
+
+      false ->
+        {:noreply,
+         socket
+         |> apply_action(socket.assigns.live_action, params)
+         |> apply_query_params(params)
+         |> maybe_show_manual_run()}
+    end
   end
+
+  defp quick_out(%{"s" => selected_job_id}) do
+    selected_job_id
+    |> Jobs.get_job()
+    |> maybe_scheduled_for_deletion()
+  end
+
+  defp quick_out(_), do: false
+
+  defp maybe_scheduled_for_deletion(
+         %{scheduled_deletion: scheduled_deletion} = _job
+       )
+       when scheduled_deletion !== nil,
+       do: true
+
+  defp maybe_scheduled_for_deletion(_), do: false
 
   def apply_action(socket, :new, params) do
     if socket.assigns.workflow do
