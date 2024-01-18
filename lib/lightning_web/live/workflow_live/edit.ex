@@ -708,6 +708,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
       {:noreply,
        socket
+       |> apply_query_params(%{})
        |> apply_params(next_params)
        |> push_patches_applied(initial_params)}
     else
