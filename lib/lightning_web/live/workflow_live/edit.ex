@@ -646,24 +646,26 @@ defmodule LightningWeb.WorkflowLive.Edit do
     end
   end
 
-  defp update_scheduled_deletion(item, should_update?, deletion_date) do
-    if should_update?.() do
-      Map.put(item, "scheduled_deletion", deletion_date)
-    else
-      item
-    end
+  defp update_scheduled_deletion(item, deletion_date) do
+    Map.put(item, "scheduled_deletion", deletion_date)
   end
 
   defp update_edge_scheduled_deletion(edge, edges_to_delete, deletion_date) do
-    update_scheduled_deletion(
-      edge,
-      fn -> edge["id"] in Enum.map(edges_to_delete, & &1.id) end,
-      deletion_date
-    )
+    if edge["id"] in Enum.map(edges_to_delete, & &1.id) do
+      edge
+      |> update_scheduled_deletion(deletion_date)
+      |> Map.put("source_job_id", nil)
+    else
+      edge
+    end
   end
 
   defp update_job_scheduled_deletion(job, id, deletion_date) do
-    update_scheduled_deletion(job, fn -> job["id"] === id end, deletion_date)
+    if job["id"] === id do
+      update_scheduled_deletion(job, deletion_date)
+    else
+      job
+    end
   end
 
   @impl true
