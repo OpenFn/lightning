@@ -837,42 +837,6 @@ defmodule LightningWeb.RunWorkOrderTest do
   end
 
   describe "Show" do
-    test "no access to project on show", %{
-      conn: conn,
-      project: project_scoped
-    } do
-      workflow_scoped = insert(:workflow, project: project_scoped)
-      job = insert(:job, workflow: workflow_scoped)
-      run = insert(:run, job: job)
-
-      {:ok, _view, html} =
-        live(
-          conn,
-          Routes.project_run_show_path(conn, :show, project_scoped.id, run.id)
-        )
-
-      assert html =~ run.id
-
-      project_unscoped = insert(:project)
-
-      job = insert(:job, workflow: workflow_scoped)
-      run = insert(:run, job: job)
-
-      error =
-        live(
-          conn,
-          Routes.project_run_show_path(
-            conn,
-            :show,
-            project_unscoped.id,
-            run.id
-          )
-        )
-
-      assert error ==
-               {:error, {:redirect, %{flash: %{"nav" => :not_found}, to: "/"}}}
-    end
-
     test "by default only the latest attempt is present when there are multiple attempts",
          %{conn: conn, user: user} do
       project =
