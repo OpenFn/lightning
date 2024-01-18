@@ -75,10 +75,12 @@ defmodule LightningWeb.Components.Viewers do
         id={"#{@id}-nothing-yet"}
         class={[
           "hidden only:block m-2 relative block rounded-md",
-          "border-2 border-dashed border-gray-500 p-12 text-center col-span-full"
+          "p-12 text-center col-span-full"
         ]}
       >
-        Nothing yet...
+        <.text_ping_loader>
+          Nothing yet
+        </.text_ping_loader>
       </div>
     </div>
     """
@@ -104,7 +106,7 @@ defmodule LightningWeb.Components.Viewers do
     ~H"""
     <div class={[
       "rounded-md shadow-sm bg-slate-700 border-slate-300",
-      "text-slate-200 text-sm w-full h-full relative",
+      "text-slate-200 text-sm font-mono w-full h-full relative",
       @class
     ]}>
       <.dataclip_type :if={@type} type={@type} id={"#{@id}-type"} />
@@ -132,10 +134,12 @@ defmodule LightningWeb.Components.Viewers do
           id={"#{@id}-nothing-yet"}
           class={[
             "hidden only:block m-2 relative block rounded-md",
-            "border-2 border-dashed border-gray-500 p-12 text-center col-span-full"
+            "p-12 text-center col-span-full"
           ]}
         >
-          Nothing yet...
+          <.text_ping_loader>
+            Nothing yet
+          </.text_ping_loader>
         </div>
       </div>
     </div>

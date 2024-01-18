@@ -225,7 +225,13 @@ defmodule LightningWeb.WorkflowLive.Edit do
         >
           <%!-- Before Editor component has mounted --%>
           <div class="flex place-content-center h-full cursor-wait">
-            <.box_loader />
+            <span class="inline-block top-[50%] relative">
+              <div class="flex items-center justify-center">
+                <.button_loader>
+                  Loading workflow
+                </.button_loader>
+              </div>
+            </span>
           </div>
         </div>
         <%= if @selected_job do %>
@@ -1256,33 +1262,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
   defp mark_validated(socket) do
     socket
     |> assign(changeset: socket.assigns.changeset |> Map.put(:action, :validate))
-  end
-
-  defp box_loader(assigns) do
-    ~H"""
-    <span class="inline-block top-[50%] relative">
-      <div class="flex items-center justify-center">
-        <span class="relative inline-flex">
-          <button
-            type="button"
-            class="inline-flex items-center px-4 py-2 font-semibold leading-6
-            text-sm shadow rounded-md bg-white dark:bg-slate-800
-            transition ease-in-out duration-150 cursor-not-allowed ring-1
-            ring-slate-900/10 dark:ring-slate-200/20"
-            disabled=""
-          >
-            Loading workflow
-          </button>
-          <span class="flex absolute h-3 w-3 top-0 right-0 -mt-1 -mr-1">
-            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary-400 opacity-75">
-            </span>
-            <span class="relative inline-flex rounded-full h-3 w-3 bg-primary-500">
-            </span>
-          </span>
-        </span>
-      </div>
-    </span>
-    """
   end
 
   defp with_changes_indicator(assigns) do

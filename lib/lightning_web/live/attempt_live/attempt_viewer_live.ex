@@ -129,7 +129,6 @@ defmodule LightningWeb.AttemptLive.AttemptViewerLive do
               >
                 <Viewers.log_viewer
                   id={"attempt-log-#{attempt.id}"}
-                  class="overflow-auto"
                   highlight_id={@selected_run_id}
                   stream={@streams.log_lines}
                 />
