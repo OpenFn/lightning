@@ -1,4 +1,7 @@
 defmodule Lightning.Workflows.Node do
+  @moduledoc """
+  Represents a node in a workflow graph.
+  """
   use Ecto.Schema
 
   alias Lightning.Workflows.Job

@@ -16,6 +16,9 @@ defmodule Lightning.SetupUtils do
   alias Lightning.WorkOrders
 
   defmodule Ticker do
+    @moduledoc """
+    Time ticker to assure time progress/sequence specially for multiple logs.
+    """
     use Agent
 
     def start_link(%DateTime{} = start_time) do

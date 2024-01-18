@@ -1,4 +1,7 @@
 defmodule Lightning.Attempts.Queue do
+  @moduledoc """
+  Allows adding, removing or claiming work to be executed by the Runtime.
+  """
   @behaviour Lightning.Attempts.Adaptor
 
   import Ecto.Query

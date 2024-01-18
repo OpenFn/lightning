@@ -1,5 +1,7 @@
 defmodule Lightning.DashboardStats do
-  @moduledoc false
+  @moduledoc """
+  Dashboard stats for a project and its workflows.
+  """
 
   import Ecto.Query
 
@@ -9,6 +11,11 @@ defmodule Lightning.DashboardStats do
   alias Lightning.Workflows.Workflow
 
   defmodule WorkflowStats do
+    @moduledoc """
+    Stats for each workflow.
+
+    Attempts and workorders counting are grouped by state.
+    """
     defstruct last_workorder: %{state: nil, updated_at: nil},
               last_failed_workorder: %{state: nil, updated_at: nil},
               failed_workorders_count: 0,
@@ -21,6 +28,9 @@ defmodule Lightning.DashboardStats do
   end
 
   defmodule ProjectMetrics do
+    @moduledoc """
+    Aggregated metrics for a project.
+    """
     defstruct work_order_metrics: %{
                 total: 0,
                 pending: 0,

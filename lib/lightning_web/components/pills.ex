@@ -1,4 +1,7 @@
 defmodule LightningWeb.Components.Pills do
+  @moduledoc """
+  UI component to render a pill to create tags.
+  """
   use Phoenix.Component
 
   slot :inner_block, required: true

@@ -1,5 +1,14 @@
 defmodule Lightning.Workers do
+  @moduledoc """
+  Lightning uses external worker processes to execute workflow jobs.
+
+  This module deals with the security tokens and the formatting used on
+  the communication with the workers.
+  """
   defmodule Token do
+    @moduledoc """
+    JWT token configuration to authenticate workers.
+    """
     use Joken.Config
 
     @impl true
@@ -16,6 +25,9 @@ defmodule Lightning.Workers do
   end
 
   defmodule AttemptToken do
+    @moduledoc """
+    JWT token configuration to verify if workers work is legit.
+    """
     use Joken.Config
 
     @impl true
