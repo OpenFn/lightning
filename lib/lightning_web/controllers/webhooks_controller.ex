@@ -7,12 +7,7 @@ defmodule LightningWeb.WebhooksController do
   require OpenTelemetry.Tracer
 
   @spec create(Plug.Conn.t(), %{path: binary()}) :: Plug.Conn.t()
-  def create(conn, params) do
-    File.write!(
-      "webhook_params.txt",
-      "params length: #{String.length(params["txt"])}"
-    )
-
+  def create(conn, _params) do
     case conn.assigns.trigger do
       nil ->
         conn |> put_status(:not_found) |> json(%{"error" => "Webhook not found"})
