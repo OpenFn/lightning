@@ -134,6 +134,7 @@ defmodule LightningWeb do
       alias LightningWeb.Router.Helpers, as: Routes
 
       import LightningWeb.Components.Pills
+      import LightningWeb.Components.Loaders
 
       unquote(verified_routes())
     end
