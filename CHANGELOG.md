@@ -17,6 +17,8 @@ and this project adheres to
 
 - Do not persist the active tab setting on the job editor
   [#1504](https://github.com/OpenFn/Lightning/issues/1504)
+- Make condition label non mandatory 
+  [#1648](https://github.com/OpenFn/Lightning/issues/1648)
 
 ### Fixed
 
