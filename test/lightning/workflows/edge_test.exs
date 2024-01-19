@@ -215,7 +215,6 @@ defmodule Lightning.Workflows.EdgeTest do
         )
 
       assert changeset.errors == [
-               condition_label: {"can't be blank", [validation: :required]},
                condition_expression: {"can't be blank", [validation: :required]}
              ]
     end

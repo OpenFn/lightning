@@ -103,7 +103,7 @@ defmodule Lightning.Workflows.Edge do
   defp validate_js_condition(changeset) do
     if :js_expression == get_field(changeset, :condition_type) do
       changeset
-      |> validate_required([:condition_label, :condition_expression])
+      |> validate_required([:condition_expression])
       |> validate_condition_expression()
     else
       changeset
