@@ -26,6 +26,8 @@ and this project adheres to
   [#1602](https://github.com/OpenFn/Lightning/issues/1602)
 - Removed unused runlive code
   [#1625](https://github.com/OpenFn/Lightning/issues/1625)
+- Edge condition expressions not correctly being handled during provisioning
+  [#openfn/kit#560](https://github.com/OpenFn/kit/pull/560)
 
 ## [v2.0.0-rc3] 2024-01-12
 
