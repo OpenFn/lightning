@@ -132,6 +132,7 @@ LightningWeb.BackupCodesController.html
 LightningWeb.BackupCodesLive.Index.html
 LightningWeb.ChangesetJSON.html
 LightningWeb.ChangesetView.html
+LightningWeb.Components.Loaders.html
 LightningWeb.Components.Modal.html
 LightningWeb.Components.NewInputs.html
 LightningWeb.Components.Pills.html
@@ -240,8 +241,8 @@ dist/merriweather-latin-ext-300-normal-K6L27CZ5.woff2
 dist/merriweather-vietnamese-300-italic-EHHNZPUO.woff2
 dist/merriweather-vietnamese-300-normal-U376L4Z4.woff2
 dist/remixicon-NKANDIL5.woff2
-dist/search_data-B1C8B4F5.js
-dist/sidebar_items-D804BC33.js
+dist/search_data-8A2539F5.js
+dist/sidebar_items-F7AD2F88.js
 index.html
 provisioning.html
 readme.html
