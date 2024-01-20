@@ -254,6 +254,25 @@ defmodule Lightning.Invocation do
     Repo.all(Step)
   end
 
+  @spec list_steps_for_project_query(Lightning.Projects.Project.t()) ::
+          Ecto.Query.t()
+  def list_steps_for_project_query(%Project{id: project_id}) do
+    from(s in Step,
+      join: j in assoc(s, :job),
+      join: w in assoc(j, :workflow),
+      where: w.project_id == ^project_id,
+      order_by: [desc: s.inserted_at, desc: s.started_at],
+      preload: [job: j]
+    )
+  end
+
+  @spec list_steps_for_project(Lightning.Projects.Project.t(), keyword | map) ::
+          Scrivener.Page.t()
+  def list_steps_for_project(%Project{} = project, params \\ %{}) do
+    list_steps_for_project_query(project)
+    |> Repo.paginate(params)
+  end
+
   @doc """
   Gets a single step.
 

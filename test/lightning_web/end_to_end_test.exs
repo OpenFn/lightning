@@ -40,7 +40,7 @@ defmodule LightningWeb.EndToEndTest do
       assert %{attempts: [%{id: attempt_id}]} =
                WorkOrders.get(wo_id, include: [:attempts])
 
-      assert %{runs: []} = Attempts.get(attempt_id, include: [:runs])
+      assert %{steps: []} = Attempts.get(attempt_id, include: [:steps])
 
       assert %{attempts: [attempt]} =
                WorkOrders.get(wo_id, include: [:attempts])
@@ -57,25 +57,25 @@ defmodule LightningWeb.EndToEndTest do
 
       assert %{state: :success} = WorkOrders.get(wo_id)
 
-      %{entries: runs} = Invocation.list_runs_for_project(project)
+      %{entries: steps} = Invocation.list_steps_for_project(project)
 
-      # runs with unique outputs and all succeed
-      assert Enum.count(runs) == 7
-      assert Enum.count(runs, & &1.output_dataclip_id) == 7
-      assert Enum.all?(runs, fn run -> run.exit_reason == "success" end)
+      # steps with unique outputs and all succeed
+      assert Enum.count(steps) == 7
+      assert Enum.count(steps, & &1.output_dataclip_id) == 7
+      assert Enum.all?(steps, fn step -> step.exit_reason == "success" end)
 
-      # first run has the webhook body as input
-      [first_run | runs] = Enum.reverse(runs)
-      assert webhook_body == select_dataclip_body(first_run.input_dataclip_id)
+      # first step has the webhook body as input
+      [first_step | steps] = Enum.reverse(steps)
+      assert webhook_body == select_dataclip_body(first_step.input_dataclip_id)
 
-      # the other 6 runs produce the same input and output on x twice
+      # the other 6 steps produce the same input and output on x twice
       # (2 branches that doubles x value three times)
-      assert runs
+      assert steps
              |> Enum.map(&select_dataclip_body(&1.input_dataclip_id)["x"])
              |> Enum.frequencies()
              |> Enum.all?(fn {_x, count} -> count == 2 end)
 
-      assert runs
+      assert steps
              |> Enum.map(&select_dataclip_body(&1.output_dataclip_id)["x"])
              |> Enum.frequencies()
              |> Enum.all?(fn {_x, count} -> count == 2 end)
@@ -168,7 +168,7 @@ defmodule LightningWeb.EndToEndTest do
       assert %{attempts: [%{id: attempt_id} = attempt]} =
                WorkOrders.get(wo_id, include: [:attempts])
 
-      assert %{runs: []} = Attempts.get(attempt.id, include: [:runs])
+      assert %{steps: []} = Attempts.get(attempt.id, include: [:steps])
 
       # wait to complete
       Events.subscribe(attempt)
@@ -180,33 +180,33 @@ defmodule LightningWeb.EndToEndTest do
 
       assert %{state: :success} = WorkOrders.get(wo_id)
 
-      # All runs are associated with the same project and attempt and proper job
-      %{runs: runs} = Attempts.get(attempt.id, include: [:runs])
+      # All steps are associated with the same project and attempt and proper job
+      %{steps: steps} = Attempts.get(attempt.id, include: [:steps])
 
       assert %{
                total_entries: 4,
-               entries: [run_4, run_3, run_2, run_1] = entries_runs
+               entries: [step_4, step_3, step_2, step_1] = entries_steps
              } =
-               Invocation.list_runs_for_project(project)
+               Invocation.list_steps_for_project(project)
 
-      assert MapSet.new(runs, & &1.id) ==
-               MapSet.new(entries_runs, & &1.id)
+      assert MapSet.new(steps, & &1.id) ==
+               MapSet.new(entries_steps, & &1.id)
 
-      # Alls runs have consistent finish_at, exit_reason and dataclips
+      # Alls steps have consistent finish_at, exit_reason and dataclips
       %{claimed_at: claimed_at, finished_at: finished_at} =
         Attempts.get(attempt.id)
 
-      assert Enum.all?(runs, fn run ->
-               NaiveDateTime.after?(run_2.finished_at, claimed_at) and
-                 NaiveDateTime.before?(run_2.finished_at, finished_at)
+      assert Enum.all?(steps, fn step ->
+               NaiveDateTime.after?(step_2.finished_at, claimed_at) and
+                 NaiveDateTime.before?(step_2.finished_at, finished_at)
              end)
 
-      # Run 1 succeeds with webhook_body as input
-      assert run_1.exit_reason == "success"
+      # Step 1 succeeds with webhook_body as input
+      assert step_1.exit_reason == "success"
 
       expected_job_x_value = 123 * 2
 
-      lines = Invocation.logs_for_run(run_1)
+      lines = Invocation.logs_for_step(step_1)
 
       assert Enum.any?(
                lines,
@@ -238,27 +238,27 @@ defmodule LightningWeb.EndToEndTest do
                )
 
       # input: has only the webhook body
-      assert webhook_body == select_dataclip_body(run_1.input_dataclip_id)
+      assert webhook_body == select_dataclip_body(step_1.input_dataclip_id)
 
       # output: data unchanged by the job and x is updated
       assert %{"data" => ^webhook_body, "x" => ^expected_job_x_value} =
-               select_dataclip_body(run_1.output_dataclip_id)
+               select_dataclip_body(step_1.output_dataclip_id)
 
-      # #  Run 2 should fail but not expose a secret
-      assert run_2.exit_reason == "fail"
+      # #  Step 2 should fail but not expose a secret
+      assert step_2.exit_reason == "fail"
 
-      log = Invocation.assemble_logs_for_run(run_2)
+      log = Invocation.assemble_logs_for_step(step_2)
 
       assert log =~ ~S[{"password":"***","username":"quux"}]
       assert log =~ ~S"Check state.errors"
 
-      assert select_dataclip_body(run_1.output_dataclip_id) ==
-               select_dataclip_body(run_2.input_dataclip_id)
+      assert select_dataclip_body(step_1.output_dataclip_id) ==
+               select_dataclip_body(step_2.input_dataclip_id)
 
-      #  Run 3 should succeed and log the correct value of x
-      assert run_3.exit_reason == "success"
+      #  Step 3 should succeed and log the correct value of x
+      assert step_3.exit_reason == "success"
 
-      lines = Invocation.logs_for_run(run_3)
+      lines = Invocation.logs_for_step(step_3)
 
       assert Enum.any?(
                lines,
@@ -286,17 +286,17 @@ defmodule LightningWeb.EndToEndTest do
                  MapSet.new(lines, &{&1.source, &1.message})
                )
 
-      assert select_dataclip_body(run_2.output_dataclip_id) ==
-               select_dataclip_body(run_3.input_dataclip_id)
+      assert select_dataclip_body(step_2.output_dataclip_id) ==
+               select_dataclip_body(step_3.input_dataclip_id)
 
       assert %{"data" => ^webhook_body, "x" => ^expected_job_x_value} =
-               select_dataclip_body(run_3.output_dataclip_id)
+               select_dataclip_body(step_3.output_dataclip_id)
 
-      # Run 4 after the js condition should succeed and log the correct value of x
+      # Step 4 after the js condition should succeed and log the correct value of x
       expected_job_x_value = expected_job_x_value * 5
-      assert run_4.exit_reason == "success"
+      assert step_4.exit_reason == "success"
 
-      assert Enum.any?(Invocation.logs_for_run(run_4), fn line ->
+      assert Enum.any?(Invocation.logs_for_step(step_4), fn line ->
                line.source == "JOB" and line.message =~ "#{expected_job_x_value}"
              end)
     end

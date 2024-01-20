@@ -5,14 +5,14 @@ defmodule Lightning.Invocation.QueryTest do
 
   import Lightning.Factories
 
-  test "runs_for/1 with user" do
+  test "steps_for/1 with user" do
     user = insert(:user)
     project = insert(:project, project_users: [%{user_id: user.id}])
 
     %{triggers: [trigger], jobs: [job]} =
       workflow = insert(:simple_workflow, project: project)
 
-    %{attempts: [%{runs: [run1]}]} =
+    %{attempts: [%{steps: [step1]}]} =
       insert(:workorder,
         workflow: workflow,
         dataclip: build(:dataclip, project: project),
@@ -21,14 +21,14 @@ defmodule Lightning.Invocation.QueryTest do
           build(:attempt,
             starting_trigger: trigger,
             dataclip: build(:dataclip, project: project),
-            runs: [build(:step, job: job)]
+            steps: [build(:step, job: job)]
           )
         ]
       )
 
     %{triggers: [trigger2], jobs: [job2]} = workflow2 = insert(:simple_workflow)
 
-    %{attempts: [%{runs: [run2]}]} =
+    %{attempts: [%{steps: [step2]}]} =
       insert(:workorder,
         workflow: workflow2,
         dataclip: build(:dataclip),
@@ -37,15 +37,15 @@ defmodule Lightning.Invocation.QueryTest do
           build(:attempt,
             dataclip: build(:dataclip),
             starting_trigger: trigger2,
-            runs: [build(:step, job: job2)]
+            steps: [build(:step, job: job2)]
           )
         ]
       )
 
-    refute run1.id == run2.id
+    refute step1.id == step2.id
 
-    run1_id = run1.id
+    step1_id = step1.id
 
-    assert [%{id: ^run1_id}] = Query.runs_for(user) |> Repo.all()
+    assert [%{id: ^step1_id}] = Query.steps_for(user) |> Repo.all()
   end
 end
