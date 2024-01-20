@@ -141,9 +141,10 @@ defmodule LightningWeb.AttemptChannel do
     {:reply, {:ok, {:binary, body}}, socket}
   end
 
-  # TODO - remove after worker update.
-  def handle_in("run:start", payload, socket),
-    do: handle_in("step:start", payload, socket)
+  def handle_in("run:start", payload, socket) do
+    worker_upgrade_required("v1.0")
+    handle_in("step:start", rename_run_id(payload), socket)
+  end
 
   def handle_in("step:start", payload, socket) do
     Map.get(payload, "job_id", :missing_job_id)
@@ -170,9 +171,10 @@ defmodule LightningWeb.AttemptChannel do
     end
   end
 
-  # TODO - remove after worker update.
-  def handle_in("run:complete", payload, socket),
-    do: handle_in("step:complete", payload, socket)
+  def handle_in("run:complete", payload, socket) do
+    worker_upgrade_required("v1.0")
+    handle_in("step:complete", rename_run_id(payload), socket)
+  end
 
   def handle_in("step:complete", payload, socket) do
     %{
@@ -237,5 +239,14 @@ defmodule LightningWeb.AttemptChannel do
   defp update_scrubber(scrubber, samples, basic_auth) do
     :ok = Scrubber.add_samples(scrubber, samples, basic_auth)
     {:ok, scrubber}
+  end
+
+  defp worker_upgrade_required(v),
+    do:
+      Logger.warning("Please upgrade your connect ws-worker to #{v} or greater")
+
+  defp rename_run_id(payload) do
+    {value, map} = Map.pop(payload, "run_id")
+    Map.put(map, "step_id", value)
   end
 end
