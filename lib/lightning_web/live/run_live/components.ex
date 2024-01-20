@@ -259,62 +259,6 @@ defmodule LightningWeb.RunLive.Components do
     end)
   end
 
-  defp maybe_nest(body, :http_request), do: Map.new(data: body)
-  defp maybe_nest(body_string, _type), do: body_string
-
-  # ------------------- Toggle Bar ---------------------
-  # Used to switch between Log and Output
-
-  slot :inner_block, required: true
-  attr :class, :string, default: "items-end"
-  attr :rest, :global
-
-  def toggle_bar(assigns) do
-    ~H"""
-    <div class={"flex flex-col #{@class}"} {@rest}>
-      <div class="flex rounded-lg p-1 bg-gray-200 font-semibold">
-        <%= render_slot(@inner_block) %>
-      </div>
-    </div>
-    """
-  end
-
-  attr :active, :string, default: "false"
-  slot :inner_block, required: true
-  attr :rest, :global
-
-  def toggle_item(assigns) do
-    ~H"""
-    <div
-      data-active={@active}
-      class="group text-sm shadow-sm text-gray-700
-                     data-[active=true]:bg-white data-[active=true]:text-indigo-500
-                     px-4 py-2 rounded-md align-middle flex items-center cursor-pointer"
-      {@rest}
-    >
-      <%= render_slot(@inner_block) %>
-    </div>
-    """
-  end
-
-  def switch_section(section) do
-    JS.hide(to: "[id$=_section]:not([id=#{section}_section])")
-    |> JS.set_attribute({"data-active", "false"},
-      to: "[data-section]:not([data-section=#{section}])"
-    )
-    |> show_section(section)
-  end
-
-  def show_section(js \\ %JS{}, section) do
-    js
-    |> JS.show(
-      to: "##{section}_section",
-      transition: {"ease-out duration-300", "opacity-0", "opacity-100"},
-      time: 200
-    )
-    |> JS.set_attribute({"data-active", "true"}, to: "[data-section=#{section}]")
-  end
-
   @spec step_icon(%{
           :error_type => any(),
           :reason => nil | <<_::32, _::_*8>>,
