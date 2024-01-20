@@ -12,7 +12,7 @@ defmodule Lightning.JanitorTest do
 
   describe "find_and_update_lost/0" do
     @tag :capture_log
-    test "updates lost attempts and their runs" do
+    test "updates lost attempts and their steps" do
       %{triggers: [trigger]} = workflow = insert(:simple_workflow)
       dataclip = insert(:dataclip)
 
@@ -32,7 +32,7 @@ defmodule Lightning.JanitorTest do
           claimed_at: DateTime.utc_now() |> DateTime.add(-3600)
         )
 
-      unfinished_run =
+      unfinished_step =
         insert(:step,
           attempts: [lost_attempt],
           finished_at: nil,
@@ -42,10 +42,10 @@ defmodule Lightning.JanitorTest do
       Janitor.find_and_update_lost()
 
       reloaded_attempt = Repo.get(Attempt, lost_attempt.id)
-      reloaded_run = Repo.get(Invocation.Step, unfinished_run.id)
+      reloaded_step = Repo.get(Invocation.Step, unfinished_step.id)
 
       assert reloaded_attempt.state == :lost
-      assert reloaded_run.exit_reason == "lost"
+      assert reloaded_step.exit_reason == "lost"
     end
   end
 end

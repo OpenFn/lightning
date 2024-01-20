@@ -237,8 +237,8 @@ defmodule Lightning.ProjectsTest do
 
       p1_dataclip = insert(:dataclip, body: %{foo: "bar"}, project: p1)
 
-      p1_run_1 = insert(:step, input_dataclip: p1_dataclip, job: e1.target_job)
-      p1_run_2 = insert(:step, input_dataclip: p1_dataclip, job: e1.target_job)
+      p1_step_1 = insert(:step, input_dataclip: p1_dataclip, job: e1.target_job)
+      p1_step_2 = insert(:step, input_dataclip: p1_dataclip, job: e1.target_job)
 
       insert(:workorder,
         trigger: t1,
@@ -248,24 +248,24 @@ defmodule Lightning.ProjectsTest do
           build(:attempt,
             starting_trigger: e1.source_trigger,
             dataclip: p1_dataclip,
-            runs: [p1_run_1],
-            log_lines: build_list(2, :log_line, run: p1_run_1)
+            steps: [p1_step_1],
+            log_lines: build_list(2, :log_line, step: p1_step_1)
           ),
           build(:attempt,
             starting_trigger: e1.source_trigger,
             dataclip: p1_dataclip,
             created_by: p1_user,
-            runs: [p1_run_2],
-            log_lines: build_list(2, :log_line, run: p1_run_1)
+            steps: [p1_step_2],
+            log_lines: build_list(2, :log_line, step: p1_step_1)
           )
         ]
       )
 
       p2_dataclip = insert(:dataclip, body: %{foo: "bar"}, project: p2)
 
-      p2_run = insert(:step, input_dataclip: p2_dataclip, job: e2.target_job)
+      p2_step = insert(:step, input_dataclip: p2_dataclip, job: e2.target_job)
 
-      p2_log_line = build(:log_line, run: p2_run)
+      p2_log_line = build(:log_line, step: p2_step)
 
       insert(:workorder,
         trigger: t2,
@@ -275,18 +275,18 @@ defmodule Lightning.ProjectsTest do
           build_list(1, :attempt,
             starting_trigger: e2.source_trigger,
             dataclip: p2_dataclip,
-            runs: [p2_run],
+            steps: [p2_step],
             log_lines: [p2_log_line]
           )
       )
 
-      runs_query = Lightning.Projects.project_runs_query(p1)
+      steps_query = Lightning.Projects.project_steps_query(p1)
 
       work_order_query = Lightning.Projects.project_workorders_query(p1)
 
       attempt_query = Lightning.Projects.project_attempts_query(p1)
 
-      attempt_run_query = Lightning.Projects.project_attempt_run_query(p1)
+      attempt_step_query = Lightning.Projects.project_attempt_step_query(p1)
 
       pu_query = Lightning.Projects.project_users_query(p1)
 
@@ -296,13 +296,13 @@ defmodule Lightning.ProjectsTest do
 
       jobs_query = Lightning.Projects.project_jobs_query(p1)
 
-      assert runs_query |> Repo.aggregate(:count, :id) == 2
+      assert steps_query |> Repo.aggregate(:count, :id) == 2
 
       assert work_order_query |> Repo.aggregate(:count, :id) == 1
 
       assert attempt_query |> Repo.aggregate(:count, :id) == 2
 
-      assert attempt_run_query |> Repo.aggregate(:count, :id) == 2
+      assert attempt_step_query |> Repo.aggregate(:count, :id) == 2
 
       assert pu_query |> Repo.aggregate(:count, :id) == 1
 
@@ -319,13 +319,13 @@ defmodule Lightning.ProjectsTest do
 
       assert {:ok, %Project{}} = Projects.delete_project(p1)
 
-      assert runs_query |> Repo.aggregate(:count, :id) == 0
+      assert steps_query |> Repo.aggregate(:count, :id) == 0
 
       assert work_order_query |> Repo.aggregate(:count, :id) == 0
 
       assert attempt_query |> Repo.aggregate(:count, :id) == 0
 
-      assert attempt_run_query |> Repo.aggregate(:count, :id) == 0
+      assert attempt_step_query |> Repo.aggregate(:count, :id) == 0
 
       assert pu_query |> Repo.aggregate(:count, :id) == 0
 
@@ -343,7 +343,7 @@ defmodule Lightning.ProjectsTest do
 
       assert p2.id == Projects.get_project!(p2.id).id
 
-      assert Lightning.Projects.project_runs_query(p2)
+      assert Lightning.Projects.project_steps_query(p2)
              |> Repo.aggregate(:count, :id) == 1
     end
 
