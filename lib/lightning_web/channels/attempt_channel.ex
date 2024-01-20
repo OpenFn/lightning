@@ -195,7 +195,7 @@ defmodule LightningWeb.AttemptChannel do
   def handle_in("attempt:log", payload, socket) do
     %{attempt: attempt, scrubber: scrubber} = socket.assigns
 
-    Attempts.append_attempt_log(attempt, payload, scrubber)
+    Attempts.append_attempt_log(attempt, rename_run_id(payload), scrubber)
     |> case do
       {:error, changeset} ->
         {:reply, {:error, LightningWeb.ChangesetJSON.error(changeset)}, socket}
@@ -245,8 +245,11 @@ defmodule LightningWeb.AttemptChannel do
     do:
       Logger.warning("Please upgrade your connect ws-worker to #{v} or greater")
 
-  defp rename_run_id(payload) do
-    {value, map} = Map.pop(payload, "run_id")
-    Map.put(map, "step_id", value)
+  # TODO - remove this once the migration is complete
+  defp rename_run_id(%{"run_id" => id} = map) do
+    Map.delete(map, "run_id")
+    |> Map.put("step_id", id)
   end
+
+  defp rename_run_id(any), do: any
 end
