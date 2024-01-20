@@ -227,7 +227,9 @@ defmodule LightningWeb.AttemptLive.Show do
   def handle_steps_change(socket) do
     %{selected_step_id: selected_step_id, steps: steps} = socket.assigns
 
-    selected_step = Enum.find(steps, &(&1.id == selected_step_id)
+    selected_step =
+      steps
+      |> Enum.find(&(&1.id == selected_step_id))
 
     socket
     |> assign(selected_step: selected_step)

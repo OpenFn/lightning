@@ -198,24 +198,6 @@ defmodule LightningWeb.RunLive.Components do
     """
   end
 
-  def step_log_viewer(assigns) do
-    assigns =
-      assign(
-        assigns,
-        :log,
-        Invocation.logs_for_step(assigns.step)
-        |> Enum.map(fn log -> log.message end)
-      )
-
-    ~H"""
-    <%= if length(@log) > 0 do %>
-      <.log_view log={@log} />
-    <% else %>
-      <.no_log_message />
-    <% end %>
-    """
-  end
-
   attr :log, :list, required: true
   attr :class, :string, default: nil
 
@@ -277,89 +259,8 @@ defmodule LightningWeb.RunLive.Components do
     end)
   end
 
-  attr :dataclip, :any, required: true
-  attr :no_dataclip_message, :any
-
-  def dataclip_view(%{dataclip: dataclip} = assigns) do
-    lines =
-      if dataclip do
-        dataclip.body
-        |> maybe_nest(dataclip.type)
-        |> Jason.encode!()
-        |> Jason.Formatter.pretty_print()
-        |> String.split("\n")
-      end
-
-    assigns =
-      assigns
-      |> assign(lines: lines)
-      |> assign_new(:no_dataclip_message, fn ->
-        %{
-          label: "Nothing here yet.",
-          description: "The resulting dataclip will appear here
-                        when the run finishes successfully."
-        }
-      end)
-
-    ~H"""
-    <div class="flex">
-      <div class="w-full h-full relative z-0">
-        <%= if @dataclip do %>
-          <.log_view log={@lines} />
-          <div class="absolute flex justify-right items-right z-10 right-1.5 top-1.5
-          text-gray-400 font-mono text-xs">
-            type: <%= @dataclip.type %>
-          </div>
-        <% else %>
-          <.no_dataclip_message
-            label={@no_dataclip_message.label}
-            description={@no_dataclip_message.description}
-          />
-        <% end %>
-      </div>
-    </div>
-    """
-  end
-
   defp maybe_nest(body, :http_request), do: Map.new(data: body)
   defp maybe_nest(body_string, _type), do: body_string
-
-  @spec no_dataclip_message(any) :: Phoenix.LiveView.Rendered.t()
-  def no_dataclip_message(assigns) do
-    ~H"""
-    <div class="flex items-center flex-col mt-5 @md:w-1/4 @xs:w-1/2 m-auto">
-      <div class="flex flex-col">
-        <div class="m-auto">
-          <Heroicons.question_mark_circle class="h-16 w-16 stroke-gray-400" />
-        </div>
-        <div class="font-sm text-slate-400 text-center">
-          <span class="text-slate-500 font-semibold">
-            <%= @label %>
-          </span>
-          <br /> <%= @description %>
-        </div>
-      </div>
-    </div>
-    """
-  end
-
-  def no_log_message(assigns) do
-    ~H"""
-    <div class="flex items-center flex-col mt-5 @md:w-1/4 @xs:w-1/2 m-auto">
-      <div class="flex flex-col">
-        <div class="m-auto">
-          <Heroicons.question_mark_circle class="h-16 w-16 stroke-gray-400" />
-        </div>
-        <div class="font-sm text-slate-400 text-center">
-          <span class="text-slate-500 font-semibold">
-            Nothing here yet.
-          </span>
-          <br /> The resulting log will appear here when the step completes.
-        </div>
-      </div>
-    </div>
-    """
-  end
 
   # ------------------- Toggle Bar ---------------------
   # Used to switch between Log and Output
