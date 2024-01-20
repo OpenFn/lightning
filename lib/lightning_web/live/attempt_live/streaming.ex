@@ -3,8 +3,8 @@ defmodule LightningWeb.AttemptLive.Streaming do
   import Phoenix.LiveView
   import Ecto.Query
 
-  alias Lightning.AttemptStep
   alias Lightning.Attempts
+  alias Lightning.AttemptStep
   alias Lightning.Credentials
   alias Lightning.Invocation.Dataclip
   alias Lightning.Invocation.Step

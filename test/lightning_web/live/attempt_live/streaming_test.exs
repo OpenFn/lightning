@@ -113,7 +113,9 @@ defmodule LightningWeb.AttemptLive.StreamingTest do
   describe "get_dataclip_lines" do
     setup :create_runs_dataclips
 
-    test "streams scrubbed lines from step_result dataclip", %{run2: selected_run} do
+    test "streams scrubbed lines from step_result dataclip", %{
+      run2: selected_run
+    } do
       dataclip_lines =
         Streaming.get_dataclip_lines(selected_run, :output_dataclip)
         |> elem(1)

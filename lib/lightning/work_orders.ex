@@ -35,8 +35,8 @@ defmodule Lightning.WorkOrders do
   alias Ecto.Multi
   alias Lightning.Accounts.User
   alias Lightning.Attempt
-  alias Lightning.AttemptStep
   alias Lightning.Attempts
+  alias Lightning.AttemptStep
   alias Lightning.Graph
   alias Lightning.Invocation.Dataclip
   alias Lightning.Invocation.Step

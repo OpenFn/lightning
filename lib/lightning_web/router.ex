@@ -53,8 +53,8 @@ defmodule LightningWeb.Router do
     resources "/provision", API.ProvisioningController, only: [:create, :show]
 
     # resources "/projects", API.ProjectController, only: [:index, :show] do
-      # resources "/jobs", API.JobController, only: [:index, :show]
-      # resources "/runs", API.RunController, only: [:index, :show]
+    # resources "/jobs", API.JobController, only: [:index, :show]
+    # resources "/runs", API.RunController, only: [:index, :show]
     # end
 
     # resources "/jobs", API.JobController, only: [:index, :show]

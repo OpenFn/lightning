@@ -221,7 +221,8 @@ defmodule Lightning.AttemptsTest do
         work_order_for(trigger, workflow: workflow, dataclip: dataclip)
         |> insert()
 
-      run = insert(:step, attempts: [attempt], job: job, input_dataclip: dataclip)
+      run =
+        insert(:step, attempts: [attempt], job: job, input_dataclip: dataclip)
 
       {:ok, run} =
         Attempts.complete_run(%{
@@ -249,7 +250,8 @@ defmodule Lightning.AttemptsTest do
         work_order_for(trigger, workflow: workflow, dataclip: dataclip)
         |> insert()
 
-      run = insert(:step, attempts: [attempt], job: job, input_dataclip: dataclip)
+      run =
+        insert(:step, attempts: [attempt], job: job, input_dataclip: dataclip)
 
       assert {:error, %Ecto.Changeset{}} =
                Attempts.complete_run(%{
@@ -536,7 +538,8 @@ defmodule Lightning.AttemptsTest do
           timestamp: DateTime.utc_now() |> DateTime.to_unix(:millisecond)
         })
 
-      run = insert(:step, attempts: [attempt], job: job, input_dataclip: dataclip)
+      run =
+        insert(:step, attempts: [attempt], job: job, input_dataclip: dataclip)
 
       {:ok, log_line} =
         Attempts.append_attempt_log(attempt, %{

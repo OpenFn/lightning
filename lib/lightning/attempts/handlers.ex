@@ -4,8 +4,8 @@ defmodule Lightning.Attempts.Handlers do
   """
 
   alias Lightning.Attempt
-  alias Lightning.AttemptStep
   alias Lightning.Attempts
+  alias Lightning.AttemptStep
   alias Lightning.Invocation.Dataclip
   alias Lightning.Invocation.Step
   alias Lightning.Repo
