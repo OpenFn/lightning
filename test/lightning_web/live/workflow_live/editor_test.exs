@@ -152,7 +152,7 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       job = workflow.jobs |> hd()
 
       dataclip_ids =
-        insert_list(4, :run,
+        insert_list(4, :step,
           job: job,
           inserted_at: fn ->
             ExMachina.sequence(:past_timestamp, fn i ->
@@ -303,7 +303,7 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
           build(:attempt,
             dataclip: existing_dataclip,
             starting_job: job,
-            runs: [build(:run, job: job, input_dataclip: existing_dataclip)]
+            runs: [build(:step, job: job, input_dataclip: existing_dataclip)]
           )
         ]
       )
@@ -465,7 +465,7 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
             build(:attempt,
               dataclip: build(:dataclip, type: :http_request),
               starting_job: job_1,
-              runs: [build(:run, job: job_1)]
+              runs: [build(:step, job: job_1)]
             )
           ]
         )
@@ -504,7 +504,7 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       output_dataclip =
         insert(:dataclip,
           project: project,
-          type: :run_result,
+          type: :step_result,
           body: %{"val" => Ecto.UUID.generate()}
         )
 
@@ -517,7 +517,7 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
               dataclip: input_dataclip,
               starting_job: job_1,
               runs: [
-                build(:run,
+                build(:step,
                   job: job_1,
                   input_dataclip: input_dataclip,
                   output_dataclip: output_dataclip,
@@ -525,12 +525,12 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
                   finished_at: build(:timestamp),
                   exit_reason: "success"
                 ),
-                build(:run,
+                build(:step,
                   job: job_2,
                   input_dataclip: output_dataclip,
                   output_dataclip:
                     build(:dataclip,
-                      type: :run_result,
+                      type: :step_result,
                       body: %{}
                     ),
                   started_at: build(:timestamp),
@@ -555,7 +555,7 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
               dataclip: dataclip,
               starting_job: job_2,
               runs: [
-                build(:run,
+                build(:step,
                   job: job_2,
                   input_dataclip: dataclip,
                   output_dataclip: nil,
@@ -604,7 +604,7 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       output_dataclip =
         insert(:dataclip,
           project: project,
-          type: :run_result,
+          type: :step_result,
           body: %{"val" => Ecto.UUID.generate()}
         )
 
@@ -618,7 +618,7 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
               dataclip: input_dataclip,
               starting_job: job_1,
               runs: [
-                build(:run,
+                build(:step,
                   job: job_1,
                   input_dataclip: input_dataclip,
                   output_dataclip: output_dataclip,
@@ -626,12 +626,12 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
                   finished_at: build(:timestamp),
                   exit_reason: "success"
                 ),
-                build(:run,
+                build(:step,
                   job: job_2,
                   input_dataclip: output_dataclip,
                   output_dataclip:
                     build(:dataclip,
-                      type: :run_result,
+                      type: :step_result,
                       body: %{}
                     ),
                   started_at: build(:timestamp),
@@ -656,7 +656,7 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
               dataclip: dataclip,
               starting_job: job_2,
               runs: [
-                build(:run,
+                build(:step,
                   job: job_2,
                   input_dataclip: dataclip,
                   output_dataclip: nil,

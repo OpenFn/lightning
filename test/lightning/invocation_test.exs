@@ -72,7 +72,7 @@ defmodule Lightning.InvocationTest do
 
       assert Invocation.get_dataclip(Ecto.UUID.generate()) == nil
 
-      run = insert(:run, input_dataclip: dataclip)
+      run = insert(:step, input_dataclip: dataclip)
 
       assert Invocation.get_dataclip(run) |> Repo.preload(:project) ==
                dataclip
@@ -140,7 +140,7 @@ defmodule Lightning.InvocationTest do
     }
 
     test "list_runs/0 returns all runs" do
-      run = insert(:run)
+      run = insert(:step)
       assert Invocation.list_runs() |> Enum.map(fn r -> r.id end) == [run.id]
     end
 
@@ -150,16 +150,16 @@ defmodule Lightning.InvocationTest do
       job_two = insert(:job, workflow: workflow)
 
       first_run =
-        insert(:run, job: job_one)
+        insert(:step, job: job_one)
         |> shift_inserted_at!(days: -1)
         |> Repo.preload(:job)
 
       second_run =
-        insert(:run, job: job_two)
+        insert(:step, job: job_two)
         |> Repo.preload(:job)
 
       third_run =
-        insert(:run, job: job_one)
+        insert(:step, job: job_one)
         |> Repo.preload(:job)
 
       assert Invocation.list_runs_for_project(workflow.project).entries
@@ -171,7 +171,7 @@ defmodule Lightning.InvocationTest do
     end
 
     test "get_run!/1 returns the run with given id" do
-      run = insert(:run)
+      run = insert(:step)
 
       actual_run = Invocation.get_run!(run.id)
 
@@ -186,7 +186,7 @@ defmodule Lightning.InvocationTest do
       workflow = insert(:workflow, project: project)
       job = insert(:job, workflow: workflow)
 
-      assert {:ok, %Run{} = run} =
+      assert {:ok, %Step{} = run} =
                Invocation.create_run(
                  Map.merge(@valid_attrs, %{
                    job_id: job.id,
@@ -215,7 +215,7 @@ defmodule Lightning.InvocationTest do
     end
 
     test "change_run/1 returns a run changeset" do
-      run = insert(:run)
+      run = insert(:step)
       assert %Ecto.Changeset{} = Invocation.change_run(run)
     end
   end
@@ -257,7 +257,7 @@ defmodule Lightning.InvocationTest do
         "finished_at" =>
           now
           |> Timex.shift(seconds: seconds + 10),
-        "run_id" => Ecto.UUID.generate()
+        "step_id" => Ecto.UUID.generate()
       })
 
     %{work_order: wo, run: run}
@@ -311,7 +311,7 @@ defmodule Lightning.InvocationTest do
           "input_dataclip_id" => dataclip.id,
           "started_at" => now |> Timex.shift(seconds: started_shift),
           "finished_at" => now |> Timex.shift(seconds: finished_shift),
-          "run_id" => Ecto.UUID.generate()
+          "step_id" => Ecto.UUID.generate()
         })
       end)
 
@@ -768,7 +768,7 @@ defmodule Lightning.InvocationTest do
           "attempt_id" => attempt.id,
           "job_id" => job.id,
           "input_dataclip_id" => dataclip.id,
-          "run_id" => Ecto.UUID.generate()
+          "step_id" => Ecto.UUID.generate()
         })
 
       insert(:log_line,
@@ -905,7 +905,7 @@ defmodule Lightning.InvocationTest do
   describe "run logs" do
     test "logs_for_run/1 returns an array of the logs for a given run" do
       run =
-        insert(:run,
+        insert(:step,
           log_lines: ["Hello", "I am a", "log"] |> Enum.map(&build_log_map/1)
         )
 
@@ -922,7 +922,7 @@ defmodule Lightning.InvocationTest do
 
     test "assemble_logs_for_run/1 returns a string representation of the logs for a run" do
       run =
-        insert(:run,
+        insert(:step,
           log_lines: ["Hello", "I am a", "log"] |> Enum.map(&build_log_map/1)
         )
 

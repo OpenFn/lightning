@@ -237,8 +237,8 @@ defmodule Lightning.ProjectsTest do
 
       p1_dataclip = insert(:dataclip, body: %{foo: "bar"}, project: p1)
 
-      p1_run_1 = insert(:run, input_dataclip: p1_dataclip, job: e1.target_job)
-      p1_run_2 = insert(:run, input_dataclip: p1_dataclip, job: e1.target_job)
+      p1_run_1 = insert(:step, input_dataclip: p1_dataclip, job: e1.target_job)
+      p1_run_2 = insert(:step, input_dataclip: p1_dataclip, job: e1.target_job)
 
       insert(:workorder,
         trigger: t1,
@@ -263,7 +263,7 @@ defmodule Lightning.ProjectsTest do
 
       p2_dataclip = insert(:dataclip, body: %{foo: "bar"}, project: p2)
 
-      p2_run = insert(:run, input_dataclip: p2_dataclip, job: e2.target_job)
+      p2_run = insert(:step, input_dataclip: p2_dataclip, job: e2.target_job)
 
       p2_log_line = build(:log_line, run: p2_run)
 

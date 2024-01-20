@@ -35,11 +35,11 @@ defmodule Lightning.WorkOrders do
   alias Ecto.Multi
   alias Lightning.Accounts.User
   alias Lightning.Attempt
-  alias Lightning.AttemptRun
+  alias Lightning.AttemptStep
   alias Lightning.Attempts
   alias Lightning.Graph
   alias Lightning.Invocation.Dataclip
-  alias Lightning.Invocation.Run
+  alias Lightning.Invocation.Step
   alias Lightning.Repo
   alias Lightning.Workflows.Job
   alias Lightning.Workflows.Trigger
@@ -167,47 +167,44 @@ defmodule Lightning.WorkOrders do
   end
 
   @doc """
-  Retry an Attempt from a given run.
+  Retry an Attempt from a given step.
 
   This will create a new Attempt on the Work Order, and enqueue it for
   processing.
 
-  When creating a new Attempt, a graph of the workflow is created, and
-  using that graph the runs would not be replaced with the new runs are linked.
-
-  For example, by retrying a run from the middle of the workflow, the new
-  attempt will only contain the runs that are upstream of the run being
-  retried.
+  When creating a new Attempt, a graph of the workflow is created steps that are
+  independent from the selected step and its downstream flow are associated with
+  this new attempt, but not executed again.
   """
   @spec retry(
           Attempt.t() | Ecto.UUID.t(),
-          Run.t() | Ecto.UUID.t(),
+          Step.t() | Ecto.UUID.t(),
           [work_order_option(), ...]
         ) ::
           {:ok, Attempt.t()} | {:error, Ecto.Changeset.t(Attempt.t())}
-  def retry(attempt, run, opts)
+  def retry(attempt, step, opts)
 
-  def retry(attempt_id, run_id, opts)
-      when is_binary(attempt_id) and is_binary(run_id) do
+  def retry(attempt_id, step_id, opts)
+      when is_binary(attempt_id) and is_binary(step_id) do
     attrs = Map.new(opts)
 
     attempt =
       from(a in Attempt,
         where: a.id == ^attempt_id,
-        join: r in assoc(a, :runs),
-        where: r.id == ^run_id,
-        preload: [:runs, work_order: [workflow: :edges]]
+        join: s in assoc(a, :steps),
+        where: s.id == ^step_id,
+        preload: [:steps, work_order: [workflow: :edges]]
       )
       |> Repo.one()
 
-    run =
-      from(r in Ecto.assoc(attempt, :runs),
-        where: r.id == ^run_id,
+    step =
+      from(s in Ecto.assoc(attempt, :steps),
+        where: s.id == ^step_id,
         preload: [:job, :input_dataclip]
       )
       |> Repo.one()
 
-    runs =
+    steps =
       attempt.work_order.workflow.edges
       |> Enum.reduce(Graph.new(), fn edge, graph ->
         graph
@@ -216,34 +213,34 @@ defmodule Lightning.WorkOrders do
           edge.target_job_id
         )
       end)
-      |> Graph.prune(run.job_id)
+      |> Graph.prune(step.job_id)
       |> Graph.nodes()
       |> then(fn nodes ->
-        Enum.filter(attempt.runs, fn run ->
-          run.job_id in nodes
+        Enum.filter(attempt.steps, fn step ->
+          step.job_id in nodes
         end)
       end)
 
     do_retry(
       attempt.work_order,
-      run.input_dataclip,
-      run.job,
-      runs,
+      step.input_dataclip,
+      step.job,
+      steps,
       attrs[:created_by]
     )
   end
 
-  def retry(%Attempt{id: attempt_id}, %Run{id: run_id}, opts) do
-    retry(attempt_id, run_id, opts)
+  def retry(%Attempt{id: attempt_id}, %Step{id: step_id}, opts) do
+    retry(attempt_id, step_id, opts)
   end
 
-  defp do_retry(workorder, dataclip, starting_job, runs, creating_user) do
+  defp do_retry(workorder, dataclip, starting_job, steps, creating_user) do
     changeset =
       Attempt.new(%{priority: :immediate})
       |> put_assoc(:work_order, workorder)
       |> put_assoc(:dataclip, dataclip)
       |> put_assoc(:starting_job, starting_job)
-      |> put_assoc(:runs, runs)
+      |> put_assoc(:steps, steps)
       |> put_assoc(:created_by, creating_user)
       |> validate_required_assoc(:dataclip)
       |> validate_required_assoc(:work_order)
@@ -275,26 +272,26 @@ defmodule Lightning.WorkOrders do
         }
       )
 
-    attempt_runs_query =
-      from(ar in AttemptRun,
+    attempt_steps_query =
+      from(ar in AttemptStep,
         join: att in assoc(ar, :attempt),
         join: wo in assoc(att, :work_order),
         join: last in subquery(last_attempts_query),
         on:
           last.work_order_id == att.work_order_id and
             att.inserted_at == last.last_inserted_at,
-        join: r in assoc(ar, :run),
+        join: r in assoc(ar, :step),
         on: r.job_id == ^job_id,
         order_by: [asc: wo.inserted_at]
       )
 
-    attempt_runs_query
+    attempt_steps_query
     |> Repo.all()
     |> retry_many(opts)
   end
 
   @spec retry_many(
-          [WorkOrder.t(), ...] | [AttemptRun.t(), ...],
+          [WorkOrder.t(), ...] | [AttemptStep.t(), ...],
           [work_order_option(), ...]
         ) :: {:ok, count :: integer()}
   def retry_many([%WorkOrder{} | _rest] = workorders, opts) do
@@ -354,12 +351,12 @@ defmodule Lightning.WorkOrders do
     {:ok, length(attempts)}
   end
 
-  def retry_many([%AttemptRun{} | _rest] = attempt_runs, opts) do
-    for attempt_run <- attempt_runs do
-      {:ok, _} = retry(attempt_run.attempt_id, attempt_run.run_id, opts)
+  def retry_many([%AttemptStep{} | _rest] = attempt_steps, opts) do
+    for attempt_step <- attempt_steps do
+      {:ok, _} = retry(attempt_step.attempt_id, attempt_step.step_id, opts)
     end
 
-    {:ok, length(attempt_runs)}
+    {:ok, length(attempt_steps)}
   end
 
   def retry_many([], _opts) do

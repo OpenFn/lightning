@@ -1,6 +1,6 @@
 defmodule LightningWeb.ProjectLive.Settings do
   @moduledoc """
-  Index Liveview for Runs
+  Index Liveview for project settings
   """
 
   use LightningWeb, :live_view

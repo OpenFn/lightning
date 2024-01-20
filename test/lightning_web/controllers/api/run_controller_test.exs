@@ -106,13 +106,13 @@ defmodule LightningWeb.API.RunControllerTest do
         )
 
       response = json_response(conn, 200)
-      run_id = run.id
+      step_id = run.id
 
       assert %{
                "attributes" => %{
                  "finished_at" => nil
                },
-               "id" => ^run_id,
+               "id" => ^step_id,
                "links" => %{
                  "self" => _
                },

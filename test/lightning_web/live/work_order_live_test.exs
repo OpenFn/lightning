@@ -73,7 +73,7 @@ defmodule LightningWeb.RunWorkOrderTest do
       state: state,
       "#{state}_at": timestamp,
       runs: [
-        build(:run,
+        build(:step,
           job: job,
           started_at: build(:timestamp),
           finished_at: build(:timestamp),
@@ -266,7 +266,7 @@ defmodule LightningWeb.RunWorkOrderTest do
           dataclip: dataclip,
           finished_at: build(:timestamp),
           runs: [
-            build(:run,
+            build(:step,
               job: job,
               started_at: build(:timestamp),
               finished_at: build(:timestamp),
@@ -347,7 +347,7 @@ defmodule LightningWeb.RunWorkOrderTest do
           "attempt_id" => attempt.id,
           "job_id" => job.id,
           "input_dataclip_id" => dataclip.id,
-          "run_id" => Ecto.UUID.generate()
+          "step_id" => Ecto.UUID.generate()
         })
 
       {:ok, _view, html} =
@@ -395,7 +395,7 @@ defmodule LightningWeb.RunWorkOrderTest do
           "attempt_id" => attempt.id,
           "job_id" => job.id,
           "input_dataclip_id" => dataclip.id,
-          "run_id" => Ecto.UUID.generate()
+          "step_id" => Ecto.UUID.generate()
         })
 
       {:ok, view, html} =
@@ -482,7 +482,7 @@ defmodule LightningWeb.RunWorkOrderTest do
           "attempt_id" => attempt.id,
           "job_id" => job.id,
           "input_dataclip_id" => dataclip.id,
-          "run_id" => Ecto.UUID.generate()
+          "step_id" => Ecto.UUID.generate()
         })
 
       {:ok, view, _html} =
@@ -546,7 +546,7 @@ defmodule LightningWeb.RunWorkOrderTest do
             starting_trigger: trigger,
             dataclip: dataclip,
             runs: [
-              build(:run,
+              build(:step,
                 job: job,
                 input_dataclip: dataclip,
                 started_at: build(:timestamp),
@@ -579,7 +579,7 @@ defmodule LightningWeb.RunWorkOrderTest do
             starting_trigger: trigger_two,
             dataclip: dataclip_two,
             runs: [
-              build(:run,
+              build(:step,
                 job: job_two,
                 input_dataclip: dataclip_two,
                 started_at: build(:timestamp),
@@ -687,7 +687,7 @@ defmodule LightningWeb.RunWorkOrderTest do
           "input_dataclip_id" => dataclip.id,
           "started_at" => expected_d1,
           "finished_at" => expected_d1 |> Timex.shift(minutes: 2),
-          "run_id" => Ecto.UUID.generate()
+          "step_id" => Ecto.UUID.generate()
         })
 
       workflow_two = insert(:workflow, project: project, name: "workflow 2")
@@ -727,7 +727,7 @@ defmodule LightningWeb.RunWorkOrderTest do
             %{body: "Log me something fun."},
             %{body: "It's another great log."}
           ],
-          "run_id" => Ecto.UUID.generate()
+          "step_id" => Ecto.UUID.generate()
         })
 
       {:ok, view, _html} =
@@ -805,7 +805,7 @@ defmodule LightningWeb.RunWorkOrderTest do
             starting_trigger: trigger,
             dataclip: dataclip,
             runs: [
-              build(:run,
+              build(:step,
                 job: job,
                 input_dataclip: dataclip,
                 started_at: build(:timestamp),
@@ -992,7 +992,7 @@ defmodule LightningWeb.RunWorkOrderTest do
           inserted_at: now |> Timex.shift(minutes: -5),
           dataclip: dataclip,
           runs:
-            build_list(1, :run, %{
+            build_list(1, :step, %{
               job: job,
               exit_reason: "fail",
               started_at: now |> Timex.shift(seconds: -40),
@@ -1008,7 +1008,7 @@ defmodule LightningWeb.RunWorkOrderTest do
           starting_job: job,
           dataclip: dataclip,
           runs:
-            build_list(1, :run,
+            build_list(1, :step,
               job: job,
               started_at: Timex.shift(now, seconds: -20),
               finished_at: now,
@@ -1093,7 +1093,7 @@ defmodule LightningWeb.RunWorkOrderTest do
           inserted_at: build(:timestamp),
           dataclip: dataclip,
           runs:
-            build_list(1, :run, %{
+            build_list(1, :step, %{
               job: job,
               exit_reason: "fail",
               started_at: build(:timestamp),
@@ -1109,7 +1109,7 @@ defmodule LightningWeb.RunWorkOrderTest do
           starting_job: job,
           dataclip: dataclip,
           runs:
-            build_list(1, :run,
+            build_list(1, :step,
               job: job,
               started_at: build(:timestamp),
               finished_at: build(:timestamp),
@@ -1197,7 +1197,7 @@ defmodule LightningWeb.RunWorkOrderTest do
               dataclip: dataclip,
               starting_trigger: trigger,
               runs: [
-                build(:run,
+                build(:step,
                   job: job,
                   exit_reason: "success",
                   started_at: build(:timestamp),
@@ -1256,7 +1256,7 @@ defmodule LightningWeb.RunWorkOrderTest do
         )
 
       run_1 =
-        insert(:run,
+        insert(:step,
           job: job_1,
           attempts: [attempt],
           exit_reason: "success",
@@ -1268,7 +1268,7 @@ defmodule LightningWeb.RunWorkOrderTest do
         live_async(conn, Routes.project_run_index_path(conn, :index, project.id))
 
       run_2 =
-        insert(:run,
+        insert(:step,
           job: job_2,
           attempts: [attempt],
           exit_reason: "success",
@@ -1323,7 +1323,7 @@ defmodule LightningWeb.RunWorkOrderTest do
               dataclip: dataclip_1,
               starting_trigger: trigger_1,
               runs: [
-                build(:run,
+                build(:step,
                   job: job_1,
                   exit_reason: "success",
                   started_at: build(:timestamp),
@@ -1344,7 +1344,7 @@ defmodule LightningWeb.RunWorkOrderTest do
               dataclip: dataclip_2,
               starting_trigger: trigger_2,
               runs: [
-                build(:run,
+                build(:step,
                   job: job_2,
                   exit_reason: "success",
                   started_at: build(:timestamp),
@@ -1448,7 +1448,7 @@ defmodule LightningWeb.RunWorkOrderTest do
           starting_trigger: trigger,
           finished_at: build(:timestamp),
           runs: [
-            build(:run,
+            build(:step,
               job: job_a,
               input_dataclip: dataclip,
               started_at: build(:timestamp),
@@ -1472,7 +1472,7 @@ defmodule LightningWeb.RunWorkOrderTest do
       assert view
              |> render_click("rerun", %{
                "attempt_id" => attempt.id,
-               "run_id" => run.id
+               "step_id" => run.id
              })
     end
 
@@ -1487,7 +1487,7 @@ defmodule LightningWeb.RunWorkOrderTest do
       assert view
              |> render_click("rerun", %{
                "attempt_id" => attempt.id,
-               "run_id" => run.id
+               "step_id" => run.id
              }) =~
                "You are not authorized to perform this action."
     end
@@ -1936,7 +1936,7 @@ defmodule LightningWeb.RunWorkOrderTest do
           runs:
             jobs
             |> Enum.map(fn j ->
-              build(:run,
+              build(:step,
                 job: j,
                 input_dataclip: dataclip,
                 started_at: build(:timestamp),
@@ -1963,7 +1963,7 @@ defmodule LightningWeb.RunWorkOrderTest do
           runs:
             jobs
             |> Enum.map(fn j ->
-              build(:run,
+              build(:step,
                 job: j,
                 input_dataclip: dataclip,
                 started_at: build(:timestamp),
@@ -2174,7 +2174,7 @@ defmodule LightningWeb.RunWorkOrderTest do
               finished_at: build(:timestamp),
               runs:
                 Enum.map(jobs, fn j ->
-                  build(:run,
+                  build(:step,
                     job: j,
                     input_dataclip: dataclip,
                     output_dataclip: dataclip,

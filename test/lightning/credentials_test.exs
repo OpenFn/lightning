@@ -539,7 +539,7 @@ defmodule Lightning.CredentialsTest do
     test "returns true when there's at least one associated run", %{
       credential: credential
     } do
-      insert(:run, credential: credential)
+      insert(:step, credential: credential)
       assert Credentials.has_activity_in_projects?(credential)
     end
 
@@ -670,7 +670,7 @@ defmodule Lightning.CredentialsTest do
     end
 
     defp mock_activity(credential) do
-      insert(:run, credential: credential)
+      insert(:step, credential: credential)
     end
 
     test "doesn't delete credentials that are not scheduled for deletion", %{

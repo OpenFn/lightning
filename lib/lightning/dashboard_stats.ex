@@ -6,7 +6,7 @@ defmodule Lightning.DashboardStats do
   import Ecto.Query
 
   alias Lightning.Attempt
-  alias Lightning.Invocation.Run
+  alias Lightning.Invocation.Step
   alias Lightning.Repo
   alias Lightning.Workflows.Workflow
 
@@ -21,8 +21,8 @@ defmodule Lightning.DashboardStats do
               failed_workorders_count: 0,
               grouped_attempts_count: %{},
               grouped_workorders_count: %{},
-              runs_count: 0,
-              runs_success_rate: 0.0,
+              step_count: 0,
+              step_success_rate: 0.0,
               workorders_count: 0,
               workflow: %Workflow{}
   end
@@ -56,8 +56,8 @@ defmodule Lightning.DashboardStats do
 
     grouped_attempts_count = count_attempts(workflow)
 
-    {runs_count, runs_success_rate} =
-      workflow |> count_runs() |> runs_stats()
+    {step_count, step_success_rate} =
+      workflow |> count_steps() |> step_stats()
 
     last_workorder = get_last_workorder(workflow)
 
@@ -68,8 +68,8 @@ defmodule Lightning.DashboardStats do
       failed_workorders_count: failed_wo_count,
       grouped_attempts_count: grouped_attempts_count,
       grouped_workorders_count: grouped_workorders_count,
-      runs_count: runs_count,
-      runs_success_rate: round(runs_success_rate * 100) / 100,
+      step_count: step_count,
+      step_success_rate: round(step_success_rate * 100) / 100,
       workorders_count: workorders_count
     }
   end
@@ -83,18 +83,18 @@ defmodule Lightning.DashboardStats do
     }
   end
 
-  defp runs_stats(%{
+  defp step_stats(%{
          success: success_count,
          failed: failed_count,
          pending: pending_count
        }) do
-    runs_count = success_count + failed_count + pending_count
+    step_count = success_count + failed_count + pending_count
 
-    if runs_count == 0 do
+    if step_count == 0 do
       {0, 0.0}
     else
       success_rate = success_count * 100 / (success_count + failed_count)
-      {runs_count, success_rate}
+      {step_count, success_rate}
     end
   end
 
@@ -163,12 +163,12 @@ defmodule Lightning.DashboardStats do
     end)
   end
 
-  defp count_runs(%Workflow{id: workflow_id}) do
-    from(r in Run,
-      join: j in assoc(r, :job),
+  defp count_steps(%Workflow{id: workflow_id}) do
+    from(s in Step,
+      join: j in assoc(s, :job),
       join: wf in assoc(j, :workflow),
       where: wf.id == ^workflow_id,
-      select: r.exit_reason
+      select: s.exit_reason
     )
     |> filter_days_ago(30)
     |> Repo.all()

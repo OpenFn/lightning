@@ -107,7 +107,7 @@ defmodule Lightning.WorkflowsFixtures do
           Enum.map([job0, job4, job5, job6], fn job ->
             # job6 run started but not completed
             exit_reason = if job == job6, do: nil, else: "success"
-            insert(:run, job: job, exit_reason: exit_reason)
+            insert(:step, job: job, exit_reason: exit_reason)
           end)
       }
     ]
@@ -122,7 +122,7 @@ defmodule Lightning.WorkflowsFixtures do
             exit_reason =
               if job == job0 or job == job3, do: "fail", else: "success"
 
-            insert(:run, job: job, exit_reason: exit_reason)
+            insert(:step, job: job, exit_reason: exit_reason)
           end)
       }
     ]

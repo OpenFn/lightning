@@ -1309,7 +1309,7 @@ defmodule Lightning.AccountsTest do
     end
 
     defp insert_attempt_run(attempt) do
-      insert(:attempt_run, attempt: attempt, run: build(:run))
+      insert(:attempt_run, attempt: attempt, run: build(:step))
     end
   end
 

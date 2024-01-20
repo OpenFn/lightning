@@ -191,7 +191,7 @@ defmodule LightningWeb.AttemptChannelTest do
 
       assert_reply ref, :ok, {:binary, ~s<{\"data\": {\"foo\": \"bar\"}}>}
 
-      Ecto.Changeset.change(dataclip, type: :run_result)
+      Ecto.Changeset.change(dataclip, type: :step_result)
       |> Repo.update()
 
       ref = push(socket, "fetch:dataclip", %{})
@@ -387,21 +387,21 @@ defmodule LightningWeb.AttemptChannelTest do
       credential: %{id: credential_id}
     } do
       # { id, job_id, input_dataclip_id }
-      run_id = Ecto.UUID.generate()
+      step_id = Ecto.UUID.generate()
       [%{id: job_id}] = workflow.jobs
 
       ref =
         push(socket, "run:start", %{
-          "run_id" => run_id,
+          "step_id" => step_id,
           "credential_id" => credential_id,
           "job_id" => job_id,
           "input_dataclip_id" => attempt.dataclip_id
         })
 
-      assert_reply ref, :ok, %{run_id: ^run_id}, 1_000
+      assert_reply ref, :ok, %{step_id: ^step_id}, 1_000
 
       assert %{credential_id: ^credential_id, job_id: ^job_id} =
-               Repo.get!(Run, run_id)
+               Repo.get!(Run, step_id)
     end
 
     test "run:complete succeeds with normal reason", %{
@@ -410,17 +410,17 @@ defmodule LightningWeb.AttemptChannelTest do
       workflow: workflow
     } do
       [job] = workflow.jobs
-      %{id: run_id} = run = insert(:run, attempts: [attempt], job: job)
+      %{id: step_id} = run = insert(:step, attempts: [attempt], job: job)
 
       ref =
         push(socket, "run:complete", %{
-          "run_id" => run.id,
+          "step_id" => run.id,
           "output_dataclip_id" => Ecto.UUID.generate(),
           "output_dataclip" => ~s({"foo": "bar"}),
           "reason" => "normal"
         })
 
-      assert_reply ref, :ok, %{run_id: ^run_id}
+      assert_reply ref, :ok, %{step_id: ^step_id}
       assert %{exit_reason: "normal"} = Repo.get(Run, run.id)
     end
 
@@ -430,17 +430,17 @@ defmodule LightningWeb.AttemptChannelTest do
       workflow: workflow
     } do
       [job] = workflow.jobs
-      %{id: run_id} = run = insert(:run, attempts: [attempt], job: job)
+      %{id: step_id} = run = insert(:step, attempts: [attempt], job: job)
 
       ref =
         push(socket, "run:complete", %{
-          "run_id" => run.id,
+          "step_id" => run.id,
           "output_dataclip_id" => Ecto.UUID.generate(),
           "output_dataclip" => ~s({"foo": "bar"}),
           "reason" => "fail"
         })
 
-      assert_reply ref, :ok, %{run_id: ^run_id}
+      assert_reply ref, :ok, %{step_id: ^step_id}
       assert %{exit_reason: "fail"} = Repo.get(Run, run.id)
     end
   end
@@ -493,12 +493,12 @@ defmodule LightningWeb.AttemptChannelTest do
       workflow: workflow
     } do
       # { id, job_id, input_dataclip_id }
-      run_id = Ecto.UUID.generate()
+      step_id = Ecto.UUID.generate()
       [job] = workflow.jobs
 
       ref =
         push(socket, "run:start", %{
-          "run_id" => run_id,
+          "step_id" => step_id,
           "job_id" => job.id,
           "input_dataclip_id" => attempt.dataclip_id
         })
@@ -522,12 +522,12 @@ defmodule LightningWeb.AttemptChannelTest do
       workflow: workflow
     } do
       # { id, job_id, input_dataclip_id }
-      run_id = Ecto.UUID.generate()
+      step_id = Ecto.UUID.generate()
       [job] = workflow.jobs
 
       ref =
         push(socket, "run:start", %{
-          "run_id" => run_id,
+          "step_id" => step_id,
           "job_id" => job.id,
           "input_dataclip_id" => attempt.dataclip_id
         })
@@ -552,12 +552,12 @@ defmodule LightningWeb.AttemptChannelTest do
       workflow: workflow
     } do
       # { id, job_id, input_dataclip_id }
-      run_id = Ecto.UUID.generate()
+      step_id = Ecto.UUID.generate()
       [job] = workflow.jobs
 
       ref =
         push(socket, "run:start", %{
-          "run_id" => run_id,
+          "step_id" => step_id,
           "job_id" => job.id,
           "input_dataclip_id" => attempt.dataclip_id
         })
@@ -582,12 +582,12 @@ defmodule LightningWeb.AttemptChannelTest do
       workflow: workflow
     } do
       # { id, job_id, input_dataclip_id }
-      run_id = Ecto.UUID.generate()
+      step_id = Ecto.UUID.generate()
       [job] = workflow.jobs
 
       ref =
         push(socket, "run:start", %{
-          "run_id" => run_id,
+          "step_id" => step_id,
           "job_id" => job.id,
           "input_dataclip_id" => attempt.dataclip_id
         })

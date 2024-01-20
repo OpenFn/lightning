@@ -81,7 +81,7 @@ defmodule LightningWeb.AttemptLive.ShowTest do
       {:ok, run} =
         Lightning.Attempts.start_run(%{
           attempt_id: attempt_id,
-          run_id: Ecto.UUID.generate(),
+          step_id: Ecto.UUID.generate(),
           job_id: job_a.id,
           input_dataclip_id: workorder.dataclip_id
         })
@@ -114,7 +114,7 @@ defmodule LightningWeb.AttemptLive.ShowTest do
         Lightning.Attempts.complete_run(%{
           attempt_id: attempt_id,
           project_id: project.id,
-          run_id: run.id,
+          step_id: run.id,
           output_dataclip: ~s({"y": 2}),
           output_dataclip_id: output_dataclip_id = Ecto.UUID.generate(),
           reason: "success"
@@ -125,7 +125,7 @@ defmodule LightningWeb.AttemptLive.ShowTest do
       {:ok, run_2} =
         Lightning.Attempts.start_run(%{
           attempt_id: attempt_id,
-          run_id: Ecto.UUID.generate(),
+          step_id: Ecto.UUID.generate(),
           job_id: job_b.id,
           input_dataclip_id: output_dataclip_id
         })
@@ -148,7 +148,7 @@ defmodule LightningWeb.AttemptLive.ShowTest do
         Lightning.Attempts.complete_run(%{
           attempt_id: attempt_id,
           project_id: project.id,
-          run_id: run_2.id,
+          step_id: run_2.id,
           output_dataclip: ~s({"z": 2}),
           output_dataclip_id: Ecto.UUID.generate(),
           reason: "success"
@@ -170,7 +170,7 @@ defmodule LightningWeb.AttemptLive.ShowTest do
 
   defp add_log({attempt, run}, message) do
     Lightning.Attempts.append_attempt_log(attempt, %{
-      run_id: run.id,
+      step_id: run.id,
       message: message,
       timestamp: DateTime.utc_now()
     })

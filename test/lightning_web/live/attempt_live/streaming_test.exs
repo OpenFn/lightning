@@ -59,7 +59,7 @@ defmodule LightningWeb.AttemptLive.StreamingTest do
     output_dataclip =
       insert(:dataclip,
         project: project,
-        type: :run_result,
+        type: :step_result,
         body: %{
           integer: 123_456,
           another_no: 789,
@@ -74,10 +74,10 @@ defmodule LightningWeb.AttemptLive.StreamingTest do
 
     now = DateTime.utc_now()
 
-    run1 = insert(:run, job: job1, started_at: now)
+    run1 = insert(:step, job: job1, started_at: now)
 
     run2 =
-      insert(:run,
+      insert(:step,
         exit_reason: "success",
         job: job2,
         input_dataclip: input_dataclip,
@@ -86,7 +86,7 @@ defmodule LightningWeb.AttemptLive.StreamingTest do
       )
 
     run3 =
-      insert(:run, job: job3, started_at: DateTime.add(now, 2, :microsecond))
+      insert(:step, job: job3, started_at: DateTime.add(now, 2, :microsecond))
 
     attempt =
       insert(:attempt,
@@ -113,7 +113,7 @@ defmodule LightningWeb.AttemptLive.StreamingTest do
   describe "get_dataclip_lines" do
     setup :create_runs_dataclips
 
-    test "streams scrubbed lines from run_result dataclip", %{run2: selected_run} do
+    test "streams scrubbed lines from step_result dataclip", %{run2: selected_run} do
       dataclip_lines =
         Streaming.get_dataclip_lines(selected_run, :output_dataclip)
         |> elem(1)

@@ -165,7 +165,7 @@ defmodule Lightning.WorkOrdersTest do
               dataclip: dataclip,
               starting_trigger: trigger,
               runs: [
-                run = insert(:run, job: job, input_dataclip: dataclip)
+                run = insert(:step, job: job, input_dataclip: dataclip)
               ]
             }
           ]
@@ -206,14 +206,14 @@ defmodule Lightning.WorkOrdersTest do
               starting_trigger: trigger,
               runs: [
                 first_run =
-                  insert(:run,
+                  insert(:step,
                     job: job_a,
                     input_dataclip: dataclip,
                     output_dataclip: output_dataclip
                   ),
                 second_run =
-                  insert(:run, job: job_b, input_dataclip: output_dataclip),
-                insert(:run, job: job_c)
+                  insert(:step, job: job_b, input_dataclip: output_dataclip),
+                insert(:step, job: job_c)
               ]
             }
           ]
@@ -254,7 +254,7 @@ defmodule Lightning.WorkOrdersTest do
               dataclip: dataclip,
               starting_trigger: trigger,
               runs: [
-                run = insert(:run, job: job, input_dataclip: dataclip)
+                run = insert(:step, job: job, input_dataclip: dataclip)
               ]
             }
           ]
@@ -359,17 +359,17 @@ defmodule Lightning.WorkOrdersTest do
               starting_trigger: trigger,
               runs: [
                 run_a =
-                  insert(:run,
+                  insert(:step,
                     job: job_a,
                     input_dataclip: input_dataclip,
                     output_dataclip: output_dataclip
                   ),
-                insert(:run,
+                insert(:step,
                   job: job_b,
                   input_dataclip: output_dataclip,
                   output_dataclip: build(:dataclip)
                 ),
-                insert(:run,
+                insert(:step,
                   job: job_c,
                   input_dataclip: build(:dataclip),
                   output_dataclip: build(:dataclip)
@@ -428,18 +428,18 @@ defmodule Lightning.WorkOrdersTest do
               starting_trigger: trigger,
               runs: [
                 run_a =
-                  insert(:run,
+                  insert(:step,
                     job: job_a,
                     input_dataclip: input_dataclip,
                     output_dataclip: output_dataclip
                   ),
                 run_b =
-                  insert(:run,
+                  insert(:step,
                     job: job_b,
                     input_dataclip: output_dataclip,
                     output_dataclip: build(:dataclip)
                   ),
-                insert(:run,
+                insert(:step,
                   job: job_c,
                   input_dataclip: build(:dataclip),
                   output_dataclip: build(:dataclip)
@@ -500,7 +500,7 @@ defmodule Lightning.WorkOrdersTest do
           starting_trigger: trigger,
           runs: [
             run_1_a =
-              insert(:run,
+              insert(:step,
                 job: job_a,
                 input_dataclip: input_dataclip,
                 output_dataclip: output_dataclip
@@ -516,17 +516,17 @@ defmodule Lightning.WorkOrdersTest do
           starting_job: job_a,
           runs: [
             run_2_a =
-              insert(:run,
+              insert(:step,
                 job: job_a,
                 input_dataclip: build(:dataclip),
                 output_dataclip: build(:dataclip)
               ),
-            insert(:run,
+            insert(:step,
               job: job_b,
               input_dataclip: build(:dataclip),
               output_dataclip: build(:dataclip)
             ),
-            insert(:run,
+            insert(:step,
               job: job_c,
               input_dataclip: build(:dataclip),
               output_dataclip: build(:dataclip)
@@ -585,13 +585,13 @@ defmodule Lightning.WorkOrdersTest do
           dataclip: input_dataclip,
           starting_trigger: trigger,
           runs: [
-            insert(:run,
+            insert(:step,
               job: job_a,
               input_dataclip: input_dataclip,
               output_dataclip: output_dataclip
             ),
             run_1_b =
-              insert(:run,
+              insert(:step,
                 job: job_b,
                 input_dataclip: output_dataclip
               )
@@ -646,13 +646,13 @@ defmodule Lightning.WorkOrdersTest do
           dataclip: input_dataclip,
           starting_trigger: trigger,
           runs: [
-            insert(:run,
+            insert(:step,
               job: job_a,
               input_dataclip: input_dataclip,
               output_dataclip: output_dataclip
             ),
             run_1_b =
-              insert(:run,
+              insert(:step,
                 job: job_b,
                 input_dataclip: build(:dataclip),
                 output_dataclip: build(:dataclip)
@@ -668,18 +668,18 @@ defmodule Lightning.WorkOrdersTest do
           starting_job: job_a,
           runs: [
             run_2_a =
-              insert(:run,
+              insert(:step,
                 job: job_a,
                 input_dataclip: build(:dataclip),
                 output_dataclip: build(:dataclip)
               ),
             run_2_b =
-              insert(:run,
+              insert(:step,
                 job: job_b,
                 input_dataclip: build(:dataclip),
                 output_dataclip: build(:dataclip)
               ),
-            insert(:run,
+            insert(:step,
               job: job_c,
               input_dataclip: build(:dataclip),
               output_dataclip: build(:dataclip)
@@ -730,17 +730,17 @@ defmodule Lightning.WorkOrdersTest do
               dataclip: build(:dataclip),
               starting_trigger: trigger,
               runs: [
-                insert(:run,
+                insert(:step,
                   job: job_a,
                   input_dataclip: build(:dataclip),
                   output_dataclip: build(:dataclip)
                 ),
-                insert(:run,
+                insert(:step,
                   job: job_b,
                   input_dataclip: build(:dataclip),
                   output_dataclip: build(:dataclip)
                 ),
-                insert(:run,
+                insert(:step,
                   job: job_c,
                   input_dataclip: build(:dataclip),
                   output_dataclip: build(:dataclip)
@@ -800,7 +800,7 @@ defmodule Lightning.WorkOrdersTest do
               dataclip: build(:dataclip),
               starting_trigger: trigger,
               runs: [
-                insert(:run,
+                insert(:step,
                   job: job_a,
                   input_dataclip: build(:dataclip),
                   output_dataclip: build(:dataclip)
@@ -821,17 +821,17 @@ defmodule Lightning.WorkOrdersTest do
               dataclip: build(:dataclip),
               starting_trigger: trigger,
               runs: [
-                insert(:run,
+                insert(:step,
                   job: job_a,
                   input_dataclip: build(:dataclip),
                   output_dataclip: build(:dataclip)
                 ),
-                insert(:run,
+                insert(:step,
                   job: job_b,
                   input_dataclip: build(:dataclip),
                   output_dataclip: build(:dataclip)
                 ),
-                insert(:run,
+                insert(:step,
                   job: job_c,
                   input_dataclip: build(:dataclip),
                   output_dataclip: build(:dataclip)
@@ -916,7 +916,7 @@ defmodule Lightning.WorkOrdersTest do
           starting_trigger: trigger,
           runs: [
             run_1_a =
-              insert(:run,
+              insert(:step,
                 job: job_a,
                 input_dataclip: input_dataclip,
                 output_dataclip: output_dataclip
@@ -932,17 +932,17 @@ defmodule Lightning.WorkOrdersTest do
           starting_job: job_a,
           runs: [
             run_2_a =
-              insert(:run,
+              insert(:step,
                 job: job_a,
                 input_dataclip: build(:dataclip),
                 output_dataclip: build(:dataclip)
               ),
-            insert(:run,
+            insert(:step,
               job: job_b,
               input_dataclip: build(:dataclip),
               output_dataclip: build(:dataclip)
             ),
-            insert(:run,
+            insert(:step,
               job: job_c,
               input_dataclip: build(:dataclip),
               output_dataclip: build(:dataclip)
@@ -998,17 +998,17 @@ defmodule Lightning.WorkOrdersTest do
               dataclip: build(:dataclip),
               starting_trigger: trigger,
               runs: [
-                insert(:run,
+                insert(:step,
                   job: job_a,
                   input_dataclip: build(:dataclip),
                   output_dataclip: build(:dataclip)
                 ),
-                insert(:run,
+                insert(:step,
                   job: job_b,
                   input_dataclip: build(:dataclip),
                   output_dataclip: build(:dataclip)
                 ),
-                insert(:run,
+                insert(:step,
                   job: job_c,
                   input_dataclip: build(:dataclip),
                   output_dataclip: build(:dataclip)
@@ -1206,7 +1206,7 @@ defmodule Lightning.WorkOrdersTest do
         )
 
       run_a =
-        insert(:run,
+        insert(:step,
           job: job_a,
           input_dataclip: input_dataclip,
           output_dataclip: output_dataclip
@@ -1217,7 +1217,7 @@ defmodule Lightning.WorkOrdersTest do
       # other attempt run
       insert(:attempt_run,
         run:
-          build(:run,
+          build(:step,
             job: job_b,
             input_dataclip: build(:dataclip),
             output_dataclip: build(:dataclip)
@@ -1277,7 +1277,7 @@ defmodule Lightning.WorkOrdersTest do
       attempt_run_a =
         insert(:attempt_run,
           run:
-            build(:run,
+            build(:step,
               job: job_a,
               input_dataclip: input_dataclip,
               output_dataclip: output_dataclip
@@ -1288,7 +1288,7 @@ defmodule Lightning.WorkOrdersTest do
       attempt_run_b =
         insert(:attempt_run,
           run:
-            build(:run,
+            build(:step,
               job: job_b,
               input_dataclip: build(:dataclip),
               output_dataclip: build(:dataclip)
@@ -1299,7 +1299,7 @@ defmodule Lightning.WorkOrdersTest do
       _attempt_run_c =
         insert(:attempt_run,
           run:
-            build(:run,
+            build(:step,
               job: job_c,
               input_dataclip: build(:dataclip),
               output_dataclip: build(:dataclip)
@@ -1357,7 +1357,7 @@ defmodule Lightning.WorkOrdersTest do
       attempt_run_1_a =
         insert(:attempt_run,
           run:
-            build(:run,
+            build(:step,
               job: job_a,
               input_dataclip: build(:dataclip),
               output_dataclip: build(:dataclip)
@@ -1383,7 +1383,7 @@ defmodule Lightning.WorkOrdersTest do
       attempt_run_2_a =
         insert(:attempt_run,
           run:
-            build(:run,
+            build(:step,
               job: job_a,
               input_dataclip: build(:dataclip),
               output_dataclip: build(:dataclip)

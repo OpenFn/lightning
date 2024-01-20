@@ -141,20 +141,24 @@ defmodule LightningWeb.AttemptChannel do
     {:reply, {:ok, {:binary, body}}, socket}
   end
 
-  def handle_in("run:start", payload, socket) do
+  # TODO - remove after worker update.
+  def handle_in("run:start", payload, socket),
+    do: handle_in("step:start", payload, socket)
+
+  def handle_in("step:start", payload, socket) do
     Map.get(payload, "job_id", :missing_job_id)
     |> case do
       job_id when is_binary(job_id) ->
         %{"attempt_id" => socket.assigns.attempt.id}
         |> Enum.into(payload)
-        |> Attempts.start_run()
+        |> Attempts.start_step()
         |> case do
           {:error, changeset} ->
             {:reply, {:error, LightningWeb.ChangesetJSON.error(changeset)},
              socket}
 
-          {:ok, run} ->
-            {:reply, {:ok, %{run_id: run.id}}, socket}
+          {:ok, step} ->
+            {:reply, {:ok, %{step_id: step.id}}, socket}
         end
 
       :missing_job_id ->
@@ -166,19 +170,23 @@ defmodule LightningWeb.AttemptChannel do
     end
   end
 
-  def handle_in("run:complete", payload, socket) do
+  # TODO - remove after worker update.
+  def handle_in("run:complete", payload, socket),
+    do: handle_in("step:complete", payload, socket)
+
+  def handle_in("step:complete", payload, socket) do
     %{
       "attempt_id" => socket.assigns.attempt.id,
       "project_id" => socket.assigns.project_id
     }
     |> Enum.into(payload)
-    |> Attempts.complete_run()
+    |> Attempts.complete_step()
     |> case do
       {:error, changeset} ->
         {:reply, {:error, LightningWeb.ChangesetJSON.error(changeset)}, socket}
 
-      {:ok, run} ->
-        {:reply, {:ok, %{run_id: run.id}}, socket}
+      {:ok, step} ->
+        {:reply, {:ok, %{step_id: step.id}}, socket}
     end
   end
 

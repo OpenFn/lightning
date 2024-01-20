@@ -21,7 +21,7 @@ defmodule Lightning.Invocation.QueryTest do
           build(:attempt,
             starting_trigger: trigger,
             dataclip: build(:dataclip, project: project),
-            runs: [build(:run, job: job)]
+            runs: [build(:step, job: job)]
           )
         ]
       )
@@ -37,7 +37,7 @@ defmodule Lightning.Invocation.QueryTest do
           build(:attempt,
             dataclip: build(:dataclip),
             starting_trigger: trigger2,
-            runs: [build(:run, job: job2)]
+            runs: [build(:step, job: job2)]
           )
         ]
       )

@@ -289,7 +289,7 @@ defmodule Lightning.SetupUtils do
         type: :http_request
       })
 
-    run_params = [
+    step_params = [
       %{
         job_id: job_2.id,
         exit_reason: "success",
@@ -321,7 +321,7 @@ defmodule Lightning.SetupUtils do
               }
             },
             project_id: project.id,
-            type: :run_result
+            type: :step_result
           }).id,
         output_dataclip:
           %{
@@ -423,7 +423,7 @@ defmodule Lightning.SetupUtils do
         workflow,
         source_trigger,
         input_dataclip,
-        run_params
+        step_params
       )
 
     %{
@@ -556,7 +556,7 @@ defmodule Lightning.SetupUtils do
         type: :http_request
       })
 
-    run_params = [
+    step_params = [
       %{
         job_id: fhir_standard_data.id,
         exit_reason: "success",
@@ -638,7 +638,7 @@ defmodule Lightning.SetupUtils do
         openhie_workflow,
         openhie_trigger,
         dataclip,
-        run_params
+        step_params
       )
 
     %{
@@ -766,7 +766,7 @@ defmodule Lightning.SetupUtils do
       })
 
     # Make it fail for demo purposes
-    run_params = [
+    step_params = [
       %{
         job_id: get_dhis2_data.id,
         exit_reason: "success",
@@ -834,7 +834,7 @@ defmodule Lightning.SetupUtils do
         dhis2_workflow,
         dhis_trigger,
         input_dataclip,
-        run_params
+        step_params
       )
 
     %{
@@ -854,12 +854,12 @@ defmodule Lightning.SetupUtils do
 
     delete_all_entities([
       Lightning.Attempt,
-      Lightning.AttemptRun,
+      Lightning.AttemptStep,
       Lightning.AuthProviders.AuthConfig,
       Lightning.Auditing.Audit,
       Lightning.Projects.ProjectCredential,
       Lightning.WorkOrder,
-      Lightning.Invocation.Run,
+      Lightning.Invocation.Step,
       Lightning.Credentials.Credential,
       Lightning.Workflows.Job,
       Lightning.Workflows.Trigger,
@@ -892,7 +892,7 @@ defmodule Lightning.SetupUtils do
          workflow,
          trigger,
          input_dataclip,
-         run_params
+         step_params
        ) do
     workflow |> Repo.preload(:project)
     {:ok, ticker} = Ticker.start_link(DateTime.utc_now())
@@ -917,61 +917,61 @@ defmodule Lightning.SetupUtils do
 
         Attempts.start_attempt(attempt)
 
-        _runs =
-          run_params
-          |> Enum.reduce(%{}, fn run, previous ->
-            run_id = Ecto.UUID.generate()
+        _steps =
+          step_params
+          |> Enum.reduce(%{}, fn step, previous ->
+            step_id = Ecto.UUID.generate()
 
             input_dataclip_id =
               Map.get(
-                run,
+                step,
                 :input_dataclip_id,
                 Map.get(previous, :output_dataclip_id, input_dataclip.id)
               )
 
-            Attempts.start_run(%{
+            Attempts.start_step(%{
               attempt_id: attempt.id,
-              run_id: run_id,
-              job_id: run.job_id,
+              step_id: step_id,
+              job_id: step.job_id,
               input_dataclip_id: input_dataclip_id,
               started_at: Ticker.next(ticker)
             })
 
-            run.log_lines
+            step.log_lines
             |> Enum.each(fn line ->
               Attempts.append_attempt_log(attempt, %{
-                run_id: run_id,
+                step_id: step_id,
                 message: line.message,
                 timestamp: Ticker.next(ticker)
               })
             end)
 
-            complete_run_params =
+            complete_step_params =
               %{
                 attempt_id: attempt.id,
                 project_id: workflow.project_id,
-                run_id: run_id,
-                reason: run.exit_reason,
+                step_id: step_id,
+                reason: step.exit_reason,
                 finished_at: Ticker.next(ticker)
               }
               |> Map.merge(
-                if run[:output_dataclip] do
+                if step[:output_dataclip] do
                   %{
                     output_dataclip_id: Ecto.UUID.generate(),
-                    output_dataclip: run.output_dataclip
+                    output_dataclip: step.output_dataclip
                   }
                 else
                   %{}
                 end
               )
 
-            {:ok, run} = Attempts.complete_run(complete_run_params)
+            {:ok, step} = Attempts.complete_step(complete_step_params)
 
-            run
+            step
           end)
 
         state =
-          List.last(run_params)
+          List.last(step_params)
           |> Map.get(:exit_reason)
           |> case do
             "fail" -> "failed"
@@ -1009,115 +1009,5 @@ defmodule Lightning.SetupUtils do
     |> select([pu, _o, u], u)
     |> limit(1)
     |> Repo.one!()
-  end
-
-  @doc """
-  This is a helper function that can be used to aid instance administrators in
-  migrating from v0.9.3 to v0.10.0.
-
-  While the final state of an attempt is now handled by the worker, this script
-  can be called once after migration (with no workers attached) to provide an
-  approximate final state for attempts that were finished before the migration.
-  """
-  def approximate_state_for_attempts_and_workorders do
-    # Set attempts state by exit_reason of their last run.
-    Repo.query!("""
-    UPDATE attempts
-    SET state = (
-      SELECT
-        DISTINCT ON
-        (a.id) CASE
-          WHEN runs.exit_reason = 'success' THEN 'success'
-          ELSE 'failed'
-        END
-      FROM
-        runs
-      JOIN attempt_runs ar ON
-        ar.run_id = runs.id
-      JOIN attempts a ON
-        a.id = ar.attempt_id
-      WHERE
-        a.id = attempts.id
-      ORDER BY
-        a.id ASC,
-        runs.finished_at DESC
-    )
-    WHERE attempts.state NOT IN ('available', 'claimed', 'started');
-    """)
-
-    # Set attempts finished_at by finished at of their last run.
-    Repo.query!("""
-    UPDATE attempts
-    SET finished_at = (
-      SELECT
-        DISTINCT ON
-        (a.id) runs.finished_at
-      FROM
-        runs
-      JOIN attempt_runs ar ON
-        ar.run_id = runs.id
-      JOIN attempts a ON
-        a.id = ar.attempt_id
-      WHERE
-        a.id = attempts.id
-      ORDER BY
-        a.id ASC,
-        runs.finished_at DESC
-    ) WHERE attempts.state NOT IN ('available', 'claimed', 'started');
-    """)
-
-    # Set attempts error type to a generic, pre v0.10.0 error.
-    Repo.query!("""
-    UPDATE attempts
-    SET error_type = 'Error'
-    WHERE error_type IS NULL
-    AND state = 'failed';
-    """)
-
-    # Set runs error type to a generic, pre v0.10.0 error.
-    Repo.query!("""
-    UPDATE runs
-    SET error_type = 'Error'
-    WHERE error_type IS NULL
-    AND exit_reason = 'fail';
-    """)
-
-    # Set state for workorders by the state from their last attempts.
-    Repo.query!("""
-    UPDATE work_orders
-    SET state = (
-      SELECT
-        DISTINCT ON
-        (a.work_order_id) a.state
-      FROM
-        attempts a
-      WHERE
-        a.work_order_id = work_orders.id
-      ORDER BY
-        a.work_order_id ASC,
-        a.finished_at DESC
-    )
-    WHERE work_orders.state NOT IN ('available', 'claimed', 'started');
-    """)
-
-    # Set last activity for workorders by the last finished_at from attempts.
-    Repo.query!("""
-    UPDATE
-      work_orders
-    SET
-      last_activity = (
-      SELECT
-        DISTINCT ON
-        (a.work_order_id) a.finished_at
-      FROM
-        attempts a
-      WHERE
-        a.work_order_id = work_orders.id
-      ORDER BY
-        a.work_order_id ASC,
-        a.finished_at DESC
-      )
-    WHERE work_orders.state NOT IN ('available', 'claimed', 'started');
-    """)
   end
 end

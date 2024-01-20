@@ -330,12 +330,12 @@ defmodule Lightning.JobsTest do
           state: :success,
           dataclip: dataclip,
           runs: [
-            build(:run,
+            build(:step,
               exit_reason: "success",
               job: job,
               input_dataclip: dataclip,
               output_dataclip:
-                build(:dataclip, type: :run_result, body: %{"changed" => true})
+                build(:dataclip, type: :step_result, body: %{"changed" => true})
             )
           ]
         )
@@ -355,7 +355,7 @@ defmodule Lightning.JobsTest do
       assert old_run.input_dataclip.body == %{}
 
       refute new_attempt.id == attempt.id
-      assert new_attempt.dataclip.type == :run_result
+      assert new_attempt.dataclip.type == :step_result
       assert new_attempt.dataclip.body == old_run.output_dataclip.body
     end
   end

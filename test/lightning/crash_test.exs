@@ -65,8 +65,8 @@
 #           })
 #         )
 #         |> Ecto.Changeset.put_assoc(
-#           :run,
-#           Run.changeset(%Run{}, %{
+#           :step,
+#           Run.changeset(%Step{}, %{
 #             project_id: job.workflow.project_id,
 #             job_id: job.id,
 #             input_dataclip_id: dataclip.id

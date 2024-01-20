@@ -171,7 +171,7 @@ defmodule Lightning.AttemptsTest do
           "attempt_id" => attempt.id,
           "job_id" => Ecto.UUID.generate(),
           "input_dataclip_id" => dataclip.id,
-          "run_id" => Ecto.UUID.generate()
+          "step_id" => Ecto.UUID.generate()
         })
 
       assert {:job_id, {"does not exist", []}} in changeset.errors
@@ -183,7 +183,7 @@ defmodule Lightning.AttemptsTest do
           "attempt_id" => Ecto.UUID.generate(),
           "job_id" => Ecto.UUID.generate(),
           "input_dataclip_id" => dataclip.id,
-          "run_id" => Ecto.UUID.generate()
+          "step_id" => Ecto.UUID.generate()
         })
 
       assert {:job_id, {"does not exist", []}} in changeset.errors
@@ -196,12 +196,12 @@ defmodule Lightning.AttemptsTest do
           "attempt_id" => attempt.id,
           "job_id" => job.id,
           "input_dataclip_id" => dataclip.id,
-          "run_id" => _run_id = Ecto.UUID.generate()
+          "step_id" => _run_id = Ecto.UUID.generate()
         })
 
       assert run.started_at, "The run has been marked as started"
 
-      assert Repo.get_by(Lightning.AttemptRun, run_id: run.id),
+      assert Repo.get_by(Lightning.AttemptRun, step_id: run.id),
              "There is a corresponding AttemptRun linking it to the attempt"
 
       attempt_id = attempt.id
@@ -221,11 +221,11 @@ defmodule Lightning.AttemptsTest do
         work_order_for(trigger, workflow: workflow, dataclip: dataclip)
         |> insert()
 
-      run = insert(:run, attempts: [attempt], job: job, input_dataclip: dataclip)
+      run = insert(:step, attempts: [attempt], job: job, input_dataclip: dataclip)
 
       {:ok, run} =
         Attempts.complete_run(%{
-          run_id: run.id,
+          step_id: run.id,
           reason: "success",
           output_dataclip: ~s({"foo": "bar"}),
           output_dataclip_id: Ecto.UUID.generate(),
@@ -249,11 +249,11 @@ defmodule Lightning.AttemptsTest do
         work_order_for(trigger, workflow: workflow, dataclip: dataclip)
         |> insert()
 
-      run = insert(:run, attempts: [attempt], job: job, input_dataclip: dataclip)
+      run = insert(:step, attempts: [attempt], job: job, input_dataclip: dataclip)
 
       assert {:error, %Ecto.Changeset{}} =
                Attempts.complete_run(%{
-                 run_id: run.id
+                 step_id: run.id
                })
     end
 
@@ -265,9 +265,9 @@ defmodule Lightning.AttemptsTest do
         work_order_for(trigger, workflow: workflow, dataclip: dataclip)
         |> insert()
 
-      assert {:error, %Ecto.Changeset{errors: [run_id: {"not found", []}]}} =
+      assert {:error, %Ecto.Changeset{errors: [step_id: {"not found", []}]}} =
                Attempts.complete_run(%{
-                 run_id: Ecto.UUID.generate(),
+                 step_id: Ecto.UUID.generate(),
                  reason: "success",
                  output_dataclip: ~s({"foo": "bar"}),
                  output_dataclip_id: Ecto.UUID.generate(),
@@ -523,12 +523,12 @@ defmodule Lightning.AttemptsTest do
 
       {:error, changeset} =
         Attempts.append_attempt_log(attempt, %{
-          run_id: Ecto.UUID.generate(),
+          step_id: Ecto.UUID.generate(),
           message: "I'm a log line",
           timestamp: DateTime.utc_now() |> DateTime.to_unix(:millisecond)
         })
 
-      assert {:run_id, {"must be associated with the attempt", []}} in changeset.errors
+      assert {:step_id, {"must be associated with the attempt", []}} in changeset.errors
 
       {:ok, _log_line} =
         Attempts.append_attempt_log(attempt, %{
@@ -536,18 +536,18 @@ defmodule Lightning.AttemptsTest do
           timestamp: DateTime.utc_now() |> DateTime.to_unix(:millisecond)
         })
 
-      run = insert(:run, attempts: [attempt], job: job, input_dataclip: dataclip)
+      run = insert(:step, attempts: [attempt], job: job, input_dataclip: dataclip)
 
       {:ok, log_line} =
         Attempts.append_attempt_log(attempt, %{
           message: "I'm another log line",
-          run_id: run.id,
+          step_id: run.id,
           timestamp: DateTime.utc_now() |> DateTime.to_unix(:millisecond)
         })
 
       log_line =
         Repo.get_by(Invocation.LogLine, id: log_line.id)
-        |> Repo.preload(:run)
+        |> Repo.preload(:step)
 
       assert log_line.run.id == run.id
     end
@@ -599,13 +599,13 @@ defmodule Lightning.AttemptsTest do
         )
 
       finished_run =
-        insert(:run,
+        insert(:step,
           attempts: [attempt],
           finished_at: DateTime.utc_now(),
           exit_reason: "success"
         )
 
-      unfinished_run = insert(:run, attempts: [attempt])
+      unfinished_run = insert(:step, attempts: [attempt])
 
       Attempts.mark_attempt_lost(attempt)
 

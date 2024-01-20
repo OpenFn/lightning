@@ -13,7 +13,7 @@ defmodule LightningWeb.RunLive.ComponentsTest do
       assert render_component(
                &LightningWeb.RunLive.Components.run_viewer/1,
                run:
-                 insert(:run, exit_reason: "fail", output_dataclip_id: nil)
+                 insert(:step, exit_reason: "fail", output_dataclip_id: nil)
                  |> Lightning.Repo.preload(:log_lines)
                  |> Lightning.Repo.preload(:attempts),
                project_id: "4adf2644-ed4e-4f97-a24c-ab35b3cb1efa"
@@ -23,7 +23,7 @@ defmodule LightningWeb.RunLive.ComponentsTest do
       assert render_component(
                &LightningWeb.RunLive.Components.run_viewer/1,
                run:
-                 insert(:run, output_dataclip_id: nil)
+                 insert(:step, output_dataclip_id: nil)
                  |> Lightning.Repo.preload(:log_lines)
                  |> Lightning.Repo.preload(:attempts),
                project_id: "4adf2644-ed4e-4f97-a24c-ab35b3cb1efa"
@@ -32,7 +32,7 @@ defmodule LightningWeb.RunLive.ComponentsTest do
 
       assert render_component(&LightningWeb.RunLive.Components.run_viewer/1,
                run:
-                 insert(:run, exit_reason: "success", output_dataclip_id: nil)
+                 insert(:step, exit_reason: "success", output_dataclip_id: nil)
                  |> Lightning.Repo.preload(:log_lines)
                  |> Lightning.Repo.preload(:attempts),
                project_id: "4adf2644-ed4e-4f97-a24c-ab35b3cb1efa"
@@ -40,11 +40,11 @@ defmodule LightningWeb.RunLive.ComponentsTest do
                "There is no output for this run"
 
       run =
-        insert(:run,
+        insert(:step,
           exit_reason: "success",
           output_dataclip:
             build(:dataclip,
-              type: :run_result,
+              type: :step_result,
               body: %{name: "dataclip_body"}
             )
         )
@@ -116,18 +116,18 @@ defmodule LightningWeb.RunLive.ComponentsTest do
             dataclip: dataclip,
             starting_trigger: trigger,
             runs: [
-              insert(:run,
+              insert(:step,
                 job: job_1,
                 input_dataclip: dataclip,
                 output_dataclip: output_dataclip,
                 exit_reason: nil
               ),
-              insert(:run,
+              insert(:step,
                 job: job_2,
                 input_dataclip: output_dataclip,
                 exit_reason: "success"
               ),
-              insert(:run,
+              insert(:step,
                 job: job_3,
                 exit_reason: "fail",
                 finished_at: build(:timestamp)
@@ -205,7 +205,7 @@ defmodule LightningWeb.RunLive.ComponentsTest do
       )
 
     attempt2_last_run =
-      insert(:run,
+      insert(:step,
         attempts: [attempt2],
         job: job_3,
         exit_reason: nil,
@@ -263,7 +263,7 @@ defmodule LightningWeb.RunLive.ComponentsTest do
         starting_trigger: trigger,
         finished_at: build(:timestamp),
         runs: [
-          build(:run, finished_at: DateTime.utc_now(), exit_reason: "success")
+          build(:step, finished_at: DateTime.utc_now(), exit_reason: "success")
         ]
       )
 
@@ -338,7 +338,7 @@ defmodule LightningWeb.RunLive.ComponentsTest do
       finished_at = now |> Timex.shift(seconds: -1)
 
       run =
-        insert(:run,
+        insert(:step,
           started_at: started_at,
           finished_at: finished_at,
           exit_reason: "success"
@@ -376,7 +376,7 @@ defmodule LightningWeb.RunLive.ComponentsTest do
       now = Timex.now()
 
       started_at = now |> Timex.shift(seconds: -25)
-      run = insert(:run, started_at: started_at)
+      run = insert(:step, started_at: started_at)
 
       html =
         render_component(&Components.run_details/1,
@@ -408,7 +408,7 @@ defmodule LightningWeb.RunLive.ComponentsTest do
       started_at = now |> Timex.shift(seconds: -25)
 
       run =
-        insert(:run,
+        insert(:step,
           started_at: started_at,
           finished_at: started_at,
           exit_reason: "fail",
@@ -435,7 +435,7 @@ defmodule LightningWeb.RunLive.ComponentsTest do
       now = Timex.now()
 
       started_at = now |> Timex.shift(minutes: -25)
-      run = insert(:run, started_at: started_at, exit_reason: "lost")
+      run = insert(:step, started_at: started_at, exit_reason: "lost")
 
       html =
         render_component(&Components.run_details/1,
@@ -459,7 +459,7 @@ defmodule LightningWeb.RunLive.ComponentsTest do
     end
 
     test "with unstarted run" do
-      run = insert(:run)
+      run = insert(:step)
 
       html =
         render_component(&Components.run_details/1,

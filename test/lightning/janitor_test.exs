@@ -33,7 +33,7 @@ defmodule Lightning.JanitorTest do
         )
 
       unfinished_run =
-        insert(:run,
+        insert(:step,
           attempts: [lost_attempt],
           finished_at: nil,
           exit_reason: nil
