@@ -6,7 +6,7 @@ defmodule Lightning.InvocationTest do
   alias Lightning.Attempts
   alias Lightning.WorkOrders.SearchParams
   alias Lightning.Invocation
-  alias Lightning.Invocation.Run
+  alias Lightning.Invocation.Step
   alias Lightning.Repo
 
   require SearchParams
@@ -72,9 +72,9 @@ defmodule Lightning.InvocationTest do
 
       assert Invocation.get_dataclip(Ecto.UUID.generate()) == nil
 
-      run = insert(:step, input_dataclip: dataclip)
+      step = insert(:step, input_dataclip: dataclip)
 
-      assert Invocation.get_dataclip(run) |> Repo.preload(:project) ==
+      assert Invocation.get_dataclip(step) |> Repo.preload(:project) ==
                dataclip
     end
 
@@ -129,7 +129,7 @@ defmodule Lightning.InvocationTest do
     end
   end
 
-  describe "runs" do
+  describe "steps" do
     @invalid_attrs %{job_id: nil}
     @valid_attrs %{
       # Note that we faithfully persist any string the worker sends back.
@@ -139,84 +139,59 @@ defmodule Lightning.InvocationTest do
       started_at: ~U[2022-02-02 11:49:00.000000Z]
     }
 
-    test "list_runs/0 returns all runs" do
-      run = insert(:step)
-      assert Invocation.list_runs() |> Enum.map(fn r -> r.id end) == [run.id]
+    test "list_steps/0 returns all steps" do
+      step = insert(:step)
+      assert Invocation.list_steps() |> Enum.map(fn s -> s.id end) == [step.id]
     end
 
-    test "list_runs_for_project/2 returns runs ordered by inserted at desc" do
-      workflow = insert(:workflow) |> Repo.preload(:project)
-      job_one = insert(:job, workflow: workflow)
-      job_two = insert(:job, workflow: workflow)
+    test "get_step!/1 returns the step with given id" do
+      step = insert(:step)
 
-      first_run =
-        insert(:step, job: job_one)
-        |> shift_inserted_at!(days: -1)
-        |> Repo.preload(:job)
+      actual_step = Invocation.get_step!(step.id)
 
-      second_run =
-        insert(:step, job: job_two)
-        |> Repo.preload(:job)
-
-      third_run =
-        insert(:step, job: job_one)
-        |> Repo.preload(:job)
-
-      assert Invocation.list_runs_for_project(workflow.project).entries
-             |> Enum.map(fn r -> r.id end) == [
-               third_run.id,
-               second_run.id,
-               first_run.id
-             ]
+      assert actual_step.id == step.id
+      assert actual_step.input_dataclip_id == step.input_dataclip_id
+      assert actual_step.job_id == step.job_id
     end
 
-    test "get_run!/1 returns the run with given id" do
-      run = insert(:step)
-
-      actual_run = Invocation.get_run!(run.id)
-
-      assert actual_run.id == run.id
-      assert actual_run.input_dataclip_id == run.input_dataclip_id
-      assert actual_run.job_id == run.job_id
-    end
-
-    test "create_run/1 with valid data creates a run" do
+    test "create_step/1 with valid data creates a step" do
       project = insert(:project)
       dataclip = insert(:dataclip, project: project)
       workflow = insert(:workflow, project: project)
       job = insert(:job, workflow: workflow)
 
-      assert {:ok, %Step{} = run} =
-               Invocation.create_run(
+      assert {:ok, %Step{} = step} =
+               Invocation.create_step(
                  Map.merge(@valid_attrs, %{
                    job_id: job.id,
                    input_dataclip_id: dataclip.id
                  })
                )
 
-      assert run.exit_reason == "something very strange"
-      assert run |> Invocation.logs_for_run() == []
-      assert run.finished_at == ~U[2022-02-02 11:49:00.000000Z]
-      assert run.started_at == ~U[2022-02-02 11:49:00.000000Z]
+      assert step.exit_reason == "something very strange"
+      assert step |> Invocation.logs_for_step() == []
+      assert step.finished_at == ~U[2022-02-02 11:49:00.000000Z]
+      assert step.started_at == ~U[2022-02-02 11:49:00.000000Z]
     end
 
-    test "create_run/1 with invalid data returns error changeset" do
-      assert {:error, %Ecto.Changeset{}} = Invocation.create_run(@invalid_attrs)
+    test "create_step/1 with invalid data returns error changeset" do
+      assert {:error, %Ecto.Changeset{}} = Invocation.create_step(@invalid_attrs)
 
       assert {:error, %Ecto.Changeset{errors: errors}} =
                Map.merge(@valid_attrs, %{event_id: Ecto.UUID.generate()})
-               |> Invocation.create_run()
+               |> Invocation.create_step()
 
       assert event_id:
                {
                  "does not exist",
+                 #  TODO - foreign keys? come back?
                  [constraint: :foreign, constraint_name: "runs_event_id_fkey"]
                } in errors
     end
 
-    test "change_run/1 returns a run changeset" do
-      run = insert(:step)
-      assert %Ecto.Changeset{} = Invocation.change_run(run)
+    test "change_step/1 returns a step changeset" do
+      step = insert(:step)
+      assert %Ecto.Changeset{} = Invocation.change_step(step)
     end
   end
 
@@ -248,8 +223,8 @@ defmodule Lightning.InvocationTest do
         starting_trigger: trigger
       )
 
-    {:ok, run} =
-      Attempts.start_run(%{
+    {:ok, step} =
+      Attempts.start_step(%{
         "attempt_id" => attempt.id,
         "job_id" => job.id,
         "input_dataclip_id" => dataclip.id,
@@ -260,7 +235,7 @@ defmodule Lightning.InvocationTest do
         "step_id" => Ecto.UUID.generate()
       })
 
-    %{work_order: wo, run: run}
+    %{work_order: wo, step: step}
   end
 
   defp get_simplified_page(project, page, filter) do
@@ -305,7 +280,7 @@ defmodule Lightning.InvocationTest do
         started_shift = -50 - index * 10
         finished_shift = -40 - index * 10
 
-        Attempts.start_run(%{
+        Attempts.start_step(%{
           "attempt_id" => attempt.id,
           "job_id" => job.id,
           "input_dataclip_id" => dataclip.id,
@@ -471,37 +446,37 @@ defmodule Lightning.InvocationTest do
 
       now = Timex.now()
 
-      %{work_order: wf1_wo1, run: _wf1_run1} =
+      %{work_order: wf1_wo1, step: _wf1_step1} =
         create_work_order(project, workflow1, job1, trigger1, now, 10)
 
-      %{work_order: wf1_wo2, run: _wf1_run2} =
+      %{work_order: wf1_wo2, step: _wf1_step2} =
         create_work_order(project, workflow1, job1, trigger1, now, 20)
 
-      %{work_order: wf1_wo3, run: _wf1_run3} =
+      %{work_order: wf1_wo3, step: _wf1_step3} =
         create_work_order(project, workflow1, job1, trigger1, now, 30)
 
       {workflow2, trigger2, job2} =
         build_workflow(project: project, name: "workflow-2")
 
-      %{work_order: wf2_wo1, run: _wf2_run1} =
+      %{work_order: wf2_wo1, step: _wf2_step1} =
         create_work_order(project, workflow2, job2, trigger2, now, 40)
 
-      %{work_order: wf2_wo2, run: _wf2_run2} =
+      %{work_order: wf2_wo2, step: _wf2_step2} =
         create_work_order(project, workflow2, job2, trigger2, now, 50)
 
-      %{work_order: wf2_wo3, run: _wf2_run3} =
+      %{work_order: wf2_wo3, step: _wf2_step3} =
         create_work_order(project, workflow2, job2, trigger2, now, 60)
 
       {workflow3, trigger3, job3} =
         build_workflow(project: project, name: "workflow-3")
 
-      %{work_order: wf3_wo1, run: _wf3_run1} =
+      %{work_order: wf3_wo1, step: _wf3_step1} =
         create_work_order(project, workflow3, job3, trigger3, now, 70)
 
-      %{work_order: wf3_wo2, run: _wf3_run2} =
+      %{work_order: wf3_wo2, step: _wf3_step2} =
         create_work_order(project, workflow3, job3, trigger3, now, 80)
 
-      %{work_order: wf3_wo3, run: _wf3_run3} =
+      %{work_order: wf3_wo3, step: _wf3_step3} =
         create_work_order(project, workflow3, job3, trigger3, now, 90)
 
       ### PAGE 1 -----------------------------------------------------------------------
@@ -736,7 +711,7 @@ defmodule Lightning.InvocationTest do
       assert found_workorder.id == wo_now.id
     end
 
-    test "filters workorders by search term on body and/or run logs and/or workorder, run and attempt ID" do
+    test "filters workorders by search term on body and/or run logs and/or workorder, attempt, or step ID" do
       project = insert(:project)
 
       dataclip =
@@ -763,8 +738,8 @@ defmodule Lightning.InvocationTest do
           starting_trigger: trigger
         )
 
-      {:ok, run} =
-        Attempts.start_run(%{
+      {:ok, step} =
+        Attempts.start_step(%{
           "attempt_id" => attempt.id,
           "job_id" => job.id,
           "input_dataclip_id" => dataclip.id,
@@ -773,7 +748,7 @@ defmodule Lightning.InvocationTest do
 
       insert(:log_line,
         attempt: attempt,
-        run: run,
+        step: step,
         message: "Sadio Mane is playing in Senegal",
         timestamp: Timex.now()
       )
@@ -825,9 +800,9 @@ defmodule Lightning.InvocationTest do
                  })
                ).entries
 
-      # Search by Run, Workorder, Attempt IDs and their parts
+      # Search by Workorder, Attempt, or Step IDs and their parts
       search_ids =
-        [run.id, workorder.id, attempt.id]
+        [workorder.id, attempt.id, step.id]
         |> Enum.map(fn uuid ->
           [part | _t] = String.split(uuid, "-")
           [part, uuid]
@@ -902,14 +877,14 @@ defmodule Lightning.InvocationTest do
     end
   end
 
-  describe "run logs" do
-    test "logs_for_run/1 returns an array of the logs for a given run" do
-      run =
+  describe "step logs" do
+    test "logs_for_step/1 returns an array of the logs for a given step" do
+      step =
         insert(:step,
           log_lines: ["Hello", "I am a", "log"] |> Enum.map(&build_log_map/1)
         )
 
-      log_lines = Invocation.logs_for_run(run)
+      log_lines = Invocation.logs_for_step(step)
 
       assert Enum.count(log_lines) == 3
 
@@ -920,19 +895,19 @@ defmodule Lightning.InvocationTest do
              ]
     end
 
-    test "assemble_logs_for_run/1 returns a string representation of the logs for a run" do
-      run =
+    test "assemble_logs_for_step/1 returns a string representation of the logs for a step" do
+      step =
         insert(:step,
           log_lines: ["Hello", "I am a", "log"] |> Enum.map(&build_log_map/1)
         )
 
-      log_string = Invocation.assemble_logs_for_run(run)
+      log_string = Invocation.assemble_logs_for_step(step)
 
       assert log_string == "Hello\nI am a\nlog"
     end
 
-    test "assemble_logs_for_run/1 returns nil when given a nil run" do
-      assert Invocation.assemble_logs_for_run(nil) == nil
+    test "assemble_logs_for_step/1 returns nil when given a nil step" do
+      assert Invocation.assemble_logs_for_step(nil) == nil
     end
 
     defp build_log_map(message) do

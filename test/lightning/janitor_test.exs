@@ -42,7 +42,7 @@ defmodule Lightning.JanitorTest do
       Janitor.find_and_update_lost()
 
       reloaded_attempt = Repo.get(Attempt, lost_attempt.id)
-      reloaded_run = Repo.get(Invocation.Run, unfinished_run.id)
+      reloaded_run = Repo.get(Invocation.Step, unfinished_run.id)
 
       assert reloaded_attempt.state == :lost
       assert reloaded_run.exit_reason == "lost"

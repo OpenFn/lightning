@@ -1,7 +1,7 @@
 defmodule LightningWeb.AttemptChannelTest do
   use LightningWeb.ChannelCase
 
-  alias Lightning.Invocation.Run
+  alias Lightning.Invocation.Step
   alias Lightning.Workers
 
   import Lightning.Factories

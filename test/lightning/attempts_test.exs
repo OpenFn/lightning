@@ -157,8 +157,8 @@ defmodule Lightning.AttemptsTest do
     end
   end
 
-  describe "start_run/1" do
-    test "creates a new run for an attempt" do
+  describe "start_step/1" do
+    test "creates a new step for an attempt" do
       dataclip = insert(:dataclip)
       %{triggers: [trigger], jobs: [job]} = workflow = insert(:simple_workflow)
 
@@ -167,7 +167,7 @@ defmodule Lightning.AttemptsTest do
         |> insert()
 
       {:error, changeset} =
-        Attempts.start_run(%{
+        Attempts.start_step(%{
           "attempt_id" => attempt.id,
           "job_id" => Ecto.UUID.generate(),
           "input_dataclip_id" => dataclip.id,
@@ -179,7 +179,7 @@ defmodule Lightning.AttemptsTest do
 
       # both attempt_id and job_id doesn't exist
       {:error, changeset} =
-        Attempts.start_run(%{
+        Attempts.start_step(%{
           "attempt_id" => Ecto.UUID.generate(),
           "job_id" => Ecto.UUID.generate(),
           "input_dataclip_id" => dataclip.id,
@@ -191,18 +191,18 @@ defmodule Lightning.AttemptsTest do
 
       Lightning.WorkOrders.subscribe(workflow.project_id)
 
-      {:ok, run} =
-        Attempts.start_run(%{
+      {:ok, step} =
+        Attempts.start_step(%{
           "attempt_id" => attempt.id,
           "job_id" => job.id,
           "input_dataclip_id" => dataclip.id,
-          "step_id" => _run_id = Ecto.UUID.generate()
+          "step_id" => _step_id = Ecto.UUID.generate()
         })
 
-      assert run.started_at, "The run has been marked as started"
+      assert step.started_at, "The step has been marked as started"
 
-      assert Repo.get_by(Lightning.AttemptRun, step_id: run.id),
-             "There is a corresponding AttemptRun linking it to the attempt"
+      assert Repo.get_by(Lightning.AttemptStep, step_id: step.id),
+             "There is a corresponding AttemptStep linking it to the attempt"
 
       attempt_id = attempt.id
 
@@ -212,8 +212,8 @@ defmodule Lightning.AttemptsTest do
     end
   end
 
-  describe "complete_run/1" do
-    test "marks a run as finished" do
+  describe "complete_step/1" do
+    test "marks a step as finished" do
       dataclip = insert(:dataclip)
       %{triggers: [trigger], jobs: [job]} = workflow = insert(:simple_workflow)
 
@@ -221,12 +221,12 @@ defmodule Lightning.AttemptsTest do
         work_order_for(trigger, workflow: workflow, dataclip: dataclip)
         |> insert()
 
-      run =
+      step =
         insert(:step, attempts: [attempt], job: job, input_dataclip: dataclip)
 
-      {:ok, run} =
-        Attempts.complete_run(%{
-          step_id: run.id,
+      {:ok, step} =
+        Attempts.complete_step(%{
+          step_id: step.id,
           reason: "success",
           output_dataclip: ~s({"foo": "bar"}),
           output_dataclip_id: Ecto.UUID.generate(),
@@ -234,12 +234,12 @@ defmodule Lightning.AttemptsTest do
           project_id: workflow.project_id
         })
 
-      run =
-        run
+      step =
+        step
         |> Repo.preload(output_dataclip: Invocation.Query.dataclip_with_body())
 
-      assert run.exit_reason == "success"
-      assert run.output_dataclip.body == %{"foo" => "bar"}
+      assert step.exit_reason == "success"
+      assert step.output_dataclip.body == %{"foo" => "bar"}
     end
 
     test "with invalid data returns error changeset" do
@@ -250,16 +250,16 @@ defmodule Lightning.AttemptsTest do
         work_order_for(trigger, workflow: workflow, dataclip: dataclip)
         |> insert()
 
-      run =
+      step =
         insert(:step, attempts: [attempt], job: job, input_dataclip: dataclip)
 
       assert {:error, %Ecto.Changeset{}} =
-               Attempts.complete_run(%{
-                 step_id: run.id
+               Attempts.complete_step(%{
+                 step_id: step.id
                })
     end
 
-    test "with an unexisting run returns an error changeset" do
+    test "with an unexisting step returns an error changeset" do
       dataclip = insert(:dataclip)
       %{triggers: [trigger]} = workflow = insert(:simple_workflow)
 
@@ -268,7 +268,7 @@ defmodule Lightning.AttemptsTest do
         |> insert()
 
       assert {:error, %Ecto.Changeset{errors: [step_id: {"not found", []}]}} =
-               Attempts.complete_run(%{
+               Attempts.complete_step(%{
                  step_id: Ecto.UUID.generate(),
                  reason: "success",
                  output_dataclip: ~s({"foo": "bar"}),
@@ -538,13 +538,13 @@ defmodule Lightning.AttemptsTest do
           timestamp: DateTime.utc_now() |> DateTime.to_unix(:millisecond)
         })
 
-      run =
+      step =
         insert(:step, attempts: [attempt], job: job, input_dataclip: dataclip)
 
       {:ok, log_line} =
         Attempts.append_attempt_log(attempt, %{
           message: "I'm another log line",
-          step_id: run.id,
+          step_id: step.id,
           timestamp: DateTime.utc_now() |> DateTime.to_unix(:millisecond)
         })
 
@@ -552,7 +552,7 @@ defmodule Lightning.AttemptsTest do
         Repo.get_by(Invocation.LogLine, id: log_line.id)
         |> Repo.preload(:step)
 
-      assert log_line.run.id == run.id
+      assert log_line.step.id == step.id
     end
 
     test "adding json objects as messages" do
@@ -581,9 +581,9 @@ defmodule Lightning.AttemptsTest do
     end
   end
 
-  describe "mark_unfinished_runs_lost/1" do
+  describe "mark_unfinished_steps_lost/1" do
     @tag :capture_log
-    test "marks unfinished runs as lost" do
+    test "marks unfinished steps as lost" do
       %{triggers: [trigger]} = workflow = insert(:simple_workflow)
       dataclip = insert(:dataclip)
 
@@ -601,24 +601,24 @@ defmodule Lightning.AttemptsTest do
           dataclip: dataclip
         )
 
-      finished_run =
+      finished_step =
         insert(:step,
           attempts: [attempt],
           finished_at: DateTime.utc_now(),
           exit_reason: "success"
         )
 
-      unfinished_run = insert(:step, attempts: [attempt])
+      unfinished_step = insert(:step, attempts: [attempt])
 
       Attempts.mark_attempt_lost(attempt)
 
-      reloaded_finished_run = Repo.get(Invocation.Run, finished_run.id)
-      reloaded_unfinished_run = Repo.get(Invocation.Run, unfinished_run.id)
+      reloaded_finished_step = Repo.get(Invocation.Step, finished_step.id)
+      reloaded_unfinished_step = Repo.get(Invocation.Step, unfinished_step.id)
 
-      assert reloaded_finished_run.exit_reason == "success"
-      assert reloaded_unfinished_run.exit_reason == "lost"
+      assert reloaded_finished_step.exit_reason == "success"
+      assert reloaded_unfinished_step.exit_reason == "lost"
 
-      assert reloaded_unfinished_run.finished_at != nil
+      assert reloaded_unfinished_step.finished_at != nil
     end
   end
 end

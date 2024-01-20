@@ -1157,7 +1157,7 @@ defmodule Lightning.WorkOrdersTest do
     end
   end
 
-  describe "retry_many/2 for AttemptRuns" do
+  describe "retry_many/2 for AttemptSteps" do
     setup do
       [job_a, job_b, job_c] = jobs = build_list(3, :job)
       trigger = build(:trigger, type: :webhook)
@@ -1181,7 +1181,7 @@ defmodule Lightning.WorkOrdersTest do
       }
     end
 
-    test "retrying a single AttemptRun of the first job", %{
+    test "retrying a single AttemptStep of the first job", %{
       workflow: workflow,
       trigger: trigger,
       jobs: [job_a, job_b | _rest],
@@ -1250,7 +1250,7 @@ defmodule Lightning.WorkOrdersTest do
              "retrying an attempt from the start should not copy over runs"
     end
 
-    test "retrying a single AttemptRun of a mid way job", %{
+    test "retrying a single AttemptStep of a mid way job", %{
       workflow: workflow,
       trigger: trigger,
       jobs: [job_a, job_b, job_c],
@@ -1332,7 +1332,7 @@ defmodule Lightning.WorkOrdersTest do
       assert runs |> Enum.map(& &1.id) == [attempt_run_a.run.id]
     end
 
-    test "retrying multiple AttemptRuns preservers the order of the given list to enqueue the attempts",
+    test "retrying multiple AttemptSteps preservers the order of the given list to enqueue the attempts",
          %{
            workflow: workflow,
            trigger: trigger,
