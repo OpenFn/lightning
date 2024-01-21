@@ -160,8 +160,8 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
             end)
           end
         )
-        |> Enum.map(fn run ->
-          run.input_dataclip_id
+        |> Enum.map(fn step ->
+          step.input_dataclip_id
         end)
         |> Enum.reverse()
 
@@ -303,7 +303,7 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
           build(:attempt,
             dataclip: existing_dataclip,
             starting_job: job,
-            runs: [build(:step, job: job, input_dataclip: existing_dataclip)]
+            steps: [build(:step, job: job, input_dataclip: existing_dataclip)]
           )
         ]
       )
@@ -337,7 +337,7 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       element =
         view
         |> element(
-          "select#manual_run_form_dataclip_id  option[value='#{new_dataclip.id}']"
+          "select#manual_run_form_dataclip_id option[value='#{new_dataclip.id}']"
         )
 
       assert render(element) =~ "selected"
@@ -465,7 +465,7 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
             build(:attempt,
               dataclip: build(:dataclip, type: :http_request),
               starting_job: job_1,
-              runs: [build(:step, job: job_1)]
+              steps: [build(:step, job: job_1)]
             )
           ]
         )
@@ -493,7 +493,7 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       assert job_1.body === "fn(state => state)"
     end
 
-    test "selects the input dataclip for the attempt run if an attempt is followed",
+    test "selects the input dataclip for the step if an attempt is followed",
          %{
            conn: conn,
            project: project,
@@ -516,7 +516,7 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
             build(:attempt,
               dataclip: input_dataclip,
               starting_job: job_1,
-              runs: [
+              steps: [
                 build(:step,
                   job: job_1,
                   input_dataclip: input_dataclip,
@@ -554,7 +554,7 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
             build(:attempt,
               dataclip: dataclip,
               starting_job: job_2,
-              runs: [
+              steps: [
                 build(:step,
                   job: job_2,
                   input_dataclip: dataclip,
@@ -575,7 +575,7 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
           ~p"/projects/#{project}/w/#{workflow}?#{[s: job_2.id, a: attempt.id, m: "expand"]}"
         )
 
-      # the run dataclip is different from the attempt dataclip.
+      # the step dataclip is different from the attempt dataclip.
       # this assertion means that the attempt dataclip won't be selected
       refute attempt.dataclip_id == output_dataclip.id
 
@@ -583,7 +583,7 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       assert element(view, "#manual-job-#{job_2.id} form") |> render() =~
                output_dataclip.body["val"]
 
-      # the run dataclip is selected
+      # the step dataclip is selected
       element =
         view
         |> element(
@@ -617,7 +617,7 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
             build(:attempt,
               dataclip: input_dataclip,
               starting_job: job_1,
-              runs: [
+              steps: [
                 build(:step,
                   job: job_1,
                   input_dataclip: input_dataclip,
@@ -655,7 +655,7 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
             build(:attempt,
               dataclip: dataclip,
               starting_job: job_2,
-              runs: [
+              steps: [
                 build(:step,
                   job: job_2,
                   input_dataclip: dataclip,
@@ -688,11 +688,11 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       refute has_element?(view, "button", "Rerun from here")
       assert has_element?(view, "button", "Create New Work Order")
 
-      # if we choose the run input dataclip, the retry button becomes available
-      run = Enum.find(attempt.runs, fn run -> run.job_id == job_2.id end)
+      # if we choose the step input dataclip, the retry button becomes available
+      step = Enum.find(attempt.steps, fn step -> step.job_id == job_2.id end)
 
       view
-      |> form("#manual_run_form", manual: %{dataclip_id: run.input_dataclip_id})
+      |> form("#manual_run_form", manual: %{dataclip_id: step.input_dataclip_id})
       |> render_change()
 
       assert has_element?(view, "button", "Rerun from here")

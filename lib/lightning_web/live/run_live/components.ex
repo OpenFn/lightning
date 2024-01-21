@@ -2,9 +2,7 @@ defmodule LightningWeb.RunLive.Components do
   @moduledoc false
   use LightningWeb, :component
 
-  alias Lightning.Invocation
   alias Lightning.WorkOrders.SearchParams
-
   alias Phoenix.LiveView.JS
 
   attr :message, :string, required: true

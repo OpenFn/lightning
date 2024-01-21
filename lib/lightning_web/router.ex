@@ -52,12 +52,12 @@ defmodule LightningWeb.Router do
     get "/provision/yaml", API.ProvisioningController, :show_yaml
     resources "/provision", API.ProvisioningController, only: [:create, :show]
 
-    # resources "/projects", API.ProjectController, only: [:index, :show] do
-    # resources "/jobs", API.JobController, only: [:index, :show]
-    # resources "/runs", API.RunController, only: [:index, :show]
-    # end
+    resources "/projects", API.ProjectController, only: [:index, :show] do
+      resources "/jobs", API.JobController, only: [:index, :show]
+      # resources "/runs", API.RunController, only: [:index, :show]
+    end
 
-    # resources "/jobs", API.JobController, only: [:index, :show]
+    resources "/jobs", API.JobController, only: [:index, :show]
     # resources "/runs", API.RunController, only: [:index, :show]
   end
 
