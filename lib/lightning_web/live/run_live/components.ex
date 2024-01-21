@@ -380,7 +380,7 @@ defmodule LightningWeb.RunLive.Components do
                 phx-disable-with="Running..."
                 class="inline-flex w-full justify-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 sm:col-start-1"
               >
-                Rerun <%= @selected_count %> selected workorder<%= if @selected_count >
+                Rerun <%= @selected_count %> selected work order<%= if @selected_count >
                                                                         1,
                                                                       do: "s",
                                                                       else: "" %> from start

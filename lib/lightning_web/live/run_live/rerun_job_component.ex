@@ -82,7 +82,7 @@ defmodule LightningWeb.RunLive.RerunJobComponent do
               </h3>
               <div class="mt-2">
                 <p class="text-sm text-gray-500">
-                  Find all runs that include this step and rerun from there. (Note that if you'd like to reprocess all of the selected workorders from the start, use the "Rerun" button, not this "Rerun from" button.)
+                  Find all runs that include this step and rerun from there. (Note that if you'd like to reprocess all of the selected work orders from the start, use the "Rerun" button, not this "Rerun from" button.)
                 </p>
                 <form
                   id="select-job-for-rerun-form"
@@ -132,7 +132,7 @@ defmodule LightningWeb.RunLive.RerunJobComponent do
                 phx-disable-with="Running..."
                 class="inline-flex w-full justify-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 sm:col-start-1"
               >
-                Rerun <%= @selected_count %> selected workorder<%= if @selected_count >
+                Rerun <%= @selected_count %> selected work order<%= if @selected_count >
                                                                         1,
                                                                       do: "s",
                                                                       else: "" %> from selected job
@@ -146,7 +146,7 @@ defmodule LightningWeb.RunLive.RerunJobComponent do
                 phx-disable-with="Running..."
                 class="inline-flex w-full justify-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 sm:col-start-2"
               >
-                Rerun all <%= @total_entries %> matching workorders from selected job
+                Rerun all <%= @total_entries %> matching work orders from selected job
               </button>
               <div class="relative col-start-1 col-end-3">
                 <div class="absolute inset-0 flex items-center" aria-hidden="true">
@@ -179,7 +179,7 @@ defmodule LightningWeb.RunLive.RerunJobComponent do
                 phx-disable-with="Running..."
                 class="inline-flex w-full justify-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 sm:col-start-2"
               >
-                Rerun <%= @selected_count %> selected workorder<%= if @selected_count >
+                Rerun <%= @selected_count %> selected work order<%= if @selected_count >
                                                                         1,
                                                                       do: "s",
                                                                       else: "" %> from selected job

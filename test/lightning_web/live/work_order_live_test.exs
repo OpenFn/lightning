@@ -1,4 +1,4 @@
-defmodule LightningWeb.RunWorkOrderTest do
+defmodule LightningWeb.WorkOrderLiveTest do
   use LightningWeb.ConnCase, async: false
 
   import Phoenix.LiveViewTest
@@ -1728,13 +1728,13 @@ defmodule LightningWeb.RunWorkOrderTest do
           pages: 3,
           total_entries: 25,
           all_selected?: true,
-          selected_count: 5,
+          selected_count: 10,
           filters: %SearchParams{},
           workflows: [{"Workflow a", "someid"}]
         )
 
       assert html =~ "Rerun all 25 matching work orders from start"
-      assert html =~ "Rerun 5 selected work orders from start"
+      assert html =~ "Rerun 10 selected work orders from start"
     end
 
     test "only 1 run button present when some entries have been selected" do
@@ -1799,7 +1799,7 @@ defmodule LightningWeb.RunWorkOrderTest do
           }
         )
 
-      assert html =~ "whose step Input contain TestSearch"
+      assert html =~ "whose run Input contain TestSearch"
 
       html =
         render_component(
@@ -1813,7 +1813,7 @@ defmodule LightningWeb.RunWorkOrderTest do
           }
         )
 
-      assert html =~ "whose step Input and Logs contain TestSearch"
+      assert html =~ "whose run Input and Logs contain TestSearch"
 
       # workflow
       html =
@@ -2259,8 +2259,8 @@ defmodule LightningWeb.RunWorkOrderTest do
           workflow_id: workflow.id
         )
 
-      assert html =~ "Rerun all 25 matching workorders from selected job"
-      assert html =~ "Rerun 5 selected workorders from selected job"
+      assert html =~ "Rerun all 25 matching work orders from selected job"
+      assert html =~ "Rerun 5 selected work orders from selected job"
     end
 
     test "only 1 run button is present when some entries have been selected", %{
@@ -2278,8 +2278,8 @@ defmodule LightningWeb.RunWorkOrderTest do
           workflow_id: workflow.id
         )
 
-      refute html =~ "Rerun all 25 matching workorders from selected job"
-      assert html =~ "Rerun 5 selected workorders from selected job"
+      refute html =~ "Rerun all 25 matching work orders from selected job"
+      assert html =~ "Rerun 5 selected work orders from selected job"
     end
 
     test "only 1 run button is present when total pages is 1", %{
@@ -2297,8 +2297,8 @@ defmodule LightningWeb.RunWorkOrderTest do
           workflow_id: workflow.id
         )
 
-      refute html =~ "Rerun all 25 matching workorders from selected job"
-      assert html =~ "Rerun 5 selected workorders from selected job"
+      refute html =~ "Rerun all 25 matching work orders from selected job"
+      assert html =~ "Rerun 5 selected work orders from selected job"
     end
   end
 
