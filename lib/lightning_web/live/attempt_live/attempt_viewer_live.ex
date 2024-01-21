@@ -27,7 +27,7 @@ defmodule LightningWeb.AttemptLive.AttemptViewerLive do
                 <:value>
                   <.link
                     navigate={
-                      ~p"/projects/#{@project}/runs?#{%{filters: %{workorder_id: attempt.work_order_id}}}"
+                      ~p"/projects/#{@project}/history?#{%{filters: %{workorder_id: attempt.work_order_id}}}"
                     }
                     class="hover:underline hover:text-primary-900"
                   >
@@ -43,7 +43,7 @@ defmodule LightningWeb.AttemptLive.AttemptViewerLive do
                 <:value>
                   <.link
                     navigate={
-                      ~p"/projects/#{@project}/attempts/#{attempt}?step=#{@selected_step_id || ""}"
+                      ~p"/projects/#{@project}/runs/#{attempt}?step=#{@selected_step_id || ""}"
                     }
                     class="hover:underline hover:text-primary-900 whitespace-nowrap text-ellipsis"
                   >

@@ -87,7 +87,7 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
               <.link
                 class="hover:underline"
                 navigate={
-                  ~p"/projects/#{@project.id}/runs?#{%{filters: Map.merge(@wo_filters, %{workflow_id: workflow.id})}}"
+                  ~p"/projects/#{@project.id}/history?#{%{filters: Map.merge(@wo_filters, %{workflow_id: workflow.id})}}"
                 }
               >
                 <%= workflow.workorders_count %>
@@ -122,7 +122,7 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
                 <.link
                   class="hover:underline"
                   navigate={
-                    ~p"/projects/#{@project.id}/runs?#{%{filters: Map.merge(@failed_wo_filters, %{workflow_id: workflow.id})}}"
+                    ~p"/projects/#{@project.id}/history?#{%{filters: Map.merge(@failed_wo_filters, %{workflow_id: workflow.id})}}"
                   }
                 >
                   <%= workflow.failed_workorders_count %>
@@ -262,7 +262,7 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
         <:value><%= @metrics.work_order_metrics.total %></:value>
         <:suffix>
           <.link
-            navigate={~p"/projects/#{@project}/runs?#{%{filters: @pending_filters}}"}
+            navigate={~p"/projects/#{@project}/history?#{%{filters: @pending_filters}}"}
             class="text-indigo-700 hover:underline"
           >
             (<%= @metrics.work_order_metrics.pending %> pending)
@@ -288,7 +288,7 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
         </:suffix>
         <:link>
           <.link
-            navigate={~p"/projects/#{@project}/runs?#{%{filters: @failed_filters}}"}
+            navigate={~p"/projects/#{@project}/history?#{%{filters: @failed_filters}}"}
             class="text-indigo-700 hover:underline"
           >
             View all

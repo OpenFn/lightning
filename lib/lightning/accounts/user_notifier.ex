@@ -187,7 +187,7 @@ defmodule Lightning.Accounts.UserNotifier do
         "workflow_id" => workflow.id
       })
 
-    url(~p"/projects/#{workflow.project_id}/runs?#{%{"filters" => uri_params}}")
+    url(~p"/projects/#{workflow.project_id}/history?#{%{"filters" => uri_params}}")
   end
 
   defp build_email(%{

@@ -294,7 +294,7 @@ defmodule LightningWeb.RunLive.Index do
        )
        |> push_navigate(
          to:
-           ~p"/projects/#{socket.assigns.project.id}/runs?#{%{filters: socket.assigns.filters}}"
+           ~p"/projects/#{socket.assigns.project.id}/history?#{%{filters: socket.assigns.filters}}"
        )}
     else
       false ->
@@ -377,7 +377,7 @@ defmodule LightningWeb.RunLive.Index do
     {:noreply,
      socket
      |> assign(filters: filters)
-     |> push_patch(to: ~p"/projects/#{project.id}/runs?#{%{filters: filters}}")}
+     |> push_patch(to: ~p"/projects/#{project.id}/history?#{%{filters: filters}}")}
   end
 
   defp find_workflow_name(workflows, workflow_id) do

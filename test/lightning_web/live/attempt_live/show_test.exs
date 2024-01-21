@@ -21,7 +21,7 @@ defmodule LightningWeb.AttemptLive.ShowTest do
 
       # Fetch an attempt that doesn't exist
       {:ok, view, _html} =
-        live(conn, ~p"/projects/#{project.id}/attempts/#{Ecto.UUID.generate()}")
+        live(conn, ~p"/projects/#{project.id}/runs/#{Ecto.UUID.generate()}")
 
       view |> render_async()
 
@@ -45,7 +45,7 @@ defmodule LightningWeb.AttemptLive.ShowTest do
         WorkOrders.get(wo_id, include: [:attempts])
 
       {:ok, view, _html} =
-        live(conn, ~p"/projects/#{project.id}/attempts/#{attempt_id}")
+        live(conn, ~p"/projects/#{project.id}/runs/#{attempt_id}")
 
       assert view
              |> element("#attempt-detail-#{attempt_id}")

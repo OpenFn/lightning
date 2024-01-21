@@ -61,7 +61,7 @@ defmodule LightningWeb.AttemptLive.Show do
                   <:value>
                     <.link
                       navigate={
-                        ~p"/projects/#{@project}/runs?#{%{filters: %{workorder_id: attempt.work_order_id}}}"
+                        ~p"/projects/#{@project}/history?#{%{filters: %{workorder_id: attempt.work_order_id}}}"
                       }
                       class="hover:underline hover:text-primary-900 whitespace-nowrap text-ellipsis"
                     >

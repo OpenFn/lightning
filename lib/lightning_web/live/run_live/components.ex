@@ -77,7 +77,7 @@ defmodule LightningWeb.RunLive.Components do
           <div class="text-gray-800 flex gap-2 text-sm">
             <.link
               navigate={
-                ~p"/projects/#{@project_id}/attempts/#{@attempt}?#{%{step: @step.id}}"
+                ~p"/projects/#{@project_id}/runs/#{@attempt}?#{%{step: @step.id}}"
               }
               class="hover:underline hover:underline-offset-2"
             >

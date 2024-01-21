@@ -232,7 +232,7 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
                 <div>
                   Run
                   <.link navigate={
-                    ~p"/projects/#{@project.id}/attempts/#{attempt.id}"
+                    ~p"/projects/#{@project.id}/runs/#{attempt.id}"
                   }>
                     <span
                       title={attempt.id}

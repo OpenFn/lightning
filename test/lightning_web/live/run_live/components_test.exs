@@ -281,7 +281,7 @@ defmodule LightningWeb.RunLive.ComponentsTest do
   defp has_attempt_step_link?(html, project, attempt, step) do
     html
     |> Floki.find(
-      ~s{a[href='#{~p"/projects/#{project}/attempts/#{attempt}?#{%{step: step.id}}"}']}
+      ~s{a[href='#{~p"/projects/#{project}/runs/#{attempt}?#{%{step: step.id}}"}']}
     )
     |> Enum.any?()
   end
