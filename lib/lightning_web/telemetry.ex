@@ -82,23 +82,6 @@ defmodule LightningWeb.Telemetry do
           "Time taken to process a successful HTTP request to a webhook trigger URL",
         keep: &match?(%{status: :ok}, &1)
       ),
-      # TODO - Rory, can we moved this over to the "attempts" table?
-      # summary("lightning.runs.queue.latency",
-      #   event_name: [:oban, :job, :stop],
-      #   measurement: :queue_time,
-      #   unit: {:native, :millisecond},
-      #   description:
-      #     "The time an attempt spends on the run queue before being claimed by a worker",
-      #   keep: &match?(%{queue: "runs"}, &1)
-      # ),
-      # distribution("lightning.runs.queue.latency",
-      #   event_name: [:oban, :job, :stop],
-      #   measurement: :queue_time,
-      #   unit: {:native, :millisecond},
-      #   description:
-      #     "The time an attempt spends on the run queue before being claimed by a worker",
-      #   keep: &match?(%{queue: "runs"}, &1)
-      # ),
       summary("lightning.ui.history",
         event_name: [:lightning, :ui, :projects, :history, :stop],
         measurement: :duration,
