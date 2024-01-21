@@ -231,9 +231,7 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
               <div class="flex gap-1 items-center bg-gray-200 pl-28 text-xs py-2">
                 <div>
                   Run
-                  <.link navigate={
-                    ~p"/projects/#{@project.id}/runs/#{attempt.id}"
-                  }>
+                  <.link navigate={~p"/projects/#{@project.id}/runs/#{attempt.id}"}>
                     <span
                       title={attempt.id}
                       class="font-normal text-xs whitespace-nowrap text-ellipsis

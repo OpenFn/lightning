@@ -12,6 +12,14 @@ and this project adheres to
 
 ### Changed
 
+- Made two significant backend changes that don't impact UI/UX but **require
+  migrations** and should make Lightning developer lives easier by updating
+  parts of the backend to match terms now used in the frontend:
+  - Renamed the `Runs` model and table to `Steps`
+    [#1571](https://github.com/OpenFn/Lightning/issues/1571)
+  - Renamed the `AttemptRuns` model and table to `AttemptSteps`
+    [#1571](https://github.com/OpenFn/Lightning/issues/1571)
+
 ### Fixed
 
 ## [v2.0.0-rc4] - 2024-01-19

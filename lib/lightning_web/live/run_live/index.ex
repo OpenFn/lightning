@@ -377,7 +377,9 @@ defmodule LightningWeb.RunLive.Index do
     {:noreply,
      socket
      |> assign(filters: filters)
-     |> push_patch(to: ~p"/projects/#{project.id}/history?#{%{filters: filters}}")}
+     |> push_patch(
+       to: ~p"/projects/#{project.id}/history?#{%{filters: filters}}"
+     )}
   end
 
   defp find_workflow_name(workflows, workflow_id) do

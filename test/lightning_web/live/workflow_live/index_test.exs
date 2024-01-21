@@ -85,7 +85,7 @@ defmodule LightningWeb.WorkflowLive.IndexTest do
         end)
 
       assert html
-             |> has_runs_link_pattern?(
+             |> has_history_link_pattern?(
                project,
                pending_and_date_filter,
                "6 pending"
@@ -107,14 +107,14 @@ defmodule LightningWeb.WorkflowLive.IndexTest do
         "filters[cancelled]=true.*filters[crashed]=true.*filters[exception]=true.*filters[failed]=true.*filters[killed]=true.*filters[lost]=true"
 
       assert html
-             |> has_runs_link_pattern?(
+             |> has_history_link_pattern?(
                project,
                failed_filter_pattern,
                "View all"
              )
 
       refute html
-             |> has_runs_link_pattern?(
+             |> has_history_link_pattern?(
                project,
                "filters[success]=true"
              )
@@ -147,7 +147,7 @@ defmodule LightningWeb.WorkflowLive.IndexTest do
              )
 
       refute html
-             |> has_runs_link_pattern?(
+             |> has_history_link_pattern?(
                project,
                "filters[workflow_id]=#{new_workflow.id}"
              )
@@ -165,14 +165,14 @@ defmodule LightningWeb.WorkflowLive.IndexTest do
         end)
 
       assert html
-             |> has_runs_link_pattern?(
+             |> has_history_link_pattern?(
                project,
                "filters[workflow_id]=#{workflow1.id}.*#{date_filter}",
                workorders_count
              )
 
       assert html
-             |> has_runs_link_pattern?(
+             |> has_history_link_pattern?(
                project,
                "filters[workflow_id]=#{workflow2.id}.*#{date_filter}",
                workorders_count
@@ -182,14 +182,14 @@ defmodule LightningWeb.WorkflowLive.IndexTest do
       failed_runs_count = "1"
 
       assert html
-             |> has_runs_link_pattern?(
+             |> has_history_link_pattern?(
                project,
                "filters[workflow_id]=#{workflow1.id}.*#{failed_filter_pattern}",
                failed_runs_count
              )
 
       assert html
-             |> has_runs_link_pattern?(
+             |> has_history_link_pattern?(
                project,
                "filters[workflow_id]=#{workflow2.id}.*#{failed_filter_pattern}",
                failed_runs_count
