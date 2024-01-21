@@ -76,11 +76,11 @@ defmodule LightningWeb.UserRegistrationControllerTest do
              |> Lightning.Repo.aggregate(:count, :id) == 1
 
       project
-      |> Lightning.Projects.project_runs_query()
+      |> Lightning.Projects.project_steps_query()
       |> Lightning.Repo.all()
 
       assert project
-             |> Lightning.Projects.project_runs_query()
+             |> Lightning.Projects.project_steps_query()
              |> Lightning.Repo.aggregate(:count, :id) == 2
 
       # Set this back to the default "false" before finishing the test

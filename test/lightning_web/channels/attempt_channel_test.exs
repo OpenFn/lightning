@@ -314,7 +314,7 @@ defmodule LightningWeb.AttemptChannelTest do
     end
   end
 
-  describe "marking runs as started and finished" do
+  describe "marking steps as started and finished" do
     setup do
       user = insert(:user)
 
@@ -380,7 +380,31 @@ defmodule LightningWeb.AttemptChannelTest do
       }
     end
 
-    test "run:start", %{
+    test "step:start", %{
+      socket: socket,
+      attempt: attempt,
+      workflow: workflow,
+      credential: %{id: credential_id}
+    } do
+      # { id, job_id, input_dataclip_id }
+      step_id = Ecto.UUID.generate()
+      [%{id: job_id}] = workflow.jobs
+
+      ref =
+        push(socket, "step:start", %{
+          "step_id" => step_id,
+          "credential_id" => credential_id,
+          "job_id" => job_id,
+          "input_dataclip_id" => attempt.dataclip_id
+        })
+
+      assert_reply ref, :ok, %{step_id: ^step_id}, 1_000
+
+      assert %{credential_id: ^credential_id, job_id: ^job_id} =
+               Repo.get!(Step, step_id)
+    end
+
+    test "run:start is converted to step:start for old workers", %{
       socket: socket,
       attempt: attempt,
       workflow: workflow,
@@ -392,7 +416,7 @@ defmodule LightningWeb.AttemptChannelTest do
 
       ref =
         push(socket, "run:start", %{
-          "step_id" => step_id,
+          "run_id" => step_id,
           "credential_id" => credential_id,
           "job_id" => job_id,
           "input_dataclip_id" => attempt.dataclip_id
@@ -401,47 +425,67 @@ defmodule LightningWeb.AttemptChannelTest do
       assert_reply ref, :ok, %{step_id: ^step_id}, 1_000
 
       assert %{credential_id: ^credential_id, job_id: ^job_id} =
-               Repo.get!(Run, step_id)
+               Repo.get!(Step, step_id)
     end
 
-    test "run:complete succeeds with normal reason", %{
+    test "run:complete is converted to step:complete for old workers", %{
       socket: socket,
       attempt: attempt,
       workflow: workflow
     } do
       [job] = workflow.jobs
-      %{id: step_id} = run = insert(:step, attempts: [attempt], job: job)
+      %{id: step_id} = step = insert(:step, attempts: [attempt], job: job)
 
       ref =
         push(socket, "run:complete", %{
-          "step_id" => run.id,
+          "run_id" => step.id,
           "output_dataclip_id" => Ecto.UUID.generate(),
           "output_dataclip" => ~s({"foo": "bar"}),
           "reason" => "normal"
         })
 
       assert_reply ref, :ok, %{step_id: ^step_id}
-      assert %{exit_reason: "normal"} = Repo.get(Run, run.id)
+      assert %{exit_reason: "normal"} = Repo.get(Step, step.id)
     end
 
-    test "run:complete succeeds preserving present tense reason", %{
+    test "step:complete succeeds with normal reason", %{
       socket: socket,
       attempt: attempt,
       workflow: workflow
     } do
       [job] = workflow.jobs
-      %{id: step_id} = run = insert(:step, attempts: [attempt], job: job)
+      %{id: step_id} = step = insert(:step, attempts: [attempt], job: job)
 
       ref =
-        push(socket, "run:complete", %{
-          "step_id" => run.id,
+        push(socket, "step:complete", %{
+          "step_id" => step.id,
+          "output_dataclip_id" => Ecto.UUID.generate(),
+          "output_dataclip" => ~s({"foo": "bar"}),
+          "reason" => "normal"
+        })
+
+      assert_reply ref, :ok, %{step_id: ^step_id}
+      assert %{exit_reason: "normal"} = Repo.get(Step, step.id)
+    end
+
+    test "step:complete succeeds preserving present tense reason", %{
+      socket: socket,
+      attempt: attempt,
+      workflow: workflow
+    } do
+      [job] = workflow.jobs
+      %{id: step_id} = step = insert(:step, attempts: [attempt], job: job)
+
+      ref =
+        push(socket, "step:complete", %{
+          "step_id" => step.id,
           "output_dataclip_id" => Ecto.UUID.generate(),
           "output_dataclip" => ~s({"foo": "bar"}),
           "reason" => "fail"
         })
 
       assert_reply ref, :ok, %{step_id: ^step_id}
-      assert %{exit_reason: "fail"} = Repo.get(Run, run.id)
+      assert %{exit_reason: "fail"} = Repo.get(Step, step.id)
     end
   end
 
@@ -497,7 +541,7 @@ defmodule LightningWeb.AttemptChannelTest do
       [job] = workflow.jobs
 
       ref =
-        push(socket, "run:start", %{
+        push(socket, "step:start", %{
           "step_id" => step_id,
           "job_id" => job.id,
           "input_dataclip_id" => attempt.dataclip_id
@@ -526,7 +570,7 @@ defmodule LightningWeb.AttemptChannelTest do
       [job] = workflow.jobs
 
       ref =
-        push(socket, "run:start", %{
+        push(socket, "step:start", %{
           "step_id" => step_id,
           "job_id" => job.id,
           "input_dataclip_id" => attempt.dataclip_id
@@ -556,7 +600,7 @@ defmodule LightningWeb.AttemptChannelTest do
       [job] = workflow.jobs
 
       ref =
-        push(socket, "run:start", %{
+        push(socket, "step:start", %{
           "step_id" => step_id,
           "job_id" => job.id,
           "input_dataclip_id" => attempt.dataclip_id
@@ -586,7 +630,7 @@ defmodule LightningWeb.AttemptChannelTest do
       [job] = workflow.jobs
 
       ref =
-        push(socket, "run:start", %{
+        push(socket, "step:start", %{
           "step_id" => step_id,
           "job_id" => job.id,
           "input_dataclip_id" => attempt.dataclip_id
