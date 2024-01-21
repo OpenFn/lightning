@@ -107,7 +107,12 @@ defmodule LightningWeb.AttemptLive.StreamingTest do
     insert(:attempt_step, attempt: attempt, step: step2)
     insert(:attempt_step, attempt: attempt, step: step3)
 
-    %{attempt: attempt, output_dataclip: output_dataclip, job: job2, step2: step2}
+    %{
+      attempt: attempt,
+      output_dataclip: output_dataclip,
+      job: job2,
+      step2: step2
+    }
   end
 
   describe "get_dataclip_lines" do
