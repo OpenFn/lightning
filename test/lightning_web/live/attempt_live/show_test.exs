@@ -56,7 +56,7 @@ defmodule LightningWeb.AttemptLive.ShowTest do
 
       refute view
              |> has_element?("#step-list-#{attempt_id} > *"),
-             "has no runs"
+             "has no steps"
 
       attempt =
         Lightning.Repo.update!(
@@ -76,89 +76,89 @@ defmodule LightningWeb.AttemptLive.ShowTest do
 
       refute view
              |> has_element?("#step-list-#{attempt_id} > *"),
-             "has no runs"
+             "has no steps"
 
-      {:ok, run} =
-        Lightning.Attempts.start_run(%{
+      {:ok, step} =
+        Lightning.Attempts.start_step(%{
           attempt_id: attempt_id,
           step_id: Ecto.UUID.generate(),
           job_id: job_a.id,
           input_dataclip_id: workorder.dataclip_id
         })
 
-      html = step_list_item(view, attempt, run)
+      html = step_list_item(view, attempt, step)
 
       assert html =~ job_a.name
       assert html =~ "Running"
 
       add_log(attempt, ["I'm the worker, I'm working!"])
 
-      {:ok, log_line} = add_log({attempt, run}, %{message: "hello"})
+      {:ok, log_line} = add_log({attempt, step}, %{message: "hello"})
 
       assert view |> has_log_line?("I'm the worker, I'm working!")
       assert view |> has_log_line?(log_line.message)
 
-      view |> select_run(attempt, job_a.name)
+      view |> select_step(attempt, job_a.name)
 
       # Check that the input dataclip is rendered
       assert view
-             |> element("#run-input-#{run.id}")
+             |> element("#step-input-#{step.id}")
              |> render_async()
              |> Floki.parse_fragment!()
              |> Floki.text() =~ ~s({  "x": 1})
 
-      assert view |> output_is_empty?(run)
+      assert view |> output_is_empty?(step)
 
-      # Complete the run
-      {:ok, _run} =
-        Lightning.Attempts.complete_run(%{
+      # Complete the step
+      {:ok, _step} =
+        Lightning.Attempts.complete_step(%{
           attempt_id: attempt_id,
           project_id: project.id,
-          step_id: run.id,
+          step_id: step.id,
           output_dataclip: ~s({"y": 2}),
           output_dataclip_id: output_dataclip_id = Ecto.UUID.generate(),
           reason: "success"
         })
 
-      assert view |> run_output(run) =~ ~r/{  \"y\": 2}/
+      assert view |> step_output(step) =~ ~r/{  \"y\": 2}/
 
-      {:ok, run_2} =
-        Lightning.Attempts.start_run(%{
+      {:ok, step_2} =
+        Lightning.Attempts.start_step(%{
           attempt_id: attempt_id,
           step_id: Ecto.UUID.generate(),
           job_id: job_b.id,
           input_dataclip_id: output_dataclip_id
         })
 
-      html = step_list_item(view, attempt, run)
+      html = step_list_item(view, attempt, step)
 
       assert html =~ job_a.name
       assert html =~ "success"
 
-      html = step_list_item(view, attempt, run_2)
+      html = step_list_item(view, attempt, step_2)
 
       assert html =~ job_b.name
       assert html =~ "running"
 
-      view |> select_run(attempt, job_b.name)
+      view |> select_step(attempt, job_b.name)
 
-      assert view |> output_is_empty?(run_2)
+      assert view |> output_is_empty?(step_2)
 
-      {:ok, _run} =
-        Lightning.Attempts.complete_run(%{
+      {:ok, _step} =
+        Lightning.Attempts.complete_step(%{
           attempt_id: attempt_id,
           project_id: project.id,
-          step_id: run_2.id,
+          step_id: step_2.id,
           output_dataclip: ~s({"z": 2}),
           output_dataclip_id: Ecto.UUID.generate(),
           reason: "success"
         })
 
-      assert view |> run_output(run_2) =~ ~r/{  \"z\": 2}/
+      assert view |> step_output(step_2) =~ ~r/{  \"z\": 2}/
 
-      # Go back to the previous run and check the output gets switched back
-      view |> select_run(attempt, job_a.name)
-      assert view |> run_output(run) =~ ~r/{  \"y\": 2}/
+      # Go back to the previous step and check the output gets switched back
+      view |> select_step(attempt, job_a.name)
+      assert view |> step_output(step) =~ ~r/{  \"y\": 2}/
 
       {:ok, _} = Lightning.Attempts.complete_attempt(attempt, %{state: :failed})
 
@@ -168,9 +168,9 @@ defmodule LightningWeb.AttemptLive.ShowTest do
     end
   end
 
-  defp add_log({attempt, run}, message) do
+  defp add_log({attempt, step}, message) do
     Lightning.Attempts.append_attempt_log(attempt, %{
-      step_id: run.id,
+      step_id: step.id,
       message: message,
       timestamp: DateTime.utc_now()
     })
@@ -192,29 +192,29 @@ defmodule LightningWeb.AttemptLive.ShowTest do
       |> to_string()
   end
 
-  defp step_list_item(view, attempt, run) do
+  defp step_list_item(view, attempt, step) do
     view
-    |> element("#step-list-#{attempt.id} > [data-run-id='#{run.id}']")
+    |> element("#step-list-#{attempt.id} > [data-step-id='#{step.id}']")
     |> render_async()
   end
 
-  defp select_run(view, attempt, job_name) do
+  defp select_step(view, attempt, job_name) do
     view
     |> element("#step-list-#{attempt.id} a[data-phx-link]", job_name)
     |> render_click()
   end
 
-  defp run_output(view, run) do
+  defp step_output(view, step) do
     assert view
-           |> element("#run-output-#{run.id}")
+           |> element("#step-output-#{step.id}")
            |> render_async()
            |> Floki.parse_fragment!()
            |> Floki.text()
   end
 
-  defp output_is_empty?(view, run) do
+  defp output_is_empty?(view, step) do
     view
-    |> element("#run-output-#{run.id}")
+    |> element("#step-output-#{step.id}")
     |> has_nothing_yet?()
   end
 
