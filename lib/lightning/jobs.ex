@@ -199,7 +199,7 @@ defmodule Lightning.Jobs do
       true
   """
   def has_runs?(%Job{id: job_id}) do
-    Lightning.Invocation.Run
+    Lightning.Invocation.Step
     |> where(job_id: ^job_id)
     |> Repo.exists?()
   end

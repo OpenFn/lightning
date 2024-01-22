@@ -135,7 +135,7 @@ defmodule Lightning.JobsTest do
       refute Jobs.has_runs?(job_one)
       refute Jobs.has_runs?(job_two)
 
-      insert(:run, job: job_one)
+      insert(:step, job: job_one)
 
       assert Jobs.has_runs?(job_one)
       refute Jobs.has_runs?(job_two)

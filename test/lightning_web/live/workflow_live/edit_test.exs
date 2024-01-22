@@ -426,7 +426,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
         |> with_edge({job_a, job_c})
         |> insert()
 
-      insert(:run, job: job_b)
+      insert(:step, job: job_b)
 
       {:ok, view, _html} = live(conn, ~p"/projects/#{project}/w/#{workflow}")
 
