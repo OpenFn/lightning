@@ -219,6 +219,11 @@ defmodule LightningWeb.ProjectLive.Settings do
     {:noreply, socket}
   end
 
+  def handle_event("cancel-retention-change", _params, socket) do
+    {:noreply,
+     socket |> assign(:project_changeset, init_changeset(socket.assigns.project))}
+  end
+
   def handle_event("save", %{"project" => project_params}, socket) do
     if can_edit_project(socket.assigns) do
       save_project(socket, project_params)
