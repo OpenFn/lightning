@@ -778,14 +778,14 @@
         </LightningWeb.Components.Common.panel_content>
         <LightningWeb.Components.Common.panel_content for_hash="data_retention">
           <div class="bg-white p-4 rounded-md">
-            <div>
-              <h6 class="font-medium text-black">
+            <div class="text-black text-sm">
+              <div class="font-medium">
                 Workflow Input & Output Data Retention
-              </h6>
-              <small class="block my-1 text-xs text-gray-600">
+              </div>
+              <div class="block mt-1 mb-3">
                 Determine whether Input and Output data for workflow should be retained or erased.
                 <a href="#" class="text-indigo-600">Learn more...</a>
-              </small>
+              </div>
             </div>
             <.form
               :let={f}
@@ -794,18 +794,14 @@
               phx-change="validate"
               phx-submit="save"
             >
-              <div class="space-y-3">
+              <div class="space-y-2">
                 <div class="relative flex items-start">
                   <div class="flex h-6 items-center">
                     <.input
                       type="radio"
+                      id="retain_all"
                       field={f[:retention_policy]}
-                      checked={
-                        @project_changeset.changes[:retention_policy] in [
-                          nil,
-                          :retain_all
-                        ]
-                      }
+                      checked={checked?(@project_changeset, :retain_all)}
                       value="retain_all"
                       class="h-4 w-4 border-gray-300 text-indigo-600 focus:ring-indigo-600"
                     />
@@ -820,13 +816,9 @@
                   <div class="flex h-6 items-center">
                     <.input
                       type="radio"
+                      id="erase_all"
                       field={f[:retention_policy]}
-                      checked={
-                        @project_changeset.changes[:retention_policy] in [
-                          :erase_all,
-                          :retain_with_errors
-                        ]
-                      }
+                      checked={checked?(@project_changeset, :erase_all)}
                       value="erase_all"
                       class="h-4 w-4 border-gray-300 text-indigo-600 focus:ring-indigo-600"
                     />
@@ -840,10 +832,7 @@
                         class:
                           "focus:ring-primary-500 h-4 w-4 text-primary-600 text-sm border-secondary-300 rounded",
                         checked:
-                          IO.inspect(
-                            @project_changeset.changes[:retention_policy] ==
-                              :retain_with_errors
-                          )
+                          checked?(@project_changeset, :retain_with_errors)
                       ) %>
                       <label
                         for="retain_with_errors"
