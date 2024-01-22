@@ -13,7 +13,7 @@
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-EPF2X7PV.js"></script>
-    <script src="dist/sidebar_items-06EE7B96.js"></script>
+    <script src="dist/sidebar_items-7655F397.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -189,26 +189,6 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#run_state_circle/1" translate="no">run_state_circle(assigns)</a>
-
-      </div>
-
-        <div class="summary-synopsis"><h2>Attributes</h2><ul><li><code class="inline">run</code> (<a href="Lightning.Invocation.Run.html"><code class="inline">Lightning.Invocation.Run</code></a>) (required)</li><li><code class="inline">class</code> (<code class="inline">:string</code>) - Defaults to <code class="inline">&quot;&quot;</code>.</li></ul></div>
-
-    </div>
-
-    <div class="summary-row">
-      <div class="summary-signature">
-        <a href="#run_state_icon/1" translate="no">run_state_icon(assigns)</a>
-
-      </div>
-
-        <div class="summary-synopsis"><h2>Attributes</h2><ul><li><code class="inline">run</code> (<a href="Lightning.Invocation.Run.html"><code class="inline">Lightning.Invocation.Run</code></a>) (required)</li><li><code class="inline">class</code> (<code class="inline">:string</code>) - Defaults to <code class="inline">&quot;h-4 w-4&quot;</code>.</li></ul></div>
-
-    </div>
-
-    <div class="summary-row">
-      <div class="summary-signature">
         <a href="#state_pill/1" translate="no">state_pill(assigns)</a>
 
       </div>
@@ -223,7 +203,7 @@ Pages
 
       </div>
 
-        <div class="summary-synopsis"><h2>Attributes</h2><ul><li><code class="inline">run</code> (<a href="Lightning.Invocation.Run.html"><code class="inline">Lightning.Invocation.Run</code></a>) (required)</li><li><code class="inline">is_clone</code> (<code class="inline">:boolean</code>) - Defaults to <code class="inline">false</code>.</li><li><code class="inline">show_inspector_link</code> (<code class="inline">:boolean</code>) - Defaults to <code class="inline">false</code>.</li><li><code class="inline">attempt_id</code> (<code class="inline">:string</code>)</li><li><code class="inline">project_id</code> (<code class="inline">:string</code>)</li><li><code class="inline">selected</code> (<code class="inline">:boolean</code>) - Defaults to <code class="inline">false</code>.</li><li><code class="inline">class</code> (<code class="inline">:string</code>) - Defaults to <code class="inline">&quot;&quot;</code>.</li><li>Global attributes are accepted.</li></ul></div>
+        <div class="summary-synopsis"><h2>Attributes</h2><ul><li><code class="inline">step</code> (<a href="Lightning.Invocation.Step.html"><code class="inline">Lightning.Invocation.Step</code></a>) (required)</li><li><code class="inline">is_clone</code> (<code class="inline">:boolean</code>) - Defaults to <code class="inline">false</code>.</li><li><code class="inline">show_inspector_link</code> (<code class="inline">:boolean</code>) - Defaults to <code class="inline">false</code>.</li><li><code class="inline">attempt_id</code> (<code class="inline">:string</code>)</li><li><code class="inline">project_id</code> (<code class="inline">:string</code>)</li><li><code class="inline">selected</code> (<code class="inline">:boolean</code>) - Defaults to <code class="inline">false</code>.</li><li><code class="inline">class</code> (<code class="inline">:string</code>) - Defaults to <code class="inline">&quot;&quot;</code>.</li><li>Global attributes are accepted.</li></ul></div>
 
     </div>
 
@@ -233,7 +213,27 @@ Pages
 
       </div>
 
-        <div class="summary-synopsis"><p>Renders a list of runs for the attempt</p></div>
+        <div class="summary-synopsis"><p>Renders a list of steps for the attempt</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#step_state_circle/1" translate="no">step_state_circle(assigns)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><h2>Attributes</h2><ul><li><code class="inline">step</code> (<a href="Lightning.Invocation.Step.html"><code class="inline">Lightning.Invocation.Step</code></a>) (required)</li><li><code class="inline">class</code> (<code class="inline">:string</code>) - Defaults to <code class="inline">&quot;&quot;</code>.</li></ul></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#step_state_icon/1" translate="no">step_state_icon(assigns)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><h2>Attributes</h2><ul><li><code class="inline">step</code> (<a href="Lightning.Invocation.Step.html"><code class="inline">Lightning.Invocation.Step</code></a>) (required)</li><li><code class="inline">class</code> (<code class="inline">:string</code>) - Defaults to <code class="inline">&quot;h-4 w-4&quot;</code>.</li></ul></div>
 
     </div>
 
@@ -362,62 +362,6 @@ Pages
 
   </section>
 </section>
-<section class="detail" id="run_state_circle/1">
-
-  <div class="detail-header">
-    <a href="#run_state_circle/1" class="detail-link" title="Link to this function">
-      <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
-    </a>
-    <h1 class="signature" translate="no">run_state_circle(assigns)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/attempt_live/components.ex#L101" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
-
-
-  </div>
-
-  <section class="docstring">
-
-<h2 id="run_state_circle/1-attributes" class="section-heading">
-  <a href="#run_state_circle/1-attributes" class="hover-link">
-    <i class="ri-link-m" aria-hidden="true"></i>
-  </a>
-  <span class="text">Attributes</span>
-</h2>
-<ul><li><code class="inline">run</code> (<a href="Lightning.Invocation.Run.html"><code class="inline">Lightning.Invocation.Run</code></a>) (required)</li><li><code class="inline">class</code> (<code class="inline">:string</code>) - Defaults to <code class="inline">&quot;&quot;</code>.</li></ul>
-  </section>
-</section>
-<section class="detail" id="run_state_icon/1">
-
-  <div class="detail-header">
-    <a href="#run_state_icon/1" class="detail-link" title="Link to this function">
-      <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
-    </a>
-    <h1 class="signature" translate="no">run_state_icon(assigns)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/attempt_live/components.ex#L136" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
-
-
-  </div>
-
-  <section class="docstring">
-
-<h2 id="run_state_icon/1-attributes" class="section-heading">
-  <a href="#run_state_icon/1-attributes" class="hover-link">
-    <i class="ri-link-m" aria-hidden="true"></i>
-  </a>
-  <span class="text">Attributes</span>
-</h2>
-<ul><li><code class="inline">run</code> (<a href="Lightning.Invocation.Run.html"><code class="inline">Lightning.Invocation.Run</code></a>) (required)</li><li><code class="inline">class</code> (<code class="inline">:string</code>) - Defaults to <code class="inline">&quot;h-4 w-4&quot;</code>.</li></ul>
-  </section>
-</section>
 <section class="detail" id="state_pill/1">
 
   <div class="detail-header">
@@ -480,7 +424,7 @@ Pages
   </a>
   <span class="text">Attributes</span>
 </h2>
-<ul><li><code class="inline">run</code> (<a href="Lightning.Invocation.Run.html"><code class="inline">Lightning.Invocation.Run</code></a>) (required)</li><li><code class="inline">is_clone</code> (<code class="inline">:boolean</code>) - Defaults to <code class="inline">false</code>.</li><li><code class="inline">show_inspector_link</code> (<code class="inline">:boolean</code>) - Defaults to <code class="inline">false</code>.</li><li><code class="inline">attempt_id</code> (<code class="inline">:string</code>)</li><li><code class="inline">project_id</code> (<code class="inline">:string</code>)</li><li><code class="inline">selected</code> (<code class="inline">:boolean</code>) - Defaults to <code class="inline">false</code>.</li><li><code class="inline">class</code> (<code class="inline">:string</code>) - Defaults to <code class="inline">&quot;&quot;</code>.</li><li>Global attributes are accepted.</li></ul>
+<ul><li><code class="inline">step</code> (<a href="Lightning.Invocation.Step.html"><code class="inline">Lightning.Invocation.Step</code></a>) (required)</li><li><code class="inline">is_clone</code> (<code class="inline">:boolean</code>) - Defaults to <code class="inline">false</code>.</li><li><code class="inline">show_inspector_link</code> (<code class="inline">:boolean</code>) - Defaults to <code class="inline">false</code>.</li><li><code class="inline">attempt_id</code> (<code class="inline">:string</code>)</li><li><code class="inline">project_id</code> (<code class="inline">:string</code>)</li><li><code class="inline">selected</code> (<code class="inline">:boolean</code>) - Defaults to <code class="inline">false</code>.</li><li><code class="inline">class</code> (<code class="inline">:string</code>) - Defaults to <code class="inline">&quot;&quot;</code>.</li><li>Global attributes are accepted.</li></ul>
   </section>
 </section>
 <section class="detail" id="step_list/1">
@@ -502,19 +446,75 @@ Pages
 
   <section class="docstring">
 
-<p>Renders a list of runs for the attempt</p><h2 id="step_list/1-attributes" class="section-heading">
+<p>Renders a list of steps for the attempt</p><h2 id="step_list/1-attributes" class="section-heading">
   <a href="#step_list/1-attributes" class="hover-link">
     <i class="ri-link-m" aria-hidden="true"></i>
   </a>
   <span class="text">Attributes</span>
 </h2>
-<ul><li><code class="inline">runs</code> (<code class="inline">:list</code>) (required)</li><li>Global attributes are accepted.</li></ul><h2 id="step_list/1-slots" class="section-heading">
+<ul><li><code class="inline">steps</code> (<code class="inline">:list</code>) (required)</li><li>Global attributes are accepted.</li></ul><h2 id="step_list/1-slots" class="section-heading">
   <a href="#step_list/1-slots" class="hover-link">
     <i class="ri-link-m" aria-hidden="true"></i>
   </a>
   <span class="text">Slots</span>
 </h2>
 <ul><li><code class="inline">inner_block</code> (required)</li></ul>
+  </section>
+</section>
+<section class="detail" id="step_state_circle/1">
+
+  <div class="detail-header">
+    <a href="#step_state_circle/1" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">step_state_circle(assigns)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/attempt_live/components.ex#L101" class="icon-action" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+<h2 id="step_state_circle/1-attributes" class="section-heading">
+  <a href="#step_state_circle/1-attributes" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
+  </a>
+  <span class="text">Attributes</span>
+</h2>
+<ul><li><code class="inline">step</code> (<a href="Lightning.Invocation.Step.html"><code class="inline">Lightning.Invocation.Step</code></a>) (required)</li><li><code class="inline">class</code> (<code class="inline">:string</code>) - Defaults to <code class="inline">&quot;&quot;</code>.</li></ul>
+  </section>
+</section>
+<section class="detail" id="step_state_icon/1">
+
+  <div class="detail-header">
+    <a href="#step_state_icon/1" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">step_state_icon(assigns)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/attempt_live/components.ex#L136" class="icon-action" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+<h2 id="step_state_icon/1-attributes" class="section-heading">
+  <a href="#step_state_icon/1-attributes" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
+  </a>
+  <span class="text">Attributes</span>
+</h2>
+<ul><li><code class="inline">step</code> (<a href="Lightning.Invocation.Step.html"><code class="inline">Lightning.Invocation.Step</code></a>) (required)</li><li><code class="inline">class</code> (<code class="inline">:string</code>) - Defaults to <code class="inline">&quot;h-4 w-4&quot;</code>.</li></ul>
   </section>
 </section>
 

@@ -13,7 +13,7 @@
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-EPF2X7PV.js"></script>
-    <script src="dist/sidebar_items-06EE7B96.js"></script>
+    <script src="dist/sidebar_items-7655F397.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -167,7 +167,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#complete_run/1" translate="no">complete_run(params)</a>
+        <a href="#complete_step/1" translate="no">complete_step(params)</a>
 
       </div>
 
@@ -257,11 +257,11 @@ for more details.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#start_run/1" translate="no">start_run(params)</a>
+        <a href="#start_step/1" translate="no">start_step(params)</a>
 
       </div>
 
-        <div class="summary-synopsis"><p>Creates a Run for a given attempt and job.</p></div>
+        <div class="summary-synopsis"><p>Creates a Step for a given attempt and job.</p></div>
 
     </div>
 
@@ -358,14 +358,14 @@ for more details.</p></div>
 
   </section>
 </section>
-<section class="detail" id="complete_run/1">
+<section class="detail" id="complete_step/1">
 
   <div class="detail-header">
-    <a href="#complete_run/1" class="detail-link" title="Link to this function">
+    <a href="#complete_step/1" class="detail-link" title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">complete_run(params)</h1>
+    <h1 class="signature" translate="no">complete_step(params)</h1>
 
       <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/attempts.ex#L216" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
@@ -379,8 +379,8 @@ for more details.</p></div>
 
       <div class="specs">
 
-          <pre translate="no"><span class="attribute">@spec</span> complete_run(<a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>()) ::
-  {:ok, <a href="Lightning.Invocation.Run.html#t:t/0">Lightning.Invocation.Run.t</a>()} | {:error, <a href="https://hexdocs.pm/ecto/3.10.3/Ecto.Changeset.html#t:t/0">Ecto.Changeset.t</a>()}</pre>
+          <pre translate="no"><span class="attribute">@spec</span> complete_step(<a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>()) ::
+  {:ok, <a href="Lightning.Invocation.Step.html#t:t/0">Lightning.Invocation.Step.t</a>()} | {:error, <a href="https://hexdocs.pm/ecto/3.10.3/Ecto.Changeset.html#t:t/0">Ecto.Changeset.t</a>()}</pre>
 
       </div>
 
@@ -436,7 +436,7 @@ for more details.</p></div>
 
       </div>
 
-<p>Get an Attempt by id.</p><p>Optionally preload associations by passing a list of atoms to <code class="inline">:include</code>.</p><pre><code class="makeup elixir" translate="no"><span class="nc">Lightning.Attempts</span><span class="o">.</span><span class="n">get</span><span class="p" data-group-id="9830666174-1">(</span><span class="n">id</span><span class="p">,</span><span class="w"> </span><span class="ss">include</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="9830666174-2">[</span><span class="ss">:workflow</span><span class="p" data-group-id="9830666174-2">]</span><span class="p" data-group-id="9830666174-1">)</span></code></pre>
+<p>Get an Attempt by id.</p><p>Optionally preload associations by passing a list of atoms to <code class="inline">:include</code>.</p><pre><code class="makeup elixir" translate="no"><span class="nc">Lightning.Attempts</span><span class="o">.</span><span class="n">get</span><span class="p" data-group-id="8983823804-1">(</span><span class="n">id</span><span class="p">,</span><span class="w"> </span><span class="ss">include</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="8983823804-2">[</span><span class="ss">:workflow</span><span class="p" data-group-id="8983823804-2">]</span><span class="p" data-group-id="8983823804-1">)</span></code></pre>
   </section>
 </section>
 <section class="detail" id="get_credential/2">
@@ -603,14 +603,14 @@ for more details.</p>
 
   </section>
 </section>
-<section class="detail" id="start_run/1">
+<section class="detail" id="start_step/1">
 
   <div class="detail-header">
-    <a href="#start_run/1" class="detail-link" title="Link to this function">
+    <a href="#start_step/1" class="detail-link" title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">start_run(params)</h1>
+    <h1 class="signature" translate="no">start_step(params)</h1>
 
       <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/attempts.ex#L210" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
@@ -624,12 +624,12 @@ for more details.</p>
 
       <div class="specs">
 
-          <pre translate="no"><span class="attribute">@spec</span> start_run(<a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>()) ::
-  {:ok, <a href="Lightning.Invocation.Run.html#t:t/0">Lightning.Invocation.Run.t</a>()} | {:error, <a href="https://hexdocs.pm/ecto/3.10.3/Ecto.Changeset.html#t:t/0">Ecto.Changeset.t</a>()}</pre>
+          <pre translate="no"><span class="attribute">@spec</span> start_step(<a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>()) ::
+  {:ok, <a href="Lightning.Invocation.Step.html#t:t/0">Lightning.Invocation.Step.t</a>()} | {:error, <a href="https://hexdocs.pm/ecto/3.10.3/Ecto.Changeset.html#t:t/0">Ecto.Changeset.t</a>()}</pre>
 
       </div>
 
-<p>Creates a Run for a given attempt and job.</p><p>The Run is created with and marked as started at the current time.</p>
+<p>Creates a Step for a given attempt and job.</p><p>The Step is created and marked as started at the current time.</p>
   </section>
 </section>
 <section class="detail" id="subscribe/1">

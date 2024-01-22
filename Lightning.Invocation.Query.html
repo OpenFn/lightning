@@ -13,7 +13,7 @@
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-EPF2X7PV.js"></script>
-    <script src="dist/sidebar_items-06EE7B96.js"></script>
+    <script src="dist/sidebar_items-7655F397.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -137,7 +137,7 @@ Pages
 
 
   <section id="moduledoc">
-<p>Query functions for working with Runs and Dataclips</p>
+<p>Query functions for working with Steps and Dataclips</p>
   </section>
 
 
@@ -166,42 +166,42 @@ the body specifically.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#last_run_for_job/1" translate="no">last_run_for_job(job)</a>
+        <a href="#last_step_for_job/1" translate="no">last_step_for_job(job)</a>
 
       </div>
 
-        <div class="summary-synopsis"><p>The last run for a job</p></div>
+        <div class="summary-synopsis"><p>The last step for a job</p></div>
 
     </div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#last_successful_run_for_job/1" translate="no">last_successful_run_for_job(job)</a>
+        <a href="#last_successful_step_for_job/1" translate="no">last_successful_step_for_job(job)</a>
 
       </div>
 
-        <div class="summary-synopsis"><p>The last successful run for a job, used in scheduler to enable downstream attempts
+        <div class="summary-synopsis"><p>The last successful step for a job, used in scheduler to enable downstream attempts
 to access a previous attempt's state</p></div>
 
     </div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#runs_for/1" translate="no">runs_for(user)</a>
+        <a href="#steps_for/1" translate="no">steps_for(user)</a>
 
       </div>
 
-        <div class="summary-synopsis"><p>Runs for a specific user</p></div>
+        <div class="summary-synopsis"><p>Steps for a specific user</p></div>
 
     </div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#runs_with_reason/2" translate="no">runs_with_reason(query, exit_reason)</a>
+        <a href="#steps_with_reason/2" translate="no">steps_with_reason(query, exit_reason)</a>
 
       </div>
 
-        <div class="summary-synopsis"><p>The last run for a job for a particular exit reason, used in scheduler</p></div>
+        <div class="summary-synopsis"><p>The last step for a job for a particular exit reason, used in scheduler</p></div>
 
     </div>
 
@@ -241,14 +241,14 @@ to access a previous attempt's state</p></div>
 the body specifically.</p>
   </section>
 </section>
-<section class="detail" id="last_run_for_job/1">
+<section class="detail" id="last_step_for_job/1">
 
   <div class="detail-header">
-    <a href="#last_run_for_job/1" class="detail-link" title="Link to this function">
+    <a href="#last_step_for_job/1" class="detail-link" title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">last_run_for_job(job)</h1>
+    <h1 class="signature" translate="no">last_step_for_job(job)</h1>
 
       <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation/query.ex#L31" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
@@ -262,21 +262,21 @@ the body specifically.</p>
 
       <div class="specs">
 
-          <pre translate="no"><span class="attribute">@spec</span> last_run_for_job(<a href="Lightning.Workflows.Job.html#t:t/0">Lightning.Workflows.Job.t</a>()) :: <a href="https://hexdocs.pm/ecto/3.10.3/Ecto.Queryable.html#t:t/0">Ecto.Queryable.t</a>()</pre>
+          <pre translate="no"><span class="attribute">@spec</span> last_step_for_job(<a href="Lightning.Workflows.Job.html#t:t/0">Lightning.Workflows.Job.t</a>()) :: <a href="https://hexdocs.pm/ecto/3.10.3/Ecto.Queryable.html#t:t/0">Ecto.Queryable.t</a>()</pre>
 
       </div>
 
-<p>The last run for a job</p>
+<p>The last step for a job</p>
   </section>
 </section>
-<section class="detail" id="last_successful_run_for_job/1">
+<section class="detail" id="last_successful_step_for_job/1">
 
   <div class="detail-header">
-    <a href="#last_successful_run_for_job/1" class="detail-link" title="Link to this function">
+    <a href="#last_successful_step_for_job/1" class="detail-link" title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">last_successful_run_for_job(job)</h1>
+    <h1 class="signature" translate="no">last_successful_step_for_job(job)</h1>
 
       <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation/query.ex#L52" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
@@ -290,22 +290,22 @@ the body specifically.</p>
 
       <div class="specs">
 
-          <pre translate="no"><span class="attribute">@spec</span> last_successful_run_for_job(<a href="Lightning.Workflows.Job.html#t:t/0">Lightning.Workflows.Job.t</a>()) :: <a href="https://hexdocs.pm/ecto/3.10.3/Ecto.Queryable.html#t:t/0">Ecto.Queryable.t</a>()</pre>
+          <pre translate="no"><span class="attribute">@spec</span> last_successful_step_for_job(<a href="Lightning.Workflows.Job.html#t:t/0">Lightning.Workflows.Job.t</a>()) :: <a href="https://hexdocs.pm/ecto/3.10.3/Ecto.Queryable.html#t:t/0">Ecto.Queryable.t</a>()</pre>
 
       </div>
 
-<p>The last successful run for a job, used in scheduler to enable downstream attempts
+<p>The last successful step for a job, used in scheduler to enable downstream attempts
 to access a previous attempt's state</p>
   </section>
 </section>
-<section class="detail" id="runs_for/1">
+<section class="detail" id="steps_for/1">
 
   <div class="detail-header">
-    <a href="#runs_for/1" class="detail-link" title="Link to this function">
+    <a href="#steps_for/1" class="detail-link" title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">runs_for(user)</h1>
+    <h1 class="signature" translate="no">steps_for(user)</h1>
 
       <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation/query.ex#L16" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
@@ -319,21 +319,21 @@ to access a previous attempt's state</p>
 
       <div class="specs">
 
-          <pre translate="no"><span class="attribute">@spec</span> runs_for(<a href="Lightning.Accounts.User.html#t:t/0">Lightning.Accounts.User.t</a>()) :: <a href="https://hexdocs.pm/ecto/3.10.3/Ecto.Queryable.html#t:t/0">Ecto.Queryable.t</a>()</pre>
+          <pre translate="no"><span class="attribute">@spec</span> steps_for(<a href="Lightning.Accounts.User.html#t:t/0">Lightning.Accounts.User.t</a>()) :: <a href="https://hexdocs.pm/ecto/3.10.3/Ecto.Queryable.html#t:t/0">Ecto.Queryable.t</a>()</pre>
 
       </div>
 
-<p>Runs for a specific user</p>
+<p>Steps for a specific user</p>
   </section>
 </section>
-<section class="detail" id="runs_with_reason/2">
+<section class="detail" id="steps_with_reason/2">
 
   <div class="detail-header">
-    <a href="#runs_with_reason/2" class="detail-link" title="Link to this function">
+    <a href="#steps_with_reason/2" class="detail-link" title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">runs_with_reason(query, exit_reason)</h1>
+    <h1 class="signature" translate="no">steps_with_reason(query, exit_reason)</h1>
 
       <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation/query.ex#L43" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
@@ -347,11 +347,11 @@ to access a previous attempt's state</p>
 
       <div class="specs">
 
-          <pre translate="no"><span class="attribute">@spec</span> runs_with_reason(<a href="https://hexdocs.pm/ecto/3.10.3/Ecto.Queryable.html#t:t/0">Ecto.Queryable.t</a>(), <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>()) :: <a href="https://hexdocs.pm/ecto/3.10.3/Ecto.Queryable.html#t:t/0">Ecto.Queryable.t</a>()</pre>
+          <pre translate="no"><span class="attribute">@spec</span> steps_with_reason(<a href="https://hexdocs.pm/ecto/3.10.3/Ecto.Queryable.html#t:t/0">Ecto.Queryable.t</a>(), <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>()) :: <a href="https://hexdocs.pm/ecto/3.10.3/Ecto.Queryable.html#t:t/0">Ecto.Queryable.t</a>()</pre>
 
       </div>
 
-<p>The last run for a job for a particular exit reason, used in scheduler</p>
+<p>The last step for a job for a particular exit reason, used in scheduler</p>
   </section>
 </section>
 

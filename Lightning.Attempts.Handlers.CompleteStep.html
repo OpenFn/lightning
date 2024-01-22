@@ -7,13 +7,13 @@
     <meta name="generator" content="ExDoc v0.30.9">
     <meta name="project" content="Lightning v2.0.0-rc4">
 
-    <title>Lightning.AttemptRun — Lightning v2.0.0-rc4</title>
+    <title>Lightning.Attempts.Handlers.CompleteStep — Lightning v2.0.0-rc4</title>
     <link rel="stylesheet" href="dist/html-elixir-XFYN5IVA.css" />
 
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-EPF2X7PV.js"></script>
-    <script src="dist/sidebar_items-06EE7B96.js"></script>
+    <script src="dist/sidebar_items-7655F397.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -125,19 +125,19 @@ Pages
 </button>
 
 
-    <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation/attempt_run.ex#L1" title="View Source" class="icon-action" rel="help">
+    <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/attempts/handlers.ex#L130" title="View Source" class="icon-action" rel="help">
       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
       <span class="sr-only">View Source</span>
     </a>
 
-  <span translate="no">Lightning.AttemptRun</span> 
+  <span translate="no">Lightning.Attempts.Handlers.CompleteStep</span> 
   <small class="app-vsn" translate="no">(Lightning v2.0.0-rc4)</small>
 
 </h1>
 
 
   <section id="moduledoc">
-<p>Ecto model for an Attempts Runs.</p>
+<p>Schema to validate the input attributes of a completed step.</p>
   </section>
 
 
@@ -148,20 +148,6 @@ Pages
       </a>
       <span class="text">Summary</span>
     </h1>
-<div class="summary-types summary">
-  <h2>
-    <a href="#types">Types</a>
-  </h2>
-
-    <div class="summary-row">
-      <div class="summary-signature">
-        <a href="#t:t/0" translate="no">t()</a>
-
-      </div>
-
-    </div>
-
-</div>
 <div class="summary-functions summary">
   <h2>
     <a href="#functions">Functions</a>
@@ -169,7 +155,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#new/1" translate="no">new(attrs \\ %{})</a>
+        <a href="#call/1" translate="no">call(params)</a>
 
       </div>
 
@@ -177,7 +163,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#new/2" translate="no">new(attempt, run)</a>
+        <a href="#new/1" translate="no">new(params)</a>
 
       </div>
 
@@ -187,54 +173,6 @@ Pages
 
   </section>
 
-
-  <section id="types" class="details-list">
-    <h1 class="section-heading">
-      <a class="hover-link" href="#types">
-        <i class="ri-link-m" aria-hidden="true"></i>
-      </a>
-      <span class="text">Types</span>
-    </h1>
-    <div class="types-list">
-<section class="detail" id="t:t/0">
-
-  <div class="detail-header">
-    <a href="#t:t/0" class="detail-link" title="Link to this type">
-      <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this type</span>
-    </a>
-    <h1 class="signature" translate="no">t()</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation/attempt_run.ex#L10" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
-
-
-  </div>
-
-  <section class="docstring">
-
-      <div class="specs">
-
-          <pre translate="no"><span class="attribute">@type</span> t() :: %Lightning.AttemptRun{
-  __meta__: <a href="https://hexdocs.pm/ecto/3.10.3/Ecto.Schema.Metadata.html#t:t/0">Ecto.Schema.Metadata.t</a>(),
-  attempt: <a href="Lightning.Attempt.html#t:t/0">Lightning.Attempt.t</a>() | <a href="https://hexdocs.pm/ecto/3.10.3/Ecto.Association.NotLoaded.html#t:t/0">Ecto.Association.NotLoaded.t</a>(),
-  attempt_id: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
-  id: <a href="https://hexdocs.pm/ecto/3.10.3/Ecto.UUID.html#t:t/0">Ecto.UUID.t</a>() | nil,
-  inserted_at: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
-  run: <a href="Lightning.Invocation.Run.html#t:t/0">Lightning.Invocation.Run.t</a>() | <a href="https://hexdocs.pm/ecto/3.10.3/Ecto.Association.NotLoaded.html#t:t/0">Ecto.Association.NotLoaded.t</a>(),
-  run_id: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>()
-}</pre>
-
-      </div>
-
-
-  </section>
-</section>
-
-    </div>
-  </section>
 
   <section id="functions" class="details-list">
     <h1 class="section-heading">
@@ -244,18 +182,16 @@ Pages
       <span class="text">Functions</span>
     </h1>
     <div class="functions-list">
-<section class="detail" id="new/1">
-
-    <span id="new/0"></span>
+<section class="detail" id="call/1">
 
   <div class="detail-header">
-    <a href="#new/1" class="detail-link" title="Link to this function">
+    <a href="#call/1" class="detail-link" title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">new(attrs \\ %{})</h1>
+    <h1 class="signature" translate="no">call(params)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation/attempt_run.ex#L26" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/attempts/handlers.ex#L192" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -268,16 +204,16 @@ Pages
 
   </section>
 </section>
-<section class="detail" id="new/2">
+<section class="detail" id="new/1">
 
   <div class="detail-header">
-    <a href="#new/2" class="detail-link" title="Link to this function">
+    <a href="#new/1" class="detail-link" title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">new(attempt, run)</h1>
+    <h1 class="signature" translate="no">new(params)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation/attempt_run.ex#L35" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/attempts/handlers.ex#L151" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -286,17 +222,6 @@ Pages
   </div>
 
   <section class="docstring">
-
-      <div class="specs">
-
-          <pre translate="no"><span class="attribute">@spec</span> new(
-  attempt :: <a href="Lightning.Attempt.html#t:t/0">Lightning.Attempt.t</a>() | <a href="https://hexdocs.pm/ecto/3.10.3/Ecto.Changeset.html#t:t/1">Ecto.Changeset.t</a>(<a href="Lightning.Attempt.html#t:t/0">Lightning.Attempt.t</a>()),
-  run ::
-    <a href="Lightning.Invocation.Run.html#t:t/0">Lightning.Invocation.Run.t</a>()
-    | <a href="https://hexdocs.pm/ecto/3.10.3/Ecto.Changeset.html#t:t/1">Ecto.Changeset.t</a>(<a href="Lightning.Invocation.Run.html#t:t/0">Lightning.Invocation.Run.t</a>())
-) :: <a href="https://hexdocs.pm/ecto/3.10.3/Ecto.Changeset.html#t:t/1">Ecto.Changeset.t</a>(<a href="#t:t/0">t</a>())</pre>
-
-      </div>
 
 
   </section>

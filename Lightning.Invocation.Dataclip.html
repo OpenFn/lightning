@@ -13,7 +13,7 @@
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-EPF2X7PV.js"></script>
-    <script src="dist/sidebar_items-06EE7B96.js"></script>
+    <script src="dist/sidebar_items-7655F397.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -149,8 +149,8 @@ The data arrived via a webhook.</li><li><code class="inline">:global</code>
 Was created manually, and is intended to be used multiple times.
 When repetitive static data is needed to be maintained, instead of hard-coding
 into a Job - a more convenient solution is to create a <code class="inline">:global</code> Dataclip
-and access it inside the Job.</li><li><code class="inline">:run_result</code>
-The final state of a successful run.</li><li><code class="inline">:saved_input</code>
+and access it inside the Job.</li><li><code class="inline">:step_result</code>
+The final state of a step.</li><li><code class="inline">:saved_input</code>
 An arbitrary input, created by a user. (Only configuration will be overwritten.)</li></ul>
   </section>
 
@@ -249,7 +249,7 @@ An arbitrary input, created by a user. (Only configuration will be overwritten.)
 
       <div class="specs">
 
-          <pre translate="no"><span class="attribute">@type</span> source_type() :: :http_request | :global | :run_result | :saved_input</pre>
+          <pre translate="no"><span class="attribute">@type</span> source_type() :: :http_request | :global | :step_result | :saved_input</pre>
 
       </div>
 
@@ -284,8 +284,8 @@ An arbitrary input, created by a user. (Only configuration will be overwritten.)
   inserted_at: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
   project: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
   project_id: <a href="https://hexdocs.pm/ecto/3.10.3/Ecto.UUID.html#t:t/0">Ecto.UUID.t</a>() | nil,
-  source_run:
-    <a href="Lightning.Invocation.Run.html#t:t/0">Lightning.Invocation.Run.t</a>() | <a href="https://hexdocs.pm/ecto/3.10.3/Ecto.Association.NotLoaded.html#t:t/0">Ecto.Association.NotLoaded.t</a>() | nil,
+  source_step:
+    <a href="Lightning.Invocation.Step.html#t:t/0">Lightning.Invocation.Step.t</a>() | <a href="https://hexdocs.pm/ecto/3.10.3/Ecto.Association.NotLoaded.html#t:t/0">Ecto.Association.NotLoaded.t</a>() | nil,
   type: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
   updated_at: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>()
 }</pre>
@@ -372,7 +372,7 @@ An arbitrary input, created by a user. (Only configuration will be overwritten.)
 
   <section class="docstring">
 
-<p>Append validations based on the type of the Dataclip.</p><ul><li><code class="inline">:run_result</code> must have an associated Run model.</li></ul>
+<p>Append validations based on the type of the Dataclip.</p><ul><li><code class="inline">:step_result</code> must have an associated Step model.</li></ul>
   </section>
 </section>
 

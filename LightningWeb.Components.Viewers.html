@@ -13,7 +13,7 @@
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-EPF2X7PV.js"></script>
-    <script src="dist/sidebar_items-06EE7B96.js"></script>
+    <script src="dist/sidebar_items-7655F397.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -245,15 +245,15 @@ with the <code class="inline">highlight_id</code> attribute.</p><h2 id="log_view
 </h2>
 <pre><code class="makeup elixir" translate="no"><span class="o">&lt;</span><span class="nc">Viewers</span><span class="o">.</span><span class="n">log_viewer</span><span class="w">
   </span><span class="n">id</span><span class="o">=</span><span class="s">&quot;log-viewer-data&quot;</span><span class="w">
-  </span><span class="n">stream</span><span class="o">=</span><span class="p" data-group-id="3188989429-1">{</span><span class="na">@log_lines</span><span class="p" data-group-id="3188989429-1">}</span><span class="w">
-  </span><span class="n">highlight_id</span><span class="o">=</span><span class="p" data-group-id="3188989429-2">{</span><span class="na">@selected_run_id</span><span class="p" data-group-id="3188989429-2">}</span><span class="w">
+  </span><span class="n">stream</span><span class="o">=</span><span class="p" data-group-id="9108250814-1">{</span><span class="na">@log_lines</span><span class="p" data-group-id="9108250814-1">}</span><span class="w">
+  </span><span class="n">highlight_id</span><span class="o">=</span><span class="p" data-group-id="9108250814-2">{</span><span class="na">@selected_step_id</span><span class="p" data-group-id="9108250814-2">}</span><span class="w">
 </span><span class="o">/</span><span class="o">&gt;</span></code></pre><h2 id="log_viewer/1-attributes" class="section-heading">
   <a href="#log_viewer/1-attributes" class="hover-link">
     <i class="ri-link-m" aria-hidden="true"></i>
   </a>
   <span class="text">Attributes</span>
 </h2>
-<ul><li><code class="inline">id</code> (<code class="inline">:string</code>) (required)</li><li><code class="inline">stream</code> (<code class="inline">:list</code>) (required) - A stream of <a href="Lightning.Invocation.LogLine.html"><code class="inline">Lightning.Invocation.LogLine</code></a> structs.</li><li><code class="inline">highlight_id</code> (<code class="inline">:string</code>) - The id of the log line to highlight, matching the <code class="inline">run_id</code> field. Defaults to <code class="inline">nil</code>.</li><li><code class="inline">class</code> (<code class="inline">:string</code>) - Additional classes to add to the log viewer container. Defaults to <code class="inline">nil</code>.</li></ul>
+<ul><li><code class="inline">id</code> (<code class="inline">:string</code>) (required)</li><li><code class="inline">stream</code> (<code class="inline">:list</code>) (required) - A stream of <a href="Lightning.Invocation.LogLine.html"><code class="inline">Lightning.Invocation.LogLine</code></a> structs.</li><li><code class="inline">highlight_id</code> (<code class="inline">:string</code>) - The id of the log line to highlight, matching the <code class="inline">step_id</code> field. Defaults to <code class="inline">nil</code>.</li><li><code class="inline">class</code> (<code class="inline">:string</code>) - Additional classes to add to the log viewer container. Defaults to <code class="inline">nil</code>.</li></ul>
   </section>
 </section>
 

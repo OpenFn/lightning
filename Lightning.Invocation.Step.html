@@ -7,13 +7,13 @@
     <meta name="generator" content="ExDoc v0.30.9">
     <meta name="project" content="Lightning v2.0.0-rc4">
 
-    <title>Lightning.Attempts.Handlers.CompleteRun — Lightning v2.0.0-rc4</title>
+    <title>Lightning.Invocation.Step — Lightning v2.0.0-rc4</title>
     <link rel="stylesheet" href="dist/html-elixir-XFYN5IVA.css" />
 
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-EPF2X7PV.js"></script>
-    <script src="dist/sidebar_items-06EE7B96.js"></script>
+    <script src="dist/sidebar_items-7655F397.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -125,19 +125,21 @@ Pages
 </button>
 
 
-    <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/attempts/handlers.ex#L130" title="View Source" class="icon-action" rel="help">
+    <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation/run.ex#L1" title="View Source" class="icon-action" rel="help">
       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
       <span class="sr-only">View Source</span>
     </a>
 
-  <span translate="no">Lightning.Attempts.Handlers.CompleteRun</span> 
+  <span translate="no">Lightning.Invocation.Step</span> 
   <small class="app-vsn" translate="no">(Lightning v2.0.0-rc4)</small>
 
 </h1>
 
 
   <section id="moduledoc">
-<p>Schema to validate the input attributes of a completed run.</p>
+<p>Ecto model for Steps.</p><p>A step is part of an attempt and represents the work initiated for a single
+Job with a single <code class="inline">input_dataclip</code>.</p><p>Once completed (successfully) it will have an <code class="inline">output_dataclip</code> associated
+with it as well.</p><p>When a step finishes, it's <code class="inline">:exit_reason</code> is set to one of following strings:</p><ul><li> <code class="inline">&quot;success&quot;</code></li><li> <code class="inline">&quot;fail&quot;</code></li><li> <code class="inline">&quot;crash&quot;</code></li><li> <code class="inline">&quot;cancel&quot;</code></li><li> <code class="inline">&quot;kill&quot;</code></li><li> <code class="inline">&quot;exception&quot;</code></li><li> <code class="inline">&quot;lost&quot;</code></li></ul>
   </section>
 
 
@@ -148,6 +150,20 @@ Pages
       </a>
       <span class="text">Summary</span>
     </h1>
+<div class="summary-types summary">
+  <h2>
+    <a href="#types">Types</a>
+  </h2>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#t:t/0" translate="no">t()</a>
+
+      </div>
+
+    </div>
+
+</div>
 <div class="summary-functions summary">
   <h2>
     <a href="#functions">Functions</a>
@@ -155,7 +171,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#call/1" translate="no">call(params)</a>
+        <a href="#finished/3" translate="no">finished(step, output_dataclip_id, arg)</a>
 
       </div>
 
@@ -163,7 +179,15 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#new/1" translate="no">new(params)</a>
+        <a href="#new/1" translate="no">new(attrs \\ %{})</a>
+
+      </div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#validate/1" translate="no">validate(changeset)</a>
 
       </div>
 
@@ -174,6 +198,65 @@ Pages
   </section>
 
 
+  <section id="types" class="details-list">
+    <h1 class="section-heading">
+      <a class="hover-link" href="#types">
+        <i class="ri-link-m" aria-hidden="true"></i>
+      </a>
+      <span class="text">Types</span>
+    </h1>
+    <div class="types-list">
+<section class="detail" id="t:t/0">
+
+  <div class="detail-header">
+    <a href="#t:t/0" class="detail-link" title="Link to this type">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this type</span>
+    </a>
+    <h1 class="signature" translate="no">t()</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation/run.ex#L32" class="icon-action" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@type</span> t() :: %Lightning.Invocation.Step{
+  __meta__: <a href="https://hexdocs.pm/ecto/3.10.3/Ecto.Schema.Metadata.html#t:t/0">Ecto.Schema.Metadata.t</a>(),
+  attempts: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
+  credential: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
+  credential_id: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
+  error_type: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
+  exit_reason: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>() | nil,
+  finished_at: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
+  id: <a href="https://hexdocs.pm/ecto/3.10.3/Ecto.UUID.html#t:t/0">Ecto.UUID.t</a>() | nil,
+  input_dataclip: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
+  input_dataclip_id: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
+  inserted_at: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
+  job: <a href="Lightning.Workflows.Job.html#t:t/0">Lightning.Workflows.Job.t</a>() | <a href="https://hexdocs.pm/ecto/3.10.3/Ecto.Association.NotLoaded.html#t:t/0">Ecto.Association.NotLoaded.t</a>() | nil,
+  job_id: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
+  log_lines: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
+  output_dataclip: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
+  output_dataclip_id: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
+  started_at: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
+  updated_at: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>()
+}</pre>
+
+      </div>
+
+
+  </section>
+</section>
+
+    </div>
+  </section>
+
   <section id="functions" class="details-list">
     <h1 class="section-heading">
       <a class="hover-link" href="#functions">
@@ -182,16 +265,16 @@ Pages
       <span class="text">Functions</span>
     </h1>
     <div class="functions-list">
-<section class="detail" id="call/1">
+<section class="detail" id="finished/3">
 
   <div class="detail-header">
-    <a href="#call/1" class="detail-link" title="Link to this function">
+    <a href="#finished/3" class="detail-link" title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">call(params)</h1>
+    <h1 class="signature" translate="no">finished(step, output_dataclip_id, arg)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/attempts/handlers.ex#L192" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation/run.ex#L67" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -206,14 +289,38 @@ Pages
 </section>
 <section class="detail" id="new/1">
 
+    <span id="new/0"></span>
+
   <div class="detail-header">
     <a href="#new/1" class="detail-link" title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">new(params)</h1>
+    <h1 class="signature" translate="no">new(attrs \\ %{})</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/attempts/handlers.ex#L151" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation/run.ex#L61" class="icon-action" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+
+  </section>
+</section>
+<section class="detail" id="validate/1">
+
+  <div class="detail-header">
+    <a href="#validate/1" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">validate(changeset)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation/run.ex#L101" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
