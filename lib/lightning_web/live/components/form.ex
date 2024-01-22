@@ -4,10 +4,11 @@ defmodule LightningWeb.Components.Form do
 
   slot :inner_block, required: true
   attr :changeset, :map
+  attr :cancel, :boolean, default: false
   attr :rest, :global, include: ~w(form disabled)
 
   @spec submit_button(Phoenix.LiveView.Socket.assigns()) :: any()
-  def submit_button(assigns) do
+  def submit_button(%{rest: rest} = assigns) do
     base_classes = ~w[
       inline-flex
       justify-center
@@ -19,33 +20,35 @@ defmodule LightningWeb.Components.Form do
       text-sm
       font-medium
       rounded-md
-      text-white
       focus:outline-none
       focus:ring-2
       focus:ring-offset-2
       focus:ring-primary-500
     ]
 
-    inactive_classes = ~w[
-      bg-primary-300
-    ] ++ base_classes
-
-    active_classes = ~w[
-      bg-primary-600
-      hover:bg-primary-700
-    ] ++ base_classes
-
-    assigns =
-      assigns
-      |> assign_new(:class, fn -> "" end)
-      |> update(:class, fn class, %{rest: rest} ->
+    custom_classes =
+      if assigns[:cancel] do
+        ~w[
+          bg-neutral-100
+          hover:bg-neutral-300
+          text-neutral-950
+        ]
+      else
         if rest[:disabled] do
-          inactive_classes
+          ~w[
+            text-white
+            bg-primary-300
+          ]
         else
-          active_classes
+          ~w[
+            text-white
+            bg-primary-600
+            hover:bg-primary-700
+          ]
         end
-        |> Enum.concat(List.wrap(class))
-      end)
+      end
+
+    assigns = assign(assigns, :class, custom_classes ++ base_classes)
 
     ~H"""
     <button type="submit" class={@class} {@rest}>
