@@ -27,6 +27,8 @@ defmodule LightningWeb.ProjectLive.Settings do
   def mount(_params, _session, socket) do
     %{project: project, current_user: current_user} = socket.assigns
 
+    IO.inspect(project, label: :mount)
+
     project_users =
       Projects.get_project_users!(project.id)
 
@@ -656,15 +658,13 @@ defmodule LightningWeb.ProjectLive.Settings do
   defp save_project(
          socket,
          %{
-           "project" => %{
-             "retain_with_errors" => "true",
-             "retention_policy" => "erase_all"
-           }
-         } = params
+           "retain_with_errors" => "true",
+           "retention_policy" => "erase_all"
+         } =
+           params
        ) do
     params =
-      put_in(params, ["project", "retention_policy"], "retain_with_errors")
-      |> IO.inspect(label: :save)
+      Map.put(params, "retention_policy", "retain_with_errors")
 
     save_project(socket, params)
   end
