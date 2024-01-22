@@ -106,12 +106,18 @@ export const Tooltip = {
       ? this.el.dataset.allowHtml
       : 'false';
     this._tippyInstance = tippy(this.el, {
-      content: content,
       placement: placement,
       animation: false,
       allowHTML: allowHTML === 'true',
       interactive: true,
     });
+    this._tippyInstance.setContent(content);
+  },
+  updated() {
+    let content = this.el.ariaLabel;
+    if (content && this._tippyInstance) {
+      this._tippyInstance.setContent(content);
+    }
   },
   destroyed() {
     if (this._tippyInstance) this._tippyInstance.unmount();
