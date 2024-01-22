@@ -141,6 +141,7 @@ defmodule LightningWeb.AttemptChannel do
     {:reply, {:ok, {:binary, body}}, socket}
   end
 
+  # TODO - Taylor to remove this once the migration is complete
   def handle_in("run:start", payload, socket) do
     worker_upgrade_required("v1.0")
     handle_in("step:start", rename_run_id(payload), socket)
@@ -171,6 +172,7 @@ defmodule LightningWeb.AttemptChannel do
     end
   end
 
+  # TODO - Taylor to remove this once the migration is complete
   def handle_in("run:complete", payload, socket) do
     worker_upgrade_required("v1.0")
     handle_in("step:complete", rename_run_id(payload), socket)
@@ -241,11 +243,12 @@ defmodule LightningWeb.AttemptChannel do
     {:ok, scrubber}
   end
 
+  # TODO - Taylor to remove this once the migration is complete
   defp worker_upgrade_required(v),
     do:
       Logger.warning("Please upgrade your connect ws-worker to #{v} or greater")
 
-  # TODO - remove this once the migration is complete
+  # TODO - Taylor to remove this once the migration is complete
   defp rename_run_id(%{"run_id" => id} = map) do
     Map.delete(map, "run_id")
     |> Map.put("step_id", id)
