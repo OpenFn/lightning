@@ -254,8 +254,8 @@ defmodule Lightning.Projects do
   end
 
   def project_attempt_step_query(project) do
-    from(ar in AttemptStep,
-      join: att in assoc(ar, :attempt),
+    from(as in AttemptStep,
+      join: att in assoc(as, :attempt),
       join: wo in assoc(att, :work_order),
       join: w in assoc(wo, :workflow),
       where: w.project_id == ^project.id

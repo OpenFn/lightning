@@ -217,7 +217,7 @@ defmodule Lightning.Attempts.Handlers do
     end
 
     defp get_step(id) do
-      from(r in Lightning.Invocation.Step, where: r.id == ^id)
+      from(s in Lightning.Invocation.Step, where: s.id == ^id)
       |> Repo.one()
     end
 

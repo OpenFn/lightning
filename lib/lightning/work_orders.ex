@@ -273,15 +273,15 @@ defmodule Lightning.WorkOrders do
       )
 
     attempt_steps_query =
-      from(ar in AttemptStep,
-        join: att in assoc(ar, :attempt),
+      from(as in AttemptStep,
+        join: att in assoc(as, :attempt),
         join: wo in assoc(att, :work_order),
         join: last in subquery(last_attempts_query),
         on:
           last.work_order_id == att.work_order_id and
             att.inserted_at == last.last_inserted_at,
-        join: r in assoc(ar, :step),
-        on: r.job_id == ^job_id,
+        join: s in assoc(as, :step),
+        on: s.job_id == ^job_id,
         order_by: [asc: wo.inserted_at]
       )
 
