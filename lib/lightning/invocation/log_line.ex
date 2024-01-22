@@ -15,7 +15,7 @@ defmodule Lightning.Invocation.LogLine do
   import Ecto.Changeset
 
   alias Lightning.Attempt
-  alias Lightning.Invocation.Run
+  alias Lightning.Invocation.Step
   alias Lightning.LogMessage
   alias Lightning.Scrubber
   alias Lightning.UnixDateTime
@@ -25,7 +25,7 @@ defmodule Lightning.Invocation.LogLine do
           id: Ecto.UUID.t() | nil,
           message: String.t(),
           timestamp: DateTime.t(),
-          run: Run.t() | Ecto.Association.NotLoaded.t() | nil,
+          step: Step.t() | Ecto.Association.NotLoaded.t() | nil,
           attempt: Attempt.t() | Ecto.Association.NotLoaded.t() | nil
         }
 
@@ -41,7 +41,7 @@ defmodule Lightning.Invocation.LogLine do
 
     field :message, LogMessage, default: ""
 
-    belongs_to :run, Run
+    belongs_to :step, Step
     belongs_to :attempt, Attempt
 
     field :timestamp, UnixDateTime
@@ -49,7 +49,7 @@ defmodule Lightning.Invocation.LogLine do
 
   def new(%Attempt{} = attempt, attrs \\ %{}, scrubber) do
     %__MODULE__{id: Ecto.UUID.generate()}
-    |> cast(attrs, [:message, :timestamp, :run_id, :attempt_id, :level, :source])
+    |> cast(attrs, [:message, :timestamp, :step_id, :attempt_id, :level, :source])
     |> put_assoc(:attempt, attempt)
     |> validate(scrubber)
   end
@@ -58,7 +58,7 @@ defmodule Lightning.Invocation.LogLine do
     changeset
     |> validate_required([:message, :timestamp])
     |> validate_length(:source, max: 8)
-    |> assoc_constraint(:run)
+    |> assoc_constraint(:step)
     |> assoc_constraint(:attempt)
     |> validate_change(:message, fn _, message ->
       # cast converts [nil] into "null"

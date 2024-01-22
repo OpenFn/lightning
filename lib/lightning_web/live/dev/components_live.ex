@@ -105,7 +105,7 @@ defmodule LightningWeb.Dev.ComponentsLive do
     ]
     |> Enum.map(fn line ->
       id = Ecto.UUID.autogenerate()
-      {id, line |> Map.put(:run_id, id)}
+      {id, line |> Map.put(:step_id, id)}
     end)
   end
 

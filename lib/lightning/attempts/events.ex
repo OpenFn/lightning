@@ -1,12 +1,12 @@
 defmodule Lightning.Attempts.Events do
-  defmodule RunStarted do
+  defmodule StepStarted do
     @moduledoc false
-    defstruct run: nil
+    defstruct step: nil
   end
 
-  defmodule RunCompleted do
+  defmodule StepCompleted do
     @moduledoc false
-    defstruct run: nil
+    defstruct step: nil
   end
 
   defmodule AttemptUpdated do
@@ -19,17 +19,17 @@ defmodule Lightning.Attempts.Events do
     defstruct log_line: nil
   end
 
-  def run_started(attempt_id, run) do
+  def step_started(attempt_id, step) do
     Lightning.broadcast(
       topic(attempt_id),
-      %RunStarted{run: run}
+      %StepStarted{step: step}
     )
   end
 
-  def run_completed(attempt_id, run) do
+  def step_completed(attempt_id, step) do
     Lightning.broadcast(
       topic(attempt_id),
-      %RunCompleted{run: run}
+      %StepCompleted{step: step}
     )
   end
 

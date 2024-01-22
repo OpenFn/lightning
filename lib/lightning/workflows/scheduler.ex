@@ -69,7 +69,7 @@ defmodule Lightning.Workflows.Scheduler do
       dataclip ->
         Logger.debug(fn ->
           # coveralls-ignore-start
-          "Starting cronjob #{job.id} using the final state of its last successful run."
+          "Starting cronjob #{job.id} using the final state of its last successful execution."
           # coveralls-ignore-stop
         end)
 
@@ -81,14 +81,14 @@ defmodule Lightning.Workflows.Scheduler do
   end
 
   defp last_state_for_job(id) do
-    run =
+    step =
       %Workflows.Job{id: id}
-      |> Invocation.Query.last_successful_run_for_job()
+      |> Invocation.Query.last_successful_step_for_job()
       |> Repo.one()
 
-    case run do
+    case step do
       nil -> nil
-      run -> Invocation.get_output_dataclip_query(run) |> Repo.one()
+      step -> Invocation.get_output_dataclip_query(step) |> Repo.one()
     end
   end
 end

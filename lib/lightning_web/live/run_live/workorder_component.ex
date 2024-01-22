@@ -29,8 +29,8 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
   end
 
   defp set_details(socket, work_order) do
-    last_run = get_last_run(work_order)
-    last_run_finished_at = format_finished_at(last_run)
+    last_step = get_last_step(work_order)
+    last_step_finished_at = format_finished_at(last_step)
     work_order_inserted_at = Calendar.strftime(work_order.inserted_at, "%c %Z")
     workflow_name = work_order.workflow.name || "Untitled"
 
@@ -38,24 +38,24 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
     |> assign(
       work_order: work_order,
       attempts: work_order.attempts,
-      last_run: last_run,
-      last_run_finished_at: last_run_finished_at,
+      last_step: last_step,
+      last_step_finished_at: last_step_finished_at,
       work_order_inserted_at: work_order_inserted_at,
       workflow_name: workflow_name
     )
   end
 
-  defp get_last_run(work_order) do
+  defp get_last_step(work_order) do
     work_order.attempts
     |> List.first()
     |> case do
       nil -> nil
-      attempt -> List.last(attempt.runs)
+      attempt -> List.last(attempt.steps)
     end
   end
 
-  defp format_finished_at(last_run) do
-    case last_run do
+  defp format_finished_at(last_step) do
+    case last_step do
       %{finished_at: %_{} = finished_at} ->
         Calendar.strftime(finished_at, "%c %Z")
 
@@ -231,9 +231,7 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
               <div class="flex gap-1 items-center bg-gray-200 pl-28 text-xs py-2">
                 <div>
                   Run
-                  <.link navigate={
-                    ~p"/projects/#{@project.id}/attempts/#{attempt.id}"
-                  }>
+                  <.link navigate={~p"/projects/#{@project.id}/runs/#{attempt.id}"}>
                     <span
                       title={attempt.id}
                       class="font-normal text-xs whitespace-nowrap text-ellipsis

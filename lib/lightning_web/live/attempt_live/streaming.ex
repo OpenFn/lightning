@@ -3,11 +3,11 @@ defmodule LightningWeb.AttemptLive.Streaming do
   import Phoenix.LiveView
   import Ecto.Query
 
-  alias Lightning.AttemptRun
   alias Lightning.Attempts
+  alias Lightning.AttemptStep
   alias Lightning.Credentials
   alias Lightning.Invocation.Dataclip
-  alias Lightning.Invocation.Run
+  alias Lightning.Invocation.Step
   alias Lightning.Repo
   alias Lightning.Scrubber
   alias Phoenix.LiveView.AsyncResult
@@ -20,32 +20,32 @@ defmodule LightningWeb.AttemptLive.Streaming do
   def get_attempt_async(socket, attempt_id) do
     socket
     |> start_async(:attempt, fn ->
-      Attempts.get(attempt_id, include: [runs: [:job], workflow: [:project]])
+      Attempts.get(attempt_id, include: [steps: [:job], workflow: [:project]])
     end)
   end
 
-  def add_or_update_run(socket, run) do
-    %{runs: runs} = socket.assigns
+  def add_or_update_step(socket, step) do
+    %{steps: steps} = socket.assigns
 
-    run = Lightning.Repo.preload(run, :job)
+    step = Lightning.Repo.preload(step, :job)
 
-    case Enum.find_index(runs, &(&1.id == run.id)) do
+    case Enum.find_index(steps, &(&1.id == step.id)) do
       nil ->
-        runs =
-          [run | runs]
-          |> sort_runs()
+        steps =
+          [step | steps]
+          |> sort_steps()
 
-        socket |> assign(runs: runs)
+        socket |> assign(steps: steps)
 
       index ->
-        socket |> assign(runs: List.replace_at(runs, index, run))
+        socket |> assign(steps: List.replace_at(steps, index, step))
     end
   end
 
-  def get_dataclip_lines(run, field) do
+  def get_dataclip_lines(step, field) do
     import Ecto.Query
 
-    from(d in Ecto.assoc(run, field),
+    from(d in Ecto.assoc(step, field),
       select: [:id, :type, :body]
     )
     |> Repo.one()
@@ -54,10 +54,10 @@ defmodule LightningWeb.AttemptLive.Streaming do
         []
 
       %Dataclip{id: id, body: body, type: type} ->
-        {%{id: id, run_id: run.id, type: type},
+        {%{id: id, step_id: step.id, type: type},
          body
          |> Jason.encode!(pretty: true)
-         |> maybe_scrub(type, run)
+         |> maybe_scrub(type, step)
          |> String.split("\n")
          |> Stream.with_index(1)
          |> Stream.map(fn {line, index} ->
@@ -69,13 +69,13 @@ defmodule LightningWeb.AttemptLive.Streaming do
   def maybe_load_input_dataclip(socket, chunk_size) do
     live_view_pid = self()
 
-    %{selected_run: selected_run} = socket.assigns
+    %{selected_step: selected_step} = socket.assigns
 
-    if selected_run && needs_dataclip_stream?(socket, :input_dataclip) do
+    if selected_step && needs_dataclip_stream?(socket, :input_dataclip) do
       socket
       |> assign_async(:input_dataclip, fn ->
         {dataclip, lines} =
-          get_dataclip_lines(selected_run, :input_dataclip)
+          get_dataclip_lines(selected_step, :input_dataclip)
 
         lines
         |> Stream.chunk_every(chunk_size)
@@ -94,14 +94,14 @@ defmodule LightningWeb.AttemptLive.Streaming do
   def maybe_load_output_dataclip(socket, chunk_size) do
     live_view_pid = self()
 
-    %{selected_run: selected_run} = socket.assigns
+    %{selected_step: selected_step} = socket.assigns
 
-    if selected_run && selected_run.output_dataclip_id &&
+    if selected_step && selected_step.output_dataclip_id &&
          needs_dataclip_stream?(socket, :output_dataclip) do
       socket
       |> assign_async(:output_dataclip, fn ->
         {dataclip, lines} =
-          get_dataclip_lines(selected_run, :output_dataclip)
+          get_dataclip_lines(selected_step, :output_dataclip)
 
         lines
         |> Stream.chunk_every(chunk_size)
@@ -123,40 +123,40 @@ defmodule LightningWeb.AttemptLive.Streaming do
     |> stream(:output_dataclip, [], reset: true)
   end
 
-  def unselect_run(socket) do
+  def unselect_step(socket) do
     socket
     |> assign(
-      selected_run_id: nil,
-      selected_run: nil,
+      selected_step_id: nil,
+      selected_step: nil,
       input_dataclip: false,
       output_dataclip: false
     )
     |> reset_dataclip_streams()
   end
 
-  def sort_runs(runs) do
-    runs
+  def sort_steps(steps) do
+    steps
     |> Enum.sort(fn x, y ->
       DateTime.compare(x.started_at, y.started_at) == :lt
     end)
   end
 
-  defp maybe_scrub(body_str, :run_result, %Run{
-         id: run_id,
+  defp maybe_scrub(body_str, :step_result, %Step{
+         id: step_id,
          started_at: started_at
        }) do
-    attempt_run =
-      from(ar in AttemptRun,
-        where: ar.run_id == ^run_id,
-        select: ar.attempt_id
+    attempt_step =
+      from(as in AttemptStep,
+        where: as.step_id == ^step_id,
+        select: as.attempt_id
       )
 
-    from(ar in AttemptRun,
-      join: r in assoc(ar, :run),
-      join: j in assoc(r, :job),
+    from(as in AttemptStep,
+      join: s in assoc(as, :step),
+      join: j in assoc(s, :job),
       join: c in assoc(j, :credential),
-      where: ar.attempt_id in subquery(attempt_run),
-      where: r.started_at <= ^started_at,
+      where: as.attempt_id in subquery(attempt_step),
+      where: s.started_at <= ^started_at,
       select: c
     )
     |> Repo.all()
@@ -178,10 +178,10 @@ defmodule LightningWeb.AttemptLive.Streaming do
     end
   end
 
-  defp maybe_scrub(body_str, _type, _run), do: body_str
+  defp maybe_scrub(body_str, _type, _step), do: body_str
 
   defp needs_dataclip_stream?(socket, assign) do
-    selected_run_id = socket.assigns.selected_run_id
+    selected_step_id = socket.assigns.selected_step_id
 
     case socket.assigns[assign] do
       false ->
@@ -192,7 +192,7 @@ defmodule LightningWeb.AttemptLive.Streaming do
 
       %Phoenix.LiveView.AsyncResult{
         ok?: true,
-        result: %{run_id: ^selected_run_id}
+        result: %{step_id: ^selected_step_id}
       } ->
         false
 
@@ -238,15 +238,15 @@ defmodule LightningWeb.AttemptLive.Streaming do
          )}
       end
 
-      def handle_info(%{__struct__: type, run: run}, socket)
+      def handle_info(%{__struct__: type, step: step}, socket)
           when type in [
-                 Attempts.Events.RunStarted,
-                 Attempts.Events.RunCompleted
+                 Attempts.Events.StepStarted,
+                 Attempts.Events.StepCompleted
                ] do
         {:noreply,
          socket
-         |> add_or_update_run(run)
-         |> handle_runs_change()}
+         |> add_or_update_step(step)
+         |> handle_steps_change()}
       end
 
       def handle_info(
@@ -280,8 +280,8 @@ defmodule LightningWeb.AttemptLive.Streaming do
          socket
          |> assign(
            attempt: AsyncResult.ok(attempt, updated_attempt),
-           # set the initial set of runs
-           runs: updated_attempt.runs |> sort_runs(),
+           # set the initial set of steps
+           steps: updated_attempt.steps |> sort_steps(),
            project: updated_attempt.workflow.project,
            workflow: updated_attempt.workflow
          )
@@ -300,7 +300,7 @@ defmodule LightningWeb.AttemptLive.Streaming do
              {:ok, %{log_lines: :ok}}
            end
          )
-         |> handle_runs_change()}
+         |> handle_steps_change()}
       end
 
       def handle_async(:attempt, {:exit, reason}, socket) do
@@ -328,23 +328,23 @@ defmodule LightningWeb.AttemptLive.Streaming do
         maybe_load_output_dataclip(socket, @chunk_size)
       end
 
-      def apply_selected_run_id(socket, id) do
+      def apply_selected_step_id(socket, id) do
         case id do
           nil ->
             socket
-            |> unselect_run()
+            |> unselect_step()
 
           _ ->
             socket
-            |> assign(selected_run_id: id)
+            |> assign(selected_step_id: id)
             |> then(fn socket ->
-              if changed?(socket, :selected_run_id) do
+              if changed?(socket, :selected_step_id) do
                 reset_dataclip_streams(socket)
               else
                 socket
               end
             end)
-            |> handle_runs_change()
+            |> handle_steps_change()
         end
       end
     end

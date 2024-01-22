@@ -46,16 +46,16 @@ defmodule Lightning.InvocationFixtures do
   end
 
   @doc """
-  Generate a run.
+  Generate a step.
   """
-  def run_fixture(attrs \\ []) when is_list(attrs) do
+  def step_fixture(attrs \\ []) when is_list(attrs) do
     attrs =
       attrs
       |> Keyword.put_new_lazy(:project_id, fn ->
         Lightning.ProjectsFixtures.project_fixture().id
       end)
 
-    {:ok, run} =
+    {:ok, step} =
       attrs
       |> Keyword.put_new_lazy(:job_id, fn ->
         Lightning.JobsFixtures.job_fixture(project_id: attrs[:project_id]).id
@@ -70,8 +70,8 @@ defmodule Lightning.InvocationFixtures do
         event_id: nil,
         started_at: nil
       })
-      |> Lightning.Invocation.create_run()
+      |> Lightning.Invocation.create_step()
 
-    run
+    step
   end
 end

@@ -285,7 +285,7 @@ defmodule Lightning.WorkflowLive.Helpers do
     |> has_element?()
   end
 
-  def has_runs_link_pattern?(
+  def has_history_link_pattern?(
         html,
         %Project{id: project_id},
         pattern,
@@ -295,7 +295,7 @@ defmodule Lightning.WorkflowLive.Helpers do
     pattern = String.replace(pattern, "[", "\\[") |> String.replace("]", "\\]")
 
     Regex.match?(
-      ~r{<a href="/projects/#{project_id}/runs\?.*#{pattern}.*#{text}.*</a>}s,
+      ~r{<a href="/projects/#{project_id}/history\?.*#{pattern}.*#{text}.*</a>}s,
       html
     )
   end

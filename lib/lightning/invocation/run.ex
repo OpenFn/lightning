@@ -1,12 +1,14 @@
-defmodule Lightning.Invocation.Run do
+defmodule Lightning.Invocation.Step do
   @moduledoc """
-  Ecto model for Runs.
+  Ecto model for Steps.
 
-  A run represents the work initiated for a Job with an input dataclip.
+  A step is part of an attempt and represents the work initiated for a single
+  Job with a single `input_dataclip`.
+
   Once completed (successfully) it will have an `output_dataclip` associated
   with it as well.
 
-  When a run finished, it's `:exit_reason` is set to one of following strings:
+  When a step finishes, it's `:exit_reason` is set to one of following strings:
 
   -  `"success"`
   -  `"fail"`
@@ -21,7 +23,7 @@ defmodule Lightning.Invocation.Run do
   import Ecto.Changeset
 
   alias Lightning.Attempt
-  alias Lightning.AttemptRun
+  alias Lightning.AttemptStep
   alias Lightning.Credentials.Credential
   alias Lightning.Invocation.Dataclip
   alias Lightning.Invocation.LogLine
@@ -36,7 +38,7 @@ defmodule Lightning.Invocation.Run do
 
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id
-  schema "runs" do
+  schema "steps" do
     field :exit_reason, :string
     field :error_type, :string
     # TODO: add now, later, or never?
@@ -51,7 +53,7 @@ defmodule Lightning.Invocation.Run do
 
     has_many :log_lines, LogLine, preload_order: [asc: :timestamp]
 
-    many_to_many :attempts, Attempt, join_through: AttemptRun
+    many_to_many :attempts, Attempt, join_through: AttemptStep
 
     timestamps(type: :utc_datetime_usec)
   end
@@ -63,12 +65,12 @@ defmodule Lightning.Invocation.Run do
   end
 
   def finished(
-        run,
+        step,
         output_dataclip_id,
         # Should this be a specified type?
         {exit_reason, error_type, _error_message}
       ) do
-    change(run, %{
+    change(step, %{
       finished_at: DateTime.utc_now(),
       output_dataclip_id: output_dataclip_id,
       exit_reason: exit_reason,
@@ -78,8 +80,8 @@ defmodule Lightning.Invocation.Run do
   end
 
   @doc false
-  def changeset(run, attrs) do
-    run
+  def changeset(step, attrs) do
+    step
     |> cast(attrs, [
       :id,
       :exit_reason,

@@ -1263,7 +1263,7 @@ defmodule Lightning.AccountsTest do
       assert_raise Ecto.NoResultsError, fn -> Accounts.get_user!(user.id) end
     end
 
-    test "removes any associated Attempt and AttemptRun records" do
+    test "removes any associated Attempt and AttemptStep records" do
       user_1 = user_fixture()
       user_2 = user_fixture()
 
@@ -1271,16 +1271,16 @@ defmodule Lightning.AccountsTest do
       attempt_2 = insert_attempt(user_1)
       attempt_3 = insert_attempt(user_2)
 
-      _attempt_run_1_1 = insert_attempt_run(attempt_1)
-      _attempt_run_1_2 = insert_attempt_run(attempt_1)
-      _attempt_run_2_1 = insert_attempt_run(attempt_2)
-      attempt_run_3_1 = insert_attempt_run(attempt_3)
+      _attempt_step_1_1 = insert_attempt_step(attempt_1)
+      _attempt_step_1_2 = insert_attempt_step(attempt_1)
+      _attempt_step_2_1 = insert_attempt_step(attempt_2)
+      attempt_step_3_1 = insert_attempt_step(attempt_3)
 
       Accounts.delete_user(user_1)
 
       assert only_record_for_type?(attempt_3)
 
-      assert only_record_for_type?(attempt_run_3_1)
+      assert only_record_for_type?(attempt_step_3_1)
     end
 
     test "removes any associated LogLine records" do
@@ -1308,8 +1308,8 @@ defmodule Lightning.AccountsTest do
       )
     end
 
-    defp insert_attempt_run(attempt) do
-      insert(:attempt_run, attempt: attempt, run: build(:run))
+    defp insert_attempt_step(attempt) do
+      insert(:attempt_step, attempt: attempt, step: build(:step))
     end
   end
 

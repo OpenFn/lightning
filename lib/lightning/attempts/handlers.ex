@@ -4,16 +4,16 @@ defmodule Lightning.Attempts.Handlers do
   """
 
   alias Lightning.Attempt
-  alias Lightning.AttemptRun
   alias Lightning.Attempts
+  alias Lightning.AttemptStep
   alias Lightning.Invocation.Dataclip
-  alias Lightning.Invocation.Run
+  alias Lightning.Invocation.Step
   alias Lightning.Repo
   alias Lightning.WorkOrders
 
-  defmodule StartRun do
+  defmodule StartStep do
     @moduledoc """
-    Schema to validate the input attributes of a started run.
+    Schema to validate the input attributes of a started step.
     """
     use Ecto.Schema
     import Ecto.Changeset
@@ -22,7 +22,7 @@ defmodule Lightning.Attempts.Handlers do
     @primary_key false
     embedded_schema do
       field :attempt_id, Ecto.UUID
-      field :run_id, Ecto.UUID
+      field :step_id, Ecto.UUID
       field :credential_id, Ecto.UUID
       field :job_id, Ecto.UUID
       field :input_dataclip_id, Ecto.UUID
@@ -32,7 +32,7 @@ defmodule Lightning.Attempts.Handlers do
     def new(params) do
       cast(%__MODULE__{}, params, [
         :attempt_id,
-        :run_id,
+        :step_id,
         :credential_id,
         :job_id,
         :input_dataclip_id,
@@ -47,7 +47,7 @@ defmodule Lightning.Attempts.Handlers do
       end)
       |> validate_required([
         :attempt_id,
-        :run_id,
+        :step_id,
         :job_id,
         :input_dataclip_id,
         :started_at
@@ -57,34 +57,34 @@ defmodule Lightning.Attempts.Handlers do
 
     def call(params) do
       with {:ok, attrs} <- new(params) |> apply_action(:validate),
-           {:ok, run} <- insert(attrs) do
+           {:ok, step} <- insert(attrs) do
         attempt = Attempts.get(attrs.attempt_id, include: [:workflow])
         WorkOrders.Events.attempt_updated(attempt.workflow.project_id, attempt)
-        Attempts.Events.run_started(attrs.attempt_id, run)
+        Attempts.Events.step_started(attrs.attempt_id, step)
 
-        {:ok, run}
+        {:ok, step}
       end
     end
 
     defp insert(attrs) do
       Repo.transact(fn ->
-        with {:ok, run} <- attrs |> to_run() |> Repo.insert(),
-             {:ok, _} <- attrs |> to_attempt_run() |> Repo.insert() do
-          {:ok, run}
+        with {:ok, step} <- attrs |> to_step() |> Repo.insert(),
+             {:ok, _} <- attrs |> to_attempt_step() |> Repo.insert() do
+          {:ok, step}
         end
       end)
     end
 
-    defp to_run(%__MODULE__{run_id: run_id} = start_run) do
-      start_run
+    defp to_step(%__MODULE__{step_id: step_id} = start_step) do
+      start_step
       |> Map.take([:credential_id, :input_dataclip_id, :job_id, :started_at])
-      |> Map.put(:id, run_id)
-      |> Run.new()
+      |> Map.put(:id, step_id)
+      |> Step.new()
     end
 
-    defp to_attempt_run(%__MODULE__{run_id: run_id, attempt_id: attempt_id}) do
-      AttemptRun.new(%{
-        run_id: run_id,
+    defp to_attempt_step(%__MODULE__{step_id: step_id, attempt_id: attempt_id}) do
+      AttemptStep.new(%{
+        step_id: step_id,
         attempt_id: attempt_id
       })
     end
@@ -127,9 +127,9 @@ defmodule Lightning.Attempts.Handlers do
     end
   end
 
-  defmodule CompleteRun do
+  defmodule CompleteStep do
     @moduledoc """
-    Schema to validate the input attributes of a completed run.
+    Schema to validate the input attributes of a completed step.
     """
     use Ecto.Schema
     import Ecto.Changeset
@@ -144,7 +144,7 @@ defmodule Lightning.Attempts.Handlers do
       field :reason, :string
       field :error_type, :string
       field :error_message, :string
-      field :run_id, Ecto.UUID
+      field :step_id, Ecto.UUID
       field :finished_at, :utc_datetime_usec
     end
 
@@ -157,7 +157,7 @@ defmodule Lightning.Attempts.Handlers do
         :reason,
         :error_type,
         :error_message,
-        :run_id,
+        :step_id,
         :finished_at
       ])
       |> then(fn changeset ->
@@ -185,30 +185,30 @@ defmodule Lightning.Attempts.Handlers do
         :finished_at,
         :project_id,
         :reason,
-        :run_id
+        :step_id
       ])
     end
 
     def call(params) do
-      with {:ok, complete_run} <- new(params) |> apply_action(:validate),
-           {:ok, run} <- update(complete_run) do
-        Attempts.Events.run_completed(complete_run.attempt_id, run)
+      with {:ok, complete_step} <- new(params) |> apply_action(:validate),
+           {:ok, step} <- update(complete_step) do
+        Attempts.Events.step_completed(complete_step.attempt_id, step)
 
-        {:ok, run}
+        {:ok, step}
       end
     end
 
-    defp update(complete_run) do
+    defp update(complete_step) do
       Repo.transact(fn ->
-        with %Run{} = run <- get_run(complete_run.run_id),
-             {:ok, _} <- maybe_save_dataclip(complete_run) do
-          update_run(run, complete_run)
+        with %Step{} = step <- get_step(complete_step.step_id),
+             {:ok, _} <- maybe_save_dataclip(complete_step) do
+          update_step(step, complete_step)
         else
           nil ->
             {:error,
-             complete_run
+             complete_step
              |> change()
-             |> add_error(:run_id, "not found")}
+             |> add_error(:step_id, "not found")}
 
           error ->
             error
@@ -216,8 +216,8 @@ defmodule Lightning.Attempts.Handlers do
       end)
     end
 
-    defp get_run(id) do
-      from(r in Lightning.Invocation.Run, where: r.id == ^id)
+    defp get_step(id) do
+      from(r in Lightning.Invocation.Step, where: r.id == ^id)
       |> Repo.one()
     end
 
@@ -234,19 +234,19 @@ defmodule Lightning.Attempts.Handlers do
         id: dataclip_id,
         project_id: project_id,
         body: output_dataclip |> Jason.decode!(),
-        type: :run_result
+        type: :step_result
       })
       |> Repo.insert()
     end
 
-    defp update_run(run, %{
+    defp update_step(step, %{
            reason: reason,
            error_type: error_type,
            error_message: error_message,
            output_dataclip_id: output_dataclip_id
          }) do
-      run
-      |> Run.finished(output_dataclip_id, {reason, error_type, error_message})
+      step
+      |> Step.finished(output_dataclip_id, {reason, error_type, error_message})
       |> Repo.update()
     end
   end

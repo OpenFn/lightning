@@ -26,7 +26,7 @@ defmodule LightningWeb.Components.Viewers do
       <Viewers.log_viewer
         id="log-viewer-data"
         stream={@log_lines}
-        highlight_id={@selected_run_id}
+        highlight_id={@selected_step_id}
       />
   """
 
@@ -38,7 +38,7 @@ defmodule LightningWeb.Components.Viewers do
 
   attr :highlight_id, :string,
     default: nil,
-    doc: "The id of the log line to highlight, matching the `run_id` field"
+    doc: "The id of the log line to highlight, matching the `step_id` field"
 
   attr :class, :string,
     default: nil,
@@ -63,7 +63,7 @@ defmodule LightningWeb.Components.Viewers do
       <div
         :for={{dom_id, log_line} <- @stream}
         class="group contents"
-        data-highlight-id={log_line.run_id}
+        data-highlight-id={log_line.step_id}
         id={dom_id}
       >
         <div class="log-viewer__prefix" data-line-prefix={log_line.source}></div>

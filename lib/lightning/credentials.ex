@@ -441,7 +441,7 @@ defmodule Lightning.Credentials do
   end
 
   @doc """
-  Checks if a given `Credential` has any associated `Run` activity.
+  Checks if a given `Credential` has any associated `Step` activity.
 
   ## Parameters
 
@@ -449,7 +449,7 @@ defmodule Lightning.Credentials do
 
   ## Returns
 
-    - `true` if there's at least one `Run` associated with the given `Credential`.
+    - `true` if there's at least one `Step` associated with the given `Credential`.
     - `false` otherwise.
 
   ## Examples
@@ -462,14 +462,14 @@ defmodule Lightning.Credentials do
 
   ## Notes
 
-  This function leverages the association between `Run` and `Credential` to determine
-  if any runs exist for a given credential. It's a fast check that does not load
-  any records into memory, but simply checks for their existence.
+  This function leverages the association between `Step` and `Credential` to
+  determine if any steps exist for a given credential. It's a fast check that
+  does not load any records into memory, but simply checks for their existence.
 
   """
   def has_activity_in_projects?(%Credential{id: id} = _credential) do
-    from(run in Lightning.Invocation.Run,
-      where: run.credential_id == ^id
+    from(step in Lightning.Invocation.Step,
+      where: step.credential_id == ^id
     )
     |> Repo.exists?()
   end

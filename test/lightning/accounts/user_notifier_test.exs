@@ -136,7 +136,7 @@ defmodule Lightning.Accounts.UserNotifierTest do
              |> Map.get("filters[workflow_id]") == workflow.id
 
       assert digest_url |> URI.parse() |> Map.get(:path) ==
-               "/projects/#{workflow.project_id}/runs"
+               "/projects/#{workflow.project_id}/history"
     end
 
     test "Daily project digest email" do

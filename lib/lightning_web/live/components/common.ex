@@ -288,7 +288,7 @@ defmodule LightningWeb.Components.Common do
 
   attr :type, :atom,
     required: true,
-    values: [:run_result, :http_request, :global, :saved_input]
+    values: [:step_result, :http_request, :global, :saved_input]
 
   def dataclip_type_pill(assigns) do
     base_classes = ~w[
@@ -298,7 +298,7 @@ defmodule LightningWeb.Components.Common do
     class =
       base_classes ++
         case assigns[:type] do
-          :run_result -> ~w[bg-purple-500 text-purple-900]
+          :step_result -> ~w[bg-purple-500 text-purple-900]
           :http_request -> ~w[bg-green-500 text-green-900]
           :global -> ~w[bg-blue-500 text-blue-900]
           :saved_input -> ~w[bg-yellow-500 text-yellow-900]

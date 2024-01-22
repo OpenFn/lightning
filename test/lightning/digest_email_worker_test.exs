@@ -145,8 +145,8 @@ defmodule Lightning.DigestEmailWorkerTest do
         dataclip: dataclip,
         starting_trigger: trigger,
         finished_at: build(:timestamp),
-        runs: [
-          build(:run,
+        steps: [
+          build(:step,
             job: job,
             input_dataclip: dataclip,
             started_at: build(:timestamp),

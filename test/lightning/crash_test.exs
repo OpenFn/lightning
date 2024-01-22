@@ -5,9 +5,9 @@
 
 #   alias Lightning.Pipeline
 #   alias Lightning.ObanManager
-#   alias Lightning.AttemptRun
+#   alias Lightning.AttemptStep
 #   alias Lightning.Attempt
-#   alias Lightning.Invocation.{Run}
+#   alias Lightning.Invocation.Step
 #   alias Lightning.Repo
 
 #   import Lightning.JobsFixtures
@@ -38,8 +38,8 @@
 #           project_id: project.id
 #         )
 
-#       run =
-#         run_fixture(
+#       step =
+#         step_fixture(
 #           job_id: job.id,
 #           input_dataclip_id:
 #             dataclip_fixture(
@@ -51,8 +51,8 @@
 
 #       dataclip = dataclip_fixture()
 
-#       {:ok, attempt_run} =
-#         AttemptRun.new()
+#       {:ok, attempt_step} =
+#         AttemptStep.new()
 #         |> Ecto.Changeset.put_assoc(
 #           :attempt,
 #           Attempt.changeset(%Attempt{}, %{
@@ -65,8 +65,8 @@
 #           })
 #         )
 #         |> Ecto.Changeset.put_assoc(
-#           :run,
-#           Run.changeset(%Run{}, %{
+#           :step,
+#           Step.changeset(%Step{}, %{
 #             project_id: job.workflow.project_id,
 #             job_id: job.id,
 #             input_dataclip_id: dataclip.id
@@ -74,33 +74,33 @@
 #         )
 #         |> Repo.insert()
 
-#       %{run: run, attempt_run: attempt_run}
+#       %{step: step, attempt_step: attempt_step}
 #     end
 
 #     @tag skip: "Deprecated. To be deleted"
-#     test "timeout jobs generate results with :killed status", %{run: run} do
-#       result = Pipeline.Runner.start(run)
+#     test "timeout jobs generate results with :killed status", %{step: step} do
+#       result = Pipeline.Runner.start(step)
 
 #       assert result.exit_reason == :killed
 
 #       assert File.read!(result.final_state_path) == ""
 
-#       run =
-#         Repo.reload!(run)
+#       step =
+#         Repo.reload!(step)
 #         |> Repo.preload(:output_dataclip)
 
-#       assert run.output_dataclip == nil
+#       assert step.output_dataclip == nil
 
-#       refute is_nil(run.started_at)
-#       refute is_nil(run.finished_at)
-#       assert run.exit_code == nil
+#       refute is_nil(step.started_at)
+#       refute is_nil(step.finished_at)
+#       assert step.exit_code == nil
 #     end
 
 #     @tag skip: "Deprecated. To be deleted"
 #     test "handle_event/4 marks a job as finished for :killed jobs", %{
-#       attempt_run: attempt_run
+#       attempt_step: attempt_step
 #     } do
-#       refute attempt_run.run.finished_at
+#       refute attempt_step.step.finished_at
 
 #       with_log(fn ->
 #         ObanManager.handle_event(
@@ -108,7 +108,7 @@
 #           %{duration: 5_096_921_850, queue_time: 106_015_000},
 #           %{
 #             job: %{
-#               args: %{"attempt_run_id" => attempt_run.id},
+#               args: %{"attempt_step_id" => attempt_step.id},
 #               worker: "Lightning.Pipeline"
 #             },
 #             error: %CaseClauseError{term: :killed},
@@ -118,16 +118,16 @@
 #         )
 #       end)
 
-#       run = Repo.get!(Run, attempt_run.run.id)
+#       step = Repo.get!(Step, attempt_step.step.id)
 
-#       assert run.finished_at
+#       assert step.finished_at
 #     end
 
 #     @tag skip: "Deprecated. To be deleted"
 #     test "handle_event/4 marks a job as finished for :timeout jobs", %{
-#       attempt_run: attempt_run
+#       attempt_step: attempt_step
 #     } do
-#       refute attempt_run.run.finished_at
+#       refute attempt_step.step.finished_at
 
 #       with_log(fn ->
 #         ObanManager.handle_event(
@@ -135,7 +135,7 @@
 #           %{duration: 5_096_921_850, queue_time: 106_015_000},
 #           %{
 #             job: %{
-#               args: %{"attempt_run_id" => attempt_run.id},
+#               args: %{"attempt_step_id" => attempt_step.id},
 #               worker: "Lightning.Pipeline"
 #             },
 #             error: %CaseClauseError{term: :timeout},
@@ -145,9 +145,9 @@
 #         )
 #       end)
 
-#       run = Repo.get!(Run, attempt_run.run.id)
+#       step = Repo.get!(Step, attempt_step.step.id)
 
-#       assert run.finished_at
+#       assert step.finished_at
 #     end
 #   end
 # end
