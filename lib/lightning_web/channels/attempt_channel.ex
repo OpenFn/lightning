@@ -32,7 +32,8 @@ defmodule LightningWeb.AttemptChannel do
          id: id,
          attempt: attempt,
          project_id: project_id,
-         scrubber: nil
+         scrubber: nil,
+         include_run_results: true
        })}
     else
       {:error, :not_found} ->
@@ -49,7 +50,11 @@ defmodule LightningWeb.AttemptChannel do
 
   @impl true
   def handle_in("fetch:attempt", _, socket) do
-    {:reply, {:ok, AttemptJson.render(socket.assigns.attempt)}, socket}
+    {:reply,
+     {:ok,
+      AttemptJson.render(socket.assigns.attempt,
+        include_run_results: socket.assigns.include_run_results
+      )}, socket}
   end
 
   def handle_in("attempt:start", _, socket) do

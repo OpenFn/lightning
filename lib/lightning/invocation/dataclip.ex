@@ -43,6 +43,7 @@ defmodule Lightning.Invocation.Dataclip do
     field :body, :map, load_in_query: false
     field :request, :map, load_in_query: false
     field :type, Ecto.Enum, values: @source_types
+    field :erased_at, :utc_datetime
     belongs_to :project, Project
 
     has_one :source_step, Step, foreign_key: :output_dataclip_id
@@ -87,6 +88,12 @@ defmodule Lightning.Invocation.Dataclip do
         c |> validate_required([:type, :body])
     end
     |> validate()
+  end
+
+  def erase_changeset(dataclip) do
+    dataclip
+    |> put_change(:erased_at, DateTime.utc_now())
+    |> put_change(:body, nil)
   end
 
   @doc """
