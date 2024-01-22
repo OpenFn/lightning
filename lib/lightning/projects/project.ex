@@ -24,6 +24,10 @@ defmodule Lightning.Projects.Project do
     field :scheduled_deletion, :utc_datetime
     field :requires_mfa, :boolean, default: false
 
+    field :data_retention_policy, Ecto.Enum,
+      values: [:retain_all, :erase_all, :erase_successful_only],
+      default: :retain_all
+
     has_many :project_users, ProjectUser
     has_many :users, through: [:project_users, :user]
     has_many :project_credentials, ProjectCredential
@@ -39,7 +43,14 @@ defmodule Lightning.Projects.Project do
   # TODO: schedule_deletion shouldn't be changed by user input
   def changeset(project, attrs) do
     project
-    |> cast(attrs, [:id, :name, :description, :scheduled_deletion, :requires_mfa])
+    |> cast(attrs, [
+      :id,
+      :name,
+      :description,
+      :scheduled_deletion,
+      :requires_mfa,
+      :data_retention_policy
+    ])
     |> cast_assoc(:project_users)
     |> validate()
   end

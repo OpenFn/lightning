@@ -55,6 +55,13 @@
               <Heroicons.arrow_path class="h-5 w-5 inline-block mr-2" />
               <span class="inline-block align-middle">Sync to Github</span>
             </LightningWeb.Components.Common.tab_item>
+            <LightningWeb.Components.Common.tab_item
+              orientation="vertical"
+              hash="data_retention"
+            >
+              <Heroicons.square_3_stack_3d class="h-5 w-5 inline-block mr-2" />
+              <span class="inline-block align-middle">Data Retention</span>
+            </LightningWeb.Components.Common.tab_item>
           </LightningWeb.Components.Common.tab_bar>
         </div>
       </div>
@@ -768,6 +775,65 @@
               </small>
             </div>
           <% end %>
+        </LightningWeb.Components.Common.panel_content>
+        <LightningWeb.Components.Common.panel_content for_hash="data_retention">
+          <div class="bg-white p-4 rounded-md">
+            <div>
+              <h6 class="font-medium text-black">
+                Workflow Input & Output Data Retention
+              </h6>
+              <small class="block my-1 text-xs text-gray-600">
+                Determine whether Input and Output data for workflow should be retained or erased.
+                <a href="#" class="text-indigo-600">Learn more...</a>
+              </small>
+            </div>
+
+            <div class="space-y-3">
+              <div class="relative flex items-start">
+                <div class="flex h-6 items-center">
+                  <input
+                    id="small"
+                    aria-describedby="small-description"
+                    name="plan"
+                    type="radio"
+                    checked
+                    class="h-4 w-4 border-gray-300 text-indigo-600 focus:ring-indigo-600"
+                  />
+                </div>
+                <div class="ml-3 text-sm leading-6">
+                  <label for="small" class="text-gray-700">
+                    Retain all input & output data on workflow completion
+                  </label>
+                </div>
+              </div>
+              <div class="relative flex items-start">
+                <div class="flex h-6 items-center">
+                  <input
+                    id="medium"
+                    aria-describedby="medium-description"
+                    name="plan"
+                    type="radio"
+                    class="h-4 w-4 border-gray-300 text-indigo-600 focus:ring-indigo-600"
+                  />
+                </div>
+                <div class="ml-3 text-sm leading-6">
+                  <label for="medium" class="text-gray-700">
+                    Erase all input & output data on workflow completion (zero-persistence)
+                  </label>
+                  <div
+                    id="medium-description"
+                    class="text-gray-700 bg-orange-50 p-3 border-l-4 border-l-orange-400"
+                  >
+                    <span class="font-medium">Heads Up!</span>
+
+                    <p>
+                      When enabled, you will no longer be able to retry workflow attempts as no data will be stored.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </LightningWeb.Components.Common.panel_content>
       </div>
     </div>
