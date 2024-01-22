@@ -105,6 +105,7 @@ defmodule LightningWeb.ProjectLive.Settings do
        can_delete_project: can_delete_project,
        can_edit_project_name: can_edit_project_name,
        can_edit_project_description: can_edit_project_description,
+       can_edit_retention: true,
        can_create_webhook_auth_method: can_create_webhook_auth_method,
        can_create_project_credential: can_create_project_credential,
        can_edit_webhook_auth_method: can_edit_webhook_auth_method,
@@ -199,10 +200,15 @@ defmodule LightningWeb.ProjectLive.Settings do
 
   @impl true
   def handle_event("validate", %{"project" => project_params}, socket) do
+    %{project: project, project_changeset: previous_changeset} = socket.assigns
+    project_params = map_retain_with_errors(project_params, previous_changeset)
+
     changeset =
-      socket.assigns.project
+      project
       |> Projects.change_project(project_params)
+      |> IO.inspect()
       |> Map.put(:action, :validate)
+      |> IO.inspect()
 
     {:noreply, assign(socket, :project_changeset, changeset)}
   end
@@ -578,6 +584,28 @@ defmodule LightningWeb.ProjectLive.Settings do
     <%= @project_user.user.first_name %> <%= @project_user.user.last_name %>
     """
   end
+
+  defp map_retain_with_errors(
+         %{"retention_policy" => "retain_all"} = params,
+         %{changes: %{retention_policy: :retain_with_errors}}
+       ) do
+    IO.inspect(params, label: :mapping)
+
+    Map.merge(params, %{
+      "retention_policy" => "retain_all",
+      "retain_with_errors" => "false"
+    })
+  end
+
+  defp map_retain_with_errors(
+         %{"retain_with_errors" => "true", "retention_policy" => _any} = params,
+         project_changeset
+       ) do
+    IO.inspect(project_changeset, label: :mapping)
+    Map.put(params, "retention_policy", "retain_with_errors")
+  end
+
+  defp map_retain_with_errors(params, _changeset), do: params
 
   defp save_project(socket, project_params) do
     case Projects.update_project(socket.assigns.project, project_params) do

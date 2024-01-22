@@ -271,6 +271,19 @@ defmodule LightningWeb.Components.NewInputs do
     """
   end
 
+  def input(%{type: "radio"} = assigns) do
+    ~H"""
+    <input
+      type="radio"
+      id={@id}
+      name={@name}
+      checked={@checked}
+      value={@value}
+      class="h-4 w-4 border-gray-300 text-indigo-600 focus:ring-indigo-600"
+    />
+    """
+  end
+
   def input(%{type: "hidden"} = assigns) do
     ~H"""
     <input

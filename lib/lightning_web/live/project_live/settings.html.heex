@@ -55,6 +55,13 @@
               <Heroicons.arrow_path class="h-5 w-5 inline-block mr-2" />
               <span class="inline-block align-middle">Sync to Github</span>
             </LightningWeb.Components.Common.tab_item>
+            <LightningWeb.Components.Common.tab_item
+              orientation="vertical"
+              hash="data_retention"
+            >
+              <Heroicons.square_3_stack_3d class="h-5 w-5 inline-block mr-2" />
+              <span class="inline-block align-middle">Data Retention</span>
+            </LightningWeb.Components.Common.tab_item>
           </LightningWeb.Components.Common.tab_bar>
         </div>
       </div>
@@ -768,6 +775,115 @@
               </small>
             </div>
           <% end %>
+        </LightningWeb.Components.Common.panel_content>
+        <LightningWeb.Components.Common.panel_content for_hash="data_retention">
+          <div class="bg-white p-4 rounded-md">
+            <div>
+              <h6 class="font-medium text-black">
+                Workflow Input & Output Data Retention
+              </h6>
+              <small class="block my-1 text-xs text-gray-600">
+                Determine whether Input and Output data for workflow should be retained or erased.
+                <a href="#" class="text-indigo-600">Learn more...</a>
+              </small>
+            </div>
+            <.form
+              :let={f}
+              for={@project_changeset}
+              id="retention-settings-form"
+              phx-change="validate"
+              phx-submit="save"
+            >
+              <div class="space-y-3">
+                <div class="relative flex items-start">
+                  <div class="flex h-6 items-center">
+                    <.input
+                      type="radio"
+                      field={f[:retention_policy]}
+                      checked={
+                        @project_changeset.changes[:retention_policy] in [
+                          nil,
+                          :retain_all
+                        ]
+                      }
+                      value="retain_all"
+                      class="h-4 w-4 border-gray-300 text-indigo-600 focus:ring-indigo-600"
+                    />
+                  </div>
+                  <div class="ml-3 leading-6">
+                    <label for="retain_all" class="text-sm text-neutral-950">
+                      Retain all input & output data on workflow completion
+                    </label>
+                  </div>
+                </div>
+                <div class="relative flex items-start">
+                  <div class="flex h-6 items-center">
+                    <.input
+                      type="radio"
+                      field={f[:retention_policy]}
+                      checked={
+                        @project_changeset.changes[:retention_policy] in [
+                          :erase_all,
+                          :retain_with_errors
+                        ]
+                      }
+                      value="erase_all"
+                      class="h-4 w-4 border-gray-300 text-indigo-600 focus:ring-indigo-600"
+                    />
+                  </div>
+                  <div class="ml-3 leading-6">
+                    <label for="erase_all" class="text-sm text-neutral-950">
+                      Erase all input & output data on workflow completion (zero-persistence)
+                    </label>
+                    <div class="mt-1 mb-3">
+                      <%= Phoenix.HTML.Form.checkbox(f, :retain_with_errors,
+                        class:
+                          "focus:ring-primary-500 h-4 w-4 text-primary-600 text-sm border-secondary-300 rounded",
+                        checked:
+                          IO.inspect(
+                            @project_changeset.changes[:retention_policy] ==
+                              :retain_with_errors
+                          )
+                      ) %>
+                      <label
+                        for="retain_with_errors"
+                        class="text-sm text-neutral-950"
+                      >
+                        Retain input & output on workflow run attempts with errors
+                      </label>
+                    </div>
+                    <div
+                      id="erase-all-description"
+                      class="text-gray-700 bg-orange-50 p-3 border-l-4 border-l-orange-400"
+                    >
+                      <span class="font-medium">Heads Up!</span>
+
+                      <p>
+                        When enabled, you will no longer be able to retry workflow attempts as no data will be stored.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                <div class="grid grid-cols gap-6">
+                  <div class="md:col-span-2">
+                    <Form.submit_button cancel={true}>
+                      Cancel
+                    </Form.submit_button>
+
+                    <Form.submit_button
+                      disabled={
+                        not @project_changeset.valid? or
+                          not @can_edit_retention
+                      }
+                      phx-disable-with="Saving"
+                    >
+                      Save
+                    </Form.submit_button>
+                  </div>
+                </div>
+              </div>
+            </.form>
+          </div>
         </LightningWeb.Components.Common.panel_content>
       </div>
     </div>
