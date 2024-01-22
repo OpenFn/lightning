@@ -17,13 +17,23 @@ defmodule LightningWeb.Components.NewInputs do
   """
   attr :id, :string, default: ""
   attr :type, :string, default: "button", values: ["button", "submit"]
-  attr :class, :any, default: nil
+  attr :class, :any, default: ""
   attr :rest, :global, include: ~w(disabled form name value)
   attr :tooltip, :any, default: nil
+  attr :cancel, :boolean, default: false
 
   slot :inner_block, required: true
 
   def button(assigns) do
+    custom_classes =
+      if assigns[:cancel] do
+        "bg-neutral-100 hover:bg-neutral-300 text-neutral-950"
+      else
+        "bg-primary-600 hover:bg-primary-700 text-white"
+      end
+
+    assign(assigns, :class, fn class -> class ++ custom_classes end)
+
     ~H"""
     <.tooltip_when_disabled
       id={@rest[:id]}
@@ -35,9 +45,8 @@ defmodule LightningWeb.Components.NewInputs do
         type={@type}
         class={[
           "inline-flex justify-center py-2 px-4 border border-transparent",
-          "shadow-sm text-sm font-medium rounded-md text-white focus:outline-none",
+          "shadow-sm text-sm font-medium rounded-md focus:outline-none",
           "focus:ring-2 focus:ring-offset-2 focus:ring-primary-500",
-          "bg-primary-600 hover:bg-primary-700",
           "disabled:bg-primary-300",
           "phx-submit-loading:opacity-75",
           @class
