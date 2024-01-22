@@ -180,4 +180,27 @@ defmodule Lightning.Jobs do
 
     Repo.all(query)
   end
+
+  @spec has_runs?(Lightning.Workflows.Job.t()) :: boolean()
+  @doc """
+  Checks if a given job has any associated runs.
+
+  ## Parameters
+
+  - job: The `Job` struct to be checked.
+
+  ## Returns
+
+  `true` if there are runs associated with the given job, `false` otherwise.
+
+  ## Examples
+
+      iex> Lightning.Workflows.Job.has_runs?(job)
+      true
+  """
+  def has_runs?(%Job{id: job_id}) do
+    Run
+    |> where(job_id: ^job_id)
+    |> Repo.exists?()
+  end
 end
