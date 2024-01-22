@@ -12,6 +12,14 @@ and this project adheres to
 
 ### Changed
 
+### Fixed
+
+## [v2.0.0-rc5] - 2024-01-22
+
+### Added
+
+### Changed
+
 - Made two significant backend changes that don't impact UI/UX but **require
   migrations** and should make Lightning developer lives easier by updating
   parts of the backend to match terms now used in the frontend:
