@@ -827,21 +827,27 @@
                     <label for="erase_all" class="text-sm text-neutral-950">
                       Erase all input & output data on workflow completion (zero-persistence)
                     </label>
-                    <div class="mt-1 mb-3">
+                    <div class="mt-1 mb-3 text-sm">
                       <%= Phoenix.HTML.Form.checkbox(f, :retain_with_errors,
                         class:
-                          "focus:ring-primary-500 h-4 w-4 text-primary-600 text-sm border-secondary-300 rounded",
+                          "h-4 w-4 text-primary-600 focus:ring-primary-500 border-secondary-300 rounded",
+                        disabled: checked?(@project_changeset, :retain_all),
                         checked:
                           checked?(@project_changeset, :retain_with_errors)
                       ) %>
                       <label
                         for="retain_with_errors"
-                        class="text-sm text-neutral-950"
+                        class={
+                          if checked?(@project_changeset, :retain_all),
+                            do: "text-neutral-400",
+                            else: "text-neutral-950"
+                        }
                       >
                         Retain input & output on workflow run attempts with errors
                       </label>
                     </div>
                     <div
+                      :if={not checked?(@project_changeset, :retain_all)}
                       id="erase-all-description"
                       class="text-gray-700 bg-orange-50 p-3 border-l-4 border-l-orange-400"
                     >

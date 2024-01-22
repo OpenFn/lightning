@@ -27,8 +27,6 @@ defmodule LightningWeb.ProjectLive.Settings do
   def mount(_params, _session, socket) do
     %{project: project, current_user: current_user} = socket.assigns
 
-    IO.inspect(project, label: :mount)
-
     project_users =
       Projects.get_project_users!(project.id)
 
@@ -107,7 +105,7 @@ defmodule LightningWeb.ProjectLive.Settings do
        can_delete_project: can_delete_project,
        can_edit_project_name: can_edit_project_name,
        can_edit_project_description: can_edit_project_description,
-       can_edit_retention: true,
+       can_edit_retention: project_user.role == :admin,
        can_create_webhook_auth_method: can_create_webhook_auth_method,
        can_create_project_credential: can_create_project_credential,
        can_edit_webhook_auth_method: can_edit_webhook_auth_method,
@@ -209,7 +207,6 @@ defmodule LightningWeb.ProjectLive.Settings do
       project
       |> Projects.change_project(project_params)
       |> Map.put(:action, :validate)
-      |> IO.inspect(label: :validate)
 
     {:noreply, assign(socket, :project_changeset, changeset)}
   end
@@ -592,41 +589,38 @@ defmodule LightningWeb.ProjectLive.Settings do
   end
 
   def checked?(changeset, :retain_all) do
-    retain_all? =
-      case Ecto.Changeset.fetch_field(changeset, :retention_policy) do
-        {_change_data, :retain_all} -> true
-        _false -> false
-      end
+    case Ecto.Changeset.fetch_field(changeset, :retention_policy) do
+      {_changes_data, :retain_all} ->
+        true
 
-    case Ecto.Changeset.fetch_field(changeset, :retain_with_errors) do
-      {_change_data, false} ->
-        retain_all?
-
-      _false ->
+      _other_policy ->
         false
     end
   end
 
   def checked?(changeset, :erase_all) do
-    case Ecto.Changeset.fetch_field(changeset, :retain_with_errors) do
-      {_change_data, true} ->
+    case Ecto.Changeset.fetch_field(changeset, :retention_policy) do
+      {_changes_data, retention_policy} when retention_policy != :retain_all ->
         true
 
-      _false ->
-        case Ecto.Changeset.fetch_field(changeset, :retention_policy) do
-          {_change_data, :erase_all} -> true
-          _false -> false
-        end
+      _other_policy ->
+        false
     end
   end
 
   def checked?(changeset, :retain_with_errors) do
-    case Ecto.Changeset.fetch_field(changeset, :retain_with_errors) do
-      {_change_data, true} ->
+    case Ecto.Changeset.fetch_field(changeset, :retention_policy) do
+      {:data, :retain_with_errors} ->
         true
 
-      _false ->
-        false
+      _changed ->
+        case Ecto.Changeset.fetch_field(changeset, :retain_with_errors) do
+          {:changes, true} ->
+            true
+
+          _other_policy ->
+            false
+        end
     end
   end
 
@@ -639,26 +633,29 @@ defmodule LightningWeb.ProjectLive.Settings do
   end
 
   defp map_retain_with_errors(
-         %{"retention_policy" => "retain_all"} = params,
-         %Ecto.Changeset{changes: %{retention_policy: :retain_with_errors}}
+         %{
+           "retain_with_errors" => "true",
+           "retention_policy" => "erase_all"
+         } = params,
+         %Ecto.Changeset{changes: _changes}
        ) do
-    IO.inspect(1)
+    # from erase_all to retain_with_errors
+    Map.put(params, "retention_policy", "retain_with_errors")
+  end
 
+  defp map_retain_with_errors(
+         %{"retention_policy" => "retain_all"} = params,
+         %Ecto.Changeset{changes: _changes}
+       ) do
     Map.merge(params, %{
       "retention_policy" => "retain_all",
       "retain_with_errors" => "false"
     })
   end
 
-  defp map_retain_with_errors(
-         %{"retain_with_errors" => "true", "retention_policy" => _any} = params,
-         changeset
-       ) do
-    IO.inspect({params, changeset})
-    Map.put(params, "retention_policy", "retain_with_errors")
+  defp map_retain_with_errors(params, _changeset) do
+    params
   end
-
-  defp map_retain_with_errors(params, _changeset), do: params
 
   defp save_project(
          socket,
