@@ -795,86 +795,61 @@
               phx-submit="save"
             >
               <div class="space-y-2">
-                <div class="relative flex items-start">
-                  <div class="flex h-6 items-center">
-                    <.input
-                      type="radio"
-                      id="retain_all"
-                      field={f[:retention_policy]}
-                      checked={checked?(@project_changeset, :retain_all)}
-                      value="retain_all"
-                      class="h-4 w-4 border-gray-300 text-indigo-600 focus:ring-indigo-600"
-                    />
-                  </div>
-                  <div class="ml-3 leading-6">
-                    <label for="retain_all" class="text-sm text-neutral-950">
-                      Retain all input & output data on workflow completion
-                    </label>
-                  </div>
-                </div>
-                <div class="relative flex items-start">
-                  <div class="flex h-6 items-center">
-                    <.input
-                      type="radio"
-                      id="erase_all"
-                      field={f[:retention_policy]}
-                      checked={checked?(@project_changeset, :erase_all)}
-                      value="erase_all"
-                      class="h-4 w-4 border-gray-300 text-indigo-600 focus:ring-indigo-600"
-                    />
-                  </div>
-                  <div class="ml-3 leading-6">
-                    <label for="erase_all" class="text-sm text-neutral-950">
-                      Erase all input & output data on workflow completion (zero-persistence)
-                    </label>
-                    <div class="mt-1 mb-3 text-sm">
-                      <%= Phoenix.HTML.Form.checkbox(f, :retain_with_errors,
-                        class:
-                          "h-4 w-4 text-primary-600 focus:ring-primary-500 border-secondary-300 rounded",
-                        disabled: checked?(@project_changeset, :retain_all),
-                        checked:
-                          checked?(@project_changeset, :retain_with_errors)
-                      ) %>
-                      <label
-                        for="retain_with_errors"
-                        class={
-                          if checked?(@project_changeset, :retain_all),
-                            do: "text-neutral-400",
-                            else: "text-neutral-950"
-                        }
-                      >
-                        Retain input & output on workflow run attempts with errors
+                <%= for {value, text} <- [
+                  {:retain_all, "Retain all input & output data on workflow completion"},
+                  {:retain_with_errors, "Retain input & output on workflow run attempts with errors"},
+                  {:erase_all, "Erase all input & output data on workflow completion (zero-persistence)"}
+                  ] do %>
+                  <div class="relative flex items-start">
+                    <div class="flex h-6 items-center">
+                      <.input
+                        type="radio"
+                        id="retain_all"
+                        field={f[:retention_policy]}
+                        checked={checked?(@project_changeset, value)}
+                        value={value}
+                        class="h-4 w-4 border-gray-300 text-indigo-600 focus:ring-indigo-600"
+                      />
+                    </div>
+                    <div class="ml-3 leading-6">
+                      <label for="retain_all" class="text-sm text-neutral-950">
+                        <%= text %>
                       </label>
                     </div>
-                    <div
-                      :if={not checked?(@project_changeset, :retain_all)}
-                      id="erase-all-description"
-                      class="text-gray-700 bg-orange-50 p-3 border-l-4 border-l-orange-400"
-                    >
-                      <span class="font-medium">Heads Up!</span>
-
-                      <p>
-                        When enabled, you will no longer be able to retry workflow attempts as no data will be stored.
-                      </p>
-                    </div>
                   </div>
+                <% end %>
+              </div>
+              <div
+                :if={not checked?(@project_changeset, :retain_all)}
+                id="erase-all-description"
+                class="mt-2 ml-7 text-gray-700 bg-orange-50 p-3 border-l-4 border-l-orange-400"
+              >
+                <span class="font-medium">Heads Up!</span>
+
+                <p>
+                  When enabled, you will no longer be able to retry workflow attempts as no data will be stored.
+                </p>
+              </div>
+              <div class="mt-3 grid grid-flow-col justify-items-end gap-6">
+                <div>
+                  <span>&nbsp;</span>
                 </div>
-                <div class="grid grid-cols gap-6">
-                  <div class="md:col-span-2">
-                    <.button phx-click="cancel-retention-change">
-                      Cancel
-                    </.button>
-
-                    <Form.submit_button
-                      disabled={
-                        not @project_changeset.valid? or
-                          not @can_edit_retention
-                      }
-                      phx-disable-with="Saving"
-                    >
-                      Save
-                    </Form.submit_button>
-                  </div>
+                <div>
+                  <.button phx-click="cancel-retention-change">
+                    Cancel
+                  </.button>
+                  <Form.submit_button
+                    disabled={
+                      not @project_changeset.valid? or
+                        not @can_edit_retention
+                    }
+                    phx-disable-with="Saving"
+                  >
+                    Save
+                  </Form.submit_button>
+                </div>
+                <div>
+                  <span>&nbsp;</span>
                 </div>
               </div>
             </.form>

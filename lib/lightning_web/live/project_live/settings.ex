@@ -101,7 +101,7 @@ defmodule LightningWeb.ProjectLive.Settings do
        credentials: credentials,
        project_users: project_users,
        current_user: socket.assigns.current_user,
-       project_changeset: init_changeset(socket.assigns.project),
+       project_changeset: Projects.change_project(socket.assigns.project),
        can_delete_project: can_delete_project,
        can_edit_project_name: can_edit_project_name,
        can_edit_project_description: can_edit_project_description,
@@ -200,11 +200,8 @@ defmodule LightningWeb.ProjectLive.Settings do
 
   @impl true
   def handle_event("validate", %{"project" => project_params}, socket) do
-    %{project: project, project_changeset: previous_changeset} = socket.assigns
-    project_params = map_retain_with_errors(project_params, previous_changeset)
-
     changeset =
-      project
+      socket.assigns.project
       |> Projects.change_project(project_params)
       |> Map.put(:action, :validate)
 
@@ -217,8 +214,7 @@ defmodule LightningWeb.ProjectLive.Settings do
   end
 
   def handle_event("cancel-retention-change", _params, socket) do
-    {:noreply,
-     socket |> assign(:project_changeset, init_changeset(socket.assigns.project))}
+    {:noreply, socket |> assign(:project_changeset, socket.assigns.project)}
   end
 
   def handle_event("save", %{"project" => project_params}, socket) do
@@ -588,87 +584,14 @@ defmodule LightningWeb.ProjectLive.Settings do
     """
   end
 
-  def checked?(changeset, :retain_all) do
+  def checked?(changeset, id) do
     case Ecto.Changeset.fetch_field(changeset, :retention_policy) do
-      {_changes_data, :retain_all} ->
+      {_changes_data, ^id} ->
         true
 
       _other_policy ->
         false
     end
-  end
-
-  def checked?(changeset, :erase_all) do
-    case Ecto.Changeset.fetch_field(changeset, :retention_policy) do
-      {_changes_data, retention_policy} when retention_policy != :retain_all ->
-        true
-
-      _other_policy ->
-        false
-    end
-  end
-
-  def checked?(changeset, :retain_with_errors) do
-    case Ecto.Changeset.fetch_field(changeset, :retention_policy) do
-      {:data, :retain_with_errors} ->
-        true
-
-      _changed ->
-        case Ecto.Changeset.fetch_field(changeset, :retain_with_errors) do
-          {:changes, true} ->
-            true
-
-          _other_policy ->
-            false
-        end
-    end
-  end
-
-  defp init_changeset(%{retention_policy: :retain_with_errors} = project) do
-    Projects.change_project(%{project | retain_with_errors: true})
-  end
-
-  defp init_changeset(project) do
-    Projects.change_project(project)
-  end
-
-  defp map_retain_with_errors(
-         %{
-           "retain_with_errors" => "true",
-           "retention_policy" => "erase_all"
-         } = params,
-         %Ecto.Changeset{changes: _changes}
-       ) do
-    # from erase_all to retain_with_errors
-    Map.put(params, "retention_policy", "retain_with_errors")
-  end
-
-  defp map_retain_with_errors(
-         %{"retention_policy" => "retain_all"} = params,
-         %Ecto.Changeset{changes: _changes}
-       ) do
-    Map.merge(params, %{
-      "retention_policy" => "retain_all",
-      "retain_with_errors" => "false"
-    })
-  end
-
-  defp map_retain_with_errors(params, _changeset) do
-    params
-  end
-
-  defp save_project(
-         socket,
-         %{
-           "retain_with_errors" => "true",
-           "retention_policy" => "erase_all"
-         } =
-           params
-       ) do
-    params =
-      Map.put(params, "retention_policy", "retain_with_errors")
-
-    save_project(socket, params)
   end
 
   defp save_project(socket, project_params) do
