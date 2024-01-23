@@ -259,7 +259,7 @@ defmodule Lightning.AttemptsTest do
                })
     end
 
-    test "with an unexisting step returns an error changeset" do
+    test "with an non-existant step returns an error changeset" do
       dataclip = insert(:dataclip)
       %{triggers: [trigger]} = workflow = insert(:simple_workflow)
 
@@ -276,6 +276,41 @@ defmodule Lightning.AttemptsTest do
                  attempt_id: attempt.id,
                  project_id: workflow.project_id
                })
+    end
+  end
+
+  describe "get_input" do
+    setup context do
+      %{triggers: [trigger]} = workflow = insert(:simple_workflow)
+
+      dataclip =
+        case context.dataclip_type do
+          :http_request ->
+            insert(:http_request_dataclip)
+
+          :step_result ->
+            insert(:dataclip,
+              body: %{"i'm" => ["a", "dataclip"]},
+              type: :step_result
+            )
+        end
+
+      %{attempts: [attempt]} =
+        work_order_for(trigger, workflow: workflow, dataclip: dataclip)
+        |> insert()
+
+      %{attempt: attempt}
+    end
+
+    @tag dataclip_type: :step_result
+    test "returns the body of a dataclip", %{attempt: attempt} do
+      assert Attempts.get_input(attempt) == ~s({"i'm": ["a", "dataclip"]})
+    end
+
+    @tag dataclip_type: :http_request
+    test "returns headers and body for http_request", %{attempt: attempt} do
+      assert Attempts.get_input(attempt) ==
+               ~s({"data": {"foo": "bar"}, "request": {"headers": {"content-type": "application/json"}}})
     end
   end
 

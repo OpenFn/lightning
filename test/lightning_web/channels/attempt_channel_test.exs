@@ -189,7 +189,10 @@ defmodule LightningWeb.AttemptChannelTest do
     } do
       ref = push(socket, "fetch:dataclip", %{})
 
-      assert_reply ref, :ok, {:binary, ~s<{\"data\": {\"foo\": \"bar\"}}>}
+      assert_reply ref,
+                   :ok,
+                   {:binary,
+                    ~s<{"data": {"foo": "bar"}, "request": {"headers": {"content-type": "application/json"}}}>}
 
       Ecto.Changeset.change(dataclip, type: :step_result)
       |> Repo.update()
@@ -658,7 +661,7 @@ defmodule LightningWeb.AttemptChannelTest do
       attempt_state = Map.get(context, :attempt_state, :available)
 
       project = insert(:project)
-      dataclip = insert(:dataclip, body: %{"foo" => "bar"}, project: project)
+      dataclip = insert(:http_request_dataclip, project: project)
 
       %{triggers: [trigger]} =
         workflow = insert(:simple_workflow, project: project)
@@ -842,11 +845,7 @@ defmodule LightningWeb.AttemptChannelTest do
     project = insert(:project, project_users: [%{user: user}])
 
     dataclip =
-      insert(:dataclip,
-        type: :http_request,
-        body: %{"foo" => "bar"},
-        project: project
-      )
+      insert(:http_request_dataclip, project: project)
 
     trigger = build(:trigger, type: :webhook, enabled: true)
 
