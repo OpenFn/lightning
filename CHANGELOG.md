@@ -20,6 +20,8 @@ and this project adheres to
 
 - Store webhook request headers in Dataclips for use in jobs.
   [#1638](https://github.com/OpenFn/Lightning/issues/1638)
+- Add zero-persistence project setting
+  [#1209](https://github.com/OpenFn/Lightning/issues/1209)
 
 ### Changed
 
@@ -34,7 +36,7 @@ and this project adheres to
 
 ### Fixed
 
-- Fix Run via Docker  
+- Fix Run via Docker
   [#1653](https://github.com/OpenFn/Lightning/issues/1653)
 - Fix remaining warnings, enable "warnings as errors"
   [#1642](https://github.com/OpenFn/Lightning/issues/1642)
