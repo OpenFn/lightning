@@ -105,7 +105,7 @@ defmodule LightningWeb.ProjectLive.Settings do
        can_delete_project: can_delete_project,
        can_edit_project_name: can_edit_project_name,
        can_edit_project_description: can_edit_project_description,
-       can_edit_retention: project_user.role == :admin,
+       can_edit_data_retention: project_user.role in [:owner, :admin],
        can_create_webhook_auth_method: can_create_webhook_auth_method,
        can_create_project_credential: can_create_project_credential,
        can_edit_webhook_auth_method: can_edit_webhook_auth_method,

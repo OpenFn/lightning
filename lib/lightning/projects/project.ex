@@ -25,7 +25,7 @@ defmodule Lightning.Projects.Project do
     field :requires_mfa, :boolean, default: false
 
     field :retention_policy, Ecto.Enum,
-      values: [:retain_all, :erase_all, :retain_with_errors],
+      values: [:retain_all, :retain_with_errors, :erase_all],
       default: :retain_all
 
     has_many :project_users, ProjectUser
