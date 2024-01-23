@@ -67,6 +67,15 @@ defmodule Lightning.Factories do
     }
   end
 
+  def http_request_dataclip_factory do
+    %Lightning.Invocation.Dataclip{
+      project: build(:project),
+      body: %{"foo" => "bar"},
+      request: %{"headers" => %{"content-type" => "application/json"}},
+      type: :http_request
+    }
+  end
+
   def step_factory do
     %Lightning.Invocation.Step{
       id: fn -> Ecto.UUID.generate() end,

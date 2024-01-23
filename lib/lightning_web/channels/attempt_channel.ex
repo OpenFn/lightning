@@ -131,12 +131,7 @@ defmodule LightningWeb.AttemptChannel do
   of those HTTP requests to the worker to use as initial state.
   """
   def handle_in("fetch:dataclip", _, socket) do
-    {type, raw_body} = Attempts.get_dataclip_for_worker(socket.assigns.attempt)
-
-    body =
-      if type == :http_request,
-        do: "{\"data\": " <> raw_body <> "}",
-        else: raw_body
+    body = Attempts.get_input(socket.assigns.attempt)
 
     {:reply, {:ok, {:binary, body}}, socket}
   end

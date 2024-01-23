@@ -29,6 +29,9 @@ defmodule LightningWeb.WebhooksControllerTest do
 
       assert Attempts.get_dataclip_body(attempt) == ~s({"foo": "bar"})
 
+      assert Attempts.get_dataclip_request(attempt) ==
+               ~s({"headers": {"content-type": "multipart/mixed; boundary=plug_conn_test"}})
+
       %{attempts: [attempt]} = work_order
       assert attempt.starting_trigger_id == trigger.id
     end

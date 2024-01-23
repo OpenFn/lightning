@@ -10,6 +10,9 @@ and this project adheres to
 
 ### Added
 
+- Store webhook request headers in Dataclips for use in jobs.
+  [#1638](https://github.com/OpenFn/Lightning/issues/1638)
+
 ### Changed
 
 ### Fixed

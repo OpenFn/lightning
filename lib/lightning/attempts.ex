@@ -87,13 +87,41 @@ defmodule Lightning.Attempts do
   end
 
   @doc """
-  Returns a tuple with {type, string} so that initial state can be created for
-  the worker. See LightingWeb.AttemptChannel.handle_in("fetch:dataclip", _, _)
+  Returns only the dataclip request as a string
+  """
+  def get_dataclip_request(%Attempt{} = attempt) do
+    from(d in Ecto.assoc(attempt, :dataclip),
+      select: type(d.request, :string)
+    )
+    |> Repo.one()
+  end
+
+  @doc """
+  Returns an Attempts dataclip formatted for use as state.
+
+  Only `http_request` dataclips are changed, their `body` is nested inside a
+  `"data"` key and `request` data is added as a `"request"` key.
+
+  See LightingWeb.AttemptChannel.handle_in("fetch:dataclip", _, _)
   for more details.
   """
-  def get_dataclip_for_worker(%Attempt{} = attempt) do
+  @spec get_input(Attempt.t()) :: String.t() | nil
+  def get_input(%Attempt{} = attempt) do
     from(d in Ecto.assoc(attempt, :dataclip),
-      select: {d.type, type(d.body, :string)}
+      select:
+        type(
+          fragment(
+            """
+            CASE WHEN type = 'http_request'
+            THEN jsonb_build_object('data', ?, 'request', ?)
+            ELSE ? END
+            """,
+            d.body,
+            d.request,
+            d.body
+          ),
+          :string
+        )
     )
     |> Repo.one()
   end

@@ -30,6 +30,7 @@ defmodule Lightning.Invocation.Dataclip do
           id: Ecto.UUID.t() | nil,
           project_id: Ecto.UUID.t() | nil,
           body: %{} | nil,
+          request: %{} | nil,
           source_step: Step.t() | Ecto.Association.NotLoaded.t() | nil
         }
 
@@ -40,6 +41,7 @@ defmodule Lightning.Invocation.Dataclip do
   @foreign_key_type :binary_id
   schema "dataclips" do
     field :body, :map, load_in_query: false
+    field :request, :map, load_in_query: false
     field :type, Ecto.Enum, values: @source_types
     belongs_to :project, Project
 
@@ -105,8 +107,18 @@ defmodule Lightning.Invocation.Dataclip do
     end
   end
 
+  defp validate_request(changeset) do
+    if fetch_field!(changeset, :type) != :http_request and
+         not is_nil(fetch_field!(changeset, :request)) do
+      add_error(changeset, :request, "cannot be set for this type")
+    else
+      changeset
+    end
+  end
+
   defp validate(changeset) do
     changeset
+    |> validate_request()
     |> validate_by_type()
   end
 
