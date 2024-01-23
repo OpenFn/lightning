@@ -47,21 +47,8 @@ defmodule Lightning.Invocation do
   end
 
   def list_dataclips_for_job(%Lightning.Workflows.Job{id: job_id}) do
-    from(s in Step,
-      join: d in assoc(s, :input_dataclip),
-      where: s.job_id == ^job_id,
-      select: %Dataclip{
-        id: d.id,
-        body: d.body,
-        type: d.type,
-        project_id: d.project_id,
-        inserted_at: d.inserted_at,
-        updated_at: d.updated_at
-      },
-      distinct: [desc: d.inserted_at],
-      order_by: [desc: d.inserted_at],
-      limit: 3
-    )
+    Query.last_n_for_job(job_id, 5)
+    |> Query.select_as_input()
     |> Repo.all()
   end
 

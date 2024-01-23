@@ -45,9 +45,8 @@ defmodule LightningWeb.AttemptLive.Streaming do
   def get_dataclip_lines(step, field) do
     import Ecto.Query
 
-    from(d in Ecto.assoc(step, field),
-      select: [:id, :type, :body]
-    )
+    from(d in Ecto.assoc(step, field))
+    |> Lightning.Invocation.Query.select_as_input()
     |> Repo.one()
     |> case do
       nil ->
