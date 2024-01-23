@@ -28,8 +28,6 @@ defmodule Lightning.Projects.Project do
       values: [:retain_all, :erase_all, :retain_with_errors],
       default: :retain_all
 
-    field :retain_with_errors, :boolean, default: false, virtual: true
-
     has_many :project_users, ProjectUser
     has_many :users, through: [:project_users, :user]
     has_many :project_credentials, ProjectCredential
@@ -51,8 +49,7 @@ defmodule Lightning.Projects.Project do
       :description,
       :scheduled_deletion,
       :requires_mfa,
-      :retention_policy,
-      :retain_with_errors
+      :retention_policy
     ])
     |> cast_assoc(:project_users)
     |> validate()
