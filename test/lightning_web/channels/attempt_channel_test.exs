@@ -1,4 +1,5 @@
 defmodule LightningWeb.AttemptChannelTest do
+  alias Lightning.Invocation.Dataclip
   use LightningWeb.ChannelCase
 
   alias Lightning.Invocation.Step
@@ -477,17 +478,49 @@ defmodule LightningWeb.AttemptChannelTest do
         attempt: attempt,
         user: user,
         workflow: workflow,
-        credential: credential
+        credential: credential,
+        project: project
       }
     end
 
     test "step:start", %{
       socket: socket,
-      attempt: attempt,
+      attempt: %{dataclip_id: dataclip_id},
       workflow: workflow,
-      credential: %{id: credential_id}
+      credential: %{id: credential_id} = credential,
+      project: project
     } do
       # { id, job_id, input_dataclip_id }
+      step_id = Ecto.UUID.generate()
+      [%{id: job_id}] = workflow.jobs
+
+      ref =
+        push(socket, "step:start", %{
+          "step_id" => step_id,
+          "credential_id" => credential_id,
+          "job_id" => job_id,
+          "input_dataclip_id" => dataclip_id
+        })
+
+      assert_reply ref, :ok, %{step_id: ^step_id}, 1_000
+
+      assert project.retention_policy == :retain_all
+
+      assert %{
+               credential_id: ^credential_id,
+               job_id: ^job_id,
+               input_dataclip_id: ^dataclip_id
+             } =
+               Repo.get!(Step, step_id)
+
+      # input dataclip is not saved for projects with erase_all
+      project = insert(:project, retention_policy: :erase_all)
+
+      %{attempt: attempt, workflow: workflow} =
+        create_attempt(%{project: project, credential: credential})
+
+      %{socket: socket} = create_socket(%{attempt: attempt})
+
       step_id = Ecto.UUID.generate()
       [%{id: job_id}] = workflow.jobs
 
@@ -499,9 +532,15 @@ defmodule LightningWeb.AttemptChannelTest do
           "input_dataclip_id" => attempt.dataclip_id
         })
 
-      assert_reply ref, :ok, %{step_id: ^step_id}, 1_000
+      assert_reply ref, :ok, %{step_id: ^step_id}
 
-      assert %{credential_id: ^credential_id, job_id: ^job_id} =
+      assert project.retention_policy == :erase_all
+
+      assert %{
+               credential_id: ^credential_id,
+               job_id: ^job_id,
+               input_dataclip_id: nil
+             } =
                Repo.get!(Step, step_id)
     end
 
@@ -587,6 +626,61 @@ defmodule LightningWeb.AttemptChannelTest do
 
       assert_reply ref, :ok, %{step_id: ^step_id}
       assert %{exit_reason: "fail"} = Repo.get(Step, step.id)
+    end
+
+    test "step:complete does not save the dataclip if project retention policy is set to erase_all",
+         %{
+           socket: socket,
+           attempt: attempt,
+           workflow: workflow,
+           project: project,
+           credential: credential
+         } do
+      [job] = workflow.jobs
+      %{id: step_id} = insert(:step, attempts: [attempt], job: job)
+      dataclip_id = Ecto.UUID.generate()
+
+      ref =
+        push(socket, "step:complete", %{
+          "step_id" => step_id,
+          "output_dataclip_id" => dataclip_id,
+          "output_dataclip" => ~s({"foo": "bar"}),
+          "reason" => "normal"
+        })
+
+      assert_reply ref, :ok, %{step_id: ^step_id}
+
+      # dataclip is saved
+      assert project.retention_policy == :retain_all
+      assert %{output_dataclip_id: ^dataclip_id} = Repo.get(Step, step_id)
+      assert Repo.get(Dataclip, dataclip_id)
+
+      # project with erase_all
+      project = insert(:project, retention_policy: :erase_all)
+
+      %{attempt: attempt, workflow: workflow} =
+        create_attempt(%{project: project, credential: credential})
+
+      %{socket: socket} = create_socket(%{attempt: attempt})
+
+      [job] = workflow.jobs
+      %{id: step_id} = insert(:step, attempts: [attempt], job: job)
+      dataclip_id = Ecto.UUID.generate()
+
+      ref =
+        push(socket, "step:complete", %{
+          "step_id" => step_id,
+          "output_dataclip_id" => dataclip_id,
+          "output_dataclip" => ~s({"foo": "bar"}),
+          "reason" => "normal"
+        })
+
+      assert_reply ref, :ok, %{step_id: ^step_id}
+
+      # dataclip is NOT saved
+      assert project.retention_policy == :erase_all
+      assert %{output_dataclip_id: nil} = Repo.get(Step, step_id)
+      refute Repo.get(Dataclip, dataclip_id)
     end
   end
 
