@@ -1753,7 +1753,7 @@ defmodule LightningWeb.ProjectLiveTest do
     end
   end
 
-  describe "data-retention" do
+  describe "data-storage" do
     setup :register_and_log_in_user
     setup :create_project_for_current_user
 
@@ -1762,10 +1762,10 @@ defmodule LightningWeb.ProjectLiveTest do
       {:ok, _view, html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/settings#data-retention"
+          ~p"/projects/#{project.id}/settings#data-storage"
         )
 
-      assert html =~ "Workflow Input &amp; Output Data Retention"
+      assert html =~ "Input/Output Data Storage Policy"
     end
 
     @tag role: :admin
@@ -1773,13 +1773,11 @@ defmodule LightningWeb.ProjectLiveTest do
       {:ok, view, html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/settings#data-retention"
+          ~p"/projects/#{project.id}/settings#data-storage"
         )
 
-      assert html =~ "Workflow Input &amp; Output Data Retention"
-
-      assert html =~
-               "Determine whether Input and Output data for workflow should be retained or erased."
+      assert html =~ "Input/Output Data Storage Policy"
+      assert html =~ "Should OpenFn store input/output data for workflow runs?"
 
       # retain_all is the default
       assert ["checked"] ==
@@ -1807,7 +1805,7 @@ defmodule LightningWeb.ProjectLiveTest do
       refute html =~ "heads-up-description"
 
       # 3 radio buttons descriptions
-      assert "Retain all input & output data on workflow completion" =
+      assert "Retain input/output data for all workflow runs" =
                view
                |> element(~s{label#[for="retain_all"]})
                |> render()
@@ -1815,7 +1813,7 @@ defmodule LightningWeb.ProjectLiveTest do
                |> Floki.text()
                |> String.trim()
 
-      assert "Retain input & output on workflow run attempts with errors" =
+      assert "Only retain input/output data when a run fails" =
                view
                |> element(~s{label#[for="retain_with_errors"]})
                |> render()
@@ -1823,7 +1821,7 @@ defmodule LightningWeb.ProjectLiveTest do
                |> Floki.text()
                |> String.trim()
 
-      assert "Erase all input & output data on workflow completion (zero-persistence)" =
+      assert "Never retain input/output data (zero-persistence)" =
                view
                |> element(~s{label#[for="erase_all"]})
                |> render()
@@ -1847,7 +1845,7 @@ defmodule LightningWeb.ProjectLiveTest do
                |> Floki.parse_fragment!()
                |> Floki.attribute("input", "checked")
 
-      assert "When enabled, you will no longer be able to retry workflow attempts as no data will be stored." =
+      assert "When enabled, you will no longer be able to retry workflow runs as no data will be stored." =
                view
                |> element("#heads-up-description")
                |> render()
@@ -1872,7 +1870,7 @@ defmodule LightningWeb.ProjectLiveTest do
                |> Floki.parse_fragment!()
                |> Floki.attribute("input", "checked")
 
-      assert "When enabled, you will no longer be able to retry workflow attempts as no data will be stored." =
+      assert "When enabled, you will no longer be able to retry workflow runs as no data will be stored." =
                view
                |> element("#heads-up-description")
                |> render()
@@ -1890,13 +1888,13 @@ defmodule LightningWeb.ProjectLiveTest do
       {:ok, _view, html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/settings#data-retention"
+          ~p"/projects/#{project.id}/settings#data-storage"
         )
 
-      refute html =~ "Workflow Input &amp; Output Data Retention"
+      refute html =~ "Input/Output Data Storage Policy"
 
       assert html =~
-               "Only project owner and admins can view or edit the Data Retention Policy."
+               "Only project owner and admins can view or edit the Data Storage section."
     end
 
     @tag role: :viewer
@@ -1907,13 +1905,13 @@ defmodule LightningWeb.ProjectLiveTest do
       {:ok, _view, html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/settings#data-retention"
+          ~p"/projects/#{project.id}/settings#data-storage"
         )
 
       refute html =~ "Workflow Input &amp; Output Data Retention"
 
       assert html =~
-               "Only project owner and admins can view or edit the Data Retention Policy."
+               "Only project owner and admins can view or edit the Data Storage section."
     end
 
     @tag role: :admin
@@ -1924,7 +1922,7 @@ defmodule LightningWeb.ProjectLiveTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/settings#data-retention"
+          ~p"/projects/#{project.id}/settings#data-storage"
         )
 
       # save, navigate to other page and saved option is checked when come back
@@ -1953,7 +1951,7 @@ defmodule LightningWeb.ProjectLiveTest do
             |> render_submit()
 
           assert html =~ "Project updated successfully"
-          assert html =~ "Workflow Input &amp; Output Data Retention"
+          assert html =~ "Input/Output Data Storage Policy"
 
           assert policy ==
                    project.id
@@ -1964,7 +1962,7 @@ defmodule LightningWeb.ProjectLiveTest do
           live(conn, ~p"/projects/#{project.id}/w")
 
           {:ok, view, _html} =
-            live(conn, ~p"/projects/#{project.id}/settings#data-retention")
+            live(conn, ~p"/projects/#{project.id}/settings#data-storage")
 
           assert ["checked"] ==
                    view
