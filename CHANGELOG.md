@@ -92,7 +92,7 @@ and this project adheres to
 
 ### Fixed
 
-- Implemented safeguards to prevent deletion of jobs with associated runs
+- Implemented safeguards to prevent deletion of jobs with associated run history
   [#1570](https://github.com/OpenFn/Lightning/issues/1570)
 - Fix Run via Docker  
   [#1653](https://github.com/OpenFn/Lightning/issues/1653)

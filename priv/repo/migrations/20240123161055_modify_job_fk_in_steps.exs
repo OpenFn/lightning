@@ -1,4 +1,4 @@
-defmodule Lightning.Repo.Migrations.ModifyJobFkInRuns do
+defmodule Lightning.Repo.Migrations.ModifyJobFkInSteps do
   use Ecto.Migration
 
   def change do
