@@ -7,7 +7,7 @@ defmodule LightningWeb.RunLive.Index do
   import Ecto.Changeset, only: [get_change: 2]
 
   alias Lightning.Invocation
-  alias Lightning.Invocation.Run
+  alias Lightning.Invocation.Step
   alias Lightning.Policies.Permissions
   alias Lightning.Policies.ProjectUsers
   alias Lightning.WorkOrders
@@ -128,7 +128,7 @@ defmodule LightningWeb.RunLive.Index do
      |> assign(
        filters: filters,
        page_title: "History",
-       run: %Run{},
+       step: %Step{},
        filters_changeset: filters_changeset(filters),
        pagination_path: &pagination_path(socket, project, &1, filters),
        page: @empty_page,
@@ -220,7 +220,7 @@ defmodule LightningWeb.RunLive.Index do
     %{work_order: work_order} =
       Lightning.Repo.preload(
         attempt,
-        [work_order: [:workflow, attempts: [runs: :job]]],
+        [work_order: [:workflow, attempts: [steps: :job]]],
         force: true
       )
 
@@ -257,7 +257,7 @@ defmodule LightningWeb.RunLive.Index do
         socket
       ) do
     work_order =
-      Lightning.Repo.preload(work_order, [:workflow, attempts: [runs: :job]],
+      Lightning.Repo.preload(work_order, [:workflow, attempts: [steps: :job]],
         force: true
       )
 
@@ -267,11 +267,11 @@ defmodule LightningWeb.RunLive.Index do
   @impl true
   def handle_event(
         "rerun",
-        %{"attempt_id" => attempt_id, "run_id" => run_id},
+        %{"attempt_id" => attempt_id, "step_id" => step_id},
         socket
       ) do
     if socket.assigns.can_rerun_job do
-      WorkOrders.retry(attempt_id, run_id,
+      WorkOrders.retry(attempt_id, step_id,
         created_by: socket.assigns.current_user
       )
 
@@ -294,7 +294,7 @@ defmodule LightningWeb.RunLive.Index do
        )
        |> push_navigate(
          to:
-           ~p"/projects/#{socket.assigns.project.id}/runs?#{%{filters: socket.assigns.filters}}"
+           ~p"/projects/#{socket.assigns.project.id}/history?#{%{filters: socket.assigns.filters}}"
        )}
     else
       false ->
@@ -377,7 +377,9 @@ defmodule LightningWeb.RunLive.Index do
     {:noreply,
      socket
      |> assign(filters: filters)
-     |> push_patch(to: ~p"/projects/#{project.id}/runs?#{%{filters: filters}}")}
+     |> push_patch(
+       to: ~p"/projects/#{project.id}/history?#{%{filters: filters}}"
+     )}
   end
 
   defp find_workflow_name(workflows, workflow_id) do

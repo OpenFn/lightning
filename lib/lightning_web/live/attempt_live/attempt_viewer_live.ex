@@ -27,7 +27,7 @@ defmodule LightningWeb.AttemptLive.AttemptViewerLive do
                 <:value>
                   <.link
                     navigate={
-                      ~p"/projects/#{@project}/runs?#{%{filters: %{workorder_id: attempt.work_order_id}}}"
+                      ~p"/projects/#{@project}/history?#{%{filters: %{workorder_id: attempt.work_order_id}}}"
                     }
                     class="hover:underline hover:text-primary-900"
                   >
@@ -43,7 +43,7 @@ defmodule LightningWeb.AttemptLive.AttemptViewerLive do
                 <:value>
                   <.link
                     navigate={
-                      ~p"/projects/#{@project}/attempts/#{attempt}?r=#{@selected_run_id || ""}"
+                      ~p"/projects/#{@project}/runs/#{attempt}?step=#{@selected_step_id || ""}"
                     }
                     class="hover:underline hover:text-primary-900 whitespace-nowrap text-ellipsis"
                   >
@@ -78,19 +78,19 @@ defmodule LightningWeb.AttemptLive.AttemptViewerLive do
             </.detail_list>
 
             <.step_list
-              :let={run}
+              :let={step}
               id={"step-list-#{attempt.id}"}
-              runs={@runs}
+              steps={@steps}
               class="flex-1"
             >
               <.step_item
-                run={run}
+                step={step}
                 is_clone={
-                  DateTime.compare(run.inserted_at, attempt.inserted_at) == :lt
+                  DateTime.compare(step.inserted_at, attempt.inserted_at) == :lt
                 }
-                phx-click="select_run"
-                phx-value-id={run.id}
-                selected={run.id == @selected_run_id}
+                phx-click="select_step"
+                phx-value-id={step.id}
+                selected={step.id == @selected_step_id}
                 class="cursor-pointer"
               />
             </.step_list>
@@ -129,13 +129,13 @@ defmodule LightningWeb.AttemptLive.AttemptViewerLive do
               >
                 <Viewers.log_viewer
                   id={"attempt-log-#{attempt.id}"}
-                  highlight_id={@selected_run_id}
+                  highlight_id={@selected_step_id}
                   stream={@streams.log_lines}
                 />
               </Common.panel_content>
               <Common.panel_content for_hash="input" class="grow overflow-auto">
                 <Viewers.dataclip_viewer
-                  id={"run-input-#{@selected_run_id}"}
+                  id={"step-input-#{@selected_step_id}"}
                   type={
                     case @input_dataclip do
                       %AsyncResult{ok?: true, result: %{type: type}} -> type
@@ -148,7 +148,7 @@ defmodule LightningWeb.AttemptLive.AttemptViewerLive do
               </Common.panel_content>
               <Common.panel_content for_hash="output" class="grow overflow-auto">
                 <Viewers.dataclip_viewer
-                  id={"run-output-#{@selected_run_id}"}
+                  id={"step-output-#{@selected_step_id}"}
                   type={
                     case @output_dataclip do
                       %AsyncResult{ok?: true, result: %{type: type}} -> type
@@ -172,9 +172,9 @@ defmodule LightningWeb.AttemptLive.AttemptViewerLive do
     {:ok,
      socket
      |> assign(
-       selected_run_id: nil,
+       selected_step_id: nil,
        job_id: Map.get(session, "job_id"),
-       runs: []
+       steps: []
      )
      |> stream(:log_lines, [])
      |> stream(:input_dataclip, [])
@@ -187,31 +187,31 @@ defmodule LightningWeb.AttemptLive.AttemptViewerLive do
   end
 
   @impl true
-  def handle_event("select_run", %{"id" => id}, socket) do
-    {:noreply, socket |> apply_selected_run_id(id)}
+  def handle_event("select_step", %{"id" => id}, socket) do
+    {:noreply, socket |> apply_selected_step_id(id)}
   end
 
-  def handle_runs_change(socket) do
-    # either a job_id or a run_id is passed in
-    # if a run_id is passed in, we can hightlight the log lines immediately
-    # if a job_id is passed in, we need to wait for the run to start
+  def handle_steps_change(socket) do
+    # either a job_id or a step_id is passed in
+    # if a step_id is passed in, we can highlight the log lines immediately
+    # if a job_id is passed in, we need to wait for the step to start
     # if neither is passed in, we can't highlight anything
 
-    %{job_id: job_id, runs: runs} = socket.assigns
+    %{job_id: job_id, steps: steps} = socket.assigns
 
-    selected_run_id =
-      socket.assigns.selected_run_id || get_run_id_for_job_id(job_id, runs)
+    selected_step_id =
+      socket.assigns.selected_step_id || get_step_id_for_job_id(job_id, steps)
 
-    selected_run = runs |> Enum.find(&(&1.id == selected_run_id))
+    selected_step = steps |> Enum.find(&(&1.id == selected_step_id))
 
     socket
-    |> assign(selected_run_id: selected_run_id, selected_run: selected_run)
+    |> assign(selected_step_id: selected_step_id, selected_step: selected_step)
     |> maybe_load_input_dataclip()
     |> maybe_load_output_dataclip()
   end
 
-  defp get_run_id_for_job_id(job_id, runs) do
-    runs
+  defp get_step_id_for_job_id(job_id, steps) do
+    steps
     |> Enum.find(%{}, &(&1.job_id == job_id))
     |> Map.get(:id)
   end

@@ -40,7 +40,7 @@ defmodule Lightning.FactoriesTest do
                |> Factories.with_attempt(
                  dataclip: dataclip,
                  starting_trigger: trigger,
-                 runs: [
+                 steps: [
                    %{
                      job: job,
                      started_at: Factories.build(:timestamp),

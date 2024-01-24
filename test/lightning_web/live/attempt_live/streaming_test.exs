@@ -3,7 +3,7 @@ defmodule LightningWeb.AttemptLive.StreamingTest do
 
   alias LightningWeb.AttemptLive.Streaming
 
-  defp create_runs_dataclips(_context) do
+  defp create_steps_dataclips(_context) do
     user = insert(:user)
     project = insert(:project, project_users: [%{user: user}])
 
@@ -59,7 +59,7 @@ defmodule LightningWeb.AttemptLive.StreamingTest do
     output_dataclip =
       insert(:dataclip,
         project: project,
-        type: :run_result,
+        type: :step_result,
         body: %{
           integer: 123_456,
           another_no: 789,
@@ -74,10 +74,10 @@ defmodule LightningWeb.AttemptLive.StreamingTest do
 
     now = DateTime.utc_now()
 
-    run1 = insert(:run, job: job1, started_at: now)
+    step1 = insert(:step, job: job1, started_at: now)
 
-    run2 =
-      insert(:run,
+    step2 =
+      insert(:step,
         exit_reason: "success",
         job: job2,
         input_dataclip: input_dataclip,
@@ -85,8 +85,8 @@ defmodule LightningWeb.AttemptLive.StreamingTest do
         started_at: DateTime.add(now, 1, :microsecond)
       )
 
-    run3 =
-      insert(:run, job: job3, started_at: DateTime.add(now, 2, :microsecond))
+    step3 =
+      insert(:step, job: job3, started_at: DateTime.add(now, 2, :microsecond))
 
     attempt =
       insert(:attempt,
@@ -100,26 +100,33 @@ defmodule LightningWeb.AttemptLive.StreamingTest do
         starting_trigger: trigger,
         state: :success,
         dataclip: input_dataclip,
-        runs: [run1, run2]
+        steps: [step1, step2]
       )
 
-    insert(:attempt_run, attempt: attempt, run: run1)
-    insert(:attempt_run, attempt: attempt, run: run2)
-    insert(:attempt_run, attempt: attempt, run: run3)
+    insert(:attempt_step, attempt: attempt, step: step1)
+    insert(:attempt_step, attempt: attempt, step: step2)
+    insert(:attempt_step, attempt: attempt, step: step3)
 
-    %{attempt: attempt, output_dataclip: output_dataclip, job: job2, run2: run2}
+    %{
+      attempt: attempt,
+      output_dataclip: output_dataclip,
+      job: job2,
+      step2: step2
+    }
   end
 
   describe "get_dataclip_lines" do
-    setup :create_runs_dataclips
+    setup :create_steps_dataclips
 
-    test "streams scrubbed lines from run_result dataclip", %{run2: selected_run} do
+    test "streams scrubbed lines from step_result dataclip", %{
+      step2: selected_step
+    } do
       dataclip_lines =
-        Streaming.get_dataclip_lines(selected_run, :output_dataclip)
+        Streaming.get_dataclip_lines(selected_step, :output_dataclip)
         |> elem(1)
         |> Enum.to_list()
 
-      # foo: "bar" is not scrubbed because it is from a following job executed on run3
+      # foo: "bar" is not scrubbed because it is from a following job executed on step3
       expected_lines = [
         ~S("integer":***),
         ~S("another_no":***),

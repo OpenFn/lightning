@@ -6,7 +6,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
   import LightningWeb.WorkflowLive.Components
 
   alias Lightning.Attempts
-  alias Lightning.Attempts.Events.RunCompleted
+  alias Lightning.Attempts.Events.StepCompleted
   alias Lightning.Invocation
   alias Lightning.Policies.Permissions
   alias Lightning.Policies.ProjectUsers
@@ -121,26 +121,26 @@ defmodule LightningWeb.WorkflowLive.Edit do
                     <.button
                       id="save-and-run"
                       phx-hook="DefaultRunViaCtrlEnter"
-                      {if retry_from_here(@run, @manual_run_form), do:
-                        [type: "button", "phx-click": "rerun", "phx-value-attempt_id": @follow_attempt_id, "phx-value-run_id": @run.id],
+                      {if retry_from_here(@step, @manual_run_form), do:
+                        [type: "button", "phx-click": "rerun", "phx-value-attempt_id": @follow_attempt_id, "phx-value-step_id": @step.id],
                       else:
                           [type: "submit", form: @manual_run_form.id]}
                       class={[
                         "relative inline-flex items-center",
-                        retry_from_here(@run, @manual_run_form) && "rounded-r-none"
+                        retry_from_here(@step, @manual_run_form) && "rounded-r-none"
                       ]}
                       disabled={
                         @save_and_run_disabled ||
-                          processing(@follow_attempt_id, @run)
+                          processing(@follow_attempt_id, @step)
                       }
                     >
-                      <%= if processing(@follow_attempt_id, @run) do %>
+                      <%= if processing(@follow_attempt_id, @step) do %>
                         <.icon
                           name="hero-arrow-path-mini"
                           class="w-4 h-4 animate-spin mr-1"
                         /> Processing
                       <% else %>
-                        <%= if retry_from_here(@run, @manual_run_form) do %>
+                        <%= if retry_from_here(@step, @manual_run_form) do %>
                           <.icon name="hero-arrow-path-mini" class="w-4 h-4 mr-1" />
                           Rerun from here
                         <% else %>
@@ -150,7 +150,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
                       <% end %>
                     </.button>
                     <div
-                      :if={retry_from_here(@run, @manual_run_form)}
+                      :if={retry_from_here(@step, @manual_run_form)}
                       class="relative -ml-px block"
                     >
                       <.button
@@ -413,10 +413,10 @@ defmodule LightningWeb.WorkflowLive.Edit do
     """
   end
 
-  defp retry_from_here(run, form),
-    do: run && run.input_dataclip_id == form[:dataclip_id].value
+  defp retry_from_here(step, form),
+    do: step && step.input_dataclip_id == form[:dataclip_id].value
 
-  defp processing(attempt_id, run), do: attempt_id && !run
+  defp processing(attempt_id, step), do: attempt_id && !step
 
   defp deletion_tooltip_message(has_multiple_jobs) do
     if has_multiple_jobs do
@@ -596,7 +596,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
        active_menu_item: :overview,
        expanded_job: nil,
        follow_attempt_id: nil,
-       run: nil,
+       step: nil,
        manual_run_form: nil,
        page_title: "",
        selected_edge: nil,
@@ -800,14 +800,14 @@ defmodule LightningWeb.WorkflowLive.Edit do
   @impl true
   def handle_event(
         "rerun",
-        %{"attempt_id" => attempt_id, "run_id" => run_id},
+        %{"attempt_id" => attempt_id, "step_id" => step_id},
         socket
       ) do
     if socket.assigns.can_rerun_job do
       case Lightning.Repo.update(%{socket.assigns.changeset | action: :update}) do
         {:ok, workflow} ->
           {:ok, attempt} =
-            WorkOrders.retry(attempt_id, run_id,
+            WorkOrders.retry(attempt_id, step_id,
               created_by: socket.assigns.current_user
             )
 
@@ -904,11 +904,11 @@ defmodule LightningWeb.WorkflowLive.Edit do
   end
 
   def handle_info(
-        %RunCompleted{run: run},
+        %StepCompleted{step: step},
         socket
       )
-      when run.job_id === socket.assigns.selected_job.id do
-    dataclip = Invocation.get_dataclip_details!(run.input_dataclip_id)
+      when step.job_id === socket.assigns.selected_job.id do
+    dataclip = Invocation.get_dataclip_details!(step.input_dataclip_id)
 
     selectable_dataclips =
       maybe_add_selected_dataclip(
@@ -918,7 +918,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
     manual_run_form_changeset =
       socket.assigns.manual_run_form.source
-      |> Ecto.Changeset.change(dataclip_id: run.input_dataclip_id)
+      |> Ecto.Changeset.change(dataclip_id: step.input_dataclip_id)
 
     manual_run_form =
       %{socket.assigns.manual_run_form | source: manual_run_form_changeset}
@@ -926,7 +926,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
     {:noreply,
      socket
-     |> assign(run: run)
+     |> assign(step: step)
      |> assign(manual_run_form: manual_run_form)
      |> assign(selectable_dataclips: selectable_dataclips)}
   end
@@ -960,16 +960,16 @@ defmodule LightningWeb.WorkflowLive.Edit do
         selectable_dataclips =
           Invocation.list_dataclips_for_job(%Job{id: job.id})
 
-        run =
+        step =
           assigns[:follow_attempt_id] &&
-            Invocation.get_run_for_attempt_and_job(
+            Invocation.get_step_for_attempt_and_job(
               assigns[:follow_attempt_id],
               job.id
             )
 
         socket
         |> assign_manual_run_form(changeset)
-        |> assign(run: run)
+        |> assign(step: step)
         |> assign(
           selectable_dataclips:
             maybe_add_selected_dataclip(selectable_dataclips, dataclip)

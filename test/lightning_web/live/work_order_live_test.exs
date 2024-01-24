@@ -1,4 +1,4 @@
-defmodule LightningWeb.RunWorkOrderTest do
+defmodule LightningWeb.WorkOrderLiveTest do
   use LightningWeb.ConnCase, async: false
 
   import Phoenix.LiveViewTest
@@ -25,7 +25,7 @@ defmodule LightningWeb.RunWorkOrderTest do
       |> with_attempt(
         starting_job: job,
         dataclip: dataclip,
-        runs: [
+        steps: [
           %{
             job: job,
             started_at: build(:timestamp),
@@ -56,13 +56,13 @@ defmodule LightningWeb.RunWorkOrderTest do
 
     attempts =
       Enum.map(attempts_params, fn params ->
-        insert_attempt_with_run(work_order, trigger, dataclip, job, params)
+        insert_attempt_with_step(work_order, trigger, dataclip, job, params)
       end)
 
     {work_order, attempts}
   end
 
-  defp insert_attempt_with_run(work_order, trigger, dataclip, job, opts) do
+  defp insert_attempt_with_step(work_order, trigger, dataclip, job, opts) do
     state = opts[:state]
     timestamp = opts[:state_timestamp]
 
@@ -72,8 +72,8 @@ defmodule LightningWeb.RunWorkOrderTest do
       dataclip: dataclip,
       state: state,
       "#{state}_at": timestamp,
-      runs: [
-        build(:run,
+      steps: [
+        build(:step,
           job: job,
           started_at: build(:timestamp),
           finished_at: build(:timestamp),
@@ -87,16 +87,16 @@ defmodule LightningWeb.RunWorkOrderTest do
     Timex.format!(timestamp, "%d/%b/%y, %H:%M", :strftime)
   end
 
-  defp assert_work_order_runs(work_order, expected_count) do
+  defp assert_work_order_steps(work_order, expected_count) do
     assert length(work_order.attempts) === expected_count
 
-    runs_count =
+    steps_count =
       work_order.attempts
-      |> Enum.map(&Map.get(&1, :runs, []))
+      |> Enum.map(&Map.get(&1, :steps, []))
       |> Enum.flat_map(& &1)
       |> length()
 
-    assert runs_count === expected_count
+    assert steps_count === expected_count
   end
 
   describe "Index" do
@@ -136,7 +136,7 @@ defmodule LightningWeb.RunWorkOrderTest do
       %{jobs: [job]} = insert(:simple_workflow, project: project)
       {work_order, _dataclip} = setup_work_order(project, job)
 
-      assert_work_order_runs(work_order, 1)
+      assert_work_order_steps(work_order, 1)
 
       rendered =
         render_component(LightningWeb.RunLive.WorkOrderComponent,
@@ -148,13 +148,13 @@ defmodule LightningWeb.RunWorkOrderTest do
       assert rendered =~ "toggle_details_for_#{work_order.id}"
     end
 
-    test "WorkOrderComponent renders runs when details are toggled", %{
+    test "WorkOrderComponent renders steps when details are toggled", %{
       project: project
     } do
       %{jobs: [job]} = insert(:simple_workflow, project: project)
       {work_order, _dataclip} = setup_work_order(project, job)
 
-      assert_work_order_runs(work_order, 1)
+      assert_work_order_steps(work_order, 1)
 
       rendered =
         render_component(LightningWeb.RunLive.WorkOrderComponent,
@@ -173,9 +173,9 @@ defmodule LightningWeb.RunWorkOrderTest do
         assert rendered =~ "attempt_#{attempt.id}"
       end)
 
-      hd(work_order.attempts).runs
-      |> Enum.each(fn run ->
-        assert rendered =~ "run-#{run.id}"
+      hd(work_order.attempts).steps
+      |> Enum.each(fn step ->
+        assert rendered =~ "step-#{step.id}"
       end)
     end
 
@@ -191,7 +191,7 @@ defmodule LightningWeb.RunWorkOrderTest do
         Lightning.Repo.reload!(work_order)
         |> Lightning.Repo.preload([:attempts, :workflow])
 
-      assert_work_order_runs(work_order, 0)
+      assert_work_order_steps(work_order, 0)
 
       rendered =
         render_component(LightningWeb.RunLive.WorkOrderComponent,
@@ -265,8 +265,8 @@ defmodule LightningWeb.RunWorkOrderTest do
           starting_trigger: trigger,
           dataclip: dataclip,
           finished_at: build(:timestamp),
-          runs: [
-            build(:run,
+          steps: [
+            build(:step,
               job: job,
               started_at: build(:timestamp),
               finished_at: build(:timestamp),
@@ -342,12 +342,12 @@ defmodule LightningWeb.RunWorkOrderTest do
           starting_trigger: trigger
         )
 
-      {:ok, _run} =
-        Attempts.start_run(%{
+      {:ok, _step} =
+        Attempts.start_step(%{
           "attempt_id" => attempt.id,
           "job_id" => job.id,
           "input_dataclip_id" => dataclip.id,
-          "run_id" => Ecto.UUID.generate()
+          "step_id" => Ecto.UUID.generate()
         })
 
       {:ok, _view, html} =
@@ -390,12 +390,12 @@ defmodule LightningWeb.RunWorkOrderTest do
           starting_trigger: trigger
         )
 
-      {:ok, _run} =
-        Attempts.start_run(%{
+      {:ok, _step} =
+        Attempts.start_step(%{
           "attempt_id" => attempt.id,
           "job_id" => job.id,
           "input_dataclip_id" => dataclip.id,
-          "run_id" => Ecto.UUID.generate()
+          "step_id" => Ecto.UUID.generate()
         })
 
       {:ok, view, html} =
@@ -477,12 +477,12 @@ defmodule LightningWeb.RunWorkOrderTest do
           starting_trigger: trigger
         )
 
-      {:ok, _run} =
-        Attempts.start_run(%{
+      {:ok, _step} =
+        Attempts.start_step(%{
           "attempt_id" => attempt.id,
           "job_id" => job.id,
           "input_dataclip_id" => dataclip.id,
-          "run_id" => Ecto.UUID.generate()
+          "step_id" => Ecto.UUID.generate()
         })
 
       {:ok, view, _html} =
@@ -545,8 +545,8 @@ defmodule LightningWeb.RunWorkOrderTest do
           build(:attempt,
             starting_trigger: trigger,
             dataclip: dataclip,
-            runs: [
-              build(:run,
+            steps: [
+              build(:step,
                 job: job,
                 input_dataclip: dataclip,
                 started_at: build(:timestamp),
@@ -578,8 +578,8 @@ defmodule LightningWeb.RunWorkOrderTest do
           build(:attempt,
             starting_trigger: trigger_two,
             dataclip: dataclip_two,
-            runs: [
-              build(:run,
+            steps: [
+              build(:step,
                 job: job_two,
                 input_dataclip: dataclip_two,
                 started_at: build(:timestamp),
@@ -644,7 +644,7 @@ defmodule LightningWeb.RunWorkOrderTest do
       refute div =~ "workflow 2"
     end
 
-    test "Filter by run run_log and dataclip_body", %{
+    test "Filter by log and dataclip_body", %{
       conn: conn,
       project: project
     } do
@@ -680,14 +680,14 @@ defmodule LightningWeb.RunWorkOrderTest do
 
       expected_d1 = Timex.now() |> Timex.shift(days: -12)
 
-      {:ok, _run} =
-        Attempts.start_run(%{
+      {:ok, _step} =
+        Attempts.start_step(%{
           "attempt_id" => attempt_one.id,
           "job_id" => job_one.id,
           "input_dataclip_id" => dataclip.id,
           "started_at" => expected_d1,
           "finished_at" => expected_d1 |> Timex.shift(minutes: 2),
-          "run_id" => Ecto.UUID.generate()
+          "step_id" => Ecto.UUID.generate()
         })
 
       workflow_two = insert(:workflow, project: project, name: "workflow 2")
@@ -715,8 +715,8 @@ defmodule LightningWeb.RunWorkOrderTest do
 
       expected_d2 = Timex.now() |> Timex.shift(days: -10)
 
-      {:ok, _run} =
-        Attempts.start_run(%{
+      {:ok, _step} =
+        Attempts.start_step(%{
           "attempt_id" => attempt_two.id,
           "job_id" => job_two.id,
           "input_dataclip_id" => dataclip.id,
@@ -727,7 +727,7 @@ defmodule LightningWeb.RunWorkOrderTest do
             %{body: "Log me something fun."},
             %{body: "It's another great log."}
           ],
-          "run_id" => Ecto.UUID.generate()
+          "step_id" => Ecto.UUID.generate()
         })
 
       {:ok, view, _html} =
@@ -804,8 +804,8 @@ defmodule LightningWeb.RunWorkOrderTest do
           build(:attempt,
             starting_trigger: trigger,
             dataclip: dataclip,
-            runs: [
-              build(:run,
+            steps: [
+              build(:step,
                 job: job,
                 input_dataclip: dataclip,
                 started_at: build(:timestamp),
@@ -991,8 +991,8 @@ defmodule LightningWeb.RunWorkOrderTest do
           starting_trigger: trigger,
           inserted_at: now |> Timex.shift(minutes: -5),
           dataclip: dataclip,
-          runs:
-            build_list(1, :run, %{
+          steps:
+            build_list(1, :step, %{
               job: job,
               exit_reason: "fail",
               started_at: now |> Timex.shift(seconds: -40),
@@ -1007,8 +1007,8 @@ defmodule LightningWeb.RunWorkOrderTest do
           work_order: workorder,
           starting_job: job,
           dataclip: dataclip,
-          runs:
-            build_list(1, :run,
+          steps:
+            build_list(1, :step,
               job: job,
               started_at: Timex.shift(now, seconds: -20),
               finished_at: now,
@@ -1092,8 +1092,8 @@ defmodule LightningWeb.RunWorkOrderTest do
           starting_trigger: trigger,
           inserted_at: build(:timestamp),
           dataclip: dataclip,
-          runs:
-            build_list(1, :run, %{
+          steps:
+            build_list(1, :step, %{
               job: job,
               exit_reason: "fail",
               started_at: build(:timestamp),
@@ -1108,8 +1108,8 @@ defmodule LightningWeb.RunWorkOrderTest do
           work_order: workorder,
           starting_job: job,
           dataclip: dataclip,
-          runs:
-            build_list(1, :run,
+          steps:
+            build_list(1, :step,
               job: job,
               started_at: build(:timestamp),
               finished_at: build(:timestamp),
@@ -1196,8 +1196,8 @@ defmodule LightningWeb.RunWorkOrderTest do
             build(:attempt,
               dataclip: dataclip,
               starting_trigger: trigger,
-              runs: [
-                build(:run,
+              steps: [
+                build(:step,
                   job: job,
                   exit_reason: "success",
                   started_at: build(:timestamp),
@@ -1255,8 +1255,8 @@ defmodule LightningWeb.RunWorkOrderTest do
           starting_trigger: trigger
         )
 
-      run_1 =
-        insert(:run,
+      step_1 =
+        insert(:step,
           job: job_1,
           attempts: [attempt],
           exit_reason: "success",
@@ -1267,8 +1267,8 @@ defmodule LightningWeb.RunWorkOrderTest do
       {:ok, view, _html} =
         live_async(conn, Routes.project_run_index_path(conn, :index, project.id))
 
-      run_2 =
-        insert(:run,
+      step_2 =
+        insert(:step,
           job: job_2,
           attempts: [attempt],
           exit_reason: "success",
@@ -1278,16 +1278,16 @@ defmodule LightningWeb.RunWorkOrderTest do
 
       view |> element("#toggle_details_for_#{work_order.id}") |> render_click()
 
-      assert has_element?(view, "#run-#{run_1.id}")
-      refute has_element?(view, "#run-#{run_2.id}")
+      assert has_element?(view, "#step-#{step_1.id}")
+      refute has_element?(view, "#step-#{step_2.id}")
 
       Events.attempt_updated(project.id, attempt)
 
       # Force Re-render to ensure the event is included
       render(view)
 
-      assert has_element?(view, "#run-#{run_1.id}")
-      assert has_element?(view, "#run-#{run_2.id}")
+      assert has_element?(view, "#step-#{step_1.id}")
+      assert has_element?(view, "#step-#{step_2.id}")
     end
 
     test "WorkOrders.Events.WorkOrderCreated", %{
@@ -1322,8 +1322,8 @@ defmodule LightningWeb.RunWorkOrderTest do
             build(:attempt,
               dataclip: dataclip_1,
               starting_trigger: trigger_1,
-              runs: [
-                build(:run,
+              steps: [
+                build(:step,
                   job: job_1,
                   exit_reason: "success",
                   started_at: build(:timestamp),
@@ -1343,8 +1343,8 @@ defmodule LightningWeb.RunWorkOrderTest do
             build(:attempt,
               dataclip: dataclip_2,
               starting_trigger: trigger_2,
-              runs: [
-                build(:run,
+              steps: [
+                build(:step,
                   job: job_2,
                   exit_reason: "success",
                   started_at: build(:timestamp),
@@ -1447,8 +1447,8 @@ defmodule LightningWeb.RunWorkOrderTest do
           dataclip: dataclip,
           starting_trigger: trigger,
           finished_at: build(:timestamp),
-          runs: [
-            build(:run,
+          steps: [
+            build(:step,
               job: job_a,
               input_dataclip: dataclip,
               started_at: build(:timestamp),
@@ -1462,9 +1462,9 @@ defmodule LightningWeb.RunWorkOrderTest do
     end
 
     @tag role: :editor
-    test "Project editors can rerun runs",
+    test "Project editors can rerun from a step",
          %{conn: conn, project: project, attempt: attempt} do
-      [run | _rest] = attempt.runs
+      [step | _rest] = attempt.steps
 
       {:ok, view, _html} =
         live(conn, Routes.project_run_index_path(conn, :index, project.id))
@@ -1472,14 +1472,14 @@ defmodule LightningWeb.RunWorkOrderTest do
       assert view
              |> render_click("rerun", %{
                "attempt_id" => attempt.id,
-               "run_id" => run.id
+               "step_id" => step.id
              })
     end
 
     @tag role: :viewer
-    test "Project viewers can't rerun runs",
+    test "Project viewers can't rerun from steps",
          %{conn: conn, project: project, attempt: attempt} do
-      [run | _rest] = attempt.runs
+      [step | _rest] = attempt.steps
 
       {:ok, view, _html} =
         live(conn, Routes.project_run_index_path(conn, :index, project.id))
@@ -1487,13 +1487,13 @@ defmodule LightningWeb.RunWorkOrderTest do
       assert view
              |> render_click("rerun", %{
                "attempt_id" => attempt.id,
-               "run_id" => run.id
+               "step_id" => step.id
              }) =~
                "You are not authorized to perform this action."
     end
 
     @tag role: :viewer
-    test "Project viewers can't rerun runs in bulk from start",
+    test "Project viewers can't rerun in bulk from start",
          %{conn: conn, project: project} do
       trigger = build(:trigger, type: :webhook)
 
@@ -1527,7 +1527,7 @@ defmodule LightningWeb.RunWorkOrderTest do
         starting_trigger: trigger,
         dataclip: dataclip,
         finished_at: build(:timestamp),
-        runs: [
+        steps: [
           %{
             job: job_b,
             started_at: build(:timestamp),
@@ -1560,7 +1560,7 @@ defmodule LightningWeb.RunWorkOrderTest do
     end
 
     @tag role: :editor
-    test "Project editors can rerun runs in bulk from start",
+    test "Project editors can rerun in bulk from start",
          %{conn: conn, project: project} do
       trigger = build(:trigger, type: :webhook)
 
@@ -1594,7 +1594,7 @@ defmodule LightningWeb.RunWorkOrderTest do
               dataclip: dataclip,
               finished_at: build(:timestamp),
               state: :success,
-              runs: [
+              steps: [
                 %{
                   job: job_b,
                   started_at: build(:timestamp),
@@ -1672,7 +1672,7 @@ defmodule LightningWeb.RunWorkOrderTest do
         work_order: work_order_b,
         dataclip: dataclip,
         starting_trigger: trigger,
-        runs: [
+        steps: [
           %{
             job: job_b,
             started_at: build(:timestamp),
@@ -1704,8 +1704,8 @@ defmodule LightningWeb.RunWorkOrderTest do
       html =
         render_change(view, "toggle_all_selections", %{all_selections: true})
 
-      refute html =~ "Rerun all 2 matching workorders from start"
-      assert html =~ "Rerun 2 selected workorders from start"
+      refute html =~ "Rerun all 2 matching work orders from start"
+      assert html =~ "Rerun 2 selected work orders from start"
 
       # uncheck 1 work order
       view
@@ -1713,8 +1713,8 @@ defmodule LightningWeb.RunWorkOrderTest do
       |> render_change(%{selected: false})
 
       updated_html = render(view)
-      refute updated_html =~ "Rerun all 2 matching workorders from start"
-      assert updated_html =~ "Rerun 1 selected workorder from start"
+      refute updated_html =~ "Rerun all 2 matching work orders from start"
+      assert updated_html =~ "Rerun 1 selected work order from start"
     end
   end
 
@@ -1728,13 +1728,13 @@ defmodule LightningWeb.RunWorkOrderTest do
           pages: 3,
           total_entries: 25,
           all_selected?: true,
-          selected_count: 5,
+          selected_count: 10,
           filters: %SearchParams{},
           workflows: [{"Workflow a", "someid"}]
         )
 
-      assert html =~ "Rerun all 25 matching workorders from start"
-      assert html =~ "Rerun 5 selected workorders from start"
+      assert html =~ "Rerun all 25 matching work orders from start"
+      assert html =~ "Rerun 10 selected work orders from start"
     end
 
     test "only 1 run button present when some entries have been selected" do
@@ -1750,8 +1750,8 @@ defmodule LightningWeb.RunWorkOrderTest do
           workflows: [{"Workflow a", "someid"}]
         )
 
-      refute html =~ "Rerun all 25 matching workorders from start"
-      assert html =~ "Rerun 5 selected workorders from start"
+      refute html =~ "Rerun all 25 matching work orders from start"
+      assert html =~ "Rerun 5 selected work orders from start"
     end
 
     test "the filter queries are displayed correctly when all entries have been selected" do
@@ -1933,10 +1933,10 @@ defmodule LightningWeb.RunWorkOrderTest do
           dataclip: dataclip,
           starting_trigger: trigger,
           finished_at: build(:timestamp),
-          runs:
+          steps:
             jobs
             |> Enum.map(fn j ->
-              build(:run,
+              build(:step,
                 job: j,
                 input_dataclip: dataclip,
                 started_at: build(:timestamp),
@@ -1960,10 +1960,10 @@ defmodule LightningWeb.RunWorkOrderTest do
           dataclip: dataclip,
           starting_trigger: trigger,
           finished_at: build(:timestamp),
-          runs:
+          steps:
             jobs
             |> Enum.map(fn j ->
-              build(:run,
+              build(:step,
                 job: j,
                 input_dataclip: dataclip,
                 started_at: build(:timestamp),
@@ -1982,7 +1982,7 @@ defmodule LightningWeb.RunWorkOrderTest do
     end
 
     @tag role: :editor
-    test "only selecting workorders from the same workflow shows the rerun button",
+    test "only selecting worko rders from the same workflow shows the rerun button",
          %{conn: conn, project: project} do
       trigger = build(:trigger, type: :webhook)
 
@@ -2016,7 +2016,7 @@ defmodule LightningWeb.RunWorkOrderTest do
           starting_trigger: trigger,
           dataclip: dataclip,
           finished_at: build(:timestamp),
-          runs: [
+          steps: [
             %{
               job: job_a,
               started_at: build(:timestamp),
@@ -2142,7 +2142,7 @@ defmodule LightningWeb.RunWorkOrderTest do
 
       {:ok, _view, html} = follow_redirect(result, conn)
 
-      # this is zero because the previous retried attempt has no run
+      # this is zero because the previous retried attempt has no steps
       assert html =~ "New attempt enqueued for 0 workorder"
     end
 
@@ -2172,9 +2172,9 @@ defmodule LightningWeb.RunWorkOrderTest do
               starting_trigger: trigger,
               started_at: build(:timestamp),
               finished_at: build(:timestamp),
-              runs:
+              steps:
                 Enum.map(jobs, fn j ->
-                  build(:run,
+                  build(:step,
                     job: j,
                     input_dataclip: dataclip,
                     output_dataclip: dataclip,
@@ -2259,8 +2259,8 @@ defmodule LightningWeb.RunWorkOrderTest do
           workflow_id: workflow.id
         )
 
-      assert html =~ "Rerun all 25 matching workorders from selected job"
-      assert html =~ "Rerun 5 selected workorders from selected job"
+      assert html =~ "Rerun all 25 matching work orders from selected job"
+      assert html =~ "Rerun 5 selected work orders from selected job"
     end
 
     test "only 1 run button is present when some entries have been selected", %{
@@ -2278,8 +2278,8 @@ defmodule LightningWeb.RunWorkOrderTest do
           workflow_id: workflow.id
         )
 
-      refute html =~ "Rerun all 25 matching workorders from selected job"
-      assert html =~ "Rerun 5 selected workorders from selected job"
+      refute html =~ "Rerun all 25 matching work orders from selected job"
+      assert html =~ "Rerun 5 selected work orders from selected job"
     end
 
     test "only 1 run button is present when total pages is 1", %{
@@ -2297,8 +2297,8 @@ defmodule LightningWeb.RunWorkOrderTest do
           workflow_id: workflow.id
         )
 
-      refute html =~ "Rerun all 25 matching workorders from selected job"
-      assert html =~ "Rerun 5 selected workorders from selected job"
+      refute html =~ "Rerun all 25 matching work orders from selected job"
+      assert html =~ "Rerun 5 selected work orders from selected job"
     end
   end
 

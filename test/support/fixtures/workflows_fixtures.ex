@@ -63,7 +63,7 @@ defmodule Lightning.WorkflowsFixtures do
           state: :available,
           dataclip: build(:dataclip),
           starting_trigger: trigger,
-          runs: []
+          steps: []
         }
       ]
     )
@@ -78,7 +78,7 @@ defmodule Lightning.WorkflowsFixtures do
           state: :claimed,
           dataclip: build(:dataclip),
           starting_trigger: trigger,
-          runs: []
+          steps: []
         }
       ]
     )
@@ -93,7 +93,7 @@ defmodule Lightning.WorkflowsFixtures do
           state: :started,
           dataclip: build(:dataclip),
           starting_trigger: trigger,
-          runs: []
+          steps: []
         }
       ]
     )
@@ -103,11 +103,11 @@ defmodule Lightning.WorkflowsFixtures do
         state: :success,
         dataclip: build(:dataclip),
         starting_trigger: trigger,
-        runs:
+        steps:
           Enum.map([job0, job4, job5, job6], fn job ->
-            # job6 run started but not completed
+            # job6 step started but not completed
             exit_reason = if job == job6, do: nil, else: "success"
-            insert(:run, job: job, exit_reason: exit_reason)
+            insert(:step, job: job, exit_reason: exit_reason)
           end)
       }
     ]
@@ -117,12 +117,12 @@ defmodule Lightning.WorkflowsFixtures do
         state: :failed,
         dataclip: build(:dataclip),
         starting_trigger: trigger,
-        runs:
+        steps:
           Enum.map([job0, job1, job2, job3], fn job ->
             exit_reason =
               if job == job0 or job == job3, do: "fail", else: "success"
 
-            insert(:run, job: job, exit_reason: exit_reason)
+            insert(:step, job: job, exit_reason: exit_reason)
           end)
       }
     ]

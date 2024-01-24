@@ -14,15 +14,15 @@ defmodule Lightning.Invocation.Dataclip do
     When repetitive static data is needed to be maintained, instead of hard-coding
     into a Job - a more convenient solution is to create a `:global` Dataclip
     and access it inside the Job.
-  * `:run_result`
-    The final state of a successful run.
+  * `:step_result`
+    The final state of a step.
   * `:saved_input`
     An arbitrary input, created by a user. (Only configuration will be overwritten.)
   """
   use Ecto.Schema
   import Ecto.Changeset
 
-  alias Lightning.Invocation.Run
+  alias Lightning.Invocation.Step
   alias Lightning.Projects.Project
 
   @type t :: %__MODULE__{
@@ -30,20 +30,22 @@ defmodule Lightning.Invocation.Dataclip do
           id: Ecto.UUID.t() | nil,
           project_id: Ecto.UUID.t() | nil,
           body: %{} | nil,
-          source_run: Run.t() | Ecto.Association.NotLoaded.t() | nil
+          request: %{} | nil,
+          source_step: Step.t() | Ecto.Association.NotLoaded.t() | nil
         }
 
-  @type source_type :: :http_request | :global | :run_result | :saved_input
-  @source_types [:http_request, :global, :run_result, :saved_input]
+  @type source_type :: :http_request | :global | :step_result | :saved_input
+  @source_types [:http_request, :global, :step_result, :saved_input]
 
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id
   schema "dataclips" do
     field :body, :map, load_in_query: false
+    field :request, :map, load_in_query: false
     field :type, Ecto.Enum, values: @source_types
     belongs_to :project, Project
 
-    has_one :source_run, Run, foreign_key: :output_dataclip_id
+    has_one :source_step, Step, foreign_key: :output_dataclip_id
 
     timestamps(type: :utc_datetime_usec)
   end
@@ -90,23 +92,33 @@ defmodule Lightning.Invocation.Dataclip do
   @doc """
   Append validations based on the type of the Dataclip.
 
-  - `:run_result` must have an associated Run model.
+  - `:step_result` must have an associated Step model.
   """
   def validate_by_type(changeset) do
     changeset
     |> fetch_field!(:type)
     |> case do
-      :run_result ->
+      :step_result ->
         changeset
-        |> foreign_key_constraint(:source_run)
+        |> foreign_key_constraint(:source_step)
 
       _ ->
         changeset
     end
   end
 
+  defp validate_request(changeset) do
+    if fetch_field!(changeset, :type) != :http_request and
+         not is_nil(fetch_field!(changeset, :request)) do
+      add_error(changeset, :request, "cannot be set for this type")
+    else
+      changeset
+    end
+  end
+
   defp validate(changeset) do
     changeset
+    |> validate_request()
     |> validate_by_type()
   end
 

@@ -1,6 +1,6 @@
 defmodule Lightning.WorkOrders.SearchParams do
   @moduledoc """
-  This module is used to parse search parameters for workorders and provide
+  This module is used to parse search parameters for work orders and provide
   a query to the database.
   """
 

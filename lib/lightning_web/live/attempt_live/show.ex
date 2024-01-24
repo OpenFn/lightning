@@ -12,7 +12,7 @@ defmodule LightningWeb.AttemptLive.Show do
   @impl true
   def render(assigns) do
     assigns =
-      assigns |> assign(:no_run_selected?, is_nil(assigns.selected_run_id))
+      assigns |> assign(:no_step_selected?, is_nil(assigns.selected_step_id))
 
     ~H"""
     <LayoutComponents.page_content>
@@ -61,7 +61,7 @@ defmodule LightningWeb.AttemptLive.Show do
                   <:value>
                     <.link
                       navigate={
-                        ~p"/projects/#{@project}/runs?#{%{filters: %{workorder_id: attempt.work_order_id}}}"
+                        ~p"/projects/#{@project}/history?#{%{filters: %{workorder_id: attempt.work_order_id}}}"
                       }
                       class="hover:underline hover:text-primary-900 whitespace-nowrap text-ellipsis"
                     >
@@ -108,18 +108,18 @@ defmodule LightningWeb.AttemptLive.Show do
               </.detail_list>
 
               <.step_list
-                :let={run}
+                :let={step}
                 id={"step-list-#{attempt.id}"}
-                runs={@runs}
+                steps={@steps}
                 class="flex-1"
               >
-                <.link patch={"?r=#{run.id}"} id={"select-run-#{run.id}"}>
+                <.link patch={"?step=#{step.id}"} id={"select-step-#{step.id}"}>
                   <.step_item
-                    run={run}
+                    step={step}
                     is_clone={
-                      DateTime.compare(run.inserted_at, attempt.inserted_at) == :lt
+                      DateTime.compare(step.inserted_at, attempt.inserted_at) == :lt
                     }
-                    selected={run.id == @selected_run_id}
+                    selected={step.id == @selected_step_id}
                     show_inspector_link={true}
                     attempt_id={attempt.id}
                     project_id={@project}
@@ -139,7 +139,7 @@ defmodule LightningWeb.AttemptLive.Show do
                 <Common.tab_item
                   orientation="horizontal"
                   hash="input"
-                  disabled={@no_run_selected?}
+                  disabled={@no_step_selected?}
                   disabled_msg="A valid step must be selected to view its input"
                 >
                   <.icon
@@ -151,7 +151,7 @@ defmodule LightningWeb.AttemptLive.Show do
                 <Common.tab_item
                   orientation="horizontal"
                   hash="output"
-                  disabled={@no_run_selected?}
+                  disabled={@no_step_selected?}
                   disabled_msg="A valid step (with a readable output) must be selected to view its output"
                 >
                   <.icon
@@ -167,13 +167,13 @@ defmodule LightningWeb.AttemptLive.Show do
               <Common.panel_content for_hash="log">
                 <Viewers.log_viewer
                   id={"attempt-log-#{attempt.id}"}
-                  highlight_id={@selected_run_id}
+                  highlight_id={@selected_step_id}
                   stream={@streams.log_lines}
                 />
               </Common.panel_content>
               <Common.panel_content for_hash="input">
                 <Viewers.dataclip_viewer
-                  id={"run-input-#{@selected_run_id}"}
+                  id={"step-input-#{@selected_step_id}"}
                   type={
                     case @input_dataclip do
                       %AsyncResult{ok?: true, result: %{type: type}} -> type
@@ -185,7 +185,7 @@ defmodule LightningWeb.AttemptLive.Show do
               </Common.panel_content>
               <Common.panel_content for_hash="output">
                 <Viewers.dataclip_viewer
-                  id={"run-output-#{@selected_run_id}"}
+                  id={"step-output-#{@selected_step_id}"}
                   type={
                     case @output_dataclip do
                       %AsyncResult{ok?: true, result: %{type: type}} -> type
@@ -211,8 +211,8 @@ defmodule LightningWeb.AttemptLive.Show do
        active_menu_item: :runs,
        page_title: "Run",
        id: id,
-       selected_run_id: nil,
-       runs: []
+       selected_step_id: nil,
+       steps: []
      )
      |> stream(:log_lines, [])
      |> stream(:input_dataclip, [])
@@ -224,21 +224,23 @@ defmodule LightningWeb.AttemptLive.Show do
      |> get_attempt_async(id)}
   end
 
-  def handle_runs_change(socket) do
-    %{selected_run_id: selected_run_id, runs: runs} = socket.assigns
+  def handle_steps_change(socket) do
+    %{selected_step_id: selected_step_id, steps: steps} = socket.assigns
 
-    selected_run = runs |> Enum.find(&(&1.id == selected_run_id))
+    selected_step =
+      steps
+      |> Enum.find(&(&1.id == selected_step_id))
 
     socket
-    |> assign(selected_run: selected_run)
+    |> assign(selected_step: selected_step)
     |> maybe_load_input_dataclip()
     |> maybe_load_output_dataclip()
   end
 
   @impl true
   def handle_params(params, _, socket) do
-    selected_run_id = Map.get(params, "r")
+    selected_step_id = Map.get(params, "step")
 
-    {:noreply, socket |> apply_selected_run_id(selected_run_id)}
+    {:noreply, socket |> apply_selected_step_id(selected_step_id)}
   end
 end

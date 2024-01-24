@@ -329,18 +329,18 @@ defmodule Lightning.JobsTest do
           starting_trigger: trigger,
           state: :success,
           dataclip: dataclip,
-          runs: [
-            build(:run,
+          steps: [
+            build(:step,
               exit_reason: "success",
               job: job,
               input_dataclip: dataclip,
               output_dataclip:
-                build(:dataclip, type: :run_result, body: %{"changed" => true})
+                build(:dataclip, type: :step_result, body: %{"changed" => true})
             )
           ]
         )
 
-      [old_run] = attempt.runs
+      [old_step] = attempt.steps
 
       _result = Scheduler.enqueue_cronjobs()
 
@@ -351,12 +351,12 @@ defmodule Lightning.JobsTest do
         |> Repo.one()
 
       assert attempt.dataclip.type == :http_request
-      assert old_run.input_dataclip.type == :http_request
-      assert old_run.input_dataclip.body == %{}
+      assert old_step.input_dataclip.type == :http_request
+      assert old_step.input_dataclip.body == %{}
 
       refute new_attempt.id == attempt.id
-      assert new_attempt.dataclip.type == :run_result
-      assert new_attempt.dataclip.body == old_run.output_dataclip.body
+      assert new_attempt.dataclip.type == :step_result
+      assert new_attempt.dataclip.body == old_step.output_dataclip.body
     end
   end
 end

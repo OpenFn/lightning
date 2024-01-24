@@ -10,14 +10,47 @@ and this project adheres to
 
 ### Added
 
+- Store webhook request headers in Dataclips for use in jobs.
+  [#1638](https://github.com/OpenFn/Lightning/issues/1638)
+
+### Changed
+
+### Fixed
+
+- Fix Run via Docker  
+  [#1653](https://github.com/OpenFn/Lightning/issues/1653)
+- Fix remaining warnings, enable "warnings as errors"
+  [#1642](https://github.com/OpenFn/Lightning/issues/1642)
+
+## [v2.0.0-rc5] - 2024-01-22
+
+### Added
+
+### Changed
+
+- Made two significant backend changes that don't impact UI/UX but **require
+  migrations** and should make Lightning developer lives easier by updating
+  parts of the backend to match terms now used in the frontend:
+  - Renamed the `Runs` model and table to `Steps`
+    [#1571](https://github.com/OpenFn/Lightning/issues/1571)
+  - Renamed the `AttemptRuns` model and table to `AttemptSteps`
+    [#1571](https://github.com/OpenFn/Lightning/issues/1571)
+
+### Fixed
+
+## [v2.0.0-rc4] - 2024-01-19
+
+### Added
+
 - Scrub output dataclips in the UI to avoid unintentional secret exposure
   [#1606](https://github.com/OpenFn/Lightning/issues/1606)
 
 ### Changed
 
+- Bump to `@openfn/cli@0.4.14`
 - Do not persist the active tab setting on the job editor
   [#1504](https://github.com/OpenFn/Lightning/issues/1504)
-- Make condition label non mandatory 
+- Make condition label optional
   [#1648](https://github.com/OpenFn/Lightning/issues/1648)
 
 ### Fixed
@@ -26,12 +59,10 @@ and this project adheres to
   [#1600](https://github.com/OpenFn/Lightning/issues/1600)
 - Fixed validation on Javascript edge conditions
   [#1602](https://github.com/OpenFn/Lightning/issues/1602)
-- Removed unused runlive code
+- Removed unused code from `run_live` directory
   [#1625](https://github.com/OpenFn/Lightning/issues/1625)
 - Edge condition expressions not correctly being handled during provisioning
   [#openfn/kit#560](https://github.com/OpenFn/kit/pull/560)
-- Fix Run via Docker  
-  [#1653](https://github.com/OpenFn/Lightning/issues/1653)
 
 ## [v2.0.0-rc3] 2024-01-12
 

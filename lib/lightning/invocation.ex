@@ -8,7 +8,7 @@ defmodule Lightning.Invocation do
 
   alias Lightning.Invocation.Dataclip
   alias Lightning.Invocation.Query
-  alias Lightning.Invocation.Run
+  alias Lightning.Invocation.Step
   alias Lightning.Projects.Project
   alias Lightning.Repo
   alias Lightning.WorkOrder
@@ -47,9 +47,9 @@ defmodule Lightning.Invocation do
   end
 
   def list_dataclips_for_job(%Lightning.Workflows.Job{id: job_id}) do
-    from(r in Run,
-      join: d in assoc(r, :input_dataclip),
-      where: r.job_id == ^job_id,
+    from(s in Step,
+      join: d in assoc(s, :input_dataclip),
+      where: s.job_id == ^job_id,
       select: %Dataclip{
         id: d.id,
         body: d.body,
@@ -88,25 +88,25 @@ defmodule Lightning.Invocation do
   def get_dataclip_for_attempt_and_job(attempt_id, job_id) do
     query =
       from d in Query.dataclip_with_body(),
-        join: r in Lightning.Invocation.Run,
-        on: r.input_dataclip_id == d.id and r.job_id == ^job_id,
-        join: a in assoc(r, :attempts),
+        join: s in Lightning.Invocation.Step,
+        on: s.input_dataclip_id == d.id and s.job_id == ^job_id,
+        join: a in assoc(s, :attempts),
         on: a.id == ^attempt_id
 
     Repo.one(query)
   end
 
-  @spec get_run_for_attempt_and_job(
+  @spec get_step_for_attempt_and_job(
           attempt_id :: Ecto.UUID.t(),
           job_id :: Ecto.UUID.t()
         ) ::
-          Lightning.Invocation.Run.t() | nil
-  def get_run_for_attempt_and_job(attempt_id, job_id) do
+          Lightning.Invocation.Step.t() | nil
+  def get_step_for_attempt_and_job(attempt_id, job_id) do
     query =
-      from r in Lightning.Invocation.Run,
-        join: a in assoc(r, :attempts),
+      from s in Lightning.Invocation.Step,
+        join: a in assoc(s, :attempts),
         on: a.id == ^attempt_id,
-        where: r.job_id == ^job_id
+        where: s.job_id == ^job_id
 
     Repo.one(query)
   end
@@ -132,7 +132,7 @@ defmodule Lightning.Invocation do
   Gets a single dataclip given one of:
 
   - a Dataclip uuid
-  - a Run model
+  - a Step model
 
   Returns `nil` if the Dataclip does not exist.
 
@@ -144,30 +144,30 @@ defmodule Lightning.Invocation do
       iex> get_dataclip("27b73932-16c7-4a72-86a3-85d805ccff98")
       nil
 
-      iex> get_dataclip(%Run{id: "a uuid"})
+      iex> get_dataclip(%Step{id: "a uuid"})
       %Dataclip{}
 
   """
-  @spec get_dataclip(run_or_uuid :: Run.t() | Ecto.UUID.t()) ::
+  @spec get_dataclip(step_or_uuid :: Step.t() | Ecto.UUID.t()) ::
           Dataclip.t() | nil
-  def get_dataclip(%Run{} = run) do
-    get_dataclip_query(run) |> Repo.one()
+  def get_dataclip(%Step{} = step) do
+    get_dataclip_query(step) |> Repo.one()
   end
 
   def get_dataclip(id), do: Repo.get(Dataclip, id)
 
   @doc """
-  Query for retrieving the dataclip that was the result of a successful run.
+  Query for retrieving the dataclip that was the result of a successful step.
   """
-  def get_output_dataclip_query(%Run{} = run) do
-    Ecto.assoc(run, :output_dataclip)
+  def get_output_dataclip_query(%Step{} = step) do
+    Ecto.assoc(step, :output_dataclip)
   end
 
   @doc """
-  Query for retrieving the dataclip that a runs starting dataclip.
+  Query for retrieving the dataclip that was step's starting dataclip.
   """
-  def get_dataclip_query(%Run{} = run) do
-    Ecto.assoc(run, :input_dataclip)
+  def get_dataclip_query(%Step{} = step) do
+    Ecto.assoc(step, :input_dataclip)
   end
 
   @doc """
@@ -242,89 +242,89 @@ defmodule Lightning.Invocation do
   end
 
   @doc """
-  Returns the list of runs.
+  Returns the list of steps.
 
   ## Examples
 
-      iex> list_runs()
-      [%Run{}, ...]
+      iex> list_steps()
+      [%Step{}, ...]
 
   """
-  def list_runs do
-    Repo.all(Run)
+  def list_steps do
+    Repo.all(Step)
   end
 
-  @spec list_runs_for_project_query(Lightning.Projects.Project.t()) ::
+  @spec list_steps_for_project_query(Lightning.Projects.Project.t()) ::
           Ecto.Query.t()
-  def list_runs_for_project_query(%Project{id: project_id}) do
-    from(r in Run,
-      join: j in assoc(r, :job),
+  def list_steps_for_project_query(%Project{id: project_id}) do
+    from(s in Step,
+      join: j in assoc(s, :job),
       join: w in assoc(j, :workflow),
       where: w.project_id == ^project_id,
-      order_by: [desc: r.inserted_at, desc: r.started_at],
+      order_by: [desc: s.inserted_at, desc: s.started_at],
       preload: [job: j]
     )
   end
 
-  @spec list_runs_for_project(Lightning.Projects.Project.t(), keyword | map) ::
+  @spec list_steps_for_project(Lightning.Projects.Project.t(), keyword | map) ::
           Scrivener.Page.t()
-  def list_runs_for_project(%Project{} = project, params \\ %{}) do
-    list_runs_for_project_query(project)
+  def list_steps_for_project(%Project{} = project, params \\ %{}) do
+    list_steps_for_project_query(project)
     |> Repo.paginate(params)
   end
 
   @doc """
-  Gets a single run.
+  Gets a single step.
 
-  Raises `Ecto.NoResultsError` if the Run does not exist.
+  Raises `Ecto.NoResultsError` if the Step does not exist.
 
   ## Examples
 
-      iex> get_run!(123)
-      %Run{}
+      iex> get_step!(123)
+      %Step{}
 
-      iex> get_run!(456)
+      iex> get_step!(456)
       ** (Ecto.NoResultsError)
 
   """
-  @spec get_run!(Ecto.UUID.t()) :: Run.t()
-  def get_run!(id), do: Repo.get!(Run, id)
+  @spec get_step!(Ecto.UUID.t()) :: Step.t()
+  def get_step!(id), do: Repo.get!(Step, id)
 
   @doc """
-  Fetches a run and preloads the job via the run's event.
+  Fetches a step and preloads the job via the step's event.
   """
-  def get_run_with_job!(id),
-    do: from(r in Run, where: r.id == ^id, preload: :job) |> Repo.one!()
+  def get_step_with_job!(id),
+    do: from(s in Step, where: s.id == ^id, preload: :job) |> Repo.one!()
 
   @doc """
-  Creates a run.
+  Creates a step.
 
   ## Examples
 
-      iex> create_run(%{field: value})
-      {:ok, %Run{}}
+      iex> create_step(%{field: value})
+      {:ok, %Step{}}
 
-      iex> create_run(%{field: bad_value})
+      iex> create_step(%{field: bad_value})
       {:error, %Ecto.Changeset{}}
 
   """
-  def create_run(attrs \\ %{}) do
-    %Run{}
-    |> Run.changeset(attrs)
+  def create_step(attrs \\ %{}) do
+    %Step{}
+    |> Step.changeset(attrs)
     |> Repo.insert()
   end
 
   @doc """
-  Returns an `%Ecto.Changeset{}` for tracking run changes.
+  Returns an `%Ecto.Changeset{}` for tracking step changes.
 
   ## Examples
 
-      iex> change_run(run)
-      %Ecto.Changeset{data: %Run{}}
+      iex> change_step(step)
+      %Ecto.Changeset{data: %Step{}}
 
   """
-  def change_run(%Run{} = run, attrs \\ %{}) do
-    Run.changeset(run, attrs)
+  def change_step(%Step{} = step, attrs \\ %{}) do
+    Step.changeset(step, attrs)
   end
 
   @doc """
@@ -405,7 +405,7 @@ defmodule Lightning.Invocation do
       as: :workflow,
       where: workflow.project_id == ^project_id,
       select: workorder,
-      preload: [workflow: workflow, attempts: [runs: :job]],
+      preload: [workflow: workflow, attempts: [steps: :job]],
       order_by: [desc_nulls_first: workorder.last_activity],
       distinct: true
     )
@@ -480,10 +480,10 @@ defmodule Lightning.Invocation do
 
       :id, dynamic ->
         dynamic(
-          [workorder: wo, attempts: att, runs: run],
+          [workorder: wo, attempts: att, steps: step],
           ^dynamic or like(type(wo.id, :string), ^"%#{search_term}%") or
             like(type(att.id, :string), ^"%#{search_term}%") or
-            like(type(run.id, :string), ^"%#{search_term}%")
+            like(type(step.id, :string), ^"%#{search_term}%")
         )
 
       :log, dynamic ->
@@ -498,8 +498,8 @@ defmodule Lightning.Invocation do
   defp build_search_fields_query(base_query, search_fields) do
     Enum.reduce(search_fields, base_query, fn
       :body, query ->
-        from [runs: run] in safe_join_runs(query),
-          left_join: dataclip in assoc(run, :input_dataclip),
+        from [steps: step] in safe_join_steps(query),
+          left_join: dataclip in assoc(step, :input_dataclip),
           as: :input_dataclip
 
       :log, query ->
@@ -508,7 +508,7 @@ defmodule Lightning.Invocation do
           as: :log_lines
 
       :id, query ->
-        safe_join_runs(query)
+        safe_join_steps(query)
     end)
   end
 
@@ -522,13 +522,13 @@ defmodule Lightning.Invocation do
     end
   end
 
-  defp safe_join_runs(query) do
-    if has_named_binding?(query, :runs) do
+  defp safe_join_steps(query) do
+    if has_named_binding?(query, :steps) do
       query
     else
       from [attempts: attempt] in safe_join_attempts(query),
-        left_join: run in assoc(attempt, :runs),
-        as: :runs
+        left_join: step in assoc(attempt, :steps),
+        as: :steps
     end
   end
 
@@ -537,13 +537,13 @@ defmodule Lightning.Invocation do
   end
 
   def with_attempts(query) do
-    runs_query =
-      from(r in Lightning.Invocation.Run,
-        as: :runs,
-        join: j in assoc(r, :job),
-        join: d in assoc(r, :input_dataclip),
+    steps_query =
+      from(s in Lightning.Invocation.Step,
+        as: :steps,
+        join: j in assoc(s, :job),
+        join: d in assoc(s, :input_dataclip),
         as: :input,
-        order_by: [asc: r.finished_at],
+        order_by: [asc: s.finished_at],
         preload: [
           job:
             ^from(job in Lightning.Workflows.Job,
@@ -555,7 +555,7 @@ defmodule Lightning.Invocation do
     attempts_query =
       from(a in Lightning.Attempt,
         order_by: [desc: a.inserted_at],
-        preload: [runs: ^runs_query]
+        preload: [steps: ^steps_query]
       )
 
     # we can use a ^custom_query to control (order_by ...) the way preloading is done
@@ -571,23 +571,23 @@ defmodule Lightning.Invocation do
   end
 
   @doc """
-  Return all logs for a run as a list
+  Return all logs for a step as a list
   """
-  @spec logs_for_run(Run.t()) :: list()
-  def logs_for_run(%Run{} = run) do
-    Ecto.assoc(run, :log_lines)
+  @spec logs_for_step(Step.t()) :: list()
+  def logs_for_step(%Step{} = step) do
+    Ecto.assoc(step, :log_lines)
     |> order_by([l], asc: l.timestamp)
     |> Repo.all()
   end
 
-  def assemble_logs_for_run(nil), do: nil
+  def assemble_logs_for_step(nil), do: nil
 
   @doc """
-  Return all logs for a run as a string of text, separated by new line \n breaks
+  Return all logs for a step as a string of text, separated by new line \n breaks
   """
-  @spec assemble_logs_for_run(Run.t()) :: binary()
-  def assemble_logs_for_run(%Run{} = run),
+  @spec assemble_logs_for_step(Step.t()) :: binary()
+  def assemble_logs_for_step(%Step{} = step),
     do:
-      logs_for_run(run)
+      logs_for_step(step)
       |> Enum.map_join("\n", fn log -> log.message end)
 end

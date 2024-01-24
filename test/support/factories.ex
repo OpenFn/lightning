@@ -67,8 +67,17 @@ defmodule Lightning.Factories do
     }
   end
 
-  def run_factory do
-    %Lightning.Invocation.Run{
+  def http_request_dataclip_factory do
+    %Lightning.Invocation.Dataclip{
+      project: build(:project),
+      body: %{"foo" => "bar"},
+      request: %{"headers" => %{"content-type" => "application/json"}},
+      type: :http_request
+    }
+  end
+
+  def step_factory do
+    %Lightning.Invocation.Step{
       id: fn -> Ecto.UUID.generate() end,
       job: build(:job),
       input_dataclip: build(:dataclip)
@@ -89,8 +98,8 @@ defmodule Lightning.Factories do
     }
   end
 
-  def attempt_run_factory do
-    %Lightning.AttemptRun{
+  def attempt_step_factory do
+    %Lightning.AttemptStep{
       id: fn -> Ecto.UUID.generate() end
     }
   end

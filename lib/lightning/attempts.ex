@@ -87,13 +87,41 @@ defmodule Lightning.Attempts do
   end
 
   @doc """
-  Returns a tuple with {type, string} so that initial state can be created for
-  the worker. See LightingWeb.AttemptChannel.handle_in("fetch:dataclip", _, _)
+  Returns only the dataclip request as a string
+  """
+  def get_dataclip_request(%Attempt{} = attempt) do
+    from(d in Ecto.assoc(attempt, :dataclip),
+      select: type(d.request, :string)
+    )
+    |> Repo.one()
+  end
+
+  @doc """
+  Returns an Attempts dataclip formatted for use as state.
+
+  Only `http_request` dataclips are changed, their `body` is nested inside a
+  `"data"` key and `request` data is added as a `"request"` key.
+
+  See LightingWeb.AttemptChannel.handle_in("fetch:dataclip", _, _)
   for more details.
   """
-  def get_dataclip_for_worker(%Attempt{} = attempt) do
+  @spec get_input(Attempt.t()) :: String.t() | nil
+  def get_input(%Attempt{} = attempt) do
     from(d in Ecto.assoc(attempt, :dataclip),
-      select: {d.type, type(d.body, :string)}
+      select:
+        type(
+          fragment(
+            """
+            CASE WHEN type = 'http_request'
+            THEN jsonb_build_object('data', ?, 'request', ?)
+            ELSE ? END
+            """,
+            d.body,
+            d.request,
+            d.body
+          ),
+          :string
+        )
     )
     |> Repo.one()
   end
@@ -176,16 +204,16 @@ defmodule Lightning.Attempts do
 
   def append_attempt_log(attempt, params, scrubber \\ nil) do
     LogLine.new(attempt, params, scrubber)
-    |> Ecto.Changeset.validate_change(:run_id, fn _, run_id ->
-      if is_nil(run_id) do
+    |> Ecto.Changeset.validate_change(:step_id, fn _, step_id ->
+      if is_nil(step_id) do
         []
       else
-        where(Lightning.AttemptRun, run_id: ^run_id, attempt_id: ^attempt.id)
+        where(Lightning.AttemptStep, step_id: ^step_id, attempt_id: ^attempt.id)
         |> Repo.exists?()
         |> if do
           []
         else
-          [{:run_id, "must be associated with the attempt"}]
+          [{:step_id, "must be associated with the attempt"}]
         end
       end
     end)
@@ -201,20 +229,20 @@ defmodule Lightning.Attempts do
   end
 
   @doc """
-  Creates a Run for a given attempt and job.
+  Creates a Step for a given attempt and job.
 
-  The Run is created with and marked as started at the current time.
+  The Step is created and marked as started at the current time.
   """
-  @spec start_run(map()) ::
-          {:ok, Lightning.Invocation.Run.t()} | {:error, Ecto.Changeset.t()}
-  def start_run(params) do
-    Handlers.StartRun.call(params)
+  @spec start_step(map()) ::
+          {:ok, Lightning.Invocation.Step.t()} | {:error, Ecto.Changeset.t()}
+  def start_step(params) do
+    Handlers.StartStep.call(params)
   end
 
-  @spec complete_run(map()) ::
-          {:ok, Lightning.Invocation.Run.t()} | {:error, Ecto.Changeset.t()}
-  def complete_run(params) do
-    Handlers.CompleteRun.call(params)
+  @spec complete_step(map()) ::
+          {:ok, Lightning.Invocation.Step.t()} | {:error, Ecto.Changeset.t()}
+  def complete_step(params) do
+    Handlers.CompleteStep.call(params)
   end
 
   @spec mark_attempt_lost(Lightning.Attempt.t()) ::
@@ -234,7 +262,7 @@ defmodule Lightning.Attempts do
     Repo.transaction(fn ->
       complete_attempt(attempt, %{state: :lost, error_type: error_type})
 
-      Ecto.assoc(attempt, :runs)
+      Ecto.assoc(attempt, :steps)
       |> where([r], is_nil(r.exit_reason))
       |> Repo.update_all(
         set: [exit_reason: "lost", finished_at: DateTime.utc_now()]

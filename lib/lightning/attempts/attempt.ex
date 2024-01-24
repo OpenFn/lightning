@@ -10,9 +10,9 @@ defmodule Lightning.Attempt do
   import Lightning.Validators
 
   alias Lightning.Accounts.User
-  alias Lightning.AttemptRun
+  alias Lightning.AttemptStep
   alias Lightning.Invocation.LogLine
-  alias Lightning.Invocation.Run
+  alias Lightning.Invocation.Step
   alias Lightning.Workflows.Job
   alias Lightning.Workflows.Trigger
   alias Lightning.WorkOrder
@@ -56,8 +56,8 @@ defmodule Lightning.Attempt do
 
     has_many :log_lines, LogLine
 
-    many_to_many :runs, Run,
-      join_through: AttemptRun,
+    many_to_many :steps, Step,
+      join_through: AttemptStep,
       preload_order: [asc: :started_at]
 
     field :state, Ecto.Enum,
@@ -115,7 +115,7 @@ defmodule Lightning.Attempt do
   def changeset(attempt, attrs) do
     attempt
     |> cast(attrs, [:work_order_id, :priority])
-    |> cast_assoc(:runs, required: false)
+    |> cast_assoc(:steps, required: false)
     |> validate_required([:work_order_id])
     |> assoc_constraint(:work_order)
     |> validate()

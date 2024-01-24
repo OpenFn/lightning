@@ -11,6 +11,41 @@ defmodule LightningWeb.WebhooksControllerTest do
   Record.defrecordp(:span, @fields)
 
   describe "a POST request to '/i'" do
+    test "returns 413 with a body exceeding the limit" do
+      %{triggers: [trigger]} =
+        insert(:simple_workflow) |> Lightning.Repo.preload(:triggers)
+
+      Application.put_env(:lightning, :max_dataclip_size, 1_000_000)
+
+      smaller_body =
+        %{"data" => %{a: String.duplicate("a", 500_000)}}
+
+      assert {:ok, %Tesla.Env{status: 200}} =
+               [
+                 {Tesla.Middleware.BaseUrl, "http://localhost:4002"},
+                 Tesla.Middleware.JSON
+               ]
+               |> Tesla.client()
+               |> Tesla.post(
+                 "/i/#{trigger.id}",
+                 smaller_body
+               )
+
+      exceeding_body =
+        %{"data" => %{a: String.duplicate("a", 2_000_000)}}
+
+      assert {:ok, %Tesla.Env{status: 413, body: "Request Entity Too Large"}} =
+               [
+                 {Tesla.Middleware.BaseUrl, "http://localhost:4002"},
+                 Tesla.Middleware.JSON
+               ]
+               |> Tesla.client()
+               |> Tesla.post(
+                 "/i/#{trigger.id}",
+                 exceeding_body
+               )
+    end
+
     test "with a valid trigger id instantiates a workorder", %{conn: conn} do
       %{triggers: [trigger]} =
         insert(:simple_workflow) |> Lightning.Repo.preload(:triggers)
@@ -28,6 +63,9 @@ defmodule LightningWeb.WebhooksControllerTest do
       assert work_order.trigger.id == trigger.id
 
       assert Attempts.get_dataclip_body(attempt) == ~s({"foo": "bar"})
+
+      assert Attempts.get_dataclip_request(attempt) ==
+               ~s({"headers": {"content-type": "multipart/mixed; boundary=plug_conn_test"}})
 
       %{attempts: [attempt]} = work_order
       assert attempt.starting_trigger_id == trigger.id

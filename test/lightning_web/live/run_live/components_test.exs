@@ -8,58 +8,6 @@ defmodule LightningWeb.RunLive.ComponentsTest do
 
   import Lightning.Factories
 
-  describe "RunViewer" do
-    test "output messages" do
-      assert render_component(
-               &LightningWeb.RunLive.Components.run_viewer/1,
-               run:
-                 insert(:run, exit_reason: "fail", output_dataclip_id: nil)
-                 |> Lightning.Repo.preload(:log_lines)
-                 |> Lightning.Repo.preload(:attempts),
-               project_id: "4adf2644-ed4e-4f97-a24c-ab35b3cb1efa"
-             ) =~
-               "Certain errors are severe enough that the worker"
-
-      assert render_component(
-               &LightningWeb.RunLive.Components.run_viewer/1,
-               run:
-                 insert(:run, output_dataclip_id: nil)
-                 |> Lightning.Repo.preload(:log_lines)
-                 |> Lightning.Repo.preload(:attempts),
-               project_id: "4adf2644-ed4e-4f97-a24c-ab35b3cb1efa"
-             ) =~
-               "This run has not yet finished."
-
-      assert render_component(&LightningWeb.RunLive.Components.run_viewer/1,
-               run:
-                 insert(:run, exit_reason: "success", output_dataclip_id: nil)
-                 |> Lightning.Repo.preload(:log_lines)
-                 |> Lightning.Repo.preload(:attempts),
-               project_id: "4adf2644-ed4e-4f97-a24c-ab35b3cb1efa"
-             ) =~
-               "There is no output for this run"
-
-      run =
-        insert(:run,
-          exit_reason: "success",
-          output_dataclip:
-            build(:dataclip,
-              type: :run_result,
-              body: %{name: "dataclip_body"}
-            )
-        )
-
-      assert render_component(&LightningWeb.RunLive.Components.run_viewer/1,
-               run:
-                 run
-                 |> Lightning.Repo.preload(:log_lines)
-                 |> Lightning.Repo.preload(:attempts),
-               project_id: "4adf2644-ed4e-4f97-a24c-ab35b3cb1efa"
-             ) =~
-               "dataclip_body"
-    end
-  end
-
   test "is_checked returns true if a specified filter is part of a filter changeset" do
     changeset =
       Index.filters_changeset(%{
@@ -96,7 +44,7 @@ defmodule LightningWeb.RunLive.ComponentsTest do
     assert Index.checked?(unchecking_changeset, :success) == false
   end
 
-  test "run_list_item component" do
+  test "step_list_item component" do
     %{triggers: [trigger], jobs: jobs} =
       workflow = insert(:complex_workflow)
 
@@ -115,19 +63,19 @@ defmodule LightningWeb.RunLive.ComponentsTest do
             state: :failed,
             dataclip: dataclip,
             starting_trigger: trigger,
-            runs: [
-              insert(:run,
+            steps: [
+              insert(:step,
                 job: job_1,
                 input_dataclip: dataclip,
                 output_dataclip: output_dataclip,
                 exit_reason: nil
               ),
-              insert(:run,
+              insert(:step,
                 job: job_2,
                 input_dataclip: output_dataclip,
                 exit_reason: "success"
               ),
-              insert(:run,
+              insert(:step,
                 job: job_3,
                 exit_reason: "fail",
                 finished_at: build(:timestamp)
@@ -137,13 +85,13 @@ defmodule LightningWeb.RunLive.ComponentsTest do
         ]
       )
 
-    [first_run, second_run, third_run] = attempt.runs
+    [first_step, second_step, third_step] = attempt.steps
 
     project_id = workflow.project_id
 
     html =
-      render_component(&Components.run_list_item/1,
-        run: first_run,
+      render_component(&Components.step_list_item/1,
+        step: first_step,
         attempt: attempt,
         project_id: project_id,
         can_rerun_job: true
@@ -156,11 +104,11 @@ defmodule LightningWeb.RunLive.ComponentsTest do
            )
            |> Enum.any?()
 
-    assert has_attempt_run_link?(html, workflow.project, attempt, first_run)
+    assert has_attempt_step_link?(html, workflow.project, attempt, first_step)
 
     html =
-      render_component(&Components.run_list_item/1,
-        run: second_run,
+      render_component(&Components.step_list_item/1,
+        step: second_step,
         attempt: attempt,
         project_id: project_id,
         can_rerun_job: true
@@ -173,11 +121,11 @@ defmodule LightningWeb.RunLive.ComponentsTest do
            )
            |> Enum.any?()
 
-    assert has_attempt_run_link?(html, workflow.project, attempt, second_run)
+    assert has_attempt_step_link?(html, workflow.project, attempt, second_step)
 
     html =
-      render_component(&Components.run_list_item/1,
-        run: third_run,
+      render_component(&Components.step_list_item/1,
+        step: third_step,
         attempt: attempt,
         project_id: project_id,
         can_rerun_job: true
@@ -190,33 +138,33 @@ defmodule LightningWeb.RunLive.ComponentsTest do
            )
            |> Enum.any?()
 
-    assert has_attempt_run_link?(html, workflow.project, attempt, third_run)
+    assert has_attempt_step_link?(html, workflow.project, attempt, third_step)
 
     # Rerun attempt
-    last_run = List.last(attempt.runs)
+    last_step = List.last(attempt.steps)
 
     attempt2 =
       insert(:attempt,
         state: :started,
         work_order_id: attempt.work_order_id,
         dataclip: dataclip,
-        starting_job: last_run.job,
-        runs: attempt.runs -- [last_run]
+        starting_job: last_step.job,
+        steps: attempt.steps -- [last_step]
       )
 
-    attempt2_last_run =
-      insert(:run,
+    attempt2_last_step =
+      insert(:step,
         attempts: [attempt2],
         job: job_3,
         exit_reason: nil,
         finished_at: nil
       )
 
-    first_run = hd(attempt2.runs)
+    first_step = hd(attempt2.steps)
 
     html =
-      render_component(&Components.run_list_item/1,
-        run: first_run,
+      render_component(&Components.step_list_item/1,
+        step: first_step,
         attempt: attempt2,
         project_id: project_id,
         can_rerun_job: true
@@ -224,14 +172,14 @@ defmodule LightningWeb.RunLive.ComponentsTest do
 
     assert html
            |> Floki.parse_fragment!()
-           |> Floki.find(~s{span[id="clone_#{attempt2.id}_#{first_run.id}"]})
+           |> Floki.find(~s{span[id="clone_#{attempt2.id}_#{first_step.id}"]})
            |> Enum.any?()
 
     assert html =~ "This step was originally executed in a previous run"
 
     html =
-      render_component(&Components.run_list_item/1,
-        run: attempt2_last_run,
+      render_component(&Components.step_list_item/1,
+        step: attempt2_last_step,
         attempt: attempt2,
         project_id: project_id,
         can_rerun_job: true
@@ -239,7 +187,7 @@ defmodule LightningWeb.RunLive.ComponentsTest do
 
     refute html
            |> Floki.parse_fragment!()
-           |> Floki.find(~s{span[id="clone_#{attempt2.id}_#{first_run.id}"]})
+           |> Floki.find(~s{span[id="clone_#{attempt2.id}_#{first_step.id}"]})
            |> Enum.any?()
 
     refute html =~ "This step was originally executed in a previous run"
@@ -262,18 +210,18 @@ defmodule LightningWeb.RunLive.ComponentsTest do
         dataclip: dataclip,
         starting_trigger: trigger,
         finished_at: build(:timestamp),
-        runs: [
-          build(:run, finished_at: DateTime.utc_now(), exit_reason: "success")
+        steps: [
+          build(:step, finished_at: DateTime.utc_now(), exit_reason: "success")
         ]
       )
 
-    run = List.first(attempt.runs)
+    step = List.first(attempt.steps)
 
-    project_id = run.job.workflow.project_id
+    project_id = step.job.workflow.project_id
 
     html =
-      render_component(&Components.run_list_item/1,
-        run: run,
+      render_component(&Components.step_list_item/1,
+        step: step,
         attempt: attempt,
         project_id: project_id,
         can_rerun_job: true
@@ -285,8 +233,8 @@ defmodule LightningWeb.RunLive.ComponentsTest do
            |> Enum.any?()
 
     html =
-      render_component(&Components.run_list_item/1,
-        run: run,
+      render_component(&Components.step_list_item/1,
+        step: step,
         attempt: attempt,
         project_id: project_id,
         can_rerun_job: false
@@ -330,163 +278,10 @@ defmodule LightningWeb.RunLive.ComponentsTest do
     |> String.replace(<<160::utf8>>, " ")
   end
 
-  describe "run_details component" do
-    test "with finished run" do
-      now = Timex.now()
-
-      started_at = now |> Timex.shift(seconds: -25)
-      finished_at = now |> Timex.shift(seconds: -1)
-
-      run =
-        insert(:run,
-          started_at: started_at,
-          finished_at: finished_at,
-          exit_reason: "success"
-        )
-
-      html =
-        render_component(&Components.run_details/1,
-          run: run |> Lightning.Repo.preload(:attempts),
-          project_id: "4adf2644-ed4e-4f97-a24c-ab35b3cb1efa"
-        )
-        |> Floki.parse_fragment!()
-
-      assert html
-             |> Floki.find("div#finished-at-#{run.id} > div:nth-child(2)")
-             |> Floki.text() =~
-               Calendar.strftime(finished_at, "%c")
-
-      assert html
-             |> Floki.find("div#ran-for-#{run.id} > div:nth-child(2)")
-             |> Floki.text() =~
-               "24000 ms"
-
-      div =
-        html
-        |> Floki.find("div#exit-reason-#{run.id} > div:nth-child(2)")
-        |> Floki.text()
-
-      assert div =~ "Success"
-
-      # We don't show error_type (with a " : ") on success.
-      refute div =~ " : "
-    end
-
-    test "with pending run" do
-      now = Timex.now()
-
-      started_at = now |> Timex.shift(seconds: -25)
-      run = insert(:run, started_at: started_at)
-
-      html =
-        render_component(&Components.run_details/1,
-          run: run |> Lightning.Repo.preload(:attempts),
-          project_id: "4adf2644-ed4e-4f97-a24c-ab35b3cb1efa"
-        )
-        |> Floki.parse_fragment!()
-
-      assert html
-             |> Floki.find("div#finished-at-#{run.id} > div:nth-child(2)")
-             |> Floki.text() =~ "n/a"
-
-      assert html
-             |> Floki.find("div#ran-for-#{run.id} > div:nth-child(2)")
-             |> Floki.text() =~ "n/a"
-
-      # TODO: add a timer that counts up from run.started_at
-      #  ~r/25\d\d\d ms/
-
-      assert html
-             |> Floki.find("div#exit-reason-#{run.id} > div:nth-child(2)")
-             |> Floki.text() =~
-               "Running"
-    end
-
-    test "with failed run also shows error type" do
-      now = Timex.now()
-
-      started_at = now |> Timex.shift(seconds: -25)
-
-      run =
-        insert(:run,
-          started_at: started_at,
-          finished_at: started_at,
-          exit_reason: "fail",
-          error_type: "JobError"
-        )
-
-      html =
-        render_component(&Components.run_details/1,
-          run: run |> Lightning.Repo.preload(:attempts),
-          project_id: "4adf2644-ed4e-4f97-a24c-ab35b3cb1efa"
-        )
-        |> Floki.parse_fragment!()
-
-      div =
-        html
-        |> Floki.find("div#exit-reason-#{run.id} > div:nth-child(2)")
-        |> Floki.text()
-
-      assert div =~ "Fail"
-      assert div =~ "JobError"
-    end
-
-    test "with lost run" do
-      now = Timex.now()
-
-      started_at = now |> Timex.shift(minutes: -25)
-      run = insert(:run, started_at: started_at, exit_reason: "lost")
-
-      html =
-        render_component(&Components.run_details/1,
-          run: run |> Lightning.Repo.preload(:attempts),
-          project_id: "4adf2644-ed4e-4f97-a24c-ab35b3cb1efa"
-        )
-        |> Floki.parse_fragment!()
-
-      assert html
-             |> Floki.find("div#finished-at-#{run.id} > div:nth-child(2)")
-             |> Floki.text() =~ "n/a"
-
-      assert html
-             |> Floki.find("div#ran-for-#{run.id} > div:nth-child(2)")
-             |> Floki.text() =~ "n/a"
-
-      assert html
-             |> Floki.find("div#exit-reason-#{run.id} > div:nth-child(2)")
-             |> Floki.text() =~
-               "Lost"
-    end
-
-    test "with unstarted run" do
-      run = insert(:run)
-
-      html =
-        render_component(&Components.run_details/1,
-          run: run |> Lightning.Repo.preload(:attempts),
-          project_id: "4adf2644-ed4e-4f97-a24c-ab35b3cb1efa"
-        )
-        |> Floki.parse_fragment!()
-
-      assert html
-             |> Floki.find("div#finished-at-#{run.id} > div:nth-child(2)")
-             |> Floki.text() =~ "Not started."
-
-      assert html
-             |> Floki.find("div#ran-for-#{run.id} > div:nth-child(2)")
-             |> Floki.text() =~ "Not started."
-
-      assert html
-             |> Floki.find("div#exit-reason-#{run.id} > div:nth-child(2)")
-             |> Floki.text() =~
-               "Running"
-    end
-  end
-
-  defp has_attempt_run_link?(html, project, attempt, run) do
+  defp has_attempt_step_link?(html, project, attempt, step) do
     html
     |> Floki.find(
-      ~s{a[href='#{~p"/projects/#{project}/attempts/#{attempt}?#{%{r: run.id}}"}']}
+      ~s{a[href='#{~p"/projects/#{project}/runs/#{attempt}?#{%{step: step.id}}"}']}
     )
     |> Enum.any?()
   end

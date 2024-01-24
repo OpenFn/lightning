@@ -122,7 +122,7 @@ defmodule LightningWeb.CredentialLiveTest do
            conn: conn,
            credential: credential
          } do
-      insert(:run, credential: credential)
+      insert(:step, credential: credential)
 
       {:ok, index_live, html} =
         live(conn, ~p"/credentials/#{credential.id}/delete")
@@ -153,7 +153,7 @@ defmodule LightningWeb.CredentialLiveTest do
       conn: conn,
       credential: credential
     } do
-      insert(:run, credential: credential)
+      insert(:step, credential: credential)
       {:ok, credential} = Credentials.schedule_credential_deletion(credential)
 
       {:ok, index_live, _html} =
@@ -208,7 +208,7 @@ defmodule LightningWeb.CredentialLiveTest do
       conn: conn,
       credential: credential
     } do
-      insert(:run, credential: credential)
+      insert(:step, credential: credential)
       {:ok, credential} = Credentials.schedule_credential_deletion(credential)
 
       {:ok, index_live, html} =

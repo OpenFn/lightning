@@ -18,6 +18,7 @@ defmodule LightningWeb.WebhooksController do
             workflow: trigger.workflow,
             dataclip: %{
               body: conn.body_params,
+              request: build_request(conn),
               type: :http_request,
               project_id: trigger.workflow.project_id
             }
@@ -32,5 +33,9 @@ defmodule LightningWeb.WebhooksController do
             "Unable to process request, trigger is disabled. Enable it on OpenFn to allow requests to this endpoint."
         })
     end
+  end
+
+  defp build_request(%Plug.Conn{} = conn) do
+    %{headers: conn.req_headers |> Enum.into(%{})}
   end
 end

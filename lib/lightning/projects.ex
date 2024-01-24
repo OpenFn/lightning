@@ -11,10 +11,10 @@ defmodule Lightning.Projects do
   alias Lightning.Accounts.User
   alias Lightning.Accounts.UserNotifier
   alias Lightning.Attempt
-  alias Lightning.AttemptRun
+  alias Lightning.AttemptStep
   alias Lightning.ExportUtils
   alias Lightning.Invocation.Dataclip
-  alias Lightning.Invocation.Run
+  alias Lightning.Invocation.Step
   alias Lightning.Projects.Project
   alias Lightning.Projects.ProjectCredential
   alias Lightning.Projects.ProjectUser
@@ -193,7 +193,7 @@ defmodule Lightning.Projects do
 
   @doc """
   Deletes a project and its related data, including workflows, work orders,
-  runs, jobs, attempts, triggers, project users, project credentials, and dataclips
+  steps, jobs, attempts, triggers, project users, project credentials, and dataclips
 
   ## Examples
 
@@ -215,11 +215,11 @@ defmodule Lightning.Projects do
     Repo.transaction(fn ->
       project_attempts_query(project) |> Repo.delete_all()
 
-      project_attempt_run_query(project) |> Repo.delete_all()
+      project_attempt_step_query(project) |> Repo.delete_all()
 
       project_workorders_query(project) |> Repo.delete_all()
 
-      project_runs_query(project) |> Repo.delete_all()
+      project_steps_query(project) |> Repo.delete_all()
 
       project_jobs_query(project) |> Repo.delete_all()
 
@@ -253,9 +253,9 @@ defmodule Lightning.Projects do
     )
   end
 
-  def project_attempt_run_query(project) do
-    from(ar in AttemptRun,
-      join: att in assoc(ar, :attempt),
+  def project_attempt_step_query(project) do
+    from(as in AttemptStep,
+      join: att in assoc(as, :attempt),
       join: wo in assoc(att, :work_order),
       join: w in assoc(wo, :workflow),
       where: w.project_id == ^project.id
@@ -276,9 +276,9 @@ defmodule Lightning.Projects do
     )
   end
 
-  def project_runs_query(project) do
-    from(r in Run,
-      join: j in assoc(r, :job),
+  def project_steps_query(project) do
+    from(s in Step,
+      join: j in assoc(s, :job),
       join: w in assoc(j, :workflow),
       where: w.project_id == ^project.id
     )
@@ -439,8 +439,9 @@ defmodule Lightning.Projects do
   @doc """
   Given a project, this function sets a scheduled deletion
   date based on the PURGE_DELETED_AFTER_DAYS environment variable. If no ENV is
-  set, this date defaults to NOW but the automatic project purge cronjob will never
-  run. (Note that subsequent logins will be blocked for projects pending deletion.)
+  set, this date defaults to NOW but the automatic project purge cronjob will
+  never run. (Note that subsequent logins will be blocked for projects pending
+  deletion.)
   """
   def schedule_project_deletion(project) do
     date =

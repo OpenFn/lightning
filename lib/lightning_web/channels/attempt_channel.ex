@@ -131,30 +131,31 @@ defmodule LightningWeb.AttemptChannel do
   of those HTTP requests to the worker to use as initial state.
   """
   def handle_in("fetch:dataclip", _, socket) do
-    {type, raw_body} = Attempts.get_dataclip_for_worker(socket.assigns.attempt)
-
-    body =
-      if type == :http_request,
-        do: "{\"data\": " <> raw_body <> "}",
-        else: raw_body
+    body = Attempts.get_input(socket.assigns.attempt)
 
     {:reply, {:ok, {:binary, body}}, socket}
   end
 
+  # TODO - Taylor to remove this once the migration is complete
   def handle_in("run:start", payload, socket) do
+    worker_upgrade_required("v1.0")
+    handle_in("step:start", rename_run_id(payload), socket)
+  end
+
+  def handle_in("step:start", payload, socket) do
     Map.get(payload, "job_id", :missing_job_id)
     |> case do
       job_id when is_binary(job_id) ->
         %{"attempt_id" => socket.assigns.attempt.id}
         |> Enum.into(payload)
-        |> Attempts.start_run()
+        |> Attempts.start_step()
         |> case do
           {:error, changeset} ->
             {:reply, {:error, LightningWeb.ChangesetJSON.error(changeset)},
              socket}
 
-          {:ok, run} ->
-            {:reply, {:ok, %{run_id: run.id}}, socket}
+          {:ok, step} ->
+            {:reply, {:ok, %{step_id: step.id}}, socket}
         end
 
       :missing_job_id ->
@@ -166,26 +167,32 @@ defmodule LightningWeb.AttemptChannel do
     end
   end
 
+  # TODO - Taylor to remove this once the migration is complete
   def handle_in("run:complete", payload, socket) do
+    worker_upgrade_required("v1.0")
+    handle_in("step:complete", rename_run_id(payload), socket)
+  end
+
+  def handle_in("step:complete", payload, socket) do
     %{
       "attempt_id" => socket.assigns.attempt.id,
       "project_id" => socket.assigns.project_id
     }
     |> Enum.into(payload)
-    |> Attempts.complete_run()
+    |> Attempts.complete_step()
     |> case do
       {:error, changeset} ->
         {:reply, {:error, LightningWeb.ChangesetJSON.error(changeset)}, socket}
 
-      {:ok, run} ->
-        {:reply, {:ok, %{run_id: run.id}}, socket}
+      {:ok, step} ->
+        {:reply, {:ok, %{step_id: step.id}}, socket}
     end
   end
 
   def handle_in("attempt:log", payload, socket) do
     %{attempt: attempt, scrubber: scrubber} = socket.assigns
 
-    Attempts.append_attempt_log(attempt, payload, scrubber)
+    Attempts.append_attempt_log(attempt, rename_run_id(payload), scrubber)
     |> case do
       {:error, changeset} ->
         {:reply, {:error, LightningWeb.ChangesetJSON.error(changeset)}, socket}
@@ -230,4 +237,17 @@ defmodule LightningWeb.AttemptChannel do
     :ok = Scrubber.add_samples(scrubber, samples, basic_auth)
     {:ok, scrubber}
   end
+
+  # TODO - Taylor to remove this once the migration is complete
+  defp worker_upgrade_required(v),
+    do:
+      Logger.warning("Please upgrade your connect ws-worker to #{v} or greater")
+
+  # TODO - Taylor to remove this once the migration is complete
+  defp rename_run_id(%{"run_id" => id} = map) do
+    Map.delete(map, "run_id")
+    |> Map.put("step_id", id)
+  end
+
+  defp rename_run_id(any), do: any
 end

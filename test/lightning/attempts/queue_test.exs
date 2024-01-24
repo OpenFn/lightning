@@ -5,19 +5,19 @@ defmodule Lightning.Attempts.QueueTest do
   import Lightning.Factories
 
   describe "dequeue" do
-    test "deletes the attempt and any associated attempt runs" do
+    test "deletes the attempt and any associated attempt steps" do
       attempt_1 = insert_attempt()
       attempt_2 = insert_attempt()
 
-      _attempt_run_1_1 = insert_attempt_run(attempt_1)
-      _attempt_run_1_2 = insert_attempt_run(attempt_1)
-      attempt_run_2 = insert_attempt_run(attempt_2)
+      _attempt_step_1_1 = insert_attempt_step(attempt_1)
+      _attempt_step_1_2 = insert_attempt_step(attempt_1)
+      attempt_step_2 = insert_attempt_step(attempt_2)
 
       Queue.dequeue(attempt_1)
 
       assert only_record_for_type?(attempt_2)
 
-      assert only_record_for_type?(attempt_run_2)
+      assert only_record_for_type?(attempt_step_2)
     end
 
     test "deletes associated LogLine records" do
@@ -41,8 +41,8 @@ defmodule Lightning.Attempts.QueueTest do
       )
     end
 
-    defp insert_attempt_run(attempt) do
-      insert(:attempt_run, attempt: attempt, run: build(:run))
+    defp insert_attempt_step(attempt) do
+      insert(:attempt_step, attempt: attempt, step: build(:step))
     end
   end
 end

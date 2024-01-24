@@ -49,20 +49,13 @@ defmodule LightningWeb.Endpoint do
     if: {LightningWeb.PromExPlugAuthorization, nil},
     do: {PromEx.Plug, prom_ex_module: Lightning.PromEx}
 
+  plug Replug,
+    plug: Plug.Parsers,
+    opts: {LightningWeb.PlugConfigs, :plug_parsers}
+
   plug Plug.Telemetry, event_prefix: [:phoenix, :endpoint]
 
   plug Plugs.WebhookAuth
-
-  plug Plug.Parsers,
-    parsers: [
-      :urlencoded,
-      :multipart,
-      # Increase to 10MB max request size only for JSON parser
-      {:json,
-       length: Application.get_env(:lightning, :max_dataclip_size, 10_000_000)}
-    ],
-    pass: ["*/*"],
-    json_decoder: Phoenix.json_library()
 
   plug Sentry.PlugContext
 

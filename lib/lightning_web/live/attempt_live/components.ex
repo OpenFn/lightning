@@ -95,16 +95,16 @@ defmodule LightningWeb.AttemptLive.Components do
     """
   end
 
-  attr :run, Lightning.Invocation.Run, required: true
+  attr :step, Lightning.Invocation.Step, required: true
   attr :class, :string, default: ""
 
-  def run_state_circle(%{run: run} = assigns) do
+  def step_state_circle(%{step: step} = assigns) do
     assigns =
       assigns
       |> update(:class, fn class ->
         [
           class,
-          case run.exit_reason do
+          case step.exit_reason do
             "success" -> ["bg-green-200 text-green-800"]
             "fail" -> ["bg-red-200 text-red-800"]
             "crash" -> ["bg-orange-200 text-orange-800"]
@@ -124,19 +124,19 @@ defmodule LightningWeb.AttemptLive.Components do
       "ring-8 ring-secondary-100",
       @class
     ]}>
-      <.run_state_icon run={@run} class="h-6 w-6" />
+      <.step_state_icon step={@step} class="h-6 w-6" />
     </span>
     """
   end
 
-  attr :run, Lightning.Invocation.Run, required: true
+  attr :step, Lightning.Invocation.Step, required: true
   attr :class, :string, default: "h-4 w-4"
 
   # credo:disable-for-next-line
-  def run_state_icon(%{run: run} = assigns) do
-    assigns = assign(assigns, title: run.exit_reason)
+  def step_state_icon(%{step: step} = assigns) do
+    assigns = assign(assigns, title: step.exit_reason)
 
-    case {run.exit_reason, run.error_type} do
+    case {step.exit_reason, step.error_type} do
       {"success", _} ->
         ~H[<.icon title={@title} name="hero-check-circle" class={@class} />]
 
@@ -167,30 +167,30 @@ defmodule LightningWeb.AttemptLive.Components do
   end
 
   @doc """
-  Renders a list of runs for the attempt
+  Renders a list of steps for the attempt
   """
-  attr :runs, :list, required: true
+  attr :steps, :list, required: true
   attr :rest, :global
   slot :inner_block, required: true
 
   def step_list(assigns) do
     ~H"""
     <ul {@rest} role="list" class="-mb-8">
-      <li :for={run <- @runs} data-run-id={run.id} class="group">
+      <li :for={step <- @steps} data-step-id={step.id} class="group">
         <div class="relative pb-8">
           <span
             class="absolute left-4 top-4 -ml-px h-full w-0.5 bg-gray-200 group-last:hidden"
             aria-hidden="true"
           >
           </span>
-          <%= render_slot(@inner_block, run) %>
+          <%= render_slot(@inner_block, step) %>
         </div>
       </li>
     </ul>
     """
   end
 
-  attr :run, Lightning.Invocation.Run, required: true
+  attr :step, Lightning.Invocation.Step, required: true
   attr :is_clone, :boolean, default: false
   attr :show_inspector_link, :boolean, default: false
   attr :attempt_id, :string
@@ -216,7 +216,7 @@ defmodule LightningWeb.AttemptLive.Components do
       {@rest}
     >
       <div class="flex items-center">
-        <.run_state_circle run={@run} />
+        <.step_state_circle step={@step} />
       </div>
       <div class={[
         "flex min-w-0 flex-1 space-x-1 pt-1.5 pr-1.5",
@@ -226,7 +226,7 @@ defmodule LightningWeb.AttemptLive.Components do
           <div class="flex">
             <span
               class="cursor-pointer"
-              id={"clone_" <> @run.id}
+              id={"clone_" <> @step.id}
               aria-label="This step was originally executed in a previous run.
                     It was skipped in this run; the original output has been
                     used as the starting point for downstream jobs."
@@ -241,11 +241,11 @@ defmodule LightningWeb.AttemptLive.Components do
           </div>
         <% end %>
         <div class="flex text-sm space-x-1 text-gray-900">
-          <%= @run.job.name %>
+          <%= @step.job.name %>
           <%= if @show_inspector_link do %>
             <.link navigate={
-                ~p"/projects/#{@project_id}/w/#{@run.job.workflow_id}"
-                  <> "?a=#{@attempt_id}&m=expand&s=#{@run.job_id}"
+                ~p"/projects/#{@project_id}/w/#{@step.job.workflow_id}"
+                  <> "?a=#{@attempt_id}&m=expand&s=#{@step.job_id}"
               }>
               <.icon
                 title="Inspect Step"
@@ -256,23 +256,23 @@ defmodule LightningWeb.AttemptLive.Components do
           <% end %>
         </div>
         <div class="flex-grow whitespace-nowrap text-right text-sm text-gray-500">
-          <.run_duration run={@run} />
+          <.step_duration step={@step} />
         </div>
       </div>
     </div>
     """
   end
 
-  defp run_duration(assigns) do
+  defp step_duration(assigns) do
     ~H"""
     <%= cond do %>
-      <% is_nil(@run.started_at) -> %>
+      <% is_nil(@step.started_at) -> %>
         Unknown
-      <% is_nil(@run.finished_at) -> %>
+      <% is_nil(@step.finished_at) -> %>
         Running...
       <% true -> %>
-        <%= DateTime.to_unix(@run.finished_at, :millisecond) -
-          DateTime.to_unix(@run.started_at, :millisecond) %> ms
+        <%= DateTime.to_unix(@step.finished_at, :millisecond) -
+          DateTime.to_unix(@step.started_at, :millisecond) %> ms
     <% end %>
     """
   end
