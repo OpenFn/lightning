@@ -126,6 +126,20 @@ defmodule Lightning.Attempts do
     |> Repo.one()
   end
 
+  @doc """
+  Clears the body of the dataclip associated with the given attempt.
+  """
+  @spec wipe_dataclip_body(Attempt.t()) :: :ok
+  def wipe_dataclip_body(%Attempt{} = attempt) do
+    query =
+      from(d in Ecto.assoc(attempt, :dataclip),
+        update: [set: [body: nil, wiped_at: ^DateTime.utc_now()]]
+      )
+
+    {1, _rows} = Repo.update_all(query, [])
+    :ok
+  end
+
   def get_credential(%Attempt{} = attempt, id) do
     from(c in Ecto.assoc(attempt, [:workflow, :jobs, :credential]),
       where: c.id == ^id

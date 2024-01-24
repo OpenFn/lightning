@@ -6,6 +6,7 @@ defmodule LightningWeb.AttemptChannel do
 
   alias Lightning.Attempts
   alias Lightning.Credentials
+  alias Lightning.Projects
   alias Lightning.Repo
   alias Lightning.Scrubber
   alias Lightning.Workers
@@ -33,7 +34,7 @@ defmodule LightningWeb.AttemptChannel do
          attempt: attempt,
          project_id: project_id,
          scrubber: nil,
-         include_run_results: true
+         retention_policy: Projects.project_retention_policy_for(attempt)
        })}
     else
       {:error, :not_found} ->
@@ -53,7 +54,8 @@ defmodule LightningWeb.AttemptChannel do
     {:reply,
      {:ok,
       AttemptJson.render(socket.assigns.attempt,
-        include_run_results: socket.assigns.include_run_results
+        include_run_results:
+          include_run_results?(socket.assigns.retention_policy)
       )}, socket}
   end
 
@@ -138,6 +140,10 @@ defmodule LightningWeb.AttemptChannel do
   def handle_in("fetch:dataclip", _, socket) do
     body = Attempts.get_input(socket.assigns.attempt)
 
+    if socket.assigns.retention_policy == :erase_all do
+      Attempts.wipe_dataclip_body(socket.assigns.attempt)
+    end
+
     {:reply, {:ok, {:binary, body}}, socket}
   end
 
@@ -153,6 +159,7 @@ defmodule LightningWeb.AttemptChannel do
       job_id when is_binary(job_id) ->
         %{"attempt_id" => socket.assigns.attempt.id}
         |> Enum.into(payload)
+        |> maybe_drop_dataclip(socket.assigns.retention_policy)
         |> Attempts.start_step()
         |> case do
           {:error, changeset} ->
@@ -184,6 +191,7 @@ defmodule LightningWeb.AttemptChannel do
       "project_id" => socket.assigns.project_id
     }
     |> Enum.into(payload)
+    |> maybe_drop_dataclip(socket.assigns.retention_policy)
     |> Attempts.complete_step()
     |> case do
       {:error, changeset} ->
@@ -211,6 +219,22 @@ defmodule LightningWeb.AttemptChannel do
     Attempts.get(id,
       include: [workflow: [:triggers, :edges, jobs: [:credential]]]
     )
+  end
+
+  defp include_run_results?(retention_policy) do
+    retention_policy != :erase_all
+  end
+
+  defp maybe_drop_dataclip(params, retention_policy) do
+    if retention_policy == :erase_all do
+      Map.drop(params, [
+        "output_dataclip",
+        "output_dataclip_id",
+        "input_dataclip_id"
+      ])
+    else
+      params
+    end
   end
 
   defp replace_reason_with_exit_reason(params) do
