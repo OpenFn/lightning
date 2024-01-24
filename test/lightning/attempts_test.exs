@@ -658,7 +658,7 @@ defmodule Lightning.AttemptsTest do
   end
 
   describe "wipe_dataclip_body/1" do
-    test "clears the dataclip body" do
+    test "clears the dataclip body and request fields" do
       project = insert(:project)
       dataclip = insert(:http_request_dataclip, project: project)
 
@@ -670,6 +670,7 @@ defmodule Lightning.AttemptsTest do
         |> insert()
 
       assert dataclip.body
+      assert dataclip.request
       refute dataclip.wiped_at
 
       :ok = Attempts.wipe_dataclip_body(attempt)
@@ -678,6 +679,7 @@ defmodule Lightning.AttemptsTest do
       updated_dataclip = Lightning.Invocation.get_dataclip_details!(dataclip.id)
       assert updated_dataclip.wiped_at
       refute updated_dataclip.body
+      refute updated_dataclip.request
     end
   end
 end

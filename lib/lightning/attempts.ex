@@ -127,13 +127,13 @@ defmodule Lightning.Attempts do
   end
 
   @doc """
-  Clears the body of the dataclip associated with the given attempt.
+  Clears the body and request fields of the dataclip associated with the given attempt.
   """
   @spec wipe_dataclip_body(Attempt.t()) :: :ok
   def wipe_dataclip_body(%Attempt{} = attempt) do
     query =
       from(d in Ecto.assoc(attempt, :dataclip),
-        update: [set: [body: nil, wiped_at: ^DateTime.utc_now()]]
+        update: [set: [request: nil, body: nil, wiped_at: ^DateTime.utc_now()]]
       )
 
     {1, _rows} = Repo.update_all(query, [])
