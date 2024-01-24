@@ -181,9 +181,9 @@ defmodule Lightning.Jobs do
     Repo.all(query)
   end
 
-  @spec has_runs?(Lightning.Workflows.Job.t()) :: boolean()
+  @spec has_steps?(Lightning.Workflows.Job.t()) :: boolean()
   @doc """
-  Checks if a given job has any associated runs.
+  Checks if a given job has any associated steps.
 
   ## Parameters
 
@@ -191,14 +191,14 @@ defmodule Lightning.Jobs do
 
   ## Returns
 
-  `true` if there are runs associated with the given job, `false` otherwise.
+  `true` if there are steps associated with the given job, `false` otherwise.
 
   ## Examples
 
-      iex> Lightning.Workflows.Job.has_runs?(job)
+      iex> Lightning.Workflows.Job.has_steps?(job)
       true
   """
-  def has_runs?(%Job{id: job_id}) do
+  def has_steps?(%Job{id: job_id}) do
     Lightning.Invocation.Step
     |> where(job_id: ^job_id)
     |> Repo.exists?()
