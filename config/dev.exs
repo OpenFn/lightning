@@ -16,7 +16,12 @@ config :lightning, Lightning.Repo,
 # watchers to your application. For example, we use it
 # with esbuild to bundle .js and .css sources.
 config :lightning, LightningWeb.Endpoint,
-  http: [ip: {127, 0, 0, 1}, port: 4000],
+  url: [host: "localhost", port: 4000, scheme: "http"],
+  http: [
+    ip: {0, 0, 0, 0},
+    port: 4000,
+    compress: true
+  ],
   check_origin: false,
   code_reloader: true,
   debug_errors: true,
