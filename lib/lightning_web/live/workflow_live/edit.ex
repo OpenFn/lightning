@@ -357,7 +357,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
                              "You can't delete a step that other downstream steps depend on."},
                             {@is_first_job,
                              "You can't delete the only step of a workflow."},
-                            {@has_runs, "You can't delete a step that has been ran."}
+                            {@has_runs,
+                             "You can't delete a step with associated history while it's protected by your data retention period. (Workflow 'snapshots' are coming. For now, disable the incoming edge to prevent the job from running.)"}
                           ])
                         }
                         data-confirm="Are you sure you want to delete this step?"

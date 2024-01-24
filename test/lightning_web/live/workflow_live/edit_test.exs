@@ -435,7 +435,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       assert view |> delete_job_button_is_disabled?(job_b)
 
       assert view |> force_event(:delete_node, job_b) =~
-               "You can&#39;t delete a step that has been ran."
+               "You can&#39;t delete a step with associated history"
 
       view |> select_node(job_c)
 
