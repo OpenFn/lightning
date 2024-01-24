@@ -656,4 +656,28 @@ defmodule Lightning.AttemptsTest do
       assert reloaded_unfinished_step.finished_at != nil
     end
   end
+
+  describe "wipe_dataclip_body/1" do
+    test "clears the dataclip body" do
+      project = insert(:project)
+      dataclip = insert(:http_request_dataclip, project: project)
+
+      %{triggers: [trigger]} =
+        workflow = insert(:simple_workflow, project: project)
+
+      %{attempts: [attempt]} =
+        work_order_for(trigger, workflow: workflow, dataclip: dataclip)
+        |> insert()
+
+      assert dataclip.body
+      refute dataclip.wiped_at
+
+      :ok = Attempts.wipe_dataclip_body(attempt)
+
+      # dataclip body is cleared
+      updated_dataclip = Lightning.Invocation.get_dataclip_details!(dataclip.id)
+      assert updated_dataclip.wiped_at
+      refute updated_dataclip.body
+    end
+  end
 end
