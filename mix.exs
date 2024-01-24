@@ -8,7 +8,7 @@ defmodule Lightning.MixProject do
       elixir: "~> 1.15",
       elixirc_paths: elixirc_paths(Mix.env()),
       elixirc_options: [
-        warnings_as_errors: false
+        warnings_as_errors: true
       ],
       compilers: Mix.compilers(),
       start_permanent: Mix.env() == :prod,
@@ -118,6 +118,7 @@ defmodule Lightning.MixProject do
       {:tesla, "~> 1.4"},
       {:timex, "~> 3.7"},
       {:unplug, "~> 1.0"},
+      {:replug, "~> 0.1.0"},
       {:phoenix_swoosh, "~> 1.0"},
       {:hammer_backend_mnesia, "~> 0.6"},
       {:hammer, "~> 6.0"},

@@ -57,7 +57,9 @@ and this project adheres to
 - Removed unused code from `run_live` directory
   [#1625](https://github.com/OpenFn/Lightning/issues/1625)
 - Edge condition expressions not correctly being handled during provisioning
-  [openfn/kit#560](https://github.com/OpenFn/kit/pull/560)
+  [#openfn/kit#560](https://github.com/OpenFn/kit/pull/560)
+- Fix remaining warnings, enable "warnings as errors"
+  [#1642](https://github.com/OpenFn/Lightning/issues/1642)
 
 ## [v2.0.0-rc3] 2024-01-12
 
