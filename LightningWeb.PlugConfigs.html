@@ -7,7 +7,7 @@
     <meta name="generator" content="ExDoc v0.30.9">
     <meta name="project" content="Lightning v2.0.0-rc5">
 
-    <title>Lightning.Attempts.PromExPlugin — Lightning v2.0.0-rc5</title>
+    <title>LightningWeb.PlugConfigs — Lightning v2.0.0-rc5</title>
     <link rel="stylesheet" href="dist/html-elixir-XFYN5IVA.css" />
 
 
@@ -125,20 +125,19 @@ Pages
 </button>
 
 
-    <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/attempts/prom_ex_plugin.ex#L1" title="View Source" class="icon-action" rel="help">
+    <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/plug_configs.ex#L1" title="View Source" class="icon-action" rel="help">
       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
       <span class="sr-only">View Source</span>
     </a>
 
-  <span translate="no">Lightning.Attempts.PromExPlugin</span> 
+  <span translate="no">LightningWeb.PlugConfigs</span> 
   <small class="app-vsn" translate="no">(Lightning v2.0.0-rc5)</small>
 
 </h1>
 
 
   <section id="moduledoc">
-<p>Metrics callbacks implementation for the PromEx plugin.</p><p>Event metrics are used to publish the dispatched events in the system.
-Polling metrics are used to publish metrics that are calculated by polling data periodically.</p>
+<p>Dinamically initialize Plugs that don't accept dynamic configs in :prod ENV.</p>
   </section>
 
 
@@ -156,23 +155,7 @@ Polling metrics are used to publish metrics that are calculated by polling data 
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#attempt_claim_duration/1" translate="no">attempt_claim_duration(attempt_age_seconds)</a>
-
-      </div>
-
-    </div>
-
-    <div class="summary-row">
-      <div class="summary-signature">
-        <a href="#calculate_average_claim_duration/2" translate="no">calculate_average_claim_duration(reference_time, attempt_age_seconds)</a>
-
-      </div>
-
-    </div>
-
-    <div class="summary-row">
-      <div class="summary-signature">
-        <a href="#stalled_attempt_count/1" translate="no">stalled_attempt_count(threshold_seconds)</a>
+        <a href="#plug_parsers/0" translate="no">plug_parsers()</a>
 
       </div>
 
@@ -191,16 +174,16 @@ Polling metrics are used to publish metrics that are calculated by polling data 
       <span class="text">Functions</span>
     </h1>
     <div class="functions-list">
-<section class="detail" id="attempt_claim_duration/1">
+<section class="detail" id="plug_parsers/0">
 
   <div class="detail-header">
-    <a href="#attempt_claim_duration/1" class="detail-link" title="Link to this function">
+    <a href="#plug_parsers/0" class="detail-link" title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">attempt_claim_duration(attempt_age_seconds)</h1>
+    <h1 class="signature" translate="no">plug_parsers()</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/attempts/prom_ex_plugin.ex#L118" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/plug_configs.ex#L7" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -210,49 +193,11 @@ Polling metrics are used to publish metrics that are calculated by polling data 
 
   <section class="docstring">
 
+      <div class="specs">
 
-  </section>
-</section>
-<section class="detail" id="calculate_average_claim_duration/2">
+          <pre translate="no"><span class="attribute">@spec</span> plug_parsers() :: <a href="https://hexdocs.pm/elixir/Keyword.html#t:t/0">Keyword.t</a>()</pre>
 
-  <div class="detail-header">
-    <a href="#calculate_average_claim_duration/2" class="detail-link" title="Link to this function">
-      <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
-    </a>
-    <h1 class="signature" translate="no">calculate_average_claim_duration(reference_time, attempt_age_seconds)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/attempts/prom_ex_plugin.ex#L139" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
-
-
-  </div>
-
-  <section class="docstring">
-
-
-  </section>
-</section>
-<section class="detail" id="stalled_attempt_count/1">
-
-  <div class="detail-header">
-    <a href="#stalled_attempt_count/1" class="detail-link" title="Link to this function">
-      <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
-    </a>
-    <h1 class="signature" translate="no">stalled_attempt_count(threshold_seconds)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/attempts/prom_ex_plugin.ex#L68" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
-
-
-  </div>
-
-  <section class="docstring">
+      </div>
 
 
   </section>
