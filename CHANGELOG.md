@@ -15,6 +15,10 @@ and this project adheres to
 
 ### Changed
 
+- Display `http_request` dataclips to the user as they will be provided to the
+  worker as "input" state to avoid confusion while writing jobs.
+  [1664](https://github.com/OpenFn/Lightning/issues/1664)
+
 ### Fixed
 
 - Fix Run via Docker  
