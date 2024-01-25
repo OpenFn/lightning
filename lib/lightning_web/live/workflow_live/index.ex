@@ -5,7 +5,7 @@ defmodule LightningWeb.WorkflowLive.Index do
   import LightningWeb.WorkflowLive.Components
 
   alias Lightning.DashboardStats
-  alias Lightning.Extensions.RateLimiter
+  alias Lightning.Extensions.RuntimeLimiter
   alias Lightning.Policies.Permissions
   alias Lightning.Policies.ProjectUsers
   alias Lightning.Workflows
@@ -72,7 +72,7 @@ defmodule LightningWeb.WorkflowLive.Index do
       NewWorkflowForm.validate(%{}, socket.assigns.project.id)
     )
     |> then(fn socket ->
-      case RateLimiter.check_limits(socket) do
+      case RuntimeLimiter.check_limits(socket) do
         {:error, _reason, message} ->
           {:ok, socket |> put_flash(:error, message)}
 

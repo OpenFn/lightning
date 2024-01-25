@@ -5,17 +5,14 @@ defmodule LightningWeb.RunChannel do
   use LightningWeb, :channel
 
   alias Lightning.Credentials
-<<<<<<< HEAD
-  alias Lightning.Projects
-=======
   alias Lightning.Extensions.RateLimiter
-  alias LightningExtensions.RateLimiting.Action
-  alias LightningExtensions.RateLimiting.Context
->>>>>>> e12bfc882 (Add rate limiting extension)
+  alias Lightning.Projects
   alias Lightning.Repo
   alias Lightning.Runs
   alias Lightning.Scrubber
   alias Lightning.Workers
+  alias LightningExtensions.RateLimiting.Action
+  alias LightningExtensions.RateLimiting.Context
   alias LightningWeb.RunOptions
   alias LightningWeb.RunWithOptions
 

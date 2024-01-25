@@ -108,7 +108,7 @@ defmodule Lightning.MixProject do
       {:rambo, "~> 0.3.4"},
       {:scrivener, "~> 2.7"},
       {:lightning_extensions,
-       git: "https://github.com/OpenFn/lightning_extensions.git", ref: "d3fb176f"},
+       git: "https://github.com/OpenFn/lightning_extensions.git", ref: "45b9cb94"},
       {:sentry, "~> 8.0"},
       {:sobelow, "~> 0.13.0", only: [:test, :dev]},
       {:sweet_xml, "~> 0.7.1", only: [:test]},

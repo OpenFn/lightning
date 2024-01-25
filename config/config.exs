@@ -116,7 +116,8 @@ config :lightning, LightningWeb,
   enable_google_credential: true
 
 config :lightning, Lightning.Extensions,
-  rate_limiter: Lightning.Extensions.Stubs.RateLimiter
+  rate_limiter: Lightning.Extensions.Stubs.RateLimiter,
+  runtime_limiter: Lightning.Extensions.Stubs.RuntimeLimiter
 
 # Rather than default  since httpc doesnt have certificate checking
 config :tesla, adapter: Tesla.Adapter.Hackney
