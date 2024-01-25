@@ -57,10 +57,10 @@
             </LightningWeb.Components.Common.tab_item>
             <LightningWeb.Components.Common.tab_item
               orientation="vertical"
-              hash="data-retention"
+              hash="data-storage"
             >
               <Heroicons.square_3_stack_3d class="h-5 w-5 inline-block mr-2" />
-              <span class="inline-block align-middle">Data Retention</span>
+              <span class="inline-block align-middle">Data Storage</span>
             </LightningWeb.Components.Common.tab_item>
           </LightningWeb.Components.Common.tab_bar>
         </div>
@@ -776,16 +776,16 @@
             </div>
           <% end %>
         </LightningWeb.Components.Common.panel_content>
-        <LightningWeb.Components.Common.panel_content for_hash="data-retention">
+        <LightningWeb.Components.Common.panel_content for_hash="data-storage">
           <%= if @can_edit_data_retention do %>
             <div class="bg-white p-4 rounded-md">
               <div class="text-black text-sm">
                 <div class="font-medium">
-                  Workflow Input & Output Data Retention
+                  Input/Output Data Storage Policy
                 </div>
                 <div class="block mt-1 mb-3">
-                  Determine whether Input and Output data for workflow should be retained or erased.
-                  <a href="#" class="text-indigo-600">Learn more...</a>
+                  Should OpenFn store input/output data for workflow runs?
+                  <a href="#" class="ml-1 text-indigo-600">Learn more...</a>
                 </div>
               </div>
               <.form
@@ -797,9 +797,9 @@
               >
                 <div class="space-y-2">
                   <%= for {value, text} <- [
-                  {:retain_all, "Retain all input & output data on workflow completion"},
-                  {:retain_with_errors, "Retain input & output on workflow run attempts with errors"},
-                  {:erase_all, "Erase all input & output data on workflow completion (zero-persistence)"}
+                  {:retain_all, "Retain input/output data for all workflow runs"},
+                  {:retain_with_errors, "Only retain input/output data when a run fails"},
+                  {:erase_all, "Never retain input/output data (zero-persistence)"}
                   ] do %>
                     <div class="relative flex items-start">
                       <div class="flex h-6 items-center">
@@ -828,7 +828,7 @@
                   <span class="font-medium">Heads Up!</span>
 
                   <p>
-                    When enabled, you will no longer be able to retry workflow attempts as no data will be stored.
+                    When enabled, you will no longer be able to retry workflow runs as no data will be stored.
                   </p>
                 </div>
                 <div class="mt-3 grid grid-flow-col justify-items-end gap-6">
@@ -857,13 +857,13 @@
             </div>
           <% else %>
             <div
-              id="data-retention-permission"
+              id="data-storage-permission"
               class="mt-2 ml-7 text-gray-700 bg-red-100 p-3"
             >
               <span class="font-medium">Permission Denied</span>
 
               <p>
-                Only project owner and admins can view or edit the Data Retention Policy.
+                Only project owner and admins can view or edit the Data Storage section.
               </p>
             </div>
           <% end %>

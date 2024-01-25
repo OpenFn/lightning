@@ -6,10 +6,11 @@ defmodule LightningWeb.AttemptChannel do
 
   alias Lightning.Attempts
   alias Lightning.Credentials
+  alias Lightning.Projects
   alias Lightning.Repo
   alias Lightning.Scrubber
   alias Lightning.Workers
-  alias LightningWeb.AttemptJson
+  alias LightningWeb.RunWithOptions
 
   require Jason.Helpers
   require Logger
@@ -32,7 +33,8 @@ defmodule LightningWeb.AttemptChannel do
          id: id,
          attempt: attempt,
          project_id: project_id,
-         scrubber: nil
+         scrubber: nil,
+         retention_policy: Projects.project_retention_policy_for(attempt)
        })}
     else
       {:error, :not_found} ->
@@ -48,8 +50,12 @@ defmodule LightningWeb.AttemptChannel do
   end
 
   @impl true
-  def handle_in("fetch:attempt", _, socket) do
-    {:reply, {:ok, AttemptJson.render(socket.assigns.attempt)}, socket}
+  def handle_in("fetch:attempt", _, %{assigns: assigns} = socket) do
+    {:reply,
+     {:ok,
+      RunWithOptions.render(assigns.attempt,
+        output_dataclips: include_output_dataclips?(assigns.retention_policy)
+      )}, socket}
   end
 
   def handle_in("attempt:start", _, socket) do
@@ -133,6 +139,10 @@ defmodule LightningWeb.AttemptChannel do
   def handle_in("fetch:dataclip", _, socket) do
     body = Attempts.get_input(socket.assigns.attempt)
 
+    if socket.assigns.retention_policy == :erase_all do
+      Attempts.wipe_dataclip_body(socket.assigns.attempt)
+    end
+
     {:reply, {:ok, {:binary, body}}, socket}
   end
 
@@ -148,6 +158,7 @@ defmodule LightningWeb.AttemptChannel do
       job_id when is_binary(job_id) ->
         %{"attempt_id" => socket.assigns.attempt.id}
         |> Enum.into(payload)
+        |> maybe_drop_dataclip(socket.assigns.retention_policy)
         |> Attempts.start_step()
         |> case do
           {:error, changeset} ->
@@ -179,6 +190,7 @@ defmodule LightningWeb.AttemptChannel do
       "project_id" => socket.assigns.project_id
     }
     |> Enum.into(payload)
+    |> maybe_drop_dataclip(socket.assigns.retention_policy)
     |> Attempts.complete_step()
     |> case do
       {:error, changeset} ->
@@ -206,6 +218,22 @@ defmodule LightningWeb.AttemptChannel do
     Attempts.get(id,
       include: [workflow: [:triggers, :edges, jobs: [:credential]]]
     )
+  end
+
+  defp include_output_dataclips?(retention_policy) do
+    retention_policy != :erase_all
+  end
+
+  defp maybe_drop_dataclip(params, retention_policy) do
+    if retention_policy == :erase_all do
+      Map.drop(params, [
+        "output_dataclip",
+        "output_dataclip_id",
+        "input_dataclip_id"
+      ])
+    else
+      params
+    end
   end
 
   defp replace_reason_with_exit_reason(params) do

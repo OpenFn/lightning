@@ -49,7 +49,6 @@ defmodule Lightning.Attempts.Handlers do
         :attempt_id,
         :step_id,
         :job_id,
-        :input_dataclip_id,
         :started_at
       ])
       |> then(&validate_job_reachable/1)

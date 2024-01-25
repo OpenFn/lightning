@@ -1,4 +1,4 @@
-defmodule LightningWeb.AttemptJson do
+defmodule LightningWeb.RunWithOptions do
   @moduledoc false
 
   alias Lightning.AdaptorRegistry
@@ -6,6 +6,12 @@ defmodule LightningWeb.AttemptJson do
   alias Lightning.Workflows.Edge
   alias Lightning.Workflows.Job
   alias Lightning.Workflows.Trigger
+
+  @spec render(Attempt.t(), Keyword.t() | map()) :: map()
+  def render(%Attempt{} = attempt, options) do
+    options = Enum.into(options, %{}, fn {key, val} -> {to_string(key), val} end)
+    attempt |> render() |> Map.put("options", options)
+  end
 
   def render(%Attempt{} = attempt) do
     %{

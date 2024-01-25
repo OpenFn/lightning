@@ -50,7 +50,7 @@ defmodule LightningWeb.AttemptLive.Streaming do
     |> Repo.one()
     |> case do
       nil ->
-        []
+        {nil, []}
 
       %Dataclip{id: id, body: body, type: type} ->
         {%{id: id, step_id: step.id, type: type},
