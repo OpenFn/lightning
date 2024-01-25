@@ -58,7 +58,7 @@ mix lightning.gen_worker_keys
 
 There are three environment variables required to make everthing work.
 
-**`ATTEMPTS_PRIVATE_KEY`**
+**`WORKER_ATTEMPTS_PRIVATE_KEY`**
 
 _Lightning only_
 
@@ -77,7 +77,7 @@ _Lightning and Workers_
 A 256bit long shared secret used by the worker to sign JWTs for authentication
 with the Lightning API.
 
-**`LIGHTNING_PUBLIC_KEY`**
+**`WORKER_LIGHTNING_PUBLIC_KEY`**
 
 _Workers only_
 

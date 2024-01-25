@@ -148,7 +148,7 @@ config :lightning,
 
 config :lightning,
        :max_run_duration,
-       System.get_env("MAX_RUN_DURATION", "60000")
+       System.get_env("WORKER_MAX_RUN_DURATION", "60000")
        |> String.to_integer()
 
 config :lightning,

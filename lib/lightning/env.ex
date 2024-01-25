@@ -8,7 +8,7 @@ defmodule Lightning.Env do
 
   config :workers,
          env([
-           {:private_key, "ATTEMPTS_PRIVATE_KEY",
+           {:private_key, "WORKER_ATTEMPTS_PRIVATE_KEY",
             required: true, map: &decode_pem/1},
            {:worker_secret, "WORKER_SECRET",
             required: true, map: &String.replace(&1, "\"", "")}
