@@ -5,7 +5,13 @@ defmodule LightningWeb.RunChannel do
   use LightningWeb, :channel
 
   alias Lightning.Credentials
+<<<<<<< HEAD
   alias Lightning.Projects
+=======
+  alias Lightning.Extensions.RateLimiter
+  alias LightningExtensions.RateLimiting.Action
+  alias LightningExtensions.RateLimiting.Context
+>>>>>>> e12bfc882 (Add rate limiting extension)
   alias Lightning.Repo
   alias Lightning.Runs
   alias Lightning.Scrubber
@@ -51,12 +57,25 @@ defmodule LightningWeb.RunChannel do
   end
 
   @impl true
-  def handle_in("fetch:plan", _, %{assigns: assigns} = socket) do
+  def handle_in("fetch:plan", _, socket) do
+    %{project_id: project_id, retention_policy: retention_policy, run: run} = socket.assigns
+
     options = %RunOptions{
-      output_dataclips: include_output_dataclips?(assigns.retention_policy)
+      output_dataclips: include_output_dataclips?(retention_policy)
     }
 
-    {:reply, {:ok, RunWithOptions.render(assigns.run, options)}, socket}
+    case RateLimiter.limit_internal(
+           %Action{
+             type: :new_run
+           },
+           %Context{project_id: project_id, user_id: nil}
+         ) do
+      :ok ->
+        {:reply, {:ok, RunWithOptions.render(run, options)}, socket}
+
+      {:error, reason, message} ->
+        {:error, %{errors: %{reason => [message]}}}
+    end
   end
 
   def handle_in("run:start", _, socket) do

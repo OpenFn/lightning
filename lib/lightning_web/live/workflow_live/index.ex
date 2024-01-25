@@ -5,6 +5,7 @@ defmodule LightningWeb.WorkflowLive.Index do
   import LightningWeb.WorkflowLive.Components
 
   alias Lightning.DashboardStats
+  alias Lightning.Extensions.RateLimiter
   alias Lightning.Policies.Permissions
   alias Lightning.Policies.ProjectUsers
   alias Lightning.Workflows
@@ -62,15 +63,23 @@ defmodule LightningWeb.WorkflowLive.Index do
         socket.assigns.project
       )
 
-    {:ok,
-     socket
-     |> assign(
-       can_delete_workflow: can_delete_workflow,
-       can_create_workflow: can_create_workflow
-     )
-     |> assign_workflow_form(
-       NewWorkflowForm.validate(%{}, socket.assigns.project.id)
-     )}
+    socket
+    |> assign(
+      can_delete_workflow: can_delete_workflow,
+      can_create_workflow: can_create_workflow
+    )
+    |> assign_workflow_form(
+      NewWorkflowForm.validate(%{}, socket.assigns.project.id)
+    )
+    |> then(fn socket ->
+      case RateLimiter.check_limits(socket) do
+        {:error, _reason, message} ->
+          {:ok, socket |> put_flash(:error, message)}
+
+        :ok ->
+          {:ok, socket}
+      end
+    end)
   end
 
   @impl true
