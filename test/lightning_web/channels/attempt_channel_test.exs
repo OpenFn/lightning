@@ -181,7 +181,7 @@ defmodule LightningWeb.AttemptChannelTest do
                "edges" => edges,
                "starting_node_id" => attempt.starting_trigger_id,
                "dataclip_id" => attempt.dataclip_id,
-               "include_run_results" => true
+               "options" => %{"output_dataclips" => true}
              }
     end
 
@@ -239,7 +239,7 @@ defmodule LightningWeb.AttemptChannelTest do
                "edges" => edges,
                "starting_node_id" => attempt.starting_trigger_id,
                "dataclip_id" => attempt.dataclip_id,
-               "include_run_results" => false
+               "options" => %{"output_dataclips" => false}
              }
     end
 

@@ -10,7 +10,7 @@ defmodule LightningWeb.AttemptChannel do
   alias Lightning.Repo
   alias Lightning.Scrubber
   alias Lightning.Workers
-  alias LightningWeb.AttemptJson
+  alias LightningWeb.RunWithOptions
 
   require Jason.Helpers
   require Logger
@@ -50,12 +50,11 @@ defmodule LightningWeb.AttemptChannel do
   end
 
   @impl true
-  def handle_in("fetch:attempt", _, socket) do
+  def handle_in("fetch:attempt", _, %{assigns: assigns} = socket) do
     {:reply,
      {:ok,
-      AttemptJson.render(socket.assigns.attempt,
-        include_run_results:
-          include_run_results?(socket.assigns.retention_policy)
+      RunWithOptions.render(assigns.attempt,
+        output_dataclips: include_output_dataclips?(assigns.retention_policy)
       )}, socket}
   end
 
@@ -221,7 +220,7 @@ defmodule LightningWeb.AttemptChannel do
     )
   end
 
-  defp include_run_results?(retention_policy) do
+  defp include_output_dataclips?(retention_policy) do
     retention_policy != :erase_all
   end
 

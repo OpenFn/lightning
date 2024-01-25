@@ -1,4 +1,4 @@
-defmodule LightningWeb.AttemptJson do
+defmodule LightningWeb.RunWithOptions do
   @moduledoc false
 
   alias Lightning.AdaptorRegistry
@@ -7,7 +7,13 @@ defmodule LightningWeb.AttemptJson do
   alias Lightning.Workflows.Job
   alias Lightning.Workflows.Trigger
 
-  def render(%Attempt{} = attempt, include_run_results: include_run_results) do
+  @spec render(Attempt.t(), Keyword.t() | map()) :: map()
+  def render(%Attempt{} = attempt, options) do
+    options = Enum.into(options, %{}, fn {key, val} -> {to_string(key), val} end)
+    attempt |> render() |> Map.put("options", options)
+  end
+
+  def render(%Attempt{} = attempt) do
     %{
       "id" => attempt.id,
       "triggers" => attempt.workflow.triggers |> Enum.map(&render/1),
@@ -15,8 +21,7 @@ defmodule LightningWeb.AttemptJson do
       "edges" => attempt.workflow.edges |> Enum.map(&render/1),
       "starting_node_id" =>
         attempt.starting_trigger_id || attempt.starting_job_id,
-      "dataclip_id" => attempt.dataclip_id,
-      "include_run_results" => include_run_results
+      "dataclip_id" => attempt.dataclip_id
     }
   end
 
