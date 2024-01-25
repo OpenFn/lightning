@@ -148,6 +148,78 @@ defmodule LightningWeb.Components.Viewers do
 
   attr :id, :string, required: true
 
+  attr :stream, :list,
+    required: true,
+    doc: """
+    A stream of lines to render. In the shape of `%{id: String.t(), line: String.t(), index: integer()}`
+    """
+
+  attr :class, :string,
+    default: nil,
+    doc: "Additional classes to add to the log viewer container"
+
+  attr :type, :atom,
+    default: nil,
+    values: [nil | Dataclip.source_types()]
+
+  attr :zero_persistence_enabled?, :boolean, required: true
+
+  attr :input_or_output, :atom, required: true, values: [:input, :output]
+  attr :project_id, :string, required: true
+
+  attr :project_admins, :list,
+    required: true,
+    doc: "list of project admin emails"
+
+  attr :has_admin_access?, :boolean, required: true
+
+  def dataclip_viewer_for_zero_persistence(assigns) do
+    ~H"""
+    <%= if @zero_persistence_enabled? do %>
+      <div class="border-2 border-gray-200 border-dashed rounded-lg px-8 pt-6 pb-8 mb-4 flex flex-col">
+        <div class="mb-4">
+          <div class="h-12 w-12 border-2 border-gray-300 border-solid mx-auto flex items-center justify-center rounded-full text-gray-400">
+            <Heroicons.code_bracket class="w-4 h-4" />
+          </div>
+        </div>
+        <div class="text-center mb-4 text-gray-500">
+          <h3 class="font-bold text-lg">
+            <span class="capitalize">No <%= @input_or_output %> Data</span> here!
+          </h3>
+          <p class="text-sm">
+            No <%= @input_or_output %> data has been saved here in accordance with your
+            <br /> projects data retention policy.
+          </p>
+        </div>
+        <div class="text-center text-gray-500 text-sm">
+          <%= if @has_admin_access? do %>
+            <.link
+              navigate={~p"/projects/#{@project_id}/settings#data-retention"}
+              class="underline text-blue-400 hover:text-blue-600"
+            >
+              Go to retention settings
+            </.link>
+          <% else %>
+            For more information, contact one of your
+            <span
+              id="zero-persistence-admins-tooltip"
+              phx-hook="Tooltip"
+              class="underline text-blue-400"
+              aria-label={Enum.join(@project_admins, ", ")}
+            >
+              account administrators
+            </span>
+          <% end %>
+        </div>
+      </div>
+    <% else %>
+      <.dataclip_viewer {assigns} />
+    <% end %>
+    """
+  end
+
+  attr :id, :string, required: true
+
   attr :type, :atom,
     default: nil,
     values: [nil | Dataclip.source_types()]

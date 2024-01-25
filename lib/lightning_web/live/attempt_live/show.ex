@@ -172,7 +172,7 @@ defmodule LightningWeb.AttemptLive.Show do
                 />
               </Common.panel_content>
               <Common.panel_content for_hash="input">
-                <Viewers.dataclip_viewer
+                <Viewers.dataclip_viewer_for_zero_persistence
                   id={"step-input-#{@selected_step_id}"}
                   type={
                     case @input_dataclip do
@@ -181,10 +181,15 @@ defmodule LightningWeb.AttemptLive.Show do
                     end
                   }
                   stream={@streams.input_dataclip}
+                  zero_persistence_enabled?={@project.retention_policy == :erase_all}
+                  input_or_output={:input}
+                  project_id={@project.id}
+                  project_admins={["frank@midigo", "hardcoded@me"]}
+                  has_admin_access?={true}
                 />
               </Common.panel_content>
               <Common.panel_content for_hash="output">
-                <Viewers.dataclip_viewer
+                <Viewers.dataclip_viewer_for_zero_persistence
                   id={"step-output-#{@selected_step_id}"}
                   type={
                     case @output_dataclip do
@@ -193,6 +198,11 @@ defmodule LightningWeb.AttemptLive.Show do
                     end
                   }
                   stream={@streams.output_dataclip}
+                  zero_persistence_enabled?={@project.retention_policy == :erase_all}
+                  input_or_output={:output}
+                  project_id={@project.id}
+                  project_admins={["frank@midigo", "hardcoded@me"]}
+                  has_admin_access?={true}
                 />
               </Common.panel_content>
             </div>

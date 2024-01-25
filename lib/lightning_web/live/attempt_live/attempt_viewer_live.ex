@@ -134,7 +134,7 @@ defmodule LightningWeb.AttemptLive.AttemptViewerLive do
                 />
               </Common.panel_content>
               <Common.panel_content for_hash="input" class="grow overflow-auto">
-                <Viewers.dataclip_viewer
+                <Viewers.dataclip_viewer_for_zero_persistence
                   id={"step-input-#{@selected_step_id}"}
                   type={
                     case @input_dataclip do
@@ -144,10 +144,15 @@ defmodule LightningWeb.AttemptLive.AttemptViewerLive do
                   }
                   class="overflow-auto h-full"
                   stream={@streams.input_dataclip}
+                  zero_persistence_enabled?={@project.retention_policy == :erase_all}
+                  input_or_output={:input}
+                  project_id={@project.id}
+                  project_admins={["frank@midigo", "hardcoded@me"]}
+                  has_admin_access?={false}
                 />
               </Common.panel_content>
               <Common.panel_content for_hash="output" class="grow overflow-auto">
-                <Viewers.dataclip_viewer
+                <Viewers.dataclip_viewer_for_zero_persistence
                   id={"step-output-#{@selected_step_id}"}
                   type={
                     case @output_dataclip do
@@ -157,6 +162,11 @@ defmodule LightningWeb.AttemptLive.AttemptViewerLive do
                   }
                   class="overflow-auto h-full"
                   stream={@streams.output_dataclip}
+                  zero_persistence_enabled?={@project.retention_policy == :erase_all}
+                  input_or_output={:output}
+                  project_id={@project.id}
+                  project_admins={["frank@midigo", "hardcoded@me"]}
+                  has_admin_access?={false}
                 />
               </Common.panel_content>
             </div>
