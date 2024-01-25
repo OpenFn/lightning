@@ -127,6 +127,20 @@ defmodule Lightning.Runs do
     |> Repo.one()
   end
 
+  @doc """
+  Clears the body and request fields of the dataclip associated with the given run.
+  """
+  @spec wipe_dataclip_body(Run.t()) :: :ok
+  def wipe_dataclip_body(%Run{} = run) do
+    query =
+      from(d in Ecto.assoc(run, :dataclip),
+        update: [set: [request: nil, body: nil, wiped_at: ^DateTime.utc_now()]]
+      )
+
+    {1, _rows} = Repo.update_all(query, [])
+    :ok
+  end
+
   def get_credential(%Run{} = run, id) do
     from(c in Ecto.assoc(run, [:workflow, :jobs, :credential]),
       where: c.id == ^id

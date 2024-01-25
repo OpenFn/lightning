@@ -656,4 +656,30 @@ defmodule Lightning.RunsTest do
       assert reloaded_unfinished_step.finished_at != nil
     end
   end
+
+  describe "wipe_dataclip_body/1" do
+    test "clears the dataclip body and request fields" do
+      project = insert(:project)
+      dataclip = insert(:http_request_dataclip, project: project)
+
+      %{triggers: [trigger]} =
+        workflow = insert(:simple_workflow, project: project)
+
+      %{runs: [run]} =
+        work_order_for(trigger, workflow: workflow, dataclip: dataclip)
+        |> insert()
+
+      assert dataclip.body
+      assert dataclip.request
+      refute dataclip.wiped_at
+
+      :ok = Runs.wipe_dataclip_body(run)
+
+      # dataclip body is cleared
+      updated_dataclip = Lightning.Invocation.get_dataclip_details!(dataclip.id)
+      assert updated_dataclip.wiped_at
+      refute updated_dataclip.body
+      refute updated_dataclip.request
+    end
+  end
 end

@@ -524,6 +524,24 @@ defmodule Lightning.ProjectsTest do
     end
   end
 
+  describe "project_retention_policy_for/1" do
+    test "returns the correct retention policy for the project associated to the Run" do
+      for policy <- Ecto.Enum.values(Project, :retention_policy) do
+        project = insert(:project, retention_policy: policy)
+        dataclip = insert(:dataclip, project: project)
+
+        %{triggers: [trigger]} =
+          workflow = insert(:simple_workflow, project: project)
+
+        %{runs: [run]} =
+          work_order_for(trigger, workflow: workflow, dataclip: dataclip)
+          |> insert()
+
+        assert Projects.project_retention_policy_for(run) == policy
+      end
+    end
+  end
+
   describe "The default Oban function Projects.perform/1" do
     test "removes all projects past deletion date when called with type 'purge_deleted'" do
       project_to_delete =

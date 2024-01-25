@@ -43,6 +43,7 @@ defmodule Lightning.Invocation.Dataclip do
     field :body, :map, load_in_query: false
     field :request, :map, load_in_query: false
     field :type, Ecto.Enum, values: @source_types
+    field :wiped_at, :utc_datetime
     belongs_to :project, Project
 
     has_one :source_step, Step, foreign_key: :output_dataclip_id

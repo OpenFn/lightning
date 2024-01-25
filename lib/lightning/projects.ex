@@ -245,6 +245,20 @@ defmodule Lightning.Projects do
     end)
   end
 
+  @spec project_retention_policy_for(Run.t()) ::
+          :retain_all | :erase_all | :erase_successful_only
+  def project_retention_policy_for(%Run{work_order_id: wo_id}) do
+    query =
+      from(wo in WorkOrder,
+        join: wf in assoc(wo, :workflow),
+        join: p in assoc(wf, :project),
+        where: wo.id == ^wo_id,
+        select: p.retention_policy
+      )
+
+    Repo.one(query)
+  end
+
   def project_runs_query(project) do
     from(att in Run,
       join: wo in assoc(att, :work_order),

@@ -48,6 +48,8 @@ and this project adheres to
   [#1638](https://github.com/OpenFn/Lightning/issues/1638)
 - Add zero-persistence project setting
   [#1209](https://github.com/OpenFn/Lightning/issues/1209)
+- Wipe dataclip after use when zero-persistence is enabled
+  [#1212](https://github.com/OpenFn/Lightning/issues/1212)
 
 ### Changed
 

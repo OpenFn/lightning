@@ -5,11 +5,12 @@ defmodule LightningWeb.RunChannel do
   use LightningWeb, :channel
 
   alias Lightning.Credentials
+  alias Lightning.Projects
   alias Lightning.Repo
   alias Lightning.Runs
   alias Lightning.Scrubber
   alias Lightning.Workers
-  alias LightningWeb.RunJson
+  alias LightningWeb.RunWithOptions
 
   require Jason.Helpers
   require Logger
@@ -32,7 +33,8 @@ defmodule LightningWeb.RunChannel do
          id: id,
          run: run,
          project_id: project_id,
-         scrubber: nil
+         scrubber: nil,
+         retention_policy: Projects.project_retention_policy_for(run)
        })}
     else
       {:error, :not_found} ->
@@ -48,8 +50,12 @@ defmodule LightningWeb.RunChannel do
   end
 
   @impl true
-  def handle_in("fetch:plan", _, socket) do
-    {:reply, {:ok, RunJson.render(socket.assigns.run)}, socket}
+  def handle_in("fetch:plan", _, %{assigns: assigns} = socket) do
+    {:reply,
+     {:ok,
+      RunWithOptions.render(assigns.run,
+        output_dataclips: include_output_dataclips?(assigns.retention_policy)
+      )}, socket}
   end
 
   def handle_in("run:start", _, socket) do
@@ -133,6 +139,10 @@ defmodule LightningWeb.RunChannel do
   def handle_in("fetch:dataclip", _, socket) do
     body = Runs.get_input(socket.assigns.run)
 
+    if socket.assigns.retention_policy == :erase_all do
+      Runs.wipe_dataclip_body(socket.assigns.run)
+    end
+
     {:reply, {:ok, {:binary, body}}, socket}
   end
 
@@ -142,6 +152,7 @@ defmodule LightningWeb.RunChannel do
       job_id when is_binary(job_id) ->
         %{"run_id" => socket.assigns.run.id}
         |> Enum.into(payload)
+        |> maybe_drop_dataclip(socket.assigns.retention_policy)
         |> Runs.start_step()
         |> case do
           {:error, changeset} ->
@@ -167,6 +178,7 @@ defmodule LightningWeb.RunChannel do
       "project_id" => socket.assigns.project_id
     }
     |> Enum.into(payload)
+    |> maybe_drop_dataclip(socket.assigns.retention_policy)
     |> Runs.complete_step()
     |> case do
       {:error, changeset} ->
@@ -194,6 +206,22 @@ defmodule LightningWeb.RunChannel do
     Runs.get(id,
       include: [workflow: [:triggers, :edges, jobs: [:credential]]]
     )
+  end
+
+  defp include_output_dataclips?(retention_policy) do
+    retention_policy != :erase_all
+  end
+
+  defp maybe_drop_dataclip(params, retention_policy) do
+    if retention_policy == :erase_all do
+      Map.drop(params, [
+        "output_dataclip",
+        "output_dataclip_id",
+        "input_dataclip_id"
+      ])
+    else
+      params
+    end
   end
 
   defp replace_reason_with_exit_reason(params) do

@@ -1,4 +1,4 @@
-defmodule LightningWeb.RunJson do
+defmodule LightningWeb.RunWithOptions do
   @moduledoc false
 
   alias Lightning.AdaptorRegistry
@@ -6,6 +6,12 @@ defmodule LightningWeb.RunJson do
   alias Lightning.Workflows.Edge
   alias Lightning.Workflows.Job
   alias Lightning.Workflows.Trigger
+
+  @spec render(Run.t(), Keyword.t() | map()) :: map()
+  def render(%Run{} = run, options) do
+    options = Enum.into(options, %{}, fn {key, val} -> {to_string(key), val} end)
+    run |> render() |> Map.put("options", options)
+  end
 
   def render(%Run{} = run) do
     %{
