@@ -9,7 +9,7 @@ defmodule LightningWeb.WebhooksController do
 
   @spec create(Plug.Conn.t(), %{path: binary()}) :: Plug.Conn.t()
   def create(conn, _params) do
-    with :ok <- RateLimiter.limit_request(conn, %{}),
+    with :ok <- RateLimiter.limit_request(conn, %{}, []),
          %Workflows.Trigger{enabled: true} = trigger <- conn.assigns.trigger do
       {:ok, work_order} =
         WorkOrders.create_for(trigger,

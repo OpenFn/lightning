@@ -4,7 +4,7 @@ defmodule Lightning.Extensions.Stubs.RateLimiter do
   """
   @behaviour LightningExtensions.RateLimiting
 
-  def limit_request(_conn, _context) do
+  def limit_request(_conn, _context, _opts) do
     :ok
   end
 end

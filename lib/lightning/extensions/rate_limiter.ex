@@ -10,11 +10,11 @@ defmodule Lightning.Extensions.RateLimiter do
   alias LightningExtensions.RateLimiting.Context
   alias Plug.Conn
 
-  @spec limit_request(Conn.t(), Context.t()) ::
+  @spec limit_request(Conn.t(), Context.t(), Keyword.t()) ::
           :ok | {:error, RateLimiting.request_error(), String.t()}
 
-  def limit_request(conn, context) do
-    adapter().limit_request(conn, context)
+  def limit_request(conn, context, opts) do
+    adapter().limit_request(conn, context, opts)
   end
 
   defp adapter, do: adapter(:rate_limiter)
