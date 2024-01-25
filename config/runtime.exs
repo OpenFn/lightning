@@ -148,7 +148,6 @@ config :lightning,
        :max_run_duration_seconds,
        System.get_env("WORKER_MAX_RUN_DURATION_SECONDS", "60")
        |> String.to_integer()
-       |> Kernel.*(1000)
 
 config :lightning,
        :max_dataclip_size_bytes,

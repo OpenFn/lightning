@@ -16,12 +16,14 @@ defmodule Lightning.Attempts.Query do
   """
   @spec lost(DateTime.t()) :: Ecto.Queryable.t()
   def lost(%DateTime{} = now) do
-    max_run_duration = Application.get_env(:lightning, :max_run_duration_seconds)
+    max_run_duration_seconds =
+      Application.get_env(:lightning, :max_run_duration_seconds)
+
     grace_period = Lightning.Config.grace_period()
 
     oldest_valid_claim =
       now
-      |> DateTime.add(-max_run_duration, :second)
+      |> DateTime.add(-max_run_duration_seconds, :second)
       |> DateTime.add(-grace_period, :second)
 
     final_states = Attempt.final_states()
