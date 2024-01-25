@@ -11,7 +11,7 @@ defmodule LightningWeb.PlugConfigs do
         :multipart,
         {
           :json,
-          length: Application.fetch_env!(:lightning, :max_dataclip_size)
+          length: Application.fetch_env!(:lightning, :max_dataclip_size_bytes)
         }
       ],
       pass: ["*/*"],

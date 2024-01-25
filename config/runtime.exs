@@ -120,9 +120,7 @@ config :lightning, Oban,
   plugins: [
     {Oban.Plugins.Cron, crontab: conditional_cron}
   ],
-  shutdown_grace_period:
-    System.get_env("MAX_RUN_DURATION", "60000")
-    |> String.to_integer(),
+  shutdown_grace_period: :timer.minutes(2),
   dispatch_cooldown: 100,
   queues: [
     scheduler: 1,
@@ -147,18 +145,20 @@ config :lightning,
        |> String.to_integer()
 
 config :lightning,
-       :max_run_duration,
-       System.get_env("WORKER_MAX_RUN_DURATION", "60000")
+       :max_run_duration_seconds,
+       System.get_env("WORKER_MAX_RUN_DURATION_SECONDS", "60")
        |> String.to_integer()
+       |> Kernel.*(1000)
 
 config :lightning,
-       :max_dataclip_size,
-       System.get_env("MAX_DATACLIP_SIZE", "10000000")
+       :max_dataclip_size_bytes,
+       System.get_env("MAX_DATACLIP_SIZE_MB", "10")
        |> String.to_integer()
+       |> Kernel.*(1000)
 
 config :lightning,
        :queue_result_retention_period,
-       System.get_env("QUEUE_RESULT_RETENTION_PERIOD", "60")
+       System.get_env("QUEUE_RESULT_RETENTION_PERIOD_SECONDS", "60")
        |> String.to_integer()
 
 config :lightning,
@@ -260,12 +260,12 @@ if config_env() == :prod do
     http: [
       protocol_options: [
         max_frame_size:
-          Application.get_env(:lightning, :max_dataclip_size, 10_000_000),
+          Application.get_env(:lightning, :max_dataclip_size_bytes),
         # Not that if a request is more than 10x the max dataclip size, we cut
         # the connection immediately to prevent memory issues via the
         # :max_skip_body_length setting.
         max_skip_body_length:
-          Application.get_env(:lightning, :max_dataclip_size, 10_000_000) * 10
+          Application.get_env(:lightning, :max_dataclip_size_bytes) * 10
       ]
     ],
     server: true

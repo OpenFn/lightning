@@ -41,7 +41,7 @@ defmodule Lightning.Config do
     an additional amount of time after a run was meant to be finished.
     """
     def grace_period do
-      (Application.get_env(:lightning, :max_run_duration) * 0.2)
+      (Application.get_env(:lightning, :max_run_duration_seconds) * 0.2)
       |> trunc()
     end
   end
