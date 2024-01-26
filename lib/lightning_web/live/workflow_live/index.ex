@@ -9,8 +9,11 @@ defmodule LightningWeb.WorkflowLive.Index do
   alias Lightning.Policies.Permissions
   alias Lightning.Policies.ProjectUsers
   alias Lightning.Workflows
+  alias LightningExtensions.LiveviewRendering
   alias LightningWeb.WorkflowLive.DashboardComponents
   alias LightningWeb.WorkflowLive.NewWorkflowForm
+
+  alias Phoenix.LiveView.TagEngine
 
   on_mount {LightningWeb.Hooks, :project_scope}
 
@@ -18,17 +21,19 @@ defmodule LightningWeb.WorkflowLive.Index do
   attr :can_delete_workflow, :boolean
   attr :workflows, :list
   attr :project, Lightning.Projects.Project
-  attr :banner_content, :any, default: nil
+  attr :banner, :map, default: nil
 
   @impl true
   def render(assigns) do
     ~H"""
     <LayoutComponents.page_content>
       <:banner>
-        <%= if assigns[:banner_content] do %>
-          <LayoutComponents.banner>
-            <%= @banner_content %>
-          </LayoutComponents.banner>
+        <%= if assigns[:banner] do %>
+          <%= TagEngine.component(
+            @banner.function,
+            @banner.attrs,
+            {__ENV__.module, __ENV__.function, __ENV__.file, __ENV__.line}
+          ) %>
         <% end %>
       </:banner>
       <:header>
@@ -81,8 +86,8 @@ defmodule LightningWeb.WorkflowLive.Index do
     )
     |> then(fn socket ->
       case RuntimeLimiter.check_limits(socket) do
-        {:error, _reason, message} ->
-          {:ok, socket |> assign(:banner_content, message)}
+        {:error, _reason, %LiveviewRendering{position: position} = component} ->
+          {:ok, socket |> assign(position, component)}
 
         :ok ->
           {:ok, socket}

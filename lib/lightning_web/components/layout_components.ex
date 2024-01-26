@@ -119,16 +119,6 @@ defmodule LightningWeb.LayoutComponents do
     """
   end
 
-  slot :inner_block
-
-  def banner(assigns) do
-    ~H"""
-    <div class="h-12 bg-red-300 text-red-700 font-bold text-normal text-center p-3">
-      <%= render_slot(@inner_block) %>
-    </div>
-    """
-  end
-
   attr :current_user, Lightning.Accounts.User
   attr :socket, Phoenix.LiveView.Socket
   slot :title

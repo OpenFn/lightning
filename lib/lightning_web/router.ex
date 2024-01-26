@@ -168,23 +168,21 @@ defmodule LightningWeb.Router do
     post "/*path", WebhooksController, :create
   end
 
-  # Other scopes may use custom stacks.
-  # scope "/api", LightningWeb do
-  #   pipe_through :api
-  # end
-
-  # Enables the Swoosh mailbox preview and LiveDashboard in development.
-  #
-  # Note that preview only shows emails that were sent by the same
-  # node running the Phoenix server.
-  #
-
   # LiveDashboard enables basic system monitoring but is only available to
   # superusers—i.e., the people who installed/maintain the instance.
   scope "/" do
     pipe_through [:browser, :require_authenticated_user, :require_superuser]
 
     live_dashboard "/dashboard", metrics: LightningWeb.Telemetry
+  end
+
+  scope "/" do
+    import Lightning.Extensions.Router
+    pipe_through [:browser, :require_authenticated_user]
+
+    live_services("/services",
+      metrics: LightningWeb.Telemetry
+    )
   end
 
   if Mix.env() == :dev do
@@ -203,6 +201,8 @@ defmodule LightningWeb.Router do
     scope "/dev" do
       pipe_through :browser
 
+      # Note that preview only shows emails that were sent by the same
+      # node running the Phoenix server.
       forward "/mailbox", Plug.Swoosh.MailboxPreview
 
       live "/components", LightningWeb.Dev.ComponentsLive, :index

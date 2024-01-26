@@ -33,6 +33,9 @@ lightning-*.tar
 # Ignore credential schemas.
 /priv/schemas/
 
+# Ignore dev customizations.
+/config/dev.extensions.exs
+
 # In case you use Node.js/npm, you want to ignore these.
 npm-debug.log
 /assets/node_modules/
