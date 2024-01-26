@@ -18,11 +18,19 @@ defmodule LightningWeb.WorkflowLive.Index do
   attr :can_delete_workflow, :boolean
   attr :workflows, :list
   attr :project, Lightning.Projects.Project
+  attr :banner_content, :any, default: nil
 
   @impl true
   def render(assigns) do
     ~H"""
     <LayoutComponents.page_content>
+      <:banner>
+        <%= if assigns[:banner_content] do %>
+          <LayoutComponents.banner>
+            <%= @banner_content %>
+          </LayoutComponents.banner>
+        <% end %>
+      </:banner>
       <:header>
         <LayoutComponents.header current_user={@current_user}>
           <:title><%= @page_title %></:title>
@@ -74,7 +82,7 @@ defmodule LightningWeb.WorkflowLive.Index do
     |> then(fn socket ->
       case RuntimeLimiter.check_limits(socket) do
         {:error, _reason, message} ->
-          {:ok, socket |> put_flash(:error, message)}
+          {:ok, socket |> assign(:banner_content, message)}
 
         :ok ->
           {:ok, socket}

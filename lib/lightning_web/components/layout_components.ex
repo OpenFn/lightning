@@ -105,6 +105,7 @@ defmodule LightningWeb.LayoutComponents do
   def page_content(assigns) do
     ~H"""
     <div class="flex h-full w-full flex-col">
+      <%= if assigns[:banner], do: render_slot(@banner) %>
       <%= if assigns[:header], do: render_slot(@header) %>
       <div class="flex-auto bg-secondary-100 relative">
         <section
@@ -114,6 +115,16 @@ defmodule LightningWeb.LayoutComponents do
           <%= render_slot(@inner_block) %>
         </section>
       </div>
+    </div>
+    """
+  end
+
+  slot :inner_block
+
+  def banner(assigns) do
+    ~H"""
+    <div class="h-12 bg-red-300 text-red-700 font-bold text-normal text-center p-3">
+      <%= render_slot(@inner_block) %>
     </div>
     """
   end
