@@ -18,6 +18,10 @@ and this project adheres to
 - Display `http_request` dataclips to the user as they will be provided to the
   worker as "input" state to avoid confusion while writing jobs.
   [1664](https://github.com/OpenFn/Lightning/issues/1664)
+- Named-spaced all worker environment variables with `WORKER_` and added
+  documentation for how to configure them.
+  [#1672](https://github.com/OpenFn/Lightning/pull/1672)
+- Bumped to `@openfn/ws-worker@0.6.0`
 
 ### Fixed
 
