@@ -6,7 +6,7 @@ defmodule Lightning.Janitor do
   Every X minutes the Janitor will check to ensure that no attempts have been
   running for more than Y seconds.
 
-  Configure your maximum attempt runtime with a MAX_RUN_DURATION environment
+  Configure your maximum attempt runtime with a WORKER_MAX_RUN_DURATION_SECONDS environment
   variable; the grace period will be an additional 20%.
   """
 

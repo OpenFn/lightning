@@ -15,7 +15,7 @@ defmodule LightningWeb.WebhooksControllerTest do
       %{triggers: [trigger]} =
         insert(:simple_workflow) |> Lightning.Repo.preload(:triggers)
 
-      Application.put_env(:lightning, :max_dataclip_size, 1_000_000)
+      Application.put_env(:lightning, :max_dataclip_size_bytes, 1_000_000)
 
       smaller_body =
         %{"data" => %{a: String.duplicate("a", 500_000)}}

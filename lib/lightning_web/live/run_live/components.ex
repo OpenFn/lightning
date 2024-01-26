@@ -274,8 +274,8 @@ defmodule LightningWeb.RunLive.Components do
         {"cancel", _any} -> [:cancel, "text-grey-600"]
         {"kill", "SecurityError"} -> [:shield, "text-yellow-800"]
         {"kill", "ImportError"} -> [:shield, "text-yellow-800"]
-        {"kill", "TimeoutError"} -> [:circle_ex, "text-yellow-800"]
-        {"kill", "OomError"} -> [:circle_ex, "text-yellow-800"]
+        {"kill", "TimeoutError"} -> [:clock, "text-yellow-800"]
+        {"kill", "OOMError"} -> [:circle_ex, "text-yellow-800"]
         {"exception", ""} -> [:triangle_ex, "text-black-800"]
         {"lost", _nil} -> [:triangle_ex, "text-black-800"]
       end
@@ -300,6 +300,8 @@ defmodule LightningWeb.RunLive.Components do
         <Heroicons.no_symbol solid class={@classes} />
       <% :shield -> %>
         <Heroicons.shield_exclamation solid class={@classes} />
+      <% :clock -> %>
+        <Heroicons.clock solid class={@classes} />
       <% :circle_ex -> %>
         <Heroicons.exclamation_circle solid class={@classes} />
       <% :triangle_ex -> %>

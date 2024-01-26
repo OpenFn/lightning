@@ -30,9 +30,9 @@ environment.
 Lightning uses external worker processes for executing Attempts. There are three
 settings required to configure worker authentication.
 
-- `ATTEMPTS_PRIVATE_KEY`
+- `WORKER_ATTEMPTS_PRIVATE_KEY`
+- `WORKER_LIGHTNING_PUBLIC_KEY`
 - `WORKER_SECRET`
-- `LIGHTNING_PUBLIC_KEY`
 
 You can use the `mix lightning.gen_worker_keys` task to generate these for
 convenience.
@@ -46,9 +46,13 @@ Note that for secure deployments, it's recommended to use a combination of
 
 ### Limits
 
-- `MAX_RUN_DURATION` - the maximum time (in milliseconds) that jobs are allowed
-  to run (keep this below your termination_grace_period if using kubernetes)
-- `MAX_DATACLIP_SIZE` - the maximum size (in bytes) of a dataclip created via
+- `WORKER_MAX_RUN_MEMORY_MB` - how much memory (in MB) can a single run use?
+- `WORKER_MAX_RUN_DURATION_SECONDS` - the maximum duration (in seconds) that
+  workflows are allowed to run (keep this below your termination_grace_period if
+  using kubernetes)
+- `WORKER_CAPACITY` - the number of runs a ws-worker instance will take on
+  concurrently.
+- `MAX_DATACLIP_SIZE_MB` - the maximum size (in MB) of a dataclip created via
   the webhook trigger URL for a job. This limits the max request size via the
   JSON plug and may (in future) limit the size of dataclips that can be stored
   as run_results via the websocket connection from a worker.
@@ -80,6 +84,9 @@ Note that for secure deployments, it's recommended to use a combination of
 - `URL_HOST` - the host, used for writing urls (e.g., `demo.openfn.org`)
 - `URL_PORT` - the port, usually `443` for production
 - `URL_SCHEME` - the scheme for writing urls, (e.g., `https`)
+- `QUEUE_RESULT_RETENTION_PERIOD_SECONDS` - the number of seconds to keep
+  completed (successful) `ObanJobs` in the queue (not to be confused with runs
+  and/or history)
 
 ### Google
 
