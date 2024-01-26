@@ -13,7 +13,7 @@
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-EPF2X7PV.js"></script>
-    <script src="dist/sidebar_items-48257ED8.js"></script>
+    <script src="dist/sidebar_items-22326195.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -166,6 +166,14 @@ the body specifically.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
+        <a href="#last_n_for_job/2" translate="no">last_n_for_job(job_id, limit)</a>
+
+      </div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
         <a href="#last_step_for_job/1" translate="no">last_step_for_job(job)</a>
 
       </div>
@@ -182,6 +190,16 @@ the body specifically.</p></div>
 
         <div class="summary-synopsis"><p>The last successful step for a job, used in scheduler to enable downstream attempts
 to access a previous attempt's state</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#select_as_input/1" translate="no">select_as_input(query)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Returns a dataclip formatted for use as an input state.</p></div>
 
     </div>
 
@@ -241,6 +259,28 @@ to access a previous attempt's state</p></div>
 the body specifically.</p>
   </section>
 </section>
+<section class="detail" id="last_n_for_job/2">
+
+  <div class="detail-header">
+    <a href="#last_n_for_job/2" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">last_n_for_job(job_id, limit)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation/query.ex#L63" class="icon-action" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+
+  </section>
+</section>
 <section class="detail" id="last_step_for_job/1">
 
   <div class="detail-header">
@@ -296,6 +336,29 @@ the body specifically.</p>
 
 <p>The last successful step for a job, used in scheduler to enable downstream attempts
 to access a previous attempt's state</p>
+  </section>
+</section>
+<section class="detail" id="select_as_input/1">
+
+  <div class="detail-header">
+    <a href="#select_as_input/1" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">select_as_input(query)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation/query.ex#L80" class="icon-action" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+<p>Returns a dataclip formatted for use as an input state.</p><p>Only <code class="inline">http_request</code> dataclips are changed, their <code class="inline">body</code> is nested inside a
+<code class="inline">&quot;data&quot;</code> key and <code class="inline">request</code> data is added as a <code class="inline">&quot;request&quot;</code> key.</p>
   </section>
 </section>
 <section class="detail" id="steps_for/1">
