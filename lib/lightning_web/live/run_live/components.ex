@@ -289,7 +289,7 @@ defmodule LightningWeb.RunLive.Components do
     ~H"""
     <%= case @icon do %>
       <% :pending -> %>
-        <Heroicons.clock solid class={@classes} />
+        <Heroicons.ellipsis_horizontal_circle solid class={@classes} />
       <% :success -> %>
         <Heroicons.check_circle solid class={@classes} />
       <% :fail -> %>
