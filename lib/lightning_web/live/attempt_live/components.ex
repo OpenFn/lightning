@@ -152,6 +152,9 @@ defmodule LightningWeb.AttemptLive.Components do
       {"kill", error_type} when error_type in ["SecurityError", "ImportError"] ->
         ~H[<.icon title={@title} name="hero-shield-exclamation" class={@class} />]
 
+      {"kill", error_type} when error_type == "TimeoutError" ->
+        ~H[<.icon title={@title} name="hero-clock" class={@class} />]
+
       {"kill", _} ->
         ~H[<.icon title={@title} name="hero-exclamation-circle" class={@class} />]
 
