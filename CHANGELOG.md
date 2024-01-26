@@ -14,7 +14,7 @@ and this project adheres to
 
 ### Fixed
 
-## [v2.0.0-rc6] - 2024-01-26
+## [v2.0.0-rc7] - 2024-01-26
 
 ### Added
 
