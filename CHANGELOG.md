@@ -21,6 +21,8 @@ and this project adheres to
   [#1653](https://github.com/OpenFn/Lightning/issues/1653)
 - Fix remaining warnings, enable "warnings as errors"
   [#1642](https://github.com/OpenFn/Lightning/issues/1642)
+- Fix workflow dashboard bug when viewed for newly created workflows with only
+  unfinished run steps. [#1674](https://github.com/OpenFn/Lightning/issues/1674)
 
 ## [v2.0.0-rc5] - 2024-01-22
 

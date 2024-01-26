@@ -90,7 +90,7 @@ defmodule Lightning.DashboardStats do
        }) do
     step_count = success_count + failed_count + pending_count
 
-    if step_count == 0 do
+    if success_count == 0 do
       {0, 0.0}
     else
       success_rate = success_count * 100 / (success_count + failed_count)
