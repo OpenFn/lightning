@@ -155,7 +155,7 @@ environment.</p><h2 id="workers" class="section-heading">
   <span class="text">Workers</span>
 </h2>
 <p>Lightning uses external worker processes for executing Attempts. There are three
-settings required to configure worker authentication.</p><ul><li><code class="inline">ATTEMPTS_PRIVATE_KEY</code></li><li><code class="inline">WORKER_SECRET</code></li><li><code class="inline">LIGHTNING_PUBLIC_KEY</code></li></ul><p>You can use the <code class="inline">mix lightning.gen_worker_keys</code> task to generate these for
+settings required to configure worker authentication.</p><ul><li><code class="inline">WORKER_ATTEMPTS_PRIVATE_KEY</code></li><li><code class="inline">WORKER_LIGHTNING_PUBLIC_KEY</code></li><li><code class="inline">WORKER_SECRET</code></li></ul><p>You can use the <code class="inline">mix lightning.gen_worker_keys</code> task to generate these for
 convenience.</p><p>For more information see the <a href="workers.html">Workers</a> documentation.</p><h2 id="environment-variables" class="section-heading">
   <a href="#environment-variables" class="hover-link">
     <i class="ri-link-m" aria-hidden="true"></i>
@@ -169,8 +169,10 @@ convenience.</p><p>For more information see the <a href="workers.html">Workers</
   </a>
   <span class="text">Limits</span>
 </h3>
-<ul><li><code class="inline">MAX_RUN_DURATION</code> - the maximum time (in milliseconds) that jobs are allowed
-to run (keep this below your termination_grace_period if using kubernetes)</li><li><code class="inline">MAX_DATACLIP_SIZE</code> - the maximum size (in bytes) of a dataclip created via
+<ul><li><code class="inline">WORKER_MAX_RUN_MEMORY_MB</code> - how much memory (in MB) can a single run use?</li><li><code class="inline">WORKER_MAX_RUN_DURATION_SECONDS</code> - the maximum duration (in seconds) that
+workflows are allowed to run (keep this below your termination_grace_period if
+using kubernetes)</li><li><code class="inline">WORKER_CAPACITY</code> - the number of runs a ws-worker instance will take on
+concurrently.</li><li><code class="inline">MAX_DATACLIP_SIZE_MB</code> - the maximum size (in MB) of a dataclip created via
 the webhook trigger URL for a job. This limits the max request size via the
 JSON plug and may (in future) limit the size of dataclips that can be stored
 as run_results via the websocket connection from a worker.</li></ul><h3 id="other-config" class="section-heading">
@@ -188,7 +190,9 @@ establish clusters.</li><li><code class="inline">LISTEN_ADDRESS</code>&quot; - t
 <code class="inline">127.0.0.1</code> to block access from other machines.</li><li><code class="inline">LOG_LEVEL</code> - how noisy you want the logs to be (e.g. <code class="inline">debug</code>, <code class="inline">info</code>)</li><li><code class="inline">MIX_ENV</code> - your mix env, likely <code class="inline">prod</code> for deployment</li><li><code class="inline">NODE_ENV</code> - node env, likely <code class="inline">production</code> for deployment</li><li><code class="inline">ORIGINS</code> - the allowed origins for web traffic to the backend</li><li><code class="inline">PORT</code> - the port your Phoenix app runs on</li><li><code class="inline">PRIMARY_ENCRYPTION_KEY</code> - a base64 encoded 32 character long string. See
 <a href="#encryption">Encryption</a>.</li><li><code class="inline">SCHEMAS_PATH</code> - path to the credential schemas that provide forms for
 different adaptors</li><li><code class="inline">SECRET_KEY_BASE</code> - a secret key used as a base to generate secrets for
-encrypting and signing data.</li><li><code class="inline">SENTRY_DSN</code> - if using Sentry for error monitoring, your DSN</li><li><code class="inline">URL_HOST</code> - the host, used for writing urls (e.g., <code class="inline">demo.openfn.org</code>)</li><li><code class="inline">URL_PORT</code> - the port, usually <code class="inline">443</code> for production</li><li><code class="inline">URL_SCHEME</code> - the scheme for writing urls, (e.g., <code class="inline">https</code>)</li></ul><h3 id="google" class="section-heading">
+encrypting and signing data.</li><li><code class="inline">SENTRY_DSN</code> - if using Sentry for error monitoring, your DSN</li><li><code class="inline">URL_HOST</code> - the host, used for writing urls (e.g., <code class="inline">demo.openfn.org</code>)</li><li><code class="inline">URL_PORT</code> - the port, usually <code class="inline">443</code> for production</li><li><code class="inline">URL_SCHEME</code> - the scheme for writing urls, (e.g., <code class="inline">https</code>)</li><li><code class="inline">QUEUE_RESULT_RETENTION_PERIOD_SECONDS</code> - the number of seconds to keep
+completed (successful) <code class="inline">ObanJobs</code> in the queue (not to be confused with runs
+and/or history)</li></ul><h3 id="google" class="section-heading">
   <a href="#google" class="hover-link">
     <i class="ri-link-m" aria-hidden="true"></i>
   </a>

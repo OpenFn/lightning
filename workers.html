@@ -184,12 +184,12 @@ outside of the scope of that Attempt.</p><h2 id="generating-keys" class="section
   </a>
   <span class="text">Configuring Lightning and Workers</span>
 </h2>
-<p>There are three environment variables required to make everthing work.</p><p><strong><code class="inline">ATTEMPTS_PRIVATE_KEY</code></strong></p><p><em>Lightning only</em></p><p>A Base64 encoded private key in PEM format, used to generate JWTs granting
+<p>There are three environment variables required to make everthing work.</p><p><strong><code class="inline">WORKER_ATTEMPTS_PRIVATE_KEY</code></strong></p><p><em>Lightning only</em></p><p>A Base64 encoded private key in PEM format, used to generate JWTs granting
 workers permission to access a specific Attempt, the related Workflow and
 credentials.</p><blockquote><p>[!IMPORTANT]
 This key should never be shared. If you suspect it has been compromised, 
 generate a new one and reconfigure both Lightning and your workers.</p></blockquote><p><strong><code class="inline">WORKER_SECRET</code></strong></p><p><em>Lightning and Workers</em></p><p>A 256bit long shared secret used by the worker to sign JWTs for authentication
-with the Lightning API.</p><p><strong><code class="inline">LIGHTNING_PUBLIC_KEY</code></strong></p><p><em>Workers only</em></p><p>A Base64 encoded public key in PEM format derived from the private key.
+with the Lightning API.</p><p><strong><code class="inline">WORKER_LIGHTNING_PUBLIC_KEY</code></strong></p><p><em>Workers only</em></p><p>A Base64 encoded public key in PEM format derived from the private key.
 This is used by workers to verify Attempt Tokens coming from Lightning.</p><h2 id="troubleshooting" class="section-heading">
   <a href="#troubleshooting" class="hover-link">
     <i class="ri-link-m" aria-hidden="true"></i>
