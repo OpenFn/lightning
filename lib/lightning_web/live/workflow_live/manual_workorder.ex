@@ -51,7 +51,7 @@ defmodule LightningWeb.WorkflowLive.ManualWorkorder do
             } />
           </div>
         </div>
-        <%= if not is_nil(@selected_dataclip) do %>
+        <%= unless is_nil(@selected_dataclip) do %>
           <div class="flex flex-row mt-4">
             <div class="basis-1/2 font-semibold text-secondary-700 text-xs xl:text-base">
               Created at
