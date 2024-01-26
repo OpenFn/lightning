@@ -51,23 +51,16 @@ defmodule LightningWeb.WorkflowLive.ManualWorkorder do
             } />
           </div>
         </div>
-        <div class="flex flex-row mt-4">
-          <div class="basis-1/2 font-semibold text-secondary-700 text-xs xl:text-base ">
-            Initial State
+        <%= if not is_nil(@selected_dataclip) do %>
+          <div class="flex flex-row mt-4">
+            <div class="basis-1/2 font-semibold text-secondary-700 text-xs xl:text-base">
+              Created at
+            </div>
+            <div class="basis-1/2 text-right">
+              <%= Calendar.strftime(@selected_dataclip.inserted_at, "%c %Z") %>
+            </div>
           </div>
-          <div class="text-right text-xs xl:text-sm">
-            <%= if(not is_nil(@selected_dataclip) and @selected_dataclip.type == :http_request) do %>
-              The JSON shown here is the <em>body</em>
-              of an HTTP request. The state assembler will place this payload into
-              <code>state.data</code>
-              when the job is run, before adding <code>state.configuration</code>
-              from your selected credential.
-            <% else %>
-              The state assembler will overwrite the <code>configuration</code>
-              attribute below with the body of the currently selected credential.
-            <% end %>
-          </div>
-        </div>
+        <% end %>
       </div>
       <div :if={@selected_dataclip} class="grow overflow-y-auto rounded-md">
         <.log_view dataclip={@selected_dataclip} class="" />
