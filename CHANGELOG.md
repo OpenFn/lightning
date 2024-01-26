@@ -22,6 +22,7 @@ and this project adheres to
   documentation for how to configure them.
   [#1672](https://github.com/OpenFn/Lightning/pull/1672)
 - Bumped to `@openfn/ws-worker@0.6.0`
+- Bumped to `@openfn/cli@0.4.15`
 
 ### Fixed
 
