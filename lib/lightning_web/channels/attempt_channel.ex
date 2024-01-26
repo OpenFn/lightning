@@ -138,7 +138,7 @@ defmodule LightningWeb.AttemptChannel do
 
   # TODO - Taylor to remove this once the migration is complete
   def handle_in("run:start", payload, socket) do
-    worker_upgrade_required("v1.0")
+    worker_upgrade_required("v0.7.0")
     handle_in("step:start", rename_run_id(payload), socket)
   end
 
@@ -169,7 +169,7 @@ defmodule LightningWeb.AttemptChannel do
 
   # TODO - Taylor to remove this once the migration is complete
   def handle_in("run:complete", payload, socket) do
-    worker_upgrade_required("v1.0")
+    worker_upgrade_required("v0.7.0")
     handle_in("step:complete", rename_run_id(payload), socket)
   end
 
