@@ -105,7 +105,8 @@ defmodule LightningWeb.AttemptLive.ShowTest do
              |> element("#step-input-#{step.id}")
              |> render_async()
              |> Floki.parse_fragment!()
-             |> Floki.text() =~ ~s({  "x": 1})
+             |> Floki.text() =~
+               ~s({  \"data\": {    \"x\": 1  },  \"request\": {    \"headers\": {      \"content-type\": \"multipart/mixed; boundary=plug_conn_test\"    })
 
       assert view |> output_is_empty?(step)
 

@@ -58,5 +58,41 @@ defmodule Lightning.Invocation.Query do
   By default, the dataclip body is not returned via a query. This query selects
   the body specifically.
   """
-  def dataclip_with_body, do: from(d in Dataclip, select: %{d | body: d.body})
+  def dataclip_with_body, do: from(d in Dataclip) |> select_as_input()
+
+  def last_n_for_job(job_id, limit) do
+    from(d in Dataclip,
+      join: s in Step,
+      on: s.input_dataclip_id == d.id,
+      where: s.job_id == ^job_id,
+      distinct: [desc: d.inserted_at],
+      order_by: [desc: d.inserted_at],
+      limit: ^limit
+    )
+  end
+
+  @doc """
+  Returns a dataclip formatted for use as an input state.
+
+  Only `http_request` dataclips are changed, their `body` is nested inside a
+  `"data"` key and `request` data is added as a `"request"` key.
+  """
+  def select_as_input(query) do
+    from(d in query,
+      select: %{
+        d
+        | body:
+            fragment(
+              """
+              CASE WHEN type = 'http_request'
+              THEN jsonb_build_object('data', ?, 'request', ?)
+              ELSE ? END
+              """,
+              d.body,
+              d.request,
+              d.body
+            )
+      }
+    )
+  end
 end
