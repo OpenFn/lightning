@@ -131,7 +131,10 @@ defmodule Lightning.Credentials do
 
   """
   def create_credential(attrs \\ %{}) do
-    changeset = %Credential{} |> change_credential(attrs) |> cast_body_change()
+    changeset =
+      %Credential{}
+      |> change_credential(attrs)
+      |> cast_body_change()
 
     Multi.new()
     |> Multi.insert(

@@ -2,6 +2,7 @@ defmodule LightningWeb.CredentialLive.FormComponent do
   @moduledoc """
   Form Component for working with a single Credential
   """
+  alias LightningWeb.CredentialLive.SalesforceOauthComponent
   use LightningWeb, :live_component
 
   import Ecto.Changeset, only: [fetch_field!: 2, put_assoc: 3]
@@ -424,6 +425,19 @@ defmodule LightningWeb.CredentialLive.FormComponent do
     >
       <%= render_slot(@inner_block, l) %>
     </GoogleSheetsComponent.fieldset>
+    """
+  end
+
+  def form_component(%{type: "salesforce_oauth"} = assigns) do
+    ~H"""
+    <SalesforceOauthComponent.fieldset
+      :let={l}
+      id={@id}
+      form={@form}
+      update_body={@update_body}
+    >
+      <%= render_slot(@inner_block, l) %>
+    </SalesforceOauthComponent.fieldset>
     """
   end
 

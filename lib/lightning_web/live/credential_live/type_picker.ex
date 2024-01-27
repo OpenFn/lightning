@@ -50,6 +50,7 @@ defmodule LightningWeb.CredentialLive.TypePicker do
 
     type_options =
       schemas_options
+      |> append_if_missing({"Salesforce Oauth", "salesforce_oauth"})
       |> append_if_missing({"Raw JSON", "raw"})
       |> append_if_missing({"Googlesheets", "googlesheets"})
       |> Enum.sort_by(& &1, :asc)
