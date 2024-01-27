@@ -82,6 +82,10 @@ config :lightning, :oauth_clients,
   google: [
     client_id: System.get_env("GOOGLE_CLIENT_ID"),
     client_secret: System.get_env("GOOGLE_CLIENT_SECRET")
+  ],
+  salesforce: [
+    consumer_key: System.get_env("SALESFORCE_CONSUMER_KEY"),
+    consumer_secret: System.get_env("SALESFORCE_CONSUMER_SECRET")
   ]
 
 config :lightning,
