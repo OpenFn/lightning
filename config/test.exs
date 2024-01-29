@@ -8,6 +8,8 @@ config :tesla, Lightning.VersionControl.GithubClient, adapter: Tesla.Mock
 
 config :tesla, Mix.Tasks.Lightning.InstallAdaptorIcons, adapter: Tesla.Mock
 
+config :tesla, Lightning.ImpactTracking.Client, adapter: Tesla.Mock
+
 # Configure your database
 #
 # The MIX_TEST_PARTITION environment variable can be used

@@ -10,6 +10,9 @@ and this project adheres to
 
 ### Added
 
+- Shim code to interact with the Impact Tracking service
+  [#1671](https://github.com/OpenFn/Lightning/issues/1671)
+
 ### Changed
 
 ### Fixed
@@ -34,7 +37,7 @@ and this project adheres to
 
 ### Fixed
 
-- Fix Run via Docker  
+- Fix Run via Docker
   [#1653](https://github.com/OpenFn/Lightning/issues/1653)
 - Fix remaining warnings, enable "warnings as errors"
   [#1642](https://github.com/OpenFn/Lightning/issues/1642)
