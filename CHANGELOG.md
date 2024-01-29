@@ -15,6 +15,10 @@ and this project adheres to
 
 ### Changed
 
+- Standardized naming of "attempts" to "runs".
+  [#1657](https://github.com/OpenFn/Lightning/issues/1657)
+- Required `@openfn/ws-worker@0.8.0` or above.
+
 ### Fixed
 
 ## [v2.0.0-rc7] - 2024-01-26
