@@ -52,12 +52,6 @@ defmodule LightningWeb.RunChannel do
     {:reply, {:ok, RunJson.render(socket.assigns.run)}, socket}
   end
 
-  # TODO - Taylor to remove this once the migration is complete
-  def handle_in("attempt:start", payload, socket) do
-    worker_upgrade_required("v0.8.0")
-    handle_in("run:start", rename_attempt_id(payload), socket)
-  end
-
   def handle_in("run:start", _, socket) do
     socket.assigns.run
     |> Runs.start_run()
@@ -68,12 +62,6 @@ defmodule LightningWeb.RunChannel do
       {:error, changeset} ->
         {:reply, {:error, LightningWeb.ChangesetJSON.error(changeset)}, socket}
     end
-  end
-
-  # TODO - Taylor to remove this once the migration is complete
-  def handle_in("attempt:complete", payload, socket) do
-    worker_upgrade_required("v0.8.0")
-    handle_in("run:complete", rename_attempt_id(payload), socket)
   end
 
   def handle_in("run:complete", payload, socket) do
@@ -237,17 +225,4 @@ defmodule LightningWeb.RunChannel do
     :ok = Scrubber.add_samples(scrubber, samples, basic_auth)
     {:ok, scrubber}
   end
-
-  # TODO - Taylor to remove this once the migration is complete
-  defp worker_upgrade_required(v),
-    do:
-      Logger.warning("Please upgrade your connect ws-worker to #{v} or greater")
-
-  # TODO - Taylor to remove this once the migration is complete
-  defp rename_attempt_id(%{"attempt_id" => id} = map) do
-    Map.delete(map, "attempt_id")
-    |> Map.put("run_id", id)
-  end
-
-  defp rename_attempt_id(any), do: any
 end
