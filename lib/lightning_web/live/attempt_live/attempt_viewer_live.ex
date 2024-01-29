@@ -5,6 +5,8 @@ defmodule LightningWeb.AttemptLive.AttemptViewerLive do
   import LightningWeb.AttemptLive.Components
 
   alias Lightning.Accounts.User
+  alias Lightning.Policies.Permissions
+  alias Lightning.Policies.ProjectUsers
   alias Lightning.Projects
   alias Lightning.Projects.Project
   alias LightningWeb.Components.Viewers
@@ -137,7 +139,7 @@ defmodule LightningWeb.AttemptLive.AttemptViewerLive do
                 />
               </Common.panel_content>
               <Common.panel_content for_hash="input" class="grow overflow-auto">
-                <Viewers.dataclip_viewer_for_zero_persistence
+                <Viewers.dataclip_viewer
                   id={"step-input-#{@selected_step_id}"}
                   class="overflow-auto h-full"
                   stream={@streams.input_dataclip}
@@ -147,12 +149,12 @@ defmodule LightningWeb.AttemptLive.AttemptViewerLive do
                   }
                   input_or_output={:input}
                   project_id={@project.id}
-                  project_admins={@admin_contacts}
-                  has_admin_access?={@can_edit_data_retention}
+                  admin_contacts={@admin_contacts}
+                  can_edit_data_retention={@can_edit_data_retention}
                 />
               </Common.panel_content>
               <Common.panel_content for_hash="output" class="grow overflow-auto">
-                <Viewers.dataclip_viewer_for_zero_persistence
+                <Viewers.dataclip_viewer
                   id={"step-output-#{@selected_step_id}"}
                   class="overflow-auto h-full"
                   stream={@streams.output_dataclip}
@@ -163,8 +165,8 @@ defmodule LightningWeb.AttemptLive.AttemptViewerLive do
                   }
                   input_or_output={:output}
                   project_id={@project.id}
-                  project_admins={@admin_contacts}
-                  has_admin_access?={@can_edit_data_retention}
+                  admin_contacts={@admin_contacts}
+                  can_edit_data_retention={@can_edit_data_retention}
                 />
               </Common.panel_content>
             </div>
@@ -202,7 +204,15 @@ defmodule LightningWeb.AttemptLive.AttemptViewerLive do
      |> assign(:output_dataclip, false)
      |> assign(:attempt, AsyncResult.loading())
      |> assign(:log_lines, AsyncResult.loading())
-     |> assign(can_edit_data_retention: project_user.role in [:owner, :admin])
+     |> assign(
+       can_edit_data_retention:
+         Permissions.can?(
+           ProjectUsers,
+           :edit_data_retention,
+           %User{id: user_id},
+           project_user
+         )
+     )
      |> assign(admin_contacts: Projects.list_project_admin_emails(project_id))
      |> get_attempt_async(attempt_id), layout: false}
   end

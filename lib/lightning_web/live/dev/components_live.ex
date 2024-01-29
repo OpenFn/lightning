@@ -46,6 +46,12 @@ defmodule LightningWeb.Dev.ComponentsLive do
                 id="dataclip-viewer"
                 stream={@streams.dataclip}
                 class=""
+                step={%{}}
+                dataclip={%{type: :step_result}}
+                input_or_output={:output}
+                project_id="1234"
+                admin_contacts={[]}
+                can_edit_data_retention={true}
               />
             </div>
           </.variation>

@@ -10,6 +10,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
   alias Lightning.Invocation
   alias Lightning.Policies.Permissions
   alias Lightning.Policies.ProjectUsers
+  alias Lightning.Projects
   alias Lightning.Workflows
   alias Lightning.Workflows.Job
   alias Lightning.Workflows.Trigger
@@ -102,6 +103,9 @@ defmodule LightningWeb.WorkflowLive.Edit do
                   form={@manual_run_form}
                   dataclips={@selectable_dataclips}
                   disabled={!@can_run_job}
+                  project={@project}
+                  admin_contacts={@admin_contacts}
+                  can_edit_data_retention={@can_edit_data_retention}
                 />
               </:collapsible_panel>
               <:footer>
@@ -549,6 +553,13 @@ defmodule LightningWeb.WorkflowLive.Edit do
               :edit_webhook_auth_method,
               current_user,
               project_user
+            ),
+          can_edit_data_retention:
+            Permissions.can?(
+              ProjectUsers,
+              :edit_data_retention,
+              current_user,
+              project_user
             )
         )
 
@@ -583,12 +594,19 @@ defmodule LightningWeb.WorkflowLive.Edit do
       can_run_job:
         Permissions.can?(ProjectUsers, :run_job, current_user, project_user),
       can_rerun_job:
-        Permissions.can?(ProjectUsers, :rerun_job, current_user, project_user)
+        Permissions.can?(ProjectUsers, :rerun_job, current_user, project_user),
+      can_edit_data_retention:
+        Permissions.can?(
+          ProjectUsers,
+          :edit_data_retention,
+          current_user,
+          project_user
+        )
     )
   end
 
   @impl true
-  def mount(_params, _session, socket) do
+  def mount(_params, _session, %{assigns: assigns} = socket) do
     {:ok,
      socket
      |> authorize()
@@ -607,7 +625,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
        workflow: nil,
        workflow_name: "",
        workflow_params: %{},
-       selected_credential_type: nil
+       selected_credential_type: nil,
+       admin_contacts: Projects.list_project_admin_emails(assigns.project.id)
      )}
   end
 
@@ -992,8 +1011,11 @@ defmodule LightningWeb.WorkflowLive.Edit do
   end
 
   defp maybe_add_selected_dataclip(selectable_dataclips, dataclip) do
-    if Enum.find(selectable_dataclips, fn dc -> dc.id == dataclip.id end) do
-      selectable_dataclips
+    existing_index =
+      Enum.find_index(selectable_dataclips, fn dc -> dc.id == dataclip.id end)
+
+    if existing_index do
+      List.replace_at(selectable_dataclips, existing_index, dataclip)
     else
       [dataclip | selectable_dataclips]
     end

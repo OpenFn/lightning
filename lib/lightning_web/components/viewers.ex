@@ -98,119 +98,117 @@ defmodule LightningWeb.Components.Viewers do
     default: nil,
     doc: "Additional classes to add to the log viewer container"
 
-  attr :type, :atom,
-    default: nil,
-    values: [nil | Dataclip.source_types()]
-
-  def dataclip_viewer(assigns) do
-    ~H"""
-    <div class={[
-      "rounded-md shadow-sm bg-slate-700 border-slate-300",
-      "text-slate-200 text-sm font-mono w-full h-full relative",
-      @class
-    ]}>
-      <.dataclip_type :if={@type} type={@type} id={"#{@id}-type"} />
-      <div
-        class={[
-          "overscroll-contain scroll-smooth",
-          "grid grid-flow-row-dense grid-cols-[min-content_1fr]",
-          "min-h-[2rem]",
-          "log-viewer relative"
-        ]}
-        id={@id}
-        phx-update="stream"
-      >
-        <div
-          :for={{dom_id, %{line: line, index: index}} <- @stream}
-          class="group contents"
-          id={dom_id}
-        >
-          <div class="log-viewer__prefix" data-line-prefix={index}></div>
-          <div data-log-line class="log-viewer__message">
-            <pre class="whitespace-break-spaces"><%= line %></pre>
-          </div>
-        </div>
-        <div
-          id={"#{@id}-nothing-yet"}
-          class={[
-            "hidden only:block m-2 relative block rounded-md",
-            "p-12 text-center col-span-full"
-          ]}
-        >
-          <.text_ping_loader>
-            Nothing yet
-          </.text_ping_loader>
-        </div>
-      </div>
-    </div>
-    """
-  end
-
-  attr :id, :string, required: true
-
-  attr :stream, :list,
-    required: true,
-    doc: """
-    A stream of lines to render. In the shape of `%{id: String.t(), line: String.t(), index: integer()}`
-    """
-
-  attr :class, :string,
-    default: nil,
-    doc: "Additional classes to add to the log viewer container"
-
-  attr :step, :map, required: true
+  attr :step, :map
   attr :dataclip, :map
   attr :input_or_output, :atom, required: true, values: [:input, :output]
   attr :project_id, :string, required: true
 
-  attr :project_admins, :list,
+  attr :admin_contacts, :list,
     required: true,
     doc: "list of project admin emails"
 
-  attr :has_admin_access?, :boolean, required: true
+  attr :can_edit_data_retention, :boolean, required: true
 
-  def dataclip_viewer_for_zero_persistence(assigns) do
+  def dataclip_viewer(assigns) do
     ~H"""
-    <%= if is_nil(@step) or is_nil(@step.finished_at) or @dataclip do %>
-      <.dataclip_viewer type={@dataclip && @dataclip.type} {assigns} />
+    <%= if step_finished?(@step) and dataclip_wiped?(@dataclip) do %>
+      <.wiped_dataclip_viewer
+        can_edit_data_retention={@can_edit_data_retention}
+        admin_contacts={@admin_contacts}
+        input_or_output={@input_or_output}
+        project_id={@project_id}
+      />
     <% else %>
-      <div class="border-2 border-gray-200 border-dashed rounded-lg px-8 pt-6 pb-8 mb-4 flex flex-col">
-        <div class="mb-4">
-          <div class="h-12 w-12 border-2 border-gray-300 border-solid mx-auto flex items-center justify-center rounded-full text-gray-400">
-            <Heroicons.code_bracket class="w-4 h-4" />
+      <div class={[
+        "rounded-md shadow-sm bg-slate-700 border-slate-300",
+        "text-slate-200 text-sm font-mono w-full h-full relative",
+        @class
+      ]}>
+        <.dataclip_type :if={@dataclip} type={@dataclip.type} id={"#{@id}-type"} />
+        <div
+          class={[
+            "overscroll-contain scroll-smooth",
+            "grid grid-flow-row-dense grid-cols-[min-content_1fr]",
+            "min-h-[2rem]",
+            "log-viewer relative"
+          ]}
+          id={@id}
+          phx-update="stream"
+        >
+          <div
+            :for={{dom_id, %{line: line, index: index}} <- @stream}
+            class="group contents"
+            id={dom_id}
+          >
+            <div class="log-viewer__prefix" data-line-prefix={index}></div>
+            <div data-log-line class="log-viewer__message">
+              <pre class="whitespace-break-spaces"><%= line %></pre>
+            </div>
           </div>
-        </div>
-        <div class="text-center mb-4 text-gray-500">
-          <h3 class="font-bold text-lg">
-            <span class="capitalize">No <%= @input_or_output %> Data</span> here!
-          </h3>
-          <p class="text-sm">
-            No <%= @input_or_output %> data has been saved here in accordance with your
-            <br /> projects data retention policy.
-          </p>
-        </div>
-        <div class="text-center text-gray-500 text-sm">
-          <%= if @has_admin_access? do %>
-            <.link
-              navigate={~p"/projects/#{@project_id}/settings#data-retention"}
-              class="underline text-blue-400 hover:text-blue-600"
-            >
-              Go to retention settings
-            </.link>
-          <% else %>
-            For more information, contact one of your
-            <span
-              id="zero-persistence-admins-tooltip"
-              phx-hook="Tooltip"
-              class="underline text-blue-400"
-              aria-label={Enum.join(@project_admins, ", ")}
-            >
-              account administrators
-            </span>
-          <% end %>
+          <div
+            id={"#{@id}-nothing-yet"}
+            class={[
+              "hidden only:block m-2 relative block rounded-md",
+              "p-12 text-center col-span-full"
+            ]}
+          >
+            <.text_ping_loader>
+              Nothing yet
+            </.text_ping_loader>
+          </div>
         </div>
       </div>
     <% end %>
+    """
+  end
+
+  attr :input_or_output, :atom, required: true, values: [:input, :output]
+  attr :project_id, :string, required: true
+
+  attr :admin_contacts, :list,
+    required: true,
+    doc: "list of project admin emails"
+
+  attr :can_edit_data_retention, :boolean, required: true
+
+  def wiped_dataclip_viewer(assigns) do
+    ~H"""
+    <div class="border-2 border-gray-200 border-dashed rounded-lg px-8 pt-6 pb-8 mb-4 flex flex-col">
+      <div class="mb-4">
+        <div class="h-12 w-12 border-2 border-gray-300 border-solid mx-auto flex items-center justify-center rounded-full text-gray-400">
+          <Heroicons.code_bracket class="w-4 h-4" />
+        </div>
+      </div>
+      <div class="text-center mb-4 text-gray-500">
+        <h3 class="font-bold text-lg">
+          <span class="capitalize">No <%= @input_or_output %> Data</span> here!
+        </h3>
+        <p class="text-sm">
+          No <%= @input_or_output %> data has been saved here in accordance with your
+          <br /> projects data retention policy.
+        </p>
+      </div>
+      <div class="text-center text-gray-500 text-sm">
+        <%= if @can_edit_data_retention do %>
+          <.link
+            navigate={~p"/projects/#{@project_id}/settings#data-retention"}
+            class="underline text-blue-400 hover:text-blue-600"
+          >
+            Go to retention settings
+          </.link>
+        <% else %>
+          For more information, contact one of your
+          <span
+            id="zero-persistence-admins-tooltip"
+            phx-hook="Tooltip"
+            class="underline text-blue-400"
+            aria-label={Enum.join(@admin_contacts, ", ")}
+          >
+            account administrators
+          </span>
+        <% end %>
+      </div>
+    </div>
     """
   end
 
@@ -244,4 +242,14 @@ defmodule LightningWeb.Components.Viewers do
     </div>
     """
   end
+
+  defp step_finished?(%{finished_at: %_{}}), do: true
+
+  defp step_finished?(_other), do: false
+
+  defp dataclip_wiped?(%{wiped_at: %_{}}), do: true
+
+  defp dataclip_wiped?(nil), do: true
+
+  defp dataclip_wiped?(_other), do: true
 end
