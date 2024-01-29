@@ -908,7 +908,9 @@ defmodule LightningWeb.WorkflowLive.Edit do
         socket
       )
       when step.job_id === socket.assigns.selected_job.id do
-    dataclip = Invocation.get_dataclip_details!(step.input_dataclip_id)
+    dataclip =
+      step.input_dataclip_id &&
+        Invocation.get_dataclip_details!(step.input_dataclip_id)
 
     selectable_dataclips =
       maybe_add_selected_dataclip(

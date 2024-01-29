@@ -4,6 +4,7 @@ defmodule LightningWeb.AttemptLive.Show do
 
   import LightningWeb.AttemptLive.Components
 
+  alias Lightning.Projects
   alias LightningWeb.Components.Viewers
   alias Phoenix.LiveView.AsyncResult
 
@@ -174,35 +175,30 @@ defmodule LightningWeb.AttemptLive.Show do
               <Common.panel_content for_hash="input">
                 <Viewers.dataclip_viewer_for_zero_persistence
                   id={"step-input-#{@selected_step_id}"}
-                  type={
-                    case @input_dataclip do
-                      %AsyncResult{ok?: true, result: %{type: type}} -> type
-                      _ -> nil
-                    end
-                  }
                   stream={@streams.input_dataclip}
-                  zero_persistence_enabled?={@project.retention_policy == :erase_all}
+                  step={@selected_step}
+                  dataclip={
+                    @input_dataclip && @input_dataclip.ok? && @input_dataclip.result
+                  }
                   input_or_output={:input}
                   project_id={@project.id}
-                  project_admins={["frank@midigo", "hardcoded@me"]}
-                  has_admin_access?={true}
+                  project_admins={@admin_contacts}
+                  has_admin_access?={@can_edit_data_retention}
                 />
               </Common.panel_content>
               <Common.panel_content for_hash="output">
                 <Viewers.dataclip_viewer_for_zero_persistence
                   id={"step-output-#{@selected_step_id}"}
-                  type={
-                    case @output_dataclip do
-                      %AsyncResult{ok?: true, result: %{type: type}} -> type
-                      _ -> nil
-                    end
-                  }
                   stream={@streams.output_dataclip}
-                  zero_persistence_enabled?={@project.retention_policy == :erase_all}
+                  step={@selected_step}
+                  dataclip={
+                    @output_dataclip && @output_dataclip.ok? &&
+                      @output_dataclip.result
+                  }
                   input_or_output={:output}
                   project_id={@project.id}
-                  project_admins={["frank@midigo", "hardcoded@me"]}
-                  has_admin_access?={true}
+                  project_admins={@admin_contacts}
+                  has_admin_access?={@can_edit_data_retention}
                 />
               </Common.panel_content>
             </div>
@@ -215,6 +211,8 @@ defmodule LightningWeb.AttemptLive.Show do
 
   @impl true
   def mount(%{"id" => id}, _session, socket) do
+    %{project_user: project_user, project: project} = socket.assigns
+
     {:ok,
      socket
      |> assign(
@@ -231,6 +229,8 @@ defmodule LightningWeb.AttemptLive.Show do
      |> assign(:output_dataclip, false)
      |> assign(:attempt, AsyncResult.loading())
      |> assign(:log_lines, AsyncResult.loading())
+     |> assign(can_edit_data_retention: project_user.role in [:owner, :admin])
+     |> assign(admin_contacts: Projects.list_project_admin_emails(project.id))
      |> get_attempt_async(id)}
   end
 

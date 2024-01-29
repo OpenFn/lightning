@@ -127,7 +127,12 @@ defmodule LightningWeb.WorkflowLive.JobView do
             @socket,
             LightningWeb.AttemptLive.AttemptViewerLive,
             id: "attempt-viewer-#{@follow_attempt_id}",
-            session: %{"attempt_id" => @follow_attempt_id, "job_id" => @job.id},
+            session: %{
+              "attempt_id" => @follow_attempt_id,
+              "job_id" => @job.id,
+              "project_id" => @project.id,
+              "user_id" => @current_user.id
+            },
             sticky: true,
             container: {:div, class: "h-full"}
           ) %>

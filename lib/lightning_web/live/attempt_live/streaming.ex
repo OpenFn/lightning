@@ -52,6 +52,9 @@ defmodule LightningWeb.AttemptLive.Streaming do
       nil ->
         {nil, []}
 
+      %Dataclip{body: nil} ->
+        {nil, []}
+
       %Dataclip{id: id, body: body, type: type} ->
         {%{id: id, step_id: step.id, type: type},
          body

@@ -158,12 +158,8 @@ defmodule LightningWeb.Components.Viewers do
     default: nil,
     doc: "Additional classes to add to the log viewer container"
 
-  attr :type, :atom,
-    default: nil,
-    values: [nil | Dataclip.source_types()]
-
-  attr :zero_persistence_enabled?, :boolean, required: true
-
+  attr :step, :map, required: true
+  attr :dataclip, :map
   attr :input_or_output, :atom, required: true, values: [:input, :output]
   attr :project_id, :string, required: true
 
@@ -175,7 +171,9 @@ defmodule LightningWeb.Components.Viewers do
 
   def dataclip_viewer_for_zero_persistence(assigns) do
     ~H"""
-    <%= if @zero_persistence_enabled? do %>
+    <%= if is_nil(@step) or is_nil(@step.finished_at) or @dataclip do %>
+      <.dataclip_viewer type={@dataclip && @dataclip.type} {assigns} />
+    <% else %>
       <div class="border-2 border-gray-200 border-dashed rounded-lg px-8 pt-6 pb-8 mb-4 flex flex-col">
         <div class="mb-4">
           <div class="h-12 w-12 border-2 border-gray-300 border-solid mx-auto flex items-center justify-center rounded-full text-gray-400">
@@ -212,8 +210,6 @@ defmodule LightningWeb.Components.Viewers do
           <% end %>
         </div>
       </div>
-    <% else %>
-      <.dataclip_viewer {assigns} />
     <% end %>
     """
   end
