@@ -785,7 +785,7 @@ defmodule Lightning.AccountsTest do
       assert changed_user.confirmed_at != user.confirmed_at
 
       assert Accounts.update_user_email(user, token) == :error,
-             "Attempting to reuse the same token should return :error"
+             "Trying to reuse the same token should return :error"
 
       refute Repo.get_by(UserToken, user_id: user.id),
              "The token should not exist after using it"

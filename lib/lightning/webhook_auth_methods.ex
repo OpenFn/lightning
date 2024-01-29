@@ -411,7 +411,7 @@ defmodule Lightning.WebhookAuthMethods do
 
   ## Notes
 
-    - It is important to ensure that the `WebhookAuthMethod` is not being referenced by other entities before attempting deletion to avoid conflicts.
+    - It is important to ensure that the `WebhookAuthMethod` is not being referenced by other entities before trying deletion to avoid conflicts.
     - This function will return an error tuple if the `WebhookAuthMethod` struct passed to it does not exist in the database.
   """
   @spec delete_auth_method(WebhookAuthMethod.t()) ::
