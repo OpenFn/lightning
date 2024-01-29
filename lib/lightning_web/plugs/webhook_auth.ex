@@ -26,7 +26,7 @@ defmodule LightningWeb.Plugs.WebhookAuth do
   by this plug.
 
   If the path matches, it then extracts the `webhook` part from the request path and
-  attempts to fetch the corresponding `trigger` using the `fetch_trigger` function.
+  runs to fetch the corresponding `trigger` using the `fetch_trigger` function.
 
   If a valid `trigger` is found, the function proceeds to validate the authentication
   of the request using the `validate_auth` function.

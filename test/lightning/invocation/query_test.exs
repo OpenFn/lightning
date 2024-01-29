@@ -12,13 +12,13 @@ defmodule Lightning.Invocation.QueryTest do
     %{triggers: [trigger], jobs: [job]} =
       workflow = insert(:simple_workflow, project: project)
 
-    %{attempts: [%{steps: [step1]}]} =
+    %{runs: [%{steps: [step1]}]} =
       insert(:workorder,
         workflow: workflow,
         dataclip: build(:dataclip, project: project),
         trigger: trigger,
-        attempts: [
-          build(:attempt,
+        runs: [
+          build(:run,
             starting_trigger: trigger,
             dataclip: build(:dataclip, project: project),
             steps: [build(:step, job: job)]
@@ -28,13 +28,13 @@ defmodule Lightning.Invocation.QueryTest do
 
     %{triggers: [trigger2], jobs: [job2]} = workflow2 = insert(:simple_workflow)
 
-    %{attempts: [%{steps: [step2]}]} =
+    %{runs: [%{steps: [step2]}]} =
       insert(:workorder,
         workflow: workflow2,
         dataclip: build(:dataclip),
         trigger: trigger2,
-        attempts: [
-          build(:attempt,
+        runs: [
+          build(:run,
             dataclip: build(:dataclip),
             starting_trigger: trigger2,
             steps: [build(:step, job: job2)]

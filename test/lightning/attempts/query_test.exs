@@ -1,12 +1,12 @@
-defmodule Lightning.Attempts.QueryTest do
+defmodule Lightning.Runs.QueryTest do
   use Lightning.DataCase, async: true
 
-  alias Lightning.Attempts.Query
+  alias Lightning.Runs.Query
 
   import Lightning.Factories
 
   describe "lost/1" do
-    test "returns only those attempts which were claimed before the earliest
+    test "returns only those runs which were claimed before the earliest
     allowable claim date and remain unfinished" do
       dataclip = insert(:dataclip)
       %{triggers: [trigger]} = workflow = insert(:simple_workflow)
@@ -27,8 +27,8 @@ defmodule Lightning.Attempts.QueryTest do
       assert grace_period == max_run_duration * 0.2
       cutoff_age_in_seconds = (grace_period + max_run_duration) |> trunc()
 
-      attempt_to_be_marked_lost =
-        insert(:attempt,
+      run_to_be_marked_lost =
+        insert(:run,
           work_order: work_order,
           starting_trigger: trigger,
           dataclip: dataclip,
@@ -39,7 +39,7 @@ defmodule Lightning.Attempts.QueryTest do
         )
 
       _crashed_but_NOT_lost =
-        insert(:attempt,
+        insert(:run,
           work_order: work_order,
           starting_trigger: trigger,
           dataclip: dataclip,
@@ -49,8 +49,8 @@ defmodule Lightning.Attempts.QueryTest do
             |> DateTime.add(-2)
         )
 
-      _another_attempt =
-        insert(:attempt,
+      _another_run =
+        insert(:run,
           work_order: work_order,
           starting_trigger: trigger,
           dataclip: dataclip,
@@ -60,12 +60,12 @@ defmodule Lightning.Attempts.QueryTest do
             |> DateTime.add(2)
         )
 
-      lost_attempts =
+      lost_runs =
         Query.lost(now)
         |> Repo.all()
         |> Enum.map(fn att -> att.id end)
 
-      assert lost_attempts == [attempt_to_be_marked_lost.id]
+      assert lost_runs == [run_to_be_marked_lost.id]
     end
   end
 end

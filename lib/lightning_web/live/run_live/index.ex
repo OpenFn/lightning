@@ -215,12 +215,12 @@ defmodule LightningWeb.RunLive.Index do
       )
 
   @impl true
-  def handle_info(%mod{attempt: attempt}, socket)
-      when mod in [Events.AttemptCreated, Events.AttemptUpdated] do
+  def handle_info(%mod{run: run}, socket)
+      when mod in [Events.RunCreated, Events.RunUpdated] do
     %{work_order: work_order} =
       Lightning.Repo.preload(
-        attempt,
-        [work_order: [:workflow, attempts: [steps: :job]]],
+        run,
+        [work_order: [:workflow, runs: [steps: :job]]],
         force: true
       )
 
@@ -257,7 +257,7 @@ defmodule LightningWeb.RunLive.Index do
         socket
       ) do
     work_order =
-      Lightning.Repo.preload(work_order, [:workflow, attempts: [steps: :job]],
+      Lightning.Repo.preload(work_order, [:workflow, runs: [steps: :job]],
         force: true
       )
 
@@ -267,11 +267,11 @@ defmodule LightningWeb.RunLive.Index do
   @impl true
   def handle_event(
         "rerun",
-        %{"attempt_id" => attempt_id, "step_id" => step_id},
+        %{"run_id" => run_id, "step_id" => step_id},
         socket
       ) do
     if socket.assigns.can_rerun_job do
-      WorkOrders.retry(attempt_id, step_id,
+      WorkOrders.retry(run_id, step_id,
         created_by: socket.assigns.current_user
       )
 
@@ -290,7 +290,7 @@ defmodule LightningWeb.RunLive.Index do
        socket
        |> put_flash(
          :info,
-         "New attempt#{if count > 1, do: "s", else: ""} enqueued for #{count} workorder#{if count > 1, do: "s", else: ""}"
+         "New run#{if count > 1, do: "s", else: ""} enqueued for #{count} workorder#{if count > 1, do: "s", else: ""}"
        )
        |> push_navigate(
          to:
@@ -307,7 +307,7 @@ defmodule LightningWeb.RunLive.Index do
          socket
          |> put_flash(
            :error,
-           "Oops! The chosen step hasn't been run in the latest attempts of any of the selected workorders"
+           "Oops! The chosen step hasn't been run in the latest runs of any of the selected workorders"
          )}
 
       {:error, _changes} ->
@@ -502,7 +502,7 @@ defmodule LightningWeb.RunLive.Index do
       send_update(LightningWeb.RunLive.WorkOrderComponent,
         id: workorder_id,
         show_details: true,
-        show_prev_attempts: true
+        show_prev_runs: true
       )
     end
 

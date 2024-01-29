@@ -1,8 +1,8 @@
-defmodule LightningWeb.AttemptLive.AttemptViewerLive do
+defmodule LightningWeb.RunLive.RunViewerLive do
   use LightningWeb, {:live_view, container: {:div, []}}
-  use LightningWeb.AttemptLive.Streaming, chunk_size: 100
+  use LightningWeb.RunLive.Streaming, chunk_size: 100
 
-  import LightningWeb.AttemptLive.Components
+  import LightningWeb.RunLive.Components
 
   alias LightningWeb.Components.Viewers
   alias Phoenix.LiveView.AsyncResult
@@ -11,28 +11,28 @@ defmodule LightningWeb.AttemptLive.AttemptViewerLive do
   def render(assigns) do
     ~H"""
     <div class="@container/viewer h-full">
-      <.async_result :let={attempt} assign={@attempt}>
+      <.async_result :let={run} assign={@run}>
         <:loading>
           <.loading_filler />
         </:loading>
         <:failed :let={_reason}>
-          There was an error loading the Attempt.
+          There was an error loading the Run.
         </:failed>
 
         <div class="flex @5xl/viewer:gap-6 h-full @5xl/viewer:flex-row flex-col">
           <div class="flex-none flex gap-6 @5xl/viewer:flex-col flex-row">
-            <.detail_list id={"attempt-detail-#{attempt.id}"}>
+            <.detail_list id={"run-detail-#{run.id}"}>
               <.list_item>
                 <:label class="whitespace-nowrap">Work Order</:label>
                 <:value>
                   <.link
                     navigate={
-                      ~p"/projects/#{@project}/history?#{%{filters: %{workorder_id: attempt.work_order_id}}}"
+                      ~p"/projects/#{@project}/history?#{%{filters: %{workorder_id: run.work_order_id}}}"
                     }
                     class="hover:underline hover:text-primary-900"
                   >
                     <span class="whitespace-nowrap text-ellipsis">
-                      <%= display_short_uuid(attempt.work_order_id) %>
+                      <%= display_short_uuid(run.work_order_id) %>
                     </span>
                     <.icon name="hero-arrow-up-right" class="h-2 w-2 float-right" />
                   </.link>
@@ -43,12 +43,12 @@ defmodule LightningWeb.AttemptLive.AttemptViewerLive do
                 <:value>
                   <.link
                     navigate={
-                      ~p"/projects/#{@project}/runs/#{attempt}?step=#{@selected_step_id || ""}"
+                      ~p"/projects/#{@project}/runs/#{run}?step=#{@selected_step_id || ""}"
                     }
                     class="hover:underline hover:text-primary-900 whitespace-nowrap text-ellipsis"
                   >
                     <span class="whitespace-nowrap text-ellipsis">
-                      <%= display_short_uuid(attempt.id) %>
+                      <%= display_short_uuid(run.id) %>
                     </span>
                     <.icon name="hero-arrow-up-right" class="h-2 w-2 float-right" />
                   </.link>
@@ -57,10 +57,10 @@ defmodule LightningWeb.AttemptLive.AttemptViewerLive do
               <.list_item>
                 <:label>Started</:label>
                 <:value>
-                  <%= if attempt.started_at,
+                  <%= if run.started_at,
                     do:
                       Timex.Format.DateTime.Formatters.Relative.format!(
-                        attempt.started_at,
+                        run.started_at,
                         "{relative}"
                       ) %>
                 </:value>
@@ -68,25 +68,25 @@ defmodule LightningWeb.AttemptLive.AttemptViewerLive do
               <.list_item>
                 <:label>Duration</:label>
                 <:value>
-                  <.elapsed_indicator attempt={attempt} />
+                  <.elapsed_indicator run={run} />
                 </:value>
               </.list_item>
               <.list_item>
                 <:label>Status</:label>
-                <:value><.state_pill state={attempt.state} /></:value>
+                <:value><.state_pill state={run.state} /></:value>
               </.list_item>
             </.detail_list>
 
             <.step_list
               :let={step}
-              id={"step-list-#{attempt.id}"}
+              id={"step-list-#{run.id}"}
               steps={@steps}
               class="flex-1"
             >
               <.step_item
                 step={step}
                 is_clone={
-                  DateTime.compare(step.inserted_at, attempt.inserted_at) == :lt
+                  DateTime.compare(step.inserted_at, run.inserted_at) == :lt
                 }
                 phx-click="select_step"
                 phx-value-id={step.id}
@@ -128,7 +128,7 @@ defmodule LightningWeb.AttemptLive.AttemptViewerLive do
                 class="grow overflow-auto rounded-md shadow-sm bg-slate-700 border-slate-300"
               >
                 <Viewers.log_viewer
-                  id={"attempt-log-#{attempt.id}"}
+                  id={"run-log-#{run.id}"}
                   highlight_id={@selected_step_id}
                   stream={@streams.log_lines}
                 />
@@ -168,7 +168,7 @@ defmodule LightningWeb.AttemptLive.AttemptViewerLive do
   end
 
   @impl true
-  def mount(_params, %{"attempt_id" => attempt_id} = session, socket) do
+  def mount(_params, %{"run_id" => run_id} = session, socket) do
     {:ok,
      socket
      |> assign(
@@ -181,9 +181,9 @@ defmodule LightningWeb.AttemptLive.AttemptViewerLive do
      |> assign(:input_dataclip, false)
      |> stream(:output_dataclip, [])
      |> assign(:output_dataclip, false)
-     |> assign(:attempt, AsyncResult.loading())
+     |> assign(:run, AsyncResult.loading())
      |> assign(:log_lines, AsyncResult.loading())
-     |> get_attempt_async(attempt_id), layout: false}
+     |> get_run_async(run_id), layout: false}
   end
 
   @impl true

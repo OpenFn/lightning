@@ -11,7 +11,7 @@ defmodule LightningWeb.WorkerSocket do
   # for further details.
 
   channel "worker:queue", LightningWeb.WorkerChannel
-  channel "attempt:*", LightningWeb.AttemptChannel
+  channel "run:*", LightningWeb.RunChannel
 
   # Socket params are passed from the client and can
   # be used to verify and authenticate a user. After

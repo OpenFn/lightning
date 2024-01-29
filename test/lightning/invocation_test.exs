@@ -3,7 +3,7 @@ defmodule Lightning.InvocationTest do
 
   import Lightning.Factories
 
-  alias Lightning.Attempts
+  alias Lightning.Runs
   alias Lightning.WorkOrders.SearchParams
   alias Lightning.Invocation
   alias Lightning.Invocation.Step
@@ -216,16 +216,16 @@ defmodule Lightning.InvocationTest do
         dataclip: dataclip
       )
 
-    attempt =
-      insert(:attempt,
+    run =
+      insert(:run,
         work_order: wo,
         dataclip: dataclip,
         starting_trigger: trigger
       )
 
     {:ok, step} =
-      Attempts.start_step(%{
-        "attempt_id" => attempt.id,
+      Runs.start_step(%{
+        "run_id" => run.id,
         "job_id" => job.id,
         "input_dataclip_id" => dataclip.id,
         "started_at" => now |> Timex.shift(seconds: seconds),
@@ -265,23 +265,23 @@ defmodule Lightning.InvocationTest do
 
       now = Timex.now()
 
-      attempts =
+      runs =
         Enum.map(workorders, fn workorder ->
-          insert(:attempt,
+          insert(:run,
             work_order: workorder,
             dataclip: dataclip,
             starting_trigger: trigger
           )
         end)
 
-      attempts
+      runs
       |> Enum.with_index()
-      |> Enum.each(fn {attempt, index} ->
+      |> Enum.each(fn {run, index} ->
         started_shift = -50 - index * 10
         finished_shift = -40 - index * 10
 
-        Attempts.start_step(%{
-          "attempt_id" => attempt.id,
+        Runs.start_step(%{
+          "run_id" => run.id,
           "job_id" => job.id,
           "input_dataclip_id" => dataclip.id,
           "started_at" => now |> Timex.shift(seconds: started_shift),
@@ -711,7 +711,7 @@ defmodule Lightning.InvocationTest do
       assert found_workorder.id == wo_now.id
     end
 
-    test "filters workorders by search term on body and/or run logs and/or workorder, attempt, or step ID" do
+    test "filters workorders by search term on body and/or run logs and/or workorder, run, or step ID" do
       project = insert(:project)
 
       dataclip =
@@ -731,23 +731,23 @@ defmodule Lightning.InvocationTest do
           dataclip: dataclip
         )
 
-      attempt =
-        insert(:attempt,
+      run =
+        insert(:run,
           work_order: workorder,
           dataclip: dataclip,
           starting_trigger: trigger
         )
 
       {:ok, step} =
-        Attempts.start_step(%{
-          "attempt_id" => attempt.id,
+        Runs.start_step(%{
+          "run_id" => run.id,
           "job_id" => job.id,
           "input_dataclip_id" => dataclip.id,
           "step_id" => Ecto.UUID.generate()
         })
 
       insert(:log_line,
-        attempt: attempt,
+        run: run,
         step: step,
         message: "Sadio Mane is playing in Senegal",
         timestamp: Timex.now()
@@ -800,9 +800,9 @@ defmodule Lightning.InvocationTest do
                  })
                ).entries
 
-      # Search by Workorder, Attempt, or Step IDs and their parts
+      # Search by Workorder, Run, or Step IDs and their parts
       search_ids =
-        [workorder.id, attempt.id, step.id]
+        [workorder.id, run.id, step.id]
         |> Enum.map(fn uuid ->
           [part | _t] = String.split(uuid, "-")
           [part, uuid]

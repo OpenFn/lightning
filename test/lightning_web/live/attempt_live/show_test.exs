@@ -1,4 +1,4 @@
-defmodule LightningWeb.AttemptLive.ShowTest do
+defmodule LightningWeb.RunLive.ShowTest do
   use LightningWeb.ConnCase, async: true
 
   import Phoenix.LiveViewTest
@@ -28,7 +28,7 @@ defmodule LightningWeb.AttemptLive.ShowTest do
       %{socket: socket} = :sys.get_state(view.pid)
 
       assert %AsyncResult{ok?: false, failed: :not_found} =
-               socket.assigns.attempt
+               socket.assigns.run
     end
 
     test "lifecycle of a run", %{conn: conn, project: project} do
@@ -41,64 +41,64 @@ defmodule LightningWeb.AttemptLive.ShowTest do
                |> json_response(200)
 
       workorder =
-        %{attempts: [%{id: attempt_id} = attempt]} =
-        WorkOrders.get(wo_id, include: [:attempts])
+        %{runs: [%{id: run_id} = run]} =
+        WorkOrders.get(wo_id, include: [:runs])
 
       {:ok, view, _html} =
-        live(conn, ~p"/projects/#{project.id}/runs/#{attempt_id}")
+        live(conn, ~p"/projects/#{project.id}/runs/#{run_id}")
 
       assert view
-             |> element("#attempt-detail-#{attempt_id}")
+             |> element("#run-detail-#{run_id}")
              |> render_async() =~ "Enqueued",
              "has enqueued state"
 
-      assert view |> log_is_empty?(attempt)
+      assert view |> log_is_empty?(run)
 
       refute view
-             |> has_element?("#step-list-#{attempt_id} > *"),
+             |> has_element?("#step-list-#{run_id} > *"),
              "has no steps"
 
-      attempt =
+      run =
         Lightning.Repo.update!(
-          attempt
+          run
           |> Ecto.Changeset.change(%{
             state: :claimed,
             claimed_at: DateTime.utc_now()
           })
         )
 
-      Lightning.Attempts.start_attempt(attempt)
+      Lightning.Runs.start_run(run)
 
       assert view
-             |> element("#attempt-detail-#{attempt_id}")
+             |> element("#run-detail-#{run_id}")
              |> render_async() =~ "Running",
              "has running state"
 
       refute view
-             |> has_element?("#step-list-#{attempt_id} > *"),
+             |> has_element?("#step-list-#{run_id} > *"),
              "has no steps"
 
       {:ok, step} =
-        Lightning.Attempts.start_step(%{
-          attempt_id: attempt_id,
+        Lightning.Runs.start_step(%{
+          run_id: run_id,
           step_id: Ecto.UUID.generate(),
           job_id: job_a.id,
           input_dataclip_id: workorder.dataclip_id
         })
 
-      html = step_list_item(view, attempt, step)
+      html = step_list_item(view, run, step)
 
       assert html =~ job_a.name
       assert html =~ "Running"
 
-      add_log(attempt, ["I'm the worker, I'm working!"])
+      add_log(run, ["I'm the worker, I'm working!"])
 
-      {:ok, log_line} = add_log({attempt, step}, %{message: "hello"})
+      {:ok, log_line} = add_log({run, step}, %{message: "hello"})
 
       assert view |> has_log_line?("I'm the worker, I'm working!")
       assert view |> has_log_line?(log_line.message)
 
-      view |> select_step(attempt, job_a.name)
+      view |> select_step(run, job_a.name)
 
       # Check that the input dataclip is rendered
       assert view
@@ -112,8 +112,8 @@ defmodule LightningWeb.AttemptLive.ShowTest do
 
       # Complete the step
       {:ok, _step} =
-        Lightning.Attempts.complete_step(%{
-          attempt_id: attempt_id,
+        Lightning.Runs.complete_step(%{
+          run_id: run_id,
           project_id: project.id,
           step_id: step.id,
           output_dataclip: ~s({"y": 2}),
@@ -124,30 +124,30 @@ defmodule LightningWeb.AttemptLive.ShowTest do
       assert view |> step_output(step) =~ ~r/{  \"y\": 2}/
 
       {:ok, step_2} =
-        Lightning.Attempts.start_step(%{
-          attempt_id: attempt_id,
+        Lightning.Runs.start_step(%{
+          run_id: run_id,
           step_id: Ecto.UUID.generate(),
           job_id: job_b.id,
           input_dataclip_id: output_dataclip_id
         })
 
-      html = step_list_item(view, attempt, step)
+      html = step_list_item(view, run, step)
 
       assert html =~ job_a.name
       assert html =~ "success"
 
-      html = step_list_item(view, attempt, step_2)
+      html = step_list_item(view, run, step_2)
 
       assert html =~ job_b.name
       assert html =~ "running"
 
-      view |> select_step(attempt, job_b.name)
+      view |> select_step(run, job_b.name)
 
       assert view |> output_is_empty?(step_2)
 
       {:ok, _step} =
-        Lightning.Attempts.complete_step(%{
-          attempt_id: attempt_id,
+        Lightning.Runs.complete_step(%{
+          run_id: run_id,
           project_id: project.id,
           step_id: step_2.id,
           output_dataclip: ~s({"z": 2}),
@@ -158,27 +158,27 @@ defmodule LightningWeb.AttemptLive.ShowTest do
       assert view |> step_output(step_2) =~ ~r/{  \"z\": 2}/
 
       # Go back to the previous step and check the output gets switched back
-      view |> select_step(attempt, job_a.name)
+      view |> select_step(run, job_a.name)
       assert view |> step_output(step) =~ ~r/{  \"y\": 2}/
 
-      {:ok, _} = Lightning.Attempts.complete_attempt(attempt, %{state: :failed})
+      {:ok, _} = Lightning.Runs.complete_run(run, %{state: :failed})
 
       assert view
-             |> element("#attempt-detail-#{attempt_id}")
+             |> element("#run-detail-#{run_id}")
              |> render_async() =~ "Failed"
     end
   end
 
-  defp add_log({attempt, step}, message) do
-    Lightning.Attempts.append_attempt_log(attempt, %{
+  defp add_log({run, step}, message) do
+    Lightning.Runs.append_run_log(run, %{
       step_id: step.id,
       message: message,
       timestamp: DateTime.utc_now()
     })
   end
 
-  defp add_log(attempt, message) do
-    Lightning.Attempts.append_attempt_log(attempt, %{
+  defp add_log(run, message) do
+    Lightning.Runs.append_run_log(run, %{
       message: message,
       timestamp: DateTime.utc_now()
     })
@@ -186,22 +186,22 @@ defmodule LightningWeb.AttemptLive.ShowTest do
 
   defp has_log_line?(view, text) do
     view
-    |> element("[id^='attempt-log-']:not([id$='-nothing-yet'])")
+    |> element("[id^='run-log-']:not([id$='-nothing-yet'])")
     |> render_async() =~
       text
       |> Phoenix.HTML.Safe.to_iodata()
       |> to_string()
   end
 
-  defp step_list_item(view, attempt, step) do
+  defp step_list_item(view, run, step) do
     view
-    |> element("#step-list-#{attempt.id} > [data-step-id='#{step.id}']")
+    |> element("#step-list-#{run.id} > [data-step-id='#{step.id}']")
     |> render_async()
   end
 
-  defp select_step(view, attempt, job_name) do
+  defp select_step(view, run, job_name) do
     view
-    |> element("#step-list-#{attempt.id} a[data-phx-link]", job_name)
+    |> element("#step-list-#{run.id} a[data-phx-link]", job_name)
     |> render_click()
   end
 
@@ -219,9 +219,9 @@ defmodule LightningWeb.AttemptLive.ShowTest do
     |> has_nothing_yet?()
   end
 
-  defp log_is_empty?(view, attempt) do
+  defp log_is_empty?(view, run) do
     view
-    |> element("#attempt-log-#{attempt.id}")
+    |> element("#run-log-#{run.id}")
     |> has_nothing_yet?()
   end
 

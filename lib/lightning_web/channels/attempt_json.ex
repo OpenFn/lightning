@@ -1,21 +1,21 @@
-defmodule LightningWeb.AttemptJson do
+defmodule LightningWeb.RunJson do
   @moduledoc false
 
   alias Lightning.AdaptorRegistry
-  alias Lightning.Attempt
+  alias Lightning.Run
   alias Lightning.Workflows.Edge
   alias Lightning.Workflows.Job
   alias Lightning.Workflows.Trigger
 
-  def render(%Attempt{} = attempt) do
+  def render(%Run{} = run) do
     %{
-      "id" => attempt.id,
-      "triggers" => attempt.workflow.triggers |> Enum.map(&render/1),
-      "jobs" => attempt.workflow.jobs |> Enum.map(&render/1),
-      "edges" => attempt.workflow.edges |> Enum.map(&render/1),
+      "id" => run.id,
+      "triggers" => run.workflow.triggers |> Enum.map(&render/1),
+      "jobs" => run.workflow.jobs |> Enum.map(&render/1),
+      "edges" => run.workflow.edges |> Enum.map(&render/1),
       "starting_node_id" =>
-        attempt.starting_trigger_id || attempt.starting_job_id,
-      "dataclip_id" => attempt.dataclip_id
+        run.starting_trigger_id || run.starting_job_id,
+      "dataclip_id" => run.dataclip_id
     }
   end
 

@@ -1,9 +1,9 @@
-defmodule LightningWeb.AttemptLive.Streaming do
+defmodule LightningWeb.RunLive.Streaming do
   import Phoenix.Component, only: [assign: 2, changed?: 2]
   import Phoenix.LiveView
   import Ecto.Query
 
-  alias Lightning.Attempts
+  alias Lightning.Runs
   alias Lightning.RunStep
   alias Lightning.Credentials
   alias Lightning.Invocation.Dataclip
@@ -13,14 +13,14 @@ defmodule LightningWeb.AttemptLive.Streaming do
   alias Phoenix.LiveView.AsyncResult
 
   @doc """
-  Starts an async process that will fetch the attempt with the given ID.
+  Starts an async process that will fetch the run with the given ID.
   """
-  @spec get_attempt_async(Phoenix.LiveView.Socket.t(), Ecto.UUID.t()) ::
+  @spec get_run_async(Phoenix.LiveView.Socket.t(), Ecto.UUID.t()) ::
           Phoenix.LiveView.Socket.t()
-  def get_attempt_async(socket, attempt_id) do
+  def get_run_async(socket, run_id) do
     socket
-    |> start_async(:attempt, fn ->
-      Attempts.get(attempt_id, include: [steps: [:job], workflow: [:project]])
+    |> start_async(:run, fn ->
+      Runs.get(run_id, include: [steps: [:job], workflow: [:project]])
     end)
   end
 
@@ -144,17 +144,17 @@ defmodule LightningWeb.AttemptLive.Streaming do
          id: step_id,
          started_at: started_at
        }) do
-    attempt_step =
+    run_step =
       from(as in RunStep,
         where: as.step_id == ^step_id,
-        select: as.attempt_id
+        select: as.run_id
       )
 
     from(as in RunStep,
       join: s in assoc(as, :step),
       join: j in assoc(s, :job),
       join: c in assoc(j, :credential),
-      where: as.attempt_id in subquery(attempt_step),
+      where: as.run_id in subquery(run_step),
       where: s.started_at <= ^started_at,
       select: c
     )
@@ -227,20 +227,20 @@ defmodule LightningWeb.AttemptLive.Streaming do
       end
 
       def handle_info(
-            %Attempts.Events.AttemptUpdated{attempt: updated_attempt},
+            %Runs.Events.RunUpdated{run: updated_run},
             socket
           ) do
         {:noreply,
          socket
          |> assign(
-           attempt: AsyncResult.ok(socket.assigns.attempt, updated_attempt)
+           run: AsyncResult.ok(socket.assigns.run, updated_run)
          )}
       end
 
       def handle_info(%{__struct__: type, step: step}, socket)
           when type in [
-                 Attempts.Events.StepStarted,
-                 Attempts.Events.StepCompleted
+                 Runs.Events.StepStarted,
+                 Runs.Events.StepCompleted
                ] do
         {:noreply,
          socket
@@ -249,7 +249,7 @@ defmodule LightningWeb.AttemptLive.Streaming do
       end
 
       def handle_info(
-            %Attempts.Events.LogAppended{log_line: log_line},
+            %Runs.Events.LogAppended{log_line: log_line},
             socket
           ) do
         {:noreply, socket |> stream_insert(:log_lines, log_line)}
@@ -259,36 +259,36 @@ defmodule LightningWeb.AttemptLive.Streaming do
 
   defp handle_asyncs do
     quote do
-      def handle_async(:attempt, {:ok, nil}, socket) do
+      def handle_async(:run, {:ok, nil}, socket) do
         {:noreply,
          socket
          |> assign(
-           :attempt,
-           AsyncResult.failed(socket.assigns.attempt, :not_found)
+           :run,
+           AsyncResult.failed(socket.assigns.run, :not_found)
          )}
       end
 
-      def handle_async(:attempt, {:ok, updated_attempt}, socket) do
-        %{attempt: attempt} = socket.assigns
+      def handle_async(:run, {:ok, updated_run}, socket) do
+        %{run: run} = socket.assigns
 
-        Attempts.subscribe(updated_attempt)
+        Runs.subscribe(updated_run)
 
         live_view_pid = self()
 
         {:noreply,
          socket
          |> assign(
-           attempt: AsyncResult.ok(attempt, updated_attempt),
+           run: AsyncResult.ok(run, updated_run),
            # set the initial set of steps
-           steps: updated_attempt.steps |> sort_steps(),
-           project: updated_attempt.workflow.project,
-           workflow: updated_attempt.workflow
+           steps: updated_run.steps |> sort_steps(),
+           project: updated_run.workflow.project,
+           workflow: updated_run.workflow
          )
          |> assign_async(
            :log_lines,
            fn ->
              Repo.transaction(fn ->
-               Attempts.get_log_lines(updated_attempt)
+               Runs.get_log_lines(updated_run)
                |> Stream.chunk_every(@chunk_size)
                |> Stream.each(fn lines ->
                  send(live_view_pid, {:log_line_chunk, lines})
@@ -302,14 +302,14 @@ defmodule LightningWeb.AttemptLive.Streaming do
          |> handle_steps_change()}
       end
 
-      def handle_async(:attempt, {:exit, reason}, socket) do
-        %{attempt: attempt} = socket.assigns
+      def handle_async(:run, {:exit, reason}, socket) do
+        %{run: run} = socket.assigns
 
         {:noreply,
          assign(
            socket,
-           :attempt,
-           AsyncResult.failed(attempt, {:exit, reason})
+           :run,
+           AsyncResult.failed(run, {:exit, reason})
          )}
       end
     end

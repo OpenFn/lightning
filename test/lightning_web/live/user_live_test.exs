@@ -251,7 +251,7 @@ defmodule LightningWeb.UserLiveTest do
           dataclip: dataclip
         )
 
-      insert(:attempt,
+      insert(:run,
         created_by: user,
         work_order: work_order,
         starting_trigger: trigger,

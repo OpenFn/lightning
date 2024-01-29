@@ -35,8 +35,8 @@ defmodule Lightning.FailureAlertTest do
           last_activity: DateTime.utc_now()
         )
 
-      attempt_1 =
-        insert(:attempt,
+      run_1 =
+        insert(:run,
           work_order: workorder_1,
           starting_trigger: build(:trigger),
           dataclip: build(:dataclip),
@@ -59,8 +59,8 @@ defmodule Lightning.FailureAlertTest do
           last_activity: DateTime.utc_now()
         )
 
-      attempt_2 =
-        insert(:attempt,
+      run_2 =
+        insert(:run,
           work_order: workorder_2,
           starting_trigger: build(:trigger),
           dataclip: build(:dataclip),
@@ -85,8 +85,8 @@ defmodule Lightning.FailureAlertTest do
           last_activity: DateTime.utc_now()
         )
 
-      attempt_3 =
-        insert(:attempt,
+      run_3 =
+        insert(:run,
           work_order: workorder_3,
           starting_trigger: build(:trigger),
           dataclip: build(:dataclip),
@@ -99,20 +99,20 @@ defmodule Lightning.FailureAlertTest do
        project: project,
        workflows: [workflow_1, workflow_2, workflow_3],
        workorders: [workorder_1, workorder_2, workorder_3],
-       attempts: [attempt_1, attempt_2, attempt_3]}
+       runs: [run_1, run_2, run_3]}
     end
 
     test "sends a limited number of failure alert emails to a subscribed user.",
          %{
            period: period,
            workorders: [workorder, _, _],
-           attempts: [attempt, _, _]
+           runs: [run, _, _]
          } do
-      FailureAlerter.alert_on_failure(attempt)
-      FailureAlerter.alert_on_failure(attempt)
-      FailureAlerter.alert_on_failure(attempt)
+      FailureAlerter.alert_on_failure(run)
+      FailureAlerter.alert_on_failure(run)
+      FailureAlerter.alert_on_failure(run)
 
-      FailureAlerter.alert_on_failure(attempt)
+      FailureAlerter.alert_on_failure(run)
 
       Oban.drain_queue(Oban, queue: :workflow_failures)
 
@@ -142,13 +142,13 @@ defmodule Lightning.FailureAlertTest do
     test "sends a failure alert email for a workflow even if another workflow has been rate limited.",
          %{
            period: period,
-           attempts: [attempt_1, attempt_2, _]
+           runs: [run_1, run_2, _]
          } do
-      FailureAlerter.alert_on_failure(attempt_1)
-      FailureAlerter.alert_on_failure(attempt_1)
-      FailureAlerter.alert_on_failure(attempt_1)
+      FailureAlerter.alert_on_failure(run_1)
+      FailureAlerter.alert_on_failure(run_1)
+      FailureAlerter.alert_on_failure(run_1)
 
-      FailureAlerter.alert_on_failure(attempt_2)
+      FailureAlerter.alert_on_failure(run_2)
 
       Oban.drain_queue(Oban, queue: :workflow_failures)
 
@@ -169,23 +169,23 @@ defmodule Lightning.FailureAlertTest do
     end
 
     test "does not send failure emails to users who have unsubscribed", %{
-      attempts: [attempt_1, _, attempt_3]
+      runs: [run_1, _, run_3]
     } do
-      FailureAlerter.alert_on_failure(attempt_1)
+      FailureAlerter.alert_on_failure(run_1)
 
       assert_email_sent(subject: "\"workflow-a\" failed.")
 
-      FailureAlerter.alert_on_failure(attempt_3)
+      FailureAlerter.alert_on_failure(run_3)
 
       refute_email_sent(subject: "\"workflow-a\" failed.")
     end
 
     test "does not increment the rate-limiter counter when an email is not delivered.",
-         %{attempts: [attempt, _, _], workorders: [workorder, _, _]} do
+         %{runs: [run, _, _], workorders: [workorder, _, _]} do
       [time_scale: time_scale, rate_limit: rate_limit] =
         Application.fetch_env!(:lightning, Lightning.FailureAlerter)
 
-      FailureAlerter.alert_on_failure(attempt)
+      FailureAlerter.alert_on_failure(run)
 
       {:ok, {0, ^rate_limit, _, _, _}} =
         Hammer.inspect_bucket(workorder.workflow_id, time_scale, rate_limit)
@@ -196,7 +196,7 @@ defmodule Lightning.FailureAlertTest do
         {:error}
       end)
 
-      FailureAlerter.alert_on_failure(attempt)
+      FailureAlerter.alert_on_failure(run)
 
       refute_email_sent(subject: "\"workflow-a\" failed.")
 
@@ -206,7 +206,7 @@ defmodule Lightning.FailureAlertTest do
     end
 
     test "failure alert is sent on run complete", %{
-      attempts: [attempt, _, _]
+      runs: [run, _, _]
     } do
       Lightning.Stub.reset_time()
 
@@ -220,13 +220,13 @@ defmodule Lightning.FailureAlertTest do
         LightningWeb.WorkerSocket
         |> socket("socket_id", %{token: bearer})
         |> subscribe_and_join(
-          LightningWeb.AttemptChannel,
-          "attempt:#{attempt.id}",
-          %{"token" => Workers.generate_attempt_token(attempt)}
+          LightningWeb.RunChannel,
+          "run:#{run.id}",
+          %{"token" => Workers.generate_run_token(run)}
         )
 
       _ref =
-        push(socket, "attempt:complete", %{
+        push(socket, "run:complete", %{
           "reason" => "crash",
           "error_type" => "RuntimeCrash",
           "error_message" => nil

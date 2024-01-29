@@ -5,24 +5,24 @@ defmodule LightningWeb.EndToEndTest do
   import Lightning.JobsFixtures
   import Lightning.Factories
 
-  alias Lightning.Attempt
-  alias Lightning.Attempts
-  alias Lightning.Attempts.Events
+  alias Lightning.Run
+  alias Lightning.Runs
+  alias Lightning.Runs.Events
   alias Lightning.Invocation
   alias Lightning.Repo
   alias Lightning.WorkOrders
   alias Lightning.Runtime.RuntimeManager
 
-  require Attempt
+  require Run
 
   setup_all context do
     start_runtime_manager(context)
   end
 
-  describe "webhook triggered attempts" do
+  describe "webhook triggered runs" do
     setup :register_and_log_in_superuser
 
-    @tag timeout: 120_000
+    @tag timeout: 10_000
     test "complete a run on a complex workflow with parallel jobs", %{
       conn: conn
     } do
@@ -37,21 +37,21 @@ defmodule LightningWeb.EndToEndTest do
 
       assert %{"work_order_id" => wo_id} = json_response(conn, 200)
 
-      assert %{attempts: [%{id: attempt_id}]} =
-               WorkOrders.get(wo_id, include: [:attempts])
+      assert %{runs: [%{id: run_id}]} =
+               WorkOrders.get(wo_id, include: [:runs])
 
-      assert %{steps: []} = Attempts.get(attempt_id, include: [:steps])
+      assert %{steps: []} = Runs.get(run_id, include: [:steps])
 
-      assert %{attempts: [attempt]} =
-               WorkOrders.get(wo_id, include: [:attempts])
+      assert %{runs: [run]} =
+               WorkOrders.get(wo_id, include: [:runs])
 
       # wait to complete
-      Events.subscribe(attempt)
+      Events.subscribe(run)
 
-      attempt_id = attempt.id
+      run_id = run.id
 
-      assert_receive %Events.AttemptUpdated{
-                       attempt: %{id: ^attempt_id, state: :success}
+      assert_receive %Events.RunUpdated{
+                       run: %{id: ^run_id, state: :success}
                      },
                      115_000
 
@@ -165,23 +165,23 @@ defmodule LightningWeb.EndToEndTest do
 
       assert %{"work_order_id" => wo_id} = json_response(conn, 200)
 
-      assert %{attempts: [%{id: attempt_id} = attempt]} =
-               WorkOrders.get(wo_id, include: [:attempts])
+      assert %{runs: [%{id: run_id} = run]} =
+               WorkOrders.get(wo_id, include: [:runs])
 
-      assert %{steps: []} = Attempts.get(attempt.id, include: [:steps])
+      assert %{steps: []} = Runs.get(run.id, include: [:steps])
 
       # wait to complete
-      Events.subscribe(attempt)
+      Events.subscribe(run)
 
-      assert_receive %Events.AttemptUpdated{
-                       attempt: %{id: ^attempt_id, state: :success}
+      assert_receive %Events.RunUpdated{
+                       run: %{id: ^run_id, state: :success}
                      },
                      115_000
 
       assert %{state: :success} = WorkOrders.get(wo_id)
 
-      # All steps are associated with the same project and attempt and proper job
-      %{steps: steps} = Attempts.get(attempt.id, include: [:steps])
+      # All steps are associated with the same project and run and proper job
+      %{steps: steps} = Runs.get(run.id, include: [:steps])
 
       assert %{
                total_entries: 4,
@@ -194,7 +194,7 @@ defmodule LightningWeb.EndToEndTest do
 
       # Alls steps have consistent finish_at, exit_reason and dataclips
       %{claimed_at: claimed_at, finished_at: finished_at} =
-        Attempts.get(attempt.id)
+        Runs.get(run.id)
 
       assert Enum.all?(steps, fn step ->
                NaiveDateTime.after?(step_2.finished_at, claimed_at) and

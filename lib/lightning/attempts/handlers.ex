@@ -1,10 +1,10 @@
-defmodule Lightning.Attempts.Handlers do
+defmodule Lightning.Runs.Handlers do
   @moduledoc """
-  Handler modules for working with attempts.
+  Handler modules for working with runs.
   """
 
-  alias Lightning.Attempt
-  alias Lightning.Attempts
+  alias Lightning.Run
+  alias Lightning.Runs
   alias Lightning.RunStep
   alias Lightning.Invocation.Dataclip
   alias Lightning.Invocation.Step
@@ -21,7 +21,7 @@ defmodule Lightning.Attempts.Handlers do
 
     @primary_key false
     embedded_schema do
-      field :attempt_id, Ecto.UUID
+      field :run_id, Ecto.UUID
       field :step_id, Ecto.UUID
       field :credential_id, Ecto.UUID
       field :job_id, Ecto.UUID
@@ -31,7 +31,7 @@ defmodule Lightning.Attempts.Handlers do
 
     def new(params) do
       cast(%__MODULE__{}, params, [
-        :attempt_id,
+        :run_id,
         :step_id,
         :credential_id,
         :job_id,
@@ -46,7 +46,7 @@ defmodule Lightning.Attempts.Handlers do
         end
       end)
       |> validate_required([
-        :attempt_id,
+        :run_id,
         :step_id,
         :job_id,
         :input_dataclip_id,
@@ -58,9 +58,9 @@ defmodule Lightning.Attempts.Handlers do
     def call(params) do
       with {:ok, attrs} <- new(params) |> apply_action(:validate),
            {:ok, step} <- insert(attrs) do
-        attempt = Attempts.get(attrs.attempt_id, include: [:workflow])
-        WorkOrders.Events.attempt_updated(attempt.workflow.project_id, attempt)
-        Attempts.Events.step_started(attrs.attempt_id, step)
+        run = Runs.get(attrs.run_id, include: [:workflow])
+        WorkOrders.Events.run_updated(run.workflow.project_id, run)
+        Runs.Events.step_started(attrs.run_id, step)
 
         {:ok, step}
       end
@@ -69,7 +69,7 @@ defmodule Lightning.Attempts.Handlers do
     defp insert(attrs) do
       Repo.transact(fn ->
         with {:ok, step} <- attrs |> to_step() |> Repo.insert(),
-             {:ok, _} <- attrs |> to_attempt_step() |> Repo.insert() do
+             {:ok, _} <- attrs |> to_run_step() |> Repo.insert() do
           {:ok, step}
         end
       end)
@@ -82,10 +82,10 @@ defmodule Lightning.Attempts.Handlers do
       |> Step.new()
     end
 
-    defp to_attempt_step(%__MODULE__{step_id: step_id, attempt_id: attempt_id}) do
+    defp to_run_step(%__MODULE__{step_id: step_id, run_id: run_id}) do
       RunStep.new(%{
         step_id: step_id,
-        attempt_id: attempt_id
+        run_id: run_id
       })
     end
 
@@ -96,12 +96,12 @@ defmodule Lightning.Attempts.Handlers do
 
         _ ->
           job_id = get_field(changeset, :job_id)
-          attempt_id = get_field(changeset, :attempt_id)
+          run_id = get_field(changeset, :run_id)
 
           # Verify that all of the required entities exist with a single query,
           # then reduce the results into a single changeset by adding errors for
           # any columns/ids that are null.
-          attempt_id
+          run_id
           |> fetch_existing_job(job_id)
           |> Enum.reduce(changeset, fn {k, v}, changeset ->
             if is_nil(v) do
@@ -113,17 +113,17 @@ defmodule Lightning.Attempts.Handlers do
       end
     end
 
-    defp fetch_existing_job(attempt_id, job_id) do
+    defp fetch_existing_job(run_id, job_id) do
       query =
-        from(a in Attempt,
-          where: a.id == ^attempt_id,
+        from(a in Run,
+          where: a.id == ^run_id,
           left_join: w in assoc(a, :workflow),
           left_join: j in assoc(w, :jobs),
           on: j.id == ^job_id,
-          select: %{attempt_id: a.id, job_id: j.id}
+          select: %{run_id: a.id, job_id: j.id}
         )
 
-      Repo.one(query) || %{attempt_id: nil, job_id: nil}
+      Repo.one(query) || %{run_id: nil, job_id: nil}
     end
   end
 
@@ -138,7 +138,7 @@ defmodule Lightning.Attempts.Handlers do
     @primary_key false
     embedded_schema do
       field :project_id, Ecto.UUID
-      field :attempt_id, Ecto.UUID
+      field :run_id, Ecto.UUID
       field :output_dataclip, :string
       field :output_dataclip_id, Ecto.UUID
       field :reason, :string
@@ -150,7 +150,7 @@ defmodule Lightning.Attempts.Handlers do
 
     def new(params) do
       cast(%__MODULE__{}, params, [
-        :attempt_id,
+        :run_id,
         :output_dataclip,
         :output_dataclip_id,
         :project_id,
@@ -181,7 +181,7 @@ defmodule Lightning.Attempts.Handlers do
         end
       end)
       |> validate_required([
-        :attempt_id,
+        :run_id,
         :finished_at,
         :project_id,
         :reason,
@@ -192,7 +192,7 @@ defmodule Lightning.Attempts.Handlers do
     def call(params) do
       with {:ok, complete_step} <- new(params) |> apply_action(:validate),
            {:ok, step} <- update(complete_step) do
-        Attempts.Events.step_completed(complete_step.attempt_id, step)
+        Runs.Events.step_completed(complete_step.run_id, step)
 
         {:ok, step}
       end

@@ -272,15 +272,15 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
         </:suffix>
       </.metric_card>
       <.metric_card title="Runs">
-        <:value><%= @metrics.attempt_metrics.total %></:value>
+        <:value><%= @metrics.run_metrics.total %></:value>
         <:suffix>
-          (<%= @metrics.attempt_metrics.pending %> pending)
+          (<%= @metrics.run_metrics.pending %> pending)
         </:suffix>
       </.metric_card>
       <.metric_card title="Successful Runs">
-        <:value><%= @metrics.attempt_metrics.success %></:value>
+        <:value><%= @metrics.run_metrics.success %></:value>
         <:suffix>
-          (<%= @metrics.attempt_metrics.success_rate %>%)
+          (<%= @metrics.run_metrics.success_rate %>%)
         </:suffix>
       </.metric_card>
       <.metric_card title="Work Orders in failed state">

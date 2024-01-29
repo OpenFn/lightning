@@ -4,7 +4,7 @@ defmodule Lightning.JanitorTest do
   alias Lightning.Invocation
   import Lightning.Factories
   alias Lightning.Repo
-  alias Lightning.Attempt
+  alias Lightning.Run
 
   setup do
     :ok = Ecto.Adapters.SQL.Sandbox.checkout(Lightning.Repo)
@@ -12,7 +12,7 @@ defmodule Lightning.JanitorTest do
 
   describe "find_and_update_lost/0" do
     @tag :capture_log
-    test "updates lost attempts and their steps" do
+    test "updates lost runs and their steps" do
       %{triggers: [trigger]} = workflow = insert(:simple_workflow)
       dataclip = insert(:dataclip)
 
@@ -23,8 +23,8 @@ defmodule Lightning.JanitorTest do
           dataclip: dataclip
         )
 
-      lost_attempt =
-        insert(:attempt,
+      lost_run =
+        insert(:run,
           work_order: work_order,
           starting_trigger: trigger,
           dataclip: dataclip,
@@ -34,17 +34,17 @@ defmodule Lightning.JanitorTest do
 
       unfinished_step =
         insert(:step,
-          attempts: [lost_attempt],
+          runs: [lost_run],
           finished_at: nil,
           exit_reason: nil
         )
 
       Janitor.find_and_update_lost()
 
-      reloaded_attempt = Repo.get(Attempt, lost_attempt.id)
+      reloaded_run = Repo.get(Run, lost_run.id)
       reloaded_step = Repo.get(Invocation.Step, unfinished_step.id)
 
-      assert reloaded_attempt.state == :lost
+      assert reloaded_run.state == :lost
       assert reloaded_step.exit_reason == "lost"
     end
   end

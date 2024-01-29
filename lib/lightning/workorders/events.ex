@@ -11,14 +11,14 @@ defmodule Lightning.WorkOrders.Events do
     defstruct work_order: nil
   end
 
-  defmodule AttemptCreated do
+  defmodule RunCreated do
     @moduledoc false
-    defstruct attempt: nil
+    defstruct run: nil
   end
 
-  defmodule AttemptUpdated do
+  defmodule RunUpdated do
     @moduledoc false
-    defstruct attempt: nil
+    defstruct run: nil
   end
 
   def work_order_created(project_id, work_order) do
@@ -35,17 +35,17 @@ defmodule Lightning.WorkOrders.Events do
     )
   end
 
-  def attempt_created(project_id, attempt) do
+  def run_created(project_id, run) do
     Lightning.broadcast(
       topic(project_id),
-      %AttemptCreated{attempt: attempt}
+      %RunCreated{run: run}
     )
   end
 
-  def attempt_updated(project_id, attempt) do
+  def run_updated(project_id, run) do
     Lightning.broadcast(
       topic(project_id),
-      %AttemptUpdated{attempt: attempt}
+      %RunUpdated{run: run}
     )
   end
 

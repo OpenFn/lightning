@@ -1,30 +1,30 @@
-defmodule Lightning.Attempts do
+defmodule Lightning.Runs do
   import Ecto.Query
 
-  alias Lightning.Attempt
-  alias Lightning.Attempts.Events
-  alias Lightning.Attempts.Handlers
+  alias Lightning.Run
+  alias Lightning.Runs.Events
+  alias Lightning.Runs.Handlers
   alias Lightning.Invocation.LogLine
   alias Lightning.Repo
   require Logger
 
   defmodule Adaptor do
     @moduledoc """
-    Behaviour for implementing an adaptor for the Lightning.Attempts module.
+    Behaviour for implementing an adaptor for the Lightning.Runs module.
     """
 
     @callback enqueue(
-                attempt ::
-                  Lightning.Attempt.t() | Ecto.Changeset.t(Lightning.Attempt.t())
+                run ::
+                  Lightning.Run.t() | Ecto.Changeset.t(Lightning.Run.t())
               ) ::
-                {:ok, Lightning.Attempt.t()}
-                | {:error, Ecto.Changeset.t(Lightning.Attempt.t())}
+                {:ok, Lightning.Run.t()}
+                | {:error, Ecto.Changeset.t(Lightning.Run.t())}
 
     @callback claim(demand :: non_neg_integer()) ::
-                {:ok, [Lightning.Attempt.t()]}
+                {:ok, [Lightning.Run.t()]}
 
-    @callback dequeue(attempt :: Lightning.Attempt.t()) ::
-                {:ok, Lightning.Attempt.t()}
+    @callback dequeue(run :: Lightning.Run.t()) ::
+                {:ok, Lightning.Run.t()}
   end
 
   # credo:disable-for-next-line
@@ -34,14 +34,14 @@ defmodule Lightning.Attempts do
   Enqueue a run to be processed.
   """
   @impl true
-  def enqueue(attempt) do
-    adaptor().enqueue(attempt)
+  def enqueue(run) do
+    adaptor().enqueue(run)
   end
 
   # @doc """
-  # Claim an available attempt.
+  # Claim an available run.
   #
-  # The `demand` parameter is used to request more than a since attempt,
+  # The `demand` parameter is used to request more than a since run,
   # all implementation should default to 1.
   # """
   @impl true
@@ -53,8 +53,8 @@ defmodule Lightning.Attempts do
   # Removes a run from the queue.
   # """
   @impl true
-  def dequeue(attempt) do
-    adaptor().dequeue(attempt)
+  def dequeue(run) do
+    adaptor().dequeue(run)
   end
 
   @doc """
@@ -62,14 +62,14 @@ defmodule Lightning.Attempts do
 
   Optionally preload associations by passing a list of atoms to `:include`.
 
-      Lightning.Attempts.get(id, include: [:workflow])
+      Lightning.Runs.get(id, include: [:workflow])
   """
   @spec get(Ecto.UUID.t(), [{:include, term()}]) ::
-          Attempt.t() | nil
+          Run.t() | nil
   def get(id, opts \\ []) do
     preloads = opts |> Keyword.get(:include, [])
 
-    from(a in Attempt,
+    from(a in Run,
       where: a.id == ^id,
       preload: ^preloads
     )
@@ -79,8 +79,8 @@ defmodule Lightning.Attempts do
   @doc """
   Returns only the dataclip body as a string
   """
-  def get_dataclip_body(%Attempt{} = attempt) do
-    from(d in Ecto.assoc(attempt, :dataclip),
+  def get_dataclip_body(%Run{} = run) do
+    from(d in Ecto.assoc(run, :dataclip),
       select: type(d.body, :string)
     )
     |> Repo.one()
@@ -89,8 +89,8 @@ defmodule Lightning.Attempts do
   @doc """
   Returns only the dataclip request as a string
   """
-  def get_dataclip_request(%Attempt{} = attempt) do
-    from(d in Ecto.assoc(attempt, :dataclip),
+  def get_dataclip_request(%Run{} = run) do
+    from(d in Ecto.assoc(run, :dataclip),
       select: type(d.request, :string)
     )
     |> Repo.one()
@@ -102,12 +102,12 @@ defmodule Lightning.Attempts do
   Only `http_request` dataclips are changed, their `body` is nested inside a
   `"data"` key and `request` data is added as a `"request"` key.
 
-  See LightingWeb.AttemptChannel.handle_in("fetch:dataclip", _, _)
+  See LightingWeb.RunChannel.handle_in("fetch:dataclip", _, _)
   for more details.
   """
-  @spec get_input(Attempt.t()) :: String.t() | nil
-  def get_input(%Attempt{} = attempt) do
-    from(d in Ecto.assoc(attempt, :dataclip),
+  @spec get_input(Run.t()) :: String.t() | nil
+  def get_input(%Run{} = run) do
+    from(d in Ecto.assoc(run, :dataclip),
       select:
         type(
           fragment(
@@ -126,59 +126,59 @@ defmodule Lightning.Attempts do
     |> Repo.one()
   end
 
-  def get_credential(%Attempt{} = attempt, id) do
-    from(c in Ecto.assoc(attempt, [:workflow, :jobs, :credential]),
+  def get_credential(%Run{} = run, id) do
+    from(c in Ecto.assoc(run, [:workflow, :jobs, :credential]),
       where: c.id == ^id
     )
     |> Repo.one()
   end
 
-  def start_attempt(%Attempt{} = attempt) do
-    Attempt.start(attempt)
-    |> update_attempt()
-    |> tap(&track_attempt_queue_delay/1)
+  def start_run(%Run{} = run) do
+    Run.start(run)
+    |> update_run()
+    |> tap(&track_run_queue_delay/1)
   end
 
-  @spec complete_attempt(Attempt.t(), %{optional(any()) => any()}) ::
-          {:ok, Attempt.t()} | {:error, Ecto.Changeset.t(Attempt.t())}
-  def complete_attempt(attempt, params) do
-    Attempt.complete(attempt, params)
+  @spec complete_run(Run.t(), %{optional(any()) => any()}) ::
+          {:ok, Run.t()} | {:error, Ecto.Changeset.t(Run.t())}
+  def complete_run(run, params) do
+    Run.complete(run, params)
     |> case do
       %{valid?: false} = changeset ->
         {:error, changeset}
 
       changeset ->
-        changeset |> update_attempt()
+        changeset |> update_run()
     end
   end
 
-  @spec update_attempt(Ecto.Changeset.t(Attempt.t())) ::
-          {:ok, Attempt.t()} | {:error, Ecto.Changeset.t(Attempt.t())}
-  def update_attempt(%Ecto.Changeset{data: %Attempt{}} = changeset) do
-    attempt_id = Ecto.Changeset.get_field(changeset, :id)
+  @spec update_run(Ecto.Changeset.t(Run.t())) ::
+          {:ok, Run.t()} | {:error, Ecto.Changeset.t(Run.t())}
+  def update_run(%Ecto.Changeset{data: %Run{}} = changeset) do
+    run_id = Ecto.Changeset.get_field(changeset, :id)
 
-    attempt_query =
-      from(a in Attempt,
-        where: a.id == ^attempt_id,
+    run_query =
+      from(a in Run,
+        where: a.id == ^run_id,
         lock: "FOR UPDATE"
       )
 
     update_query =
-      Attempt
-      |> with_cte("subset", as: ^attempt_query)
+      Run
+      |> with_cte("subset", as: ^run_query)
       |> join(:inner, [a], s in fragment(~s("subset")), on: a.id == s.id)
       |> select([a, _], a)
 
-    case update_attempts(update_query, changeset) do
-      {:ok, %{attempts: {1, [attempt]}}} ->
-        {:ok, attempt}
+    case update_runs(update_query, changeset) do
+      {:ok, %{runs: {1, [run]}}} ->
+        {:ok, run}
 
       {:error, _op, changeset, _changes} ->
         {:error, changeset}
     end
   end
 
-  def update_attempts(update_query, updates) do
+  def update_runs(update_query, updates) do
     updates =
       case updates do
         %Ecto.Changeset{changes: changes} -> [set: changes |> Enum.into([])]
@@ -186,34 +186,34 @@ defmodule Lightning.Attempts do
       end
 
     Ecto.Multi.new()
-    |> Ecto.Multi.update_all(:attempts, update_query, updates)
-    |> Ecto.Multi.run(:post, fn _, %{attempts: {_, attempts}} ->
-      Enum.each(attempts, fn attempt ->
-        {:ok, _} = Lightning.WorkOrders.update_state(attempt)
+    |> Ecto.Multi.update_all(:runs, update_query, updates)
+    |> Ecto.Multi.run(:post, fn _, %{runs: {_, runs}} ->
+      Enum.each(runs, fn run ->
+        {:ok, _} = Lightning.WorkOrders.update_state(run)
       end)
 
       {:ok, nil}
     end)
     |> Repo.transaction()
     |> tap(fn result ->
-      with {:ok, %{attempts: {_n, attempts}}} <- result do
-        Enum.each(attempts, &Events.attempt_updated/1)
+      with {:ok, %{runs: {_n, runs}}} <- result do
+        Enum.each(runs, &Events.run_updated/1)
       end
     end)
   end
 
-  def append_attempt_log(attempt, params, scrubber \\ nil) do
-    LogLine.new(attempt, params, scrubber)
+  def append_run_log(run, params, scrubber \\ nil) do
+    LogLine.new(run, params, scrubber)
     |> Ecto.Changeset.validate_change(:step_id, fn _, step_id ->
       if is_nil(step_id) do
         []
       else
-        where(Lightning.RunStep, step_id: ^step_id, attempt_id: ^attempt.id)
+        where(Lightning.RunStep, step_id: ^step_id, run_id: ^run.id)
         |> Repo.exists?()
         |> if do
           []
         else
-          [{:step_id, "must be associated with the attempt"}]
+          [{:step_id, "must be associated with the run"}]
         end
       end
     end)
@@ -229,7 +229,7 @@ defmodule Lightning.Attempts do
   end
 
   @doc """
-  Creates a Step for a given attempt and job.
+  Creates a Step for a given run and job.
 
   The Step is created and marked as started at the current time.
   """
@@ -245,24 +245,24 @@ defmodule Lightning.Attempts do
     Handlers.CompleteStep.call(params)
   end
 
-  @spec mark_attempt_lost(Lightning.Attempt.t()) ::
+  @spec mark_run_lost(Lightning.Run.t()) ::
           {:ok, any()} | {:error, any()}
-  def mark_attempt_lost(%Attempt{} = attempt) do
+  def mark_run_lost(%Run{} = run) do
     error_type =
-      case attempt.state do
+      case run.state do
         :claimed -> "LostAfterClaim"
         :started -> "LostAfterStart"
         _other -> "UnknownReason"
       end
 
     Logger.warning(fn ->
-      "Detected lost attempt with reason #{error_type}: #{inspect(attempt)}"
+      "Detected lost run with reason #{error_type}: #{inspect(run)}"
     end)
 
     Repo.transaction(fn ->
-      complete_attempt(attempt, %{state: :lost, error_type: error_type})
+      complete_run(run, %{state: :lost, error_type: error_type})
 
-      Ecto.assoc(attempt, :steps)
+      Ecto.assoc(run, :steps)
       |> where([r], is_nil(r.exit_reason))
       |> Repo.update_all(
         set: [exit_reason: "lost", finished_at: DateTime.utc_now()]
@@ -270,36 +270,36 @@ defmodule Lightning.Attempts do
     end)
   end
 
-  defdelegate subscribe(attempt), to: Events
+  defdelegate subscribe(run), to: Events
 
-  def get_project_id_for_attempt(attempt) do
-    Ecto.assoc(attempt, [:work_order, :workflow, :project])
+  def get_project_id_for_run(run) do
+    Ecto.assoc(run, [:work_order, :workflow, :project])
     |> select([p], p.id)
     |> Repo.one()
   end
 
-  def get_log_lines(attempt, order \\ :asc) do
-    Ecto.assoc(attempt, :log_lines)
+  def get_log_lines(run, order \\ :asc) do
+    Ecto.assoc(run, :log_lines)
     |> order_by([{^order, :timestamp}])
     |> Repo.stream()
   end
 
   defp adaptor do
-    Lightning.Config.attempts_adaptor()
+    Lightning.Config.runs_adaptor()
   end
 
-  defp track_attempt_queue_delay({:ok, attempt}) do
-    %Attempt{inserted_at: inserted_at, started_at: started_at} = attempt
+  defp track_run_queue_delay({:ok, run}) do
+    %Run{inserted_at: inserted_at, started_at: started_at} = run
 
     delay = DateTime.diff(started_at, inserted_at, :millisecond)
 
     :telemetry.execute(
-      [:domain, :attempt, :queue],
+      [:domain, :run, :queue],
       %{delay: delay},
       %{}
     )
   end
 
-  defp track_attempt_queue_delay({:error, _changeset}) do
+  defp track_run_queue_delay({:error, _changeset}) do
   end
 end

@@ -15,38 +15,38 @@ defmodule Lightning.WorkOrders.QueryTest do
       %{work_order: work_order, trigger: trigger, dataclip: dataclip}
     end
 
-    test "when the attempt is the only one", context do
-      first_attempt =
-        insert(:attempt,
+    test "when the run is the only one", context do
+      first_run =
+        insert(:run,
           work_order: context.work_order,
           dataclip: context.dataclip,
           starting_trigger: context.trigger
         )
 
-      assert Query.state_for(first_attempt) |> Repo.one() == %{state: "pending"}
+      assert Query.state_for(first_run) |> Repo.one() == %{state: "pending"}
 
-      Repo.update(change(first_attempt, state: :claimed))
+      Repo.update(change(first_run, state: :claimed))
 
-      assert Query.state_for(first_attempt) |> Repo.one() == %{state: "pending"}
+      assert Query.state_for(first_run) |> Repo.one() == %{state: "pending"}
 
-      Repo.update(change(first_attempt, state: :started))
+      Repo.update(change(first_run, state: :started))
 
-      assert Query.state_for(first_attempt) |> Repo.one() == %{state: "running"}
+      assert Query.state_for(first_run) |> Repo.one() == %{state: "running"}
 
       for state <- [:success, :failed, :killed, :crashed] do
-        Repo.update(change(first_attempt, state: state))
+        Repo.update(change(first_run, state: state))
 
-        assert Query.state_for(first_attempt) |> Repo.one() == %{
+        assert Query.state_for(first_run) |> Repo.one() == %{
                  state: state |> to_string()
                }
       end
     end
 
-    test "when there are more than one attempt", context do
-      [_, _, third_attempt] =
+    test "when there are more than one run", context do
+      [_, _, third_run] =
         [:success, :started, :available]
         |> Enum.map(fn state ->
-          insert(:attempt,
+          insert(:run,
             work_order: context.work_order,
             dataclip: context.dataclip,
             starting_trigger: context.trigger,
@@ -55,7 +55,7 @@ defmodule Lightning.WorkOrders.QueryTest do
         end)
 
       # Running wins over pending.
-      assert %{state: "running"} = Query.state_for(third_attempt) |> Repo.one()
+      assert %{state: "running"} = Query.state_for(third_run) |> Repo.one()
     end
   end
 end

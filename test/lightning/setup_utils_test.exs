@@ -872,13 +872,13 @@ defmodule Lightning.SetupUtilsTest do
     |> Repo.one()
   end
 
-  defp get_steps_from_workorder(workorder, attempt_idx \\ 0) do
-    attempt_query =
-      Ecto.assoc(workorder, :attempts)
-      |> offset(^attempt_idx)
+  defp get_steps_from_workorder(workorder, run_idx \\ 0) do
+    run_query =
+      Ecto.assoc(workorder, :runs)
+      |> offset(^run_idx)
       |> limit(1)
 
-    from(a in attempt_query, preload: [:steps])
+    from(a in run_query, preload: [:steps])
     |> Repo.one()
     |> Map.get(:steps)
   end

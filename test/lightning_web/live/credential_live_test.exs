@@ -98,7 +98,7 @@ defmodule LightningWeb.CredentialLiveTest do
       assert html =~
                "Deleting this credential will immediately remove it from all jobs"
 
-      refute html =~ "credential has been used in workflow attempts"
+      refute html =~ "credential has been used in workflow runs"
 
       assert index_live
              |> element("button", "Delete credential")
@@ -130,7 +130,7 @@ defmodule LightningWeb.CredentialLiveTest do
       assert html =~ "Delete credential"
 
       assert html =~ "Deleting this credential will immediately"
-      assert html =~ "*This credential has been used in workflow attempts"
+      assert html =~ "*This credential has been used in workflow runs"
 
       assert index_live
              |> element("button", "Delete credential")
@@ -189,7 +189,7 @@ defmodule LightningWeb.CredentialLiveTest do
       assert html =~
                "Deleting this credential will immediately remove it from all jobs"
 
-      refute html =~ "credential has been used in workflow attempts"
+      refute html =~ "credential has been used in workflow runs"
 
       assert index_live
              |> element("button", "Delete credential")
@@ -214,7 +214,7 @@ defmodule LightningWeb.CredentialLiveTest do
       {:ok, index_live, html} =
         live(conn, ~p"/credentials/#{credential.id}/delete")
 
-      assert html =~ "This credential has been used in workflow attempts"
+      assert html =~ "This credential has been used in workflow runs"
       assert html =~ "will be made unavailable for future use immediately"
 
       assert index_live |> element("button", "Ok, understood") |> has_element?()

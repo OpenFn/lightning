@@ -1,24 +1,24 @@
-defmodule Lightning.Attempts.Queue do
+defmodule Lightning.Runs.Queue do
   @moduledoc """
   Allows adding, removing or claiming work to be executed by the Runtime.
   """
-  @behaviour Lightning.Attempts.Adaptor
+  @behaviour Lightning.Runs.Adaptor
 
   import Ecto.Query
 
-  alias Lightning.Attempts
+  alias Lightning.Runs
   alias Lightning.Repo
 
   @impl true
-  def enqueue(attempt) do
-    attempt
+  def enqueue(run) do
+    run
     |> Repo.insert()
   end
 
   @impl true
   def claim(demand \\ 1) do
     subset_query =
-      Lightning.Attempt
+      Lightning.Run
       |> select([:id])
       |> where([j], j.state == :available)
       |> limit(^demand)
@@ -35,17 +35,17 @@ defmodule Lightning.Attempts.Queue do
     # The odd "subset" fragment is required to prevent Ecto from applying the
     # prefix to the name of the CTE, e.g. "public"."subset".
     query =
-      Lightning.Attempt
+      Lightning.Run
       |> with_cte("subset", as: ^subset_query)
       |> join(:inner, [a], x in fragment(~s("subset")), on: true)
       |> where([a, x], a.id == x.id)
       |> select([a, _], a)
 
-    case Attempts.update_attempts(query,
+    case Runs.update_runs(query,
            set: [state: :claimed, claimed_at: DateTime.utc_now()]
          ) do
-      {:ok, %{attempts: {_, attempts}}} ->
-        {:ok, attempts}
+      {:ok, %{runs: {_, runs}}} ->
+        {:ok, runs}
 
       {:error, _op, changeset, _changes} ->
         {:error, changeset}
@@ -53,8 +53,8 @@ defmodule Lightning.Attempts.Queue do
   end
 
   @impl true
-  def dequeue(attempt) do
-    attempt
+  def dequeue(run) do
+    run
     |> Repo.delete()
   end
 end

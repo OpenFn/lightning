@@ -24,7 +24,7 @@ defmodule Lightning.Workers do
     end
   end
 
-  defmodule AttemptToken do
+  defmodule RunToken do
     @moduledoc """
     JWT token configuration to verify if workers work is legit.
     """
@@ -58,11 +58,11 @@ defmodule Lightning.Workers do
     end
   end
 
-  def generate_attempt_token(attempt) do
+  def generate_run_token(run) do
     {:ok, token, _claims} =
-      AttemptToken.generate_and_sign(
-        %{"id" => attempt.id},
-        Lightning.Config.attempt_token_signer()
+      RunToken.generate_and_sign(
+        %{"id" => run.id},
+        Lightning.Config.run_token_signer()
       )
 
     token
@@ -73,20 +73,20 @@ defmodule Lightning.Workers do
 
   It requires a context map with the following keys:
 
-  - `:id` - the attempt id that the token was issued with.
+  - `:id` - the run id that the token was issued with.
 
   Optionally takes a context map that will be passed to the validation:
 
   - `:current_time` - the current time as a `DateTime` struct.
   """
-  @spec verify_attempt_token(binary(), map()) ::
+  @spec verify_run_token(binary(), map()) ::
           {:ok, Joken.claims()} | {:error, any()}
-  def verify_attempt_token(token, context) when is_binary(token) do
+  def verify_run_token(token, context) when is_binary(token) do
     context = Enum.into(context, %{current_time: Lightning.current_time()})
 
-    AttemptToken.verify_and_validate(
+    RunToken.verify_and_validate(
       token,
-      Lightning.Config.attempt_token_signer(),
+      Lightning.Config.run_token_signer(),
       context
     )
     |> case do

@@ -6,7 +6,7 @@ defmodule Lightning.SetupUtils do
   import Ecto.Changeset
 
   alias Lightning.Accounts
-  alias Lightning.Attempts
+  alias Lightning.Runs
   alias Lightning.Credentials
   alias Lightning.Jobs
   alias Lightning.Projects
@@ -853,7 +853,7 @@ defmodule Lightning.SetupUtils do
     ])
 
     delete_all_entities([
-      Lightning.Attempt,
+      Lightning.Run,
       Lightning.RunStep,
       Lightning.AuthProviders.AuthConfig,
       Lightning.Auditing.Audit,
@@ -900,22 +900,22 @@ defmodule Lightning.SetupUtils do
     workorder =
       Repo.transaction(fn ->
         workorder =
-          %{attempts: [attempt]} =
+          %{runs: [run]} =
           WorkOrders.build_for(trigger, %{
             workflow: workflow,
             dataclip: input_dataclip
           })
           |> then(fn changeset ->
-            [attempt] = changeset |> get_change(:attempts)
+            [run] = changeset |> get_change(:runs)
 
-            put_change(changeset, :attempts, [
-              attempt
+            put_change(changeset, :runs, [
+              run
               |> change(%{state: :claimed, claimed_at: Ticker.next(ticker)})
             ])
           end)
           |> Repo.insert!()
 
-        Attempts.start_attempt(attempt)
+        Runs.start_run(run)
 
         _steps =
           step_params
@@ -929,8 +929,8 @@ defmodule Lightning.SetupUtils do
                 Map.get(previous, :output_dataclip_id, input_dataclip.id)
               )
 
-            Attempts.start_step(%{
-              attempt_id: attempt.id,
+            Runs.start_step(%{
+              run_id: run.id,
               step_id: step_id,
               job_id: step.job_id,
               input_dataclip_id: input_dataclip_id,
@@ -939,7 +939,7 @@ defmodule Lightning.SetupUtils do
 
             step.log_lines
             |> Enum.each(fn line ->
-              Attempts.append_attempt_log(attempt, %{
+              Runs.append_run_log(run, %{
                 step_id: step_id,
                 message: line.message,
                 timestamp: Ticker.next(ticker)
@@ -948,7 +948,7 @@ defmodule Lightning.SetupUtils do
 
             complete_step_params =
               %{
-                attempt_id: attempt.id,
+                run_id: run.id,
                 project_id: workflow.project_id,
                 step_id: step_id,
                 reason: step.exit_reason,
@@ -965,7 +965,7 @@ defmodule Lightning.SetupUtils do
                 end
               )
 
-            {:ok, step} = Attempts.complete_step(complete_step_params)
+            {:ok, step} = Runs.complete_step(complete_step_params)
 
             step
           end)
@@ -978,7 +978,7 @@ defmodule Lightning.SetupUtils do
             reason -> reason
           end
 
-        {:ok, _} = Attempts.complete_attempt(attempt, %{state: state})
+        {:ok, _} = Runs.complete_run(run, %{state: state})
 
         workorder
       end)

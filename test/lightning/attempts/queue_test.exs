@@ -1,38 +1,38 @@
-defmodule Lightning.Attempts.QueueTest do
+defmodule Lightning.Runs.QueueTest do
   use Lightning.DataCase, async: true
 
-  alias Lightning.Attempts.Queue
+  alias Lightning.Runs.Queue
   import Lightning.Factories
 
   describe "dequeue" do
-    test "deletes the attempt and any associated attempt steps" do
-      attempt_1 = insert_attempt()
-      attempt_2 = insert_attempt()
+    test "deletes the run and any associated run steps" do
+      run_1 = insert_run()
+      run_2 = insert_run()
 
-      _attempt_step_1_1 = insert_attempt_step(attempt_1)
-      _attempt_step_1_2 = insert_attempt_step(attempt_1)
-      attempt_step_2 = insert_attempt_step(attempt_2)
+      _run_step_1_1 = insert_run_step(run_1)
+      _run_step_1_2 = insert_run_step(run_1)
+      run_step_2 = insert_run_step(run_2)
 
-      Queue.dequeue(attempt_1)
+      Queue.dequeue(run_1)
 
-      assert only_record_for_type?(attempt_2)
+      assert only_record_for_type?(run_2)
 
-      assert only_record_for_type?(attempt_step_2)
+      assert only_record_for_type?(run_step_2)
     end
 
     test "deletes associated LogLine records" do
-      attempt_1 = build_list(2, :log_line) |> insert_attempt()
+      run_1 = build_list(2, :log_line) |> insert_run()
 
-      attempt_2 = insert_attempt()
-      log_line_2_1 = insert(:log_line, attempt: attempt_2)
+      run_2 = insert_run()
+      log_line_2_1 = insert(:log_line, run: run_2)
 
-      Queue.dequeue(attempt_1)
+      Queue.dequeue(run_1)
 
       assert only_record_for_type?(log_line_2_1)
     end
 
-    defp insert_attempt(log_lines \\ []) do
-      insert(:attempt,
+    defp insert_run(log_lines \\ []) do
+      insert(:run,
         created_by: build(:user),
         work_order: build(:workorder),
         dataclip: build(:dataclip),
@@ -41,8 +41,8 @@ defmodule Lightning.Attempts.QueueTest do
       )
     end
 
-    defp insert_attempt_step(attempt) do
-      insert(:attempt_step, attempt: attempt, step: build(:step))
+    defp insert_run_step(run) do
+      insert(:run_step, run: run, step: build(:step))
     end
   end
 end

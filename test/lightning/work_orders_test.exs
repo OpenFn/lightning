@@ -42,9 +42,9 @@ defmodule Lightning.WorkOrdersTest do
       assert workorder.dataclip_id == dataclip.id
       assert workorder.dataclip.type == :http_request
 
-      [attempt] = workorder.attempts
+      [run] = workorder.runs
 
-      assert attempt.starting_trigger.id == trigger.id
+      assert run.starting_trigger.id == trigger.id
 
       workorder_id = workorder.id
 
@@ -70,9 +70,9 @@ defmodule Lightning.WorkOrdersTest do
       assert workorder.dataclip_id == dataclip.id
       assert workorder.dataclip.type == :http_request
 
-      [attempt] = workorder.attempts
+      [run] = workorder.runs
 
-      assert attempt.starting_trigger.id == trigger.id
+      assert run.starting_trigger.id == trigger.id
 
       workorder_id = workorder.id
 
@@ -103,7 +103,7 @@ defmodule Lightning.WorkOrdersTest do
                |> Ecto.Changeset.apply_action(:validate)
 
       assert {:ok, workorder} = WorkOrders.create_for(manual)
-      assert [attempt] = workorder.attempts
+      assert [run] = workorder.runs
 
       assert workorder.dataclip.type == :saved_input
 
@@ -111,9 +111,9 @@ defmodule Lightning.WorkOrdersTest do
                "key_left" => "value_left"
              }
 
-      assert attempt.created_by.id == user.id
+      assert run.created_by.id == user.id
 
-      assert_received %Lightning.WorkOrders.Events.AttemptCreated{}
+      assert_received %Lightning.WorkOrders.Events.RunCreated{}
 
       workorder_id = workorder.id
 
@@ -153,13 +153,13 @@ defmodule Lightning.WorkOrdersTest do
     } do
       user = insert(:user)
       dataclip = insert(:dataclip)
-      # create existing complete attempt
-      %{attempts: [attempt]} =
+      # create existing complete run
+      %{runs: [run]} =
         insert(:workorder,
           workflow: workflow,
           trigger: trigger,
           dataclip: dataclip,
-          attempts: [
+          runs: [
             %{
               state: :failed,
               dataclip: dataclip,
@@ -171,16 +171,16 @@ defmodule Lightning.WorkOrdersTest do
           ]
         )
 
-      {:ok, retry_attempt} = WorkOrders.retry(attempt, step, created_by: user)
+      {:ok, retry_run} = WorkOrders.retry(run, step, created_by: user)
 
-      refute retry_attempt.id == attempt.id
-      assert retry_attempt.dataclip_id == dataclip.id
-      assert retry_attempt.starting_job.id == job.id
-      assert retry_attempt.created_by.id == user.id
-      assert retry_attempt.work_order_id == attempt.work_order_id
-      assert retry_attempt.state == :available
+      refute retry_run.id == run.id
+      assert retry_run.dataclip_id == dataclip.id
+      assert retry_run.starting_job.id == job.id
+      assert retry_run.created_by.id == user.id
+      assert retry_run.work_order_id == run.work_order_id
+      assert retry_run.state == :available
 
-      assert retry_attempt |> Repo.preload(:steps) |> Map.get(:steps) == [],
+      assert retry_run |> Repo.preload(:steps) |> Map.get(:steps) == [],
              "retrying a run from the start should not copy over steps"
     end
 
@@ -193,13 +193,13 @@ defmodule Lightning.WorkOrdersTest do
       dataclip = insert(:dataclip)
       output_dataclip = insert(:dataclip)
 
-      # create existing complete attempt
-      %{attempts: [attempt]} =
+      # create existing complete run
+      %{runs: [run]} =
         insert(:workorder,
           workflow: workflow,
           trigger: trigger,
           dataclip: dataclip,
-          attempts: [
+          runs: [
             %{
               state: :failed,
               dataclip: dataclip,
@@ -219,17 +219,17 @@ defmodule Lightning.WorkOrdersTest do
           ]
         )
 
-      {:ok, retry_attempt} =
-        WorkOrders.retry(attempt, second_step, created_by: user)
+      {:ok, retry_run} =
+        WorkOrders.retry(run, second_step, created_by: user)
 
-      refute retry_attempt.id == attempt.id
-      assert retry_attempt.dataclip_id == output_dataclip.id
-      assert retry_attempt.starting_job.id == job_b.id
-      assert retry_attempt.created_by.id == user.id
-      assert retry_attempt.work_order_id == attempt.work_order_id
-      assert retry_attempt.state == :available
+      refute retry_run.id == run.id
+      assert retry_run.dataclip_id == output_dataclip.id
+      assert retry_run.starting_job.id == job_b.id
+      assert retry_run.created_by.id == user.id
+      assert retry_run.work_order_id == run.work_order_id
+      assert retry_run.state == :available
 
-      steps = Ecto.assoc(retry_attempt, :steps) |> Repo.all()
+      steps = Ecto.assoc(retry_run, :steps) |> Repo.all()
       assert steps |> Enum.map(& &1.id) == [first_step.id]
     end
 
@@ -240,15 +240,15 @@ defmodule Lightning.WorkOrdersTest do
     } do
       user = insert(:user)
       dataclip = insert(:dataclip)
-      # create existing complete attempt
-      %{attempts: [attempt]} =
+      # create existing complete run
+      %{runs: [run]} =
         workorder =
         insert(:workorder,
           workflow: workflow,
           trigger: trigger,
           dataclip: dataclip,
           state: :failed,
-          attempts: [
+          runs: [
             %{
               state: :failed,
               dataclip: dataclip,
@@ -263,7 +263,7 @@ defmodule Lightning.WorkOrdersTest do
       assert workorder.state == :failed
       Lightning.WorkOrders.subscribe(workflow.project_id)
 
-      {:ok, _attempt} = WorkOrders.retry(attempt, step, created_by: user)
+      {:ok, _run} = WorkOrders.retry(run, step, created_by: user)
 
       updated_workorder = Lightning.Repo.get(Lightning.WorkOrder, workorder.id)
 
@@ -301,7 +301,7 @@ defmodule Lightning.WorkOrdersTest do
       }
     end
 
-    test "retrying one WorkOrder with a single attempt without steps from start job skips the retry",
+    test "retrying one WorkOrder with a single run without steps from start job skips the retry",
          %{
            workflow: workflow,
            trigger: trigger,
@@ -315,7 +315,7 @@ defmodule Lightning.WorkOrdersTest do
           workflow: workflow,
           trigger: trigger,
           dataclip: input_dataclip,
-          attempts: [
+          runs: [
             %{
               state: :failed,
               dataclip: input_dataclip,
@@ -325,20 +325,20 @@ defmodule Lightning.WorkOrdersTest do
           ]
         )
 
-      refute Repo.get_by(Lightning.Attempt,
+      refute Repo.get_by(Lightning.Run,
                work_order_id: workorder.id,
                starting_job_id: job_a.id
              )
 
       {:ok, 0} = WorkOrders.retry_many([workorder], job_a.id, created_by: user)
 
-      refute Repo.get_by(Lightning.Attempt,
+      refute Repo.get_by(Lightning.Run,
                work_order_id: workorder.id,
                starting_job_id: job_a.id
              )
     end
 
-    test "retrying one WorkOrder with a single attempt from start job", %{
+    test "retrying one WorkOrder with a single run from start job", %{
       workflow: workflow,
       trigger: trigger,
       jobs: [job_a, job_b, job_c],
@@ -352,7 +352,7 @@ defmodule Lightning.WorkOrdersTest do
           workflow: workflow,
           trigger: trigger,
           dataclip: input_dataclip,
-          attempts: [
+          runs: [
             %{
               state: :failed,
               dataclip: input_dataclip,
@@ -379,34 +379,34 @@ defmodule Lightning.WorkOrdersTest do
           ]
         )
 
-      refute Repo.get_by(Lightning.Attempt,
+      refute Repo.get_by(Lightning.Run,
                work_order_id: workorder.id,
                starting_job_id: job_a.id
              )
 
       {:ok, 1} = WorkOrders.retry_many([workorder], job_a.id, created_by: user)
 
-      retry_attempt =
-        Repo.get_by(Lightning.Attempt,
+      retry_run =
+        Repo.get_by(Lightning.Run,
           work_order_id: workorder.id,
           starting_job_id: job_a.id
         )
 
-      [old_attempt] = workorder.attempts
+      [old_run] = workorder.runs
 
-      refute retry_attempt.id == old_attempt.id
-      assert retry_attempt.dataclip_id == step_a.input_dataclip_id
-      assert retry_attempt.starting_trigger_id |> is_nil()
-      assert retry_attempt.starting_job_id == job_a.id
-      assert retry_attempt.created_by_id == user.id
-      assert retry_attempt.work_order_id == old_attempt.work_order_id
-      assert retry_attempt.state == :available
+      refute retry_run.id == old_run.id
+      assert retry_run.dataclip_id == step_a.input_dataclip_id
+      assert retry_run.starting_trigger_id |> is_nil()
+      assert retry_run.starting_job_id == job_a.id
+      assert retry_run.created_by_id == user.id
+      assert retry_run.work_order_id == old_run.work_order_id
+      assert retry_run.state == :available
 
-      assert retry_attempt |> Repo.preload(:steps) |> Map.get(:steps) == [],
+      assert retry_run |> Repo.preload(:steps) |> Map.get(:steps) == [],
              "retrying a run from the start should not copy over steps"
     end
 
-    test "retrying one WorkOrder with a single attempt from mid way job", %{
+    test "retrying one WorkOrder with a single run from mid way job", %{
       workflow: workflow,
       trigger: trigger,
       jobs: [job_a, job_b, job_c],
@@ -415,13 +415,13 @@ defmodule Lightning.WorkOrdersTest do
       input_dataclip = insert(:dataclip)
       output_dataclip = insert(:dataclip)
 
-      # create existing complete attempt
+      # create existing complete run
       workorder =
         insert(:workorder,
           workflow: workflow,
           trigger: trigger,
           dataclip: input_dataclip,
-          attempts: [
+          runs: [
             %{
               state: :failed,
               dataclip: input_dataclip,
@@ -449,34 +449,34 @@ defmodule Lightning.WorkOrdersTest do
           ]
         )
 
-      refute Repo.get_by(Lightning.Attempt,
+      refute Repo.get_by(Lightning.Run,
                work_order_id: workorder.id,
                starting_job_id: job_b.id
              )
 
       {:ok, 1} = WorkOrders.retry_many([workorder], job_b.id, created_by: user)
 
-      retry_attempt =
-        Repo.get_by(Lightning.Attempt,
+      retry_run =
+        Repo.get_by(Lightning.Run,
           work_order_id: workorder.id,
           starting_job_id: job_b.id
         )
 
-      [old_attempt] = workorder.attempts
+      [old_run] = workorder.runs
 
-      refute retry_attempt.id == old_attempt.id
-      assert retry_attempt.dataclip_id == step_b.input_dataclip_id
-      assert retry_attempt.starting_trigger_id |> is_nil()
-      assert retry_attempt.starting_job_id == job_b.id
-      assert retry_attempt.created_by_id == user.id
-      assert retry_attempt.work_order_id == old_attempt.work_order_id
-      assert retry_attempt.state == :available
+      refute retry_run.id == old_run.id
+      assert retry_run.dataclip_id == step_b.input_dataclip_id
+      assert retry_run.starting_trigger_id |> is_nil()
+      assert retry_run.starting_job_id == job_b.id
+      assert retry_run.created_by_id == user.id
+      assert retry_run.work_order_id == old_run.work_order_id
+      assert retry_run.state == :available
 
-      steps = Ecto.assoc(retry_attempt, :steps) |> Repo.all()
+      steps = Ecto.assoc(retry_run, :steps) |> Repo.all()
       assert steps |> Enum.map(& &1.id) == [step_a.id]
     end
 
-    test "retrying one WorkOrder with a multiple attempts from start job", %{
+    test "retrying one WorkOrder with a multiple runs from start job", %{
       workflow: workflow,
       trigger: trigger,
       jobs: [job_a, job_b, job_c],
@@ -492,8 +492,8 @@ defmodule Lightning.WorkOrdersTest do
           dataclip: input_dataclip
         )
 
-      attempt_1 =
-        insert(:attempt,
+      run_1 =
+        insert(:run,
           work_order: workorder,
           state: :failed,
           dataclip: input_dataclip,
@@ -508,8 +508,8 @@ defmodule Lightning.WorkOrdersTest do
           ]
         )
 
-      attempt_2 =
-        insert(:attempt,
+      run_2 =
+        insert(:run,
           work_order: workorder,
           state: :failed,
           dataclip: build(:dataclip),
@@ -534,34 +534,34 @@ defmodule Lightning.WorkOrdersTest do
           ]
         )
 
-      attempts = Ecto.assoc(workorder, :attempts) |> Repo.all()
+      runs = Ecto.assoc(workorder, :runs) |> Repo.all()
 
-      for attempt <- attempts do
-        assert attempt.id in [attempt_1.id, attempt_2.id]
+      for run <- runs do
+        assert run.id in [run_1.id, run_2.id]
       end
 
       {:ok, 1} = WorkOrders.retry_many([workorder], job_a.id, created_by: user)
 
-      attempts = Ecto.assoc(workorder, :attempts) |> Repo.all()
+      runs = Ecto.assoc(workorder, :runs) |> Repo.all()
 
-      [retry_attempt] =
-        Enum.reject(attempts, fn attempt ->
-          attempt.id in [attempt_1.id, attempt_2.id]
+      [retry_run] =
+        Enum.reject(runs, fn run ->
+          run.id in [run_1.id, run_2.id]
         end)
 
       refute step_1_a.input_dataclip_id == step_2_a.input_dataclip_id
-      assert retry_attempt.dataclip_id == step_2_a.input_dataclip_id
-      assert retry_attempt.starting_trigger_id |> is_nil()
-      assert retry_attempt.starting_job_id == job_a.id
-      assert retry_attempt.created_by_id == user.id
-      assert retry_attempt.work_order_id == workorder.id
-      assert retry_attempt.state == :available
+      assert retry_run.dataclip_id == step_2_a.input_dataclip_id
+      assert retry_run.starting_trigger_id |> is_nil()
+      assert retry_run.starting_job_id == job_a.id
+      assert retry_run.created_by_id == user.id
+      assert retry_run.work_order_id == workorder.id
+      assert retry_run.state == :available
 
-      assert retry_attempt |> Repo.preload(:steps) |> Map.get(:steps) == [],
+      assert retry_run |> Repo.preload(:steps) |> Map.get(:steps) == [],
              "retrying a run from the start should not copy over steps"
     end
 
-    test "retrying one WorkOrder with a multiple attempts whose latest attempt has no steps from start job skips the retry",
+    test "retrying one WorkOrder with a multiple runs whose latest run has no steps from start job skips the retry",
          %{
            workflow: workflow,
            trigger: trigger,
@@ -578,8 +578,8 @@ defmodule Lightning.WorkOrdersTest do
           dataclip: input_dataclip
         )
 
-      attempt_1 =
-        insert(:attempt,
+      run_1 =
+        insert(:run,
           work_order: workorder,
           state: :failed,
           dataclip: input_dataclip,
@@ -598,8 +598,8 @@ defmodule Lightning.WorkOrdersTest do
           ]
         )
 
-      attempt_2 =
-        insert(:attempt,
+      run_2 =
+        insert(:run,
           work_order: workorder,
           state: :failed,
           dataclip: step_1_b.input_dataclip,
@@ -607,23 +607,23 @@ defmodule Lightning.WorkOrdersTest do
           steps: []
         )
 
-      attempts = Ecto.assoc(workorder, :attempts) |> Repo.all()
+      runs = Ecto.assoc(workorder, :runs) |> Repo.all()
 
-      for attempt <- attempts do
-        assert attempt.id in [attempt_1.id, attempt_2.id]
+      for run <- runs do
+        assert run.id in [run_1.id, run_2.id]
       end
 
       {:ok, 0} = WorkOrders.retry_many([workorder], job_a.id, created_by: user)
 
-      attempts = Ecto.assoc(workorder, :attempts) |> Repo.all()
+      runs = Ecto.assoc(workorder, :runs) |> Repo.all()
 
       assert [] ==
-               Enum.reject(attempts, fn attempt ->
-                 attempt.id in [attempt_1.id, attempt_2.id]
+               Enum.reject(runs, fn run ->
+                 run.id in [run_1.id, run_2.id]
                end)
     end
 
-    test "retrying one WorkOrder with a multiple attempts from mid way job", %{
+    test "retrying one WorkOrder with a multiple runs from mid way job", %{
       workflow: workflow,
       trigger: trigger,
       jobs: [job_a, job_b, job_c],
@@ -639,8 +639,8 @@ defmodule Lightning.WorkOrdersTest do
           dataclip: input_dataclip
         )
 
-      attempt_1 =
-        insert(:attempt,
+      run_1 =
+        insert(:run,
           work_order: workorder,
           state: :failed,
           dataclip: input_dataclip,
@@ -660,8 +660,8 @@ defmodule Lightning.WorkOrdersTest do
           ]
         )
 
-      attempt_2 =
-        insert(:attempt,
+      run_2 =
+        insert(:run,
           work_order: workorder,
           state: :failed,
           dataclip: build(:dataclip),
@@ -687,28 +687,28 @@ defmodule Lightning.WorkOrdersTest do
           ]
         )
 
-      attempts = Ecto.assoc(workorder, :attempts) |> Repo.all()
-      attempts_ids = Enum.map(attempts, & &1.id)
-      assert Enum.sort(attempts_ids) == Enum.sort([attempt_1.id, attempt_2.id])
+      runs = Ecto.assoc(workorder, :runs) |> Repo.all()
+      runs_ids = Enum.map(runs, & &1.id)
+      assert Enum.sort(runs_ids) == Enum.sort([run_1.id, run_2.id])
 
       {:ok, 1} = WorkOrders.retry_many([workorder], job_b.id, created_by: user)
 
-      attempts = Ecto.assoc(workorder, :attempts) |> Repo.all()
+      runs = Ecto.assoc(workorder, :runs) |> Repo.all()
 
-      [retry_attempt] =
-        Enum.reject(attempts, fn attempt ->
-          attempt.id in [attempt_1.id, attempt_2.id]
+      [retry_run] =
+        Enum.reject(runs, fn run ->
+          run.id in [run_1.id, run_2.id]
         end)
 
       refute step_1_b.input_dataclip_id == step_2_b.input_dataclip_id
-      assert retry_attempt.dataclip_id == step_2_b.input_dataclip_id
-      assert retry_attempt.starting_trigger_id |> is_nil()
-      assert retry_attempt.starting_job_id == job_b.id
-      assert retry_attempt.created_by_id == user.id
-      assert retry_attempt.work_order_id == workorder.id
-      assert retry_attempt.state == :available
+      assert retry_run.dataclip_id == step_2_b.input_dataclip_id
+      assert retry_run.starting_trigger_id |> is_nil()
+      assert retry_run.starting_job_id == job_b.id
+      assert retry_run.created_by_id == user.id
+      assert retry_run.work_order_id == workorder.id
+      assert retry_run.state == :available
 
-      steps = Ecto.assoc(retry_attempt, :steps) |> Repo.all()
+      steps = Ecto.assoc(retry_run, :steps) |> Repo.all()
       assert steps |> Enum.map(& &1.id) == [step_2_a.id]
     end
 
@@ -724,7 +724,7 @@ defmodule Lightning.WorkOrdersTest do
           workflow: workflow,
           trigger: trigger,
           dataclip: build(:dataclip),
-          attempts: [
+          runs: [
             %{
               state: :failed,
               dataclip: build(:dataclip),
@@ -750,12 +750,12 @@ defmodule Lightning.WorkOrdersTest do
           ]
         )
 
-      refute Repo.get_by(Lightning.Attempt,
+      refute Repo.get_by(Lightning.Run,
                work_order_id: workorder_1.id,
                starting_job_id: job_a.id
              )
 
-      refute Repo.get_by(Lightning.Attempt,
+      refute Repo.get_by(Lightning.Run,
                work_order_id: workorder_2.id,
                starting_job_id: job_a.id
              )
@@ -766,20 +766,20 @@ defmodule Lightning.WorkOrdersTest do
           created_by: user
         )
 
-      retry_attempt_1 =
-        Repo.get_by(Lightning.Attempt,
+      retry_run_1 =
+        Repo.get_by(Lightning.Run,
           work_order_id: workorder_1.id,
           starting_job_id: job_a.id
         )
 
-      retry_attempt_2 =
-        Repo.get_by(Lightning.Attempt,
+      retry_run_2 =
+        Repo.get_by(Lightning.Run,
           work_order_id: workorder_2.id,
           starting_job_id: job_a.id
         )
 
-      assert retry_attempt_1.inserted_at
-             |> DateTime.before?(retry_attempt_2.inserted_at)
+      assert retry_run_1.inserted_at
+             |> DateTime.before?(retry_run_2.inserted_at)
     end
 
     test "retrying multiple workorders only retries workorders with the given job",
@@ -794,7 +794,7 @@ defmodule Lightning.WorkOrdersTest do
           workflow: workflow,
           trigger: trigger,
           dataclip: build(:dataclip),
-          attempts: [
+          runs: [
             %{
               state: :failed,
               dataclip: build(:dataclip),
@@ -815,7 +815,7 @@ defmodule Lightning.WorkOrdersTest do
           workflow: workflow,
           trigger: trigger,
           dataclip: build(:dataclip),
-          attempts: [
+          runs: [
             %{
               state: :failed,
               dataclip: build(:dataclip),
@@ -841,12 +841,12 @@ defmodule Lightning.WorkOrdersTest do
           ]
         )
 
-      refute Repo.get_by(Lightning.Attempt,
+      refute Repo.get_by(Lightning.Run,
                work_order_id: workorder_1.id,
                starting_job_id: job_b.id
              )
 
-      refute Repo.get_by(Lightning.Attempt,
+      refute Repo.get_by(Lightning.Run,
                work_order_id: workorder_2.id,
                starting_job_id: job_b.id
              )
@@ -856,12 +856,12 @@ defmodule Lightning.WorkOrdersTest do
           created_by: user
         )
 
-      refute Repo.get_by(Lightning.Attempt,
+      refute Repo.get_by(Lightning.Run,
                work_order_id: workorder_1.id,
                starting_job_id: job_b.id
              )
 
-      assert Repo.get_by(Lightning.Attempt,
+      assert Repo.get_by(Lightning.Run,
                work_order_id: workorder_2.id,
                starting_job_id: job_b.id
              )
@@ -892,7 +892,7 @@ defmodule Lightning.WorkOrdersTest do
       }
     end
 
-    test "retrying a single WorkOrder with multiple attempts", %{
+    test "retrying a single WorkOrder with multiple runs", %{
       workflow: workflow,
       trigger: trigger,
       jobs: [job_a, job_b, job_c],
@@ -908,8 +908,8 @@ defmodule Lightning.WorkOrdersTest do
           dataclip: input_dataclip
         )
 
-      attempt_1 =
-        insert(:attempt,
+      run_1 =
+        insert(:run,
           work_order: workorder,
           state: :failed,
           dataclip: input_dataclip,
@@ -924,8 +924,8 @@ defmodule Lightning.WorkOrdersTest do
           ]
         )
 
-      attempt_2 =
-        insert(:attempt,
+      run_2 =
+        insert(:run,
           work_order: workorder,
           state: :failed,
           dataclip: build(:dataclip),
@@ -950,33 +950,33 @@ defmodule Lightning.WorkOrdersTest do
           ]
         )
 
-      attempts = Ecto.assoc(workorder, :attempts) |> Repo.all()
+      runs = Ecto.assoc(workorder, :runs) |> Repo.all()
 
-      for attempt <- attempts do
-        assert attempt.id in [attempt_1.id, attempt_2.id]
+      for run <- runs do
+        assert run.id in [run_1.id, run_2.id]
       end
 
       {:ok, 1} = WorkOrders.retry_many([workorder], created_by: user)
 
-      attempts = Ecto.assoc(workorder, :attempts) |> Repo.all()
+      runs = Ecto.assoc(workorder, :runs) |> Repo.all()
 
-      [retry_attempt] =
-        Enum.reject(attempts, fn attempt ->
-          attempt.id in [attempt_1.id, attempt_2.id]
+      [retry_run] =
+        Enum.reject(runs, fn run ->
+          run.id in [run_1.id, run_2.id]
         end)
 
       refute step_1_a.input_dataclip_id == step_2_a.input_dataclip_id
 
-      assert retry_attempt.dataclip_id == step_1_a.input_dataclip_id,
-             "when retrying a workorder from start, the first job of the first attempt used"
+      assert retry_run.dataclip_id == step_1_a.input_dataclip_id,
+             "when retrying a workorder from start, the first job of the first run used"
 
-      assert retry_attempt.starting_trigger_id |> is_nil()
-      assert retry_attempt.starting_job_id == job_a.id
-      assert retry_attempt.created_by_id == user.id
-      assert retry_attempt.work_order_id == workorder.id
-      assert retry_attempt.state == :available
+      assert retry_run.starting_trigger_id |> is_nil()
+      assert retry_run.starting_job_id == job_a.id
+      assert retry_run.created_by_id == user.id
+      assert retry_run.work_order_id == workorder.id
+      assert retry_run.state == :available
 
-      assert retry_attempt |> Repo.preload(:steps) |> Map.get(:steps) == [],
+      assert retry_run |> Repo.preload(:steps) |> Map.get(:steps) == [],
              "retrying a run from the start should not copy over steps"
     end
 
@@ -992,7 +992,7 @@ defmodule Lightning.WorkOrdersTest do
           workflow: workflow,
           trigger: trigger,
           dataclip: build(:dataclip),
-          attempts: [
+          runs: [
             %{
               state: :failed,
               dataclip: build(:dataclip),
@@ -1018,12 +1018,12 @@ defmodule Lightning.WorkOrdersTest do
           ]
         )
 
-      refute Repo.get_by(Lightning.Attempt,
+      refute Repo.get_by(Lightning.Run,
                work_order_id: workorder_1.id,
                starting_job_id: job_a.id
              )
 
-      refute Repo.get_by(Lightning.Attempt,
+      refute Repo.get_by(Lightning.Run,
                work_order_id: workorder_2.id,
                starting_job_id: job_a.id
              )
@@ -1034,20 +1034,20 @@ defmodule Lightning.WorkOrdersTest do
           created_by: user
         )
 
-      retry_attempt_1 =
-        Repo.get_by(Lightning.Attempt,
+      retry_run_1 =
+        Repo.get_by(Lightning.Run,
           work_order_id: workorder_1.id,
           starting_job_id: job_a.id
         )
 
-      retry_attempt_2 =
-        Repo.get_by(Lightning.Attempt,
+      retry_run_2 =
+        Repo.get_by(Lightning.Run,
           work_order_id: workorder_2.id,
           starting_job_id: job_a.id
         )
 
-      assert retry_attempt_1.inserted_at
-             |> DateTime.before?(retry_attempt_2.inserted_at)
+      assert retry_run_1.inserted_at
+             |> DateTime.before?(retry_run_2.inserted_at)
     end
 
     test "retrying a WorkOrder with a run having starting_trigger without steps",
@@ -1066,8 +1066,8 @@ defmodule Lightning.WorkOrdersTest do
           dataclip: input_dataclip
         )
 
-      attempt_1 =
-        insert(:attempt,
+      run_1 =
+        insert(:run,
           work_order: workorder,
           state: :failed,
           dataclip: input_dataclip,
@@ -1075,33 +1075,33 @@ defmodule Lightning.WorkOrdersTest do
           steps: []
         )
 
-      attempts = Ecto.assoc(workorder, :attempts) |> Repo.all()
+      runs = Ecto.assoc(workorder, :runs) |> Repo.all()
 
-      for attempt <- attempts do
-        assert attempt.id in [attempt_1.id]
+      for run <- runs do
+        assert run.id in [run_1.id]
       end
 
       {:ok, 1} = WorkOrders.retry_many([workorder], created_by: user)
 
-      attempts = Ecto.assoc(workorder, :attempts) |> Repo.all()
+      runs = Ecto.assoc(workorder, :runs) |> Repo.all()
 
-      [retry_attempt] =
-        Enum.reject(attempts, fn attempt ->
-          attempt.id in [attempt_1.id]
+      [retry_run] =
+        Enum.reject(runs, fn run ->
+          run.id in [run_1.id]
         end)
 
-      assert retry_attempt.dataclip_id == attempt_1.dataclip_id
+      assert retry_run.dataclip_id == run_1.dataclip_id
 
-      assert retry_attempt.starting_trigger_id |> is_nil()
+      assert retry_run.starting_trigger_id |> is_nil()
 
-      assert retry_attempt.starting_job_id == job_a.id,
+      assert retry_run.starting_job_id == job_a.id,
              "the job linked to the trigger is used when there's no strarting job"
 
-      assert retry_attempt.created_by_id == user.id
-      assert retry_attempt.work_order_id == workorder.id
-      assert retry_attempt.state == :available
+      assert retry_run.created_by_id == user.id
+      assert retry_run.work_order_id == workorder.id
+      assert retry_run.state == :available
 
-      assert retry_attempt |> Repo.preload(:steps) |> Map.get(:steps) == []
+      assert retry_run |> Repo.preload(:steps) |> Map.get(:steps) == []
     end
 
     test "retrying a WorkOrder with a run having starting_job without steps",
@@ -1120,8 +1120,8 @@ defmodule Lightning.WorkOrdersTest do
           dataclip: input_dataclip
         )
 
-      attempt_1 =
-        insert(:attempt,
+      run_1 =
+        insert(:run,
           work_order: workorder,
           state: :failed,
           dataclip: input_dataclip,
@@ -1130,30 +1130,30 @@ defmodule Lightning.WorkOrdersTest do
           steps: []
         )
 
-      attempts = Ecto.assoc(workorder, :attempts) |> Repo.all()
+      runs = Ecto.assoc(workorder, :runs) |> Repo.all()
 
-      for attempt <- attempts do
-        assert attempt.id in [attempt_1.id]
+      for run <- runs do
+        assert run.id in [run_1.id]
       end
 
       {:ok, 1} = WorkOrders.retry_many([workorder], created_by: user)
 
-      attempts = Ecto.assoc(workorder, :attempts) |> Repo.all()
+      runs = Ecto.assoc(workorder, :runs) |> Repo.all()
 
-      [retry_attempt] =
-        Enum.reject(attempts, fn attempt ->
-          attempt.id in [attempt_1.id]
+      [retry_run] =
+        Enum.reject(runs, fn run ->
+          run.id in [run_1.id]
         end)
 
-      assert retry_attempt.dataclip_id == attempt_1.dataclip_id
+      assert retry_run.dataclip_id == run_1.dataclip_id
 
-      assert retry_attempt.starting_trigger_id |> is_nil()
-      assert retry_attempt.starting_job_id == attempt_1.starting_job_id
-      assert retry_attempt.created_by_id == user.id
-      assert retry_attempt.work_order_id == workorder.id
-      assert retry_attempt.state == :available
+      assert retry_run.starting_trigger_id |> is_nil()
+      assert retry_run.starting_job_id == run_1.starting_job_id
+      assert retry_run.created_by_id == user.id
+      assert retry_run.work_order_id == workorder.id
+      assert retry_run.state == :available
 
-      assert retry_attempt |> Repo.preload(:steps) |> Map.get(:steps) == []
+      assert retry_run |> Repo.preload(:steps) |> Map.get(:steps) == []
     end
   end
 
@@ -1197,8 +1197,8 @@ defmodule Lightning.WorkOrdersTest do
           dataclip: input_dataclip
         )
 
-      attempt =
-        insert(:attempt,
+      run =
+        insert(:run,
           work_order: workorder,
           state: :failed,
           dataclip: input_dataclip,
@@ -1212,41 +1212,41 @@ defmodule Lightning.WorkOrdersTest do
           output_dataclip: output_dataclip
         )
 
-      attempt_step_a = insert(:attempt_step, step: step_a, attempt: attempt)
+      run_step_a = insert(:run_step, step: step_a, run: run)
 
-      # other attempt step
-      insert(:attempt_step,
+      # other run step
+      insert(:run_step,
         step:
           build(:step,
             job: job_b,
             input_dataclip: build(:dataclip),
             output_dataclip: build(:dataclip)
           ),
-        attempt: attempt
+        run: run
       )
 
-      refute Repo.get_by(Lightning.Attempt,
+      refute Repo.get_by(Lightning.Run,
                work_order_id: workorder.id,
                starting_job_id: job_a.id
              )
 
-      {:ok, 1} = WorkOrders.retry_many([attempt_step_a], created_by: user)
+      {:ok, 1} = WorkOrders.retry_many([run_step_a], created_by: user)
 
-      retry_attempt =
-        Repo.get_by(Lightning.Attempt,
+      retry_run =
+        Repo.get_by(Lightning.Run,
           work_order_id: workorder.id,
           starting_job_id: job_a.id
         )
 
-      refute retry_attempt.id == attempt.id
-      assert retry_attempt.dataclip_id == attempt_step_a.step.input_dataclip_id
-      assert retry_attempt.starting_trigger_id |> is_nil()
-      assert retry_attempt.starting_job_id == attempt_step_a.step.job.id
-      assert retry_attempt.created_by_id == user.id
-      assert retry_attempt.work_order_id == attempt.work_order_id
-      assert retry_attempt.state == :available
+      refute retry_run.id == run.id
+      assert retry_run.dataclip_id == run_step_a.step.input_dataclip_id
+      assert retry_run.starting_trigger_id |> is_nil()
+      assert retry_run.starting_job_id == run_step_a.step.job.id
+      assert retry_run.created_by_id == user.id
+      assert retry_run.work_order_id == run.work_order_id
+      assert retry_run.state == :available
 
-      assert retry_attempt |> Repo.preload(:steps) |> Map.get(:steps) == [],
+      assert retry_run |> Repo.preload(:steps) |> Map.get(:steps) == [],
              "retrying a run from the start should not copy over steps"
     end
 
@@ -1266,73 +1266,73 @@ defmodule Lightning.WorkOrdersTest do
           dataclip: input_dataclip
         )
 
-      attempt =
-        insert(:attempt,
+      run =
+        insert(:run,
           work_order: workorder,
           state: :failed,
           dataclip: input_dataclip,
           starting_trigger: trigger
         )
 
-      attempt_step_a =
-        insert(:attempt_step,
+      run_step_a =
+        insert(:run_step,
           step:
             build(:step,
               job: job_a,
               input_dataclip: input_dataclip,
               output_dataclip: output_dataclip
             ),
-          attempt: attempt
+          run: run
         )
 
-      attempt_step_b =
-        insert(:attempt_step,
+      run_step_b =
+        insert(:run_step,
           step:
             build(:step,
               job: job_b,
               input_dataclip: build(:dataclip),
               output_dataclip: build(:dataclip)
             ),
-          attempt: attempt
+          run: run
         )
 
-      _attempt_step_c =
-        insert(:attempt_step,
+      _run_step_c =
+        insert(:run_step,
           step:
             build(:step,
               job: job_c,
               input_dataclip: build(:dataclip),
               output_dataclip: build(:dataclip)
             ),
-          attempt: attempt
+          run: run
         )
 
-      refute Repo.get_by(Lightning.Attempt,
+      refute Repo.get_by(Lightning.Run,
                work_order_id: workorder.id,
-               starting_job_id: attempt_step_b.step.job.id
+               starting_job_id: run_step_b.step.job.id
              )
 
-      {:ok, 1} = WorkOrders.retry_many([attempt_step_b], created_by: user)
+      {:ok, 1} = WorkOrders.retry_many([run_step_b], created_by: user)
 
-      retry_attempt =
-        Repo.get_by(Lightning.Attempt,
+      retry_run =
+        Repo.get_by(Lightning.Run,
           work_order_id: workorder.id,
-          starting_job_id: attempt_step_b.step.job.id
+          starting_job_id: run_step_b.step.job.id
         )
 
-      refute retry_attempt.id == attempt.id
-      assert retry_attempt.dataclip_id == attempt_step_b.step.input_dataclip_id
-      assert retry_attempt.starting_trigger_id |> is_nil()
-      assert retry_attempt.starting_job_id == attempt_step_b.step.job.id
-      assert retry_attempt.created_by_id == user.id
-      assert retry_attempt.work_order_id == attempt.work_order_id
-      assert retry_attempt.state == :available
+      refute retry_run.id == run.id
+      assert retry_run.dataclip_id == run_step_b.step.input_dataclip_id
+      assert retry_run.starting_trigger_id |> is_nil()
+      assert retry_run.starting_job_id == run_step_b.step.job.id
+      assert retry_run.created_by_id == user.id
+      assert retry_run.work_order_id == run.work_order_id
+      assert retry_run.state == :available
 
-      steps = Ecto.assoc(retry_attempt, :steps) |> Repo.all()
-      assert steps |> Enum.map(& &1.id) == [attempt_step_a.step.id]
+      steps = Ecto.assoc(retry_run, :steps) |> Repo.all()
+      assert steps |> Enum.map(& &1.id) == [run_step_a.step.id]
     end
 
-    test "retrying multiple RunSteps preservers the order of the given list to enqueue the attempts",
+    test "retrying multiple RunSteps preservers the order of the given list to enqueue the runs",
          %{
            workflow: workflow,
            trigger: trigger,
@@ -1346,23 +1346,23 @@ defmodule Lightning.WorkOrdersTest do
           dataclip: build(:dataclip)
         )
 
-      attempt_1 =
-        insert(:attempt,
+      run_1 =
+        insert(:run,
           work_order: workorder_1,
           state: :failed,
           dataclip: build(:dataclip),
           starting_trigger: trigger
         )
 
-      attempt_step_1_a =
-        insert(:attempt_step,
+      run_step_1_a =
+        insert(:run_step,
           step:
             build(:step,
               job: job_a,
               input_dataclip: build(:dataclip),
               output_dataclip: build(:dataclip)
             ),
-          attempt: attempt_1
+          run: run_1
         )
 
       workorder_2 =
@@ -1372,75 +1372,75 @@ defmodule Lightning.WorkOrdersTest do
           dataclip: build(:dataclip)
         )
 
-      attempt_2 =
-        insert(:attempt,
+      run_2 =
+        insert(:run,
           work_order: workorder_2,
           state: :failed,
           dataclip: build(:dataclip),
           starting_trigger: trigger
         )
 
-      attempt_step_2_a =
-        insert(:attempt_step,
+      run_step_2_a =
+        insert(:run_step,
           step:
             build(:step,
               job: job_a,
               input_dataclip: build(:dataclip),
               output_dataclip: build(:dataclip)
             ),
-          attempt: attempt_2
+          run: run_2
         )
 
-      refute Repo.get_by(Lightning.Attempt,
+      refute Repo.get_by(Lightning.Run,
                work_order_id: workorder_1.id,
                starting_job_id: job_a.id
              )
 
-      refute Repo.get_by(Lightning.Attempt,
+      refute Repo.get_by(Lightning.Run,
                work_order_id: workorder_2.id,
                starting_job_id: job_a.id
              )
 
       # we've reversed the order here
       {:ok, 2} =
-        WorkOrders.retry_many([attempt_step_2_a, attempt_step_1_a],
+        WorkOrders.retry_many([run_step_2_a, run_step_1_a],
           created_by: user
         )
 
-      retry_attempt_1 =
-        Repo.get_by(Lightning.Attempt,
+      retry_run_1 =
+        Repo.get_by(Lightning.Run,
           work_order_id: workorder_1.id,
           starting_job_id: job_a.id
         )
 
-      retry_attempt_2 =
-        Repo.get_by(Lightning.Attempt,
+      retry_run_2 =
+        Repo.get_by(Lightning.Run,
           work_order_id: workorder_2.id,
           starting_job_id: job_a.id
         )
 
-      assert retry_attempt_2.inserted_at
-             |> DateTime.before?(retry_attempt_1.inserted_at)
+      assert retry_run_2.inserted_at
+             |> DateTime.before?(retry_run_1.inserted_at)
     end
   end
 
   describe "update_state/1" do
-    test "sets the workorders state to running if there are any started attempts" do
+    test "sets the workorders state to running if there are any started runs" do
       dataclip = insert(:dataclip)
       %{triggers: [trigger]} = workflow = insert(:simple_workflow)
 
-      %{attempts: [attempt]} =
+      %{runs: [run]} =
         work_order_for(trigger, workflow: workflow, dataclip: dataclip)
         |> insert()
 
-      {:ok, work_order} = WorkOrders.update_state(attempt)
+      {:ok, work_order} = WorkOrders.update_state(run)
 
       assert work_order.state == :pending
 
-      {:ok, attempt} =
-        Repo.update(attempt |> Ecto.Changeset.change(state: :started))
+      {:ok, run} =
+        Repo.update(run |> Ecto.Changeset.change(state: :started))
 
-      {:ok, work_order} = WorkOrders.update_state(attempt)
+      {:ok, work_order} = WorkOrders.update_state(run)
 
       assert work_order.state == :running
     end

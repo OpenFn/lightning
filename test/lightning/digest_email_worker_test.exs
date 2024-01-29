@@ -140,7 +140,7 @@ defmodule Lightning.DigestEmailWorkerTest do
         dataclip: dataclip,
         state: status
       )
-      |> with_attempt(
+      |> with_run(
         state: state,
         dataclip: dataclip,
         starting_trigger: trigger,

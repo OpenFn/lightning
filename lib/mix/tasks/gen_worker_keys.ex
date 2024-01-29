@@ -11,7 +11,7 @@ defmodule Mix.Tasks.Lightning.GenWorkerKeys do
 
   Lightning expects the following environment variables to be set:
 
-  - WORKER_ATTEMPTS_PRIVATE_KEY
+  - WORKER_RUNS_PRIVATE_KEY
   - WORKER_SECRET
 
   And the workers expect:
@@ -29,7 +29,7 @@ defmodule Mix.Tasks.Lightning.GenWorkerKeys do
       with {:ok, private_key} <- create_private_key(),
            {:ok, public_key} <- abstract_public_key(private_key) do
         IO.puts("""
-        WORKER_ATTEMPTS_PRIVATE_KEY="#{private_key |> Base.encode64(padding: false)}"
+        WORKER_RUNS_PRIVATE_KEY="#{private_key |> Base.encode64(padding: false)}"
 
         WORKER_SECRET="#{generate_hs256_key()}"
 

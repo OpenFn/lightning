@@ -58,7 +58,7 @@ defmodule Lightning.WorkflowsFixtures do
       trigger: trigger,
       dataclip: build(:dataclip),
       state: :pending,
-      attempts: [
+      runs: [
         %{
           state: :available,
           dataclip: build(:dataclip),
@@ -73,7 +73,7 @@ defmodule Lightning.WorkflowsFixtures do
       trigger: trigger,
       dataclip: build(:dataclip),
       state: :running,
-      attempts: [
+      runs: [
         %{
           state: :claimed,
           dataclip: build(:dataclip),
@@ -88,7 +88,7 @@ defmodule Lightning.WorkflowsFixtures do
       trigger: trigger,
       dataclip: build(:dataclip),
       state: :running,
-      attempts: [
+      runs: [
         %{
           state: :started,
           dataclip: build(:dataclip),
@@ -98,7 +98,7 @@ defmodule Lightning.WorkflowsFixtures do
       ]
     )
 
-    attempts_success = [
+    runs_success = [
       %{
         state: :success,
         dataclip: build(:dataclip),
@@ -112,7 +112,7 @@ defmodule Lightning.WorkflowsFixtures do
       }
     ]
 
-    attempts_failed = [
+    runs_failed = [
       %{
         state: :failed,
         dataclip: build(:dataclip),
@@ -127,11 +127,11 @@ defmodule Lightning.WorkflowsFixtures do
       }
     ]
 
-    {wo_state1, wo_state2, attempts1, attempts2} =
+    {wo_state1, wo_state2, runs1, runs2} =
       if last_workorder_failed? do
-        {:success, :failed, attempts_success, attempts_failed}
+        {:success, :failed, runs_success, runs_failed}
       else
-        {:failed, :success, attempts_failed, attempts_success}
+        {:failed, :success, runs_failed, runs_success}
       end
 
     insert(:workorder,
@@ -139,7 +139,7 @@ defmodule Lightning.WorkflowsFixtures do
       trigger: trigger,
       dataclip: build(:dataclip),
       state: wo_state1,
-      attempts: attempts1
+      runs: runs1
     )
 
     insert(:workorder,
@@ -147,7 +147,7 @@ defmodule Lightning.WorkflowsFixtures do
       trigger: trigger,
       dataclip: build(:dataclip),
       state: wo_state2,
-      attempts: attempts2
+      runs: runs2
     )
 
     workflow

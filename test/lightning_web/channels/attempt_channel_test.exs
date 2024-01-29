@@ -1,4 +1,4 @@
-defmodule LightningWeb.AttemptChannelTest do
+defmodule LightningWeb.RunChannelTest do
   use LightningWeb.ChannelCase
 
   alias Lightning.Invocation.Step
@@ -16,7 +16,7 @@ defmodule LightningWeb.AttemptChannelTest do
     end
   end
 
-  describe "joining the attempt:* channel" do
+  describe "joining the run:* channel" do
     setup do
       Lightning.Stub.reset_time()
 
@@ -36,13 +36,13 @@ defmodule LightningWeb.AttemptChannelTest do
     test "rejects joining when the token isn't valid", %{socket: socket} do
       assert {:error, %{reason: "unauthorized"}} =
                socket
-               |> subscribe_and_join(LightningWeb.AttemptChannel, "attempt:123")
+               |> subscribe_and_join(LightningWeb.RunChannel, "run:123")
 
       assert {:error, %{reason: "unauthorized"}} =
                socket
                |> subscribe_and_join(
-                 LightningWeb.AttemptChannel,
-                 "attempt:123",
+                 LightningWeb.RunChannel,
+                 "run:123",
                  %{"token" => "invalid"}
                )
 
@@ -55,7 +55,7 @@ defmodule LightningWeb.AttemptChannelTest do
               |> DateTime.add(5, :second)
               |> DateTime.to_unix()
           },
-          Lightning.Config.attempt_token_signer()
+          Lightning.Config.run_token_signer()
         )
 
       Lightning.Stub.freeze_time(DateTime.utc_now())
@@ -63,8 +63,8 @@ defmodule LightningWeb.AttemptChannelTest do
       assert {:error, %{reason: "unauthorized"}} =
                socket
                |> subscribe_and_join(
-                 LightningWeb.AttemptChannel,
-                 "attempt:123",
+                 LightningWeb.RunChannel,
+                 "run:123",
                  %{"token" => bearer}
                )
 
@@ -72,34 +72,34 @@ defmodule LightningWeb.AttemptChannelTest do
       id = Ecto.UUID.generate()
       other_id = Ecto.UUID.generate()
 
-      bearer = Workers.generate_attempt_token(%{id: id})
+      bearer = Workers.generate_run_token(%{id: id})
 
       assert {:error, %{reason: "unauthorized"}} =
                socket
                |> subscribe_and_join(
-                 LightningWeb.AttemptChannel,
-                 "attempt:#{other_id}",
+                 LightningWeb.RunChannel,
+                 "run:#{other_id}",
                  %{"token" => bearer}
                )
     end
 
-    test "joining with a valid token but attempt is not found", %{socket: socket} do
+    test "joining with a valid token but run is not found", %{socket: socket} do
       id = Ecto.UUID.generate()
 
       bearer =
-        Workers.generate_attempt_token(%{id: id})
+        Workers.generate_run_token(%{id: id})
 
       assert {:error, %{reason: "not_found"}} =
                socket
                |> subscribe_and_join(
-                 LightningWeb.AttemptChannel,
-                 "attempt:#{id}",
+                 LightningWeb.RunChannel,
+                 "run:#{id}",
                  %{"token" => bearer}
                )
     end
   end
 
-  describe "fetching attempt data" do
+  describe "fetching run data" do
     defp set_google_credential(_context) do
       expires_at =
         DateTime.utc_now()
@@ -127,16 +127,16 @@ defmodule LightningWeb.AttemptChannelTest do
     end
 
     setup :set_google_credential
-    setup :create_socket_and_attempt
+    setup :create_socket_and_run
 
-    test "fetch:attempt", %{
+    test "fetch:run", %{
       socket: socket,
-      attempt: attempt,
+      run: run,
       workflow: workflow,
       credential: credential
     } do
-      id = attempt.id
-      ref = push(socket, "fetch:attempt", %{})
+      id = run.id
+      ref = push(socket, "fetch:run", %{})
 
       # { id, triggers, jobs, edges, options ...etc }
       assert_reply ref, :ok, payload
@@ -178,8 +178,8 @@ defmodule LightningWeb.AttemptChannelTest do
                "triggers" => triggers,
                "jobs" => jobs,
                "edges" => edges,
-               "starting_node_id" => attempt.starting_trigger_id,
-               "dataclip_id" => attempt.dataclip_id
+               "starting_node_id" => run.starting_trigger_id,
+               "dataclip_id" => run.dataclip_id
              }
     end
 
@@ -262,7 +262,7 @@ defmodule LightningWeb.AttemptChannelTest do
         )
 
       %{socket: socket} =
-        create_socket_and_attempt(%{credential: credential, user: user})
+        create_socket_and_run(%{credential: credential, user: user})
 
       ref = push(socket, "fetch:credential", %{"id" => credential.id})
 
@@ -299,7 +299,7 @@ defmodule LightningWeb.AttemptChannelTest do
         )
 
       %{socket: socket} =
-        create_socket_and_attempt(%{credential: credential, user: user})
+        create_socket_and_run(%{credential: credential, user: user})
 
       ref = push(socket, "fetch:credential", %{"id" => credential.id})
 
@@ -350,8 +350,8 @@ defmodule LightningWeb.AttemptChannelTest do
           dataclip: dataclip
         )
 
-      attempt =
-        insert(:attempt,
+      run =
+        insert(:run,
           work_order: work_order,
           starting_trigger: trigger,
           dataclip: dataclip
@@ -369,14 +369,14 @@ defmodule LightningWeb.AttemptChannelTest do
         LightningWeb.WorkerSocket
         |> socket("socket_id", %{token: bearer})
         |> subscribe_and_join(
-          LightningWeb.AttemptChannel,
-          "attempt:#{attempt.id}",
-          %{"token" => Workers.generate_attempt_token(attempt)}
+          LightningWeb.RunChannel,
+          "run:#{run.id}",
+          %{"token" => Workers.generate_run_token(run)}
         )
 
       %{
         socket: socket,
-        attempt: attempt,
+        run: run,
         user: user,
         workflow: workflow,
         credential: credential
@@ -385,7 +385,7 @@ defmodule LightningWeb.AttemptChannelTest do
 
     test "step:start", %{
       socket: socket,
-      attempt: attempt,
+      run: run,
       workflow: workflow,
       credential: %{id: credential_id}
     } do
@@ -398,7 +398,7 @@ defmodule LightningWeb.AttemptChannelTest do
           "step_id" => step_id,
           "credential_id" => credential_id,
           "job_id" => job_id,
-          "input_dataclip_id" => attempt.dataclip_id
+          "input_dataclip_id" => run.dataclip_id
         })
 
       assert_reply ref, :ok, %{step_id: ^step_id}, 1_000
@@ -409,7 +409,7 @@ defmodule LightningWeb.AttemptChannelTest do
 
     test "run:start is converted to step:start for old workers", %{
       socket: socket,
-      attempt: attempt,
+      run: run,
       workflow: workflow,
       credential: %{id: credential_id}
     } do
@@ -422,7 +422,7 @@ defmodule LightningWeb.AttemptChannelTest do
           "run_id" => step_id,
           "credential_id" => credential_id,
           "job_id" => job_id,
-          "input_dataclip_id" => attempt.dataclip_id
+          "input_dataclip_id" => run.dataclip_id
         })
 
       assert_reply ref, :ok, %{step_id: ^step_id}, 1_000
@@ -433,11 +433,11 @@ defmodule LightningWeb.AttemptChannelTest do
 
     test "run:complete is converted to step:complete for old workers", %{
       socket: socket,
-      attempt: attempt,
+      run: run,
       workflow: workflow
     } do
       [job] = workflow.jobs
-      %{id: step_id} = step = insert(:step, attempts: [attempt], job: job)
+      %{id: step_id} = step = insert(:step, runs: [run], job: job)
 
       ref =
         push(socket, "run:complete", %{
@@ -453,11 +453,11 @@ defmodule LightningWeb.AttemptChannelTest do
 
     test "step:complete succeeds with normal reason", %{
       socket: socket,
-      attempt: attempt,
+      run: run,
       workflow: workflow
     } do
       [job] = workflow.jobs
-      %{id: step_id} = step = insert(:step, attempts: [attempt], job: job)
+      %{id: step_id} = step = insert(:step, runs: [run], job: job)
 
       ref =
         push(socket, "step:complete", %{
@@ -473,11 +473,11 @@ defmodule LightningWeb.AttemptChannelTest do
 
     test "step:complete succeeds preserving present tense reason", %{
       socket: socket,
-      attempt: attempt,
+      run: run,
       workflow: workflow
     } do
       [job] = workflow.jobs
-      %{id: step_id} = step = insert(:step, attempts: [attempt], job: job)
+      %{id: step_id} = step = insert(:step, runs: [run], job: job)
 
       ref =
         push(socket, "step:complete", %{
@@ -507,8 +507,8 @@ defmodule LightningWeb.AttemptChannelTest do
           dataclip: dataclip
         )
 
-      attempt =
-        insert(:attempt,
+      run =
+        insert(:run,
           work_order: work_order,
           starting_trigger: trigger,
           dataclip: dataclip
@@ -526,17 +526,17 @@ defmodule LightningWeb.AttemptChannelTest do
         LightningWeb.WorkerSocket
         |> socket("socket_id", %{token: bearer})
         |> subscribe_and_join(
-          LightningWeb.AttemptChannel,
-          "attempt:#{attempt.id}",
-          %{"token" => Workers.generate_attempt_token(attempt)}
+          LightningWeb.RunChannel,
+          "run:#{run.id}",
+          %{"token" => Workers.generate_run_token(run)}
         )
 
-      %{socket: socket, attempt: attempt, workflow: workflow}
+      %{socket: socket, run: run, workflow: workflow}
     end
 
-    test "attempt:log missing message can't be blank", %{
+    test "run:log missing message can't be blank", %{
       socket: socket,
-      attempt: attempt,
+      run: run,
       workflow: workflow
     } do
       # { id, job_id, input_dataclip_id }
@@ -547,13 +547,13 @@ defmodule LightningWeb.AttemptChannelTest do
         push(socket, "step:start", %{
           "step_id" => step_id,
           "job_id" => job.id,
-          "input_dataclip_id" => attempt.dataclip_id
+          "input_dataclip_id" => run.dataclip_id
         })
 
       assert_reply ref, :ok, _
 
       ref =
-        push(socket, "attempt:log", %{
+        push(socket, "run:log", %{
           # we expect a 16 character string for microsecond resolution
           "timestamp" => "1699444653874088"
         })
@@ -563,9 +563,9 @@ defmodule LightningWeb.AttemptChannelTest do
       assert errors == %{message: ["This field can't be blank."]}
     end
 
-    test "attempt:log message can't be nil", %{
+    test "run:log message can't be nil", %{
       socket: socket,
-      attempt: attempt,
+      run: run,
       workflow: workflow
     } do
       # { id, job_id, input_dataclip_id }
@@ -576,13 +576,13 @@ defmodule LightningWeb.AttemptChannelTest do
         push(socket, "step:start", %{
           "step_id" => step_id,
           "job_id" => job.id,
-          "input_dataclip_id" => attempt.dataclip_id
+          "input_dataclip_id" => run.dataclip_id
         })
 
       assert_reply ref, :ok, _
 
       ref =
-        push(socket, "attempt:log", %{
+        push(socket, "run:log", %{
           # we expect a 16 character string for microsecond resolution
           "timestamp" => "1699444653874088",
           "message" => nil
@@ -593,9 +593,9 @@ defmodule LightningWeb.AttemptChannelTest do
       assert errors == %{message: ["This field can't be blank."]}
     end
 
-    test "attempt:log message can't be [nil]", %{
+    test "run:log message can't be [nil]", %{
       socket: socket,
-      attempt: attempt,
+      run: run,
       workflow: workflow
     } do
       # { id, job_id, input_dataclip_id }
@@ -606,13 +606,13 @@ defmodule LightningWeb.AttemptChannelTest do
         push(socket, "step:start", %{
           "step_id" => step_id,
           "job_id" => job.id,
-          "input_dataclip_id" => attempt.dataclip_id
+          "input_dataclip_id" => run.dataclip_id
         })
 
       assert_reply ref, :ok, _
 
       ref =
-        push(socket, "attempt:log", %{
+        push(socket, "run:log", %{
           # we expect a 16 character string for microsecond resolution
           "timestamp" => "1699444653874088",
           "message" => [nil]
@@ -623,9 +623,9 @@ defmodule LightningWeb.AttemptChannelTest do
       assert errors == %{message: ["This field can't be blank."]}
     end
 
-    test "attempt:log timestamp is handled at microsecond resolution", %{
+    test "run:log timestamp is handled at microsecond resolution", %{
       socket: socket,
-      attempt: attempt,
+      run: run,
       workflow: workflow
     } do
       # { id, job_id, input_dataclip_id }
@@ -636,13 +636,13 @@ defmodule LightningWeb.AttemptChannelTest do
         push(socket, "step:start", %{
           "step_id" => step_id,
           "job_id" => job.id,
-          "input_dataclip_id" => attempt.dataclip_id
+          "input_dataclip_id" => run.dataclip_id
         })
 
       assert_reply ref, :ok, _
 
       ref =
-        push(socket, "attempt:log", %{
+        push(socket, "run:log", %{
           "level" => "debug",
           "message" => ["Intialising pipeline"],
           "source" => "R/T",
@@ -656,9 +656,9 @@ defmodule LightningWeb.AttemptChannelTest do
     end
   end
 
-  describe "marking attempts as started and finished" do
+  describe "marking runs as started and finished" do
     setup context do
-      attempt_state = Map.get(context, :attempt_state, :available)
+      run_state = Map.get(context, :run_state, :available)
 
       project = insert(:project)
       dataclip = insert(:http_request_dataclip, project: project)
@@ -673,12 +673,12 @@ defmodule LightningWeb.AttemptChannelTest do
           dataclip: dataclip
         )
 
-      attempt =
-        insert(:attempt,
+      run =
+        insert(:run,
           work_order: work_order,
           starting_trigger: trigger,
           dataclip: dataclip,
-          state: attempt_state
+          state: run_state
         )
 
       Lightning.Stub.reset_time()
@@ -693,37 +693,37 @@ defmodule LightningWeb.AttemptChannelTest do
         LightningWeb.WorkerSocket
         |> socket("socket_id", %{token: bearer})
         |> subscribe_and_join(
-          LightningWeb.AttemptChannel,
-          "attempt:#{attempt.id}",
-          %{"token" => Workers.generate_attempt_token(attempt)}
+          LightningWeb.RunChannel,
+          "run:#{run.id}",
+          %{"token" => Workers.generate_run_token(run)}
         )
 
       %{
         socket: socket,
-        attempt: attempt,
+        run: run,
         workflow: workflow,
         work_order: work_order
       }
     end
 
-    @tag attempt_state: :claimed
-    test "attempt:start", %{
+    @tag run_state: :claimed
+    test "run:start", %{
       socket: socket,
-      attempt: attempt,
+      run: run,
       work_order: work_order
     } do
-      ref = push(socket, "attempt:start", %{})
+      ref = push(socket, "run:start", %{})
 
       assert_reply ref, :ok, nil
 
-      assert %{state: :started} = Lightning.Repo.reload!(attempt)
+      assert %{state: :started} = Lightning.Repo.reload!(run)
       assert %{state: :running} = Lightning.Repo.reload!(work_order)
     end
 
-    @tag attempt_state: :claimed
-    test "attempt:complete when claimed", %{socket: socket} do
+    @tag run_state: :claimed
+    test "run:complete when claimed", %{socket: socket} do
       ref =
-        push(socket, "attempt:complete", %{
+        push(socket, "run:complete", %{
           "reason" => "success",
           "error_type" => nil,
           "error_message" => nil
@@ -732,7 +732,7 @@ defmodule LightningWeb.AttemptChannelTest do
       assert_reply ref, :ok, nil
 
       ref =
-        push(socket, "attempt:complete", %{
+        push(socket, "run:complete", %{
           "reason" => "failed",
           "error_type" => nil,
           "error_message" => nil
@@ -745,14 +745,14 @@ defmodule LightningWeb.AttemptChannelTest do
              }
     end
 
-    @tag attempt_state: :started
-    test "attempt:complete when started", %{
+    @tag run_state: :started
+    test "run:complete when started", %{
       socket: socket,
-      attempt: attempt,
+      run: run,
       work_order: work_order
     } do
       ref =
-        push(socket, "attempt:complete", %{
+        push(socket, "run:complete", %{
           "reason" => "success",
           "error_type" => nil,
           "error_message" => nil
@@ -760,18 +760,18 @@ defmodule LightningWeb.AttemptChannelTest do
 
       assert_reply ref, :ok, nil
 
-      assert %{state: :success} = Lightning.Repo.reload!(attempt)
+      assert %{state: :success} = Lightning.Repo.reload!(run)
       assert %{state: :success} = Lightning.Repo.reload!(work_order)
     end
 
-    @tag attempt_state: :started
-    test "attempt:complete when started and cancelled", %{
+    @tag run_state: :started
+    test "run:complete when started and cancelled", %{
       socket: socket,
-      attempt: attempt,
+      run: run,
       work_order: work_order
     } do
       ref =
-        push(socket, "attempt:complete", %{
+        push(socket, "run:complete", %{
           "reason" => "cancel",
           "error_type" => nil,
           "error_message" => nil
@@ -779,18 +779,18 @@ defmodule LightningWeb.AttemptChannelTest do
 
       assert_reply ref, :ok, nil
 
-      assert %{state: :cancelled} = Lightning.Repo.reload!(attempt)
+      assert %{state: :cancelled} = Lightning.Repo.reload!(run)
       assert %{state: :cancelled} = Lightning.Repo.reload!(work_order)
     end
 
-    @tag attempt_state: :started
-    test "attempt:complete when started and fails", %{
+    @tag run_state: :started
+    test "run:complete when started and fails", %{
       socket: socket,
-      attempt: attempt,
+      run: run,
       work_order: work_order
     } do
       ref =
-        push(socket, "attempt:complete", %{
+        push(socket, "run:complete", %{
           "reason" => "fail",
           "error_type" => "UserError",
           "error_message" => nil
@@ -798,18 +798,18 @@ defmodule LightningWeb.AttemptChannelTest do
 
       assert_reply ref, :ok, nil
 
-      assert %{state: :failed} = Lightning.Repo.reload!(attempt)
+      assert %{state: :failed} = Lightning.Repo.reload!(run)
       assert %{state: :failed} = Lightning.Repo.reload!(work_order)
     end
 
-    @tag attempt_state: :started
-    test "attempt:complete when started and crashes", %{
+    @tag run_state: :started
+    test "run:complete when started and crashes", %{
       socket: socket,
-      attempt: attempt,
+      run: run,
       work_order: work_order
     } do
       ref =
-        push(socket, "attempt:complete", %{
+        push(socket, "run:complete", %{
           "reason" => "crash",
           "error_type" => "RuntimeCrash",
           "error_message" => nil
@@ -817,18 +817,18 @@ defmodule LightningWeb.AttemptChannelTest do
 
       assert_reply ref, :ok, nil
 
-      assert %{state: :crashed} = Lightning.Repo.reload!(attempt)
+      assert %{state: :crashed} = Lightning.Repo.reload!(run)
       assert %{state: :crashed} = Lightning.Repo.reload!(work_order)
     end
 
-    @tag attempt_state: :started
-    test "attempt:complete when started and gets a kill", %{
+    @tag run_state: :started
+    test "run:complete when started and gets a kill", %{
       socket: socket,
-      attempt: attempt,
+      run: run,
       work_order: work_order
     } do
       ref =
-        push(socket, "attempt:complete", %{
+        push(socket, "run:complete", %{
           "reason" => "kill",
           "error_type" => "TimeoutError",
           "error_message" => nil
@@ -836,12 +836,12 @@ defmodule LightningWeb.AttemptChannelTest do
 
       assert_reply ref, :ok, nil
 
-      assert %{state: :killed} = Lightning.Repo.reload!(attempt)
+      assert %{state: :killed} = Lightning.Repo.reload!(run)
       assert %{state: :killed} = Lightning.Repo.reload!(work_order)
     end
   end
 
-  defp create_socket_and_attempt(%{credential: credential, user: user}) do
+  defp create_socket_and_run(%{credential: credential, user: user}) do
     project = insert(:project, project_users: [%{user: user}])
 
     dataclip =
@@ -873,8 +873,8 @@ defmodule LightningWeb.AttemptChannelTest do
         dataclip: dataclip
       )
 
-    attempt =
-      insert(:attempt,
+    run =
+      insert(:run,
         work_order: work_order,
         starting_trigger: trigger,
         dataclip: dataclip
@@ -892,14 +892,14 @@ defmodule LightningWeb.AttemptChannelTest do
       LightningWeb.WorkerSocket
       |> socket("socket_id", %{token: bearer})
       |> subscribe_and_join(
-        LightningWeb.AttemptChannel,
-        "attempt:#{attempt.id}",
-        %{"token" => Workers.generate_attempt_token(attempt)}
+        LightningWeb.RunChannel,
+        "run:#{run.id}",
+        %{"token" => Workers.generate_run_token(run)}
       )
 
     %{
       socket: socket,
-      attempt: attempt,
+      run: run,
       workflow: workflow,
       credential: credential,
       dataclip: dataclip

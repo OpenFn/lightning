@@ -138,7 +138,7 @@ defmodule LightningWeb.Router do
         live "/settings/delete", ProjectLive.Settings, :delete
 
         live "/history", RunLive.Index, :index
-        live "/runs/:id", AttemptLive.Show, :show
+        live "/runs/:id", RunLive.Show, :show
 
         live "/dataclips/:id/show", DataclipLive.Show, :show
 

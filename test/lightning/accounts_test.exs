@@ -29,8 +29,8 @@ defmodule Lightning.AccountsTest do
         dataclip: dataclip
       )
 
-    _attempt =
-      insert(:attempt,
+    _run =
+      insert(:run,
         created_by: user,
         work_order: work_order,
         starting_trigger: trigger,
@@ -600,8 +600,8 @@ defmodule Lightning.AccountsTest do
           dataclip: dataclip
         )
 
-      _attempt =
-        insert(:attempt,
+      _run =
+        insert(:run,
           created_by: user,
           work_order: work_order,
           starting_trigger: trigger,
@@ -1263,43 +1263,43 @@ defmodule Lightning.AccountsTest do
       assert_raise Ecto.NoResultsError, fn -> Accounts.get_user!(user.id) end
     end
 
-    test "removes any associated Attempt and RunStep records" do
+    test "removes any associated Run and RunStep records" do
       user_1 = user_fixture()
       user_2 = user_fixture()
 
-      attempt_1 = insert_attempt(user_1)
-      attempt_2 = insert_attempt(user_1)
-      attempt_3 = insert_attempt(user_2)
+      run_1 = insert_run(user_1)
+      run_2 = insert_run(user_1)
+      run_3 = insert_run(user_2)
 
-      _attempt_step_1_1 = insert_attempt_step(attempt_1)
-      _attempt_step_1_2 = insert_attempt_step(attempt_1)
-      _attempt_step_2_1 = insert_attempt_step(attempt_2)
-      attempt_step_3_1 = insert_attempt_step(attempt_3)
+      _run_step_1_1 = insert_run_step(run_1)
+      _run_step_1_2 = insert_run_step(run_1)
+      _run_step_2_1 = insert_run_step(run_2)
+      run_step_3_1 = insert_run_step(run_3)
 
       Accounts.delete_user(user_1)
 
-      assert only_record_for_type?(attempt_3)
+      assert only_record_for_type?(run_3)
 
-      assert only_record_for_type?(attempt_step_3_1)
+      assert only_record_for_type?(run_step_3_1)
     end
 
     test "removes any associated LogLine records" do
       user_1 = user_fixture()
       user_2 = user_fixture()
 
-      insert_attempt(user_1, build_list(2, :log_line))
-      insert_attempt(user_1, build_list(2, :log_line))
+      insert_run(user_1, build_list(2, :log_line))
+      insert_run(user_1, build_list(2, :log_line))
 
-      attempt_3 = insert_attempt(user_2)
-      log_line_3_1 = insert(:log_line, attempt: attempt_3)
+      run_3 = insert_run(user_2)
+      log_line_3_1 = insert(:log_line, run: run_3)
 
       Accounts.delete_user(user_1)
 
       assert only_record_for_type?(log_line_3_1)
     end
 
-    defp insert_attempt(user, log_lines \\ []) do
-      insert(:attempt,
+    defp insert_run(user, log_lines \\ []) do
+      insert(:run,
         created_by: user,
         work_order: build(:workorder),
         dataclip: build(:dataclip),
@@ -1308,8 +1308,8 @@ defmodule Lightning.AccountsTest do
       )
     end
 
-    defp insert_attempt_step(attempt) do
-      insert(:attempt_step, attempt: attempt, step: build(:step))
+    defp insert_run_step(run) do
+      insert(:run_step, run: run, step: build(:step))
     end
   end
 

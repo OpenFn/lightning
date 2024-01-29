@@ -1,12 +1,12 @@
-defmodule Lightning.AttemptsTest do
+defmodule Lightning.RunsTest do
   alias Lightning.Invocation
   use Lightning.DataCase
   import Lightning.Factories
   import Mock
 
   alias Lightning.WorkOrders
-  alias Lightning.Attempt
-  alias Lightning.Attempts
+  alias Lightning.Run
+  alias Lightning.Runs
 
   describe "enqueue/1" do
     test "enqueues a run" do
@@ -20,17 +20,17 @@ defmodule Lightning.AttemptsTest do
           dataclip: dataclip
         )
 
-      attempt =
-        build(:attempt,
+      run =
+        build(:run,
           work_order: work_order,
           starting_trigger: trigger,
           dataclip: dataclip
         )
 
-      assert {:ok, queued_attempt} = Attempts.enqueue(attempt)
+      assert {:ok, queued_run} = Runs.enqueue(run)
 
-      assert queued_attempt.id == attempt.id
-      assert queued_attempt.state == :available
+      assert queued_run.id == run.id
+      assert queued_run.state == :available
     end
   end
 
@@ -38,58 +38,58 @@ defmodule Lightning.AttemptsTest do
     test "claims a run from the queue" do
       %{triggers: [trigger]} = workflow = insert(:simple_workflow)
 
-      {:ok, %{attempts: [attempt]}} =
+      {:ok, %{runs: [run]}} =
         WorkOrders.create_for(trigger,
           workflow: workflow,
           dataclip: params_with_assocs(:dataclip)
         )
 
-      assert {:ok, [claimed]} = Attempts.claim()
+      assert {:ok, [claimed]} = Runs.claim()
 
-      assert claimed.id == attempt.id
+      assert claimed.id == run.id
       assert claimed.state == :claimed
 
-      assert {:ok, []} = Attempts.claim()
+      assert {:ok, []} = Runs.claim()
     end
 
     test "claims with demand" do
       %{triggers: [trigger]} = workflow = insert(:simple_workflow)
 
-      [attempt_1, attempt_2, attempt_3] =
+      [run_1, run_2, run_3] =
         1..3
         |> Enum.map(fn _ ->
-          {:ok, %{attempts: [attempt]}} =
+          {:ok, %{runs: [run]}} =
             WorkOrders.create_for(trigger,
               workflow: workflow,
               dataclip: params_with_assocs(:dataclip)
             )
 
-          attempt
+          run
         end)
 
-      assert {:ok, [claimed_1, claimed_2]} = Attempts.claim(2)
+      assert {:ok, [claimed_1, claimed_2]} = Runs.claim(2)
 
-      assert claimed_1.id == attempt_1.id
+      assert claimed_1.id == run_1.id
       assert claimed_1.state == :claimed
-      assert claimed_2.id == attempt_2.id
+      assert claimed_2.id == run_2.id
       assert claimed_2.state == :claimed
 
-      assert {:ok, [claimed_3]} = Attempts.claim(2)
+      assert {:ok, [claimed_3]} = Runs.claim(2)
 
-      assert claimed_3.id == attempt_3.id
+      assert claimed_3.id == run_3.id
       assert claimed_3.state == :claimed
     end
 
-    test "claims with demand for all immediate attempt" do
+    test "claims with demand for all immediate run" do
       %{triggers: [trigger]} = workflow = insert(:simple_workflow)
 
-      [second_last_attempt, last_attempt] =
+      [second_last_run, last_run] =
         Enum.map(1..2, fn _i ->
           WorkOrders.create_for(trigger,
             workflow: workflow,
             dataclip: params_with_assocs(:dataclip)
           )
-          |> then(fn {:ok, %{attempts: [attempt]}} -> attempt end)
+          |> then(fn {:ok, %{runs: [run]}} -> run end)
         end)
 
       dataclip = insert(:dataclip)
@@ -101,42 +101,42 @@ defmodule Lightning.AttemptsTest do
           dataclip: dataclip
         )
 
-      attempts =
+      runs =
         Map.new(1..4, fn i ->
-          build(:attempt,
+          build(:run,
             work_order: work_order,
             starting_trigger: trigger,
             dataclip: dataclip,
             priority: :immediate
           )
-          |> Attempts.enqueue()
-          |> then(fn {:ok, attempt} -> {i, attempt} end)
+          |> Runs.enqueue()
+          |> then(fn {:ok, run} -> {i, run} end)
         end)
 
-      assert {:ok, [claimed_1, claimed_2]} = Attempts.claim(2)
+      assert {:ok, [claimed_1, claimed_2]} = Runs.claim(2)
 
-      assert claimed_1.id == attempts[1].id
+      assert claimed_1.id == runs[1].id
       assert claimed_1.state == :claimed
-      assert claimed_2.id == attempts[2].id
+      assert claimed_2.id == runs[2].id
       assert claimed_2.state == :claimed
 
-      assert {:ok, [claimed_3]} = Attempts.claim()
+      assert {:ok, [claimed_3]} = Runs.claim()
 
-      assert claimed_3.id == attempts[3].id
+      assert claimed_3.id == runs[3].id
       assert claimed_3.state == :claimed
 
-      assert {:ok, [claimed_4, claimed_5]} = Attempts.claim(2)
+      assert {:ok, [claimed_4, claimed_5]} = Runs.claim(2)
 
-      assert claimed_4.id in [attempts[4].id, second_last_attempt.id]
+      assert claimed_4.id in [runs[4].id, second_last_run.id]
       assert claimed_4.state == :claimed
 
       assert claimed_5.id != claimed_4.id
-      assert claimed_5.id in [attempts[4].id, second_last_attempt.id]
+      assert claimed_5.id in [runs[4].id, second_last_run.id]
       assert claimed_5.state == :claimed
 
-      assert {:ok, [claimed_6]} = Attempts.claim(2)
+      assert {:ok, [claimed_6]} = Runs.claim(2)
 
-      assert claimed_6.id == last_attempt.id
+      assert claimed_6.id == last_run.id
       assert claimed_6.state == :claimed
     end
   end
@@ -145,13 +145,13 @@ defmodule Lightning.AttemptsTest do
     test "removes a run from the queue" do
       %{triggers: [trigger]} = workflow = insert(:simple_workflow)
 
-      {:ok, %{attempts: [attempt]}} =
+      {:ok, %{runs: [run]}} =
         WorkOrders.create_for(trigger,
           workflow: workflow,
           dataclip: params_with_assocs(:dataclip)
         )
 
-      assert {:ok, dequeued} = Attempts.dequeue(attempt)
+      assert {:ok, dequeued} = Runs.dequeue(run)
 
       refute dequeued |> Repo.reload()
     end
@@ -162,38 +162,38 @@ defmodule Lightning.AttemptsTest do
       dataclip = insert(:dataclip)
       %{triggers: [trigger], jobs: [job]} = workflow = insert(:simple_workflow)
 
-      %{attempts: [attempt]} =
+      %{runs: [run]} =
         work_order_for(trigger, workflow: workflow, dataclip: dataclip)
         |> insert()
 
       {:error, changeset} =
-        Attempts.start_step(%{
-          "attempt_id" => attempt.id,
+        Runs.start_step(%{
+          "run_id" => run.id,
           "job_id" => Ecto.UUID.generate(),
           "input_dataclip_id" => dataclip.id,
           "step_id" => Ecto.UUID.generate()
         })
 
       assert {:job_id, {"does not exist", []}} in changeset.errors
-      refute {:attempt_id, {"does not exist", []}} in changeset.errors
+      refute {:run_id, {"does not exist", []}} in changeset.errors
 
-      # both attempt_id and job_id doesn't exist
+      # both run_id and job_id doesn't exist
       {:error, changeset} =
-        Attempts.start_step(%{
-          "attempt_id" => Ecto.UUID.generate(),
+        Runs.start_step(%{
+          "run_id" => Ecto.UUID.generate(),
           "job_id" => Ecto.UUID.generate(),
           "input_dataclip_id" => dataclip.id,
           "step_id" => Ecto.UUID.generate()
         })
 
       assert {:job_id, {"does not exist", []}} in changeset.errors
-      assert {:attempt_id, {"does not exist", []}} in changeset.errors
+      assert {:run_id, {"does not exist", []}} in changeset.errors
 
       Lightning.WorkOrders.subscribe(workflow.project_id)
 
       {:ok, step} =
-        Attempts.start_step(%{
-          "attempt_id" => attempt.id,
+        Runs.start_step(%{
+          "run_id" => run.id,
           "job_id" => job.id,
           "input_dataclip_id" => dataclip.id,
           "step_id" => _step_id = Ecto.UUID.generate()
@@ -202,12 +202,12 @@ defmodule Lightning.AttemptsTest do
       assert step.started_at, "The step has been marked as started"
 
       assert Repo.get_by(Lightning.RunStep, step_id: step.id),
-             "There is a corresponding RunStep linking it to the attempt"
+             "There is a corresponding RunStep linking it to the run"
 
-      attempt_id = attempt.id
+      run_id = run.id
 
-      assert_received %Lightning.WorkOrders.Events.AttemptUpdated{
-        attempt: %{id: ^attempt_id}
+      assert_received %Lightning.WorkOrders.Events.RunUpdated{
+        run: %{id: ^run_id}
       }
     end
   end
@@ -217,20 +217,20 @@ defmodule Lightning.AttemptsTest do
       dataclip = insert(:dataclip)
       %{triggers: [trigger], jobs: [job]} = workflow = insert(:simple_workflow)
 
-      %{attempts: [attempt]} =
+      %{runs: [run]} =
         work_order_for(trigger, workflow: workflow, dataclip: dataclip)
         |> insert()
 
       step =
-        insert(:step, attempts: [attempt], job: job, input_dataclip: dataclip)
+        insert(:step, runs: [run], job: job, input_dataclip: dataclip)
 
       {:ok, step} =
-        Attempts.complete_step(%{
+        Runs.complete_step(%{
           step_id: step.id,
           reason: "success",
           output_dataclip: ~s({"foo": "bar"}),
           output_dataclip_id: Ecto.UUID.generate(),
-          attempt_id: attempt.id,
+          run_id: run.id,
           project_id: workflow.project_id
         })
 
@@ -246,15 +246,15 @@ defmodule Lightning.AttemptsTest do
       dataclip = insert(:dataclip)
       %{triggers: [trigger], jobs: [job]} = workflow = insert(:simple_workflow)
 
-      %{attempts: [attempt]} =
+      %{runs: [run]} =
         work_order_for(trigger, workflow: workflow, dataclip: dataclip)
         |> insert()
 
       step =
-        insert(:step, attempts: [attempt], job: job, input_dataclip: dataclip)
+        insert(:step, runs: [run], job: job, input_dataclip: dataclip)
 
       assert {:error, %Ecto.Changeset{}} =
-               Attempts.complete_step(%{
+               Runs.complete_step(%{
                  step_id: step.id
                })
     end
@@ -263,17 +263,17 @@ defmodule Lightning.AttemptsTest do
       dataclip = insert(:dataclip)
       %{triggers: [trigger]} = workflow = insert(:simple_workflow)
 
-      %{attempts: [attempt]} =
+      %{runs: [run]} =
         work_order_for(trigger, workflow: workflow, dataclip: dataclip)
         |> insert()
 
       assert {:error, %Ecto.Changeset{errors: [step_id: {"not found", []}]}} =
-               Attempts.complete_step(%{
+               Runs.complete_step(%{
                  step_id: Ecto.UUID.generate(),
                  reason: "success",
                  output_dataclip: ~s({"foo": "bar"}),
                  output_dataclip_id: Ecto.UUID.generate(),
-                 attempt_id: attempt.id,
+                 run_id: run.id,
                  project_id: workflow.project_id
                })
     end
@@ -295,47 +295,47 @@ defmodule Lightning.AttemptsTest do
             )
         end
 
-      %{attempts: [attempt]} =
+      %{runs: [run]} =
         work_order_for(trigger, workflow: workflow, dataclip: dataclip)
         |> insert()
 
-      %{attempt: attempt}
+      %{run: run}
     end
 
     @tag dataclip_type: :step_result
-    test "returns the body of a dataclip", %{attempt: attempt} do
-      assert Attempts.get_input(attempt) == ~s({"i'm": ["a", "dataclip"]})
+    test "returns the body of a dataclip", %{run: run} do
+      assert Runs.get_input(run) == ~s({"i'm": ["a", "dataclip"]})
     end
 
     @tag dataclip_type: :http_request
-    test "returns headers and body for http_request", %{attempt: attempt} do
-      assert Attempts.get_input(attempt) ==
+    test "returns headers and body for http_request", %{run: run} do
+      assert Runs.get_input(run) ==
                ~s({"data": {"foo": "bar"}, "request": {"headers": {"content-type": "application/json"}}})
     end
   end
 
-  describe "start_attempt/1" do
+  describe "start_run/1" do
     setup do
       dataclip = insert(:dataclip)
       %{triggers: [trigger]} = workflow = insert(:simple_workflow)
 
-      %{attempts: [attempt]} =
+      %{runs: [run]} =
         workorder =
         work_order_for(trigger, workflow: workflow, dataclip: dataclip)
         |> insert()
 
-      {:ok, attempt} =
-        Repo.update(attempt |> Ecto.Changeset.change(state: :claimed))
+      {:ok, run} =
+        Repo.update(run |> Ecto.Changeset.change(state: :claimed))
 
       Lightning.WorkOrders.subscribe(workflow.project_id)
 
-      %{attempt: attempt, workorder_id: workorder.id}
+      %{run: run, workorder_id: workorder.id}
     end
 
     test "marks a run as started",
-         %{attempt: attempt, workorder_id: workorder_id} do
-      assert {:ok, %Attempt{started_at: started_at}} =
-               Attempts.start_attempt(attempt)
+         %{run: run, workorder_id: workorder_id} do
+      assert {:ok, %Run{started_at: started_at}} =
+               Runs.start_run(run)
 
       assert DateTime.compare(started_at, DateTime.utc_now()) == :lt
 
@@ -344,57 +344,57 @@ defmodule Lightning.AttemptsTest do
       }
     end
 
-    test "indicates if a response was unsuccessful", %{attempt: attempt} do
+    test "indicates if a response was unsuccessful", %{run: run} do
       with_mock(
         Lightning.Repo,
         transaction: fn _multi -> {:error, nil, %Ecto.Changeset{}, nil} end
       ) do
-        assert Attempts.start_attempt(attempt) == {:error, %Ecto.Changeset{}}
+        assert Runs.start_run(run) == {:error, %Ecto.Changeset{}}
       end
     end
 
-    test "triggers a metric if starting the attempt was successful",
-         %{attempt: attempt} do
+    test "triggers a metric if starting the run was successful",
+         %{run: run} do
       ref =
         :telemetry_test.attach_event_handlers(
           self(),
-          [[:domain, :attempt, :queue]]
+          [[:domain, :run, :queue]]
         )
 
       {:ok,
-       %Attempt{
+       %Run{
          started_at: started_at,
          inserted_at: inserted_at
        }} =
-        Attempts.start_attempt(attempt)
+        Runs.start_run(run)
 
       delay = DateTime.diff(started_at, inserted_at, :millisecond)
 
       assert_received {
-        [:domain, :attempt, :queue],
+        [:domain, :run, :queue],
         ^ref,
         %{delay: ^delay},
         %{}
       }
     end
 
-    test "does not trigger a metric if starting the attempt was unsuccessful",
-         %{attempt: attempt} do
+    test "does not trigger a metric if starting the run was unsuccessful",
+         %{run: run} do
       ref =
         :telemetry_test.attach_event_handlers(
           self(),
-          [[:domain, :attempt, :queue]]
+          [[:domain, :run, :queue]]
         )
 
       with_mock(
         Lightning.Repo,
         transaction: fn _multi -> {:error, nil, nil, nil} end
       ) do
-        Attempts.start_attempt(attempt)
+        Runs.start_run(run)
       end
 
       refute_received {
-        [:domain, :attempt, :queue],
+        [:domain, :run, :queue],
         ^ref,
         %{delay: _delay},
         %{}
@@ -402,44 +402,44 @@ defmodule Lightning.AttemptsTest do
     end
   end
 
-  describe "complete_attempt/1" do
+  describe "complete_run/1" do
     test "marks a run as complete" do
       dataclip = insert(:dataclip)
       %{triggers: [trigger]} = workflow = insert(:simple_workflow)
 
-      %{attempts: [attempt]} =
+      %{runs: [run]} =
         workorder =
         work_order_for(trigger, workflow: workflow, dataclip: dataclip)
         |> insert()
 
-      # Make another attempt to ensure the updating doesn't include other
-      # attempts.
-      %{attempts: [_attempt]} =
+      # Make another run to ensure the updating doesn't include other
+      # runs.
+      %{runs: [_run]} =
         work_order_for(trigger, workflow: workflow, dataclip: dataclip)
         |> insert()
 
       {:error, changeset} =
-        Attempts.complete_attempt(attempt, %{state: :success})
+        Runs.complete_run(run, %{state: :success})
 
       assert {:state,
-              {"cannot mark attempt success that has not been claimed by a worker",
+              {"cannot mark run success that has not been claimed by a worker",
                []}} in changeset.errors
 
-      {:ok, attempt} =
-        Repo.update(attempt |> Ecto.Changeset.change(state: :claimed))
+      {:ok, run} =
+        Repo.update(run |> Ecto.Changeset.change(state: :claimed))
 
       # TODO: test that the workorder has it's state updated
 
-      {:ok, attempt} = Attempts.start_attempt(attempt)
+      {:ok, run} = Runs.start_run(run)
 
-      assert WorkOrders.get(attempt.work_order_id).state == :running
+      assert WorkOrders.get(run.work_order_id).state == :running
 
       Lightning.WorkOrders.subscribe(workflow.project_id)
 
-      {:ok, attempt} = Attempts.complete_attempt(attempt, %{state: :success})
+      {:ok, run} = Runs.complete_run(run, %{state: :success})
 
-      assert attempt.state == :success
-      assert DateTime.after?(DateTime.utc_now(), attempt.finished_at)
+      assert run.state == :success
+      assert DateTime.after?(DateTime.utc_now(), run.finished_at)
 
       workorder_id = workorder.id
 
@@ -452,21 +452,21 @@ defmodule Lightning.AttemptsTest do
       dataclip = insert(:dataclip)
       %{triggers: [trigger]} = workflow = insert(:simple_workflow)
 
-      %{attempts: [attempt]} =
+      %{runs: [run]} =
         work_order_for(trigger, workflow: workflow, dataclip: dataclip)
         |> insert()
 
-      {:ok, attempt} =
-        attempt
+      {:ok, run} =
+        run
         |> Ecto.Changeset.change(state: :available)
         |> Repo.update()
 
       {:error, changeset} =
-        Attempts.complete_attempt(attempt, %{state: :lost, error_type: "Lost"})
+        Runs.complete_run(run, %{state: :lost, error_type: "Lost"})
 
       assert changeset.errors == [
                state:
-                 {"cannot mark attempt lost that has not been claimed by a worker",
+                 {"cannot mark run lost that has not been claimed by a worker",
                   []}
              ]
     end
@@ -475,36 +475,36 @@ defmodule Lightning.AttemptsTest do
       dataclip = insert(:dataclip)
       %{triggers: [trigger]} = workflow = insert(:simple_workflow)
 
-      %{attempts: [attempt]} =
+      %{runs: [run]} =
         work_order_for(trigger, workflow: workflow, dataclip: dataclip)
         |> insert()
 
-      {:ok, attempt} =
-        attempt
+      {:ok, run} =
+        run
         |> Ecto.Changeset.change(state: :claimed)
         |> Repo.update()
 
-      {:ok, attempt} =
-        Attempts.complete_attempt(attempt, %{state: :lost, error_type: "Lost"})
+      {:ok, run} =
+        Runs.complete_run(run, %{state: :lost, error_type: "Lost"})
 
-      assert attempt.state == :lost
+      assert run.state == :lost
     end
 
     test "returns error if state is not present" do
       dataclip = insert(:dataclip)
       %{triggers: [trigger]} = workflow = insert(:simple_workflow)
 
-      %{attempts: [attempt]} =
+      %{runs: [run]} =
         work_order_for(trigger, workflow: workflow, dataclip: dataclip)
         |> insert()
 
-      {:ok, attempt} =
-        attempt
+      {:ok, run} =
+        run
         |> Ecto.Changeset.change(state: :started)
         |> Repo.update()
 
       {:error, changeset} =
-        Attempts.complete_attempt(attempt, %{})
+        Runs.complete_run(run, %{})
 
       assert changeset.errors == [
                state: {"can't be blank", [validation: :required]}
@@ -515,17 +515,17 @@ defmodule Lightning.AttemptsTest do
       dataclip = insert(:dataclip)
       %{triggers: [trigger]} = workflow = insert(:simple_workflow)
 
-      %{attempts: [attempt]} =
+      %{runs: [run]} =
         work_order_for(trigger, workflow: workflow, dataclip: dataclip)
         |> insert()
 
-      {:ok, attempt} =
-        attempt
+      {:ok, run} =
+        run
         |> Ecto.Changeset.change(state: :started)
         |> Repo.update()
 
       {:error, changeset} =
-        Attempts.complete_attempt(attempt, %{state: "some_unknown_state"})
+        Runs.complete_run(run, %{state: "some_unknown_state"})
 
       assert [
                state:
@@ -538,17 +538,17 @@ defmodule Lightning.AttemptsTest do
     end
   end
 
-  describe "append_attempt_log/3" do
+  describe "append_run_log/3" do
     test "adds a log line to a run" do
       dataclip = insert(:dataclip)
       %{triggers: [trigger], jobs: [job]} = workflow = insert(:simple_workflow)
 
-      %{attempts: [attempt]} =
+      %{runs: [run]} =
         work_order_for(trigger, workflow: workflow, dataclip: dataclip)
         |> insert()
 
       {:error, changeset} =
-        Attempts.append_attempt_log(attempt, %{source: "fooo-ooooo"})
+        Runs.append_run_log(run, %{source: "fooo-ooooo"})
 
       assert {:source,
               {"should be at most %{count} character(s)",
@@ -559,25 +559,25 @@ defmodule Lightning.AttemptsTest do
       assert {:timestamp, {"can't be blank", [validation: :required]}} in changeset.errors
 
       {:error, changeset} =
-        Attempts.append_attempt_log(attempt, %{
+        Runs.append_run_log(run, %{
           step_id: Ecto.UUID.generate(),
           message: "I'm a log line",
           timestamp: DateTime.utc_now() |> DateTime.to_unix(:millisecond)
         })
 
-      assert {:step_id, {"must be associated with the attempt", []}} in changeset.errors
+      assert {:step_id, {"must be associated with the run", []}} in changeset.errors
 
       {:ok, _log_line} =
-        Attempts.append_attempt_log(attempt, %{
+        Runs.append_run_log(run, %{
           message: "I'm a log line",
           timestamp: DateTime.utc_now() |> DateTime.to_unix(:millisecond)
         })
 
       step =
-        insert(:step, attempts: [attempt], job: job, input_dataclip: dataclip)
+        insert(:step, runs: [run], job: job, input_dataclip: dataclip)
 
       {:ok, log_line} =
-        Attempts.append_attempt_log(attempt, %{
+        Runs.append_run_log(run, %{
           message: "I'm another log line",
           step_id: step.id,
           timestamp: DateTime.utc_now() |> DateTime.to_unix(:millisecond)
@@ -594,12 +594,12 @@ defmodule Lightning.AttemptsTest do
       dataclip = insert(:dataclip)
       %{triggers: [trigger], jobs: [_job]} = workflow = insert(:simple_workflow)
 
-      %{attempts: [attempt]} =
+      %{runs: [run]} =
         work_order_for(trigger, workflow: workflow, dataclip: dataclip)
         |> insert()
 
       {:ok, log_line} =
-        Attempts.append_attempt_log(attempt, %{
+        Runs.append_run_log(run, %{
           message: [%{"foo" => "bar"}, "hello there"],
           timestamp: DateTime.utc_now() |> DateTime.to_unix(:millisecond)
         })
@@ -607,7 +607,7 @@ defmodule Lightning.AttemptsTest do
       assert log_line.message == ~s<{"foo":"bar"} hello there>
 
       {:ok, log_line} =
-        Attempts.append_attempt_log(attempt, %{
+        Runs.append_run_log(run, %{
           message: %{"foo" => "bar"},
           timestamp: DateTime.utc_now() |> DateTime.to_unix(:millisecond)
         })
@@ -629,8 +629,8 @@ defmodule Lightning.AttemptsTest do
           dataclip: dataclip
         )
 
-      attempt =
-        insert(:attempt,
+      run =
+        insert(:run,
           work_order: work_order,
           starting_trigger: trigger,
           dataclip: dataclip
@@ -638,14 +638,14 @@ defmodule Lightning.AttemptsTest do
 
       finished_step =
         insert(:step,
-          attempts: [attempt],
+          runs: [run],
           finished_at: DateTime.utc_now(),
           exit_reason: "success"
         )
 
-      unfinished_step = insert(:step, attempts: [attempt])
+      unfinished_step = insert(:step, runs: [run])
 
-      Attempts.mark_attempt_lost(attempt)
+      Runs.mark_run_lost(run)
 
       reloaded_finished_step = Repo.get(Invocation.Step, finished_step.id)
       reloaded_unfinished_step = Repo.get(Invocation.Step, unfinished_step.id)

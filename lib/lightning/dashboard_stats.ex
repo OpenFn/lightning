@@ -5,7 +5,7 @@ defmodule Lightning.DashboardStats do
 
   import Ecto.Query
 
-  alias Lightning.Attempt
+  alias Lightning.Run
   alias Lightning.Invocation.Step
   alias Lightning.Repo
   alias Lightning.Workflows.Workflow
@@ -14,12 +14,12 @@ defmodule Lightning.DashboardStats do
     @moduledoc """
     Stats for each workflow.
 
-    Attempts and WorkOrders counting are grouped by state.
+    Runs and WorkOrders counting are grouped by state.
     """
     defstruct last_workorder: %{state: nil, updated_at: nil},
               last_failed_workorder: %{state: nil, updated_at: nil},
               failed_workorders_count: 0,
-              grouped_attempts_count: %{},
+              grouped_runs_count: %{},
               grouped_workorders_count: %{},
               step_count: 0,
               step_success_rate: 0.0,
@@ -37,7 +37,7 @@ defmodule Lightning.DashboardStats do
                 failed: 0,
                 failed_percentage: 0.0
               },
-              attempt_metrics: %{
+              run_metrics: %{
                 total: 0,
                 pending: 0,
                 success: 0,
@@ -54,7 +54,7 @@ defmodule Lightning.DashboardStats do
       |> Enum.map(fn {_key, count} -> count end)
       |> Enum.sum()
 
-    grouped_attempts_count = count_attempts(workflow)
+    grouped_runs_count = count_runs(workflow)
 
     {step_count, step_success_rate} =
       workflow |> count_steps() |> step_stats()
@@ -66,7 +66,7 @@ defmodule Lightning.DashboardStats do
       last_workorder: last_workorder,
       last_failed_workorder: get_last_failed_workorder(workflow, last_workorder),
       failed_workorders_count: failed_wo_count,
-      grouped_attempts_count: grouped_attempts_count,
+      grouped_runs_count: grouped_runs_count,
       grouped_workorders_count: grouped_workorders_count,
       step_count: step_count,
       step_success_rate: round(step_success_rate * 100) / 100,
@@ -78,8 +78,8 @@ defmodule Lightning.DashboardStats do
     %ProjectMetrics{
       work_order_metrics:
         aggregate_metrics(workflows_stats, :grouped_workorders_count),
-      attempt_metrics:
-        aggregate_metrics(workflows_stats, :grouped_attempts_count)
+      run_metrics:
+        aggregate_metrics(workflows_stats, :grouped_runs_count)
     }
   end
 
@@ -142,8 +142,8 @@ defmodule Lightning.DashboardStats do
     end)
   end
 
-  defp count_attempts(%Workflow{id: workflow_id}) do
-    from(a in Attempt,
+  defp count_runs(%Workflow{id: workflow_id}) do
+    from(a in Run,
       join: wo in assoc(a, :work_order),
       join: wf in assoc(wo, :workflow),
       where: wf.id == ^workflow_id,

@@ -10,7 +10,7 @@ defmodule Lightning.Projects do
 
   alias Lightning.Accounts.User
   alias Lightning.Accounts.UserNotifier
-  alias Lightning.Attempt
+  alias Lightning.Run
   alias Lightning.RunStep
   alias Lightning.ExportUtils
   alias Lightning.Invocation.Dataclip
@@ -193,7 +193,7 @@ defmodule Lightning.Projects do
 
   @doc """
   Deletes a project and its related data, including workflows, work orders,
-  steps, jobs, attempts, triggers, project users, project credentials, and dataclips
+  steps, jobs, runs, triggers, project users, project credentials, and dataclips
 
   ## Examples
 
@@ -213,9 +213,9 @@ defmodule Lightning.Projects do
     end)
 
     Repo.transaction(fn ->
-      project_attempts_query(project) |> Repo.delete_all()
+      project_runs_query(project) |> Repo.delete_all()
 
-      project_attempt_step_query(project) |> Repo.delete_all()
+      project_run_step_query(project) |> Repo.delete_all()
 
       project_workorders_query(project) |> Repo.delete_all()
 
@@ -245,17 +245,17 @@ defmodule Lightning.Projects do
     end)
   end
 
-  def project_attempts_query(project) do
-    from(att in Attempt,
+  def project_runs_query(project) do
+    from(att in Run,
       join: wo in assoc(att, :work_order),
       join: w in assoc(wo, :workflow),
       where: w.project_id == ^project.id
     )
   end
 
-  def project_attempt_step_query(project) do
+  def project_run_step_query(project) do
     from(as in RunStep,
-      join: att in assoc(as, :attempt),
+      join: att in assoc(as, :run),
       join: wo in assoc(att, :work_order),
       join: w in assoc(wo, :workflow),
       where: w.project_id == ^project.id
