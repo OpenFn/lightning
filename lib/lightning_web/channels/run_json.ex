@@ -13,8 +13,7 @@ defmodule LightningWeb.RunJson do
       "triggers" => run.workflow.triggers |> Enum.map(&render/1),
       "jobs" => run.workflow.jobs |> Enum.map(&render/1),
       "edges" => run.workflow.edges |> Enum.map(&render/1),
-      "starting_node_id" =>
-        run.starting_trigger_id || run.starting_job_id,
+      "starting_node_id" => run.starting_trigger_id || run.starting_job_id,
       "dataclip_id" => run.dataclip_id
     }
   end

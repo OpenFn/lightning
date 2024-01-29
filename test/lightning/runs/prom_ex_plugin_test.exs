@@ -62,8 +62,7 @@ defmodule Lightning.Runs.PromExPluginText do
       assert %Telemetry.Metrics.LastValue{
                name: [:lightning, :run, :queue, :stalled, :count],
                event_name: [:lightning, :run, :queue, :stalled],
-               description:
-                 "The count of runs stuck in the `available` state",
+               description: "The count of runs stuck in the `available` state",
                measurement: :count
              } = metric
     end
@@ -96,8 +95,7 @@ defmodule Lightning.Runs.PromExPluginText do
                  :milliseconds
                ],
                event_name: [:lightning, :run, :queue, :claim],
-               description:
-                 "The average time taken before a run is claimed",
+               description: "The average time taken before a run is claimed",
                measurement: :average_duration,
                unit: :millisecond
              } = metric

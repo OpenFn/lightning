@@ -232,9 +232,7 @@ defmodule LightningWeb.RunLive.Streaming do
           ) do
         {:noreply,
          socket
-         |> assign(
-           run: AsyncResult.ok(socket.assigns.run, updated_run)
-         )}
+         |> assign(run: AsyncResult.ok(socket.assigns.run, updated_run))}
       end
 
       def handle_info(%{__struct__: type, step: step}, socket)

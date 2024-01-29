@@ -244,10 +244,8 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
                   </.link>
                   <%= if Enum.count(@runs) > 1 do %>
                     (<%= index %>/<%= Enum.count(@runs) %><%= if index !=
-                                                                       Enum.count(
-                                                                         @runs
-                                                                       ),
-                                                                     do: ")" %>
+                                                                   Enum.count(@runs),
+                                                                 do: ")" %>
                     <%= if index == Enum.count(@runs) do %>
                       <span>
                         &bull; <a
@@ -269,18 +267,13 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
                     <% :started -> %>
                       started @ <.timestamp timestamp={run.started_at} />
                     <% _state -> %>
-                      <%= run.state %> @
-                      <.timestamp timestamp={run.finished_at} />
+                      <%= run.state %> @ <.timestamp timestamp={run.finished_at} />
                   <% end %>
                 </div>
               </div>
             </div>
 
-            <.run_item
-              can_rerun_job={@can_rerun_job}
-              run={run}
-              project={@project}
-            />
+            <.run_item can_rerun_job={@can_rerun_job} run={run} project={@project} />
           </div>
         <% end %>
       <% end %>

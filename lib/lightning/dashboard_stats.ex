@@ -78,8 +78,7 @@ defmodule Lightning.DashboardStats do
     %ProjectMetrics{
       work_order_metrics:
         aggregate_metrics(workflows_stats, :grouped_workorders_count),
-      run_metrics:
-        aggregate_metrics(workflows_stats, :grouped_runs_count)
+      run_metrics: aggregate_metrics(workflows_stats, :grouped_runs_count)
     }
   end
 

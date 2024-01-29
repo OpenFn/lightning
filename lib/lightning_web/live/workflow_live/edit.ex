@@ -813,8 +813,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
           Runs.subscribe(run)
 
-          {:noreply,
-           socket |> assign_workflow(workflow) |> follow_run(run)}
+          {:noreply, socket |> assign_workflow(workflow) |> follow_run(run)}
 
         {:error, changeset} ->
           {
