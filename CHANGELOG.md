@@ -1173,7 +1173,7 @@ the Nodes and Edges [epic](https://github.com/OpenFn/Lightning/issues/793).
 
 ### Fixed
 
-- Fixed bug that attempted to execute HTML scripts in dataclips
+- Fixed bug that tried to execute HTML scripts in dataclips
 - Fixed bug that prevented work orders from displaying in the order of their
   last run, descending.
 - Remove alerts after set timeout or close
