@@ -6,8 +6,8 @@ defmodule Lightning.Runs.Queue do
 
   import Ecto.Query
 
-  alias Lightning.Runs
   alias Lightning.Repo
+  alias Lightning.Runs
 
   @impl true
   def enqueue(run) do

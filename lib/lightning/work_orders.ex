@@ -34,13 +34,13 @@ defmodule Lightning.WorkOrders do
 
   alias Ecto.Multi
   alias Lightning.Accounts.User
-  alias Lightning.Run
-  alias Lightning.Runs
-  alias Lightning.RunStep
   alias Lightning.Graph
   alias Lightning.Invocation.Dataclip
   alias Lightning.Invocation.Step
   alias Lightning.Repo
+  alias Lightning.Run
+  alias Lightning.Runs
+  alias Lightning.RunStep
   alias Lightning.Workflows.Job
   alias Lightning.Workflows.Trigger
   alias Lightning.Workflows.Workflow

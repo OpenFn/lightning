@@ -4,9 +4,9 @@ defmodule LightningWeb.RunChannel do
   """
   use LightningWeb, :channel
 
-  alias Lightning.Runs
   alias Lightning.Credentials
   alias Lightning.Repo
+  alias Lightning.Runs
   alias Lightning.Scrubber
   alias Lightning.Workers
   alias LightningWeb.RunJson

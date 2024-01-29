@@ -6,11 +6,11 @@ defmodule Lightning.SetupUtils do
   import Ecto.Changeset
 
   alias Lightning.Accounts
-  alias Lightning.Runs
   alias Lightning.Credentials
   alias Lightning.Jobs
   alias Lightning.Projects
   alias Lightning.Repo
+  alias Lightning.Runs
   alias Lightning.VersionControl
   alias Lightning.Workflows
   alias Lightning.WorkOrders

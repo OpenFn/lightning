@@ -5,11 +5,11 @@ defmodule LightningWeb.WorkflowLive.Edit do
   import LightningWeb.Components.NewInputs
   import LightningWeb.WorkflowLive.Components
 
-  alias Lightning.Runs
-  alias Lightning.Runs.Events.StepCompleted
   alias Lightning.Invocation
   alias Lightning.Policies.Permissions
   alias Lightning.Policies.ProjectUsers
+  alias Lightning.Runs
+  alias Lightning.Runs.Events.StepCompleted
   alias Lightning.Workflows
   alias Lightning.Workflows.Job
   alias Lightning.Workflows.Trigger

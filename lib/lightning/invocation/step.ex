@@ -22,11 +22,11 @@ defmodule Lightning.Invocation.Step do
 
   import Ecto.Changeset
 
-  alias Lightning.Run
-  alias Lightning.RunStep
   alias Lightning.Credentials.Credential
   alias Lightning.Invocation.Dataclip
   alias Lightning.Invocation.LogLine
+  alias Lightning.Run
+  alias Lightning.RunStep
   alias Lightning.Workflows.Job
 
   @type t :: %__MODULE__{

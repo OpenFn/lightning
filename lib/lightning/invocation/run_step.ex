@@ -3,9 +3,11 @@ defmodule Lightning.RunStep do
   Ecto model for an the Steps in a Run.
   """
   use Ecto.Schema
+
   import Ecto.Changeset
-  alias Lightning.Run
+
   alias Lightning.Invocation.Step
+  alias Lightning.Run
 
   @type t :: %__MODULE__{
           __meta__: Ecto.Schema.Metadata.t(),

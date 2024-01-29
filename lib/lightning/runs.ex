@@ -1,11 +1,12 @@
 defmodule Lightning.Runs do
   import Ecto.Query
 
+  alias Lightning.Invocation.LogLine
+  alias Lightning.Repo
   alias Lightning.Run
   alias Lightning.Runs.Events
   alias Lightning.Runs.Handlers
-  alias Lightning.Invocation.LogLine
-  alias Lightning.Repo
+
   require Logger
 
   defmodule Adaptor do

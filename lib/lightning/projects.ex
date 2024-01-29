@@ -10,8 +10,6 @@ defmodule Lightning.Projects do
 
   alias Lightning.Accounts.User
   alias Lightning.Accounts.UserNotifier
-  alias Lightning.Run
-  alias Lightning.RunStep
   alias Lightning.ExportUtils
   alias Lightning.Invocation.Dataclip
   alias Lightning.Invocation.Step
@@ -20,6 +18,8 @@ defmodule Lightning.Projects do
   alias Lightning.Projects.ProjectUser
   alias Lightning.Projects.ProjectUser
   alias Lightning.Repo
+  alias Lightning.Run
+  alias Lightning.RunStep
   alias Lightning.Workflows.Job
   alias Lightning.Workflows.Trigger
   alias Lightning.Workflows.Workflow

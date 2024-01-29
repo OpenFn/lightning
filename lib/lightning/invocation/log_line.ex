@@ -14,9 +14,9 @@ defmodule Lightning.Invocation.LogLine do
 
   import Ecto.Changeset
 
-  alias Lightning.Run
   alias Lightning.Invocation.Step
   alias Lightning.LogMessage
+  alias Lightning.Run
   alias Lightning.Scrubber
   alias Lightning.UnixDateTime
 

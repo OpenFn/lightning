@@ -3,12 +3,12 @@ defmodule Lightning.Runs.Handlers do
   Handler modules for working with runs.
   """
 
-  alias Lightning.Run
-  alias Lightning.Runs
-  alias Lightning.RunStep
   alias Lightning.Invocation.Dataclip
   alias Lightning.Invocation.Step
   alias Lightning.Repo
+  alias Lightning.Run
+  alias Lightning.Runs
+  alias Lightning.RunStep
   alias Lightning.WorkOrders
 
   defmodule StartStep do

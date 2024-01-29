@@ -5,9 +5,9 @@ defmodule Lightning.DashboardStats do
 
   import Ecto.Query
 
-  alias Lightning.Run
   alias Lightning.Invocation.Step
   alias Lightning.Repo
+  alias Lightning.Run
   alias Lightning.Workflows.Workflow
 
   defmodule WorkflowStats do

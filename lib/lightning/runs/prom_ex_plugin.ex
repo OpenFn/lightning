@@ -9,8 +9,8 @@ defmodule Lightning.Runs.PromExPlugin do
 
   import Ecto.Query
 
-  alias Lightning.Run
   alias Lightning.Repo
+  alias Lightning.Run
 
   @average_claim_event [:lightning, :run, :queue, :claim]
   @stalled_event [:lightning, :run, :queue, :stalled]

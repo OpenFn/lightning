@@ -10,9 +10,9 @@ defmodule Lightning.Run do
   import Lightning.Validators
 
   alias Lightning.Accounts.User
-  alias Lightning.RunStep
   alias Lightning.Invocation.LogLine
   alias Lightning.Invocation.Step
+  alias Lightning.RunStep
   alias Lightning.Workflows.Job
   alias Lightning.Workflows.Trigger
   alias Lightning.WorkOrder

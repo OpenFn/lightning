@@ -3,12 +3,12 @@ defmodule LightningWeb.RunLive.Streaming do
   import Phoenix.LiveView
   import Ecto.Query
 
-  alias Lightning.Runs
-  alias Lightning.RunStep
   alias Lightning.Credentials
   alias Lightning.Invocation.Dataclip
   alias Lightning.Invocation.Step
   alias Lightning.Repo
+  alias Lightning.Runs
+  alias Lightning.RunStep
   alias Lightning.Scrubber
   alias Phoenix.LiveView.AsyncResult
 

@@ -7,8 +7,8 @@ defmodule Lightning.WorkOrder do
 
   import Ecto.Changeset
 
-  alias Lightning.Run
   alias Lightning.Invocation.Dataclip
+  alias Lightning.Run
   alias Lightning.Workflows.Trigger
   alias Lightning.Workflows.Workflow
 
