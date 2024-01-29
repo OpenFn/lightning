@@ -407,50 +407,6 @@ defmodule LightningWeb.RunChannelTest do
                Repo.get!(Step, step_id)
     end
 
-    test "run:start is converted to step:start for old workers", %{
-      socket: socket,
-      run: run,
-      workflow: workflow,
-      credential: %{id: credential_id}
-    } do
-      # { id, job_id, input_dataclip_id }
-      step_id = Ecto.UUID.generate()
-      [%{id: job_id}] = workflow.jobs
-
-      ref =
-        push(socket, "run:start", %{
-          "run_id" => step_id,
-          "credential_id" => credential_id,
-          "job_id" => job_id,
-          "input_dataclip_id" => run.dataclip_id
-        })
-
-      assert_reply ref, :ok, %{step_id: ^step_id}, 1_000
-
-      assert %{credential_id: ^credential_id, job_id: ^job_id} =
-               Repo.get!(Step, step_id)
-    end
-
-    test "run:complete is converted to step:complete for old workers", %{
-      socket: socket,
-      run: run,
-      workflow: workflow
-    } do
-      [job] = workflow.jobs
-      %{id: step_id} = step = insert(:step, runs: [run], job: job)
-
-      ref =
-        push(socket, "run:complete", %{
-          "run_id" => step.id,
-          "output_dataclip_id" => Ecto.UUID.generate(),
-          "output_dataclip" => ~s({"foo": "bar"}),
-          "reason" => "normal"
-        })
-
-      assert_reply ref, :ok, %{step_id: ^step_id}
-      assert %{exit_reason: "normal"} = Repo.get(Step, step.id)
-    end
-
     test "step:complete succeeds with normal reason", %{
       socket: socket,
       run: run,
@@ -721,6 +677,20 @@ defmodule LightningWeb.RunChannelTest do
     end
 
     @tag run_state: :claimed
+    test "attempt:start is converted to run:start for old workers", %{
+      socket: socket,
+      run: run,
+      work_order: work_order
+    } do
+      ref = push(socket, "attempt:start", %{})
+
+      assert_reply ref, :ok, nil
+
+      assert %{state: :started} = Lightning.Repo.reload!(run)
+      assert %{state: :running} = Lightning.Repo.reload!(work_order)
+    end
+
+    @tag run_state: :claimed
     test "run:complete when claimed", %{socket: socket} do
       ref =
         push(socket, "run:complete", %{
@@ -743,6 +713,25 @@ defmodule LightningWeb.RunChannelTest do
       assert errors == %{
                state: ["already in completed state"]
              }
+    end
+
+    @tag run_state: :started
+    test "attempt:complete is converted to run:complete for old workers", %{
+      socket: socket,
+      run: run,
+      work_order: work_order
+    } do
+      ref =
+        push(socket, "attempt:complete", %{
+          "reason" => "success",
+          "error_type" => nil,
+          "error_message" => nil
+        })
+
+      assert_reply ref, :ok, nil
+
+      assert %{state: :success} = Lightning.Repo.reload!(run)
+      assert %{state: :success} = Lightning.Repo.reload!(work_order)
     end
 
     @tag run_state: :started
