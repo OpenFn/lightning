@@ -99,7 +99,7 @@ defmodule Lightning.Factories do
   end
 
   def attempt_step_factory do
-    %Lightning.AttemptStep{
+    %Lightning.RunStep{
       id: fn -> Ecto.UUID.generate() end
     }
   end
@@ -179,7 +179,7 @@ defmodule Lightning.Factories do
   end
 
   @doc """
-  Inserts an attempt and associates it two-way with an work order.
+  Inserts a run and associates it two-way with an work order.
   ```
   work_order =
     insert(:workorder, workflow: workflow)
@@ -190,7 +190,7 @@ defmodule Lightning.Factories do
   """
   def with_attempt(work_order, attempt_or_args) do
     if work_order.__meta__.state == :built do
-      raise "Cannot associate an attempt with a work order that has not been inserted"
+      raise "Cannot associate a run with a work order that has not been inserted"
     end
 
     attempt =

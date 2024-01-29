@@ -14,7 +14,7 @@ defmodule Lightning.AccountsTest do
   import Lightning.AccountsFixtures
   import Lightning.Factories
 
-  test "has_activity_in_projects?/1 returns true if user has activity in a project (is associated with an attempt) and false otherwise." do
+  test "has_activity_in_projects?/1 returns true if user has activity in a project (is associated with a run) and false otherwise." do
     user = AccountsFixtures.user_fixture()
     another_user = AccountsFixtures.user_fixture()
 
@@ -583,7 +583,7 @@ defmodule Lightning.AccountsTest do
   end
 
   describe "The default Oban function Accounts.perform/1" do
-    test "prevents users that are still linked to an attempt from being deleted" do
+    test "prevents users that are still linked to a run from being deleted" do
       user =
         user_fixture(
           scheduled_deletion: DateTime.utc_now() |> Timex.shift(seconds: -10)
@@ -1263,7 +1263,7 @@ defmodule Lightning.AccountsTest do
       assert_raise Ecto.NoResultsError, fn -> Accounts.get_user!(user.id) end
     end
 
-    test "removes any associated Attempt and AttemptStep records" do
+    test "removes any associated Attempt and RunStep records" do
       user_1 = user_fixture()
       user_2 = user_fixture()
 

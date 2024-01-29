@@ -4,7 +4,7 @@ defmodule LightningWeb.AttemptLive.Streaming do
   import Ecto.Query
 
   alias Lightning.Attempts
-  alias Lightning.AttemptStep
+  alias Lightning.RunStep
   alias Lightning.Credentials
   alias Lightning.Invocation.Dataclip
   alias Lightning.Invocation.Step
@@ -145,12 +145,12 @@ defmodule LightningWeb.AttemptLive.Streaming do
          started_at: started_at
        }) do
     attempt_step =
-      from(as in AttemptStep,
+      from(as in RunStep,
         where: as.step_id == ^step_id,
         select: as.attempt_id
       )
 
-    from(as in AttemptStep,
+    from(as in RunStep,
       join: s in assoc(as, :step),
       join: j in assoc(s, :job),
       join: c in assoc(j, :credential),

@@ -146,7 +146,7 @@ defmodule Lightning.WorkOrdersTest do
       }
     end
 
-    test "retrying an attempt from the start", %{
+    test "retrying a run from the start", %{
       workflow: workflow,
       trigger: trigger,
       jobs: [job | _rest]
@@ -181,10 +181,10 @@ defmodule Lightning.WorkOrdersTest do
       assert retry_attempt.state == :available
 
       assert retry_attempt |> Repo.preload(:steps) |> Map.get(:steps) == [],
-             "retrying an attempt from the start should not copy over steps"
+             "retrying a run from the start should not copy over steps"
     end
 
-    test "retrying an attempt from a step that isn't the first", %{
+    test "retrying a run from a step that isn't the first", %{
       workflow: workflow,
       trigger: trigger,
       jobs: [job_a, job_b, job_c]
@@ -403,7 +403,7 @@ defmodule Lightning.WorkOrdersTest do
       assert retry_attempt.state == :available
 
       assert retry_attempt |> Repo.preload(:steps) |> Map.get(:steps) == [],
-             "retrying an attempt from the start should not copy over steps"
+             "retrying a run from the start should not copy over steps"
     end
 
     test "retrying one WorkOrder with a single attempt from mid way job", %{
@@ -558,7 +558,7 @@ defmodule Lightning.WorkOrdersTest do
       assert retry_attempt.state == :available
 
       assert retry_attempt |> Repo.preload(:steps) |> Map.get(:steps) == [],
-             "retrying an attempt from the start should not copy over steps"
+             "retrying a run from the start should not copy over steps"
     end
 
     test "retrying one WorkOrder with a multiple attempts whose latest attempt has no steps from start job skips the retry",
@@ -977,7 +977,7 @@ defmodule Lightning.WorkOrdersTest do
       assert retry_attempt.state == :available
 
       assert retry_attempt |> Repo.preload(:steps) |> Map.get(:steps) == [],
-             "retrying an attempt from the start should not copy over steps"
+             "retrying a run from the start should not copy over steps"
     end
 
     test "retrying multiple workorders preserves the order in which the workorders were created",
@@ -1050,7 +1050,7 @@ defmodule Lightning.WorkOrdersTest do
              |> DateTime.before?(retry_attempt_2.inserted_at)
     end
 
-    test "retrying a WorkOrder with an attempt having starting_trigger without steps",
+    test "retrying a WorkOrder with a run having starting_trigger without steps",
          %{
            workflow: workflow,
            trigger: trigger,
@@ -1104,7 +1104,7 @@ defmodule Lightning.WorkOrdersTest do
       assert retry_attempt |> Repo.preload(:steps) |> Map.get(:steps) == []
     end
 
-    test "retrying a WorkOrder with an attempt having starting_job without steps",
+    test "retrying a WorkOrder with a run having starting_job without steps",
          %{
            workflow: workflow,
            trigger: trigger,
@@ -1157,7 +1157,7 @@ defmodule Lightning.WorkOrdersTest do
     end
   end
 
-  describe "retry_many/2 for AttemptSteps" do
+  describe "retry_many/2 for RunSteps" do
     setup do
       [job_a, job_b, job_c] = jobs = build_list(3, :job)
       trigger = build(:trigger, type: :webhook)
@@ -1181,7 +1181,7 @@ defmodule Lightning.WorkOrdersTest do
       }
     end
 
-    test "retrying a single AttemptStep of the first job", %{
+    test "retrying a single RunStep of the first job", %{
       workflow: workflow,
       trigger: trigger,
       jobs: [job_a, job_b | _rest],
@@ -1247,10 +1247,10 @@ defmodule Lightning.WorkOrdersTest do
       assert retry_attempt.state == :available
 
       assert retry_attempt |> Repo.preload(:steps) |> Map.get(:steps) == [],
-             "retrying an attempt from the start should not copy over steps"
+             "retrying a run from the start should not copy over steps"
     end
 
-    test "retrying a single AttemptStep of a mid way job", %{
+    test "retrying a single RunStep of a mid way job", %{
       workflow: workflow,
       trigger: trigger,
       jobs: [job_a, job_b, job_c],
@@ -1332,7 +1332,7 @@ defmodule Lightning.WorkOrdersTest do
       assert steps |> Enum.map(& &1.id) == [attempt_step_a.step.id]
     end
 
-    test "retrying multiple AttemptSteps preservers the order of the given list to enqueue the attempts",
+    test "retrying multiple RunSteps preservers the order of the given list to enqueue the attempts",
          %{
            workflow: workflow,
            trigger: trigger,

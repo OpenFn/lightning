@@ -31,7 +31,7 @@ defmodule Lightning.Attempts do
   @behaviour Adaptor
 
   @doc """
-  Enqueue an attempt to be processed.
+  Enqueue a run to be processed.
   """
   @impl true
   def enqueue(attempt) do
@@ -50,7 +50,7 @@ defmodule Lightning.Attempts do
   end
 
   # @doc """
-  # Removes an attempt from the queue.
+  # Removes a run from the queue.
   # """
   @impl true
   def dequeue(attempt) do
@@ -58,7 +58,7 @@ defmodule Lightning.Attempts do
   end
 
   @doc """
-  Get an Attempt by id.
+  Get a run by id.
 
   Optionally preload associations by passing a list of atoms to `:include`.
 
@@ -97,7 +97,7 @@ defmodule Lightning.Attempts do
   end
 
   @doc """
-  Returns an Attempts dataclip formatted for use as state.
+  Returns a run's dataclip formatted for use as state.
 
   Only `http_request` dataclips are changed, their `body` is nested inside a
   `"data"` key and `request` data is added as a `"request"` key.
@@ -208,7 +208,7 @@ defmodule Lightning.Attempts do
       if is_nil(step_id) do
         []
       else
-        where(Lightning.AttemptStep, step_id: ^step_id, attempt_id: ^attempt.id)
+        where(Lightning.RunStep, step_id: ^step_id, attempt_id: ^attempt.id)
         |> Repo.exists?()
         |> if do
           []

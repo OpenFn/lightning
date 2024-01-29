@@ -69,7 +69,7 @@ defmodule Lightning.Workers do
   end
 
   @doc """
-  Verifies and validates an attempt token.
+  Verifies and validates a run token.
 
   It requires a context map with the following keys:
 

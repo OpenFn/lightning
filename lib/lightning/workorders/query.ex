@@ -21,7 +21,7 @@ defmodule Lightning.WorkOrders.Query do
   @doc """
   Query to calculate the current state of a workorder.
 
-  It takes an Attempt, as the state is updated after each attempt is changed.
+  It takes a run, as the state is updated after each attempt is changed.
 
   The logic is as follows:
 

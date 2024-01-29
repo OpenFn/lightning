@@ -11,7 +11,7 @@ defmodule Lightning.Projects do
   alias Lightning.Accounts.User
   alias Lightning.Accounts.UserNotifier
   alias Lightning.Attempt
-  alias Lightning.AttemptStep
+  alias Lightning.RunStep
   alias Lightning.ExportUtils
   alias Lightning.Invocation.Dataclip
   alias Lightning.Invocation.Step
@@ -254,7 +254,7 @@ defmodule Lightning.Projects do
   end
 
   def project_attempt_step_query(project) do
-    from(as in AttemptStep,
+    from(as in RunStep,
       join: att in assoc(as, :attempt),
       join: wo in assoc(att, :work_order),
       join: w in assoc(wo, :workflow),

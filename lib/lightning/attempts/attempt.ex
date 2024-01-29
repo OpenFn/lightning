@@ -10,7 +10,7 @@ defmodule Lightning.Attempt do
   import Lightning.Validators
 
   alias Lightning.Accounts.User
-  alias Lightning.AttemptStep
+  alias Lightning.RunStep
   alias Lightning.Invocation.LogLine
   alias Lightning.Invocation.Step
   alias Lightning.Workflows.Job
@@ -28,7 +28,7 @@ defmodule Lightning.Attempt do
   ]
 
   @doc """
-  Returns the list of final states for an attempt.
+  Returns the list of final states for a run.
   """
   defmacro final_states do
     quote do
@@ -57,7 +57,7 @@ defmodule Lightning.Attempt do
     has_many :log_lines, LogLine
 
     many_to_many :steps, Step,
-      join_through: AttemptStep,
+      join_through: RunStep,
       preload_order: [asc: :started_at]
 
     field :state, Ecto.Enum,

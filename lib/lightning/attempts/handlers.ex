@@ -5,7 +5,7 @@ defmodule Lightning.Attempts.Handlers do
 
   alias Lightning.Attempt
   alias Lightning.Attempts
-  alias Lightning.AttemptStep
+  alias Lightning.RunStep
   alias Lightning.Invocation.Dataclip
   alias Lightning.Invocation.Step
   alias Lightning.Repo
@@ -83,7 +83,7 @@ defmodule Lightning.Attempts.Handlers do
     end
 
     defp to_attempt_step(%__MODULE__{step_id: step_id, attempt_id: attempt_id}) do
-      AttemptStep.new(%{
+      RunStep.new(%{
         step_id: step_id,
         attempt_id: attempt_id
       })

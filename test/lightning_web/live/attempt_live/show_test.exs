@@ -19,7 +19,7 @@ defmodule LightningWeb.AttemptLive.ShowTest do
       assert post(conn, "/i/#{webhook_trigger_id}", %{"x" => 1})
              |> json_response(200)
 
-      # Fetch an attempt that doesn't exist
+      # Try to fetch a run that doesn't exist
       {:ok, view, _html} =
         live(conn, ~p"/projects/#{project.id}/runs/#{Ecto.UUID.generate()}")
 
@@ -31,7 +31,7 @@ defmodule LightningWeb.AttemptLive.ShowTest do
                socket.assigns.attempt
     end
 
-    test "lifecycle of an attempt", %{conn: conn, project: project} do
+    test "lifecycle of a run", %{conn: conn, project: project} do
       %{triggers: [%{id: webhook_trigger_id}], jobs: [job_a, job_b | _rest]} =
         insert(:complex_workflow, project: project)
 

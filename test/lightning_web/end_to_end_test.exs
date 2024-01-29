@@ -23,7 +23,7 @@ defmodule LightningWeb.EndToEndTest do
     setup :register_and_log_in_superuser
 
     @tag timeout: 120_000
-    test "complete an attempt on a complex workflow with parallel jobs", %{
+    test "complete a run on a complex workflow with parallel jobs", %{
       conn: conn
     } do
       project = insert(:project)

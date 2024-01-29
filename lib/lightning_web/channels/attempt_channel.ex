@@ -122,7 +122,7 @@ defmodule LightningWeb.AttemptChannel do
 
   @doc """
   For the time being, calls to `fetch:dataclip` will return dataclips that are
-  preformatted for use as "initial state" in an attempt.
+  preformatted for use as "initial state" in a run.
 
   This means that the body of http requests will be nested inside a "data" key.
 

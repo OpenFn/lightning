@@ -493,7 +493,7 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       assert job_1.body === "fn(state => state)"
     end
 
-    test "selects the input dataclip for the step if an attempt is followed",
+    test "selects the input dataclip for the step if a run is followed",
          %{
            conn: conn,
            project: project,

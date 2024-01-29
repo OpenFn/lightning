@@ -854,7 +854,7 @@ defmodule Lightning.SetupUtils do
 
     delete_all_entities([
       Lightning.Attempt,
-      Lightning.AttemptStep,
+      Lightning.RunStep,
       Lightning.AuthProviders.AuthConfig,
       Lightning.Auditing.Audit,
       Lightning.Projects.ProjectCredential,

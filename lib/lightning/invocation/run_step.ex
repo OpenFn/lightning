@@ -1,6 +1,6 @@
-defmodule Lightning.AttemptStep do
+defmodule Lightning.RunStep do
   @moduledoc """
-  Ecto model for an the Steps in an Attempt.
+  Ecto model for an the Steps in a Run.
   """
   use Ecto.Schema
   import Ecto.Changeset

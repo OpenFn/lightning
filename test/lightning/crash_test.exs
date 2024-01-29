@@ -5,7 +5,7 @@
 
 #   alias Lightning.Pipeline
 #   alias Lightning.ObanManager
-#   alias Lightning.AttemptStep
+#   alias Lightning.RunStep
 #   alias Lightning.Attempt
 #   alias Lightning.Invocation.Step
 #   alias Lightning.Repo
@@ -52,7 +52,7 @@
 #       dataclip = dataclip_fixture()
 
 #       {:ok, attempt_step} =
-#         AttemptStep.new()
+#         RunStep.new()
 #         |> Ecto.Changeset.put_assoc(
 #           :attempt,
 #           Attempt.changeset(%Attempt{}, %{

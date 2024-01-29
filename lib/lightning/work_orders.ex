@@ -36,7 +36,7 @@ defmodule Lightning.WorkOrders do
   alias Lightning.Accounts.User
   alias Lightning.Attempt
   alias Lightning.Attempts
-  alias Lightning.AttemptStep
+  alias Lightning.RunStep
   alias Lightning.Graph
   alias Lightning.Invocation.Dataclip
   alias Lightning.Invocation.Step
@@ -167,7 +167,7 @@ defmodule Lightning.WorkOrders do
   end
 
   @doc """
-  Retry an Attempt from a given step.
+  Retry a run from a given step.
 
   This will create a new Attempt on the Work Order, and enqueue it for
   processing.
@@ -273,7 +273,7 @@ defmodule Lightning.WorkOrders do
       )
 
     attempt_steps_query =
-      from(as in AttemptStep,
+      from(as in RunStep,
         join: att in assoc(as, :attempt),
         join: wo in assoc(att, :work_order),
         join: last in subquery(last_attempts_query),
@@ -291,7 +291,7 @@ defmodule Lightning.WorkOrders do
   end
 
   @spec retry_many(
-          [WorkOrder.t(), ...] | [AttemptStep.t(), ...],
+          [WorkOrder.t(), ...] | [RunStep.t(), ...],
           [work_order_option(), ...]
         ) :: {:ok, count :: integer()}
   def retry_many([%WorkOrder{} | _rest] = workorders, opts) do
@@ -351,7 +351,7 @@ defmodule Lightning.WorkOrders do
     {:ok, length(attempts)}
   end
 
-  def retry_many([%AttemptStep{} | _rest] = attempt_steps, opts) do
+  def retry_many([%RunStep{} | _rest] = attempt_steps, opts) do
     for attempt_step <- attempt_steps do
       {:ok, _} = retry(attempt_step.attempt_id, attempt_step.step_id, opts)
     end
@@ -364,7 +364,7 @@ defmodule Lightning.WorkOrders do
   end
 
   @doc """
-  Updates the state of a WorkOrder based on the state of an attempt.
+  Updates the state of a WorkOrder based on the state of a run.
 
   This considers the state of all attempts on the WorkOrder, with the
   Attempt passed in as the latest attempt.

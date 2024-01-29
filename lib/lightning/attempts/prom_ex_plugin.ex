@@ -107,7 +107,7 @@ defmodule Lightning.Attempts.PromExPlugin do
             :milliseconds
           ],
           event_name: @average_claim_event,
-          description: "The average time taken before an attempt is claimed",
+          description: "The average time taken before a run is claimed",
           measurement: :average_duration,
           unit: :millisecond
         )

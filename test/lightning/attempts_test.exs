@@ -9,7 +9,7 @@ defmodule Lightning.AttemptsTest do
   alias Lightning.Attempts
 
   describe "enqueue/1" do
-    test "enqueues an attempt" do
+    test "enqueues a run" do
       dataclip = insert(:dataclip)
       %{triggers: [trigger]} = workflow = insert(:simple_workflow)
 
@@ -35,7 +35,7 @@ defmodule Lightning.AttemptsTest do
   end
 
   describe "claim/1" do
-    test "claims an attempt from the queue" do
+    test "claims a run from the queue" do
       %{triggers: [trigger]} = workflow = insert(:simple_workflow)
 
       {:ok, %{attempts: [attempt]}} =
@@ -142,7 +142,7 @@ defmodule Lightning.AttemptsTest do
   end
 
   describe "dequeue/1" do
-    test "removes an attempt from the queue" do
+    test "removes a run from the queue" do
       %{triggers: [trigger]} = workflow = insert(:simple_workflow)
 
       {:ok, %{attempts: [attempt]}} =
@@ -158,7 +158,7 @@ defmodule Lightning.AttemptsTest do
   end
 
   describe "start_step/1" do
-    test "creates a new step for an attempt" do
+    test "creates a new step for a run" do
       dataclip = insert(:dataclip)
       %{triggers: [trigger], jobs: [job]} = workflow = insert(:simple_workflow)
 
@@ -201,8 +201,8 @@ defmodule Lightning.AttemptsTest do
 
       assert step.started_at, "The step has been marked as started"
 
-      assert Repo.get_by(Lightning.AttemptStep, step_id: step.id),
-             "There is a corresponding AttemptStep linking it to the attempt"
+      assert Repo.get_by(Lightning.RunStep, step_id: step.id),
+             "There is a corresponding RunStep linking it to the attempt"
 
       attempt_id = attempt.id
 
@@ -332,7 +332,7 @@ defmodule Lightning.AttemptsTest do
       %{attempt: attempt, workorder_id: workorder.id}
     end
 
-    test "marks an attempt as started",
+    test "marks a run as started",
          %{attempt: attempt, workorder_id: workorder_id} do
       assert {:ok, %Attempt{started_at: started_at}} =
                Attempts.start_attempt(attempt)
@@ -403,7 +403,7 @@ defmodule Lightning.AttemptsTest do
   end
 
   describe "complete_attempt/1" do
-    test "marks an attempt as complete" do
+    test "marks a run as complete" do
       dataclip = insert(:dataclip)
       %{triggers: [trigger]} = workflow = insert(:simple_workflow)
 
@@ -539,7 +539,7 @@ defmodule Lightning.AttemptsTest do
   end
 
   describe "append_attempt_log/3" do
-    test "adds a log line to an attempt" do
+    test "adds a log line to a run" do
       dataclip = insert(:dataclip)
       %{triggers: [trigger], jobs: [job]} = workflow = insert(:simple_workflow)
 
