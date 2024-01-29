@@ -1131,7 +1131,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
       %{"s" => nil} ->
         socket |> unselect_all()
 
-      # Attempt to select the given item, possibly with a mode (such as `expand`)
+      # Try to select the given item, possibly with a mode (such as `expand`)
       %{"s" => selected_id, "m" => mode} ->
         case find_item_in_changeset(socket.assigns.changeset, selected_id) do
           [type, selected] ->
