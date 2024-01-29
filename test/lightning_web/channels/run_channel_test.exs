@@ -677,20 +677,6 @@ defmodule LightningWeb.RunChannelTest do
     end
 
     @tag run_state: :claimed
-    test "attempt:start is converted to run:start for old workers", %{
-      socket: socket,
-      run: run,
-      work_order: work_order
-    } do
-      ref = push(socket, "attempt:start", %{})
-
-      assert_reply ref, :ok, nil
-
-      assert %{state: :started} = Lightning.Repo.reload!(run)
-      assert %{state: :running} = Lightning.Repo.reload!(work_order)
-    end
-
-    @tag run_state: :claimed
     test "run:complete when claimed", %{socket: socket} do
       ref =
         push(socket, "run:complete", %{
@@ -713,25 +699,6 @@ defmodule LightningWeb.RunChannelTest do
       assert errors == %{
                state: ["already in completed state"]
              }
-    end
-
-    @tag run_state: :started
-    test "attempt:complete is converted to run:complete for old workers", %{
-      socket: socket,
-      run: run,
-      work_order: work_order
-    } do
-      ref =
-        push(socket, "attempt:complete", %{
-          "reason" => "success",
-          "error_type" => nil,
-          "error_message" => nil
-        })
-
-      assert_reply ref, :ok, nil
-
-      assert %{state: :success} = Lightning.Repo.reload!(run)
-      assert %{state: :success} = Lightning.Repo.reload!(work_order)
     end
 
     @tag run_state: :started
