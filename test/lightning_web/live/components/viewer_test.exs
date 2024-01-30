@@ -7,33 +7,39 @@ defmodule LightningWeb.Components.ViewerTest do
 
   import Lightning.Factories
 
-  describe "dataclip_viewer/1" do
+  describe "step_dataclip_viewer/1" do
     setup do
       [workflow: insert(:simple_workflow)]
     end
 
-    test "renders correct information for a wiped dataclip", %{
+    test "renders correct information", %{
       workflow: %{jobs: [job | _rest], project: project}
     } do
-      dataclip = insert(:dataclip, body: nil, wiped_at: DateTime.utc_now())
+      wiped_dataclip = insert(:dataclip, body: nil, wiped_at: DateTime.utc_now())
 
       finished_step =
         insert(:step,
           job: job,
-          input_dataclip: dataclip,
+          input_dataclip: wiped_dataclip,
+          output_dataclip: nil,
           finished_at: DateTime.utc_now()
         )
 
       running_step =
-        insert(:step, job: job, input_dataclip: dataclip, finished_at: nil)
+        insert(:step,
+          job: job,
+          input_dataclip: wiped_dataclip,
+          finished_at: nil,
+          output_dataclip: nil
+        )
 
       # finished step for a user who can can_edit_data_retention
       html =
-        render_component(&Viewers.dataclip_viewer/1,
+        render_component(&Viewers.step_dataclip_viewer/1,
           id: "test",
           stream: [],
           step: finished_step,
-          dataclip: dataclip,
+          dataclip: wiped_dataclip,
           input_or_output: :input,
           project_id: project.id,
           admin_contacts: ["test@email.com"],
@@ -47,11 +53,11 @@ defmodule LightningWeb.Components.ViewerTest do
 
       # finished step for a user who can NOT edit_data_retention
       html =
-        render_component(&Viewers.dataclip_viewer/1,
+        render_component(&Viewers.step_dataclip_viewer/1,
           id: "test",
           stream: [],
           step: finished_step,
-          dataclip: dataclip,
+          dataclip: wiped_dataclip,
           input_or_output: :input,
           project_id: project.id,
           admin_contacts: ["test@email.com"],
@@ -65,7 +71,7 @@ defmodule LightningWeb.Components.ViewerTest do
 
       # finished step for a dataclip that was not saved at all
       html =
-        render_component(&Viewers.dataclip_viewer/1,
+        render_component(&Viewers.step_dataclip_viewer/1,
           id: "test",
           stream: [],
           step: finished_step,
@@ -81,11 +87,11 @@ defmodule LightningWeb.Components.ViewerTest do
 
       # running step always shows the pending state
       html =
-        render_component(&Viewers.dataclip_viewer/1,
+        render_component(&Viewers.step_dataclip_viewer/1,
           id: "test",
           stream: [],
           step: running_step,
-          dataclip: dataclip,
+          dataclip: nil,
           input_or_output: :input,
           project_id: project.id,
           admin_contacts: ["test@email.com"],
@@ -95,6 +101,49 @@ defmodule LightningWeb.Components.ViewerTest do
       assert html =~ "Nothing yet"
       refute html =~ "No input data has been saved here in accordance"
       refute html =~ "Go to retention settings"
+      refute html =~ "test@email.com"
+
+      # loading async result always shows the pending state
+      html =
+        render_component(&Viewers.step_dataclip_viewer/1,
+          id: "test",
+          stream: [],
+          step: finished_step,
+          dataclip: %Phoenix.LiveView.AsyncResult{
+            ok?: false,
+            loading: [:input_dataclip]
+          },
+          input_or_output: :input,
+          project_id: project.id,
+          admin_contacts: ["test@email.com"],
+          can_edit_data_retention: true
+        )
+
+      assert html =~ "Nothing yet"
+      refute html =~ "No input data has been saved here in accordance"
+      refute html =~ "Go to retention settings"
+      refute html =~ "test@email.com"
+
+      # completed async result shows the right information
+      html =
+        render_component(&Viewers.step_dataclip_viewer/1,
+          id: "test",
+          stream: [],
+          step: finished_step,
+          dataclip: %Phoenix.LiveView.AsyncResult{
+            ok?: true,
+            loading: nil,
+            result: wiped_dataclip
+          },
+          input_or_output: :input,
+          project_id: project.id,
+          admin_contacts: ["test@email.com"],
+          can_edit_data_retention: true
+        )
+
+      refute html =~ "Nothing yet"
+      assert html =~ "No input data has been saved here in accordance"
+      assert html =~ "Go to retention settings"
       refute html =~ "test@email.com"
     end
   end

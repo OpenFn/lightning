@@ -139,14 +139,12 @@ defmodule LightningWeb.AttemptLive.AttemptViewerLive do
                 />
               </Common.panel_content>
               <Common.panel_content for_hash="input" class="grow overflow-auto">
-                <Viewers.dataclip_viewer
+                <Viewers.step_dataclip_viewer
                   id={"step-input-#{@selected_step_id}"}
                   class="overflow-auto h-full"
                   stream={@streams.input_dataclip}
                   step={@selected_step}
-                  dataclip={
-                    @input_dataclip && @input_dataclip.ok? && @input_dataclip.result
-                  }
+                  dataclip={@input_dataclip}
                   input_or_output={:input}
                   project_id={@project.id}
                   admin_contacts={@admin_contacts}
@@ -154,15 +152,12 @@ defmodule LightningWeb.AttemptLive.AttemptViewerLive do
                 />
               </Common.panel_content>
               <Common.panel_content for_hash="output" class="grow overflow-auto">
-                <Viewers.dataclip_viewer
+                <Viewers.step_dataclip_viewer
                   id={"step-output-#{@selected_step_id}"}
                   class="overflow-auto h-full"
                   stream={@streams.output_dataclip}
                   step={@selected_step}
-                  dataclip={
-                    @output_dataclip && @output_dataclip.ok? &&
-                      @output_dataclip.result
-                  }
+                  dataclip={@output_dataclip}
                   input_or_output={:output}
                   project_id={@project.id}
                   admin_contacts={@admin_contacts}

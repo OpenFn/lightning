@@ -55,8 +55,8 @@ defmodule LightningWeb.AttemptLive.Streaming do
       %Dataclip{body: nil} ->
         {nil, []}
 
-      %Dataclip{id: id, body: body, type: type} ->
-        {%{id: id, step_id: step.id, type: type},
+      %Dataclip{id: id, body: body, type: type, wiped_at: wiped_at} ->
+        {%{id: id, step_id: step.id, type: type, wiped_at: wiped_at},
          body
          |> Jason.encode!(pretty: true)
          |> maybe_scrub(type, step)

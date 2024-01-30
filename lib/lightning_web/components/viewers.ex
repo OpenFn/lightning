@@ -14,6 +14,7 @@ defmodule LightningWeb.Components.Viewers do
 
   alias Lightning.Invocation.Dataclip
   alias LightningWeb.Components.Icon
+  alias Phoenix.LiveView.AsyncResult
 
   @doc """
   Renders out a log line stream
@@ -98,8 +99,68 @@ defmodule LightningWeb.Components.Viewers do
     default: nil,
     doc: "Additional classes to add to the log viewer container"
 
+  attr :type, :atom,
+    default: nil,
+    values: [nil | Dataclip.source_types()]
+
+  def dataclip_viewer(assigns) do
+    ~H"""
+    <div class={[
+      "rounded-md shadow-sm bg-slate-700 border-slate-300",
+      "text-slate-200 text-sm font-mono w-full h-full relative",
+      @class
+    ]}>
+      <.dataclip_type :if={@type} type={@type} id={"#{@id}-type"} />
+      <div
+        class={[
+          "overscroll-contain scroll-smooth",
+          "grid grid-flow-row-dense grid-cols-[min-content_1fr]",
+          "min-h-[2rem]",
+          "log-viewer relative"
+        ]}
+        id={@id}
+        phx-update="stream"
+      >
+        <div
+          :for={{dom_id, %{line: line, index: index}} <- @stream}
+          class="group contents"
+          id={dom_id}
+        >
+          <div class="log-viewer__prefix" data-line-prefix={index}></div>
+          <div data-log-line class="log-viewer__message">
+            <pre class="whitespace-break-spaces"><%= line %></pre>
+          </div>
+        </div>
+        <div
+          id={"#{@id}-nothing-yet"}
+          class={[
+            "hidden only:block m-2 relative block rounded-md",
+            "p-12 text-center col-span-full"
+          ]}
+        >
+          <.text_ping_loader>
+            Nothing yet
+          </.text_ping_loader>
+        </div>
+      </div>
+    </div>
+    """
+  end
+
+  attr :id, :string, required: true
+
+  attr :stream, :list,
+    required: true,
+    doc: """
+    A stream of lines to render. In the shape of `%{id: String.t(), line: String.t(), index: integer()}`
+    """
+
+  attr :class, :string,
+    default: nil,
+    doc: "Additional classes to add to the log viewer container"
+
   attr :step, :map
-  attr :dataclip, :map
+  attr :dataclip, :map, doc: "Can be an `AsyncResult` or `Dataclip`"
   attr :input_or_output, :atom, required: true, values: [:input, :output]
   attr :project_id, :string, required: true
 
@@ -109,59 +170,34 @@ defmodule LightningWeb.Components.Viewers do
 
   attr :can_edit_data_retention, :boolean, required: true
 
-  def dataclip_viewer(assigns) do
+  def step_dataclip_viewer(assigns) do
     ~H"""
-    <%= if step_finished?(@step) and dataclip_wiped?(@dataclip) do %>
+    <%= if dataclip_wiped?(@step, @dataclip, @input_or_output) do %>
       <.wiped_dataclip_viewer
+        id={@id}
         can_edit_data_retention={@can_edit_data_retention}
         admin_contacts={@admin_contacts}
         input_or_output={@input_or_output}
         project_id={@project_id}
       />
     <% else %>
-      <div class={[
-        "rounded-md shadow-sm bg-slate-700 border-slate-300",
-        "text-slate-200 text-sm font-mono w-full h-full relative",
-        @class
-      ]}>
-        <.dataclip_type :if={@dataclip} type={@dataclip.type} id={"#{@id}-type"} />
-        <div
-          class={[
-            "overscroll-contain scroll-smooth",
-            "grid grid-flow-row-dense grid-cols-[min-content_1fr]",
-            "min-h-[2rem]",
-            "log-viewer relative"
-          ]}
-          id={@id}
-          phx-update="stream"
-        >
-          <div
-            :for={{dom_id, %{line: line, index: index}} <- @stream}
-            class="group contents"
-            id={dom_id}
-          >
-            <div class="log-viewer__prefix" data-line-prefix={index}></div>
-            <div data-log-line class="log-viewer__message">
-              <pre class="whitespace-break-spaces"><%= line %></pre>
-            </div>
-          </div>
-          <div
-            id={"#{@id}-nothing-yet"}
-            class={[
-              "hidden only:block m-2 relative block rounded-md",
-              "p-12 text-center col-span-full"
-            ]}
-          >
-            <.text_ping_loader>
-              Nothing yet
-            </.text_ping_loader>
-          </div>
-        </div>
-      </div>
+      <.dataclip_viewer
+        id={@id}
+        class={@class}
+        stream={@stream}
+        type={
+          case @dataclip do
+            %AsyncResult{ok?: true, result: %{type: type}} -> type
+            %{type: type} -> type
+            _ -> nil
+          end
+        }
+      />
     <% end %>
     """
   end
 
+  attr :id, :string, default: nil
   attr :input_or_output, :atom, required: true, values: [:input, :output]
   attr :project_id, :string, required: true
 
@@ -173,7 +209,10 @@ defmodule LightningWeb.Components.Viewers do
 
   def wiped_dataclip_viewer(assigns) do
     ~H"""
-    <div class="border-2 border-gray-200 border-dashed rounded-lg px-8 pt-6 pb-8 mb-4 flex flex-col">
+    <div
+      id={@id}
+      class="border-2 border-gray-200 border-dashed rounded-lg px-8 pt-6 pb-8 mb-4 flex flex-col"
+    >
       <div class="mb-4">
         <div class="h-12 w-12 border-2 border-gray-300 border-solid mx-auto flex items-center justify-center rounded-full text-gray-400">
           <Heroicons.code_bracket class="w-4 h-4" />
@@ -247,9 +286,28 @@ defmodule LightningWeb.Components.Viewers do
 
   defp step_finished?(_other), do: false
 
-  defp dataclip_wiped?(%{wiped_at: %_{}}), do: true
+  defp dataclip_wiped?(_step, %AsyncResult{ok?: false}, _input_or_output) do
+    false
+  end
 
-  defp dataclip_wiped?(nil), do: true
+  defp dataclip_wiped?(
+         step,
+         %AsyncResult{ok?: true, result: result},
+         input_or_output
+       ) do
+    dataclip_wiped?(step, result, input_or_output)
+  end
 
-  defp dataclip_wiped?(_other), do: true
+  defp dataclip_wiped?(_step, %{wiped_at: %_{}} = _dataclip, _input_or_output) do
+    true
+  end
+
+  defp dataclip_wiped?(step, _dataclip, input_or_output) do
+    dataclip_field = dataclip_field(input_or_output)
+
+    step_finished?(step) and is_nil(Map.fetch!(step, dataclip_field))
+  end
+
+  defp dataclip_field(:input), do: :input_dataclip_id
+  defp dataclip_field(:output), do: :output_dataclip_id
 end
