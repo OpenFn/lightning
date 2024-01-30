@@ -1,8 +1,8 @@
-defmodule Lightning.Extensions.Stubs.RateLimiter do
+defmodule Lightning.Extensions.Default.RateLimiter do
   @moduledoc """
   Rate limiting stub for Lightning.
   """
-  @behaviour LightningExtensions.RateLimiting
+  @behaviour Lightning.Extensions.RateLimiting
 
   def limit_request(_conn, _context, _opts) do
     :ok

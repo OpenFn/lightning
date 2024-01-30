@@ -1,7 +1,6 @@
 defmodule LightningWeb.WebhooksController do
   use LightningWeb, :controller
 
-  alias Lightning.Extensions.RateLimiter
   alias Lightning.Workflows
   alias Lightning.WorkOrders
 
@@ -9,35 +8,23 @@ defmodule LightningWeb.WebhooksController do
 
   @spec create(Plug.Conn.t(), %{path: binary()}) :: Plug.Conn.t()
   def create(conn, _params) do
-    with :ok <- RateLimiter.limit_request(conn, %{}, []),
-         %Workflows.Trigger{enabled: true} = trigger <- conn.assigns.trigger do
-      {:ok, work_order} =
-        WorkOrders.create_for(trigger,
-          workflow: trigger.workflow,
-          dataclip: %{
-            body: conn.body_params,
-            request: build_request(conn),
-            type: :http_request,
-            project_id: trigger.workflow.project_id
-          }
-        )
-
-      conn |> json(%{work_order_id: work_order.id})
-    else
-      {:error, :too_many_requests, message} ->
-        conn
-        |> put_status(:too_many_requests)
-        |> json(%{"error" => message})
-
-      {:error, _reason, message} ->
-        conn
-        |> put_status(:internal_server_error)
-        |> json(%{"error" => message})
-
+    case conn.assigns.trigger do
       nil ->
-        conn
-        |> put_status(:not_found)
-        |> json(%{"error" => "Webhook not found"})
+        conn |> put_status(:not_found) |> json(%{"error" => "Webhook not found"})
+
+      %Workflows.Trigger{enabled: true} = trigger ->
+        {:ok, work_order} =
+          WorkOrders.create_for(trigger,
+            workflow: trigger.workflow,
+            dataclip: %{
+              body: conn.body_params,
+              request: build_request(conn),
+              type: :http_request,
+              project_id: trigger.workflow.project_id
+            }
+          )
+
+        conn |> json(%{work_order_id: work_order.id})
 
       _disabled ->
         put_status(conn, :forbidden)

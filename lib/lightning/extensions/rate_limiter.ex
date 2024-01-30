@@ -2,12 +2,12 @@ defmodule Lightning.Extensions.RateLimiter do
   @moduledoc """
   Adapter to call the extension for rate limiting.
   """
-  @behaviour LightningExtensions.RateLimiting
+  @behaviour Lightning.Extensions.RateLimiting
 
   import Lightning.Extensions.AdapterHelper
 
-  alias LightningExtensions.RateLimiting
-  alias LightningExtensions.RateLimiting.Context
+  alias Lightning.Extensions.RateLimiting
+  alias Lightning.Extensions.RateLimiting.Context
   alias Plug.Conn
 
   @spec limit_request(Conn.t(), Context.t(), Keyword.t()) ::

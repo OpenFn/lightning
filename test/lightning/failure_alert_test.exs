@@ -114,7 +114,7 @@ defmodule Lightning.FailureAlertTest do
 
       FailureAlerter.alert_on_failure(run)
 
-      Oban.drain_queue(Oban, queue: :workflow_failures)
+      Oban.drain_queue(Lightning.Oban, queue: :workflow_failures)
 
       # TODO: remove this with https://github.com/OpenFn/Lightning/issues/693
       Process.sleep(250)
@@ -150,7 +150,7 @@ defmodule Lightning.FailureAlertTest do
 
       FailureAlerter.alert_on_failure(run_2)
 
-      Oban.drain_queue(Oban, queue: :workflow_failures)
+      Oban.drain_queue(Lightning.Oban, queue: :workflow_failures)
 
       # TODO: remove this with https://github.com/OpenFn/Lightning/issues/693
       Process.sleep(250)

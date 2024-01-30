@@ -1,8 +1,8 @@
-defmodule Lightning.Extensions.Stubs.RuntimeLimiter do
+defmodule Lightning.Extensions.Default.RuntimeLimiter do
   @moduledoc """
   Runtime limiting stub for Lightning.
   """
-  @behaviour LightningExtensions.RuntimeLimiting
+  @behaviour Lightning.Extensions.RuntimeLimiting
 
   def check_limits(_context) do
     :ok

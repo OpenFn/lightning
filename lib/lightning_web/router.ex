@@ -1,4 +1,7 @@
 defmodule LightningWeb.Router do
+  @moduledoc """
+  The router for Lightning.
+  """
   use LightningWeb, :router
 
   import LightningWeb.UserAuth
@@ -168,21 +171,35 @@ defmodule LightningWeb.Router do
     post "/*path", WebhooksController, :create
   end
 
+  @services_opts Application.compile_env(
+                   :lightning,
+                   Lightning.Extensions.Routing,
+                   []
+                 )
+                 |> Keyword.get(:session_opts, [])
+  @services_routes Application.compile_env(
+                     :lightning,
+                     Lightning.Extensions.Routing,
+                     []
+                   )
+                   |> Keyword.get(:routes, [])
+
+  scope "/" do
+    pipe_through [:browser, :require_authenticated_user]
+
+    live_session :services, @services_opts do
+      Enum.each(@services_routes, fn {path, module, action, opts} ->
+        live(path, module, action, opts)
+      end)
+    end
+  end
+
   # LiveDashboard enables basic system monitoring but is only available to
   # superusers—i.e., the people who installed/maintain the instance.
   scope "/" do
     pipe_through [:browser, :require_authenticated_user, :require_superuser]
 
     live_dashboard "/dashboard", metrics: LightningWeb.Telemetry
-  end
-
-  scope "/" do
-    import Lightning.Extensions.Router
-    pipe_through [:browser, :require_authenticated_user]
-
-    live_services("/services",
-      metrics: LightningWeb.Telemetry
-    )
   end
 
   if Mix.env() == :dev do
@@ -201,8 +218,6 @@ defmodule LightningWeb.Router do
     scope "/dev" do
       pipe_through :browser
 
-      # Note that preview only shows emails that were sent by the same
-      # node running the Phoenix server.
       forward "/mailbox", Plug.Swoosh.MailboxPreview
 
       live "/components", LightningWeb.Dev.ComponentsLive, :index

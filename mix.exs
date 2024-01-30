@@ -31,6 +31,19 @@ defmodule Lightning.MixProject do
       name: "Lightning",
       docs: docs()
     ]
+    |> then(fn project ->
+      if System.get_env("UMBRELLA") == "true" do
+        project ++
+          [
+            build_path: "../../_build",
+            config_path: "../../config/config.exs",
+            deps_path: "../../deps",
+            lockfile: "../../mix.lock"
+          ]
+      else
+        project
+      end
+    end)
   end
 
   # Configuration for the OTP application.
@@ -107,9 +120,6 @@ defmodule Lightning.MixProject do
       {:prom_ex, "~> 1.8.0"},
       {:rambo, "~> 0.3.4"},
       {:scrivener, "~> 2.7"},
-      {:lightning_extensions,
-       git: "https://github.com/OpenFn/lightning_extensions.git", ref: "89f9069"},
-      {:lightning_services, "~> 0.0.1", path: "../lightning-services"},
       {:sentry, "~> 8.0"},
       {:sobelow, "~> 0.13.0", only: [:test, :dev]},
       {:sweet_xml, "~> 0.7.1", only: [:test]},

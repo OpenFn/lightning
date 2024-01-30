@@ -6,10 +6,10 @@ defmodule LightningWeb.WorkflowLive.Index do
 
   alias Lightning.DashboardStats
   alias Lightning.Extensions.RuntimeLimiter
+  alias Lightning.Extensions.RuntimeLimiting.Context
   alias Lightning.Policies.Permissions
   alias Lightning.Policies.ProjectUsers
   alias Lightning.Workflows
-  alias LightningExtensions.LiveviewRendering
   alias LightningWeb.WorkflowLive.DashboardComponents
   alias LightningWeb.WorkflowLive.NewWorkflowForm
 
@@ -85,12 +85,14 @@ defmodule LightningWeb.WorkflowLive.Index do
       NewWorkflowForm.validate(%{}, socket.assigns.project.id)
     )
     |> then(fn socket ->
-      case RuntimeLimiter.check_limits(socket) do
-        {:error, _reason, %LiveviewRendering{position: position} = component} ->
-          {:ok, socket |> assign(position, component)}
-
+      case RuntimeLimiter.check_limits(%Context{
+             project_id: socket.assigns.project.id
+           }) do
         :ok ->
           {:ok, socket}
+
+        {:error, :too_many_runs, %{position: position} = component} ->
+          {:ok, socket |> assign(position, component)}
       end
     end)
   end
