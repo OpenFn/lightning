@@ -386,6 +386,7 @@ defmodule LightningWeb.CredentialLive.FormComponent do
               <button
                 type="submit"
                 disabled={!@changeset.valid?}
+                form="credential-form-new"
                 class="inline-flex w-full justify-center rounded-md disabled:bg-primary-300 bg-primary-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary-500 sm:ml-3 sm:w-auto"
               >
                 Save
