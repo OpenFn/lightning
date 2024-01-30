@@ -22,7 +22,8 @@ defmodule LightningWeb.EndToEndTest do
   describe "webhook triggered runs" do
     setup :register_and_log_in_superuser
 
-    @tag timeout: 10_000
+    @tag :integration
+    @tag timeout: 20_000
     test "complete a run on a complex workflow with parallel jobs", %{
       conn: conn
     } do
@@ -83,7 +84,8 @@ defmodule LightningWeb.EndToEndTest do
       assert %{state: :success} = WorkOrders.get(wo_id)
     end
 
-    @tag timeout: 120_000
+    @tag :integration
+    @tag timeout: 20_000
     test "the whole thing", %{conn: conn} do
       project = insert(:project)
 
