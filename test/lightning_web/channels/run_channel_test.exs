@@ -129,14 +129,14 @@ defmodule LightningWeb.RunChannelTest do
     setup :set_google_credential
     setup :create_socket_and_run
 
-    test "fetch:run", %{
+    test "fetch:plan", %{
       socket: socket,
       run: run,
       workflow: workflow,
       credential: credential
     } do
       id = run.id
-      ref = push(socket, "fetch:run", %{})
+      ref = push(socket, "fetch:plan", %{})
 
       # { id, triggers, jobs, edges, options ...etc }
       assert_reply ref, :ok, payload

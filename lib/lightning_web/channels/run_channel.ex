@@ -48,7 +48,7 @@ defmodule LightningWeb.RunChannel do
   end
 
   @impl true
-  def handle_in("fetch:run", _, socket) do
+  def handle_in("fetch:plan", _, socket) do
     {:reply, {:ok, RunJson.render(socket.assigns.run)}, socket}
   end
 
