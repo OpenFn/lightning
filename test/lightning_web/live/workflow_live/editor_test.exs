@@ -165,6 +165,11 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
         end)
         |> Enum.reverse()
 
+      # wiped dataclip. This is the latest dataclip
+      wiped_dataclip = insert(:dataclip, body: nil, wiped_at: DateTime.utc_now())
+
+      insert(:step, job: job, input_dataclip: wiped_dataclip)
+
       {:ok, view, _html} =
         live(
           conn,
@@ -186,6 +191,14 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
                )
                |> has_element?()
       end
+
+      # wiped dataclip is not listed despite being latest
+      refute view
+             |> element(
+               ~s{#manual-job-#{job.id} form select[name='manual[dataclip_id]'] option},
+               wiped_dataclip.id
+             )
+             |> has_element?()
     end
 
     test "can create a new input dataclip", %{
