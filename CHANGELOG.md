@@ -15,7 +15,11 @@ and this project adheres to
 
 ### Changed
 
-- Standardized naming of "attempts" to "runs".
+- Standardized naming of "attempts" to "runs". This had already been done in the
+  front-end, but this change cleans up the backend, the database, and the
+  interface with the worker. Make sure to run migrations and update your
+  ENV/secrets to use `WORKER_RUNS_PRIVATE_KEY` rather than
+  `WORKER_ATTEMPTS_PRIVATE_KEY`
   [#1657](https://github.com/OpenFn/Lightning/issues/1657)
 - Required `@openfn/ws-worker@0.8.0` or above.
 
@@ -41,8 +45,7 @@ and this project adheres to
 
 ### Fixed
 
-- Fix Run via Docker
-  [#1653](https://github.com/OpenFn/Lightning/issues/1653)
+- Fix Run via Docker [#1653](https://github.com/OpenFn/Lightning/issues/1653)
 - Fix remaining warnings, enable "warnings as errors"
   [#1642](https://github.com/OpenFn/Lightning/issues/1642)
 - Fix workflow dashboard bug when viewed for newly created workflows with only
