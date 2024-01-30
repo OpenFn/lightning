@@ -77,14 +77,20 @@ defmodule Lightning.AuthProviders.Salesforce do
 
   # Refresh token is null, changeset error
 
-  def authorize_url(client, state) do
-    scope = ~W[
-      full
+  def authorize_url(client, state, additional_scopes) do
+    # Predefined scopes
+    predefined_scopes = ~W[
+      refresh_token
       offline_access
-    ] |> Enum.join(" ")
+    ]
+
+    # Merge the predefined scopes with additional_scopes
+    merged_scopes =
+      (predefined_scopes ++ additional_scopes)
+      |> Enum.join(" ")
 
     OAuth2.Client.authorize_url!(client,
-      scope: scope,
+      scope: merged_scopes,
       state: state,
       access_type: "offline",
       prompt: "consent"

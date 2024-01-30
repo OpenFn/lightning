@@ -1,6 +1,5 @@
 defmodule LightningWeb.CredentialLive.SalesforceOauthComponent do
   @moduledoc ""
-
   use LightningWeb, :live_component
 
   import LightningWeb.OauthCredentialHelper
@@ -8,6 +7,7 @@ defmodule LightningWeb.CredentialLive.SalesforceOauthComponent do
   require Logger
 
   alias Lightning.AuthProviders.Salesforce
+  alias LightningWeb.CredentialLive.ScopeSelectionComponent
 
   attr :form, :map, required: true
   attr :id, :string, required: true
@@ -92,7 +92,14 @@ defmodule LightningWeb.CredentialLive.SalesforceOauthComponent do
         <%= Phoenix.HTML.Form.hidden_input(body_form, :expires_at) %>
         <%= Phoenix.HTML.Form.hidden_input(body_form, :scope) %>
       </div>
-      <div class="lg:grid lg:grid-cols-2 grid-cols-1 grid-flow-col">
+
+      <.live_component
+        id={"#{@id}-scope-selection"}
+        parent_id={@id}
+        module={ScopeSelectionComponent}
+      />
+
+      <div class="lg:grid lg:grid-cols-2 grid-cols-1 grid-flow-col mt-5">
         <.authorize_button
           :if={@show_authorize}
           authorize_url={@authorize_url}
@@ -132,10 +139,10 @@ defmodule LightningWeb.CredentialLive.SalesforceOauthComponent do
             )
           }
           alt="Authorizing..."
-          class="w-20 h-20 bg-white rounded"
+          class="w-10 h-10 bg-white rounded"
         />
       </div>
-      <span class="text-2xl">Sign in with Salesforce</span>
+      <span class="text-xl">Sign in with Salesforce</span>
     </.link>
     """
   end
@@ -153,10 +160,10 @@ defmodule LightningWeb.CredentialLive.SalesforceOauthComponent do
               )
             }
             alt="Authorizing..."
-            class="w-20 h-20 bg-white rounded"
+            class="w-10 h-10 bg-white rounded"
           />
         </div>
-        <span class="text-2xl">Sign in with Salesforce</span>
+        <span class="text-xl">Sign in with Salesforce</span>
       </div>
       <div class="text-sm ml-1">
         Not working?
@@ -305,56 +312,91 @@ defmodule LightningWeb.CredentialLive.SalesforceOauthComponent do
   @impl true
   def update(
         %{
-          form: form,
-          id: id,
-          token_body_changeset: token_body_changeset,
-          update_body: update_body
-        },
+          form: _form,
+          id: _id,
+          token_body_changeset: _changeset,
+          update_body: _body
+        } = params,
         socket
       ) do
     token =
       params_to_token(
-        token_body_changeset
+        params.token_body_changeset
         |> Ecto.Changeset.apply_changes()
       )
 
-    socket =
-      socket
-      |> assign_new(:userinfo, fn -> nil end)
-      |> assign_new(:authorizing, fn -> false end)
-      |> assign(
-        form: form,
-        id: id,
-        token_body_changeset: token_body_changeset,
-        token: token,
-        error: token_error(token),
-        update_body: update_body
-      )
-      |> assign_new(:client, fn %{token: token} ->
-        build_client()
-        |> case do
-          {:ok, client} ->
-            client |> Map.put(:token, token)
-
-          {:error, _} ->
-            nil
-        end
-      end)
-      |> assign_new(:authorize_url, fn %{client: client} ->
-        if client do
-          Salesforce.authorize_url(
-            client,
-            build_state(socket.id, __MODULE__, id)
-          )
-        end
-      end)
-      |> maybe_fetch_userinfo()
-
-    {:ok, socket}
+    {:ok,
+     socket
+     |> reset_assigns()
+     |> update_assigns(params, token)
+     |> update_client()
+     |> maybe_fetch_userinfo()}
   end
 
-  @impl true
   def update(%{code: code}, socket) do
+    handle_code_update(code, socket)
+  end
+
+  def update(%{error: error}, socket) do
+    {:ok, socket |> assign(error: error, authorizing: false)}
+  end
+
+  def update(%{userinfo: userinfo}, socket) do
+    {:ok, socket |> assign(userinfo: userinfo, authorizing: false, error: nil)}
+  end
+
+  def update(%{scopes: scopes}, socket) do
+    handle_scopes_update(scopes, socket)
+  end
+
+  defp reset_assigns(socket) do
+    socket
+    |> assign_new(:userinfo, fn -> nil end)
+    |> assign_new(:authorizing, fn -> false end)
+  end
+
+  defp update_assigns(
+         socket,
+         %{
+           form: form,
+           id: id,
+           token_body_changeset: token_body_changeset,
+           update_body: update_body
+         },
+         token
+       ) do
+    socket
+    |> assign(
+      form: form,
+      id: id,
+      token_body_changeset: token_body_changeset,
+      token: token,
+      error: token_error(token),
+      update_body: update_body
+    )
+  end
+
+  defp update_client(socket) do
+    socket
+    |> assign_new(:client, fn %{token: token} ->
+      build_client()
+      |> case do
+        {:ok, client} -> client |> Map.put(:token, token)
+        {:error, _} -> nil
+      end
+    end)
+    |> assign_new(:authorize_url, fn %{client: client} ->
+      if client do
+        Salesforce.authorize_url(
+          client,
+          build_state(socket.id, __MODULE__, socket.assigns.id),
+          []
+        )
+      end
+    end)
+  end
+
+  defp handle_code_update(code, socket) do
     client = socket.assigns.client
 
     # NOTE: there can be _no_ refresh token if something went wrong like if the
@@ -367,12 +409,15 @@ defmodule LightningWeb.CredentialLive.SalesforceOauthComponent do
     {:ok, socket |> assign(authorizing: false, client: client)}
   end
 
-  def update(%{error: error}, socket) do
-    {:ok, socket |> assign(error: error, authorizing: false)}
-  end
+  defp handle_scopes_update(scopes, socket) do
+    authorize_url =
+      Salesforce.authorize_url(
+        socket.assigns.client,
+        build_state(socket.id, __MODULE__, socket.assigns.id),
+        scopes
+      )
 
-  def update(%{userinfo: userinfo}, socket) do
-    {:ok, socket |> assign(userinfo: userinfo, authorizing: false, error: nil)}
+    {:ok, socket |> assign(autorize_url: authorize_url)}
   end
 
   @impl true
@@ -380,7 +425,6 @@ defmodule LightningWeb.CredentialLive.SalesforceOauthComponent do
     {:noreply, socket |> assign(authorizing: true, userinfo: nil, error: nil)}
   end
 
-  @impl true
   def handle_event("try_userinfo_again", _, socket) do
     Logger.debug("Attempting to retrieve userinfo again...")
 
