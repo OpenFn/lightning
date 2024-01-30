@@ -1,12 +1,14 @@
 defmodule Lightning.RunsTest do
-  alias Lightning.Invocation
   use Lightning.DataCase
+
   import Lightning.Factories
   import Mock
+  import Ecto.Query
 
   alias Lightning.WorkOrders
   alias Lightning.Run
   alias Lightning.Runs
+  alias Lightning.Invocation
 
   describe "enqueue/1" do
     test "enqueues a run" do
@@ -657,7 +659,7 @@ defmodule Lightning.RunsTest do
     end
   end
 
-  describe "wipe_dataclip_body/1" do
+  describe "wipe_dataclips/1" do
     test "clears the dataclip body and request fields" do
       project = insert(:project)
       dataclip = insert(:http_request_dataclip, project: project)
@@ -673,11 +675,16 @@ defmodule Lightning.RunsTest do
       assert dataclip.request
       refute dataclip.wiped_at
 
-      :ok = Runs.wipe_dataclip_body(run)
+      :ok = Runs.wipe_dataclips(run)
 
       # dataclip body is cleared
-      updated_dataclip = Lightning.Invocation.get_dataclip_details!(dataclip.id)
-      assert updated_dataclip.wiped_at
+      query = from(Invocation.Dataclip, select: [:wiped_at, :body, :request])
+
+      updated_dataclip = Lightning.Repo.get(query, dataclip.id)
+
+      assert updated_dataclip.wiped_at ==
+               DateTime.utc_now() |> DateTime.truncate(:second)
+
       refute updated_dataclip.body
       refute updated_dataclip.request
     end

@@ -16,6 +16,8 @@ defmodule Lightning.Projects.Project do
           project_users: [ProjectUser.t()] | Ecto.Association.NotLoaded.t()
         }
 
+  @type retention_policy_type :: :retain_all | :retain_with_errors | :erase_all
+
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id
   schema "projects" do

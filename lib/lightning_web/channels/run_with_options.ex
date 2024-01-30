@@ -6,10 +6,10 @@ defmodule LightningWeb.RunWithOptions do
   alias Lightning.Workflows.Edge
   alias Lightning.Workflows.Job
   alias Lightning.Workflows.Trigger
+  alias LightningWeb.RunOptions
 
-  @spec render(Run.t(), Keyword.t() | map()) :: map()
+  @spec render(Run.t(), RunOptions.t()) :: map()
   def render(%Run{} = run, options) do
-    options = Enum.into(options, %{}, fn {key, val} -> {to_string(key), val} end)
     run |> render() |> Map.put("options", options)
   end
 

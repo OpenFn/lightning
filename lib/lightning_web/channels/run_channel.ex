@@ -11,6 +11,7 @@ defmodule LightningWeb.RunChannel do
   alias Lightning.Scrubber
   alias Lightning.Workers
   alias LightningWeb.RunWithOptions
+  alias LightningWeb.RunOptions
 
   require Jason.Helpers
   require Logger
@@ -51,11 +52,11 @@ defmodule LightningWeb.RunChannel do
 
   @impl true
   def handle_in("fetch:plan", _, %{assigns: assigns} = socket) do
-    {:reply,
-     {:ok,
-      RunWithOptions.render(assigns.run,
-        output_dataclips: include_output_dataclips?(assigns.retention_policy)
-      )}, socket}
+    options = %RunOptions{
+      output_dataclips: include_output_dataclips?(assigns.retention_policy)
+    }
+
+    {:reply, {:ok, RunWithOptions.render(assigns.run, options)}, socket}
   end
 
   def handle_in("run:start", _, socket) do
@@ -140,7 +141,7 @@ defmodule LightningWeb.RunChannel do
     body = Runs.get_input(socket.assigns.run)
 
     if socket.assigns.retention_policy == :erase_all do
-      Runs.wipe_dataclip_body(socket.assigns.run)
+      Runs.wipe_dataclips(socket.assigns.run)
     end
 
     {:reply, {:ok, {:binary, body}}, socket}

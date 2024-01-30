@@ -130,8 +130,8 @@ defmodule Lightning.Runs do
   @doc """
   Clears the body and request fields of the dataclip associated with the given run.
   """
-  @spec wipe_dataclip_body(Run.t()) :: :ok
-  def wipe_dataclip_body(%Run{} = run) do
+  @spec wipe_dataclips(Run.t()) :: :ok
+  def wipe_dataclips(%Run{} = run) do
     query =
       from(d in Ecto.assoc(run, :dataclip),
         update: [set: [request: nil, body: nil, wiped_at: ^DateTime.utc_now()]]

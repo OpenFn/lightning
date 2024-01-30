@@ -1,10 +1,11 @@
 defmodule LightningWeb.RunChannelTest do
-  alias Lightning.Invocation.Dataclip
   use LightningWeb.ChannelCase
 
+  alias Lightning.Invocation.Dataclip
   alias Lightning.Invocation.Step
   alias Lightning.Workers
 
+  import Ecto.Query
   import Lightning.Factories
   import Lightning.BypassHelpers
 
@@ -181,7 +182,7 @@ defmodule LightningWeb.RunChannelTest do
                "edges" => edges,
                "starting_node_id" => run.starting_trigger_id,
                "dataclip_id" => run.dataclip_id,
-               "options" => %{"output_dataclips" => true}
+               "options" => %LightningWeb.RunOptions{output_dataclips: true}
              }
     end
 
@@ -239,7 +240,7 @@ defmodule LightningWeb.RunChannelTest do
                "edges" => edges,
                "starting_node_id" => run.starting_trigger_id,
                "dataclip_id" => run.dataclip_id,
-               "options" => %{"output_dataclips" => false}
+               "options" => %LightningWeb.RunOptions{output_dataclips: false}
              }
     end
 
@@ -286,8 +287,12 @@ defmodule LightningWeb.RunChannelTest do
       assert_reply ref, :ok, {:binary, _payload}
 
       # dataclip body is cleared
-      updated_dataclip = Lightning.Invocation.get_dataclip_details!(dataclip.id)
-      assert updated_dataclip.wiped_at
+      dataclip_query = from(Dataclip, select: [:wiped_at, :body, :request])
+      updated_dataclip = Lightning.Repo.get(dataclip_query, dataclip.id)
+
+      assert updated_dataclip.wiped_at ==
+               DateTime.utc_now() |> DateTime.truncate(:second)
+
       refute updated_dataclip.body
 
       # retain_all
@@ -303,7 +308,7 @@ defmodule LightningWeb.RunChannelTest do
       assert_reply ref, :ok, {:binary, _payload}
 
       # dataclip body is not cleared
-      updated_dataclip = Lightning.Invocation.get_dataclip_details!(dataclip.id)
+      updated_dataclip = Lightning.Repo.get(dataclip_query, dataclip.id)
       refute updated_dataclip.wiped_at
       assert updated_dataclip.body
     end

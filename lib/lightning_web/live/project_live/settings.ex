@@ -589,14 +589,8 @@ defmodule LightningWeb.ProjectLive.Settings do
     """
   end
 
-  def checked?(changeset, id) do
-    case Ecto.Changeset.fetch_field(changeset, :retention_policy) do
-      {_changes_data, ^id} ->
-        true
-
-      _other_policy ->
-        false
-    end
+  defp checked?(changeset, input_id) do
+    Ecto.Changeset.fetch_field!(changeset, :retention_policy) == input_id
   end
 
   defp save_project(socket, project_params) do

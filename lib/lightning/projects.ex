@@ -246,7 +246,7 @@ defmodule Lightning.Projects do
   end
 
   @spec project_retention_policy_for(Run.t()) ::
-          :retain_all | :erase_all | :erase_successful_only
+          Project.retention_policy_type()
   def project_retention_policy_for(%Run{work_order_id: wo_id}) do
     query =
       from(wo in WorkOrder,
