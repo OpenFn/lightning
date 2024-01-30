@@ -186,8 +186,8 @@ defmodule Lightning.MixProject do
         Accounts: [
           ~r/Lightning.Accounts/
         ],
-        Attempts: [
-          ~r/Lightning.Attempts/
+        Runs: [
+          ~r/Lightning.Runs/
         ],
         WorkOrders: [
           ~r/Lightning.WorkOrders/

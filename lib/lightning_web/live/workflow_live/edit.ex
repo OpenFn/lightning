@@ -5,11 +5,11 @@ defmodule LightningWeb.WorkflowLive.Edit do
   import LightningWeb.Components.NewInputs
   import LightningWeb.WorkflowLive.Components
 
-  alias Lightning.Attempts
-  alias Lightning.Attempts.Events.StepCompleted
   alias Lightning.Invocation
   alias Lightning.Policies.Permissions
   alias Lightning.Policies.ProjectUsers
+  alias Lightning.Runs
+  alias Lightning.Runs.Events.StepCompleted
   alias Lightning.Workflows
   alias Lightning.Workflows.Job
   alias Lightning.Workflows.Trigger
@@ -19,7 +19,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
   alias LightningWeb.WorkflowLive.Helpers
   alias LightningWeb.WorkflowNewLive.WorkflowParams
 
-  require Lightning.Attempt
+  require Lightning.Run
 
   on_mount {LightningWeb.Hooks, :project_scope}
 
@@ -87,7 +87,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
               current_user={@current_user}
               project={@project}
               socket={@socket}
-              follow_attempt_id={@follow_attempt_id}
+              follow_run_id={@follow_run_id}
               close_url={
                 "#{@base_url}?s=#{@selected_job.id}"
               }
@@ -122,7 +122,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
                       id="save-and-run"
                       phx-hook="DefaultRunViaCtrlEnter"
                       {if retry_from_here(@step, @manual_run_form), do:
-                        [type: "button", "phx-click": "rerun", "phx-value-attempt_id": @follow_attempt_id, "phx-value-step_id": @step.id],
+                        [type: "button", "phx-click": "rerun", "phx-value-run_id": @follow_run_id, "phx-value-step_id": @step.id],
                       else:
                           [type: "submit", form: @manual_run_form.id]}
                       class={[
@@ -131,10 +131,10 @@ defmodule LightningWeb.WorkflowLive.Edit do
                       ]}
                       disabled={
                         @save_and_run_disabled ||
-                          processing(@follow_attempt_id, @step)
+                          processing(@follow_run_id, @step)
                       }
                     >
-                      <%= if processing(@follow_attempt_id, @step) do %>
+                      <%= if processing(@follow_run_id, @step) do %>
                         <.icon
                           name="hero-arrow-path-mini"
                           class="w-4 h-4 animate-spin mr-1"
@@ -416,7 +416,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
   defp retry_from_here(step, form),
     do: step && step.input_dataclip_id == form[:dataclip_id].value
 
-  defp processing(attempt_id, step), do: attempt_id && !step
+  defp processing(run_id, step), do: run_id && !step
 
   defp deletion_tooltip_message(has_multiple_jobs) do
     if has_multiple_jobs do
@@ -595,7 +595,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
      |> assign(
        active_menu_item: :overview,
        expanded_job: nil,
-       follow_attempt_id: nil,
+       follow_run_id: nil,
        step: nil,
        manual_run_form: nil,
        page_title: "",
@@ -794,27 +794,26 @@ defmodule LightningWeb.WorkflowLive.Edit do
     {:noreply, socket |> assign_manual_run_form(changeset)}
   end
 
-  # The retry_from_run event is for creating a new attempt for an existing work
+  # The retry_from_run event is for creating a new run for an existing work
   # order, just like clicking "rerun from here" on the history page.
 
   @impl true
   def handle_event(
         "rerun",
-        %{"attempt_id" => attempt_id, "step_id" => step_id},
+        %{"run_id" => run_id, "step_id" => step_id},
         socket
       ) do
     if socket.assigns.can_rerun_job do
       case Lightning.Repo.update(%{socket.assigns.changeset | action: :update}) do
         {:ok, workflow} ->
-          {:ok, attempt} =
-            WorkOrders.retry(attempt_id, step_id,
+          {:ok, run} =
+            WorkOrders.retry(run_id, step_id,
               created_by: socket.assigns.current_user
             )
 
-          Attempts.subscribe(attempt)
+          Runs.subscribe(run)
 
-          {:noreply,
-           socket |> assign_workflow(workflow) |> follow_attempt(attempt)}
+          {:noreply, socket |> assign_workflow(workflow) |> follow_run(run)}
 
         {:error, changeset} ->
           {
@@ -859,14 +858,14 @@ defmodule LightningWeb.WorkflowLive.Edit do
     end
     |> case do
       {:ok, %{workorder: workorder, workflow: workflow}} ->
-        %{attempts: [attempt]} = workorder
+        %{runs: [run]} = workorder
 
-        Attempts.subscribe(attempt)
+        Runs.subscribe(run)
 
         {:noreply,
          socket
          |> assign_workflow(workflow)
-         |> follow_attempt(attempt)}
+         |> follow_run(run)}
 
       {:error, %Ecto.Changeset{data: %WorkOrders.Manual{}} = changeset} ->
         {:noreply,
@@ -945,8 +944,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
       %{selected_job: job, selection_mode: "expand"} = assigns
       when not is_nil(job) ->
         dataclip =
-          assigns[:follow_attempt_id] &&
-            get_selected_dataclip(assigns[:follow_attempt_id], job.id)
+          assigns[:follow_run_id] &&
+            get_selected_dataclip(assigns[:follow_run_id], job.id)
 
         changeset =
           WorkOrders.Manual.new(
@@ -961,9 +960,9 @@ defmodule LightningWeb.WorkflowLive.Edit do
           Invocation.list_dataclips_for_job(%Job{id: job.id})
 
         step =
-          assigns[:follow_attempt_id] &&
-            Invocation.get_step_for_attempt_and_job(
-              assigns[:follow_attempt_id],
+          assigns[:follow_run_id] &&
+            Invocation.get_step_for_run_and_job(
+              assigns[:follow_run_id],
               job.id
             )
 
@@ -980,9 +979,9 @@ defmodule LightningWeb.WorkflowLive.Edit do
     end
   end
 
-  defp get_selected_dataclip(attempt_id, job_id) do
-    Invocation.get_dataclip_for_attempt_and_job(attempt_id, job_id) ||
-      Invocation.get_dataclip_for_attempt(attempt_id)
+  defp get_selected_dataclip(run_id, job_id) do
+    Invocation.get_dataclip_for_run_and_job(run_id, job_id) ||
+      Invocation.get_dataclip_for_run(run_id)
   end
 
   defp maybe_add_selected_dataclip(selectable_dataclips, nil) do
@@ -1131,7 +1130,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
       %{"s" => nil} ->
         socket |> unselect_all()
 
-      # Attempt to select the given item, possibly with a mode (such as `expand`)
+      # Try to select the given item, possibly with a mode (such as `expand`)
       %{"s" => selected_id, "m" => mode} ->
         case find_item_in_changeset(socket.assigns.changeset, selected_id) do
           [type, selected] ->
@@ -1142,7 +1141,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
             socket |> unselect_all()
         end
     end
-    |> maybe_follow_attempt(socket.assigns.query_params)
+    |> maybe_follow_run(socket.assigns.query_params)
   end
 
   defp assign_changeset(socket, changeset) do
@@ -1215,23 +1214,23 @@ defmodule LightningWeb.WorkflowLive.Edit do
     |> assign(selection_mode: selection_mode)
   end
 
-  defp follow_attempt(socket, attempt) do
+  defp follow_run(socket, run) do
     %{query_params: query_params, project: project, workflow: workflow} =
       socket.assigns
 
-    params = query_params |> Map.put("a", attempt.id) |> Enum.into([])
+    params = query_params |> Map.put("a", run.id) |> Enum.into([])
 
     socket
     |> push_patch(to: ~p"/projects/#{project}/w/#{workflow}?#{params}")
   end
 
-  defp maybe_follow_attempt(socket, query_params) do
+  defp maybe_follow_run(socket, query_params) do
     case query_params do
-      %{"a" => attempt_id} when is_binary(attempt_id) ->
-        socket |> assign(follow_attempt_id: attempt_id)
+      %{"a" => run_id} when is_binary(run_id) ->
+        socket |> assign(follow_run_id: run_id)
 
       _ ->
-        socket |> assign(follow_attempt_id: nil)
+        socket |> assign(follow_run_id: nil)
     end
   end
 

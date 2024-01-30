@@ -400,7 +400,7 @@ defmodule LightningWeb.CredentialLive.GoogleSheetsComponent do
 
   @impl true
   def handle_event("try_userinfo_again", _, socket) do
-    Logger.debug("Attempting to retrieve userinfo again...")
+    Logger.debug("Trying to retrieve userinfo again...")
 
     pid = self()
     Task.start(fn -> get_userinfo(pid, socket) end)

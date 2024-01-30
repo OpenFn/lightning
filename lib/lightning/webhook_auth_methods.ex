@@ -382,7 +382,7 @@ defmodule Lightning.WebhookAuthMethods do
   @doc """
   Deletes a given `WebhookAuthMethod` from the database.
 
-  The function takes a `WebhookAuthMethod` struct and attempts to delete it. If the deletion is successful, it returns an `:ok` tuple with the deleted `WebhookAuthMethod` struct. If the deletion fails due to a constraint, such as a foreign key reference, it returns an error tuple.
+  The function takes a `WebhookAuthMethod` struct and runs to delete it. If the deletion is successful, it returns an `:ok` tuple with the deleted `WebhookAuthMethod` struct. If the deletion fails due to a constraint, such as a foreign key reference, it returns an error tuple.
 
   ## Parameters
 
@@ -411,7 +411,7 @@ defmodule Lightning.WebhookAuthMethods do
 
   ## Notes
 
-    - It is important to ensure that the `WebhookAuthMethod` is not being referenced by other entities before attempting deletion to avoid conflicts.
+    - It is important to ensure that the `WebhookAuthMethod` is not being referenced by other entities before trying deletion to avoid conflicts.
     - This function will return an error tuple if the `WebhookAuthMethod` struct passed to it does not exist in the database.
   """
   @spec delete_auth_method(WebhookAuthMethod.t()) ::

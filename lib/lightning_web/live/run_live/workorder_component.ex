@@ -5,7 +5,7 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
   use LightningWeb, :live_component
 
   import LightningWeb.RunLive.Components
-  import LightningWeb.AttemptLive.Components
+  import LightningWeb.RunLive.Components
 
   @impl true
   def update(
@@ -37,7 +37,7 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
     socket
     |> assign(
       work_order: work_order,
-      attempts: work_order.attempts,
+      runs: work_order.runs,
       last_step: last_step,
       last_step_finished_at: last_step_finished_at,
       work_order_inserted_at: work_order_inserted_at,
@@ -46,11 +46,11 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
   end
 
   defp get_last_step(work_order) do
-    work_order.attempts
+    work_order.runs
     |> List.first()
     |> case do
       nil -> nil
-      attempt -> List.last(attempt.steps)
+      run -> List.last(run.steps)
     end
   end
 
@@ -74,12 +74,12 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
      )}
   end
 
-  def handle_event("toggle_attempts", %{}, socket) do
+  def handle_event("toggle_runs", %{}, socket) do
     {:noreply,
      assign(
        socket,
-       :show_prev_attempts,
-       !socket.assigns[:show_prev_attempts]
+       :show_prev_runs,
+       !socket.assigns[:show_prev_runs]
      )}
   end
 
@@ -93,7 +93,7 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
   end
 
   attr :show_details, :boolean, default: false
-  attr :show_prev_attempts, :boolean, default: false
+  attr :show_prev_runs, :boolean, default: false
   attr :entry_selected, :boolean, default: false
 
   @impl true
@@ -138,7 +138,7 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
                 {if @entry_selected, do: [checked: "checked"], else: []}
               />
             </form>
-            <%= if @work_order.attempts !== [] do %>
+            <%= if @work_order.runs !== [] do %>
               <button
                 id={"toggle_details_for_#{@work_order.id}"}
                 class="w-auto rounded-full p-3 hover:bg-gray-100"
@@ -218,11 +218,11 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
         </div>
       </div>
       <%= if @show_details do %>
-        <%= for {attempt, index} <- @attempts |> Enum.reverse() |> Enum.with_index(1) |> Enum.reverse() do %>
+        <%= for {run, index} <- @runs |> Enum.reverse() |> Enum.with_index(1) |> Enum.reverse() do %>
           <div
-            id={"attempt_#{attempt.id}"}
+            id={"run_#{run.id}"}
             class={
-              if index != Enum.count(@attempts) and !@show_prev_attempts,
+              if index != Enum.count(@runs) and !@show_prev_runs,
                 do: "hidden",
                 else: ""
             }
@@ -231,56 +231,49 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
               <div class="flex gap-1 items-center bg-gray-200 pl-28 text-xs py-2">
                 <div>
                   Run
-                  <.link navigate={~p"/projects/#{@project.id}/runs/#{attempt.id}"}>
+                  <.link navigate={~p"/projects/#{@project.id}/runs/#{run.id}"}>
                     <span
-                      title={attempt.id}
+                      title={run.id}
                       class="font-normal text-xs whitespace-nowrap text-ellipsis
                             inline-block rounded-md font-mono
                             text-indigo-400 hover:underline underline-offset-2
                             hover:text-indigo-500"
                     >
-                      <%= display_short_uuid(attempt.id) %>
+                      <%= display_short_uuid(run.id) %>
                     </span>
                   </.link>
-                  <%= if Enum.count(@attempts) > 1 do %>
-                    (<%= index %>/<%= Enum.count(@attempts) %><%= if index !=
-                                                                       Enum.count(
-                                                                         @attempts
-                                                                       ),
-                                                                     do: ")" %>
-                    <%= if index == Enum.count(@attempts) do %>
+                  <%= if Enum.count(@runs) > 1 do %>
+                    (<%= index %>/<%= Enum.count(@runs) %><%= if index !=
+                                                                   Enum.count(@runs),
+                                                                 do: ")" %>
+                    <%= if index == Enum.count(@runs) do %>
                       <span>
                         &bull; <a
-                          id={"toggle_attempts_for_#{@work_order.id}"}
+                          id={"toggle_runs_for_#{@work_order.id}"}
                           href="#"
                           class="text-indigo-400"
-                          phx-click="toggle_attempts"
+                          phx-click="toggle_runs"
                           phx-target={@myself}
                         >
-                        <%= if @show_prev_attempts, do: "hide", else: "show" %> previous</a>)
+                        <%= if @show_prev_runs, do: "hide", else: "show" %> previous</a>)
                       </span>
                     <% end %>
                   <% end %>
-                  <%= case attempt.state do %>
+                  <%= case run.state do %>
                     <% :available -> %>
-                      enqueued @ <.timestamp timestamp={attempt.inserted_at} />
+                      enqueued @ <.timestamp timestamp={run.inserted_at} />
                     <% :claimed -> %>
-                      claimed @ <.timestamp timestamp={attempt.claimed_at} />
+                      claimed @ <.timestamp timestamp={run.claimed_at} />
                     <% :started -> %>
-                      started @ <.timestamp timestamp={attempt.started_at} />
+                      started @ <.timestamp timestamp={run.started_at} />
                     <% _state -> %>
-                      <%= attempt.state %> @
-                      <.timestamp timestamp={attempt.finished_at} />
+                      <%= run.state %> @ <.timestamp timestamp={run.finished_at} />
                   <% end %>
                 </div>
               </div>
             </div>
 
-            <.attempt_item
-              can_rerun_job={@can_rerun_job}
-              attempt={attempt}
-              project={@project}
-            />
+            <.run_item can_rerun_job={@can_rerun_job} run={run} project={@project} />
           </div>
         <% end %>
       <% end %>

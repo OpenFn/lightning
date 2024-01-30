@@ -73,12 +73,12 @@ defmodule LightningWeb.Components.CredentialDeletionModal do
         close_modal_target={@myself}
       >
         <p>
-          This credential has been used in workflow attempts that
+          This credential has been used in workflow runs that
           are still monitored in at least one project's audit trail. The
           credential will be made unavailable for future use immediately and
           after a cooling-off period all secrets will be permanently scrubbed,
           but the record itself will not be removed until related workflow
-          attempts have been purged.
+          runs have been purged.
         </p>
         <p class="py-2">
           Contact your instance administrator for more details.
@@ -114,12 +114,12 @@ defmodule LightningWeb.Components.CredentialDeletionModal do
             <div class="py-2"></div>
           </div>
           <p class="italic text-slate-500">
-            *This credential has been used in workflow attempts that
+            *This credential has been used in workflow runs that
             are still monitored in at least one project's audit trail. The
             credential will be made unavailable for future use immediately and
             after a cooling-off period all secrets will be permanently scrubbed,
             but the record itself will not be removed until related workflow
-            attempts have been purged.
+            runs have been purged.
           </p>
         <% end %>
         <div class="hidden sm:block" aria-hidden="true">

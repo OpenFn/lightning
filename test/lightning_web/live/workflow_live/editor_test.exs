@@ -299,8 +299,8 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       insert(:workorder,
         workflow: w,
         dataclip: existing_dataclip,
-        attempts: [
-          build(:attempt,
+        runs: [
+          build(:run,
             dataclip: existing_dataclip,
             starting_job: job,
             steps: [build(:step, job: job, input_dataclip: existing_dataclip)]
@@ -458,11 +458,11 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       project: project,
       workflow: %{jobs: [job_1 | _]} = workflow
     } do
-      %{attempts: [attempt]} =
+      %{runs: [run]} =
         insert(:workorder,
           workflow: workflow,
-          attempts: [
-            build(:attempt,
+          runs: [
+            build(:run,
               dataclip: build(:dataclip, type: :http_request),
               starting_job: job_1,
               steps: [build(:step, job: job_1)]
@@ -475,7 +475,7 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project}/w/#{workflow}?#{[s: job_1.id, a: attempt.id, m: "expand"]}"
+          ~p"/projects/#{project}/w/#{workflow}?#{[s: job_1.id, a: run.id, m: "expand"]}"
         )
 
       view
@@ -493,7 +493,7 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       assert job_1.body === "fn(state => state)"
     end
 
-    test "selects the input dataclip for the step if an attempt is followed",
+    test "selects the input dataclip for the step if a run is followed",
          %{
            conn: conn,
            project: project,
@@ -508,12 +508,12 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
           body: %{"val" => Ecto.UUID.generate()}
         )
 
-      %{attempts: [attempt]} =
+      %{runs: [run]} =
         insert(:workorder,
           workflow: workflow,
           dataclip: input_dataclip,
-          attempts: [
-            build(:attempt,
+          runs: [
+            build(:run,
               dataclip: input_dataclip,
               starting_job: job_1,
               steps: [
@@ -550,8 +550,8 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
         insert(:workorder,
           workflow: workflow,
           dataclip: dataclip,
-          attempts: [
-            build(:attempt,
+          runs: [
+            build(:run,
               dataclip: dataclip,
               starting_job: job_2,
               steps: [
@@ -572,12 +572,12 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project}/w/#{workflow}?#{[s: job_2.id, a: attempt.id, m: "expand"]}"
+          ~p"/projects/#{project}/w/#{workflow}?#{[s: job_2.id, a: run.id, m: "expand"]}"
         )
 
-      # the step dataclip is different from the attempt dataclip.
-      # this assertion means that the attempt dataclip won't be selected
-      refute attempt.dataclip_id == output_dataclip.id
+      # the step dataclip is different from the run dataclip.
+      # this assertion means that the run dataclip won't be selected
+      refute run.dataclip_id == output_dataclip.id
 
       # the form has the dataclips body
       assert element(view, "#manual-job-#{job_2.id} form") |> render() =~
@@ -593,7 +593,7 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       assert render(element) =~ "selected"
     end
 
-    test "users can retry a workorder from a followed attempt",
+    test "users can retry a workorder from a followed run",
          %{
            conn: conn,
            project: project,
@@ -608,13 +608,13 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
           body: %{"val" => Ecto.UUID.generate()}
         )
 
-      %{attempts: [attempt]} =
+      %{runs: [run]} =
         workorder =
         insert(:workorder,
           workflow: workflow,
           dataclip: input_dataclip,
-          attempts: [
-            build(:attempt,
+          runs: [
+            build(:run,
               dataclip: input_dataclip,
               starting_job: job_1,
               steps: [
@@ -651,8 +651,8 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
         insert(:workorder,
           workflow: workflow,
           dataclip: dataclip,
-          attempts: [
-            build(:attempt,
+          runs: [
+            build(:run,
               dataclip: dataclip,
               starting_job: job_2,
               steps: [
@@ -673,7 +673,7 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project}/w/#{workflow}?#{[s: job_2.id, a: attempt.id, m: "expand"]}"
+          ~p"/projects/#{project}/w/#{workflow}?#{[s: job_2.id, a: run.id, m: "expand"]}"
         )
 
       # user gets option to rerun
@@ -689,7 +689,7 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       assert has_element?(view, "button", "Create New Work Order")
 
       # if we choose the step input dataclip, the retry button becomes available
-      step = Enum.find(attempt.steps, fn step -> step.job_id == job_2.id end)
+      step = Enum.find(run.steps, fn step -> step.job_id == job_2.id end)
 
       view
       |> form("#manual_run_form", manual: %{dataclip_id: step.input_dataclip_id})
@@ -700,16 +700,16 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
 
       view |> element("button", "Rerun from here") |> render_click()
 
-      all_attempts =
-        Lightning.Repo.preload(workorder, [:attempts], force: true).attempts
+      all_runs =
+        Lightning.Repo.preload(workorder, [:runs], force: true).runs
 
-      assert Enum.count(all_attempts) == 2
-      [new_attempt] = Enum.reject(all_attempts, fn a -> a.id == attempt.id end)
+      assert Enum.count(all_runs) == 2
+      [new_run] = Enum.reject(all_runs, fn a -> a.id == run.id end)
 
       html = render(view)
 
-      refute html =~ attempt.id
-      assert html =~ new_attempt.id
+      refute html =~ run.id
+      assert html =~ new_run.id
     end
   end
 

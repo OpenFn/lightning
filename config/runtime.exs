@@ -336,13 +336,13 @@ config :lightning, Lightning.PromEx,
   metrics_endpoint_scheme: System.get_env("PROMEX_ENDPOINT_SCHEME") || "https"
 
 config :lightning, :metrics,
-  stalled_attempt_threshold_seconds:
+  stalled_run_threshold_seconds:
     String.to_integer(
-      System.get_env("METRICS_STALLED_ATTEMPT_THRESHOLD_SECONDS", "3600")
+      System.get_env("METRICS_STALLED_RUN_THRESHOLD_SECONDS", "3600")
     ),
-  attempt_performance_age_seconds:
+  run_performance_age_seconds:
     String.to_integer(
-      System.get_env("METRICS_ATTEMPT_PERFORMANCE_AGE_SECONDS", "300")
+      System.get_env("METRICS_RUN_PERFORMANCE_AGE_SECONDS", "300")
     )
 
 config :lightning, :impact_tracking,

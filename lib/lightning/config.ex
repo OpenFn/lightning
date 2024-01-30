@@ -5,13 +5,13 @@ defmodule Lightning.Config do
   defmodule API do
     @moduledoc false
 
-    @callback attempt_token_signer() :: Joken.Signer.t()
+    @callback run_token_signer() :: Joken.Signer.t()
     @callback worker_token_signer() :: Joken.Signer.t()
     @callback worker_secret() :: binary() | nil
-    @callback attempts_adaptor() :: module()
+    @callback runs_adaptor() :: module()
     @callback grace_period() :: integer()
 
-    def attempt_token_signer do
+    def run_token_signer do
       pem =
         Application.get_env(:lightning, :workers, [])
         |> Keyword.get(:private_key)
@@ -23,11 +23,11 @@ defmodule Lightning.Config do
       Joken.Signer.create("HS256", worker_secret())
     end
 
-    def attempts_adaptor do
+    def runs_adaptor do
       Application.get_env(
         :lightning,
-        :attempts_module,
-        Lightning.Attempts.Queue
+        :runs_module,
+        Lightning.Runs.Queue
       )
     end
 
@@ -50,11 +50,11 @@ defmodule Lightning.Config do
   @behaviour API
 
   @doc """
-  Returns the Token signer used to sign and verify attempt tokens.
+  Returns the Token signer used to sign and verify run tokens.
   """
   @impl true
-  def attempt_token_signer do
-    impl().attempt_token_signer()
+  def run_token_signer do
+    impl().run_token_signer()
   end
 
   @doc """
@@ -66,11 +66,11 @@ defmodule Lightning.Config do
   end
 
   @doc """
-  Returns the module used to manage attempts.
+  Returns the module used to manage runs.
   """
   @impl true
-  def attempts_adaptor do
-    impl().attempts_adaptor()
+  def runs_adaptor do
+    impl().runs_adaptor()
   end
 
   @impl true

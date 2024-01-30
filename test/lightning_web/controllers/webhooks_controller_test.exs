@@ -1,7 +1,7 @@
 defmodule LightningWeb.WebhooksControllerTest do
   use LightningWeb.ConnCase, async: false
 
-  alias Lightning.Attempts
+  alias Lightning.Runs
   alias Lightning.WorkOrders
 
   import Lightning.Factories
@@ -57,18 +57,18 @@ defmodule LightningWeb.WebhooksControllerTest do
                json_response(conn, 200)
 
       work_order =
-        %{attempts: [attempt]} =
-        WorkOrders.get(work_order_id, include: [:attempts, :dataclip, :trigger])
+        %{runs: [run]} =
+        WorkOrders.get(work_order_id, include: [:runs, :dataclip, :trigger])
 
       assert work_order.trigger.id == trigger.id
 
-      assert Attempts.get_dataclip_body(attempt) == ~s({"foo": "bar"})
+      assert Runs.get_dataclip_body(run) == ~s({"foo": "bar"})
 
-      assert Attempts.get_dataclip_request(attempt) ==
+      assert Runs.get_dataclip_request(run) ==
                ~s({"headers": {"content-type": "multipart/mixed; boundary=plug_conn_test"}})
 
-      %{attempts: [attempt]} = work_order
-      assert attempt.starting_trigger_id == trigger.id
+      %{runs: [run]} = work_order
+      assert run.starting_trigger_id == trigger.id
     end
 
     test "with an invalid trigger id returns a 404", %{conn: conn} do

@@ -244,14 +244,14 @@ defmodule Lightning.ProjectsTest do
         trigger: t1,
         dataclip: p1_dataclip,
         workflow: w1,
-        attempts: [
-          build(:attempt,
+        runs: [
+          build(:run,
             starting_trigger: e1.source_trigger,
             dataclip: p1_dataclip,
             steps: [p1_step_1],
             log_lines: build_list(2, :log_line, step: p1_step_1)
           ),
-          build(:attempt,
+          build(:run,
             starting_trigger: e1.source_trigger,
             dataclip: p1_dataclip,
             created_by: p1_user,
@@ -271,8 +271,8 @@ defmodule Lightning.ProjectsTest do
         trigger: t2,
         workflow: w2,
         dataclip: p2_dataclip,
-        attempts:
-          build_list(1, :attempt,
+        runs:
+          build_list(1, :run,
             starting_trigger: e2.source_trigger,
             dataclip: p2_dataclip,
             steps: [p2_step],
@@ -284,9 +284,9 @@ defmodule Lightning.ProjectsTest do
 
       work_order_query = Lightning.Projects.project_workorders_query(p1)
 
-      attempt_query = Lightning.Projects.project_attempts_query(p1)
+      run_query = Lightning.Projects.project_runs_query(p1)
 
-      attempt_step_query = Lightning.Projects.project_attempt_step_query(p1)
+      run_step_query = Lightning.Projects.project_run_step_query(p1)
 
       pu_query = Lightning.Projects.project_users_query(p1)
 
@@ -300,9 +300,9 @@ defmodule Lightning.ProjectsTest do
 
       assert work_order_query |> Repo.aggregate(:count, :id) == 1
 
-      assert attempt_query |> Repo.aggregate(:count, :id) == 2
+      assert run_query |> Repo.aggregate(:count, :id) == 2
 
-      assert attempt_step_query |> Repo.aggregate(:count, :id) == 2
+      assert run_step_query |> Repo.aggregate(:count, :id) == 2
 
       assert pu_query |> Repo.aggregate(:count, :id) == 1
 
@@ -323,9 +323,9 @@ defmodule Lightning.ProjectsTest do
 
       assert work_order_query |> Repo.aggregate(:count, :id) == 0
 
-      assert attempt_query |> Repo.aggregate(:count, :id) == 0
+      assert run_query |> Repo.aggregate(:count, :id) == 0
 
-      assert attempt_step_query |> Repo.aggregate(:count, :id) == 0
+      assert run_step_query |> Repo.aggregate(:count, :id) == 0
 
       assert pu_query |> Repo.aggregate(:count, :id) == 0
 

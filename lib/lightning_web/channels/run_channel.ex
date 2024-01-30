@@ -1,36 +1,36 @@
-defmodule LightningWeb.AttemptChannel do
+defmodule LightningWeb.RunChannel do
   @moduledoc """
-  Phoenix channel to interact with Attempts.
+  Phoenix channel to interact with Runs.
   """
   use LightningWeb, :channel
 
-  alias Lightning.Attempts
   alias Lightning.Credentials
   alias Lightning.Repo
+  alias Lightning.Runs
   alias Lightning.Scrubber
   alias Lightning.Workers
-  alias LightningWeb.AttemptJson
+  alias LightningWeb.RunJson
 
   require Jason.Helpers
   require Logger
 
   @impl true
   def join(
-        "attempt:" <> id,
+        "run:" <> id,
         %{"token" => token},
         %{assigns: %{token: worker_token}} = socket
       ) do
     with {:ok, _} <- Workers.verify_worker_token(worker_token),
-         {:ok, claims} <- Workers.verify_attempt_token(token, %{id: id}),
-         attempt when is_map(attempt) <- get_attempt(id) || {:error, :not_found},
+         {:ok, claims} <- Workers.verify_run_token(token, %{id: id}),
+         run when is_map(run) <- get_run(id) || {:error, :not_found},
          project_id when is_binary(project_id) <-
-           Attempts.get_project_id_for_attempt(attempt) do
+           Runs.get_project_id_for_run(run) do
       {:ok,
        socket
        |> assign(%{
          claims: claims,
          id: id,
-         attempt: attempt,
+         run: run,
          project_id: project_id,
          scrubber: nil
        })}
@@ -43,42 +43,42 @@ defmodule LightningWeb.AttemptChannel do
     end
   end
 
-  def join("attempt:" <> _, _payload, _socket) do
+  def join("run:" <> _, _payload, _socket) do
     {:error, %{reason: "unauthorized"}}
   end
 
   @impl true
-  def handle_in("fetch:attempt", _, socket) do
-    {:reply, {:ok, AttemptJson.render(socket.assigns.attempt)}, socket}
+  def handle_in("fetch:plan", _, socket) do
+    {:reply, {:ok, RunJson.render(socket.assigns.run)}, socket}
   end
 
-  def handle_in("attempt:start", _, socket) do
-    socket.assigns.attempt
-    |> Attempts.start_attempt()
+  def handle_in("run:start", _, socket) do
+    socket.assigns.run
+    |> Runs.start_run()
     |> case do
-      {:ok, attempt} ->
-        {:reply, {:ok, nil}, socket |> assign(attempt: attempt)}
+      {:ok, run} ->
+        {:reply, {:ok, nil}, socket |> assign(run: run)}
 
       {:error, changeset} ->
         {:reply, {:error, LightningWeb.ChangesetJSON.error(changeset)}, socket}
     end
   end
 
-  def handle_in("attempt:complete", payload, socket) do
+  def handle_in("run:complete", payload, socket) do
     params =
       payload |> replace_reason_with_exit_reason()
 
-    socket.assigns.attempt
-    |> Attempts.complete_attempt(params)
+    socket.assigns.run
+    |> Runs.complete_run(params)
     |> case do
-      {:ok, attempt} ->
+      {:ok, run} ->
         # TODO: Turn FailureAlerter into an Oban worker and process async
         # instead of blocking the channel.
-        attempt
+        run
         |> Repo.preload([:log_lines, work_order: [:workflow]])
         |> Lightning.FailureAlerter.alert_on_failure()
 
-        {:reply, {:ok, nil}, socket |> assign(attempt: attempt)}
+        {:reply, {:ok, nil}, socket |> assign(run: run)}
 
       {:error, changeset} ->
         {:reply, {:error, LightningWeb.ChangesetJSON.error(changeset)}, socket}
@@ -86,9 +86,9 @@ defmodule LightningWeb.AttemptChannel do
   end
 
   def handle_in("fetch:credential", %{"id" => id}, socket) do
-    %{attempt: attempt, scrubber: scrubber} = socket.assigns
+    %{run: run, scrubber: scrubber} = socket.assigns
 
-    with credential <- Attempts.get_credential(attempt, id) || :not_found,
+    with credential <- Runs.get_credential(run, id) || :not_found,
          {:ok, credential} <- Credentials.maybe_refresh_token(credential),
          samples <- Credentials.sensitive_values_for(credential),
          basic_auth <- Credentials.basic_auth_for(credential),
@@ -122,7 +122,7 @@ defmodule LightningWeb.AttemptChannel do
 
   @doc """
   For the time being, calls to `fetch:dataclip` will return dataclips that are
-  preformatted for use as "initial state" in an attempt.
+  preformatted for use as "initial state" in a run.
 
   This means that the body of http requests will be nested inside a "data" key.
 
@@ -131,24 +131,18 @@ defmodule LightningWeb.AttemptChannel do
   of those HTTP requests to the worker to use as initial state.
   """
   def handle_in("fetch:dataclip", _, socket) do
-    body = Attempts.get_input(socket.assigns.attempt)
+    body = Runs.get_input(socket.assigns.run)
 
     {:reply, {:ok, {:binary, body}}, socket}
-  end
-
-  # TODO - Taylor to remove this once the migration is complete
-  def handle_in("run:start", payload, socket) do
-    worker_upgrade_required("v0.7.0")
-    handle_in("step:start", rename_run_id(payload), socket)
   end
 
   def handle_in("step:start", payload, socket) do
     Map.get(payload, "job_id", :missing_job_id)
     |> case do
       job_id when is_binary(job_id) ->
-        %{"attempt_id" => socket.assigns.attempt.id}
+        %{"run_id" => socket.assigns.run.id}
         |> Enum.into(payload)
-        |> Attempts.start_step()
+        |> Runs.start_step()
         |> case do
           {:error, changeset} ->
             {:reply, {:error, LightningWeb.ChangesetJSON.error(changeset)},
@@ -167,19 +161,13 @@ defmodule LightningWeb.AttemptChannel do
     end
   end
 
-  # TODO - Taylor to remove this once the migration is complete
-  def handle_in("run:complete", payload, socket) do
-    worker_upgrade_required("v0.7.0")
-    handle_in("step:complete", rename_run_id(payload), socket)
-  end
-
   def handle_in("step:complete", payload, socket) do
     %{
-      "attempt_id" => socket.assigns.attempt.id,
+      "run_id" => socket.assigns.run.id,
       "project_id" => socket.assigns.project_id
     }
     |> Enum.into(payload)
-    |> Attempts.complete_step()
+    |> Runs.complete_step()
     |> case do
       {:error, changeset} ->
         {:reply, {:error, LightningWeb.ChangesetJSON.error(changeset)}, socket}
@@ -189,10 +177,10 @@ defmodule LightningWeb.AttemptChannel do
     end
   end
 
-  def handle_in("attempt:log", payload, socket) do
-    %{attempt: attempt, scrubber: scrubber} = socket.assigns
+  def handle_in("run:log", payload, socket) do
+    %{run: run, scrubber: scrubber} = socket.assigns
 
-    Attempts.append_attempt_log(attempt, rename_run_id(payload), scrubber)
+    Runs.append_run_log(run, payload, scrubber)
     |> case do
       {:error, changeset} ->
         {:reply, {:error, LightningWeb.ChangesetJSON.error(changeset)}, socket}
@@ -202,8 +190,8 @@ defmodule LightningWeb.AttemptChannel do
     end
   end
 
-  defp get_attempt(id) do
-    Attempts.get(id,
+  defp get_run(id) do
+    Runs.get(id,
       include: [workflow: [:triggers, :edges, jobs: [:credential]]]
     )
   end
@@ -237,17 +225,4 @@ defmodule LightningWeb.AttemptChannel do
     :ok = Scrubber.add_samples(scrubber, samples, basic_auth)
     {:ok, scrubber}
   end
-
-  # TODO - Taylor to remove this once the migration is complete
-  defp worker_upgrade_required(v),
-    do:
-      Logger.warning("Please upgrade your connect ws-worker to #{v} or greater")
-
-  # TODO - Taylor to remove this once the migration is complete
-  defp rename_run_id(%{"run_id" => id} = map) do
-    Map.delete(map, "run_id")
-    |> Map.put("step_id", id)
-  end
-
-  defp rename_run_id(any), do: any
 end

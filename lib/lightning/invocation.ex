@@ -56,43 +56,43 @@ defmodule Lightning.Invocation do
   def get_dataclip_details!(id),
     do: Repo.get!(Query.dataclip_with_body(), id)
 
-  @spec get_dataclip_for_attempt(attempt_id :: Ecto.UUID.t()) ::
+  @spec get_dataclip_for_run(run_id :: Ecto.UUID.t()) ::
           Dataclip.t() | nil
-  def get_dataclip_for_attempt(attempt_id) do
+  def get_dataclip_for_run(run_id) do
     query =
       from d in Query.dataclip_with_body(),
-        join: a in Lightning.Attempt,
-        on: a.dataclip_id == d.id and a.id == ^attempt_id
+        join: a in Lightning.Run,
+        on: a.dataclip_id == d.id and a.id == ^run_id
 
     Repo.one(query)
   end
 
-  @spec get_dataclip_for_attempt_and_job(
-          attempt_id :: Ecto.UUID.t(),
+  @spec get_dataclip_for_run_and_job(
+          run_id :: Ecto.UUID.t(),
           job_id :: Ecto.UUID.t()
         ) ::
           Dataclip.t() | nil
-  def get_dataclip_for_attempt_and_job(attempt_id, job_id) do
+  def get_dataclip_for_run_and_job(run_id, job_id) do
     query =
       from d in Query.dataclip_with_body(),
         join: s in Lightning.Invocation.Step,
         on: s.input_dataclip_id == d.id and s.job_id == ^job_id,
-        join: a in assoc(s, :attempts),
-        on: a.id == ^attempt_id
+        join: a in assoc(s, :runs),
+        on: a.id == ^run_id
 
     Repo.one(query)
   end
 
-  @spec get_step_for_attempt_and_job(
-          attempt_id :: Ecto.UUID.t(),
+  @spec get_step_for_run_and_job(
+          run_id :: Ecto.UUID.t(),
           job_id :: Ecto.UUID.t()
         ) ::
           Lightning.Invocation.Step.t() | nil
-  def get_step_for_attempt_and_job(attempt_id, job_id) do
+  def get_step_for_run_and_job(run_id, job_id) do
     query =
       from s in Lightning.Invocation.Step,
-        join: a in assoc(s, :attempts),
-        on: a.id == ^attempt_id,
+        join: a in assoc(s, :runs),
+        on: a.id == ^run_id,
         where: s.job_id == ^job_id
 
     Repo.one(query)
@@ -392,7 +392,7 @@ defmodule Lightning.Invocation do
       as: :workflow,
       where: workflow.project_id == ^project_id,
       select: workorder,
-      preload: [workflow: workflow, attempts: [steps: :job]],
+      preload: [workflow: workflow, runs: [steps: :job]],
       order_by: [desc_nulls_first: workorder.last_activity],
       distinct: true
     )
@@ -467,7 +467,7 @@ defmodule Lightning.Invocation do
 
       :id, dynamic ->
         dynamic(
-          [workorder: wo, attempts: att, steps: step],
+          [workorder: wo, runs: att, steps: step],
           ^dynamic or like(type(wo.id, :string), ^"%#{search_term}%") or
             like(type(att.id, :string), ^"%#{search_term}%") or
             like(type(step.id, :string), ^"%#{search_term}%")
@@ -490,8 +490,8 @@ defmodule Lightning.Invocation do
           as: :input_dataclip
 
       :log, query ->
-        from [attempts: attempt] in safe_join_attempts(query),
-          left_join: log_line in assoc(attempt, :log_lines),
+        from [runs: run] in safe_join_runs(query),
+          left_join: log_line in assoc(run, :log_lines),
           as: :log_lines
 
       :id, query ->
@@ -499,12 +499,12 @@ defmodule Lightning.Invocation do
     end)
   end
 
-  defp safe_join_attempts(query) do
-    if has_named_binding?(query, :attempts) do
+  defp safe_join_runs(query) do
+    if has_named_binding?(query, :runs) do
       query
     else
-      join(query, :left, [workorder: workorder], assoc(workorder, :attempts),
-        as: :attempts
+      join(query, :left, [workorder: workorder], assoc(workorder, :runs),
+        as: :runs
       )
     end
   end
@@ -513,8 +513,8 @@ defmodule Lightning.Invocation do
     if has_named_binding?(query, :steps) do
       query
     else
-      from [attempts: attempt] in safe_join_attempts(query),
-        left_join: step in assoc(attempt, :steps),
+      from [runs: run] in safe_join_runs(query),
+        left_join: step in assoc(run, :steps),
         as: :steps
     end
   end
@@ -523,7 +523,7 @@ defmodule Lightning.Invocation do
     from(wo in Lightning.WorkOrder, where: wo.id in ^ids)
   end
 
-  def with_attempts(query) do
+  def with_runs(query) do
     steps_query =
       from(s in Lightning.Invocation.Step,
         as: :steps,
@@ -539,8 +539,8 @@ defmodule Lightning.Invocation do
         ]
       )
 
-    attempts_query =
-      from(a in Lightning.Attempt,
+    runs_query =
+      from(a in Lightning.Run,
         order_by: [desc: a.inserted_at],
         preload: [steps: ^steps_query]
       )
@@ -552,7 +552,7 @@ defmodule Lightning.Invocation do
           ^from(wf in Lightning.Workflows.Workflow,
             select: %{id: wf.id, name: wf.name, project_id: wf.project_id}
           ),
-        attempts: ^attempts_query
+        runs: ^runs_query
       ]
     )
   end

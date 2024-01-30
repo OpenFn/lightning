@@ -5,8 +5,8 @@
 
 #   alias Lightning.Pipeline
 #   alias Lightning.ObanManager
-#   alias Lightning.AttemptStep
-#   alias Lightning.Attempt
+#   alias Lightning.RunStep
+#   alias Lightning.Run
 #   alias Lightning.Invocation.Step
 #   alias Lightning.Repo
 
@@ -51,11 +51,11 @@
 
 #       dataclip = dataclip_fixture()
 
-#       {:ok, attempt_step} =
-#         AttemptStep.new()
+#       {:ok, run_step} =
+#         RunStep.new()
 #         |> Ecto.Changeset.put_assoc(
-#           :attempt,
-#           Attempt.changeset(%Attempt{}, %{
+#           :run,
+#           Run.changeset(%Run{}, %{
 #             work_order_id: work_order_fixture(workflow_id: job.workflow_id).id,
 #             reason_id:
 #               reason_fixture(
@@ -74,7 +74,7 @@
 #         )
 #         |> Repo.insert()
 
-#       %{step: step, attempt_step: attempt_step}
+#       %{step: step, run_step: run_step}
 #     end
 
 #     @tag skip: "Deprecated. To be deleted"
@@ -98,9 +98,9 @@
 
 #     @tag skip: "Deprecated. To be deleted"
 #     test "handle_event/4 marks a job as finished for :killed jobs", %{
-#       attempt_step: attempt_step
+#       run_step: run_step
 #     } do
-#       refute attempt_step.step.finished_at
+#       refute run_step.step.finished_at
 
 #       with_log(fn ->
 #         ObanManager.handle_event(
@@ -108,7 +108,7 @@
 #           %{duration: 5_096_921_850, queue_time: 106_015_000},
 #           %{
 #             job: %{
-#               args: %{"attempt_step_id" => attempt_step.id},
+#               args: %{"run_step_id" => run_step.id},
 #               worker: "Lightning.Pipeline"
 #             },
 #             error: %CaseClauseError{term: :killed},
@@ -118,16 +118,16 @@
 #         )
 #       end)
 
-#       step = Repo.get!(Step, attempt_step.step.id)
+#       step = Repo.get!(Step, run_step.step.id)
 
 #       assert step.finished_at
 #     end
 
 #     @tag skip: "Deprecated. To be deleted"
 #     test "handle_event/4 marks a job as finished for :timeout jobs", %{
-#       attempt_step: attempt_step
+#       run_step: run_step
 #     } do
-#       refute attempt_step.step.finished_at
+#       refute run_step.step.finished_at
 
 #       with_log(fn ->
 #         ObanManager.handle_event(
@@ -135,7 +135,7 @@
 #           %{duration: 5_096_921_850, queue_time: 106_015_000},
 #           %{
 #             job: %{
-#               args: %{"attempt_step_id" => attempt_step.id},
+#               args: %{"run_step_id" => run_step.id},
 #               worker: "Lightning.Pipeline"
 #             },
 #             error: %CaseClauseError{term: :timeout},
@@ -145,7 +145,7 @@
 #         )
 #       end)
 
-#       step = Repo.get!(Step, attempt_step.step.id)
+#       step = Repo.get!(Step, run_step.step.id)
 
 #       assert step.finished_at
 #     end

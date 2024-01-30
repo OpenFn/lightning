@@ -1,11 +1,11 @@
-defmodule Lightning.Invocation.AttemptTest do
+defmodule Lightning.Invocation.RunTest do
   use Lightning.DataCase, async: true
 
-  alias Lightning.Attempt
+  alias Lightning.Run
 
   describe "changeset/2" do
     test "must have a work_order" do
-      errors = Attempt.changeset(%Attempt{}, %{}) |> errors_on()
+      errors = Run.changeset(%Run{}, %{}) |> errors_on()
 
       assert errors[:work_order_id] == ["can't be blank"]
     end

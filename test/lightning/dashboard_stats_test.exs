@@ -45,7 +45,7 @@ defmodule Lightning.DashboardStatsTest do
                last_workorder: last_workorder,
                last_failed_workorder: last_workorder,
                failed_workorders_count: 1,
-               grouped_attempts_count: grouped_attempts_count,
+               grouped_runs_count: grouped_runs_count,
                grouped_workorders_count: grouped_workorders_count,
                step_count: 8,
                step_success_rate: ^step_success_rate,
@@ -56,7 +56,7 @@ defmodule Lightning.DashboardStatsTest do
                failed: 1,
                pending: 3,
                success: 1
-             } = grouped_attempts_count
+             } = grouped_runs_count
 
       assert %{
                failed: 1,
@@ -76,7 +76,7 @@ defmodule Lightning.DashboardStatsTest do
                last_workorder: last_workorder,
                last_failed_workorder: failed_last_workorder,
                failed_workorders_count: 1,
-               grouped_attempts_count: grouped_attempts_count,
+               grouped_runs_count: grouped_runs_count,
                grouped_workorders_count: grouped_workorders_count,
                step_count: 8,
                step_success_rate: ^step_success_rate,
@@ -90,7 +90,7 @@ defmodule Lightning.DashboardStatsTest do
                failed: 1,
                pending: 3,
                success: 1
-             } = grouped_attempts_count
+             } = grouped_runs_count
 
       assert %{
                failed: 1,
@@ -112,7 +112,7 @@ defmodule Lightning.DashboardStatsTest do
       failed_percent = round(2 * 100 * 100 / 10) / 100
 
       assert %ProjectMetrics{
-               attempt_metrics: %{
+               run_metrics: %{
                  failed: 2,
                  pending: 6,
                  success: 2,

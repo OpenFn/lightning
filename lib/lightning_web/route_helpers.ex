@@ -4,12 +4,12 @@ defmodule LightningWeb.RouteHelpers do
   """
   alias LightningWeb.Router.Helpers, as: Routes
 
-  def show_attempt_url(project_id, attempt_id) do
-    Routes.project_attempt_show_url(
+  def show_run_url(project_id, run_id) do
+    Routes.project_run_show_url(
       LightningWeb.Endpoint,
       :show,
       project_id,
-      attempt_id
+      run_id
     )
   end
 

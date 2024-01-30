@@ -53,12 +53,12 @@ defmodule LightningWeb.RunLive.ComponentsTest do
     dataclip = insert(:dataclip)
     output_dataclip = insert(:dataclip)
 
-    %{attempts: [attempt]} =
+    %{runs: [run]} =
       insert(:workorder,
         workflow: workflow,
         trigger: trigger,
         dataclip: dataclip,
-        attempts: [
+        runs: [
           %{
             state: :failed,
             dataclip: dataclip,
@@ -85,14 +85,14 @@ defmodule LightningWeb.RunLive.ComponentsTest do
         ]
       )
 
-    [first_step, second_step, third_step] = attempt.steps
+    [first_step, second_step, third_step] = run.steps
 
     project_id = workflow.project_id
 
     html =
       render_component(&Components.step_list_item/1,
         step: first_step,
-        attempt: attempt,
+        run: run,
         project_id: project_id,
         can_rerun_job: true
       )
@@ -104,12 +104,12 @@ defmodule LightningWeb.RunLive.ComponentsTest do
            )
            |> Enum.any?()
 
-    assert has_attempt_step_link?(html, workflow.project, attempt, first_step)
+    assert has_run_step_link?(html, workflow.project, run, first_step)
 
     html =
       render_component(&Components.step_list_item/1,
         step: second_step,
-        attempt: attempt,
+        run: run,
         project_id: project_id,
         can_rerun_job: true
       )
@@ -121,12 +121,12 @@ defmodule LightningWeb.RunLive.ComponentsTest do
            )
            |> Enum.any?()
 
-    assert has_attempt_step_link?(html, workflow.project, attempt, second_step)
+    assert has_run_step_link?(html, workflow.project, run, second_step)
 
     html =
       render_component(&Components.step_list_item/1,
         step: third_step,
-        attempt: attempt,
+        run: run,
         project_id: project_id,
         can_rerun_job: true
       )
@@ -138,56 +138,56 @@ defmodule LightningWeb.RunLive.ComponentsTest do
            )
            |> Enum.any?()
 
-    assert has_attempt_step_link?(html, workflow.project, attempt, third_step)
+    assert has_run_step_link?(html, workflow.project, run, third_step)
 
-    # Rerun attempt
-    last_step = List.last(attempt.steps)
+    # Rerun run
+    last_step = List.last(run.steps)
 
-    attempt2 =
-      insert(:attempt,
+    run2 =
+      insert(:run,
         state: :started,
-        work_order_id: attempt.work_order_id,
+        work_order_id: run.work_order_id,
         dataclip: dataclip,
         starting_job: last_step.job,
-        steps: attempt.steps -- [last_step]
+        steps: run.steps -- [last_step]
       )
 
-    attempt2_last_step =
+    run2_last_step =
       insert(:step,
-        attempts: [attempt2],
+        runs: [run2],
         job: job_3,
         exit_reason: nil,
         finished_at: nil
       )
 
-    first_step = hd(attempt2.steps)
+    first_step = hd(run2.steps)
 
     html =
       render_component(&Components.step_list_item/1,
         step: first_step,
-        attempt: attempt2,
+        run: run2,
         project_id: project_id,
         can_rerun_job: true
       )
 
     assert html
            |> Floki.parse_fragment!()
-           |> Floki.find(~s{span[id="clone_#{attempt2.id}_#{first_step.id}"]})
+           |> Floki.find(~s{span[id="clone_#{run2.id}_#{first_step.id}"]})
            |> Enum.any?()
 
     assert html =~ "This step was originally executed in a previous run"
 
     html =
       render_component(&Components.step_list_item/1,
-        step: attempt2_last_step,
-        attempt: attempt2,
+        step: run2_last_step,
+        run: run2,
         project_id: project_id,
         can_rerun_job: true
       )
 
     refute html
            |> Floki.parse_fragment!()
-           |> Floki.find(~s{span[id="clone_#{attempt2.id}_#{first_step.id}"]})
+           |> Floki.find(~s{span[id="clone_#{run2.id}_#{first_step.id}"]})
            |> Enum.any?()
 
     refute html =~ "This step was originally executed in a previous run"
@@ -198,14 +198,14 @@ defmodule LightningWeb.RunLive.ComponentsTest do
 
     dataclip = insert(:dataclip)
 
-    %{attempts: [attempt]} =
+    %{runs: [run]} =
       insert(:workorder,
         workflow: workflow,
         trigger: trigger,
         dataclip: dataclip,
         state: :failed
       )
-      |> with_attempt(
+      |> with_run(
         state: :failed,
         dataclip: dataclip,
         starting_trigger: trigger,
@@ -215,14 +215,14 @@ defmodule LightningWeb.RunLive.ComponentsTest do
         ]
       )
 
-    step = List.first(attempt.steps)
+    step = List.first(run.steps)
 
     project_id = step.job.workflow.project_id
 
     html =
       render_component(&Components.step_list_item/1,
         step: step,
-        attempt: attempt,
+        run: run,
         project_id: project_id,
         can_rerun_job: true
       )
@@ -235,7 +235,7 @@ defmodule LightningWeb.RunLive.ComponentsTest do
     html =
       render_component(&Components.step_list_item/1,
         step: step,
-        attempt: attempt,
+        run: run,
         project_id: project_id,
         can_rerun_job: false
       )
@@ -278,10 +278,10 @@ defmodule LightningWeb.RunLive.ComponentsTest do
     |> String.replace(<<160::utf8>>, " ")
   end
 
-  defp has_attempt_step_link?(html, project, attempt, step) do
+  defp has_run_step_link?(html, project, run, step) do
     html
     |> Floki.find(
-      ~s{a[href='#{~p"/projects/#{project}/runs/#{attempt}?#{%{step: step.id}}"}']}
+      ~s{a[href='#{~p"/projects/#{project}/runs/#{run}?#{%{step: step.id}}"}']}
     )
     |> Enum.any?()
   end

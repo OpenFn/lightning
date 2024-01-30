@@ -1,6 +1,6 @@
-defmodule Lightning.Attempt do
+defmodule Lightning.Run do
   @moduledoc """
-  Ecto model for Attempts.
+  Ecto model for Runs.
 
 
   """
@@ -10,9 +10,9 @@ defmodule Lightning.Attempt do
   import Lightning.Validators
 
   alias Lightning.Accounts.User
-  alias Lightning.AttemptStep
   alias Lightning.Invocation.LogLine
   alias Lightning.Invocation.Step
+  alias Lightning.RunStep
   alias Lightning.Workflows.Job
   alias Lightning.Workflows.Trigger
   alias Lightning.WorkOrder
@@ -28,7 +28,7 @@ defmodule Lightning.Attempt do
   ]
 
   @doc """
-  Returns the list of final states for an attempt.
+  Returns the list of final states for a run.
   """
   defmacro final_states do
     quote do
@@ -44,7 +44,7 @@ defmodule Lightning.Attempt do
 
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id
-  schema "attempts" do
+  schema "runs" do
     belongs_to :work_order, WorkOrder
 
     belongs_to :starting_job, Job
@@ -57,7 +57,7 @@ defmodule Lightning.Attempt do
     has_many :log_lines, LogLine
 
     many_to_many :steps, Step,
-      join_through: AttemptStep,
+      join_through: RunStep,
       preload_order: [asc: :started_at]
 
     field :state, Ecto.Enum,
@@ -112,8 +112,8 @@ defmodule Lightning.Attempt do
   end
 
   @doc false
-  def changeset(attempt, attrs) do
-    attempt
+  def changeset(run, attrs) do
+    run
     |> cast(attrs, [:work_order_id, :priority])
     |> cast_assoc(:steps, required: false)
     |> validate_required([:work_order_id])
@@ -121,8 +121,8 @@ defmodule Lightning.Attempt do
     |> validate()
   end
 
-  def start(attempt) do
-    attempt
+  def start(run) do
+    run
     |> change(
       state: :started,
       started_at: DateTime.utc_now()
@@ -132,8 +132,8 @@ defmodule Lightning.Attempt do
 
   @spec complete(%__MODULE__{}, %{optional(any()) => any()}) ::
           Ecto.Changeset.t()
-  def complete(attempt, params) do
-    attempt
+  def complete(run, params) do
+    run
     |> change()
     |> put_change(:state, nil)
     |> cast(params, [:state, :error_type])
@@ -154,7 +154,7 @@ defmodule Lightning.Attempt do
         changeset
         |> add_error(
           :state,
-          "cannot mark attempt #{to} that has not been claimed by a worker"
+          "cannot mark run #{to} that has not been claimed by a worker"
         )
 
       {:claimed, :started} ->

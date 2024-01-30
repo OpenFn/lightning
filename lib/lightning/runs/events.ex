@@ -1,4 +1,4 @@
-defmodule Lightning.Attempts.Events do
+defmodule Lightning.Runs.Events do
   defmodule StepStarted do
     @moduledoc false
     defstruct step: nil
@@ -9,9 +9,9 @@ defmodule Lightning.Attempts.Events do
     defstruct step: nil
   end
 
-  defmodule AttemptUpdated do
+  defmodule RunUpdated do
     @moduledoc false
-    defstruct attempt: nil
+    defstruct run: nil
   end
 
   defmodule LogAppended do
@@ -19,37 +19,37 @@ defmodule Lightning.Attempts.Events do
     defstruct log_line: nil
   end
 
-  def step_started(attempt_id, step) do
+  def step_started(run_id, step) do
     Lightning.broadcast(
-      topic(attempt_id),
+      topic(run_id),
       %StepStarted{step: step}
     )
   end
 
-  def step_completed(attempt_id, step) do
+  def step_completed(run_id, step) do
     Lightning.broadcast(
-      topic(attempt_id),
+      topic(run_id),
       %StepCompleted{step: step}
     )
   end
 
-  def attempt_updated(attempt) do
+  def run_updated(run) do
     Lightning.broadcast(
-      topic(attempt.id),
-      %AttemptUpdated{attempt: attempt}
+      topic(run.id),
+      %RunUpdated{run: run}
     )
   end
 
   def log_appended(log_line) do
     Lightning.broadcast(
-      topic(log_line.attempt_id),
+      topic(log_line.run_id),
       %LogAppended{log_line: log_line}
     )
   end
 
-  def subscribe(%Lightning.Attempt{id: id}) do
+  def subscribe(%Lightning.Run{id: id}) do
     Lightning.subscribe(topic(id))
   end
 
-  defp topic(id), do: "attempt_events:#{id}"
+  defp topic(id), do: "run_events:#{id}"
 end

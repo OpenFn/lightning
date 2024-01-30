@@ -2,7 +2,7 @@ defmodule Lightning.Invocation.Step do
   @moduledoc """
   Ecto model for Steps.
 
-  A step is part of an attempt and represents the work initiated for a single
+  A step is part of a run and represents the work initiated for a single
   Job with a single `input_dataclip`.
 
   Once completed (successfully) it will have an `output_dataclip` associated
@@ -22,11 +22,11 @@ defmodule Lightning.Invocation.Step do
 
   import Ecto.Changeset
 
-  alias Lightning.Attempt
-  alias Lightning.AttemptStep
   alias Lightning.Credentials.Credential
   alias Lightning.Invocation.Dataclip
   alias Lightning.Invocation.LogLine
+  alias Lightning.Run
+  alias Lightning.RunStep
   alias Lightning.Workflows.Job
 
   @type t :: %__MODULE__{
@@ -53,7 +53,7 @@ defmodule Lightning.Invocation.Step do
 
     has_many :log_lines, LogLine, preload_order: [asc: :timestamp]
 
-    many_to_many :attempts, Attempt, join_through: AttemptStep
+    many_to_many :runs, Run, join_through: RunStep
 
     timestamps(type: :utc_datetime_usec)
   end

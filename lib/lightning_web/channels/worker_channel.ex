@@ -4,7 +4,7 @@ defmodule LightningWeb.WorkerChannel do
   """
   use LightningWeb, :channel
 
-  alias Lightning.Attempts
+  alias Lightning.Runs
   alias Lightning.Workers
 
   @impl true
@@ -24,20 +24,20 @@ defmodule LightningWeb.WorkerChannel do
 
   @impl true
   def handle_in("claim", %{"demand" => demand}, socket) do
-    case Attempts.claim(demand) do
-      {:ok, attempts} ->
-        attempts =
-          attempts
-          |> Enum.map(fn attempt ->
-            token = Lightning.Workers.generate_attempt_token(attempt)
+    case Runs.claim(demand) do
+      {:ok, runs} ->
+        runs =
+          runs
+          |> Enum.map(fn run ->
+            token = Lightning.Workers.generate_run_token(run)
 
             %{
-              "id" => attempt.id,
+              "id" => run.id,
               "token" => token
             }
           end)
 
-        {:reply, {:ok, %{attempts: attempts}}, socket}
+        {:reply, {:ok, %{runs: runs}}, socket}
 
       {:error, changeset} ->
         {:reply, {:error, LightningWeb.ChangesetJSON.error(changeset)}, socket}

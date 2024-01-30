@@ -25,7 +25,8 @@ defmodule Lightning.Credentials do
 
   @doc """
   Perform, when called with %{"type" => "purge_deleted"}
-  will find credentials that are ready for permanent deletion, set their bodies to null, and attempt to purge them.
+  will find credentials that are ready for permanent deletion, set their bodies
+  to null, and try to purge them.
   """
 
   @impl Oban.Worker

@@ -45,8 +45,8 @@ defmodule Lightning.Invocation.Query do
   end
 
   @doc """
-  The last successful step for a job, used in scheduler to enable downstream attempts
-  to access a previous attempt's state
+  The last successful step for a job, used in scheduler to enable downstream runs
+  to access a previous run's state
   """
   @spec last_successful_step_for_job(Job.t()) :: Ecto.Queryable.t()
   def last_successful_step_for_job(%Job{id: id}) do

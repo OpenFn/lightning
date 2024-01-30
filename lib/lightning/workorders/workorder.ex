@@ -7,12 +7,12 @@ defmodule Lightning.WorkOrder do
 
   import Ecto.Changeset
 
-  alias Lightning.Attempt
   alias Lightning.Invocation.Dataclip
+  alias Lightning.Run
   alias Lightning.Workflows.Trigger
   alias Lightning.Workflows.Workflow
 
-  require Attempt
+  require Run
 
   @type t :: %__MODULE__{
           __meta__: Ecto.Schema.Metadata.t(),
@@ -32,7 +32,7 @@ defmodule Lightning.WorkOrder do
             :pending,
             :running
           ],
-          Attempt.final_states()
+          Run.final_states()
         ),
       default: :pending
 
@@ -44,7 +44,7 @@ defmodule Lightning.WorkOrder do
     belongs_to :trigger, Trigger
     belongs_to :dataclip, Dataclip
 
-    has_many :attempts, Attempt, preload_order: [desc: :inserted_at]
+    has_many :runs, Run, preload_order: [desc: :inserted_at]
     has_many :jobs, through: [:workflow, :jobs]
 
     timestamps(type: :utc_datetime_usec)
@@ -56,8 +56,8 @@ defmodule Lightning.WorkOrder do
   end
 
   @doc false
-  def changeset(attempt, attrs) do
-    attempt
+  def changeset(run, attrs) do
+    run
     |> cast(attrs, [:state, :last_activity, :workflow_id])
     |> validate_required([:state, :last_activity, :workflow_id])
     |> validate()

@@ -92,14 +92,14 @@ defmodule Lightning.Factories do
     }
   end
 
-  def attempt_factory do
-    %Lightning.Attempt{
+  def run_factory do
+    %Lightning.Run{
       id: fn -> Ecto.UUID.generate() end
     }
   end
 
-  def attempt_step_factory do
-    %Lightning.AttemptStep{
+  def run_step_factory do
+    %Lightning.RunStep{
       id: fn -> Ecto.UUID.generate() end
     }
   end
@@ -179,40 +179,40 @@ defmodule Lightning.Factories do
   end
 
   @doc """
-  Inserts an attempt and associates it two-way with an work order.
+  Inserts a run and associates it two-way with an work order.
   ```
   work_order =
     insert(:workorder, workflow: workflow)
-    |> with_attempt(attempt)
+    |> with_run(run)
 
   > **NOTE** The work order must be inserted before calling this function.
   ```
   """
-  def with_attempt(work_order, attempt_or_args) do
+  def with_run(work_order, run_or_args) do
     if work_order.__meta__.state == :built do
-      raise "Cannot associate an attempt with a work order that has not been inserted"
+      raise "Cannot associate a run with a work order that has not been inserted"
     end
 
-    attempt =
-      case attempt_or_args do
-        %Lightning.Attempt{} = attempt ->
-          if attempt.__meta__.state != :built do
-            raise "The attempt must be built, not inserted"
+    run =
+      case run_or_args do
+        %Lightning.Run{} = run ->
+          if run.__meta__.state != :built do
+            raise "The run must be built, not inserted"
           end
 
-          attempt
+          run
           |> merge_attributes(%{work_order: work_order})
           |> insert()
 
-        attempt_args ->
-          build(:attempt, attempt_args)
+        run_args ->
+          build(:run, run_args)
           |> merge_attributes(%{work_order: work_order})
           |> insert()
       end
 
     %{
       work_order
-      | attempts: merge_assoc(work_order.attempts, attempt)
+      | runs: merge_assoc(work_order.runs, run)
     }
   end
 

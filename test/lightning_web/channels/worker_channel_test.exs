@@ -34,50 +34,50 @@ defmodule LightningWeb.WorkerChannelTest do
       %{socket: socket}
     end
 
-    test "returns an empty list when there are no attempts", %{socket: socket} do
+    test "returns an empty list when there are no runs", %{socket: socket} do
       ref = push(socket, "claim", %{"demand" => 1})
-      assert_reply ref, :ok, %{attempts: []}
+      assert_reply ref, :ok, %{runs: []}
     end
 
-    test "returns attempts", %{socket: socket} do
+    test "returns runs", %{socket: socket} do
       %{triggers: [trigger]} =
         workflow =
         insert(:simple_workflow)
 
       Lightning.Stub.reset_time()
 
-      [attempt | rest] =
+      [run | rest] =
         1..3
         |> Enum.map(fn _ ->
-          {:ok, %{attempts: [attempt]}} =
+          {:ok, %{runs: [run]}} =
             WorkOrders.create_for(trigger,
               workflow: workflow,
               dataclip: params_with_assocs(:dataclip)
             )
 
-          attempt
+          run
         end)
 
-      %{id: attempt_id} = attempt
+      %{id: run_id} = run
 
       ref = push(socket, "claim", %{"demand" => 1})
 
       assert_reply ref, :ok, %{
-        attempts: [%{"id" => ^attempt_id, "token" => token}]
+        runs: [%{"id" => ^run_id, "token" => token}]
       }
 
       Lightning.Stub.freeze_time(DateTime.utc_now() |> DateTime.add(5, :second))
 
       assert {:ok, claims} =
-               Workers.verify_attempt_token(token, %{id: attempt_id})
+               Workers.verify_run_token(token, %{id: run_id})
 
-      assert claims["id"] == attempt_id
+      assert claims["id"] == run_id
 
       ref = push(socket, "claim", %{"demand" => 4})
-      assert_reply ref, :ok, %{attempts: attempts}
+      assert_reply ref, :ok, %{runs: runs}
 
-      assert attempts |> Enum.map(& &1["id"]) == rest |> Enum.map(& &1.id)
-      assert length(attempts) == 2, "only 2 attempts should be returned"
+      assert runs |> Enum.map(& &1["id"]) == rest |> Enum.map(& &1.id)
+      assert length(runs) == 2, "only 2 runs should be returned"
     end
   end
 end

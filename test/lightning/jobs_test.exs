@@ -1,7 +1,7 @@
 defmodule Lightning.JobsTest do
   use Lightning.DataCase, async: true
 
-  alias Lightning.Attempt
+  alias Lightning.Run
   alias Lightning.Invocation
   alias Lightning.Jobs
   alias Lightning.Repo
@@ -283,15 +283,15 @@ defmodule Lightning.JobsTest do
 
       Scheduler.enqueue_cronjobs()
 
-      attempt = Repo.one(Lightning.Attempt)
+      run = Repo.one(Lightning.Run)
 
-      assert attempt.starting_trigger_id == trigger.id
+      assert run.starting_trigger_id == trigger.id
 
-      attempt =
-        Repo.preload(attempt, dataclip: Invocation.Query.dataclip_with_body())
+      run =
+        Repo.preload(run, dataclip: Invocation.Query.dataclip_with_body())
 
-      assert attempt.dataclip.type == :global
-      assert attempt.dataclip.body == %{}
+      assert run.dataclip.type == :global
+      assert run.dataclip.body == %{}
     end
   end
 
@@ -317,8 +317,8 @@ defmodule Lightning.JobsTest do
 
       dataclip = insert(:dataclip)
 
-      attempt =
-        insert(:attempt,
+      run =
+        insert(:run,
           work_order:
             build(:workorder,
               workflow: job.workflow,
@@ -340,23 +340,23 @@ defmodule Lightning.JobsTest do
           ]
         )
 
-      [old_step] = attempt.steps
+      [old_step] = run.steps
 
       _result = Scheduler.enqueue_cronjobs()
 
-      new_attempt =
-        Attempt
+      new_run =
+        Run
         |> last(:inserted_at)
         |> preload(dataclip: ^Invocation.Query.dataclip_with_body())
         |> Repo.one()
 
-      assert attempt.dataclip.type == :http_request
+      assert run.dataclip.type == :http_request
       assert old_step.input_dataclip.type == :http_request
       assert old_step.input_dataclip.body == %{}
 
-      refute new_attempt.id == attempt.id
-      assert new_attempt.dataclip.type == :step_result
-      assert new_attempt.dataclip.body == old_step.output_dataclip.body
+      refute new_run.id == run.id
+      assert new_run.dataclip.type == :step_result
+      assert new_run.dataclip.body == old_step.output_dataclip.body
     end
   end
 end

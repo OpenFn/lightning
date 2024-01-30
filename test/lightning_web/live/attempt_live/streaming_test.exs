@@ -1,7 +1,7 @@
-defmodule LightningWeb.AttemptLive.StreamingTest do
+defmodule LightningWeb.RunLive.StreamingTest do
   use Lightning.DataCase, async: true
 
-  alias LightningWeb.AttemptLive.Streaming
+  alias LightningWeb.RunLive.Streaming
 
   defp create_steps_dataclips(_context) do
     user = insert(:user)
@@ -88,8 +88,8 @@ defmodule LightningWeb.AttemptLive.StreamingTest do
     step3 =
       insert(:step, job: job3, started_at: DateTime.add(now, 2, :microsecond))
 
-    attempt =
-      insert(:attempt,
+    run =
+      insert(:run,
         work_order:
           build(:workorder,
             workflow: workflow,
@@ -103,12 +103,12 @@ defmodule LightningWeb.AttemptLive.StreamingTest do
         steps: [step1, step2]
       )
 
-    insert(:attempt_step, attempt: attempt, step: step1)
-    insert(:attempt_step, attempt: attempt, step: step2)
-    insert(:attempt_step, attempt: attempt, step: step3)
+    insert(:run_step, run: run, step: step1)
+    insert(:run_step, run: run, step: step2)
+    insert(:run_step, run: run, step: step3)
 
     %{
-      attempt: attempt,
+      run: run,
       output_dataclip: output_dataclip,
       job: job2,
       step2: step2

@@ -27,10 +27,10 @@ environment.
 
 ## Workers
 
-Lightning uses external worker processes for executing Attempts. There are three
+Lightning uses external worker processes for executing Runs. There are three
 settings required to configure worker authentication.
 
-- `WORKER_ATTEMPTS_PRIVATE_KEY`
+- `WORKER_RUNS_PRIVATE_KEY`
 - `WORKER_LIGHTNING_PUBLIC_KEY`
 - `WORKER_SECRET`
 

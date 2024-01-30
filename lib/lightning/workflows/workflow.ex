@@ -35,7 +35,7 @@ defmodule Lightning.Workflows.Workflow do
     has_many :triggers, Trigger
 
     has_many :work_orders, Lightning.WorkOrder
-    has_many :attempts, through: [:work_orders, :attempts]
+    has_many :runs, through: [:work_orders, :runs]
     belongs_to :project, Project
 
     field :deleted_at, :utc_datetime

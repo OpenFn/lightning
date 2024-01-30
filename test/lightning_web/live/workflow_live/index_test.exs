@@ -71,8 +71,8 @@ defmodule LightningWeb.WorkflowLive.IndexTest do
 
       # Metrics
       # 10 total workorders
-      # 10 total attempts (4 pending)
-      # 2 successful attempts out of 4 completed
+      # 10 total runs (4 pending)
+      # 2 successful runs out of 4 completed
       # 2 work orders failed out of 10
       assert Regex.match?(~r/Work Orders.*?<div>\s*10.*\(6 pending\)/s, html)
 

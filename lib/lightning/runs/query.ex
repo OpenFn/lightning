@@ -1,18 +1,18 @@
-defmodule Lightning.Attempts.Query do
+defmodule Lightning.Runs.Query do
   @moduledoc """
-  Query functions for working with Attempts
+  Query functions for working with Runs
   """
   import Ecto.Query
 
-  alias Lightning.Attempt
+  alias Lightning.Run
 
-  require Lightning.Attempt
+  require Lightning.Run
 
   @doc """
-  Return all attempts that have been claimed by a worker before the earliest
+  Return all runs that have been claimed by a worker before the earliest
   acceptable start time (determined by the longest acceptable run time) but are
   still incomplete. This indicates that we may have lost contact with the worker
-  that was responsible for executing the attempt.
+  that was responsible for executing the run.
   """
   @spec lost(DateTime.t()) :: Ecto.Queryable.t()
   def lost(%DateTime{} = now) do
@@ -26,9 +26,9 @@ defmodule Lightning.Attempts.Query do
       |> DateTime.add(-max_run_duration_seconds, :second)
       |> DateTime.add(-grace_period, :second)
 
-    final_states = Attempt.final_states()
+    final_states = Run.final_states()
 
-    from(att in Attempt,
+    from(att in Run,
       where: is_nil(att.finished_at),
       where: att.state not in ^final_states,
       where: att.claimed_at < ^oldest_valid_claim
