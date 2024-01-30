@@ -10,8 +10,8 @@ defmodule LightningWeb.AttemptChannel do
   alias Lightning.Repo
   alias Lightning.Scrubber
   alias Lightning.Workers
-  alias LightningWeb.RunWithOptions
   alias LightningWeb.RunOptions
+  alias LightningWeb.RunWithOptions
 
   require Jason.Helpers
   require Logger
