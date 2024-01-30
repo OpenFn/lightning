@@ -7,13 +7,13 @@
     <meta name="generator" content="ExDoc v0.30.9">
     <meta name="project" content="Lightning v2.0.0-rc7">
 
-    <title>Lightning.Attempts.Adaptor — Lightning v2.0.0-rc7</title>
+    <title>Lightning.RunStep — Lightning v2.0.0-rc7</title>
     <link rel="stylesheet" href="dist/html-elixir-XFYN5IVA.css" />
 
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-EPF2X7PV.js"></script>
-    <script src="dist/sidebar_items-AA0128C8.js"></script>
+    <script src="dist/sidebar_items-F4341F54.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -21,7 +21,7 @@
 
 
   </head>
-  <body data-type="modules" class="page-behaviour">
+  <body data-type="modules" class="page-module">
     <script>
 
       try {
@@ -125,19 +125,19 @@ Pages
 </button>
 
 
-    <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/attempts.ex#L11" title="View Source" class="icon-action" rel="help">
+    <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation/run_step.ex#L1" title="View Source" class="icon-action" rel="help">
       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
       <span class="sr-only">View Source</span>
     </a>
 
-  <span translate="no">Lightning.Attempts.Adaptor</span> <small>behaviour</small>
+  <span translate="no">Lightning.RunStep</span> 
   <small class="app-vsn" translate="no">(Lightning v2.0.0-rc7)</small>
 
 </h1>
 
 
   <section id="moduledoc">
-<p>Behaviour for implementing an adaptor for the Lightning.Attempts module.</p>
+<p>Ecto model for an the Steps in a Run.</p>
   </section>
 
 
@@ -148,14 +148,28 @@ Pages
       </a>
       <span class="text">Summary</span>
     </h1>
-<div class="summary-callbacks summary">
+<div class="summary-types summary">
   <h2>
-    <a href="#callbacks">Callbacks</a>
+    <a href="#types">Types</a>
   </h2>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#c:claim/1" translate="no">claim(demand)</a>
+        <a href="#t:t/0" translate="no">t()</a>
+
+      </div>
+
+    </div>
+
+</div>
+<div class="summary-functions summary">
+  <h2>
+    <a href="#functions">Functions</a>
+  </h2>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#new/1" translate="no">new(attrs \\ %{})</a>
 
       </div>
 
@@ -163,15 +177,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#c:dequeue/1" translate="no">dequeue(attempt)</a>
-
-      </div>
-
-    </div>
-
-    <div class="summary-row">
-      <div class="summary-signature">
-        <a href="#c:enqueue/1" translate="no">enqueue(attempt)</a>
+        <a href="#new/2" translate="no">new(run, step)</a>
 
       </div>
 
@@ -182,24 +188,24 @@ Pages
   </section>
 
 
-  <section id="callbacks" class="details-list">
+  <section id="types" class="details-list">
     <h1 class="section-heading">
-      <a class="hover-link" href="#callbacks">
+      <a class="hover-link" href="#types">
         <i class="ri-link-m" aria-hidden="true"></i>
       </a>
-      <span class="text">Callbacks</span>
+      <span class="text">Types</span>
     </h1>
-    <div class="callbacks-list">
-<section class="detail" id="c:claim/1">
+    <div class="types-list">
+<section class="detail" id="t:t/0">
 
   <div class="detail-header">
-    <a href="#c:claim/1" class="detail-link" title="Link to this callback">
+    <a href="#t:t/0" class="detail-link" title="Link to this type">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this callback</span>
+      <span class="sr-only">Link to this type</span>
     </a>
-    <h1 class="signature" translate="no">claim(demand)</h1>
+    <h1 class="signature" translate="no">t()</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/attempts.ex#L23" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation/run_step.ex#L12" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -211,23 +217,45 @@ Pages
 
       <div class="specs">
 
-          <pre translate="no"><span class="attribute">@callback</span> claim(demand :: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">non_neg_integer</a>()) :: {:ok, [<a href="Lightning.Attempt.html#t:t/0">Lightning.Attempt.t</a>()]}</pre>
+          <pre translate="no"><span class="attribute">@type</span> t() :: %Lightning.RunStep{
+  __meta__: <a href="https://hexdocs.pm/ecto/3.10.3/Ecto.Schema.Metadata.html#t:t/0">Ecto.Schema.Metadata.t</a>(),
+  id: <a href="https://hexdocs.pm/ecto/3.10.3/Ecto.UUID.html#t:t/0">Ecto.UUID.t</a>() | nil,
+  inserted_at: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
+  run: <a href="Lightning.Run.html#t:t/0">Lightning.Run.t</a>() | <a href="https://hexdocs.pm/ecto/3.10.3/Ecto.Association.NotLoaded.html#t:t/0">Ecto.Association.NotLoaded.t</a>(),
+  run_id: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
+  step: <a href="Lightning.Invocation.Step.html#t:t/0">Lightning.Invocation.Step.t</a>() | <a href="https://hexdocs.pm/ecto/3.10.3/Ecto.Association.NotLoaded.html#t:t/0">Ecto.Association.NotLoaded.t</a>(),
+  step_id: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>()
+}</pre>
 
       </div>
 
 
   </section>
 </section>
-<section class="detail" id="c:dequeue/1">
+
+    </div>
+  </section>
+
+  <section id="functions" class="details-list">
+    <h1 class="section-heading">
+      <a class="hover-link" href="#functions">
+        <i class="ri-link-m" aria-hidden="true"></i>
+      </a>
+      <span class="text">Functions</span>
+    </h1>
+    <div class="functions-list">
+<section class="detail" id="new/1">
+
+    <span id="new/0"></span>
 
   <div class="detail-header">
-    <a href="#c:dequeue/1" class="detail-link" title="Link to this callback">
+    <a href="#new/1" class="detail-link" title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this callback</span>
+      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">dequeue(attempt)</h1>
+    <h1 class="signature" translate="no">new(attrs \\ %{})</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/attempts.ex#L26" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation/run_step.ex#L28" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -236,26 +264,20 @@ Pages
   </div>
 
   <section class="docstring">
-
-      <div class="specs">
-
-          <pre translate="no"><span class="attribute">@callback</span> dequeue(attempt :: <a href="Lightning.Attempt.html#t:t/0">Lightning.Attempt.t</a>()) :: {:ok, <a href="Lightning.Attempt.html#t:t/0">Lightning.Attempt.t</a>()}</pre>
-
-      </div>
 
 
   </section>
 </section>
-<section class="detail" id="c:enqueue/1">
+<section class="detail" id="new/2">
 
   <div class="detail-header">
-    <a href="#c:enqueue/1" class="detail-link" title="Link to this callback">
+    <a href="#new/2" class="detail-link" title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this callback</span>
+      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">enqueue(attempt)</h1>
+    <h1 class="signature" translate="no">new(run, step)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/attempts.ex#L19" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation/run_step.ex#L37" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -267,11 +289,12 @@ Pages
 
       <div class="specs">
 
-          <pre translate="no"><span class="attribute">@callback</span> enqueue(
-  attempt :: <a href="Lightning.Attempt.html#t:t/0">Lightning.Attempt.t</a>() | <a href="https://hexdocs.pm/ecto/3.10.3/Ecto.Changeset.html#t:t/1">Ecto.Changeset.t</a>(<a href="Lightning.Attempt.html#t:t/0">Lightning.Attempt.t</a>())
-) ::
-  {:ok, <a href="Lightning.Attempt.html#t:t/0">Lightning.Attempt.t</a>()}
-  | {:error, <a href="https://hexdocs.pm/ecto/3.10.3/Ecto.Changeset.html#t:t/1">Ecto.Changeset.t</a>(<a href="Lightning.Attempt.html#t:t/0">Lightning.Attempt.t</a>())}</pre>
+          <pre translate="no"><span class="attribute">@spec</span> new(
+  run :: <a href="Lightning.Run.html#t:t/0">Lightning.Run.t</a>() | <a href="https://hexdocs.pm/ecto/3.10.3/Ecto.Changeset.html#t:t/1">Ecto.Changeset.t</a>(<a href="Lightning.Run.html#t:t/0">Lightning.Run.t</a>()),
+  step ::
+    <a href="Lightning.Invocation.Step.html#t:t/0">Lightning.Invocation.Step.t</a>()
+    | <a href="https://hexdocs.pm/ecto/3.10.3/Ecto.Changeset.html#t:t/1">Ecto.Changeset.t</a>(<a href="Lightning.Invocation.Step.html#t:t/0">Lightning.Invocation.Step.t</a>())
+) :: <a href="https://hexdocs.pm/ecto/3.10.3/Ecto.Changeset.html#t:t/1">Ecto.Changeset.t</a>(<a href="#t:t/0">t</a>())</pre>
 
       </div>
 

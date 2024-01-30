@@ -7,13 +7,13 @@
     <meta name="generator" content="ExDoc v0.30.9">
     <meta name="project" content="Lightning v2.0.0-rc7">
 
-    <title>Lightning.Attempts.Queue — Lightning v2.0.0-rc7</title>
+    <title>Lightning.Runs.Query — Lightning v2.0.0-rc7</title>
     <link rel="stylesheet" href="dist/html-elixir-XFYN5IVA.css" />
 
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-EPF2X7PV.js"></script>
-    <script src="dist/sidebar_items-AA0128C8.js"></script>
+    <script src="dist/sidebar_items-F4341F54.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -125,22 +125,94 @@ Pages
 </button>
 
 
-    <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/attempts/queue.ex#L1" title="View Source" class="icon-action" rel="help">
+    <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs/query.ex#L1" title="View Source" class="icon-action" rel="help">
       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
       <span class="sr-only">View Source</span>
     </a>
 
-  <span translate="no">Lightning.Attempts.Queue</span> 
+  <span translate="no">Lightning.Runs.Query</span> 
   <small class="app-vsn" translate="no">(Lightning v2.0.0-rc7)</small>
 
 </h1>
 
 
   <section id="moduledoc">
-<p>Allows adding, removing or claiming work to be executed by the Runtime.</p>
+<p>Query functions for working with Runs</p>
   </section>
 
 
+  <section id="summary" class="details-list">
+    <h1 class="section-heading">
+      <a class="hover-link" href="#summary">
+        <i class="ri-link-m" aria-hidden="true"></i>
+      </a>
+      <span class="text">Summary</span>
+    </h1>
+<div class="summary-functions summary">
+  <h2>
+    <a href="#functions">Functions</a>
+  </h2>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#lost/1" translate="no">lost(now)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Return all runs that have been claimed by a worker before the earliest
+acceptable start time (determined by the longest acceptable run time) but are
+still incomplete. This indicates that we may have lost contact with the worker
+that was responsible for executing the run.</p></div>
+
+    </div>
+
+</div>
+
+  </section>
+
+
+  <section id="functions" class="details-list">
+    <h1 class="section-heading">
+      <a class="hover-link" href="#functions">
+        <i class="ri-link-m" aria-hidden="true"></i>
+      </a>
+      <span class="text">Functions</span>
+    </h1>
+    <div class="functions-list">
+<section class="detail" id="lost/1">
+
+  <div class="detail-header">
+    <a href="#lost/1" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">lost(now)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs/query.ex#L18" class="icon-action" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> lost(<a href="https://hexdocs.pm/elixir/DateTime.html#t:t/0">DateTime.t</a>()) :: <a href="https://hexdocs.pm/ecto/3.10.3/Ecto.Queryable.html#t:t/0">Ecto.Queryable.t</a>()</pre>
+
+      </div>
+
+<p>Return all runs that have been claimed by a worker before the earliest
+acceptable start time (determined by the longest acceptable run time) but are
+still incomplete. This indicates that we may have lost contact with the worker
+that was responsible for executing the run.</p>
+  </section>
+</section>
+
+    </div>
+  </section>
 
       <footer class="footer">
         <p>

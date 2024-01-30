@@ -13,7 +13,7 @@
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-EPF2X7PV.js"></script>
-    <script src="dist/sidebar_items-AA0128C8.js"></script>
+    <script src="dist/sidebar_items-F4341F54.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -137,7 +137,7 @@ Pages
 
 
   <section id="moduledoc">
-<p>Ecto model for Steps.</p><p>A step is part of an attempt and represents the work initiated for a single
+<p>Ecto model for Steps.</p><p>A step is part of a run and represents the work initiated for a single
 Job with a single <code class="inline">input_dataclip</code>.</p><p>Once completed (successfully) it will have an <code class="inline">output_dataclip</code> associated
 with it as well.</p><p>When a step finishes, it's <code class="inline">:exit_reason</code> is set to one of following strings:</p><ul><li> <code class="inline">&quot;success&quot;</code></li><li> <code class="inline">&quot;fail&quot;</code></li><li> <code class="inline">&quot;crash&quot;</code></li><li> <code class="inline">&quot;cancel&quot;</code></li><li> <code class="inline">&quot;kill&quot;</code></li><li> <code class="inline">&quot;exception&quot;</code></li><li> <code class="inline">&quot;lost&quot;</code></li></ul>
   </section>
@@ -229,7 +229,6 @@ with it as well.</p><p>When a step finishes, it's <code class="inline">:exit_rea
 
           <pre translate="no"><span class="attribute">@type</span> t() :: %Lightning.Invocation.Step{
   __meta__: <a href="https://hexdocs.pm/ecto/3.10.3/Ecto.Schema.Metadata.html#t:t/0">Ecto.Schema.Metadata.t</a>(),
-  attempts: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
   credential: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
   credential_id: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
   error_type: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
@@ -244,6 +243,7 @@ with it as well.</p><p>When a step finishes, it's <code class="inline">:exit_rea
   log_lines: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
   output_dataclip: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
   output_dataclip_id: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
+  runs: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
   started_at: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
   updated_at: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>()
 }</pre>

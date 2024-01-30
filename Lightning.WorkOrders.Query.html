@@ -13,7 +13,7 @@
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-EPF2X7PV.js"></script>
-    <script src="dist/sidebar_items-AA0128C8.js"></script>
+    <script src="dist/sidebar_items-F4341F54.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -155,7 +155,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#state_for/1" translate="no">state_for(attempt)</a>
+        <a href="#state_for/1" translate="no">state_for(run)</a>
 
       </div>
 
@@ -183,7 +183,7 @@ Pages
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">state_for(attempt)</h1>
+    <h1 class="signature" translate="no">state_for(run)</h1>
 
       <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workorders/query.ex#L40" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
@@ -197,14 +197,14 @@ Pages
 
       <div class="specs">
 
-          <pre translate="no"><span class="attribute">@spec</span> state_for(<a href="Lightning.Attempt.html#t:t/0">Lightning.Attempt.t</a>()) :: <a href="https://hexdocs.pm/ecto/3.10.3/Ecto.Query.html#t:t/0">Ecto.Query.t</a>()</pre>
+          <pre translate="no"><span class="attribute">@spec</span> state_for(<a href="Lightning.Run.html#t:t/0">Lightning.Run.t</a>()) :: <a href="https://hexdocs.pm/ecto/3.10.3/Ecto.Query.html#t:t/0">Ecto.Query.t</a>()</pre>
 
       </div>
 
-<p>Query to calculate the current state of a workorder.</p><p>It takes an Attempt, as the state is updated after each attempt is changed.</p><p>The logic is as follows:</p><ul><li>All <em>other</em> Attempts that are not in a finished state are considered first.</li><li>The current Attempt is unioned onto the unfinished attempts with a null
-ordinality.</li><li>The attempts are ordered by state in the following order
-<code class="inline">started &gt; available &gt; claimed &gt; null</code></li><li>The attempt states are then mapped to the workorder state enum, so <code class="inline">available</code>
-and <code class="inline">claimed</code> are both mapped to <code class="inline">pending</code> and <code class="inline">started</code> is mapped to <code class="inline">running</code></li></ul><blockquote><p>The <code class="inline">null</code> ordinality ensures that the current attempt is always last in the
+<p>Query to calculate the current state of a workorder.</p><p>It takes a run, as the state is updated after each run is changed.</p><p>The logic is as follows:</p><ul><li>All <em>other</em> Runs that are not in a finished state are considered first.</li><li>The current Run is unioned onto the unfinished runs with a null
+ordinality.</li><li>The runs are ordered by state in the following order
+<code class="inline">started &gt; available &gt; claimed &gt; null</code></li><li>The run states are then mapped to the workorder state enum, so <code class="inline">available</code>
+and <code class="inline">claimed</code> are both mapped to <code class="inline">pending</code> and <code class="inline">started</code> is mapped to <code class="inline">running</code></li></ul><blockquote><p>The <code class="inline">null</code> ordinality ensures that the current run is always last in the
 ordering.</p></blockquote>
   </section>
 </section>

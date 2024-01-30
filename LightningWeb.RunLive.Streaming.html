@@ -7,7 +7,7 @@
     <meta name="generator" content="ExDoc v0.30.9">
     <meta name="project" content="Lightning v2.0.0-rc7">
 
-    <title>Lightning.LogMessage — Lightning v2.0.0-rc7</title>
+    <title>LightningWeb.RunLive.Streaming — Lightning v2.0.0-rc7</title>
     <link rel="stylesheet" href="dist/html-elixir-XFYN5IVA.css" />
 
 
@@ -125,25 +125,16 @@ Pages
 </button>
 
 
-    <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/ecto_types.ex#L63" title="View Source" class="icon-action" rel="help">
+    <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/run_live/streaming.ex#L1" title="View Source" class="icon-action" rel="help">
       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
       <span class="sr-only">View Source</span>
     </a>
 
-  <span translate="no">Lightning.LogMessage</span> 
+  <span translate="no">LightningWeb.RunLive.Streaming</span> 
   <small class="app-vsn" translate="no">(Lightning v2.0.0-rc7)</small>
 
 </h1>
 
-
-  <section id="moduledoc">
-<p>A custom type to handle JSON log messages.</p><p>Currently the underlying database type is a string, and workers may send
-either a string, or a JSON object. This type will encode JSON objects to
-string.</p><blockquote><h4 class="info">Messages are always strings</h4><p>While this type allows JSON objects to be sent, the model will always return
-strings. This type is a stand-in until we want to add a JSONB column to the
-underlying table.</p></blockquote><p>In the case of JSON objects we serialize them to a string, and in the case of
-arrays we serialize them individually and join them with a space.</p>
-  </section>
 
 
   <section id="summary" class="details-list">
@@ -160,61 +151,67 @@ arrays we serialize them individually and join them with a space.</p>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#cast/1" translate="no">cast(d)</a>
+        <a href="#add_or_update_step/2" translate="no">add_or_update_step(socket, step)</a>
 
       </div>
-
-        <div class="summary-synopsis"><p>Callback implementation for <a href="https://hexdocs.pm/ecto/3.10.3/Ecto.Type.html#c:cast/1"><code class="inline">Ecto.Type.cast/1</code></a>.</p></div>
 
     </div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#dump/1" translate="no">dump(d)</a>
+        <a href="#get_dataclip_lines/2" translate="no">get_dataclip_lines(step, field)</a>
 
       </div>
-
-        <div class="summary-synopsis"><p>Callback implementation for <a href="https://hexdocs.pm/ecto/3.10.3/Ecto.Type.html#c:dump/1"><code class="inline">Ecto.Type.dump/1</code></a>.</p></div>
 
     </div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#embed_as/1" translate="no">embed_as(_)</a>
+        <a href="#get_run_async/2" translate="no">get_run_async(socket, run_id)</a>
 
       </div>
 
-        <div class="summary-synopsis"><p>Callback implementation for <a href="https://hexdocs.pm/ecto/3.10.3/Ecto.Type.html#c:embed_as/1"><code class="inline">Ecto.Type.embed_as/1</code></a>.</p></div>
+        <div class="summary-synopsis"><p>Starts an async process that will fetch the run with the given ID.</p></div>
 
     </div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#equal?/2" translate="no">equal?(term1, term2)</a>
+        <a href="#maybe_load_input_dataclip/2" translate="no">maybe_load_input_dataclip(socket, chunk_size)</a>
 
       </div>
-
-        <div class="summary-synopsis"><p>Callback implementation for <a href="https://hexdocs.pm/ecto/3.10.3/Ecto.Type.html#c:equal?/2"><code class="inline">Ecto.Type.equal?/2</code></a>.</p></div>
 
     </div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#load/1" translate="no">load(d)</a>
+        <a href="#maybe_load_output_dataclip/2" translate="no">maybe_load_output_dataclip(socket, chunk_size)</a>
 
       </div>
-
-        <div class="summary-synopsis"><p>Callback implementation for <a href="https://hexdocs.pm/ecto/3.10.3/Ecto.Type.html#c:load/1"><code class="inline">Ecto.Type.load/1</code></a>.</p></div>
 
     </div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#type/0" translate="no">type()</a>
+        <a href="#reset_dataclip_streams/1" translate="no">reset_dataclip_streams(socket)</a>
 
       </div>
 
-        <div class="summary-synopsis"><p>Callback implementation for <a href="https://hexdocs.pm/ecto/3.10.3/Ecto.Type.html#c:type/0"><code class="inline">Ecto.Type.type/0</code></a>.</p></div>
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#sort_steps/1" translate="no">sort_steps(steps)</a>
+
+      </div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#unselect_step/1" translate="no">unselect_step(socket)</a>
+
+      </div>
 
     </div>
 
@@ -231,16 +228,16 @@ arrays we serialize them individually and join them with a space.</p>
       <span class="text">Functions</span>
     </h1>
     <div class="functions-list">
-<section class="detail" id="cast/1">
+<section class="detail" id="add_or_update_step/2">
 
   <div class="detail-header">
-    <a href="#cast/1" class="detail-link" title="Link to this function">
+    <a href="#add_or_update_step/2" class="detail-link" title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">cast(d)</h1>
+    <h1 class="signature" translate="no">add_or_update_step(socket, step)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/ecto_types.ex#L83" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/run_live/streaming.ex#L27" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -250,19 +247,19 @@ arrays we serialize them individually and join them with a space.</p>
 
   <section class="docstring">
 
-<p>Callback implementation for <a href="https://hexdocs.pm/ecto/3.10.3/Ecto.Type.html#c:cast/1"><code class="inline">Ecto.Type.cast/1</code></a>.</p>
+
   </section>
 </section>
-<section class="detail" id="dump/1">
+<section class="detail" id="get_dataclip_lines/2">
 
   <div class="detail-header">
-    <a href="#dump/1" class="detail-link" title="Link to this function">
+    <a href="#get_dataclip_lines/2" class="detail-link" title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">dump(d)</h1>
+    <h1 class="signature" translate="no">get_dataclip_lines(step, field)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/ecto_types.ex#L105" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/run_live/streaming.ex#L45" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -272,19 +269,19 @@ arrays we serialize them individually and join them with a space.</p>
 
   <section class="docstring">
 
-<p>Callback implementation for <a href="https://hexdocs.pm/ecto/3.10.3/Ecto.Type.html#c:dump/1"><code class="inline">Ecto.Type.dump/1</code></a>.</p>
+
   </section>
 </section>
-<section class="detail" id="embed_as/1">
+<section class="detail" id="get_run_async/2">
 
   <div class="detail-header">
-    <a href="#embed_as/1" class="detail-link" title="Link to this function">
+    <a href="#get_run_async/2" class="detail-link" title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">embed_as(_)</h1>
+    <h1 class="signature" translate="no">get_run_async(socket, run_id)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/ecto_types.ex#L80" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/run_live/streaming.ex#L20" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -294,19 +291,26 @@ arrays we serialize them individually and join them with a space.</p>
 
   <section class="docstring">
 
-<p>Callback implementation for <a href="https://hexdocs.pm/ecto/3.10.3/Ecto.Type.html#c:embed_as/1"><code class="inline">Ecto.Type.embed_as/1</code></a>.</p>
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> get_run_async(<a href="https://hexdocs.pm/phoenix_live_view/0.20.1/Phoenix.LiveView.Socket.html#t:t/0">Phoenix.LiveView.Socket.t</a>(), <a href="https://hexdocs.pm/ecto/3.10.3/Ecto.UUID.html#t:t/0">Ecto.UUID.t</a>()) ::
+  <a href="https://hexdocs.pm/phoenix_live_view/0.20.1/Phoenix.LiveView.Socket.html#t:t/0">Phoenix.LiveView.Socket.t</a>()</pre>
+
+      </div>
+
+<p>Starts an async process that will fetch the run with the given ID.</p>
   </section>
 </section>
-<section class="detail" id="equal?/2">
+<section class="detail" id="maybe_load_input_dataclip/2">
 
   <div class="detail-header">
-    <a href="#equal?/2" class="detail-link" title="Link to this function">
+    <a href="#maybe_load_input_dataclip/2" class="detail-link" title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">equal?(term1, term2)</h1>
+    <h1 class="signature" translate="no">maybe_load_input_dataclip(socket, chunk_size)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/ecto_types.ex#L80" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/run_live/streaming.ex#L68" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -316,19 +320,19 @@ arrays we serialize them individually and join them with a space.</p>
 
   <section class="docstring">
 
-<p>Callback implementation for <a href="https://hexdocs.pm/ecto/3.10.3/Ecto.Type.html#c:equal?/2"><code class="inline">Ecto.Type.equal?/2</code></a>.</p>
+
   </section>
 </section>
-<section class="detail" id="load/1">
+<section class="detail" id="maybe_load_output_dataclip/2">
 
   <div class="detail-header">
-    <a href="#load/1" class="detail-link" title="Link to this function">
+    <a href="#maybe_load_output_dataclip/2" class="detail-link" title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">load(d)</h1>
+    <h1 class="signature" translate="no">maybe_load_output_dataclip(socket, chunk_size)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/ecto_types.ex#L101" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/run_live/streaming.ex#L93" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -338,19 +342,19 @@ arrays we serialize them individually and join them with a space.</p>
 
   <section class="docstring">
 
-<p>Callback implementation for <a href="https://hexdocs.pm/ecto/3.10.3/Ecto.Type.html#c:load/1"><code class="inline">Ecto.Type.load/1</code></a>.</p>
+
   </section>
 </section>
-<section class="detail" id="type/0">
+<section class="detail" id="reset_dataclip_streams/1">
 
   <div class="detail-header">
-    <a href="#type/0" class="detail-link" title="Link to this function">
+    <a href="#reset_dataclip_streams/1" class="detail-link" title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">type()</h1>
+    <h1 class="signature" translate="no">reset_dataclip_streams(socket)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/ecto_types.ex#L81" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/run_live/streaming.ex#L119" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -360,7 +364,51 @@ arrays we serialize them individually and join them with a space.</p>
 
   <section class="docstring">
 
-<p>Callback implementation for <a href="https://hexdocs.pm/ecto/3.10.3/Ecto.Type.html#c:type/0"><code class="inline">Ecto.Type.type/0</code></a>.</p>
+
+  </section>
+</section>
+<section class="detail" id="sort_steps/1">
+
+  <div class="detail-header">
+    <a href="#sort_steps/1" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">sort_steps(steps)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/run_live/streaming.ex#L136" class="icon-action" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+
+  </section>
+</section>
+<section class="detail" id="unselect_step/1">
+
+  <div class="detail-header">
+    <a href="#unselect_step/1" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">unselect_step(socket)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/run_live/streaming.ex#L125" class="icon-action" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+
   </section>
 </section>
 

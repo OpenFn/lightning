@@ -7,13 +7,13 @@
     <meta name="generator" content="ExDoc v0.30.9">
     <meta name="project" content="Lightning v2.0.0-rc7">
 
-    <title>Lightning.Attempts.Query — Lightning v2.0.0-rc7</title>
+    <title>LightningWeb.RunLive.Show — Lightning v2.0.0-rc7</title>
     <link rel="stylesheet" href="dist/html-elixir-XFYN5IVA.css" />
 
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-EPF2X7PV.js"></script>
-    <script src="dist/sidebar_items-AA0128C8.js"></script>
+    <script src="dist/sidebar_items-F4341F54.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -125,20 +125,16 @@ Pages
 </button>
 
 
-    <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/attempts/query.ex#L1" title="View Source" class="icon-action" rel="help">
+    <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/run_live/show.ex#L1" title="View Source" class="icon-action" rel="help">
       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
       <span class="sr-only">View Source</span>
     </a>
 
-  <span translate="no">Lightning.Attempts.Query</span> 
+  <span translate="no">LightningWeb.RunLive.Show</span> 
   <small class="app-vsn" translate="no">(Lightning v2.0.0-rc7)</small>
 
 </h1>
 
-
-  <section id="moduledoc">
-<p>Query functions for working with Attempts</p>
-  </section>
 
 
   <section id="summary" class="details-list">
@@ -155,14 +151,41 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#lost/1" translate="no">lost(now)</a>
+        <a href="#apply_selected_step_id/2" translate="no">apply_selected_step_id(socket, id)</a>
 
       </div>
 
-        <div class="summary-synopsis"><p>Return all attempts that have been claimed by a worker before the earliest
-acceptable start time (determined by the longest acceptable run time) but are
-still incomplete. This indicates that we may have lost contact with the worker
-that was responsible for executing the attempt.</p></div>
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#handle_async/3" translate="no">handle_async(atom, arg, socket)</a>
+
+      </div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#handle_steps_change/1" translate="no">handle_steps_change(socket)</a>
+
+      </div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#maybe_load_input_dataclip/1" translate="no">maybe_load_input_dataclip(socket)</a>
+
+      </div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#maybe_load_output_dataclip/1" translate="no">maybe_load_output_dataclip(socket)</a>
+
+      </div>
 
     </div>
 
@@ -179,16 +202,16 @@ that was responsible for executing the attempt.</p></div>
       <span class="text">Functions</span>
     </h1>
     <div class="functions-list">
-<section class="detail" id="lost/1">
+<section class="detail" id="apply_selected_step_id/2">
 
   <div class="detail-header">
-    <a href="#lost/1" class="detail-link" title="Link to this function">
+    <a href="#apply_selected_step_id/2" class="detail-link" title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">lost(now)</h1>
+    <h1 class="signature" translate="no">apply_selected_step_id(socket, id)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/attempts/query.ex#L18" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/run_live/show.ex#L3" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -198,16 +221,95 @@ that was responsible for executing the attempt.</p></div>
 
   <section class="docstring">
 
-      <div class="specs">
 
-          <pre translate="no"><span class="attribute">@spec</span> lost(<a href="https://hexdocs.pm/elixir/DateTime.html#t:t/0">DateTime.t</a>()) :: <a href="https://hexdocs.pm/ecto/3.10.3/Ecto.Queryable.html#t:t/0">Ecto.Queryable.t</a>()</pre>
+  </section>
+</section>
+<section class="detail" id="handle_async/3">
 
-      </div>
+  <div class="detail-header">
+    <a href="#handle_async/3" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">handle_async(atom, arg, socket)</h1>
 
-<p>Return all attempts that have been claimed by a worker before the earliest
-acceptable start time (determined by the longest acceptable run time) but are
-still incomplete. This indicates that we may have lost contact with the worker
-that was responsible for executing the attempt.</p>
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/run_live/show.ex#L3" class="icon-action" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+
+  </section>
+</section>
+<section class="detail" id="handle_steps_change/1">
+
+  <div class="detail-header">
+    <a href="#handle_steps_change/1" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">handle_steps_change(socket)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/run_live/show.ex#L227" class="icon-action" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+
+  </section>
+</section>
+<section class="detail" id="maybe_load_input_dataclip/1">
+
+  <div class="detail-header">
+    <a href="#maybe_load_input_dataclip/1" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">maybe_load_input_dataclip(socket)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/run_live/show.ex#L3" class="icon-action" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+
+  </section>
+</section>
+<section class="detail" id="maybe_load_output_dataclip/1">
+
+  <div class="detail-header">
+    <a href="#maybe_load_output_dataclip/1" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">maybe_load_output_dataclip(socket)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/run_live/show.ex#L3" class="icon-action" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+
   </section>
 </section>
 

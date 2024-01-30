@@ -13,7 +13,7 @@
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-EPF2X7PV.js"></script>
-    <script src="dist/sidebar_items-AA0128C8.js"></script>
+    <script src="dist/sidebar_items-F4341F54.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -171,7 +171,7 @@ a JSON field; but for now we coerce it into a string.</p><p>See <a href="Lightni
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#new/3" translate="no">new(attempt, attrs \\ %{}, scrubber)</a>
+        <a href="#new/3" translate="no">new(run, attrs \\ %{}, scrubber)</a>
 
       </div>
 
@@ -221,11 +221,11 @@ a JSON field; but for now we coerce it into a string.</p><p>See <a href="Lightni
 
           <pre translate="no"><span class="attribute">@type</span> t() :: %Lightning.Invocation.LogLine{
   __meta__: <a href="https://hexdocs.pm/ecto/3.10.3/Ecto.Schema.Metadata.html#t:t/0">Ecto.Schema.Metadata.t</a>(),
-  attempt: <a href="Lightning.Attempt.html#t:t/0">Lightning.Attempt.t</a>() | <a href="https://hexdocs.pm/ecto/3.10.3/Ecto.Association.NotLoaded.html#t:t/0">Ecto.Association.NotLoaded.t</a>() | nil,
-  attempt_id: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
   id: <a href="https://hexdocs.pm/ecto/3.10.3/Ecto.UUID.html#t:t/0">Ecto.UUID.t</a>() | nil,
   level: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
   message: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>(),
+  run: <a href="Lightning.Run.html#t:t/0">Lightning.Run.t</a>() | <a href="https://hexdocs.pm/ecto/3.10.3/Ecto.Association.NotLoaded.html#t:t/0">Ecto.Association.NotLoaded.t</a>() | nil,
+  run_id: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
   source: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
   step: <a href="Lightning.Invocation.Step.html#t:t/0">Lightning.Invocation.Step.t</a>() | <a href="https://hexdocs.pm/ecto/3.10.3/Ecto.Association.NotLoaded.html#t:t/0">Ecto.Association.NotLoaded.t</a>() | nil,
   step_id: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
@@ -258,7 +258,7 @@ a JSON field; but for now we coerce it into a string.</p><p>See <a href="Lightni
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">new(attempt, attrs \\ %{}, scrubber)</h1>
+    <h1 class="signature" translate="no">new(run, attrs \\ %{}, scrubber)</h1>
 
       <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation/log_line.ex#L50" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>

@@ -7,13 +7,13 @@
     <meta name="generator" content="ExDoc v0.30.9">
     <meta name="project" content="Lightning v2.0.0-rc7">
 
-    <title>LightningWeb.AttemptLive.AttemptViewerLive — Lightning v2.0.0-rc7</title>
+    <title>Lightning.Runs.Handlers.CompleteStep — Lightning v2.0.0-rc7</title>
     <link rel="stylesheet" href="dist/html-elixir-XFYN5IVA.css" />
 
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-EPF2X7PV.js"></script>
-    <script src="dist/sidebar_items-AA0128C8.js"></script>
+    <script src="dist/sidebar_items-F4341F54.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -125,16 +125,20 @@ Pages
 </button>
 
 
-    <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/attempt_live/attempt_viewer_live.ex#L1" title="View Source" class="icon-action" rel="help">
+    <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs/handlers.ex#L130" title="View Source" class="icon-action" rel="help">
       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
       <span class="sr-only">View Source</span>
     </a>
 
-  <span translate="no">LightningWeb.AttemptLive.AttemptViewerLive</span> 
+  <span translate="no">Lightning.Runs.Handlers.CompleteStep</span> 
   <small class="app-vsn" translate="no">(Lightning v2.0.0-rc7)</small>
 
 </h1>
 
+
+  <section id="moduledoc">
+<p>Schema to validate the input attributes of a completed step.</p>
+  </section>
 
 
   <section id="summary" class="details-list">
@@ -151,7 +155,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#apply_selected_step_id/2" translate="no">apply_selected_step_id(socket, id)</a>
+        <a href="#call/1" translate="no">call(params)</a>
 
       </div>
 
@@ -159,31 +163,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#handle_async/3" translate="no">handle_async(atom, arg, socket)</a>
-
-      </div>
-
-    </div>
-
-    <div class="summary-row">
-      <div class="summary-signature">
-        <a href="#handle_steps_change/1" translate="no">handle_steps_change(socket)</a>
-
-      </div>
-
-    </div>
-
-    <div class="summary-row">
-      <div class="summary-signature">
-        <a href="#maybe_load_input_dataclip/1" translate="no">maybe_load_input_dataclip(socket)</a>
-
-      </div>
-
-    </div>
-
-    <div class="summary-row">
-      <div class="summary-signature">
-        <a href="#maybe_load_output_dataclip/1" translate="no">maybe_load_output_dataclip(socket)</a>
+        <a href="#new/1" translate="no">new(params)</a>
 
       </div>
 
@@ -202,16 +182,16 @@ Pages
       <span class="text">Functions</span>
     </h1>
     <div class="functions-list">
-<section class="detail" id="apply_selected_step_id/2">
+<section class="detail" id="call/1">
 
   <div class="detail-header">
-    <a href="#apply_selected_step_id/2" class="detail-link" title="Link to this function">
+    <a href="#call/1" class="detail-link" title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">apply_selected_step_id(socket, id)</h1>
+    <h1 class="signature" translate="no">call(params)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/attempt_live/attempt_viewer_live.ex#L3" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs/handlers.ex#L192" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -224,82 +204,16 @@ Pages
 
   </section>
 </section>
-<section class="detail" id="handle_async/3">
+<section class="detail" id="new/1">
 
   <div class="detail-header">
-    <a href="#handle_async/3" class="detail-link" title="Link to this function">
+    <a href="#new/1" class="detail-link" title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">handle_async(atom, arg, socket)</h1>
+    <h1 class="signature" translate="no">new(params)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/attempt_live/attempt_viewer_live.ex#L3" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
-
-
-  </div>
-
-  <section class="docstring">
-
-
-  </section>
-</section>
-<section class="detail" id="handle_steps_change/1">
-
-  <div class="detail-header">
-    <a href="#handle_steps_change/1" class="detail-link" title="Link to this function">
-      <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
-    </a>
-    <h1 class="signature" translate="no">handle_steps_change(socket)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/attempt_live/attempt_viewer_live.ex#L194" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
-
-
-  </div>
-
-  <section class="docstring">
-
-
-  </section>
-</section>
-<section class="detail" id="maybe_load_input_dataclip/1">
-
-  <div class="detail-header">
-    <a href="#maybe_load_input_dataclip/1" class="detail-link" title="Link to this function">
-      <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
-    </a>
-    <h1 class="signature" translate="no">maybe_load_input_dataclip(socket)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/attempt_live/attempt_viewer_live.ex#L3" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
-
-
-  </div>
-
-  <section class="docstring">
-
-
-  </section>
-</section>
-<section class="detail" id="maybe_load_output_dataclip/1">
-
-  <div class="detail-header">
-    <a href="#maybe_load_output_dataclip/1" class="detail-link" title="Link to this function">
-      <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
-    </a>
-    <h1 class="signature" translate="no">maybe_load_output_dataclip(socket)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/attempt_live/attempt_viewer_live.ex#L3" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs/handlers.ex#L151" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>

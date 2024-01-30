@@ -7,13 +7,13 @@
     <meta name="generator" content="ExDoc v0.30.9">
     <meta name="project" content="Lightning v2.0.0-rc7">
 
-    <title>LightningWeb.AttemptChannel — Lightning v2.0.0-rc7</title>
+    <title>Lightning.Runs.PromExPlugin — Lightning v2.0.0-rc7</title>
     <link rel="stylesheet" href="dist/html-elixir-XFYN5IVA.css" />
 
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-EPF2X7PV.js"></script>
-    <script src="dist/sidebar_items-AA0128C8.js"></script>
+    <script src="dist/sidebar_items-F4341F54.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -125,19 +125,20 @@ Pages
 </button>
 
 
-    <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/channels/attempt_channel.ex#L1" title="View Source" class="icon-action" rel="help">
+    <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs/prom_ex_plugin.ex#L1" title="View Source" class="icon-action" rel="help">
       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
       <span class="sr-only">View Source</span>
     </a>
 
-  <span translate="no">LightningWeb.AttemptChannel</span> 
+  <span translate="no">Lightning.Runs.PromExPlugin</span> 
   <small class="app-vsn" translate="no">(Lightning v2.0.0-rc7)</small>
 
 </h1>
 
 
   <section id="moduledoc">
-<p>Phoenix channel to interact with Attempts.</p>
+<p>Metrics callbacks implementation for the PromEx plugin.</p><p>Event metrics are used to publish the dispatched events in the system.
+Polling metrics are used to publish metrics that are calculated by polling data periodically.</p>
   </section>
 
 
@@ -155,7 +156,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#child_spec/1" translate="no">child_spec(init_arg)</a>
+        <a href="#calculate_average_claim_duration/2" translate="no">calculate_average_claim_duration(reference_time, run_age_seconds)</a>
 
       </div>
 
@@ -163,18 +164,15 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#handle_in/3" translate="no">handle_in(binary, payload, socket)</a>
+        <a href="#run_claim_duration/1" translate="no">run_claim_duration(run_age_seconds)</a>
 
       </div>
-
-        <div class="summary-synopsis"><p>For the time being, calls to <code class="inline">fetch:dataclip</code> will return dataclips that are
-preformatted for use as &quot;initial state&quot; in an attempt.</p></div>
 
     </div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#start_link/1" translate="no">start_link(triplet)</a>
+        <a href="#stalled_run_count/1" translate="no">stalled_run_count(threshold_seconds)</a>
 
       </div>
 
@@ -193,16 +191,16 @@ preformatted for use as &quot;initial state&quot; in an attempt.</p></div>
       <span class="text">Functions</span>
     </h1>
     <div class="functions-list">
-<section class="detail" id="child_spec/1">
+<section class="detail" id="calculate_average_claim_duration/2">
 
   <div class="detail-header">
-    <a href="#child_spec/1" class="detail-link" title="Link to this function">
+    <a href="#calculate_average_claim_duration/2" class="detail-link" title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">child_spec(init_arg)</h1>
+    <h1 class="signature" translate="no">calculate_average_claim_duration(reference_time, run_age_seconds)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/channels/attempt_channel.ex#L5" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs/prom_ex_plugin.ex#L139" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -215,16 +213,16 @@ preformatted for use as &quot;initial state&quot; in an attempt.</p></div>
 
   </section>
 </section>
-<section class="detail" id="handle_in/3">
+<section class="detail" id="run_claim_duration/1">
 
   <div class="detail-header">
-    <a href="#handle_in/3" class="detail-link" title="Link to this function">
+    <a href="#run_claim_duration/1" class="detail-link" title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">handle_in(binary, payload, socket)</h1>
+    <h1 class="signature" translate="no">run_claim_duration(run_age_seconds)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/channels/attempt_channel.ex#L51" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs/prom_ex_plugin.ex#L118" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -234,22 +232,19 @@ preformatted for use as &quot;initial state&quot; in an attempt.</p></div>
 
   <section class="docstring">
 
-<p>For the time being, calls to <code class="inline">fetch:dataclip</code> will return dataclips that are
-preformatted for use as &quot;initial state&quot; in an attempt.</p><p>This means that the body of http requests will be nested inside a &quot;data&quot; key.</p><p>There is an open discussion on the community that may impact how we
-store HTTP requests in the database as dataclips and how we send the body
-of those HTTP requests to the worker to use as initial state.</p>
+
   </section>
 </section>
-<section class="detail" id="start_link/1">
+<section class="detail" id="stalled_run_count/1">
 
   <div class="detail-header">
-    <a href="#start_link/1" class="detail-link" title="Link to this function">
+    <a href="#stalled_run_count/1" class="detail-link" title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">start_link(triplet)</h1>
+    <h1 class="signature" translate="no">stalled_run_count(threshold_seconds)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/channels/attempt_channel.ex#L5" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs/prom_ex_plugin.ex#L68" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>

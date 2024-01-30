@@ -13,7 +13,7 @@
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-EPF2X7PV.js"></script>
-    <script src="dist/sidebar_items-AA0128C8.js"></script>
+    <script src="dist/sidebar_items-F4341F54.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -217,7 +217,7 @@ based on paths starting with <code class="inline">/i/</code>.</p><h2 id="call/2-
 <p>This function is the entry point for the <code class="inline">WebhookAuth</code> plug. It first checks if
 the request path starts with <code class="inline">/i/</code> to determine whether the request should be processed
 by this plug.</p><p>If the path matches, it then extracts the <code class="inline">webhook</code> part from the request path and
-attempts to fetch the corresponding <code class="inline">trigger</code> using the <code class="inline">fetch_trigger</code> function.</p><p>If a valid <code class="inline">trigger</code> is found, the function proceeds to validate the authentication
+runs to fetch the corresponding <code class="inline">trigger</code> using the <code class="inline">fetch_trigger</code> function.</p><p>If a valid <code class="inline">trigger</code> is found, the function proceeds to validate the authentication
 of the request using the <code class="inline">validate_auth</code> function.</p><p>In case the <code class="inline">trigger</code> is not found, or the path does not start with <code class="inline">/i/</code>, the function
 returns a 404 Not Found response with a JSON error message indicating that the webhook
 is not found.</p><h2 id="call/2-parameters" class="section-heading">
@@ -247,11 +247,11 @@ of the above-mentioned conditions.</li></ul><h2 id="call/2-examples" class="sect
   </a>
   <span class="text">Webhook Found and Authenticated</span>
 </h3>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="nc">LightningWeb.Plugs.WebhookAuth</span><span class="o">.</span><span class="n">call</span><span class="p" data-group-id="8269460363-1">(</span><span class="n">conn</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="8269460363-2">[</span><span class="p" data-group-id="8269460363-2">]</span><span class="p" data-group-id="8269460363-1">)</span><span class="w">
-</span><span class="p" data-group-id="8269460363-3">%</span><span class="nc" data-group-id="8269460363-3">Plug.Conn</span><span class="p" data-group-id="8269460363-3">{</span><span class="ss">status</span><span class="p">:</span><span class="w"> </span><span class="mi">200</span><span class="p">,</span><span class="w"> </span><span class="n">...</span><span class="p" data-group-id="8269460363-3">}</span><span class="w">
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="nc">LightningWeb.Plugs.WebhookAuth</span><span class="o">.</span><span class="n">call</span><span class="p" data-group-id="3431428949-1">(</span><span class="n">conn</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="3431428949-2">[</span><span class="p" data-group-id="3431428949-2">]</span><span class="p" data-group-id="3431428949-1">)</span><span class="w">
+</span><span class="p" data-group-id="3431428949-3">%</span><span class="nc" data-group-id="3431428949-3">Plug.Conn</span><span class="p" data-group-id="3431428949-3">{</span><span class="ss">status</span><span class="p">:</span><span class="w"> </span><span class="mi">200</span><span class="p">,</span><span class="w"> </span><span class="n">...</span><span class="p" data-group-id="3431428949-3">}</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="nc">LightningWeb.Plugs.WebhookAuth</span><span class="o">.</span><span class="n">call</span><span class="p" data-group-id="8269460363-4">(</span><span class="n">conn</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="8269460363-5">[</span><span class="p" data-group-id="8269460363-5">]</span><span class="p" data-group-id="8269460363-4">)</span><span class="w">
-</span><span class="p" data-group-id="8269460363-6">%</span><span class="nc" data-group-id="8269460363-6">Plug.Conn</span><span class="p" data-group-id="8269460363-6">{</span><span class="ss">status</span><span class="p">:</span><span class="w"> </span><span class="mi">404</span><span class="p">,</span><span class="w"> </span><span class="n">...</span><span class="p" data-group-id="8269460363-6">}</span></code></pre>
+</span><span class="gp unselectable">iex&gt; </span><span class="nc">LightningWeb.Plugs.WebhookAuth</span><span class="o">.</span><span class="n">call</span><span class="p" data-group-id="3431428949-4">(</span><span class="n">conn</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="3431428949-5">[</span><span class="p" data-group-id="3431428949-5">]</span><span class="p" data-group-id="3431428949-4">)</span><span class="w">
+</span><span class="p" data-group-id="3431428949-6">%</span><span class="nc" data-group-id="3431428949-6">Plug.Conn</span><span class="p" data-group-id="3431428949-6">{</span><span class="ss">status</span><span class="p">:</span><span class="w"> </span><span class="mi">404</span><span class="p">,</span><span class="w"> </span><span class="n">...</span><span class="p" data-group-id="3431428949-6">}</span></code></pre>
   </section>
 </section>
 <section class="detail" id="init/1">

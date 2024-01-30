@@ -7,13 +7,13 @@
     <meta name="generator" content="ExDoc v0.30.9">
     <meta name="project" content="Lightning v2.0.0-rc7">
 
-    <title>Lightning.Attempt — Lightning v2.0.0-rc7</title>
+    <title>Lightning.Run — Lightning v2.0.0-rc7</title>
     <link rel="stylesheet" href="dist/html-elixir-XFYN5IVA.css" />
 
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-EPF2X7PV.js"></script>
-    <script src="dist/sidebar_items-AA0128C8.js"></script>
+    <script src="dist/sidebar_items-F4341F54.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -125,19 +125,19 @@ Pages
 </button>
 
 
-    <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/attempts/attempt.ex#L1" title="View Source" class="icon-action" rel="help">
+    <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs/run.ex#L1" title="View Source" class="icon-action" rel="help">
       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
       <span class="sr-only">View Source</span>
     </a>
 
-  <span translate="no">Lightning.Attempt</span> 
+  <span translate="no">Lightning.Run</span> 
   <small class="app-vsn" translate="no">(Lightning v2.0.0-rc7)</small>
 
 </h1>
 
 
   <section id="moduledoc">
-<p>Ecto model for Attempts.</p>
+<p>Ecto model for Runs.</p>
   </section>
 
 
@@ -169,7 +169,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#complete/2" translate="no">complete(attempt, params)</a>
+        <a href="#complete/2" translate="no">complete(run, params)</a>
 
       </div>
 
@@ -181,7 +181,7 @@ Pages
 
       </div>
 
-        <div class="summary-synopsis"><p>Returns the list of final states for an attempt.</p></div>
+        <div class="summary-synopsis"><p>Returns the list of final states for a run.</p></div>
 
     </div>
 
@@ -203,7 +203,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#start/1" translate="no">start(attempt)</a>
+        <a href="#start/1" translate="no">start(run)</a>
 
       </div>
 
@@ -231,7 +231,7 @@ Pages
     </a>
     <h1 class="signature" translate="no">t()</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/attempts/attempt.ex#L39" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs/run.ex#L39" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -243,7 +243,7 @@ Pages
 
       <div class="specs">
 
-          <pre translate="no"><span class="attribute">@type</span> t() :: %Lightning.Attempt{
+          <pre translate="no"><span class="attribute">@type</span> t() :: %Lightning.Run{
   __meta__: <a href="https://hexdocs.pm/ecto/3.10.3/Ecto.Schema.Metadata.html#t:t/0">Ecto.Schema.Metadata.t</a>(),
   claimed_at: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
   created_by: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
@@ -292,9 +292,9 @@ Pages
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">complete(attempt, params)</h1>
+    <h1 class="signature" translate="no">complete(run, params)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/attempts/attempt.ex#L135" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs/run.ex#L135" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -307,7 +307,7 @@ Pages
       <div class="specs">
 
           <pre translate="no"><span class="attribute">@spec</span> complete(
-  %Lightning.Attempt{
+  %Lightning.Run{
     __meta__: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
     claimed_at: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
     created_by: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
@@ -348,7 +348,7 @@ Pages
     </a>
     <h1 class="signature" translate="no">final_states()</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/attempts/attempt.ex#L33" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs/run.ex#L33" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -360,7 +360,7 @@ Pages
 
   <section class="docstring">
 
-<p>Returns the list of final states for an attempt.</p>
+<p>Returns the list of final states for a run.</p>
   </section>
 </section>
 <section class="detail" id="for/2">
@@ -372,7 +372,7 @@ Pages
     </a>
     <h1 class="signature" translate="no">for(trigger, attrs)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/attempts/attempt.ex#L88" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs/run.ex#L88" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -396,7 +396,7 @@ Pages
     </a>
     <h1 class="signature" translate="no">new(attrs \\ %{})</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/attempts/attempt.ex#L108" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs/run.ex#L108" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -416,9 +416,9 @@ Pages
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">start(attempt)</h1>
+    <h1 class="signature" translate="no">start(run)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/attempts/attempt.ex#L124" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs/run.ex#L124" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>

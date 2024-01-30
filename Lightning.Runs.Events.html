@@ -7,13 +7,13 @@
     <meta name="generator" content="ExDoc v0.30.9">
     <meta name="project" content="Lightning v2.0.0-rc7">
 
-    <title>Lightning.Attempts.Events — Lightning v2.0.0-rc7</title>
+    <title>Lightning.Runs.Events — Lightning v2.0.0-rc7</title>
     <link rel="stylesheet" href="dist/html-elixir-XFYN5IVA.css" />
 
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-EPF2X7PV.js"></script>
-    <script src="dist/sidebar_items-AA0128C8.js"></script>
+    <script src="dist/sidebar_items-F4341F54.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -125,12 +125,12 @@ Pages
 </button>
 
 
-    <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/attempts/events.ex#L1" title="View Source" class="icon-action" rel="help">
+    <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs/events.ex#L1" title="View Source" class="icon-action" rel="help">
       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
       <span class="sr-only">View Source</span>
     </a>
 
-  <span translate="no">Lightning.Attempts.Events</span> 
+  <span translate="no">Lightning.Runs.Events</span> 
   <small class="app-vsn" translate="no">(Lightning v2.0.0-rc7)</small>
 
 </h1>
@@ -151,14 +151,6 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#attempt_updated/1" translate="no">attempt_updated(attempt)</a>
-
-      </div>
-
-    </div>
-
-    <div class="summary-row">
-      <div class="summary-signature">
         <a href="#log_appended/1" translate="no">log_appended(log_line)</a>
 
       </div>
@@ -167,7 +159,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#step_completed/2" translate="no">step_completed(attempt_id, step)</a>
+        <a href="#run_updated/1" translate="no">run_updated(run)</a>
 
       </div>
 
@@ -175,7 +167,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#step_started/2" translate="no">step_started(attempt_id, step)</a>
+        <a href="#step_completed/2" translate="no">step_completed(run_id, step)</a>
 
       </div>
 
@@ -183,7 +175,15 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#subscribe/1" translate="no">subscribe(attempt)</a>
+        <a href="#step_started/2" translate="no">step_started(run_id, step)</a>
+
+      </div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#subscribe/1" translate="no">subscribe(run)</a>
 
       </div>
 
@@ -202,16 +202,16 @@ Pages
       <span class="text">Functions</span>
     </h1>
     <div class="functions-list">
-<section class="detail" id="attempt_updated/1">
+<section class="detail" id="log_appended/1">
 
   <div class="detail-header">
-    <a href="#attempt_updated/1" class="detail-link" title="Link to this function">
+    <a href="#log_appended/1" class="detail-link" title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">attempt_updated(attempt)</h1>
+    <h1 class="signature" translate="no">log_appended(log_line)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/attempts/events.ex#L36" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs/events.ex#L43" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -224,16 +224,16 @@ Pages
 
   </section>
 </section>
-<section class="detail" id="log_appended/1">
+<section class="detail" id="run_updated/1">
 
   <div class="detail-header">
-    <a href="#log_appended/1" class="detail-link" title="Link to this function">
+    <a href="#run_updated/1" class="detail-link" title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">log_appended(log_line)</h1>
+    <h1 class="signature" translate="no">run_updated(run)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/attempts/events.ex#L43" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs/events.ex#L36" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -253,9 +253,9 @@ Pages
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">step_completed(attempt_id, step)</h1>
+    <h1 class="signature" translate="no">step_completed(run_id, step)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/attempts/events.ex#L29" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs/events.ex#L29" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -275,9 +275,9 @@ Pages
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">step_started(attempt_id, step)</h1>
+    <h1 class="signature" translate="no">step_started(run_id, step)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/attempts/events.ex#L22" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs/events.ex#L22" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -297,9 +297,9 @@ Pages
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">subscribe(attempt)</h1>
+    <h1 class="signature" translate="no">subscribe(run)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/attempts/events.ex#L50" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs/events.ex#L50" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>

@@ -7,13 +7,13 @@
     <meta name="generator" content="ExDoc v0.30.9">
     <meta name="project" content="Lightning v2.0.0-rc7">
 
-    <title>Lightning.Workers.AttemptToken — Lightning v2.0.0-rc7</title>
+    <title>LightningWeb.RunLive.RunViewerLive — Lightning v2.0.0-rc7</title>
     <link rel="stylesheet" href="dist/html-elixir-XFYN5IVA.css" />
 
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-EPF2X7PV.js"></script>
-    <script src="dist/sidebar_items-AA0128C8.js"></script>
+    <script src="dist/sidebar_items-F4341F54.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -125,20 +125,16 @@ Pages
 </button>
 
 
-    <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workers.ex#L27" title="View Source" class="icon-action" rel="help">
+    <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/run_live/run_viewer_live.ex#L1" title="View Source" class="icon-action" rel="help">
       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
       <span class="sr-only">View Source</span>
     </a>
 
-  <span translate="no">Lightning.Workers.AttemptToken</span> 
+  <span translate="no">LightningWeb.RunLive.RunViewerLive</span> 
   <small class="app-vsn" translate="no">(Lightning v2.0.0-rc7)</small>
 
 </h1>
 
-
-  <section id="moduledoc">
-<p>JWT token configuration to verify if workers work is legit.</p>
-  </section>
 
 
   <section id="summary" class="details-list">
@@ -155,41 +151,41 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#generate_and_sign/2" translate="no">generate_and_sign(extra_claims \\ %{}, key \\ __default_signer__())</a>
+        <a href="#apply_selected_step_id/2" translate="no">apply_selected_step_id(socket, id)</a>
 
       </div>
-
-        <div class="summary-synopsis"><p>Combines <code class="inline">generate_claims/1</code> and <code class="inline">encode_and_sign/2</code></p></div>
 
     </div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#generate_and_sign!/2" translate="no">generate_and_sign!(extra_claims \\ %{}, key \\ __default_signer__())</a>
+        <a href="#handle_async/3" translate="no">handle_async(atom, arg, socket)</a>
 
       </div>
-
-        <div class="summary-synopsis"><p>Same as <a href="#generate_and_sign/2"><code class="inline">generate_and_sign/2</code></a> but raises if error</p></div>
 
     </div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#verify_and_validate/3" translate="no">verify_and_validate(bearer_token, key \\ __default_signer__(), context \\ %{})</a>
+        <a href="#handle_steps_change/1" translate="no">handle_steps_change(socket)</a>
 
       </div>
-
-        <div class="summary-synopsis"><p>Combines <code class="inline">verify/2</code> and <code class="inline">validate/2</code></p></div>
 
     </div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#verify_and_validate!/3" translate="no">verify_and_validate!(bearer_token, key \\ __default_signer__(), context \\ %{})</a>
+        <a href="#maybe_load_input_dataclip/1" translate="no">maybe_load_input_dataclip(socket)</a>
 
       </div>
 
-        <div class="summary-synopsis"><p>Same as <a href="#verify_and_validate/2"><code class="inline">verify_and_validate/2</code></a> but raises if error</p></div>
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#maybe_load_output_dataclip/1" translate="no">maybe_load_output_dataclip(socket)</a>
+
+      </div>
 
     </div>
 
@@ -206,20 +202,16 @@ Pages
       <span class="text">Functions</span>
     </h1>
     <div class="functions-list">
-<section class="detail" id="generate_and_sign/2">
-
-    <span id="generate_and_sign/0"></span>
-
-    <span id="generate_and_sign/1"></span>
+<section class="detail" id="apply_selected_step_id/2">
 
   <div class="detail-header">
-    <a href="#generate_and_sign/2" class="detail-link" title="Link to this function">
+    <a href="#apply_selected_step_id/2" class="detail-link" title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">generate_and_sign(extra_claims \\ %{}, key \\ __default_signer__())</h1>
+    <h1 class="signature" translate="no">apply_selected_step_id(socket, id)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workers.ex#L31" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/run_live/run_viewer_live.ex#L3" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -229,30 +221,19 @@ Pages
 
   <section class="docstring">
 
-      <div class="specs">
 
-          <pre translate="no"><span class="attribute">@spec</span> generate_and_sign(<a href="https://hexdocs.pm/joken/2.6.0/Joken.html#t:claims/0">Joken.claims</a>(), <a href="https://hexdocs.pm/joken/2.6.0/Joken.html#t:signer_arg/0">Joken.signer_arg</a>()) ::
-  {:ok, <a href="https://hexdocs.pm/joken/2.6.0/Joken.html#t:bearer_token/0">Joken.bearer_token</a>(), <a href="https://hexdocs.pm/joken/2.6.0/Joken.html#t:claims/0">Joken.claims</a>()} | {:error, <a href="https://hexdocs.pm/joken/2.6.0/Joken.html#t:error_reason/0">Joken.error_reason</a>()}</pre>
-
-      </div>
-
-<p>Combines <code class="inline">generate_claims/1</code> and <code class="inline">encode_and_sign/2</code></p>
   </section>
 </section>
-<section class="detail" id="generate_and_sign!/2">
-
-    <span id="generate_and_sign!/0"></span>
-
-    <span id="generate_and_sign!/1"></span>
+<section class="detail" id="handle_async/3">
 
   <div class="detail-header">
-    <a href="#generate_and_sign!/2" class="detail-link" title="Link to this function">
+    <a href="#handle_async/3" class="detail-link" title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">generate_and_sign!(extra_claims \\ %{}, key \\ __default_signer__())</h1>
+    <h1 class="signature" translate="no">handle_async(atom, arg, socket)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workers.ex#L31" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/run_live/run_viewer_live.ex#L3" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -262,29 +243,19 @@ Pages
 
   <section class="docstring">
 
-      <div class="specs">
 
-          <pre translate="no"><span class="attribute">@spec</span> generate_and_sign!(<a href="https://hexdocs.pm/joken/2.6.0/Joken.html#t:claims/0">Joken.claims</a>(), <a href="https://hexdocs.pm/joken/2.6.0/Joken.html#t:signer_arg/0">Joken.signer_arg</a>()) :: <a href="https://hexdocs.pm/joken/2.6.0/Joken.html#t:bearer_token/0">Joken.bearer_token</a>()</pre>
-
-      </div>
-
-<p>Same as <a href="#generate_and_sign/2"><code class="inline">generate_and_sign/2</code></a> but raises if error</p>
   </section>
 </section>
-<section class="detail" id="verify_and_validate/3">
-
-    <span id="verify_and_validate/1"></span>
-
-    <span id="verify_and_validate/2"></span>
+<section class="detail" id="handle_steps_change/1">
 
   <div class="detail-header">
-    <a href="#verify_and_validate/3" class="detail-link" title="Link to this function">
+    <a href="#handle_steps_change/1" class="detail-link" title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">verify_and_validate(bearer_token, key \\ __default_signer__(), context \\ %{})</h1>
+    <h1 class="signature" translate="no">handle_steps_change(socket)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workers.ex#L31" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/run_live/run_viewer_live.ex#L192" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -294,30 +265,19 @@ Pages
 
   <section class="docstring">
 
-      <div class="specs">
 
-          <pre translate="no"><span class="attribute">@spec</span> verify_and_validate(<a href="https://hexdocs.pm/joken/2.6.0/Joken.html#t:bearer_token/0">Joken.bearer_token</a>(), <a href="https://hexdocs.pm/joken/2.6.0/Joken.html#t:signer_arg/0">Joken.signer_arg</a>(), <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>()) ::
-  {:ok, <a href="https://hexdocs.pm/joken/2.6.0/Joken.html#t:claims/0">Joken.claims</a>()} | {:error, <a href="https://hexdocs.pm/joken/2.6.0/Joken.html#t:error_reason/0">Joken.error_reason</a>()}</pre>
-
-      </div>
-
-<p>Combines <code class="inline">verify/2</code> and <code class="inline">validate/2</code></p>
   </section>
 </section>
-<section class="detail" id="verify_and_validate!/3">
-
-    <span id="verify_and_validate!/1"></span>
-
-    <span id="verify_and_validate!/2"></span>
+<section class="detail" id="maybe_load_input_dataclip/1">
 
   <div class="detail-header">
-    <a href="#verify_and_validate!/3" class="detail-link" title="Link to this function">
+    <a href="#maybe_load_input_dataclip/1" class="detail-link" title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">verify_and_validate!(bearer_token, key \\ __default_signer__(), context \\ %{})</h1>
+    <h1 class="signature" translate="no">maybe_load_input_dataclip(socket)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workers.ex#L31" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/run_live/run_viewer_live.ex#L3" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -327,14 +287,29 @@ Pages
 
   <section class="docstring">
 
-      <div class="specs">
 
-          <pre translate="no"><span class="attribute">@spec</span> verify_and_validate!(<a href="https://hexdocs.pm/joken/2.6.0/Joken.html#t:bearer_token/0">Joken.bearer_token</a>(), <a href="https://hexdocs.pm/joken/2.6.0/Joken.html#t:signer_arg/0">Joken.signer_arg</a>(), <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>()) ::
-  <a href="https://hexdocs.pm/joken/2.6.0/Joken.html#t:claims/0">Joken.claims</a>()</pre>
+  </section>
+</section>
+<section class="detail" id="maybe_load_output_dataclip/1">
 
-      </div>
+  <div class="detail-header">
+    <a href="#maybe_load_output_dataclip/1" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">maybe_load_output_dataclip(socket)</h1>
 
-<p>Same as <a href="#verify_and_validate/2"><code class="inline">verify_and_validate/2</code></a> but raises if error</p>
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/run_live/run_viewer_live.ex#L3" class="icon-action" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+
   </section>
 </section>
 

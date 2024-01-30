@@ -13,7 +13,7 @@
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-EPF2X7PV.js"></script>
-    <script src="dist/sidebar_items-AA0128C8.js"></script>
+    <script src="dist/sidebar_items-F4341F54.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -137,9 +137,9 @@ Pages
 
 
   <section id="moduledoc">
-<p>The Janitor is responsible for detecting attempts that have been &quot;lost&quot; due to
-communication issues with the worker.</p><p>Every X minutes the Janitor will check to ensure that no attempts have been
-running for more than Y seconds.</p><p>Configure your maximum attempt runtime with a WORKER_MAX_RUN_DURATION_SECONDS environment
+<p>The Janitor is responsible for detecting runs that have been &quot;lost&quot; due to
+communication issues with the worker.</p><p>Every X minutes the Janitor will check to ensure that no runs have been
+running for more than Y seconds.</p><p>Configure your maximum run runtime with a WORKER_MAX_RUN_DURATION_SECONDS environment
 variable; the grace period will be an additional 20%.</p>
   </section>
 
@@ -163,8 +163,8 @@ variable; the grace period will be an additional 20%.</p>
       </div>
 
         <div class="summary-synopsis"><p>The find_and_update_lost function determines the current time, finds all
-attempts that were claimed before the earliest allowable claim time for
-unfinished attempts, and marks them as lost.</p></div>
+runs that were claimed before the earliest allowable claim time for
+unfinished runs, and marks them as lost.</p></div>
 
     </div>
 
@@ -212,8 +212,8 @@ by the Oban cron plugin.</p></div>
   <section class="docstring">
 
 <p>The find_and_update_lost function determines the current time, finds all
-attempts that were claimed before the earliest allowable claim time for
-unfinished attempts, and marks them as lost.</p>
+runs that were claimed before the earliest allowable claim time for
+unfinished runs, and marks them as lost.</p>
   </section>
 </section>
 <section class="detail" id="perform/1">
