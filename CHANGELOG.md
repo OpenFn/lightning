@@ -10,6 +10,14 @@ and this project adheres to
 
 ### Added
 
+### Changed
+
+### Fixed
+
+## [v2.0.0-rc8] - 2024-01-30
+
+### Added
+
 - Shim code to interact with the Impact Tracking service
   [#1671](https://github.com/OpenFn/Lightning/issues/1671)
 
@@ -17,7 +25,7 @@ and this project adheres to
 
 - Standardized naming of "attempts" to "runs". This had already been done in the
   front-end, but this change cleans up the backend, the database, and the
-  interface with the worker. Make sure to run migrations and update your
+  interface with the worker. Make sure to **run migrations** and update your
   ENV/secrets to use `WORKER_RUNS_PRIVATE_KEY` rather than
   `WORKER_ATTEMPTS_PRIVATE_KEY`
   [#1657](https://github.com/OpenFn/Lightning/issues/1657)
