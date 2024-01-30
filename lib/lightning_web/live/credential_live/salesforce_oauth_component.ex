@@ -4,10 +4,10 @@ defmodule LightningWeb.CredentialLive.SalesforceOauthComponent do
 
   import LightningWeb.OauthCredentialHelper
 
-  require Logger
-
   alias Lightning.AuthProviders.Salesforce
   alias LightningWeb.CredentialLive.ScopeSelectionComponent
+
+  require Logger
 
   attr :form, :map, required: true
   attr :id, :string, required: true

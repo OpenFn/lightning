@@ -49,7 +49,7 @@ defmodule Lightning.AuthProviders.Salesforce do
   def build_client(_opts \\ []) do
     config = get_config()
 
-    if is_nil(config[:consumer_key]) or is_nil(config[:consumer_key]) do
+    if is_nil(config[:consumer_key]) or is_nil(config[:consumer_secret]) do
       Logger.error("""
       Please ensure the following ENV variables are set correctly:
 
