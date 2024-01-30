@@ -11,6 +11,7 @@ defmodule LightningWeb.AttemptChannel do
   alias Lightning.Scrubber
   alias Lightning.Workers
   alias LightningWeb.RunWithOptions
+  alias LightningWeb.RunOptions
 
   require Jason.Helpers
   require Logger
@@ -51,11 +52,11 @@ defmodule LightningWeb.AttemptChannel do
 
   @impl true
   def handle_in("fetch:attempt", _, %{assigns: assigns} = socket) do
-    {:reply,
-     {:ok,
-      RunWithOptions.render(assigns.attempt,
-        output_dataclips: include_output_dataclips?(assigns.retention_policy)
-      )}, socket}
+    options = %RunOptions{
+      output_dataclips: include_output_dataclips?(assigns.retention_policy)
+    }
+
+    {:reply, {:ok, RunWithOptions.render(assigns.attempt, options)}, socket}
   end
 
   def handle_in("attempt:start", _, socket) do
@@ -140,7 +141,7 @@ defmodule LightningWeb.AttemptChannel do
     body = Attempts.get_input(socket.assigns.attempt)
 
     if socket.assigns.retention_policy == :erase_all do
-      Attempts.wipe_dataclip_body(socket.assigns.attempt)
+      Attempts.wipe_dataclips(socket.assigns.attempt)
     end
 
     {:reply, {:ok, {:binary, body}}, socket}
