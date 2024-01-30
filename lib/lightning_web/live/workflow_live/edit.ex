@@ -6,7 +6,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
   import LightningWeb.WorkflowLive.Components
 
   alias Lightning.Invocation
-  alias Lightning.Jobs
   alias Lightning.Policies.Permissions
   alias Lightning.Policies.ProjectUsers
   alias Lightning.Projects
@@ -698,7 +697,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
           |> Lightning.Repo.preload([
             :edges,
             triggers: Trigger.with_auth_methods_query(),
-            jobs: {Workflows.jobs_ordered_subquery(), [:credential]}
+            jobs: {Workflows.jobs_ordered_subquery(), [:credential, :steps]}
           ])
 
         socket |> assign_workflow(workflow) |> assign(page_title: workflow.name)
@@ -1139,8 +1138,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
     |> Enum.any?()
   end
 
-  defp has_steps?(job_id) do
-    Jobs.has_steps?(%Job{id: job_id})
+  defp has_steps?(job) do
+    !Enum.empty?(job.steps)
   end
 
   defp get_filtered_edges(workflow_changeset, filter_func) do
@@ -1290,7 +1289,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
       :jobs ->
         socket
         |> assign(
-          has_steps: has_steps?(value.id),
+          has_steps: has_steps?(value),
           has_child_edges: has_child_edges?(socket.assigns.changeset, value.id),
           is_first_job: first_job?(socket.assigns.changeset, value.id),
           selected_job: value,

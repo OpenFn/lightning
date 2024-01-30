@@ -180,27 +180,4 @@ defmodule Lightning.Jobs do
 
     Repo.all(query)
   end
-
-  @spec has_steps?(Lightning.Workflows.Job.t()) :: boolean()
-  @doc """
-  Checks if a given job has any associated steps.
-
-  ## Parameters
-
-  - job: The `Job` struct to be checked.
-
-  ## Returns
-
-  `true` if there are steps associated with the given job, `false` otherwise.
-
-  ## Examples
-
-      iex> Lightning.Workflows.Job.has_steps?(job)
-      true
-  """
-  def has_steps?(%Job{id: job_id}) do
-    Lightning.Invocation.Step
-    |> where(job_id: ^job_id)
-    |> Repo.exists?()
-  end
 end

@@ -126,20 +126,6 @@ defmodule Lightning.JobsTest do
       assert Jobs.get_downstream_jobs_for(job, :on_job_success) == []
       assert Jobs.get_downstream_jobs_for(other_job) == []
     end
-
-    test "has_steps?/1 returns true if a given job has associated steps and false if not" do
-      workflow = insert(:workflow)
-      job_one = insert(:job, workflow: workflow)
-      job_two = insert(:job, workflow: workflow)
-
-      refute Jobs.has_steps?(job_one)
-      refute Jobs.has_steps?(job_two)
-
-      insert(:step, job: job_one)
-
-      assert Jobs.has_steps?(job_one)
-      refute Jobs.has_steps?(job_two)
-    end
   end
 
   describe "update_job/2" do
