@@ -837,6 +837,39 @@ defmodule LightningWeb.WorkOrderLiveTest do
   end
 
   describe "Show" do
+    test "no access to project on show", %{conn: conn, project: project} do
+      workflow =
+        %{triggers: [trigger]} = insert(:simple_workflow, project: project)
+
+      attempt =
+        build(:attempt, dataclip: insert(:dataclip), starting_trigger: trigger)
+
+      insert(:workorder, workflow: workflow)
+      |> with_attempt(attempt)
+
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project}/runs/#{attempt}")
+
+      assert view |> render_async() =~ attempt.id
+
+      project = insert(:project)
+
+      workflow =
+        %{triggers: [trigger]} = insert(:simple_workflow, project: project)
+
+      attempt =
+        build(:attempt, dataclip: insert(:dataclip), starting_trigger: trigger)
+
+      insert(:workorder, workflow: workflow)
+      |> with_attempt(attempt)
+
+      error =
+        live(conn, ~p"/projects/#{project}/runs/#{attempt}")
+
+      assert error ==
+               {:error, {:redirect, %{flash: %{"nav" => :not_found}, to: "/"}}}
+    end
+
     test "by default only the latest attempt is present when there are multiple attempts",
          %{conn: conn, user: user} do
       project =

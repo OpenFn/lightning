@@ -182,24 +182,33 @@ defmodule Lightning.Factories do
   Inserts an attempt and associates it two-way with an work order.
   ```
   work_order =
-    insert(:workorder, workflow: workflow, reason: reason)
+    insert(:workorder, workflow: workflow)
     |> with_attempt(attempt)
 
   > **NOTE** The work order must be inserted before calling this function.
   ```
   """
-  def with_attempt(work_order, attempt_args) do
+  def with_attempt(work_order, attempt_or_args) do
     if work_order.__meta__.state == :built do
       raise "Cannot associate an attempt with a work order that has not been inserted"
     end
 
-    attempt_args =
-      Keyword.merge(
-        [work_order: work_order],
-        attempt_args
-      )
+    attempt =
+      case attempt_or_args do
+        %Lightning.Attempt{} = attempt ->
+          if attempt.__meta__.state != :built do
+            raise "The attempt must be built, not inserted"
+          end
 
-    attempt = insert(:attempt, attempt_args)
+          attempt
+          |> merge_attributes(%{work_order: work_order})
+          |> insert()
+
+        attempt_args ->
+          build(:attempt, attempt_args)
+          |> merge_attributes(%{work_order: work_order})
+          |> insert()
+      end
 
     %{
       work_order
