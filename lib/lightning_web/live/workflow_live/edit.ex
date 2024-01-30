@@ -1350,7 +1350,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
           {:cont, nil}
 
         %Job{} = job ->
-          {:halt, [field, job |> Lightning.Repo.preload(:credential)]}
+          {:halt, [field, job |> Lightning.Repo.preload([:credential, :steps])]}
 
         %Trigger{} = trigger ->
           {:halt,
