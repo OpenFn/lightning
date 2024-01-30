@@ -48,6 +48,8 @@ Lightning.ExportUtils.html
 Lightning.FailureNotifierView.html
 Lightning.Graph.html
 Lightning.Helpers.html
+Lightning.ImpactTracking.Client.html
+Lightning.ImpactTracking.Worker.html
 Lightning.Invocation.Dataclip.html
 Lightning.Invocation.LogLine.html
 Lightning.Invocation.Query.html
@@ -238,8 +240,8 @@ dist/merriweather-latin-ext-300-normal-K6L27CZ5.woff2
 dist/merriweather-vietnamese-300-italic-EHHNZPUO.woff2
 dist/merriweather-vietnamese-300-normal-U376L4Z4.woff2
 dist/remixicon-NKANDIL5.woff2
-dist/search_data-4DC596D9.js
-dist/sidebar_items-B3484D89.js
+dist/search_data-DE396C3A.js
+dist/sidebar_items-AA0128C8.js
 index.html
 provisioning.html
 readme.html
