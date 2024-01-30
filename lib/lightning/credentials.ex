@@ -237,6 +237,8 @@ defmodule Lightning.Credentials do
 
   defp put_typed_body(body, "raw"), do: {:ok, body}
 
+  defp put_typed_body(body, "salesforce_oauth"), do: {:ok, body}
+
   defp put_typed_body(body, schema_name) do
     schema = get_schema(schema_name)
 
