@@ -417,7 +417,7 @@ defmodule LightningWeb.CredentialLive.SalesforceOauthComponent do
         scopes
       )
 
-    {:ok, socket |> assign(autorize_url: authorize_url)}
+    {:ok, socket |> assign(authorize_url: authorize_url)}
   end
 
   @impl true
