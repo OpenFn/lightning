@@ -19,7 +19,7 @@ defmodule LightningWeb.Components.NewInputs do
   attr :type, :string, default: "button", values: ["button", "submit"]
   attr :class, :any, default: ""
 
-  attr :visual_class, :any,
+  attr :color_class, :any,
     default: "bg-primary-600 hover:bg-primary-700 text-white"
 
   attr :rest, :global, include: ~w(disabled form name value)
@@ -43,7 +43,7 @@ defmodule LightningWeb.Components.NewInputs do
           "focus:ring-2 focus:ring-offset-2 focus:ring-primary-500",
           "disabled:bg-primary-300",
           "phx-submit-loading:opacity-75",
-          @visual_class,
+          @color_class,
           @class
         ]}
         {@rest}
