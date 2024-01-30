@@ -100,25 +100,26 @@ base_oban_cron = [
    args: %{"type" => "monthly_project_digest"}}
 ]
 
-conditional_cron =
-  if System.get_env("PURGE_DELETED_AFTER_DAYS") != 0,
-    do:
-      base_oban_cron ++
-        [
-          {"0 2 * * *", Lightning.WebhookAuthMethods,
-           args: %{"type" => "purge_deleted"}},
-          {"0 2 * * *", Lightning.Credentials,
-           args: %{"type" => "purge_deleted"}},
-          {"*/5 * * * *", Lightning.Janitor},
-          {"0 2 * * *", Lightning.Accounts, args: %{"type" => "purge_deleted"}},
-          {"0 2 * * *", Lightning.Projects, args: %{"type" => "purge_deleted"}}
-        ],
-    else: base_oban_cron
+purge_cron =
+  if System.get_env("PURGE_DELETED_AFTER_DAYS") != "0",
+    do: [
+      {"0 2 * * *", Lightning.WebhookAuthMethods,
+       args: %{"type" => "purge_deleted"}},
+      {"0 2 * * *", Lightning.Credentials, args: %{"type" => "purge_deleted"}},
+      {"*/5 * * * *", Lightning.Janitor},
+      {"0 2 * * *", Lightning.Accounts, args: %{"type" => "purge_deleted"}},
+      {"0 2 * * *", Lightning.Projects, args: %{"type" => "purge_deleted"}}
+    ],
+    else: []
+
+impact_tracking_cron = [{"0 */1 * * *", Lightning.ImpactTracking.Worker}]
+
+all_cron = base_oban_cron ++ purge_cron ++ impact_tracking_cron
 
 config :lightning, Oban,
   repo: Lightning.Repo,
   plugins: [
-    {Oban.Plugins.Cron, crontab: conditional_cron}
+    {Oban.Plugins.Cron, crontab: all_cron}
   ],
   shutdown_grace_period: :timer.minutes(2),
   dispatch_cooldown: 100,
@@ -343,3 +344,7 @@ config :lightning, :metrics,
     String.to_integer(
       System.get_env("METRICS_ATTEMPT_PERFORMANCE_AGE_SECONDS", "300")
     )
+
+config :lightning, :impact_tracking,
+  enabled: System.get_env("IMPACT_TRACKING_ENABLED") == "true",
+  host: System.get_env("IMPACT_TRACKER_HOST", "https://impact.openfn.org")
