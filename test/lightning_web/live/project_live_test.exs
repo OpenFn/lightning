@@ -75,8 +75,7 @@ defmodule LightningWeb.ProjectLiveTest do
     end
 
     test "saves new project", %{conn: conn} do
-      # this makes it first in the list
-      user = insert(:user, first_name: "1")
+      user = insert(:user, first_name: "1st", last_name: "user")
 
       {:ok, index_live, _html} =
         live(conn, Routes.project_index_path(conn, :index))
@@ -94,11 +93,13 @@ defmodule LightningWeb.ProjectLiveTest do
       |> form("#project-form", project: @create_attrs)
       |> render_change()
 
+      user_index = find_user_index_in_list(index_live, user)
+
       index_live
       |> form("#project-users-form",
         project: %{
           "project_users" => %{
-            "0" => %{"user_id" => user.id, "role" => "editor"}
+            user_index => %{"user_id" => user.id, "role" => "editor"}
           }
         }
       )
@@ -297,24 +298,24 @@ defmodule LightningWeb.ProjectLiveTest do
     end
 
     test "Edits a project", %{conn: conn, user: superuser} do
-      # the alphabetical order here is important. In the page, the users are ordered alphabeticaly
-      superuser
-      |> Ecto.Changeset.change(%{first_name: "1"})
-      |> Repo.update!()
-
       user1 = insert(:user, first_name: "2")
       user2 = insert(:user, first_name: "3")
       project = insert(:project)
 
       {:ok, view, _html} = live(conn, ~p"/settings/projects/#{project.id}")
 
-      # notice the order. We've skipped `0` who's the superadmin. Changing this order will fail the test
       view
       |> form("#project-users-form",
         project: %{
           "project_users" => %{
-            "1" => %{"user_id" => user1.id, "role" => "editor"},
-            "2" => %{"user_id" => user2.id, "role" => "viewer"}
+            find_user_index_in_list(view, user1) => %{
+              "user_id" => user1.id,
+              "role" => "editor"
+            },
+            find_user_index_in_list(view, user2) => %{
+              "user_id" => user2.id,
+              "role" => "viewer"
+            }
           }
         }
       )
@@ -1749,5 +1750,15 @@ defmodule LightningWeb.ProjectLiveTest do
       assert flash["info"] ==
                "Your Webhook Authentication method has been deleted."
     end
+  end
+
+  defp find_user_index_in_list(view, user) do
+    Floki.parse_fragment!(render(view))
+    |> Floki.find("#project-users-form tbody tr")
+    |> Enum.find_index(fn el ->
+      Floki.find(el, "td:first-child()") |> Floki.text() =~
+        "#{user.first_name} #{user.last_name}"
+    end)
+    |> to_string()
   end
 end
