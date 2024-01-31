@@ -705,6 +705,7 @@
                         work_order={workorder}
                         project={@project}
                         can_rerun_job={@can_rerun_job}
+                        can_edit_data_retention={@can_edit_data_retention}
                         entry_selected={
                           Enum.any?(@selected_work_orders, fn wo ->
                             wo.id == workorder.id

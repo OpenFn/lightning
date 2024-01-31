@@ -385,6 +385,16 @@ defmodule Lightning.Invocation do
     )
   end
 
+  def search_workorders_having_dataclips_query(
+        %Project{} = project,
+        %SearchParams{} = params
+      ) do
+    project
+    |> search_workorders_query(params)
+    |> join(:inner, [workorder: wo], assoc(wo, :dataclip), as: :dataclip)
+    |> where([dataclip: d], is_nil(d.wiped_at))
+  end
+
   defp base_query(project_id) do
     from(
       workorder in WorkOrder,
@@ -393,7 +403,7 @@ defmodule Lightning.Invocation do
       as: :workflow,
       where: workflow.project_id == ^project_id,
       select: workorder,
-      preload: [workflow: workflow, attempts: [steps: :job]],
+      preload: [workflow: workflow, attempts: [steps: :job], dataclip: []],
       order_by: [desc_nulls_first: workorder.last_activity],
       distinct: true
     )

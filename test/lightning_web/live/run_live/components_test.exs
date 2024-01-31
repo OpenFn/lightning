@@ -94,7 +94,8 @@ defmodule LightningWeb.RunLive.ComponentsTest do
         step: first_step,
         attempt: attempt,
         project_id: project_id,
-        can_rerun_job: true
+        can_rerun_job: true,
+        can_edit_data_retention: true
       )
       |> Floki.parse_fragment!()
 
@@ -111,7 +112,8 @@ defmodule LightningWeb.RunLive.ComponentsTest do
         step: second_step,
         attempt: attempt,
         project_id: project_id,
-        can_rerun_job: true
+        can_rerun_job: true,
+        can_edit_data_retention: true
       )
       |> Floki.parse_fragment!()
 
@@ -128,7 +130,8 @@ defmodule LightningWeb.RunLive.ComponentsTest do
         step: third_step,
         attempt: attempt,
         project_id: project_id,
-        can_rerun_job: true
+        can_rerun_job: true,
+        can_edit_data_retention: true
       )
       |> Floki.parse_fragment!()
 
@@ -167,7 +170,8 @@ defmodule LightningWeb.RunLive.ComponentsTest do
         step: first_step,
         attempt: attempt2,
         project_id: project_id,
-        can_rerun_job: true
+        can_rerun_job: true,
+        can_edit_data_retention: true
       )
 
     assert html
@@ -182,7 +186,8 @@ defmodule LightningWeb.RunLive.ComponentsTest do
         step: attempt2_last_step,
         attempt: attempt2,
         project_id: project_id,
-        can_rerun_job: true
+        can_rerun_job: true,
+        can_edit_data_retention: true
       )
 
     refute html
@@ -224,7 +229,8 @@ defmodule LightningWeb.RunLive.ComponentsTest do
         step: step,
         attempt: attempt,
         project_id: project_id,
-        can_rerun_job: true
+        can_rerun_job: true,
+        can_edit_data_retention: true
       )
       |> Floki.parse_fragment!()
 
@@ -237,13 +243,106 @@ defmodule LightningWeb.RunLive.ComponentsTest do
         step: step,
         attempt: attempt,
         project_id: project_id,
-        can_rerun_job: false
+        can_rerun_job: false,
+        can_edit_data_retention: true
       )
       |> Floki.parse_fragment!()
 
     refute html
            |> Floki.find(~s{span[title="Rerun workflow from here"]})
            |> Enum.any?()
+  end
+
+  test "rerun button is disabled when the step dataclip is not saved" do
+    %{triggers: [trigger], jobs: [job | _rest]} =
+      workflow = insert(:simple_workflow)
+
+    dataclip = insert(:dataclip, body: nil, wiped_at: DateTime.utc_now())
+
+    %{attempts: [attempt]} =
+      insert(:workorder,
+        workflow: workflow,
+        trigger: trigger,
+        dataclip: dataclip,
+        state: :failed
+      )
+      |> with_attempt(
+        state: :failed,
+        dataclip: dataclip,
+        starting_trigger: trigger,
+        finished_at: build(:timestamp),
+        steps: [
+          build(:step,
+            finished_at: DateTime.utc_now(),
+            job: job,
+            exit_reason: "success",
+            input_dataclip: nil,
+            output_dataclip: nil
+          )
+        ]
+      )
+
+    step = List.first(attempt.steps)
+
+    project_id = step.job.workflow.project_id
+
+    html =
+      render_component(&Components.step_list_item/1,
+        step: step,
+        attempt: attempt,
+        project_id: project_id,
+        can_rerun_job: true,
+        can_edit_data_retention: true
+      )
+
+    parsed_html = Floki.parse_fragment!(html)
+
+    assert parsed_html
+           |> Floki.find(~s{span[id=#{step.id}]})
+           |> Enum.any?(),
+           "rerun button exists"
+
+    refute parsed_html
+           |> Floki.find(~s{span[id=#{step.id}][phx-click="rerun"]})
+           |> Enum.any?(),
+           "rerun button does not have the rerun phx event"
+
+    assert html =~
+             "This work order cannot be rerun since no input data has been stored",
+           "Tooltip is displayed"
+
+    assert html =~ "Go to retention settings", "User sees link to go to settings"
+    refute html =~ "contact one of your account administrators"
+
+    html =
+      render_component(&Components.step_list_item/1,
+        step: step,
+        attempt: attempt,
+        project_id: project_id,
+        can_rerun_job: true,
+        can_edit_data_retention: false
+      )
+
+    parsed_html = Floki.parse_fragment!(html)
+
+    assert parsed_html
+           |> Floki.find(~s{span[id=#{step.id}]})
+           |> Enum.any?(),
+           "rerun button exists"
+
+    refute parsed_html
+           |> Floki.find(~s{span[id=#{step.id}][phx-click="rerun"]})
+           |> Enum.any?(),
+           "rerun button does not have the rerun phx event"
+
+    assert html =~
+             "This work order cannot be rerun since no input data has been stored",
+           "Tooltip is displayed"
+
+    refute html =~ "Go to retention settings",
+           "User does not see link to go to settings"
+
+    assert html =~ "contact one of your account administrators"
   end
 
   describe "log_view component" do

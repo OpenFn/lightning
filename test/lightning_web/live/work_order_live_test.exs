@@ -141,7 +141,10 @@ defmodule LightningWeb.WorkOrderLiveTest do
       rendered =
         render_component(LightningWeb.RunLive.WorkOrderComponent,
           id: work_order.id,
-          work_order: work_order
+          work_order: work_order,
+          project: project,
+          can_rerun_job: true,
+          can_edit_data_retention: true
         )
 
       assert rendered =~ work_order.dataclip_id
@@ -162,7 +165,8 @@ defmodule LightningWeb.WorkOrderLiveTest do
           work_order: work_order,
           show_details: true,
           project: project,
-          can_rerun_job: true
+          can_rerun_job: true,
+          can_edit_data_retention: true
         )
 
       assert rendered =~ work_order.dataclip_id
@@ -189,18 +193,274 @@ defmodule LightningWeb.WorkOrderLiveTest do
 
       work_order =
         Lightning.Repo.reload!(work_order)
-        |> Lightning.Repo.preload([:attempts, :workflow])
+        |> Lightning.Repo.preload([:attempts, :workflow, :dataclip])
 
       assert_work_order_steps(work_order, 0)
 
       rendered =
         render_component(LightningWeb.RunLive.WorkOrderComponent,
           id: work_order.id,
-          work_order: work_order
+          work_order: work_order,
+          project: project,
+          can_rerun_job: true,
+          can_edit_data_retention: true
         )
 
       assert rendered =~ work_order.dataclip_id
       refute rendered =~ "toggle_details_for_#{work_order.id}"
+    end
+
+    test "WorkOrderComponent disables dataclip link if the dataclip has been wiped",
+         %{
+           project: project
+         } do
+      %{triggers: [trigger], jobs: [job | _rest]} =
+        workflow = insert(:simple_workflow, project: project)
+
+      wiped_dataclip = insert(:dataclip, body: nil, wiped_at: DateTime.utc_now())
+
+      work_order =
+        insert(:workorder,
+          workflow: workflow,
+          trigger: trigger,
+          dataclip: wiped_dataclip,
+          state: :failed
+        )
+        |> with_attempt(
+          state: :failed,
+          dataclip: wiped_dataclip,
+          starting_trigger: trigger,
+          finished_at: build(:timestamp),
+          steps: [
+            build(:step,
+              finished_at: DateTime.utc_now(),
+              job: job,
+              exit_reason: "success",
+              input_dataclip: nil,
+              output_dataclip: nil
+            )
+          ]
+        )
+
+      html =
+        render_component(LightningWeb.RunLive.WorkOrderComponent,
+          id: work_order.id,
+          work_order: work_order,
+          project: project,
+          can_rerun_job: true,
+          can_edit_data_retention: true
+        )
+
+      parsed_html = Floki.parse_fragment!(html)
+
+      refute parsed_html
+             |> Floki.find(~s{a#view-dataclip-#{wiped_dataclip.id}})
+             |> Enum.any?(),
+             "dataclip link not available"
+
+      assert parsed_html
+             |> Floki.find(~s{span#view-dataclip-#{wiped_dataclip.id}})
+             |> Enum.any?()
+
+      dataclip_element =
+        parsed_html
+        |> Floki.find(~s{span#view-dataclip-#{wiped_dataclip.id}})
+        |> hd()
+
+      dataclip_html = Floki.raw_html(dataclip_element)
+
+      assert dataclip_html =~
+               "The input dataclip is unavailable and has not been stored"
+
+      assert dataclip_html =~ "Go to retention settings",
+             "User sees link to go to settings"
+
+      refute dataclip_html =~ "contact one of your account administrators"
+
+      # User cannot edit data retention
+
+      html =
+        render_component(LightningWeb.RunLive.WorkOrderComponent,
+          id: work_order.id,
+          work_order: work_order,
+          project: project,
+          can_rerun_job: true,
+          can_edit_data_retention: false
+        )
+
+      parsed_html = Floki.parse_fragment!(html)
+
+      refute parsed_html
+             |> Floki.find(~s{a#view-dataclip-#{wiped_dataclip.id}})
+             |> Enum.any?(),
+             "dataclip link not available"
+
+      assert parsed_html
+             |> Floki.find(~s{span#view-dataclip-#{wiped_dataclip.id}})
+             |> Enum.any?()
+
+      dataclip_html =
+        parsed_html
+        |> Floki.find(~s{span#view-dataclip-#{wiped_dataclip.id}})
+        |> hd()
+        |> Floki.raw_html()
+
+      assert dataclip_html =~
+               "The input dataclip is unavailable and has not been stored"
+
+      refute dataclip_html =~ "Go to retention settings",
+             "User cannot see link to go to settings"
+
+      assert dataclip_html =~ "contact one of your account administrators"
+
+      # Normal dataclip
+
+      parsed_html =
+        render_component(LightningWeb.RunLive.WorkOrderComponent,
+          id: work_order.id,
+          work_order: %{work_order | dataclip: insert(:dataclip)},
+          project: project,
+          can_rerun_job: true,
+          can_edit_data_retention: false
+        )
+        |> Floki.parse_fragment!()
+
+      assert parsed_html
+             |> Floki.find(~s{a#view-dataclip-#{wiped_dataclip.id}})
+             |> Enum.any?(),
+             "dataclip link available"
+    end
+
+    test "WorkOrderComponent disables the select checkbox if the dataclip has been wiped",
+         %{
+           project: project
+         } do
+      %{triggers: [trigger], jobs: [job | _rest]} =
+        workflow = insert(:simple_workflow, project: project)
+
+      wiped_dataclip = insert(:dataclip, body: nil, wiped_at: DateTime.utc_now())
+
+      work_order =
+        insert(:workorder,
+          workflow: workflow,
+          trigger: trigger,
+          dataclip: wiped_dataclip,
+          state: :failed
+        )
+        |> with_attempt(
+          state: :failed,
+          dataclip: wiped_dataclip,
+          starting_trigger: trigger,
+          finished_at: build(:timestamp),
+          steps: [
+            build(:step,
+              finished_at: DateTime.utc_now(),
+              job: job,
+              exit_reason: "success",
+              input_dataclip: nil,
+              output_dataclip: nil
+            )
+          ]
+        )
+
+      html =
+        render_component(LightningWeb.RunLive.WorkOrderComponent,
+          id: work_order.id,
+          work_order: work_order,
+          project: project,
+          can_rerun_job: true,
+          can_edit_data_retention: true
+        )
+
+      parsed_html = Floki.parse_fragment!(html)
+
+      assert parsed_html
+             |> Floki.find(~s{form#select_#{work_order.id}})
+             |> Enum.any?(),
+             "selection form exists"
+
+      refute parsed_html
+             |> Floki.find(
+               ~s{form#select_#{work_order.id}[phx-change="toggle_selection"]}
+             )
+             |> Enum.any?(),
+             "selection form does not have the phx-change attr"
+
+      tooltip_html =
+        parsed_html
+        |> Floki.find(~s{form#select_#{work_order.id}_tooltip})
+        |> hd()
+        |> Floki.raw_html()
+
+      assert tooltip_html =~
+               "This work order cannot be rerun since no input data has been stored"
+
+      assert tooltip_html =~ "Go to retention settings",
+             "User sees link to go to settings"
+
+      refute tooltip_html =~ "contact one of your account administrators"
+
+      # User cannot edit data retention
+
+      html =
+        render_component(LightningWeb.RunLive.WorkOrderComponent,
+          id: work_order.id,
+          work_order: work_order,
+          project: project,
+          can_rerun_job: true,
+          can_edit_data_retention: false
+        )
+
+      parsed_html = Floki.parse_fragment!(html)
+
+      assert parsed_html
+             |> Floki.find(~s{form#select_#{work_order.id}})
+             |> Enum.any?(),
+             "selection form exists"
+
+      refute parsed_html
+             |> Floki.find(
+               ~s{form#select_#{work_order.id}[phx-change="toggle_selection"]}
+             )
+             |> Enum.any?(),
+             "selection form does not have the phx-change attr"
+
+      tooltip_html =
+        parsed_html
+        |> Floki.find(~s{form#select_#{work_order.id}_tooltip})
+        |> hd()
+        |> Floki.raw_html()
+
+      assert tooltip_html =~
+               "This work order cannot be rerun since no input data has been stored"
+
+      refute tooltip_html =~ "Go to retention settings",
+             "User cannot see link to go to settings"
+
+      assert tooltip_html =~ "contact one of your account administrators"
+
+      # Normal dataclip
+
+      parsed_html =
+        render_component(LightningWeb.RunLive.WorkOrderComponent,
+          id: work_order.id,
+          work_order: %{work_order | dataclip: insert(:dataclip)},
+          project: project,
+          can_rerun_job: true,
+          can_edit_data_retention: false
+        )
+        |> Floki.parse_fragment!()
+
+      assert parsed_html
+             |> Floki.find(
+               ~s{form#select_#{work_order.id}[phx-change="toggle_selection"]}
+             )
+             |> Enum.any?()
+
+      refute parsed_html
+             |> Floki.find(~s{form#select_#{work_order.id}_tooltip})
+             |> Enum.any?(),
+             "tooltip does not exist"
     end
 
     test "toggle details of a work order shows attempt state and timestamp", %{
@@ -1715,6 +1975,62 @@ defmodule LightningWeb.WorkOrderLiveTest do
       updated_html = render(view)
       refute updated_html =~ "Rerun all 2 matching work orders from start"
       assert updated_html =~ "Rerun 1 selected work order from start"
+    end
+
+    test "workorders with wiped dataclips cannot be selected",
+         %{conn: conn, project: project, work_order: work_order_1} do
+      %{triggers: [trigger], jobs: [job | _rest]} =
+        workflow = insert(:simple_workflow, project: project)
+
+      dataclip = insert(:dataclip, body: nil, wiped_at: DateTime.utc_now())
+
+      work_order_2 =
+        insert(:workorder,
+          workflow: workflow,
+          trigger: trigger,
+          dataclip: dataclip,
+          state: :success
+        )
+        |> with_attempt(
+          state: :success,
+          dataclip: dataclip,
+          starting_trigger: trigger,
+          finished_at: build(:timestamp),
+          steps: [
+            build(:step,
+              finished_at: DateTime.utc_now(),
+              job: job,
+              exit_reason: "success",
+              input_dataclip: nil,
+              output_dataclip: nil
+            )
+          ]
+        )
+
+      {:ok, view, _html} =
+        live_async(conn, Routes.project_run_index_path(conn, :index, project.id))
+
+      # Try selecting
+      assert_raise ArgumentError, fn ->
+        view
+        |> form("#selection-form-#{work_order_2.id}")
+        |> render_change(%{selected: true})
+      end
+
+      # Workorder with existing dataclip can be selected
+      assert view
+             |> form("#selection-form-#{work_order_1.id}")
+             |> render_change(%{selected: true}) =~
+               "Rerun 1 selected work order from start"
+
+      # Select All work orders. We have 2 workorders
+      html =
+        render_change(view, "toggle_all_selections", %{all_selections: true})
+
+      refute html =~ "Rerun 2 selected work orders from start"
+
+      assert html =~ "Rerun 1 selected work order from start",
+             "Only one workorder gets selected"
     end
   end
 

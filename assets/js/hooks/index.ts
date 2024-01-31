@@ -102,10 +102,15 @@ export const Tooltip = {
     let placement = this.el.dataset.placement
       ? this.el.dataset.placement
       : 'top';
+    let allowHTML = this.el.dataset.allowHtml
+      ? this.el.dataset.allowHtml
+      : 'false';
     this._tippyInstance = tippy(this.el, {
       content: content,
       placement: placement,
       animation: false,
+      allowHTML: allowHTML === 'true',
+      interactive: true,
     });
   },
   destroyed() {

@@ -53,7 +53,13 @@ defmodule LightningWeb.RunLive.Index do
   def mount(
         params,
         _session,
-        %{assigns: %{current_user: current_user, project: project}} = socket
+        %{
+          assigns: %{
+            current_user: current_user,
+            project: project,
+            project_user: project_user
+          }
+        } = socket
       ) do
     WorkOrders.subscribe(project.id)
 
@@ -67,6 +73,14 @@ defmodule LightningWeb.RunLive.Index do
         :rerun_job,
         current_user,
         project
+      )
+
+    can_edit_data_retention =
+      ProjectUsers
+      |> Permissions.can?(
+        :edit_data_retention,
+        current_user,
+        project_user
       )
 
     statuses = [
@@ -100,6 +114,7 @@ defmodule LightningWeb.RunLive.Index do
        work_orders: [],
        selected_work_orders: [],
        can_rerun_job: can_rerun_job,
+       can_edit_data_retention: can_edit_data_retention,
        pagination_path: &pagination_path(socket, project, &1),
        filters: params["filters"]
      )}
@@ -220,7 +235,7 @@ defmodule LightningWeb.RunLive.Index do
     %{work_order: work_order} =
       Lightning.Repo.preload(
         attempt,
-        [work_order: [:workflow, attempts: [steps: :job]]],
+        [work_order: [:workflow, :dataclip, attempts: [steps: :job]]],
         force: true
       )
 
@@ -257,7 +272,9 @@ defmodule LightningWeb.RunLive.Index do
         socket
       ) do
     work_order =
-      Lightning.Repo.preload(work_order, [:workflow, attempts: [steps: :job]],
+      Lightning.Repo.preload(
+        work_order,
+        [:workflow, :dataclip, attempts: [steps: :job]],
         force: true
       )
 
@@ -357,7 +374,9 @@ defmodule LightningWeb.RunLive.Index do
 
     work_orders =
       if selection do
-        Enum.map(page.entries, fn entry ->
+        page.entries
+        |> Enum.filter(fn wo -> is_nil(wo.dataclip.wiped_at) end)
+        |> Enum.map(fn entry ->
           %Lightning.WorkOrder{id: entry.id, workflow_id: entry.workflow_id}
         end)
       else
@@ -399,7 +418,7 @@ defmodule LightningWeb.RunLive.Index do
     filter = SearchParams.new(socket.assigns.filters)
 
     socket.assigns.project
-    |> Invocation.search_workorders_query(filter)
+    |> Invocation.search_workorders_having_dataclips_query(filter)
     |> Lightning.Repo.all()
     |> WorkOrders.retry_many(job_id, created_by: socket.assigns.current_user)
   end
@@ -413,7 +432,7 @@ defmodule LightningWeb.RunLive.Index do
     filter = SearchParams.new(socket.assigns.filters)
 
     socket.assigns.project
-    |> Invocation.search_workorders_query(filter)
+    |> Invocation.search_workorders_having_dataclips_query(filter)
     |> Lightning.Repo.all()
     |> WorkOrders.retry_many(created_by: socket.assigns.current_user)
   end
