@@ -125,13 +125,17 @@ defmodule LightningWeb.WorkflowLive.Edit do
                     <.button
                       id="save-and-run"
                       phx-hook="DefaultRunViaCtrlEnter"
-                      {if retry_from_here(@step, @manual_run_form), do:
+                      {if retry_from_here(@step, @manual_run_form, @selectable_dataclips), do:
                         [type: "button", "phx-click": "rerun", "phx-value-attempt_id": @follow_attempt_id, "phx-value-step_id": @step.id],
                       else:
                           [type: "submit", form: @manual_run_form.id]}
                       class={[
                         "relative inline-flex items-center",
-                        retry_from_here(@step, @manual_run_form) && "rounded-r-none"
+                        retry_from_here(
+                          @step,
+                          @manual_run_form,
+                          @selectable_dataclips
+                        ) && "rounded-r-none"
                       ]}
                       disabled={
                         @save_and_run_disabled ||
@@ -144,7 +148,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
                           class="w-4 h-4 animate-spin mr-1"
                         /> Processing
                       <% else %>
-                        <%= if retry_from_here(@step, @manual_run_form) do %>
+                        <%= if retry_from_here(@step, @manual_run_form, @selectable_dataclips) do %>
                           <.icon name="hero-arrow-path-mini" class="w-4 h-4 mr-1" />
                           Rerun from here
                         <% else %>
@@ -154,7 +158,13 @@ defmodule LightningWeb.WorkflowLive.Edit do
                       <% end %>
                     </.button>
                     <div
-                      :if={retry_from_here(@step, @manual_run_form)}
+                      :if={
+                        retry_from_here(
+                          @step,
+                          @manual_run_form,
+                          @selectable_dataclips
+                        )
+                      }
                       class="relative -ml-px block"
                     >
                       <.button
@@ -417,8 +427,17 @@ defmodule LightningWeb.WorkflowLive.Edit do
     """
   end
 
-  defp retry_from_here(step, form),
-    do: step && step.input_dataclip_id == form[:dataclip_id].value
+  defp retry_from_here(step, form, selectable_dataclips) do
+    step_dataclip_id = step && step.input_dataclip_id
+
+    selected_dataclip =
+      Enum.find(selectable_dataclips, fn d ->
+        d.id == form[:dataclip_id].value
+      end)
+
+    selected_dataclip && selected_dataclip.id == step_dataclip_id &&
+      is_nil(selected_dataclip.wiped_at)
+  end
 
   defp processing(attempt_id, step), do: attempt_id && !step
 
@@ -927,9 +946,12 @@ defmodule LightningWeb.WorkflowLive.Edit do
         socket
       )
       when step.job_id === socket.assigns.selected_job.id do
+    form = socket.assigns.manual_run_form
+    selected_dataclip_id = Phoenix.HTML.Form.input_value(form, :dataclip_id)
+
     dataclip =
-      step.input_dataclip_id &&
-        Invocation.get_dataclip_details!(step.input_dataclip_id)
+      selected_dataclip_id &&
+        Invocation.get_dataclip_details!(selected_dataclip_id)
 
     selectable_dataclips =
       maybe_add_selected_dataclip(
@@ -938,12 +960,10 @@ defmodule LightningWeb.WorkflowLive.Edit do
       )
 
     manual_run_form_changeset =
-      socket.assigns.manual_run_form.source
-      |> Ecto.Changeset.change(dataclip_id: step.input_dataclip_id)
+      Ecto.Changeset.change(form.source, dataclip_id: step.input_dataclip_id)
 
     manual_run_form =
-      %{socket.assigns.manual_run_form | source: manual_run_form_changeset}
-      |> to_form(id: "manual_run_form")
+      to_form(%{form | source: manual_run_form_changeset}, id: "manual_run_form")
 
     {:noreply,
      socket
@@ -1252,7 +1272,13 @@ defmodule LightningWeb.WorkflowLive.Edit do
   defp maybe_follow_attempt(socket, query_params) do
     case query_params do
       %{"a" => attempt_id} when is_binary(attempt_id) ->
-        socket |> assign(follow_attempt_id: attempt_id)
+        step =
+          Invocation.get_step_for_attempt_and_job(
+            attempt_id,
+            socket.assigns.selected_job.id
+          )
+
+        socket |> assign(follow_attempt_id: attempt_id, step: step)
 
       _ ->
         socket |> assign(follow_attempt_id: nil)
