@@ -1,11 +1,13 @@
 defmodule LightningWeb.RunChannelTest do
   use LightningWeb.ChannelCase
 
+  alias Lightning.Extensions.RuntimeLimiter
   alias Lightning.Invocation.Dataclip
   alias Lightning.Invocation.Step
   alias Lightning.Workers
 
   import Ecto.Query
+  import Mock
   import Lightning.Factories
   import Lightning.BypassHelpers
 
@@ -131,7 +133,7 @@ defmodule LightningWeb.RunChannelTest do
     setup :set_google_credential
     setup :create_socket_and_run
 
-    test "fetch:plan", %{
+    test "fetch:plan success", %{
       socket: socket,
       run: run,
       workflow: workflow,
@@ -242,6 +244,25 @@ defmodule LightningWeb.RunChannelTest do
                "dataclip_id" => run.dataclip_id,
                "options" => %LightningWeb.RunOptions{output_dataclips: false}
              }
+    end
+
+    test "fetch:plan returns error on runtime limit exceeded", %{
+      socket: socket
+    } do
+      %{project_id: project_id} = socket.assigns
+
+      with_mock(
+        RuntimeLimiter,
+        limit_internal: fn %{type: :new_run}, %{project_id: ^project_id} ->
+          {:error, :too_many_runs, "some error message"}
+        end
+      ) do
+        ref = push(socket, "fetch:plan", %{})
+
+        assert_reply ref,
+                     :error,
+                     %{errors: %{too_many_runs: ["some error message"]}}
+      end
     end
 
     test "fetch:dataclip handles all types", %{

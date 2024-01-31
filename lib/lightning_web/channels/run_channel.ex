@@ -55,7 +55,8 @@ defmodule LightningWeb.RunChannel do
 
   @impl true
   def handle_in("fetch:plan", _, socket) do
-    %{project_id: project_id, retention_policy: retention_policy, run: run} = socket.assigns
+    %{project_id: project_id, retention_policy: retention_policy, run: run} =
+      socket.assigns
 
     options = %RunOptions{
       output_dataclips: include_output_dataclips?(retention_policy)
@@ -71,7 +72,7 @@ defmodule LightningWeb.RunChannel do
         {:reply, {:ok, RunWithOptions.render(run, options)}, socket}
 
       {:error, reason, message} ->
-        {:error, %{errors: %{reason => [message]}}}
+        {:reply, {:error, %{errors: %{reason => [message]}}}, socket}
     end
   end
 
