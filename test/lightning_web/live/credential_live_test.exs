@@ -761,6 +761,388 @@ defmodule LightningWeb.CredentialLiveTest do
     end
   end
 
+  describe "salesforce oauth credential" do
+    setup do
+      bypass = Bypass.open()
+
+      # TODO: replace this with a proper Mock via Lightning.Config
+      Lightning.ApplicationHelpers.put_temporary_env(:lightning, :oauth_clients,
+        salesforce: [
+          client_id: "foo",
+          client_secret: "bar",
+          wellknown_url: "http://localhost:#{bypass.port}/auth/.well-known"
+        ]
+      )
+
+      {:ok, bypass: bypass}
+    end
+
+    test "allows the user to define and save a new salesforce oauth credential",
+         %{
+           bypass: bypass,
+           conn: conn,
+           user: user
+         } do
+      expect_wellknown(bypass)
+
+      expect_token(
+        bypass,
+        Lightning.AuthProviders.Common.get_wellknown!(:salesforce),
+        %{
+          access_token: "ya29.a0AVvZ...",
+          refresh_token: "1//03vpp6Li...",
+          expires_in: 3600,
+          token_type: "Bearer",
+          id_token: "eyJhbGciO...",
+          scope: "scope1 scope2"
+        }
+      )
+
+      expect_userinfo(
+        bypass,
+        Lightning.AuthProviders.Common.get_wellknown!(:salesforce),
+        """
+        {"picture": "image.png", "name": "Test User"}
+        """
+      )
+
+      {:ok, index_live, _html} = live(conn, ~p"/credentials")
+
+      # Pick a type
+
+      index_live |> select_credential_type("salesforce_oauth")
+      index_live |> click_continue()
+
+      refute index_live |> has_element?("#credential-type-picker")
+
+      index_live
+      |> fill_credential(%{
+        name: "My Salesforce OAuth Credential"
+      })
+
+      # Get the state from the authorize url in order to fake the calling
+      # off the action in the OidcController
+      [subscription_id, mod, component_id] =
+        index_live
+        |> get_authorize_url("salesforce")
+        |> get_decoded_state()
+
+      assert index_live.id == subscription_id
+      assert index_live |> element(component_id)
+
+      # Click on the 'Authorize with Google button
+      index_live
+      |> element("#salesforce-oauth-inner-form-new #authorize-button")
+      |> render_click()
+
+      # Once authorizing the button isn't available
+      refute index_live
+             |> has_element?(
+               "#salesforce-oauth-inner-form-new #authorize-button"
+             )
+
+      # `handle_info/2` in LightingWeb.CredentialLive.Edit forwards the data
+      # as a `send_update/3` call to the GoogleSheets component
+      LightningWeb.OauthCredentialHelper.broadcast_forward(subscription_id, mod,
+        id: component_id,
+        code: "1234"
+      )
+
+      # Wait for the userinfo endpoint to be called
+      assert wait_for_assigns(index_live, :userinfo, "new", "salesforce"),
+             ":userinfo has not been set yet."
+
+      # Rerender as the broadcast above has altered the LiveView state
+      index_live |> render()
+
+      assert index_live |> has_element?("span", "Test User")
+
+      refute index_live |> submit_disabled()
+
+      {:ok, _index_live, _html} =
+        index_live
+        |> form("#credential-form-new")
+        |> render_submit()
+        |> follow_redirect(
+          conn,
+          ~p"/credentials"
+        )
+
+      {_path, flash} = assert_redirect(index_live)
+      assert flash == %{"info" => "Credential created successfully"}
+
+      credential =
+        Lightning.Credentials.list_credentials_for_user(user.id) |> List.first()
+
+      token = Lightning.AuthProviders.Common.TokenBody.new(credential.body)
+      expected_expiry = DateTime.to_unix(DateTime.utc_now()) + 3600
+
+      assert %{
+               access_token: "ya29.a0AVvZ...",
+               refresh_token: "1//03vpp6Li...",
+               expires_at: expiry,
+               scope: "scope1 scope2"
+             } = token
+
+      assert (expiry - expected_expiry) in -1..1
+    end
+
+    test "correctly renders a valid existing token", %{
+      conn: conn,
+      user: user,
+      bypass: bypass
+    } do
+      expect_wellknown(bypass)
+
+      expect_userinfo(
+        bypass,
+        Lightning.AuthProviders.Common.get_wellknown!(:salesforce),
+        %{
+          picture: "image.png",
+          name: "Test User"
+        }
+      )
+
+      expires_at = DateTime.to_unix(DateTime.utc_now()) + 3600
+
+      credential =
+        credential_fixture(
+          user_id: user.id,
+          schema: "salesforce_oauth",
+          body: %{
+            access_token: "ya29.a0AVvZ...",
+            refresh_token: "1//03vpp6Li...",
+            expires_at: expires_at,
+            scope: "scope1 scope2"
+          }
+        )
+
+      {:ok, edit_live, _html} = live(conn, ~p"/credentials")
+
+      assert_receive {:phoenix, :send_update, _}
+
+      # Wait for the userinfo endpoint to be called
+      assert wait_for_assigns(edit_live, :userinfo, credential.id, "salesforce"),
+             ":userinfo has not been set yet."
+
+      edit_live |> render()
+
+      assert edit_live |> has_element?("span", "Test User")
+    end
+
+    test "renders an error when a token has no refresh token", %{
+      conn: conn,
+      user: user,
+      bypass: bypass
+    } do
+      expect_wellknown(bypass)
+
+      expires_at = DateTime.to_unix(DateTime.utc_now()) + 3600
+
+      credential =
+        credential_fixture(
+          user_id: user.id,
+          schema: "salesforce_oauth",
+          body: %{
+            access_token: "ya29.a0AVvZ...",
+            refresh_token: "",
+            expires_at: expires_at,
+            scope: "scope1 scope2"
+          }
+        )
+
+      {:ok, edit_live, _html} = live(conn, ~p"/credentials")
+
+      # Wait for next `send_update` triggered by the token Task calls
+      assert_receive {:plug_conn, :sent}
+
+      edit_live
+      |> element("#salesforce-oauth-inner-form-#{credential.id}")
+      |> render()
+
+      assert edit_live |> has_element?("p", "The token is missing it's")
+    end
+
+    test "renewing an expired but valid token", %{
+      user: user,
+      bypass: bypass,
+      conn: conn
+    } do
+      expect_wellknown(bypass)
+
+      expect_userinfo(
+        bypass,
+        Lightning.AuthProviders.Common.get_wellknown!(:salesforce),
+        """
+        {"picture": "image.png", "name": "Test User"}
+        """
+      )
+
+      expires_at = DateTime.to_unix(DateTime.utc_now()) - 50
+
+      credential =
+        credential_fixture(
+          user_id: user.id,
+          schema: "salesforce_oauth",
+          body: %{
+            access_token: "ya29.a0AVvZ...",
+            refresh_token: "1//03vpp6Li...",
+            expires_at: expires_at,
+            scope: "scope1 scope2"
+          }
+        )
+
+      expect_token(
+        bypass,
+        Lightning.AuthProviders.Common.get_wellknown!(:salesforce),
+        %{
+          access_token: "ya29.a0AVvZ...",
+          refresh_token: "1//03vpp6Li...",
+          expires_in: 3600,
+          token_type: "Bearer",
+          id_token: "eyJhbGciO...",
+          scope: "scope1 scope2"
+        }
+      )
+
+      {:ok, edit_live, _html} = live(conn, ~p"/credentials")
+
+      assert wait_for_assigns(edit_live, :userinfo, credential.id, "salesforce"),
+             ":userinfo has not been set yet."
+
+      edit_live |> render()
+
+      assert edit_live |> has_element?("span", "Test User")
+    end
+
+    @tag :capture_log
+    test "failing to retrieve userinfo", %{
+      user: user,
+      bypass: bypass,
+      conn: conn
+    } do
+      expect_wellknown(bypass)
+
+      expect_userinfo(
+        bypass,
+        Lightning.AuthProviders.Common.get_wellknown!(:salesforce),
+        {400,
+         """
+         {
+           "error": "access_denied",
+           "error_description": "You're not from around these parts are ya?"
+         }
+         """}
+      )
+
+      expires_at = DateTime.to_unix(DateTime.utc_now()) + 3600
+
+      credential =
+        credential_fixture(
+          user_id: user.id,
+          schema: "salesforce_oauth",
+          body: %{
+            access_token: "ya29.a0AVvZ...",
+            refresh_token: "1//03vpp6Li...",
+            expires_at: expires_at,
+            scope: "scope1 scope2"
+          }
+        )
+
+      {:ok, edit_live, _html} = live(conn, ~p"/credentials")
+
+      assert wait_for_assigns(edit_live, :error, credential.id, "salesforce")
+
+      edit_live |> render()
+
+      assert edit_live
+             |> has_element?("p", "Failed retrieving your information.")
+
+      # Now respond with success
+      expect_userinfo(
+        bypass,
+        Lightning.AuthProviders.Common.get_wellknown!(:salesforce),
+        """
+        {"picture": "image.png", "name": "Test User"}
+        """
+      )
+
+      edit_live |> element("a", "try again.") |> render_click()
+
+      assert wait_for_assigns(edit_live, :userinfo, credential.id, "salesforce")
+
+      assert edit_live |> has_element?("span", "Test User")
+    end
+
+    @tag :capture_log
+    test "renewing an expired but invalid token", %{
+      user: user,
+      bypass: bypass,
+      conn: conn
+    } do
+      expect_wellknown(bypass)
+
+      expect_token(
+        bypass,
+        Lightning.AuthProviders.Common.get_wellknown!(:salesforce),
+        {400,
+         """
+         {
+           "error": "access_denied",
+           "error_description": "You're not from around these parts are ya?"
+         }
+         """}
+      )
+
+      expires_at = DateTime.to_unix(DateTime.utc_now()) - 50
+
+      credential =
+        credential_fixture(
+          user_id: user.id,
+          schema: "salesforce_oauth",
+          body: %{
+            access_token: "ya29.a0AVvZ...",
+            refresh_token: "1//03vpp6Li...",
+            expires_at: expires_at,
+            scope: "scope1 scope2"
+          }
+        )
+
+      {:ok, edit_live, _html} = live(conn, ~p"/credentials")
+
+      assert wait_for_assigns(edit_live, :error, credential.id, "salesforce")
+
+      edit_live |> render()
+
+      assert edit_live
+             |> has_element?("p", "Failed renewing your access token.")
+    end
+
+    test "salesforce oauth credential will render a scope pick list", %{
+      user: _user,
+      bypass: bypass,
+      conn: conn
+    } do
+      expect_wellknown(bypass)
+
+      {:ok, index_live, _html} = live(conn, ~p"/credentials")
+
+      index_live |> select_credential_type("salesforce_oauth")
+      index_live |> click_continue()
+
+      assert index_live
+             |> has_element?("#salesforce-oauth-inner-form-new-scope-selection")
+
+      {:ok, index_live, _html} = live(conn, ~p"/credentials")
+
+      index_live |> select_credential_type("googlesheets")
+      index_live |> click_continue()
+
+      refute index_live
+             |> has_element?("#salesforce-oauth-inner-form-new-scope-selection")
+    end
+  end
+
   describe "googlesheets credential" do
     setup do
       bypass = Bypass.open()
@@ -823,7 +1205,7 @@ defmodule LightningWeb.CredentialLiveTest do
       # off the action in the OidcController
       [subscription_id, mod, component_id] =
         index_live
-        |> get_authorize_url()
+        |> get_authorize_url("google")
         |> get_decoded_state()
 
       assert index_live.id == subscription_id
@@ -1139,38 +1521,12 @@ defmodule LightningWeb.CredentialLiveTest do
     end
   end
 
-  test "salesforce oauth credential will render a scope pick list", %{conn: conn} do
-    # TODO: replace this with a proper Mock via Lightning.Config
-    Lightning.ApplicationHelpers.put_temporary_env(:lightning, :oauth_clients,
-      salesforce: [
-        client_id: "foo",
-        client_secret: "bar"
-      ]
-    )
-
-    {:ok, index_live, _html} = live(conn, ~p"/credentials")
-
-    index_live |> select_credential_type("salesforce_oauth")
-    index_live |> click_continue()
-
-    assert index_live
-           |> has_element?("#salesforce-oauth-inner-form-new-scope-selection")
-
-    {:ok, index_live, _html} = live(conn, ~p"/credentials")
-
-    index_live |> select_credential_type("googlesheets")
-    index_live |> click_continue()
-
-    refute index_live
-           |> has_element?("#salesforce-oauth-inner-form-new-scope-selection")
-  end
-
-  defp wait_for_assigns(live, key, id \\ "new") do
+  defp wait_for_assigns(live, key, id \\ "new", provider \\ "google") do
     Enum.reduce_while(1..10, nil, fn n, _ ->
       {_mod, assigns} =
         Lightning.LiveViewHelpers.get_component_assigns_by(
           live,
-          id: "google-oauth-inner-form-#{id}"
+          id: "#{provider}-oauth-inner-form-#{id}"
         )
 
       if val = assigns[key] do
@@ -1182,9 +1538,9 @@ defmodule LightningWeb.CredentialLiveTest do
     end)
   end
 
-  defp get_authorize_url(live) do
+  defp get_authorize_url(live, provider) do
     live
-    |> element("#google-oauth-inner-form-new")
+    |> element("##{provider}-oauth-inner-form-new")
     |> render()
     |> Floki.parse_fragment!()
     |> Floki.find("a[phx-click=authorize_click]")

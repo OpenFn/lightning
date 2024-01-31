@@ -16,21 +16,7 @@ defmodule Lightning.AuthProviders.Google do
   - An `{:ok, client}` tuple on success, or `{:error, :invalid_config}` if the configuration is not set correctly.
   """
   def build_client(opts \\ []) do
-    config = Common.get_config(:google)
-
-    if is_nil(config) or Enum.empty?(config) do
-      {:error, :invalid_config}
-    else
-      {:ok, wellknown} =
-        Common.get_wellknown(:google)
-
-      Common.build_client(
-        config,
-        wellknown.authorization_endpoint,
-        wellknown.token_endpoint,
-        opts
-      )
-    end
+    Common.build_client(:google, opts)
   end
 
   @doc """

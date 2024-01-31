@@ -119,20 +119,25 @@ defmodule Lightning.AuthProviders.Common do
   @doc """
   Builds a new OAuth client with the specified configuration, authorization URL, token URL, and options.
   """
-  def build_client(config, authorize_url, token_url, opts \\ []) do
-    if is_nil(config[:client_id]) or is_nil(config[:client_secret]) do
+  def build_client(provider, opts \\ []) do
+    config = get_config(provider)
+
+    if is_nil(config) or is_nil(config[:client_id]) or
+         is_nil(config[:client_secret]) do
       Logger.error("""
       Please ensure the CLIENT_ID and CLIENT_SECRET ENV variables are set correctly.
       """)
 
       {:error, :invalid_config}
     else
+      {:ok, wellknown} = get_wellknown(provider)
+
       client =
         OAuth2.Client.new(strategy: OAuth2.Strategy.AuthCode)
         |> OAuth2.Client.put_serializer("application/json", Jason)
         |> Map.merge(%{
-          authorize_url: authorize_url,
-          token_url: token_url,
+          authorize_url: wellknown.authorization_endpoint,
+          token_url: wellknown.token_endpoint,
           client_id: config[:client_id],
           client_secret: config[:client_secret],
           redirect_uri: opts[:callback_url]

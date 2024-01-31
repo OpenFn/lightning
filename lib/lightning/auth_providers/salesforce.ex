@@ -16,11 +16,7 @@ defmodule Lightning.AuthProviders.Salesforce do
   - An `{:ok, client}` tuple on success, or `{:error, :invalid_config}` if the configuration is not set correctly.
   """
   def build_client(opts \\ []) do
-    config = Common.get_config(:salesforce)
-    authorize_url = "https://login.salesforce.com/services/oauth2/authorize"
-    token_url = "https://login.salesforce.com/services/oauth2/token"
-
-    Common.build_client(config, authorize_url, token_url, opts)
+    Common.build_client(:salesforce, opts)
   end
 
   @doc """
