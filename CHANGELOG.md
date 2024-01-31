@@ -41,6 +41,8 @@ and this project adheres to
 
 - Shim code to interact with the Impact Tracking service
   [#1671](https://github.com/OpenFn/Lightning/issues/1671)
+- Add rate limiter to webhook endpoints and runtime limiter for runs.
+  [#639](https://github.com/OpenFn/Lightning/issues/639)
 
 ### Changed
 
