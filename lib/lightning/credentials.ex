@@ -12,6 +12,7 @@ defmodule Lightning.Credentials do
 
   alias Ecto.Multi
   alias Lightning.Accounts.UserNotifier
+  alias Lightning.AuthProviders.Common
   alias Lightning.AuthProviders.Google
   alias Lightning.Credentials
   alias Lightning.Credentials.Audit
@@ -565,7 +566,7 @@ defmodule Lightning.Credentials do
   @spec maybe_refresh_token(Lightning.Credentials.Credential.t()) ::
           {:error, any()} | {:ok, Lightning.Credentials.Credential.t()}
   def maybe_refresh_token(%Credential{schema: "googlesheets"} = credential) do
-    token_body = Google.TokenBody.new(credential.body)
+    token_body = Common.TokenBody.new(credential.body)
 
     if still_fresh(token_body) do
       {:ok, credential}
@@ -573,7 +574,7 @@ defmodule Lightning.Credentials do
       with {:ok, %OAuth2.Client{} = client} <- Google.build_client(),
            {:ok, %OAuth2.AccessToken{} = token} <-
              Google.refresh_token(client, token_body),
-           token <- Google.TokenBody.from_oauth2_token(token) do
+           token <- Common.TokenBody.from_oauth2_token(token) do
         Credentials.update_credential(credential, %{
           body: token |> Lightning.Helpers.json_safe()
         })

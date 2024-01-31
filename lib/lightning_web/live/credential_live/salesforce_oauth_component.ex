@@ -4,6 +4,7 @@ defmodule LightningWeb.CredentialLive.SalesforceOauthComponent do
 
   import LightningWeb.OauthCredentialHelper
 
+  alias Lightning.AuthProviders.Common
   alias Lightning.AuthProviders.Salesforce
   alias LightningWeb.CredentialLive.ScopeSelectionComponent
 
@@ -20,7 +21,7 @@ defmodule LightningWeb.CredentialLive.SalesforceOauthComponent do
     parent_valid? = !(changeset.errors |> Keyword.drop([:body]) |> Enum.any?())
 
     token_body_changeset =
-      Salesforce.TokenBody.changeset(
+      Common.TokenBody.changeset(
         changeset |> Ecto.Changeset.get_field(:body) || %{}
       )
 
@@ -514,7 +515,7 @@ defmodule LightningWeb.CredentialLive.SalesforceOauthComponent do
     |> Map.new()
   end
 
-  defp params_to_token(%Salesforce.TokenBody{} = token) do
+  defp params_to_token(%Common.TokenBody{} = token) do
     struct!(
       OAuth2.AccessToken,
       token
