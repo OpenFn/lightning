@@ -13,14 +13,18 @@ defmodule LightningWeb.CredentialLive.ScopeSelectionComponent do
         Pick the scopes to authorize
       </h3>
 
-      <.form :let={f} for={@scopes_changeset} id="scope-selection-form">
+      <.form
+        :let={f}
+        for={@scopes_changeset}
+        phx-change="checked"
+        phx-target={@myself}
+        id="scope-selection-form"
+      >
         <div class="grid grid-cols-4 gap-1">
           <%= inputs_for f, :options, fn value -> %>
             <div class="form-check">
               <label class="form-check-label inline-block">
                 <%= checkbox(value, :selected,
-                  phx_change: "checked",
-                  phx_target: @myself,
                   value: value.data.selected,
                   class:
                     "form-check-input appearance-none h-4 w-4 border border-gray-300 rounded-sm bg-white checked:bg-blue-600 checked:border-blue-600 focus:outline-none transition duration-200 mt-1 align-top bg-no-repeat bg-center bg-contain float-left cursor-pointer"
@@ -98,32 +102,39 @@ defmodule LightningWeb.CredentialLive.ScopeSelectionComponent do
     |> Ecto.Changeset.put_embed(:options, options)
   end
 
-  def handle_event(
-        "checked",
-        %{"scope" => %{"options" => values}},
-        socket
-      ) do
-    [{index, %{"selected" => selected?}}] = Map.to_list(values)
-    index = String.to_integer(index)
-    current_option = Enum.at(socket.assigns.options, index)
+  def handle_event("checked", %{"scope" => %{"options" => values}}, socket) do
+    # Parse the form data and update the selected status
+    updated_options =
+      Enum.map(socket.assigns.options, fn option ->
+        new_selected =
+          case values["#{option.id - 1}"] do
+            %{"selected" => "true"} -> true
+            _ -> false
+          end
 
-    options =
-      List.replace_at(socket.assigns.options, index, %{
-        current_option
-        | selected: String.to_atom(selected?)
-      })
+        %{option | selected: new_selected}
+      end)
+
+    selected_scopes =
+      updated_options |> Enum.filter(& &1.selected) |> Enum.map(& &1.label)
 
     send_update(LightningWeb.CredentialLive.OauthComponent,
       id: socket.assigns.parent_id,
-      scopes:
-        options
-        |> Enum.filter(fn %{selected: selected?} -> selected? end)
-        |> Enum.map(fn %{label: label} -> label end)
+      scopes: selected_scopes
     )
 
+    updated_changeset = build_changeset(updated_options)
+
     {:noreply,
-     socket
-     |> assign(:scopes_changeset, build_changeset(options))
-     |> assign(:options, options)}
+     assign(socket,
+       scopes_changeset: updated_changeset,
+       options: updated_options
+     )}
   end
+
+  # defp update_option(options, id, selected) do
+  #   Enum.map(options, fn option ->
+  #     if option.id == id, do: %{option | selected: selected}, else: option
+  #   end)
+  # end
 end

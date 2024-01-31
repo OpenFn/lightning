@@ -1127,19 +1127,34 @@ defmodule LightningWeb.CredentialLiveTest do
 
       {:ok, index_live, _html} = live(conn, ~p"/credentials")
 
+      index_live |> select_credential_type("googlesheets")
+      index_live |> click_continue()
+
+      refute index_live
+             |> has_element?("#salesforce-oauth-inner-form-new-scope-selection")
+
+      {:ok, index_live, _html} = live(conn, ~p"/credentials")
+
       index_live |> select_credential_type("salesforce_oauth")
       index_live |> click_continue()
 
       assert index_live
              |> has_element?("#salesforce-oauth-inner-form-new-scope-selection")
 
-      {:ok, index_live, _html} = live(conn, ~p"/credentials")
+      index_live
+      |> form("#scope-selection-form", %{
+        "scope" => %{"options" => %{"1" => %{"selected" => "true"}}}
+      })
+      |> render_change()
 
-      index_live |> select_credential_type("googlesheets")
-      index_live |> click_continue()
+      %{query: query} =
+        index_live
+        |> get_authorize_url("salesforce")
+        |> URI.parse()
 
-      refute index_live
-             |> has_element?("#salesforce-oauth-inner-form-new-scope-selection")
+      query
+      |> URI.decode_query()
+      |> Map.get("scope") =~ "pardot_api"
     end
   end
 
