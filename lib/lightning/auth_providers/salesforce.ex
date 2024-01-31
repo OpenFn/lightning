@@ -80,6 +80,6 @@ defmodule Lightning.AuthProviders.Salesforce do
       Common.get_userinfo(
         client,
         token,
-        "https://login.salesforce.com/services/oauth2/userinfo"
+        :salesforce
       )
 end

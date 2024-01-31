@@ -786,7 +786,7 @@ defmodule LightningWeb.CredentialLiveTest do
 
       expect_token(
         bypass,
-        Lightning.AuthProviders.Google.get_wellknown!(),
+        Lightning.AuthProviders.Common.get_wellknown!(:google),
         %{
           access_token: "ya29.a0AVvZ...",
           refresh_token: "1//03vpp6Li...",
@@ -799,7 +799,7 @@ defmodule LightningWeb.CredentialLiveTest do
 
       expect_userinfo(
         bypass,
-        Lightning.AuthProviders.Google.get_wellknown!(),
+        Lightning.AuthProviders.Common.get_wellknown!(:google),
         """
         {"picture": "image.png", "name": "Test User"}
         """
@@ -871,7 +871,7 @@ defmodule LightningWeb.CredentialLiveTest do
       credential =
         Lightning.Credentials.list_credentials_for_user(user.id) |> List.first()
 
-      token = Lightning.AuthProviders.Google.TokenBody.new(credential.body)
+      token = Lightning.AuthProviders.Common.TokenBody.new(credential.body)
       expected_expiry = DateTime.to_unix(DateTime.utc_now()) + 3600
 
       assert %{
@@ -893,7 +893,7 @@ defmodule LightningWeb.CredentialLiveTest do
 
       expect_userinfo(
         bypass,
-        Lightning.AuthProviders.Google.get_wellknown!(),
+        Lightning.AuthProviders.Common.get_wellknown!(:google),
         %{
           picture: "image.png",
           name: "Test User"
@@ -969,7 +969,7 @@ defmodule LightningWeb.CredentialLiveTest do
 
       expect_userinfo(
         bypass,
-        Lightning.AuthProviders.Google.get_wellknown!(),
+        Lightning.AuthProviders.Common.get_wellknown!(:google),
         """
         {"picture": "image.png", "name": "Test User"}
         """
@@ -991,7 +991,7 @@ defmodule LightningWeb.CredentialLiveTest do
 
       expect_token(
         bypass,
-        Lightning.AuthProviders.Google.get_wellknown!(),
+        Lightning.AuthProviders.Common.get_wellknown!(:google),
         %{
           access_token: "ya29.a0AVvZ...",
           refresh_token: "1//03vpp6Li...",
@@ -1022,7 +1022,7 @@ defmodule LightningWeb.CredentialLiveTest do
 
       expect_userinfo(
         bypass,
-        Lightning.AuthProviders.Google.get_wellknown!(),
+        Lightning.AuthProviders.Common.get_wellknown!(:google),
         {400,
          """
          {
@@ -1058,7 +1058,7 @@ defmodule LightningWeb.CredentialLiveTest do
       # Now respond with success
       expect_userinfo(
         bypass,
-        Lightning.AuthProviders.Google.get_wellknown!(),
+        Lightning.AuthProviders.Common.get_wellknown!(:google),
         """
         {"picture": "image.png", "name": "Test User"}
         """
@@ -1081,7 +1081,7 @@ defmodule LightningWeb.CredentialLiveTest do
 
       expect_token(
         bypass,
-        Lightning.AuthProviders.Google.get_wellknown!(),
+        Lightning.AuthProviders.Common.get_wellknown!(:google),
         {400,
          """
          {

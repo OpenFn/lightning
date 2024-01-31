@@ -81,6 +81,6 @@ defmodule Lightning.AuthProviders.Google do
       Common.get_userinfo(
         client,
         token,
-        "https://www.googleapis.com/oauth2/v3/userinfo"
+        :google
       )
 end

@@ -619,7 +619,11 @@ defmodule Lightning.CredentialsTest do
 
       expect_wellknown(bypass)
 
-      expect_token(bypass, Lightning.AuthProviders.Google.get_wellknown!())
+      expect_token(
+        bypass,
+        Lightning.AuthProviders.Common.get_wellknown!(:google)
+      )
+
       # Now plus 4 minutes
       expires_at = DateTime.to_unix(DateTime.utc_now()) + 4 * 60
 

@@ -6,11 +6,10 @@ defmodule Lightning.AuthProviders.Common do
   alias Lightning.AuthProviders.WellKnown
   require Logger
 
-  @doc """
-  Defines a schema for OAuth token information.
-  """
   defmodule TokenBody do
-    @moduledoc false
+    @moduledoc """
+    Defines a schema for OAuth token information.
+    """
 
     use Ecto.Schema
     import Ecto.Changeset
@@ -77,14 +76,18 @@ defmodule Lightning.AuthProviders.Common do
   @doc """
   Retrieves user information from the OAuth provider.
   """
-  def get_userinfo(client, token, userinfo_endpoint) do
-    OAuth2.Client.get(%{client | token: token}, userinfo_endpoint)
+  def get_userinfo(client, token, provider) do
+    {:ok, wellknown} = get_wellknown(provider)
+    OAuth2.Client.get(%{client | token: token}, wellknown.userinfo_endpoint)
   end
 
   @doc """
   Fetches the well-known configuration from the OAuth provider.
   """
-  def get_wellknown(wellknown_url) do
+  def get_wellknown(provider) do
+    config = get_config(provider)
+    wellknown_url = config[:wellknown_url]
+
     case Tesla.get(wellknown_url) do
       {:ok, %{status: status, body: body}} when status in 200..202 ->
         {:ok, Jason.decode!(body) |> WellKnown.new()}
@@ -97,8 +100,8 @@ defmodule Lightning.AuthProviders.Common do
   @doc """
   Fetches the well-known configuration from the OAuth provider and raises an error if not successful.
   """
-  def get_wellknown!(wellknown_url) do
-    get_wellknown(wellknown_url)
+  def get_wellknown!(provider) do
+    get_wellknown(provider)
     |> case do
       {:ok, wellknown} ->
         wellknown
