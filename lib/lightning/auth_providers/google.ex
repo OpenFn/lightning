@@ -18,7 +18,7 @@ defmodule Lightning.AuthProviders.Google do
   def build_client(opts \\ []) do
     config = Common.get_config(:google)
 
-    if Enum.empty?(config) do
+    if is_nil(config) or Enum.empty?(config) do
       {:error, :invalid_config}
     else
       {:ok, wellknown} =

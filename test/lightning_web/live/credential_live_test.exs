@@ -1139,6 +1139,32 @@ defmodule LightningWeb.CredentialLiveTest do
     end
   end
 
+  test "salesforce oauth credential will render a scope pick list", %{conn: conn} do
+    # TODO: replace this with a proper Mock via Lightning.Config
+    Lightning.ApplicationHelpers.put_temporary_env(:lightning, :oauth_clients,
+      salesforce: [
+        client_id: "foo",
+        client_secret: "bar"
+      ]
+    )
+
+    {:ok, index_live, _html} = live(conn, ~p"/credentials")
+
+    index_live |> select_credential_type("salesforce_oauth")
+    index_live |> click_continue()
+
+    assert index_live
+           |> has_element?("#salesforce-oauth-inner-form-new-scope-selection")
+
+    {:ok, index_live, _html} = live(conn, ~p"/credentials")
+
+    index_live |> select_credential_type("googlesheets")
+    index_live |> click_continue()
+
+    refute index_live
+           |> has_element?("#salesforce-oauth-inner-form-new-scope-selection")
+  end
+
   defp wait_for_assigns(live, key, id \\ "new") do
     Enum.reduce_while(1..10, nil, fn n, _ ->
       {_mod, assigns} =
