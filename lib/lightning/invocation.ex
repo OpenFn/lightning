@@ -385,12 +385,8 @@ defmodule Lightning.Invocation do
     )
   end
 
-  def search_workorders_having_dataclips_query(
-        %Project{} = project,
-        %SearchParams{} = params
-      ) do
-    project
-    |> search_workorders_query(params)
+  def exclude_wiped_dataclips(work_order_query) do
+    work_order_query
     |> join(:inner, [workorder: wo], assoc(wo, :dataclip), as: :dataclip)
     |> where([dataclip: d], is_nil(d.wiped_at))
   end
