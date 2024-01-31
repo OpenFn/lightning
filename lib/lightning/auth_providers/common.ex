@@ -33,8 +33,13 @@ defmodule Lightning.AuthProviders.Common do
     Converts an OAuth2 token to a TokenBody struct.
     """
     def from_oauth2_token(token) do
-      token_params = Map.from_struct(token)
-      extra_params = token.other_params |> Enum.into(%{})
+      token_params =
+        Map.from_struct(token)
+
+      extra_params =
+        token.other_params
+        |> Enum.map(fn {key, value} -> {String.to_existing_atom(key), value} end)
+        |> Map.new()
 
       token_params
       |> Map.merge(extra_params)

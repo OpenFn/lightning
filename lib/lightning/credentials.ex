@@ -566,12 +566,14 @@ defmodule Lightning.Credentials do
   @spec maybe_refresh_token(Lightning.Credentials.Credential.t()) ::
           {:error, any()} | {:ok, Lightning.Credentials.Credential.t()}
   def maybe_refresh_token(%Credential{schema: "googlesheets"} = credential) do
-    token_body = Common.TokenBody.new(credential.body)
+    token_body =
+      Common.TokenBody.new(credential.body)
 
     if still_fresh(token_body) do
       {:ok, credential}
     else
-      with {:ok, %OAuth2.Client{} = client} <- Google.build_client(),
+      with {:ok, %OAuth2.Client{} = client} <-
+             Google.build_client(),
            {:ok, %OAuth2.AccessToken{} = token} <-
              Google.refresh_token(client, token_body),
            token <- Common.TokenBody.from_oauth2_token(token) do

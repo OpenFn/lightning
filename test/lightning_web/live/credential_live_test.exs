@@ -1133,8 +1133,8 @@ defmodule LightningWeb.CredentialLiveTest do
 
       assert index_live
              |> has_element?(
-               "#google-sheets-inner-form-new",
-               "Please ensure the CLIENT_ID and CLIENT_SECRET ENV variables are set correctly."
+               "#google-oauth-inner-form-new",
+               "No Client Configured"
              )
     end
   end

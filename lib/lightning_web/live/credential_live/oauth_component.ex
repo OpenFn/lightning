@@ -231,7 +231,7 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
           Something went wrong.
         </div>
         <p class="text-sm mt-2">
-          The token is missing it'0
+          The token is missing it's
           <code class="bg-gray-200 rounded-md p-1">refresh_token</code>
           value.
         </p>

@@ -17,10 +17,20 @@ defmodule Lightning.AuthProviders.Google do
   """
   def build_client(opts \\ []) do
     config = Common.get_config(:google)
-    authorize_url = "https://accounts.google.com/o/oauth2/auth"
-    token_url = "https://oauth2.googleapis.com/token"
 
-    Common.build_client(config, authorize_url, token_url, opts)
+    if Enum.empty?(config) do
+      {:error, :invalid_config}
+    else
+      {:ok, wellknown} =
+        Common.get_wellknown(:google)
+
+      Common.build_client(
+        config,
+        wellknown.authorization_endpoint,
+        wellknown.token_endpoint,
+        opts
+      )
+    end
   end
 
   @doc """
