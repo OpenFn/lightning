@@ -284,7 +284,7 @@ defmodule LightningWeb.RunLive.ComponentsTest do
 
     step = List.first(attempt.steps)
 
-    project_id = step.job.workflow.project_id
+    project_id = workflow.project_id
 
     html =
       render_component(&Components.step_list_item/1,

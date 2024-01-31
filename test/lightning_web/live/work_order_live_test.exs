@@ -375,20 +375,20 @@ defmodule LightningWeb.WorkOrderLiveTest do
       parsed_html = Floki.parse_fragment!(html)
 
       assert parsed_html
-             |> Floki.find(~s{form#select_#{work_order.id}})
+             |> Floki.find(~s{form#selection-form-#{work_order.id}})
              |> Enum.any?(),
              "selection form exists"
 
       refute parsed_html
              |> Floki.find(
-               ~s{form#select_#{work_order.id}[phx-change="toggle_selection"]}
+               ~s{form#selection-form-#{work_order.id}[phx-change="toggle_selection"]}
              )
              |> Enum.any?(),
              "selection form does not have the phx-change attr"
 
       tooltip_html =
         parsed_html
-        |> Floki.find(~s{form#select_#{work_order.id}_tooltip})
+        |> Floki.find(~s{form #select_#{work_order.id}_tooltip})
         |> hd()
         |> Floki.raw_html()
 
@@ -414,20 +414,20 @@ defmodule LightningWeb.WorkOrderLiveTest do
       parsed_html = Floki.parse_fragment!(html)
 
       assert parsed_html
-             |> Floki.find(~s{form#select_#{work_order.id}})
+             |> Floki.find(~s{form#selection-form-#{work_order.id}})
              |> Enum.any?(),
              "selection form exists"
 
       refute parsed_html
              |> Floki.find(
-               ~s{form#select_#{work_order.id}[phx-change="toggle_selection"]}
+               ~s{form#selection-form-#{work_order.id}[phx-change="toggle_selection"]}
              )
              |> Enum.any?(),
              "selection form does not have the phx-change attr"
 
       tooltip_html =
         parsed_html
-        |> Floki.find(~s{form#select_#{work_order.id}_tooltip})
+        |> Floki.find(~s{form #select_#{work_order.id}_tooltip})
         |> hd()
         |> Floki.raw_html()
 
@@ -453,12 +453,12 @@ defmodule LightningWeb.WorkOrderLiveTest do
 
       assert parsed_html
              |> Floki.find(
-               ~s{form#select_#{work_order.id}[phx-change="toggle_selection"]}
+               ~s{form#selection-form-#{work_order.id}[phx-change="toggle_selection"]}
              )
              |> Enum.any?()
 
       refute parsed_html
-             |> Floki.find(~s{form#select_#{work_order.id}_tooltip})
+             |> Floki.find(~s{form #select_#{work_order.id}_tooltip})
              |> Enum.any?(),
              "tooltip does not exist"
     end
