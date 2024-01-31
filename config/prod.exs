@@ -21,7 +21,3 @@ config :lightning,
 
 # For now, do not export any open-telephony messages
 config :opentelemetry, traces_exporter: :none
-
-if File.exists?(Path.join([__DIR__, "prod.extensions.exs"])) do
-  import_config "prod.extensions.exs"
-end

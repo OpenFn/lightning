@@ -101,7 +101,3 @@ if System.get_env("EXPORT_OTEL") == "true" do
 else
   config :opentelemetry, traces_exporter: :none
 end
-
-if File.exists?(Path.join([__DIR__, "dev.extensions.exs"])) do
-  import_config "dev.extensions.exs"
-end
