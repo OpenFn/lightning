@@ -50,6 +50,8 @@ and this project adheres to
   [#1209](https://github.com/OpenFn/Lightning/issues/1209)
 - Wipe dataclip after use when zero-persistence is enabled
   [#1212](https://github.com/OpenFn/Lightning/issues/1212)
+- Show appropriate message when a wiped dataclip is viewed
+  [#1211](https://github.com/OpenFn/Lightning/issues/1211)
 
 ### Changed
 

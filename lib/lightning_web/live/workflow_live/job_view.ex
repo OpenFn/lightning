@@ -127,7 +127,12 @@ defmodule LightningWeb.WorkflowLive.JobView do
             @socket,
             LightningWeb.RunLive.RunViewerLive,
             id: "run-viewer-#{@follow_run_id}",
-            session: %{"run_id" => @follow_run_id, "job_id" => @job.id},
+            session: %{
+              "run_id" => @follow_run_id,
+              "job_id" => @job.id,
+              "project_id" => @project.id,
+              "user_id" => @current_user.id
+            },
             sticky: true,
             container: {:div, class: "h-full"}
           ) %>

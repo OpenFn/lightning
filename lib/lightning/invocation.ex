@@ -49,6 +49,7 @@ defmodule Lightning.Invocation do
   def list_dataclips_for_job(%Lightning.Workflows.Job{id: job_id}) do
     Query.last_n_for_job(job_id, 5)
     |> Query.select_as_input()
+    |> where([d], is_nil(d.wiped_at))
     |> Repo.all()
   end
 
