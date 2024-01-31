@@ -33,7 +33,7 @@ defmodule Lightning.AuthProviders.Google do
   ## Returns
   - A URL string used for initiating the OAuth authorization process.
   """
-  def authorize_url(client, state) do
+  def authorize_url(client, state, _additional_scopes \\ nil) do
     scopes = [
       "https://www.googleapis.com/auth/spreadsheets",
       "https://www.googleapis.com/auth/userinfo.profile"

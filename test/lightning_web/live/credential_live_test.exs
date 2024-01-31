@@ -831,12 +831,12 @@ defmodule LightningWeb.CredentialLiveTest do
 
       # Click on the 'Authorize with Google button
       index_live
-      |> element("#google-sheets-inner-form-new #authorize-button")
+      |> element("#google-oauth-inner-form-new #authorize-button")
       |> render_click()
 
       # Once authorizing the button isn't available
       refute index_live
-             |> has_element?("#google-sheets-inner-form-new #authorize-button")
+             |> has_element?("#google-oauth-inner-form-new #authorize-button")
 
       # `handle_info/2` in LightingWeb.CredentialLive.Edit forwards the data
       # as a `send_update/3` call to the GoogleSheets component
@@ -954,7 +954,7 @@ defmodule LightningWeb.CredentialLiveTest do
       assert_receive {:plug_conn, :sent}
 
       edit_live
-      |> element("#google-sheets-inner-form-#{credential.id}")
+      |> element("#google-oauth-inner-form-#{credential.id}")
       |> render()
 
       assert edit_live |> has_element?("p", "The token is missing it's")
@@ -1134,7 +1134,7 @@ defmodule LightningWeb.CredentialLiveTest do
       assert index_live
              |> has_element?(
                "#google-sheets-inner-form-new",
-               "No Client Configured"
+               "Please ensure the CLIENT_ID and CLIENT_SECRET ENV variables are set correctly."
              )
     end
   end
@@ -1144,7 +1144,7 @@ defmodule LightningWeb.CredentialLiveTest do
       {_mod, assigns} =
         Lightning.LiveViewHelpers.get_component_assigns_by(
           live,
-          id: "google-sheets-inner-form-#{id}"
+          id: "google-oauth-inner-form-#{id}"
         )
 
       if val = assigns[key] do
@@ -1158,7 +1158,7 @@ defmodule LightningWeb.CredentialLiveTest do
 
   defp get_authorize_url(live) do
     live
-    |> element("#google-sheets-inner-form-new")
+    |> element("#google-oauth-inner-form-new")
     |> render()
     |> Floki.parse_fragment!()
     |> Floki.find("a[phx-click=authorize_click]")

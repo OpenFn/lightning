@@ -117,7 +117,7 @@ defmodule Lightning.AuthProviders.Common do
   def build_client(config, authorize_url, token_url, opts \\ []) do
     if is_nil(config[:client_id]) or is_nil(config[:client_secret]) do
       Logger.error("""
-      Please ensure the client ID and secret ENV variables are set correctly.
+      Please ensure the CLIENT_ID and CLIENT_SECRET ENV variables are set correctly.
       """)
 
       {:error, :invalid_config}

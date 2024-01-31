@@ -3,7 +3,6 @@ defmodule LightningWeb.CredentialLive.ScopeSelectionComponent do
 
   import Phoenix.HTML.Form
 
-  alias LightningWeb.CredentialLive.SalesforceOauthComponent
   alias LightningWeb.CredentialLive.Scope
   alias LightningWeb.CredentialLive.Scope.Option
 
@@ -114,7 +113,7 @@ defmodule LightningWeb.CredentialLive.ScopeSelectionComponent do
         | selected: String.to_atom(selected?)
       })
 
-    send_update(SalesforceOauthComponent,
+    send_update(LightningWeb.CredentialLive.OauthComponent,
       id: socket.assigns.parent_id,
       scopes:
         options

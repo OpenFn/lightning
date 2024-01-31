@@ -8,10 +8,9 @@ defmodule LightningWeb.CredentialLive.FormComponent do
 
   alias Lightning.Credentials
   alias LightningWeb.Components.NewInputs
-  alias LightningWeb.CredentialLive.GoogleSheetsComponent
   alias LightningWeb.CredentialLive.JsonSchemaBodyComponent
+  alias LightningWeb.CredentialLive.OauthComponent
   alias LightningWeb.CredentialLive.RawBodyComponent
-  alias LightningWeb.CredentialLive.SalesforceOauthComponent
   alias Phoenix.LiveView.JS
 
   @valid_assigns [
@@ -418,27 +417,29 @@ defmodule LightningWeb.CredentialLive.FormComponent do
   """
   def form_component(%{type: "googlesheets"} = assigns) do
     ~H"""
-    <GoogleSheetsComponent.fieldset
+    <OauthComponent.fieldset
       :let={l}
       id={@id}
       form={@form}
       update_body={@update_body}
+      provider={Lightning.AuthProviders.Google}
     >
       <%= render_slot(@inner_block, l) %>
-    </GoogleSheetsComponent.fieldset>
+    </OauthComponent.fieldset>
     """
   end
 
   def form_component(%{type: "salesforce_oauth"} = assigns) do
     ~H"""
-    <SalesforceOauthComponent.fieldset
+    <OauthComponent.fieldset
       :let={l}
       id={@id}
       form={@form}
       update_body={@update_body}
+      provider={Lightning.AuthProviders.Salesforce}
     >
       <%= render_slot(@inner_block, l) %>
-    </SalesforceOauthComponent.fieldset>
+    </OauthComponent.fieldset>
     """
   end
 
