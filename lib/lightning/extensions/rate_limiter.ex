@@ -13,7 +13,7 @@ defmodule Lightning.Extensions.RateLimiter do
   @spec limit_request(Conn.t(), Context.t(), Keyword.t()) ::
           :ok | {:error, RateLimiting.request_error(), String.t()}
 
-  def limit_request(conn, context, opts) do
+  def limit_request(conn, context, opts \\ []) do
     adapter().limit_request(conn, context, opts)
   end
 

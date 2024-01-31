@@ -18,7 +18,7 @@ defmodule Lightning.Extensions.RateLimiting do
 
     @type t :: %Context{
             project_id: Ecto.UUID.t(),
-            user_id: Ecto.UUID.t()
+            user_id: Ecto.UUID.t() | nil
           }
 
     defstruct [:project_id, :user_id]

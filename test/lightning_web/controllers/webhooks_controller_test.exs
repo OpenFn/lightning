@@ -1,17 +1,24 @@
 defmodule LightningWeb.WebhooksControllerTest do
   use LightningWeb.ConnCase, async: false
 
+  import Lightning.Factories
+  import Mock
+
+  alias Lightning.Extensions.RateLimiter
   alias Lightning.Repo
   alias Lightning.Runs
   alias Lightning.WorkOrders
-
-  import Lightning.Factories
 
   require Record
   @fields Record.extract(:span, from: "deps/opentelemetry/include/otel_span.hrl")
   Record.defrecordp(:span, @fields)
 
   describe "a POST request to '/i'" do
+    test "returns 404 when trigger does not exist", %{conn: conn} do
+      conn = post(conn, "/i/bar")
+      assert json_response(conn, 404) == %{"error" => "Webhook not found"}
+    end
+
     test "returns 413 with a body exceeding the limit" do
       %{triggers: [trigger]} =
         insert(:simple_workflow) |> Repo.preload(:triggers)
@@ -47,36 +54,42 @@ defmodule LightningWeb.WebhooksControllerTest do
                )
     end
 
-    test "with a valid trigger id instantiates a workorder", %{conn: conn} do
-      %{triggers: [trigger]} =
-        insert(:simple_workflow) |> Repo.preload(:triggers)
+    test "returns 429 on rate limiting", %{conn: conn} do
+      with_mock RateLimiter,
+        limit_request: fn _conn, _context, _opts ->
+          {:error, :too_many_workorders, "Too many workorders"}
+        end do
+        %{triggers: [trigger]} =
+          insert(:simple_workflow) |> Lightning.Repo.preload(:triggers)
+
+        conn = post(conn, "/i/#{trigger.id}")
+        assert json_response(conn, 429) == %{"error" => "Too many workorders"}
+      end
+    end
+
+    test "creates a pending workorder with a valid trigger", %{conn: conn} do
+      %{triggers: [%{id: trigger_id}]} =
+        insert(:simple_workflow) |> Lightning.Repo.preload(:triggers)
 
       message = %{"foo" => "bar"}
-      conn = post(conn, "/i/#{trigger.id}", message)
+      conn = post(conn, "/i/#{trigger_id}", message)
 
       assert %{"work_order_id" => work_order_id} =
                json_response(conn, 200)
 
+      assert %{trigger: %{id: ^trigger_id}, runs: [run], state: :pending} =
+               WorkOrders.get(work_order_id,
+                 include: [:runs, :dataclip, :trigger]
+               )
+
+      assert %{starting_trigger_id: ^trigger_id} = run
+
       assert Repo.all(Lightning.Invocation.Dataclip) |> Enum.count() == 1
-
-      work_order =
-        %{runs: [run]} =
-        WorkOrders.get(work_order_id, include: [:runs, :dataclip, :trigger])
-
-      assert work_order.trigger.id == trigger.id
 
       assert Runs.get_dataclip_body(run) == ~s({"foo": "bar"})
 
       assert Runs.get_dataclip_request(run) ==
                ~s({"headers": {"content-type": "multipart/mixed; boundary=plug_conn_test"}})
-
-      %{runs: [run]} = work_order
-      assert run.starting_trigger_id == trigger.id
-    end
-
-    test "with an invalid trigger id returns a 404", %{conn: conn} do
-      conn = post(conn, "/i/bar")
-      assert json_response(conn, 404) == %{"error" => "Webhook not found"}
     end
   end
 
