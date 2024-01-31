@@ -7,6 +7,14 @@ defmodule LightningWeb.WorkflowLive.ManualWorkorder do
   attr :form, :map, required: true
   attr :disabled, :boolean, default: true
 
+  attr :project, :map, required: true
+
+  attr :admin_contacts, :list,
+    required: true,
+    doc: "list of project admin emails"
+
+  attr :can_edit_data_retention, :boolean, required: true
+
   def component(assigns) do
     assigns =
       assigns
@@ -62,9 +70,19 @@ defmodule LightningWeb.WorkflowLive.ManualWorkorder do
           </div>
         <% end %>
       </div>
-      <div :if={@selected_dataclip} class="grow overflow-y-auto rounded-md">
+      <div
+        :if={@selected_dataclip && is_nil(@selected_dataclip.wiped_at)}
+        class="grow overflow-y-auto rounded-md"
+      >
         <.log_view dataclip={@selected_dataclip} class="" />
       </div>
+      <LightningWeb.Components.Viewers.wiped_dataclip_viewer
+        :if={@selected_dataclip && is_nil(@selected_dataclip.body)}
+        input_or_output={:input}
+        project_id={@project.id}
+        admin_contacts={@admin_contacts}
+        can_edit_data_retention={@can_edit_data_retention}
+      />
       <div :if={is_nil(@selected_dataclip)} class="grow">
         <.input
           type="textarea"

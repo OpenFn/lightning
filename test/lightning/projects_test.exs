@@ -542,6 +542,40 @@ defmodule Lightning.ProjectsTest do
     end
   end
 
+  describe "list_project_admin_emails/1" do
+    test "lists emails for users with admin or owner roles in the project" do
+      project = insert(:project)
+
+      owner =
+        insert(:project_user, project: project, role: :owner, user: build(:user))
+
+      admin =
+        insert(:project_user, project: project, role: :admin, user: build(:user))
+
+      editor =
+        insert(:project_user,
+          project: project,
+          role: :editor,
+          user: build(:user)
+        )
+
+      viewer =
+        insert(:project_user,
+          project: project,
+          role: :viewer,
+          user: build(:user)
+        )
+
+      emails = Projects.list_project_admin_emails(project.id)
+
+      assert owner.user.email in emails
+      assert admin.user.email in emails
+
+      refute editor.user.email in emails
+      refute viewer.user.email in emails
+    end
+  end
+
   describe "The default Oban function Projects.perform/1" do
     test "removes all projects past deletion date when called with type 'purge_deleted'" do
       project_to_delete =
