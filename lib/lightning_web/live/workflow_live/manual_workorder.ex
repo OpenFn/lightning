@@ -77,7 +77,7 @@ defmodule LightningWeb.WorkflowLive.ManualWorkorder do
         <.log_view dataclip={@selected_dataclip} class="" />
       </div>
       <LightningWeb.Components.Viewers.wiped_dataclip_viewer
-        :if={@selected_dataclip && is_nil(@selected_dataclip.body)}
+        :if={@selected_dataclip && @selected_dataclip.wiped_at}
         input_or_output={:input}
         project_id={@project.id}
         admin_contacts={@admin_contacts}
