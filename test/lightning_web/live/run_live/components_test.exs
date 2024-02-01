@@ -311,7 +311,9 @@ defmodule LightningWeb.RunLive.ComponentsTest do
              "This work order cannot be rerun since no input data has been stored",
            "Tooltip is displayed"
 
-    assert html =~ "Go to data storage settings", "User sees link to go to settings"
+    assert html =~ "Go to data storage settings",
+           "User sees link to go to settings"
+
     refute html =~ "contact one of your project admins"
 
     html =
