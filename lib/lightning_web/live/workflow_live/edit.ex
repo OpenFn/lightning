@@ -125,13 +125,13 @@ defmodule LightningWeb.WorkflowLive.Edit do
                     <.button
                       id="save-and-run"
                       phx-hook="DefaultRunViaCtrlEnter"
-                      {if retry_from_here(@step, @manual_run_form, @selectable_dataclips), do:
+                      {if step_retryable?(@step, @manual_run_form, @selectable_dataclips), do:
                         [type: "button", "phx-click": "rerun", "phx-value-attempt_id": @follow_attempt_id, "phx-value-step_id": @step.id],
                       else:
                           [type: "submit", form: @manual_run_form.id]}
                       class={[
                         "relative inline-flex items-center",
-                        retry_from_here(
+                        step_retryable?(
                           @step,
                           @manual_run_form,
                           @selectable_dataclips
@@ -152,7 +152,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
                           class="w-4 h-4 animate-spin mr-1"
                         /> Processing
                       <% else %>
-                        <%= if retry_from_here(@step, @manual_run_form, @selectable_dataclips) do %>
+                        <%= if step_retryable?(@step, @manual_run_form, @selectable_dataclips) do %>
                           <.icon name="hero-arrow-path-mini" class="w-4 h-4 mr-1" />
                           Rerun from here
                         <% else %>
@@ -163,7 +163,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
                     </.button>
                     <div
                       :if={
-                        retry_from_here(
+                        step_retryable?(
                           @step,
                           @manual_run_form,
                           @selectable_dataclips
@@ -431,7 +431,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
     """
   end
 
-  defp retry_from_here(step, form, selectable_dataclips) do
+  defp step_retryable?(step, form, selectable_dataclips) do
     step_dataclip_id = step && step.input_dataclip_id
 
     selected_dataclip =
