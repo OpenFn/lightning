@@ -66,8 +66,15 @@ defmodule Lightning.WorkOrders do
   @spec create_for(Trigger.t() | Job.t(), [work_order_option()]) ::
           {:ok, WorkOrder.t()} | {:error, Ecto.Changeset.t(WorkOrder.t())}
   def create_for(%Trigger{} = trigger, opts) do
-    build_for(trigger, opts |> Map.new())
-    |> Repo.insert()
+    Multi.new()
+    |> maybe_insert_dataclip(opts[:dataclip])
+    |> Multi.insert(:workorder, fn %{dataclip: dataclip} ->
+      build_for(
+        trigger,
+        Map.new(opts) |> Map.put(:dataclip, dataclip)
+      )
+    end)
+    |> transact_and_return_work_order()
     |> maybe_broadcast_workorder_creation()
   end
 
@@ -93,14 +100,7 @@ defmodule Lightning.WorkOrders do
       Events.run_created(manual.project.id, run)
       {:ok, nil}
     end)
-    |> Repo.transaction()
-    |> case do
-      {:ok, %{workorder: workorder}} ->
-        {:ok, workorder}
-
-      {:error, _op, changeset, _changes} ->
-        {:error, changeset}
-    end
+    |> transact_and_return_work_order()
   end
 
   defp maybe_broadcast_workorder_creation(result) do
@@ -112,6 +112,26 @@ defmodule Lightning.WorkOrders do
 
       other ->
         other
+    end
+  end
+
+  defp transact_and_return_work_order(multi) do
+    multi
+    |> Repo.transaction()
+    |> case do
+      {:ok, %{workorder: workorder}} ->
+        {:ok, workorder}
+
+      {:error, _op, changeset, _changes} ->
+        {:error, changeset}
+    end
+  end
+
+  defp maybe_insert_dataclip(multi, dataclip) do
+    if Map.has_key?(dataclip, :id) do
+      Multi.one(multi, :dataclip, where(Dataclip, id: ^dataclip.id))
+    else
+      Multi.insert(multi, :dataclip, Dataclip.new(dataclip))
     end
   end
 
