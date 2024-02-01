@@ -12,13 +12,23 @@ and this project adheres to
 
 - Persist impact tracking configuration and reports
   [#1684](https://github.com/OpenFn/Lightning/issues/1684)
+- Add zero-persistence project setting
+  [#1209](https://github.com/OpenFn/Lightning/issues/1209)
+- Wipe dataclip after use when zero-persistence is enabled
+  [#1212](https://github.com/OpenFn/Lightning/issues/1212)
+- Show appropriate message when a wiped dataclip is viewed
+  [#1211](https://github.com/OpenFn/Lightning/issues/1211)
+- Disable selecting work orders having wiped dataclips in the history page
+  [#1210](https://github.com/OpenFn/Lightning/issues/1210)
+- Hide rerun button in inspector when the selected step has a wiped dataclip
+  [#1639](https://github.com/OpenFn/Lightning/issues/1639)
 
 ### Changed
 
 ### Fixed
 
 - Fixed bug that was duplicating inbound http_requests, resulting in unnecessary
-  data storage  
+  data storage
   [#1695](https://github.com/OpenFn/Lightning/issues/1695)
 
 ## [v2.0.0-rc8] - 2024-01-30
@@ -46,16 +56,6 @@ and this project adheres to
 
 - Store webhook request headers in Dataclips for use in jobs.
   [#1638](https://github.com/OpenFn/Lightning/issues/1638)
-- Add zero-persistence project setting
-  [#1209](https://github.com/OpenFn/Lightning/issues/1209)
-- Wipe dataclip after use when zero-persistence is enabled
-  [#1212](https://github.com/OpenFn/Lightning/issues/1212)
-- Show appropriate message when a wiped dataclip is viewed
-  [#1211](https://github.com/OpenFn/Lightning/issues/1211)
-- Disable selecting work orders having wiped dataclips in the history page
-  [#1210](https://github.com/OpenFn/Lightning/issues/1210)
-- Hide rerun button in inspector when the selected step has a wiped dataclip
-  [#1639](https://github.com/OpenFn/Lightning/issues/1639)
 
 ### Changed
 
