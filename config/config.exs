@@ -53,13 +53,16 @@ config :swoosh, :api_client, Swoosh.ApiClient.Hackney
 # Set OAuth2 to use Hackney for HTTP calls
 config :oauth2, adapter: Tesla.Adapter.Hackney
 
+wellknown_url_builder = fn instance_url_env ->
+  "#{System.get_env(instance_url_env)}/.well-known/openid-configuration"
+end
+
 config :lightning, :oauth_clients,
   google: [
-    wellknown_url: "https://accounts.google.com/.well-known/openid-configuration"
+    wellknown_url: wellknown_url_builder.("GOOGLE_INSTANCE_URL")
   ],
   salesforce: [
-    wellknown_url:
-      "https://du0000000krrwmac-dev-ed.my.salesforce.com/.well-known/openid-configuration"
+    wellknown_url: wellknown_url_builder.("SALESFORCE_INSTANCE_URL")
   ]
 
 # Configure esbuild (the version is required)
