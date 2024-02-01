@@ -592,7 +592,7 @@ defmodule Lightning.CredentialsTest do
             "refresh_token" => "1//03dATMQTmE5NSCgYIARAAGA...",
             "scope" => "https://www.googleapis.com/auth/spreadsheets"
           },
-          schema: "googlesheets"
+          schema: "salesforce_oauth"
         )
 
       {:ok, refreshed_credential} = Credentials.maybe_refresh_token(credential)
