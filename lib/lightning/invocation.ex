@@ -385,6 +385,12 @@ defmodule Lightning.Invocation do
     )
   end
 
+  def exclude_wiped_dataclips(work_order_query) do
+    work_order_query
+    |> join(:inner, [workorder: wo], assoc(wo, :dataclip), as: :dataclip)
+    |> where([dataclip: d], is_nil(d.wiped_at))
+  end
+
   defp base_query(project_id) do
     from(
       workorder in WorkOrder,
@@ -393,7 +399,7 @@ defmodule Lightning.Invocation do
       as: :workflow,
       where: workflow.project_id == ^project_id,
       select: workorder,
-      preload: [workflow: workflow, runs: [steps: :job]],
+      preload: [workflow: workflow, runs: [steps: :job], dataclip: []],
       order_by: [desc_nulls_first: workorder.last_activity],
       distinct: true
     )

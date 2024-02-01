@@ -52,6 +52,8 @@ and this project adheres to
   [#1212](https://github.com/OpenFn/Lightning/issues/1212)
 - Show appropriate message when a wiped dataclip is viewed
   [#1211](https://github.com/OpenFn/Lightning/issues/1211)
+- Disable selecting work orders having wiped dataclips in the history page
+  [#1210](https://github.com/OpenFn/Lightning/issues/1210)
 
 ### Changed
 

@@ -329,6 +329,7 @@ defmodule LightningWeb.RunLive.Components do
   attr :project, :map, required: true
   attr :run, :map, required: true
   attr :can_rerun_job, :boolean, required: true
+  attr :can_edit_data_retention, :boolean, required: true
 
   def run_item(%{run: run} = assigns) do
     steps = run.steps
@@ -351,6 +352,7 @@ defmodule LightningWeb.RunLive.Components do
           can_rerun_job={@can_rerun_job}
           project_id={@project.id}
           run={@run}
+          can_edit_data_retention={@can_edit_data_retention}
           step={step}
         />
       <% end %>
@@ -362,6 +364,7 @@ defmodule LightningWeb.RunLive.Components do
   attr :run, :map, required: true
   attr :project_id, :string, required: true
   attr :can_rerun_job, :boolean, required: true
+  attr :can_edit_data_retention, :boolean, required: true
 
   def step_list_item(assigns) do
     is_clone =
@@ -414,6 +417,23 @@ defmodule LightningWeb.RunLive.Components do
             <div class="flex gap-1 text-xs leading-5">
               <%= if @can_rerun_job && @step.exit_reason do %>
                 <span
+                  :if={is_nil(@step.input_dataclip_id)}
+                  id={@step.id}
+                  class="text-indigo-300 cursor-pointer"
+                  phx-hook="Tooltip"
+                  data-placement="right"
+                  data-allow-html="true"
+                  aria-label={
+                    rerun_zero_persistence_tooltip_message(
+                      @project_id,
+                      @can_edit_data_retention
+                    )
+                  }
+                >
+                  rerun
+                </span>
+                <span
+                  :if={@step.input_dataclip_id}
                   id={@step.id}
                   class="text-indigo-400 hover:underline hover:underline-offset-2 hover:text-indigo-500 cursor-pointer"
                   phx-click="rerun"
@@ -464,6 +484,28 @@ defmodule LightningWeb.RunLive.Components do
       <div role="cell"></div>
     </div>
     """
+  end
+
+  def rerun_zero_persistence_tooltip_message(project_id, can_edit_retention) do
+    """
+    <span class="text-center">
+    This work order cannot be rerun since no input data has been stored<br>
+    due to the data retention policy set in the project.<br>
+    #{zero_persistence_action_message(project_id, can_edit_retention)}
+    </span>
+    """
+  end
+
+  def zero_persistence_action_message(project_id, can_edit_retention) do
+    if can_edit_retention do
+      """
+      <a href="#{~p"/projects/#{project_id}/settings#data-storage"}" class="underline text-blue-400">
+      Go to retention settings
+      </a>
+      """
+    else
+      "For more information, contact one of your account administrators"
+    end
   end
 
   attr :timestamp, :any, required: true
