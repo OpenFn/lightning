@@ -858,8 +858,8 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
         step: %{id: ^step_id}
       }
 
-      # wait for 5 milliseconds to give liveview some time to process the event
-      Process.sleep(5)
+      # make sure that the event is processed by liveview
+      render(view)
 
       # dataclip body is nolonger present
       html = view |> element("#manual-job-#{job_1.id}") |> render()
