@@ -20,6 +20,7 @@ defmodule Lightning.AuthProviders.Common do
       field :refresh_token, :string
       field :expires_at, :integer
       field :scope, :string
+      field :instance_url, :string
     end
 
     @doc """
@@ -49,7 +50,13 @@ defmodule Lightning.AuthProviders.Common do
     @doc false
     def changeset(attrs \\ %{}) do
       %__MODULE__{}
-      |> cast(attrs, [:access_token, :refresh_token, :expires_at, :scope])
+      |> cast(attrs, [
+        :access_token,
+        :refresh_token,
+        :expires_at,
+        :scope,
+        :instance_url
+      ])
       |> validate_required([:access_token, :refresh_token])
     end
   end

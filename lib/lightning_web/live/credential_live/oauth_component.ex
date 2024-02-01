@@ -93,6 +93,7 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
         <%= Phoenix.HTML.Form.hidden_input(body_form, :refresh_token) %>
         <%= Phoenix.HTML.Form.hidden_input(body_form, :expires_at) %>
         <%= Phoenix.HTML.Form.hidden_input(body_form, :scope) %>
+        <%= Phoenix.HTML.Form.hidden_input(body_form, :instance_url) %>
       </div>
 
       <%= if @provider === Lightning.AuthProviders.Salesforce do %>
