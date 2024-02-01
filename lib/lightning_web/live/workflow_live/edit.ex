@@ -1291,6 +1291,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
             socket.assigns.selected_job.id
           )
 
+        Attempts.subscribe(%Lightning.Attempt{id: attempt_id})
+
         socket |> assign(follow_attempt_id: attempt_id, step: step)
 
       _ ->

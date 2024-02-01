@@ -781,6 +781,91 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       assert has_element?(view, "button:disabled", "Create New Work Order"),
              "create new workorder button is disabled"
     end
+
+    test "selected dataclip viewer is updated correctly if dataclip is wiped and step completed",
+         %{
+           conn: conn,
+           project: project,
+           workflow: %{jobs: [job_1, _job_2 | _rest]} = workflow
+         } do
+      unique_val = "random" <> Ecto.UUID.generate()
+
+      input_dataclip =
+        insert(:dataclip,
+          project: project,
+          type: :saved_input,
+          body: %{"foo" => unique_val}
+        )
+
+      %{attempts: [attempt]} =
+        insert(:workorder,
+          workflow: workflow,
+          dataclip: input_dataclip,
+          state: :running,
+          attempts: [
+            build(:attempt,
+              dataclip: input_dataclip,
+              starting_job: job_1,
+              state: :started,
+              steps: []
+            )
+          ]
+        )
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project}/w/#{workflow}?#{[s: job_1.id, a: attempt.id, m: "expand"]}"
+        )
+
+      # dataclip body is displayed
+      html = view |> element("#manual-job-#{job_1.id}") |> render()
+      assert html =~ unique_val, "dataclip body is present"
+      refute html =~ "No input data has been saved here in accordance"
+
+      # let's subscribe to events to make sure we're in sync with liveview
+      Lightning.Attempts.subscribe(attempt)
+
+      # lets wipe the dataclip
+      Lightning.Attempts.wipe_dataclips(attempt)
+
+      # start step without dataclip
+      {:ok, %{id: step_id}} =
+        Lightning.Attempts.start_step(%{
+          "attempt_id" => attempt.id,
+          "job_id" => job_1.id,
+          "step_id" => Ecto.UUID.generate()
+        })
+
+      assert_received %Lightning.Attempts.Events.StepStarted{
+        step: %{id: ^step_id}
+      }
+
+      # dataclip body is still present
+      html = view |> element("#manual-job-#{job_1.id}") |> render()
+      assert html =~ unique_val, "dataclip body is present when the step starts"
+
+      # complete step without dataclip
+      {:ok, _step} =
+        Lightning.Attempts.complete_step(%{
+          step_id: step_id,
+          reason: "success",
+          attempt_id: attempt.id,
+          project_id: project.id
+        })
+
+      assert_received %Lightning.Attempts.Events.StepCompleted{
+        step: %{id: ^step_id}
+      }
+
+      # wait for 5 milliseconds to give liveview some time to process the event
+      Process.sleep(5)
+
+      # dataclip body is nolonger present
+      html = view |> element("#manual-job-#{job_1.id}") |> render()
+      refute html =~ unique_val, "dataclip body has been removed"
+      assert html =~ "No input data has been saved here in accordance"
+    end
   end
 
   describe "Editor events" do
