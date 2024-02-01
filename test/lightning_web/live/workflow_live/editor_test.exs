@@ -724,6 +724,63 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       refute html =~ attempt.id
       assert html =~ new_attempt.id
     end
+
+    test "followed attempt with wiped dataclip renders the page correctly",
+         %{
+           conn: conn,
+           project: project,
+           workflow: %{jobs: [job_1, job_2 | _rest]} = workflow
+         } do
+      wiped_dataclip =
+        insert(:dataclip,
+          project: project,
+          type: :http_request,
+          body: nil,
+          wiped_at: DateTime.utc_now()
+        )
+
+      %{attempts: [attempt]} =
+        insert(:workorder,
+          workflow: workflow,
+          dataclip: wiped_dataclip,
+          attempts: [
+            build(:attempt,
+              dataclip: wiped_dataclip,
+              starting_job: job_1,
+              steps: [
+                build(:step,
+                  job: job_1,
+                  input_dataclip: nil,
+                  output_dataclip: nil,
+                  started_at: build(:timestamp),
+                  finished_at: build(:timestamp),
+                  exit_reason: "success"
+                ),
+                build(:step,
+                  job: job_2,
+                  input_dataclip: nil,
+                  output_dataclip: nil,
+                  started_at: build(:timestamp),
+                  finished_at: build(:timestamp),
+                  exit_reason: "success"
+                )
+              ]
+            )
+          ]
+        )
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project}/w/#{workflow}?#{[s: job_2.id, a: attempt.id, m: "expand"]}"
+        )
+
+      # user cannot rerun
+      refute has_element?(view, "button", "Rerun from here")
+
+      assert has_element?(view, "button:disabled", "Create New Work Order"),
+             "create new workorder button is disabled"
+    end
   end
 
   describe "Editor events" do
