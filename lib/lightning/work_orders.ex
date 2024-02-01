@@ -130,6 +130,50 @@ defmodule Lightning.WorkOrders do
   end
 
   defp get_or_insert_dataclip(multi, %Manual{} = manual) do
+=======
+    |> Multi.run(:broadcast, fn _repo,
+                                %{workorder: %{runs: [run]} = workorder} ->
+      Events.work_order_created(manual.project.id, workorder)
+      Events.run_created(manual.project.id, run)
+      {:ok, nil}
+    end)
+    |> transact_and_return_work_order()
+  end
+
+  defp maybe_broadcast_workorder_creation(result) do
+    case result do
+      {:ok, workorder} ->
+        workflow = workorder |> Repo.preload(:workflow) |> Map.get(:workflow)
+        Events.work_order_created(workflow.project_id, workorder)
+        {:ok, workorder}
+
+      other ->
+        other
+    end
+  end
+
+  defp transact_and_return_work_order(multi) do
+    multi
+    |> Repo.transaction()
+    |> case do
+      {:ok, %{workorder: workorder}} ->
+        {:ok, workorder}
+
+      {:error, _op, changeset, _changes} ->
+        {:error, changeset}
+    end
+  end
+
+  defp maybe_insert_dataclip(multi, dataclip) do
+    if Map.has_key?(dataclip, :id) do
+      Multi.one(multi, :dataclip, where(Dataclip, id: ^dataclip.id))
+    else
+      Multi.insert(multi, :dataclip, Dataclip.new(dataclip))
+    end
+  end
+
+  defp get_or_insert_dataclip(multi, manual) do
+>>>>>>> 54b6a02c7 (fix #1695)
     if manual.dataclip_id do
       multi |> Multi.one(:dataclip, where(Dataclip, id: ^manual.dataclip_id))
     else
