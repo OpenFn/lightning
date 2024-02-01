@@ -28,6 +28,8 @@ and this project adheres to
   [#1211](https://github.com/OpenFn/Lightning/issues/1211)
 - Disable selecting work orders having wiped dataclips in the history page
   [#1210](https://github.com/OpenFn/Lightning/issues/1210)
+- Hide rerun button in inspector when the selected step has a wiped dataclip
+  [#1639](https://github.com/OpenFn/Lightning/issues/1639)
 
 ### Changed
 
