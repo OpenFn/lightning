@@ -785,7 +785,8 @@
                 </div>
                 <div class="block mt-1 mb-3">
                   Should OpenFn store input/output data for workflow runs?
-                  <a href="#" class="ml-1 text-indigo-600">Learn more...</a>
+                  <%!-- TODO: add link to docs page when it's built --%>
+                  <%!-- <a href="#" class="ml-1 text-indigo-600">Learn more...</a> --%>
                 </div>
               </div>
               <.form
@@ -796,9 +797,10 @@
                 phx-submit="save"
               >
                 <div class="space-y-2">
+                  <%!-- TODO: add this to the list of options for https://github.com/OpenFn/Lightning/issues/1694 --%>
+                  <%!-- {:retain_with_errors, "Only retain input/output data when a run fails"}, --%>
                   <%= for {value, text} <- [
                   {:retain_all, "Retain input/output data for all workflow runs"},
-                  {:retain_with_errors, "Only retain input/output data when a run fails"},
                   {:erase_all, "Never retain input/output data (zero-persistence)"}
                   ] do %>
                     <div class="relative flex items-start">

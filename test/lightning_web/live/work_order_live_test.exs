@@ -272,10 +272,10 @@ defmodule LightningWeb.WorkOrderLiveTest do
       assert dataclip_html =~
                "The input dataclip is unavailable and has not been stored"
 
-      assert dataclip_html =~ "Go to retention settings",
+      assert dataclip_html =~ "Go to data storage settings",
              "User sees link to go to settings"
 
-      refute dataclip_html =~ "contact one of your account administrators"
+      refute dataclip_html =~ "contact one of your project admins"
 
       # User cannot edit data retention
 
@@ -308,10 +308,10 @@ defmodule LightningWeb.WorkOrderLiveTest do
       assert dataclip_html =~
                "The input dataclip is unavailable and has not been stored"
 
-      refute dataclip_html =~ "Go to retention settings",
+      refute dataclip_html =~ "Go to data storage settings",
              "User cannot see link to go to settings"
 
-      assert dataclip_html =~ "contact one of your account administrators"
+      assert dataclip_html =~ "contact one of your project admins"
 
       # Normal dataclip
 
@@ -395,10 +395,10 @@ defmodule LightningWeb.WorkOrderLiveTest do
       assert tooltip_html =~
                "This work order cannot be rerun since no input data has been stored"
 
-      assert tooltip_html =~ "Go to retention settings",
+      assert tooltip_html =~ "Go to data storage settings",
              "User sees link to go to settings"
 
-      refute tooltip_html =~ "contact one of your account administrators"
+      refute tooltip_html =~ "contact one of your project admins"
 
       # User cannot edit data retention
 
@@ -434,10 +434,10 @@ defmodule LightningWeb.WorkOrderLiveTest do
       assert tooltip_html =~
                "This work order cannot be rerun since no input data has been stored"
 
-      refute tooltip_html =~ "Go to retention settings",
+      refute tooltip_html =~ "Go to data storage settings",
              "User cannot see link to go to settings"
 
-      assert tooltip_html =~ "contact one of your account administrators"
+      assert tooltip_html =~ "contact one of your project admins"
 
       # Normal dataclip
 

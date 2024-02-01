@@ -821,7 +821,7 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       # dataclip body is displayed
       html = view |> element("#manual-job-#{job_1.id}") |> render()
       assert html =~ unique_val, "dataclip body is present"
-      refute html =~ "No input data has been saved here in accordance"
+      refute html =~ "data for this step has not been retained"
 
       # let's subscribe to events to make sure we're in sync with liveview
       Lightning.Runs.subscribe(run)
@@ -864,7 +864,7 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       # dataclip body is nolonger present
       html = view |> element("#manual-job-#{job_1.id}") |> render()
       refute html =~ unique_val, "dataclip body has been removed"
-      assert html =~ "No input data has been saved here in accordance"
+      assert html =~ "data for this step has not been retained"
     end
   end
 

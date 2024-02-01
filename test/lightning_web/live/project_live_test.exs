@@ -1788,12 +1788,13 @@ defmodule LightningWeb.ProjectLiveTest do
                |> Floki.parse_fragment!()
                |> Floki.attribute("input", "checked")
 
-      refute ["checked"] ==
-               view
-               |> element("#retain_with_errors")
-               |> render()
-               |> Floki.parse_fragment!()
-               |> Floki.attribute("input", "checked")
+      # TODO - this will be implemented in https://github.com/OpenFn/Lightning/issues/1694
+      # refute ["checked"] ==
+      #          view
+      #          |> element("#retain_with_errors")
+      #          |> render()
+      #          |> Floki.parse_fragment!()
+      #          |> Floki.attribute("input", "checked")
 
       refute ["checked"] ==
                view
@@ -1814,13 +1815,14 @@ defmodule LightningWeb.ProjectLiveTest do
                |> Floki.text()
                |> String.trim()
 
-      assert "Only retain input/output data when a run fails" =
-               view
-               |> element(~s{label#[for="retain_with_errors"]})
-               |> render()
-               |> Floki.parse_fragment!()
-               |> Floki.text()
-               |> String.trim()
+      # TODO - this will be implemented in https://github.com/OpenFn/Lightning/issues/1694
+      # assert "Only retain input/output data when a run fails" =
+      #          view
+      #          |> element(~s{label#[for="retain_with_errors"]})
+      #          |> render()
+      #          |> Floki.parse_fragment!()
+      #          |> Floki.text()
+      #          |> String.trim()
 
       assert "Never retain input/output data (zero-persistence)" =
                view
@@ -1830,30 +1832,31 @@ defmodule LightningWeb.ProjectLiveTest do
                |> Floki.text()
                |> String.trim()
 
+      # TODO - this will be implemented in https://github.com/OpenFn/Lightning/issues/1694
       # show heads up for retain_with_errors
-      view
-      |> form("#retention-settings-form",
-        project: %{
-          retention_policy: "retain_with_errors"
-        }
-      )
-      |> render_change()
+      # view
+      # |> form("#retention-settings-form",
+      #   project: %{
+      #     retention_policy: "retain_with_errors"
+      #   }
+      # )
+      # |> render_change()
 
-      assert ["checked"] ==
-               view
-               |> element("#retain_with_errors")
-               |> render()
-               |> Floki.parse_fragment!()
-               |> Floki.attribute("input", "checked")
+      # assert ["checked"] ==
+      #          view
+      #          |> element("#retain_with_errors")
+      #          |> render()
+      #          |> Floki.parse_fragment!()
+      #          |> Floki.attribute("input", "checked")
 
-      assert "When enabled, you will no longer be able to retry workflow runs as no data will be stored." =
-               view
-               |> element("#heads-up-description")
-               |> render()
-               |> Floki.parse_fragment!()
-               |> Floki.find("p")
-               |> Floki.text()
-               |> String.trim()
+      # assert "When enabled, you will no longer be able to retry workflow runs as no data will be stored." =
+      #          view
+      #          |> element("#heads-up-description")
+      #          |> render()
+      #          |> Floki.parse_fragment!()
+      #          |> Floki.find("p")
+      #          |> Floki.text()
+      #          |> String.trim()
 
       # show heads up for erase all
       view
@@ -1928,7 +1931,9 @@ defmodule LightningWeb.ProjectLiveTest do
 
       # save, navigate to other page and saved option is checked when come back
       Enum.reduce(
-        ["retain_with_errors", "erase_all", "retain_all"],
+        # TODO - this will be implemented in https://github.com/OpenFn/Lightning/issues/1694
+        # ["retain_with_errors", "erase_all", "retain_all"],
+        ["erase_all", "retain_all"],
         view,
         fn policy, view ->
           view

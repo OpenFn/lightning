@@ -489,8 +489,9 @@ defmodule LightningWeb.RunLive.Components do
   def rerun_zero_persistence_tooltip_message(project_id, can_edit_retention) do
     """
     <span class="text-center">
-    This work order cannot be rerun since no input data has been stored<br>
-    due to the data retention policy set in the project.<br>
+    This work order cannot be rerun since no input data has been stored due to
+    the data retention policy set in the project.
+    <br />
     #{zero_persistence_action_message(project_id, can_edit_retention)}
     </span>
     """
@@ -500,11 +501,11 @@ defmodule LightningWeb.RunLive.Components do
     if can_edit_retention do
       """
       <a href="#{~p"/projects/#{project_id}/settings#data-storage"}" class="underline text-blue-400">
-      Go to retention settings
+      Go to data storage settings
       </a>
       """
     else
-      "For more information, contact one of your account administrators"
+      "For more information, contact one of your project admins"
     end
   end
 

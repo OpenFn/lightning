@@ -47,8 +47,8 @@ defmodule LightningWeb.Components.ViewerTest do
         )
 
       refute html =~ "Nothing yet"
-      assert html =~ "No input data has been saved here in accordance"
-      assert html =~ "Go to retention settings"
+      assert html =~ "data for this step has not been retained"
+      assert html =~ "this policy\n      </a>\n      for future runs"
       refute html =~ "test@email.com"
 
       # finished step for a user who can NOT edit_data_retention
@@ -65,8 +65,8 @@ defmodule LightningWeb.Components.ViewerTest do
         )
 
       refute html =~ "Nothing yet"
-      assert html =~ "No input data has been saved here in accordance"
-      refute html =~ "Go to retention settings"
+      assert html =~ "data for this step has not been retained"
+      refute html =~ "this policy\n      </a>\n      for future runs"
       assert html =~ "test@email.com"
 
       # finished step for a dataclip that was not saved at all
@@ -83,7 +83,7 @@ defmodule LightningWeb.Components.ViewerTest do
         )
 
       refute html =~ "Nothing yet"
-      assert html =~ "No output data has been saved here in accordance"
+      assert html =~ "data for this step has not been retained in accordance"
 
       # running step always shows the pending state
       html =
@@ -99,8 +99,8 @@ defmodule LightningWeb.Components.ViewerTest do
         )
 
       assert html =~ "Nothing yet"
-      refute html =~ "No input data has been saved here in accordance"
-      refute html =~ "Go to retention settings"
+      refute html =~ "data for this step has not been retained"
+      refute html =~ "this policy\n      </a>\n      for future runs"
       refute html =~ "test@email.com"
 
       # loading async result always shows the pending state
@@ -120,8 +120,8 @@ defmodule LightningWeb.Components.ViewerTest do
         )
 
       assert html =~ "Nothing yet"
-      refute html =~ "No input data has been saved here in accordance"
-      refute html =~ "Go to retention settings"
+      refute html =~ "data for this step has not been retained"
+      refute html =~ "this policy\n      </a>\n      for future runs"
       refute html =~ "test@email.com"
 
       # completed async result shows the right information
@@ -142,8 +142,8 @@ defmodule LightningWeb.Components.ViewerTest do
         )
 
       refute html =~ "Nothing yet"
-      assert html =~ "No input data has been saved here in accordance"
-      assert html =~ "Go to retention settings"
+      assert html =~ "data for this step has not been retained"
+      assert html =~ "this policy\n      </a>\n      for future runs"
       refute html =~ "test@email.com"
     end
   end

@@ -311,8 +311,8 @@ defmodule LightningWeb.RunLive.ComponentsTest do
              "This work order cannot be rerun since no input data has been stored",
            "Tooltip is displayed"
 
-    assert html =~ "Go to retention settings", "User sees link to go to settings"
-    refute html =~ "contact one of your account administrators"
+    assert html =~ "Go to data storage settings", "User sees link to go to settings"
+    refute html =~ "contact one of your project admins"
 
     html =
       render_component(&Components.step_list_item/1,
@@ -339,10 +339,10 @@ defmodule LightningWeb.RunLive.ComponentsTest do
              "This work order cannot be rerun since no input data has been stored",
            "Tooltip is displayed"
 
-    refute html =~ "Go to retention settings",
+    refute html =~ "Go to data storage settings",
            "User does not see link to go to settings"
 
-    assert html =~ "contact one of your account administrators"
+    assert html =~ "contact one of your project admins"
   end
 
   describe "log_view component" do

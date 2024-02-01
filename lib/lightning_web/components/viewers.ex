@@ -223,28 +223,32 @@ defmodule LightningWeb.Components.Viewers do
           <span class="capitalize">No <%= @input_or_output %> Data</span> here!
         </h3>
         <p class="text-sm">
-          No <%= @input_or_output %> data has been saved here in accordance with your
-          <br /> projects data retention policy.
+          <span class="capitalize"><%= @input_or_output %></span>
+          data for this step has not been retained in accordance
+          with your project's data storage policy.
         </p>
       </div>
       <div class="text-center text-gray-500 text-sm">
         <%= if @can_edit_data_retention do %>
+          Change
           <.link
-            navigate={~p"/projects/#{@project_id}/settings#data-retention"}
-            class="underline text-blue-400 hover:text-blue-600"
+            href={~p"/projects/#{@project_id}/settings#data-storage"}
+            class="underline inline-block text-blue-400 hover:text-blue-600"
           >
-            Go to retention settings
+            this policy
           </.link>
+          for future runs.
         <% else %>
-          For more information, contact one of your
+          Contact one of your
           <span
             id="zero-persistence-admins-tooltip"
             phx-hook="Tooltip"
-            class="underline text-blue-400"
+            class="underline inline-block text-blue-400"
             aria-label={Enum.join(@admin_contacts, ", ")}
           >
-            account administrators
+            project admins
           </span>
+          for more information.
         <% end %>
       </div>
     </div>
