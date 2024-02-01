@@ -139,7 +139,11 @@ defmodule LightningWeb.WorkflowLive.Edit do
                       ]}
                       disabled={
                         @save_and_run_disabled ||
-                          processing(@follow_attempt_id, @step)
+                          processing(@follow_attempt_id, @step) ||
+                          selected_dataclip_wiped?(
+                            @manual_run_form,
+                            @selectable_dataclips
+                          )
                       }
                     >
                       <%= if processing(@follow_attempt_id, @step) do %>
@@ -431,12 +435,21 @@ defmodule LightningWeb.WorkflowLive.Edit do
     step_dataclip_id = step && step.input_dataclip_id
 
     selected_dataclip =
-      Enum.find(selectable_dataclips, fn d ->
-        d.id == form[:dataclip_id].value
+      Enum.find(selectable_dataclips, fn dataclip ->
+        dataclip.id == form[:dataclip_id].value
       end)
 
     selected_dataclip && selected_dataclip.id == step_dataclip_id &&
       is_nil(selected_dataclip.wiped_at)
+  end
+
+  defp selected_dataclip_wiped?(form, selectable_dataclips) do
+    selected_dataclip =
+      Enum.find(selectable_dataclips, fn dataclip ->
+        dataclip.id == form[:dataclip_id].value
+      end)
+
+    selected_dataclip && !is_nil(selected_dataclip.wiped_at)
   end
 
   defp processing(attempt_id, step), do: attempt_id && !step
