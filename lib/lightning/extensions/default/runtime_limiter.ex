@@ -4,10 +4,12 @@ defmodule Lightning.Extensions.Default.RuntimeLimiter do
   """
   @behaviour Lightning.Extensions.RuntimeLimiting
 
+  @impl true
   def check_limits(_context) do
     :ok
   end
 
+  @impl true
   def limit_internal(_action, _context) do
     :ok
   end
