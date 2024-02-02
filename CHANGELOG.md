@@ -15,7 +15,8 @@ and this project adheres to
 ### Fixed
 
 - Fixed bug that was duplicating inbound http_requests, resulting in unnecessary
-  data storage [#1695](https://github.com/OpenFn/Lightning/issues/1695)
+  data storage  
+  [#1695](https://github.com/OpenFn/Lightning/issues/1695)
 
 ## [v2.0.0-rc8] - 2024-01-30
 
