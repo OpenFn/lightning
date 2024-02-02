@@ -85,7 +85,10 @@ config :lightning, :oauth_clients,
   ],
   salesforce: [
     client_id: System.get_env("SALESFORCE_CLIENT_ID"),
-    client_secret: System.get_env("SALESFORCE_CLIENT_SECRET")
+    client_secret: System.get_env("SALESFORCE_CLIENT_SECRET"),
+    wellknown_url:
+      System.get_env("SALESFORCE_INSTANCE_URL") <>
+        "/.well-known/openid-configuration"
   ]
 
 config :lightning,
