@@ -12,6 +12,8 @@ and this project adheres to
 
 - Persist impact tracking configuration and reports
   [#1684](https://github.com/OpenFn/Lightning/issues/1684)
+- Add support for Salesforce OAuth2 credentials
+  [#1633](https://github.com/OpenFn/Lightning/issues/1633)
 
 ### Changed
 
