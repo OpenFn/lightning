@@ -12,7 +12,6 @@ defmodule Lightning.Workflows.Scheduler do
     unique: [period: 59]
 
   alias Lightning.Invocation
-  alias Lightning.Invocation.Dataclip
   alias Lightning.Repo
   alias Lightning.Workflows
   alias Lightning.Workflows.Edge
@@ -52,17 +51,12 @@ defmodule Lightning.Workflows.Scheduler do
         # default_state_for_job(id)
         # %{id: uuid, type: :global, body: %{arbitrary: true}}
 
-        dataclip =
-          %{
+        WorkOrders.create_for(trigger,
+          dataclip: %{
             type: :global,
             body: %{},
             project_id: job.workflow.project_id
-          }
-          |> Dataclip.new()
-          |> Repo.insert!()
-
-        WorkOrders.create_for(trigger,
-          dataclip: dataclip,
+          },
           workflow: job.workflow
         )
 

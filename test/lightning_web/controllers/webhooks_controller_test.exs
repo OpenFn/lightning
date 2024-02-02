@@ -1,6 +1,7 @@
 defmodule LightningWeb.WebhooksControllerTest do
   use LightningWeb.ConnCase, async: false
 
+  alias Lightning.Repo
   alias Lightning.Runs
   alias Lightning.WorkOrders
 
@@ -13,7 +14,7 @@ defmodule LightningWeb.WebhooksControllerTest do
   describe "a POST request to '/i'" do
     test "returns 413 with a body exceeding the limit" do
       %{triggers: [trigger]} =
-        insert(:simple_workflow) |> Lightning.Repo.preload(:triggers)
+        insert(:simple_workflow) |> Repo.preload(:triggers)
 
       Application.put_env(:lightning, :max_dataclip_size_bytes, 1_000_000)
 
@@ -48,13 +49,15 @@ defmodule LightningWeb.WebhooksControllerTest do
 
     test "with a valid trigger id instantiates a workorder", %{conn: conn} do
       %{triggers: [trigger]} =
-        insert(:simple_workflow) |> Lightning.Repo.preload(:triggers)
+        insert(:simple_workflow) |> Repo.preload(:triggers)
 
       message = %{"foo" => "bar"}
       conn = post(conn, "/i/#{trigger.id}", message)
 
       assert %{"work_order_id" => work_order_id} =
                json_response(conn, 200)
+
+      assert Repo.all(Lightning.Invocation.Dataclip) |> Enum.count() == 1
 
       work_order =
         %{runs: [run]} =

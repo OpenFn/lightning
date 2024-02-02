@@ -45,6 +45,7 @@ defmodule Lightning.WorkOrdersTest do
       [run] = workorder.runs
 
       assert run.starting_trigger.id == trigger.id
+      assert run.dataclip_id == dataclip.id
 
       workorder_id = workorder.id
 

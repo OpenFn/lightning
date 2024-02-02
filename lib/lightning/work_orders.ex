@@ -66,15 +66,22 @@ defmodule Lightning.WorkOrders do
   @spec create_for(Trigger.t() | Job.t(), [work_order_option()]) ::
           {:ok, WorkOrder.t()} | {:error, Ecto.Changeset.t(WorkOrder.t())}
   def create_for(%Trigger{} = trigger, opts) do
-    build_for(trigger, opts |> Map.new())
-    |> Repo.insert()
-    |> maybe_broadcast_workorder_creation()
+    Multi.new()
+    |> Multi.put(:workflow, opts[:workflow])
+    |> get_or_insert_dataclip(opts[:dataclip])
+    |> Multi.insert(:workorder, fn %{dataclip: dataclip} ->
+      build_for(trigger, Map.new(opts) |> Map.put(:dataclip, dataclip))
+    end)
+    |> broadcast_workorder_creation()
+    |> transact_and_return_work_order()
   end
 
   def create_for(%Job{} = job, opts) do
-    build_for(job, opts |> Map.new())
-    |> Repo.insert()
-    |> maybe_broadcast_workorder_creation()
+    Multi.new()
+    |> Multi.put(:workflow, opts[:workflow])
+    |> Multi.insert(:workorder, build_for(job, opts |> Map.new()))
+    |> broadcast_workorder_creation()
+    |> transact_and_return_work_order()
   end
 
   def create_for(%Manual{} = manual) do
@@ -87,12 +94,31 @@ defmodule Lightning.WorkOrders do
         created_by: manual.created_by
       })
     end)
-    |> Multi.run(:broadcast, fn _repo,
-                                %{workorder: %{runs: [run]} = workorder} ->
-      Events.work_order_created(manual.project.id, workorder)
-      Events.run_created(manual.project.id, run)
-      {:ok, nil}
-    end)
+    |> Multi.put(:workflow, manual.workflow)
+    |> broadcast_workorder_creation()
+    |> Multi.run(
+      :broadcast_run,
+      fn _repo, %{workorder: %{runs: [run], workflow: workflow}} ->
+        Events.run_created(workflow.project_id, run)
+        {:ok, nil}
+      end
+    )
+    |> transact_and_return_work_order()
+  end
+
+  defp broadcast_workorder_creation(multi) do
+    multi
+    |> Multi.run(
+      :broadcast_workorder,
+      fn _repo, %{workorder: workorder, workflow: workflow} ->
+        Events.work_order_created(workflow.project_id, workorder)
+        {:ok, nil}
+      end
+    )
+  end
+
+  defp transact_and_return_work_order(multi) do
+    multi
     |> Repo.transaction()
     |> case do
       {:ok, %{workorder: workorder}} ->
@@ -103,19 +129,7 @@ defmodule Lightning.WorkOrders do
     end
   end
 
-  defp maybe_broadcast_workorder_creation(result) do
-    case result do
-      {:ok, workorder} ->
-        workflow = workorder |> Repo.preload(:workflow) |> Map.get(:workflow)
-        Events.work_order_created(workflow.project_id, workorder)
-        {:ok, workorder}
-
-      other ->
-        other
-    end
-  end
-
-  defp get_or_insert_dataclip(multi, manual) do
+  defp get_or_insert_dataclip(multi, %Manual{} = manual) do
     if manual.dataclip_id do
       multi |> Multi.one(:dataclip, where(Dataclip, id: ^manual.dataclip_id))
     else
@@ -129,6 +143,21 @@ defmodule Lightning.WorkOrders do
         )
       )
     end
+  end
+
+  defp get_or_insert_dataclip(
+         multi,
+         %Ecto.Changeset{data: %Dataclip{}} = dataclip
+       ) do
+    multi |> Multi.insert(:dataclip, dataclip)
+  end
+
+  defp get_or_insert_dataclip(multi, %Dataclip{} = dataclip) do
+    multi |> Multi.one(:dataclip, where(Dataclip, id: ^dataclip.id))
+  end
+
+  defp get_or_insert_dataclip(multi, params) when is_map(params) do
+    get_or_insert_dataclip(multi, Dataclip.new(params))
   end
 
   @spec build_for(Trigger.t() | Job.t(), map()) ::

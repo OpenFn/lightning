@@ -82,6 +82,9 @@ defmodule LightningWeb.EndToEndTest do
              |> Enum.all?(fn {_x, count} -> count == 2 end)
 
       assert %{state: :success} = WorkOrders.get(wo_id)
+
+      # There was an initial http_request dataclip and 7 run_result dataclips
+      assert Repo.all(Lightning.Invocation.Dataclip) |> Enum.count() == 8
     end
 
     @tag :integration
