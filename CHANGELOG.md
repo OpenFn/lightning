@@ -22,6 +22,8 @@ and this project adheres to
   [#1210](https://github.com/OpenFn/Lightning/issues/1210)
 - Hide rerun button in inspector when the selected step has a wiped dataclip
   [#1639](https://github.com/OpenFn/Lightning/issues/1639)
+- Add rate limiter to webhook endpoints and runtime limiter for runs.
+  [#639](https://github.com/OpenFn/Lightning/issues/639)
 
 ### Changed
 
@@ -32,8 +34,7 @@ and this project adheres to
   (e.g., {"username": "come-on-in", "password": ""})
   [#1585](https://github.com/OpenFn/Lightning/issues/1585)
 - Fixed bug that was duplicating inbound http_requests, resulting in unnecessary
-  data storage
-  [#1695](https://github.com/OpenFn/Lightning/issues/1695)
+  data storage [#1695](https://github.com/OpenFn/Lightning/issues/1695)
 
 ## [v2.0.0-rc8] - 2024-01-30
 
@@ -41,8 +42,6 @@ and this project adheres to
 
 - Shim code to interact with the Impact Tracking service
   [#1671](https://github.com/OpenFn/Lightning/issues/1671)
-- Add rate limiter to webhook endpoints and runtime limiter for runs.
-  [#639](https://github.com/OpenFn/Lightning/issues/639)
 
 ### Changed
 
@@ -76,8 +75,7 @@ and this project adheres to
 
 ### Fixed
 
-- Fix Run via Docker
-  [#1653](https://github.com/OpenFn/Lightning/issues/1653)
+- Fix Run via Docker [#1653](https://github.com/OpenFn/Lightning/issues/1653)
 - Fix remaining warnings, enable "warnings as errors"
   [#1642](https://github.com/OpenFn/Lightning/issues/1642)
 - Fix workflow dashboard bug when viewed for newly created workflows with only
