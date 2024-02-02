@@ -73,7 +73,11 @@ defmodule Lightning.Invocation.Dataclip do
   end
 
   defp remove_configuration(changeset) do
-    add_error(changeset, :body, "must be a map")
+    if changeset |> get_change(:body) |> is_nil() do
+      changeset
+    else
+      add_error(changeset, :body, "must be a map")
+    end
   end
 
   @doc false

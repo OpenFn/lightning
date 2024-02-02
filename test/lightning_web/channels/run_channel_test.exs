@@ -492,7 +492,7 @@ defmodule LightningWeb.RunChannelTest do
       socket: socket,
       run: %{dataclip_id: dataclip_id},
       workflow: workflow,
-      credential: %{id: credential_id} = credential,
+      credential: %{id: credential_id},
       project: project
     } do
       # { id, job_id, input_dataclip_id }
@@ -517,8 +517,43 @@ defmodule LightningWeb.RunChannelTest do
                input_dataclip_id: ^dataclip_id
              } =
                Repo.get!(Step, step_id)
+    end
 
-      # input dataclip is not saved for projects with erase_all
+    test "step:start for a project with erase_all retention policy", %{
+      credential: %{id: credential_id} = credential
+    } do
+      # input dataclip is saved if provided by the worker
+      project = insert(:project, retention_policy: :erase_all)
+
+      %{run: %{dataclip_id: dataclip_id} = run, workflow: workflow} =
+        create_run(%{project: project, credential: credential})
+
+      %{socket: socket} = create_socket(%{run: run})
+
+      step_id = Ecto.UUID.generate()
+      [%{id: job_id}] = workflow.jobs
+
+      ref =
+        push(socket, "step:start", %{
+          "step_id" => step_id,
+          "credential_id" => credential_id,
+          "job_id" => job_id,
+          "input_dataclip_id" => dataclip_id
+        })
+
+      assert_reply ref, :ok, %{step_id: ^step_id}
+
+      assert project.retention_policy == :erase_all
+
+      assert %{
+               credential_id: ^credential_id,
+               job_id: ^job_id,
+               input_dataclip_id: ^dataclip_id
+             } =
+               Repo.get!(Step, step_id),
+             "dataclip is saved if provided"
+
+      # NO INPUT DATACLIP, NO PROBLEM
       project = insert(:project, retention_policy: :erase_all)
 
       %{run: run, workflow: workflow} =
@@ -533,8 +568,7 @@ defmodule LightningWeb.RunChannelTest do
         push(socket, "step:start", %{
           "step_id" => step_id,
           "credential_id" => credential_id,
-          "job_id" => job_id,
-          "input_dataclip_id" => run.dataclip_id
+          "job_id" => job_id
         })
 
       assert_reply ref, :ok, %{step_id: ^step_id}
@@ -589,7 +623,7 @@ defmodule LightningWeb.RunChannelTest do
       assert %{exit_reason: "fail"} = Repo.get(Step, step.id)
     end
 
-    test "step:complete does not save the dataclip if project retention policy is set to erase_all",
+    test "step:complete does not save the dataclip/wipes it if project retention policy is set to erase_all",
          %{
            socket: socket,
            run: run,
@@ -597,6 +631,7 @@ defmodule LightningWeb.RunChannelTest do
            project: project,
            credential: credential
          } do
+      dataclip_query = from(d in Dataclip, select: %{d | body: d.body})
       [job] = workflow.jobs
       %{id: step_id} = insert(:step, runs: [run], job: job)
       dataclip_id = Ecto.UUID.generate()
@@ -614,7 +649,9 @@ defmodule LightningWeb.RunChannelTest do
       # dataclip is saved
       assert project.retention_policy == :retain_all
       assert %{output_dataclip_id: ^dataclip_id} = Repo.get(Step, step_id)
-      assert Repo.get(Dataclip, dataclip_id)
+      assert dataclip = Repo.get(dataclip_query, dataclip_id)
+      assert dataclip.body, "body is not wiped"
+      assert is_nil(dataclip.wiped_at)
 
       # project with erase_all
       project = insert(:project, retention_policy: :erase_all)
@@ -638,10 +675,39 @@ defmodule LightningWeb.RunChannelTest do
 
       assert_reply ref, :ok, %{step_id: ^step_id}
 
-      # dataclip is NOT saved
+      # dataclip is saved but wiped
+      assert project.retention_policy == :erase_all
+      assert %{output_dataclip_id: ^dataclip_id} = Repo.get(Step, step_id)
+      assert dataclip = Repo.get(dataclip_query, dataclip_id)
+      assert is_nil(dataclip.body), "body is wiped"
+      assert is_struct(dataclip.wiped_at, DateTime)
+
+      # another project with erase_all
+      project = insert(:project, retention_policy: :erase_all)
+
+      %{run: run, workflow: workflow} =
+        create_run(%{project: project, credential: credential})
+
+      %{socket: socket} = create_socket(%{run: run})
+
+      [job] = workflow.jobs
+      %{id: step_id} = insert(:step, runs: [run], job: job)
+      dataclip_id = Ecto.UUID.generate()
+
+      # do not inclide output_dataclip_id
+      ref =
+        push(socket, "step:complete", %{
+          "step_id" => step_id,
+          "output_dataclip" => ~s({"foo": "bar"}),
+          "reason" => "normal"
+        })
+
+      assert_reply ref, :ok, %{step_id: ^step_id}
+
+      # dataclip NOT saved AT ALL
       assert project.retention_policy == :erase_all
       assert %{output_dataclip_id: nil} = Repo.get(Step, step_id)
-      refute Repo.get(Dataclip, dataclip_id)
+      refute Repo.get(dataclip_query, dataclip_id)
     end
   end
 

@@ -145,6 +145,7 @@ defmodule Lightning.Runs.Handlers do
       field :error_message, :string
       field :step_id, Ecto.UUID
       field :finished_at, :utc_datetime_usec
+      field :wipe?, :boolean
     end
 
     def new(params) do
@@ -157,7 +158,8 @@ defmodule Lightning.Runs.Handlers do
         :error_type,
         :error_message,
         :step_id,
-        :finished_at
+        :finished_at,
+        :wipe?
       ])
       |> then(fn changeset ->
         if get_change(changeset, :finished_at) do
@@ -169,9 +171,13 @@ defmodule Lightning.Runs.Handlers do
       |> then(fn changeset ->
         output_dataclip_id = get_change(changeset, :output_dataclip_id)
         output_dataclip = get_change(changeset, :output_dataclip)
+        wipe? = get_change(changeset, :wipe?)
 
-        case {output_dataclip, output_dataclip_id} do
-          {nil, nil} ->
+        case {wipe?, output_dataclip, output_dataclip_id} do
+          {true, _, _} ->
+            changeset
+
+          {_, nil, nil} ->
             changeset
 
           _ ->
@@ -218,6 +224,25 @@ defmodule Lightning.Runs.Handlers do
     defp get_step(id) do
       from(s in Lightning.Invocation.Step, where: s.id == ^id)
       |> Repo.one()
+    end
+
+    defp maybe_save_dataclip(%__MODULE__{
+           wipe?: true,
+           project_id: project_id,
+           output_dataclip_id: dataclip_id
+         }) do
+      if is_nil(dataclip_id) do
+        {:ok, nil}
+      else
+        Dataclip.new(%{
+          id: dataclip_id,
+          project_id: project_id,
+          body: nil,
+          wiped_at: DateTime.utc_now() |> DateTime.truncate(:second),
+          type: :step_result
+        })
+        |> Repo.insert()
+      end
     end
 
     defp maybe_save_dataclip(%__MODULE__{output_dataclip: nil}) do

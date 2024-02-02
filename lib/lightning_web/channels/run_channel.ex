@@ -153,7 +153,6 @@ defmodule LightningWeb.RunChannel do
       job_id when is_binary(job_id) ->
         %{"run_id" => socket.assigns.run.id}
         |> Enum.into(payload)
-        |> maybe_drop_dataclip(socket.assigns.retention_policy)
         |> Runs.start_step()
         |> case do
           {:error, changeset} ->
@@ -176,10 +175,10 @@ defmodule LightningWeb.RunChannel do
   def handle_in("step:complete", payload, socket) do
     %{
       "run_id" => socket.assigns.run.id,
-      "project_id" => socket.assigns.project_id
+      "project_id" => socket.assigns.project_id,
+      "wipe?" => socket.assigns.retention_policy == :erase_all
     }
     |> Enum.into(payload)
-    |> maybe_drop_dataclip(socket.assigns.retention_policy)
     |> Runs.complete_step()
     |> case do
       {:error, changeset} ->
@@ -211,18 +210,6 @@ defmodule LightningWeb.RunChannel do
 
   defp include_output_dataclips?(retention_policy) do
     retention_policy != :erase_all
-  end
-
-  defp maybe_drop_dataclip(params, retention_policy) do
-    if retention_policy == :erase_all do
-      Map.drop(params, [
-        "output_dataclip",
-        "output_dataclip_id",
-        "input_dataclip_id"
-      ])
-    else
-      params
-    end
   end
 
   defp replace_reason_with_exit_reason(params) do
