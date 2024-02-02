@@ -171,20 +171,15 @@ defmodule LightningWeb.Router do
     post "/*path", WebhooksController, :create
   end
 
-  @services_opts Application.compile_env(
-                   :lightning,
-                   Lightning.Extensions.Routing,
-                   []
-                 )
-                 |> Keyword.get(:session_opts, [])
-  @services_routes Application.compile_env(
-                     :lightning,
-                     Lightning.Extensions.Routing,
-                     []
-                   )
-                   |> Keyword.get(:routes, [])
-
   scope "/" do
+    @routing_config Application.compile_env(
+                      :lightning,
+                      Lightning.Extensions.Routing,
+                      []
+                    )
+    @services_opts @routing_config |> Keyword.get(:session_opts, [])
+    @services_routes @routing_config |> Keyword.get(:routes, [])
+
     pipe_through [:browser, :require_authenticated_user]
 
     live_session :services, @services_opts do
