@@ -107,6 +107,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
                   admin_contacts={@admin_contacts}
                   can_edit_data_retention={@can_edit_data_retention}
                   follow_run_id={@follow_run_id}
+                  show_wiped_dataclip_selector={@show_wiped_dataclip_selector}
                 />
               </:collapsible_panel>
               <:footer>
@@ -659,6 +660,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
        workflow_name: "",
        workflow_params: %{},
        selected_credential_type: nil,
+       show_wiped_dataclip_selector: false,
        admin_contacts: Projects.list_project_admin_emails(assigns.project.id)
      )}
   end
@@ -830,6 +832,10 @@ defmodule LightningWeb.WorkflowLive.Edit do
     {:noreply,
      socket
      |> put_flash(:info, "Copied webhook URL to clipboard")}
+  end
+
+  def handle_event("toggle_wiped_dataclip_selector", _, socket) do
+    {:noreply, update(socket, :show_wiped_dataclip_selector, fn val -> !val end)}
   end
 
   def handle_event("manual_run_change", %{"manual" => params}, socket) do

@@ -207,6 +207,8 @@ defmodule LightningWeb.Components.Viewers do
 
   attr :can_edit_data_retention, :boolean, required: true
 
+  slot :footer
+
   def wiped_dataclip_viewer(assigns) do
     ~H"""
     <div
@@ -251,6 +253,7 @@ defmodule LightningWeb.Components.Viewers do
           for more information.
         <% end %>
       </div>
+      <%= render_slot(@footer) %>
     </div>
     """
   end

@@ -734,6 +734,19 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       refute has_element?(view, "select#manual_run_form_dataclip_id")
 
       assert render(form) =~ "data for this step has not been retained"
+
+      # user can click to show the dataclip selector
+      assert has_element?(view, "#toggle_dataclip_selector_button")
+
+      view |> element("#toggle_dataclip_selector_button") |> render_click()
+
+      # the select input now exists
+      assert has_element?(view, "select#manual_run_form_dataclip_id")
+
+      # the wiped message is nolonger displayed
+      refute render(form) =~ "data for this step has not been retained"
+
+      assert has_element?(view, "textarea#manual_run_form_body")
     end
 
     test "users can retry a workorder from a followed run",
