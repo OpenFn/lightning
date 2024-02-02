@@ -50,15 +50,15 @@ defmodule LightningWeb.WorkflowLive.ManualWorkorder do
           >
             <:footer>
               <div class="text-center text-gray-500 text-sm mt-4">
-                You cannot retry this step. Do you want to create a new work order instead?
-                <br />
+                <span>To create a new work order, first</span>
                 <span
                   id="toggle_dataclip_selector_button"
                   phx-click="toggle_wiped_dataclip_selector"
                   class="underline inline-block text-blue-400 hover:text-blue-600 cursor-pointer"
                 >
-                  Click here
+                  click here
                 </span>
+                <span>to select/build an input.</span>
               </div>
             </:footer>
           </LightningWeb.Components.Viewers.wiped_dataclip_viewer>

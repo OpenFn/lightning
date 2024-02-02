@@ -232,7 +232,7 @@ defmodule LightningWeb.Components.Viewers do
       </div>
       <div class="text-center text-gray-500 text-sm">
         <%= if @can_edit_data_retention do %>
-          Change
+          You can’t rerun this work order, but you can change
           <.link
             href={~p"/projects/#{@project_id}/settings#data-storage"}
             class="underline inline-block text-blue-400 hover:text-blue-600"
