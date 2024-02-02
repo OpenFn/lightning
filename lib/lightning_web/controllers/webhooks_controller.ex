@@ -13,7 +13,7 @@ defmodule LightningWeb.WebhooksController do
     with %Workflows.Trigger{enabled: true, workflow: %{project_id: project_id}} =
            trigger <- conn.assigns.trigger,
          :ok <-
-           RateLimiter.limit_request(conn, %Context{project_id: project_id}) do
+           RateLimiter.limit_request(conn, %Context{project_id: project_id}, []) do
       {:ok, work_order} =
         WorkOrders.create_for(trigger,
           workflow: trigger.workflow,
