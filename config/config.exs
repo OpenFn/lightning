@@ -59,7 +59,7 @@ config :lightning, :oauth_clients,
   ],
   salesforce: [
     wellknown_url:
-      "https://openfn-dev-ed.develop.my.salesforce.com/.well-known/openid-configuration"
+      "https://login.salesforce.com/.well-known/openid-configuration"
   ]
 
 # Configure esbuild (the version is required)
