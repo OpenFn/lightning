@@ -471,14 +471,25 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       project: project,
       workflow: %{jobs: [job_1 | _]} = workflow
     } do
+      dataclip = insert(:dataclip, type: :http_request)
+
       %{runs: [run]} =
         insert(:workorder,
           workflow: workflow,
+          dataclip: dataclip,
           runs: [
             build(:run,
-              dataclip: build(:dataclip, type: :http_request),
+              dataclip: dataclip,
               starting_job: job_1,
-              steps: [build(:step, job: job_1)]
+              steps: [
+                build(:step,
+                  job: job_1,
+                  input_dataclip: dataclip,
+                  output_dataclip: build(:dataclip),
+                  started_at: build(:timestamp),
+                  finished_at: build(:timestamp)
+                )
+              ]
             )
           ]
         )
@@ -604,6 +615,125 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
         )
 
       assert render(element) =~ "selected"
+    end
+
+    test "selects the input dataclip for the run if no step has been added yet",
+         %{
+           conn: conn,
+           project: project,
+           workflow: %{jobs: [job_1 | _rest]} = workflow
+         } do
+      input_dataclip = insert(:dataclip, project: project, type: :http_request)
+
+      %{runs: [run]} =
+        insert(:workorder,
+          workflow: workflow,
+          dataclip: input_dataclip,
+          runs: [
+            build(:run,
+              dataclip: input_dataclip,
+              starting_job: job_1,
+              steps: []
+            )
+          ]
+        )
+
+      # insert 3 new dataclips
+      dataclips = insert_list(3, :dataclip, project: project)
+
+      # associate dataclips with job 1
+      for dataclip <- dataclips do
+        insert(:workorder,
+          workflow: workflow,
+          dataclip: dataclip,
+          runs: [
+            build(:run,
+              dataclip: dataclip,
+              starting_job: job_1,
+              steps: [
+                build(:step,
+                  job: job_1,
+                  input_dataclip: dataclip,
+                  output_dataclip: nil,
+                  started_at: build(:timestamp),
+                  finished_at: nil,
+                  exit_reason: nil
+                )
+              ]
+            )
+          ]
+        )
+      end
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project}/w/#{workflow}?#{[s: job_1.id, a: run.id, m: "expand"]}"
+        )
+
+      # the form has the dataclip
+      assert element(view, "#manual-job-#{job_1.id} form") |> render() =~
+               input_dataclip.id
+
+      # the run dataclip is selected
+      element =
+        view
+        |> element(
+          "select#manual_run_form_dataclip_id  option[value='#{input_dataclip.id}']"
+        )
+
+      assert render(element) =~ "selected"
+    end
+
+    test "does not show the dataclip select input if the step dataclip is not available",
+         %{
+           conn: conn,
+           project: project,
+           workflow: %{jobs: [job_1 | _rest]} = workflow
+         } do
+      input_dataclip = insert(:dataclip, project: project, type: :http_request)
+
+      %{runs: [run]} =
+        insert(:workorder,
+          workflow: workflow,
+          dataclip: input_dataclip,
+          runs: [
+            build(:run,
+              dataclip: input_dataclip,
+              starting_job: job_1,
+              steps: [
+                build(:step,
+                  job: job_1,
+                  input_dataclip: nil,
+                  output_dataclip: nil,
+                  started_at: build(:timestamp),
+                  finished_at: build(:timestamp),
+                  exit_reason: "success"
+                )
+              ]
+            )
+          ]
+        )
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project}/w/#{workflow}?#{[s: job_1.id, a: run.id, m: "expand"]}"
+        )
+
+      # notice that we haven't wiped the run dataclip.
+      # This is intentional to assert that we dont EVER fallback to the run dataclip
+      # if we dont find a dataclip on the step
+      assert is_nil(input_dataclip.wiped_at)
+
+      # the form does not contain the dataclip
+      form = element(view, "#manual-job-#{job_1.id} form")
+      refute render(form) =~ input_dataclip.id
+
+      # the select input doesn't exist
+      refute has_element?(view, "select#manual_run_form_dataclip_id")
+
+      assert render(form) =~ "data for this step has not been retained"
     end
 
     test "users can retry a workorder from a followed run",

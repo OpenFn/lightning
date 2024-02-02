@@ -14,6 +14,7 @@ defmodule LightningWeb.WorkflowLive.ManualWorkorder do
     doc: "list of project admin emails"
 
   attr :can_edit_data_retention, :boolean, required: true
+  attr :follow_run_id, :string, required: true
 
   def component(assigns) do
     assigns =
@@ -36,63 +37,65 @@ defmodule LightningWeb.WorkflowLive.ManualWorkorder do
       phx-submit="manual_run_submit"
       class="h-full flex flex-col gap-4"
     >
-      <div class="">
-        <div class="flex-grow">
-          <.input
-            type="select"
-            field={@form[:dataclip_id]}
-            options={@dataclips |> Enum.map(&{&1.id, &1.id})}
-            prompt="Create a new input"
-            disabled={@disabled}
-          />
+      <%= if @follow_run_id && (is_nil(@selected_dataclip) or !is_nil(@selected_dataclip.wiped_at))  do %>
+        <LightningWeb.Components.Viewers.wiped_dataclip_viewer
+          input_or_output={:input}
+          project_id={@project.id}
+          admin_contacts={@admin_contacts}
+          can_edit_data_retention={@can_edit_data_retention}
+        />
+      <% else %>
+        <div class="">
+          <div class="flex-grow">
+            <.input
+              type="select"
+              field={@form[:dataclip_id]}
+              options={@dataclips |> Enum.map(&{&1.id, &1.id})}
+              prompt="Create a new input"
+              disabled={@disabled}
+            />
+          </div>
         </div>
-      </div>
 
-      <div class="flex-0">
-        <div class="flex flex-row">
-          <div class="basis-1/2 font-semibold text-secondary-700 text-xs xl:text-base">
-            Type
-          </div>
-          <div class="basis-1/2 text-right">
-            <Common.dataclip_type_pill type={
-              (@selected_dataclip && @selected_dataclip.type) || :saved_input
-            } />
-          </div>
-        </div>
-        <%= unless is_nil(@selected_dataclip) do %>
-          <div class="flex flex-row mt-4">
+        <div class="flex-0">
+          <div class="flex flex-row">
             <div class="basis-1/2 font-semibold text-secondary-700 text-xs xl:text-base">
-              Created at
+              Type
             </div>
             <div class="basis-1/2 text-right">
-              <%= Calendar.strftime(@selected_dataclip.inserted_at, "%c %Z") %>
+              <Common.dataclip_type_pill type={
+                (@selected_dataclip && @selected_dataclip.type) || :saved_input
+              } />
             </div>
           </div>
-        <% end %>
-      </div>
-      <div
-        :if={@selected_dataclip && is_nil(@selected_dataclip.wiped_at)}
-        class="grow overflow-y-auto rounded-md"
-      >
-        <.log_view dataclip={@selected_dataclip} class="" />
-      </div>
-      <LightningWeb.Components.Viewers.wiped_dataclip_viewer
-        :if={@selected_dataclip && @selected_dataclip.wiped_at}
-        input_or_output={:input}
-        project_id={@project.id}
-        admin_contacts={@admin_contacts}
-        can_edit_data_retention={@can_edit_data_retention}
-      />
-      <div :if={is_nil(@selected_dataclip)} class="grow">
-        <.input
-          type="textarea"
-          field={@form[:body]}
-          disabled={@disabled}
-          class="h-full pb-2"
-          phx-debounce="300"
-          phx-hook="BlurDataclipEditor"
-        />
-      </div>
+          <%= unless is_nil(@selected_dataclip) do %>
+            <div class="flex flex-row mt-4">
+              <div class="basis-1/2 font-semibold text-secondary-700 text-xs xl:text-base">
+                Created at
+              </div>
+              <div class="basis-1/2 text-right">
+                <%= Calendar.strftime(@selected_dataclip.inserted_at, "%c %Z") %>
+              </div>
+            </div>
+          <% end %>
+        </div>
+        <div
+          :if={@selected_dataclip && is_nil(@selected_dataclip.wiped_at)}
+          class="grow overflow-y-auto rounded-md"
+        >
+          <.log_view dataclip={@selected_dataclip} class="" />
+        </div>
+        <div :if={is_nil(@selected_dataclip)} class="grow">
+          <.input
+            type="textarea"
+            field={@form[:body]}
+            disabled={@disabled}
+            class="h-full pb-2"
+            phx-debounce="300"
+            phx-hook="BlurDataclipEditor"
+          />
+        </div>
+      <% end %>
     </.form>
     """
   end

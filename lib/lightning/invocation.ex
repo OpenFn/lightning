@@ -99,6 +99,16 @@ defmodule Lightning.Invocation do
     Repo.one(query)
   end
 
+  @spec get_step_count_for_run(run_id :: Ecto.UUID.t()) :: non_neg_integer()
+  def get_step_count_for_run(run_id) do
+    query =
+      from s in Lightning.Invocation.Step,
+        join: a in assoc(s, :runs),
+        on: a.id == ^run_id
+
+    Repo.aggregate(query, :count)
+  end
+
   @doc """
   Gets a single dataclip.
 

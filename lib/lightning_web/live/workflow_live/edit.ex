@@ -106,6 +106,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
                   project={@project}
                   admin_contacts={@admin_contacts}
                   can_edit_data_retention={@can_edit_data_retention}
+                  follow_run_id={@follow_run_id}
                 />
               </:collapsible_panel>
               <:footer>
@@ -1034,8 +1035,13 @@ defmodule LightningWeb.WorkflowLive.Edit do
   end
 
   defp get_selected_dataclip(run_id, job_id) do
-    Invocation.get_dataclip_for_run_and_job(run_id, job_id) ||
+    dataclip = Invocation.get_dataclip_for_run_and_job(run_id, job_id)
+
+    if is_nil(dataclip) and Invocation.get_step_count_for_run(run_id) == 0 do
       Invocation.get_dataclip_for_run(run_id)
+    else
+      dataclip
+    end
   end
 
   defp maybe_add_selected_dataclip(selectable_dataclips, nil) do
