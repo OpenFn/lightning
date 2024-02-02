@@ -10,6 +10,9 @@ and this project adheres to
 
 ### Added
 
+- Persist impact tracking configuration and reports
+  [#1684](https://github.com/OpenFn/Lightning/issues/1684)
+
 ### Changed
 
 ### Fixed
