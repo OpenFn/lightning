@@ -26,6 +26,8 @@ defmodule Lightning.Policies.ProjectUsers do
           | :create_project_credential
           | :edit_data_retention
           | :write_webhook_auth_method
+          | :write_github_connection
+          | :initiate_github_sync
 
   @doc """
   authorize/3 takes an action, a user, and a project. It checks the user's role
@@ -78,7 +80,8 @@ defmodule Lightning.Policies.ProjectUsers do
 
   def authorize(action, %User{}, %ProjectUser{} = project_user)
       when action in [
-             :write_webhook_auth_method
+             :write_webhook_auth_method,
+             :write_github_connection
            ],
       do: project_user.role in [:owner, :admin]
 
@@ -92,7 +95,7 @@ defmodule Lightning.Policies.ProjectUsers do
              :rerun_job,
              :provision_project,
              :create_project_credential,
-             :write_webhook_auth_method
+             :initiate_github_sync
            ],
       do: project_user.role in [:owner, :admin, :editor]
 end

@@ -558,7 +558,7 @@
         </LightningWeb.Components.Common.panel_content>
         <LightningWeb.Components.Common.panel_content for_hash="vcs">
           <%= if  @github_enabled do %>
-            <div :if={@can_install_github}>
+            <div>
               <div :if={@show_github_setup} class="bg-white p-4 rounded-md">
                 <h6 class="font-medium text-black">
                   Install Github App to get started
@@ -574,6 +574,7 @@
                 </div>
                 <button
                   type="button"
+                  disabled={!@can_install_github}
                   phx-click="install_app"
                   phx-value-id={@project.id}
                   class="bg-primary-600 hover:bg-primary-700 inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
@@ -632,7 +633,7 @@
                       <Form.select_field
                         :if={@show_repo_setup && !@show_sync_button}
                         form={f}
-                        disabled={@show_sync_button}
+                        disabled={!@can_install_github || @show_sync_button}
                         name={:repo}
                         id="project-repo"
                         phx-change="repo_selected"
@@ -665,7 +666,7 @@
                       <Form.select_field
                         :if={@show_repo_setup && !@show_sync_button}
                         form={f}
-                        disabled={@loading_branches}
+                        disabled={!@can_install_github || @loading_branches}
                         phx-change="branch_selected"
                         name={:branch}
                         id="project-branch"
@@ -695,7 +696,7 @@
                         <Form.select_field
                           :if={@show_repo_setup && !@show_sync_button}
                           form={f}
-                          disabled={@loading_branches}
+                          disabled={!@can_install_github || @loading_branches}
                           phx-change="branch_selected"
                           name={:branch}
                           id="project-branch"
@@ -717,23 +718,29 @@
                         :if={!@show_sync_button}
                         phx-disable-with="Saving"
                         disabled={
-                          !@project_repo_connection["repo"] ||
+                          !@can_install_github ||
+                            !@project_repo_connection["repo"] ||
                             !@project_repo_connection["branch"]
                         }
                       >
                         Connect Branch
                       </Form.submit_button>
-                      <button
+                      <LightningWeb.Components.NewInputs.button
                         :if={@show_sync_button}
+                        disabled={!@can_initiate_github_sync}
                         type="button"
-                        phx-click="run_sync"
+                        tooltip={
+                          !@can_initiate_github_sync &&
+                            "Contact an editor or admin to sync."
+                        }
+                        phx-click="initiate_sync"
                         phx-value-id={@project.id}
                         class="bg-primary-600 hover:bg-primary-700 inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
                       >
-                        Sync to Branch
-                      </button>
+                        Initiate Sync to Branch
+                      </LightningWeb.Components.NewInputs.button>
                     </div>
-                    <div>
+                    <div :if={@can_install_github}>
                       <div>
                         <small>
                           Need to change the repository or branch?
@@ -766,14 +773,6 @@
                 </.form>
               </div>
               <DeleteConnectionModal.modal id="delete_connection_modal" />
-            </div>
-            <div :if={!@can_install_github} class="bg-white p-4 rounded-md">
-              <h6 class="font-medium text-black">
-                Sync to Github
-              </h6>
-              <small class="block mt-1 text-xs text-gray-600">
-                Ask an admin to install our github app to start syncing your project
-              </small>
             </div>
           <% else %>
             <div class="bg-white p-4 rounded-md">
