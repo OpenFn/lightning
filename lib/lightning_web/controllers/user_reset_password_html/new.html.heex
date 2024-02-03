@@ -27,9 +27,10 @@
             <% end %>
             <div class="grid grid-flow-row gap-4 auto-rows-max">
               <div>
-                <LightningWeb.Components.Form.email_field
-                  form={f}
-                  id={:email}
+                <.input
+                  type="email"
+                  label="Email"
+                  field={f[:email]}
                   required={true}
                 />
               </div>
