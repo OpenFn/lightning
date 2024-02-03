@@ -11,8 +11,7 @@ defmodule Lightning.Policies.ProjectUsers do
 
   @type actions ::
           :run_workflow
-          | :edit_job
-          | :create_job
+          | :edit_workflow
           | :access_project
           | :delete_project
           | :delete_workflow
@@ -53,12 +52,11 @@ defmodule Lightning.Policies.ProjectUsers do
   def authorize(:delete_project, %User{} = user, %Project{} = project),
     do: Projects.get_project_user_role(user, project) == :owner
 
-  def authorize(
-        action,
-        %User{id: id} = _user,
-        %ProjectUser{user_id: user_id} = _project
-      )
-      when action in [:edit_digest_alerts, :edit_failure_alerts],
+  def authorize(action, %User{id: id}, %ProjectUser{user_id: user_id})
+      when action in [
+             :edit_digest_alerts,
+             :edit_failure_alerts
+           ],
       do: id == user_id
 
   def authorize(action, %User{} = user, %Project{} = project)
@@ -87,8 +85,7 @@ defmodule Lightning.Policies.ProjectUsers do
   def authorize(action, %User{}, %ProjectUser{} = project_user)
       when action in [
              :create_workflow,
-             :edit_job,
-             :create_job,
+             :edit_workflow,
              :delete_workflow,
              :run_workflow,
              :provision_project,

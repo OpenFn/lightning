@@ -108,10 +108,9 @@ defmodule Lightning.Policies.ProjectUserPermissionsTest do
            viewer: viewer
          } do
       ~w(
-        create_job
         create_workflow
         delete_workflow
-        edit_job
+        edit_workflow
         provision_project
         edit_project_description
         edit_project_name
@@ -129,10 +128,9 @@ defmodule Lightning.Policies.ProjectUserPermissionsTest do
            editor: editor
          } do
       ~w(
-        create_job
         create_workflow
         delete_workflow
-        edit_job
+        edit_workflow
         create_project_credential
         provision_project
         run_workflow
@@ -159,10 +157,9 @@ defmodule Lightning.Policies.ProjectUserPermissionsTest do
            admin: admin
          } do
       ~w(
-          create_job
           create_workflow
           delete_workflow
-          edit_job
+          edit_workflow
           edit_project_description
           edit_project_name
           provision_project
@@ -180,10 +177,9 @@ defmodule Lightning.Policies.ProjectUserPermissionsTest do
            owner: owner
          } do
       ~w(
-        create_job
         create_workflow
         delete_workflow
-        edit_job
+        edit_workflow
         edit_project_description
         edit_project_name
         provision_project

@@ -20,7 +20,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       %{job: job}
     end
 
-    test "open credential modal from the job inspector (edit_job)", %{
+    test "open credential modal from the job inspector (edit_workflow)", %{
       conn: conn,
       project: project,
       job: job
