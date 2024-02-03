@@ -232,23 +232,7 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
           Something went wrong.
         </div>
         <p class="text-sm mt-2">
-          Failed retrieving the token from the salesforce instance
-        </p>
-        <p class="text-sm mt-2">
-          Please make sure you install the OpenFn package by following this link
-          <a
-            href={
-              Application.get_env(:lightning, :oauth_clients)
-              |> Keyword.get(:salesforce)
-              |> Keyword.get(:install_url)
-            }
-            target="_blank"
-            phx-click="try_userinfo_again"
-            phx-target={@myself}
-            class="hover:underline text-primary-900"
-          >
-            this link.
-          </a>
+          Failed retrieving the token from the provider
         </p>
       </div>
     </div>
@@ -550,9 +534,7 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
         {:ok, socket |> assign(authorizing: false, client: client)}
 
       {:error, %OAuth2.Response{status_code: 400, body: body}} ->
-        Logger.error(
-          "Failed retrieving token from Salesforce instance:\n#{inspect(body)}"
-        )
+        Logger.error("Failed retrieving token from provider:\n#{inspect(body)}")
 
         send_update(self(), __MODULE__,
           id: socket.assigns.id,
