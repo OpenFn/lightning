@@ -381,6 +381,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
                   form={tf}
                   on_change={&send_form_changed/1}
                   disabled={!@can_edit_job}
+                  can_write_webhook_auth_method={@can_write_webhook_auth_method}
                   webhook_url={webhook_url(@selected_trigger)}
                   selected_trigger={@selected_trigger}
                   action={@live_action}
@@ -415,7 +416,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
         <.live_component
           :if={
-            @live_action == :edit && @can_create_webhook_auth_method &&
+            @live_action == :edit && @can_write_webhook_auth_method &&
               @selected_trigger
           }
           module={LightningWeb.WorkflowLive.WebhookAuthMethodModalComponent}
@@ -574,17 +575,10 @@ defmodule LightningWeb.WorkflowLive.Edit do
               current_user,
               project_user
             ),
-          can_create_webhook_auth_method:
+          can_write_webhook_auth_method:
             Permissions.can?(
               ProjectUsers,
-              :create_webhook_auth_method,
-              current_user,
-              project_user
-            ),
-          can_edit_webhook_auth_method:
-            Permissions.can?(
-              ProjectUsers,
-              :edit_webhook_auth_method,
+              :write_webhook_auth_method,
               current_user,
               project_user
             ),
@@ -609,17 +603,10 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
     socket
     |> assign(
-      can_create_webhook_auth_method:
+      can_write_webhook_auth_method:
         Permissions.can?(
           ProjectUsers,
-          :create_webhook_auth_method,
-          current_user,
-          project_user
-        ),
-      can_edit_webhook_auth_method:
-        Permissions.can?(
-          ProjectUsers,
-          :edit_webhook_auth_method,
+          :write_webhook_auth_method,
           current_user,
           project_user
         ),

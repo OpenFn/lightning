@@ -62,10 +62,10 @@ defmodule LightningWeb.ProjectLive.Settings do
         project_user.user_id == current_user.id
       end)
 
-    can_create_webhook_auth_method =
+    can_write_webhook_auth_method =
       Permissions.can?(
         ProjectUsers,
-        :create_webhook_auth_method,
+        :write_webhook_auth_method,
         current_user,
         project_user
       )
@@ -74,14 +74,6 @@ defmodule LightningWeb.ProjectLive.Settings do
       Permissions.can?(
         ProjectUsers,
         :create_project_credential,
-        current_user,
-        project_user
-      )
-
-    can_edit_webhook_auth_method =
-      Permissions.can?(
-        ProjectUsers,
-        :edit_webhook_auth_method,
         current_user,
         project_user
       )
@@ -106,9 +98,8 @@ defmodule LightningWeb.ProjectLive.Settings do
        can_edit_project_name: can_edit_project_name,
        can_edit_project_description: can_edit_project_description,
        can_edit_data_retention: project_user.role in [:owner, :admin],
-       can_create_webhook_auth_method: can_create_webhook_auth_method,
+       can_write_webhook_auth_method: can_write_webhook_auth_method,
        can_create_project_credential: can_create_project_credential,
-       can_edit_webhook_auth_method: can_edit_webhook_auth_method,
        show_github_setup: show_github_setup,
        show_repo_setup: show_repo_setup,
        show_sync_button: show_sync_button,
