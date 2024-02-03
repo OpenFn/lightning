@@ -1341,7 +1341,7 @@ defmodule LightningWeb.ProjectLiveTest do
       end
     end
 
-    test "authorized project users can add a new project webhook auth method",
+    test "owners or admins can add a new project webhook auth method, editors and viewers can't",
          %{
            conn: conn
          } do
@@ -1351,7 +1351,7 @@ defmodule LightningWeb.ProjectLiveTest do
         Routes.project_project_settings_path(conn, :index, project.id)
 
       for project_user <-
-            Enum.map([:editor, :admin, :owner], fn role ->
+            Enum.map([:admin, :owner], fn role ->
               insert(:project_user,
                 role: role,
                 project: project,
@@ -1416,6 +1416,31 @@ defmodule LightningWeb.ProjectLiveTest do
 
         assert html =~ credential_name
       end
+
+      for project_user <-
+            Enum.map([:editor, :viewer], fn role ->
+              insert(:project_user,
+                role: role,
+                project: project,
+                user: build(:user)
+              )
+            end) do
+        conn = log_in_user(conn, project_user.user)
+
+        {:ok, view, _html} =
+          live(
+            conn,
+            settings_path
+          )
+
+        assert view
+               |> element("button#add_new_auth_method:disabled")
+               |> has_element?()
+
+        modal_id = "new_auth_method_modal"
+
+        refute view |> element("##{modal_id}") |> has_element?()
+      end
     end
 
     test "project viewers cannot add a new project webhook auth method", %{
@@ -1445,7 +1470,7 @@ defmodule LightningWeb.ProjectLiveTest do
       refute view |> element("#new_auth_method_modal") |> has_element?()
     end
 
-    test "authorized project users can add edit a project webhook auth method",
+    test "owners and admins can add edit a project webhook auth method",
          %{
            conn: conn
          } do
@@ -1461,7 +1486,7 @@ defmodule LightningWeb.ProjectLiveTest do
         Routes.project_project_settings_path(conn, :index, project.id)
 
       for project_user <-
-            Enum.map([:editor, :admin, :owner], fn role ->
+            Enum.map([:admin, :owner], fn role ->
               insert(:project_user,
                 role: role,
                 project: project,
@@ -1510,6 +1535,33 @@ defmodule LightningWeb.ProjectLiveTest do
 
         assert html =~ credential_name
       end
+
+      for project_user <-
+            Enum.map([:editor, :viewer], fn role ->
+              insert(:project_user,
+                role: role,
+                project: project,
+                user: build(:user)
+              )
+            end) do
+        conn = log_in_user(conn, project_user.user)
+
+        {:ok, view, _html} =
+          live(
+            conn,
+            settings_path
+          )
+
+        assert view
+               |> element(
+                 "a#edit_auth_method_link_#{auth_method.id}.cursor-not-allowed"
+               )
+               |> has_element?()
+
+        modal_id = "edit_auth_#{auth_method.id}_modal"
+
+        refute view |> element("##{modal_id}") |> has_element?()
+      end
     end
 
     test "project viewers cannot edit a project webhook auth method", %{
@@ -1539,7 +1591,9 @@ defmodule LightningWeb.ProjectLiveTest do
         )
 
       assert view
-             |> element("a#edit_auth_method_link_#{auth_method.id}")
+             |> element(
+               "a#edit_auth_method_link_#{auth_method.id}.cursor-not-allowed"
+             )
              |> has_element?()
 
       refute view
@@ -1562,7 +1616,7 @@ defmodule LightningWeb.ProjectLiveTest do
 
       project_user =
         insert(:project_user,
-          role: :editor,
+          role: :admin,
           project: project,
           user: build(:user)
         )
@@ -1639,7 +1693,7 @@ defmodule LightningWeb.ProjectLiveTest do
 
       project_user =
         insert(:project_user,
-          role: :editor,
+          role: :admin,
           project: project,
           user: build(:user)
         )
@@ -1702,11 +1756,11 @@ defmodule LightningWeb.ProjectLiveTest do
     end
   end
 
-  test "authorized project users can delete a project webhook auth method",
+  test "owners and admins can delete a project webhook auth method",
        %{conn: conn} do
     project = insert(:project)
 
-    for role <- [:owner, :admin, :editor] do
+    for role <- [:owner, :admin] do
       auth_method =
         insert(:webhook_auth_method,
           project: project,
@@ -1737,6 +1791,10 @@ defmodule LightningWeb.ProjectLiveTest do
 
       modal_id = "delete_auth_#{auth_method.id}_modal"
 
+      assert view
+             |> element("#delete_auth_method_#{modal_id}_#{auth_method.id}")
+             |> has_element?()
+
       view
       |> form("#delete_auth_method_#{modal_id}_#{auth_method.id}",
         delete_confirmation_changeset: %{confirmation: "DELETE"}
@@ -1751,6 +1809,42 @@ defmodule LightningWeb.ProjectLiveTest do
 
       assert flash["info"] ==
                "Your Webhook Authentication method has been deleted."
+    end
+
+    for role <- [:editor, :viewer] do
+      auth_method =
+        insert(:webhook_auth_method,
+          project: project,
+          auth_type: :basic
+        )
+
+      project_user =
+        insert(:project_user,
+          role: role,
+          project: project,
+          user: build(:user)
+        )
+
+      settings_path =
+        Routes.project_project_settings_path(conn, :index, project.id)
+
+      conn = log_in_user(conn, project_user.user)
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          settings_path
+        )
+
+      refute view
+             |> element("a#delete_auth_method_link_#{auth_method.id}")
+             |> has_element?()
+
+      modal_id = "delete_auth_#{auth_method.id}_modal"
+
+      refute view
+             |> element("#delete_auth_method_#{modal_id}_#{auth_method.id}")
+             |> has_element?()
     end
   end
 
