@@ -2,6 +2,7 @@ defmodule LightningWeb.ProjectLiveTest do
   use LightningWeb.ConnCase, async: false
 
   alias Lightning.Repo
+  alias Lightning.Name
 
   import Phoenix.LiveViewTest
   import Lightning.ProjectsFixtures
@@ -1313,22 +1314,11 @@ defmodule LightningWeb.ProjectLiveTest do
       end)
     end
 
-    test "all project users can see the project webhook auth methods", %{
-      conn: conn
-    } do
+    test "all project users can see the project webhook auth methods" do
       project = insert(:project)
       auth_methods = insert_list(4, :webhook_auth_method, project: project)
 
-      for project_user <-
-            Enum.map([:editor, :admin, :owner, :viewer], fn role ->
-              insert(:project_user,
-                role: role,
-                project: project,
-                user: build(:user)
-              )
-            end) do
-        conn = log_in_user(conn, project_user.user)
-
+      for conn <- project_user_conns(project, [:editor, :admin, :owner, :viewer]) do
         {:ok, _view, html} =
           live(
             conn,
@@ -1341,7 +1331,7 @@ defmodule LightningWeb.ProjectLiveTest do
       end
     end
 
-    test "owners or admins can add a new project webhook auth method, editors and viewers can't",
+    test "owners/admins can add a new project webhook auth method, editors/viewers can't",
          %{
            conn: conn
          } do
@@ -1350,16 +1340,7 @@ defmodule LightningWeb.ProjectLiveTest do
       settings_path =
         Routes.project_project_settings_path(conn, :index, project.id)
 
-      for project_user <-
-            Enum.map([:admin, :owner], fn role ->
-              insert(:project_user,
-                role: role,
-                project: project,
-                user: build(:user)
-              )
-            end) do
-        conn = log_in_user(conn, project_user.user)
-
+      for conn <- project_user_conns(project, [:owner, :admin]) do
         {:ok, view, _html} =
           live(
             conn,
@@ -1386,7 +1367,7 @@ defmodule LightningWeb.ProjectLiveTest do
                |> element("form#choose_auth_type_form_#{modal_id}")
                |> has_element?()
 
-        credential_name = "#{project_user.role}credentialname"
+        credential_name = Name.generate()
 
         refute render(view) =~ credential_name
 
@@ -1417,16 +1398,7 @@ defmodule LightningWeb.ProjectLiveTest do
         assert html =~ credential_name
       end
 
-      for project_user <-
-            Enum.map([:editor, :viewer], fn role ->
-              insert(:project_user,
-                role: role,
-                project: project,
-                user: build(:user)
-              )
-            end) do
-        conn = log_in_user(conn, project_user.user)
-
+      for conn <- project_user_conns(project, [:editor, :viewer]) do
         {:ok, view, _html} =
           live(
             conn,
@@ -1470,7 +1442,7 @@ defmodule LightningWeb.ProjectLiveTest do
       refute view |> element("#new_auth_method_modal") |> has_element?()
     end
 
-    test "owners and admins can add edit a project webhook auth method",
+    test "owners/admins can add edit a project webhook auth method, editors/viewers can't",
          %{
            conn: conn
          } do
@@ -1485,16 +1457,7 @@ defmodule LightningWeb.ProjectLiveTest do
       settings_path =
         Routes.project_project_settings_path(conn, :index, project.id)
 
-      for project_user <-
-            Enum.map([:admin, :owner], fn role ->
-              insert(:project_user,
-                role: role,
-                project: project,
-                user: build(:user)
-              )
-            end) do
-        conn = log_in_user(conn, project_user.user)
-
+      for conn <- project_user_conns(project, [:owner, :admin]) do
         {:ok, view, _html} =
           live(
             conn,
@@ -1509,7 +1472,7 @@ defmodule LightningWeb.ProjectLiveTest do
 
         assert view |> element("##{modal_id}") |> has_element?()
 
-        credential_name = "#{project_user.role}credentialname"
+        credential_name = Name.generate()
 
         refute render(view) =~ credential_name
 
@@ -1536,16 +1499,7 @@ defmodule LightningWeb.ProjectLiveTest do
         assert html =~ credential_name
       end
 
-      for project_user <-
-            Enum.map([:editor, :viewer], fn role ->
-              insert(:project_user,
-                role: role,
-                project: project,
-                user: build(:user)
-              )
-            end) do
-        conn = log_in_user(conn, project_user.user)
-
+      for conn <- project_user_conns(project, [:editor, :viewer]) do
         {:ok, view, _html} =
           live(
             conn,
