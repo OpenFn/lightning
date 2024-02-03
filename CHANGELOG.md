@@ -17,6 +17,10 @@ and this project adheres to
 
 ### Fixed
 
+- Prevented secret scrubber from over-eagerly adding \*\*\* between all
+  characters if an empty string secret was provided as a credential field value
+  (e.g., {"username": "come-on-in", "password": ""})
+  [#1585](https://github.com/OpenFn/Lightning/issues/1585)
 - Fixed bug that was duplicating inbound http_requests, resulting in unnecessary
   data storage  
   [#1695](https://github.com/OpenFn/Lightning/issues/1695)

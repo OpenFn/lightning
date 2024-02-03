@@ -30,6 +30,13 @@ defmodule Lightning.ScrubberTest do
       assert scrubbed == ["Successfully logged in as *** using ***"]
     end
 
+    test "doesn't put *** between every character when given an empty string secret" do
+      secrets = ["123", ""]
+      scrubber = start_supervised!({Lightning.Scrubber, samples: secrets})
+      scrubbed = Scrubber.scrub(scrubber, ["Hello world, 123 is my password"])
+      assert scrubbed == ["Hello world, *** is my password"]
+    end
+
     test "doesn't replace booleans with ***" do
       secrets = ["ip_addr", "db_name", "my_user", "my_password", 5432, false]
       scrubber = start_supervised!({Lightning.Scrubber, samples: secrets})
