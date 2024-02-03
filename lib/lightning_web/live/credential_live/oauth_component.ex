@@ -541,7 +541,7 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
     # NOTE: there can be _no_ refresh token if something went wrong like if the
     # previous auth didn't receive a refresh_token
 
-    case socket.assigns.provider.get_token(client, code: code) |> IO.inspect() do
+    case socket.assigns.provider.get_token(client, code: code) do
       {:ok, client} ->
         client.token
         |> token_to_params()
