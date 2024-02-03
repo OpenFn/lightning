@@ -249,7 +249,7 @@ defmodule LightningWeb.WorkflowLive.Components do
                     href="#"
                     class={[
                       "text-indigo-400 underline not-italic inline-flex items-center",
-                      if(@action == :new or @disabled,
+                      if(@action == :new or !@can_write_webhook_auth_method,
                         do: "text-gray-500 cursor-not-allowed",
                         else: ""
                       )

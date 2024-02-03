@@ -11,7 +11,21 @@ defmodule LightningWeb.WorkflowLive.TriggerTest do
     workflow = insert(:workflow, project: project)
     trigger = insert(:trigger, type: :webhook, workflow: workflow)
 
-    [workflow: workflow, trigger: trigger]
+    %{conn: admin_conn, user: admin_user} =
+      register_and_log_in_user(%{conn: build_conn()})
+
+    insert(:project_user,
+      role: :admin,
+      project: project,
+      user: admin_user
+    )
+
+    [
+      workflow: workflow,
+      trigger: trigger,
+      admin_conn: admin_conn,
+      admin_user: admin_user
+    ]
   end
 
   test "authorized users can see link to add authentication method", %{
@@ -21,7 +35,7 @@ defmodule LightningWeb.WorkflowLive.TriggerTest do
     trigger: trigger
   } do
     for project_user <-
-          Enum.map([:editor, :admin, :owner], fn role ->
+          Enum.map([:admin, :owner], fn role ->
             insert(:project_user,
               role: role,
               project: project,
@@ -40,26 +54,28 @@ defmodule LightningWeb.WorkflowLive.TriggerTest do
       assert view |> element("#webhooks_auth_method_modal") |> has_element?()
     end
 
-    project_user =
-      insert(:project_user,
-        role: :viewer,
-        project: project,
-        user: build(:user)
-      )
+    for project_user <-
+          Enum.map([:editor, :viewer], fn role ->
+            insert(:project_user,
+              role: role,
+              project: project,
+              user: build(:user)
+            )
+          end) do
+      conn = log_in_user(conn, project_user.user)
 
-    conn = log_in_user(conn, project_user.user)
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[s: trigger.id]}"
+        )
 
-    {:ok, view, _html} =
-      live(
-        conn,
-        ~p"/projects/#{project.id}/w/#{workflow.id}?#{[s: trigger.id]}"
-      )
+      assert view
+             |> element("a#addAuthenticationLink.cursor-not-allowed")
+             |> has_element?()
 
-    assert view
-           |> element("a#addAuthenticationLink.cursor-not-allowed")
-           |> has_element?()
-
-    refute view |> element("#webhooks_auth_method_modal") |> has_element?()
+      refute view |> element("#webhooks_auth_method_modal") |> has_element?()
+    end
   end
 
   test "user can see existing trigger authentication methods", %{
@@ -92,19 +108,29 @@ defmodule LightningWeb.WorkflowLive.TriggerTest do
     assert html =~ auth_method.name
   end
 
-  test "user can successfully create a basic authentication method", %{
-    conn: conn,
-    project: project,
-    workflow: workflow,
-    trigger: trigger
-  } do
+  test "admin can successfully create a basic authentication method, editor cant",
+       %{
+         conn: conn,
+         admin_conn: admin_conn,
+         project: project,
+         workflow: workflow,
+         trigger: trigger
+       } do
+    modal_id = "webhooks_auth_method_modal"
+
     {:ok, view, _html} =
       live(
         conn,
         ~p"/projects/#{project.id}/w/#{workflow.id}?#{[s: trigger.id]}"
       )
 
-    modal_id = "webhooks_auth_method_modal"
+    refute view |> element("##{modal_id}") |> has_element?()
+
+    {:ok, view, _html} =
+      live(
+        admin_conn,
+        ~p"/projects/#{project.id}/w/#{workflow.id}?#{[s: trigger.id]}"
+      )
 
     assert view |> element("##{modal_id}") |> has_element?()
 
@@ -148,19 +174,29 @@ defmodule LightningWeb.WorkflowLive.TriggerTest do
     assert html =~ auth_method_name
   end
 
-  test "user can successfully create an API authentication method", %{
-    conn: conn,
-    project: project,
-    workflow: workflow,
-    trigger: trigger
-  } do
+  test "admin can successfully create an API authentication method, user can't",
+       %{
+         conn: conn,
+         admin_conn: admin_conn,
+         project: project,
+         workflow: workflow,
+         trigger: trigger
+       } do
+    modal_id = "webhooks_auth_method_modal"
+
     {:ok, view, _html} =
       live(
         conn,
         ~p"/projects/#{project.id}/w/#{workflow.id}?#{[s: trigger.id]}"
       )
 
-    modal_id = "webhooks_auth_method_modal"
+    refute view |> element("##{modal_id}") |> has_element?()
+
+    {:ok, view, _html} =
+      live(
+        admin_conn,
+        ~p"/projects/#{project.id}/w/#{workflow.id}?#{[s: trigger.id]}"
+      )
 
     assert view |> element("##{modal_id}") |> has_element?()
 
@@ -204,8 +240,9 @@ defmodule LightningWeb.WorkflowLive.TriggerTest do
     assert html =~ auth_method_name
   end
 
-  test "user can successfully update an authentication method", %{
+  test "admin can successfully update an authentication method, editor cant", %{
     conn: conn,
+    admin_conn: admin_conn,
     project: project,
     workflow: workflow,
     trigger: trigger
@@ -217,13 +254,21 @@ defmodule LightningWeb.WorkflowLive.TriggerTest do
         triggers: [trigger]
       )
 
+    modal_id = "webhooks_auth_method_modal"
+
     {:ok, view, _html} =
       live(
         conn,
         ~p"/projects/#{project.id}/w/#{workflow.id}?#{[s: trigger.id]}"
       )
 
-    modal_id = "webhooks_auth_method_modal"
+    refute view |> element("##{modal_id}") |> has_element?()
+
+    {:ok, view, _html} =
+      live(
+        admin_conn,
+        ~p"/projects/#{project.id}/w/#{workflow.id}?#{[s: trigger.id]}"
+      )
 
     assert view |> element("##{modal_id}") |> has_element?()
 
@@ -268,12 +313,14 @@ defmodule LightningWeb.WorkflowLive.TriggerTest do
     assert auth_method.password == updated_auth_method.password
   end
 
-  test "user can successfully remove an authentication method from a trigger", %{
-    conn: conn,
-    project: project,
-    workflow: workflow,
-    trigger: trigger
-  } do
+  test "admin can successfully remove an authentication method from a trigger, user can't",
+       %{
+         conn: conn,
+         admin_conn: admin_conn,
+         project: project,
+         workflow: workflow,
+         trigger: trigger
+       } do
     auth_method =
       insert(:webhook_auth_method,
         project: project,
@@ -284,6 +331,14 @@ defmodule LightningWeb.WorkflowLive.TriggerTest do
     {:ok, view, _html} =
       live(
         conn,
+        ~p"/projects/#{project.id}/w/#{workflow.id}?#{[s: trigger.id]}"
+      )
+
+    refute view |> element("#webhooks_auth_method_modal") |> has_element?()
+
+    {:ok, view, _html} =
+      live(
+        admin_conn,
         ~p"/projects/#{project.id}/w/#{workflow.id}?#{[s: trigger.id]}"
       )
 
