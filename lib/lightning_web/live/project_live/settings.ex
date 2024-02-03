@@ -70,6 +70,22 @@ defmodule LightningWeb.ProjectLive.Settings do
         project_user
       )
 
+    can_write_github_connection =
+      Permissions.can?(
+        ProjectUsers,
+        :write_github_connection,
+        current_user,
+        project_user
+      )
+
+    can_initiate_github_sync =
+      Permissions.can?(
+        ProjectUsers,
+        :initiate_github_sync,
+        current_user,
+        project_user
+      )
+
     can_create_project_credential =
       Permissions.can?(
         ProjectUsers,
@@ -107,16 +123,10 @@ defmodule LightningWeb.ProjectLive.Settings do
        branches: [],
        loading_branches: false,
        github_enabled: VersionControl.github_enabled?(),
-       can_install_github: can_install_github(socket),
+       can_install_github: can_write_github_connection,
+       can_initiate_github_sync: can_initiate_github_sync,
        selected_credential_type: nil
      )}
-  end
-
-  defp can_install_github(socket) do
-    case socket.assigns.project_user.role do
-      :viewer -> false
-      _ -> true
-    end
   end
 
   defp repo_settings(%Project{id: project_id}) do
@@ -383,14 +393,18 @@ defmodule LightningWeb.ProjectLive.Settings do
      )}
   end
 
-  def handle_event("run_sync", params, %{assigns: %{current_user: u}} = socket) do
-    case VersionControl.run_sync(params["id"], u.email) do
-      {:ok, :fired} ->
-        {:noreply, socket |> put_flash(:info, "Sync Initialized")}
+  def handle_event("initiate_sync", params, %{assigns: %{current_user: u}} = socket) do
+    if socket.assigns.can_initiate_github_sync do
+      case VersionControl.initiate_sync(params["id"], u.email) do
+        {:ok, :fired} ->
+          {:noreply, socket |> put_flash(:info, "Sync Initialized")}
 
-      _err ->
-        # we should log or instrument this situation
-        {:noreply, socket |> put_flash(:error, "Sync Error")}
+        _err ->
+          # we should log or instrument this situation
+          {:noreply, socket |> put_flash(:error, "Sync Error")}
+      end
+    else
+      {:noreply, socket |> put_flash(:error, "Viewers Cannot Initiate Sync")}
     end
   end
 
