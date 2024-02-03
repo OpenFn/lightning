@@ -28,28 +28,30 @@
 
             <div class="grid grid-flow-row gap-4 auto-rows-max">
               <div>
-                <LightningWeb.Components.Form.text_field
-                  form={f}
-                  field={:first_name}
+                <.input
+                  field={f[:first_name]}
+                  label="First Name"
                   required={true}
                 />
               </div>
               <div>
-                <LightningWeb.Components.Form.text_field
-                  form={f}
-                  field={:last_name}
+                <.input field={f[:last_name]} required={true} label="Last Name" />
+              </div>
+              <div>
+                <.input
+                  field={f[:email]}
+                  type="email"
+                  label="Email"
                   required={true}
                 />
               </div>
               <div>
-                <LightningWeb.Components.Form.email_field
-                  form={f}
-                  id={:email}
+                <.input
+                  field={f[:password]}
+                  type="password"
+                  label="Password"
                   required={true}
                 />
-              </div>
-              <div>
-                <.input type="password" field={f[:password]} required />
               </div>
 
               <div class="flex items-start">
@@ -60,18 +62,21 @@
                   ) %>
                 </div>
                 <div class="ml-3 text-sm">
-                  <%= Phoenix.HTML.Form.label(f, "Terms and conditions",
+                  <%= Phoenix.HTML.Form.label(
+                    f,
+                    "I accept the terms of service.",
                     class: "font-medium text-secondary-700"
                   ) %>
                   <br />
                   <span class="text-xs text-secondary-500">
-                    Lightning is still in Beta, therefore
-                    <b>
-                      we strongly advise against building out production workflows
-                    </b>
-                    until the official release of Lightning. <br />
-                    By registering for an account, you’ll be given your own project, which you can use <em> free of charge until further notice</em>.
-                    All credentials, jobs and workflows you create will only be visible to you.
+                    Please check with the host of this instance of Lightning to
+                    ensure that you understand, accept, and are willing to abide
+                    by all of their terms and conditions. You can read the
+                    OpenFn.org terms of service <.link
+                      class="text-indigo-600 hover:underline"
+                      target="_blank"
+                      href="https://www.openfn.org/terms"
+                    >here</.link>.
                   </span>
                 </div>
               </div>

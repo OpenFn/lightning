@@ -28,10 +28,15 @@
 
             <div class="grid grid-flow-row gap-4 auto-rows-max">
               <div>
-                <.email_field form={f} id={:email} required={true} />
+                <.input
+                  type="email"
+                  field={f[:email]}
+                  required={true}
+                  label="Email"
+                />
               </div>
               <div>
-                <.password_field form={f} id={:password} required={true} />
+                <.input type="password" field={f[:password]} label="Password" />
               </div>
               <.check_box form={f} field={:remember_me}>
                 <br />
