@@ -22,6 +22,10 @@ and this project adheres to
   [#1692](https://github.com/OpenFn/Lightning/issues/1692)
 - Fixed bug that was duplicating inbound http_requests, resulting in unnecessary
   data storage [#1695](https://github.com/OpenFn/Lightning/issues/1695)
+- Fixed permissions issue that allowed editors to set up new Github connections
+  [#1703](https://github.com/OpenFn/Lightning/issues/1703)
+- Fixed permissions issue that allowed viewers to initiate syncs to github
+  [#1704](https://github.com/OpenFn/Lightning/issues/1704)
 
 ## [v2.0.0-rc8] - 2024-01-30
 
