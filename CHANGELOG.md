@@ -33,6 +33,9 @@ and this project adheres to
   characters if an empty string secret was provided as a credential field value
   (e.g., {"username": "come-on-in", "password": ""})
   [#1585](https://github.com/OpenFn/Lightning/issues/1585)
+- Fixed permissions issue that allowed viewer/editor to modify webhook auth
+  methods. These permissions only belong to project owners and admins
+  [#1692](https://github.com/OpenFn/Lightning/issues/1692)
 - Fixed bug that was duplicating inbound http_requests, resulting in unnecessary
   data storage [#1695](https://github.com/OpenFn/Lightning/issues/1695)
 
