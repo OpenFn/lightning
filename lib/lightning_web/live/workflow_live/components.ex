@@ -158,6 +158,7 @@ defmodule LightningWeb.WorkflowLive.Components do
   attr :form, :map, required: true
   attr :cancel_url, :string, required: true
   attr :disabled, :boolean, required: true
+  attr :can_write_webhook_auth_method, :boolean, required: true
   attr :webhook_url, :string, required: true
   attr :on_change, :any, required: true
   attr :selected_trigger, Trigger, required: true
@@ -286,7 +287,11 @@ defmodule LightningWeb.WorkflowLive.Components do
                 <div>
                   <.link
                     href="#"
-                    class="text-primary-700 underline hover:text-primary-800"
+                    class={[
+                      "text-primary-700 underline hover:text-primary-800",
+                      !@can_write_webhook_auth_method &&
+                        "text-gray-500 cursor-not-allowed"
+                    ]}
                     phx-click={show_modal("webhooks_auth_method_modal")}
                   >
                     Manage authentication
@@ -308,6 +313,7 @@ defmodule LightningWeb.WorkflowLive.Components do
       form={@form}
       field={:enabled}
       label="Disable this trigger"
+      disabled={@disabled}
       checked_value={false}
       unchecked_value={true}
       value={@trigger_enabled}
@@ -424,6 +430,7 @@ defmodule LightningWeb.WorkflowLive.Components do
             <Form.check_box
               form={@form}
               field={:enabled}
+              disabled={@disabled}
               label="Disable this path"
               checked_value={false}
               unchecked_value={true}
