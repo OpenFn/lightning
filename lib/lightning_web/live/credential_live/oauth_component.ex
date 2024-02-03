@@ -223,6 +223,38 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
     """
   end
 
+  def error_block(%{type: :token_failed} = assigns) do
+    ~H"""
+    <div class="mx-auto pt-2 max-w-md">
+      <div class="text-center">
+        <Heroicons.exclamation_triangle class="h-6 w-6 text-red-600 inline-block" />
+        <div class="text-base font-medium text-gray-900">
+          Something went wrong.
+        </div>
+        <p class="text-sm mt-2">
+          Failed retrieving the token from the salesforce instance
+        </p>
+        <p class="text-sm mt-2">
+          Please make sure you install the OpenFn package by following this link
+          <a
+            href={
+              Application.get_env(:lightning, :oauth_clients)
+              |> Keyword.get(:salesforce)
+              |> Keyword.get(:install_url)
+            }
+            target="_blank"
+            phx-click="try_userinfo_again"
+            phx-target={@myself}
+            class="hover:underline text-primary-900"
+          >
+            this link.
+          </a>
+        </p>
+      </div>
+    </div>
+    """
+  end
+
   def error_block(%{type: :no_refresh_token} = assigns) do
     ~H"""
     <div class="mx-auto pt-2 max-w-md">
@@ -509,13 +541,26 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
     # NOTE: there can be _no_ refresh token if something went wrong like if the
     # previous auth didn't receive a refresh_token
 
-    {:ok, client} = socket.assigns.provider.get_token(client, code: code)
+    case socket.assigns.provider.get_token(client, code: code) |> IO.inspect() do
+      {:ok, client} ->
+        client.token
+        |> token_to_params()
+        |> socket.assigns.update_body.()
 
-    client.token
-    |> token_to_params()
-    |> socket.assigns.update_body.()
+        {:ok, socket |> assign(authorizing: false, client: client)}
 
-    {:ok, socket |> assign(authorizing: false, client: client)}
+      {:error, %OAuth2.Response{status_code: 400, body: body}} ->
+        Logger.error(
+          "Failed retrieving token from Salesforce instance:\n#{inspect(body)}"
+        )
+
+        send_update(self(), __MODULE__,
+          id: socket.assigns.id,
+          error: :token_failed
+        )
+
+        {:ok, socket}
+    end
   end
 
   defp handle_scopes_update(scopes, socket) do

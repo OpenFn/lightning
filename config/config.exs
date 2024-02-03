@@ -59,7 +59,9 @@ config :lightning, :oauth_clients,
   ],
   salesforce: [
     wellknown_url:
-      "https://login.salesforce.com/.well-known/openid-configuration"
+      "https://login.salesforce.com/.well-known/openid-configuration",
+    install_url:
+      "https://login.salesforce.com/packaging/installPackage.apexp?p0=04tWT0000000okn"
   ]
 
 # Configure esbuild (the version is required)
