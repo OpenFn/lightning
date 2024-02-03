@@ -328,8 +328,8 @@ defmodule LightningWeb.RunLive.Components do
 
   attr :project, :map, required: true
   attr :run, :map, required: true
-  attr :can_rerun_job, :boolean, required: true
   attr :can_edit_data_retention, :boolean, required: true
+  attr :can_run_workflow, :boolean, required: true
 
   def run_item(%{run: run} = assigns) do
     steps = run.steps
@@ -349,7 +349,7 @@ defmodule LightningWeb.RunLive.Components do
     >
       <%= for step <- @step_list do %>
         <.step_list_item
-          can_rerun_job={@can_rerun_job}
+          can_run_workflow={@can_run_workflow}
           project_id={@project.id}
           run={@run}
           can_edit_data_retention={@can_edit_data_retention}
@@ -363,7 +363,7 @@ defmodule LightningWeb.RunLive.Components do
   attr :step, :map, required: true
   attr :run, :map, required: true
   attr :project_id, :string, required: true
-  attr :can_rerun_job, :boolean, required: true
+  attr :can_run_workflow, :boolean, required: true
   attr :can_edit_data_retention, :boolean, required: true
 
   def step_list_item(assigns) do
@@ -415,7 +415,7 @@ defmodule LightningWeb.RunLive.Components do
               </div>
             <% end %>
             <div class="flex gap-1 text-xs leading-5">
-              <%= if @can_rerun_job && @step.exit_reason do %>
+              <%= if @can_run_workflow && @step.exit_reason do %>
                 <.step_rerun_tag {assigns} />/
               <% end %>
               <.link

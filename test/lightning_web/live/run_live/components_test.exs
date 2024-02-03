@@ -94,7 +94,7 @@ defmodule LightningWeb.RunLive.ComponentsTest do
         step: first_step,
         run: run,
         project_id: project_id,
-        can_rerun_job: true,
+        can_run_workflow: true,
         can_edit_data_retention: true
       )
       |> Floki.parse_fragment!()
@@ -112,7 +112,7 @@ defmodule LightningWeb.RunLive.ComponentsTest do
         step: second_step,
         run: run,
         project_id: project_id,
-        can_rerun_job: true,
+        can_run_workflow: true,
         can_edit_data_retention: true
       )
       |> Floki.parse_fragment!()
@@ -130,7 +130,7 @@ defmodule LightningWeb.RunLive.ComponentsTest do
         step: third_step,
         run: run,
         project_id: project_id,
-        can_rerun_job: true,
+        can_run_workflow: true,
         can_edit_data_retention: true
       )
       |> Floki.parse_fragment!()
@@ -170,7 +170,7 @@ defmodule LightningWeb.RunLive.ComponentsTest do
         step: first_step,
         run: run2,
         project_id: project_id,
-        can_rerun_job: true,
+        can_run_workflow: true,
         can_edit_data_retention: true
       )
 
@@ -186,7 +186,7 @@ defmodule LightningWeb.RunLive.ComponentsTest do
         step: run2_last_step,
         run: run2,
         project_id: project_id,
-        can_rerun_job: true,
+        can_run_workflow: true,
         can_edit_data_retention: true
       )
 
@@ -229,7 +229,7 @@ defmodule LightningWeb.RunLive.ComponentsTest do
         step: step,
         run: run,
         project_id: project_id,
-        can_rerun_job: true,
+        can_run_workflow: true,
         can_edit_data_retention: true
       )
       |> Floki.parse_fragment!()
@@ -243,7 +243,7 @@ defmodule LightningWeb.RunLive.ComponentsTest do
         step: step,
         run: run,
         project_id: project_id,
-        can_rerun_job: false,
+        can_run_workflow: false,
         can_edit_data_retention: true
       )
       |> Floki.parse_fragment!()

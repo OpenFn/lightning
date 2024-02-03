@@ -403,7 +403,11 @@ defmodule LightningWeb.ProjectLive.Settings do
      )}
   end
 
-  def handle_event("initiate_sync", params, %{assigns: %{current_user: u}} = socket) do
+  def handle_event(
+        "initiate_sync",
+        params,
+        %{assigns: %{current_user: u}} = socket
+      ) do
     if socket.assigns.can_initiate_github_sync do
       case VersionControl.initiate_sync(params["id"], u.email) do
         {:ok, :fired} ->

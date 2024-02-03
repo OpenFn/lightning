@@ -9,14 +9,18 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
 
   @impl true
   def update(
-        %{work_order: work_order, project: project, can_rerun_job: can_rerun_job} =
+        %{
+          work_order: work_order,
+          project: project,
+          can_run_workflow: can_run_workflow
+        } =
           assigns,
         socket
       ) do
     {:ok,
      socket
      |> assign(assigns)
-     |> assign(project: project, can_rerun_job: can_rerun_job)
+     |> assign(project: project, can_run_workflow: can_run_workflow)
      |> set_details(work_order)}
   end
 
@@ -284,8 +288,8 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
             </div>
 
             <.run_item
-              can_rerun_job={@can_rerun_job}
               can_edit_data_retention={@can_edit_data_retention}
+              can_run_workflow={@can_run_workflow}
               run={run}
               project={@project}
             />

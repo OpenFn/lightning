@@ -166,6 +166,7 @@ defmodule LightningWeb.WorkOrderLiveTest do
           show_details: true,
           project: project,
           can_rerun_job: true,
+          can_run_workflow: true,
           can_edit_data_retention: true
         )
 

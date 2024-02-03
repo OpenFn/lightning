@@ -10,9 +10,8 @@ defmodule Lightning.Policies.ProjectUsers do
   alias Lightning.Projects.ProjectUser
 
   @type actions ::
-          :run_job
+          :run_workflow
           | :edit_job
-          | :rerun_job
           | :create_job
           | :access_project
           | :delete_project
@@ -91,8 +90,7 @@ defmodule Lightning.Policies.ProjectUsers do
              :edit_job,
              :create_job,
              :delete_workflow,
-             :run_job,
-             :rerun_job,
+             :run_workflow,
              :provision_project,
              :create_project_credential,
              :initiate_github_sync

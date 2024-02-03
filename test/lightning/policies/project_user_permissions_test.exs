@@ -117,8 +117,7 @@ defmodule Lightning.Policies.ProjectUserPermissionsTest do
         edit_project_name
         write_webhook_auth_method
         create_project_credential
-        rerun_job
-        run_job
+        run_workflow
       )a |> (&refute_can(ProjectUsers, &1, viewer, project)).()
     end
   end
@@ -136,8 +135,7 @@ defmodule Lightning.Policies.ProjectUserPermissionsTest do
         edit_job
         create_project_credential
         provision_project
-        rerun_job
-        run_job
+        run_workflow
       )a |> (&assert_can(ProjectUsers, &1, editor, project)).()
     end
 
@@ -170,8 +168,7 @@ defmodule Lightning.Policies.ProjectUserPermissionsTest do
           provision_project
           write_webhook_auth_method
           create_project_credential
-          rerun_job
-          run_job
+          run_workflow
         )a |> (&assert_can(ProjectUsers, &1, admin, project)).()
     end
   end
@@ -192,8 +189,7 @@ defmodule Lightning.Policies.ProjectUserPermissionsTest do
         provision_project
         write_webhook_auth_method
         create_project_credential
-        rerun_job
-        run_job
+        run_workflow
       )a |> (&assert_can(ProjectUsers, &1, owner, project)).()
     end
   end

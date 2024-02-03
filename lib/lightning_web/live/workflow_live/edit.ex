@@ -102,7 +102,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
                   id={"manual-job-#{@selected_job.id}"}
                   form={@manual_run_form}
                   dataclips={@selectable_dataclips}
-                  disabled={!@can_run_job}
+                  disabled={!@can_run_workflow}
                   project={@project}
                   admin_contacts={@admin_contacts}
                   can_edit_data_retention={@can_edit_data_retention}
@@ -566,12 +566,10 @@ defmodule LightningWeb.WorkflowLive.Edit do
         |> assign(
           can_edit_job:
             Permissions.can?(ProjectUsers, :edit_job, current_user, project_user),
-          can_run_job:
-            Permissions.can?(ProjectUsers, :run_job, current_user, project_user),
-          can_rerun_job:
+          can_run_workflow:
             Permissions.can?(
               ProjectUsers,
-              :rerun_job,
+              :run_workflow,
               current_user,
               project_user
             ),
@@ -612,8 +610,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
         ),
       can_edit_job:
         Permissions.can?(ProjectUsers, :edit_job, current_user, project_user),
-      can_run_job:
-        Permissions.can?(ProjectUsers, :run_job, current_user, project_user),
+      can_run_workflow:
+        Permissions.can?(ProjectUsers, :run_workflow, current_user, project_user),
       can_rerun_job:
         Permissions.can?(ProjectUsers, :rerun_job, current_user, project_user),
       can_edit_data_retention:
@@ -848,7 +846,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
         %{"run_id" => run_id, "step_id" => step_id},
         socket
       ) do
-    if socket.assigns.can_rerun_job do
+    if socket.assigns.can_run_workflow do
       case Lightning.Repo.update(%{socket.assigns.changeset | action: :update}) do
         {:ok, workflow} ->
           {:ok, run} =
@@ -885,12 +883,12 @@ defmodule LightningWeb.WorkflowLive.Edit do
       current_user: current_user,
       workflow_params: workflow_params,
       can_edit_job: can_edit_job,
-      can_run_job: can_run_job
+      can_run_workflow: can_run_workflow
     } = socket.assigns
 
     socket = socket |> apply_params(workflow_params)
 
-    if can_run_job && can_edit_job do
+    if can_run_workflow && can_edit_job do
       Helpers.save_and_run(
         socket.assigns.changeset,
         params,
@@ -1066,7 +1064,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
         manual_run_form: manual_run_form,
         changeset: changeset,
         can_edit_job: can_edit_job,
-        can_run_job: can_run_job
+        can_run_workflow: can_run_workflow
       } ->
         form_valid =
           if manual_run_form.source.errors == [
@@ -1079,7 +1077,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
         !form_valid or
           !changeset.valid? or
-          !(can_edit_job or can_run_job)
+          !(can_edit_job or can_run_workflow)
     end
   end
 

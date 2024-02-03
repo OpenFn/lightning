@@ -67,10 +67,10 @@ defmodule LightningWeb.RunLive.Index do
       Lightning.Workflows.get_workflows_for(project)
       |> Enum.map(&{&1.name || "Untitled", &1.id})
 
-    can_rerun_job =
+    can_run_workflow =
       ProjectUsers
       |> Permissions.can?(
-        :rerun_job,
+        :run_workflow,
         current_user,
         project
       )
@@ -113,8 +113,8 @@ defmodule LightningWeb.RunLive.Index do
        active_menu_item: :runs,
        work_orders: [],
        selected_work_orders: [],
-       can_rerun_job: can_rerun_job,
        can_edit_data_retention: can_edit_data_retention,
+       can_run_workflow: can_run_workflow,
        pagination_path: &pagination_path(socket, project, &1),
        filters: params["filters"]
      )}
@@ -293,7 +293,7 @@ defmodule LightningWeb.RunLive.Index do
         %{"run_id" => run_id, "step_id" => step_id},
         socket
       ) do
-    if socket.assigns.can_rerun_job do
+    if socket.assigns.can_run_workflow do
       WorkOrders.retry(run_id, step_id, created_by: socket.assigns.current_user)
 
       {:noreply, socket}
@@ -305,7 +305,7 @@ defmodule LightningWeb.RunLive.Index do
   end
 
   def handle_event("bulk-rerun", attrs, socket) do
-    with true <- socket.assigns.can_rerun_job,
+    with true <- socket.assigns.can_run_workflow,
          {:ok, count} <- handle_bulk_rerun(socket, attrs) do
       {:noreply,
        socket
