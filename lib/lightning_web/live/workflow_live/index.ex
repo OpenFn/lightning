@@ -91,7 +91,8 @@ defmodule LightningWeb.WorkflowLive.Index do
         :ok ->
           {:ok, socket}
 
-        {:error, :too_many_runs, %{position: position} = component} ->
+        {:error, reason, %{position: position} = component}
+        when reason in [:too_many_runs, :too_many_workorders] ->
           {:ok, socket |> assign(position, component)}
       end
     end)
