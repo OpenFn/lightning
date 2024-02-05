@@ -57,27 +57,22 @@ defmodule Lightning.Invocation.Dataclip do
     |> validate()
   end
 
-  defp remove_configuration(
-         %Ecto.Changeset{
-           valid?: true,
-           changes: %{
-             body: body
-           }
-         } =
-           changeset
-       )
-       when is_map(body) do
-    body = Map.delete(body, "configuration")
+  defp remove_configuration(%{valid?: true} = changeset) do
+    case get_change(changeset, :body) do
+      %{} = body ->
+        body = Map.delete(body, "configuration")
+        put_change(changeset, :body, body)
 
-    put_change(changeset, :body, body)
+      nil ->
+        changeset
+
+      _other ->
+        add_error(changeset, :body, "must be a map")
+    end
   end
 
   defp remove_configuration(changeset) do
-    if changeset |> get_change(:body) |> is_nil() do
-      changeset
-    else
-      add_error(changeset, :body, "must be a map")
-    end
+    changeset
   end
 
   @doc false

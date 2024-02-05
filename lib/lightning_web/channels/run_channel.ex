@@ -175,11 +175,10 @@ defmodule LightningWeb.RunChannel do
   def handle_in("step:complete", payload, socket) do
     %{
       "run_id" => socket.assigns.run.id,
-      "project_id" => socket.assigns.project_id,
-      "wipe?" => socket.assigns.retention_policy == :erase_all
+      "project_id" => socket.assigns.project_id
     }
     |> Enum.into(payload)
-    |> Runs.complete_step()
+    |> Runs.complete_step(socket.assigns.retention_policy)
     |> case do
       {:error, changeset} ->
         {:reply, {:error, LightningWeb.ChangesetJSON.error(changeset)}, socket}
