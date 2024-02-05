@@ -2,12 +2,12 @@ defmodule Lightning.Runs.Queue do
   @moduledoc """
   Allows adding, removing or claiming work to be executed by the Runtime.
   """
-  @behaviour Lightning.Runs.Adaptor
-
   import Ecto.Query
 
   alias Lightning.Repo
   alias Lightning.Runs
+
+  @behaviour Lightning.Extensions.RuntimeScheduling
 
   @impl true
   def enqueue(run) do
@@ -16,11 +16,11 @@ defmodule Lightning.Runs.Queue do
   end
 
   @impl true
-  def claim(demand \\ 1) do
+  def claim(demand, base_query \\ Lightning.Run) do
     subset_query =
-      Lightning.Run
+      base_query
       |> select([:id])
-      |> where([j], j.state == :available)
+      |> where([r], r.state == :available)
       |> limit(^demand)
       |> order_by([:priority, :inserted_at])
       |> lock("FOR UPDATE SKIP LOCKED")

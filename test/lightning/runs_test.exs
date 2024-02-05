@@ -38,7 +38,8 @@ defmodule Lightning.RunsTest do
 
   describe "claim/1" do
     test "claims a run from the queue" do
-      %{triggers: [trigger]} = workflow = insert(:simple_workflow)
+      %{triggers: [trigger]} =
+        workflow = insert(:simple_workflow)
 
       {:ok, %{runs: [run]}} =
         WorkOrders.create_for(trigger,

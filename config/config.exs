@@ -32,7 +32,8 @@ config :lightning, LightningWeb.Endpoint,
 
 config :lightning, Lightning.Extensions,
   rate_limiter: Lightning.Extensions.Default.RateLimiter,
-  runtime_limiter: Lightning.Extensions.Default.RuntimeLimiter
+  runtime_limiter: Lightning.Extensions.Default.RuntimeLimiter,
+  runtime_scheduler: Lightning.Extensions.Default.RuntimeScheduler
 
 config :joken, default_signer: "secret"
 

@@ -1,6 +1,10 @@
 defmodule Lightning.Runs do
+  @moduledoc """
+  Gathers operations to create, update and delete Runs.
+  """
   import Ecto.Query
 
+  alias Lightning.Extensions.RuntimeScheduler
   alias Lightning.Invocation.LogLine
   alias Lightning.Repo
   alias Lightning.Run
@@ -9,34 +13,11 @@ defmodule Lightning.Runs do
 
   require Logger
 
-  defmodule Adaptor do
-    @moduledoc """
-    Behaviour for implementing an adaptor for the Lightning.Runs module.
-    """
-
-    @callback enqueue(
-                run ::
-                  Lightning.Run.t() | Ecto.Changeset.t(Lightning.Run.t())
-              ) ::
-                {:ok, Lightning.Run.t()}
-                | {:error, Ecto.Changeset.t(Lightning.Run.t())}
-
-    @callback claim(demand :: non_neg_integer()) ::
-                {:ok, [Lightning.Run.t()]}
-
-    @callback dequeue(run :: Lightning.Run.t()) ::
-                {:ok, Lightning.Run.t()}
-  end
-
-  # credo:disable-for-next-line
-  @behaviour Adaptor
-
   @doc """
   Enqueue a run to be processed.
   """
-  @impl true
   def enqueue(run) do
-    adaptor().enqueue(run)
+    RuntimeScheduler.enqueue(run)
   end
 
   # @doc """
@@ -45,17 +26,15 @@ defmodule Lightning.Runs do
   # The `demand` parameter is used to request more than a since run,
   # all implementation should default to 1.
   # """
-  @impl true
   def claim(demand \\ 1) do
-    adaptor().claim(demand)
+    RuntimeScheduler.claim(demand)
   end
 
   # @doc """
   # Removes a run from the queue.
   # """
-  @impl true
   def dequeue(run) do
-    adaptor().dequeue(run)
+    RuntimeScheduler.dequeue(run)
   end
 
   @doc """
@@ -297,10 +276,6 @@ defmodule Lightning.Runs do
     Ecto.assoc(run, :log_lines)
     |> order_by([{^order, :timestamp}])
     |> Repo.stream()
-  end
-
-  defp adaptor do
-    Lightning.Config.runs_adaptor()
   end
 
   defp track_run_queue_delay({:ok, run}) do
