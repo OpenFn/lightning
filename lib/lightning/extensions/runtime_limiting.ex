@@ -27,6 +27,6 @@ defmodule Lightning.Extensions.RuntimeLimiting do
   @callback check_limits(context :: Context.t()) ::
               :ok | {:error, limit_error(), message :: String.t()}
 
-  @callback limit_internal(action :: Action.t(), context :: Context.t()) ::
+  @callback limit_action(action :: Action.t(), context :: Context.t()) ::
               :ok | {:error, action_error(), message :: String.t()}
 end

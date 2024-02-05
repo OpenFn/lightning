@@ -18,8 +18,8 @@ defmodule Lightning.Extensions.RuntimeLimiter do
   end
 
   @impl true
-  def limit_internal(action, context) do
-    adapter().limit_internal(action, context)
+  def limit_action(action, context) do
+    adapter().limit_action(action, context)
   end
 
   defp adapter, do: adapter(:runtime_limiter)

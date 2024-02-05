@@ -62,12 +62,11 @@ defmodule LightningWeb.RunChannel do
       output_dataclips: include_output_dataclips?(retention_policy)
     }
 
-    case RateLimiter.limit_internal(
-           %Action{
-             type: :new_run
-           },
-           %Context{project_id: project_id, user_id: nil}
-         ) do
+    RuntimeLimiter.limit_action(
+      %Action{type: :new_run},
+      %Context{project_id: project_id, user_id: nil}
+    )
+    |> case do
       :ok ->
         {:reply, {:ok, RunWithOptions.render(run, options)}, socket}
 

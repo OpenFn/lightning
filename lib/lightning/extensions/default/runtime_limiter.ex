@@ -10,7 +10,7 @@ defmodule Lightning.Extensions.Default.RuntimeLimiter do
   end
 
   @impl true
-  def limit_internal(_action, _context) do
+  def limit_action(_action, _context) do
     :ok
   end
 end
