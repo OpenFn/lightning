@@ -13,7 +13,7 @@
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-EPF2X7PV.js"></script>
-    <script src="dist/sidebar_items-72528FDC.js"></script>
+    <script src="dist/sidebar_items-065D2386.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -170,8 +170,12 @@ and this project adheres to
 <ul><li>Prevented secret scrubber from over-eagerly adding *** between all
 characters if an empty string secret was provided as a credential field value
 (e.g., {&quot;username&quot;: &quot;come-on-in&quot;, &quot;password&quot;: &quot;&quot;})
-<a href="https://github.com/OpenFn/Lightning/issues/1585">#1585</a></li><li>Fixed bug that was duplicating inbound http_requests, resulting in unnecessary
-data storage <a href="https://github.com/OpenFn/Lightning/issues/1695">#1695</a></li></ul><h2 id="v2-0-0-rc8-2024-01-30" class="section-heading">
+<a href="https://github.com/OpenFn/Lightning/issues/1585">#1585</a></li><li>Fixed permissions issue that allowed viewer/editor to modify webhook auth
+methods. These permissions only belong to project owners and admins
+<a href="https://github.com/OpenFn/Lightning/issues/1692">#1692</a></li><li>Fixed bug that was duplicating inbound http_requests, resulting in unnecessary
+data storage <a href="https://github.com/OpenFn/Lightning/issues/1695">#1695</a></li><li>Fixed permissions issue that allowed editors to set up new Github connections
+<a href="https://github.com/OpenFn/Lightning/issues/1703">#1703</a></li><li>Fixed permissions issue that allowed viewers to initiate syncs to github
+<a href="https://github.com/OpenFn/Lightning/issues/1704">#1704</a></li></ul><h2 id="v2-0-0-rc8-2024-01-30" class="section-heading">
   <a href="#v2-0-0-rc8-2024-01-30" class="hover-link">
     <i class="ri-link-m" aria-hidden="true"></i>
   </a>
@@ -727,7 +731,7 @@ work orders up to <code class="inline">v0.10.0</code>, though the granularity of
 will be less than <code class="inline">v0.10.0</code> and the final states are not guaranteed to be
 accurate for workflows with multiple branches and leaf nodes with varying exit
 reasons.</p><p>The migration scripts can be run with a single function call in SetupUtils from
-a connect <code class="inline">iex</code> session:</p><pre><code class="makeup elixir" translate="no"><span class="nc">Lightning.SetupUtils</span><span class="o">.</span><span class="n">approximate_state_for_attempts_and_workorders</span><span class="p" data-group-id="1781016361-1">(</span><span class="p" data-group-id="1781016361-1">)</span></code></pre><p>Note that (like lots of <em>other</em> functionality in <code class="inline">SetupUtils</code>, calling this
+a connect <code class="inline">iex</code> session:</p><pre><code class="makeup elixir" translate="no"><span class="nc">Lightning.SetupUtils</span><span class="o">.</span><span class="n">approximate_state_for_attempts_and_workorders</span><span class="p" data-group-id="0515868805-1">(</span><span class="p" data-group-id="0515868805-1">)</span></code></pre><p>Note that (like lots of <em>other</em> functionality in <code class="inline">SetupUtils</code>, calling this
 function is a destructive action and you should only do it if you've backed up
 your data and you know what you're doing.)</p><p>As always, we recommend backing up your data before migrating. (And thanks for
 bearing with us as we move towards our first stable Lightning release.)</p><h3 id="added-18" class="section-heading">

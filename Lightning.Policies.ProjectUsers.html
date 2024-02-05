@@ -13,7 +13,7 @@
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-EPF2X7PV.js"></script>
-    <script src="dist/sidebar_items-72528FDC.js"></script>
+    <script src="dist/sidebar_items-065D2386.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -214,10 +214,8 @@ that project and <code class="inline">false</code> if they cannot.</p></div>
       <div class="specs">
 
           <pre translate="no"><span class="attribute">@type</span> actions() ::
-  :run_job
-  | :edit_job
-  | :rerun_job
-  | :create_job
+  :run_workflow
+  | :edit_workflow
   | :access_project
   | :delete_project
   | :delete_workflow
@@ -227,10 +225,11 @@ that project and <code class="inline">false</code> if they cannot.</p></div>
   | :edit_failure_alerts
   | :edit_project_description
   | :provision_project
-  | :create_webhook_auth_method
   | :create_project_credential
-  | :edit_webhook_auth_method
-  | :edit_data_retention</pre>
+  | :edit_data_retention
+  | :write_webhook_auth_method
+  | :write_github_connection
+  | :initiate_github_sync</pre>
 
       </div>
 
@@ -258,7 +257,7 @@ that project and <code class="inline">false</code> if they cannot.</p></div>
     </a>
     <h1 class="signature" translate="no">authorize(action, user, project)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/policies/project_users.ex#L46" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/policies/project_users.ex#L45" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
