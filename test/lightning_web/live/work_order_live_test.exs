@@ -179,31 +179,6 @@ defmodule LightningWeb.WorkOrderLiveTest do
       end)
     end
 
-    # TODO: This test is removed here: https://github.com/OpenFn/Lightning/pull/1660/files#diff-0d2174d557f95f0bf8356930daa8a2e91380ae2dc36400d9f39ef8f56cc9b8be
-    # test "WorkOrderComponent remains stable when associated jobs are deleted", %{
-    #   project: project
-    # } do
-    #   %{jobs: [job]} = insert(:simple_workflow, project: project)
-    #   {work_order, _dataclip} = setup_work_order(project, job)
-
-    #   Lightning.Repo.delete!(job)
-
-    #   work_order =
-    #     Lightning.Repo.reload!(work_order)
-    #     |> Lightning.Repo.preload([:runs, :workflow])
-
-    #   assert_work_order_steps(work_order, 0)
-
-    #   rendered =
-    #     render_component(LightningWeb.RunLive.WorkOrderComponent,
-    #       id: work_order.id,
-    #       work_order: work_order
-    #     )
-
-    #   assert rendered =~ work_order.dataclip_id
-    #   refute rendered =~ "toggle_details_for_#{work_order.id}"
-    # end
-
     test "toggle details of a work order shows run state and timestamp", %{
       conn: conn,
       project: project
