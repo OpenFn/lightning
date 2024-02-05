@@ -34,6 +34,14 @@ Lightning.DashboardStats.html
 Lightning.Demo.html
 Lightning.Env.html
 Lightning.ExportUtils.html
+Lightning.Extensions.AdapterHelper.html
+Lightning.Extensions.Default.RateLimiter.html
+Lightning.Extensions.Default.RuntimeLimiter.html
+Lightning.Extensions.RateLimiter.html
+Lightning.Extensions.RateLimiting.Context.html
+Lightning.Extensions.RateLimiting.html
+Lightning.Extensions.RuntimeLimiter.html
+Lightning.Extensions.RuntimeLimiting.html
 Lightning.FailureNotifierView.html
 Lightning.Graph.html
 Lightning.Helpers.html
@@ -242,8 +250,8 @@ dist/merriweather-latin-ext-300-normal-K6L27CZ5.woff2
 dist/merriweather-vietnamese-300-italic-EHHNZPUO.woff2
 dist/merriweather-vietnamese-300-normal-U376L4Z4.woff2
 dist/remixicon-NKANDIL5.woff2
-dist/search_data-39F34CB0.js
-dist/sidebar_items-013E9E66.js
+dist/search_data-1370E8C6.js
+dist/sidebar_items-72528FDC.js
 index.html
 provisioning.html
 readme.html
