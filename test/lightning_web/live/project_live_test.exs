@@ -12,6 +12,8 @@ defmodule LightningWeb.ProjectLiveTest do
   import Lightning.ApplicationHelpers,
     only: [dynamically_absorb_delay: 1, put_temporary_env: 3]
 
+  alias Lightning.Projects
+
   @cert """
   -----BEGIN RSA PRIVATE KEY-----
   MIICWwIBAAKBgQDdlatRjRjogo3WojgGHFHYLugdUWAY9iR3fy4arWNA1KoS8kVw33cJibXr8bvwUAUparCwlvdbH6dvEOfou0/gCFQsHUfQrSDv+MuSUMAe8jzKE4qW+jK+xQU9a03GUnKHkkle+Q0pX/g6jXZ7r1/xAK5Do2kQ+X5xK9cipRgEKwIDAQABAoGAD+onAtVye4ic7VR7V50DF9bOnwRwNXrARcDhq9LWNRrRGElESYYTQ6EbatXS3MCyjjX2eMhu/aF5YhXBwkppwxg+EOmXeh+MzL7Zh284OuPbkglAaGhV9bb6/5CpuGb1esyPbYW+Ty2PC0GSZfIXkXs76jXAu9TOBvD0ybc2YlkCQQDywg2R/7t3Q2OE2+yo382CLJdrlSLVROWKwb4tb2PjhY4XAwV8d1vy0RenxTB+K5Mu57uVSTHtrMK0GAtFr833AkEA6avx20OHo61Yela/4k5kQDtjEf1N0LfI+BcWZtxsS3jDM3i1Hp0KSu5rsCPb8acJo5RO26gGVrfAsDcIXKC+bQJAZZ2XIpsitLyPpuiMOvBbzPavd4gY6Z8KWrfYzJoI/Q9FuBo6rKwl4BFoToD7WIUS+hpkagwWiz+6zLoX1dbOZwJACmH5fSSjAkLRi54PKJ8TFUeOP15h9sQzydI8zJU+upvDEKZsZc/UhT/SySDOxQ4G/523Y0sz/OZtSWcol/UMgQJALesy++GdvoIDLfJX5GBQpuFgFenRiRDabxrE9MNUZ2aPFaFp+DyAe+b4nDwuJaW2LURbr8AEZga7oQj0uYxcYw==
@@ -1749,6 +1751,235 @@ defmodule LightningWeb.ProjectLiveTest do
 
       assert flash["info"] ==
                "Your Webhook Authentication method has been deleted."
+    end
+  end
+
+  describe "data-storage" do
+    setup :register_and_log_in_user
+    setup :create_project_for_current_user
+
+    @tag role: :owner
+    test "project owner can view these settings", %{conn: conn, project: project} do
+      {:ok, _view, html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/settings#data-storage"
+        )
+
+      assert html =~ "Input/Output Data Storage Policy"
+    end
+
+    @tag role: :admin
+    test "project admin can view these settings", %{conn: conn, project: project} do
+      {:ok, view, html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/settings#data-storage"
+        )
+
+      assert html =~ "Input/Output Data Storage Policy"
+      assert html =~ "Should OpenFn store input/output data for workflow runs?"
+
+      # retain_all is the default
+      assert ["checked"] ==
+               view
+               |> element("#retain_all")
+               |> render()
+               |> Floki.parse_fragment!()
+               |> Floki.attribute("input", "checked")
+
+      # TODO - this will be implemented in https://github.com/OpenFn/Lightning/issues/1694
+      # refute ["checked"] ==
+      #          view
+      #          |> element("#retain_with_errors")
+      #          |> render()
+      #          |> Floki.parse_fragment!()
+      #          |> Floki.attribute("input", "checked")
+
+      refute ["checked"] ==
+               view
+               |> element("#erase_all")
+               |> render()
+               |> Floki.parse_fragment!()
+               |> Floki.attribute("input", "checked")
+
+      # heads up not shown for retain all
+      refute html =~ "heads-up-description"
+
+      # 3 radio buttons descriptions
+      assert "Retain input/output data for all workflow runs" =
+               view
+               |> element(~s{label#[for="retain_all"]})
+               |> render()
+               |> Floki.parse_fragment!()
+               |> Floki.text()
+               |> String.trim()
+
+      # TODO - this will be implemented in https://github.com/OpenFn/Lightning/issues/1694
+      # assert "Only retain input/output data when a run fails" =
+      #          view
+      #          |> element(~s{label#[for="retain_with_errors"]})
+      #          |> render()
+      #          |> Floki.parse_fragment!()
+      #          |> Floki.text()
+      #          |> String.trim()
+
+      assert "Never retain input/output data (zero-persistence)" =
+               view
+               |> element(~s{label#[for="erase_all"]})
+               |> render()
+               |> Floki.parse_fragment!()
+               |> Floki.text()
+               |> String.trim()
+
+      # TODO - this will be implemented in https://github.com/OpenFn/Lightning/issues/1694
+      # show heads up for retain_with_errors
+      # view
+      # |> form("#retention-settings-form",
+      #   project: %{
+      #     retention_policy: "retain_with_errors"
+      #   }
+      # )
+      # |> render_change()
+
+      # assert ["checked"] ==
+      #          view
+      #          |> element("#retain_with_errors")
+      #          |> render()
+      #          |> Floki.parse_fragment!()
+      #          |> Floki.attribute("input", "checked")
+
+      # assert "When enabled, you will no longer be able to retry workflow runs as no data will be stored." =
+      #          view
+      #          |> element("#heads-up-description")
+      #          |> render()
+      #          |> Floki.parse_fragment!()
+      #          |> Floki.find("p")
+      #          |> Floki.text()
+      #          |> String.trim()
+
+      # show heads up for erase all
+      view
+      |> form("#retention-settings-form",
+        project: %{
+          retention_policy: "erase_all"
+        }
+      )
+      |> render_change()
+
+      assert ["checked"] ==
+               view
+               |> element("#erase_all")
+               |> render()
+               |> Floki.parse_fragment!()
+               |> Floki.attribute("input", "checked")
+
+      assert "When enabled, you will no longer be able to retry workflow runs as no data will be stored." =
+               view
+               |> element("#heads-up-description")
+               |> render()
+               |> Floki.parse_fragment!()
+               |> Floki.find("p")
+               |> Floki.text()
+               |> String.trim()
+    end
+
+    @tag role: :editor
+    test "project editor does not have permission", %{
+      conn: conn,
+      project: project
+    } do
+      {:ok, _view, html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/settings#data-storage"
+        )
+
+      refute html =~ "Input/Output Data Storage Policy"
+
+      assert html =~
+               "Only project owner and admins can view or edit the Data Storage section."
+    end
+
+    @tag role: :viewer
+    test "project viewer does not have permission", %{
+      conn: conn,
+      project: project
+    } do
+      {:ok, _view, html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/settings#data-storage"
+        )
+
+      refute html =~ "Workflow Input &amp; Output Data Retention"
+
+      assert html =~
+               "Only project owner and admins can view or edit the Data Storage section."
+    end
+
+    @tag role: :admin
+    test "project admin can change the retention policy", %{
+      conn: conn,
+      project: project
+    } do
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/settings#data-storage"
+        )
+
+      # save, navigate to other page and saved option is checked when come back
+      Enum.reduce(
+        # TODO - this will be implemented in https://github.com/OpenFn/Lightning/issues/1694
+        # ["retain_with_errors", "erase_all", "retain_all"],
+        ["erase_all", "retain_all"],
+        view,
+        fn policy, view ->
+          view
+          |> form("#retention-settings-form",
+            project: %{
+              retention_policy: policy
+            }
+          )
+          |> render_change()
+
+          assert ["checked"] ==
+                   view
+                   |> element("#" <> policy)
+                   |> render()
+                   |> Floki.parse_fragment!()
+                   |> Floki.attribute("input", "checked")
+
+          html =
+            view
+            |> form("#retention-settings-form")
+            |> render_submit()
+
+          assert html =~ "Project updated successfully"
+          assert html =~ "Input/Output Data Storage Policy"
+
+          assert policy ==
+                   project.id
+                   |> Projects.get_project!()
+                   |> Map.get(:retention_policy)
+                   |> Atom.to_string()
+
+          live(conn, ~p"/projects/#{project.id}/w")
+
+          {:ok, view, _html} =
+            live(conn, ~p"/projects/#{project.id}/settings#data-storage")
+
+          assert ["checked"] ==
+                   view
+                   |> element("#" <> policy)
+                   |> render()
+                   |> Floki.parse_fragment!()
+                   |> Floki.attribute("input", "checked")
+
+          view
+        end
+      )
     end
   end
 

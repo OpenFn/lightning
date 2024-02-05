@@ -49,7 +49,6 @@ defmodule Lightning.Runs.Handlers do
         :run_id,
         :step_id,
         :job_id,
-        :input_dataclip_id,
         :started_at
       ])
       |> then(&validate_job_reachable/1)
@@ -148,7 +147,7 @@ defmodule Lightning.Runs.Handlers do
       field :finished_at, :utc_datetime_usec
     end
 
-    def new(params) do
+    def new(params, retention_policy) do
       cast(%__MODULE__{}, params, [
         :run_id,
         :output_dataclip,
@@ -171,8 +170,11 @@ defmodule Lightning.Runs.Handlers do
         output_dataclip_id = get_change(changeset, :output_dataclip_id)
         output_dataclip = get_change(changeset, :output_dataclip)
 
-        case {output_dataclip, output_dataclip_id} do
-          {nil, nil} ->
+        case {retention_policy, output_dataclip, output_dataclip_id} do
+          {:erase_all, _, _} ->
+            changeset
+
+          {_, nil, nil} ->
             changeset
 
           _ ->
@@ -189,20 +191,27 @@ defmodule Lightning.Runs.Handlers do
       ])
     end
 
-    def call(params) do
-      with {:ok, complete_step} <- new(params) |> apply_action(:validate),
-           {:ok, step} <- update(complete_step) do
+    def call(params, retention_policy) do
+      with {:ok, complete_step} <-
+             params |> new(retention_policy) |> apply_action(:validate),
+           {:ok, step} <- update_step(complete_step, retention_policy) do
         Runs.Events.step_completed(complete_step.run_id, step)
 
         {:ok, step}
       end
     end
 
-    defp update(complete_step) do
+    defp update_step(complete_step, retention_policy) do
       Repo.transact(fn ->
         with %Step{} = step <- get_step(complete_step.step_id),
-             {:ok, _} <- maybe_save_dataclip(complete_step) do
-          update_step(step, complete_step)
+             {:ok, _} <- maybe_save_dataclip(complete_step, retention_policy) do
+          step
+          |> Step.finished(
+            complete_step.output_dataclip_id,
+            {complete_step.reason, complete_step.error_type,
+             complete_step.error_message}
+          )
+          |> Repo.update()
         else
           nil ->
             {:error,
@@ -221,15 +230,42 @@ defmodule Lightning.Runs.Handlers do
       |> Repo.one()
     end
 
-    defp maybe_save_dataclip(%__MODULE__{output_dataclip: nil}) do
+    defp maybe_save_dataclip(
+           %__MODULE__{
+             project_id: project_id,
+             output_dataclip_id: dataclip_id
+           },
+           :erase_all
+         ) do
+      if is_nil(dataclip_id) do
+        {:ok, nil}
+      else
+        Dataclip.new(%{
+          id: dataclip_id,
+          project_id: project_id,
+          body: nil,
+          wiped_at: DateTime.utc_now() |> DateTime.truncate(:second),
+          type: :step_result
+        })
+        |> Repo.insert()
+      end
+    end
+
+    defp maybe_save_dataclip(
+           %__MODULE__{output_dataclip: nil},
+           _retention_policy
+         ) do
       {:ok, nil}
     end
 
-    defp maybe_save_dataclip(%__MODULE__{
-           output_dataclip: output_dataclip,
-           project_id: project_id,
-           output_dataclip_id: dataclip_id
-         }) do
+    defp maybe_save_dataclip(
+           %__MODULE__{
+             output_dataclip: output_dataclip,
+             project_id: project_id,
+             output_dataclip_id: dataclip_id
+           },
+           _retention_policy
+         ) do
       Dataclip.new(%{
         id: dataclip_id,
         project_id: project_id,
@@ -237,17 +273,6 @@ defmodule Lightning.Runs.Handlers do
         type: :step_result
       })
       |> Repo.insert()
-    end
-
-    defp update_step(step, %{
-           reason: reason,
-           error_type: error_type,
-           error_message: error_message,
-           output_dataclip_id: output_dataclip_id
-         }) do
-      step
-      |> Step.finished(output_dataclip_id, {reason, error_type, error_message})
-      |> Repo.update()
     end
   end
 end

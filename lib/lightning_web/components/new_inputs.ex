@@ -17,7 +17,11 @@ defmodule LightningWeb.Components.NewInputs do
   """
   attr :id, :string, default: ""
   attr :type, :string, default: "button", values: ["button", "submit"]
-  attr :class, :any, default: nil
+  attr :class, :any, default: ""
+
+  attr :color_class, :any,
+    default: "bg-primary-600 hover:bg-primary-700 text-white"
+
   attr :rest, :global, include: ~w(disabled form name value)
   attr :tooltip, :any, default: nil
 
@@ -35,11 +39,11 @@ defmodule LightningWeb.Components.NewInputs do
         type={@type}
         class={[
           "inline-flex justify-center py-2 px-4 border border-transparent",
-          "shadow-sm text-sm font-medium rounded-md text-white focus:outline-none",
+          "shadow-sm text-sm font-medium rounded-md focus:outline-none",
           "focus:ring-2 focus:ring-offset-2 focus:ring-primary-500",
-          "bg-primary-600 hover:bg-primary-700",
           "disabled:bg-primary-300",
           "phx-submit-loading:opacity-75",
+          @color_class,
           @class
         ]}
         {@rest}
@@ -268,6 +272,19 @@ defmodule LightningWeb.Components.NewInputs do
         <.error :for={msg <- @errors}><%= msg %></.error>
       </div>
     </div>
+    """
+  end
+
+  def input(%{type: "radio"} = assigns) do
+    ~H"""
+    <input
+      type="radio"
+      id={@id}
+      name={@name}
+      checked={@checked}
+      value={@value}
+      class="h-4 w-4 border-gray-300 text-indigo-600 focus:ring-indigo-600"
+    />
     """
   end
 

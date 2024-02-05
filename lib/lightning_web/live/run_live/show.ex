@@ -4,6 +4,9 @@ defmodule LightningWeb.RunLive.Show do
 
   import LightningWeb.RunLive.Components
 
+  alias Lightning.Policies.Permissions
+  alias Lightning.Policies.ProjectUsers
+  alias Lightning.Projects
   alias LightningWeb.Components.Viewers
   alias Phoenix.LiveView.AsyncResult
 
@@ -172,27 +175,27 @@ defmodule LightningWeb.RunLive.Show do
                 />
               </Common.panel_content>
               <Common.panel_content for_hash="input">
-                <Viewers.dataclip_viewer
+                <Viewers.step_dataclip_viewer
                   id={"step-input-#{@selected_step_id}"}
-                  type={
-                    case @input_dataclip do
-                      %AsyncResult{ok?: true, result: %{type: type}} -> type
-                      _ -> nil
-                    end
-                  }
                   stream={@streams.input_dataclip}
+                  step={@selected_step}
+                  dataclip={@input_dataclip}
+                  input_or_output={:input}
+                  project_id={@project.id}
+                  admin_contacts={@admin_contacts}
+                  can_edit_data_retention={@can_edit_data_retention}
                 />
               </Common.panel_content>
               <Common.panel_content for_hash="output">
-                <Viewers.dataclip_viewer
+                <Viewers.step_dataclip_viewer
                   id={"step-output-#{@selected_step_id}"}
-                  type={
-                    case @output_dataclip do
-                      %AsyncResult{ok?: true, result: %{type: type}} -> type
-                      _ -> nil
-                    end
-                  }
                   stream={@streams.output_dataclip}
+                  step={@selected_step}
+                  dataclip={@output_dataclip}
+                  input_or_output={:output}
+                  project_id={@project.id}
+                  admin_contacts={@admin_contacts}
+                  can_edit_data_retention={@can_edit_data_retention}
                 />
               </Common.panel_content>
             </div>
@@ -205,6 +208,9 @@ defmodule LightningWeb.RunLive.Show do
 
   @impl true
   def mount(%{"id" => id}, _session, socket) do
+    %{current_user: user, project_user: project_user, project: project} =
+      socket.assigns
+
     {:ok,
      socket
      |> assign(
@@ -221,6 +227,16 @@ defmodule LightningWeb.RunLive.Show do
      |> assign(:output_dataclip, false)
      |> assign(:run, AsyncResult.loading())
      |> assign(:log_lines, AsyncResult.loading())
+     |> assign(
+       can_edit_data_retention:
+         Permissions.can?(
+           ProjectUsers,
+           :edit_data_retention,
+           user,
+           project_user
+         )
+     )
+     |> assign(admin_contacts: Projects.list_project_admin_emails(project.id))
      |> get_run_async(id)}
   end
 

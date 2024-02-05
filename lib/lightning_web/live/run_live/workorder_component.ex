@@ -83,15 +83,6 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
      )}
   end
 
-  def handle_event("toggle_selection", %{}, %{assigns: assigns} = socket) do
-    send(
-      self(),
-      {:selection_toggled, {assigns.work_order, !assigns[:entry_selected]}}
-    )
-
-    {:noreply, assign(socket, :entry_selected, !assigns[:entry_selected])}
-  end
-
   attr :show_details, :boolean, default: false
   attr :show_prev_runs, :boolean, default: false
   attr :entry_selected, :boolean, default: false
@@ -111,33 +102,59 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
           class="col-span-3 py-1 px-4 text-sm font-normal text-left rtl:text-right text-gray-500"
         >
           <div class="flex gap-4 items-center">
-            <form
-              phx-change="toggle_selection"
-              id={"selection-form-#{@work_order.id}"}
-            >
-              <input
-                type="hidden"
-                id={"id_#{@work_order.id}"}
-                name="workorder_id"
-                value={@work_order.id}
-              />
+            <%= if wo_dataclip_available?(@work_order) do %>
+              <form
+                phx-change="toggle_selection"
+                id={"selection-form-#{@work_order.id}"}
+              >
+                <input
+                  type="hidden"
+                  id={"id_#{@work_order.id}"}
+                  name="workorder_id"
+                  value={@work_order.id}
+                />
 
-              <input
-                type="hidden"
-                id={"unselect_#{@work_order.id}"}
-                name="selected"
-                value="false"
-              />
+                <input
+                  type="hidden"
+                  id={"unselect_#{@work_order.id}"}
+                  name="selected"
+                  value="false"
+                />
 
-              <input
-                type="checkbox"
-                id={"select_#{@work_order.id}"}
-                name="selected"
-                class="left-4 top-1/2 h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-600"
-                value="true"
-                {if @entry_selected, do: [checked: "checked"], else: []}
-              />
-            </form>
+                <input
+                  type="checkbox"
+                  id={"select_#{@work_order.id}"}
+                  name="selected"
+                  class="left-4 top-1/2 h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-600"
+                  value="true"
+                  {if @entry_selected, do: [checked: "checked"], else: []}
+                />
+              </form>
+            <% else %>
+              <form id={"selection-form-#{@work_order.id}"}>
+                <span
+                  id={"select_#{@work_order.id}_tooltip"}
+                  class="cursor-pointer"
+                  phx-hook="Tooltip"
+                  data-placement="right"
+                  data-allow-html="true"
+                  aria-label={
+                    rerun_zero_persistence_tooltip_message(
+                      @project.id,
+                      @can_edit_data_retention
+                    )
+                  }
+                >
+                  <input
+                    type="checkbox"
+                    id={"select_#{@work_order.id}"}
+                    name="selected"
+                    class="left-4 top-1/2 h-4 w-4 rounded border-gray-300 bg-gray-100 text-indigo-600 focus:ring-indigo-600"
+                    disabled
+                  />
+                </span>
+              </form>
+            <% end %>
             <%= if @work_order.runs !== [] do %>
               <button
                 id={"toggle_details_for_#{@work_order.id}"}
@@ -170,18 +187,11 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
                   <%= display_short_uuid(@work_order.id) %>
                 </span>
                 &bull;
-                <.link navigate={
-                  ~p"/projects/#{@work_order.workflow.project_id}/dataclips/#{@work_order.dataclip_id}/show"
-                }>
-                  <span
-                    title={@work_order.dataclip_id}
-                    class="font-normal text-xs whitespace-nowrap text-ellipsis
-                            p-1 rounded-md font-mono text-indigo-400 hover:underline
-                            underline-offset-2 hover:text-indigo-500"
-                  >
-                    <%= display_short_uuid(@work_order.dataclip_id) %>
-                  </span>
-                </.link>
+                <.workorder_dataclip_link
+                  work_order={@work_order}
+                  project={@project}
+                  can_edit_data_retention={@can_edit_data_retention}
+                />
               </span>
             </div>
           </div>
@@ -273,11 +283,68 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
               </div>
             </div>
 
-            <.run_item can_rerun_job={@can_rerun_job} run={run} project={@project} />
+            <.run_item
+              can_rerun_job={@can_rerun_job}
+              can_edit_data_retention={@can_edit_data_retention}
+              run={run}
+              project={@project}
+            />
           </div>
         <% end %>
       <% end %>
     </div>
+    """
+  end
+
+  defp workorder_dataclip_link(assigns) do
+    ~H"""
+    <%= if wo_dataclip_available?(@work_order) do %>
+      <.link
+        id={"view-dataclip-#{@work_order.dataclip_id}"}
+        navigate={
+          ~p"/projects/#{@work_order.workflow.project_id}/dataclips/#{@work_order.dataclip_id}/show"
+        }
+      >
+        <span
+          title={@work_order.dataclip_id}
+          class="font-normal text-xs whitespace-nowrap text-ellipsis
+                p-1 rounded-md font-mono text-indigo-400 hover:underline
+                underline-offset-2 hover:text-indigo-500"
+        >
+          <%= display_short_uuid(@work_order.dataclip_id) %>
+        </span>
+      </.link>
+    <% else %>
+      <span
+        id={"view-dataclip-#{@work_order.dataclip_id}"}
+        title={@work_order.dataclip_id}
+        class="font-normal text-xs whitespace-nowrap text-ellipsis
+              p-1 rounded-md font-mono text-indigo-300 cursor-pointer
+              "
+        phx-hook="Tooltip"
+        data-placement="right"
+        data-allow-html="true"
+        aria-label={
+          wiped_dataclip_tooltip_message(@project.id, @can_edit_data_retention)
+        }
+      >
+        <%= display_short_uuid(@work_order.dataclip_id) %>
+      </span>
+    <% end %>
+    """
+  end
+
+  defp wo_dataclip_available?(work_order) do
+    is_nil(work_order.dataclip.wiped_at)
+  end
+
+  defp wiped_dataclip_tooltip_message(project_id, can_edit_retention) do
+    """
+    <span class="text-center">
+    The input dataclip is unavailable and has not been stored<br>
+    due to the data retention policy set in the project.<br>
+    #{zero_persistence_action_message(project_id, can_edit_retention)}
+    </span>
     """
   end
 end

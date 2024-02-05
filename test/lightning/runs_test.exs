@@ -1,12 +1,14 @@
 defmodule Lightning.RunsTest do
-  alias Lightning.Invocation
   use Lightning.DataCase
+
   import Lightning.Factories
   import Mock
+  import Ecto.Query
 
   alias Lightning.WorkOrders
   alias Lightning.Run
   alias Lightning.Runs
+  alias Lightning.Invocation
 
   describe "enqueue/1" do
     test "enqueues a run" do
@@ -212,7 +214,7 @@ defmodule Lightning.RunsTest do
     end
   end
 
-  describe "complete_step/1" do
+  describe "complete_step/2" do
     test "marks a step as finished" do
       dataclip = insert(:dataclip)
       %{triggers: [trigger], jobs: [job]} = workflow = insert(:simple_workflow)
@@ -240,6 +242,41 @@ defmodule Lightning.RunsTest do
 
       assert step.exit_reason == "success"
       assert step.output_dataclip.body == %{"foo" => "bar"}
+    end
+
+    test "wipes the dataclip if erase_all retention policy is specified" do
+      dataclip = insert(:dataclip)
+      %{triggers: [trigger], jobs: [job]} = workflow = insert(:simple_workflow)
+
+      %{runs: [run]} =
+        work_order_for(trigger, workflow: workflow, dataclip: dataclip)
+        |> insert()
+
+      step =
+        insert(:step, runs: [run], job: job, input_dataclip: dataclip)
+
+      {:ok, step} =
+        Runs.complete_step(
+          %{
+            step_id: step.id,
+            reason: "success",
+            output_dataclip: ~s({"foo": "bar"}),
+            output_dataclip_id: Ecto.UUID.generate(),
+            run_id: run.id,
+            project_id: workflow.project_id
+          },
+          :erase_all
+        )
+
+      step =
+        step
+        |> Repo.preload(output_dataclip: Invocation.Query.dataclip_with_body())
+
+      assert step.exit_reason == "success"
+      assert step.output_dataclip.body == nil
+
+      assert step.output_dataclip.wiped_at ==
+               DateTime.utc_now() |> DateTime.truncate(:second)
     end
 
     test "with invalid data returns error changeset" do
@@ -654,6 +691,37 @@ defmodule Lightning.RunsTest do
       assert reloaded_unfinished_step.exit_reason == "lost"
 
       assert reloaded_unfinished_step.finished_at != nil
+    end
+  end
+
+  describe "wipe_dataclips/1" do
+    test "clears the dataclip body and request fields" do
+      project = insert(:project)
+      dataclip = insert(:http_request_dataclip, project: project)
+
+      %{triggers: [trigger]} =
+        workflow = insert(:simple_workflow, project: project)
+
+      %{runs: [run]} =
+        work_order_for(trigger, workflow: workflow, dataclip: dataclip)
+        |> insert()
+
+      assert dataclip.body
+      assert dataclip.request
+      refute dataclip.wiped_at
+
+      :ok = Runs.wipe_dataclips(run)
+
+      # dataclip body is cleared
+      query = from(Invocation.Dataclip, select: [:wiped_at, :body, :request])
+
+      updated_dataclip = Lightning.Repo.get(query, dataclip.id)
+
+      assert updated_dataclip.wiped_at ==
+               DateTime.utc_now() |> DateTime.truncate(:second)
+
+      refute updated_dataclip.body
+      refute updated_dataclip.request
     end
   end
 end

@@ -1,4 +1,4 @@
-defmodule LightningWeb.RunJson do
+defmodule LightningWeb.RunWithOptions do
   @moduledoc false
 
   alias Lightning.AdaptorRegistry
@@ -6,6 +6,12 @@ defmodule LightningWeb.RunJson do
   alias Lightning.Workflows.Edge
   alias Lightning.Workflows.Job
   alias Lightning.Workflows.Trigger
+  alias LightningWeb.RunOptions
+
+  @spec render(Run.t(), RunOptions.t()) :: map()
+  def render(%Run{} = run, options) do
+    run |> render() |> Map.put("options", options)
+  end
 
   def render(%Run{} = run) do
     %{

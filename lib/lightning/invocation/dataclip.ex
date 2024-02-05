@@ -43,6 +43,7 @@ defmodule Lightning.Invocation.Dataclip do
     field :body, :map, load_in_query: false
     field :request, :map, load_in_query: false
     field :type, Ecto.Enum, values: @source_types
+    field :wiped_at, :utc_datetime
     belongs_to :project, Project
 
     has_one :source_step, Step, foreign_key: :output_dataclip_id
@@ -56,23 +57,22 @@ defmodule Lightning.Invocation.Dataclip do
     |> validate()
   end
 
-  defp remove_configuration(
-         %Ecto.Changeset{
-           valid?: true,
-           changes: %{
-             body: body
-           }
-         } =
-           changeset
-       )
-       when is_map(body) do
-    body = Map.delete(body, "configuration")
+  defp remove_configuration(%{valid?: true} = changeset) do
+    case get_change(changeset, :body) do
+      %{} = body ->
+        body = Map.delete(body, "configuration")
+        put_change(changeset, :body, body)
 
-    put_change(changeset, :body, body)
+      nil ->
+        changeset
+
+      _other ->
+        add_error(changeset, :body, "must be a map")
+    end
   end
 
   defp remove_configuration(changeset) do
-    add_error(changeset, :body, "must be a map")
+    changeset
   end
 
   @doc false

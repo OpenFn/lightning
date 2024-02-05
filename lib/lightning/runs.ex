@@ -127,6 +127,20 @@ defmodule Lightning.Runs do
     |> Repo.one()
   end
 
+  @doc """
+  Clears the body and request fields of the dataclip associated with the given run.
+  """
+  @spec wipe_dataclips(Run.t()) :: :ok
+  def wipe_dataclips(%Run{} = run) do
+    query =
+      from(d in Ecto.assoc(run, :dataclip),
+        update: [set: [request: nil, body: nil, wiped_at: ^DateTime.utc_now()]]
+      )
+
+    {1, _rows} = Repo.update_all(query, [])
+    :ok
+  end
+
   def get_credential(%Run{} = run, id) do
     from(c in Ecto.assoc(run, [:workflow, :jobs, :credential]),
       where: c.id == ^id
@@ -240,10 +254,10 @@ defmodule Lightning.Runs do
     Handlers.StartStep.call(params)
   end
 
-  @spec complete_step(map()) ::
+  @spec complete_step(map(), Lightning.Projects.Project.retention_policy_type()) ::
           {:ok, Lightning.Invocation.Step.t()} | {:error, Ecto.Changeset.t()}
-  def complete_step(params) do
-    Handlers.CompleteStep.call(params)
+  def complete_step(params, retention_policy \\ :retain_all) do
+    Handlers.CompleteStep.call(params, retention_policy)
   end
 
   @spec mark_run_lost(Lightning.Run.t()) ::

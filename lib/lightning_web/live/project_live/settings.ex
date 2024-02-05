@@ -105,6 +105,7 @@ defmodule LightningWeb.ProjectLive.Settings do
        can_delete_project: can_delete_project,
        can_edit_project_name: can_edit_project_name,
        can_edit_project_description: can_edit_project_description,
+       can_edit_data_retention: project_user.role in [:owner, :admin],
        can_create_webhook_auth_method: can_create_webhook_auth_method,
        can_create_project_credential: can_create_project_credential,
        can_edit_webhook_auth_method: can_edit_webhook_auth_method,
@@ -210,6 +211,15 @@ defmodule LightningWeb.ProjectLive.Settings do
   # validate without input can be ignored
   def handle_event("validate", _params, socket) do
     {:noreply, socket}
+  end
+
+  def handle_event("cancel-retention-change", _params, socket) do
+    {:noreply,
+     socket
+     |> assign(
+       :project_changeset,
+       Projects.change_project(socket.assigns.project)
+     )}
   end
 
   def handle_event("save", %{"project" => project_params}, socket) do
@@ -577,6 +587,10 @@ defmodule LightningWeb.ProjectLive.Settings do
     ~H"""
     <%= @project_user.user.first_name %> <%= @project_user.user.last_name %>
     """
+  end
+
+  defp checked?(changeset, input_id) do
+    Ecto.Changeset.fetch_field!(changeset, :retention_policy) == input_id
   end
 
   defp save_project(socket, project_params) do

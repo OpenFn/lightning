@@ -8,6 +8,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
   alias Lightning.Invocation
   alias Lightning.Policies.Permissions
   alias Lightning.Policies.ProjectUsers
+  alias Lightning.Projects
   alias Lightning.Runs
   alias Lightning.Runs.Events.StepCompleted
   alias Lightning.Workflows
@@ -102,6 +103,11 @@ defmodule LightningWeb.WorkflowLive.Edit do
                   form={@manual_run_form}
                   dataclips={@selectable_dataclips}
                   disabled={!@can_run_job}
+                  project={@project}
+                  admin_contacts={@admin_contacts}
+                  can_edit_data_retention={@can_edit_data_retention}
+                  follow_run_id={@follow_run_id}
+                  show_wiped_dataclip_selector={@show_wiped_dataclip_selector}
                 />
               </:collapsible_panel>
               <:footer>
@@ -121,17 +127,25 @@ defmodule LightningWeb.WorkflowLive.Edit do
                     <.button
                       id="save-and-run"
                       phx-hook="DefaultRunViaCtrlEnter"
-                      {if retry_from_here(@step, @manual_run_form), do:
+                      {if step_retryable?(@step, @manual_run_form, @selectable_dataclips), do:
                         [type: "button", "phx-click": "rerun", "phx-value-run_id": @follow_run_id, "phx-value-step_id": @step.id],
                       else:
                           [type: "submit", form: @manual_run_form.id]}
                       class={[
                         "relative inline-flex items-center",
-                        retry_from_here(@step, @manual_run_form) && "rounded-r-none"
+                        step_retryable?(
+                          @step,
+                          @manual_run_form,
+                          @selectable_dataclips
+                        ) && "rounded-r-none"
                       ]}
                       disabled={
                         @save_and_run_disabled ||
-                          processing(@follow_run_id, @step)
+                          processing(@follow_run_id, @step) ||
+                          selected_dataclip_wiped?(
+                            @manual_run_form,
+                            @selectable_dataclips
+                          )
                       }
                     >
                       <%= if processing(@follow_run_id, @step) do %>
@@ -140,7 +154,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
                           class="w-4 h-4 animate-spin mr-1"
                         /> Processing
                       <% else %>
-                        <%= if retry_from_here(@step, @manual_run_form) do %>
+                        <%= if step_retryable?(@step, @manual_run_form, @selectable_dataclips) do %>
                           <.icon name="hero-arrow-path-mini" class="w-4 h-4 mr-1" />
                           Rerun from here
                         <% else %>
@@ -150,7 +164,13 @@ defmodule LightningWeb.WorkflowLive.Edit do
                       <% end %>
                     </.button>
                     <div
-                      :if={retry_from_here(@step, @manual_run_form)}
+                      :if={
+                        step_retryable?(
+                          @step,
+                          @manual_run_form,
+                          @selectable_dataclips
+                        )
+                      }
                       class="relative -ml-px block"
                     >
                       <.button
@@ -413,8 +433,26 @@ defmodule LightningWeb.WorkflowLive.Edit do
     """
   end
 
-  defp retry_from_here(step, form),
-    do: step && step.input_dataclip_id == form[:dataclip_id].value
+  defp step_retryable?(step, form, selectable_dataclips) do
+    step_dataclip_id = step && step.input_dataclip_id
+
+    selected_dataclip =
+      Enum.find(selectable_dataclips, fn dataclip ->
+        dataclip.id == form[:dataclip_id].value
+      end)
+
+    selected_dataclip && selected_dataclip.id == step_dataclip_id &&
+      is_nil(selected_dataclip.wiped_at)
+  end
+
+  defp selected_dataclip_wiped?(form, selectable_dataclips) do
+    selected_dataclip =
+      Enum.find(selectable_dataclips, fn dataclip ->
+        dataclip.id == form[:dataclip_id].value
+      end)
+
+    selected_dataclip && !is_nil(selected_dataclip.wiped_at)
+  end
 
   defp processing(run_id, step), do: run_id && !step
 
@@ -549,6 +587,13 @@ defmodule LightningWeb.WorkflowLive.Edit do
               :edit_webhook_auth_method,
               current_user,
               project_user
+            ),
+          can_edit_data_retention:
+            Permissions.can?(
+              ProjectUsers,
+              :edit_data_retention,
+              current_user,
+              project_user
             )
         )
 
@@ -583,12 +628,19 @@ defmodule LightningWeb.WorkflowLive.Edit do
       can_run_job:
         Permissions.can?(ProjectUsers, :run_job, current_user, project_user),
       can_rerun_job:
-        Permissions.can?(ProjectUsers, :rerun_job, current_user, project_user)
+        Permissions.can?(ProjectUsers, :rerun_job, current_user, project_user),
+      can_edit_data_retention:
+        Permissions.can?(
+          ProjectUsers,
+          :edit_data_retention,
+          current_user,
+          project_user
+        )
     )
   end
 
   @impl true
-  def mount(_params, _session, socket) do
+  def mount(_params, _session, %{assigns: assigns} = socket) do
     {:ok,
      socket
      |> authorize()
@@ -607,7 +659,9 @@ defmodule LightningWeb.WorkflowLive.Edit do
        workflow: nil,
        workflow_name: "",
        workflow_params: %{},
-       selected_credential_type: nil
+       selected_credential_type: nil,
+       show_wiped_dataclip_selector: false,
+       admin_contacts: Projects.list_project_admin_emails(assigns.project.id)
      )}
   end
 
@@ -780,6 +834,10 @@ defmodule LightningWeb.WorkflowLive.Edit do
      |> put_flash(:info, "Copied webhook URL to clipboard")}
   end
 
+  def handle_event("toggle_wiped_dataclip_selector", _, socket) do
+    {:noreply, update(socket, :show_wiped_dataclip_selector, fn val -> !val end)}
+  end
+
   def handle_event("manual_run_change", %{"manual" => params}, socket) do
     changeset =
       WorkOrders.Manual.new(
@@ -907,7 +965,12 @@ defmodule LightningWeb.WorkflowLive.Edit do
         socket
       )
       when step.job_id === socket.assigns.selected_job.id do
-    dataclip = Invocation.get_dataclip_details!(step.input_dataclip_id)
+    form = socket.assigns.manual_run_form
+    selected_dataclip_id = Phoenix.HTML.Form.input_value(form, :dataclip_id)
+
+    dataclip =
+      selected_dataclip_id &&
+        Invocation.get_dataclip_details!(selected_dataclip_id)
 
     selectable_dataclips =
       maybe_add_selected_dataclip(
@@ -916,12 +979,10 @@ defmodule LightningWeb.WorkflowLive.Edit do
       )
 
     manual_run_form_changeset =
-      socket.assigns.manual_run_form.source
-      |> Ecto.Changeset.change(dataclip_id: step.input_dataclip_id)
+      Ecto.Changeset.change(form.source, dataclip_id: step.input_dataclip_id)
 
     manual_run_form =
-      %{socket.assigns.manual_run_form | source: manual_run_form_changeset}
-      |> to_form(id: "manual_run_form")
+      to_form(%{form | source: manual_run_form_changeset}, id: "manual_run_form")
 
     {:noreply,
      socket
@@ -980,8 +1041,13 @@ defmodule LightningWeb.WorkflowLive.Edit do
   end
 
   defp get_selected_dataclip(run_id, job_id) do
-    Invocation.get_dataclip_for_run_and_job(run_id, job_id) ||
+    dataclip = Invocation.get_dataclip_for_run_and_job(run_id, job_id)
+
+    if is_nil(dataclip) and Invocation.get_step_count_for_run(run_id) == 0 do
       Invocation.get_dataclip_for_run(run_id)
+    else
+      dataclip
+    end
   end
 
   defp maybe_add_selected_dataclip(selectable_dataclips, nil) do
@@ -989,8 +1055,11 @@ defmodule LightningWeb.WorkflowLive.Edit do
   end
 
   defp maybe_add_selected_dataclip(selectable_dataclips, dataclip) do
-    if Enum.find(selectable_dataclips, fn dc -> dc.id == dataclip.id end) do
-      selectable_dataclips
+    existing_index =
+      Enum.find_index(selectable_dataclips, fn dc -> dc.id == dataclip.id end)
+
+    if existing_index do
+      List.replace_at(selectable_dataclips, existing_index, dataclip)
     else
       [dataclip | selectable_dataclips]
     end
@@ -1227,7 +1296,15 @@ defmodule LightningWeb.WorkflowLive.Edit do
   defp maybe_follow_run(socket, query_params) do
     case query_params do
       %{"a" => run_id} when is_binary(run_id) ->
-        socket |> assign(follow_run_id: run_id)
+        step =
+          Invocation.get_step_for_run_and_job(
+            run_id,
+            socket.assigns.selected_job.id
+          )
+
+        Runs.subscribe(%Lightning.Run{id: run_id})
+
+        socket |> assign(follow_run_id: run_id, step: step)
 
       _ ->
         socket |> assign(follow_run_id: nil)

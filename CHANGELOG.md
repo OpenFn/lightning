@@ -12,6 +12,16 @@ and this project adheres to
 
 - Persist impact tracking configuration and reports
   [#1684](https://github.com/OpenFn/Lightning/issues/1684)
+- Add zero-persistence project setting
+  [#1209](https://github.com/OpenFn/Lightning/issues/1209)
+- Wipe dataclip after use when zero-persistence is enabled
+  [#1212](https://github.com/OpenFn/Lightning/issues/1212)
+- Show appropriate message when a wiped dataclip is viewed
+  [#1211](https://github.com/OpenFn/Lightning/issues/1211)
+- Disable selecting work orders having wiped dataclips in the history page
+  [#1210](https://github.com/OpenFn/Lightning/issues/1210)
+- Hide rerun button in inspector when the selected step has a wiped dataclip
+  [#1639](https://github.com/OpenFn/Lightning/issues/1639)
 
 ### Changed
 
@@ -22,7 +32,7 @@ and this project adheres to
   (e.g., {"username": "come-on-in", "password": ""})
   [#1585](https://github.com/OpenFn/Lightning/issues/1585)
 - Fixed bug that was duplicating inbound http_requests, resulting in unnecessary
-  data storage  
+  data storage
   [#1695](https://github.com/OpenFn/Lightning/issues/1695)
 
 ## [v2.0.0-rc8] - 2024-01-30
@@ -64,7 +74,8 @@ and this project adheres to
 
 ### Fixed
 
-- Fix Run via Docker [#1653](https://github.com/OpenFn/Lightning/issues/1653)
+- Fix Run via Docker
+  [#1653](https://github.com/OpenFn/Lightning/issues/1653)
 - Fix remaining warnings, enable "warnings as errors"
   [#1642](https://github.com/OpenFn/Lightning/issues/1642)
 - Fix workflow dashboard bug when viewed for newly created workflows with only

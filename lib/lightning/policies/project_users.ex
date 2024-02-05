@@ -26,6 +26,7 @@ defmodule Lightning.Policies.ProjectUsers do
           | :create_webhook_auth_method
           | :create_project_credential
           | :edit_webhook_auth_method
+          | :edit_data_retention
 
   @doc """
   authorize/3 takes an action, a user, and a project. It checks the user's role
@@ -70,6 +71,10 @@ defmodule Lightning.Policies.ProjectUsers do
   def authorize(action, %User{} = user, %Project{} = project) do
     project_user = Projects.get_project_user(project, user)
     authorize(action, user, project_user)
+  end
+
+  def authorize(:edit_data_retention, _user, %ProjectUser{role: role}) do
+    role in [:owner, :admin]
   end
 
   def authorize(action, %User{}, %ProjectUser{} = project_user)

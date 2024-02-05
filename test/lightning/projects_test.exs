@@ -524,6 +524,58 @@ defmodule Lightning.ProjectsTest do
     end
   end
 
+  describe "project_retention_policy_for/1" do
+    test "returns the correct retention policy for the project associated to the Run" do
+      for policy <- Ecto.Enum.values(Project, :retention_policy) do
+        project = insert(:project, retention_policy: policy)
+        dataclip = insert(:dataclip, project: project)
+
+        %{triggers: [trigger]} =
+          workflow = insert(:simple_workflow, project: project)
+
+        %{runs: [run]} =
+          work_order_for(trigger, workflow: workflow, dataclip: dataclip)
+          |> insert()
+
+        assert Projects.project_retention_policy_for(run) == policy
+      end
+    end
+  end
+
+  describe "list_project_admin_emails/1" do
+    test "lists emails for users with admin or owner roles in the project" do
+      project = insert(:project)
+
+      owner =
+        insert(:project_user, project: project, role: :owner, user: build(:user))
+
+      admin =
+        insert(:project_user, project: project, role: :admin, user: build(:user))
+
+      editor =
+        insert(:project_user,
+          project: project,
+          role: :editor,
+          user: build(:user)
+        )
+
+      viewer =
+        insert(:project_user,
+          project: project,
+          role: :viewer,
+          user: build(:user)
+        )
+
+      emails = Projects.list_project_admin_emails(project.id)
+
+      assert owner.user.email in emails
+      assert admin.user.email in emails
+
+      refute editor.user.email in emails
+      refute viewer.user.email in emails
+    end
+  end
+
   describe "The default Oban function Projects.perform/1" do
     test "removes all projects past deletion date when called with type 'purge_deleted'" do
       project_to_delete =

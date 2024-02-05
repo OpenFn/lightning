@@ -5,11 +5,13 @@ defmodule LightningWeb.RunChannel do
   use LightningWeb, :channel
 
   alias Lightning.Credentials
+  alias Lightning.Projects
   alias Lightning.Repo
   alias Lightning.Runs
   alias Lightning.Scrubber
   alias Lightning.Workers
-  alias LightningWeb.RunJson
+  alias LightningWeb.RunOptions
+  alias LightningWeb.RunWithOptions
 
   require Jason.Helpers
   require Logger
@@ -32,7 +34,8 @@ defmodule LightningWeb.RunChannel do
          id: id,
          run: run,
          project_id: project_id,
-         scrubber: nil
+         scrubber: nil,
+         retention_policy: Projects.project_retention_policy_for(run)
        })}
     else
       {:error, :not_found} ->
@@ -48,8 +51,12 @@ defmodule LightningWeb.RunChannel do
   end
 
   @impl true
-  def handle_in("fetch:plan", _, socket) do
-    {:reply, {:ok, RunJson.render(socket.assigns.run)}, socket}
+  def handle_in("fetch:plan", _, %{assigns: assigns} = socket) do
+    options = %RunOptions{
+      output_dataclips: include_output_dataclips?(assigns.retention_policy)
+    }
+
+    {:reply, {:ok, RunWithOptions.render(assigns.run, options)}, socket}
   end
 
   def handle_in("run:start", _, socket) do
@@ -133,6 +140,10 @@ defmodule LightningWeb.RunChannel do
   def handle_in("fetch:dataclip", _, socket) do
     body = Runs.get_input(socket.assigns.run)
 
+    if socket.assigns.retention_policy == :erase_all do
+      Runs.wipe_dataclips(socket.assigns.run)
+    end
+
     {:reply, {:ok, {:binary, body}}, socket}
   end
 
@@ -167,7 +178,7 @@ defmodule LightningWeb.RunChannel do
       "project_id" => socket.assigns.project_id
     }
     |> Enum.into(payload)
-    |> Runs.complete_step()
+    |> Runs.complete_step(socket.assigns.retention_policy)
     |> case do
       {:error, changeset} ->
         {:reply, {:error, LightningWeb.ChangesetJSON.error(changeset)}, socket}
@@ -194,6 +205,10 @@ defmodule LightningWeb.RunChannel do
     Runs.get(id,
       include: [workflow: [:triggers, :edges, jobs: [:credential]]]
     )
+  end
+
+  defp include_output_dataclips?(retention_policy) do
+    retention_policy != :erase_all
   end
 
   defp replace_reason_with_exit_reason(params) do
