@@ -624,8 +624,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
         ),
       can_run_workflow:
         Permissions.can?(ProjectUsers, :run_workflow, current_user, project_user),
-      can_rerun_job:
-        Permissions.can?(ProjectUsers, :rerun_job, current_user, project_user),
       can_edit_data_retention:
         Permissions.can?(
           ProjectUsers,

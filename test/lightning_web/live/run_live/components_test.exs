@@ -291,7 +291,7 @@ defmodule LightningWeb.RunLive.ComponentsTest do
         step: step,
         run: run,
         project_id: project_id,
-        can_rerun_job: true,
+        can_run_workflow: true,
         can_edit_data_retention: true
       )
 
@@ -321,7 +321,7 @@ defmodule LightningWeb.RunLive.ComponentsTest do
         step: step,
         run: run,
         project_id: project_id,
-        can_rerun_job: true,
+        can_run_workflow: true,
         can_edit_data_retention: false
       )
 
@@ -385,7 +385,7 @@ defmodule LightningWeb.RunLive.ComponentsTest do
         step: step,
         run: run,
         project_id: project_id,
-        can_rerun_job: true,
+        can_run_workflow: true,
         can_edit_data_retention: true
       )
 
@@ -415,7 +415,7 @@ defmodule LightningWeb.RunLive.ComponentsTest do
         step: step,
         run: run,
         project_id: project_id,
-        can_rerun_job: true,
+        can_run_workflow: true,
         can_edit_data_retention: false
       )
 
