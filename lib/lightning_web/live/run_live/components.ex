@@ -416,33 +416,7 @@ defmodule LightningWeb.RunLive.Components do
             <% end %>
             <div class="flex gap-1 text-xs leading-5">
               <%= if @can_rerun_job && @step.exit_reason do %>
-                <span
-                  :if={is_nil(@step.input_dataclip_id)}
-                  id={@step.id}
-                  class="text-indigo-300 cursor-pointer"
-                  phx-hook="Tooltip"
-                  data-placement="right"
-                  data-allow-html="true"
-                  aria-label={
-                    rerun_zero_persistence_tooltip_message(
-                      @project_id,
-                      @can_edit_data_retention
-                    )
-                  }
-                >
-                  rerun
-                </span>
-                <span
-                  :if={@step.input_dataclip_id}
-                  id={@step.id}
-                  class="text-indigo-400 hover:underline hover:underline-offset-2 hover:text-indigo-500 cursor-pointer"
-                  phx-click="rerun"
-                  phx-value-run_id={@run.id}
-                  phx-value-step_id={@step.id}
-                  title="Rerun workflow from here"
-                >
-                  rerun
-                </span>/
+                <.step_rerun_tag {assigns} />/
               <% end %>
               <.link
                 class="text-indigo-400 hover:underline hover:underline-offset-2 hover:text-indigo-500 cursor-pointer"
@@ -483,6 +457,39 @@ defmodule LightningWeb.RunLive.Components do
       </div>
       <div role="cell"></div>
     </div>
+    """
+  end
+
+  defp step_rerun_tag(assigns) do
+    ~H"""
+    <%= if @step.input_dataclip && is_nil(@step.input_dataclip.wiped_at) do %>
+      <span
+        id={@step.id}
+        class="text-indigo-400 hover:underline hover:underline-offset-2 hover:text-indigo-500 cursor-pointer"
+        phx-click="rerun"
+        phx-value-run_id={@run.id}
+        phx-value-step_id={@step.id}
+        title="Rerun workflow from here"
+      >
+        rerun
+      </span>
+    <% else %>
+      <span
+        id={@step.id}
+        class="text-indigo-300 cursor-pointer"
+        phx-hook="Tooltip"
+        data-placement="right"
+        data-allow-html="true"
+        aria-label={
+          rerun_zero_persistence_tooltip_message(
+            @project_id,
+            @can_edit_data_retention
+          )
+        }
+      >
+        rerun
+      </span>
+    <% end %>
     """
   end
 

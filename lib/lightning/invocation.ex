@@ -409,7 +409,11 @@ defmodule Lightning.Invocation do
       as: :workflow,
       where: workflow.project_id == ^project_id,
       select: workorder,
-      preload: [workflow: workflow, runs: [steps: :job], dataclip: []],
+      preload: [
+        workflow: workflow,
+        runs: [steps: [:job, :input_dataclip]],
+        dataclip: []
+      ],
       order_by: [desc_nulls_first: workorder.last_activity],
       distinct: true
     )

@@ -52,8 +52,8 @@ defmodule LightningWeb.RunLive.Streaming do
       nil ->
         {nil, []}
 
-      %Dataclip{body: nil} ->
-        {nil, []}
+      %Dataclip{id: id, type: type, body: nil, wiped_at: %{} = wiped_at} ->
+        {%{id: id, step_id: step.id, type: type, wiped_at: wiped_at}, []}
 
       %Dataclip{id: id, body: body, type: type, wiped_at: wiped_at} ->
         {%{id: id, step_id: step.id, type: type, wiped_at: wiped_at},
