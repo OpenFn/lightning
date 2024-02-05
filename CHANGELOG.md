@@ -10,6 +10,14 @@ and this project adheres to
 
 ### Added
 
+### Changed
+
+### Fixed
+
+## [v2.0.0-rc9] 2024-02-05
+
+### Added
+
 - Persist impact tracking configuration and reports
   [#1684](https://github.com/OpenFn/Lightning/issues/1684)
 - Add zero-persistence project setting
