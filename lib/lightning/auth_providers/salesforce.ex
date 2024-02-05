@@ -48,44 +48,8 @@ defmodule Lightning.AuthProviders.Salesforce do
   - An OAuth token on success.
   """
   def get_token(client, params) do
-    Common.get_token(client, params) |> introspect()
+    Common.get_token(client, params)
   end
-
-  defp introspect({:ok, %{token: token} = client}) do
-    %{
-      access_token: access_token,
-      other_params: %{"instance_url" => instance_url}
-    } = token
-
-    config = Common.get_config(:salesforce)
-
-    url = "#{instance_url}/services/oauth2/introspect"
-
-    Tesla.post(
-      url,
-      "token=#{access_token}&client_id=#{config[:client_id]}&client_secret=#{config[:client_secret]}&token_type_hint=access_token",
-      headers: [
-        {"Accept", "application/json"},
-        {"Content-Type", "application/x-www-form-urlencoded"}
-      ]
-    )
-    |> handle_introspection_result(client)
-  end
-
-  defp introspect(response), do: response
-
-  defp handle_introspection_result({:ok, %{status: status, body: body}}, client)
-       when status in 200..202 do
-    %{token: token} = client
-    expires_at = Jason.decode!(body) |> Map.get("exp")
-    updated_token = Map.update!(token, :expires_at, fn _ -> expires_at end)
-    updated_client = Map.update!(client, :token, fn _ -> updated_token end)
-    {:ok, updated_client}
-  end
-
-  defp handle_introspection_result({:ok, %{status: status}}, client)
-       when status not in 200..202,
-       do: {:ok, client}
 
   @doc """
   Refreshes the Salesforce authentication token.
@@ -97,7 +61,8 @@ defmodule Lightning.AuthProviders.Salesforce do
   ## Returns
   - A refreshed OAuth token on success.
   """
-  def refresh_token(client, token), do: Common.refresh_token(client, token)
+  def refresh_token(client, token),
+    do: Common.refresh_token(client, token)
 
   @doc """
   Retrieves user information from Salesforce using the provided OAuth token.

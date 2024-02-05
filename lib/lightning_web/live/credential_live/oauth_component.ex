@@ -579,7 +579,7 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
     if socket |> changed?(:token) and token_body_changeset.valid? do
       pid = self()
 
-      if OAuth2.AccessToken.expired?(token) do
+      if is_nil(token.expires_at) or OAuth2.AccessToken.expired?(token) do
         Logger.debug("Refreshing expired token")
 
         Task.start(fn -> refresh_token(pid, socket) end)
