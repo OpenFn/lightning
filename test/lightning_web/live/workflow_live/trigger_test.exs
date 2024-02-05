@@ -26,7 +26,7 @@ defmodule LightningWeb.WorkflowLive.TriggerTest do
     workflow: workflow,
     trigger: trigger
   } do
-    for conn <- project_user_conns(project, [:owner, :admin]) do
+    for conn <- build_project_user_conns(project, [:owner, :admin]) do
       {:ok, view, _html} =
         live(
           conn,
@@ -37,7 +37,7 @@ defmodule LightningWeb.WorkflowLive.TriggerTest do
       assert view |> element("#webhooks_auth_method_modal") |> has_element?()
     end
 
-    for conn <- project_user_conns(project, [:editor, :viewer]) do
+    for conn <- build_project_user_conns(project, [:editor, :viewer]) do
       {:ok, view, _html} =
         live(
           conn,
@@ -57,7 +57,8 @@ defmodule LightningWeb.WorkflowLive.TriggerTest do
     workflow: workflow,
     trigger: trigger
   } do
-    for conn <- project_user_conns(project, [:owner, :admin, :editor, :viewer]) do
+    for conn <-
+          build_project_user_conns(project, [:owner, :admin, :editor, :viewer]) do
       {:ok, _view, html} =
         live(
           conn,
@@ -91,7 +92,7 @@ defmodule LightningWeb.WorkflowLive.TriggerTest do
        } do
     modal_id = "webhooks_auth_method_modal"
 
-    for conn <- project_user_conns(project, [:editor, :viewer]) do
+    for conn <- build_project_user_conns(project, [:editor, :viewer]) do
       {:ok, view, _html} =
         live(
           conn,
@@ -101,7 +102,7 @@ defmodule LightningWeb.WorkflowLive.TriggerTest do
       refute view |> element("##{modal_id}") |> has_element?()
     end
 
-    for conn <- project_user_conns(project, [:owner, :admin]) do
+    for conn <- build_project_user_conns(project, [:owner, :admin]) do
       {:ok, view, _html} =
         live(
           conn,
@@ -168,7 +169,7 @@ defmodule LightningWeb.WorkflowLive.TriggerTest do
        } do
     modal_id = "webhooks_auth_method_modal"
 
-    for conn <- project_user_conns(project, [:editor, :viewer]) do
+    for conn <- build_project_user_conns(project, [:editor, :viewer]) do
       {:ok, view, _html} =
         live(
           conn,
@@ -178,7 +179,7 @@ defmodule LightningWeb.WorkflowLive.TriggerTest do
       refute view |> element("##{modal_id}") |> has_element?()
     end
 
-    for conn <- project_user_conns(project, [:owner, :admin]) do
+    for conn <- build_project_user_conns(project, [:owner, :admin]) do
       {:ok, view, _html} =
         live(
           conn,
@@ -251,7 +252,7 @@ defmodule LightningWeb.WorkflowLive.TriggerTest do
 
     modal_id = "webhooks_auth_method_modal"
 
-    for conn <- project_user_conns(project, [:editor, :viewer]) do
+    for conn <- build_project_user_conns(project, [:editor, :viewer]) do
       {:ok, view, _html} =
         live(
           conn,
@@ -261,7 +262,7 @@ defmodule LightningWeb.WorkflowLive.TriggerTest do
       refute view |> element("##{modal_id}") |> has_element?()
     end
 
-    for conn <- project_user_conns(project, [:owner, :admin]) do
+    for conn <- build_project_user_conns(project, [:owner, :admin]) do
       {:ok, view, _html} =
         live(
           conn,
@@ -324,7 +325,7 @@ defmodule LightningWeb.WorkflowLive.TriggerTest do
         triggers: [trigger]
       )
 
-    for conn <- project_user_conns(project, [:editor, :viewer]) do
+    for conn <- build_project_user_conns(project, [:editor, :viewer]) do
       {:ok, view, _html} =
         live(
           conn,
@@ -334,7 +335,7 @@ defmodule LightningWeb.WorkflowLive.TriggerTest do
       refute view |> element("#webhooks_auth_method_modal") |> has_element?()
     end
 
-    for conn <- project_user_conns(project, [:owner, :admin]) do
+    for conn <- build_project_user_conns(project, [:owner, :admin]) do
       {:ok, view, _html} =
         live(
           conn,

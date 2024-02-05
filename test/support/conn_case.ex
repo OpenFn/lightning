@@ -164,7 +164,7 @@ defmodule LightningWeb.ConnCase do
 
   @doc """
   """
-  def project_user_conns(project, roles) do
+  def build_project_user_conns(project, roles) do
     Enum.map(roles, fn role ->
       project_user =
         Lightning.Factories.insert(:project_user,

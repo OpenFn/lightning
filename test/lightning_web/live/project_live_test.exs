@@ -1318,7 +1318,8 @@ defmodule LightningWeb.ProjectLiveTest do
       project = insert(:project)
       auth_methods = insert_list(4, :webhook_auth_method, project: project)
 
-      for conn <- project_user_conns(project, [:editor, :admin, :owner, :viewer]) do
+      for conn <-
+            build_project_user_conns(project, [:editor, :admin, :owner, :viewer]) do
         {:ok, _view, html} =
           live(
             conn,
@@ -1340,7 +1341,7 @@ defmodule LightningWeb.ProjectLiveTest do
       settings_path =
         Routes.project_project_settings_path(conn, :index, project.id)
 
-      for conn <- project_user_conns(project, [:owner, :admin]) do
+      for conn <- build_project_user_conns(project, [:owner, :admin]) do
         {:ok, view, _html} =
           live(
             conn,
@@ -1398,7 +1399,7 @@ defmodule LightningWeb.ProjectLiveTest do
         assert html =~ credential_name
       end
 
-      for conn <- project_user_conns(project, [:editor, :viewer]) do
+      for conn <- build_project_user_conns(project, [:editor, :viewer]) do
         {:ok, view, _html} =
           live(
             conn,
@@ -1457,7 +1458,7 @@ defmodule LightningWeb.ProjectLiveTest do
       settings_path =
         Routes.project_project_settings_path(conn, :index, project.id)
 
-      for conn <- project_user_conns(project, [:owner, :admin]) do
+      for conn <- build_project_user_conns(project, [:owner, :admin]) do
         {:ok, view, _html} =
           live(
             conn,
@@ -1499,7 +1500,7 @@ defmodule LightningWeb.ProjectLiveTest do
         assert html =~ credential_name
       end
 
-      for conn <- project_user_conns(project, [:editor, :viewer]) do
+      for conn <- build_project_user_conns(project, [:editor, :viewer]) do
         {:ok, view, _html} =
           live(
             conn,
