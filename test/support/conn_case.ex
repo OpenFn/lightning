@@ -161,4 +161,20 @@ defmodule LightningWeb.ConnCase do
     |> Phoenix.ConnTest.init_test_session(%{})
     |> Plug.Conn.put_session(:user_token, token)
   end
+
+  @doc """
+  """
+  def build_project_user_conns(project, roles) do
+    Enum.map(roles, fn role ->
+      project_user =
+        Lightning.Factories.insert(:project_user,
+          role: role,
+          project: project,
+          user: Lightning.Factories.build(:user)
+        )
+
+      Phoenix.ConnTest.build_conn()
+      |> log_in_user(project_user.user)
+    end)
+  end
 end

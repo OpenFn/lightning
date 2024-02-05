@@ -18,10 +18,10 @@ defmodule Lightning.Policies.Permissions do
 
   Here is an example of how we the `Lightning.Policies.Permissions.can/4` interface to check if the a user can edit a job or not
   ```elixir
-  can_edit_job = Lightning.Policies.ProjectUsers |> Lightning.Policies.Permissions.can?(:edit_job, socket.assigns.current_user, socket.assigns.project)
+  can_edit_workflow = Lightning.Policies.ProjectUsers |> Lightning.Policies.Permissions.can?(:edit_workflow, socket.assigns.current_user, socket.assigns.project)
 
-  if can_edit_job do
-    # allow user to edit the job
+  if can_edit_workflow do
+    # allow user to edit the workflow
   else
     # quick user out
   end

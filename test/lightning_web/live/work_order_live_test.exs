@@ -143,7 +143,7 @@ defmodule LightningWeb.WorkOrderLiveTest do
           id: work_order.id,
           work_order: work_order,
           project: project,
-          can_rerun_job: true,
+          can_run_workflow: true,
           can_edit_data_retention: true
         )
 
@@ -165,7 +165,8 @@ defmodule LightningWeb.WorkOrderLiveTest do
           work_order: work_order,
           show_details: true,
           project: project,
-          can_rerun_job: true,
+          can_run_workflow: true,
+          can_run_workflow: true,
           can_edit_data_retention: true
         )
 
@@ -202,7 +203,7 @@ defmodule LightningWeb.WorkOrderLiveTest do
           id: work_order.id,
           work_order: work_order,
           project: project,
-          can_rerun_job: true,
+          can_run_workflow: true,
           can_edit_data_retention: true
         )
 
@@ -247,7 +248,7 @@ defmodule LightningWeb.WorkOrderLiveTest do
           id: work_order.id,
           work_order: work_order,
           project: project,
-          can_rerun_job: true,
+          can_run_workflow: true,
           can_edit_data_retention: true
         )
 
@@ -284,7 +285,7 @@ defmodule LightningWeb.WorkOrderLiveTest do
           id: work_order.id,
           work_order: work_order,
           project: project,
-          can_rerun_job: true,
+          can_run_workflow: true,
           can_edit_data_retention: false
         )
 
@@ -320,7 +321,7 @@ defmodule LightningWeb.WorkOrderLiveTest do
           id: work_order.id,
           work_order: %{work_order | dataclip: insert(:dataclip)},
           project: project,
-          can_rerun_job: true,
+          can_run_workflow: true,
           can_edit_data_retention: false
         )
         |> Floki.parse_fragment!()
@@ -368,7 +369,7 @@ defmodule LightningWeb.WorkOrderLiveTest do
           id: work_order.id,
           work_order: work_order,
           project: project,
-          can_rerun_job: true,
+          can_run_workflow: true,
           can_edit_data_retention: true
         )
 
@@ -407,7 +408,7 @@ defmodule LightningWeb.WorkOrderLiveTest do
           id: work_order.id,
           work_order: work_order,
           project: project,
-          can_rerun_job: true,
+          can_run_workflow: true,
           can_edit_data_retention: false
         )
 
@@ -446,7 +447,7 @@ defmodule LightningWeb.WorkOrderLiveTest do
           id: work_order.id,
           work_order: %{work_order | dataclip: insert(:dataclip)},
           project: project,
-          can_rerun_job: true,
+          can_run_workflow: true,
           can_edit_data_retention: false
         )
         |> Floki.parse_fragment!()

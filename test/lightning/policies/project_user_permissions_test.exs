@@ -108,17 +108,15 @@ defmodule Lightning.Policies.ProjectUserPermissionsTest do
            viewer: viewer
          } do
       ~w(
-        create_job
         create_workflow
         delete_workflow
-        edit_job
+        edit_workflow
+        provision_project
         edit_project_description
         edit_project_name
-        provision_project
-        create_webhook_auth_method
+        write_webhook_auth_method
         create_project_credential
-        rerun_job
-        run_job
+        run_workflow
       )a |> (&refute_can(ProjectUsers, &1, viewer, project)).()
     end
   end
@@ -130,15 +128,12 @@ defmodule Lightning.Policies.ProjectUserPermissionsTest do
            editor: editor
          } do
       ~w(
-        create_job
         create_workflow
         delete_workflow
-        edit_job
-        provision_project
-        create_webhook_auth_method
+        edit_workflow
         create_project_credential
-        rerun_job
-        run_job
+        provision_project
+        run_workflow
       )a |> (&assert_can(ProjectUsers, &1, editor, project)).()
     end
 
@@ -150,6 +145,7 @@ defmodule Lightning.Policies.ProjectUserPermissionsTest do
       ~w(
           edit_project_description
           edit_project_name
+          write_webhook_auth_method
         )a |> (&refute_can(ProjectUsers, &1, editor, project)).()
     end
   end
@@ -161,17 +157,15 @@ defmodule Lightning.Policies.ProjectUserPermissionsTest do
            admin: admin
          } do
       ~w(
-          create_job
           create_workflow
           delete_workflow
-          edit_job
+          edit_workflow
           edit_project_description
           edit_project_name
           provision_project
-          create_webhook_auth_method
+          write_webhook_auth_method
           create_project_credential
-          rerun_job
-          run_job
+          run_workflow
         )a |> (&assert_can(ProjectUsers, &1, admin, project)).()
     end
   end
@@ -183,17 +177,15 @@ defmodule Lightning.Policies.ProjectUserPermissionsTest do
            owner: owner
          } do
       ~w(
-        create_job
         create_workflow
         delete_workflow
-        edit_job
+        edit_workflow
         edit_project_description
         edit_project_name
         provision_project
-        create_webhook_auth_method
+        write_webhook_auth_method
         create_project_credential
-        rerun_job
-        run_job
+        run_workflow
       )a |> (&assert_can(ProjectUsers, &1, owner, project)).()
     end
   end

@@ -57,7 +57,7 @@ defmodule Lightning.VersionControl.GithubClientTest do
                 code: :installation_not_found,
                 message: "Github Installation APP ID is misconfigured"
               }} =
-               VersionControl.run_sync(p_repo.project_id, "some-user-name")
+               VersionControl.initiate_sync(p_repo.project_id, "some-user-name")
     end
 
     @tag :capture_log
@@ -131,7 +131,7 @@ defmodule Lightning.VersionControl.GithubClientTest do
       p_repo = insert(:project_repo_connection)
 
       assert {:ok, :fired} =
-               VersionControl.run_sync(p_repo.project_id, "some-user-name")
+               VersionControl.initiate_sync(p_repo.project_id, "some-user-name")
     end
   end
 

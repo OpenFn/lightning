@@ -335,7 +335,7 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodFormComponent do
 
   def render(assigns) do
     ~H"""
-    <div id="create_edit_webhook_auth_method">
+    <div id="write_webhook_auth_method">
       <%!-- <%= if @webhook_auth_method.auth_type do %> --%>
       <.form
         :let={f}

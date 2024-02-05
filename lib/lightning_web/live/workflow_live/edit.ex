@@ -54,14 +54,14 @@ defmodule LightningWeb.WorkflowLive.Edit do
           <.with_changes_indicator changeset={@changeset}>
             <div class="flex flex-row gap-2">
               <.icon
-                :if={!@can_edit_job}
+                :if={!@can_edit_workflow}
                 name="hero-lock-closed"
                 class="w-5 h-5 place-self-center text-gray-300"
               />
               <Form.submit_button
                 class=""
                 phx-disable-with="Saving..."
-                disabled={!@can_edit_job or !@changeset.valid?}
+                disabled={!@can_edit_workflow or !@changeset.valid?}
                 form="workflow-form"
               >
                 Save
@@ -102,7 +102,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
                   id={"manual-job-#{@selected_job.id}"}
                   form={@manual_run_form}
                   dataclips={@selectable_dataclips}
-                  disabled={!@can_run_job}
+                  disabled={!@can_run_workflow}
                   project={@project}
                   admin_contacts={@admin_contacts}
                   can_edit_data_retention={@can_edit_data_retention}
@@ -119,7 +119,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
                   </.save_is_blocked_error>
 
                   <.icon
-                    :if={!@can_edit_job}
+                    :if={!@can_edit_workflow}
                     name="hero-lock-closed"
                     class="w-5 h-5 place-self-center text-gray-300"
                   />
@@ -225,7 +225,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
                     <Form.submit_button
                       class=""
                       phx-disable-with="Saving..."
-                      disabled={!@can_edit_job or !@changeset.valid?}
+                      disabled={!@can_edit_workflow or !@changeset.valid?}
                       form="workflow-form"
                     >
                       Save
@@ -289,7 +289,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
                 send_form_changed(params)
               end
             }
-            can_create_project_credential={@can_edit_job}
+            can_create_project_credential={@can_edit_workflow}
             return_to={
               ~p"/projects/#{@project.id}/w/#{@workflow.id}?s=#{@selected_job.id}"
             }
@@ -323,7 +323,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
               <!-- Show only the currently selected one -->
               <.job_form
                 on_change={&send_form_changed/1}
-                editable={@can_edit_job}
+                editable={@can_edit_workflow}
                 form={jf}
                 project_user={@project_user}
               />
@@ -343,7 +343,9 @@ defmodule LightningWeb.WorkflowLive.Edit do
                         phx-click="delete_node"
                         phx-value-id={@selected_job.id}
                         class="focus:ring-red-500 bg-red-600 hover:bg-red-700 disabled:bg-red-300"
-                        disabled={!@can_edit_job or has_child_edges or is_first_job}
+                        disabled={
+                          !@can_edit_workflow or has_child_edges or is_first_job
+                        }
                         tooltip={deletion_tooltip_message(@has_multiple_jobs)}
                         data-confirm="Are you sure you want to delete this step?"
                       >
@@ -380,7 +382,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
                 <.trigger_form
                   form={tf}
                   on_change={&send_form_changed/1}
-                  disabled={!@can_edit_job}
+                  disabled={!@can_edit_workflow}
+                  can_write_webhook_auth_method={@can_write_webhook_auth_method}
                   webhook_url={webhook_url(@selected_trigger)}
                   selected_trigger={@selected_trigger}
                   action={@live_action}
@@ -403,7 +406,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
                 <!-- Show only the currently selected one -->
                 <.edge_form
                   form={ef}
-                  disabled={!@can_edit_job}
+                  disabled={!@can_edit_workflow}
                   cancel_url={
                     ~p"/projects/#{@project.id}/w/#{@workflow.id || "new"}"
                   }
@@ -415,7 +418,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
         <.live_component
           :if={
-            @live_action == :edit && @can_create_webhook_auth_method &&
+            @live_action == :edit && @can_write_webhook_auth_method &&
               @selected_trigger
           }
           module={LightningWeb.WorkflowLive.WebhookAuthMethodModalComponent}
@@ -563,28 +566,24 @@ defmodule LightningWeb.WorkflowLive.Edit do
       :ok ->
         socket
         |> assign(
-          can_edit_job:
-            Permissions.can?(ProjectUsers, :edit_job, current_user, project_user),
-          can_run_job:
-            Permissions.can?(ProjectUsers, :run_job, current_user, project_user),
-          can_rerun_job:
+          can_edit_workflow:
             Permissions.can?(
               ProjectUsers,
-              :rerun_job,
+              :edit_workflow,
               current_user,
               project_user
             ),
-          can_create_webhook_auth_method:
+          can_run_workflow:
             Permissions.can?(
               ProjectUsers,
-              :create_webhook_auth_method,
+              :run_workflow,
               current_user,
               project_user
             ),
-          can_edit_webhook_auth_method:
+          can_write_webhook_auth_method:
             Permissions.can?(
               ProjectUsers,
-              :edit_webhook_auth_method,
+              :write_webhook_auth_method,
               current_user,
               project_user
             ),
@@ -609,26 +608,22 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
     socket
     |> assign(
-      can_create_webhook_auth_method:
+      can_write_webhook_auth_method:
         Permissions.can?(
           ProjectUsers,
-          :create_webhook_auth_method,
+          :write_webhook_auth_method,
           current_user,
           project_user
         ),
-      can_edit_webhook_auth_method:
+      can_edit_workflow:
         Permissions.can?(
           ProjectUsers,
-          :edit_webhook_auth_method,
+          :edit_workflow,
           current_user,
           project_user
         ),
-      can_edit_job:
-        Permissions.can?(ProjectUsers, :edit_job, current_user, project_user),
-      can_run_job:
-        Permissions.can?(ProjectUsers, :run_job, current_user, project_user),
-      can_rerun_job:
-        Permissions.can?(ProjectUsers, :rerun_job, current_user, project_user),
+      can_run_workflow:
+        Permissions.can?(ProjectUsers, :run_workflow, current_user, project_user),
       can_edit_data_retention:
         Permissions.can?(
           ProjectUsers,
@@ -719,10 +714,10 @@ defmodule LightningWeb.WorkflowLive.Edit do
     %{
       changeset: changeset,
       workflow_params: initial_params,
-      can_edit_job: can_edit_job
+      can_edit_workflow: can_edit_workflow
     } = socket.assigns
 
-    with true <- can_edit_job || :not_authorized,
+    with true <- can_edit_workflow || :not_authorized,
          true <- !has_child_edges?(changeset, id) || :has_child_edges,
          true <- !first_job?(changeset, id) || :is_first_job do
       edges_to_delete =
@@ -768,11 +763,11 @@ defmodule LightningWeb.WorkflowLive.Edit do
     %{
       project: project,
       workflow_params: initial_params,
-      can_edit_job: can_edit_job
+      can_edit_workflow: can_edit_workflow
     } =
       socket.assigns
 
-    if can_edit_job do
+    if can_edit_workflow do
       next_params =
         case params do
           %{"workflow" => params} ->
@@ -861,7 +856,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
         %{"run_id" => run_id, "step_id" => step_id},
         socket
       ) do
-    if socket.assigns.can_rerun_job do
+    if socket.assigns.can_run_workflow do
       case Lightning.Repo.update(%{socket.assigns.changeset | action: :update}) do
         {:ok, workflow} ->
           {:ok, run} =
@@ -897,13 +892,13 @@ defmodule LightningWeb.WorkflowLive.Edit do
       selected_job: selected_job,
       current_user: current_user,
       workflow_params: workflow_params,
-      can_edit_job: can_edit_job,
-      can_run_job: can_run_job
+      can_edit_workflow: can_edit_workflow,
+      can_run_workflow: can_run_workflow
     } = socket.assigns
 
     socket = socket |> apply_params(workflow_params)
 
-    if can_run_job && can_edit_job do
+    if can_run_workflow && can_edit_workflow do
       Helpers.save_and_run(
         socket.assigns.changeset,
         params,
@@ -1078,8 +1073,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
       %{
         manual_run_form: manual_run_form,
         changeset: changeset,
-        can_edit_job: can_edit_job,
-        can_run_job: can_run_job
+        can_edit_workflow: can_edit_workflow,
+        can_run_workflow: can_run_workflow
       } ->
         form_valid =
           if manual_run_form.source.errors == [
@@ -1092,7 +1087,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
         !form_valid or
           !changeset.valid? or
-          !(can_edit_job or can_run_job)
+          !(can_edit_workflow or can_run_workflow)
     end
   end
 
@@ -1125,10 +1120,10 @@ defmodule LightningWeb.WorkflowLive.Edit do
   end
 
   defp handle_new_params(socket, params) do
-    %{workflow_params: initial_params, can_edit_job: can_edit_job} =
+    %{workflow_params: initial_params, can_edit_workflow: can_edit_workflow} =
       socket.assigns
 
-    if can_edit_job do
+    if can_edit_workflow do
       next_params =
         WorkflowParams.apply_form_params(socket.assigns.workflow_params, params)
 
