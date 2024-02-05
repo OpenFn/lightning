@@ -105,6 +105,7 @@ defmodule LightningWeb.LayoutComponents do
   def page_content(assigns) do
     ~H"""
     <div class="flex h-full w-full flex-col">
+      <%= if assigns[:banner], do: render_slot(@banner) %>
       <%= if assigns[:header], do: render_slot(@header) %>
       <div class="flex-auto bg-secondary-100 relative">
         <section

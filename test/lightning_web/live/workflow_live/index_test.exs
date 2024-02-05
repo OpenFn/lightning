@@ -2,20 +2,49 @@ defmodule LightningWeb.WorkflowLive.IndexTest do
   use LightningWeb.ConnCase, async: true
   import Phoenix.LiveViewTest
 
+  import Mock
   import Lightning.Factories
   import Lightning.WorkflowsFixtures
   import Lightning.WorkflowLive.Helpers
+
+  alias Lightning.Extensions.RuntimeLimiter
+  alias LightningWeb.Components.Modal
 
   setup :register_and_log_in_user
   setup :create_project_for_current_user
   setup :create_workflow
 
   describe "index" do
-    test "renders a list of workflows", %{conn: conn, project: project} do
+    test "renders an empty list of workflows", %{conn: conn, project: project} do
       {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/w")
 
       assert view
              |> element("#workflows-#{project.id}", "No workflows yet")
+    end
+
+    test "renders a component on runtime limit exceeded", %{
+      conn: conn,
+      project: %{id: project_id}
+    } do
+      with_mock RuntimeLimiter,
+        check_limits: fn %{project_id: ^project_id} ->
+          {:error, :too_many_runs,
+           %{
+             position: :banner,
+             function: &Modal.modal_footer/1,
+             attrs: [
+               inner_block: [
+                 %{
+                   inner_block: fn nil, nil -> "Some text" end
+                 }
+               ]
+             ]
+           }}
+        end do
+        {:ok, _view, html} = live(conn, ~p"/projects/#{project_id}/w")
+
+        assert html =~ "Some text"
+      end
     end
 
     test "only users with MFA enabled can access workflows for a project with MFA requirement",

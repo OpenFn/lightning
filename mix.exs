@@ -31,6 +31,19 @@ defmodule Lightning.MixProject do
       name: "Lightning",
       docs: docs()
     ]
+    |> then(fn project ->
+      if System.get_env("UMBRELLA") == "true" do
+        project ++
+          [
+            build_path: "../../_build",
+            config_path: "../../config/config.exs",
+            deps_path: "../../deps",
+            lockfile: "../../mix.lock"
+          ]
+      else
+        project
+      end
+    end)
   end
 
   # Configuration for the OTP application.
