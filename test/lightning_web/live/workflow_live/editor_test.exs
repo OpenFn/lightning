@@ -1093,6 +1093,9 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       run_id = Plug.Conn.Query.decode(uri.query)["a"]
       run = Lightning.Repo.get!(Lightning.Run, run_id)
 
+      # Get the Output/Logs View
+      run_view = find_live_child(view, "run-viewer-#{run.id}")
+
       # action button is rendered correctly
       refute has_element?(view, "button", "Rerun from here")
 
@@ -1100,6 +1103,17 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
              "currently processing"
 
       refute has_element?(view, "button", "Create New Work Order")
+
+      render_async(run_view)
+      # input tab shows correct information
+      html = run_view |> element("div[data-panel-hash='input']") |> render()
+      assert html =~ "Nothing yet"
+      refute html =~ "No input/output available. This step was never started."
+
+      # output tab shows correct information
+      html = run_view |> element("div[data-panel-hash='output']") |> render()
+      assert html =~ "Nothing yet"
+      refute html =~ "No input/output available. This step was never started."
 
       # let's subscribe to events to make sure we're in sync with liveview
       Lightning.Runs.subscribe(run)
@@ -1133,6 +1147,19 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       refute has_element?(view, "button", "Rerun from here")
       refute has_element?(view, "button", "Processing"), "nolonger processing"
       assert has_element?(view, "button", "Create New Work Order")
+
+      # make sure event is processed by the run viewer
+      render_async(run_view)
+
+      # input tab shows correct information
+      html = run_view |> element("div[data-panel-hash='input']") |> render()
+      refute html =~ "Nothing yet"
+      assert html =~ "No input/output available. This step was never started."
+
+      # output tab shows correct information
+      html = run_view |> element("div[data-panel-hash='output']") |> render()
+      refute html =~ "Nothing yet"
+      assert html =~ "No input/output available. This step was never started."
     end
   end
 
