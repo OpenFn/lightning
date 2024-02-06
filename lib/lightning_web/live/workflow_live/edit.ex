@@ -345,14 +345,14 @@ defmodule LightningWeb.WorkflowLive.Edit do
                         phx-value-id={@selected_job.id}
                         class="focus:ring-red-500 bg-red-600 hover:bg-red-700 disabled:bg-red-300"
                         disabled={
-                          !@can_edit_job or @has_child_edges or @is_first_job or
+                          !@can_edit_workflow or @has_child_edges or @is_first_job or
                             @has_steps
                         }
                         tooltip={
                           deletion_tooltip_message(
-                            @can_edit_job,
-                            @is_first_job,
+                            @can_edit_workflow,
                             @has_child_edges,
+                            @is_first_job,
                             @has_steps
                           )
                         }
@@ -474,19 +474,19 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
   defp deletion_tooltip_message(
          can_edit_job,
-         is_first_job,
          has_child_edges,
+         is_first_job,
          has_steps
        ) do
     cond do
       !can_edit_job ->
         "You are not authorized to delete this step."
 
-      is_first_job ->
-        "You can't delete the only step of a workflow."
-
       has_child_edges ->
         "You can't delete a step that other downstream steps depend on."
+
+      is_first_job ->
+        "You can't delete the only step of a workflow."
 
       has_steps ->
         "You can't delete a step with associated history while it's protected by your data retention period. (Workflow 'snapshots' are coming. For now, disable the incoming edge to prevent the job from running.)"
@@ -731,13 +731,13 @@ defmodule LightningWeb.WorkflowLive.Edit do
     %{
       changeset: changeset,
       workflow_params: initial_params,
-      can_edit_job: can_edit_job,
+      can_edit_workflow: can_edit_workflow,
       has_child_edges: has_child_edges,
       is_first_job: is_first_job,
       has_steps: has_steps
     } = socket.assigns
 
-    with true <- can_edit_job || :not_authorized,
+    with true <- can_edit_workflow || :not_authorized,
          true <- !has_child_edges || :has_child_edges,
          true <- !is_first_job || :is_first_job,
          true <- !has_steps || :has_steps do
