@@ -477,15 +477,18 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
         insert(:workorder,
           workflow: workflow,
           dataclip: dataclip,
+          state: :failed,
           runs: [
             build(:run,
               dataclip: dataclip,
               starting_job: job_1,
+              state: :failed,
               steps: [
                 build(:step,
                   job: job_1,
                   input_dataclip: dataclip,
                   output_dataclip: build(:dataclip),
+                  exit_reason: "fail",
                   started_at: build(:timestamp),
                   finished_at: build(:timestamp)
                 )
@@ -769,10 +772,12 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
         insert(:workorder,
           workflow: workflow,
           dataclip: input_dataclip,
+          state: :success,
           runs: [
             build(:run,
               dataclip: input_dataclip,
               starting_job: job_1,
+              state: :success,
               steps: [
                 build(:step,
                   job: job_1,
@@ -886,10 +891,12 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
         insert(:workorder,
           workflow: workflow,
           dataclip: wiped_dataclip,
+          state: :success,
           runs: [
             build(:run,
               dataclip: wiped_dataclip,
               starting_job: job_1,
+              state: :success,
               steps: [
                 build(:step,
                   job: job_1,
