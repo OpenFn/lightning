@@ -477,15 +477,18 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
         insert(:workorder,
           workflow: workflow,
           dataclip: dataclip,
+          state: :failed,
           runs: [
             build(:run,
               dataclip: dataclip,
               starting_job: job_1,
+              state: :failed,
               steps: [
                 build(:step,
                   job: job_1,
                   input_dataclip: dataclip,
                   output_dataclip: build(:dataclip),
+                  exit_reason: "fail",
                   started_at: build(:timestamp),
                   finished_at: build(:timestamp)
                 )
@@ -769,10 +772,12 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
         insert(:workorder,
           workflow: workflow,
           dataclip: input_dataclip,
+          state: :success,
           runs: [
             build(:run,
               dataclip: input_dataclip,
               starting_job: job_1,
+              state: :success,
               steps: [
                 build(:step,
                   job: job_1,
@@ -886,10 +891,12 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
         insert(:workorder,
           workflow: workflow,
           dataclip: wiped_dataclip,
+          state: :success,
           runs: [
             build(:run,
               dataclip: wiped_dataclip,
               starting_job: job_1,
+              state: :success,
               steps: [
                 build(:step,
                   job: job_1,
@@ -1008,6 +1015,158 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       html = view |> element("#manual-job-#{job_1.id}") |> render()
       refute html =~ unique_val, "dataclip body has been removed"
       assert html =~ "data for this step has not been retained"
+    end
+
+    test "followed crashed run without steps renders the page correctly",
+         %{
+           conn: conn,
+           project: project,
+           workflow: %{jobs: [job_1 | _rest]} = workflow
+         } do
+      dataclip =
+        insert(:dataclip,
+          project: project,
+          type: :http_request
+        )
+
+      %{runs: [run]} =
+        insert(:workorder,
+          workflow: workflow,
+          dataclip: dataclip,
+          runs: [
+            build(:run,
+              dataclip: dataclip,
+              starting_job: job_1,
+              claimed_at: build(:timestamp),
+              finished_at: build(:timestamp),
+              started_at: nil,
+              state: :crashed,
+              error_type: "CompileError",
+              steps: []
+            )
+          ]
+        )
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project}/w/#{workflow}?#{[s: job_1.id, a: run.id, m: "expand"]}"
+        )
+
+      # user cannot rerun
+      refute has_element?(view, "button", "Rerun from here")
+
+      # user can create new work order
+      assert has_element?(view, "button", "Create New Work Order")
+
+      run_view = find_live_child(view, "run-viewer-#{run.id}")
+
+      render_async(run_view)
+
+      # input tab shows correct information
+      html = run_view |> element("div[data-panel-hash='input']") |> render()
+      assert html =~ "No input/output available. This step was never started."
+
+      # output tab shows correct information
+      html = run_view |> element("div[data-panel-hash='output']") |> render()
+      assert html =~ "No input/output available. This step was never started."
+    end
+
+    test "viewer is updated correctly if manual run crashes",
+         %{
+           conn: conn,
+           project: project,
+           workflow: %{jobs: [job_1 | _rest]} = workflow
+         } do
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project}/w/#{workflow}?#{[s: job_1.id, m: "expand"]}"
+        )
+
+      # action button is rendered correctly
+      refute has_element?(view, "button", "Rerun from here")
+      refute has_element?(view, "button", "Processing")
+      assert has_element?(view, "button", "Create New Work Order")
+
+      # submit the manual run form
+      view
+      |> form("#manual_run_form", %{
+        manual: %{body: "{}"}
+      })
+      |> render_submit()
+
+      uri = view |> assert_patch() |> URI.parse()
+      run_id = Plug.Conn.Query.decode(uri.query)["a"]
+      run = Lightning.Repo.get!(Lightning.Run, run_id)
+
+      # Get the Output/Logs View
+      run_view = find_live_child(view, "run-viewer-#{run.id}")
+
+      # action button is rendered correctly
+      refute has_element?(view, "button", "Rerun from here")
+
+      assert has_element?(view, "button:disabled", "Processing"),
+             "currently processing"
+
+      refute has_element?(view, "button", "Create New Work Order")
+
+      render_async(run_view)
+      # input tab shows correct information
+      html = run_view |> element("div[data-panel-hash='input']") |> render()
+      assert html =~ "Nothing yet"
+      refute html =~ "No input/output available. This step was never started."
+
+      # output tab shows correct information
+      html = run_view |> element("div[data-panel-hash='output']") |> render()
+      assert html =~ "Nothing yet"
+      refute html =~ "No input/output available. This step was never started."
+
+      # let's subscribe to events to make sure we're in sync with liveview
+      Lightning.Runs.subscribe(run)
+
+      # Let's claim the run
+      run =
+        run
+        |> Ecto.Changeset.change(%{
+          state: :claimed,
+          claimed_at: DateTime.utc_now()
+        })
+        |> Lightning.Repo.update!()
+
+      # lets crash the run
+      {:ok, _run} =
+        Lightning.Runs.complete_run(run, %{
+          "error_message" => "Unexpected token (6:9)",
+          "error_type" => "CompileError",
+          "final_dataclip_id" => "",
+          "state" => :crashed
+        })
+
+      assert_received %Lightning.Runs.Events.RunUpdated{
+        run: %{id: ^run_id}
+      }
+
+      # make sure that the event is processed by liveview
+      render(view)
+
+      # action button is rendered correctly.
+      refute has_element?(view, "button", "Rerun from here")
+      refute has_element?(view, "button", "Processing"), "nolonger processing"
+      assert has_element?(view, "button", "Create New Work Order")
+
+      # make sure event is processed by the run viewer
+      render_async(run_view)
+
+      # input tab shows correct information
+      html = run_view |> element("div[data-panel-hash='input']") |> render()
+      refute html =~ "Nothing yet"
+      assert html =~ "No input/output available. This step was never started."
+
+      # output tab shows correct information
+      html = run_view |> element("div[data-panel-hash='output']") |> render()
+      refute html =~ "Nothing yet"
+      assert html =~ "No input/output available. This step was never started."
     end
   end
 

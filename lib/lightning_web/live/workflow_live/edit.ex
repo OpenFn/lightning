@@ -10,6 +10,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
   alias Lightning.Policies.ProjectUsers
   alias Lightning.Projects
   alias Lightning.Runs
+  alias Lightning.Runs.Events.RunUpdated
   alias Lightning.Runs.Events.StepCompleted
   alias Lightning.Workflows
   alias Lightning.Workflows.Job
@@ -88,7 +89,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
               current_user={@current_user}
               project={@project}
               socket={@socket}
-              follow_run_id={@follow_run_id}
+              follow_run_id={@follow_run && @follow_run.id}
               close_url={
                 "#{@base_url}?s=#{@selected_job.id}"
               }
@@ -106,7 +107,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
                   project={@project}
                   admin_contacts={@admin_contacts}
                   can_edit_data_retention={@can_edit_data_retention}
-                  follow_run_id={@follow_run_id}
+                  follow_run_id={@follow_run && @follow_run.id}
                   show_wiped_dataclip_selector={@show_wiped_dataclip_selector}
                 />
               </:collapsible_panel>
@@ -128,7 +129,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
                       id="save-and-run"
                       phx-hook="DefaultRunViaCtrlEnter"
                       {if step_retryable?(@step, @manual_run_form, @selectable_dataclips), do:
-                        [type: "button", "phx-click": "rerun", "phx-value-run_id": @follow_run_id, "phx-value-step_id": @step.id],
+                        [type: "button", "phx-click": "rerun", "phx-value-run_id": @follow_run.id, "phx-value-step_id": @step.id],
                       else:
                           [type: "submit", form: @manual_run_form.id]}
                       class={[
@@ -141,14 +142,14 @@ defmodule LightningWeb.WorkflowLive.Edit do
                       ]}
                       disabled={
                         @save_and_run_disabled ||
-                          processing(@follow_run_id, @step) ||
+                          processing(@follow_run) ||
                           selected_dataclip_wiped?(
                             @manual_run_form,
                             @selectable_dataclips
                           )
                       }
                     >
-                      <%= if processing(@follow_run_id, @step) do %>
+                      <%= if processing(@follow_run) do %>
                         <.icon
                           name="hero-arrow-path-mini"
                           class="w-4 h-4 animate-spin mr-1"
@@ -457,7 +458,11 @@ defmodule LightningWeb.WorkflowLive.Edit do
     selected_dataclip && !is_nil(selected_dataclip.wiped_at)
   end
 
-  defp processing(run_id, step), do: run_id && !step
+  defp processing(%{state: state}) do
+    !(state in Lightning.Run.final_states())
+  end
+
+  defp processing(_run), do: false
 
   defp deletion_tooltip_message(has_multiple_jobs) do
     if has_multiple_jobs do
@@ -642,7 +647,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
      |> assign(
        active_menu_item: :overview,
        expanded_job: nil,
-       follow_run_id: nil,
+       follow_run: nil,
        step: nil,
        manual_run_form: nil,
        page_title: "",
@@ -986,6 +991,16 @@ defmodule LightningWeb.WorkflowLive.Edit do
      |> assign(selectable_dataclips: selectable_dataclips)}
   end
 
+  def handle_info(
+        %RunUpdated{run: run},
+        %{assigns: %{follow_run: %{id: follow_run_id}}} = socket
+      )
+      when run.id === follow_run_id do
+    {:noreply,
+     socket
+     |> assign(follow_run: run)}
+  end
+
   def handle_info(%{}, socket), do: {:noreply, socket}
 
   defp maybe_show_manual_run(socket) do
@@ -1000,8 +1015,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
       %{selected_job: job, selection_mode: "expand"} = assigns
       when not is_nil(job) ->
         dataclip =
-          assigns[:follow_run_id] &&
-            get_selected_dataclip(assigns[:follow_run_id], job.id)
+          assigns[:follow_run] &&
+            get_selected_dataclip(assigns[:follow_run].id, job.id)
 
         changeset =
           WorkOrders.Manual.new(
@@ -1016,9 +1031,9 @@ defmodule LightningWeb.WorkflowLive.Edit do
           Invocation.list_dataclips_for_job(%Job{id: job.id})
 
         step =
-          assigns[:follow_run_id] &&
+          assigns[:follow_run] &&
             Invocation.get_step_for_run_and_job(
-              assigns[:follow_run_id],
+              assigns[:follow_run].id,
               job.id
             )
 
@@ -1291,18 +1306,20 @@ defmodule LightningWeb.WorkflowLive.Edit do
   defp maybe_follow_run(socket, query_params) do
     case query_params do
       %{"a" => run_id} when is_binary(run_id) ->
+        run = Runs.get(run_id)
+
         step =
           Invocation.get_step_for_run_and_job(
             run_id,
             socket.assigns.selected_job.id
           )
 
-        Runs.subscribe(%Lightning.Run{id: run_id})
+        Runs.subscribe(run)
 
-        socket |> assign(follow_run_id: run_id, step: step)
+        socket |> assign(follow_run: run, step: step)
 
       _ ->
-        socket |> assign(follow_run_id: nil)
+        socket |> assign(follow_run: nil)
     end
   end
 
