@@ -181,6 +181,7 @@ defmodule LightningWeb.RunLive.Index do
     )
   end
 
+  @impl true
   def handle_async(:load_workorders, {:ok, searched_page}, socket) do
     %{async_page: async_page} = socket.assigns
 

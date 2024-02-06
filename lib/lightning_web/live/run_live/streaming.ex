@@ -210,6 +210,7 @@ defmodule LightningWeb.RunLive.Streaming do
 
       unquote(helpers())
       unquote(handle_infos())
+      @impl true
       unquote(handle_asyncs())
     end
   end
