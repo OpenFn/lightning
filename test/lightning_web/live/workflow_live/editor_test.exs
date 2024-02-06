@@ -1064,6 +1064,76 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       html = run_view |> element("div[data-panel-hash='output']") |> render()
       assert html =~ "No input/output available. This step was never started."
     end
+
+    test "viewer is updated correctly if manual run crashes",
+         %{
+           conn: conn,
+           project: project,
+           workflow: %{jobs: [job_1 | _rest]} = workflow
+         } do
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project}/w/#{workflow}?#{[s: job_1.id, m: "expand"]}"
+        )
+
+      # action button is rendered correctly
+      refute has_element?(view, "button", "Rerun from here")
+      refute has_element?(view, "button", "Processing")
+      assert has_element?(view, "button", "Create New Work Order")
+
+      # submit the manual run form
+      view
+      |> form("#manual_run_form", %{
+        manual: %{body: "{}"}
+      })
+      |> render_submit()
+
+      uri = view |> assert_patch() |> URI.parse()
+      run_id = Plug.Conn.Query.decode(uri.query)["a"]
+      run = Lightning.Repo.get!(Lightning.Run, run_id)
+
+      # action button is rendered correctly
+      refute has_element?(view, "button", "Rerun from here")
+
+      assert has_element?(view, "button:disabled", "Processing"),
+             "currently processing"
+
+      refute has_element?(view, "button", "Create New Work Order")
+
+      # let's subscribe to events to make sure we're in sync with liveview
+      Lightning.Runs.subscribe(run)
+
+      # Let's claim the run
+      run =
+        run
+        |> Ecto.Changeset.change(%{
+          state: :claimed,
+          claimed_at: DateTime.utc_now()
+        })
+        |> Lightning.Repo.update!()
+
+      # lets crash the run
+      {:ok, _run} =
+        Lightning.Runs.complete_run(run, %{
+          "error_message" => "Unexpected token (6:9)",
+          "error_type" => "CompileError",
+          "final_dataclip_id" => "",
+          "state" => :crashed
+        })
+
+      assert_received %Lightning.Runs.Events.RunUpdated{
+        run: %{id: ^run_id}
+      }
+
+      # make sure that the event is processed by liveview
+      render(view)
+
+      # action button is rendered correctly.
+      refute has_element?(view, "button", "Rerun from here")
+      refute has_element?(view, "button", "Processing"), "nolonger processing"
+      assert has_element?(view, "button", "Create New Work Order")
+    end
   end
 
   describe "Editor events" do
