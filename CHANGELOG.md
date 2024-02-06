@@ -12,6 +12,9 @@ and this project adheres to
 
 ### Changed
 
+- Implemented safeguards to prevent deletion of jobs with associated run history
+  [#1570](https://github.com/OpenFn/Lightning/issues/1570)
+
 ### Fixed
 
 ## [v2.0.0-rc9] 2024-02-05
@@ -92,8 +95,6 @@ and this project adheres to
 
 ### Fixed
 
-- Implemented safeguards to prevent deletion of jobs with associated run history
-  [#1570](https://github.com/OpenFn/Lightning/issues/1570)
 - Fix Run via Docker  
   [#1653](https://github.com/OpenFn/Lightning/issues/1653)
 - Fix remaining warnings, enable "warnings as errors"
