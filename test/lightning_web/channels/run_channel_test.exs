@@ -254,7 +254,7 @@ defmodule LightningWeb.RunChannelTest do
       with_mock(
         RuntimeLimiter,
         limit_action: fn %{type: :new_run}, %{project_id: ^project_id} ->
-          {:error, :too_many_runs, "some error message"}
+          {:error, :too_many_runs, %{text: "some error message"}}
         end
       ) do
         ref = push(socket, "fetch:plan", %{})

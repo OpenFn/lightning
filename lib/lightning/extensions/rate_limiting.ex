@@ -5,11 +5,7 @@ defmodule Lightning.Extensions.RateLimiting do
   alias Plug.Conn
 
   @type request_error :: :too_many_requests | :unknown
-  @type message :: %{
-          position: atom(),
-          function: fun(),
-          attrs: Keyword.t()
-        }
+  @type message :: Lightning.Extensions.RuntimeLimiting.message()
 
   defmodule Context do
     @moduledoc """
@@ -29,5 +25,5 @@ defmodule Lightning.Extensions.RateLimiting do
               context :: Context.t(),
               opts :: Keyword.t()
             ) ::
-              :ok | {:error, request_error(), message :: message()}
+              :ok | {:error, request_error(), message()}
 end

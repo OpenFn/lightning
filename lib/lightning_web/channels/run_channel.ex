@@ -70,7 +70,7 @@ defmodule LightningWeb.RunChannel do
       :ok ->
         {:reply, {:ok, RunWithOptions.render(run, options)}, socket}
 
-      {:error, reason, message} ->
+      {:error, reason, %{text: message}} ->
         {:reply, {:error, %{errors: %{reason => [message]}}}, socket}
     end
   end
