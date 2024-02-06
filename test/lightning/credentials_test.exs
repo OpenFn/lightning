@@ -623,7 +623,9 @@ defmodule Lightning.CredentialsTest do
              [
                client_id: "client_id",
                client_secret: "secret",
-               wellknown_url: "http://localhost:#{bypass.port}/auth/.well-known"
+               wellknown_url: "http://localhost:#{bypass.port}/auth/.well-known",
+               introspect_url:
+                 "http://localhost:#{bypass.port}/services/oauth2/introspect"
              ]}
           ]
         )
@@ -635,15 +637,16 @@ defmodule Lightning.CredentialsTest do
           Lightning.AuthProviders.Common.get_wellknown!(oauth.provider)
         )
 
-        # Prepare credentials that are about to expire
-        # 4 minutes from now
-        expires_at = DateTime.to_unix(DateTime.utc_now()) + 4 * 60
+        expect_introspect(
+          bypass,
+          "http://localhost:#{bypass.port}/services/oauth2/introspect"
+        )
 
         credential =
           credential_fixture(
             body: %{
               "access_token" => "ya29.a0AWY7CknfkidjXaoDTuNi",
-              "expires_at" => expires_at,
+              "expires_at" => 1000,
               "refresh_token" => "1//03dATMQTmE5NSCgYIARAAGAMSNwF",
               "scope" => "https://www.googleapis.com/auth/spreadsheets"
             },
@@ -657,7 +660,8 @@ defmodule Lightning.CredentialsTest do
         refute refreshed_credential == credential,
                "Expected credentials to be refreshed for #{oauth.provider |> Atom.to_string()}"
 
-        assert refreshed_credential.body["expires_at"] > expires_at,
+        assert refreshed_credential.body["expires_at"] >
+                 credential.body["expires_at"],
                "Expected new expiry to be greater than the old expiry for #{oauth.provider |> Atom.to_string()}"
       end)
     end

@@ -59,7 +59,8 @@ config :lightning, :oauth_clients,
   ],
   salesforce: [
     wellknown_url:
-      "https://login.salesforce.com/.well-known/openid-configuration"
+      "https://login.salesforce.com/.well-known/openid-configuration",
+    introspect_url: "https://login.salesforce.com/services/oauth2/introspect"
   ]
 
 # Configure esbuild (the version is required)

@@ -64,7 +64,8 @@ defmodule Lightning.AuthProviders.Common do
   @doc """
   Requests an authentication token from the OAuth provider.
   """
-  def get_token(client, params), do: OAuth2.Client.get_token(client, params)
+  def get_token(client, params),
+    do: OAuth2.Client.get_token(client, params)
 
   @doc """
   Refreshes the authentication token using the OAuth provider.
@@ -80,7 +81,7 @@ defmodule Lightning.AuthProviders.Common do
   defp handle_refresh_token_response(
          {:error, %OAuth2.Response{status_code: code, body: body}}
        ),
-       do: {:error, %{code: code, body: body}}
+       do: {:error, %{status_code: code, body: body}}
 
   defp handle_refresh_token_response({:error, %{reason: reason}}),
     do: {:error, reason}

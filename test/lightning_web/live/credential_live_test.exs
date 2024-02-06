@@ -770,7 +770,9 @@ defmodule LightningWeb.CredentialLiveTest do
         salesforce: [
           client_id: "foo",
           client_secret: "bar",
-          wellknown_url: "http://localhost:#{bypass.port}/auth/.well-known"
+          wellknown_url: "http://localhost:#{bypass.port}/auth/.well-known",
+          introspect_url:
+            "http://localhost:#{bypass.port}/services/oauth2/introspect"
         ]
       )
 
@@ -791,7 +793,7 @@ defmodule LightningWeb.CredentialLiveTest do
         %{
           access_token: "ya29.a0AVvZ...",
           refresh_token: "1//03vpp6Li...",
-          expires_in: 3600,
+          expires_at: 3600,
           token_type: "Bearer",
           id_token: "eyJhbGciO...",
           scope: "scope1 scope2"
@@ -804,6 +806,19 @@ defmodule LightningWeb.CredentialLiveTest do
         """
         {"picture": "image.png", "name": "Test User"}
         """
+      )
+
+      expect_introspect(
+        bypass,
+        "http://localhost:#{bypass.port}/services/oauth2/introspect",
+        %{
+          access_token: "ya29.a0AVvZ...",
+          refresh_token: "1//03vpp6Li...",
+          expires_at: 3600,
+          token_type: "Bearer",
+          id_token: "eyJhbGciO...",
+          scope: "scope1 scope2"
+        }
       )
 
       {:ok, index_live, _html} = live(conn, ~p"/credentials")
@@ -874,17 +889,15 @@ defmodule LightningWeb.CredentialLiveTest do
       credential =
         Lightning.Credentials.list_credentials_for_user(user.id) |> List.first()
 
-      token = Lightning.AuthProviders.Common.TokenBody.new(credential.body)
-      expected_expiry = DateTime.to_unix(DateTime.utc_now()) + 3600
+      token =
+        Lightning.AuthProviders.Common.TokenBody.new(credential.body)
 
       assert %{
                access_token: "ya29.a0AVvZ...",
                refresh_token: "1//03vpp6Li...",
-               expires_at: expiry,
+               expires_at: 3600,
                scope: "scope1 scope2"
              } = token
-
-      assert (expiry - expected_expiry) in -1..1
     end
 
     test "correctly renders a valid existing token", %{
@@ -968,6 +981,17 @@ defmodule LightningWeb.CredentialLiveTest do
       bypass: bypass,
       conn: conn
     } do
+      # TODO: replace this with a proper Mock via Lightning.Config
+      Lightning.ApplicationHelpers.put_temporary_env(:lightning, :oauth_clients,
+        salesforce: [
+          client_id: "foo",
+          client_secret: "bar",
+          wellknown_url: "http://localhost:#{bypass.port}/auth/.well-known",
+          introspect_url:
+            "http://localhost:#{bypass.port}/services/oauth2/introspect"
+        ]
+      )
+
       expect_wellknown(bypass)
 
       expect_userinfo(
@@ -998,11 +1022,16 @@ defmodule LightningWeb.CredentialLiveTest do
         %{
           access_token: "ya29.a0AVvZ...",
           refresh_token: "1//03vpp6Li...",
-          expires_in: 3600,
+          expires_at: 3600,
           token_type: "Bearer",
           id_token: "eyJhbGciO...",
           scope: "scope1 scope2"
         }
+      )
+
+      expect_introspect(
+        bypass,
+        "http://localhost:#{bypass.port}/services/oauth2/introspect"
       )
 
       {:ok, edit_live, _html} = live(conn, ~p"/credentials")
@@ -1045,7 +1074,8 @@ defmodule LightningWeb.CredentialLiveTest do
             access_token: "ya29.a0AVvZ...",
             refresh_token: "1//03vpp6Li...",
             expires_at: expires_at,
-            scope: "scope1 scope2"
+            scope: "scope1 scope2",
+            instance_url: "http://localhost:#{bypass.port}/auth/.well-known"
           }
         )
 
@@ -1104,7 +1134,8 @@ defmodule LightningWeb.CredentialLiveTest do
             access_token: "ya29.a0AVvZ...",
             refresh_token: "1//03vpp6Li...",
             expires_at: expires_at,
-            scope: "scope1 scope2"
+            scope: "scope1 scope2",
+            instance_url: "http://localhost:#{bypass.port}/auth/.well-known"
           }
         )
 
@@ -1187,7 +1218,7 @@ defmodule LightningWeb.CredentialLiveTest do
         %{
           access_token: "ya29.a0AVvZ...",
           refresh_token: "1//03vpp6Li...",
-          expires_in: 3600,
+          expires_at: 3600,
           token_type: "Bearer",
           id_token: "eyJhbGciO...",
           scope: "scope1 scope2"
@@ -1269,16 +1300,13 @@ defmodule LightningWeb.CredentialLiveTest do
         Lightning.Credentials.list_credentials_for_user(user.id) |> List.first()
 
       token = Lightning.AuthProviders.Common.TokenBody.new(credential.body)
-      expected_expiry = DateTime.to_unix(DateTime.utc_now()) + 3600
 
       assert %{
                access_token: "ya29.a0AVvZ...",
                refresh_token: "1//03vpp6Li...",
-               expires_at: expiry,
+               expires_at: 3600,
                scope: "scope1 scope2"
              } = token
-
-      assert (expiry - expected_expiry) in -1..1
     end
 
     test "correctly renders a valid existing token", %{
@@ -1392,7 +1420,7 @@ defmodule LightningWeb.CredentialLiveTest do
         %{
           access_token: "ya29.a0AVvZ...",
           refresh_token: "1//03vpp6Li...",
-          expires_in: 3600,
+          expires_at: 3600,
           token_type: "Bearer",
           id_token: "eyJhbGciO...",
           scope: "scope1 scope2"

@@ -28,6 +28,14 @@ defmodule Lightning.BypassHelpers do
     end)
   end
 
+  def expect_introspect(bypass, path, token \\ %{}) do
+    %{path: path} = URI.new!(path)
+
+    Bypass.expect(bypass, "POST", path, fn conn ->
+      Plug.Conn.resp(conn, 200, token |> Jason.encode!())
+    end)
+  end
+
   @doc """
   Add a token endpoint expectation. Used to test AuthProviders
   """
@@ -47,7 +55,7 @@ defmodule Lightning.BypassHelpers do
         %{
           access_token: "access_token_123",
           refresh_token: "refresh_token_123",
-          expires_in: 3600
+          expires_at: 3600
         }
 
     body = Jason.encode!(token_attrs)

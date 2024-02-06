@@ -51,6 +51,33 @@ defmodule Lightning.AuthProviders.Salesforce do
     Common.get_token(client, params)
   end
 
+  defp introspect({:ok, %OAuth2.AccessToken{access_token: access_token} = token}) do
+    config = Common.get_config(:salesforce)
+
+    Tesla.post(
+      config[:introspect_url],
+      "token=#{access_token}&client_id=#{config[:client_id]}&client_secret=#{config[:client_secret]}&token_type_hint=access_token",
+      headers: [
+        {"Accept", "application/json"},
+        {"Content-Type", "application/x-www-form-urlencoded"}
+      ]
+    )
+    |> handle_introspection_result(token)
+  end
+
+  defp introspect(result), do: result
+
+  defp handle_introspection_result({:ok, %{status: status, body: body}}, token)
+       when status in 200..202 do
+    expires_at = Jason.decode!(body) |> Map.get("exp")
+    updated_token = Map.update!(token, :expires_at, fn _ -> expires_at end)
+    {:ok, updated_token}
+  end
+
+  defp handle_introspection_result({:ok, %{status: status}}, _token)
+       when status not in 200..202,
+       do: {:error, nil}
+
   @doc """
   Refreshes the Salesforce authentication token.
 
@@ -62,7 +89,9 @@ defmodule Lightning.AuthProviders.Salesforce do
   - A refreshed OAuth token on success.
   """
   def refresh_token(client, token),
-    do: Common.refresh_token(client, token)
+    do:
+      Common.refresh_token(client, token)
+      |> introspect()
 
   @doc """
   Retrieves user information from Salesforce using the provided OAuth token.

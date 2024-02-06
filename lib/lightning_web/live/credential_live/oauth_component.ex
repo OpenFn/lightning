@@ -579,13 +579,11 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
     if socket |> changed?(:token) and token_body_changeset.valid? do
       pid = self()
 
-      if is_nil(token.expires_at) or OAuth2.AccessToken.expired?(token) do
+      if token_needs_refresh?(token) do
         Logger.debug("Refreshing expired token")
-
         Task.start(fn -> refresh_token(pid, socket) end)
       else
         Logger.debug("Retrieving userinfo")
-
         Task.start(fn -> get_userinfo(pid, socket) end)
       end
 
@@ -593,6 +591,12 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
     else
       socket
     end
+  end
+
+  defp token_needs_refresh?(token) do
+    is_nil(token.expires_at) or
+      token.expires_at == "" or
+      OAuth2.AccessToken.expired?(token)
   end
 
   defp get_userinfo(pid, socket) do
@@ -619,6 +623,9 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
       {:ok, token} ->
         update_body.(token |> token_to_params())
 
+        Logger.debug("Retrieving userinfo")
+        Task.start(fn -> get_userinfo(pid, socket) end)
+
       {:error, reason} ->
         Logger.error("Failed refreshing valid token: #{inspect(reason)}")
 
@@ -633,21 +640,24 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
   end
 
   defp token_to_params(%OAuth2.AccessToken{} = token) do
-    token
-    |> Map.from_struct()
-    |> Enum.reduce([], fn {k, v}, acc ->
-      case k do
-        _ when k in [:access_token, :refresh_token, :scope, :expires_at] ->
-          [{k |> to_string(), v} | acc]
+    base = token |> Map.from_struct()
 
-        :other_params ->
-          Enum.concat(Map.to_list(v), acc)
+    {extra, base} =
+      if Map.has_key?(base, :other_params) do
+        expires_at = Map.get(base.other_params, "expires_at", "")
+        scope = Map.get(base.other_params, "scope", "")
 
-        _ ->
-          acc
+        {%{expires_at: expires_at, scope: scope},
+         Map.delete(base, :other_params)}
+      else
+        {%{}, base}
       end
+
+    Map.merge(base, extra, fn
+      :expires_at, v1, v2 when v1 in [nil, ""] -> v2
+      :expires_at, v1, v2 when v2 in [nil, ""] -> v1
+      _k, _v1, v2 -> v2
     end)
-    |> Map.new()
   end
 
   defp params_to_token(%Lightning.AuthProviders.Common.TokenBody{} = token) do
