@@ -52,6 +52,8 @@ and this project adheres to
   [#1704](https://github.com/OpenFn/Lightning/issues/1704)
 - Fixed inspector view stuck at processing when following a crashed run
   [#1711](https://github.com/OpenFn/Lightning/issues/1711)
+- Fixed inspector dataclip selector not getting updated after running manual run
+  [#1714](https://github.com/OpenFn/Lightning/issues/1714)
 
 ## [v2.0.0-rc8] - 2024-01-30
 
