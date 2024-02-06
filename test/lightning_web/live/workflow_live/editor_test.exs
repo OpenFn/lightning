@@ -752,6 +752,72 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       assert has_element?(view, "textarea#manual_run_form_body")
     end
 
+    test "shows the wiped dataclip viewer if the step dataclip was wiped",
+         %{
+           conn: conn,
+           project: project,
+           workflow: %{jobs: [job_1 | _rest]} = workflow
+         } do
+      input_dataclip =
+        insert(:dataclip,
+          project: project,
+          type: :saved_input,
+          wiped_at: DateTime.utc_now(),
+          body: nil
+        )
+
+      %{runs: [run]} =
+        insert(:workorder,
+          workflow: workflow,
+          dataclip: input_dataclip,
+          runs: [
+            build(:run,
+              dataclip: input_dataclip,
+              starting_job: job_1,
+              steps: [
+                build(:step,
+                  job: job_1,
+                  input_dataclip: input_dataclip,
+                  output_dataclip: nil,
+                  started_at: build(:timestamp),
+                  finished_at: build(:timestamp),
+                  exit_reason: "success"
+                )
+              ]
+            )
+          ]
+        )
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project}/w/#{workflow}?#{[s: job_1.id, a: run.id, m: "expand"]}"
+        )
+
+      # the form contains the dataclip
+      form = element(view, "#manual-job-#{job_1.id} form")
+      assert render(form) =~ input_dataclip.id
+
+      # the select input exists
+      assert has_element?(view, "select#manual_run_form_dataclip_id")
+
+      # the body says that it was wiped
+      assert render(form) =~ "data for this step has not been retained"
+
+      refute has_element?(view, "textarea#manual_run_form_body"),
+             "dataclip body input is missing"
+
+      # lets select the create new dataclip option
+      form |> render_change(manual: %{dataclip_id: nil})
+
+      # the dataclip textarea input now exists
+      assert has_element?(view, "textarea#manual_run_form_body"),
+             "dataclip body input exists"
+
+      # the wiped message is nolonger displayed
+      refute render(form) =~ "data for this step has not been retained"
+    end
+
     test "users can retry a workorder from a followed run",
          %{
            conn: conn,
