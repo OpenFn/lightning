@@ -349,16 +349,12 @@ defmodule LightningWeb.WorkflowLive.Edit do
                             @has_steps
                         }
                         tooltip={
-                          deletion_tooltip_message([
-                            {!@can_edit_job,
-                             "You are not authorized to delete this step."},
-                            {@has_child_edges,
-                             "You can't delete a step that other downstream steps depend on."},
-                            {@is_first_job,
-                             "You can't delete the only step of a workflow."},
-                            {@has_steps,
-                             "You can't delete a step with associated history while it's protected by your data retention period. (Workflow 'snapshots' are coming. For now, disable the incoming edge to prevent the job from running.)"}
-                          ])
+                          deletion_tooltip_message(
+                            @can_edit_job,
+                            @is_first_job,
+                            @has_child_edges,
+                            @has_steps
+                          )
                         }
                         data-confirm="Are you sure you want to delete this step?"
                       >
@@ -476,10 +472,28 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
   defp processing(_run), do: false
 
-  defp deletion_tooltip_message(conditions) do
-    Enum.find_value(conditions, fn {condition, message} ->
-      if condition, do: message
-    end)
+  defp deletion_tooltip_message(
+         can_edit_job,
+         is_first_job,
+         has_child_edges,
+         has_steps
+       ) do
+    cond do
+      !can_edit_job ->
+        "You are not authorized to delete this step."
+
+      is_first_job ->
+        "You can't delete the only step of a workflow."
+
+      has_child_edges ->
+        "You can't delete a step that other downstream steps depend on."
+
+      has_steps ->
+        "You can't delete a step with associated history while it's protected by your data retention period. (Workflow 'snapshots' are coming. For now, disable the incoming edge to prevent the job from running.)"
+
+      true ->
+        nil
+    end
   end
 
   defp expand_job_editor(assigns) do
