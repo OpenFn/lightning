@@ -107,7 +107,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
                   project={@project}
                   admin_contacts={@admin_contacts}
                   can_edit_data_retention={@can_edit_data_retention}
-                  follow_run_id={@follow_run_id}
+                  follow_run_id={@follow_run && @follow_run.id}
                   show_wiped_dataclip_selector={@show_wiped_dataclip_selector}
                 />
               </:collapsible_panel>
@@ -458,7 +458,10 @@ defmodule LightningWeb.WorkflowLive.Edit do
     selected_dataclip && !is_nil(selected_dataclip.wiped_at)
   end
 
-  defp processing(%{exit_reason: nil}), do: true
+  defp processing(%{state: state}) do
+    !(state in Lightning.Run.final_states())
+  end
+
   defp processing(_run), do: false
 
   defp deletion_tooltip_message(has_multiple_jobs) do

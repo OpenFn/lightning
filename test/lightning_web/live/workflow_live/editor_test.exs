@@ -1009,6 +1009,61 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       refute html =~ unique_val, "dataclip body has been removed"
       assert html =~ "data for this step has not been retained"
     end
+
+    test "followed crashed run without steps renders the page correctly",
+         %{
+           conn: conn,
+           project: project,
+           workflow: %{jobs: [job_1 | _rest]} = workflow
+         } do
+      dataclip =
+        insert(:dataclip,
+          project: project,
+          type: :http_request
+        )
+
+      %{runs: [run]} =
+        insert(:workorder,
+          workflow: workflow,
+          dataclip: dataclip,
+          runs: [
+            build(:run,
+              dataclip: dataclip,
+              starting_job: job_1,
+              claimed_at: build(:timestamp),
+              finished_at: build(:timestamp),
+              started_at: nil,
+              state: :crashed,
+              error_type: "CompileError",
+              steps: []
+            )
+          ]
+        )
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project}/w/#{workflow}?#{[s: job_1.id, a: run.id, m: "expand"]}"
+        )
+
+      # user cannot rerun
+      refute has_element?(view, "button", "Rerun from here")
+
+      # user can create new work order
+      assert has_element?(view, "button", "Create New Work Order")
+
+      run_view = find_live_child(view, "run-viewer-#{run.id}")
+
+      render_async(run_view)
+
+      # input tab shows correct information
+      html = run_view |> element("div[data-panel-hash='input']") |> render()
+      assert html =~ "No input/output available. This step was never started."
+
+      # output tab shows correct information
+      html = run_view |> element("div[data-panel-hash='output']") |> render()
+      assert html =~ "No input/output available. This step was never started."
+    end
   end
 
   describe "Editor events" do

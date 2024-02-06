@@ -1,6 +1,7 @@
 defmodule LightningWeb.RunLive.RunViewerLive do
   use LightningWeb, {:live_view, container: {:div, []}}
   use LightningWeb.RunLive.Streaming, chunk_size: 100
+  require Lightning.Run
 
   import LightningWeb.RunLive.Components
 
@@ -137,7 +138,13 @@ defmodule LightningWeb.RunLive.RunViewerLive do
                 />
               </Common.panel_content>
               <Common.panel_content for_hash="input" class="grow overflow-auto">
-                <%= if @run.ok? && @selected_step_id do %>
+                <%= if @run.ok? && @run.result.state in Lightning.Run.final_states() && is_nil(@selected_step_id) do %>
+                  <div class="border-2 border-gray-200 border-dashed rounded-lg px-8 pt-6 pb-8 mb-4 flex flex-col">
+                    <p class="text-sm text-center">
+                      No input/output available. This step was never started.
+                    </p>
+                  </div>
+                <% else %>
                   <Viewers.step_dataclip_viewer
                     id={"step-input-#{@selected_step_id}"}
                     class="overflow-auto h-full"
@@ -149,16 +156,16 @@ defmodule LightningWeb.RunLive.RunViewerLive do
                     admin_contacts={@admin_contacts}
                     can_edit_data_retention={@can_edit_data_retention}
                   />
-                <% else %>
-                  <div class="border-2 border-gray-200 border-dashed rounded-lg px-8 pt-6 pb-8 mb-4 flex flex-col">
-                    <p class="text-sm text-center">
-                      No input/output available
-                    </p>
-                  </div>
                 <% end %>
               </Common.panel_content>
               <Common.panel_content for_hash="output" class="grow overflow-auto">
-                <%= if @run.ok? && @selected_step_id do %>
+                <%= if @run.ok? && @run.result.state in Lightning.Run.final_states() && is_nil(@selected_step_id) do %>
+                  <div class="border-2 border-gray-200 border-dashed rounded-lg px-8 pt-6 pb-8 mb-4 flex flex-col">
+                    <p class="text-sm text-center">
+                      No input/output available. This step was never started.
+                    </p>
+                  </div>
+                <% else %>
                   <Viewers.step_dataclip_viewer
                     id={"step-output-#{@selected_step_id}"}
                     class="overflow-auto h-full"
@@ -170,12 +177,6 @@ defmodule LightningWeb.RunLive.RunViewerLive do
                     admin_contacts={@admin_contacts}
                     can_edit_data_retention={@can_edit_data_retention}
                   />
-                <% else %>
-                  <div class="border-2 border-gray-200 border-dashed rounded-lg px-8 pt-6 pb-8 mb-4 flex flex-col">
-                    <p class="text-sm text-center">
-                      No input/output available
-                    </p>
-                  </div>
                 <% end %>
               </Common.panel_content>
             </div>

@@ -50,6 +50,8 @@ and this project adheres to
   [#1703](https://github.com/OpenFn/Lightning/issues/1703)
 - Fixed permissions issue that allowed viewers to initiate syncs to github
   [#1704](https://github.com/OpenFn/Lightning/issues/1704)
+- Fixed inspector view stuck at processing when following a crashed run
+  [#1711](https://github.com/OpenFn/Lightning/issues/1711)
 
 ## [v2.0.0-rc8] - 2024-01-30
 
