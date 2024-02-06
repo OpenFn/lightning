@@ -10,8 +10,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
   alias Lightning.Policies.ProjectUsers
   alias Lightning.Projects
   alias Lightning.Runs
-  alias Lightning.Runs.Events.StepCompleted
   alias Lightning.Runs.Events.RunUpdated
+  alias Lightning.Runs.Events.StepCompleted
   alias Lightning.Workflows
   alias Lightning.Workflows.Job
   alias Lightning.Workflows.Trigger

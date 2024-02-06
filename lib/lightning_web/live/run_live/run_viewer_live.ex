@@ -1,7 +1,6 @@
 defmodule LightningWeb.RunLive.RunViewerLive do
   use LightningWeb, {:live_view, container: {:div, []}}
   use LightningWeb.RunLive.Streaming, chunk_size: 100
-  require Lightning.Run
 
   import LightningWeb.RunLive.Components
 
@@ -12,6 +11,8 @@ defmodule LightningWeb.RunLive.RunViewerLive do
   alias Lightning.Projects.Project
   alias LightningWeb.Components.Viewers
   alias Phoenix.LiveView.AsyncResult
+
+  require Lightning.Run
 
   @impl true
   def render(assigns) do
