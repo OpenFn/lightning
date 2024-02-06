@@ -1,9 +1,13 @@
 defmodule LightningWeb.RunChannelTest do
   use LightningWeb.ChannelCase
 
+  alias Lightning.Extensions.RuntimeLimiter
+  alias Lightning.Invocation.Dataclip
   alias Lightning.Invocation.Step
   alias Lightning.Workers
 
+  import Ecto.Query
+  import Mock
   import Lightning.Factories
   import Lightning.BypassHelpers
 
@@ -129,7 +133,7 @@ defmodule LightningWeb.RunChannelTest do
     setup :set_google_credential
     setup :create_socket_and_run
 
-    test "fetch:plan", %{
+    test "fetch:plan success", %{
       socket: socket,
       run: run,
       workflow: workflow,
@@ -179,8 +183,86 @@ defmodule LightningWeb.RunChannelTest do
                "jobs" => jobs,
                "edges" => edges,
                "starting_node_id" => run.starting_trigger_id,
-               "dataclip_id" => run.dataclip_id
+               "dataclip_id" => run.dataclip_id,
+               "options" => %LightningWeb.RunOptions{output_dataclips: true}
              }
+    end
+
+    test "fetch:plan for project with erase_all retention setting", %{
+      credential: credential
+    } do
+      project = insert(:project, retention_policy: :erase_all)
+
+      %{run: run, workflow: workflow} =
+        create_run(%{project: project, credential: credential})
+
+      %{socket: socket} = create_socket(%{run: run})
+
+      id = run.id
+      ref = push(socket, "fetch:plan", %{})
+
+      assert_reply ref, :ok, payload
+
+      triggers =
+        workflow.triggers
+        |> Enum.map(&Map.take(&1, [:id]))
+        |> Enum.map(&stringify_keys/1)
+
+      [job] = workflow.jobs
+
+      jobs =
+        [
+          %{
+            "id" => job.id,
+            "name" => job.name,
+            "body" => job.body,
+            "credential_id" => credential.id,
+            "adaptor" => "@openfn/language-common@1.6.2"
+          }
+        ]
+
+      edges =
+        workflow.edges
+        |> Enum.map(
+          &(Map.take(&1, [
+              :id,
+              :source_trigger_id,
+              :source_job_id,
+              :enabled,
+              :target_job_id
+            ])
+            |> Map.put(:condition, "state.a == 33"))
+        )
+        |> Enum.map(&stringify_keys/1)
+
+      assert payload == %{
+               "id" => id,
+               "triggers" => triggers,
+               "jobs" => jobs,
+               "edges" => edges,
+               "starting_node_id" => run.starting_trigger_id,
+               "dataclip_id" => run.dataclip_id,
+               "options" => %LightningWeb.RunOptions{output_dataclips: false}
+             }
+    end
+
+    test "fetch:plan returns error on runtime limit exceeded", %{
+      socket: socket
+    } do
+      %{project_id: project_id} = socket.assigns
+
+      with_mock(
+        RuntimeLimiter,
+        limit_action: fn %{type: :new_run}, %{project_id: ^project_id} ->
+          {:error, :too_many_runs, "some error message"}
+        end
+      ) do
+        ref = push(socket, "fetch:plan", %{})
+
+        assert_reply ref,
+                     :error,
+                     %{errors: %{too_many_runs: ["some error message"]}}
+      end
     end
 
     test "fetch:dataclip handles all types", %{
@@ -207,6 +289,49 @@ defmodule LightningWeb.RunChannelTest do
       ref = push(socket, "fetch:dataclip", %{})
 
       assert_reply ref, :ok, {:binary, ~s<{"foo": "bar"}>}
+    end
+
+    test "fetch:dataclip wipes dataclip body for projects with erase_all retention policy",
+         %{
+           credential: credential
+         } do
+      # erase_all
+      project = insert(:project, retention_policy: :erase_all)
+
+      %{run: run, dataclip: dataclip} =
+        create_run(%{project: project, credential: credential})
+
+      %{socket: socket} = create_socket(%{run: run})
+
+      ref = push(socket, "fetch:dataclip", %{})
+
+      assert_reply ref, :ok, {:binary, _payload}
+
+      # dataclip body is cleared
+      dataclip_query = from(Dataclip, select: [:wiped_at, :body, :request])
+      updated_dataclip = Lightning.Repo.get(dataclip_query, dataclip.id)
+
+      assert updated_dataclip.wiped_at ==
+               DateTime.utc_now() |> DateTime.truncate(:second)
+
+      refute updated_dataclip.body
+
+      # retain_all
+      project = insert(:project, retention_policy: :retain_all)
+
+      %{run: run, dataclip: dataclip} =
+        create_run(%{project: project, credential: credential})
+
+      %{socket: socket} = create_socket(%{run: run})
+
+      ref = push(socket, "fetch:dataclip", %{})
+
+      assert_reply ref, :ok, {:binary, _payload}
+
+      # dataclip body is not cleared
+      updated_dataclip = Lightning.Repo.get(dataclip_query, dataclip.id)
+      refute updated_dataclip.wiped_at
+      assert updated_dataclip.body
     end
 
     test "fetch:credential", %{socket: socket, credential: credential} do
@@ -379,15 +504,17 @@ defmodule LightningWeb.RunChannelTest do
         run: run,
         user: user,
         workflow: workflow,
-        credential: credential
+        credential: credential,
+        project: project
       }
     end
 
     test "step:start", %{
       socket: socket,
-      run: run,
+      run: %{dataclip_id: dataclip_id},
       workflow: workflow,
-      credential: %{id: credential_id}
+      credential: %{id: credential_id},
+      project: project
     } do
       # { id, job_id, input_dataclip_id }
       step_id = Ecto.UUID.generate()
@@ -398,12 +525,82 @@ defmodule LightningWeb.RunChannelTest do
           "step_id" => step_id,
           "credential_id" => credential_id,
           "job_id" => job_id,
-          "input_dataclip_id" => run.dataclip_id
+          "input_dataclip_id" => dataclip_id
         })
 
       assert_reply ref, :ok, %{step_id: ^step_id}, 1_000
 
-      assert %{credential_id: ^credential_id, job_id: ^job_id} =
+      assert project.retention_policy == :retain_all
+
+      assert %{
+               credential_id: ^credential_id,
+               job_id: ^job_id,
+               input_dataclip_id: ^dataclip_id
+             } =
+               Repo.get!(Step, step_id)
+    end
+
+    test "step:start for a project with erase_all retention policy", %{
+      credential: %{id: credential_id} = credential
+    } do
+      # input dataclip is saved if provided by the worker
+      project = insert(:project, retention_policy: :erase_all)
+
+      %{run: %{dataclip_id: dataclip_id} = run, workflow: workflow} =
+        create_run(%{project: project, credential: credential})
+
+      %{socket: socket} = create_socket(%{run: run})
+
+      step_id = Ecto.UUID.generate()
+      [%{id: job_id}] = workflow.jobs
+
+      ref =
+        push(socket, "step:start", %{
+          "step_id" => step_id,
+          "credential_id" => credential_id,
+          "job_id" => job_id,
+          "input_dataclip_id" => dataclip_id
+        })
+
+      assert_reply ref, :ok, %{step_id: ^step_id}
+
+      assert project.retention_policy == :erase_all
+
+      assert %{
+               credential_id: ^credential_id,
+               job_id: ^job_id,
+               input_dataclip_id: ^dataclip_id
+             } =
+               Repo.get!(Step, step_id),
+             "dataclip is saved if provided"
+
+      # NO INPUT DATACLIP, NO PROBLEM
+      project = insert(:project, retention_policy: :erase_all)
+
+      %{run: run, workflow: workflow} =
+        create_run(%{project: project, credential: credential})
+
+      %{socket: socket} = create_socket(%{run: run})
+
+      step_id = Ecto.UUID.generate()
+      [%{id: job_id}] = workflow.jobs
+
+      ref =
+        push(socket, "step:start", %{
+          "step_id" => step_id,
+          "credential_id" => credential_id,
+          "job_id" => job_id
+        })
+
+      assert_reply ref, :ok, %{step_id: ^step_id}
+
+      assert project.retention_policy == :erase_all
+
+      assert %{
+               credential_id: ^credential_id,
+               job_id: ^job_id,
+               input_dataclip_id: nil
+             } =
                Repo.get!(Step, step_id)
     end
 
@@ -445,6 +642,93 @@ defmodule LightningWeb.RunChannelTest do
 
       assert_reply ref, :ok, %{step_id: ^step_id}
       assert %{exit_reason: "fail"} = Repo.get(Step, step.id)
+    end
+
+    test "step:complete does not save the dataclip/wipes it if project retention policy is set to erase_all",
+         %{
+           socket: socket,
+           run: run,
+           workflow: workflow,
+           project: project,
+           credential: credential
+         } do
+      dataclip_query = from(d in Dataclip, select: %{d | body: d.body})
+      [job] = workflow.jobs
+      %{id: step_id} = insert(:step, runs: [run], job: job)
+      dataclip_id = Ecto.UUID.generate()
+
+      ref =
+        push(socket, "step:complete", %{
+          "step_id" => step_id,
+          "output_dataclip_id" => dataclip_id,
+          "output_dataclip" => ~s({"foo": "bar"}),
+          "reason" => "normal"
+        })
+
+      assert_reply ref, :ok, %{step_id: ^step_id}
+
+      # dataclip is saved
+      assert project.retention_policy == :retain_all
+      assert %{output_dataclip_id: ^dataclip_id} = Repo.get(Step, step_id)
+      assert dataclip = Repo.get(dataclip_query, dataclip_id)
+      assert dataclip.body, "body is not wiped"
+      assert is_nil(dataclip.wiped_at)
+
+      # project with erase_all
+      project = insert(:project, retention_policy: :erase_all)
+
+      %{run: run, workflow: workflow} =
+        create_run(%{project: project, credential: credential})
+
+      %{socket: socket} = create_socket(%{run: run})
+
+      [job] = workflow.jobs
+      %{id: step_id} = insert(:step, runs: [run], job: job)
+      dataclip_id = Ecto.UUID.generate()
+
+      ref =
+        push(socket, "step:complete", %{
+          "step_id" => step_id,
+          "output_dataclip_id" => dataclip_id,
+          "output_dataclip" => ~s({"foo": "bar"}),
+          "reason" => "normal"
+        })
+
+      assert_reply ref, :ok, %{step_id: ^step_id}
+
+      # dataclip is saved but wiped
+      assert project.retention_policy == :erase_all
+      assert %{output_dataclip_id: ^dataclip_id} = Repo.get(Step, step_id)
+      assert dataclip = Repo.get(dataclip_query, dataclip_id)
+      assert is_nil(dataclip.body), "body is wiped"
+      assert is_struct(dataclip.wiped_at, DateTime)
+
+      # another project with erase_all
+      project = insert(:project, retention_policy: :erase_all)
+
+      %{run: run, workflow: workflow} =
+        create_run(%{project: project, credential: credential})
+
+      %{socket: socket} = create_socket(%{run: run})
+
+      [job] = workflow.jobs
+      %{id: step_id} = insert(:step, runs: [run], job: job)
+      dataclip_id = Ecto.UUID.generate()
+
+      # do not inclide output_dataclip_id
+      ref =
+        push(socket, "step:complete", %{
+          "step_id" => step_id,
+          "output_dataclip" => ~s({"foo": "bar"}),
+          "reason" => "normal"
+        })
+
+      assert_reply ref, :ok, %{step_id: ^step_id}
+
+      # dataclip NOT saved AT ALL
+      assert project.retention_policy == :erase_all
+      assert %{output_dataclip_id: nil} = Repo.get(Step, step_id)
+      refute Repo.get(dataclip_query, dataclip_id)
     end
   end
 
@@ -800,6 +1084,14 @@ defmodule LightningWeb.RunChannelTest do
   defp create_socket_and_run(%{credential: credential, user: user}) do
     project = insert(:project, project_users: [%{user: user}])
 
+    run_result = create_run(%{project: project, credential: credential})
+
+    socket_result = create_socket(run_result)
+
+    Map.merge(run_result, socket_result)
+  end
+
+  defp create_run(%{project: project, credential: credential}) do
     dataclip =
       insert(:http_request_dataclip, project: project)
 
@@ -813,7 +1105,7 @@ defmodule LightningWeb.RunChannelTest do
 
     workflow =
       %{triggers: [trigger]} =
-      build(:workflow)
+      build(:workflow, project: project)
       |> with_trigger(trigger)
       |> with_job(job)
       |> with_edge({trigger, job}, %{
@@ -836,6 +1128,15 @@ defmodule LightningWeb.RunChannelTest do
         dataclip: dataclip
       )
 
+    %{
+      run: run,
+      workflow: workflow,
+      credential: credential,
+      dataclip: dataclip
+    }
+  end
+
+  defp create_socket(%{run: run}) do
     Lightning.Stub.reset_time()
 
     {:ok, bearer, _} =
@@ -853,13 +1154,7 @@ defmodule LightningWeb.RunChannelTest do
         %{"token" => Workers.generate_run_token(run)}
       )
 
-    %{
-      socket: socket,
-      run: run,
-      workflow: workflow,
-      credential: credential,
-      dataclip: dataclip
-    }
+    %{socket: socket}
   end
 
   defp stringify_keys(map) do

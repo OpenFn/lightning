@@ -49,6 +49,7 @@ defmodule Lightning.Invocation do
   def list_dataclips_for_job(%Lightning.Workflows.Job{id: job_id}) do
     Query.last_n_for_job(job_id, 5)
     |> Query.select_as_input()
+    |> where([d], is_nil(d.wiped_at))
     |> Repo.all()
   end
 
@@ -96,6 +97,16 @@ defmodule Lightning.Invocation do
         where: s.job_id == ^job_id
 
     Repo.one(query)
+  end
+
+  @spec get_step_count_for_run(run_id :: Ecto.UUID.t()) :: non_neg_integer()
+  def get_step_count_for_run(run_id) do
+    query =
+      from s in Lightning.Invocation.Step,
+        join: a in assoc(s, :runs),
+        on: a.id == ^run_id
+
+    Repo.aggregate(query, :count)
   end
 
   @doc """
@@ -384,6 +395,12 @@ defmodule Lightning.Invocation do
     )
   end
 
+  def exclude_wiped_dataclips(work_order_query) do
+    work_order_query
+    |> join(:inner, [workorder: wo], assoc(wo, :dataclip), as: :dataclip)
+    |> where([dataclip: d], is_nil(d.wiped_at))
+  end
+
   defp base_query(project_id) do
     from(
       workorder in WorkOrder,
@@ -392,7 +409,11 @@ defmodule Lightning.Invocation do
       as: :workflow,
       where: workflow.project_id == ^project_id,
       select: workorder,
-      preload: [workflow: workflow, runs: [steps: :job]],
+      preload: [
+        workflow: workflow,
+        runs: [steps: [:job, :input_dataclip]],
+        dataclip: []
+      ],
       order_by: [desc_nulls_first: workorder.last_activity],
       distinct: true
     )

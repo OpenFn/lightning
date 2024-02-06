@@ -55,6 +55,13 @@
               <Heroicons.arrow_path class="h-5 w-5 inline-block mr-2" />
               <span class="inline-block align-middle">Sync to Github</span>
             </LightningWeb.Components.Common.tab_item>
+            <LightningWeb.Components.Common.tab_item
+              orientation="vertical"
+              hash="data-storage"
+            >
+              <Heroicons.square_3_stack_3d class="h-5 w-5 inline-block mr-2" />
+              <span class="inline-block align-middle">Data Storage</span>
+            </LightningWeb.Components.Common.tab_item>
           </LightningWeb.Components.Common.tab_bar>
         </div>
       </div>
@@ -301,12 +308,12 @@
                 type="button"
                 phx-click={show_modal("new_auth_method_modal")}
                 class="rounded-md bg-indigo-600 px-2.5 py-1.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 disabled:opacity-50"
-                {if !@can_create_webhook_auth_method, do: [disabled: "disabled"], else: []}
+                {if !@can_write_webhook_auth_method, do: [disabled: "disabled"], else: []}
               >
                 Add an auth method
               </button>
               <.live_component
-                :if={@can_create_webhook_auth_method}
+                :if={@can_write_webhook_auth_method}
                 module={
                   LightningWeb.WorkflowLive.WebhookAuthMethodModalComponent
                 }
@@ -367,7 +374,7 @@
               </span>
             </:linked_triggers>
             <:action :let={auth_method}>
-              <%= if @can_edit_webhook_auth_method do %>
+              <%= if @can_write_webhook_auth_method do %>
                 <a
                   id={"edit_auth_method_link_#{auth_method.id}"}
                   href="#"
@@ -403,30 +410,40 @@
               <% end %>
             </:action>
             <:action :let={auth_method}>
-              <a
-                id={"delete_auth_method_link_#{auth_method.id}"}
-                href="#"
-                class="text-red-600 hover:text-red-800"
-                phx-click={show_modal("delete_auth_#{auth_method.id}_modal")}
-              >
-                Delete
-              </a>
-              <div class="text-left">
-                <.live_component
-                  module={
-                    LightningWeb.WorkflowLive.WebhookAuthMethodModalComponent
-                  }
-                  id={"delete_auth_#{auth_method.id}_modal"}
-                  action={:delete}
-                  project={@project}
-                  webhook_auth_method={auth_method}
-                  current_user={@current_user}
-                  return_to={
-                    ~p"/projects/#{@project.id}/settings#webhook_security"
-                  }
-                  trigger={nil}
-                />
-              </div>
+              <%= if @can_write_webhook_auth_method do %>
+                <a
+                  id={"delete_auth_method_link_#{auth_method.id}"}
+                  href="#"
+                  class="text-red-600 hover:text-red-800"
+                  phx-click={show_modal("delete_auth_#{auth_method.id}_modal")}
+                >
+                  Delete
+                </a>
+                <div class="text-left">
+                  <.live_component
+                    module={
+                      LightningWeb.WorkflowLive.WebhookAuthMethodModalComponent
+                    }
+                    id={"delete_auth_#{auth_method.id}_modal"}
+                    action={:delete}
+                    project={@project}
+                    webhook_auth_method={auth_method}
+                    current_user={@current_user}
+                    return_to={
+                      ~p"/projects/#{@project.id}/settings#webhook_security"
+                    }
+                    trigger={nil}
+                  />
+                </div>
+              <% else %>
+                <a
+                  id={"edit_auth_method_link_#{auth_method.id}"}
+                  href="#"
+                  class="ml-1 cursor-not-allowed text-indigo-300"
+                >
+                  Delete
+                </a>
+              <% end %>
             </:action>
           </LightningWeb.WorkflowLive.Components.webhook_auth_methods_table>
         </LightningWeb.Components.Common.panel_content>
@@ -541,7 +558,7 @@
         </LightningWeb.Components.Common.panel_content>
         <LightningWeb.Components.Common.panel_content for_hash="vcs">
           <%= if  @github_enabled do %>
-            <div :if={@can_install_github}>
+            <div>
               <div :if={@show_github_setup} class="bg-white p-4 rounded-md">
                 <h6 class="font-medium text-black">
                   Install Github App to get started
@@ -557,6 +574,7 @@
                 </div>
                 <button
                   type="button"
+                  disabled={!@can_install_github}
                   phx-click="install_app"
                   phx-value-id={@project.id}
                   class="bg-primary-600 hover:bg-primary-700 inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
@@ -615,7 +633,7 @@
                       <Form.select_field
                         :if={@show_repo_setup && !@show_sync_button}
                         form={f}
-                        disabled={@show_sync_button}
+                        disabled={!@can_install_github || @show_sync_button}
                         name={:repo}
                         id="project-repo"
                         phx-change="repo_selected"
@@ -648,7 +666,7 @@
                       <Form.select_field
                         :if={@show_repo_setup && !@show_sync_button}
                         form={f}
-                        disabled={@loading_branches}
+                        disabled={!@can_install_github || @loading_branches}
                         phx-change="branch_selected"
                         name={:branch}
                         id="project-branch"
@@ -678,7 +696,7 @@
                         <Form.select_field
                           :if={@show_repo_setup && !@show_sync_button}
                           form={f}
-                          disabled={@loading_branches}
+                          disabled={!@can_install_github || @loading_branches}
                           phx-change="branch_selected"
                           name={:branch}
                           id="project-branch"
@@ -700,23 +718,29 @@
                         :if={!@show_sync_button}
                         phx-disable-with="Saving"
                         disabled={
-                          !@project_repo_connection["repo"] ||
+                          !@can_install_github ||
+                            !@project_repo_connection["repo"] ||
                             !@project_repo_connection["branch"]
                         }
                       >
                         Connect Branch
                       </Form.submit_button>
-                      <button
+                      <LightningWeb.Components.NewInputs.button
                         :if={@show_sync_button}
+                        disabled={!@can_initiate_github_sync}
                         type="button"
-                        phx-click="run_sync"
+                        tooltip={
+                          !@can_initiate_github_sync &&
+                            "Contact an editor or admin to sync."
+                        }
+                        phx-click="initiate_sync"
                         phx-value-id={@project.id}
                         class="bg-primary-600 hover:bg-primary-700 inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
                       >
-                        Sync to Branch
-                      </button>
+                        Initiate Sync to Branch
+                      </LightningWeb.Components.NewInputs.button>
                     </div>
-                    <div>
+                    <div :if={@can_install_github}>
                       <div>
                         <small>
                           Need to change the repository or branch?
@@ -750,14 +774,6 @@
               </div>
               <DeleteConnectionModal.modal id="delete_connection_modal" />
             </div>
-            <div :if={!@can_install_github} class="bg-white p-4 rounded-md">
-              <h6 class="font-medium text-black">
-                Sync to Github
-              </h6>
-              <small class="block mt-1 text-xs text-gray-600">
-                Ask an admin to install our github app to start syncing your project
-              </small>
-            </div>
           <% else %>
             <div class="bg-white p-4 rounded-md">
               <h6 class="font-medium text-black">
@@ -766,6 +782,107 @@
               <small class="block mt-1 text-xs text-gray-600">
                 Version Control is not configured for this Lightning instance. Contact the superuser for more information.
               </small>
+            </div>
+          <% end %>
+        </LightningWeb.Components.Common.panel_content>
+        <LightningWeb.Components.Common.panel_content for_hash="data-storage">
+          <%= if @can_edit_data_retention do %>
+            <div class="bg-white p-4 rounded-md">
+              <div class="text-black text-sm">
+                <div class="font-medium">
+                  Input/Output Data Storage Policy
+                </div>
+                <div class="block mt-1 mb-3">
+                  Should OpenFn store input/output data for workflow runs?
+                  <a
+                    href="https://docs.openfn.org/documentation/next/manage-projects/io-data-storage"
+                    class="ml-1 text-indigo-600"
+                  >
+                    Learn more...
+                  </a>
+                </div>
+              </div>
+              <.form
+                :let={f}
+                for={@project_changeset}
+                id="retention-settings-form"
+                phx-change="validate"
+                phx-submit="save"
+              >
+                <div class="space-y-2">
+                  <%!-- TODO: add this to the list of options for https://github.com/OpenFn/Lightning/issues/1694 --%>
+                  <%!-- {:retain_with_errors, "Only retain input/output data when a run fails"}, --%>
+                  <%= for {value, text} <- [
+                  {:retain_all, "Retain input/output data for all workflow runs"},
+                  {:erase_all, "Never retain input/output data (zero-persistence)"}
+                  ] do %>
+                    <div class="relative flex items-start">
+                      <div class="flex h-6 items-center">
+                        <.input
+                          type="radio"
+                          id={value}
+                          field={f[:retention_policy]}
+                          checked={checked?(@project_changeset, value)}
+                          value={value}
+                          class="h-4 w-4 border-gray-300 text-indigo-600 focus:ring-indigo-600"
+                        />
+                      </div>
+                      <div class="ml-3 leading-6">
+                        <label for={value} class="text-sm text-neutral-950">
+                          <%= text %>
+                        </label>
+                      </div>
+                    </div>
+                  <% end %>
+                </div>
+                <div
+                  :if={not checked?(@project_changeset, :retain_all)}
+                  id="heads-up-description"
+                  class="mt-2 ml-7 text-gray-700 bg-orange-50 p-3 border-l-4 border-l-orange-400"
+                >
+                  <span class="font-medium">Heads Up!</span>
+
+                  <p>
+                    When enabled, you will no longer be able to retry workflow runs as no data will be stored.
+                  </p>
+                </div>
+                <div class="mt-3 grid grid-flow-col justify-items-end gap-6">
+                  <div>
+                    <span>&nbsp;</span>
+                  </div>
+                  <div>
+                    <.button
+                      color_class="bg-neutral-100 hover:bg-neutral-300 text-neutral-950"
+                      phx-click="cancel-retention-change"
+                    >
+                      Cancel
+                    </.button>
+                    <Form.submit_button
+                      disabled={
+                        not @project_changeset.valid? or
+                          not @can_edit_data_retention
+                      }
+                      phx-disable-with="Saving"
+                    >
+                      Save
+                    </Form.submit_button>
+                  </div>
+                  <div>
+                    <span>&nbsp;</span>
+                  </div>
+                </div>
+              </.form>
+            </div>
+          <% else %>
+            <div
+              id="data-storage-permission"
+              class="mt-2 ml-7 text-gray-700 bg-red-100 p-3"
+            >
+              <span class="font-medium">Permission Denied</span>
+
+              <p>
+                Only project owner and admins can view or edit the Data Storage section.
+              </p>
             </div>
           <% end %>
         </LightningWeb.Components.Common.panel_content>

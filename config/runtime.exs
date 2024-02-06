@@ -121,6 +121,7 @@ impact_tracking_cron = [{"0 */1 * * *", Lightning.ImpactTracking.Worker}]
 all_cron = base_oban_cron ++ purge_cron ++ impact_tracking_cron
 
 config :lightning, Oban,
+  name: Lightning.Oban,
   repo: Lightning.Repo,
   plugins: [
     {Oban.Plugins.Cron, crontab: all_cron}

@@ -138,6 +138,19 @@ defmodule Lightning.Projects do
   end
 
   @doc """
+  Lists emails of users with `:owner` or `:admin` roles in the project
+  """
+  @spec list_project_admin_emails(Ecto.UUID.t()) :: [String.t(), ...] | []
+  def list_project_admin_emails(id) do
+    from(pu in ProjectUser,
+      join: u in assoc(pu, :user),
+      where: pu.project_id == ^id and pu.role in ^[:admin, :owner],
+      select: u.email
+    )
+    |> Repo.all()
+  end
+
+  @doc """
   Creates a project.
 
   ## Examples
@@ -243,6 +256,20 @@ defmodule Lightning.Projects do
 
       project
     end)
+  end
+
+  @spec project_retention_policy_for(Run.t()) ::
+          Project.retention_policy_type()
+  def project_retention_policy_for(%Run{work_order_id: wo_id}) do
+    query =
+      from(wo in WorkOrder,
+        join: wf in assoc(wo, :workflow),
+        join: p in assoc(wf, :project),
+        where: wo.id == ^wo_id,
+        select: p.retention_policy
+      )
+
+    Repo.one(query)
   end
 
   def project_runs_query(project) do

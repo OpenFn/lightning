@@ -10,18 +10,48 @@ and this project adheres to
 
 ### Added
 
+### Changed
+
+### Fixed
+
+## [v2.0.0-rc9] 2024-02-05
+
+### Added
+
 - Persist impact tracking configuration and reports
   [#1684](https://github.com/OpenFn/Lightning/issues/1684)
 - Add support for Salesforce OAuth2 credentials
   [#1633](https://github.com/OpenFn/Lightning/issues/1633)
+- Add zero-persistence project setting
+  [#1209](https://github.com/OpenFn/Lightning/issues/1209)
+- Wipe dataclip after use when zero-persistence is enabled
+  [#1212](https://github.com/OpenFn/Lightning/issues/1212)
+- Show appropriate message when a wiped dataclip is viewed
+  [#1211](https://github.com/OpenFn/Lightning/issues/1211)
+- Disable selecting work orders having wiped dataclips in the history page
+  [#1210](https://github.com/OpenFn/Lightning/issues/1210)
+- Hide rerun button in inspector when the selected step has a wiped dataclip
+  [#1639](https://github.com/OpenFn/Lightning/issues/1639)
+- Add rate limiter to webhook endpoints and runtime limiter for runs.
+  [#639](https://github.com/OpenFn/Lightning/issues/639)
 
 ### Changed
 
 ### Fixed
 
+- Prevented secret scrubber from over-eagerly adding \*\*\* between all
+  characters if an empty string secret was provided as a credential field value
+  (e.g., {"username": "come-on-in", "password": ""})
+  [#1585](https://github.com/OpenFn/Lightning/issues/1585)
+- Fixed permissions issue that allowed viewer/editor to modify webhook auth
+  methods. These permissions only belong to project owners and admins
+  [#1692](https://github.com/OpenFn/Lightning/issues/1692)
 - Fixed bug that was duplicating inbound http_requests, resulting in unnecessary
-  data storage  
-  [#1695](https://github.com/OpenFn/Lightning/issues/1695)
+  data storage [#1695](https://github.com/OpenFn/Lightning/issues/1695)
+- Fixed permissions issue that allowed editors to set up new Github connections
+  [#1703](https://github.com/OpenFn/Lightning/issues/1703)
+- Fixed permissions issue that allowed viewers to initiate syncs to github
+  [#1704](https://github.com/OpenFn/Lightning/issues/1704)
 
 ## [v2.0.0-rc8] - 2024-01-30
 

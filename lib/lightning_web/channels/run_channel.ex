@@ -5,11 +5,16 @@ defmodule LightningWeb.RunChannel do
   use LightningWeb, :channel
 
   alias Lightning.Credentials
+  alias Lightning.Extensions.RuntimeLimiter
+  alias Lightning.Extensions.RuntimeLimiting.Action
+  alias Lightning.Extensions.RuntimeLimiting.Context
+  alias Lightning.Projects
   alias Lightning.Repo
   alias Lightning.Runs
   alias Lightning.Scrubber
   alias Lightning.Workers
-  alias LightningWeb.RunJson
+  alias LightningWeb.RunOptions
+  alias LightningWeb.RunWithOptions
 
   require Jason.Helpers
   require Logger
@@ -32,7 +37,8 @@ defmodule LightningWeb.RunChannel do
          id: id,
          run: run,
          project_id: project_id,
-         scrubber: nil
+         scrubber: nil,
+         retention_policy: Projects.project_retention_policy_for(run)
        })}
     else
       {:error, :not_found} ->
@@ -49,7 +55,24 @@ defmodule LightningWeb.RunChannel do
 
   @impl true
   def handle_in("fetch:plan", _, socket) do
-    {:reply, {:ok, RunJson.render(socket.assigns.run)}, socket}
+    %{project_id: project_id, retention_policy: retention_policy, run: run} =
+      socket.assigns
+
+    options = %RunOptions{
+      output_dataclips: include_output_dataclips?(retention_policy)
+    }
+
+    RuntimeLimiter.limit_action(
+      %Action{type: :new_run},
+      %Context{project_id: project_id, user_id: nil}
+    )
+    |> case do
+      :ok ->
+        {:reply, {:ok, RunWithOptions.render(run, options)}, socket}
+
+      {:error, reason, message} ->
+        {:reply, {:error, %{errors: %{reason => [message]}}}, socket}
+    end
   end
 
   def handle_in("run:start", _, socket) do
@@ -136,6 +159,10 @@ defmodule LightningWeb.RunChannel do
   def handle_in("fetch:dataclip", _, socket) do
     body = Runs.get_input(socket.assigns.run)
 
+    if socket.assigns.retention_policy == :erase_all do
+      Runs.wipe_dataclips(socket.assigns.run)
+    end
+
     {:reply, {:ok, {:binary, body}}, socket}
   end
 
@@ -170,7 +197,7 @@ defmodule LightningWeb.RunChannel do
       "project_id" => socket.assigns.project_id
     }
     |> Enum.into(payload)
-    |> Runs.complete_step()
+    |> Runs.complete_step(socket.assigns.retention_policy)
     |> case do
       {:error, changeset} ->
         {:reply, {:error, LightningWeb.ChangesetJSON.error(changeset)}, socket}
@@ -197,6 +224,10 @@ defmodule LightningWeb.RunChannel do
     Runs.get(id,
       include: [workflow: [:triggers, :edges, jobs: [:credential]]]
     )
+  end
+
+  defp include_output_dataclips?(retention_policy) do
+    retention_policy != :erase_all
   end
 
   defp replace_reason_with_exit_reason(params) do

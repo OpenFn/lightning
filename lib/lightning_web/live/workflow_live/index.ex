@@ -5,11 +5,15 @@ defmodule LightningWeb.WorkflowLive.Index do
   import LightningWeb.WorkflowLive.Components
 
   alias Lightning.DashboardStats
+  alias Lightning.Extensions.RuntimeLimiter
+  alias Lightning.Extensions.RuntimeLimiting.Context
   alias Lightning.Policies.Permissions
   alias Lightning.Policies.ProjectUsers
   alias Lightning.Workflows
   alias LightningWeb.WorkflowLive.DashboardComponents
   alias LightningWeb.WorkflowLive.NewWorkflowForm
+
+  alias Phoenix.LiveView.TagEngine
 
   on_mount {LightningWeb.Hooks, :project_scope}
 
@@ -17,11 +21,21 @@ defmodule LightningWeb.WorkflowLive.Index do
   attr :can_delete_workflow, :boolean
   attr :workflows, :list
   attr :project, Lightning.Projects.Project
+  attr :banner, :map, default: nil
 
   @impl true
   def render(assigns) do
     ~H"""
     <LayoutComponents.page_content>
+      <:banner>
+        <%= if assigns[:banner] do %>
+          <%= TagEngine.component(
+            @banner.function,
+            @banner.attrs,
+            {__ENV__.module, __ENV__.function, __ENV__.file, __ENV__.line}
+          ) %>
+        <% end %>
+      </:banner>
       <:header>
         <LayoutComponents.header current_user={@current_user}>
           <:title><%= @page_title %></:title>
@@ -62,15 +76,26 @@ defmodule LightningWeb.WorkflowLive.Index do
         socket.assigns.project
       )
 
-    {:ok,
-     socket
-     |> assign(
-       can_delete_workflow: can_delete_workflow,
-       can_create_workflow: can_create_workflow
-     )
-     |> assign_workflow_form(
-       NewWorkflowForm.validate(%{}, socket.assigns.project.id)
-     )}
+    socket
+    |> assign(
+      can_delete_workflow: can_delete_workflow,
+      can_create_workflow: can_create_workflow
+    )
+    |> assign_workflow_form(
+      NewWorkflowForm.validate(%{}, socket.assigns.project.id)
+    )
+    |> then(fn socket ->
+      case RuntimeLimiter.check_limits(%Context{
+             project_id: socket.assigns.project.id
+           }) do
+        :ok ->
+          {:ok, socket}
+
+        {:error, reason, %{position: position} = component}
+        when reason in [:too_many_runs, :too_many_workorders] ->
+          {:ok, socket |> assign(position, component)}
+      end
+    end)
   end
 
   @impl true

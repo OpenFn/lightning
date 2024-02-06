@@ -4,7 +4,7 @@ defmodule Lightning.MixProject do
   def project do
     [
       app: :lightning,
-      version: "2.0.0-rc8",
+      version: "2.0.0-rc9",
       elixir: "~> 1.15",
       elixirc_paths: elixirc_paths(Mix.env()),
       elixirc_options: [
@@ -31,6 +31,19 @@ defmodule Lightning.MixProject do
       name: "Lightning",
       docs: docs()
     ]
+    |> then(fn project ->
+      if System.get_env("UMBRELLA") == "true" do
+        project ++
+          [
+            build_path: "../../_build",
+            config_path: "../../config/config.exs",
+            deps_path: "../../deps",
+            lockfile: "../../mix.lock"
+          ]
+      else
+        project
+      end
+    end)
   end
 
   # Configuration for the OTP application.

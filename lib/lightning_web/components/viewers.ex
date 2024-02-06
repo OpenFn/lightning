@@ -14,6 +14,7 @@ defmodule LightningWeb.Components.Viewers do
 
   alias Lightning.Invocation.Dataclip
   alias LightningWeb.Components.Icon
+  alias Phoenix.LiveView.AsyncResult
 
   @doc """
   Renders out a log line stream
@@ -148,6 +149,117 @@ defmodule LightningWeb.Components.Viewers do
 
   attr :id, :string, required: true
 
+  attr :stream, :list,
+    required: true,
+    doc: """
+    A stream of lines to render. In the shape of `%{id: String.t(), line: String.t(), index: integer()}`
+    """
+
+  attr :class, :string,
+    default: nil,
+    doc: "Additional classes to add to the log viewer container"
+
+  attr :step, :map
+  attr :dataclip, :map, doc: "Can be an `AsyncResult` or `Dataclip`"
+  attr :input_or_output, :atom, required: true, values: [:input, :output]
+  attr :project_id, :string, required: true
+
+  attr :admin_contacts, :list,
+    required: true,
+    doc: "list of project admin emails"
+
+  attr :can_edit_data_retention, :boolean, required: true
+
+  def step_dataclip_viewer(assigns) do
+    ~H"""
+    <%= if dataclip_wiped?(@step, @dataclip, @input_or_output) do %>
+      <.wiped_dataclip_viewer
+        id={@id}
+        can_edit_data_retention={@can_edit_data_retention}
+        admin_contacts={@admin_contacts}
+        input_or_output={@input_or_output}
+        project_id={@project_id}
+      />
+    <% else %>
+      <.dataclip_viewer
+        id={@id}
+        class={@class}
+        stream={@stream}
+        type={
+          case @dataclip do
+            %AsyncResult{ok?: true, result: %{type: type}} -> type
+            %{type: type} -> type
+            _ -> nil
+          end
+        }
+      />
+    <% end %>
+    """
+  end
+
+  attr :id, :string, default: nil
+  attr :input_or_output, :atom, required: true, values: [:input, :output]
+  attr :project_id, :string, required: true
+
+  attr :admin_contacts, :list,
+    required: true,
+    doc: "list of project admin emails"
+
+  attr :can_edit_data_retention, :boolean, required: true
+
+  slot :footer
+
+  def wiped_dataclip_viewer(assigns) do
+    ~H"""
+    <div
+      id={@id}
+      class="border-2 border-gray-200 border-dashed rounded-lg px-8 pt-6 pb-8 mb-4 flex flex-col"
+    >
+      <div class="mb-4">
+        <div class="h-12 w-12 border-2 border-gray-300 border-solid mx-auto flex items-center justify-center rounded-full text-gray-400">
+          <Heroicons.code_bracket class="w-4 h-4" />
+        </div>
+      </div>
+      <div class="text-center mb-4 text-gray-500">
+        <h3 class="font-bold text-lg">
+          <span class="capitalize">No <%= @input_or_output %> Data</span> here!
+        </h3>
+        <p class="text-sm">
+          <span class="capitalize"><%= @input_or_output %></span>
+          data for this step has not been retained in accordance
+          with your project's data storage policy.
+        </p>
+      </div>
+      <div class="text-center text-gray-500 text-sm">
+        <%= if @can_edit_data_retention do %>
+          You can’t rerun this work order, but you can change
+          <.link
+            href={~p"/projects/#{@project_id}/settings#data-storage"}
+            class="underline inline-block text-blue-400 hover:text-blue-600"
+          >
+            this policy
+          </.link>
+          for future runs.
+        <% else %>
+          Contact one of your
+          <span
+            id="zero-persistence-admins-tooltip"
+            phx-hook="Tooltip"
+            class="underline inline-block text-blue-400"
+            aria-label={Enum.join(@admin_contacts, ", ")}
+          >
+            project admins
+          </span>
+          for more information.
+        <% end %>
+      </div>
+      <%= render_slot(@footer) %>
+    </div>
+    """
+  end
+
+  attr :id, :string, required: true
+
   attr :type, :atom,
     default: nil,
     values: [nil | Dataclip.source_types()]
@@ -176,4 +288,33 @@ defmodule LightningWeb.Components.Viewers do
     </div>
     """
   end
+
+  defp step_finished?(%{finished_at: %_{}}), do: true
+
+  defp step_finished?(_other), do: false
+
+  defp dataclip_wiped?(_step, %AsyncResult{ok?: false}, _input_or_output) do
+    false
+  end
+
+  defp dataclip_wiped?(
+         step,
+         %AsyncResult{ok?: true, result: result},
+         input_or_output
+       ) do
+    dataclip_wiped?(step, result, input_or_output)
+  end
+
+  defp dataclip_wiped?(_step, %{wiped_at: %_{}} = _dataclip, _input_or_output) do
+    true
+  end
+
+  defp dataclip_wiped?(step, _dataclip, input_or_output) do
+    dataclip_field = dataclip_field(input_or_output)
+
+    step_finished?(step) and is_nil(Map.fetch!(step, dataclip_field))
+  end
+
+  defp dataclip_field(:input), do: :input_dataclip_id
+  defp dataclip_field(:output), do: :output_dataclip_id
 end

@@ -53,7 +53,13 @@ defmodule LightningWeb.RunLive.Index do
   def mount(
         params,
         _session,
-        %{assigns: %{current_user: current_user, project: project}} = socket
+        %{
+          assigns: %{
+            current_user: current_user,
+            project: project,
+            project_user: project_user
+          }
+        } = socket
       ) do
     WorkOrders.subscribe(project.id)
 
@@ -61,12 +67,20 @@ defmodule LightningWeb.RunLive.Index do
       Lightning.Workflows.get_workflows_for(project)
       |> Enum.map(&{&1.name || "Untitled", &1.id})
 
-    can_rerun_job =
+    can_run_workflow =
       ProjectUsers
       |> Permissions.can?(
-        :rerun_job,
+        :run_workflow,
         current_user,
         project
+      )
+
+    can_edit_data_retention =
+      ProjectUsers
+      |> Permissions.can?(
+        :edit_data_retention,
+        current_user,
+        project_user
       )
 
     statuses = [
@@ -99,7 +113,8 @@ defmodule LightningWeb.RunLive.Index do
        active_menu_item: :runs,
        work_orders: [],
        selected_work_orders: [],
-       can_rerun_job: can_rerun_job,
+       can_edit_data_retention: can_edit_data_retention,
+       can_run_workflow: can_run_workflow,
        pagination_path: &pagination_path(socket, project, &1),
        filters: params["filters"]
      )}
@@ -220,7 +235,13 @@ defmodule LightningWeb.RunLive.Index do
     %{work_order: work_order} =
       Lightning.Repo.preload(
         run,
-        [work_order: [:workflow, runs: [steps: :job]]],
+        [
+          work_order: [
+            :workflow,
+            :dataclip,
+            runs: [steps: [:job, :input_dataclip]]
+          ]
+        ],
         force: true
       )
 
@@ -257,7 +278,9 @@ defmodule LightningWeb.RunLive.Index do
         socket
       ) do
     work_order =
-      Lightning.Repo.preload(work_order, [:workflow, runs: [steps: :job]],
+      Lightning.Repo.preload(
+        work_order,
+        [:workflow, :dataclip, runs: [steps: [:job, :input_dataclip]]],
         force: true
       )
 
@@ -270,7 +293,7 @@ defmodule LightningWeb.RunLive.Index do
         %{"run_id" => run_id, "step_id" => step_id},
         socket
       ) do
-    if socket.assigns.can_rerun_job do
+    if socket.assigns.can_run_workflow do
       WorkOrders.retry(run_id, step_id, created_by: socket.assigns.current_user)
 
       {:noreply, socket}
@@ -282,7 +305,7 @@ defmodule LightningWeb.RunLive.Index do
   end
 
   def handle_event("bulk-rerun", attrs, socket) do
-    with true <- socket.assigns.can_rerun_job,
+    with true <- socket.assigns.can_run_workflow,
          {:ok, count} <- handle_bulk_rerun(socket, attrs) do
       {:noreply,
        socket
@@ -355,7 +378,9 @@ defmodule LightningWeb.RunLive.Index do
 
     work_orders =
       if selection do
-        Enum.map(page.entries, fn entry ->
+        page.entries
+        |> Enum.filter(fn wo -> is_nil(wo.dataclip.wiped_at) end)
+        |> Enum.map(fn entry ->
           %Lightning.WorkOrder{id: entry.id, workflow_id: entry.workflow_id}
         end)
       else
@@ -398,6 +423,7 @@ defmodule LightningWeb.RunLive.Index do
 
     socket.assigns.project
     |> Invocation.search_workorders_query(filter)
+    |> Invocation.exclude_wiped_dataclips()
     |> Lightning.Repo.all()
     |> WorkOrders.retry_many(job_id, created_by: socket.assigns.current_user)
   end
@@ -412,6 +438,7 @@ defmodule LightningWeb.RunLive.Index do
 
     socket.assigns.project
     |> Invocation.search_workorders_query(filter)
+    |> Invocation.exclude_wiped_dataclips()
     |> Lightning.Repo.all()
     |> WorkOrders.retry_many(created_by: socket.assigns.current_user)
   end

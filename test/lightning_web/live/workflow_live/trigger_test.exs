@@ -1,6 +1,10 @@
 defmodule LightningWeb.WorkflowLive.TriggerTest do
   use LightningWeb.ConnCase, async: true
 
+  alias Lightning.Name
+  alias Lightning.Repo
+  alias Lightning.Workflows.WebhookAuthMethod
+
   import Phoenix.LiveViewTest
   import Lightning.Factories
 
@@ -11,25 +15,18 @@ defmodule LightningWeb.WorkflowLive.TriggerTest do
     workflow = insert(:workflow, project: project)
     trigger = insert(:trigger, type: :webhook, workflow: workflow)
 
-    [workflow: workflow, trigger: trigger]
+    [
+      workflow: workflow,
+      trigger: trigger
+    ]
   end
 
-  test "authorized users can see link to add authentication method", %{
-    conn: conn,
+  test "owner/admin can see link to add auth method, editor/viewer can't", %{
     project: project,
     workflow: workflow,
     trigger: trigger
   } do
-    for project_user <-
-          Enum.map([:editor, :admin, :owner], fn role ->
-            insert(:project_user,
-              role: role,
-              project: project,
-              user: build(:user)
-            )
-          end) do
-      conn = log_in_user(conn, project_user.user)
-
+    for conn <- build_project_user_conns(project, [:owner, :admin]) do
       {:ok, view, _html} =
         live(
           conn,
@@ -40,40 +37,212 @@ defmodule LightningWeb.WorkflowLive.TriggerTest do
       assert view |> element("#webhooks_auth_method_modal") |> has_element?()
     end
 
-    project_user =
-      insert(:project_user,
-        role: :viewer,
-        project: project,
-        user: build(:user)
-      )
+    for conn <- build_project_user_conns(project, [:editor, :viewer]) do
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[s: trigger.id]}"
+        )
 
-    conn = log_in_user(conn, project_user.user)
+      assert view
+             |> element("a#addAuthenticationLink.cursor-not-allowed")
+             |> has_element?()
 
-    {:ok, view, _html} =
-      live(
-        conn,
-        ~p"/projects/#{project.id}/w/#{workflow.id}?#{[s: trigger.id]}"
-      )
-
-    assert view
-           |> element("a#addAuthenticationLink.cursor-not-allowed")
-           |> has_element?()
-
-    refute view |> element("#webhooks_auth_method_modal") |> has_element?()
+      refute view |> element("#webhooks_auth_method_modal") |> has_element?()
+    end
   end
 
-  test "user can see existing trigger authentication methods", %{
-    conn: conn,
+  test "all users can see existing trigger authentication methods", %{
     project: project,
     workflow: workflow,
     trigger: trigger
   } do
-    {:ok, _view, html} =
-      live(
-        conn,
-        ~p"/projects/#{project.id}/w/#{workflow.id}?#{[s: trigger.id]}"
-      )
+    for conn <-
+          build_project_user_conns(project, [:owner, :admin, :editor, :viewer]) do
+      {:ok, _view, html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[s: trigger.id]}"
+        )
 
+      auth_method =
+        insert(:webhook_auth_method,
+          project: project,
+          auth_type: :basic,
+          triggers: [trigger]
+        )
+
+      refute html =~ auth_method.name
+
+      {:ok, _view, html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[s: trigger.id]}"
+        )
+
+      assert html =~ auth_method.name
+    end
+  end
+
+  test "owner/admin can successfully create a basic authentication method, editor/viewer can't",
+       %{
+         project: project,
+         workflow: workflow,
+         trigger: trigger
+       } do
+    modal_id = "webhooks_auth_method_modal"
+
+    for conn <- build_project_user_conns(project, [:editor, :viewer]) do
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[s: trigger.id]}"
+        )
+
+      refute view |> element("##{modal_id}") |> has_element?()
+    end
+
+    for conn <- build_project_user_conns(project, [:owner, :admin]) do
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[s: trigger.id]}"
+        )
+
+      assert view |> element("##{modal_id}") |> has_element?()
+
+      html =
+        view
+        |> form("#choose_auth_type_form_#{modal_id}",
+          webhook_auth_method: %{auth_type: "basic"}
+        )
+        |> render_submit()
+
+      assert html =~ "Create auth method"
+
+      auth_method_name = Name.generate()
+
+      refute render(view) =~ auth_method_name
+
+      view
+      |> form("#form_#{modal_id}_new_webhook_auth_method",
+        webhook_auth_method: %{
+          name: auth_method_name,
+          username: "testusername",
+          password: "testpassword123"
+        }
+      )
+      |> render_submit()
+
+      flash =
+        assert_redirect(
+          view,
+          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[s: trigger.id]}"
+        )
+
+      assert flash["info"] == "Webhook auth method created successfully"
+
+      {:ok, _view, html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[s: trigger.id]}"
+        )
+
+      assert html =~ auth_method_name
+
+      assert %Postgrex.Result{num_rows: 1} =
+               Ecto.Adapters.SQL.query!(
+                 Repo,
+                 "delete from trigger_webhook_auth_methods"
+               )
+
+      Repo.get_by(WebhookAuthMethod, name: auth_method_name)
+      |> Repo.delete()
+    end
+  end
+
+  test "admin can successfully create an API authentication method, editor/viewer can't",
+       %{
+         project: project,
+         workflow: workflow,
+         trigger: trigger
+       } do
+    modal_id = "webhooks_auth_method_modal"
+
+    for conn <- build_project_user_conns(project, [:editor, :viewer]) do
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[s: trigger.id]}"
+        )
+
+      refute view |> element("##{modal_id}") |> has_element?()
+    end
+
+    for conn <- build_project_user_conns(project, [:owner, :admin]) do
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[s: trigger.id]}"
+        )
+
+      assert view |> element("##{modal_id}") |> has_element?()
+
+      html =
+        view
+        |> form("#choose_auth_type_form_#{modal_id}",
+          webhook_auth_method: %{auth_type: "api"}
+        )
+        |> render_submit()
+
+      assert html =~ "Create auth method"
+      assert html =~ "API Key"
+      refute html =~ "password"
+
+      auth_method_name = Name.generate()
+
+      refute render(view) =~ auth_method_name
+
+      assert view
+             |> form("#form_#{modal_id}_new_webhook_auth_method",
+               webhook_auth_method: %{
+                 name: auth_method_name
+               }
+             )
+             |> render_submit()
+
+      flash =
+        assert_redirect(
+          view,
+          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[s: trigger.id]}"
+        )
+
+      assert flash["info"] == "Webhook auth method created successfully"
+
+      {:ok, _view, html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[s: trigger.id]}"
+        )
+
+      assert html =~ auth_method_name
+
+      assert %Postgrex.Result{num_rows: 1} =
+               Ecto.Adapters.SQL.query!(
+                 Repo,
+                 "delete from trigger_webhook_auth_methods"
+               )
+
+      Repo.get_by(WebhookAuthMethod, name: auth_method_name)
+      |> Repo.delete()
+    end
+  end
+
+  test "admin can successfully update an authentication method, editor cant", %{
+    project: project,
+    workflow: workflow,
+    trigger: trigger
+  } do
     auth_method =
       insert(:webhook_auth_method,
         project: project,
@@ -81,135 +250,74 @@ defmodule LightningWeb.WorkflowLive.TriggerTest do
         triggers: [trigger]
       )
 
-    refute html =~ auth_method.name
-
-    {:ok, _view, html} =
-      live(
-        conn,
-        ~p"/projects/#{project.id}/w/#{workflow.id}?#{[s: trigger.id]}"
-      )
-
-    assert html =~ auth_method.name
-  end
-
-  test "user can successfully create a basic authentication method", %{
-    conn: conn,
-    project: project,
-    workflow: workflow,
-    trigger: trigger
-  } do
-    {:ok, view, _html} =
-      live(
-        conn,
-        ~p"/projects/#{project.id}/w/#{workflow.id}?#{[s: trigger.id]}"
-      )
-
     modal_id = "webhooks_auth_method_modal"
 
-    assert view |> element("##{modal_id}") |> has_element?()
+    for conn <- build_project_user_conns(project, [:editor, :viewer]) do
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[s: trigger.id]}"
+        )
 
-    html =
-      view
-      |> form("#choose_auth_type_form_#{modal_id}",
-        webhook_auth_method: %{auth_type: "basic"}
-      )
-      |> render_submit()
+      refute view |> element("##{modal_id}") |> has_element?()
+    end
 
-    assert html =~ "Create auth method"
+    for conn <- build_project_user_conns(project, [:owner, :admin]) do
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[s: trigger.id]}"
+        )
 
-    auth_method_name = "funnyauthmethodname"
+      assert view |> element("##{modal_id}") |> has_element?()
 
-    refute render(view) =~ auth_method_name
+      html =
+        view
+        |> element("#edit_auth_method_link_#{auth_method.id}")
+        |> render_click()
 
-    view
-    |> form("#form_#{modal_id}_new_webhook_auth_method",
-      webhook_auth_method: %{
-        name: auth_method_name,
-        username: "testusername",
-        password: "testpassword123"
-      }
-    )
-    |> render_submit()
+      assert html =~ "Edit webhook auth method"
 
-    flash =
-      assert_redirect(
-        view,
-        ~p"/projects/#{project.id}/w/#{workflow.id}?#{[s: trigger.id]}"
-      )
+      new_auth_method_name = Name.generate()
 
-    assert flash["info"] == "Webhook auth method created successfully"
+      assert view
+             |> form("#form_#{modal_id}_#{auth_method.id}")
+             |> render_submit(%{
+               webhook_auth_method: %{
+                 name: new_auth_method_name,
+                 username: "newusername",
+                 password: "newpassword123"
+               }
+             })
 
-    {:ok, _view, html} =
-      live(
-        conn,
-        ~p"/projects/#{project.id}/w/#{workflow.id}?#{[s: trigger.id]}"
-      )
+      flash =
+        assert_redirect(
+          view,
+          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[s: trigger.id]}"
+        )
 
-    assert html =~ auth_method_name
+      assert flash["info"] == "Webhook auth method updated successfully"
+
+      updated_auth_method = Repo.get(WebhookAuthMethod, auth_method.id)
+
+      refute updated_auth_method.name == auth_method.name
+      assert updated_auth_method.name == new_auth_method_name
+
+      # only auth method name is updated
+      refute auth_method.username == "username"
+      assert auth_method.username == updated_auth_method.username
+
+      refute auth_method.password == "newpassword123"
+      assert auth_method.password == updated_auth_method.password
+    end
   end
 
-  test "user can successfully create an API authentication method", %{
-    conn: conn,
-    project: project,
-    workflow: workflow,
-    trigger: trigger
-  } do
-    {:ok, view, _html} =
-      live(
-        conn,
-        ~p"/projects/#{project.id}/w/#{workflow.id}?#{[s: trigger.id]}"
-      )
-
-    modal_id = "webhooks_auth_method_modal"
-
-    assert view |> element("##{modal_id}") |> has_element?()
-
-    html =
-      view
-      |> form("#choose_auth_type_form_#{modal_id}",
-        webhook_auth_method: %{auth_type: "api"}
-      )
-      |> render_submit()
-
-    assert html =~ "Create auth method"
-    assert html =~ "API Key"
-    refute html =~ "password"
-
-    auth_method_name = "funnyapiauthmethodname"
-
-    refute render(view) =~ auth_method_name
-
-    assert view
-           |> form("#form_#{modal_id}_new_webhook_auth_method",
-             webhook_auth_method: %{
-               name: auth_method_name
-             }
-           )
-           |> render_submit()
-
-    flash =
-      assert_redirect(
-        view,
-        ~p"/projects/#{project.id}/w/#{workflow.id}?#{[s: trigger.id]}"
-      )
-
-    assert flash["info"] == "Webhook auth method created successfully"
-
-    {:ok, _view, html} =
-      live(
-        conn,
-        ~p"/projects/#{project.id}/w/#{workflow.id}?#{[s: trigger.id]}"
-      )
-
-    assert html =~ auth_method_name
-  end
-
-  test "user can successfully update an authentication method", %{
-    conn: conn,
-    project: project,
-    workflow: workflow,
-    trigger: trigger
-  } do
+  test "owner/admin can remove an auth method from a trigger, editor/viewer can't",
+       %{
+         project: project,
+         workflow: workflow,
+         trigger: trigger
+       } do
     auth_method =
       insert(:webhook_auth_method,
         project: project,
@@ -217,95 +325,57 @@ defmodule LightningWeb.WorkflowLive.TriggerTest do
         triggers: [trigger]
       )
 
-    {:ok, view, _html} =
-      live(
-        conn,
-        ~p"/projects/#{project.id}/w/#{workflow.id}?#{[s: trigger.id]}"
-      )
+    for conn <- build_project_user_conns(project, [:editor, :viewer]) do
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[s: trigger.id]}"
+        )
 
-    modal_id = "webhooks_auth_method_modal"
+      refute view |> element("#webhooks_auth_method_modal") |> has_element?()
+    end
 
-    assert view |> element("##{modal_id}") |> has_element?()
+    for conn <- build_project_user_conns(project, [:owner, :admin]) do
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[s: trigger.id]}"
+        )
 
-    html =
+      assert view |> element("#webhooks_auth_method_modal") |> has_element?()
+
       view
-      |> element("#edit_auth_method_link_#{auth_method.id}")
+      |> element("#select_#{auth_method.id}")
       |> render_click()
 
-    assert html =~ "Edit webhook auth method"
+      view |> element("#update_trigger_auth_methods_button") |> render_click()
 
-    new_auth_method_name = "funnyapiauthmethodname"
+      flash =
+        assert_redirect(
+          view,
+          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[s: trigger.id]}"
+        )
 
-    assert view
-           |> form("#form_#{modal_id}_#{auth_method.id}")
-           |> render_submit(%{
-             webhook_auth_method: %{
-               name: new_auth_method_name,
-               username: "newusername",
-               password: "newpassword123"
-             }
-           })
+      assert flash["info"] == "Trigger webhook auth methods updated successfully"
 
-    flash =
-      assert_redirect(
-        view,
-        ~p"/projects/#{project.id}/w/#{workflow.id}?#{[s: trigger.id]}"
-      )
+      updated_trigger =
+        Repo.preload(trigger, [:webhook_auth_methods], force: true)
 
-    assert flash["info"] == "Webhook auth method updated successfully"
+      assert updated_trigger.webhook_auth_methods == []
 
-    updated_auth_method =
-      Lightning.Repo.get(Lightning.Workflows.WebhookAuthMethod, auth_method.id)
+      # Then we add it back for the next test role! ============================
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[s: trigger.id]}"
+        )
 
-    refute updated_auth_method.name == auth_method.name
-    assert updated_auth_method.name == new_auth_method_name
+      view
+      |> element("#select_#{auth_method.id}")
+      |> render_click()
 
-    # only auth method name is updated
-    refute auth_method.username == "username"
-    assert auth_method.username == updated_auth_method.username
-
-    refute auth_method.password == "newpassword123"
-    assert auth_method.password == updated_auth_method.password
-  end
-
-  test "user can successfully remove an authentication method from a trigger", %{
-    conn: conn,
-    project: project,
-    workflow: workflow,
-    trigger: trigger
-  } do
-    auth_method =
-      insert(:webhook_auth_method,
-        project: project,
-        auth_type: :basic,
-        triggers: [trigger]
-      )
-
-    {:ok, view, _html} =
-      live(
-        conn,
-        ~p"/projects/#{project.id}/w/#{workflow.id}?#{[s: trigger.id]}"
-      )
-
-    assert view |> element("#webhooks_auth_method_modal") |> has_element?()
-
-    view
-    |> element("#select_#{auth_method.id}")
-    |> render_click()
-
-    view |> element("#update_trigger_auth_methods_button") |> render_click()
-
-    flash =
-      assert_redirect(
-        view,
-        ~p"/projects/#{project.id}/w/#{workflow.id}?#{[s: trigger.id]}"
-      )
-
-    assert flash["info"] == "Trigger webhook auth methods updated successfully"
-
-    updated_trigger =
-      Lightning.Repo.preload(trigger, [:webhook_auth_methods], force: true)
-
-    assert updated_trigger.webhook_auth_methods == []
+      view |> element("#update_trigger_auth_methods_button") |> render_click()
+      # ========================================================================
+    end
   end
 end

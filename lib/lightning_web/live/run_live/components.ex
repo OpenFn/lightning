@@ -328,7 +328,8 @@ defmodule LightningWeb.RunLive.Components do
 
   attr :project, :map, required: true
   attr :run, :map, required: true
-  attr :can_rerun_job, :boolean, required: true
+  attr :can_edit_data_retention, :boolean, required: true
+  attr :can_run_workflow, :boolean, required: true
 
   def run_item(%{run: run} = assigns) do
     steps = run.steps
@@ -348,9 +349,10 @@ defmodule LightningWeb.RunLive.Components do
     >
       <%= for step <- @step_list do %>
         <.step_list_item
-          can_rerun_job={@can_rerun_job}
+          can_run_workflow={@can_run_workflow}
           project_id={@project.id}
           run={@run}
+          can_edit_data_retention={@can_edit_data_retention}
           step={step}
         />
       <% end %>
@@ -361,7 +363,8 @@ defmodule LightningWeb.RunLive.Components do
   attr :step, :map, required: true
   attr :run, :map, required: true
   attr :project_id, :string, required: true
-  attr :can_rerun_job, :boolean, required: true
+  attr :can_run_workflow, :boolean, required: true
+  attr :can_edit_data_retention, :boolean, required: true
 
   def step_list_item(assigns) do
     is_clone =
@@ -412,17 +415,8 @@ defmodule LightningWeb.RunLive.Components do
               </div>
             <% end %>
             <div class="flex gap-1 text-xs leading-5">
-              <%= if @can_rerun_job && @step.exit_reason do %>
-                <span
-                  id={@step.id}
-                  class="text-indigo-400 hover:underline hover:underline-offset-2 hover:text-indigo-500 cursor-pointer"
-                  phx-click="rerun"
-                  phx-value-run_id={@run.id}
-                  phx-value-step_id={@step.id}
-                  title="Rerun workflow from here"
-                >
-                  rerun
-                </span>/
+              <%= if @can_run_workflow && @step.exit_reason do %>
+                <.step_rerun_tag {assigns} />/
               <% end %>
               <.link
                 class="text-indigo-400 hover:underline hover:underline-offset-2 hover:text-indigo-500 cursor-pointer"
@@ -464,6 +458,62 @@ defmodule LightningWeb.RunLive.Components do
       <div role="cell"></div>
     </div>
     """
+  end
+
+  defp step_rerun_tag(assigns) do
+    ~H"""
+    <%= if @step.input_dataclip && is_nil(@step.input_dataclip.wiped_at) do %>
+      <span
+        id={@step.id}
+        class="text-indigo-400 hover:underline hover:underline-offset-2 hover:text-indigo-500 cursor-pointer"
+        phx-click="rerun"
+        phx-value-run_id={@run.id}
+        phx-value-step_id={@step.id}
+        title="Rerun workflow from here"
+      >
+        rerun
+      </span>
+    <% else %>
+      <span
+        id={@step.id}
+        class="text-indigo-300 cursor-pointer"
+        phx-hook="Tooltip"
+        data-placement="right"
+        data-allow-html="true"
+        aria-label={
+          rerun_zero_persistence_tooltip_message(
+            @project_id,
+            @can_edit_data_retention
+          )
+        }
+      >
+        rerun
+      </span>
+    <% end %>
+    """
+  end
+
+  def rerun_zero_persistence_tooltip_message(project_id, can_edit_retention) do
+    """
+    <span class="text-center">
+    This work order cannot be rerun since no input data has been stored due to
+    the data retention policy set in the project.
+    <br />
+    #{zero_persistence_action_message(project_id, can_edit_retention)}
+    </span>
+    """
+  end
+
+  def zero_persistence_action_message(project_id, can_edit_retention) do
+    if can_edit_retention do
+      """
+      <a href="#{~p"/projects/#{project_id}/settings#data-storage"}" class="underline text-blue-400">
+      Go to data storage settings
+      </a>
+      """
+    else
+      "For more information, contact one of your project admins"
+    end
   end
 
   attr :timestamp, :any, required: true

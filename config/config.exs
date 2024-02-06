@@ -30,6 +30,10 @@ config :lightning, LightningWeb.Endpoint,
   pubsub_server: Lightning.PubSub,
   live_view: [signing_salt: "EfrmuOUr"]
 
+config :lightning, Lightning.Extensions,
+  rate_limiter: Lightning.Extensions.Default.RateLimiter,
+  runtime_limiter: Lightning.Extensions.Default.RuntimeLimiter
+
 config :joken, default_signer: "secret"
 
 # Configures the mechanism for erlang node clustering

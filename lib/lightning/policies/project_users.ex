@@ -10,10 +10,8 @@ defmodule Lightning.Policies.ProjectUsers do
   alias Lightning.Projects.ProjectUser
 
   @type actions ::
-          :run_job
-          | :edit_job
-          | :rerun_job
-          | :create_job
+          :run_workflow
+          | :edit_workflow
           | :access_project
           | :delete_project
           | :delete_workflow
@@ -23,9 +21,11 @@ defmodule Lightning.Policies.ProjectUsers do
           | :edit_failure_alerts
           | :edit_project_description
           | :provision_project
-          | :create_webhook_auth_method
           | :create_project_credential
-          | :edit_webhook_auth_method
+          | :edit_data_retention
+          | :write_webhook_auth_method
+          | :write_github_connection
+          | :initiate_github_sync
 
   @doc """
   authorize/3 takes an action, a user, and a project. It checks the user's role
@@ -52,12 +52,11 @@ defmodule Lightning.Policies.ProjectUsers do
   def authorize(:delete_project, %User{} = user, %Project{} = project),
     do: Projects.get_project_user_role(user, project) == :owner
 
-  def authorize(
-        action,
-        %User{id: id} = _user,
-        %ProjectUser{user_id: user_id} = _project
-      )
-      when action in [:edit_digest_alerts, :edit_failure_alerts],
+  def authorize(action, %User{id: id}, %ProjectUser{user_id: user_id})
+      when action in [
+             :edit_digest_alerts,
+             :edit_failure_alerts
+           ],
       do: id == user_id
 
   def authorize(action, %User{} = user, %Project{} = project)
@@ -72,18 +71,26 @@ defmodule Lightning.Policies.ProjectUsers do
     authorize(action, user, project_user)
   end
 
+  def authorize(:edit_data_retention, _user, %ProjectUser{role: role}) do
+    role in [:owner, :admin]
+  end
+
+  def authorize(action, %User{}, %ProjectUser{} = project_user)
+      when action in [
+             :write_webhook_auth_method,
+             :write_github_connection
+           ],
+      do: project_user.role in [:owner, :admin]
+
   def authorize(action, %User{}, %ProjectUser{} = project_user)
       when action in [
              :create_workflow,
-             :edit_job,
-             :create_job,
+             :edit_workflow,
              :delete_workflow,
-             :run_job,
-             :rerun_job,
+             :run_workflow,
              :provision_project,
-             :create_webhook_auth_method,
              :create_project_credential,
-             :edit_webhook_auth_method
+             :initiate_github_sync
            ],
       do: project_user.role in [:owner, :admin, :editor]
 end

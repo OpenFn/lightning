@@ -4,6 +4,11 @@ defmodule LightningWeb.RunLive.RunViewerLive do
 
   import LightningWeb.RunLive.Components
 
+  alias Lightning.Accounts.User
+  alias Lightning.Policies.Permissions
+  alias Lightning.Policies.ProjectUsers
+  alias Lightning.Projects
+  alias Lightning.Projects.Project
   alias LightningWeb.Components.Viewers
   alias Phoenix.LiveView.AsyncResult
 
@@ -132,29 +137,29 @@ defmodule LightningWeb.RunLive.RunViewerLive do
                 />
               </Common.panel_content>
               <Common.panel_content for_hash="input" class="grow overflow-auto">
-                <Viewers.dataclip_viewer
+                <Viewers.step_dataclip_viewer
                   id={"step-input-#{@selected_step_id}"}
-                  type={
-                    case @input_dataclip do
-                      %AsyncResult{ok?: true, result: %{type: type}} -> type
-                      _ -> nil
-                    end
-                  }
                   class="overflow-auto h-full"
                   stream={@streams.input_dataclip}
+                  step={@selected_step}
+                  dataclip={@input_dataclip}
+                  input_or_output={:input}
+                  project_id={@project.id}
+                  admin_contacts={@admin_contacts}
+                  can_edit_data_retention={@can_edit_data_retention}
                 />
               </Common.panel_content>
               <Common.panel_content for_hash="output" class="grow overflow-auto">
-                <Viewers.dataclip_viewer
+                <Viewers.step_dataclip_viewer
                   id={"step-output-#{@selected_step_id}"}
-                  type={
-                    case @output_dataclip do
-                      %AsyncResult{ok?: true, result: %{type: type}} -> type
-                      _ -> nil
-                    end
-                  }
                   class="overflow-auto h-full"
                   stream={@streams.output_dataclip}
+                  step={@selected_step}
+                  dataclip={@output_dataclip}
+                  input_or_output={:output}
+                  project_id={@project.id}
+                  admin_contacts={@admin_contacts}
+                  can_edit_data_retention={@can_edit_data_retention}
                 />
               </Common.panel_content>
             </div>
@@ -166,7 +171,18 @@ defmodule LightningWeb.RunLive.RunViewerLive do
   end
 
   @impl true
-  def mount(_params, %{"run_id" => run_id} = session, socket) do
+  def mount(
+        _params,
+        %{
+          "run_id" => run_id,
+          "project_id" => project_id,
+          "user_id" => user_id
+        } = session,
+        socket
+      ) do
+    project_user =
+      Projects.get_project_user(%Project{id: project_id}, %User{id: user_id})
+
     {:ok,
      socket
      |> assign(
@@ -181,6 +197,16 @@ defmodule LightningWeb.RunLive.RunViewerLive do
      |> assign(:output_dataclip, false)
      |> assign(:run, AsyncResult.loading())
      |> assign(:log_lines, AsyncResult.loading())
+     |> assign(
+       can_edit_data_retention:
+         Permissions.can?(
+           ProjectUsers,
+           :edit_data_retention,
+           %User{id: user_id},
+           project_user
+         )
+     )
+     |> assign(admin_contacts: Projects.list_project_admin_emails(project_id))
      |> get_run_async(run_id), layout: false}
   end
 
