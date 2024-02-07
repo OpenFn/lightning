@@ -46,6 +46,8 @@ defmodule Lightning.Workflows.Job do
     belongs_to :workflow, Workflow
     has_one :project, through: [:workflow, :project]
 
+    has_many :steps, Lightning.Invocation.Step
+
     field :delete, :boolean, virtual: true
 
     timestamps(type: :utc_datetime_usec)

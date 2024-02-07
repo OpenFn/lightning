@@ -377,7 +377,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
     end
 
     @tag role: :editor
-    test "", %{
+    test "can't delete the only step in a workflow", %{
       conn: conn,
       project: project
     } do
@@ -403,7 +403,43 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       assert view |> delete_job_button_is_disabled?(job)
 
       assert view |> force_event(:delete_node, job) =~
-               "You can&#39;t delete the only step in a workflow."
+               "You can&#39;t delete the first step of a workflow."
+    end
+
+    @tag role: :editor
+    test "can't delete a step that has already been ran", %{
+      conn: conn,
+      project: project
+    } do
+      trigger = build(:trigger, type: :webhook)
+
+      [job_a, job_b, job_c] = insert_list(3, :job)
+
+      workflow =
+        build(:workflow)
+        |> with_job(job_a)
+        |> with_job(job_b)
+        |> with_job(job_c)
+        |> with_trigger(trigger)
+        |> with_edge({trigger, job_a})
+        |> with_edge({job_a, job_b})
+        |> with_edge({job_a, job_c})
+        |> insert()
+
+      insert(:step, job: job_b)
+
+      {:ok, view, _html} = live(conn, ~p"/projects/#{project}/w/#{workflow}")
+
+      view |> select_node(job_b)
+
+      assert view |> delete_job_button_is_disabled?(job_b)
+
+      assert view |> force_event(:delete_node, job_b) =~
+               "You can&#39;t delete a step with associated history"
+
+      view |> select_node(job_c)
+
+      refute view |> delete_job_button_is_disabled?(job_b)
     end
 
     @tag role: :editor

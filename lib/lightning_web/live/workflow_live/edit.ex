@@ -304,7 +304,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
           phx-change="validate"
         >
           <.single_inputs_for
-            :let={{jf, has_child_edges, is_first_job}}
+            :let={{jf}}
             :if={@selected_job}
             form={@workflow_form}
             field={:jobs}
@@ -345,9 +345,17 @@ defmodule LightningWeb.WorkflowLive.Edit do
                         phx-value-id={@selected_job.id}
                         class="focus:ring-red-500 bg-red-600 hover:bg-red-700 disabled:bg-red-300"
                         disabled={
-                          !@can_edit_workflow or has_child_edges or is_first_job
+                          !@can_edit_workflow or @has_child_edges or @is_first_job or
+                            @has_steps
                         }
-                        tooltip={deletion_tooltip_message(@has_multiple_jobs)}
+                        tooltip={
+                          deletion_tooltip_message(
+                            @can_edit_workflow,
+                            @has_child_edges,
+                            @is_first_job,
+                            @has_steps
+                          )
+                        }
                         data-confirm="Are you sure you want to delete this step?"
                       >
                         Delete Step
@@ -464,11 +472,27 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
   defp processing(_run), do: false
 
-  defp deletion_tooltip_message(has_multiple_jobs) do
-    if has_multiple_jobs do
-      "You can't delete a step that other downstream steps depend on."
-    else
-      "You can't delete the only step in a workflow."
+  defp deletion_tooltip_message(
+         can_edit_job,
+         has_child_edges,
+         is_first_job,
+         has_steps
+       ) do
+    cond do
+      !can_edit_job ->
+        "You are not authorized to delete this step."
+
+      has_child_edges ->
+        "You can't delete a step that other downstream steps depend on."
+
+      is_first_job ->
+        "You can't delete the only step of a workflow."
+
+      has_steps ->
+        "You can't delete a step with associated history while it's protected by your data retention period. (Workflow 'snapshots' are coming. For now, disable the incoming edge to prevent the job from running.)"
+
+      true ->
+        nil
     end
   end
 
@@ -517,29 +541,17 @@ defmodule LightningWeb.WorkflowLive.Edit do
   defp single_inputs_for(%{field: :jobs} = assigns) do
     %{form: form, field: field} = assigns
 
-    has_child_edges = form.source |> has_child_edges?(assigns[:id])
-    is_first_job = form.source |> first_job?(assigns[:id])
-
     %Phoenix.HTML.FormField{field: field_name, form: parent_form} = form[field]
 
     forms =
       parent_form.impl.to_form(parent_form.source, parent_form, field_name, [])
       |> Enum.filter(&(Ecto.Changeset.get_field(&1.source, :id) == assigns[:id]))
 
-    assigns =
-      assigns
-      |> assign(
-        forms: forms,
-        has_child_edges: has_child_edges,
-        is_first_job: is_first_job
-      )
+    assigns = assigns |> assign(forms: forms)
 
     ~H"""
     <%= for f <- @forms do %>
-      <%= render_slot(
-        @inner_block,
-        {f, @has_child_edges, @is_first_job}
-      ) %>
+      <%= render_slot(@inner_block, {f}) %>
     <% end %>
     """
   end
@@ -699,7 +711,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
           |> Lightning.Repo.preload([
             :edges,
             triggers: Trigger.with_auth_methods_query(),
-            jobs: {Workflows.jobs_ordered_subquery(), [:credential]}
+            jobs: {Workflows.jobs_ordered_subquery(), [:credential, :steps]}
           ])
 
         socket |> assign_workflow(workflow) |> assign(page_title: workflow.name)
@@ -719,12 +731,16 @@ defmodule LightningWeb.WorkflowLive.Edit do
     %{
       changeset: changeset,
       workflow_params: initial_params,
-      can_edit_workflow: can_edit_workflow
+      can_edit_workflow: can_edit_workflow,
+      has_child_edges: has_child_edges,
+      is_first_job: is_first_job,
+      has_steps: has_steps
     } = socket.assigns
 
     with true <- can_edit_workflow || :not_authorized,
-         true <- !has_child_edges?(changeset, id) || :has_child_edges,
-         true <- !first_job?(changeset, id) || :is_first_job do
+         true <- !has_child_edges || :has_child_edges,
+         true <- !is_first_job || :is_first_job,
+         true <- !has_steps || :has_steps do
       edges_to_delete =
         Ecto.Changeset.get_assoc(changeset, :edges, :struct)
         |> Enum.filter(&(&1.target_job_id == id))
@@ -757,6 +773,14 @@ defmodule LightningWeb.WorkflowLive.Edit do
         {:noreply,
          socket
          |> put_flash(:error, "You can't delete the first step of a workflow.")}
+
+      :has_steps ->
+        {:noreply,
+         socket
+         |> put_flash(
+           :error,
+           "You can't delete a step that has already been ran."
+         )}
     end
   end
 
@@ -1128,6 +1152,10 @@ defmodule LightningWeb.WorkflowLive.Edit do
     |> Enum.any?()
   end
 
+  defp has_steps?(job) do
+    !Enum.empty?(job.steps)
+  end
+
   defp get_filtered_edges(workflow_changeset, filter_func) do
     workflow_changeset
     |> Ecto.Changeset.get_assoc(:edges, :struct)
@@ -1174,7 +1202,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
   end
 
   defp apply_params(socket, params) do
-    # Build a new changeset from the new params
     changeset =
       socket.assigns.workflow
       |> Workflow.changeset(
@@ -1183,12 +1210,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
         |> Map.put("project_id", socket.assigns.project.id)
       )
 
-    has_multiple_jobs =
-      length(Ecto.Changeset.get_field(changeset, :jobs)) > 1
-
-    socket
-    |> assign_changeset(changeset)
-    |> assign(:has_multiple_jobs, has_multiple_jobs)
+    socket |> assign_changeset(changeset)
   end
 
   defp apply_query_params(socket, params) do
@@ -1280,7 +1302,14 @@ defmodule LightningWeb.WorkflowLive.Edit do
     case type do
       :jobs ->
         socket
-        |> assign(selected_job: value, selected_trigger: nil, selected_edge: nil)
+        |> assign(
+          has_steps: has_steps?(value),
+          has_child_edges: has_child_edges?(socket.assigns.changeset, value.id),
+          is_first_job: first_job?(socket.assigns.changeset, value.id),
+          selected_job: value,
+          selected_trigger: nil,
+          selected_edge: nil
+        )
 
       :triggers ->
         socket
@@ -1335,7 +1364,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
           {:cont, nil}
 
         %Job{} = job ->
-          {:halt, [field, job |> Lightning.Repo.preload(:credential)]}
+          {:halt, [field, job |> Lightning.Repo.preload([:credential, :steps])]}
 
         %Trigger{} = trigger ->
           {:halt,
