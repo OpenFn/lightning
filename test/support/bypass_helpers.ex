@@ -7,7 +7,9 @@ defmodule Lightning.BypassHelpers do
         "authorization_endpoint" =>
           "#{endpoint_url(bypass)}/authorization_endpoint",
         "token_endpoint" => "#{endpoint_url(bypass)}/token_endpoint",
-        "userinfo_endpoint" => "#{endpoint_url(bypass)}/userinfo_endpoint"
+        "userinfo_endpoint" => "#{endpoint_url(bypass)}/userinfo_endpoint",
+        "introspection_endpoint" =>
+          "#{endpoint_url(bypass)}/introspection_endpoint"
       },
       attrs
     )
@@ -28,8 +30,8 @@ defmodule Lightning.BypassHelpers do
     end)
   end
 
-  def expect_introspect(bypass, path, token \\ %{}) do
-    %{path: path} = URI.new!(path)
+  def expect_introspect(bypass, wellknown, token \\ %{}) do
+    %{path: path} = URI.new!(wellknown.introspection_endpoint)
 
     Bypass.expect(bypass, "POST", path, fn conn ->
       Plug.Conn.resp(conn, 200, token |> Jason.encode!())

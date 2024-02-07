@@ -579,24 +579,18 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
     if socket |> changed?(:token) and token_body_changeset.valid? do
       pid = self()
 
-      if token_needs_refresh?(token) do
-        Logger.debug("Refreshing expired token")
-        Task.start(fn -> refresh_token(pid, socket) end)
-      else
+      if Common.still_fresh(token) do
         Logger.debug("Retrieving userinfo")
         Task.start(fn -> get_userinfo(pid, socket) end)
+      else
+        Logger.debug("Refreshing expired token")
+        Task.start(fn -> refresh_token(pid, socket) end)
       end
 
       socket |> assign(authorizing: true)
     else
       socket
     end
-  end
-
-  defp token_needs_refresh?(token) do
-    is_nil(token.expires_at) or
-      token.expires_at == "" or
-      OAuth2.AccessToken.expired?(token)
   end
 
   defp get_userinfo(pid, socket) do
@@ -646,8 +640,9 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
       if Map.has_key?(base, :other_params) do
         expires_at = Map.get(base.other_params, "expires_at", "")
         scope = Map.get(base.other_params, "scope", "")
+        instance_url = Map.get(base.other_params, "instance_url", "")
 
-        {%{expires_at: expires_at, scope: scope},
+        {%{expires_at: expires_at, scope: scope, instance_url: instance_url},
          Map.delete(base, :other_params)}
       else
         {%{}, base}

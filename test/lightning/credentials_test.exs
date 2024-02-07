@@ -623,9 +623,7 @@ defmodule Lightning.CredentialsTest do
              [
                client_id: "client_id",
                client_secret: "secret",
-               wellknown_url: "http://localhost:#{bypass.port}/auth/.well-known",
-               introspect_url:
-                 "http://localhost:#{bypass.port}/services/oauth2/introspect"
+               wellknown_url: "http://localhost:#{bypass.port}/auth/.well-known"
              ]}
           ]
         )
@@ -639,7 +637,7 @@ defmodule Lightning.CredentialsTest do
 
         expect_introspect(
           bypass,
-          "http://localhost:#{bypass.port}/services/oauth2/introspect"
+          Lightning.AuthProviders.Common.get_wellknown!(oauth.provider)
         )
 
         credential =

@@ -4,14 +4,20 @@ defmodule Lightning.AuthProviders.WellKnown do
   """
   use HTTPoison.Base
 
-  @fields [:authorization_endpoint, :token_endpoint, :userinfo_endpoint]
+  @fields [
+    :authorization_endpoint,
+    :token_endpoint,
+    :userinfo_endpoint,
+    :introspection_endpoint
+  ]
 
   defstruct @fields
 
   @type t :: %__MODULE__{
           authorization_endpoint: String.t(),
           token_endpoint: String.t(),
-          userinfo_endpoint: String.t()
+          userinfo_endpoint: String.t(),
+          introspection_endpoint: String.t()
         }
 
   @spec fetch(discovery_url :: String.t()) ::

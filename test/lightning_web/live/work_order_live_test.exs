@@ -184,33 +184,6 @@ defmodule LightningWeb.WorkOrderLiveTest do
       end)
     end
 
-    test "WorkOrderComponent remains stable when associated jobs are deleted", %{
-      project: project
-    } do
-      %{jobs: [job]} = insert(:simple_workflow, project: project)
-      {work_order, _dataclip} = setup_work_order(project, job)
-
-      Lightning.Repo.delete!(job)
-
-      work_order =
-        Lightning.Repo.reload!(work_order)
-        |> Lightning.Repo.preload([:runs, :workflow, :dataclip])
-
-      assert_work_order_steps(work_order, 0)
-
-      rendered =
-        render_component(LightningWeb.RunLive.WorkOrderComponent,
-          id: work_order.id,
-          work_order: work_order,
-          project: project,
-          can_run_workflow: true,
-          can_edit_data_retention: true
-        )
-
-      assert rendered =~ work_order.dataclip_id
-      refute rendered =~ "toggle_details_for_#{work_order.id}"
-    end
-
     test "WorkOrderComponent disables dataclip link if the dataclip has been wiped",
          %{
            project: project

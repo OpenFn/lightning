@@ -810,7 +810,7 @@ defmodule LightningWeb.CredentialLiveTest do
 
       expect_introspect(
         bypass,
-        "http://localhost:#{bypass.port}/services/oauth2/introspect",
+        Lightning.AuthProviders.Common.get_wellknown!(:salesforce),
         %{
           access_token: "ya29.a0AVvZ...",
           refresh_token: "1//03vpp6Li...",
@@ -1031,7 +1031,7 @@ defmodule LightningWeb.CredentialLiveTest do
 
       expect_introspect(
         bypass,
-        "http://localhost:#{bypass.port}/services/oauth2/introspect"
+        Lightning.AuthProviders.Common.get_wellknown!(:salesforce)
       )
 
       {:ok, edit_live, _html} = live(conn, ~p"/credentials")

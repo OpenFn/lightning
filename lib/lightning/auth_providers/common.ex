@@ -173,6 +173,57 @@ defmodule Lightning.AuthProviders.Common do
     )
   end
 
+  def introspect(
+        {:ok, %OAuth2.AccessToken{access_token: access_token} = token},
+        provider
+      ) do
+    {:ok, wellknown} = get_wellknown(provider)
+    config = get_config(provider)
+
+    Tesla.post(
+      wellknown.introspection_endpoint,
+      "token=#{access_token}&client_id=#{config[:client_id]}&client_secret=#{config[:client_secret]}&token_type_hint=access_token",
+      headers: [
+        {"Accept", "application/json"},
+        {"Content-Type", "application/x-www-form-urlencoded"}
+      ]
+    )
+    |> handle_introspection_result(token)
+  end
+
+  def introspect(result, _provider), do: result
+
+  defp handle_introspection_result({:ok, %{status: status, body: body}}, token)
+       when status in 200..202 do
+    expires_at = Jason.decode!(body) |> Map.get("exp")
+    updated_token = Map.update!(token, :expires_at, fn _ -> expires_at end)
+    {:ok, updated_token}
+  end
+
+  defp handle_introspection_result({:ok, %{status: status}}, _token)
+       when status not in 200..202,
+       do: {:error, nil}
+
+  def still_fresh(token_body, threshold \\ 5, time_unit \\ :minute)
+
+  def still_fresh(
+        %{expires_at: nil},
+        _threshold,
+        _time_unit
+      ),
+      do: false
+
+  def still_fresh(
+        %{expires_at: expires_at},
+        threshold,
+        time_unit
+      ) do
+    current_time = DateTime.utc_now()
+    expiration_time = DateTime.from_unix!(expires_at)
+    time_remaining = DateTime.diff(expiration_time, current_time, time_unit)
+    time_remaining >= threshold
+  end
+
   @doc """
   Retrieves the configuration for a specified OAuth provider.
   """
