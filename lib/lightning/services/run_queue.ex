@@ -1,10 +1,10 @@
-defmodule Lightning.Extensions.RuntimeScheduler do
+defmodule Lightning.Services.RunQueue do
   @moduledoc """
   Adapter to call the extension for selecting Runtime workloads.
   """
-  @behaviour Lightning.Extensions.RuntimeScheduling
+  @behaviour Lightning.Extensions.RunQueue
 
-  import Lightning.Extensions.AdapterHelper
+  import Lightning.Services.AdapterHelper
 
   @impl true
   def enqueue(run) do
@@ -21,5 +21,5 @@ defmodule Lightning.Extensions.RuntimeScheduler do
     adapter().dequeue(run)
   end
 
-  defp adapter, do: adapter(:runtime_scheduler)
+  defp adapter, do: adapter(:run_queue)
 end

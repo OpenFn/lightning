@@ -31,9 +31,9 @@ config :lightning, LightningWeb.Endpoint,
   live_view: [signing_salt: "EfrmuOUr"]
 
 config :lightning, Lightning.Extensions,
-  rate_limiter: Lightning.Extensions.Default.RateLimiter,
-  runtime_limiter: Lightning.Extensions.Default.RuntimeLimiter,
-  runtime_scheduler: Lightning.Extensions.Default.RuntimeScheduler
+  rate_limiter: Lightning.Extensions.RateLimiter,
+  runtime_limiter: Lightning.Extensions.RuntimeLimiter,
+  run_queue: Lightning.Extensions.FifoRunQueue
 
 config :joken, default_signer: "secret"
 

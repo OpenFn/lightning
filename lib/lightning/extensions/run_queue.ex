@@ -1,4 +1,4 @@
-defmodule Lightning.Extensions.RuntimeScheduling do
+defmodule Lightning.Extensions.RunQueue do
   @moduledoc """
   Extension to customize the scheduling of workloads on Lightning Runtime.
   """

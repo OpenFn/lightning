@@ -5,10 +5,10 @@ defmodule LightningWeb.WorkflowLive.Index do
   import LightningWeb.WorkflowLive.Components
 
   alias Lightning.DashboardStats
-  alias Lightning.Extensions.RuntimeLimiter
   alias Lightning.Extensions.RuntimeLimiting.Context
   alias Lightning.Policies.Permissions
   alias Lightning.Policies.ProjectUsers
+  alias Lightning.Services.RuntimeLimiter
   alias Lightning.Workflows
   alias LightningWeb.WorkflowLive.DashboardComponents
   alias LightningWeb.WorkflowLive.NewWorkflowForm

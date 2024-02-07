@@ -1,9 +1,9 @@
-defmodule Lightning.Extensions.Default.RuntimeScheduler do
+defmodule Lightning.Extensions.FifoRunQueue do
   @moduledoc """
   Default implementation of runtime scheduler.
   """
 
-  @behaviour Lightning.Extensions.RuntimeScheduling
+  @behaviour Lightning.Extensions.RunQueue
 
   alias Lightning.Runs.Queue
 

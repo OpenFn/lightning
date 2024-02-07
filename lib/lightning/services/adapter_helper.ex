@@ -1,4 +1,4 @@
-defmodule Lightning.Extensions.AdapterHelper do
+defmodule Lightning.Services.AdapterHelper do
   @moduledoc """
   Maps the module to be used for the extension service.
   """

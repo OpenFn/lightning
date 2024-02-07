@@ -1,26 +1,16 @@
 defmodule Lightning.Extensions.RuntimeLimiter do
   @moduledoc """
-  Adapter to call the extension for limiting Runtime workloads.
+  Runtime limiting stub for Lightning.
   """
   @behaviour Lightning.Extensions.RuntimeLimiting
 
-  import Lightning.Extensions.AdapterHelper
-
-  @type message :: %{
-          position: atom(),
-          function: fun(),
-          attrs: Keyword.t()
-        }
-
   @impl true
-  def check_limits(context) do
-    adapter().check_limits(context)
+  def check_limits(_context) do
+    :ok
   end
 
   @impl true
-  def limit_action(action, context) do
-    adapter().limit_action(action, context)
+  def limit_action(_action, _context) do
+    :ok
   end
-
-  defp adapter, do: adapter(:runtime_limiter)
 end

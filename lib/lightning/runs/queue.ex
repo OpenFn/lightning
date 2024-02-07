@@ -2,7 +2,7 @@ defmodule Lightning.Runs.Queue do
   @moduledoc """
   Allows adding, removing or claiming work to be executed by the Runtime.
   """
-  @behaviour Lightning.Extensions.RuntimeScheduling
+  @behaviour Lightning.Extensions.RunQueue
 
   import Ecto.Query
 

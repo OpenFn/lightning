@@ -4,12 +4,12 @@ defmodule Lightning.Runs do
   """
   import Ecto.Query
 
-  alias Lightning.Extensions.RuntimeScheduler
   alias Lightning.Invocation.LogLine
   alias Lightning.Repo
   alias Lightning.Run
   alias Lightning.Runs.Events
   alias Lightning.Runs.Handlers
+  alias Lightning.Services.RunQueue
 
   require Logger
 
@@ -17,7 +17,7 @@ defmodule Lightning.Runs do
   Enqueue a run to be processed.
   """
   def enqueue(run) do
-    RuntimeScheduler.enqueue(run)
+    RunQueue.enqueue(run)
   end
 
   # @doc """
@@ -27,14 +27,14 @@ defmodule Lightning.Runs do
   # all implementation should default to 1.
   # """
   def claim(demand \\ 1) do
-    RuntimeScheduler.claim(demand)
+    RunQueue.claim(demand)
   end
 
   # @doc """
   # Removes a run from the queue.
   # """
   def dequeue(run) do
-    RuntimeScheduler.dequeue(run)
+    RunQueue.dequeue(run)
   end
 
   @doc """
