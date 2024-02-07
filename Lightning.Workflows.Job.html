@@ -256,6 +256,7 @@ Workflow changeset - and want it to be created at the same time as a Job.</p></d
   project: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
   project_credential: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
   project_credential_id: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
+  steps: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
   updated_at: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
   workflow:
     nil | <a href="Lightning.Workflows.Workflow.html#t:t/0">Lightning.Workflows.Workflow.t</a>() | <a href="https://hexdocs.pm/ecto/3.10.3/Ecto.Association.NotLoaded.html#t:t/0">Ecto.Association.NotLoaded.t</a>(),
@@ -290,7 +291,7 @@ Workflow changeset - and want it to be created at the same time as a Job.</p></d
     </a>
     <h1 class="signature" translate="no">new(attrs \\ %{})</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/job.ex#L54" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/job.ex#L56" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -312,7 +313,7 @@ Workflow changeset - and want it to be created at the same time as a Job.</p></d
     </a>
     <h1 class="signature" translate="no">put_project_credential(job, project_credential)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/job.ex#L118" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/job.ex#L120" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -334,7 +335,7 @@ Workflow changeset - and want it to be created at the same time as a Job.</p></d
     </a>
     <h1 class="signature" translate="no">put_workflow(changeset, workflow)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/job.ex#L109" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/job.ex#L111" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -355,17 +356,17 @@ Workflow changeset - and want it to be created at the same time as a Job.</p></d
 
 <p>Attaches a workflow to a job, this is useful when you have an unpersisted
 Workflow changeset - and want it to be created at the same time as a Job.</p><p>Example:</p><pre><code class="makeup elixir" translate="no"><span class="n">workflow</span><span class="w"> </span><span class="o">=</span><span class="w">
-  </span><span class="nc">Ecto.Changeset</span><span class="o">.</span><span class="n">cast</span><span class="p" data-group-id="0140555006-1">(</span><span class="w">
-    </span><span class="p" data-group-id="0140555006-2">%</span><span class="nc" data-group-id="0140555006-2">Lightning.Workflows.Workflow</span><span class="p" data-group-id="0140555006-2">{</span><span class="p" data-group-id="0140555006-2">}</span><span class="p">,</span><span class="w">
-    </span><span class="p" data-group-id="0140555006-3">%{</span><span class="w"> </span><span class="s">&quot;project_id&quot;</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="n">attrs</span><span class="p" data-group-id="0140555006-4">[</span><span class="ss">:project_id</span><span class="p" data-group-id="0140555006-4">]</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;id&quot;</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="nc">Ecto.UUID</span><span class="o">.</span><span class="n">generate</span><span class="p" data-group-id="0140555006-5">(</span><span class="p" data-group-id="0140555006-5">)</span><span class="w"> </span><span class="p" data-group-id="0140555006-3">}</span><span class="p">,</span><span class="w">
-    </span><span class="p" data-group-id="0140555006-6">[</span><span class="ss">:project_id</span><span class="p">,</span><span class="w"> </span><span class="ss">:id</span><span class="p" data-group-id="0140555006-6">]</span><span class="w">
-  </span><span class="p" data-group-id="0140555006-1">)</span><span class="w">
+  </span><span class="nc">Ecto.Changeset</span><span class="o">.</span><span class="n">cast</span><span class="p" data-group-id="2604926424-1">(</span><span class="w">
+    </span><span class="p" data-group-id="2604926424-2">%</span><span class="nc" data-group-id="2604926424-2">Lightning.Workflows.Workflow</span><span class="p" data-group-id="2604926424-2">{</span><span class="p" data-group-id="2604926424-2">}</span><span class="p">,</span><span class="w">
+    </span><span class="p" data-group-id="2604926424-3">%{</span><span class="w"> </span><span class="s">&quot;project_id&quot;</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="n">attrs</span><span class="p" data-group-id="2604926424-4">[</span><span class="ss">:project_id</span><span class="p" data-group-id="2604926424-4">]</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;id&quot;</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="nc">Ecto.UUID</span><span class="o">.</span><span class="n">generate</span><span class="p" data-group-id="2604926424-5">(</span><span class="p" data-group-id="2604926424-5">)</span><span class="w"> </span><span class="p" data-group-id="2604926424-3">}</span><span class="p">,</span><span class="w">
+    </span><span class="p" data-group-id="2604926424-6">[</span><span class="ss">:project_id</span><span class="p">,</span><span class="w"> </span><span class="ss">:id</span><span class="p" data-group-id="2604926424-6">]</span><span class="w">
+  </span><span class="p" data-group-id="2604926424-1">)</span><span class="w">
 
 </span><span class="n">job</span><span class="w"> </span><span class="o">=</span><span class="w">
-  </span><span class="p" data-group-id="0140555006-7">%</span><span class="nc" data-group-id="0140555006-7">Job</span><span class="p" data-group-id="0140555006-7">{</span><span class="p" data-group-id="0140555006-7">}</span><span class="w">
-  </span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Ecto.Changeset</span><span class="o">.</span><span class="n">change</span><span class="p" data-group-id="0140555006-8">(</span><span class="p" data-group-id="0140555006-8">)</span><span class="w">
-  </span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Job</span><span class="o">.</span><span class="n">put_workflow</span><span class="p" data-group-id="0140555006-9">(</span><span class="n">workflow</span><span class="p" data-group-id="0140555006-9">)</span><span class="w">
-  </span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Job</span><span class="o">.</span><span class="n">changeset</span><span class="p" data-group-id="0140555006-10">(</span><span class="n">attrs</span><span class="p" data-group-id="0140555006-10">)</span></code></pre>
+  </span><span class="p" data-group-id="2604926424-7">%</span><span class="nc" data-group-id="2604926424-7">Job</span><span class="p" data-group-id="2604926424-7">{</span><span class="p" data-group-id="2604926424-7">}</span><span class="w">
+  </span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Ecto.Changeset</span><span class="o">.</span><span class="n">change</span><span class="p" data-group-id="2604926424-8">(</span><span class="p" data-group-id="2604926424-8">)</span><span class="w">
+  </span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Job</span><span class="o">.</span><span class="n">put_workflow</span><span class="p" data-group-id="2604926424-9">(</span><span class="n">workflow</span><span class="p" data-group-id="2604926424-9">)</span><span class="w">
+  </span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Job</span><span class="o">.</span><span class="n">changeset</span><span class="p" data-group-id="2604926424-10">(</span><span class="n">attrs</span><span class="p" data-group-id="2604926424-10">)</span></code></pre>
   </section>
 </section>
 <section class="detail" id="validate/1">
@@ -377,7 +378,7 @@ Workflow changeset - and want it to be created at the same time as a Job.</p><p>
     </a>
     <h1 class="signature" translate="no">validate(changeset)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/job.ex#L75" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/job.ex#L77" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
