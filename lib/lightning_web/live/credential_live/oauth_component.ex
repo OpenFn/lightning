@@ -579,6 +579,7 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
     if socket |> changed?(:token) and token_body_changeset.valid? do
       pid = self()
 
+      # TODO: We should change all those Task.start(fn) with assign_async/4 (https://hexdocs.pm/phoenix_live_view/Phoenix.LiveView.html#assign_async/4)
       if Common.still_fresh(token) do
         Logger.debug("Retrieving userinfo")
         Task.start(fn -> get_userinfo(pid, socket) end)
