@@ -1,4 +1,4 @@
-defmodule Lightning.Extensions.RuntimeLimiting do
+defmodule Lightning.Extensions.UsageLimiting do
   @moduledoc """
   Rate limiting for Lightning workloads that depends on Runtime.
   """

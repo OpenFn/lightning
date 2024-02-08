@@ -7,7 +7,7 @@ defmodule LightningWeb.WorkflowLive.IndexTest do
   import Lightning.WorkflowsFixtures
   import Lightning.WorkflowLive.Helpers
 
-  alias Lightning.Extensions.RuntimeLimiter
+  alias Lightning.Extensions.UsageLimiter
   alias LightningWeb.Components.Modal
 
   setup :register_and_log_in_user
@@ -26,7 +26,7 @@ defmodule LightningWeb.WorkflowLive.IndexTest do
       conn: conn,
       project: %{id: project_id}
     } do
-      with_mock RuntimeLimiter,
+      with_mock UsageLimiter,
         check_limits: fn %{project_id: ^project_id} ->
           {:error, :too_many_runs,
            %{

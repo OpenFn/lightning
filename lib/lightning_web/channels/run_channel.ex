@@ -5,13 +5,13 @@ defmodule LightningWeb.RunChannel do
   use LightningWeb, :channel
 
   alias Lightning.Credentials
-  alias Lightning.Extensions.RuntimeLimiting.Action
-  alias Lightning.Extensions.RuntimeLimiting.Context
+  alias Lightning.Extensions.UsageLimiting.Action
+  alias Lightning.Extensions.UsageLimiting.Context
   alias Lightning.Projects
   alias Lightning.Repo
   alias Lightning.Runs
   alias Lightning.Scrubber
-  alias Lightning.Services.RuntimeLimiter
+  alias Lightning.Services.UsageLimiter
   alias Lightning.Workers
   alias LightningWeb.RunOptions
   alias LightningWeb.RunWithOptions
@@ -62,7 +62,7 @@ defmodule LightningWeb.RunChannel do
       output_dataclips: include_output_dataclips?(retention_policy)
     }
 
-    RuntimeLimiter.limit_action(
+    UsageLimiter.limit_action(
       %Action{type: :new_run},
       %Context{project_id: project_id, user_id: nil}
     )

@@ -1,8 +1,8 @@
-defmodule Lightning.Services.RuntimeLimiter do
+defmodule Lightning.Services.UsageLimiter do
   @moduledoc """
   Adapter to call the extension for limiting Runtime workloads.
   """
-  @behaviour Lightning.Extensions.RuntimeLimiting
+  @behaviour Lightning.Extensions.UsageLimiting
 
   import Lightning.Services.AdapterHelper
 
@@ -16,5 +16,5 @@ defmodule Lightning.Services.RuntimeLimiter do
     adapter().limit_action(action, context)
   end
 
-  defp adapter, do: adapter(:runtime_limiter)
+  defp adapter, do: adapter(:usage_limiter)
 end

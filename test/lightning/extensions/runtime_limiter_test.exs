@@ -1,11 +1,11 @@
-defmodule Lightning.Extensions.RuntimeLimiterTest do
+defmodule Lightning.Extensions.UsageLimiterTest do
   use ExUnit.Case
 
-  alias Lightning.Extensions.RuntimeLimiting.Context
-  alias Lightning.Extensions.RuntimeLimiter
+  alias Lightning.Extensions.UsageLimiting.Context
+  alias Lightning.Extensions.UsageLimiter
 
   test "runtime limit is not exceeded" do
-    assert RuntimeLimiter.check_limits(%Context{
+    assert UsageLimiter.check_limits(%Context{
              project_id: Ecto.UUID.generate(),
              user_id: Ecto.UUID.generate()
            }) == :ok
