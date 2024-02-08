@@ -13,7 +13,7 @@
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-EPF2X7PV.js"></script>
-    <script src="dist/sidebar_items-C6D6DE37.js"></script>
+    <script src="dist/sidebar_items-9E1B2AFA.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -162,7 +162,7 @@ class will help with scrolling.</p></blockquote>
 
       </div>
 
-        <div class="summary-synopsis"><h2>Attributes</h2><ul><li><code class="inline">id</code> (<code class="inline">:string</code>) (required)</li><li><code class="inline">stream</code> (<code class="inline">:list</code>) (required) - A stream of lines to render. In the shape of <code class="inline">%{id: String.t(), line: String.t(), index: integer()}</code>.</li><li><code class="inline">class</code> (<code class="inline">:string</code>) - Additional classes to add to the log viewer container. Defaults to <code class="inline">nil</code>.</li><li><code class="inline">type</code> (<code class="inline">:atom</code>) - Defaults to <code class="inline">nil</code>.</li></ul></div>
+        <div class="summary-synopsis"><h2>Attributes</h2><ul><li><code class="inline">id</code> (<code class="inline">:string</code>) (required)</li><li><code class="inline">stream</code> (<code class="inline">:list</code>) (required) - A stream of lines to render. In the shape of <code class="inline">%{id: String.t(), line: String.t(), index: integer()}</code>.</li><li><code class="inline">stream_empty?</code> (<code class="inline">:boolean</code>) (required)</li><li><code class="inline">class</code> (<code class="inline">:string</code>) - Additional classes to add to the log viewer container. Defaults to <code class="inline">nil</code>.</li><li><code class="inline">type</code> (<code class="inline">:atom</code>) - Defaults to <code class="inline">nil</code>.</li></ul></div>
 
     </div>
 
@@ -182,7 +182,7 @@ class will help with scrolling.</p></blockquote>
 
       </div>
 
-        <div class="summary-synopsis"><h2>Attributes</h2><ul><li><code class="inline">id</code> (<code class="inline">:string</code>) (required)</li><li><code class="inline">stream</code> (<code class="inline">:list</code>) (required) - A stream of lines to render. In the shape of <code class="inline">%{id: String.t(), line: String.t(), index: integer()}</code>.</li><li><code class="inline">class</code> (<code class="inline">:string</code>) - Additional classes to add to the log viewer container. Defaults to <code class="inline">nil</code>.</li><li><code class="inline">step</code> (<code class="inline">:map</code>)</li><li><code class="inline">dataclip</code> (<code class="inline">:map</code>) - Can be an <code class="inline">AsyncResult</code> or <code class="inline">Dataclip</code>.</li><li><code class="inline">input_or_output</code> (<code class="inline">:atom</code>) (required) - Must be one of <code class="inline">:input</code>, or <code class="inline">:output</code>.</li><li><code class="inline">project_id</code> (<code class="inline">:string</code>) (required)</li><li><code class="inline">admin_contacts</code> (<code class="inline">:list</code>) (required) - list of project admin emails.</li><li><code class="inline">can_edit_data_retention</code> (<code class="inline">:boolean</code>) (required)</li></ul></div>
+        <div class="summary-synopsis"><h2>Attributes</h2><ul><li><code class="inline">id</code> (<code class="inline">:string</code>) (required)</li><li><code class="inline">stream</code> (<code class="inline">:list</code>) (required) - A stream of lines to render. In the shape of <code class="inline">%{id: String.t(), line: String.t(), index: integer()}</code>.</li><li><code class="inline">stream_empty?</code> (<code class="inline">:boolean</code>) (required)</li><li><code class="inline">class</code> (<code class="inline">:string</code>) - Additional classes to add to the log viewer container. Defaults to <code class="inline">nil</code>.</li><li><code class="inline">step</code> (<code class="inline">:map</code>)</li><li><code class="inline">dataclip</code> (<code class="inline">:map</code>) - Can be an <code class="inline">AsyncResult</code> or <code class="inline">Dataclip</code>.</li><li><code class="inline">input_or_output</code> (<code class="inline">:atom</code>) (required) - Must be one of <code class="inline">:input</code>, or <code class="inline">:output</code>.</li><li><code class="inline">project_id</code> (<code class="inline">:string</code>) (required)</li><li><code class="inline">admin_contacts</code> (<code class="inline">:list</code>) (required) - list of project admin emails.</li><li><code class="inline">can_edit_data_retention</code> (<code class="inline">:boolean</code>) (required)</li></ul></div>
 
     </div>
 
@@ -218,7 +218,7 @@ class will help with scrolling.</p></blockquote>
     </a>
     <h1 class="signature" translate="no">dataclip_viewer(assigns)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/components/viewers.ex#L106" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/components/viewers.ex#L114" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -234,7 +234,7 @@ class will help with scrolling.</p></blockquote>
   </a>
   <span class="text">Attributes</span>
 </h2>
-<ul><li><code class="inline">id</code> (<code class="inline">:string</code>) (required)</li><li><code class="inline">stream</code> (<code class="inline">:list</code>) (required) - A stream of lines to render. In the shape of <code class="inline">%{id: String.t(), line: String.t(), index: integer()}</code>.</li><li><code class="inline">class</code> (<code class="inline">:string</code>) - Additional classes to add to the log viewer container. Defaults to <code class="inline">nil</code>.</li><li><code class="inline">type</code> (<code class="inline">:atom</code>) - Defaults to <code class="inline">nil</code>.</li></ul>
+<ul><li><code class="inline">id</code> (<code class="inline">:string</code>) (required)</li><li><code class="inline">stream</code> (<code class="inline">:list</code>) (required) - A stream of lines to render. In the shape of <code class="inline">%{id: String.t(), line: String.t(), index: integer()}</code>.</li><li><code class="inline">stream_empty?</code> (<code class="inline">:boolean</code>) (required)</li><li><code class="inline">class</code> (<code class="inline">:string</code>) - Additional classes to add to the log viewer container. Defaults to <code class="inline">nil</code>.</li><li><code class="inline">type</code> (<code class="inline">:atom</code>) - Defaults to <code class="inline">nil</code>.</li></ul>
   </section>
 </section>
 <section class="detail" id="log_viewer/1">
@@ -246,7 +246,7 @@ class will help with scrolling.</p></blockquote>
     </a>
     <h1 class="signature" translate="no">log_viewer(assigns)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/components/viewers.ex#L48" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/components/viewers.ex#L50" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -265,15 +265,15 @@ with the <code class="inline">highlight_id</code> attribute.</p><h2 id="log_view
 </h2>
 <pre><code class="makeup elixir" translate="no"><span class="o">&lt;</span><span class="nc">Viewers</span><span class="o">.</span><span class="n">log_viewer</span><span class="w">
   </span><span class="n">id</span><span class="o">=</span><span class="s">&quot;log-viewer-data&quot;</span><span class="w">
-  </span><span class="n">stream</span><span class="o">=</span><span class="p" data-group-id="5976304594-1">{</span><span class="na">@log_lines</span><span class="p" data-group-id="5976304594-1">}</span><span class="w">
-  </span><span class="n">highlight_id</span><span class="o">=</span><span class="p" data-group-id="5976304594-2">{</span><span class="na">@selected_step_id</span><span class="p" data-group-id="5976304594-2">}</span><span class="w">
+  </span><span class="n">stream</span><span class="o">=</span><span class="p" data-group-id="7436475865-1">{</span><span class="na">@log_lines</span><span class="p" data-group-id="7436475865-1">}</span><span class="w">
+  </span><span class="n">highlight_id</span><span class="o">=</span><span class="p" data-group-id="7436475865-2">{</span><span class="na">@selected_step_id</span><span class="p" data-group-id="7436475865-2">}</span><span class="w">
 </span><span class="o">/</span><span class="o">&gt;</span></code></pre><h2 id="log_viewer/1-attributes" class="section-heading">
   <a href="#log_viewer/1-attributes" class="hover-link">
     <i class="ri-link-m" aria-hidden="true"></i>
   </a>
   <span class="text">Attributes</span>
 </h2>
-<ul><li><code class="inline">id</code> (<code class="inline">:string</code>) (required)</li><li><code class="inline">stream</code> (<code class="inline">:list</code>) (required) - A stream of <a href="Lightning.Invocation.LogLine.html"><code class="inline">Lightning.Invocation.LogLine</code></a> structs.</li><li><code class="inline">highlight_id</code> (<code class="inline">:string</code>) - The id of the log line to highlight, matching the <code class="inline">step_id</code> field. Defaults to <code class="inline">nil</code>.</li><li><code class="inline">class</code> (<code class="inline">:string</code>) - Additional classes to add to the log viewer container. Defaults to <code class="inline">nil</code>.</li></ul>
+<ul><li><code class="inline">id</code> (<code class="inline">:string</code>) (required)</li><li><code class="inline">stream</code> (<code class="inline">:list</code>) (required) - A stream of <a href="Lightning.Invocation.LogLine.html"><code class="inline">Lightning.Invocation.LogLine</code></a> structs.</li><li><code class="inline">stream_empty?</code> (<code class="inline">:boolean</code>) (required)</li><li><code class="inline">highlight_id</code> (<code class="inline">:string</code>) - The id of the log line to highlight, matching the <code class="inline">step_id</code> field. Defaults to <code class="inline">nil</code>.</li><li><code class="inline">class</code> (<code class="inline">:string</code>) - Additional classes to add to the log viewer container. Defaults to <code class="inline">nil</code>.</li></ul>
   </section>
 </section>
 <section class="detail" id="step_dataclip_viewer/1">
@@ -285,7 +285,7 @@ with the <code class="inline">highlight_id</code> attribute.</p><h2 id="log_view
     </a>
     <h1 class="signature" translate="no">step_dataclip_viewer(assigns)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/components/viewers.ex#L173" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/components/viewers.ex#L184" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -301,7 +301,7 @@ with the <code class="inline">highlight_id</code> attribute.</p><h2 id="log_view
   </a>
   <span class="text">Attributes</span>
 </h2>
-<ul><li><code class="inline">id</code> (<code class="inline">:string</code>) (required)</li><li><code class="inline">stream</code> (<code class="inline">:list</code>) (required) - A stream of lines to render. In the shape of <code class="inline">%{id: String.t(), line: String.t(), index: integer()}</code>.</li><li><code class="inline">class</code> (<code class="inline">:string</code>) - Additional classes to add to the log viewer container. Defaults to <code class="inline">nil</code>.</li><li><code class="inline">step</code> (<code class="inline">:map</code>)</li><li><code class="inline">dataclip</code> (<code class="inline">:map</code>) - Can be an <code class="inline">AsyncResult</code> or <code class="inline">Dataclip</code>.</li><li><code class="inline">input_or_output</code> (<code class="inline">:atom</code>) (required) - Must be one of <code class="inline">:input</code>, or <code class="inline">:output</code>.</li><li><code class="inline">project_id</code> (<code class="inline">:string</code>) (required)</li><li><code class="inline">admin_contacts</code> (<code class="inline">:list</code>) (required) - list of project admin emails.</li><li><code class="inline">can_edit_data_retention</code> (<code class="inline">:boolean</code>) (required)</li></ul>
+<ul><li><code class="inline">id</code> (<code class="inline">:string</code>) (required)</li><li><code class="inline">stream</code> (<code class="inline">:list</code>) (required) - A stream of lines to render. In the shape of <code class="inline">%{id: String.t(), line: String.t(), index: integer()}</code>.</li><li><code class="inline">stream_empty?</code> (<code class="inline">:boolean</code>) (required)</li><li><code class="inline">class</code> (<code class="inline">:string</code>) - Additional classes to add to the log viewer container. Defaults to <code class="inline">nil</code>.</li><li><code class="inline">step</code> (<code class="inline">:map</code>)</li><li><code class="inline">dataclip</code> (<code class="inline">:map</code>) - Can be an <code class="inline">AsyncResult</code> or <code class="inline">Dataclip</code>.</li><li><code class="inline">input_or_output</code> (<code class="inline">:atom</code>) (required) - Must be one of <code class="inline">:input</code>, or <code class="inline">:output</code>.</li><li><code class="inline">project_id</code> (<code class="inline">:string</code>) (required)</li><li><code class="inline">admin_contacts</code> (<code class="inline">:list</code>) (required) - list of project admin emails.</li><li><code class="inline">can_edit_data_retention</code> (<code class="inline">:boolean</code>) (required)</li></ul>
   </section>
 </section>
 <section class="detail" id="wiped_dataclip_viewer/1">
@@ -313,7 +313,7 @@ with the <code class="inline">highlight_id</code> attribute.</p><h2 id="log_view
     </a>
     <h1 class="signature" translate="no">wiped_dataclip_viewer(assigns)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/components/viewers.ex#L212" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/components/viewers.ex#L224" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
