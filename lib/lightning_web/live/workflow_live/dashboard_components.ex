@@ -23,6 +23,7 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
         />
       </div>
       <.workflows_table
+        period={@period}
         workflows_stats={@workflows_stats}
         can_create_workflow={@can_create_workflow}
         can_delete_workflow={@can_delete_workflow}
@@ -74,6 +75,7 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
         <.state_card
           state={workflow.last_workorder.state}
           timestamp={workflow.last_workorder.updated_at}
+          period={@period}
         />
       </:col>
       <:col
@@ -344,38 +346,70 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
 
     ~H"""
     <div class="flex flex-col text-center">
-      <%= if @state in [:success,:failed] do %>
-        <.status_card state={@state} time={@time} />
-      <% else %>
+      <%= if is_nil(@state) do %>
         <div class="flex items-center gap-x-2">
           <span class="inline-block h-2 w-2 bg-gray-200 rounded-full"></span>
-          <span class="text-grey-200 italic">No work orders created yet</span>
+          <span class="text-grey-200 italic">Nothing <%= @period %></span>
         </div>
+      <% else %>
+        <.status_card state={@state} time={@time} />
       <% end %>
     </div>
     """
   end
 
   def status_card(assigns) do
+    dot_color = %{
+      pending: "bg-gray-600",
+      running: "bg-blue-600",
+      success: "bg-green-600",
+      failed: "bg-red-600",
+      crashed: "bg-orange-600",
+      cancelled: "bg-gray-500",
+      killed: "bg-yellow-600",
+      exception: "bg-gray-800",
+      lost: "bg-gray-800"
+    }
+
+    font_color = %{
+      pending: "text-gray-500",
+      running: "text-blue-500",
+      success: "text-green-500",
+      failed: "text-red-500",
+      crashed: "text-orange-500",
+      cancelled: "text-gray-500",
+      killed: "text-yellow-800",
+      exception: "text-white",
+      lost: "text-white"
+    }
+
+    assigns =
+      assign(assigns,
+        text:
+          LightningWeb.RunLive.Components.display_text_from_state(assigns.state),
+        dot_color: Map.get(dot_color, assigns.state),
+        font_color: Map.get(font_color, assigns.state)
+      )
+
     ~H"""
     <div>
-      <%= if @state == :success do %>
-        <div class="flex items-center gap-x-2">
-          <span class="inline-block h-2 w-2 bg-green-600 rounded-full"></span>
-          <span class="text-green-500 font-medium">Success</span>
-        </div>
-        <span class="block text-left text-gray-500 text-xs ml-4 mt-1">
-          <%= @time %>
+      <div class="flex items-center gap-x-2">
+        <span class="inline-block relative flex h-2 w-2">
+          <%= if @state in [:pending, :running] do %>
+            <span class={[
+              "animate-ping absolute inline-flex h-full w-full rounded-full opacity-75",
+              @dot_color
+            ]}>
+            </span>
+          <% end %>
+          <span class={["relative inline-flex rounded-full h-2 w-2", @dot_color]}>
+          </span>
         </span>
-      <% else %>
-        <div class="flex items-center gap-x-2">
-          <span class="inline-block h-2 w-2 bg-red-600 rounded-full"></span>
-          <span class="text-red-500 font-medium">Failure</span>
-        </div>
-        <span class="block text-left text-gray-500 text-xs ml-4 mt-1">
-          <%= @time %>
-        </span>
-      <% end %>
+        <span class={[@font_color, "font-medium"]}><%= @text %></span>
+      </div>
+      <span class="block text-left text-gray-500 text-xs ml-4 mt-1">
+        <%= @time %>
+      </span>
     </div>
     """
   end

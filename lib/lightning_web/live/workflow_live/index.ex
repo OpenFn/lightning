@@ -17,6 +17,10 @@ defmodule LightningWeb.WorkflowLive.Index do
 
   on_mount {LightningWeb.Hooks, :project_scope}
 
+  # TODO - make this configurable some day
+  @dashboard_period "last 30 days"
+
+  attr :dashboard_period, :string, default: @dashboard_period
   attr :can_create_workflow, :boolean
   attr :can_delete_workflow, :boolean
   attr :workflows, :list
@@ -39,14 +43,13 @@ defmodule LightningWeb.WorkflowLive.Index do
       <:header>
         <LayoutComponents.header current_user={@current_user}>
           <:title><%= @page_title %></:title>
-          <:period>
-            <small style="margin-top: 12px">&nbsp;(last 30 days)</small>
-          </:period>
+          <:period><%= @dashboard_period %></:period>
         </LayoutComponents.header>
       </:header>
       <LayoutComponents.centered>
         <DashboardComponents.project_metrics metrics={@metrics} project={@project} />
         <DashboardComponents.workflow_list
+          period={@dashboard_period}
           can_create_workflow={@can_create_workflow}
           can_delete_workflow={@can_delete_workflow}
           workflows_stats={@workflows_stats}

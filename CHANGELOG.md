@@ -14,6 +14,9 @@ and this project adheres to
 
 ### Fixed
 
+- Adds more detail to work order states on dashboard
+  [#1677](https://github.com/OpenFn/lightning/issues/1677)
+
 ## [v2.0.0-rc11] - 2024-02-08
 
 ### Added
