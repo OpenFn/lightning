@@ -134,11 +134,16 @@ defmodule Lightning.Runs do
   def wipe_dataclips(%Run{} = run) do
     query =
       from(d in Ecto.assoc(run, :dataclip),
-        update: [set: [request: nil, body: nil, wiped_at: ^DateTime.utc_now()]]
+        update: [set: [request: nil, body: nil, wiped_at: ^DateTime.utc_now()]],
+        select: d
       )
 
-    {1, _rows} = Repo.update_all(query, [])
-    :ok
+    query
+    |> Repo.update_all([])
+    |> then(fn {1, [dataclip]} ->
+      Events.dataclip_updated(run.id, dataclip)
+      :ok
+    end)
   end
 
   def get_credential(%Run{} = run, id) do

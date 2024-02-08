@@ -19,6 +19,11 @@ defmodule Lightning.Runs.Events do
     defstruct log_line: nil
   end
 
+  defmodule DataclipUpdated do
+    @moduledoc false
+    defstruct dataclip: nil
+  end
+
   def step_started(run_id, step) do
     Lightning.broadcast(
       topic(run_id),
@@ -44,6 +49,13 @@ defmodule Lightning.Runs.Events do
     Lightning.broadcast(
       topic(log_line.run_id),
       %LogAppended{log_line: log_line}
+    )
+  end
+
+  def dataclip_updated(run_id, dataclip) do
+    Lightning.broadcast(
+      topic(run_id),
+      %DataclipUpdated{dataclip: dataclip}
     )
   end
 

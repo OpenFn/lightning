@@ -723,5 +723,28 @@ defmodule Lightning.RunsTest do
       refute updated_dataclip.body
       refute updated_dataclip.request
     end
+
+    test "emits a DataclipUpdated Event" do
+      project = insert(:project)
+      dataclip = insert(:http_request_dataclip, project: project)
+
+      %{triggers: [trigger]} =
+        workflow = insert(:simple_workflow, project: project)
+
+      %{runs: [run]} =
+        work_order_for(trigger, workflow: workflow, dataclip: dataclip)
+        |> insert()
+
+      # subscribe to run events
+      Runs.subscribe(run)
+
+      :ok = Runs.wipe_dataclips(run)
+
+      dataclip_id = dataclip.id
+
+      assert_received %Lightning.Runs.Events.DataclipUpdated{
+        dataclip: %{id: ^dataclip_id}
+      }
+    end
   end
 end
