@@ -37,7 +37,7 @@ defmodule LightningWeb.DataclipLiveTest do
         |> render()
         |> Floki.parse_fragment!()
         |> Floki.text()
-        |> String.replace("&amp;quot;", "\"")
+        |> String.replace("&quot;", "\"")
 
       assert dataclip_text =~ ~S("foo":"bar")
 

@@ -1007,7 +1007,7 @@ defmodule LightningWeb.ProjectLiveTest do
 
       {:ok, _view, html} =
         view
-        |> element("button", "Cancel")
+        |> element("footer button", "Cancel")
         |> render_click()
         |> follow_redirect(
           conn,

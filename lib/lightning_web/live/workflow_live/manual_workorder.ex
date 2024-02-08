@@ -40,7 +40,15 @@ defmodule LightningWeb.WorkflowLive.ManualWorkorder do
     >
       <%= if @follow_run_id && is_nil(@selected_dataclip)  do %>
         <%= if @show_wiped_dataclip_selector do %>
-          <.dataclip_selector_fields {assigns} />
+          <.dataclip_selector_fields
+            form={@form}
+            dataclips={@dataclips}
+            selected_dataclip={@selected_dataclip}
+            disabled={@disabled}
+            project={@project}
+            admin_contacts={@admin_contacts}
+            can_edit_data_retention={@can_edit_data_retention}
+          />
         <% else %>
           <LightningWeb.Components.Viewers.wiped_dataclip_viewer
             input_or_output={:input}
@@ -64,7 +72,15 @@ defmodule LightningWeb.WorkflowLive.ManualWorkorder do
           </LightningWeb.Components.Viewers.wiped_dataclip_viewer>
         <% end %>
       <% else %>
-        <.dataclip_selector_fields {assigns} />
+        <.dataclip_selector_fields
+          form={@form}
+          dataclips={@dataclips}
+          selected_dataclip={@selected_dataclip}
+          disabled={@disabled}
+          project={@project}
+          admin_contacts={@admin_contacts}
+          can_edit_data_retention={@can_edit_data_retention}
+        />
       <% end %>
     </.form>
     """

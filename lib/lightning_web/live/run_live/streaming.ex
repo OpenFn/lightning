@@ -123,6 +123,10 @@ defmodule LightningWeb.RunLive.Streaming do
     socket
     |> stream(:input_dataclip, [], reset: true)
     |> stream(:output_dataclip, [], reset: true)
+    |> assign(
+      input_dataclip_stream_empty?: true,
+      output_dataclip_stream_empty?: true
+    )
   end
 
   def unselect_step(socket) do
@@ -210,6 +214,7 @@ defmodule LightningWeb.RunLive.Streaming do
 
       unquote(helpers())
       unquote(handle_infos())
+      @impl true
       unquote(handle_asyncs())
     end
   end
@@ -218,15 +223,24 @@ defmodule LightningWeb.RunLive.Streaming do
     quote do
       @impl true
       def handle_info({:log_line_chunk, lines}, socket) do
-        {:noreply, socket |> stream(:log_lines, lines)}
+        {:noreply,
+         socket
+         |> stream(:log_lines, lines)
+         |> assign(:log_lines_stream_empty?, false)}
       end
 
       def handle_info({:input_dataclip, lines}, socket) do
-        {:noreply, socket |> stream(:input_dataclip, lines)}
+        {:noreply,
+         socket
+         |> stream(:input_dataclip, lines)
+         |> assign(:input_dataclip_stream_empty?, false)}
       end
 
       def handle_info({:output_dataclip, lines}, socket) do
-        {:noreply, socket |> stream(:output_dataclip, lines)}
+        {:noreply,
+         socket
+         |> stream(:output_dataclip, lines)
+         |> assign(:output_dataclip_stream_empty?, false)}
       end
 
       def handle_info(
@@ -253,7 +267,10 @@ defmodule LightningWeb.RunLive.Streaming do
             %Runs.Events.LogAppended{log_line: log_line},
             socket
           ) do
-        {:noreply, socket |> stream_insert(:log_lines, log_line)}
+        {:noreply,
+         socket
+         |> stream_insert(:log_lines, log_line)
+         |> assign(:log_lines_stream_empty?, false)}
       end
     end
   end

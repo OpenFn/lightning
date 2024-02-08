@@ -996,12 +996,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
       selected_dataclip_id &&
         Invocation.get_dataclip_details!(selected_dataclip_id)
 
-    selectable_dataclips =
-      maybe_add_selected_dataclip(
-        socket.assigns.selectable_dataclips,
-        dataclip
-      )
-
     manual_run_form_changeset =
       Ecto.Changeset.change(form.source, dataclip_id: step.input_dataclip_id)
 
@@ -1012,7 +1006,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
      socket
      |> assign(step: step)
      |> assign(manual_run_form: manual_run_form)
-     |> assign(selectable_dataclips: selectable_dataclips)}
+     |> assign_dataclips(socket.assigns.selectable_dataclips, dataclip)}
   end
 
   def handle_info(
@@ -1064,14 +1058,20 @@ defmodule LightningWeb.WorkflowLive.Edit do
         socket
         |> assign_manual_run_form(changeset)
         |> assign(step: step)
-        |> assign(
-          selectable_dataclips:
-            maybe_add_selected_dataclip(selectable_dataclips, dataclip)
-        )
+        |> assign_dataclips(selectable_dataclips, dataclip)
 
       _ ->
         socket
     end
+  end
+
+  defp assign_dataclips(socket, selectable_dataclips, step_dataclip) do
+    socket
+    |> assign(
+      selectable_dataclips:
+        maybe_add_selected_dataclip(selectable_dataclips, step_dataclip)
+    )
+    |> assign(show_wiped_dataclip_selector: is_map(step_dataclip))
   end
 
   defp get_selected_dataclip(run_id, job_id) do
