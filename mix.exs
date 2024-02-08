@@ -108,7 +108,7 @@ defmodule Lightning.MixProject do
       {:opentelemetry_phoenix, "~> 1.1.1"},
       {:opentelemetry_tesla, "~> 2.2.0"},
       {:petal_components, "~> 1.2.0"},
-      {:phoenix, "~> 1.7.0"},
+      {:phoenix, "~> 1.7.11"},
       {:phoenix_ecto, "~> 4.4"},
       {:phoenix_html, "~> 3.3"},
       {:phoenix_live_dashboard, "~> 0.8"},
