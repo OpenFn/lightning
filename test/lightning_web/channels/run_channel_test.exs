@@ -289,6 +289,15 @@ defmodule LightningWeb.RunChannelTest do
       ref = push(socket, "fetch:dataclip", %{})
 
       assert_reply ref, :ok, {:binary, ~s<{"foo": "bar"}>}
+
+      now = DateTime.utc_now() |> DateTime.truncate(:second)
+
+      dataclip
+      |> Ecto.Changeset.change(body: nil, wiped_at: now)
+      |> Repo.update()
+
+      ref = push(socket, "fetch:dataclip", %{})
+      assert_reply ref, :ok, {:binary, "null"}
     end
 
     test "fetch:dataclip wipes dataclip body for projects with erase_all retention policy",
