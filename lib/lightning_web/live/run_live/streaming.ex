@@ -272,10 +272,6 @@ defmodule LightningWeb.RunLive.Streaming do
          |> stream_insert(:log_lines, log_line)
          |> assign(:log_lines_stream_empty?, false)}
       end
-
-      def handle_info(%Runs.Events.DataclipUpdated{}, socket) do
-        {:noreply, socket}
-      end
     end
   end
 

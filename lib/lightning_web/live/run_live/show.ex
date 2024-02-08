@@ -265,4 +265,9 @@ defmodule LightningWeb.RunLive.Show do
 
     {:noreply, socket |> apply_selected_step_id(selected_step_id)}
   end
+
+  @impl true
+  def handle_info(%Lightning.Runs.Events.DataclipUpdated{}, socket) do
+    {:noreply, socket}
+  end
 end
