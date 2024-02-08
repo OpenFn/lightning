@@ -998,7 +998,7 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
              "create new workorder button is disabled"
     end
 
-    test "selected dataclip viewer is updated correctly if dataclip is wiped and step completed",
+    test "selected dataclip viewer is updated correctly if dataclip is wiped",
          %{
            conn: conn,
            project: project,
@@ -1042,9 +1042,6 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       # let's subscribe to events to make sure we're in sync with liveview
       Lightning.Runs.subscribe(run)
 
-      # lets wipe the dataclip
-      Lightning.Runs.wipe_dataclips(run)
-
       # start step without dataclip
       {:ok, %{id: step_id}} =
         Lightning.Runs.start_step(%{
@@ -1061,17 +1058,13 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       html = view |> element("#manual-job-#{job_1.id}") |> render()
       assert html =~ unique_val, "dataclip body is present when the step starts"
 
-      # complete step without dataclip
-      {:ok, _step} =
-        Lightning.Runs.complete_step(%{
-          step_id: step_id,
-          reason: "success",
-          run_id: run.id,
-          project_id: project.id
-        })
+      # lets wipe the dataclip
+      Lightning.Runs.wipe_dataclips(run)
 
-      assert_received %Lightning.Runs.Events.StepCompleted{
-        step: %{id: ^step_id}
+      dataclip_id = input_dataclip.id
+
+      assert_received %Lightning.Runs.Events.DataclipUpdated{
+        dataclip: %{id: ^dataclip_id}
       }
 
       # make sure that the event is processed by liveview

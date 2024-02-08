@@ -234,6 +234,81 @@ defmodule Lightning.WorkOrdersTest do
       assert steps |> Enum.map(& &1.id) == [first_step.id]
     end
 
+    test "retrying a run from a step with a wiped dataclip", %{
+      workflow: workflow,
+      trigger: trigger,
+      jobs: [job | _rest]
+    } do
+      user = insert(:user)
+      dataclip = insert(:dataclip, wiped_at: DateTime.utc_now())
+      # create existing complete run
+      %{runs: [run]} =
+        insert(:workorder,
+          workflow: workflow,
+          trigger: trigger,
+          dataclip: dataclip,
+          runs: [
+            %{
+              state: :failed,
+              dataclip: dataclip,
+              starting_trigger: trigger,
+              steps: [
+                step = insert(:step, job: job, input_dataclip: dataclip)
+              ]
+            }
+          ]
+        )
+
+      {:error, changeset} = WorkOrders.retry(run, step, created_by: user)
+
+      assert changeset.errors == [
+               {:input_dataclip_id,
+                {"cannot retry run using a wiped dataclip", []}}
+             ]
+    end
+
+    test "retrying a run from a step with a dropped dataclip", %{
+      workflow: workflow,
+      trigger: trigger,
+      jobs: [job_a, job_b, job_c]
+    } do
+      user = insert(:user)
+      dataclip = insert(:dataclip)
+
+      # create existing complete run
+      %{runs: [run]} =
+        insert(:workorder,
+          workflow: workflow,
+          trigger: trigger,
+          dataclip: dataclip,
+          runs: [
+            %{
+              state: :failed,
+              dataclip: dataclip,
+              starting_trigger: trigger,
+              steps: [
+                insert(:step,
+                  job: job_a,
+                  input_dataclip: dataclip,
+                  output_dataclip: nil
+                ),
+                second_step =
+                  insert(:step, job: job_b, input_dataclip: nil),
+                insert(:step, job: job_c)
+              ]
+            }
+          ]
+        )
+
+      {:error, changeset} =
+        WorkOrders.retry(run, second_step, created_by: user)
+
+      assert changeset.errors == [
+               {:input_dataclip_id,
+                {"cannot retry run using a wiped dataclip", []}}
+             ]
+    end
+
     test "updates workorder state", %{
       workflow: workflow,
       trigger: trigger,
@@ -1156,6 +1231,84 @@ defmodule Lightning.WorkOrdersTest do
 
       assert retry_run |> Repo.preload(:steps) |> Map.get(:steps) == []
     end
+
+    test "retrying multiple workorders with wiped and non wiped dataclips",
+         %{
+           workflow: workflow,
+           trigger: trigger,
+           jobs: [job_a | _rest],
+           user: user
+         } do
+      workorder_1 =
+        insert(:workorder,
+          workflow: workflow,
+          trigger: trigger,
+          dataclip: build(:dataclip),
+          runs: [
+            %{
+              state: :failed,
+              dataclip: build(:dataclip),
+              starting_trigger: trigger,
+              steps: [
+                insert(:step,
+                  job: job_a,
+                  input_dataclip: build(:dataclip),
+                  output_dataclip: build(:dataclip)
+                )
+              ]
+            }
+          ]
+        )
+
+      wiped_dataclip = insert(:dataclip, wiped_at: DateTime.utc_now())
+
+      workorder_2 =
+        insert(:workorder,
+          workflow: workflow,
+          trigger: trigger,
+          dataclip: wiped_dataclip,
+          runs: [
+            %{
+              state: :failed,
+              dataclip: wiped_dataclip,
+              starting_trigger: trigger,
+              steps: [
+                insert(:step,
+                  job: job_a,
+                  input_dataclip: wiped_dataclip,
+                  output_dataclip: nil
+                )
+              ]
+            }
+          ]
+        )
+
+      refute Repo.get_by(Lightning.Run,
+               work_order_id: workorder_1.id,
+               starting_job_id: job_a.id
+             )
+
+      refute Repo.get_by(Lightning.Run,
+               work_order_id: workorder_2.id,
+               starting_job_id: job_a.id
+             )
+
+      {:ok, 1} =
+        WorkOrders.retry_many([workorder_2, workorder_1],
+          created_by: user
+        )
+
+      assert Repo.get_by(Lightning.Run,
+               work_order_id: workorder_1.id,
+               starting_job_id: job_a.id
+             )
+
+      refute Repo.get_by(Lightning.Run,
+               work_order_id: workorder_2.id,
+               starting_job_id: job_a.id
+             ),
+             "workorder with wiped dataclip is not retried"
+    end
   end
 
   describe "retry_many/2 for RunSteps" do
@@ -1422,6 +1575,94 @@ defmodule Lightning.WorkOrdersTest do
 
       assert retry_run_2.inserted_at
              |> DateTime.before?(retry_run_1.inserted_at)
+    end
+
+    test "retrying multiple RunSteps with wiped and non wiped dataclips",
+         %{
+           workflow: workflow,
+           trigger: trigger,
+           jobs: [job_a | _rest],
+           user: user
+         } do
+      workorder_1 =
+        insert(:workorder,
+          workflow: workflow,
+          trigger: trigger,
+          dataclip: build(:dataclip)
+        )
+
+      run_1 =
+        insert(:run,
+          work_order: workorder_1,
+          state: :failed,
+          dataclip: build(:dataclip),
+          starting_trigger: trigger
+        )
+
+      run_step_1_a =
+        insert(:run_step,
+          step:
+            build(:step,
+              job: job_a,
+              input_dataclip: build(:dataclip),
+              output_dataclip: build(:dataclip)
+            ),
+          run: run_1
+        )
+
+      wiped_dataclip = insert(:dataclip, wiped_at: DateTime.utc_now())
+
+      workorder_2 =
+        insert(:workorder,
+          workflow: workflow,
+          trigger: trigger,
+          dataclip: wiped_dataclip
+        )
+
+      run_2 =
+        insert(:run,
+          work_order: workorder_2,
+          state: :failed,
+          dataclip: wiped_dataclip,
+          starting_trigger: trigger
+        )
+
+      run_step_2_a =
+        insert(:run_step,
+          step:
+            build(:step,
+              job: job_a,
+              input_dataclip: wiped_dataclip,
+              output_dataclip: nil
+            ),
+          run: run_2
+        )
+
+      refute Repo.get_by(Lightning.Run,
+               work_order_id: workorder_1.id,
+               starting_job_id: job_a.id
+             )
+
+      refute Repo.get_by(Lightning.Run,
+               work_order_id: workorder_2.id,
+               starting_job_id: job_a.id
+             )
+
+      {:ok, 1} =
+        WorkOrders.retry_many([run_step_2_a, run_step_1_a],
+          created_by: user
+        )
+
+      assert Repo.get_by(Lightning.Run,
+               work_order_id: workorder_1.id,
+               starting_job_id: job_a.id
+             )
+
+      refute Repo.get_by(Lightning.Run,
+               work_order_id: workorder_2.id,
+               starting_job_id: job_a.id
+             ),
+             "run with wiped dataclip is not retried"
     end
   end
 

@@ -160,7 +160,7 @@ defmodule LightningWeb.RunChannel do
       Runs.wipe_dataclips(socket.assigns.run)
     end
 
-    {:reply, {:ok, {:binary, body}}, socket}
+    {:reply, {:ok, {:binary, body || "null"}}, socket}
   end
 
   def handle_in("step:start", payload, socket) do

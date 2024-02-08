@@ -10,6 +10,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
   alias Lightning.Policies.ProjectUsers
   alias Lightning.Projects
   alias Lightning.Runs
+  alias Lightning.Runs.Events.DataclipUpdated
   alias Lightning.Runs.Events.RunUpdated
   alias Lightning.Runs.Events.StepCompleted
   alias Lightning.Workflows
@@ -984,29 +985,19 @@ defmodule LightningWeb.WorkflowLive.Edit do
     {:noreply, socket |> assign(:selected_credential_type, type)}
   end
 
+  def handle_info(%DataclipUpdated{dataclip: dataclip}, socket) do
+    dataclip = Invocation.get_dataclip_details!(dataclip.id)
+
+    {:noreply,
+     assign_dataclips(socket, socket.assigns.selectable_dataclips, dataclip)}
+  end
+
   def handle_info(
         %StepCompleted{step: step},
         socket
       )
       when step.job_id === socket.assigns.selected_job.id do
-    form = socket.assigns.manual_run_form
-    selected_dataclip_id = Phoenix.HTML.Form.input_value(form, :dataclip_id)
-
-    dataclip =
-      selected_dataclip_id &&
-        Invocation.get_dataclip_details!(selected_dataclip_id)
-
-    manual_run_form_changeset =
-      Ecto.Changeset.change(form.source, dataclip_id: step.input_dataclip_id)
-
-    manual_run_form =
-      to_form(%{form | source: manual_run_form_changeset}, id: "manual_run_form")
-
-    {:noreply,
-     socket
-     |> assign(step: step)
-     |> assign(manual_run_form: manual_run_form)
-     |> assign_dataclips(socket.assigns.selectable_dataclips, dataclip)}
+    {:noreply, assign(socket, step: step)}
   end
 
   def handle_info(

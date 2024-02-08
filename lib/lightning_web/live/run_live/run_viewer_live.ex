@@ -239,6 +239,11 @@ defmodule LightningWeb.RunLive.RunViewerLive do
     {:noreply, socket |> apply_selected_step_id(id)}
   end
 
+  @impl true
+  def handle_info(%Lightning.Runs.Events.DataclipUpdated{}, socket) do
+    {:noreply, socket}
+  end
+
   def handle_steps_change(socket) do
     # either a job_id or a step_id is passed in
     # if a step_id is passed in, we can highlight the log lines immediately

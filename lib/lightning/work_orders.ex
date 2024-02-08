@@ -263,7 +263,13 @@ defmodule Lightning.WorkOrders do
     retry(run_id, step_id, opts)
   end
 
-  defp do_retry(workorder, dataclip, starting_job, steps, creating_user) do
+  defp do_retry(
+         workorder,
+         %{wiped_at: nil} = dataclip,
+         starting_job,
+         steps,
+         creating_user
+       ) do
     changeset =
       Run.new(%{priority: :immediate})
       |> put_assoc(:work_order, workorder)
@@ -281,6 +287,16 @@ defmodule Lightning.WorkOrders do
         {:ok, run}
       end
     end)
+  end
+
+  defp do_retry(_workorder, _wiped_dataclip, _starting_job, _steps, _user) do
+    %Run{}
+    |> Ecto.Changeset.change()
+    |> Ecto.Changeset.add_error(
+      :input_dataclip_id,
+      "cannot retry run using a wiped dataclip"
+    )
+    |> Ecto.Changeset.apply_action(:insert)
   end
 
   @spec retry_many(
@@ -358,16 +374,16 @@ defmodule Lightning.WorkOrders do
 
     runs = Repo.all(first_runs_query)
 
-    for run <- runs do
-      starting_job =
-        if job = run.starting_job do
-          job
-        else
-          [edge] = run.starting_trigger.edges
-          edge.target_job
-        end
+    results =
+      Enum.map(runs, fn run ->
+        starting_job =
+          if job = run.starting_job do
+            job
+          else
+            [edge] = run.starting_trigger.edges
+            edge.target_job
+          end
 
-      {:ok, _} =
         do_retry(
           run.work_order,
           run.dataclip,
@@ -375,17 +391,18 @@ defmodule Lightning.WorkOrders do
           [],
           attrs[:created_by]
         )
-    end
+      end)
 
-    {:ok, length(runs)}
+    {:ok, Enum.count(results, fn result -> match?({:ok, _}, result) end)}
   end
 
   def retry_many([%RunStep{} | _rest] = run_steps, opts) do
-    for run_step <- run_steps do
-      {:ok, _} = retry(run_step.run_id, run_step.step_id, opts)
-    end
+    results =
+      Enum.map(run_steps, fn run_step ->
+        retry(run_step.run_id, run_step.step_id, opts)
+      end)
 
-    {:ok, length(run_steps)}
+    {:ok, Enum.count(results, fn result -> match?({:ok, _}, result) end)}
   end
 
   def retry_many([], _opts) do
