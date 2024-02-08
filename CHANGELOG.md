@@ -14,8 +14,16 @@ and this project adheres to
 
 ### Fixed
 
-- Bumped live_view from `0.20.4` to `0.20.5` to fix canvas selection issue
-  [#1724](https://github.com/OpenFn/lightning/issues/1724)
+## [v2.0.0-rc11] - 2024-02-08
+
+### Added
+
+### Changed
+
+### Fixed
+
+- Bumped Phoenix LiveView from `0.20.4` to `0.20.5` to fix canvas selection
+  issue [#1724](https://github.com/OpenFn/lightning/issues/1724)
 
 ## [v2.0.0-rc10] - 2024-02-08
 
