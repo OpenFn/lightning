@@ -26,7 +26,7 @@ defmodule Lightning.Projects.Events do
     )
   end
 
-  def subscribe() do
+  def subscribe do
     Lightning.subscribe(topic())
   end
 

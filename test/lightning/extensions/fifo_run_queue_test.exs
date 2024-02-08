@@ -1,14 +1,13 @@
-defmodule Lightning.Runs.QueueTest do
+defmodule Lightning.Extensions.FifoRunQueueTest do
   use Lightning.DataCase, async: true
 
-  alias Lightning.Runs
-  alias Lightning.Runs.Queue
+  alias Lightning.Extensions.FifoRunQueue
   alias Lightning.WorkOrders
 
   describe "claim" do
-    test "claims a run from a project queue" do
-      %{id: project1_id} = project1 = insert(:project)
-      %{id: project2_id} = project2 = insert(:project)
+    test "claims a run from any project sorting by insertion" do
+      project1 = insert(:project)
+      project2 = insert(:project)
 
       %{triggers: [trigger1]} =
         workflow1 = insert(:simple_workflow, project: project1)
@@ -40,33 +39,20 @@ defmodule Lightning.Runs.QueueTest do
           dataclip: params_with_assocs(:dataclip)
         )
 
-      base_query_project1 =
-        from(a in Lightning.Run,
-          join: wo in assoc(a, :work_order),
-          join: wf in assoc(wo, :workflow),
-          where: wf.project_id == ^project1_id
-        )
-
-      base_query_project2 =
-        from(a in Lightning.Run,
-          join: wo in assoc(a, :work_order),
-          join: wf in assoc(wo, :workflow),
-          where: wf.project_id == ^project2_id
-        )
-
       assert {:ok, [%{id: ^run1_id, state: :claimed}]} =
-               Queue.claim(1, base_query_project1)
-
-      assert {:ok, [%{id: ^run3_id, state: :claimed}]} =
-               Queue.claim(1, base_query_project2)
-
-      assert {:ok, [%{id: ^run4_id, state: :claimed}]} =
-               Queue.claim(1, base_query_project2)
+               FifoRunQueue.claim(1)
 
       assert {:ok, [%{id: ^run2_id, state: :claimed}]} =
-               Queue.claim(1)
+               FifoRunQueue.claim(1)
 
-      assert {:ok, []} = Runs.claim()
+      assert {:ok,
+              [
+                %{id: ^run3_id, state: :claimed},
+                %{id: ^run4_id, state: :claimed}
+              ]} =
+               FifoRunQueue.claim(2)
+
+      assert {:ok, []} = FifoRunQueue.claim(1)
     end
   end
 
@@ -79,7 +65,7 @@ defmodule Lightning.Runs.QueueTest do
       _run_step_1_2 = insert_run_step(run_1)
       run_step_2 = insert_run_step(run_2)
 
-      Queue.dequeue(run_1)
+      FifoRunQueue.dequeue(run_1)
 
       assert only_record_for_type?(run_2)
 
@@ -92,7 +78,7 @@ defmodule Lightning.Runs.QueueTest do
       run_2 = insert_run()
       log_line_2_1 = insert(:log_line, run: run_2)
 
-      Queue.dequeue(run_1)
+      FifoRunQueue.dequeue(run_1)
 
       assert only_record_for_type?(log_line_2_1)
     end

@@ -2,27 +2,19 @@ defmodule Lightning.Runs.Queue do
   @moduledoc """
   Allows adding, removing or claiming work to be executed by the Runtime.
   """
-  @behaviour Lightning.Extensions.RunQueue
-
   import Ecto.Query
 
-  alias Lightning.Repo
   alias Lightning.Runs
 
-  @impl true
-  def enqueue(run) do
-    run
-    |> Repo.insert()
-  end
-
-  @impl true
-  def claim(demand, base_query \\ Lightning.Run) do
+  @spec claim(non_neg_integer(), Ecto.Query.t()) ::
+          {:ok, [Lightning.Run.t()]}
+          | {:error, Ecto.Changeset.t(Lightning.Run.t())}
+  def claim(demand, base_query) do
     subset_query =
       base_query
       |> select([:id])
       |> where([r], r.state == :available)
       |> limit(^demand)
-      |> order_by([:priority, :inserted_at])
       |> lock("FOR UPDATE SKIP LOCKED")
 
     # The Postgres planner may choose to generate a plan that executes a nested
@@ -50,11 +42,5 @@ defmodule Lightning.Runs.Queue do
       {:error, _op, changeset, _changes} ->
         {:error, changeset}
     end
-  end
-
-  @impl true
-  def dequeue(run) do
-    run
-    |> Repo.delete()
   end
 end

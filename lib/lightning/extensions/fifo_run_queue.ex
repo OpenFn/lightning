@@ -1,24 +1,33 @@
 defmodule Lightning.Extensions.FifoRunQueue do
   @moduledoc """
-  Default implementation of runtime scheduler.
+  Allows adding, removing or claiming work to be executed by the Runtime.
   """
 
   @behaviour Lightning.Extensions.RunQueue
 
+  import Ecto.Query
+
+  alias Lightning.Repo
   alias Lightning.Runs.Queue
 
   @impl true
   def enqueue(run) do
-    Queue.enqueue(run)
+    run
+    |> Repo.insert()
   end
 
   @impl true
   def claim(demand) do
-    Queue.claim(demand)
+    fifo_runs_query =
+      Lightning.Run
+      |> order_by([:priority, :inserted_at])
+
+    Queue.claim(demand, fifo_runs_query)
   end
 
   @impl true
   def dequeue(run) do
-    Queue.dequeue(run)
+    run
+    |> Repo.delete()
   end
 end

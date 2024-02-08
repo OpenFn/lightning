@@ -10,7 +10,7 @@ and this project adheres to
 
 ### Added
 
-- Add Runtime scheduler extension
+- Add RunQueue extension to allow claim customization.
   [#1715](https://github.com/OpenFn/Lightning/issues/1715)
 
 ### Changed
