@@ -204,6 +204,12 @@ defmodule Lightning.AuthProviders.Common do
        when status not in 200..202,
        do: {:error, nil}
 
+  @doc """
+  Checks if a token is still valid or must be refreshed. If expires_at is nil,
+  it will return `false`, forcing a refresh. If the token has already expired or
+  will expire before the default buffer (in the next 5 minutes) we return
+  `false`, forcing a refresh.
+  """
   def still_fresh(token_body, threshold \\ 5, time_unit \\ :minute)
 
   def still_fresh(
