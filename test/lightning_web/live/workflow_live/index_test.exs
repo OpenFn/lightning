@@ -231,7 +231,7 @@ defmodule LightningWeb.WorkflowLive.IndexTest do
 
       # Last workflow with placeholders
       assert Regex.match?(
-               ~r{Two.*#{new_workflow.name}.*No work orders created yet.*0.*N/A.*0.*N/A}s,
+               ~r{Two.*#{new_workflow.name}.*Nothing last.*0.*N/A.*0.*N/A}s,
                html
              )
     end

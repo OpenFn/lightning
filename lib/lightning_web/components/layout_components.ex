@@ -132,7 +132,11 @@ defmodule LightningWeb.LayoutComponents do
         <h1 class="text-3xl font-bold text-secondary-900 flex items-center">
           <%= if assigns[:title], do: render_slot(@title) %>
         </h1>
-        <%= if assigns[:period], do: render_slot(@period) %>
+        <%= if assigns[:period] do %>
+          <span class="ml-2 mt-3 text-xs">
+            <%= render_slot(@period) %>
+          </span>
+        <% end %>
         <div class="grow"></div>
         <%= if assigns[:inner_block], do: render_slot(@inner_block) %>
         <%= if assigns[:current_user] do %>

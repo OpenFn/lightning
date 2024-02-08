@@ -68,28 +68,29 @@ defmodule LightningWeb.RunLive.Components do
   @spec state_pill(%{:state => any(), optional(any()) => any()}) ::
           Phoenix.LiveView.Rendered.t()
   @spec state_pill(map()) :: Phoenix.LiveView.Rendered.t()
-  # it's not really that complex!
-  # credo:disable-for-next-line
   def state_pill(%{state: state} = assigns) do
-    [text, classes] =
-      case state do
-        # only workorder states...
-        :pending -> ["Enqueued", "bg-gray-200 text-gray-800"]
-        :running -> ["Running", "bg-blue-200 text-blue-800"]
-        # run & workorder states...
-        :available -> ["Enqueued", "bg-gray-200 text-gray-800"]
-        :claimed -> ["Starting", "bg-blue-200 text-blue-800"]
-        :started -> ["Running", "bg-blue-200 text-blue-800"]
-        :success -> ["Success", "bg-green-200 text-green-800"]
-        :failed -> ["Failed", "bg-red-200 text-red-800"]
-        :crashed -> ["Crashed", "bg-orange-200 text-orange-800"]
-        :cancelled -> ["Cancelled", "bg-gray-500 text-gray-800"]
-        :killed -> ["Killed", "bg-yellow-200 text-yellow-800"]
-        :exception -> ["Exception", "bg-gray-800 text-white"]
-        :lost -> ["Lost", "bg-gray-800 text-white"]
-      end
+    chip_styles = %{
+      # only workorder states...
+      pending: "bg-gray-200 text-gray-800",
+      running: "bg-blue-200 text-blue-800",
+      #  run and workorder states...
+      available: "text-gray-800",
+      claimed: "bg-blue-200 text-blue-800",
+      started: "bg-blue-200 text-blue-800",
+      success: "bg-green-200 text-green-800",
+      failed: "bg-red-200 text-red-800",
+      crashed: "bg-orange-200 text-orange-800",
+      cancelled: "bg-gray-500 text-gray-800",
+      killed: "bg-yellow-200 text-yellow-800",
+      exception: "bg-gray-800 text-white",
+      lost: "bg-gray-800 text-white"
+    }
 
-    assigns = assign(assigns, text: text, classes: classes)
+    assigns =
+      assign(assigns,
+        text: display_text_from_state(state),
+        classes: Map.get(chip_styles, state)
+      )
 
     ~H"""
     <span class={["my-auto whitespace-nowrap rounded-full
@@ -97,6 +98,19 @@ defmodule LightningWeb.RunLive.Components do
       <%= @text %>
     </span>
     """
+  end
+
+  def display_text_from_state(state) do
+    case state do
+      # only workorder states...
+      :pending -> "Enqueued"
+      :running -> "Running"
+      # run & workorder states...
+      :available -> "Enqueued"
+      :claimed -> "Starting"
+      :started -> "Running"
+      atom -> to_string(atom) |> String.capitalize()
+    end
   end
 
   attr :step, Lightning.Invocation.Step, required: true

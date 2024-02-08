@@ -108,7 +108,7 @@ defmodule Lightning.DashboardStats do
 
   defp get_last_workorder(
          %Workflow{id: workflow_id},
-         excluded_states \\ [:pending, :running]
+         excluded_states \\ []
        ) do
     from(wo in Lightning.WorkOrder,
       where: wo.workflow_id == ^workflow_id,
