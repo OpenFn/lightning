@@ -37,6 +37,12 @@ defmodule Lightning.Invocation.Query do
   end
 
   @doc """
+  To be used in preloads for `workflow > job > step` when the presence of any
+  step is all the information we need. As in, "Does this job have any steps?"
+  """
+  def any_step, do: from(s in Step, limit: 1)
+
+  @doc """
   The last step for a job for a particular exit reason, used in scheduler
   """
   @spec steps_with_reason(Ecto.Queryable.t(), String.t()) :: Ecto.Queryable.t()

@@ -712,7 +712,9 @@ defmodule LightningWeb.WorkflowLive.Edit do
           |> Lightning.Repo.preload([
             :edges,
             triggers: Trigger.with_auth_methods_query(),
-            jobs: {Workflows.jobs_ordered_subquery(), [:credential, :steps]}
+            jobs:
+              {Workflows.jobs_ordered_subquery(),
+               [:credential, steps: Invocation.Query.any_step()]}
           ])
 
         socket |> assign_workflow(workflow) |> assign(page_title: workflow.name)
@@ -1355,7 +1357,15 @@ defmodule LightningWeb.WorkflowLive.Edit do
           {:cont, nil}
 
         %Job{} = job ->
-          {:halt, [field, job |> Lightning.Repo.preload([:credential, :steps])]}
+          {:halt,
+           [
+             field,
+             job
+             |> Lightning.Repo.preload([
+               :credential,
+               steps: Invocation.Query.any_step()
+             ])
+           ]}
 
         %Trigger{} = trigger ->
           {:halt,
