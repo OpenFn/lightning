@@ -12,6 +12,14 @@ and this project adheres to
 
 ### Changed
 
+### Fixed
+
+## [v2.0.0-rc10] - 2024-02-08
+
+### Added
+
+### Changed
+
 - Implemented safeguards to prevent deletion of jobs with associated run history
   [#1570](https://github.com/OpenFn/Lightning/issues/1570)
 
@@ -102,8 +110,7 @@ and this project adheres to
 
 ### Fixed
 
-- Fix Run via Docker
-  [#1653](https://github.com/OpenFn/Lightning/issues/1653)
+- Fix Run via Docker [#1653](https://github.com/OpenFn/Lightning/issues/1653)
 - Fix remaining warnings, enable "warnings as errors"
   [#1642](https://github.com/OpenFn/Lightning/issues/1642)
 - Fix workflow dashboard bug when viewed for newly created workflows with only
