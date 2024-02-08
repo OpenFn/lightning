@@ -17,6 +17,11 @@ and this project adheres to
 
 ### Fixed
 
+- Fixed inspector dataclip body not getting updated after dataclip is wiped
+  [#1718](https://github.com/OpenFn/Lightning/issues/1718)
+- Fixed work orders getting retried despite having wiped dataclips
+  [#1721](https://github.com/OpenFn/Lightning/issues/1721)
+
 ## [v2.0.0-rc9] 2024-02-05
 
 ### Added
@@ -97,7 +102,7 @@ and this project adheres to
 
 ### Fixed
 
-- Fix Run via Docker  
+- Fix Run via Docker
   [#1653](https://github.com/OpenFn/Lightning/issues/1653)
 - Fix remaining warnings, enable "warnings as errors"
   [#1642](https://github.com/OpenFn/Lightning/issues/1642)
