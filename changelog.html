@@ -13,7 +13,7 @@
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-EPF2X7PV.js"></script>
-    <script src="dist/sidebar_items-9E1B2AFA.js"></script>
+    <script src="dist/sidebar_items-38F7F706.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -161,7 +161,9 @@ and this project adheres to
   </a>
   <span class="text">Fixed</span>
 </h3>
-<h2 id="v2-0-0-rc9-2024-02-05" class="section-heading">
+<ul><li>Fixed inspector dataclip body not getting updated after dataclip is wiped
+<a href="https://github.com/OpenFn/Lightning/issues/1718">#1718</a></li><li>Fixed work orders getting retried despite having wiped dataclips
+<a href="https://github.com/OpenFn/Lightning/issues/1721">#1721</a></li></ul><h2 id="v2-0-0-rc9-2024-02-05" class="section-heading">
   <a href="#v2-0-0-rc9-2024-02-05" class="hover-link">
     <i class="ri-link-m" aria-hidden="true"></i>
   </a>
@@ -261,7 +263,8 @@ documentation for how to configure them.
   </a>
   <span class="text">Fixed</span>
 </h3>
-<ul><li>Fix Run via Docker<br/><a href="https://github.com/OpenFn/Lightning/issues/1653">#1653</a></li><li>Fix remaining warnings, enable &quot;warnings as errors&quot;
+<ul><li>Fix Run via Docker
+<a href="https://github.com/OpenFn/Lightning/issues/1653">#1653</a></li><li>Fix remaining warnings, enable &quot;warnings as errors&quot;
 <a href="https://github.com/OpenFn/Lightning/issues/1642">#1642</a></li><li>Fix workflow dashboard bug when viewed for newly created workflows with only
 unfinished run steps. <a href="https://github.com/OpenFn/Lightning/issues/1674">#1674</a></li></ul><h2 id="v2-0-0-rc5-2024-01-22" class="section-heading">
   <a href="#v2-0-0-rc5-2024-01-22" class="hover-link">
@@ -758,7 +761,7 @@ work orders up to <code class="inline">v0.10.0</code>, though the granularity of
 will be less than <code class="inline">v0.10.0</code> and the final states are not guaranteed to be
 accurate for workflows with multiple branches and leaf nodes with varying exit
 reasons.</p><p>The migration scripts can be run with a single function call in SetupUtils from
-a connect <code class="inline">iex</code> session:</p><pre><code class="makeup elixir" translate="no"><span class="nc">Lightning.SetupUtils</span><span class="o">.</span><span class="n">approximate_state_for_attempts_and_workorders</span><span class="p" data-group-id="0364908359-1">(</span><span class="p" data-group-id="0364908359-1">)</span></code></pre><p>Note that (like lots of <em>other</em> functionality in <code class="inline">SetupUtils</code>, calling this
+a connect <code class="inline">iex</code> session:</p><pre><code class="makeup elixir" translate="no"><span class="nc">Lightning.SetupUtils</span><span class="o">.</span><span class="n">approximate_state_for_attempts_and_workorders</span><span class="p" data-group-id="4112080956-1">(</span><span class="p" data-group-id="4112080956-1">)</span></code></pre><p>Note that (like lots of <em>other</em> functionality in <code class="inline">SetupUtils</code>, calling this
 function is a destructive action and you should only do it if you've backed up
 your data and you know what you're doing.)</p><p>As always, we recommend backing up your data before migrating. (And thanks for
 bearing with us as we move towards our first stable Lightning release.)</p><h3 id="added-19" class="section-heading">
