@@ -45,6 +45,7 @@ defmodule LightningWeb.Dev.ComponentsLive do
               <Viewers.dataclip_viewer
                 id="dataclip-viewer"
                 stream={@streams.dataclip}
+                stream_empty?={false}
                 class=""
               />
             </div>
@@ -54,10 +55,11 @@ defmodule LightningWeb.Dev.ComponentsLive do
               id="log-viewer-data"
               stream={@log_lines}
               highlight_id={@highlight_id}
+              stream_empty?={false}
             />
           </.variation>
           <.variation title="Empty">
-            <Viewers.log_viewer id="log-viewer" stream={[]} />
+            <Viewers.log_viewer id="log-viewer" stream={[]} stream_empty?={true} />
           </.variation>
         </ul>
       </div>

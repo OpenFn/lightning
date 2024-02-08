@@ -1181,17 +1181,13 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       # input tab shows correct information
       html = run_view |> element("div[data-panel-hash='input']") |> render()
 
-      # TODO: uncomment when https://github.com/phoenixframework/phoenix_live_view/issues/3096
-      # gets fixed.
-      # assert html =~ "Nothing yet"
+      assert html =~ "Nothing yet"
       refute html =~ "No input/output available. This step was never started."
 
       # output tab shows correct information
       html = run_view |> element("div[data-panel-hash='output']") |> render()
 
-      # TODO: uncomment when https://github.com/phoenixframework/phoenix_live_view/issues/3096
-      # gets fixed.
-      # assert html =~ "Nothing yet"
+      assert html =~ "Nothing yet"
       refute html =~ "No input/output available. This step was never started."
 
       # let's subscribe to events to make sure we're in sync with liveview

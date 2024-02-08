@@ -215,26 +215,11 @@ defmodule LightningWeb.RunLive.ShowTest do
 
   defp output_is_empty?(view, step) do
     view
-    |> element("#step-output-#{step.id}")
-    |> has_nothing_yet?()
+    |> has_element?("#step-output-#{step.id}-nothing-yet")
   end
 
   defp log_is_empty?(view, run) do
     view
-    |> element("#run-log-#{run.id}")
-    |> has_nothing_yet?()
-  end
-
-  # TODO: fix when https://github.com/phoenixframework/phoenix_live_view/issues/3096
-  # gets reslved. Currently returning `true`
-  defp has_nothing_yet?(elem) do
-    elem
-    |> render_async()
-    |> Floki.parse_fragment!()
-    |> Floki.filter_out("[id$='-type']")
-    |> Floki.text() =~
-      ~r/^[\n\s]+Nothing yet[\n\s]+$/
-
-    true
+    |> has_element?("#run-log-#{run.id}-nothing-yet")
   end
 end

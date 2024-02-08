@@ -37,6 +37,8 @@ defmodule LightningWeb.Components.Viewers do
     required: true,
     doc: "A stream of `Lightning.Invocation.LogLine` structs"
 
+  attr :stream_empty?, :boolean, required: true
+
   attr :highlight_id, :string,
     default: nil,
     doc: "The id of the log line to highlight, matching the `step_id` field"
@@ -47,35 +49,39 @@ defmodule LightningWeb.Components.Viewers do
 
   def log_viewer(assigns) do
     ~H"""
-    <div
-      class={[
-        "rounded-md shadow-sm bg-slate-700 border-slate-300",
-        "text-slate-200 text-sm font-mono proportional-nums w-full",
-        "overscroll-contain scroll-smooth",
-        "grid grid-flow-row-dense grid-cols-[min-content_1fr]",
-        "log-viewer",
-        @class
-      ]}
-      id={@id}
-      phx-hook="LogLineHighlight"
-      data-highlight-id={@highlight_id}
-      phx-update="stream"
-    >
+    <div class={[
+      "rounded-md shadow-sm bg-slate-700 border-slate-300",
+      "text-slate-200 text-sm font-mono proportional-nums w-full"
+    ]}>
       <div
-        :for={{dom_id, log_line} <- @stream}
-        class="group contents"
-        data-highlight-id={log_line.step_id}
-        id={dom_id}
+        id={@id}
+        phx-hook="LogLineHighlight"
+        data-highlight-id={@highlight_id}
+        phx-update="stream"
+        class={[
+          "overscroll-contain scroll-smooth",
+          "grid grid-flow-row-dense grid-cols-[min-content_1fr]",
+          "log-viewer",
+          @class
+        ]}
       >
-        <div class="log-viewer__prefix" data-line-prefix={log_line.source}></div>
-        <span data-log-line class="log-viewer__message">
-          <pre><%= log_line.message %></pre>
-        </span>
+        <div
+          :for={{dom_id, log_line} <- @stream}
+          class="group contents"
+          data-highlight-id={log_line.step_id}
+          id={dom_id}
+        >
+          <div class="log-viewer__prefix" data-line-prefix={log_line.source}></div>
+          <span data-log-line class="log-viewer__message">
+            <pre><%= log_line.message %></pre>
+          </span>
+        </div>
       </div>
       <div
+        :if={@stream_empty?}
         id={"#{@id}-nothing-yet"}
         class={[
-          "hidden only:block m-2 relative block rounded-md",
+          "m-2 relative rounded-md",
           "p-12 text-center col-span-full"
         ]}
       >
@@ -94,6 +100,8 @@ defmodule LightningWeb.Components.Viewers do
     doc: """
     A stream of lines to render. In the shape of `%{id: String.t(), line: String.t(), index: integer()}`
     """
+
+  attr :stream_empty?, :boolean, required: true
 
   attr :class, :string,
     default: nil,
@@ -131,17 +139,18 @@ defmodule LightningWeb.Components.Viewers do
             <pre class="whitespace-break-spaces"><%= line %></pre>
           </div>
         </div>
-        <div
-          id={"#{@id}-nothing-yet"}
-          class={[
-            "hidden only:block m-2 relative block rounded-md",
-            "p-12 text-center col-span-full"
-          ]}
-        >
-          <.text_ping_loader>
-            Nothing yet
-          </.text_ping_loader>
-        </div>
+      </div>
+      <div
+        :if={@stream_empty?}
+        id={"#{@id}-nothing-yet"}
+        class={[
+          "m-2 relative rounded-md",
+          "p-12 text-center col-span-full"
+        ]}
+      >
+        <.text_ping_loader>
+          Nothing yet
+        </.text_ping_loader>
       </div>
     </div>
     """
@@ -154,6 +163,8 @@ defmodule LightningWeb.Components.Viewers do
     doc: """
     A stream of lines to render. In the shape of `%{id: String.t(), line: String.t(), index: integer()}`
     """
+
+  attr :stream_empty?, :boolean, required: true
 
   attr :class, :string,
     default: nil,
@@ -185,6 +196,7 @@ defmodule LightningWeb.Components.Viewers do
         id={@id}
         class={@class}
         stream={@stream}
+        stream_empty?={@stream_empty?}
         type={
           case @dataclip do
             %AsyncResult{ok?: true, result: %{type: type}} -> type
