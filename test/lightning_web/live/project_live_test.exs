@@ -548,7 +548,7 @@ defmodule LightningWeb.ProjectLiveTest do
           Routes.project_project_settings_path(conn, :index, project.id)
         )
 
-      assert html =~ "Install Github App to get started"
+      assert html =~ "Connect this project to a GitHub repo"
     end
 
     @tag role: :admin
@@ -783,7 +783,7 @@ defmodule LightningWeb.ProjectLiveTest do
         )
 
       assert view |> render_click("delete_repo_connection", %{}) =~
-               "Install Github"
+               "Connect to GitHub"
     end
 
     @tag role: :admin

@@ -56,7 +56,7 @@ defmodule LightningWeb.VersionControlControllerTest do
         )
 
       assert text_response(conn, 200) ==
-               "Github installation updated successfully; you may close this page or navigate to any OpenFn project which uses this installation: #{installation_id}"
+               "GitHub installation updated successfully; you may close this page or navigate to any OpenFn project which uses this installation: #{installation_id}"
     end
   end
 

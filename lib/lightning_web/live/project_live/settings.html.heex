@@ -53,7 +53,7 @@
               hash="vcs"
             >
               <Heroicons.arrow_path class="h-5 w-5 inline-block mr-2" />
-              <span class="inline-block align-middle">Sync to Github</span>
+              <span class="inline-block align-middle">Sync to GitHub</span>
             </LightningWeb.Components.Common.tab_item>
             <LightningWeb.Components.Common.tab_item
               orientation="vertical"
@@ -561,32 +561,33 @@
             <div>
               <div :if={@show_github_setup} class="bg-white p-4 rounded-md">
                 <h6 class="font-medium text-black">
-                  Install Github App to get started
+                  Connect this project to a GitHub repo
                 </h6>
                 <small class="block my-1 text-xs text-gray-600">
-                  Easily keep your Project synced to a Github Repository
-                </small>
-                <small class="block my-1 text-xs text-gray-600">
-                  To get started you will need to install the OpenFn Github application (admin access require)
+                  Click to install the OpenFn app in a GitHub organization & repository.
+                  (You will need admin access.)
                 </small>
                 <div class="hidden sm:block" aria-hidden="true">
                   <div class="py-2"></div>
                 </div>
-                <button
+                <.button
                   type="button"
                   disabled={!@can_install_github}
                   phx-click="install_app"
                   phx-value-id={@project.id}
-                  class="bg-primary-600 hover:bg-primary-700 inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+                  tooltip={
+                    !@can_install_github &&
+                      "You're not allowed to configure repository connections for this project."
+                  }
                 >
-                  Install Github
-                </button>
+                  Connect to GitHub
+                </.button>
               </div>
               <div class="hidden sm:block" aria-hidden="true">
                 <div class="py-2"></div>
               </div>
               <div :if={!@show_github_setup} class="bg-white p-4 rounded-md">
-                <h6 class="font-medium text-black">Sync to Github</h6>
+                <h6 class="font-medium text-black">Sync to GitHub</h6>
                 <small class="block my-1 text-xs text-gray-600">
                   Configure a two-way sync between this lightning project and a
                   GitHub repo. See
@@ -725,7 +726,7 @@
                       >
                         Connect Branch
                       </Form.submit_button>
-                      <LightningWeb.Components.NewInputs.button
+                      <.button
                         :if={@show_sync_button}
                         disabled={!@can_initiate_github_sync}
                         type="button"
@@ -738,7 +739,7 @@
                         class="bg-primary-600 hover:bg-primary-700 inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
                       >
                         Initiate Sync to Branch
-                      </LightningWeb.Components.NewInputs.button>
+                      </.button>
                     </div>
                     <div :if={@can_install_github}>
                       <div>
@@ -748,7 +749,7 @@
                             class="text-primary-600"
                             phx-click="reinstall_app"
                           >
-                            Re-configure your Github permissions (admin access required)
+                            Re-configure your GitHub permissions (admin access required)
                           </button>
                         </small>
                       </div>
@@ -777,7 +778,7 @@
           <% else %>
             <div class="bg-white p-4 rounded-md">
               <h6 class="font-medium text-black">
-                Sync to Github
+                Sync to GitHub
               </h6>
               <small class="block mt-1 text-xs text-gray-600">
                 Version Control is not configured for this Lightning instance. Contact the superuser for more information.

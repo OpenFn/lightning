@@ -305,10 +305,10 @@ defmodule LightningWeb.ProjectLive.Settings do
 
     case Application.get_env(:lightning, :github_app) |> Map.new() do
       %{app_name: nil} ->
-        Logger.error("Github App Name not configured")
+        Logger.error("GitHub App Name not configured")
         # Send to sentry and show cozy error
         error =
-          GithubError.misconfigured("Github App Name Misconfigured", %{
+          GithubError.misconfigured("GitHub App Name Misconfigured", %{
             app_name: nil
           })
 
@@ -342,7 +342,7 @@ defmodule LightningWeb.ProjectLive.Settings do
     case Application.get_env(:lightning, :github_app) |> Map.new() do
       %{app_name: nil} ->
         error =
-          GithubError.misconfigured("Github App Name Misconfigured", %{
+          GithubError.misconfigured("GitHub App Name Misconfigured", %{
             app_name: nil
           })
 
@@ -477,7 +477,7 @@ defmodule LightningWeb.ProjectLive.Settings do
         {:noreply, socket |> assign(repos: repos)}
 
       # while it's possible to trigger this state when testing
-      # Github makes it pretty impossible to arrive here
+      # GitHub makes it pretty impossible to arrive here
       _ ->
         {:noreply, socket}
     end
