@@ -25,7 +25,7 @@ cdp_api sfap_api interaction_api)
           <div class="form-check">
             <label class="form-check-label inline-block">
               <input
-                id={"scope_#{scope}"}
+                id={"#{@id}_#{scope}"}
                 type="checkbox"
                 name={scope}
                 checked={Enum.member?(@selected_scopes, scope)}

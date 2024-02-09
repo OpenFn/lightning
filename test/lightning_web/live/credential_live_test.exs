@@ -1168,7 +1168,7 @@ defmodule LightningWeb.CredentialLiveTest do
       index_live |> click_continue()
 
       assert index_live
-             |> has_element?("#salesforce_oauth_scope_selection")
+             |> has_element?("#scope_selection_new")
 
       not_chosen_scopes =
         ~W(wave_api api custom_permissions id profile email address)
@@ -1179,7 +1179,7 @@ defmodule LightningWeb.CredentialLiveTest do
       scopes_to_choose
       |> Enum.each(fn scope ->
         index_live
-        |> element("#scope_#{scope}")
+        |> element("#scope_selection_new_#{scope}")
         |> render_change(%{"_target" => [scope], "#{scope}" => "on"})
       end)
 
@@ -1211,7 +1211,7 @@ defmodule LightningWeb.CredentialLiveTest do
       scope_to_unselect = scopes_to_choose |> Enum.at(0)
 
       index_live
-      |> element("#scope_#{scope_to_unselect}")
+      |> element("#scope_selection_new_#{scope_to_unselect}")
       |> render_change(%{"_target" => [scope_to_unselect]})
 
       %{query: query} =

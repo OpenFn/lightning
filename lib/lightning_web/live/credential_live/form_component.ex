@@ -258,6 +258,16 @@ defmodule LightningWeb.CredentialLive.FormComponent do
      )}
   end
 
+  defp modal_title(assigns) do
+    ~H"""
+    <%= if @action in [:edit] do %>
+      Edit a credential
+    <% else %>
+      Add a credential
+    <% end %>
+    """
+  end
+
   @impl true
   def render(%{type: nil} = assigns) do
     ~H"""
@@ -265,9 +275,7 @@ defmodule LightningWeb.CredentialLive.FormComponent do
       <.modal id={@id} width="xl:min-w-1/3 min-w-1/2 max-w-full">
         <:title>
           <div class="flex justify-between">
-            <span class="font-bold">
-              Add a credential
-            </span>
+            <span class="font-bold"><.modal_title action={@action} /></span>
             <button
               phx-click="close_modal"
               phx-target={@myself}
@@ -318,9 +326,7 @@ defmodule LightningWeb.CredentialLive.FormComponent do
       <.modal id={@id} width="xl:min-w-1/3 min-w-1/2 max-w-full">
         <:title>
           <div class="flex justify-between">
-            <span class="font-bold">
-              Add a credential
-            </span>
+            <span class="font-bold"><.modal_title action={@action} /></span>
             <button
               phx-click="close_modal"
               phx-target={@myself}
@@ -369,7 +375,7 @@ defmodule LightningWeb.CredentialLive.FormComponent do
                 <!-- # TODO: Make this part of the fieldset -->
                 <%= if @type === "salesforce_oauth" do %>
                   <LightningWeb.CredentialLive.Salesforce.scopes
-                    id="salesforce_oauth_scope_selection"
+                    id={"scope_selection_#{@credential.id || "new"}"}
                     on_change="scopes_changed"
                     target={@myself}
                     selected_scopes={@scopes}
@@ -412,7 +418,7 @@ defmodule LightningWeb.CredentialLive.FormComponent do
               <button
                 type="submit"
                 disabled={!@changeset.valid?}
-                form="credential-form-new"
+                form={"credential-form-#{@credential.id || "new"}"}
                 class="inline-flex w-full justify-center rounded-md disabled:bg-primary-300 bg-primary-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary-500 sm:ml-3 sm:w-auto"
               >
                 Save
