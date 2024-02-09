@@ -133,7 +133,6 @@ defmodule LightningWeb.WorkflowLive.JobView do
               "project_id" => @project.id,
               "user_id" => @current_user.id
             },
-            sticky: true,
             container: {:div, class: "h-full"}
           ) %>
         <% else %>

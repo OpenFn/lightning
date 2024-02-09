@@ -1294,4 +1294,87 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       )
     end
   end
+
+  describe "Output & Logs" do
+    test "all users can view output and logs for a follwed run", %{
+      conn: conn,
+      project: project,
+      workflow: %{jobs: [job_1 | _rest]} = workflow
+    } do
+      input_dataclip =
+        insert(:dataclip,
+          project: project,
+          type: :saved_input,
+          body: %{"input" => Ecto.UUID.generate()}
+        )
+
+      output_dataclip =
+        insert(:dataclip,
+          project: project,
+          type: :saved_input,
+          body: %{"output" => Ecto.UUID.generate()}
+        )
+
+      log_line = build(:log_line)
+
+      %{runs: [run]} =
+        insert(:workorder,
+          workflow: workflow,
+          dataclip: input_dataclip,
+          state: :success,
+          runs: [
+            build(:run,
+              dataclip: input_dataclip,
+              starting_job: job_1,
+              state: :success,
+              log_lines: [log_line],
+              steps: [
+                build(:step,
+                  job: job_1,
+                  input_dataclip: input_dataclip,
+                  output_dataclip: output_dataclip,
+                  started_at: build(:timestamp),
+                  finished_at: build(:timestamp),
+                  exit_reason: "success"
+                )
+              ]
+            )
+          ]
+        )
+
+      for {conn, _user} <-
+            setup_project_users(conn, project, [:owner, :admin, :editor, :viewer]) do
+        {:ok, view, _html} =
+          live(
+            conn,
+            ~p"/projects/#{project}/w/#{workflow}?#{[s: job_1.id, a: run.id, m: "expand"]}"
+          )
+
+        run_view = find_live_child(view, "run-viewer-#{run.id}")
+
+        # This ensures that async result is loaded
+        render_async(run_view)
+        # This ensures that stream messages are processed
+        render(run_view)
+
+        # log tab shows correct information
+        html =
+          run_view |> element("div[data-panel-hash='log']") |> render_async()
+
+        assert html =~ log_line.message
+
+        # input tab shows correct information
+        html =
+          run_view |> element("div[data-panel-hash='input']") |> render_async()
+
+        assert html =~ input_dataclip.body["input"]
+
+        # output tab shows correct information
+        html =
+          run_view |> element("div[data-panel-hash='output']") |> render_async()
+
+        assert html =~ output_dataclip.body["output"]
+      end
+    end
+  end
 end
