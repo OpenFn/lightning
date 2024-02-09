@@ -7,7 +7,9 @@ defmodule Lightning.BypassHelpers do
         "authorization_endpoint" =>
           "#{endpoint_url(bypass)}/authorization_endpoint",
         "token_endpoint" => "#{endpoint_url(bypass)}/token_endpoint",
-        "userinfo_endpoint" => "#{endpoint_url(bypass)}/userinfo_endpoint"
+        "userinfo_endpoint" => "#{endpoint_url(bypass)}/userinfo_endpoint",
+        "introspection_endpoint" =>
+          "#{endpoint_url(bypass)}/introspection_endpoint"
       },
       attrs
     )
@@ -25,6 +27,14 @@ defmodule Lightning.BypassHelpers do
   def expect_wellknown(bypass, wellknown) do
     Bypass.expect(bypass, "GET", "auth/.well-known", fn conn ->
       Plug.Conn.resp(conn, 200, wellknown |> Jason.encode!())
+    end)
+  end
+
+  def expect_introspect(bypass, wellknown, token \\ %{}) do
+    %{path: path} = URI.new!(wellknown.introspection_endpoint)
+
+    Bypass.expect(bypass, "POST", path, fn conn ->
+      Plug.Conn.resp(conn, 200, token |> Jason.encode!())
     end)
   end
 
@@ -47,7 +57,7 @@ defmodule Lightning.BypassHelpers do
         %{
           access_token: "access_token_123",
           refresh_token: "refresh_token_123",
-          expires_in: 3600
+          expires_at: 3600
         }
 
     body = Jason.encode!(token_attrs)

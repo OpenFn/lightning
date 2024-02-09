@@ -12,7 +12,7 @@ defmodule Lightning.Credentials do
 
   alias Ecto.Multi
   alias Lightning.Accounts.UserNotifier
-  alias Lightning.AuthProviders.Google
+  alias Lightning.AuthProviders.Common
   alias Lightning.Credentials
   alias Lightning.Credentials.Audit
   alias Lightning.Credentials.Credential
@@ -131,7 +131,10 @@ defmodule Lightning.Credentials do
 
   """
   def create_credential(attrs \\ %{}) do
-    changeset = %Credential{} |> change_credential(attrs) |> cast_body_change()
+    changeset =
+      %Credential{}
+      |> change_credential(attrs)
+      |> cast_body_change()
 
     Multi.new()
     |> Multi.insert(
@@ -233,6 +236,8 @@ defmodule Lightning.Credentials do
   defp cast_body_change(changeset), do: changeset
 
   defp put_typed_body(body, "raw"), do: {:ok, body}
+
+  defp put_typed_body(body, "salesforce_oauth"), do: {:ok, body}
 
   defp put_typed_body(body, schema_name) do
     schema = get_schema(schema_name)
@@ -556,38 +561,34 @@ defmodule Lightning.Credentials do
     project_credentials -- project_users
   end
 
-  # TODO: this doesn't need to be Google specific. It should work for any standard OAuth2 credential.
-  @spec maybe_refresh_token(Lightning.Credentials.Credential.t()) ::
-          {:error, any()} | {:ok, Lightning.Credentials.Credential.t()}
-  def maybe_refresh_token(%Credential{schema: "googlesheets"} = credential) do
-    token_body = Google.TokenBody.new(credential.body)
+  def maybe_refresh_token(%Credential{schema: schema} = credential) do
+    case lookup_adapter(schema) do
+      nil ->
+        {:ok, credential}
 
-    if still_fresh(token_body) do
-      {:ok, credential}
-    else
-      with {:ok, %OAuth2.Client{} = client} <- Google.build_client(),
-           {:ok, %OAuth2.AccessToken{} = token} <-
-             Google.refresh_token(client, token_body),
-           token <- Google.TokenBody.from_oauth2_token(token) do
-        Credentials.update_credential(credential, %{
-          body: token |> Lightning.Helpers.json_safe()
-        })
-      end
+      adapter ->
+        token = Common.TokenBody.new(credential.body)
+
+        if Common.still_fresh(token) do
+          {:ok, credential}
+        else
+          {:ok, refreshed_token} =
+            adapter.refresh_token(token)
+
+          update_credential(credential, %{
+            body:
+              refreshed_token
+              |> Common.TokenBody.from_oauth2_token()
+              |> Lightning.Helpers.json_safe()
+          })
+        end
     end
   end
 
-  def maybe_refresh_token(%Credential{} = credential), do: {:ok, credential}
-
-  defp still_fresh(
-         %{expires_at: expires_at},
-         threshold \\ 5,
-         time_unit \\ :minute
-       ) do
-    current_time = DateTime.utc_now()
-    expiration_time = DateTime.from_unix!(expires_at)
-
-    time_remaining = DateTime.diff(expiration_time, current_time, time_unit)
-
-    time_remaining >= threshold
+  defp lookup_adapter(schema) do
+    case :ets.lookup(:adapter_lookup, schema) do
+      [{^schema, adapter}] -> adapter
+      [] -> nil
+    end
   end
 end

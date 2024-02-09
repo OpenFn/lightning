@@ -2,7 +2,7 @@ defmodule Lightning.AuthProviders.GoogleTest do
   use ExUnit.Case, async: false
   import Lightning.BypassHelpers
 
-  alias Lightning.AuthProviders.Google
+  alias Lightning.AuthProviders.Common
 
   describe "get_wellknown/0" do
     setup do
@@ -23,7 +23,7 @@ defmodule Lightning.AuthProviders.GoogleTest do
       bypass: bypass
     } do
       assert {:ok, %Lightning.AuthProviders.WellKnown{} = wellknown} =
-               Google.get_wellknown()
+               Common.get_wellknown(:google)
 
       assert wellknown.authorization_endpoint ==
                "#{endpoint_url(bypass)}/authorization_endpoint"
@@ -43,7 +43,7 @@ defmodule Lightning.AuthProviders.GoogleTest do
         refresh_token: "1//03dATMQTmE5NSCgYIARAAGAMSNwF"
       }
 
-      result = Google.TokenBody.from_oauth2_token(token)
+      result = Common.TokenBody.from_oauth2_token(token)
 
       assert is_map(result)
       assert Map.get(result, :access_token) == "ya29.a0AWY7CknfkidjXaoDTuNi"

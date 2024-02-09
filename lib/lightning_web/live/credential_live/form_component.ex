@@ -8,8 +8,8 @@ defmodule LightningWeb.CredentialLive.FormComponent do
 
   alias Lightning.Credentials
   alias LightningWeb.Components.NewInputs
-  alias LightningWeb.CredentialLive.GoogleSheetsComponent
   alias LightningWeb.CredentialLive.JsonSchemaBodyComponent
+  alias LightningWeb.CredentialLive.OauthComponent
   alias LightningWeb.CredentialLive.RawBodyComponent
   alias Phoenix.LiveView.JS
 
@@ -37,7 +37,8 @@ defmodule LightningWeb.CredentialLive.FormComponent do
        allow_credential_transfer: allow_credential_transfer,
        available_projects: [],
        type: nil,
-       button: []
+       button: [],
+       scopes: []
      )}
   end
 
@@ -118,6 +119,23 @@ defmodule LightningWeb.CredentialLive.FormComponent do
       |> Map.put(:action, :validate)
 
     {:noreply, socket |> assign(changeset: changeset)}
+  end
+
+  @impl true
+  def handle_event("scopes_changed", %{"_target" => [scope]}, socket) do
+    selected_scopes =
+      if Enum.member?(socket.assigns.scopes, scope) do
+        Enum.reject(socket.assigns.scopes, fn value -> value == scope end)
+      else
+        [scope | socket.assigns.scopes]
+      end
+
+    send_update(LightningWeb.CredentialLive.OauthComponent,
+      id: "inner-form-#{socket.assigns.credential.id || "new"}",
+      scopes: selected_scopes
+    )
+
+    {:noreply, socket |> assign(:scopes, selected_scopes)}
   end
 
   @impl true
@@ -240,6 +258,16 @@ defmodule LightningWeb.CredentialLive.FormComponent do
      )}
   end
 
+  defp modal_title(assigns) do
+    ~H"""
+    <%= if @action in [:edit] do %>
+      Edit a credential
+    <% else %>
+      Add a credential
+    <% end %>
+    """
+  end
+
   @impl true
   def render(%{type: nil} = assigns) do
     ~H"""
@@ -247,9 +275,7 @@ defmodule LightningWeb.CredentialLive.FormComponent do
       <.modal id={@id} width="xl:min-w-1/3 min-w-1/2 max-w-full">
         <:title>
           <div class="flex justify-between">
-            <span class="font-bold">
-              Add a credential
-            </span>
+            <span class="font-bold"><.modal_title action={@action} /></span>
             <button
               phx-click="close_modal"
               phx-target={@myself}
@@ -300,9 +326,7 @@ defmodule LightningWeb.CredentialLive.FormComponent do
       <.modal id={@id} width="xl:min-w-1/3 min-w-1/2 max-w-full">
         <:title>
           <div class="flex justify-between">
-            <span class="font-bold">
-              Add a credential
-            </span>
+            <span class="font-bold"><.modal_title action={@action} /></span>
             <button
               phx-click="close_modal"
               phx-target={@myself}
@@ -348,6 +372,15 @@ defmodule LightningWeb.CredentialLive.FormComponent do
                 <div class="hidden sm:block" aria-hidden="true">
                   <div class="border-t border-secondary-200"></div>
                 </div>
+                <!-- # TODO: Make this part of the fieldset -->
+                <%= if @type === "salesforce_oauth" do %>
+                  <LightningWeb.CredentialLive.Salesforce.scopes
+                    id={"scope_selection_#{@credential.id || "new"}"}
+                    on_change="scopes_changed"
+                    target={@myself}
+                    selected_scopes={@scopes}
+                  />
+                <% end %>
                 <%= fieldset %>
               </div>
 
@@ -385,6 +418,7 @@ defmodule LightningWeb.CredentialLive.FormComponent do
               <button
                 type="submit"
                 disabled={!@changeset.valid?}
+                form={"credential-form-#{@credential.id || "new"}"}
                 class="inline-flex w-full justify-center rounded-md disabled:bg-primary-300 bg-primary-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary-500 sm:ml-3 sm:w-auto"
               >
                 Save
@@ -416,14 +450,29 @@ defmodule LightningWeb.CredentialLive.FormComponent do
   """
   def form_component(%{type: "googlesheets"} = assigns) do
     ~H"""
-    <GoogleSheetsComponent.fieldset
+    <OauthComponent.fieldset
       :let={l}
       id={@id}
       form={@form}
       update_body={@update_body}
+      provider={Lightning.AuthProviders.Google}
     >
       <%= render_slot(@inner_block, l) %>
-    </GoogleSheetsComponent.fieldset>
+    </OauthComponent.fieldset>
+    """
+  end
+
+  def form_component(%{type: "salesforce_oauth"} = assigns) do
+    ~H"""
+    <OauthComponent.fieldset
+      :let={l}
+      id={@id}
+      form={@form}
+      update_body={@update_body}
+      provider={Lightning.AuthProviders.Salesforce}
+    >
+      <%= render_slot(@inner_block, l) %>
+    </OauthComponent.fieldset>
     """
   end
 

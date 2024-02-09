@@ -360,7 +360,7 @@ defmodule LightningWeb.RunChannelTest do
 
       expect_token(
         bypass,
-        Lightning.AuthProviders.Google.get_wellknown!(),
+        Lightning.AuthProviders.Common.get_wellknown!(:google),
         Map.put(credential.body, "expires_at", new_expiry)
       )
 

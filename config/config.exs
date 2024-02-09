@@ -61,6 +61,10 @@ config :oauth2, adapter: Tesla.Adapter.Hackney
 config :lightning, :oauth_clients,
   google: [
     wellknown_url: "https://accounts.google.com/.well-known/openid-configuration"
+  ],
+  salesforce: [
+    wellknown_url:
+      "https://login.salesforce.com/.well-known/openid-configuration"
   ]
 
 # Configure esbuild (the version is required)
