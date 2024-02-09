@@ -215,7 +215,7 @@
                 phx-click={show_modal("new-credential-modal")}
                 {if !@can_create_project_credential, do: [disabled: "disabled"], else: []}
               >
-                + New Credential
+                New credential
               </.button>
               <.live_component
                 id="new-credential-modal"
@@ -303,15 +303,14 @@
               </small>
             </div>
             <div class="sm:block" aria-hidden="true">
-              <button
+              <.button
                 id="add_new_auth_method"
                 type="button"
                 phx-click={show_modal("new_auth_method_modal")}
-                class="rounded-md bg-indigo-600 px-2.5 py-1.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 disabled:opacity-50"
                 {if !@can_write_webhook_auth_method, do: [disabled: "disabled"], else: []}
               >
-                Add an auth method
-              </button>
+                New auth method
+              </.button>
               <.live_component
                 :if={@can_write_webhook_auth_method}
                 module={
@@ -847,30 +846,22 @@
                     When enabled, you will no longer be able to retry workflow runs as no data will be stored.
                   </p>
                 </div>
-                <div class="mt-3 grid grid-flow-col justify-items-end gap-6">
-                  <div>
-                    <span>&nbsp;</span>
-                  </div>
-                  <div>
-                    <.button
-                      color_class="bg-neutral-100 hover:bg-neutral-300 text-neutral-950"
-                      phx-click="cancel-retention-change"
-                    >
-                      Cancel
-                    </.button>
-                    <Form.submit_button
-                      disabled={
-                        not @project_changeset.valid? or
-                          not @can_edit_data_retention
-                      }
-                      phx-disable-with="Saving"
-                    >
-                      Save
-                    </Form.submit_button>
-                  </div>
-                  <div>
-                    <span>&nbsp;</span>
-                  </div>
+                <div class="mt-4">
+                  <.button
+                    color_class="p-2 bg-neutral-200 hover:bg-neutral-300 text-neutral-950"
+                    phx-click="cancel-retention-change"
+                  >
+                    Cancel
+                  </.button>
+                  <Form.submit_button
+                    disabled={
+                      not @project_changeset.valid? or
+                        not @can_edit_data_retention
+                    }
+                    phx-disable-with="Saving"
+                  >
+                    Save
+                  </Form.submit_button>
                 </div>
               </.form>
             </div>
