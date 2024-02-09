@@ -31,36 +31,6 @@ defmodule LightningWeb.CredentialLive.FormComponent do
       Application.fetch_env!(:lightning, LightningWeb)
       |> Keyword.get(:allow_credential_transfer)
 
-    scopes =
-      [
-        %{label: "cdp_query_api", selected: false},
-        %{label: "pardot_api", selected: false},
-        %{label: "cdp_profile_api", selected: false},
-        %{label: "chatter_api", selected: false},
-        %{label: "cdp_ingest_api", selected: false},
-        %{label: "eclair_api", selected: false},
-        %{label: "wave_api", selected: false},
-        %{label: "api", selected: false},
-        %{label: "custom_permissions", selected: false},
-        %{label: "id", selected: false},
-        %{label: "profile", selected: false},
-        %{label: "email", selected: false},
-        %{label: "address", selected: false},
-        %{label: "phone", selected: false},
-        %{label: "lightning", selected: false},
-        %{label: "content", selected: false},
-        %{label: "openid", selected: false},
-        %{label: "full", selected: false},
-        %{label: "visualforce", selected: false},
-        %{label: "web", selected: false},
-        %{label: "chatbot_api", selected: false},
-        %{label: "user_registration_api", selected: false},
-        %{label: "forgot_password", selected: false},
-        %{label: "cdp_api", selected: false},
-        %{label: "sfap_api", selected: false},
-        %{label: "interaction_api", selected: false}
-      ]
-
     {:ok,
      socket
      |> assign(
@@ -68,7 +38,7 @@ defmodule LightningWeb.CredentialLive.FormComponent do
        available_projects: [],
        type: nil,
        button: [],
-       scopes: scopes
+       scopes: []
      )}
   end
 
@@ -149,6 +119,23 @@ defmodule LightningWeb.CredentialLive.FormComponent do
       |> Map.put(:action, :validate)
 
     {:noreply, socket |> assign(changeset: changeset)}
+  end
+
+  @impl true
+  def handle_event("scopes_changed", %{"_target" => [scope]}, socket) do
+    selected_scopes =
+      if Enum.member?(socket.assigns.scopes, scope) do
+        Enum.reject(socket.assigns.scopes, fn value -> value == scope end)
+      else
+        [scope | socket.assigns.scopes]
+      end
+
+    send_update(LightningWeb.CredentialLive.OauthComponent,
+      id: "salesforce-oauth-inner-form-#{socket.assigns.credential.id || "new"}",
+      scopes: selected_scopes
+    )
+
+    {:noreply, socket |> assign(:scopes, selected_scopes)}
   end
 
   @impl true
@@ -380,30 +367,11 @@ defmodule LightningWeb.CredentialLive.FormComponent do
                   <div class="border-t border-secondary-200"></div>
                 </div>
                 <%= if @type === "salesforce_oauth" do %>
-                  <div id={@id}>
-                    <h3 class="text-base font-semibold leading-6 text-gray-900 pb-2">
-                      Pick the scopes to authorize
-                    </h3>
-                    <div class="grid grid-cols-4 gap-1">
-                      <%= for scope <- @scopes do %>
-                        <div class="form-check">
-                          <label class="form-check-label inline-block">
-                            <input
-                              id={"scope_#{scope.label}"}
-                              type="checkbox"
-                              name={scope.label}
-                              value={scope.label}
-                              checked={scope.selected}
-                              phx-change="scopes_changed"
-                              phx-target={@myself}
-                              class="form-check-input appearance-none h-4 w-4 border border-gray-300 rounded-sm bg-white checked:bg-blue-600 checked:border-blue-600 focus:outline-none transition duration-200 mt-1 align-top bg-no-repeat bg-center bg-contain float-left cursor-pointer"
-                            />
-                            <span class="ml-2"><%= scope.label %></span>
-                          </label>
-                        </div>
-                      <% end %>
-                    </div>
-                  </div>
+                  <LightningWeb.Components.Salesforce.scopes
+                    id="salesforce_oauth_scope_selection"
+                    on_change="scopes_changed"
+                    selected_scopes={@scopes}
+                  />
                 <% end %>
                 <%= fieldset %>
               </div>

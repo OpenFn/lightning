@@ -1170,7 +1170,7 @@ defmodule LightningWeb.CredentialLiveTest do
       index_live |> click_continue()
 
       assert index_live
-             |> has_element?("#salesforce-oauth-inner-form-new-scope-selection")
+             |> has_element?("#salesforce_oauth_scope_selection")
 
       index_live
       |> form("#scope-selection-form", %{
