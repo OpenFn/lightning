@@ -839,7 +839,7 @@ defmodule LightningWeb.CredentialLiveTest do
       # off the action in the OidcController
       [subscription_id, mod, component_id] =
         index_live
-        |> get_authorize_url("salesforce")
+        |> get_authorize_url()
         |> get_decoded_state()
 
       assert index_live.id == subscription_id
@@ -847,14 +847,12 @@ defmodule LightningWeb.CredentialLiveTest do
 
       # Click on the 'Authorize with Google button
       index_live
-      |> element("#salesforce-oauth-inner-form-new #authorize-button")
+      |> element("#inner-form-new #authorize-button")
       |> render_click()
 
       # Once authorizing the button isn't available
       refute index_live
-             |> has_element?(
-               "#salesforce-oauth-inner-form-new #authorize-button"
-             )
+             |> has_element?("#inner-form-new #authorize-button")
 
       # `handle_info/2` in LightingWeb.CredentialLive.Edit forwards the data
       # as a `send_update/3` call to the GoogleSheets component
@@ -864,7 +862,7 @@ defmodule LightningWeb.CredentialLiveTest do
       )
 
       # Wait for the userinfo endpoint to be called
-      assert wait_for_assigns(index_live, :userinfo, "new", "salesforce"),
+      assert wait_for_assigns(index_live, :userinfo, "new"),
              ":userinfo has not been set yet."
 
       # Rerender as the broadcast above has altered the LiveView state
@@ -935,7 +933,7 @@ defmodule LightningWeb.CredentialLiveTest do
       assert_receive {:phoenix, :send_update, _}
 
       # Wait for the userinfo endpoint to be called
-      assert wait_for_assigns(edit_live, :userinfo, credential.id, "salesforce"),
+      assert wait_for_assigns(edit_live, :userinfo, credential.id),
              ":userinfo has not been set yet."
 
       edit_live |> render()
@@ -970,7 +968,7 @@ defmodule LightningWeb.CredentialLiveTest do
       assert_receive {:plug_conn, :sent}
 
       edit_live
-      |> element("#salesforce-oauth-inner-form-#{credential.id}")
+      |> element("#inner-form-#{credential.id}")
       |> render()
 
       assert edit_live |> has_element?("p", "The token is missing it's")
@@ -1036,7 +1034,7 @@ defmodule LightningWeb.CredentialLiveTest do
 
       {:ok, edit_live, _html} = live(conn, ~p"/credentials")
 
-      assert wait_for_assigns(edit_live, :userinfo, credential.id, "salesforce"),
+      assert wait_for_assigns(edit_live, :userinfo, credential.id),
              ":userinfo has not been set yet."
 
       edit_live |> render()
@@ -1075,13 +1073,13 @@ defmodule LightningWeb.CredentialLiveTest do
             refresh_token: "1//03vpp6Li...",
             expires_at: expires_at,
             scope: "scope1 scope2",
-            instance_url: "http://localhost:#{bypass.port}/auth/.well-known"
+            instance_url: "http://localhost:#{bypass.port}/salesforce/instance"
           }
         )
 
       {:ok, edit_live, _html} = live(conn, ~p"/credentials")
 
-      assert wait_for_assigns(edit_live, :error, credential.id, "salesforce")
+      assert wait_for_assigns(edit_live, :error, credential.id)
 
       edit_live |> render()
 
@@ -1099,7 +1097,7 @@ defmodule LightningWeb.CredentialLiveTest do
 
       edit_live |> element("a", "try again.") |> render_click()
 
-      assert wait_for_assigns(edit_live, :userinfo, credential.id, "salesforce")
+      assert wait_for_assigns(edit_live, :userinfo, credential.id)
 
       assert edit_live |> has_element?("span", "Test User")
     end
@@ -1135,13 +1133,13 @@ defmodule LightningWeb.CredentialLiveTest do
             refresh_token: "1//03vpp6Li...",
             expires_at: expires_at,
             scope: "scope1 scope2",
-            instance_url: "http://localhost:#{bypass.port}/auth/.well-known"
+            instance_url: "http://localhost:#{bypass.port}/salesforce/instance"
           }
         )
 
       {:ok, edit_live, _html} = live(conn, ~p"/credentials")
 
-      assert wait_for_assigns(edit_live, :error, credential.id, "salesforce")
+      assert wait_for_assigns(edit_live, :error, credential.id)
 
       edit_live |> render()
 
@@ -1162,7 +1160,7 @@ defmodule LightningWeb.CredentialLiveTest do
       index_live |> click_continue()
 
       refute index_live
-             |> has_element?("#salesforce-oauth-inner-form-new-scope-selection")
+             |> has_element?("#inner-form-new-scope-selection")
 
       {:ok, index_live, _html} = live(conn, ~p"/credentials")
 
@@ -1172,20 +1170,42 @@ defmodule LightningWeb.CredentialLiveTest do
       assert index_live
              |> has_element?("#salesforce_oauth_scope_selection")
 
-      index_live
-      |> form("#scope-selection-form", %{
-        "scope" => %{"options" => %{"1" => %{"selected" => "true"}}}
-      })
-      |> render_change()
+      not_chosen_scopes =
+        ~W(wave_api api custom_permissions id profile email address)
+
+      scopes_to_choose =
+        ~W(cdp_query_api pardot_api cdp_profile_api chatter_api cdp_ingest_api)
+
+      scopes_to_choose
+      |> Enum.each(fn scope ->
+        index_live
+        |> element("#scope_#{scope}")
+        |> render_change(%{"_target" => [scope], "#{scope}" => "on"})
+      end)
 
       %{query: query} =
         index_live
-        |> get_authorize_url("salesforce")
+        |> get_authorize_url()
         |> URI.parse()
 
-      query
-      |> URI.decode_query()
-      |> Map.get("scope") =~ "pardot_api"
+      scopes_in_url =
+        query
+        |> URI.decode_query()
+        |> Map.get("scope")
+
+      assert scopes_in_url
+             |> String.contains?(
+               scopes_to_choose
+               |> Enum.reverse()
+               |> Enum.join(" ")
+             )
+
+      refute scopes_in_url
+             |> String.contains?(
+               not_chosen_scopes
+               |> Enum.reverse()
+               |> Enum.join(" ")
+             )
     end
   end
 
@@ -1251,7 +1271,7 @@ defmodule LightningWeb.CredentialLiveTest do
       # off the action in the OidcController
       [subscription_id, mod, component_id] =
         index_live
-        |> get_authorize_url("google")
+        |> get_authorize_url()
         |> get_decoded_state()
 
       assert index_live.id == subscription_id
@@ -1259,12 +1279,12 @@ defmodule LightningWeb.CredentialLiveTest do
 
       # Click on the 'Authorize with Google button
       index_live
-      |> element("#google-oauth-inner-form-new #authorize-button")
+      |> element("#inner-form-new #authorize-button")
       |> render_click()
 
       # Once authorizing the button isn't available
       refute index_live
-             |> has_element?("#google-oauth-inner-form-new #authorize-button")
+             |> has_element?("#inner-form-new #authorize-button")
 
       # `handle_info/2` in LightingWeb.CredentialLive.Edit forwards the data
       # as a `send_update/3` call to the GoogleSheets component
@@ -1379,7 +1399,7 @@ defmodule LightningWeb.CredentialLiveTest do
       assert_receive {:plug_conn, :sent}
 
       edit_live
-      |> element("#google-oauth-inner-form-#{credential.id}")
+      |> element("#inner-form-#{credential.id}")
       |> render()
 
       assert edit_live |> has_element?("p", "The token is missing it's")
@@ -1558,18 +1578,18 @@ defmodule LightningWeb.CredentialLiveTest do
 
       assert index_live
              |> has_element?(
-               "#google-oauth-inner-form-new",
+               "#inner-form-new",
                "No Client Configured"
              )
     end
   end
 
-  defp wait_for_assigns(live, key, id \\ "new", provider \\ "google") do
+  defp wait_for_assigns(live, key, id \\ "new") do
     Enum.reduce_while(1..10, nil, fn n, _ ->
       {_mod, assigns} =
         Lightning.LiveViewHelpers.get_component_assigns_by(
           live,
-          id: "#{provider}-oauth-inner-form-#{id}"
+          id: "inner-form-#{id}"
         )
 
       if val = assigns[key] do
@@ -1581,9 +1601,9 @@ defmodule LightningWeb.CredentialLiveTest do
     end)
   end
 
-  defp get_authorize_url(live, provider) do
+  defp get_authorize_url(live) do
     live
-    |> element("##{provider}-oauth-inner-form-new")
+    |> element("#inner-form-new")
     |> render()
     |> Floki.parse_fragment!()
     |> Floki.find("a[phx-click=authorize_click]")

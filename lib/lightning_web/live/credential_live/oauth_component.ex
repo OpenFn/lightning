@@ -43,7 +43,7 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
            token_body_changeset: @token_body_changeset,
            update_body: @update_body,
            provider: @provider,
-           id: "#{provider_name(@provider)}-oauth-inner-form-#{@id}"
+           id: "inner-form-#{@id}"
          ],
          {__ENV__.module, __ENV__.function, __ENV__.file, __ENV__.line}
        ), @valid?}

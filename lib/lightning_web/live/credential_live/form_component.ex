@@ -131,7 +131,7 @@ defmodule LightningWeb.CredentialLive.FormComponent do
       end
 
     send_update(LightningWeb.CredentialLive.OauthComponent,
-      id: "salesforce-oauth-inner-form-#{socket.assigns.credential.id || "new"}",
+      id: "inner-form-#{socket.assigns.credential.id || "new"}",
       scopes: selected_scopes
     )
 
@@ -366,10 +366,12 @@ defmodule LightningWeb.CredentialLive.FormComponent do
                 <div class="hidden sm:block" aria-hidden="true">
                   <div class="border-t border-secondary-200"></div>
                 </div>
+                <!-- # TODO: Make this part of the fieldset -->
                 <%= if @type === "salesforce_oauth" do %>
-                  <LightningWeb.Components.Salesforce.scopes
+                  <LightningWeb.CredentialLive.Salesforce.scopes
                     id="salesforce_oauth_scope_selection"
                     on_change="scopes_changed"
+                    target={@myself}
                     selected_scopes={@scopes}
                   />
                 <% end %>
