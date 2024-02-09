@@ -1,7 +1,7 @@
 defmodule LightningWeb.RunChannelTest do
   use LightningWeb.ChannelCase
 
-  alias Lightning.Extensions.RuntimeLimiter
+  alias Lightning.Extensions.UsageLimiter
   alias Lightning.Invocation.Dataclip
   alias Lightning.Invocation.Step
   alias Lightning.Workers
@@ -252,9 +252,9 @@ defmodule LightningWeb.RunChannelTest do
       %{project_id: project_id} = socket.assigns
 
       with_mock(
-        RuntimeLimiter,
+        UsageLimiter,
         limit_action: fn %{type: :new_run}, %{project_id: ^project_id} ->
-          {:error, :too_many_runs, "some error message"}
+          {:error, :too_many_runs, %{text: "some error message"}}
         end
       ) do
         ref = push(socket, "fetch:plan", %{})

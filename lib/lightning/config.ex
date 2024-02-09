@@ -8,7 +8,6 @@ defmodule Lightning.Config do
     @callback run_token_signer() :: Joken.Signer.t()
     @callback worker_token_signer() :: Joken.Signer.t()
     @callback worker_secret() :: binary() | nil
-    @callback runs_adaptor() :: module()
     @callback grace_period() :: integer()
 
     def run_token_signer do
@@ -21,14 +20,6 @@ defmodule Lightning.Config do
 
     def worker_token_signer do
       Joken.Signer.create("HS256", worker_secret())
-    end
-
-    def runs_adaptor do
-      Application.get_env(
-        :lightning,
-        :runs_module,
-        Lightning.Runs.Queue
-      )
     end
 
     def worker_secret do
@@ -63,14 +54,6 @@ defmodule Lightning.Config do
   @impl true
   def worker_token_signer do
     impl().worker_token_signer()
-  end
-
-  @doc """
-  Returns the module used to manage runs.
-  """
-  @impl true
-  def runs_adaptor do
-    impl().runs_adaptor()
   end
 
   @impl true

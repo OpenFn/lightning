@@ -13,6 +13,7 @@ defmodule Lightning.Projects do
   alias Lightning.ExportUtils
   alias Lightning.Invocation.Dataclip
   alias Lightning.Invocation.Step
+  alias Lightning.Projects.Events
   alias Lightning.Projects.Project
   alias Lightning.Projects.ProjectCredential
   alias Lightning.Projects.ProjectUser
@@ -166,6 +167,11 @@ defmodule Lightning.Projects do
     %Project{}
     |> Project.changeset(attrs)
     |> Repo.insert()
+    |> tap(fn result ->
+      with {:ok, project} <- result do
+        Events.project_created(project)
+      end
+    end)
   end
 
   @doc """
@@ -255,6 +261,11 @@ defmodule Lightning.Projects do
       end)
 
       project
+    end)
+    |> tap(fn result ->
+      with {:ok, _project} <- result do
+        Events.project_deleted(project)
+      end
     end)
   end
 

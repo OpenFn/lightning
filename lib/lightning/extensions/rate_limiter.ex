@@ -1,15 +1,11 @@
 defmodule Lightning.Extensions.RateLimiter do
   @moduledoc """
-  Adapter to call the extension for rate limiting.
+  Rate limiting stub for Lightning.
   """
   @behaviour Lightning.Extensions.RateLimiting
 
-  import Lightning.Extensions.AdapterHelper
-
   @impl true
-  def limit_request(conn, context, opts) do
-    adapter().limit_request(conn, context, opts)
+  def limit_request(_conn, _context, _opts) do
+    :ok
   end
-
-  defp adapter, do: adapter(:rate_limiter)
 end
