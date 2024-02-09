@@ -16,6 +16,8 @@ and this project adheres to
 
 - Adds more detail to work order states on dashboard
   [#1677](https://github.com/OpenFn/lightning/issues/1677)
+- Fix Output & Logs in inspector fails to show sometimes
+  [#1702](https://github.com/OpenFn/lightning/issues/1702)
 
 ## [v2.0.0-rc11] - 2024-02-08
 

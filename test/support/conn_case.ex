@@ -131,6 +131,12 @@ defmodule LightningWeb.ConnCase do
   @doc """
   Setup helper that creates a user adds them as project user with a given role and logs them them in
   """
+  def setup_project_users(conn, project, roles) when is_list(roles) do
+    for role <- roles do
+      setup_project_user(conn, project, role)
+    end
+  end
+
   def setup_project_user(conn, project, role) do
     user = Lightning.Factories.insert(:user)
 
