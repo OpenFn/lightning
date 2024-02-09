@@ -12,6 +12,9 @@ and this project adheres to
 
 ### Changed
 
+- Use `PAYLOAD_SIZE_KB` in k6 load testing script, set thresholds on wait time,
+  set default payload size to `2kb`
+
 ### Fixed
 
 - Adds more detail to work order states on dashboard
