@@ -1206,6 +1206,25 @@ defmodule LightningWeb.CredentialLiveTest do
                |> Enum.reverse()
                |> Enum.join(" ")
              )
+
+      # Unselecting one of the already selected scopes will remove it from the authorization url
+      scope_to_unselect = scopes_to_choose |> Enum.at(0)
+
+      index_live
+      |> element("#scope_#{scope_to_unselect}")
+      |> render_change(%{"_target" => [scope_to_unselect]})
+
+      %{query: query} =
+        index_live
+        |> get_authorize_url()
+        |> URI.parse()
+
+      scopes_in_url =
+        query
+        |> URI.decode_query()
+        |> Map.get("scope")
+
+      refute scopes_in_url |> String.contains?(scope_to_unselect)
     end
   end
 
