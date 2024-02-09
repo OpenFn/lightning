@@ -40,7 +40,16 @@ defmodule Lightning.Invocation.Query do
   To be used in preloads for `workflow > job > step` when the presence of any
   step is all the information we need. As in, "Does this job have any steps?"
   """
-  def any_step, do: from(s in Step, limit: 1)
+  def any_step do
+    by_job =
+      from s in Step,
+        select: %{id: s.id, row_number: over(row_number(), :jobs_partition)},
+        windows: [jobs_partition: [partition_by: :job_id]]
+
+    from s in Step,
+      join: r in subquery(by_job),
+      on: s.id == r.id and r.row_number == 1
+  end
 
   @doc """
   The last step for a job for a particular exit reason, used in scheduler
