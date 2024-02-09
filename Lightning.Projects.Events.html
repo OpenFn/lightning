@@ -7,13 +7,13 @@
     <meta name="generator" content="ExDoc v0.30.9">
     <meta name="project" content="Lightning v2.0.0-rc11">
 
-    <title>Lightning.Extensions.RuntimeLimiting — Lightning v2.0.0-rc11</title>
+    <title>Lightning.Projects.Events — Lightning v2.0.0-rc11</title>
     <link rel="stylesheet" href="dist/html-elixir-XFYN5IVA.css" />
 
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-EPF2X7PV.js"></script>
-    <script src="dist/sidebar_items-4A8D3779.js"></script>
+    <script src="dist/sidebar_items-1CDEDC5C.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -21,7 +21,7 @@
 
 
   </head>
-  <body data-type="modules" class="page-behaviour">
+  <body data-type="modules" class="page-module">
     <script>
 
       try {
@@ -125,19 +125,19 @@ Pages
 </button>
 
 
-    <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/extensions/runtime_limiting.ex#L1" title="View Source" class="icon-action" rel="help">
+    <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/events.ex#L1" title="View Source" class="icon-action" rel="help">
       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
       <span class="sr-only">View Source</span>
     </a>
 
-  <span translate="no">Lightning.Extensions.RuntimeLimiting</span> <small>behaviour</small>
+  <span translate="no">Lightning.Projects.Events</span> 
   <small class="app-vsn" translate="no">(Lightning v2.0.0-rc11)</small>
 
 </h1>
 
 
   <section id="moduledoc">
-<p>Rate limiting for Lightning workloads that depends on Runtime.</p>
+<p>Events for Projects changes.</p>
   </section>
 
 
@@ -148,14 +148,14 @@ Pages
       </a>
       <span class="text">Summary</span>
     </h1>
-<div class="summary-types summary">
+<div class="summary-functions summary">
   <h2>
-    <a href="#types">Types</a>
+    <a href="#functions">Functions</a>
   </h2>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#t:action_error/0" translate="no">action_error()</a>
+        <a href="#project_created/1" translate="no">project_created(project)</a>
 
       </div>
 
@@ -163,21 +163,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#t:limit_error/0" translate="no">limit_error()</a>
-
-      </div>
-
-    </div>
-
-</div>
-<div class="summary-callbacks summary">
-  <h2>
-    <a href="#callbacks">Callbacks</a>
-  </h2>
-
-    <div class="summary-row">
-      <div class="summary-signature">
-        <a href="#c:check_limits/1" translate="no">check_limits(context)</a>
+        <a href="#project_deleted/1" translate="no">project_deleted(project)</a>
 
       </div>
 
@@ -185,7 +171,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#c:limit_action/2" translate="no">limit_action(action, context)</a>
+        <a href="#subscribe/0" translate="no">subscribe()</a>
 
       </div>
 
@@ -196,24 +182,24 @@ Pages
   </section>
 
 
-  <section id="types" class="details-list">
+  <section id="functions" class="details-list">
     <h1 class="section-heading">
-      <a class="hover-link" href="#types">
+      <a class="hover-link" href="#functions">
         <i class="ri-link-m" aria-hidden="true"></i>
       </a>
-      <span class="text">Types</span>
+      <span class="text">Functions</span>
     </h1>
-    <div class="types-list">
-<section class="detail" id="t:action_error/0">
+    <div class="functions-list">
+<section class="detail" id="project_created/1">
 
   <div class="detail-header">
-    <a href="#t:action_error/0" class="detail-link" title="Link to this type">
+    <a href="#project_created/1" class="detail-link" title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this type</span>
+      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">action_error()</h1>
+    <h1 class="signature" translate="no">project_created(project)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/extensions/runtime_limiting.ex#L5" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/events.ex#L15" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -222,26 +208,20 @@ Pages
   </div>
 
   <section class="docstring">
-
-      <div class="specs">
-
-          <pre translate="no"><span class="attribute">@type</span> action_error() :: :too_many_actions | :unknown</pre>
-
-      </div>
 
 
   </section>
 </section>
-<section class="detail" id="t:limit_error/0">
+<section class="detail" id="project_deleted/1">
 
   <div class="detail-header">
-    <a href="#t:limit_error/0" class="detail-link" title="Link to this type">
+    <a href="#project_deleted/1" class="detail-link" title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this type</span>
+      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">limit_error()</h1>
+    <h1 class="signature" translate="no">project_deleted(project)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/extensions/runtime_limiting.ex#L6" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/events.ex#L22" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -250,38 +230,20 @@ Pages
   </div>
 
   <section class="docstring">
-
-      <div class="specs">
-
-          <pre translate="no"><span class="attribute">@type</span> limit_error() :: :too_many_runs | :too_many_workorders | :unknown</pre>
-
-      </div>
 
 
   </section>
 </section>
-
-    </div>
-  </section>
-
-  <section id="callbacks" class="details-list">
-    <h1 class="section-heading">
-      <a class="hover-link" href="#callbacks">
-        <i class="ri-link-m" aria-hidden="true"></i>
-      </a>
-      <span class="text">Callbacks</span>
-    </h1>
-    <div class="callbacks-list">
-<section class="detail" id="c:check_limits/1">
+<section class="detail" id="subscribe/0">
 
   <div class="detail-header">
-    <a href="#c:check_limits/1" class="detail-link" title="Link to this callback">
+    <a href="#subscribe/0" class="detail-link" title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this callback</span>
+      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">check_limits(context)</h1>
+    <h1 class="signature" translate="no">subscribe()</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/extensions/runtime_limiting.ex#L27" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/events.ex#L29" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -290,44 +252,6 @@ Pages
   </div>
 
   <section class="docstring">
-
-      <div class="specs">
-
-          <pre translate="no"><span class="attribute">@callback</span> check_limits(context :: Lightning.Extensions.RuntimeLimiting.Context.t()) ::
-  :ok | {:error, <a href="#t:limit_error/0">limit_error</a>(), message :: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>()}</pre>
-
-      </div>
-
-
-  </section>
-</section>
-<section class="detail" id="c:limit_action/2">
-
-  <div class="detail-header">
-    <a href="#c:limit_action/2" class="detail-link" title="Link to this callback">
-      <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this callback</span>
-    </a>
-    <h1 class="signature" translate="no">limit_action(action, context)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/extensions/runtime_limiting.ex#L30" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
-
-
-  </div>
-
-  <section class="docstring">
-
-      <div class="specs">
-
-          <pre translate="no"><span class="attribute">@callback</span> limit_action(
-  action :: Lightning.Extensions.RuntimeLimiting.Action.t(),
-  context :: Lightning.Extensions.RuntimeLimiting.Context.t()
-) :: :ok | {:error, <a href="#t:action_error/0">action_error</a>(), message :: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>()}</pre>
-
-      </div>
 
 
   </section>

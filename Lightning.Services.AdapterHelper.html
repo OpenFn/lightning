@@ -7,13 +7,13 @@
     <meta name="generator" content="ExDoc v0.30.9">
     <meta name="project" content="Lightning v2.0.0-rc11">
 
-    <title>Lightning.Extensions.RuntimeLimiter — Lightning v2.0.0-rc11</title>
+    <title>Lightning.Services.AdapterHelper — Lightning v2.0.0-rc11</title>
     <link rel="stylesheet" href="dist/html-elixir-XFYN5IVA.css" />
 
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-EPF2X7PV.js"></script>
-    <script src="dist/sidebar_items-4A8D3779.js"></script>
+    <script src="dist/sidebar_items-1CDEDC5C.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -125,19 +125,19 @@ Pages
 </button>
 
 
-    <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/extensions/runtime_limiter.ex#L1" title="View Source" class="icon-action" rel="help">
+    <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/services/adapter_helper.ex#L1" title="View Source" class="icon-action" rel="help">
       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
       <span class="sr-only">View Source</span>
     </a>
 
-  <span translate="no">Lightning.Extensions.RuntimeLimiter</span> 
+  <span translate="no">Lightning.Services.AdapterHelper</span> 
   <small class="app-vsn" translate="no">(Lightning v2.0.0-rc11)</small>
 
 </h1>
 
 
   <section id="moduledoc">
-<p>Adapter to call the extension for limiting Runtime workloads.</p>
+<p>Maps the module to be used for the extension service.</p>
   </section>
 
 
@@ -148,14 +148,14 @@ Pages
       </a>
       <span class="text">Summary</span>
     </h1>
-<div class="summary-types summary">
+<div class="summary-functions summary">
   <h2>
-    <a href="#types">Types</a>
+    <a href="#functions">Functions</a>
   </h2>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#t:message/0" translate="no">message()</a>
+        <a href="#adapter/1" translate="no">adapter(extension_key)</a>
 
       </div>
 
@@ -166,24 +166,24 @@ Pages
   </section>
 
 
-  <section id="types" class="details-list">
+  <section id="functions" class="details-list">
     <h1 class="section-heading">
-      <a class="hover-link" href="#types">
+      <a class="hover-link" href="#functions">
         <i class="ri-link-m" aria-hidden="true"></i>
       </a>
-      <span class="text">Types</span>
+      <span class="text">Functions</span>
     </h1>
-    <div class="types-list">
-<section class="detail" id="t:message/0">
+    <div class="functions-list">
+<section class="detail" id="adapter/1">
 
   <div class="detail-header">
-    <a href="#t:message/0" class="detail-link" title="Link to this type">
+    <a href="#adapter/1" class="detail-link" title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this type</span>
+      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">message()</h1>
+    <h1 class="signature" translate="no">adapter(extension_key)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/extensions/runtime_limiter.ex#L9" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/services/adapter_helper.ex#L6" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -192,12 +192,6 @@ Pages
   </div>
 
   <section class="docstring">
-
-      <div class="specs">
-
-          <pre translate="no"><span class="attribute">@type</span> message() :: %{position: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">atom</a>(), function: (... -&gt; <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">any</a>()), attrs: <a href="https://hexdocs.pm/elixir/Keyword.html#t:t/0">Keyword.t</a>()}</pre>
-
-      </div>
 
 
   </section>
