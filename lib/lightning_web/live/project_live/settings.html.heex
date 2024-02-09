@@ -295,7 +295,7 @@
           </.table>
         </LightningWeb.Components.Common.panel_content>
         <LightningWeb.Components.Common.panel_content for_hash="webhook_security">
-          <div class="flex justify-between content-center pb-2">
+          <div class="flex justify-between content-center pb-2 mb-3">
             <div class="leading-loose">
               <h6 class="font-medium text-black">Webhook Security</h6>
               <small class="block my-1 text-xs text-gray-600">
@@ -332,7 +332,7 @@
             auth_methods={@webhook_auth_methods}
             current_user={@current_user}
             return_to={~p"/projects/#{@project.id}/settings#webhook_security"}
-            class="px-2"
+            class="p-2"
           >
             <:linked_triggers :let={auth_method}>
               <span class="relative font-normal">
