@@ -10,6 +10,14 @@ and this project adheres to
 
 ### Added
 
+### Changed
+
+### Fixed
+
+## [v2.0.0-rc12] - 2024-02-09
+
+### Added
+
 - Add RunQueue extension to allow claim customization.
   [#1715](https://github.com/OpenFn/Lightning/issues/1715)
 - Add support for Salesforce OAuth2 credentials
