@@ -2,6 +2,8 @@ defmodule Lightning.Invocation.QueryTest do
   use Lightning.DataCase, async: true
 
   alias Lightning.Invocation.Query
+  alias Lightning.Workflows
+  alias Lightning.Workflows.Trigger
 
   import Lightning.Factories
 
@@ -47,5 +49,37 @@ defmodule Lightning.Invocation.QueryTest do
     step1_id = step1.id
 
     assert [%{id: ^step1_id}] = Query.steps_for(user) |> Repo.all()
+  end
+
+  test "any_step/0 returns only 1 result when used in a preload for a job" do
+    %{jobs: [job1]} = workflow = insert(:simple_workflow)
+
+    insert(:step, job: job1)
+    insert(:step, job: job1)
+
+    assert Repo.preload(workflow, [
+             :edges,
+             triggers: Trigger.with_auth_methods_query(),
+             jobs: {Workflows.jobs_ordered_subquery(), [:credential, :steps]}
+           ])
+           |> count_steps() == 2
+
+    assert Repo.preload(workflow, [
+             :edges,
+             triggers: Trigger.with_auth_methods_query(),
+             jobs: {
+               Workflows.jobs_ordered_subquery(),
+               [:credential, steps: Query.any_step()]
+             }
+           ])
+           |> count_steps == 1
+  end
+
+  defp count_steps(workflow) do
+    workflow
+    |> Map.get(:jobs)
+    |> Enum.at(0)
+    |> Map.get(:steps)
+    |> Enum.count()
   end
 end
