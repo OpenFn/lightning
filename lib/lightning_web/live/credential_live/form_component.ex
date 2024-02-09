@@ -31,13 +31,44 @@ defmodule LightningWeb.CredentialLive.FormComponent do
       Application.fetch_env!(:lightning, LightningWeb)
       |> Keyword.get(:allow_credential_transfer)
 
+    scopes =
+      [
+        %{label: "cdp_query_api", selected: false},
+        %{label: "pardot_api", selected: false},
+        %{label: "cdp_profile_api", selected: false},
+        %{label: "chatter_api", selected: false},
+        %{label: "cdp_ingest_api", selected: false},
+        %{label: "eclair_api", selected: false},
+        %{label: "wave_api", selected: false},
+        %{label: "api", selected: false},
+        %{label: "custom_permissions", selected: false},
+        %{label: "id", selected: false},
+        %{label: "profile", selected: false},
+        %{label: "email", selected: false},
+        %{label: "address", selected: false},
+        %{label: "phone", selected: false},
+        %{label: "lightning", selected: false},
+        %{label: "content", selected: false},
+        %{label: "openid", selected: false},
+        %{label: "full", selected: false},
+        %{label: "visualforce", selected: false},
+        %{label: "web", selected: false},
+        %{label: "chatbot_api", selected: false},
+        %{label: "user_registration_api", selected: false},
+        %{label: "forgot_password", selected: false},
+        %{label: "cdp_api", selected: false},
+        %{label: "sfap_api", selected: false},
+        %{label: "interaction_api", selected: false}
+      ]
+
     {:ok,
      socket
      |> assign(
        allow_credential_transfer: allow_credential_transfer,
        available_projects: [],
        type: nil,
-       button: []
+       button: [],
+       scopes: scopes
      )}
   end
 
@@ -348,6 +379,32 @@ defmodule LightningWeb.CredentialLive.FormComponent do
                 <div class="hidden sm:block" aria-hidden="true">
                   <div class="border-t border-secondary-200"></div>
                 </div>
+                <%= if @type === "salesforce_oauth" do %>
+                  <div id={@id}>
+                    <h3 class="text-base font-semibold leading-6 text-gray-900 pb-2">
+                      Pick the scopes to authorize
+                    </h3>
+                    <div class="grid grid-cols-4 gap-1">
+                      <%= for scope <- @scopes do %>
+                        <div class="form-check">
+                          <label class="form-check-label inline-block">
+                            <input
+                              id={"scope_#{scope.label}"}
+                              type="checkbox"
+                              name={scope.label}
+                              value={scope.label}
+                              checked={scope.selected}
+                              phx-change="scopes_changed"
+                              phx-target={@myself}
+                              class="form-check-input appearance-none h-4 w-4 border border-gray-300 rounded-sm bg-white checked:bg-blue-600 checked:border-blue-600 focus:outline-none transition duration-200 mt-1 align-top bg-no-repeat bg-center bg-contain float-left cursor-pointer"
+                            />
+                            <span class="ml-2"><%= scope.label %></span>
+                          </label>
+                        </div>
+                      <% end %>
+                    </div>
+                  </div>
+                <% end %>
                 <%= fieldset %>
               </div>
 

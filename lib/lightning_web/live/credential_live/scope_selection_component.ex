@@ -47,32 +47,32 @@ defmodule LightningWeb.CredentialLive.ScopeSelectionComponent do
   def mount(socket) do
     scope_options =
       [
-        %{id: 1, label: "cdp_query_api", selected: false},
-        %{id: 2, label: "pardot_api", selected: false},
-        %{id: 3, label: "cdp_profile_api", selected: false},
-        %{id: 4, label: "chatter_api", selected: false},
-        %{id: 5, label: "cdp_ingest_api", selected: false},
-        %{id: 6, label: "eclair_api", selected: false},
-        %{id: 7, label: "wave_api", selected: false},
-        %{id: 8, label: "api", selected: false},
-        %{id: 9, label: "custom_permissions", selected: false},
-        %{id: 10, label: "id", selected: false},
-        %{id: 11, label: "profile", selected: false},
-        %{id: 12, label: "email", selected: false},
-        %{id: 13, label: "address", selected: false},
-        %{id: 14, label: "phone", selected: false},
-        %{id: 15, label: "lightning", selected: false},
-        %{id: 16, label: "content", selected: false},
-        %{id: 17, label: "openid", selected: false},
-        %{id: 18, label: "full", selected: false},
-        %{id: 19, label: "visualforce", selected: false},
-        %{id: 20, label: "web", selected: false},
-        %{id: 21, label: "chatbot_api", selected: false},
-        %{id: 22, label: "user_registration_api", selected: false},
-        %{id: 23, label: "forgot_password", selected: false},
-        %{id: 24, label: "cdp_api", selected: false},
-        %{id: 25, label: "sfap_api", selected: false},
-        %{id: 26, label: "interaction_api", selected: false}
+        %{label: "cdp_query_api", selected: false},
+        %{label: "pardot_api", selected: false},
+        %{label: "cdp_profile_api", selected: false},
+        %{label: "chatter_api", selected: false},
+        %{label: "cdp_ingest_api", selected: false},
+        %{label: "eclair_api", selected: false},
+        %{label: "wave_api", selected: false},
+        %{label: "api", selected: false},
+        %{label: "custom_permissions", selected: false},
+        %{label: "id", selected: false},
+        %{label: "profile", selected: false},
+        %{label: "email", selected: false},
+        %{label: "address", selected: false},
+        %{label: "phone", selected: false},
+        %{label: "lightning", selected: false},
+        %{label: "content", selected: false},
+        %{label: "openid", selected: false},
+        %{label: "full", selected: false},
+        %{label: "visualforce", selected: false},
+        %{label: "web", selected: false},
+        %{label: "chatbot_api", selected: false},
+        %{label: "user_registration_api", selected: false},
+        %{label: "forgot_password", selected: false},
+        %{label: "cdp_api", selected: false},
+        %{label: "sfap_api", selected: false},
+        %{label: "interaction_api", selected: false}
       ]
       |> build_options()
 
@@ -86,13 +86,12 @@ defmodule LightningWeb.CredentialLive.ScopeSelectionComponent do
     Enum.map(options, fn
       {_idx, data} ->
         %Option{
-          id: data["id"],
           label: data["label"],
           selected: data["selected"]
         }
 
       data ->
-        %Option{id: data.id, label: data.label, selected: data.selected}
+        %Option{label: data.label, selected: data.selected}
     end)
   end
 

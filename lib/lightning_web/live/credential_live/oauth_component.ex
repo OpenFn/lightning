@@ -5,7 +5,6 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
   import LightningWeb.OauthCredentialHelper
 
   alias Lightning.AuthProviders.Common
-  alias LightningWeb.CredentialLive.ScopeSelectionComponent
 
   require Logger
 
@@ -95,15 +94,6 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
         <%= Phoenix.HTML.Form.hidden_input(body_form, :scope) %>
         <%= Phoenix.HTML.Form.hidden_input(body_form, :instance_url) %>
       </div>
-
-      <%= if @provider === Lightning.AuthProviders.Salesforce do %>
-        <.live_component
-          id={"#{@id}-scope-selection"}
-          parent_id={@id}
-          module={ScopeSelectionComponent}
-        />
-      <% end %>
-
       <div class="lg:grid lg:grid-cols-2 grid-cols-1 grid-flow-col mt-5">
         <.authorize_button
           :if={@show_authorize}
@@ -119,7 +109,6 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
           myself={@myself}
           provider={@provider}
         />
-
         <.error_block
           :if={@error}
           type={@error}
