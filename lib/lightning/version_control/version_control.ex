@@ -15,10 +15,22 @@ defmodule Lightning.VersionControl do
   @doc """
   Creates a connection between a project and a github repo
   """
-  def create_github_connection(attrs) do
-    %ProjectRepoConnection{}
-    |> ProjectRepoConnection.changeset(attrs)
-    |> Repo.insert()
+  def create_github_connection(user_id, project_id) do
+    pending_installation = get_pending_user_installation(user_id)
+
+    changeset =
+      ProjectRepoConnection.changeset(%ProjectRepoConnection{}, %{
+        user_id: user_id,
+        project_id: project_id
+      })
+
+    if is_nil(pending_installation) do
+      Repo.insert(changeset)
+    else
+      changeset
+      |> Ecto.Changeset.add_error(:user_id, "user has pending installation")
+      |> Ecto.Changeset.apply_action(:insert)
+    end
   end
 
   @doc """
