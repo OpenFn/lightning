@@ -140,7 +140,7 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
                   id={"select_#{@work_order.id}_tooltip"}
                   class="cursor-pointer"
                   phx-hook="Tooltip"
-                  data-placement="right"
+                  data-placement="top"
                   data-allow-html="true"
                   aria-label={
                     rerun_zero_persistence_tooltip_message(
