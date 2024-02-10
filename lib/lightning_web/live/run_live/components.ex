@@ -74,7 +74,7 @@ defmodule LightningWeb.RunLive.Components do
       pending: "bg-gray-200 text-gray-800",
       running: "bg-blue-200 text-blue-800",
       #  run and workorder states...
-      available: "text-gray-800",
+      available: "bg-gray-200 text-gray-800",
       claimed: "bg-blue-200 text-blue-800",
       started: "bg-blue-200 text-blue-800",
       success: "bg-green-200 text-green-800",
