@@ -25,6 +25,10 @@ integration at all levels.
 > - a [Digital Square](https://digitalsquare.org/digital-health-global-goods)
 >   certified **Global Good for Health**
 
+<p align="center">
+  <img width="880" alt="image" src="https://github.com/OpenFn/lightning/assets/8732845/1d5fcd81-cc4a-4458-bb24-f04ebf22893d">
+</p>
+
 ## Contents
 
 - [Demo](#demo)
@@ -73,7 +77,9 @@ password: welcome123
 Plan and build workflows using Lightning's visual interface to quickly define
 when, where and what you want your automation to do.
 
-<img width="1679" alt="image" src="https://github.com/OpenFn/Lightning/assets/8732845/15afafe7-561b-4d79-9cd8-5d31506a9031">
+<p align="center">
+  <img width="1679" alt="image" src="https://github.com/OpenFn/Lightning/assets/8732845/15afafe7-561b-4d79-9cd8-5d31506a9031">
+</p>
 
 Use our
 [CLI](https://github.com/OpenFn/kit/blob/main/packages/cli/README.md#openfncli)
@@ -84,7 +90,9 @@ editor.
 
 Monitor all workflow activity in one place.
 
-<img width="1680" alt="image" src="https://github.com/OpenFn/Lightning/assets/8732845/909dba85-e0d1-4bce-8a17-5949386c6375">
+<p align="center">
+  <img width="1680" alt="image" src="https://github.com/OpenFn/Lightning/assets/8732845/909dba85-e0d1-4bce-8a17-5949386c6375">
+</p>
 
 - Filter and search runs to identify issues that need addressing and follow how
   a specific request has been processed
