@@ -367,8 +367,8 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
       crashed: "bg-orange-600",
       cancelled: "bg-gray-500",
       killed: "bg-yellow-600",
-      exception: "bg-gray-800",
-      lost: "bg-gray-800"
+      exception: "bg-gray-300 border-solid border-2 border-gray-800",
+      lost: "bg-gray-300 border-solid border-2 border-gray-800"
     }
 
     font_color = %{
@@ -379,8 +379,8 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
       crashed: "text-orange-500",
       cancelled: "text-gray-500",
       killed: "text-yellow-800",
-      exception: "text-white",
-      lost: "text-white"
+      exception: "text-gray-600",
+      lost: "text-gray-600"
     }
 
     assigns =
