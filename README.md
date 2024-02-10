@@ -1,82 +1,70 @@
-# OpenFn/Lightning [![CircleCI](https://dl.circleci.com/status-badge/img/gh/OpenFn/Lightning/tree/main.svg?style=svg)](https://dl.circleci.com/status-badge/redirect/gh/OpenFn/Lightning/tree/main) [![codecov](https://codecov.io/gh/OpenFn/Lightning/branch/main/graph/badge.svg?token=FfDMxdGL3a)](https://codecov.io/gh/OpenFn/Lightning) ![Docker Pulls](https://img.shields.io/docker/pulls/openfn/lightning)
+# OpenFn/Lightning [![CircleCI](https://dl.circleci.com/status-badge/img/gh/OpenFn/lightning/tree/main.svg?style=svg)](https://dl.circleci.com/status-badge/redirect/gh/OpenFn/lightning/tree/main) [![codecov](https://codecov.io/gh/OpenFn/lightning/branch/main/graph/badge.svg?token=FfDMxdGL3a)](https://codecov.io/gh/OpenFn/lightning) ![Docker Pulls](https://img.shields.io/docker/pulls/openfn/lightning)
 
-OpenFn/Lightning is a fully open source, workflow automation platform that's
-used to automate critical business processes and integrate information systems.
-From last-mile services to national-level reporting, it boosts efficiency &
-effectiveness while enabling secure, stable, scalable interoperability at all
-levels. **Read more about Lightning
-[on OpenFn/Docs](https://docs.openfn.org/documentation/about-lightning).**
+Lightning ⚡ (aka "OpenFn v2") is a workflow automation platform that's used to
+automate critical business processes and integrate information systems. From
+last-mile services to national-level reporting, it boosts efficiency &
+effectiveness while enabling secure, stable, scalable interoperability and data
+integration at all levels.
 
-Lightning is the latest "v2" of OpenFn, the
-[Digital Public Good for workflow automation](https://app.digitalpublicgoods.net/a/10176).
-Use Lightning to visually build, execute and manage workflows.
+**Use it online at [app.openfn.org](https://app.openfn.org).**
 
-- The latest version of the OpenFn technology - first launched in 2014, now
-  tried and tested by NGOs in over 40 countries
-- Fully open source (no premium features or community edition, you get the same
-  product whether using SaaS or self-hosted)
-- Recognised as a Digital Public Good by the
-  [DPGA](https://digitalpublicgoods.net/) and a Global Good for Health by
-  [Digital Square](https://digitalsquare.org/digital-health-global-goods)
+**Explore in a sandbox on [demo.openfn.org](#demo-sandbox).**
+
+**Or learn more at
+[docs.openfn.org](https://docs.openfn.org/documentation/about-lightning).**
+
+> [!TIP] OpenFn/Lightning is:
+>
+> - the latest version of OpenFn: first launched in 2014, it's been tried and
+>   tested by NGOs and governments in 40+ countries
+> - fully **open source**: there's no "community edition" and "premium edition",
+>   you get the same product whether you are self-hosting or using the
+>   OpenFn.org software-as-a-service
+> - the leading [DPGA](https://digitalpublicgoods.net/) certified **Digital
+>   Public Good** for workflow automation
+> - a [Digital Square](https://digitalsquare.org/digital-health-global-goods)
+>   certified **Global Good for Health**
 
 ## Contents
 
-- [OpenFn/Lightning   ](#openfnlightning---)
-  - [Contents](#contents)
-  - [Demo](#demo)
-  - [Use OpenFn Online](#use-openfn-online)
-  - [Features](#features)
-    - [Build](#build)
-    - [Monitor](#monitor)
-    - [Manage](#manage)
-    - [Roles and permissions](#roles-and-permissions)
-    - [Roadmap](#roadmap)
-  - [Getting Started](#getting-started)
+- [Demo](#demo)
+- [Features](#features)
+  - [Build](#build)
+  - [Monitor](#monitor)
+  - [Manage](#manage)
+  - [Roles and permissions](#roles-and-permissions)
+  - [Roadmap](#roadmap)
+- [Getting Started](#getting-started)
   - [**Run** via Docker](#run-via-docker)
   - [**Deploy** on external infrastructure](#deploy-on-external-infrastructure)
-  - [Run Lightning locally](#run-lightning-locally)
-    - [Clone the repo and optionally set ENVs](#clone-the-repo-and-optionally-set-envs)
-    - [Database Setup](#database-setup)
-    - [Elixir \& Ecto Setup](#elixir--ecto-setup)
-    - [Run the app](#run-the-app)
-    - [Run the tests](#run-the-tests)
-  - [Benchmarking](#benchmarking)
-  - [Troubleshooting](#troubleshooting)
-    - [Trouble with environment variables](#trouble-with-environment-variables)
-    - [Problems with Postgres](#problems-with-postgres)
-    - [Problems with Debian](#problems-with-debian)
-    - [Problems with Docker](#problems-with-docker)
-      - [Versions](#versions)
-    - [Problems with `rambo`](#problems-with-rambo)
-      - [Starting from scratch](#starting-from-scratch)
-  - [Project Configuration Quickstart](#project-configuration-quickstart)
-  - [**Contribute** to this project](#contribute-to-this-project)
-    - [Assign yourself to an issue](#assign-yourself-to-an-issue)
-    - [Open a pull request](#open-a-pull-request)
-  - [Generating Documentation](#generating-documentation)
-  - [Security and Standards](#security-and-standards)
-  - [Server Specs for Self-Hosting](#server-specs-for-self-hosting)
-  - [Support](#support)
-
-![Screenshot 2023-03-15 at 13 01 13](https://user-images.githubusercontent.com/36554605/225275565-99c94f3b-3057-4185-9086-58015c28e77f.png)
+  - [**Dev** on Lightning locally](#dev-on-lightning-locally)
+- [Security and Standards](#security-and-standards)
+- [**Contribute** to this project](#contribute-to-this-project)
+  - [Pick up an issue](#pick-up-an-issue)
+  - [Open a pull request](#open-a-pull-request)
+  - [Generate the docs pages](#generate-the-docs-pages)
+- [Server Specs for Self-Hosting](#server-specs-for-self-hosting)
+- [Benchmarking](#benchmarking)
+- [Troubleshooting](#troubleshooting)
+  - [Problems with environment variables](#problems-with-environment-variables)
+  - [Problems with Postgres](#problems-with-postgres)
+  - [Problems with Debian](#problems-with-debian)
+  - [Problems with Docker](#problems-with-docker)
+  - [Problems with Rambo](#problems-with-rambo)
+- [Support](#support)
 
 ## Demo
 
-Watch a quick demo here: https://www.youtube.com/watch?v=BNaxlHAWb5I
+Watch a short [demo video](https://www.youtube.com/watch?v=BNaxlHAWb5I) or
+explore a **[public sandbox](https://demo.openfn.org/)** with the login details
+below, but please note that this deployment is reset every night at 12:00:00 UTC
+and is 100% publicly accessible. **_Don't build anything you want to keep, or
+keep private!_**
 
-Explore our [demo app\*](https://demo.openfn.org/) with username:
-`demo@openfn.org`, password: `welcome123`, or read through the
-[features](#features) section to view screenshots of the app.
-
-_\*Note that the demo app refreshes daily, so do not configure workflows you
-want to save._
-
-## Use OpenFn Online
-
-Register for an account at [app.openfn.org](https://app.openfn.org/) and go
-through the
-[quick-start guide](https://docs.openfn.org/documentation/build/lightning-quick-start)
-to get familiar with the app.
+```
+username: demo@openfn.org
+password: welcome123
+```
 
 ## Features
 
@@ -119,8 +107,9 @@ refer to our
 
 ### Roadmap
 
-View our public roadmap
-[here](https://docs.openfn.org/documentation/openfn-roadmap#lightning-roadmap).
+View our
+[public GitHub project](https://github.com/orgs/OpenFn/projects/3/views/1) to
+see what we're working on now and what's coming next.
 
 ## Getting Started
 
@@ -132,7 +121,7 @@ View our public roadmap
   we recommend
   [running Lightning on your local machine](#run-lightning-locally).
 
-## **Run** via Docker
+### **Run** via Docker
 
 1. Install the latest version of
    [Docker](https://docs.docker.com/engine/install/)
@@ -150,7 +139,7 @@ additional troubleshooting help. Note that you can also create your own
 [pre-built image](https://hub.docker.com/repository/docker/openfn/lightning)
 from Dockerhub.
 
-## **Deploy** on external infrastructure
+### **Deploy** on external infrastructure
 
 Head to the [Deploy](https://docs.openfn.org/documentation/deploy/options)
 section of our docs site to get started.
@@ -158,9 +147,9 @@ section of our docs site to get started.
 For technical guidelines, see [deployment considerations](DEPLOYMENT.md) for
 more detailed information.
 
-## Run Lightning locally
+### **Dev** on Lightning locally
 
-### Clone the repo and optionally set ENVs
+#### Clone the repo and optionally set ENVs
 
 ```sh
 git clone git@github.com:OpenFn/Lightning.git # or from YOUR fork!
@@ -173,7 +162,7 @@ your Postgres setup and your ENVs. You can run lightning without any ENVs
 assuming a vanilla postgres setup (see below), but you may want to make
 adjustments.
 
-### Database Setup
+#### Database Setup
 
 If you're already using Postgres locally, create a new database called
 `lightning_dev`, for example.
@@ -194,7 +183,7 @@ docker create \
 docker start lightning-postgres
 ```
 
-### Elixir & Ecto Setup
+#### Elixir & Ecto Setup
 
 We use [asdf](https://github.com/asdf-vm/asdf) to configure our local
 environments. Included in the repo is a `.tool-versions` file that is read by
@@ -219,7 +208,7 @@ mix lightning.install_adaptor_icons
 npm install --prefix assets
 ```
 
-### Run the app
+#### Run the app
 
 Lightning is a web app. To run it in interactive Elixir mode, start the
 development server by running with your environment variables by running:
@@ -237,7 +226,7 @@ env $(cat .env | grep -v "#" | xargs ) iex -S mix phx.server
 Once the server has started, head to [`localhost:4000`](http://localhost:4000)
 in your browser.
 
-### Run the tests
+#### Run the tests
 
 Before the first time running the tests, you need a test database setup.
 
@@ -254,6 +243,97 @@ MIX_ENV=test mix test
 We also have `test.watch` installed which can be used to rerun the tests on file
 changes.
 
+## Security and Standards
+
+We use a host of common Elixir static analysis tools to help us avoid common
+pitfalls and make sure we keep everything clean and consistent.
+
+In addition to our test suite, you can run the following commands:
+
+- `mix format --check-formatted`  
+  Code formatting checker, run again without the `--check-formatted` flag to
+  have your code automatically changed.
+- `mix dialyzer`  
+  Static analysis for type mismatches and other common warnings. See
+  [dialyxir](https://github.com/jeremyjh/dialyxir).
+- `mix credo --strict --all`  
+  Static analysis for consistency, and coding standards. See
+  [Credo](https://github.com/rrrene/credo).
+- `mix sobelow`  
+  Check for commonly known security exploits. See
+  [Sobelow](https://sobelow.io/).
+- `MIX_ENV=test mix coveralls`  
+  Test coverage reporter. This command also runs the test suite, and can be used
+  in place of `mix test` when checking everything before pushing your code. See
+  [excoveralls](https://github.com/parroty/excoveralls).
+
+> For convenience there is a `verify` mix task that runs all of the above and
+> defaults the `MIX_ENV` to `test`.
+
+For more guidance on security best practices for workflow automation
+implementations, check out OpenFn Docs:
+[docs.openfn.org/documentation/getting-started/security](https://docs.openfn.org/documentation/getting-started/security)
+
+## **Contribute** to this project
+
+First, thanks for being here! You're contributing to a digital public good that
+will always be free and open source and aimed at serving innovative NGOs,
+governments, and social impact organizations the world over! You rock. ❤️
+
+FYI, Lightning is built in [Elixir](https://elixir-lang.org/), harnessing the
+[Phoenix Framework](https://www.phoenixframework.org/). Currently, the only
+unbundled dependency is a [PostgreSQL](https://www.postgresql.org/) database.
+
+If you'd like to contribute to this projects, follow the steps below:
+
+### Pick up an issue
+
+Read through the existing [issues](https://github.com/OpenFn/Lightning/issues),
+assign yourself to the issue you have chosen. Leave a comment on the issue to
+let us know you'll be working on it, and if you have any questions of
+clarifications that would help you get started ask them there - we will get back
+to you as soon as possible.
+
+If there isn't already an issue for the feature you would like to contribute,
+please start a discussion in our
+[community forum](https://community.openfn.org/c/feature-requests/12).
+
+### Open a pull request
+
+1. Clone the Lightning repository, then
+   [fork it](https://docs.github.com/en/get-started/quickstart/fork-a-repo).
+
+2. Run through [setting up your environment](#set-up-your-environment) and make
+   your changes.
+
+3. Make sure you have written your tests and updated /CHANGELOG.md (in the
+   'Unreleased' section, add a short description of the changes you are making,
+   along with a link to your issue).
+
+4. Open a draft pull request by clicking "Contribute > Open Pull Request" from
+   your forked repository. Fill out the pull request template (this will **be**
+   added automatically for you), then make sure to self-review your code and go
+   through the 'Review checklist'. Don't worry about the QA checkbox, our
+   product manager Amber will tick that once she has reviewed your PR. You can
+   leave any notes for the reviewer in a comment.
+
+5. Once you're ready to submit a pull request, you can mark your draft PR as
+   'Ready for review' and assign @stuartc or @taylordowns2000.
+
+### Generate the docs pages
+
+You can generate the HTML and EPUB documentation locally using:
+
+`mix docs` and opening `doc/index.html` in your browser.
+
+## Server Specs for Self-Hosting
+
+For recommend server specifications for self-hosting of Lightning, head to the
+[deployment planning](https://docs.openfn.org/documentation/deploy/options)
+section of the documentation or check out this
+[self-hosting thread](https://community.openfn.org/t/specs-for-self-hosting-lightning/292)
+on our community forum.
+
 ## Benchmarking
 
 We are using [k6](https://k6.io/) to benchmark Lightning. Under `benchmarking`
@@ -263,7 +343,7 @@ See [Benchmarking](benchmarking/README.md) for more detailed information.
 
 ## Troubleshooting
 
-### Trouble with environment variables
+### Problems with environment variables
 
 For troubleshooting custom environment variable configuration it's important to
 know how an Elixir app loads and modifies configuration. The order is as
@@ -311,7 +391,26 @@ Docker version 20.10.17, build 100c701
 Docker Compose version v2.6.0
 ```
 
-### Problems with `rambo`
+#### Starting from scratch
+
+If you're actively working with docker, you start experiencing issues, and you
+would like to start from scratch you can clean up everything and start over like
+this:
+
+```sh
+# To remove any ignored files and reset your .env to it's example
+git clean -fdx && cp .env.example .env
+# You can skip the line below if you want to keep your database
+docker compose down --rmi all --volumes
+
+docker compose build --no-cache web && \
+  docker compose create --force-recreate
+
+docker compose run --rm web mix ecto.migrate
+docker compose up
+```
+
+### Problems with Rambo
 
 When running `mix compile.rambo` on Apple Silicon (an Apple M1/M2, `macarm`,
 `aarch64-apple-darwin`) and encountering the following error:
@@ -343,121 +442,6 @@ sh: line 0: exec: /path_to_directory/Lightning/_build/dev/lib/rambo/priv/rambo: 
 You can try renaming `deps/rambo/priv/rambo-mac` to `deps/rambo/priv/rambo`.
 
 If neither of the approaches above work, please raise an issue.
-
-#### Starting from scratch
-
-If you're actively working with docker, you start experiencing issues, and you
-would like to start from scratch you can clean up everything and start over like
-this:
-
-```sh
-# To remove any ignored files and reset your .env to it's example
-git clean -fdx && cp .env.example .env
-# You can skip the line below if you want to keep your database
-docker compose down --rmi all --volumes
-
-docker compose build --no-cache web && \
-  docker compose create --force-recreate
-
-docker compose run --rm web mix ecto.migrate
-docker compose up
-```
-
-## Project Configuration Quickstart
-
-For help getting started with your OpenFn/Lightning Project and Workflows
-configuration, check out the
-[Lightning Quickstart Guidance](https://docs.openfn.org/documentation/build/lightning-quick-start)
-on OpenFn/Docs.
-
-## **Contribute** to this project
-
-First, thanks for being here! You're contributing to a digital public good that
-will always be free and open source and aimed at serving innovative NGOs,
-governments, and social impact organizations the world over! You rock. ❤️
-
-FYI, Lightning is built in [Elixir](https://elixir-lang.org/), harnessing the
-[Phoenix Framework](https://www.phoenixframework.org/). Currently, the only
-unbundled dependency is a [PostgreSQL](https://www.postgresql.org/) database.
-
-If you'd like to contribute to this projects, follow the steps below:
-
-### Assign yourself to an issue
-
-Read through the existing [issues](https://github.com/OpenFn/Lightning/issues),
-assign yourself to the issue you have chosen. Leave a comment on the issue to
-let us know you'll be working on it, and if you have any questions of
-clarifications that would help you get started ask them there - we will get back
-to you as soon as possible.
-
-If there isn't already an issue for the feature you would like to contribute,
-please start a discussion in our
-[community forum](https://community.openfn.org/c/feature-requests/12).
-
-### Open a pull request
-
-1. Clone the Lightning repository, then
-   [fork it](https://docs.github.com/en/get-started/quickstart/fork-a-repo).
-
-2. Run through [setting up your environment](#set-up-your-environment) and make
-   your changes.
-
-3. Make sure you have written your tests and updated /CHANGELOG.md (in the
-   'Unreleased' section, add a short description of the changes you are making,
-   along with a link to your issue).
-
-4. Open a draft pull request by clicking "Contribute > Open Pull Request" from
-   your forked repository. Fill out the pull request template (this will be
-   added automatically for you), then make sure to self-review your code and go
-   through the 'Review checklist'. Don't worry about the QA checkbox, our
-   product manager Amber will tick that once she has reviewed your PR. You can
-   leave any notes for the reviewer in a comment.
-
-5. Once you're ready to submit a pull request, you can mark your draft PR as
-   'Ready for review' and assign @stuartc or @taylordowns2000.
-
-## Generating Documentation
-
-You can generate the HTML and EPUB documentation locally using:
-
-`mix docs` and opening `doc/index.html` in your browser.
-
-## Security and Standards
-
-We use a host of common Elixir static analysis tools to help us avoid common
-pitfalls and make sure we keep everything clean and consistent.
-
-In addition to our test suite, you can run the following commands:
-
-- `mix format --check-formatted`  
-  Code formatting checker, run again without the `--check-formatted` flag to
-  have your code automatically changed.
-- `mix dialyzer`  
-  Static analysis for type mismatches and other common warnings. See
-  [dialyxir](https://github.com/jeremyjh/dialyxir).
-- `mix credo --strict --all`  
-  Static analysis for consistency, and coding standards. See
-  [Credo](https://github.com/rrrene/credo).
-- `mix sobelow`  
-  Check for commonly known security exploits. See
-  [Sobelow](https://sobelow.io/).
-- `MIX_ENV=test mix coveralls`  
-  Test coverage reporter. This command also runs the test suite, and can be used
-  in place of `mix test` when checking everything before pushing your code. See
-  [excoveralls](https://github.com/parroty/excoveralls).
-
-> For convenience there is a `verify` mix task that runs all of the above and
-> defaults the `MIX_ENV` to `test`.
-
-For more guidance on security best practices for workflow automation
-implementations, check out OpenFn Docs:
-[docs.openfn.org/documentation/getting-started/security](https://docs.openfn.org/documentation/getting-started/security)
-
-## Server Specs for Self-Hosting
-
-For recommend server specifications for self-hosting of Lightning, check out
-this Community topic:
-[community.openfn.org/t/specs-for-self-hosting-lightning/292](https://community.openfn.org/t/specs-for-self-hosting-lightning/292)
 
 ## Support
 
