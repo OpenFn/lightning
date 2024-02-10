@@ -12,9 +12,16 @@ and this project adheres to
 
 ### Changed
 
+- Only show GoogleSheets and Salesforce credential options if Oauth clients are
+  registered with the instance via ENV
+  [#1734](https://github.com/OpenFn/Lightning/issues/1734)
+
 ### Fixed
 
-- Make disabled button for "Connect to GitHub" clear, add tooltip []()
+- Use standard table type for webhook auth methods
+  [#1514](https://github.com/OpenFn/Lightning/issues/1514)
+- Make disabled button for "Connect to GitHub" clear, add tooltip
+  [#1732](https://github.com/OpenFn/Lightning/issues/1715)
 
 ## [v2.0.0-rc12] - 2024-02-09
 
