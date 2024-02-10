@@ -26,7 +26,7 @@ integration at all levels.
 >   certified **Global Good for Health**
 
 <p align="center">
-  <img height="400" alt="image" src="https://github.com/OpenFn/lightning/assets/8732845/1d5fcd81-cc4a-4458-bb24-f04ebf22893d">
+  <img width="2349" alt="image" src="https://github.com/OpenFn/lightning/assets/8732845/61b1025c-b65e-4a76-a280-1023fcd51592">
 </p>
 
 ## Contents
