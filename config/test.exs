@@ -79,9 +79,7 @@ config :lightning, Oban, testing: :inline
 config :lightning, LightningWeb, allow_credential_transfer: true
 
 # Enables / Displays the credential features for LightningWeb.CredentialLiveTest
-config :lightning, LightningWeb,
-  allow_credential_transfer: true,
-  enable_google_credential: true
+config :lightning, LightningWeb, allow_credential_transfer: true
 
 config :lightning, CLI, child_process_mod: FakeRambo
 

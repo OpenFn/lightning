@@ -14,7 +14,10 @@ defmodule LightningWeb.CredentialLive.TypePicker do
         phx-change="type_changed"
       >
         <div class="grid grid-cols-2 md:grid-cols-4 sm:grid-cols-3 gap-4 overflow-auto max-h-99">
-          <div :for={{name, key} <- @type_options} class="flex items-center p-2">
+          <div
+            :for={{name, key, logo} <- @type_options}
+            class="flex items-center p-2"
+          >
             <%= Phoenix.HTML.Form.radio_button(f, :selected, key,
               class: "h-4 w-4 border-gray-300 text-indigo-600 focus:ring-indigo-500"
             ) %>
@@ -23,6 +26,7 @@ defmodule LightningWeb.CredentialLive.TypePicker do
               field={:selected}
               for={"credential-type-picker_selected_#{key}"}
               title={name}
+              logo={logo}
               class="ml-3 block text-sm font-medium text-gray-700"
               value={key}
             />
@@ -37,34 +41,48 @@ defmodule LightningWeb.CredentialLive.TypePicker do
   def mount(socket) do
     {:ok, schemas_path} = Application.fetch_env(:lightning, :schemas_path)
 
-    enable_google_credential =
-      Application.get_env(:lightning, LightningWeb, [])
-      |> Keyword.get(:enable_google_credential)
-
     schemas_options =
       Path.wildcard("#{schemas_path}/*.json")
       |> Enum.map(fn p ->
         name = p |> Path.basename() |> String.replace(".json", "")
-        {name |> Phoenix.HTML.Form.humanize(), name}
+        {name |> Phoenix.HTML.Form.humanize(), name, nil}
       end)
+
+    oauth_clients =
+      Application.get_env(:lightning, :oauth_clients)
 
     type_options =
       schemas_options
-      |> append_if_missing({"Raw JSON", "raw"})
-      |> append_if_missing({"Googlesheets", "googlesheets"})
-      |> append_if_missing({"Salesforce Oauth", "salesforce_oauth"})
+      |> Enum.concat([{"Raw JSON", "raw", nil}])
+      |> handle_oauth_item(
+        {"GoogleSheets", "googlesheets",
+         Routes.static_path(socket, "/images/oauth-2.png")},
+        get_in(oauth_clients, [:google, :client_id])
+      )
+      |> handle_oauth_item(
+        {
+          "Salesforce",
+          "salesforce_oauth",
+          Routes.static_path(socket, "/images/oauth-2.png")
+        },
+        get_in(oauth_clients, [:salesforce, :client_id])
+      )
       |> Enum.sort_by(& &1, :asc)
-      |> Enum.filter(fn {_, key} ->
-        case key do
-          "googlesheets" ->
-            enable_google_credential
-
-          _ ->
-            true
-        end
-      end)
 
     {:ok, socket |> assign(type_options: type_options)}
+  end
+
+  defp handle_oauth_item(list, {_label, id, _image} = item, client_id) do
+    if is_nil(client_id) || Enum.member?(list, item) do
+      # Replace
+      Enum.reject(list, fn {_first, second, _third} -> second == id end)
+    else
+      Enum.map(list, fn
+        {_old_label, old_id, _old_image} when old_id == id -> item
+        old_item -> old_item
+      end)
+      |> append_if_missing(item)
+    end
   end
 
   defp append_if_missing(list, item) do

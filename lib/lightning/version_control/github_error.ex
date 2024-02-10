@@ -1,6 +1,6 @@
 defmodule Lightning.VersionControl.GithubError do
   @moduledoc """
-  Github Error exception
+  GitHub Error exception
   """
   defexception [:code, :message, :meta]
 

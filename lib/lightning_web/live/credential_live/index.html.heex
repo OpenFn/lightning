@@ -2,12 +2,9 @@
   <:header>
     <LayoutComponents.header current_user={@current_user}>
       <:title><%= @page_title %></:title>
-      <Common.button phx-click={show_modal("new-credential-modal")}>
-        <div class="h-full">
-          <Icon.plus class="h-4 w-4 inline-block" />
-          <span class="inline-block align-middle">New Credential</span>
-        </div>
-      </Common.button>
+      <.button phx-click={show_modal("new-credential-modal")}>
+        New credential
+      </.button>
     </LayoutComponents.header>
   </:header>
   <LayoutComponents.centered>

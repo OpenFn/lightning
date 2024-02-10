@@ -112,8 +112,7 @@ defmodule Lightning.Policies.ProjectUserPermissionsTest do
         delete_workflow
         edit_workflow
         provision_project
-        edit_project_description
-        edit_project_name
+        edit_project
         write_webhook_auth_method
         create_project_credential
         run_workflow
@@ -143,8 +142,7 @@ defmodule Lightning.Policies.ProjectUserPermissionsTest do
            editor: editor
          } do
       ~w(
-          edit_project_description
-          edit_project_name
+          edit_project
           write_webhook_auth_method
         )a |> (&refute_can(ProjectUsers, &1, editor, project)).()
     end
@@ -160,8 +158,7 @@ defmodule Lightning.Policies.ProjectUserPermissionsTest do
           create_workflow
           delete_workflow
           edit_workflow
-          edit_project_description
-          edit_project_name
+          edit_project
           provision_project
           write_webhook_auth_method
           create_project_credential
@@ -180,8 +177,7 @@ defmodule Lightning.Policies.ProjectUserPermissionsTest do
         create_workflow
         delete_workflow
         edit_workflow
-        edit_project_description
-        edit_project_name
+        edit_project
         provision_project
         write_webhook_auth_method
         create_project_credential

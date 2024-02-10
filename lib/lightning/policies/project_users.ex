@@ -13,13 +13,12 @@ defmodule Lightning.Policies.ProjectUsers do
           :run_workflow
           | :edit_workflow
           | :access_project
+          | :edit_project
           | :delete_project
           | :delete_workflow
           | :create_workflow
-          | :edit_project_name
           | :edit_digest_alerts
           | :edit_failure_alerts
-          | :edit_project_description
           | :provision_project
           | :create_project_credential
           | :edit_data_retention
@@ -61,8 +60,7 @@ defmodule Lightning.Policies.ProjectUsers do
 
   def authorize(action, %User{} = user, %Project{} = project)
       when action in [
-             :edit_project_name,
-             :edit_project_description
+             :edit_project
            ],
       do: Projects.get_project_user_role(user, project) in [:owner, :admin]
 

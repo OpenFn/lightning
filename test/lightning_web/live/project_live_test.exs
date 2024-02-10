@@ -548,7 +548,7 @@ defmodule LightningWeb.ProjectLiveTest do
           Routes.project_project_settings_path(conn, :index, project.id)
         )
 
-      assert html =~ "Install Github App to get started"
+      assert html =~ "Connect this project to a GitHub repo"
     end
 
     @tag role: :admin
@@ -783,7 +783,7 @@ defmodule LightningWeb.ProjectLiveTest do
         )
 
       assert view |> render_click("delete_repo_connection", %{}) =~
-               "Install Github"
+               "Connect to GitHub"
     end
 
     @tag role: :admin
@@ -1944,10 +1944,8 @@ defmodule LightningWeb.ProjectLiveTest do
           ~p"/projects/#{project.id}/settings#data-storage"
         )
 
-      refute html =~ "Input/Output Data Storage Policy"
-
-      assert html =~
-               "Only project owner and admins can view or edit the Data Storage section."
+      assert html =~ "Input/Output Data Storage Policy"
+      assert html =~ "You cannot modify this project&#39;s data storage"
     end
 
     @tag role: :viewer
@@ -1961,10 +1959,8 @@ defmodule LightningWeb.ProjectLiveTest do
           ~p"/projects/#{project.id}/settings#data-storage"
         )
 
-      refute html =~ "Workflow Input &amp; Output Data Retention"
-
-      assert html =~
-               "Only project owner and admins can view or edit the Data Storage section."
+      assert html =~ "Input/Output Data Storage Policy"
+      assert html =~ "You cannot modify this project&#39;s data storage"
     end
 
     @tag role: :admin

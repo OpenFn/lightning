@@ -10,7 +10,7 @@ defmodule Lightning.VersionControl.GithubClientTest do
   -----END RSA PRIVATE KEY-----
   """
 
-  describe "Non success Github Client" do
+  describe "Non success GitHub Client" do
     setup do
       put_temporary_env(:lightning, :github_app,
         cert: @cert,
@@ -42,7 +42,7 @@ defmodule Lightning.VersionControl.GithubClientTest do
       assert {:error,
               %{
                 code: :invalid_certificate,
-                message: "Github Certificate is misconfigured"
+                message: "GitHub Certificate is misconfigured"
               }} =
                VersionControl.fetch_installation_repos(p_repo.project_id)
     end
@@ -55,7 +55,7 @@ defmodule Lightning.VersionControl.GithubClientTest do
       assert {:error,
               %{
                 code: :installation_not_found,
-                message: "Github Installation APP ID is misconfigured"
+                message: "GitHub Installation APP ID is misconfigured"
               }} =
                VersionControl.initiate_sync(p_repo.project_id, "some-user-name")
     end
@@ -67,7 +67,7 @@ defmodule Lightning.VersionControl.GithubClientTest do
       assert {:error,
               %{
                 code: :invalid_certificate,
-                message: "Github Certificate is misconfigured"
+                message: "GitHub Certificate is misconfigured"
               }} =
                VersionControl.fetch_repo_branches(p_repo.project_id, p_repo.repo)
     end
@@ -79,13 +79,13 @@ defmodule Lightning.VersionControl.GithubClientTest do
       assert {:error,
               %{
                 code: :invalid_certificate,
-                message: "Github Certificate is misconfigured"
+                message: "GitHub Certificate is misconfigured"
               }} =
                VersionControl.fetch_installation_repos(p_repo.project_id)
     end
   end
 
-  describe "Github Client" do
+  describe "GitHub Client" do
     setup do
       put_temporary_env(:lightning, :github_app,
         cert: @cert,

@@ -41,18 +41,10 @@ defmodule LightningWeb.ProjectLive.Settings do
         project
       )
 
-    can_edit_project_name =
+    can_edit_project =
       ProjectUsers
       |> Permissions.can?(
-        :edit_project_name,
-        current_user,
-        project
-      )
-
-    can_edit_project_description =
-      ProjectUsers
-      |> Permissions.can?(
-        :edit_project_description,
+        :edit_project,
         current_user,
         project
       )
@@ -61,6 +53,14 @@ defmodule LightningWeb.ProjectLive.Settings do
       Enum.find(project_users, fn project_user ->
         project_user.user_id == current_user.id
       end)
+
+    can_edit_data_retention =
+      Permissions.can?(
+        ProjectUsers,
+        :edit_data_retention,
+        current_user,
+        project_user
+      )
 
     can_write_webhook_auth_method =
       Permissions.can?(
@@ -111,9 +111,8 @@ defmodule LightningWeb.ProjectLive.Settings do
        current_user: socket.assigns.current_user,
        project_changeset: Projects.change_project(socket.assigns.project),
        can_delete_project: can_delete_project,
-       can_edit_project_name: can_edit_project_name,
-       can_edit_project_description: can_edit_project_description,
-       can_edit_data_retention: project_user.role in [:owner, :admin],
+       can_edit_project: can_edit_project,
+       can_edit_data_retention: can_edit_data_retention,
        can_write_webhook_auth_method: can_write_webhook_auth_method,
        can_create_project_credential: can_create_project_credential,
        show_github_setup: show_github_setup,
@@ -175,10 +174,7 @@ defmodule LightningWeb.ProjectLive.Settings do
          ProjectUsers
          |> Permissions.can?(:edit_failure_alerts, current_user, project_user)
 
-  defp can_edit_project(assigns),
-    do:
-      assigns.can_edit_project_name and
-        assigns.can_edit_project_description
+  defp can_edit_project(assigns), do: assigns.can_edit_project
 
   @impl true
   def handle_params(params, _url, socket) do
@@ -305,10 +301,10 @@ defmodule LightningWeb.ProjectLive.Settings do
 
     case Application.get_env(:lightning, :github_app) |> Map.new() do
       %{app_name: nil} ->
-        Logger.error("Github App Name not configured")
+        Logger.error("GitHub App Name not configured")
         # Send to sentry and show cozy error
         error =
-          GithubError.misconfigured("Github App Name Misconfigured", %{
+          GithubError.misconfigured("GitHub App Name Misconfigured", %{
             app_name: nil
           })
 
@@ -342,7 +338,7 @@ defmodule LightningWeb.ProjectLive.Settings do
     case Application.get_env(:lightning, :github_app) |> Map.new() do
       %{app_name: nil} ->
         error =
-          GithubError.misconfigured("Github App Name Misconfigured", %{
+          GithubError.misconfigured("GitHub App Name Misconfigured", %{
             app_name: nil
           })
 
@@ -477,7 +473,7 @@ defmodule LightningWeb.ProjectLive.Settings do
         {:noreply, socket |> assign(repos: repos)}
 
       # while it's possible to trigger this state when testing
-      # Github makes it pretty impossible to arrive here
+      # GitHub makes it pretty impossible to arrive here
       _ ->
         {:noreply, socket}
     end
@@ -613,5 +609,13 @@ defmodule LightningWeb.ProjectLive.Settings do
       {:error, %Ecto.Changeset{} = changeset} ->
         {:noreply, assign(socket, :project_changeset, changeset)}
     end
+  end
+
+  def permissions_message(assigns) do
+    ~H"""
+    <small id="permission" class="mt-2 text-red-700">
+      Role based permissions: You cannot modify this project's <%= @section %>
+    </small>
+    """
   end
 end

@@ -391,7 +391,7 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodModalComponent do
 
   defp auth_methods_table(assigns) do
     ~H"""
-    <div class="mt-4">
+    <div class="-my-4 mx-px">
       <LightningWeb.WorkflowLive.Components.webhook_auth_methods_table
         auth_methods={@project_auth_methods}
         current_user={@current_user}

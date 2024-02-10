@@ -14,7 +14,7 @@ defmodule LightningWeb.VersionControlController do
       |> put_resp_content_type("text/plain")
       |> send_resp(
         200,
-        "Github installation updated successfully; you may close this page or navigate to any OpenFn project which uses this installation: #{params["installation_id"]}"
+        "GitHub installation updated successfully; you may close this page or navigate to any OpenFn project which uses this installation: #{params["installation_id"]}"
       )
     else
       {:ok, project_repo_connection} =

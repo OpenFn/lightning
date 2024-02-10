@@ -43,7 +43,7 @@ defmodule LightningWeb.ProjectLive.DeleteConnectionModal do
             >
               <div>
                 <span class="text-black">
-                  Remove Github Connection
+                  Remove GitHub Connection
                 </span>
                 <hr />
                 <div class="hidden sm:block" aria-hidden="true">

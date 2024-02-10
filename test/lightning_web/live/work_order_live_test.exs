@@ -243,8 +243,7 @@ defmodule LightningWeb.WorkOrderLiveTest do
 
       dataclip_html = Floki.raw_html(dataclip_element)
 
-      assert dataclip_html =~
-               "The input dataclip is unavailable and has not been stored"
+      assert dataclip_html =~ "The input dataclip is unavailable"
 
       assert dataclip_html =~ "Go to data storage settings",
              "User sees link to go to settings"
@@ -279,8 +278,7 @@ defmodule LightningWeb.WorkOrderLiveTest do
         |> hd()
         |> Floki.raw_html()
 
-      assert dataclip_html =~
-               "The input dataclip is unavailable and has not been stored"
+      assert dataclip_html =~ "The input dataclip is unavailable"
 
       refute dataclip_html =~ "Go to data storage settings",
              "User cannot see link to go to settings"

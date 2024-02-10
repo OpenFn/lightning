@@ -140,7 +140,7 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
                   id={"select_#{@work_order.id}_tooltip"}
                   class="cursor-pointer"
                   phx-hook="Tooltip"
-                  data-placement="right"
+                  data-placement="top"
                   data-allow-html="true"
                   aria-label={
                     rerun_zero_persistence_tooltip_message(
@@ -345,8 +345,8 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
   defp wiped_dataclip_tooltip_message(project_id, can_edit_retention) do
     """
     <span class="text-center">
-    The input dataclip is unavailable and has not been stored<br>
-    due to the data retention policy set in the project.<br>
+    The input dataclip is unavailable due to this project's data retention policy.
+    <br>
     #{zero_persistence_action_message(project_id, can_edit_retention)}
     </span>
     """

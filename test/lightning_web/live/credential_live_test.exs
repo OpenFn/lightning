@@ -1152,6 +1152,18 @@ defmodule LightningWeb.CredentialLiveTest do
       bypass: bypass,
       conn: conn
     } do
+      # TODO: replace this with a proper Mock via Lightning.Config
+      Lightning.ApplicationHelpers.put_temporary_env(:lightning, :oauth_clients,
+        google: [client_id: "foo"],
+        salesforce: [
+          client_id: "foo",
+          client_secret: "bar",
+          wellknown_url: "http://localhost:#{bypass.port}/auth/.well-known",
+          introspect_url:
+            "http://localhost:#{bypass.port}/services/oauth2/introspect"
+        ]
+      )
+
       expect_wellknown(bypass)
 
       {:ok, index_live, _html} = live(conn, ~p"/credentials")
@@ -1585,7 +1597,7 @@ defmodule LightningWeb.CredentialLiveTest do
     test "shows a warning that Google Sheets isn't available", %{conn: conn} do
       # TODO: replace this with a proper Mock via Lightning.Config
       Lightning.ApplicationHelpers.put_temporary_env(:lightning, :oauth_clients,
-        google: []
+        google: [client_id: true]
       )
 
       {:ok, index_live, _html} = live(conn, ~p"/credentials")
