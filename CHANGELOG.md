@@ -16,13 +16,23 @@ and this project adheres to
 
 ## [v2.0.0] - 2024-02-10
 
-At the time of writing there are no more big changes planned and testing has
-gone well. Thanks to everyone who's helping to kick the tyres during the "rc"
-phase. There are still a _lot of **new features** coming_, so please keep an eye
-on our [public roadmap](https://github.com/orgs/OpenFn/projects/3) to stay
-abreast of our core team's backlog and, as always, head over to the
-[**Contributing**](https://github.com/OpenFn/lightning/?tab=readme-ov-file#contribute-to-this-project)
-section to lend a hand!
+> At the time of writing there are no more big changes planned and testing has
+> gone well. Thanks to everyone who's helped to kick the tyres during the "rc"
+> phase. There are still a _lot of **new features** coming_, so please:
+>
+> - watch our [**Public Roadmap**](https://github.com/orgs/OpenFn/projects/3) to
+>   stay abreast of our core team's backlog,
+> - request a feature in the
+>   [**Community Forum**](https://community.openfn.org),
+> - raise a
+>   [**new issue**](https://github.com/OpenFn/lightning/issues/new/choose) if
+>   you spot a bug,
+> - and head over to the
+>   [**Contributing**](https://github.com/OpenFn/lightning/?tab=readme-ov-file#contribute-to-this-project)
+>   section to lend a hand.
+>
+> Head to [**docs.openfn.org**](https://docs.openfn.org) for product
+> documentation and help with v1 to v2 migration.
 
 ### Added
 
