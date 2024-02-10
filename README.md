@@ -13,7 +13,7 @@ integration at all levels.
 **Or learn more at
 [docs.openfn.org](https://docs.openfn.org/documentation/about-lightning).**
 
-> OpenFn/Lightning is:
+> OpenFn **Lightning** is:
 >
 > - the **latest version** of OpenFn: first launched in 2014, it's been tried
 >   and tested by NGOs and governments in 40+ countries
