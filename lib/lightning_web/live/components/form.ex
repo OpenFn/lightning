@@ -360,6 +360,7 @@ defmodule LightningWeb.Components.Form do
   attr :form, :any, required: true
   attr :field, :any, required: true
   attr :title, :string
+  attr :logo, :string, default: nil
   attr :tooltip, :string
   attr :opts, :global, include: ~w(for value)
 
@@ -384,14 +385,28 @@ defmodule LightningWeb.Components.Form do
     ~H"""
     <%= if assigns[:tooltip] do %>
       <div class="flex flex-row">
-        <%= Phoenix.HTML.Form.label(@form, @field, @title, @opts) %>
+        <%= Phoenix.HTML.Form.label(@form, @field, @opts) do %>
+          <div class="flex items-center">
+            <%= @title %>
+            <%= if @logo do %>
+              <img src={@logo} class="w-3 h-3 ml-1" />
+            <% end %>
+          </div>
+        <% end %>
         <LightningWeb.Components.Common.tooltip
           id={"#{@field}-tooltip"}
           title={@tooltip}
         />
       </div>
     <% else %>
-      <%= Phoenix.HTML.Form.label(@form, @field, @title, @opts) %>
+      <%= Phoenix.HTML.Form.label(@form, @field, @opts) do %>
+        <div class="flex items-center">
+          <%= @title %>
+          <%= if @logo do %>
+            <img src={@logo} class="w-3 h-3 ml-1" />
+          <% end %>
+        </div>
+      <% end %>
     <% end %>
     """
   end

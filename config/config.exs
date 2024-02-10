@@ -120,9 +120,7 @@ config :lightning, Lightning.FailureAlerter,
   rate_limit: 3
 
 # Disables / Hides the credential transfer feature for beta (in LightningWeb.CredentialLive.Edit)
-config :lightning, LightningWeb,
-  allow_credential_transfer: false,
-  enable_google_credential: true
+config :lightning, LightningWeb, allow_credential_transfer: false
 
 # Rather than default  since httpc doesnt have certificate checking
 config :tesla, adapter: Tesla.Adapter.Hackney
