@@ -6,12 +6,12 @@ last-mile services to national-level reporting, it boosts efficiency &
 effectiveness while enabling secure, stable, scalable interoperability and data
 integration at all levels.
 
-**Use it online at [app.openfn.org](https://app.openfn.org).**
+**Use it online at [app.openfn.org](https://app.openfn.org)**
 
-**Explore in a sandbox on [demo.openfn.org](#demo-sandbox).**
+**Explore in a sandbox on [demo.openfn.org](#demo-sandbox)**
 
 **Or learn more at
-[docs.openfn.org](https://docs.openfn.org/documentation/about-lightning).**
+[docs.openfn.org](https://docs.openfn.org/documentation/about-lightning)**
 
 > OpenFn **Lightning** is:
 >
