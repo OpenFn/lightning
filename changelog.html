@@ -166,7 +166,16 @@ and this project adheres to
   </a>
   <span class="text">[v2.0.0] - 2024-02-10</span>
 </h2>
-<h3 id="added-1" class="section-heading">
+<blockquote><p>At the time of writing there are no more big changes planned and testing has
+gone well. Thanks to everyone who's helped to kick the tyres during the &quot;rc&quot;
+phase. There are still a <em>lot of <strong>new features</strong> coming</em>, so please:</p><ul><li>watch our <a href="https://github.com/orgs/OpenFn/projects/3"><strong>Public Roadmap</strong></a> to
+stay abreast of our core team's backlog,</li><li>request a feature in the
+<a href="https://community.openfn.org"><strong>Community Forum</strong></a>,</li><li>raise a
+<a href="https://github.com/OpenFn/lightning/issues/new/choose"><strong>new issue</strong></a> if
+you spot a bug,</li><li>and head over to the
+<a href="https://github.com/OpenFn/lightning/?tab=readme-ov-file#contribute-to-this-project"><strong>Contributing</strong></a>
+section to lend a hand.</li></ul><p>Head to <a href="https://docs.openfn.org"><strong>docs.openfn.org</strong></a> for product
+documentation and help with v1 to v2 migration.</p></blockquote><h3 id="added-1" class="section-heading">
   <a href="#added-1" class="hover-link">
     <i class="ri-link-m" aria-hidden="true"></i>
   </a>
@@ -178,7 +187,7 @@ and this project adheres to
   </a>
   <span class="text">Changed</span>
 </h3>
-<ul><li>Only show GoogleSheets and Salesforce credential options if Oauth clients are
+<ul><li>Bump <code class="inline">@openfn/worker</code> to <code class="inline">v0.8.1</code></li><li>Only show GoogleSheets and Salesforce credential options if Oauth clients are
 registered with the instance via ENV
 <a href="https://github.com/OpenFn/Lightning/issues/1734">#1734</a></li></ul><h3 id="fixed-1" class="section-heading">
   <a href="#fixed-1" class="hover-link">
@@ -866,7 +875,7 @@ work orders up to <code class="inline">v0.10.0</code>, though the granularity of
 will be less than <code class="inline">v0.10.0</code> and the final states are not guaranteed to be
 accurate for workflows with multiple branches and leaf nodes with varying exit
 reasons.</p><p>The migration scripts can be run with a single function call in SetupUtils from
-a connect <code class="inline">iex</code> session:</p><pre><code class="makeup elixir" translate="no"><span class="nc">Lightning.SetupUtils</span><span class="o">.</span><span class="n">approximate_state_for_attempts_and_workorders</span><span class="p" data-group-id="0892531789-1">(</span><span class="p" data-group-id="0892531789-1">)</span></code></pre><p>Note that (like lots of <em>other</em> functionality in <code class="inline">SetupUtils</code>, calling this
+a connect <code class="inline">iex</code> session:</p><pre><code class="makeup elixir" translate="no"><span class="nc">Lightning.SetupUtils</span><span class="o">.</span><span class="n">approximate_state_for_attempts_and_workorders</span><span class="p" data-group-id="2485966068-1">(</span><span class="p" data-group-id="2485966068-1">)</span></code></pre><p>Note that (like lots of <em>other</em> functionality in <code class="inline">SetupUtils</code>, calling this
 function is a destructive action and you should only do it if you've backed up
 your data and you know what you're doing.)</p><p>As always, we recommend backing up your data before migrating. (And thanks for
 bearing with us as we move towards our first stable Lightning release.)</p><h3 id="added-23" class="section-heading">
