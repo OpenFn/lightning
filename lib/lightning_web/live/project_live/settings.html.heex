@@ -847,12 +847,12 @@
                   </p>
                 </div>
                 <div class="mt-4">
-                  <.button
-                    color_class="p-2 bg-neutral-200 hover:bg-neutral-300 text-neutral-950"
+                  <button
+                    class="mt-3 mr-1 inline-flex w-full justify-center rounded-md px-3 py-2 text-sm font-semibold shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:mt-0 sm:w-auto bg-white text-gray-900"
                     phx-click="cancel-retention-change"
                   >
                     Cancel
-                  </.button>
+                  </button>
                   <Form.submit_button
                     disabled={
                       not @project_changeset.valid? or
