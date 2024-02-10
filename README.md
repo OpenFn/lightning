@@ -13,12 +13,10 @@ integration at all levels.
 **Or learn more at
 [docs.openfn.org](https://docs.openfn.org/documentation/about-lightning).**
 
-> [!TIP]
->
 > OpenFn/Lightning is:
 >
-> - the latest version of OpenFn: first launched in 2014, it's been tried and
->   tested by NGOs and governments in 40+ countries
+> - the **latest version** of OpenFn: first launched in 2014, it's been tried
+>   and tested by NGOs and governments in 40+ countries
 > - fully **open source**: there's no "community edition" and "premium edition",
 >   you get the same product whether you are self-hosting or using the
 >   OpenFn.org software-as-a-service
