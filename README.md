@@ -26,7 +26,7 @@ integration at all levels.
 >   certified **Global Good for Health**
 
 <p align="center">
-  <img width="880" alt="image" src="https://github.com/OpenFn/lightning/assets/8732845/1d5fcd81-cc4a-4458-bb24-f04ebf22893d">
+  <img height="400" alt="image" src="https://github.com/OpenFn/lightning/assets/8732845/1d5fcd81-cc4a-4458-bb24-f04ebf22893d">
 </p>
 
 ## Contents
@@ -102,8 +102,11 @@ Monitor all workflow activity in one place.
 
 ### Manage
 
-Manage users and access by project
-![Screenshot 2023-03-21 at 10 09 03](https://user-images.githubusercontent.com/36554605/226538682-e7f43407-2363-41eb-bee8-73307e7f3cf3.png)
+Manage users and access by project.
+
+<p align="center">
+  <img width="2560" alt="image" src="https://github.com/OpenFn/lightning/assets/8732845/5411e6a6-14f2-4ff1-a37f-d4156cf40e97">
+</p>
 
 ### Roles and permissions
 
