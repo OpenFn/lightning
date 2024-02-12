@@ -48,11 +48,6 @@ Lightning.Extensions.UsageLimiting.html
 Lightning.FailureNotifierView.html
 Lightning.Graph.html
 Lightning.Helpers.html
-Lightning.ImpactTracking.Client.html
-Lightning.ImpactTracking.Configuration.html
-Lightning.ImpactTracking.Report.html
-Lightning.ImpactTracking.ResponseProcessor.html
-Lightning.ImpactTracking.Worker.html
 Lightning.Invocation.Dataclip.html
 Lightning.Invocation.LogLine.html
 Lightning.Invocation.Query.html
@@ -104,6 +99,11 @@ Lightning.SetupUtils.Ticker.html
 Lightning.SetupUtils.html
 Lightning.TaskWorker.html
 Lightning.UnixDateTime.html
+Lightning.UsageTracking.Client.html
+Lightning.UsageTracking.Configuration.html
+Lightning.UsageTracking.Report.html
+Lightning.UsageTracking.ResponseProcessor.html
+Lightning.UsageTracking.Worker.html
 Lightning.Validators.html
 Lightning.Vault.html
 Lightning.VersionControl.GithubClient.html
@@ -257,8 +257,8 @@ dist/merriweather-latin-ext-300-normal-K6L27CZ5.woff2
 dist/merriweather-vietnamese-300-italic-EHHNZPUO.woff2
 dist/merriweather-vietnamese-300-normal-U376L4Z4.woff2
 dist/remixicon-NKANDIL5.woff2
-dist/search_data-60F66AE0.js
-dist/sidebar_items-42859433.js
+dist/search_data-B44A8258.js
+dist/sidebar_items-65588887.js
 index.html
 provisioning.html
 readme.html
