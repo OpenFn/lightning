@@ -96,13 +96,6 @@ defmodule Lightning.WorkOrders do
     end)
     |> Multi.put(:workflow, manual.workflow)
     |> broadcast_workorder_creation()
-    |> Multi.run(
-      :broadcast_run,
-      fn _repo, %{workorder: %{runs: [run], workflow: workflow}} ->
-        Events.run_created(workflow.project_id, run)
-        {:ok, nil}
-      end
-    )
     |> transact_and_return_work_order()
   end
 
@@ -110,7 +103,8 @@ defmodule Lightning.WorkOrders do
     multi
     |> Multi.run(
       :broadcast_workorder,
-      fn _repo, %{workorder: workorder, workflow: workflow} ->
+      fn _repo, %{workorder: %{runs: runs} = workorder, workflow: workflow} ->
+        Enum.each(runs, &Events.run_created(workflow.project_id, &1))
         Events.work_order_created(workflow.project_id, workorder)
         {:ok, nil}
       end

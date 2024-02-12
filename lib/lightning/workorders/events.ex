@@ -13,7 +13,7 @@ defmodule Lightning.WorkOrders.Events do
 
   defmodule RunCreated do
     @moduledoc false
-    defstruct run: nil
+    defstruct run: nil, project_id: nil
   end
 
   defmodule RunUpdated do
@@ -38,7 +38,7 @@ defmodule Lightning.WorkOrders.Events do
   def run_created(project_id, run) do
     Lightning.broadcast(
       topic(project_id),
-      %RunCreated{run: run}
+      %RunCreated{run: run, project_id: project_id}
     )
   end
 
