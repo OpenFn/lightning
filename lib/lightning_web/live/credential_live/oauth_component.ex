@@ -522,7 +522,7 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
 
         {:ok, socket |> assign(authorizing: false, client: client)}
 
-      {:error, %OAuth2.Response{status_code: 400, body: body}} ->
+      {:error, %OAuth2.Response{body: body}} ->
         Logger.error("Failed retrieving token from provider:\n#{inspect(body)}")
 
         send_update(self(), __MODULE__,
