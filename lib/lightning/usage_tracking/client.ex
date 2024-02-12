@@ -1,12 +1,12 @@
-defmodule Lightning.ImpactTracking.Client do
+defmodule Lightning.UsageTracking.Client do
   @moduledoc """
-  Client for Impact Tracker service
+  Client for Usage Tracker service
 
 
   """
   use Tesla, only: [:post], docs: false
 
-  alias Lightning.ImpactTracking.ResponseProcessor
+  alias Lightning.UsageTracking.ResponseProcessor
 
   def submit_metrics(metrics, host) do
     build_client(host)

@@ -1,4 +1,4 @@
-defmodule Lightning.ImpactTracking.ResponseProcessor do
+defmodule Lightning.UsageTracking.ResponseProcessor do
   @moduledoc """
   Utility module to abstract deaing with some of the Tesla plumbing
 

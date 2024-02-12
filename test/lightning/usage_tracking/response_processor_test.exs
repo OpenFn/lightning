@@ -1,7 +1,7 @@
-defmodule Lightning.ImpactTracking.ResponseProcessorTest do
+defmodule Lightning.UsageTracking.ResponseProcessorTest do
   use ExUnit.Case
 
-  alias Lightning.ImpactTracking.ResponseProcessor
+  alias Lightning.UsageTracking.ResponseProcessor
 
   test "returns false with a status outside the 2xx range" do
     env = %Tesla.Env{status: 199}
