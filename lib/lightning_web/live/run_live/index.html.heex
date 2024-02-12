@@ -12,7 +12,7 @@
           <.form
             :let={f}
             for={@filters_changeset}
-            id="run-filter-form"
+            id="workorder-filter-form"
             as={:filters}
             phx-change="apply_filters"
             phx-submit="apply_filters"
@@ -34,10 +34,7 @@
                     >
                       <span>
                         <%= if workflow_id = get_change(@filters_changeset, :workflow_id) do %>
-                          <%= Enum.find(@workflows, fn {_name, id} ->
-                            id == workflow_id
-                          end)
-                          |> elem(0) %>
+                          <%= find_workflow_name(@workflows, workflow_id) %>
                         <% else %>
                           Any
                         <% end %>
@@ -102,12 +99,12 @@
                       phx-click={show_dropdown("status_filter_dropdown")}
                     >
                       <span>
-                        <%= if Enum.all?(@statuses, fn status -> checked(@filters_changeset, status.id) end) do %>
-                          Any
-                        <% else %>
+                        <%= if Enum.any?(@statuses, fn status -> checked?(@filters_changeset, status.id) end) do %>
                           <%= Enum.count(@statuses, fn status ->
-                            checked(@filters_changeset, status.id)
+                            checked?(@filters_changeset, status.id)
                           end) %> Selected
+                        <% else %>
+                          Any
                         <% end %>
                       </span>
                       <svg
@@ -133,19 +130,16 @@
                     id="status_filter_dropdown"
                     phx-click-away={hide_dropdown("status_filter_dropdown")}
                   >
-                    <div class="py-1" role="none">
-                      <div class="px-4 py-1 text-gray-500 text-sm">
-                        Workorder
-                      </div>
+                    <div class="pt-2 pb-1" role="none">
                       <!-- Active: "bg-gray-100 text-gray-900", Not Active: "text-gray-700" -->
                       <%= for status <- @statuses do %>
                         <div class="px-4 py-1 text-gray-700 text-sm">
                           <%= Phoenix.HTML.Form.checkbox(
                             f,
                             status.id,
-                            checked: checked(@filters_changeset, status.id),
+                            checked: checked?(@filters_changeset, status.id),
                             class:
-                              "mb-1 mr-1/2 h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                              "mb-1 mr-1 h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
                           ) %>
                           <%= Phoenix.HTML.Form.label(f, status.label) %>
                         </div>
@@ -308,10 +302,7 @@
         <div class="mt-2">
           <%= if workflow_id = get_change(@filters_changeset, :workflow_id) do %>
             <span class="inline-flex items-center gap-x-0.5 rounded-md bg-blue-100 px-2 py-1 text-xs font-medium text-blue-700">
-              Workflow: <%= Enum.find(@workflows, fn {_name, id} ->
-                id == workflow_id
-              end)
-              |> elem(0) %>
+              Workflow: <%= find_workflow_name(@workflows, workflow_id) %>
               <.form
                 :let={f}
                 for={@filters_changeset}
@@ -340,42 +331,40 @@
             </span>
           <% end %>
 
-          <%= if !Enum.all?(@statuses, fn status -> checked(@filters_changeset, status.id) end) do %>
-            <%= for status <- Enum.filter(@statuses, fn status -> checked(@filters_changeset, status.id) end)  do %>
-              <span class="inline-flex items-center gap-x-0.5 rounded-md bg-blue-100 px-2 py-1 text-xs font-medium text-blue-700">
-                Work order status: <%= status.label %>
-                <.form
-                  :let={f}
-                  for={@filters_changeset}
-                  as={:filters}
-                  class="inline"
-                  phx-submit="apply_filters"
+          <%= for status <- Enum.filter(@statuses, fn status -> checked?(@filters_changeset, status.id) end)  do %>
+            <span class="inline-flex items-center gap-x-0.5 rounded-md bg-blue-100 px-2 py-1 text-xs font-medium text-blue-700">
+              Work order status: <%= status.label %>
+              <.form
+                :let={f}
+                for={@filters_changeset}
+                as={:filters}
+                class="inline"
+                phx-submit="apply_filters"
+              >
+                <%= Phoenix.HTML.Form.hidden_input(f, status.id,
+                  id: "workorder_status_chip_#{status.id}",
+                  value: false
+                ) %>
+                <button
+                  type="submit"
+                  class="group relative -mr-1 h-3.5 w-3.5 rounded-sm hover:bg-blue-600/20"
                 >
-                  <%= Phoenix.HTML.Form.hidden_input(f, status.id,
-                    id: "workorder_status_chip_#{status.id}",
-                    value: false
-                  ) %>
-                  <button
-                    type="submit"
-                    class="group relative -mr-1 h-3.5 w-3.5 rounded-sm hover:bg-blue-600/20"
+                  <span class="sr-only">Remove</span>
+                  <svg
+                    viewBox="0 0 14 14"
+                    class="h-3.5 w-3.5 stroke-blue-800/50 group-hover:stroke-blue-800/75"
                   >
-                    <span class="sr-only">Remove</span>
-                    <svg
-                      viewBox="0 0 14 14"
-                      class="h-3.5 w-3.5 stroke-blue-800/50 group-hover:stroke-blue-800/75"
-                    >
-                      <path d="M4 4l6 6m0-6l-6 6" />
-                    </svg>
-                    <span class="absolute -inset-1"></span>
-                  </button>
-                </.form>
-              </span>
-            <% end %>
+                    <path d="M4 4l6 6m0-6l-6 6" />
+                  </svg>
+                  <span class="absolute -inset-1"></span>
+                </button>
+              </.form>
+            </span>
           <% end %>
 
           <%= if get_change(@filters_changeset, :wo_date_after) || get_change(@filters_changeset, :wo_date_before) do %>
             <span class="inline-flex items-center gap-x-0.5 rounded-md bg-blue-100 px-2 py-1 text-xs font-medium text-blue-700">
-              Workorder: <%= @filters_changeset
+              <%= @filters_changeset
               |> get_change(:wo_date_after)
               |> maybe_humanize_date() || "*" %> - <%= @filters_changeset
               |> get_change(:wo_date_before)
@@ -454,18 +443,23 @@
 
         <div>
           <div class="mt-2">
-            <div class="flex justify-between items-center">
-              <div>
-                <p class="text-xl text-gray-500 font-medium">
-                  <%= if search = get_change(@filters_changeset, :search_term) do %>
-                    <%= @page.total_entries %> Work Orders with runs matching "<%= search %>"
-                  <% else %>
-                    Work Orders
+            <div class="flex justify-between items-end">
+              <div class="text-md text-gray-500 font-medium truncate w-full">
+                <%= if search = get_change(@filters_changeset, :search_term) do %>
+                  <%= @page.total_entries %><%= if @page.total_entries >=
+                                                     @string_search_limit,
+                                                   do: "+" %> work orders with runs matching "<%= search %>"
+                  <%= if @page.total_entries >= @string_search_limit do %>
+                    <span class="text-xs text-gray">
+                      (try more specific filters)
+                    </span>
                   <% end %>
-                </p>
+                <% else %>
+                  Work Orders
+                <% end %>
               </div>
-              <div>
-                <div class="w-full flex items-center gap-2">
+              <div class="flex w-full justify-end grow">
+                <div class="flex items-end gap-1">
                   <.form
                     :let={f}
                     for={@filters_changeset}
@@ -473,7 +467,7 @@
                     as={:filters}
                     phx-submit="apply_filters"
                   >
-                    <div class="relative rounded-md shadow-sm">
+                    <div class="relative rounded-md shadow-sm flex grow">
                       <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
                         <Heroicons.magnifying_glass class="h-5 w-5 text-gray-400" />
                       </div>
@@ -503,58 +497,44 @@
                       </div>
                     </div>
                   </.form>
-                  <div id="search_button_group" class="hidden">
-                    <div class="inline-flex overflow-hidden bg-white border divide-x rounded-lg dark:bg-gray-900 rtl:flex-row-reverse dark:border-gray-700 dark:divide-gray-700">
-                      <.form
-                        :let={f}
-                        for={@filters_changeset}
-                        as={:filters}
-                        phx-submit="apply_filters"
-                        class="inline"
-                        id="run-both-search-form"
-                      >
-                        <%= for search_field <- @search_fields do %>
-                          <%= Phoenix.HTML.Form.hidden_input(f, search_field.id,
-                            value: true
-                          ) %>
+                  <div id="search_button_group" class="hidden flex text-right">
+                    <.form
+                      :let={f}
+                      for={@filters_changeset}
+                      as={:filters}
+                      phx-change="apply_filters"
+                      class="isolate inline-flex rounded-md shadow-sm"
+                      id="run-toggle-form"
+                    >
+                      <%= for {search_field, index} <- Enum.with_index(@search_fields) do %>
+                        <%= Phoenix.HTML.Form.checkbox(f, search_field.id,
+                          class: "absolute invisible",
+                          style: "left: -9999px"
+                        ) %>
+                        <%= Phoenix.HTML.Form.label f, search_field.id, id: "search-button-#{search_field.label}",
+                          role: "button", phx_hook: "Tooltip", data: [placement: "top"],
+                          class: "relative inline-flex items-center",
+                          aria_label: search_field.label do %>
+                          <div class={"#{if(index == 0, do: "rounded-l-md", else: "-ml-px")} #{if(index == 2, do: "rounded-r-md")}
+                           ring-1 ring-inset ring-gray-300 px-3 py-2 text-sm
+                           font-semibold text-gray-500 hover:bg-gray-100 focus:z-10
+                           #{if(checked?(@filters_changeset, search_field.id), do: "bg-gray-200", else: "bg-white")}
+                           "}>
+                            <.icon
+                              name={search_field.icon}
+                              class={"h-4 w-4 inline-block align-middle #{checked?(@filters_changeset, search_field.id) && "text-indigo-800"}"}
+                            />
+                          </div>
                         <% end %>
-                        <button
-                          type="submit"
-                          class={"px-3 py-2 text-sm text-gray-800 dark:hover:bg-gray-800 dark:text-gray-300 hover:bg-gray-100 #{if(Enum.all?(@search_fields, fn search_field -> checked(@filters_changeset, search_field.id) end), do: "bg-gray-300")}"}
-                        >
-                          Both
-                        </button>
-                      </.form>
-                      <%= for search_field <- @search_fields do %>
-                        <.form
-                          :let={f}
-                          for={@filters_changeset}
-                          as={:filters}
-                          phx-submit="apply_filters"
-                          class="inline"
-                          id={"run-#{search_field.id}-search-form"}
-                        >
-                          <%= for other_field <- @search_fields -- [search_field] do %>
-                            <%= Phoenix.HTML.Form.hidden_input(f, other_field.id,
-                              value: false
-                            ) %>
-                          <% end %>
-                          <%= Phoenix.HTML.Form.hidden_input(f, search_field.id,
-                            value: true
-                          ) %>
-                          <button
-                            type="submit"
-                            class={"px-3 py-2 text-sm text-gray-800  dark:hover:bg-gray-800 dark:text-gray-300 hover:bg-gray-100 #{if(checked(@filters_changeset, search_field.id) && !Enum.all?(@search_fields -- [search_field], fn other_field -> checked(@filters_changeset, other_field.id) end), do: "bg-gray-300")}"}
-                          >
-                            <%= search_field.label %>
-                          </button>
-                        </.form>
                       <% end %>
-                    </div>
+                    </.form>
                     <button
                       type="submit"
                       form="run-search-form"
-                      class="rounded-md bg-indigo-600 px-5 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
+                      class="rounded-md bg-indigo-600 px-5 py-2 text-sm font-semibold
+                      text-white shadow-sm hover:bg-indigo-500 focus-visible:outline
+                      focus-visible:outline-2 focus-visible:outline-offset-2
+                      focus-visible:outline-indigo-600 truncate"
                     >
                       Search
                     </button>
@@ -586,6 +566,7 @@
                       <div class="">
                         <.form
                           :let={f}
+                          :if={@page.entries != []}
                           for={
                             %{
                               "all_selections" =>
@@ -611,7 +592,7 @@
                           <div>
                             <p class="text-sm mb-1">Workflow Name</p>
                             <span class="text-gray-700 mt-2 font-medium">
-                              WORK ORDER ID .
+                              WORK ORDER ID &bull;
                               <span class="font-normal text-xs whitespace-nowrap text-ellipsis
                             bg-gray-200 p-1 rounded-md font-mono">
                                 INPUT
@@ -671,7 +652,7 @@
                     class="px-4 py-3.5 text-sm font-normal text-left rtl:text-right text-gray-500"
                   >
                     <div>
-                      <p class="text-sm text-gray-500 mb-1">Run</p>
+                      <p class="text-sm text-gray-500 mb-1">Step</p>
                       <span class="text-gray-700 mt-2 font-medium">
                         STARTED AT
                       </span>
@@ -683,7 +664,7 @@
                     class="px-4 py-3.5 text-sm font-normal text-left rtl:text-right text-gray-500"
                   >
                     <div>
-                      <p class="text-sm text-gray-500 mb-1">Run</p>
+                      <p class="text-sm text-gray-500 mb-1">Step</p>
                       <span class="text-gray-700 mt-2 font-medium">
                         FINISHED AT
                       </span>
@@ -707,20 +688,38 @@
                   data-entity="work_order_list"
                   class="bg-white divide-y divide-gray-200 text-gray-500"
                 >
-                  <%= for wo <- @page.entries do %>
-                    <.live_component
-                      module={LightningWeb.RunLive.WorkOrderComponent}
-                      id={wo.id}
-                      work_order={wo}
-                      project={@project}
-                      can_rerun_job={@can_rerun_job}
-                    />
-                  <% end %>
+                  <.async_result :let={searched_page} assign={@async_page}>
+                    <:loading>
+                      <Components.async_filler
+                        message="Loading work orders ..."
+                        class="animate-pulse"
+                      />
+                    </:loading>
+                    <:failed :let={_reason}>
+                      <Components.async_filler message="There was an error loading the work orders" />
+                    </:failed>
+                    <%= for workorder <- searched_page.entries do %>
+                      <.live_component
+                        module={LightningWeb.RunLive.WorkOrderComponent}
+                        id={workorder.id}
+                        work_order={workorder}
+                        project={@project}
+                        can_edit_data_retention={@can_edit_data_retention}
+                        can_run_workflow={@can_run_workflow}
+                        entry_selected={
+                          Enum.any?(@selected_work_orders, fn wo ->
+                            wo.id == workorder.id
+                          end)
+                        }
+                      />
+                    <% end %>
+                  </.async_result>
                 </div>
               </div>
 
               <LightningWeb.Pagination.pagination_bar
                 page={@page}
+                async_page={@async_page}
                 url={@pagination_path}
               />
             </div>

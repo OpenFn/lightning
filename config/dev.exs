@@ -16,6 +16,12 @@ config :lightning, Lightning.Repo,
 # watchers to your application. For example, we use it
 # with esbuild to bundle .js and .css sources.
 config :lightning, LightningWeb.Endpoint,
+  url: [host: "localhost", port: 4000, scheme: "http"],
+  http: [
+    ip: {0, 0, 0, 0},
+    port: 4000,
+    compress: true
+  ],
   check_origin: false,
   code_reloader: true,
   debug_errors: true,
@@ -38,8 +44,7 @@ config :lightning, Lightning.Vault,
 
 config :lightning, Lightning.Runtime.RuntimeManager,
   start: true,
-  args: ~w(npm exec @openfn/ws-worker -- --backoff 0.5/5),
-  cd: Path.expand("../assets", __DIR__)
+  env: [{"NODE_OPTIONS", "--dns-result-order=ipv4first"}]
 
 # ## SSL Support
 #

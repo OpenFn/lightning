@@ -1,6 +1,11 @@
 defmodule LightningWeb.WorkerChannel do
-  alias Lightning.{Workers, Attempts}
+  @moduledoc """
+  Websocket channel to handle when workers join or claim something to run.
+  """
   use LightningWeb, :channel
+
+  alias Lightning.Runs
+  alias Lightning.Workers
 
   @impl true
   def join("worker:queue", _payload, %{assigns: %{token: token}} = socket) do
@@ -19,20 +24,23 @@ defmodule LightningWeb.WorkerChannel do
 
   @impl true
   def handle_in("claim", %{"demand" => demand}, socket) do
-    attempts =
-      Attempts.claim(demand)
-      |> then(fn {:ok, attempts} ->
-        attempts
-        |> Enum.map(fn attempt ->
-          token = Lightning.Workers.generate_attempt_token(attempt)
+    case Runs.claim(demand) do
+      {:ok, runs} ->
+        runs =
+          runs
+          |> Enum.map(fn run ->
+            token = Lightning.Workers.generate_run_token(run)
 
-          %{
-            "id" => attempt.id,
-            "token" => token
-          }
-        end)
-      end)
+            %{
+              "id" => run.id,
+              "token" => token
+            }
+          end)
 
-    {:reply, {:ok, %{attempts: attempts}}, socket}
+        {:reply, {:ok, %{runs: runs}}, socket}
+
+      {:error, changeset} ->
+        {:reply, {:error, LightningWeb.ChangesetJSON.error(changeset)}, socket}
+    end
   end
 end

@@ -2,12 +2,13 @@ defmodule LightningWeb.UserAuth do
   @moduledoc """
   The UserAuth controller.
   """
-
-  import Plug.Conn
-  import Phoenix.Controller
   use LightningWeb, :verified_routes
 
+  import Phoenix.Controller
+  import Plug.Conn
+
   alias Lightning.Accounts
+  alias Lightning.Accounts.UserToken
   alias LightningWeb.Router.Helpers, as: Routes
 
   # Make the remember me cookie valid for 60 days.
@@ -109,7 +110,7 @@ defmodule LightningWeb.UserAuth do
     conn
     |> renew_session()
     |> delete_resp_cookie(@remember_me_cookie)
-    |> redirect(to: "/")
+    |> redirect(to: "/users/log_in")
   end
 
   @doc """
@@ -163,9 +164,9 @@ defmodule LightningWeb.UserAuth do
   end
 
   defp update_last_used(token) do
-    Lightning.Accounts.UserToken.token_and_context_query(token, "api")
+    UserToken.token_and_context_query(token, "api")
     |> Lightning.Repo.one()
-    |> Lightning.Accounts.UserToken.last_used_changeset()
+    |> UserToken.last_used_changeset()
     |> Lightning.Repo.update!()
   end
 
@@ -223,7 +224,7 @@ defmodule LightningWeb.UserAuth do
 
           _ ->
             conn
-            |> put_flash(:error, "You must log in to access this page.")
+            # |> put_flash(:error, "You must log in to access this page.")
             |> maybe_store_return_to()
             |> redirect(to: Routes.user_session_path(conn, :new))
             |> halt()

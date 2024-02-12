@@ -44,13 +44,12 @@ const model = (model: Flow.Model) => {
       wfEdge.source_job_id = edge.source;
     }
 
-    if (edge.data?.condition) {
-      wfEdge.condition = edge.data.condition;
+    if (edge.data?.condition_type) {
+      wfEdge.condition_type = edge.data.condition_type;
     }
 
     workflow.edges.push(wfEdge as Lightning.Edge);
   });
-
   return workflow;
 };
 

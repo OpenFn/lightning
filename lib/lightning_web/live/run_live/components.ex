@@ -1,123 +1,446 @@
 defmodule LightningWeb.RunLive.Components do
   @moduledoc false
-  alias Lightning.Invocation
   use LightningWeb, :component
-  import LightningWeb.RouteHelpers
+
   alias Lightning.WorkOrders.SearchParams
   alias Phoenix.LiveView.JS
 
-  attr :project, :map, required: true
-  attr :attempt, :map, required: true
-  attr :can_rerun_job, :boolean, required: true
+  attr :run, Lightning.Run, required: true
 
-  def attempt_item(%{attempt: attempt} = assigns) do
-    runs = attempt.runs
-    last_run = List.last(runs)
+  def elapsed_indicator(assigns) do
+    ~H"""
+    <div
+      phx-hook="ElapsedIndicator"
+      data-start-time={as_timestamp(@run.started_at)}
+      data-finish-time={as_timestamp(@run.finished_at)}
+      id={"elapsed-indicator-#{@run.id}"}
+    />
+    """
+  end
+
+  defp as_timestamp(datetime) do
+    if datetime do
+      datetime |> DateTime.to_unix(:millisecond)
+    end
+  end
+
+  slot :inner_block
+  attr :class, :string, default: ""
+  attr :rest, :global
+
+  def detail_list(assigns) do
+    ~H"""
+    <ul
+      {@rest}
+      role="list"
+      class={["flex-1 @5xl/viewer:flex-none", "divide-y divide-gray-200", @class]}
+    >
+      <%= render_slot(@inner_block) %>
+    </ul>
+    """
+  end
+
+  slot :label do
+    attr :class, :string
+  end
+
+  slot :value
+
+  def list_item(assigns) do
+    ~H"""
+    <li class="px-4 py-4 sm:px-0">
+      <div class="flex justify-between items-baseline text-sm @md/viewer:text-base">
+        <%= for label <- @label do %>
+          <dt class={["font-medium items-center", label[:class]]}>
+            <%= render_slot(label) %>
+          </dt>
+        <% end %>
+        <dd class="text-gray-900 font-mono">
+          <%= render_slot(@value) %>
+        </dd>
+      </div>
+    </li>
+    """
+  end
+
+  attr :state, :atom, required: true
+
+  @spec state_pill(%{:state => any(), optional(any()) => any()}) ::
+          Phoenix.LiveView.Rendered.t()
+  @spec state_pill(map()) :: Phoenix.LiveView.Rendered.t()
+  def state_pill(%{state: state} = assigns) do
+    chip_styles = %{
+      # only workorder states...
+      pending: "bg-gray-200 text-gray-800",
+      running: "bg-blue-200 text-blue-800",
+      #  run and workorder states...
+      available: "bg-gray-200 text-gray-800",
+      claimed: "bg-blue-200 text-blue-800",
+      started: "bg-blue-200 text-blue-800",
+      success: "bg-green-200 text-green-800",
+      failed: "bg-red-200 text-red-800",
+      crashed: "bg-orange-200 text-orange-800",
+      cancelled: "bg-gray-500 text-gray-800",
+      killed: "bg-yellow-200 text-yellow-800",
+      exception: "bg-gray-800 text-white",
+      lost: "bg-gray-800 text-white"
+    }
+
+    assigns =
+      assign(assigns,
+        text: display_text_from_state(state),
+        classes: Map.get(chip_styles, state)
+      )
+
+    ~H"""
+    <span class={["my-auto whitespace-nowrap rounded-full
+    py-2 px-4 text-center align-baseline text-xs font-medium leading-none", @classes]}>
+      <%= @text %>
+    </span>
+    """
+  end
+
+  def display_text_from_state(state) do
+    case state do
+      # only workorder states...
+      :pending -> "Enqueued"
+      :running -> "Running"
+      # run & workorder states...
+      :available -> "Enqueued"
+      :claimed -> "Starting"
+      :started -> "Running"
+      atom -> to_string(atom) |> String.capitalize()
+    end
+  end
+
+  attr :step, Lightning.Invocation.Step, required: true
+  attr :class, :string, default: ""
+
+  def step_state_circle(%{step: step} = assigns) do
+    assigns =
+      assigns
+      |> update(:class, fn class ->
+        [
+          class,
+          case step.exit_reason do
+            "success" -> ["bg-green-200 text-green-800"]
+            "fail" -> ["bg-red-200 text-red-800"]
+            "crash" -> ["bg-orange-200 text-orange-800"]
+            "cancel" -> ["bg-gray-500 text-gray-800"]
+            "kill" -> ["bg-yellow-200 text-yellow-800"]
+            "exception" -> ["bg-gray-800 text-white"]
+            "lost" -> ["bg-gray-800 text-white"]
+            _ -> ["bg-blue-200 text-blue-800"]
+          end
+        ]
+      end)
+
+    ~H"""
+    <span class={[
+      "h-8 w-8 rounded-full",
+      "flex items-center justify-center",
+      "ring-8 ring-secondary-100",
+      @class
+    ]}>
+      <.step_state_icon step={@step} class="h-6 w-6" />
+    </span>
+    """
+  end
+
+  attr :step, Lightning.Invocation.Step, required: true
+  attr :class, :string, default: "h-4 w-4"
+
+  # credo:disable-for-next-line
+  def step_state_icon(%{step: step} = assigns) do
+    assigns = assign(assigns, title: step.exit_reason)
+
+    case {step.exit_reason, step.error_type} do
+      {"success", _} ->
+        ~H[<.icon title={@title} name="hero-check-circle" class={@class} />]
+
+      {"fail", _} ->
+        ~H[<.icon title={@title} name="hero-x-circle" class={@class} />]
+
+      {"crash", _} ->
+        ~H[<.icon title={@title} name="hero-x-circle" class={@class} />]
+
+      {"cancel", _} ->
+        ~H[<.icon title={@title} name="hero-check-circle" class={@class} />]
+
+      {"kill", error_type} when error_type in ["SecurityError", "ImportError"] ->
+        ~H[<.icon title={@title} name="hero-shield-exclamation" class={@class} />]
+
+      {"kill", error_type} when error_type == "TimeoutError" ->
+        ~H[<.icon title={@title} name="hero-clock" class={@class} />]
+
+      {"kill", _} ->
+        ~H[<.icon title={@title} name="hero-exclamation-circle" class={@class} />]
+
+      {"exception", _} ->
+        ~H[<.icon title={@title} name="hero-exclamation-triangle" class={@class} />]
+
+      {"lost", _} ->
+        ~H[<.icon title={@title} name="hero-exclamation-triangle" class={@class} />]
+
+      _ ->
+        ~H[<.icon title="running" name="hero-ellipsis-horizontal" class={@class} />]
+    end
+  end
+
+  @doc """
+  Renders a list of steps for the run
+  """
+  attr :steps, :list, required: true
+  attr :rest, :global
+  slot :inner_block, required: true
+
+  def step_list(assigns) do
+    ~H"""
+    <ul {@rest} role="list" class="-mb-8">
+      <li :for={step <- @steps} data-step-id={step.id} class="group">
+        <div class="relative pb-8">
+          <span
+            class="absolute left-4 top-4 -ml-px h-full w-0.5 bg-gray-200 group-last:hidden"
+            aria-hidden="true"
+          >
+          </span>
+          <%= render_slot(@inner_block, step) %>
+        </div>
+      </li>
+    </ul>
+    """
+  end
+
+  attr :step, Lightning.Invocation.Step, required: true
+  attr :is_clone, :boolean, default: false
+  attr :show_inspector_link, :boolean, default: false
+  attr :run_id, :string
+  attr :project_id, :string
+  attr :selected, :boolean, default: false
+  attr :class, :string, default: ""
+  attr :rest, :global
+
+  def step_item(assigns) do
+    # TODO - add dataclip and workorder
+    # <> "?i=DATACLIP_ID&m=expand&wo=WORKORDER_ID"
+
+    ~H"""
+    <div
+      class={[
+        "relative flex space-x-3 border-r-4",
+        if(@selected,
+          do: "border-primary-500",
+          else: "border-transparent hover:border-gray-300"
+        ),
+        @class
+      ]}
+      {@rest}
+    >
+      <div class="flex items-center">
+        <.step_state_circle step={@step} />
+      </div>
+      <div class={[
+        "flex min-w-0 flex-1 space-x-1 pt-1.5 pr-1.5",
+        if(@is_clone, do: "opacity-50")
+      ]}>
+        <%= if @is_clone do %>
+          <div class="flex">
+            <span
+              class="cursor-pointer"
+              id={"clone_" <> @step.id}
+              aria-label="This step was originally executed in a previous run.
+                    It was skipped in this run; the original output has been
+                    used as the starting point for downstream jobs."
+              phx-hook="Tooltip"
+              data-placement="bottom"
+            >
+              <Heroicons.paper_clip
+                mini
+                class="mr-1 mt-1 h-3 w-3 flex-shrink-0 text-gray-500"
+              />
+            </span>
+          </div>
+        <% end %>
+        <div class="flex text-sm space-x-1 text-gray-900">
+          <%= @step.job.name %>
+          <%= if @show_inspector_link do %>
+            <.link navigate={
+                ~p"/projects/#{@project_id}/w/#{@step.job.workflow_id}"
+                  <> "?a=#{@run_id}&m=expand&s=#{@step.job_id}"
+              }>
+              <.icon
+                title="Inspect Step"
+                name="hero-document-magnifying-glass-mini"
+                class="h-4 w-4 mb-2 hover:text-primary-400"
+              />
+            </.link>
+          <% end %>
+        </div>
+        <div class="flex-grow whitespace-nowrap text-right text-sm text-gray-500">
+          <.step_duration step={@step} />
+        </div>
+      </div>
+    </div>
+    """
+  end
+
+  defp step_duration(assigns) do
+    ~H"""
+    <%= cond do %>
+      <% is_nil(@step.started_at) -> %>
+        Unknown
+      <% is_nil(@step.finished_at) -> %>
+        Running...
+      <% true -> %>
+        <%= DateTime.to_unix(@step.finished_at, :millisecond) -
+          DateTime.to_unix(@step.started_at, :millisecond) %> ms
+    <% end %>
+    """
+  end
+
+  def loading_filler(assigns) do
+    ~H"""
+    <.detail_list class="animate-pulse">
+      <.list_item>
+        <:label>
+          <span class="inline-block bg-slate-500 rounded-full h-3 w-16">&nbsp;</span>
+        </:label>
+        <:value>
+          <span class="inline-block bg-slate-500 rounded-full h-3 w-24"></span>
+        </:value>
+      </.list_item>
+      <.list_item>
+        <:label>
+          <span class="inline-block bg-slate-500 rounded-full h-3 w-12">&nbsp;</span>
+        </:label>
+        <:value>
+          <span class="inline-block bg-slate-500 rounded-full h-3 w-12"></span>
+        </:value>
+      </.list_item>
+      <.list_item>
+        <:label>
+          <span class="inline-block bg-slate-500 rounded-full h-3 w-12">&nbsp;</span>
+        </:label>
+        <:value>
+          <span class="inline-block bg-slate-500 rounded-full h-3 w-24"></span>
+        </:value>
+      </.list_item>
+    </.detail_list>
+    """
+  end
+
+  attr :message, :string, required: true
+  attr :class, :string, default: ""
+
+  def async_filler(assigns) do
+    ~H"""
+    <div data-entity="work_order" class={["bg-gray-50", @class]}>
+      <div class="py-3 text-center text-gray-500"><%= @message %></div>
+    </div>
+    """
+  end
+
+  attr :project, :map, required: true
+  attr :run, :map, required: true
+  attr :can_edit_data_retention, :boolean, required: true
+  attr :can_run_workflow, :boolean, required: true
+
+  def run_item(%{run: run} = assigns) do
+    steps = run.steps
+    last_step = List.last(steps)
 
     assigns =
       assigns
-      |> assign(last_run: last_run, run_list: runs)
+      |> assign(last_step: last_step, step_list: steps)
 
     ~H"""
     <div
       role="rowgroup"
       phx-mounted={JS.transition("fade-in-scale", time: 500)}
-      id={"attempt-#{@attempt.id}"}
-      data-entity="attempt"
+      id={"run-#{@run.id}"}
+      data-entity="run"
       class="bg-gray-100"
     >
-      <%= for run <- @run_list do %>
-        <.run_list_item
-          can_rerun_job={@can_rerun_job}
+      <%= for step <- @step_list do %>
+        <.step_list_item
+          can_run_workflow={@can_run_workflow}
           project_id={@project.id}
-          attempt={@attempt}
-          run={run}
+          run={@run}
+          can_edit_data_retention={@can_edit_data_retention}
+          step={step}
         />
       <% end %>
     </div>
     """
   end
 
+  attr :step, :map, required: true
   attr :run, :map, required: true
-  attr :attempt, :map, required: true
   attr :project_id, :string, required: true
-  attr :can_rerun_job, :boolean, required: true
+  attr :can_run_workflow, :boolean, required: true
+  attr :can_edit_data_retention, :boolean, required: true
 
-  def run_list_item(assigns) do
+  def step_list_item(assigns) do
     is_clone =
-      DateTime.compare(assigns.run.inserted_at, assigns.attempt.inserted_at) ==
+      DateTime.compare(assigns.step.inserted_at, assigns.run.inserted_at) ==
         :lt
 
     base_classes = ~w(grid grid-cols-8 items-center)
 
-    run_item_classes =
+    step_item_classes =
       if is_clone, do: base_classes ++ ~w(opacity-50), else: base_classes
 
     assigns =
-      assign(assigns, is_clone: is_clone, run_item_classes: run_item_classes)
+      assign(assigns, is_clone: is_clone, step_item_classes: step_item_classes)
 
     ~H"""
-    <div id={"run-#{@run.id}"} role="row" class={@run_item_classes}>
+    <div id={"step-#{@step.id}"} role="row" class={@step_item_classes}>
       <div
         role="cell"
         class="col-span-3 py-2 text-sm font-normal text-left rtl:text-right text-gray-500"
       >
         <div class="flex pl-28">
-          <%= case @run.exit_reason do %>
-            <% "fail" -> %>
-              <%= if @run.finished_at do %>
-                <Heroicons.x_circle
-                  solid
-                  class="mr-1.5 h-5 w-5 flex-shrink-0 text-red-500"
-                />
-              <% else %>
-                <Heroicons.ellipsis_horizontal_circle
-                  solid
-                  class="mr-1.5 h-5 w-5 flex-shrink-0 text-gray-500"
-                />
-              <% end %>
-            <% "success" -> %>
-              <Heroicons.check_circle
-                solid
-                class="mr-1.5 h-5 w-5 flex-shrink-0 text-green-500"
-              />
-            <% nil -> %>
-              <Heroicons.clock
-                solid
-                class="mr-1.5 h-5 w-5 flex-shrink-0 text-gray-500"
-              />
-            <% val -> %>
-              <%= val %>
-          <% end %>
+          <.step_icon reason={@step.exit_reason} error_type={@step.error_type} />
           <div class="text-gray-800 flex gap-2 text-sm">
             <.link
-              navigate={show_run_url(@project_id, @run.id)}
-              target="_blank"
+              navigate={
+                ~p"/projects/#{@project_id}/runs/#{@run}?#{%{step: @step.id}}"
+              }
               class="hover:underline hover:underline-offset-2"
             >
-              <span><%= @run.job.name %></span>
+              <span><%= @step.job.name %></span>
             </.link>
             <%= if @is_clone do %>
               <div class="flex gap-1">
-                <Heroicons.document_duplicate
-                  solid
-                  class="mr-1.5 mt-1 h-3 w-3 flex-shrink-0 text-gray-500"
-                />
+                <span
+                  class="cursor-pointer"
+                  id={"clone_" <> @run.id <> "_" <> @step.id}
+                  aria-label="This step was originally executed in a previous run.
+                    It was skipped in this run; the original output has been
+                    used as the starting point for downstream jobs."
+                  phx-hook="Tooltip"
+                  data-placement="right"
+                >
+                  <Heroicons.paper_clip
+                    mini
+                    class="mr-1.5 mt-1 h-3 w-3 flex-shrink-0 text-gray-500"
+                  />
+                </span>
               </div>
             <% end %>
-            <div class="flex gap-1">
-              <%= if @can_rerun_job && @run.exit_reason do %>
-                <span
-                  id={@run.id}
-                  class="text-indigo-400 hover:underline hover:underline-offset-2 hover:text-indigo-500 cursor-pointer"
-                  phx-click="rerun"
-                  phx-value-attempt_id={@attempt.id}
-                  phx-value-run_id={@run.id}
-                  title="Rerun workflow from here"
-                >
-                  rerun
-                </span>
+            <div class="flex gap-1 text-xs leading-5">
+              <%= if @can_run_workflow && @step.exit_reason do %>
+                <.step_rerun_tag {assigns} />/
               <% end %>
+              <.link
+                class="text-indigo-400 hover:underline hover:underline-offset-2 hover:text-indigo-500 cursor-pointer"
+                navigate={
+                ~p"/projects/#{@project_id}/w/#{@step.job.workflow_id}"
+                  <> "?a=#{@run.id}&m=expand&s=#{@step.job_id}"
+              }
+              >
+                inspect
+              </.link>
             </div>
           </div>
         </div>
@@ -138,17 +461,73 @@ defmodule LightningWeb.RunLive.Components do
         class="py-2 px-4 text-sm font-normal text-left rtl:text-right text-gray-500"
         role="cell"
       >
-        <.timestamp timestamp={@run.started_at} style={:wrapped} />
+        <.timestamp timestamp={@step.started_at} style={:wrapped} />
       </div>
       <div
         class="py-2 px-4 text-sm font-normal text-left rtl:text-right text-gray-500"
         role="cell"
       >
-        <.timestamp timestamp={@run.finished_at} style={:wrapped} />
+        <.timestamp timestamp={@step.finished_at} style={:wrapped} />
       </div>
       <div role="cell"></div>
     </div>
     """
+  end
+
+  defp step_rerun_tag(assigns) do
+    ~H"""
+    <%= if @step.input_dataclip && is_nil(@step.input_dataclip.wiped_at) do %>
+      <span
+        id={@step.id}
+        class="text-indigo-400 hover:underline hover:underline-offset-2 hover:text-indigo-500 cursor-pointer"
+        phx-click="rerun"
+        phx-value-run_id={@run.id}
+        phx-value-step_id={@step.id}
+        title="Rerun workflow from here"
+      >
+        rerun
+      </span>
+    <% else %>
+      <span
+        id={@step.id}
+        class="text-indigo-300 cursor-pointer"
+        phx-hook="Tooltip"
+        data-placement="top"
+        data-allow-html="true"
+        aria-label={
+          rerun_zero_persistence_tooltip_message(
+            @project_id,
+            @can_edit_data_retention
+          )
+        }
+      >
+        rerun
+      </span>
+    <% end %>
+    """
+  end
+
+  def rerun_zero_persistence_tooltip_message(project_id, can_edit_retention) do
+    """
+    <span class="text-center">
+    This work order cannot be rerun since no input data has been stored due to
+    the data retention policy set in the project.
+    <br />
+    #{zero_persistence_action_message(project_id, can_edit_retention)}
+    </span>
+    """
+  end
+
+  def zero_persistence_action_message(project_id, can_edit_retention) do
+    if can_edit_retention do
+      """
+      <a href="#{~p"/projects/#{project_id}/settings#data-storage"}" class="underline text-blue-400">
+      Go to data storage settings
+      </a>
+      """
+    else
+      "For more information, contact one of your project admins"
+    end
   end
 
   attr :timestamp, :any, required: true
@@ -188,210 +567,6 @@ defmodule LightningWeb.RunLive.Components do
           <%= Timex.format!(@timestamp, "%H:%M:%S", :strftime) %>
       <% end %>
     <% end %>
-    """
-  end
-
-  def run_log_viewer(assigns) do
-    assigns =
-      assign(
-        assigns,
-        :log,
-        Invocation.logs_for_run(assigns.run)
-        |> Enum.map(fn log -> log.message end)
-      )
-
-    ~H"""
-    <%= if length(@log) > 0 do %>
-      <.log_view log={@log} />
-    <% else %>
-      <.no_log_message />
-    <% end %>
-    """
-  end
-
-  # --------------- Run Details ---------------
-  attr :run, :any, required: true
-  attr :show_input_dataclip, :boolean
-  attr :class, :string, default: nil
-
-  @spec run_viewer(map) :: Phoenix.LiveView.Rendered.t()
-  def run_viewer(assigns) do
-    assigns = assigns |> assign_new(:show_input_dataclip, fn -> false end)
-
-    ~H"""
-    <div class="flex flex-col h-full ">
-      <div class="flex-0">
-        <.run_details run={@run} />
-        <.toggle_bar class="mt-4 items-end" phx-mounted={show_section("log")}>
-          <%= if @show_input_dataclip do %>
-            <.toggle_item data-section="input" phx-click={switch_section("input")}>
-              Input
-            </.toggle_item>
-          <% end %>
-          <.toggle_item data-section="output" phx-click={switch_section("output")}>
-            Output
-          </.toggle_item>
-          <.toggle_item
-            data-section="log"
-            phx-click={switch_section("log")}
-            active="true"
-          >
-            Log
-          </.toggle_item>
-        </.toggle_bar>
-      </div>
-
-      <div class="mt-4 flex-1 overflow-y-auto">
-        <%= if @show_input_dataclip do %>
-          <div
-            id="input_section"
-            style="display: none;"
-            class="@container overflow-y-auto h-full"
-          >
-            <.dataclip_view dataclip={@run.input_dataclip} />
-          </div>
-        <% end %>
-
-        <div
-          id="log_section"
-          style="display: none;"
-          class="@container overflow-y-auto h-full rounded-md"
-        >
-          <.run_log_viewer run={@run} />
-        </div>
-        <div
-          id="output_section"
-          style="display: none;"
-          class="@container h-full overflow-y-auto"
-        >
-          <%= cond  do %>
-            <% is_nil(@run.exit_reason) -> %>
-              <.dataclip_view
-                dataclip={nil}
-                no_dataclip_message={
-                  %{
-                    label: "This run has not yet finished.",
-                    description:
-                      "There is no output. See the logs for more information"
-                  }
-                }
-              />
-            <% @run.exit_reason != "success" -> %>
-              <.dataclip_view
-                dataclip={nil}
-                no_dataclip_message={
-                  %{
-                    label: "This run failed",
-                    description:
-                      "There is no output. See the logs for more information"
-                  }
-                }
-              />
-            <% is_nil(@run.output_dataclip_id) -> %>
-              <.dataclip_view
-                dataclip={nil}
-                no_dataclip_message={
-                  %{
-                    label: "There is no output for this run",
-                    description:
-                      "Check your job expression to ensure that the final operation returns something."
-                  }
-                }
-              />
-            <% true -> %>
-              <.dataclip_view dataclip={@run.output_dataclip} />
-          <% end %>
-        </div>
-      </div>
-    </div>
-    """
-  end
-
-  attr :run, :any, required: true
-
-  def run_details(%{run: run} = assigns) do
-    run_finished_at =
-      cond do
-        run.finished_at ->
-          run.finished_at |> Calendar.strftime("%c.%f %Z")
-
-        run.started_at ->
-          "Running..."
-
-        true ->
-          "Not started."
-      end
-
-    ran_for =
-      cond do
-        run.finished_at ->
-          "#{DateTime.diff(run.finished_at, run.started_at, :millisecond)} ms"
-
-        run.started_at ->
-          "..."
-
-        true ->
-          "Not started."
-      end
-
-    run_credential =
-      if Ecto.assoc_loaded?(run.credential) && run.credential,
-        do: "#{run.credential.name} (owned by #{run.credential.user.email})",
-        else: nil
-
-    run_job = get_in(run, [Access.key!(:job), Access.key(:name, run.job_id)])
-
-    assigns =
-      assigns
-      |> assign(
-        run_finished_at: run_finished_at,
-        run_credential: run_credential,
-        run_job: run_job,
-        ran_for: ran_for
-      )
-
-    ~H"""
-    <div class="flex flex-col gap-2">
-      <div class="flex gap-4 flex-row text-xs lg:text-sm" id={"job-#{@run.id}"}>
-        <div class="basis-1/2 font-semibold text-secondary-700">Job</div>
-        <div class="basis-1/2 text-right"><%= @run_job %></div>
-      </div>
-      <div
-        class="flex gap-4 flex-row text-xs lg:text-sm"
-        id={"job-credential-#{@run.id}"}
-      >
-        <div class="basis-1/2 font-semibold text-secondary-700">Credential</div>
-        <div class="basis-1/2 text-right"><%= @run_credential || "n/a" %></div>
-      </div>
-      <div
-        class="flex gap-4 flex-row text-xs lg:text-sm"
-        id={"finished-at-#{@run.id}"}
-      >
-        <div class="basis-1/2 font-semibold text-secondary-700">Finished</div>
-        <div class="basis-1/2 text-right"><%= @run_finished_at %></div>
-      </div>
-      <div class="flex flex-row text-xs lg:text-sm" id={"ran-for-#{@run.id}"}>
-        <div class="lg:basis-1/2 font-semibold text-secondary-700">Duration</div>
-        <div class="basis-1/2 text-right"><%= @ran_for %></div>
-      </div>
-      <div class="flex flex-row text-xs lg:text-sm" id={"exit-reason-#{@run.id}"}>
-        <div class="basis-1/2 font-semibold text-secondary-700">Exit Reason</div>
-        <div class="basis-1/2 text-right">
-          <%= case @run.exit_reason do %>
-            <% "fail" -> %>
-              <.failure_pill class="font-mono font-bold">fail</.failure_pill>
-            <% "success" -> %>
-              <.success_pill class="font-mono font-bold">success</.success_pill>
-            <% nil -> %>
-              <.pending_pill class="font-mono font-bold">running</.pending_pill>
-            <% val -> %>
-              <.other_state_pill class="font-mono font-bold">
-                <%= val %>
-              </.other_state_pill>
-          <% end %>
-        </div>
-      </div>
-    </div>
     """
   end
 
@@ -456,194 +631,57 @@ defmodule LightningWeb.RunLive.Components do
     end)
   end
 
-  attr :dataclip, :any, required: true
-  attr :no_dataclip_message, :any
-
-  def dataclip_view(%{dataclip: dataclip} = assigns) do
-    lines =
-      if dataclip do
-        dataclip.body
-        |> Jason.encode!()
-        |> Jason.Formatter.pretty_print()
-        |> String.split("\n")
+  @spec step_icon(%{
+          :error_type => any(),
+          :reason => nil | <<_::32, _::_*8>>,
+          optional(any()) => any()
+        }) :: Phoenix.LiveView.Rendered.t()
+  # it's not really that complex!
+  # credo:disable-for-next-line
+  def step_icon(%{reason: reason, error_type: error_type} = assigns) do
+    [icon, classes] =
+      case {reason, error_type} do
+        {nil, _any} -> [:pending, "text-gray-400"]
+        {"success", _any} -> [:success, "text-green-500"]
+        {"fail", _any} -> [:fail, "text-red-500"]
+        {"crash", _any} -> [:crash, "text-orange-800"]
+        {"cancel", _any} -> [:cancel, "text-grey-600"]
+        {"kill", "SecurityError"} -> [:shield, "text-yellow-800"]
+        {"kill", "ImportError"} -> [:shield, "text-yellow-800"]
+        {"kill", "TimeoutError"} -> [:clock, "text-yellow-800"]
+        {"kill", "OOMError"} -> [:circle_ex, "text-yellow-800"]
+        {"exception", ""} -> [:triangle_ex, "text-black-800"]
+        {"lost", _nil} -> [:triangle_ex, "text-black-800"]
       end
 
     assigns =
-      assigns
-      |> assign(lines: lines)
-      |> assign_new(:no_dataclip_message, fn ->
-        %{
-          label: "Nothing here yet.",
-          description: "The resulting dataclip will appear here
-    when the run finishes successfully."
-        }
-      end)
+      assign(assigns,
+        icon: icon,
+        classes: ["mr-1.5 h-5 w-5 flex-shrink-0 inline", classes]
+      )
 
     ~H"""
-    <%= if @dataclip do %>
-      <.log_view log={@lines} />
-    <% else %>
-      <.no_dataclip_message
-        label={@no_dataclip_message.label}
-        description={@no_dataclip_message.description}
-      />
+    <%= case @icon do %>
+      <% :pending -> %>
+        <Heroicons.ellipsis_horizontal_circle solid class={@classes} />
+      <% :success -> %>
+        <Heroicons.check_circle solid class={@classes} />
+      <% :fail -> %>
+        <Heroicons.x_circle solid class={@classes} />
+      <% :crash -> %>
+        <Heroicons.x_circle solid class={@classes} />
+      <% :cancel -> %>
+        <Heroicons.no_symbol solid class={@classes} />
+      <% :shield -> %>
+        <Heroicons.shield_exclamation solid class={@classes} />
+      <% :clock -> %>
+        <Heroicons.clock solid class={@classes} />
+      <% :circle_ex -> %>
+        <Heroicons.exclamation_circle solid class={@classes} />
+      <% :triangle_ex -> %>
+        <Heroicons.exclamation_triangle solid class={@classes} />
     <% end %>
     """
-  end
-
-  @spec no_dataclip_message(any) :: Phoenix.LiveView.Rendered.t()
-  def no_dataclip_message(assigns) do
-    ~H"""
-    <div class="flex items-center flex-col mt-5 @md:w-1/4 @xs:w-1/2 m-auto">
-      <div class="flex flex-col">
-        <div class="m-auto">
-          <Heroicons.question_mark_circle class="h-16 w-16 stroke-gray-400" />
-        </div>
-        <div class="font-sm text-slate-400 text-center">
-          <span class="text-slate-500 font-semibold">
-            <%= @label %>
-          </span>
-          <br /> <%= @description %>
-        </div>
-      </div>
-    </div>
-    """
-  end
-
-  def no_log_message(assigns) do
-    ~H"""
-    <div class="flex items-center flex-col mt-5 @md:w-1/4 @xs:w-1/2 m-auto">
-      <div class="flex flex-col">
-        <div class="m-auto">
-          <Heroicons.question_mark_circle class="h-16 w-16 stroke-gray-400" />
-        </div>
-        <div class="font-sm text-slate-400 text-center">
-          <span class="text-slate-500 font-semibold">
-            Nothing here yet.
-          </span>
-          <br /> The resulting log will appear here when the run completes.
-        </div>
-      </div>
-    </div>
-    """
-  end
-
-  # ------------------- Toggle Bar ---------------------
-  # Used to switch between Log and Output
-
-  slot :inner_block, required: true
-  attr :class, :string, default: "items-end"
-  attr :rest, :global
-
-  def toggle_bar(assigns) do
-    ~H"""
-    <div class={"flex flex-col #{@class}"} {@rest}>
-      <div class="flex rounded-lg p-1 bg-gray-200 font-semibold">
-        <%= render_slot(@inner_block) %>
-      </div>
-    </div>
-    """
-  end
-
-  attr :active, :string, default: "false"
-  slot :inner_block, required: true
-  attr :rest, :global
-
-  def toggle_item(assigns) do
-    ~H"""
-    <div
-      data-active={@active}
-      class="group text-sm shadow-sm text-gray-700
-                     data-[active=true]:bg-white data-[active=true]:text-indigo-500
-                     px-4 py-2 rounded-md align-middle flex items-center cursor-pointer"
-      {@rest}
-    >
-      <%= render_slot(@inner_block) %>
-    </div>
-    """
-  end
-
-  def switch_section(section) do
-    JS.hide(to: "[id$=_section]:not([id=#{section}_section])")
-    |> JS.set_attribute({"data-active", "false"},
-      to: "[data-section]:not([data-section=#{section}])"
-    )
-    |> show_section(section)
-  end
-
-  def show_section(js \\ %JS{}, section) do
-    js
-    |> JS.show(
-      to: "##{section}_section",
-      transition: {"ease-out duration-300", "opacity-0", "opacity-100"},
-      time: 200
-    )
-    |> JS.set_attribute({"data-active", "true"}, to: "[data-section=#{section}]")
-  end
-
-  # -------------------- Status Pills -------------------
-
-  @base_classes ~w[
-    my-auto whitespace-nowrap rounded-full
-    py-2 px-4 text-center align-baseline text-xs font-medium leading-none
-  ]
-
-  def failure_pill(assigns) do
-    assigns = assigns |> apply_classes(~w[text-red-800 bg-red-200])
-
-    ~H"""
-    <span class={@classes}>
-      <%= render_slot(@inner_block) %>
-    </span>
-    """
-  end
-
-  def killed_pill(assigns) do
-    assigns = assigns |> apply_classes(~w[text-yellow-800 bg-yellow-200])
-
-    ~H"""
-    <span class={@classes}>
-      <%= render_slot(@inner_block) %>
-    </span>
-    """
-  end
-
-  def success_pill(assigns) do
-    assigns =
-      assigns
-      |> apply_classes(~w[bg-green-200 text-green-800])
-
-    ~H"""
-    <span class={@classes}>
-      <%= render_slot(@inner_block) %>
-    </span>
-    """
-  end
-
-  def pending_pill(assigns) do
-    assigns = assigns |> apply_classes(~w[bg-gray-200 text-gray-800])
-
-    ~H"""
-    <span class={@classes}>
-      <%= render_slot(@inner_block) %>
-    </span>
-    """
-  end
-
-  def other_state_pill(assigns) do
-    assigns = assigns |> apply_classes(~w[bg-black text-white])
-
-    ~H"""
-    <span class={@classes}>
-      <%= render_slot(@inner_block) %>
-    </span>
-    """
-  end
-
-  defp apply_classes(assigns, classes) do
-    assign(assigns,
-      classes: @base_classes ++ classes ++ List.wrap(assigns[:class])
-    )
   end
 
   # BULK RERUN
@@ -692,17 +730,17 @@ defmodule LightningWeb.RunLive.Components do
                 class="text-base font-semibold leading-6 text-gray-900"
                 id={"#{@id}-title"}
               >
-                Run Selected Workers
+                Run Selected Work Orders
               </h3>
               <div class="mt-2">
                 <p class="text-sm text-gray-500">
                   <%= if @all_selected? do %>
-                    You've selected all <%= @selected_count %> workorders from page <%= @page_number %> of <%= @pages %>. There are a total of <%= @total_entries %> that match your current query: <%= humanize_search_params(
+                    You've selected all <%= @selected_count %> work orders from page <%= @page_number %> of <%= @pages %>. There are a total of <%= @total_entries %> that match your current query: <%= humanize_search_params(
                       @filters,
                       @workflows
                     ) %>.
                   <% else %>
-                    You've selected <%= @selected_count %> workorders to rerun from the start. This will create a new attempt for each selected workorder.
+                    You've selected <%= @selected_count %> work orders to rerun from the start. This will create a new run for each selected work order.
                   <% end %>
                 </p>
               </div>
@@ -718,10 +756,10 @@ defmodule LightningWeb.RunLive.Components do
                 phx-disable-with="Running..."
                 class="inline-flex w-full justify-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 sm:col-start-1"
               >
-                Rerun <%= @selected_count %> selected workorder<%= if @selected_count >
-                                                                        1,
-                                                                      do: "s",
-                                                                      else: "" %> from start
+                Rerun <%= @selected_count %> selected work order<%= if @selected_count >
+                                                                         1,
+                                                                       do: "s",
+                                                                       else: "" %> from start
               </button>
               <button
                 type="button"
@@ -730,7 +768,7 @@ defmodule LightningWeb.RunLive.Components do
                 phx-disable-with="Running..."
                 class="inline-flex w-full justify-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 sm:col-start-2"
               >
-                Rerun all <%= @total_entries %> matching workorders from start
+                Rerun all <%= @total_entries %> matching work orders from start
               </button>
               <div class="relative col-start-1 col-end-3">
                 <div class="absolute inset-0 flex items-center" aria-hidden="true">
@@ -761,10 +799,10 @@ defmodule LightningWeb.RunLive.Components do
                 phx-disable-with="Running..."
                 class="inline-flex w-full justify-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 sm:col-start-2"
               >
-                Rerun <%= @selected_count %> selected workorder<%= if @selected_count >
-                                                                        1,
-                                                                      do: "s",
-                                                                      else: "" %> from start
+                Rerun <%= @selected_count %> selected work order<%= if @selected_count >
+                                                                         1,
+                                                                       do: "s",
+                                                                       else: "" %> from start
               </button>
               <button
                 type="button"

@@ -67,8 +67,17 @@ defmodule Lightning.Factories do
     }
   end
 
-  def run_factory do
-    %Lightning.Invocation.Run{
+  def http_request_dataclip_factory do
+    %Lightning.Invocation.Dataclip{
+      project: build(:project),
+      body: %{"foo" => "bar"},
+      request: %{"headers" => %{"content-type" => "application/json"}},
+      type: :http_request
+    }
+  end
+
+  def step_factory do
+    %Lightning.Invocation.Step{
       id: fn -> Ecto.UUID.generate() end,
       job: build(:job),
       input_dataclip: build(:dataclip)
@@ -77,29 +86,30 @@ defmodule Lightning.Factories do
 
   def log_line_factory do
     %Lightning.Invocation.LogLine{
+      id: fn -> Ecto.UUID.generate() end,
       message: sequence(:log_line, &"somelog#{&1}"),
       timestamp: build(:timestamp)
     }
   end
 
-  def attempt_factory() do
-    %Lightning.Attempt{
+  def run_factory do
+    %Lightning.Run{
       id: fn -> Ecto.UUID.generate() end
     }
   end
 
-  def attempt_run_factory do
-    %Lightning.AttemptRun{
+  def run_step_factory do
+    %Lightning.RunStep{
       id: fn -> Ecto.UUID.generate() end
     }
-  end
-
-  def reason_factory do
-    %Lightning.InvocationReason{}
   end
 
   def credential_factory do
-    %Lightning.Credentials.Credential{}
+    %Lightning.Credentials.Credential{
+      body: %{},
+      schema: "raw",
+      name: sequence(:credential_name, &"credential#{&1}")
+    }
   end
 
   def project_credential_factory do
@@ -169,31 +179,40 @@ defmodule Lightning.Factories do
   end
 
   @doc """
-  Inserts an attempt and associates it two-way with an work order.
+  Inserts a run and associates it two-way with an work order.
   ```
   work_order =
-    insert(:workorder, workflow: workflow, reason: reason)
-    |> with_attempt(attempt)
+    insert(:workorder, workflow: workflow)
+    |> with_run(run)
 
   > **NOTE** The work order must be inserted before calling this function.
   ```
   """
-  def with_attempt(work_order, attempt_args) do
+  def with_run(work_order, run_or_args) do
     if work_order.__meta__.state == :built do
-      raise "Cannot associate an attempt with a work order that has not been inserted"
+      raise "Cannot associate a run with a work order that has not been inserted"
     end
 
-    attempt_args =
-      Keyword.merge(
-        [work_order: work_order],
-        attempt_args
-      )
+    run =
+      case run_or_args do
+        %Lightning.Run{} = run ->
+          if run.__meta__.state != :built do
+            raise "The run must be built, not inserted"
+          end
 
-    attempt = insert(:attempt, attempt_args)
+          run
+          |> merge_attributes(%{work_order: work_order})
+          |> insert()
+
+        run_args ->
+          build(:run, run_args)
+          |> merge_attributes(%{work_order: work_order})
+          |> insert()
+      end
 
     %{
       work_order
-      | attempts: merge_assoc(work_order.attempts, attempt)
+      | runs: merge_assoc(work_order.runs, run)
     }
   end
 
@@ -266,7 +285,12 @@ defmodule Lightning.Factories do
   end
 
   def simple_workflow_factory(attrs) do
-    trigger = build(:trigger, type: :webhook, enabled: true)
+    trigger =
+      build(:trigger,
+        type: :webhook,
+        enabled: true,
+        cron_expression: "* * * * *"
+      )
 
     job =
       build(:job,
@@ -276,7 +300,7 @@ defmodule Lightning.Factories do
     build(:workflow, attrs)
     |> with_trigger(trigger)
     |> with_job(job)
-    |> with_edge({trigger, job})
+    |> with_edge({trigger, job}, condition_type: :always)
   end
 
   def complex_workflow_factory(attrs) do
@@ -312,7 +336,18 @@ defmodule Lightning.Factories do
     jobs =
       build_list(7, :job,
         name: fn -> sequence(:name, &"Job-#{&1}") end,
-        body: ~s[fn(state => { return {...state, extra: "data"} })],
+        body: fn ->
+          sequence(
+            :body,
+            &"""
+            fn(state => {
+              state.x = (state.x || state.data.x) * 2;
+              console.log({output: '#{&1}'});
+              return {...state, extra: 'data'};
+            });
+            """
+          )
+        end,
         workflow: nil
       )
 
@@ -323,7 +358,7 @@ defmodule Lightning.Factories do
         workflow |> with_job(job)
       end)
     end)
-    |> with_edge({trigger, jobs |> Enum.at(0)})
+    |> with_edge({trigger, jobs |> Enum.at(0)}, condition_type: :always)
     |> with_edge({jobs |> Enum.at(0), jobs |> Enum.at(1)})
     |> with_edge({jobs |> Enum.at(1), jobs |> Enum.at(2)})
     |> with_edge({jobs |> Enum.at(2), jobs |> Enum.at(3)})

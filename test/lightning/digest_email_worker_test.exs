@@ -11,10 +11,10 @@ defmodule Lightning.DigestEmailWorkerTest do
 
   describe "perform/1" do
     test "projects that are scheduled for deletion are not part of the projects for which digest alerts are sent" do
-      user = AccountsFixtures.user_fixture()
+      user = insert(:user)
 
       project =
-        ProjectsFixtures.project_fixture(
+        insert(:project,
           scheduled_deletion: Timex.now(),
           project_users: [
             %{user_id: user.id, digest: :daily}
@@ -140,13 +140,13 @@ defmodule Lightning.DigestEmailWorkerTest do
         dataclip: dataclip,
         state: status
       )
-      |> with_attempt(
+      |> with_run(
         state: state,
         dataclip: dataclip,
         starting_trigger: trigger,
         finished_at: build(:timestamp),
-        runs: [
-          build(:run,
+        steps: [
+          build(:step,
             job: job,
             input_dataclip: dataclip,
             started_at: build(:timestamp),

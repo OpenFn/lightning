@@ -5,7 +5,7 @@ orbs:
 
 commands:
   install_node:
-    description: "Install NodeJS"
+    description: 'Install NodeJS'
     parameters:
       version:
         type: string
@@ -34,11 +34,11 @@ jobs:
       elixir_version:
         description: Elixir version
         type: string
-        default: "1.15.4" # Looks like it's pinned at OTP26
+        default: '1.15.4' # Looks like it's pinned at OTP26
       nodejs_version:
         description: NodeJS version
         type: string
-        default: "18.17.1"
+        default: '18.17.1'
       execute:
         description: What steps to execute after build
         type: steps
@@ -60,6 +60,7 @@ jobs:
 
       - run: mix local.hex --force
       - run: mix local.rebar --force
+      - run: cd assets && npm install
       - run: MIX_ENV=test mix do deps.get --only test, deps.compile, compile
       - run: MIX_ENV=test mix lightning.install_runtime
 
@@ -93,7 +94,7 @@ workflows:
       - build:
           name: 'Check code style'
           execute:
-            - run: MIX_ENV=test mix credo --all
+            - run: MIX_ENV=test mix credo --strict --all
       - build:
           name: 'Type check'
           execute:

@@ -31,6 +31,7 @@ defmodule LightningWeb.ConnCase do
 
       alias LightningWeb.Router.Helpers, as: Routes
 
+      import Lightning.LiveViewHelpers
       import Lightning.ModelHelpers
       import Plug.HTML
     end
@@ -130,8 +131,14 @@ defmodule LightningWeb.ConnCase do
   @doc """
   Setup helper that creates a user adds them as project user with a given role and logs them them in
   """
+  def setup_project_users(conn, project, roles) when is_list(roles) do
+    for role <- roles do
+      setup_project_user(conn, project, role)
+    end
+  end
+
   def setup_project_user(conn, project, role) do
-    user = Lightning.AccountsFixtures.user_fixture()
+    user = Lightning.Factories.insert(:user)
 
     conn = setup_project_user(conn, project, user, role)
 
@@ -139,16 +146,11 @@ defmodule LightningWeb.ConnCase do
   end
 
   def setup_project_user(conn, project, user, role) do
-    project_users =
-      project.project_users
-      |> Enum.concat([
-        %Lightning.Projects.ProjectUser{user_id: user.id, role: role}
-      ])
-
-    {:ok, _project} =
-      Lightning.Projects.Project.changeset(project, %{})
-      |> Ecto.Changeset.put_assoc(:project_users, project_users)
-      |> Lightning.Repo.update()
+    Lightning.Factories.insert(:project_user,
+      user: user,
+      project: project,
+      role: role
+    )
 
     log_in_user(conn, user)
   end
@@ -164,5 +166,21 @@ defmodule LightningWeb.ConnCase do
     conn
     |> Phoenix.ConnTest.init_test_session(%{})
     |> Plug.Conn.put_session(:user_token, token)
+  end
+
+  @doc """
+  """
+  def build_project_user_conns(project, roles) do
+    Enum.map(roles, fn role ->
+      project_user =
+        Lightning.Factories.insert(:project_user,
+          role: role,
+          project: project,
+          user: Lightning.Factories.build(:user)
+        )
+
+      Phoenix.ConnTest.build_conn()
+      |> log_in_user(project_user.user)
+    end)
   end
 end

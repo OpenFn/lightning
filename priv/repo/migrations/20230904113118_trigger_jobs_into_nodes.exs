@@ -24,15 +24,19 @@ defmodule Lightning.Repo.Migrations.TriggerJobsIntoNodes do
                   WHEN ir.trigger_id IS NULL THEN r.job_id
                   ELSE NULL
                 END AS starting_job_id,
-                ir.dataclip_id
+                COALESCE(ir.dataclip_id, ir_runs.input_dataclip_id) as dataclip_id
               FROM attempts a
                 JOIN invocation_reasons ir ON ir.id = a.reason_id
+                LEFT JOIN runs ir_runs ON ir.run_id = ir_runs.id
                 LEFT JOIN (
                   SELECT DISTINCT ON (attempt_id) attempt_id,
                     run_id
                   FROM attempt_runs
+                  JOIN attempts ON attempts.id = attempt_runs.attempt_id
+                  JOIN runs ON runs.id = attempt_runs.run_id
+                  WHERE runs.inserted_at >= attempts.inserted_at
                   ORDER BY attempt_id,
-                    inserted_at ASC
+                    attempt_runs.inserted_at ASC
                 ) AS ar
                 LEFT JOIN runs r ON r.id = ar.run_id ON a.id = ar.attempt_id
             )

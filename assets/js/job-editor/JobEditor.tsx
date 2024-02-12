@@ -26,7 +26,6 @@ const settings = persistedSettings
   : {
       [SettingsKeys.ORIENTATION]: 'h',
       [SettingsKeys.SHOW_PANEL]: true,
-      [SettingsKeys.ACTIVE_TAB]: 'docs',
     };
 
 const persistSettings = () =>
@@ -123,9 +122,7 @@ export default ({
   const [showPanel, setShowPanel] = useState(
     () => settings[SettingsKeys.SHOW_PANEL]
   );
-  const [selectedTab, setSelectedTab] = useState(
-    () => settings[SettingsKeys.ACTIVE_TAB]
-  );
+  const [selectedTab, setSelectedTab] = useState('docs');
 
   const toggleOrientiation = useCallback(() => {
     setVertical(!vertical);
@@ -143,8 +140,6 @@ export default ({
 
   const handleSelectionChange = (newSelection: string) => {
     setSelectedTab(newSelection);
-    settings[SettingsKeys.ACTIVE_TAB] = newSelection;
-    persistSettings();
     if (!showPanel) {
       toggleShowPanel();
     }
@@ -180,7 +175,7 @@ export default ({
         </div>
         <div
           className={`${
-            showPanel ? 'flex flex-col flex-1 overflow-auto' : ''
+            showPanel ? 'flex flex-1 flex-col z-10 overflow-auto' : ''
           } bg-white`}
         >
           <div

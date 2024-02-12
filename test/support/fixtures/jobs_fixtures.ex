@@ -36,7 +36,7 @@ defmodule Lightning.JobsFixtures do
     job
   end
 
-  defp random_name() do
+  defp random_name do
     suffix =
       Ecto.UUID.generate() |> String.split_at(5) |> then(fn {x, _} -> x end)
 
@@ -89,7 +89,6 @@ defmodule Lightning.JobsFixtures do
       attrs
       |> Enum.into(%{
         body: "fn(state => state)",
-        enabled: true,
         name: "some name",
         adaptor: "@openfn/language-common",
         workflow: workflow,
@@ -102,7 +101,7 @@ defmodule Lightning.JobsFixtures do
       insert(:trigger,
         workflow: attrs[:workflow],
         type: :webhook,
-        enabled: attrs[:enabled]
+        enabled: true
       )
 
     e =
@@ -110,7 +109,8 @@ defmodule Lightning.JobsFixtures do
         workflow: attrs[:workflow],
         source_trigger: t,
         target_job: job,
-        condition: :always
+        condition_type: :always,
+        enabled: true
       )
 
     %{job: job, edge: e, trigger: t, workflow: workflow}
@@ -164,7 +164,7 @@ defmodule Lightning.JobsFixtures do
         workflow: workflow,
         source_job: job_a,
         target_job: job_b,
-        condition: :on_job_success
+        condition_type: :on_job_success
       })
 
     job_c = insert(:job, %{name: "job_c", workflow: workflow})
@@ -174,7 +174,7 @@ defmodule Lightning.JobsFixtures do
         workflow: workflow,
         source_job: job_b,
         target_job: job_c,
-        condition: :on_job_success
+        condition_type: :on_job_success
       })
 
     job_d = insert(:job, %{name: "job_d", workflow: workflow})
@@ -184,7 +184,7 @@ defmodule Lightning.JobsFixtures do
         workflow: workflow,
         source_job: job_c,
         target_job: job_d,
-        condition: :on_job_success
+        condition_type: :on_job_success
       })
 
     job_e = insert(:job, %{name: "job_e", workflow: workflow})
@@ -194,7 +194,7 @@ defmodule Lightning.JobsFixtures do
         workflow: workflow,
         source_job: job_a,
         target_job: job_e,
-        condition: :on_job_success
+        condition_type: :on_job_success
       })
 
     job_f = insert(:job, %{name: "job_f", workflow: workflow})
@@ -204,7 +204,7 @@ defmodule Lightning.JobsFixtures do
         workflow: workflow,
         source_job: job_e,
         target_job: job_f,
-        condition: :on_job_success
+        condition_type: :on_job_success
       })
 
     job_g = insert(:job, %{workflow: workflow, name: "job_g"})
@@ -214,7 +214,7 @@ defmodule Lightning.JobsFixtures do
         workflow: workflow,
         source_job: job_f,
         target_job: job_g,
-        condition: :on_job_success
+        condition_type: :on_job_success
       })
 
     %{

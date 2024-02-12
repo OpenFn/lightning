@@ -69,105 +69,6 @@ defmodule Lightning.CredentialsTest do
       assert Credentials.get_credential!(credential.id) == credential
     end
 
-    test "create_credential/1 with valid data creates a credential" do
-      valid_attrs = %{
-        body: %{},
-        name: "some name",
-        user_id: user_fixture().id,
-        schema: "raw",
-        project_credentials: [
-          %{project_id: project_fixture().id}
-        ]
-      }
-
-      assert {:ok, %Credential{} = credential} =
-               Credentials.create_credential(valid_attrs)
-
-      assert credential.body == %{}
-      assert credential.name == "some name"
-
-      assert from(a in Audit.base_query(),
-               where: a.item_id == ^credential.id and a.event == "created"
-             )
-             |> Repo.one!(),
-             "Has exactly one 'created' event"
-    end
-
-    test "create_credential/1 with invalid data returns error changeset" do
-      assert {:error, %Ecto.Changeset{}} =
-               Credentials.create_credential(@invalid_attrs)
-    end
-
-    test "update_credential/2 with valid data updates the credential" do
-      user = user_fixture()
-
-      {:ok, %Lightning.Projects.Project{id: project_id}} =
-        Lightning.Projects.create_project(%{
-          name: "some-name",
-          project_users: [%{user_id: user.id}]
-        })
-
-      credential =
-        credential_fixture(
-          user_id: user.id,
-          project_credentials: [
-            %{project_id: project_id}
-          ]
-        )
-
-      original_project_credential =
-        Enum.at(credential.project_credentials, 0)
-        |> Map.from_struct()
-
-      new_project = project_fixture()
-
-      update_attrs = %{
-        body: %{},
-        name: "some updated name",
-        project_credentials: [
-          original_project_credential,
-          %{project_id: new_project.id}
-        ]
-      }
-
-      assert {:ok, %Credential{} = credential} =
-               Credentials.update_credential(credential, update_attrs)
-
-      assert credential.body == %{}
-      assert credential.name == "some updated name"
-
-      audit_events =
-        from(a in Audit.base_query(),
-          where: a.item_id == ^credential.id,
-          select: {a.event, type(a.changes, :map)}
-        )
-        |> Repo.all()
-
-      assert {"created", %{"after" => nil, "before" => nil}} in audit_events
-
-      assert {"updated",
-              %{
-                "before" => %{"name" => "some name"},
-                "after" => %{"name" => "some updated name"}
-              }} in audit_events
-
-      assert {"added_to_project",
-              %{
-                "before" => %{"project_id" => nil},
-                "after" => %{"project_id" => new_project.id}
-              }} in audit_events
-    end
-
-    test "update_credential/2 with invalid data returns error changeset" do
-      user = user_fixture()
-      credential = credential_fixture(user_id: user.id)
-
-      assert {:error, %Ecto.Changeset{}} =
-               Credentials.update_credential(credential, @invalid_attrs)
-
-      assert credential == Credentials.get_credential!(credential.id)
-    end
-
     test "delete_credential/1 deletes a credential and removes it from associated jobs and projects" do
       user = user_fixture()
 
@@ -195,7 +96,7 @@ defmodule Lightning.CredentialsTest do
 
       assert {:ok,
               %{
-                audit: %Lightning.Auditing.Model{} = audit,
+                audit: %Lightning.Auditing.Audit{} = audit,
                 credential: %Credential{} = credential
               }} =
                Credentials.delete_credential(%Lightning.Credentials.Credential{
@@ -222,13 +123,13 @@ defmodule Lightning.CredentialsTest do
       end
 
       # no more project_credentials
-      assert length(
+      assert Enum.empty?(
                Lightning.Projects.list_project_credentials(
                  %Lightning.Projects.Project{
                    id: project_credential.project_id
                  }
                )
-             ) == 0
+             )
 
       job = Repo.get!(Lightning.Workflows.Job, job.id)
 
@@ -355,19 +256,294 @@ defmodule Lightning.CredentialsTest do
     end
   end
 
+  describe "get_credential_by_project_credential/1" do
+    test "sreturns the credential with given project_credential id" do
+      refute Credentials.get_credential_by_project_credential(
+               Ecto.UUID.generate()
+             )
+
+      project_credential = insert(:project_credential)
+
+      credential =
+        Credentials.get_credential_by_project_credential(project_credential.id)
+
+      assert credential.id == project_credential.credential.id
+    end
+  end
+
+  describe "create_credential/1" do
+    test "suceeds with raw schema" do
+      valid_attrs = %{
+        body: %{"username" => "user", "password" => "pass", "port" => 5000},
+        name: "some raw credential",
+        user_id: insert(:user).id,
+        schema: "raw",
+        project_credentials: [
+          %{project_id: insert(:project).id}
+        ]
+      }
+
+      assert {:ok, %Credential{} = credential} =
+               Credentials.create_credential(valid_attrs)
+
+      assert credential.body == %{
+               "username" => "user",
+               "password" => "pass",
+               "port" => 5000
+             }
+
+      assert credential.name == "some raw credential"
+
+      assert audit_event =
+               from(a in Audit.base_query(),
+                 where: a.item_id == ^credential.id and a.event == "created"
+               )
+               |> Repo.one!(),
+             "Has exactly one 'created' event"
+
+      assert audit_event.changes.before |> is_nil()
+      assert audit_event.changes.after["name"] == credential.name
+
+      # If we decode and then decrypt the audit trail event with, we'll see the
+      # raw credential body again.
+      assert audit_event.changes.after["body"]
+             |> Base.decode64!()
+             |> Lightning.Encrypted.Map.load() == {:ok, credential.body}
+    end
+
+    test "saves the body casting non string fields" do
+      body = %{
+        "user" => "user1",
+        "password" => "pass1",
+        "host" => "https://dbhost",
+        "database" => "test_db",
+        "port" => "5000",
+        "ssl" => "true",
+        "allowSelfSignedCert" => "false"
+      }
+
+      valid_attrs = %{
+        body: body,
+        name: "some name",
+        user_id: insert(:user).id,
+        schema: "postgresql",
+        project_credentials: [
+          %{project_id: insert(:project).id}
+        ]
+      }
+
+      assert {:ok, %Credential{} = credential} =
+               Credentials.create_credential(valid_attrs)
+
+      assert credential.body ==
+               Map.merge(body, %{
+                 "port" => 5000,
+                 "ssl" => true,
+                 "allowSelfSignedCert" => false
+               })
+
+      assert credential.name == "some name"
+
+      assert audit_event =
+               from(a in Audit.base_query(),
+                 where: a.item_id == ^credential.id and a.event == "created"
+               )
+               |> Repo.one!(),
+             "Has exactly one 'created' event"
+
+      assert audit_event.changes.before |> is_nil()
+      assert audit_event.changes.after["name"] == credential.name
+
+      {:ok, saved_body} =
+        audit_event.changes.after["body"]
+        |> Base.decode64!()
+        |> Lightning.Encrypted.Map.load()
+
+      assert saved_body == credential.body
+    end
+
+    test "fails with invalid data" do
+      assert {:error, %Ecto.Changeset{}} =
+               Credentials.create_credential(@invalid_attrs)
+    end
+  end
+
+  describe "update_credential/2" do
+    test "succeeds with valid data" do
+      user = insert(:user)
+
+      project =
+        insert(:project, name: "some-name", project_users: [%{user_id: user.id}])
+
+      credential =
+        insert(:credential,
+          body: %{},
+          name: "some name",
+          schema: "raw",
+          user: user,
+          project_credentials: [
+            %{project_id: project.id}
+          ]
+        )
+
+      original_project_credential =
+        Enum.at(credential.project_credentials, 0)
+        |> Map.from_struct()
+
+      new_project = insert(:project)
+
+      update_attrs = %{
+        body: %{},
+        name: "some updated name",
+        project_credentials: [
+          original_project_credential,
+          %{project_id: new_project.id}
+        ]
+      }
+
+      assert {:ok, %Credential{} = credential} =
+               Credentials.update_credential(credential, update_attrs)
+
+      assert credential.body == %{}
+      assert credential.name == "some updated name"
+
+      audit_events =
+        from(a in Audit.base_query(),
+          where: a.item_id == ^credential.id,
+          select: {a.event, type(a.changes, :map)}
+        )
+        |> Repo.all()
+
+      assert {"updated",
+              %{
+                "before" => %{"name" => "some name"},
+                "after" => %{"name" => "some updated name"}
+              }} in audit_events
+
+      assert {"added_to_project",
+              %{
+                "before" => %{"project_id" => nil},
+                "after" => %{"project_id" => new_project.id}
+              }} in audit_events
+    end
+
+    test "casts body to field types based on schema" do
+      user = insert(:user)
+
+      project =
+        insert(:project, name: "some-name", project_users: [%{user_id: user.id}])
+
+      credential =
+        insert(:credential,
+          name: "Test Postgres",
+          user_id: user.id,
+          body: %{
+            user: "user1",
+            password: "pass1",
+            host: "https://dbhost",
+            database: "test_db",
+            port: "5000",
+            ssl: "true",
+            allowSelfSignedCert: "false"
+          },
+          project_credentials: [
+            %{project_id: project.id}
+          ],
+          schema: "postgresql"
+        )
+
+      new_body_attrs = %{
+        "user" => "user1",
+        "password" => "pass1",
+        "host" => "https://dbhost",
+        "database" => "test_db",
+        "port" => "5002",
+        "ssl" => "true",
+        "allowSelfSignedCert" => "false"
+      }
+
+      assert {:ok, %Credential{body: updated_body}} =
+               Credentials.update_credential(credential, %{
+                 body: new_body_attrs
+               })
+
+      assert updated_body ==
+               Map.merge(new_body_attrs, %{
+                 "port" => 5002,
+                 "ssl" => true,
+                 "allowSelfSignedCert" => false
+               })
+    end
+
+    test "returns error changeset with invalid data" do
+      user = user_fixture()
+      credential = credential_fixture(user_id: user.id)
+
+      assert {:error, %Ecto.Changeset{}} =
+               Credentials.update_credential(credential, @invalid_attrs)
+
+      assert credential == Credentials.get_credential!(credential.id)
+    end
+  end
+
+  describe "migrate_credential_body/1" do
+    test "casts body to field types based on schema" do
+      user = user_fixture()
+
+      {:ok, %Lightning.Projects.Project{id: project_id}} =
+        Lightning.Projects.create_project(%{
+          name: "some-name",
+          project_users: [%{user_id: user.id}]
+        })
+
+      body = %{
+        "user" => "user1",
+        "password" => "pass1",
+        "host" => "https://dbhost",
+        "database" => "test_db",
+        "port" => "5000",
+        "ssl" => "true",
+        "allowSelfSignedCert" => "false"
+      }
+
+      %{id: id} =
+        insert(:credential,
+          name: "Test Postgres",
+          user_id: user.id,
+          body: body,
+          project_credentials: [
+            %{project_id: project_id}
+          ],
+          schema: "postgresql"
+        )
+
+      assert %Credential{body: updated_body} =
+               Repo.all(Credential)
+               |> Enum.find(&(&1.id == id))
+               |> Credentials.migrate_credential_body()
+
+      assert updated_body ==
+               Map.merge(body, %{
+                 "port" => 5000,
+                 "ssl" => true,
+                 "allowSelfSignedCert" => false
+               })
+    end
+  end
+
   describe "has_activity_in_projects?/1" do
     setup do
       {:ok, credential: insert(:credential)}
     end
 
-    test "returns true when there's at least one associated run", %{
+    test "returns true when there's at least one associated step", %{
       credential: credential
     } do
-      insert(:run, credential: credential)
+      insert(:step, credential: credential)
       assert Credentials.has_activity_in_projects?(credential)
     end
 
-    test "returns false when there's no associated run", %{
+    test "returns false when there's no associated step", %{
       credential: credential
     } do
       refute Credentials.has_activity_in_projects?(credential)
@@ -416,7 +592,7 @@ defmodule Lightning.CredentialsTest do
             "refresh_token" => "1//03dATMQTmE5NSCgYIARAAGA...",
             "scope" => "https://www.googleapis.com/auth/spreadsheets"
           },
-          schema: "googlesheets"
+          schema: "salesforce_oauth"
         )
 
       {:ok, refreshed_credential} = Credentials.maybe_refresh_token(credential)
@@ -433,39 +609,59 @@ defmodule Lightning.CredentialsTest do
     test "refreshes OAuth credentials when they are about to expire" do
       bypass = Bypass.open()
 
-      Lightning.ApplicationHelpers.put_temporary_env(:lightning, :oauth_clients,
-        google: [
-          client_id: "foo",
-          client_secret: "bar",
-          wellknown_url: "http://localhost:#{bypass.port}/auth/.well-known"
-        ]
-      )
-
-      expect_wellknown(bypass)
-
-      expect_token(bypass, Lightning.AuthProviders.Google.get_wellknown!())
-      # Now plus 4 minutes
-      expires_at = DateTime.to_unix(DateTime.utc_now()) + 4 * 60
-
-      credential =
-        credential_fixture(
-          body: %{
-            "access_token" => "ya29.a0AWY7CknfkidjXaoDTuNi",
-            "expires_at" => expires_at,
-            "refresh_token" => "1//03dATMQTmE5NSCgYIARAAGAMSNwF",
-            "scope" => "https://www.googleapis.com/auth/spreadsheets"
-          },
-          schema: "googlesheets"
+      [
+        %{provider: :google, schema: "googlesheets"},
+        %{provider: :salesforce, schema: "salesforce_oauth"}
+      ]
+      |> Enum.each(fn oauth ->
+        # Setup OAuth client environment for the current provider
+        Lightning.ApplicationHelpers.put_temporary_env(
+          :lightning,
+          :oauth_clients,
+          [
+            {oauth.provider,
+             [
+               client_id: "client_id",
+               client_secret: "secret",
+               wellknown_url: "http://localhost:#{bypass.port}/auth/.well-known"
+             ]}
+          ]
         )
 
-      {:ok, refreshed_credential} = Credentials.maybe_refresh_token(credential)
+        expect_wellknown(bypass)
 
-      assert refreshed_credential != credential
+        expect_token(
+          bypass,
+          Lightning.AuthProviders.Common.get_wellknown!(oauth.provider)
+        )
 
-      new_expiry = refreshed_credential.body["expires_at"]
+        expect_introspect(
+          bypass,
+          Lightning.AuthProviders.Common.get_wellknown!(oauth.provider)
+        )
 
-      assert is_integer(new_expiry)
-      assert new_expiry > DateTime.to_unix(DateTime.utc_now()) + 10 * 60
+        credential =
+          credential_fixture(
+            body: %{
+              "access_token" => "ya29.a0AWY7CknfkidjXaoDTuNi",
+              "expires_at" => 1000,
+              "refresh_token" => "1//03dATMQTmE5NSCgYIARAAGAMSNwF",
+              "scope" => "https://www.googleapis.com/auth/spreadsheets"
+            },
+            schema: oauth.schema
+          )
+
+        # Attempt to refresh the OAuth credentials
+        {:ok, refreshed_credential} = Credentials.maybe_refresh_token(credential)
+
+        # Assertions to verify that the credentials were indeed refreshed
+        refute refreshed_credential == credential,
+               "Expected credentials to be refreshed for #{oauth.provider |> Atom.to_string()}"
+
+        assert refreshed_credential.body["expires_at"] >
+                 credential.body["expires_at"],
+               "Expected new expiry to be greater than the old expiry for #{oauth.provider |> Atom.to_string()}"
+      end)
     end
   end
 
@@ -494,7 +690,7 @@ defmodule Lightning.CredentialsTest do
     end
 
     defp mock_activity(credential) do
-      insert(:run, credential: credential)
+      insert(:step, credential: credential)
     end
 
     test "doesn't delete credentials that are not scheduled for deletion", %{

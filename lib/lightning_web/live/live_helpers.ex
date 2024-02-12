@@ -4,7 +4,8 @@ defmodule LightningWeb.LiveHelpers do
   """
   import Phoenix.Component
 
-  alias LightningWeb.Components.{Common, Icon}
+  alias LightningWeb.Components.Common
+  alias LightningWeb.Components.Icon
   alias Phoenix.LiveView.JS
 
   def live_info_block(assigns) do
@@ -139,6 +140,11 @@ defmodule LightningWeb.LiveHelpers do
   def display_short_uuid(uuid_string) do
     uuid_string |> String.slice(0..7)
   end
+
+  def upcase_first(nil), do: nil
+
+  def upcase_first(<<first::utf8, rest::binary>>),
+    do: String.upcase(<<first::utf8>>) <> rest
 
   def fade_in(opts \\ []) do
     Keyword.put(

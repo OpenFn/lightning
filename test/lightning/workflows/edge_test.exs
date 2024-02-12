@@ -8,7 +8,7 @@ defmodule Lightning.Workflows.EdgeTest do
       changeset =
         Edge.changeset(%Edge{}, %{
           workflow_id: Ecto.UUID.generate(),
-          condition: :on_job_success
+          condition_type: :on_job_success
         })
 
       assert changeset.valid?
@@ -20,7 +20,7 @@ defmodule Lightning.Workflows.EdgeTest do
       refute changeset.valid?
 
       assert changeset.errors == [
-               condition: {"can't be blank", [validation: :required]}
+               condition_type: {"can't be blank", [validation: :required]}
              ]
     end
 
@@ -29,14 +29,14 @@ defmodule Lightning.Workflows.EdgeTest do
         Edge.changeset(%Edge{}, %{
           workflow_id: Ecto.UUID.generate(),
           source_trigger_id: Ecto.UUID.generate(),
-          condition: "on_job_success"
+          condition_type: "on_job_success"
         })
 
       refute changeset.valid?
 
-      assert {:condition,
-              {"must be :always when source is a trigger",
-               [validation: :inclusion, enum: [:always]]}} in changeset.errors
+      assert {:condition_type,
+              {"must be :always or :js_expression when source is a trigger",
+               [validation: :inclusion, enum: [:always, :js_expression]]}} in changeset.errors
     end
 
     test "can't have both source_job_id and source_trigger_id" do
@@ -74,7 +74,7 @@ defmodule Lightning.Workflows.EdgeTest do
         Edge.changeset(%Edge{}, %{
           workflow_id: Ecto.UUID.generate(),
           source_job_id: job_id,
-          condition: :on_job_success,
+          condition_type: :on_job_success,
           target_job_id: job_id
         })
 
@@ -89,7 +89,7 @@ defmodule Lightning.Workflows.EdgeTest do
         Edge.changeset(%Edge{}, %{
           workflow_id: Ecto.UUID.generate(),
           source_job_id: job_id,
-          condition: :on_job_success,
+          condition_type: :on_job_success,
           target_job_id: Ecto.UUID.generate()
         })
 
@@ -103,7 +103,7 @@ defmodule Lightning.Workflows.EdgeTest do
       changeset =
         Edge.changeset(%Edge{}, %{
           workflow_id: workflow.id,
-          condition: :on_job_success,
+          condition_type: :on_job_success,
           source_job_id: job.id
         })
 
@@ -123,7 +123,7 @@ defmodule Lightning.Workflows.EdgeTest do
       changeset =
         Edge.changeset(%Edge{}, %{
           workflow_id: workflow.id,
-          condition: :on_job_success,
+          condition_type: :on_job_success,
           target_job_id: job.id
         })
 
@@ -153,7 +153,7 @@ defmodule Lightning.Workflows.EdgeTest do
       changeset =
         Edge.changeset(%Edge{}, %{
           workflow_id: workflow.id,
-          condition: :always,
+          condition_type: :always,
           source_trigger_id: trigger.id
         })
 
@@ -169,6 +169,220 @@ defmodule Lightning.Workflows.EdgeTest do
                   constraint_name: "workflow_edges_source_trigger_id_fkey"
                 ]}
              } in changeset.errors
+    end
+
+    test "new edges are enabled by default" do
+      changeset =
+        Edge.changeset(%Edge{}, %{
+          workflow_id: Ecto.UUID.generate(),
+          target_job_id: Ecto.UUID.generate(),
+          condition_type: :on_job_success
+        })
+
+      assert changeset.valid?
+
+      assert changeset.data.enabled ||
+               Map.get(changeset.changes, :enabled, true),
+             "New edges should be enabled by default"
+    end
+
+    test "edges with source_trigger_id should be enabled" do
+      changeset =
+        Edge.changeset(%Edge{}, %{
+          workflow_id: Ecto.UUID.generate(),
+          source_trigger_id: Ecto.UUID.generate(),
+          target_job_id: Ecto.UUID.generate(),
+          condition_type: :always
+        })
+
+      assert changeset.valid?
+
+      assert changeset.data.enabled ||
+               Map.get(changeset.changes, :enabled, true),
+             "Edges with a source_trigger_id should always be enabled"
+    end
+
+    test "requires js_expression condition to have a label and js body" do
+      changeset =
+        Edge.changeset(
+          %Edge{
+            id: Ecto.UUID.generate(),
+            workflow_id: Ecto.UUID.generate(),
+            source_job_id: Ecto.UUID.generate(),
+            enabled: true
+          },
+          %{condition_type: :js_expression}
+        )
+
+      assert changeset.errors == [
+               condition_expression: {"can't be blank", [validation: :required]}
+             ]
+    end
+
+    test "requires js_expression label and condition to have limited length" do
+      changeset =
+        Edge.changeset(
+          %Edge{
+            id: Ecto.UUID.generate(),
+            workflow_id: Ecto.UUID.generate(),
+            source_job_id: Ecto.UUID.generate(),
+            enabled: true
+          },
+          %{
+            condition_type: :js_expression,
+            condition_label: String.duplicate("a", 256),
+            condition_expression: String.duplicate("a", 256)
+          }
+        )
+
+      assert changeset.errors == [
+               condition_expression: {
+                 "should be at most %{count} character(s)",
+                 [
+                   {:count, 255},
+                   {:validation, :length},
+                   {:kind, :max},
+                   {:type, :string}
+                 ]
+               },
+               condition_label:
+                 {"should be at most %{count} character(s)",
+                  [count: 255, validation: :length, kind: :max, type: :string]}
+             ]
+    end
+
+    test "requires JS expression to have valid syntax" do
+      edge = %Edge{
+        id: Ecto.UUID.generate(),
+        workflow_id: Ecto.UUID.generate(),
+        source_job_id: Ecto.UUID.generate(),
+        enabled: true
+      }
+
+      js_attrs = %{
+        condition_type: :js_expression,
+        condition_label: "Some JS Expression"
+      }
+
+      changeset =
+        Edge.changeset(
+          edge,
+          Map.put(
+            js_attrs,
+            :condition_expression,
+            "state.data.foo == 'bar';"
+          )
+        )
+
+      assert Enum.empty?(changeset.errors)
+
+      changeset =
+        Edge.changeset(
+          edge,
+          Map.put(
+            js_attrs,
+            :condition_expression,
+            "this.process"
+          )
+        )
+
+      assert changeset.errors == [
+               condition_expression: {"contains unacceptable words", []}
+             ]
+
+      changeset =
+        Edge.changeset(
+          edge,
+          Map.put(
+            js_attrs,
+            :condition_expression,
+            "state.data.patient.status == 'processing'"
+          )
+        )
+
+      assert Enum.empty?(changeset.errors)
+
+      changeset =
+        Edge.changeset(
+          edge,
+          Map.put(
+            js_attrs,
+            :condition_expression,
+            "await state.data.myFunction();"
+          )
+        )
+
+      assert changeset.errors == [
+               condition_expression: {"contains unacceptable words", []}
+             ]
+
+      changeset =
+        Edge.changeset(
+          edge,
+          Map.put(
+            js_attrs,
+            :condition_expression,
+            "eval('2 + 2')"
+          )
+        )
+
+      assert changeset.errors == [
+               condition_expression: {"contains unacceptable words", []}
+             ]
+
+      changeset =
+        Edge.changeset(
+          edge,
+          Map.put(
+            js_attrs,
+            :condition_expression,
+            "state.data.foo == 'bar' || state.data.bar == 'foo'"
+          )
+        )
+
+      assert Enum.empty?(changeset.errors)
+    end
+
+    test "requires JS expression to have neither import or require statements" do
+      edge = %Edge{
+        id: Ecto.UUID.generate(),
+        workflow_id: Ecto.UUID.generate(),
+        source_job_id: Ecto.UUID.generate(),
+        enabled: true
+      }
+
+      js_attrs = %{
+        condition_type: :js_expression,
+        condition_label: "Some JS Expression"
+      }
+
+      changeset =
+        Edge.changeset(
+          edge,
+          Map.put(
+            js_attrs,
+            :condition_expression,
+            "{ var fs = require('fs'); }"
+          )
+        )
+
+      assert changeset.errors == [
+               condition_expression: {"contains unacceptable words", []}
+             ]
+
+      changeset =
+        Edge.changeset(
+          edge,
+          Map.put(
+            js_attrs,
+            :condition_expression,
+            "{ var fs = import('fs'); }"
+          )
+        )
+
+      assert changeset.errors == [
+               condition_expression: {"contains unacceptable words", []}
+             ]
     end
   end
 end

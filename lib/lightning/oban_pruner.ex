@@ -8,10 +8,11 @@ defmodule ObanPruner do
     max_attempts: 10,
     unique: [period: 55]
 
-  require Logger
+  import Ecto.Query
 
   alias Lightning.Repo
-  import Ecto.Query
+
+  require Logger
 
   @doc """
   Deletes completed Oban jobs, leaving discarded for manual inspection.

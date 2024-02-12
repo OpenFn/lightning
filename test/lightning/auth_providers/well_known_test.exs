@@ -18,7 +18,8 @@ defmodule Lightning.AuthProviders.WellKnownTest do
               %WellKnown{
                 authorization_endpoint: "#{endpoint_url}/authorization_endpoint",
                 token_endpoint: "#{endpoint_url}/token_endpoint",
-                userinfo_endpoint: "#{endpoint_url}/userinfo_endpoint"
+                userinfo_endpoint: "#{endpoint_url}/userinfo_endpoint",
+                introspection_endpoint: "#{endpoint_url}/introspection_endpoint"
               }} == WellKnown.fetch("#{endpoint_url}/auth/.well-known")
 
       Bypass.down(bypass)

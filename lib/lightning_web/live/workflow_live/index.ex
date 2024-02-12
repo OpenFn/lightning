@@ -2,36 +2,61 @@ defmodule LightningWeb.WorkflowLive.Index do
   @moduledoc false
   use LightningWeb, :live_view
 
-  on_mount {LightningWeb.Hooks, :project_scope}
-
-  alias Lightning.Workflows
-  alias Lightning.Policies.{Permissions, ProjectUsers}
   import LightningWeb.WorkflowLive.Components
 
+  alias Lightning.DashboardStats
+  alias Lightning.Extensions.UsageLimiting.Context
+  alias Lightning.Policies.Permissions
+  alias Lightning.Policies.ProjectUsers
+  alias Lightning.Services.UsageLimiter
+  alias Lightning.Workflows
+  alias LightningWeb.WorkflowLive.DashboardComponents
+  alias LightningWeb.WorkflowLive.NewWorkflowForm
+
+  alias Phoenix.LiveView.TagEngine
+
+  on_mount {LightningWeb.Hooks, :project_scope}
+
+  # TODO - make this configurable some day
+  @dashboard_period "last 30 days"
+
+  attr :dashboard_period, :string, default: @dashboard_period
   attr :can_create_workflow, :boolean
   attr :can_delete_workflow, :boolean
   attr :workflows, :list
   attr :project, Lightning.Projects.Project
+  attr :banner, :map, default: nil
 
   @impl true
   def render(assigns) do
     ~H"""
     <LayoutComponents.page_content>
+      <:banner>
+        <%= if assigns[:banner] do %>
+          <%= TagEngine.component(
+            @banner.function,
+            @banner.attrs,
+            {__ENV__.module, __ENV__.function, __ENV__.file, __ENV__.line}
+          ) %>
+        <% end %>
+      </:banner>
       <:header>
         <LayoutComponents.header current_user={@current_user}>
           <:title><%= @page_title %></:title>
+          <:period><%= @dashboard_period %></:period>
         </LayoutComponents.header>
       </:header>
-      <div class="relative h-full flex">
-        <LayoutComponents.centered>
-          <.workflow_list
-            can_create_workflow={@can_create_workflow}
-            can_delete_workflow={@can_delete_workflow}
-            workflows={@workflows}
-            project={@project}
-          />
-        </LayoutComponents.centered>
-      </div>
+      <LayoutComponents.centered>
+        <DashboardComponents.project_metrics metrics={@metrics} project={@project} />
+        <DashboardComponents.workflow_list
+          period={@dashboard_period}
+          can_create_workflow={@can_create_workflow}
+          can_delete_workflow={@can_delete_workflow}
+          workflows_stats={@workflows_stats}
+          project={@project}
+        />
+        <.create_workflow_modal form={@form} />
+      </LayoutComponents.centered>
     </LayoutComponents.page_content>
     """
   end
@@ -54,12 +79,26 @@ defmodule LightningWeb.WorkflowLive.Index do
         socket.assigns.project
       )
 
-    {:ok,
-     socket
-     |> assign(
-       can_delete_workflow: can_delete_workflow,
-       can_create_workflow: can_create_workflow
-     )}
+    socket
+    |> assign(
+      can_delete_workflow: can_delete_workflow,
+      can_create_workflow: can_create_workflow
+    )
+    |> assign_workflow_form(
+      NewWorkflowForm.validate(%{}, socket.assigns.project.id)
+    )
+    |> then(fn socket ->
+      case UsageLimiter.check_limits(%Context{
+             project_id: socket.assigns.project.id
+           }) do
+        :ok ->
+          {:ok, socket}
+
+        {:error, reason, %{position: position} = component}
+        when reason in [:too_many_runs, :too_many_workorders] ->
+          {:ok, socket |> assign(position, component)}
+      end
+    end)
   end
 
   @impl true
@@ -68,17 +107,53 @@ defmodule LightningWeb.WorkflowLive.Index do
   end
 
   defp apply_action(socket, :index, _params) do
+    %{project: project} = socket.assigns
+
+    workflows_stats =
+      project
+      |> Workflows.get_workflows_for()
+      |> Enum.map(&DashboardStats.get_workflow_stats/1)
+
     socket
     |> assign(
       active_menu_item: :overview,
-      page_title: "Workflows",
-      workflows: Workflows.get_workflows_for(socket.assigns.project)
+      page_title: "Dashboard",
+      metrics: DashboardStats.aggregate_project_metrics(workflows_stats),
+      workflows_stats: workflows_stats
     )
   end
 
   @impl true
+  def handle_event("validate_workflow", %{"new_workflow" => params}, socket) do
+    changeset =
+      NewWorkflowForm.validate(params, socket.assigns.project.id)
+      |> Map.put(:action, :validate)
+
+    {:noreply, socket |> assign_workflow_form(changeset)}
+  end
+
+  def handle_event("create_work_flow", %{"new_workflow" => params}, socket) do
+    changeset =
+      params
+      |> NewWorkflowForm.validate(socket.assigns.project.id)
+      |> NewWorkflowForm.validate_for_save()
+
+    if changeset.valid? do
+      {:noreply,
+       push_navigate(socket,
+         to:
+           ~p"/projects/#{socket.assigns.project}/w/new?#{%{name: Ecto.Changeset.get_field(changeset, :name)}}"
+       )}
+    else
+      {:noreply, socket |> assign_workflow_form(changeset)}
+    end
+  end
+
   def handle_event("delete_workflow", %{"id" => id}, socket) do
-    if socket.assigns.can_delete_workflow do
+    %{project: project, can_delete_workflow: can_delete_workflow?} =
+      socket.assigns
+
+    if can_delete_workflow? do
       Workflows.get_workflow!(id)
       |> Workflows.mark_for_deletion()
       |> case do
@@ -86,10 +161,9 @@ defmodule LightningWeb.WorkflowLive.Index do
           {
             :noreply,
             socket
-            |> assign(
-              workflows: Workflows.get_workflows_for(socket.assigns.project)
-            )
+            |> assign(workflows: Workflows.get_workflows_for(project))
             |> put_flash(:info, "Workflow successfully deleted.")
+            |> push_patch(to: "/projects/#{project.id}/w")
           }
 
         {:error, _changeset} ->
@@ -100,5 +174,9 @@ defmodule LightningWeb.WorkflowLive.Index do
        socket
        |> put_flash(:error, "You are not authorized to perform this action.")}
     end
+  end
+
+  defp assign_workflow_form(socket, changeset) do
+    socket |> assign(form: to_form(changeset, as: :new_workflow))
   end
 end

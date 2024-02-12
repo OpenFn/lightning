@@ -1,22 +1,19 @@
 defmodule Lightning.DigestEmailWorker do
   @moduledoc false
 
+  use Oban.Worker,
+    queue: :background,
+    max_attempts: 1
+
+  import Ecto.Query, warn: false
+
   alias Lightning.Accounts.UserNotifier
   alias Lightning.Projects
   alias Lightning.Projects.Project
   alias Lightning.Projects.ProjectUser
-
   alias Lightning.Repo
-
-  alias Lightning.WorkOrders.SearchParams
-
   alias Lightning.Workflows
-
-  import Ecto.Query, warn: false
-
-  use Oban.Worker,
-    queue: :background,
-    max_attempts: 1
+  alias Lightning.WorkOrders.SearchParams
 
   @doc """
   Perform, when called with %{"type" => "daily_project_digest"} will find
@@ -90,7 +87,8 @@ defmodule Lightning.DigestEmailWorker do
   end
 
   @doc """
-  Get a map of counts for successful, rerun and failed Workorders for a given workflow in a given timeframe.
+  Get a map of counts for successful, rerun and failed Work Orders for a given
+  workflow in a given timeframe.
   """
   def get_digest_data(workflow, start_date, end_date) do
     project = Projects.get_project!(workflow.project_id)

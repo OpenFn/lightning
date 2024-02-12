@@ -4,9 +4,9 @@ defmodule LightningWeb.TokensLive.Index do
   """
   use LightningWeb, :live_view
 
+  alias Lightning.Accounts
   alias Lightning.Policies.Permissions
   alias Lightning.Policies.Users
-  alias Lightning.Accounts
 
   on_mount {LightningWeb.Hooks, :assign_projects}
 

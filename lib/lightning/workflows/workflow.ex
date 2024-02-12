@@ -8,10 +8,14 @@ defmodule Lightning.Workflows.Workflow do
     A plain text identifier
   """
   use Ecto.Schema
+
   import Ecto.Changeset
 
   alias Lightning.Projects.Project
-  alias Lightning.Workflows.{Job, Trigger, Edge, Trigger}
+  alias Lightning.Workflows.Edge
+  alias Lightning.Workflows.Job
+  alias Lightning.Workflows.Trigger
+  alias Lightning.Workflows.Trigger
 
   @type t :: %__MODULE__{
           __meta__: Ecto.Schema.Metadata.t(),
@@ -31,7 +35,7 @@ defmodule Lightning.Workflows.Workflow do
     has_many :triggers, Trigger
 
     has_many :work_orders, Lightning.WorkOrder
-    has_many :attempts, through: [:work_orders, :attempts]
+    has_many :runs, through: [:work_orders, :runs]
     belongs_to :project, Project
 
     field :deleted_at, :utc_datetime

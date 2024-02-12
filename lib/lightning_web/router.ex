@@ -1,12 +1,15 @@
 defmodule LightningWeb.Router do
+  @moduledoc """
+  The router for Lightning.
+  """
   use LightningWeb, :router
 
   import LightningWeb.UserAuth
   import Phoenix.LiveDashboard.Router
 
-  alias ProjectLive
-  alias JobLive
   alias CredentialLive
+  alias JobLive
+  alias ProjectLive
   alias UserLive
 
   pipeline :browser do
@@ -54,11 +57,11 @@ defmodule LightningWeb.Router do
 
     resources "/projects", API.ProjectController, only: [:index, :show] do
       resources "/jobs", API.JobController, only: [:index, :show]
-      resources "/runs", API.RunController, only: [:index, :show]
+      # resources "/runs", API.RunController, only: [:index, :show]
     end
 
     resources "/jobs", API.JobController, only: [:index, :show]
-    resources "/runs", API.RunController, only: [:index, :show]
+    # resources "/runs", API.RunController, only: [:index, :show]
   end
 
   ## Authentication routes
@@ -137,14 +140,10 @@ defmodule LightningWeb.Router do
         live "/settings", ProjectLive.Settings, :index
         live "/settings/delete", ProjectLive.Settings, :delete
 
-        live "/runs", RunLive.Index, :index
+        live "/history", RunLive.Index, :index
         live "/runs/:id", RunLive.Show, :show
 
-        live "/attempts/:id", AttemptLive.Show, :show
-
-        live "/dataclips", DataclipLive.Index, :index
-        live "/dataclips/new", DataclipLive.Edit, :new
-        live "/dataclips/:id/edit", DataclipLive.Edit, :edit
+        live "/dataclips/:id/show", DataclipLive.Show, :show
 
         live "/w", WorkflowLive.Index, :index
         live "/w/new", WorkflowLive.Edit, :new
@@ -172,16 +171,23 @@ defmodule LightningWeb.Router do
     post "/*path", WebhooksController, :create
   end
 
-  # Other scopes may use custom stacks.
-  # scope "/api", LightningWeb do
-  #   pipe_through :api
-  # end
+  scope "/" do
+    @routing_config Application.compile_env(
+                      :lightning,
+                      Lightning.Extensions.Routing,
+                      []
+                    )
+    @services_opts @routing_config |> Keyword.get(:session_opts, [])
+    @services_routes @routing_config |> Keyword.get(:routes, [])
 
-  # Enables the Swoosh mailbox preview and LiveDashboard in development.
-  #
-  # Note that preview only shows emails that were sent by the same
-  # node running the Phoenix server.
-  #
+    pipe_through [:browser, :require_authenticated_user]
+
+    live_session :services, @services_opts do
+      Enum.each(@services_routes, fn {path, module, action, opts} ->
+        live(path, module, action, opts)
+      end)
+    end
+  end
 
   # LiveDashboard enables basic system monitoring but is only available to
   # superusers—i.e., the people who installed/maintain the instance.
@@ -208,6 +214,8 @@ defmodule LightningWeb.Router do
       pipe_through :browser
 
       forward "/mailbox", Plug.Swoosh.MailboxPreview
+
+      live "/components", LightningWeb.Dev.ComponentsLive, :index
     end
   end
 

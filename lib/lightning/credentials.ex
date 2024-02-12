@@ -9,18 +9,24 @@ defmodule Lightning.Credentials do
 
   import Ecto.Query, warn: false
   import Lightning.Helpers, only: [coerce_json_field: 2]
-  alias Lightning.Accounts.UserNotifier
-  alias Lightning.Credentials
-  alias Lightning.AuthProviders.Google
-  alias Lightning.Repo
-  alias Ecto.Multi
 
-  alias Lightning.Credentials.{Audit, Credential, SensitiveValues}
+  alias Ecto.Multi
+  alias Lightning.Accounts.UserNotifier
+  alias Lightning.AuthProviders.Common
+  alias Lightning.Credentials
+  alias Lightning.Credentials.Audit
+  alias Lightning.Credentials.Credential
+  alias Lightning.Credentials.SchemaDocument
+  alias Lightning.Credentials.SensitiveValues
   alias Lightning.Projects.Project
+  alias Lightning.Repo
+
+  require Logger
 
   @doc """
   Perform, when called with %{"type" => "purge_deleted"}
-  will find credentials that are ready for permanent deletion, set their bodies to null, and attempt to purge them.
+  will find credentials that are ready for permanent deletion, set their bodies
+  to null, and try to purge them.
   """
 
   @impl Oban.Worker
@@ -103,6 +109,15 @@ defmodule Lightning.Credentials do
   """
   def get_credential!(id), do: Repo.get!(Credential, id)
 
+  def get_credential_by_project_credential(project_credential_id) do
+    query =
+      from c in Credential,
+        join: pc in assoc(c, :project_credentials),
+        on: pc.id == ^project_credential_id
+
+    Repo.one(query)
+  end
+
   @doc """
   Creates a credential.
 
@@ -116,17 +131,20 @@ defmodule Lightning.Credentials do
 
   """
   def create_credential(attrs \\ %{}) do
+    changeset =
+      %Credential{}
+      |> change_credential(attrs)
+      |> cast_body_change()
+
     Multi.new()
     |> Multi.insert(
       :credential,
-      Credential.changeset(%Credential{}, attrs |> coerce_json_field("body"))
+      changeset
     )
-    |> Multi.insert(:audit, fn %{credential: credential} ->
-      Audit.event("created", credential.id, credential.user_id)
-    end)
+    |> derive_events(changeset)
     |> Repo.transaction()
     |> case do
-      {:error, :credential, changeset, _changes} ->
+      {:error, _op, changeset, _changes} ->
         {:error, changeset}
 
       {:ok, %{credential: credential}} ->
@@ -147,7 +165,7 @@ defmodule Lightning.Credentials do
 
   """
   def update_credential(%Credential{} = credential, attrs) do
-    changeset = change_credential(credential, attrs)
+    changeset = credential |> change_credential(attrs) |> cast_body_change()
 
     Multi.new()
     |> Multi.update(:credential, changeset)
@@ -162,9 +180,83 @@ defmodule Lightning.Credentials do
     end
   end
 
+  @doc """
+  Creates a credential schema from credential json schema.
+  """
+  @spec get_schema(String.t()) :: Credentials.Schema.t()
+  # false positive, it's safe file path (path from config)
+  # sobelow_skip ["Traversal.FileModule"]
+  def get_schema(schema_name) do
+    {:ok, schemas_path} = Application.fetch_env(:lightning, :schemas_path)
+
+    File.read("#{schemas_path}/#{schema_name}.json")
+    |> case do
+      {:ok, raw_json} ->
+        Credentials.Schema.new(raw_json, schema_name)
+
+      {:error, reason} ->
+        raise "Error reading credential schema. Got: #{reason |> inspect()}"
+    end
+  end
+
+  # Migration only
+  def migrate_credential_body(
+        %Credential{body: body, schema: schema_name} = credential
+      ) do
+    case put_typed_body(body, schema_name) do
+      {:ok, ^body} ->
+        :ok
+
+      {:ok, changed_body} ->
+        credential
+        |> change_credential(%{body: changed_body})
+        |> Repo.update!()
+
+      {:error, %Ecto.Changeset{errors: errors}} ->
+        Logger.warning(fn ->
+          "Casting credential on migration failed with reason: #{inspect(errors)}"
+        end)
+    end
+  end
+
+  defp cast_body_change(
+         %Ecto.Changeset{valid?: true, changes: %{body: body}} = changeset
+       ) do
+    schema_name = Ecto.Changeset.get_field(changeset, :schema)
+
+    case put_typed_body(body, schema_name) do
+      {:ok, updated_body} ->
+        Ecto.Changeset.put_change(changeset, :body, updated_body)
+
+      {:error, _reason} ->
+        Ecto.Changeset.add_error(changeset, :body, "Invalid body types")
+    end
+  end
+
+  defp cast_body_change(changeset), do: changeset
+
+  defp put_typed_body(body, "raw"), do: {:ok, body}
+
+  defp put_typed_body(body, "salesforce_oauth"), do: {:ok, body}
+
+  defp put_typed_body(body, schema_name) do
+    schema = get_schema(schema_name)
+
+    with changeset <- SchemaDocument.changeset(body, schema: schema),
+         {:ok, typed_body} <- Ecto.Changeset.apply_action(changeset, :insert) do
+      updated_body =
+        Enum.into(typed_body, body, fn {field, typed_value} ->
+          {to_string(field), typed_value}
+        end)
+
+      {:ok, updated_body}
+    end
+  end
+
   defp derive_events(
          multi,
-         %Ecto.Changeset{data: %Credential{}} = changeset
+         %Ecto.Changeset{data: %Credential{__meta__: %{state: state}}} =
+           changeset
        ) do
     case changeset.changes do
       map when map_size(map) == 0 ->
@@ -182,7 +274,7 @@ defmodule Lightning.Credentials do
           :audit,
           fn %{credential: credential} ->
             Audit.event(
-              "updated",
+              if(state == :built, do: "created", else: "updated"),
               credential.id,
               credential.user_id,
               changeset
@@ -355,7 +447,7 @@ defmodule Lightning.Credentials do
   end
 
   @doc """
-  Checks if a given `Credential` has any associated `Run` activity.
+  Checks if a given `Credential` has any associated `Step` activity.
 
   ## Parameters
 
@@ -363,7 +455,7 @@ defmodule Lightning.Credentials do
 
   ## Returns
 
-    - `true` if there's at least one `Run` associated with the given `Credential`.
+    - `true` if there's at least one `Step` associated with the given `Credential`.
     - `false` otherwise.
 
   ## Examples
@@ -376,14 +468,14 @@ defmodule Lightning.Credentials do
 
   ## Notes
 
-  This function leverages the association between `Run` and `Credential` to determine
-  if any runs exist for a given credential. It's a fast check that does not load
-  any records into memory, but simply checks for their existence.
+  This function leverages the association between `Step` and `Credential` to
+  determine if any steps exist for a given credential. It's a fast check that
+  does not load any records into memory, but simply checks for their existence.
 
   """
   def has_activity_in_projects?(%Credential{id: id} = _credential) do
-    from(run in Lightning.Invocation.Run,
-      where: run.credential_id == ^id
+    from(step in Lightning.Invocation.Step,
+      where: step.credential_id == ^id
     )
     |> Repo.exists?()
   end
@@ -419,6 +511,23 @@ defmodule Lightning.Credentials do
     end
   end
 
+  def basic_auth_for(%Credential{body: body}) when is_map(body) do
+    usernames =
+      body
+      |> Map.take(["username", "email"])
+      |> Map.values()
+
+    password = Map.get(body, "password", "")
+
+    usernames
+    |> Enum.zip(List.duplicate(password, length(usernames)))
+    |> Enum.map(fn {username, password} ->
+      Base.encode64("#{username}:#{password}")
+    end)
+  end
+
+  def basic_auth_for(_credential), do: []
+
   @doc """
   Given a credential and a user, returns a list of invalid projects—i.e., those
   that the credential is shared with but that the user does not have access to.
@@ -452,40 +561,34 @@ defmodule Lightning.Credentials do
     project_credentials -- project_users
   end
 
-  # TODO: this doesn't need to be Google specific. It should work for any standard OAuth2 credential.
-  @spec maybe_refresh_token(nil | Lightning.Credentials.Credential.t()) ::
-          {:error, :invalid_config}
-          | {:ok, Lightning.Credentials.Credential.t()}
-  def maybe_refresh_token(%Credential{schema: "googlesheets"} = credential) do
-    token_body = Google.TokenBody.new(credential.body)
+  def maybe_refresh_token(%Credential{schema: schema} = credential) do
+    case lookup_adapter(schema) do
+      nil ->
+        {:ok, credential}
 
-    if still_fresh(token_body) do
-      {:ok, credential}
-    else
-      with {:ok, %OAuth2.Client{} = client} <- Google.build_client(),
-           {:ok, %OAuth2.AccessToken{} = token} <-
-             Google.refresh_token(client, token_body),
-           token <- Google.TokenBody.from_oauth2_token(token) do
-        Credentials.update_credential(credential, %{
-          body: token |> Lightning.Helpers.json_safe()
-        })
-      end
+      adapter ->
+        token = Common.TokenBody.new(credential.body)
+
+        if Common.still_fresh(token) do
+          {:ok, credential}
+        else
+          {:ok, refreshed_token} =
+            adapter.refresh_token(token)
+
+          update_credential(credential, %{
+            body:
+              refreshed_token
+              |> Common.TokenBody.from_oauth2_token()
+              |> Lightning.Helpers.json_safe()
+          })
+        end
     end
   end
 
-  def maybe_refresh_token(%Credential{} = credential), do: {:ok, credential}
-  def maybe_refresh_token(nil), do: {:ok, nil}
-
-  defp still_fresh(
-         %{expires_at: expires_at},
-         threshold \\ 5,
-         time_unit \\ :minute
-       ) do
-    current_time = DateTime.utc_now()
-    expiration_time = DateTime.from_unix!(expires_at)
-
-    time_remaining = DateTime.diff(expiration_time, current_time, time_unit)
-
-    time_remaining >= threshold
+  defp lookup_adapter(schema) do
+    case :ets.lookup(:adapter_lookup, schema) do
+      [{^schema, adapter}] -> adapter
+      [] -> nil
+    end
   end
 end

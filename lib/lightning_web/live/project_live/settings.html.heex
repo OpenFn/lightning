@@ -53,7 +53,14 @@
               hash="vcs"
             >
               <Heroicons.arrow_path class="h-5 w-5 inline-block mr-2" />
-              <span class="inline-block align-middle">Sync to Github</span>
+              <span class="inline-block align-middle">Sync to GitHub</span>
+            </LightningWeb.Components.Common.tab_item>
+            <LightningWeb.Components.Common.tab_item
+              orientation="vertical"
+              hash="data-storage"
+            >
+              <Heroicons.square_3_stack_3d class="h-5 w-5 inline-block mr-2" />
+              <span class="inline-block align-middle">Data Storage</span>
             </LightningWeb.Components.Common.tab_item>
           </LightningWeb.Components.Common.tab_bar>
         </div>
@@ -66,15 +73,19 @@
             <small class="block my-1 text-xs text-gray-600">
               Projects are isolated workspaces that contain workflows, accessible to certain users.
             </small>
+            <.permissions_message
+              :if={!can_edit_project(assigns)}
+              section="basic settings, but you can export a copy."
+            />
           </div>
           <div class="hidden sm:block" aria-hidden="true">
             <div class="py-2"></div>
           </div>
-          <div id="project-settings-#" class="bg-white p-4 rounded-md">
+          <div class="bg-white p-4 rounded-md">
             <div>
               <h6 class="font-medium text-black">Project Identity</h6>
               <small class="block my-1 text-xs text-gray-600">
-                This metadata helps you idenity the types of workflows managed in this project and the people that have access.
+                This metadata helps you identify the types of workflows managed in this project and the people that have access.
               </small>
             </div>
             <.form
@@ -91,7 +102,7 @@
                 <div class="md:col-span-2">
                   <Form.text_field
                     form={f}
-                    disabled={!@can_edit_project_name}
+                    disabled={!can_edit_project(assigns)}
                     label="Project name"
                     field={:name}
                   />
@@ -105,7 +116,7 @@
                   <Form.text_area
                     class="mt-1 focus:ring-primary-500 focus:border-primary-500 block w-full shadow-sm sm:text-sm border-secondary-300 rounded-md"
                     form={f}
-                    disabled={!@can_edit_project_description}
+                    disabled={!can_edit_project(assigns)}
                     label="Project description"
                     field={:description}
                   />
@@ -121,8 +132,8 @@
                 <div class="md:col-span-2">
                   <Form.submit_button
                     disabled={
-                      !(@project_changeset.valid? and @can_edit_project_name and
-                          @can_edit_project_description)
+                      !(@project_changeset.valid? and can_edit_project(assigns) and
+                          can_edit_project(assigns))
                     }
                     phx-disable-with="Saving"
                   >
@@ -135,7 +146,7 @@
           <div class="hidden sm:block" aria-hidden="true">
             <div class="py-2"></div>
           </div>
-          <div id="project-settings-#" class="bg-white p-4 rounded-md">
+          <div class="bg-white p-4 rounded-md">
             <div>
               <h6 class="font-medium text-black">Export your Project</h6>
               <p class="block my-1 text-xs text-gray-600">
@@ -146,6 +157,7 @@
               </div>
               <a
                 href={~p"/download/yaml?id=#{@project.id}"}
+                target="_blank"
                 class="bg-primary-600 hover:bg-primary-700 inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 "
               >
                 Export project
@@ -156,7 +168,7 @@
             <div class="hidden sm:block" aria-hidden="true">
               <div class="py-2"></div>
             </div>
-            <div id="project-settings-#" class="bg-white p-4 rounded-md">
+            <div class="bg-white p-4 rounded-md">
               <div>
                 <h6 class="font-medium text-black">The danger zone</h6>
                 <small class="block my-1 text-xs text-gray-600">
@@ -194,11 +206,47 @@
           <% end %>
         </LightningWeb.Components.Common.panel_content>
         <LightningWeb.Components.Common.panel_content for_hash="credentials">
-          <div>
-            <h6 class="font-medium text-black">Project credentials</h6>
-            <small class="block my-1 text-xs text-gray-600">
-              View and edit credentials that are currently accesible for use in this project.
-            </small>
+          <div class="flex justify-between content-center pb-2">
+            <div class="leading-loose">
+              <h6 class="font-medium text-black">Project credentials</h6>
+              <small class="block text-xs text-gray-600">
+                View and edit credentials that are currently accessible for use in this project.
+              </small>
+              <.permissions_message
+                :if={!@can_create_project_credential}
+                section="available credentials."
+              />
+            </div>
+            <div class="sm:block" aria-hidden="true">
+              <.button
+                id="new-credential-button"
+                phx-click={show_modal("new-credential-modal")}
+                {if !@can_create_project_credential, do: [disabled: "disabled"], else: []}
+              >
+                New credential
+              </.button>
+              <.live_component
+                id="new-credential-modal"
+                module={LightningWeb.CredentialLive.FormComponent}
+                action={:new}
+                credential_type={@selected_credential_type}
+                credential={
+                  %Lightning.Credentials.Credential{
+                    user_id: @current_user.id,
+                    project_credentials: [
+                      %Lightning.Projects.ProjectCredential{
+                        project_id: @project.id
+                      }
+                    ]
+                  }
+                }
+                projects={[]}
+                project={@project}
+                show_project_credentials={false}
+                can_create_project_credential={@can_create_project_credential}
+                return_to={~p"/projects/#{@project.id}/settings#credentials"}
+              />
+            </div>
           </div>
           <div class="hidden sm:block" aria-hidden="true">
             <div class="py-2"></div>
@@ -228,8 +276,8 @@
                 <.td>
                   <%= if credential.user_id == @current_user.id do %>
                     <span>
-                      <.link navigate={
-                        Routes.credential_edit_path(@socket, :edit, credential)
+                      <.link phx-click={
+                        show_modal("edit-credential-#{credential.id}-modal")
                       }>
                         Edit
                       </.link>
@@ -237,29 +285,46 @@
                   <% end %>
                 </.td>
               </.tr>
+              <.live_component
+                id={"edit-credential-#{credential.id}-modal"}
+                module={LightningWeb.CredentialLive.FormComponent}
+                action={:edit}
+                credential_type={nil}
+                credential={
+                  credential |> Lightning.Repo.preload(:project_credentials)
+                }
+                projects={[]}
+                project={@project}
+                show_project_credentials={false}
+                can_create_project_credential={@can_create_project_credential}
+                return_to={~p"/projects/#{@project.id}/settings#credentials"}
+              />
             <% end %>
           </.table>
         </LightningWeb.Components.Common.panel_content>
         <LightningWeb.Components.Common.panel_content for_hash="webhook_security">
-          <div class="flex justify-between content-center pb-2">
+          <div class="flex justify-between content-center">
             <div class="leading-loose">
               <h6 class="font-medium text-black">Webhook Security</h6>
-              <small class="block my-1 text-xs text-gray-600">
+              <small class="block text-xs text-gray-600">
                 Webhook authentication methods that are used with the starting trigger in workflows.
               </small>
+              <.permissions_message
+                :if={!@can_write_webhook_auth_method}
+                section="webhook auth methods."
+              />
             </div>
             <div class="sm:block" aria-hidden="true">
-              <button
+              <.button
                 id="add_new_auth_method"
                 type="button"
                 phx-click={show_modal("new_auth_method_modal")}
-                class="rounded-md bg-indigo-600 px-2.5 py-1.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 disabled:opacity-50"
-                {if !@can_create_webhook_auth_method, do: [disabled: "disabled"], else: []}
+                {if !@can_write_webhook_auth_method, do: [disabled: "disabled"], else: []}
               >
-                Add an auth method
-              </button>
+                New auth method
+              </.button>
               <.live_component
-                :if={@can_create_webhook_auth_method}
+                :if={@can_write_webhook_auth_method}
                 module={
                   LightningWeb.WorkflowLive.WebhookAuthMethodModalComponent
                 }
@@ -275,11 +340,14 @@
               />
             </div>
           </div>
+          <div class="hidden sm:block" aria-hidden="true">
+            <div class="py-2"></div>
+          </div>
           <LightningWeb.WorkflowLive.Components.webhook_auth_methods_table
             auth_methods={@webhook_auth_methods}
             current_user={@current_user}
             return_to={~p"/projects/#{@project.id}/settings#webhook_security"}
-            class="px-2"
+            class="p-2"
           >
             <:linked_triggers :let={auth_method}>
               <span class="relative font-normal">
@@ -320,7 +388,7 @@
               </span>
             </:linked_triggers>
             <:action :let={auth_method}>
-              <%= if @can_edit_webhook_auth_method do %>
+              <%= if @can_write_webhook_auth_method do %>
                 <a
                   id={"edit_auth_method_link_#{auth_method.id}"}
                   href="#"
@@ -356,30 +424,40 @@
               <% end %>
             </:action>
             <:action :let={auth_method}>
-              <a
-                id={"delete_auth_method_link_#{auth_method.id}"}
-                href="#"
-                class="text-red-600 hover:text-red-800"
-                phx-click={show_modal("delete_auth_#{auth_method.id}_modal")}
-              >
-                Delete
-              </a>
-              <div class="text-left">
-                <.live_component
-                  module={
-                    LightningWeb.WorkflowLive.WebhookAuthMethodModalComponent
-                  }
-                  id={"delete_auth_#{auth_method.id}_modal"}
-                  action={:delete}
-                  project={@project}
-                  webhook_auth_method={auth_method}
-                  current_user={@current_user}
-                  return_to={
-                    ~p"/projects/#{@project.id}/settings#webhook_security"
-                  }
-                  trigger={nil}
-                />
-              </div>
+              <%= if @can_write_webhook_auth_method do %>
+                <a
+                  id={"delete_auth_method_link_#{auth_method.id}"}
+                  href="#"
+                  class="text-red-600 hover:text-red-800"
+                  phx-click={show_modal("delete_auth_#{auth_method.id}_modal")}
+                >
+                  Delete
+                </a>
+                <div class="text-left">
+                  <.live_component
+                    module={
+                      LightningWeb.WorkflowLive.WebhookAuthMethodModalComponent
+                    }
+                    id={"delete_auth_#{auth_method.id}_modal"}
+                    action={:delete}
+                    project={@project}
+                    webhook_auth_method={auth_method}
+                    current_user={@current_user}
+                    return_to={
+                      ~p"/projects/#{@project.id}/settings#webhook_security"
+                    }
+                    trigger={nil}
+                  />
+                </div>
+              <% else %>
+                <a
+                  id={"edit_auth_method_link_#{auth_method.id}"}
+                  href="#"
+                  class="ml-1 cursor-not-allowed text-indigo-300"
+                >
+                  Delete
+                </a>
+              <% end %>
             </:action>
           </LightningWeb.WorkflowLive.Components.webhook_auth_methods_table>
         </LightningWeb.Components.Common.panel_content>
@@ -389,6 +467,10 @@
             <small class="block my-1 text-xs text-gray-600">
               View collaborators and manage alert settings for this project.
             </small>
+            <.permissions_message
+              :if={!can_edit_project(assigns)}
+              section="collaboration settings, but you can change your notification preferences."
+            />
           </div>
           <div class="hidden sm:block" aria-hidden="true">
             <div class="py-2"></div>
@@ -405,6 +487,11 @@
               <.tr id={"project_user-#{project_user.id}"}>
                 <.td>
                   <.user project_user={project_user} />
+                  <div :if={project_user.user.email == @current_user.email}>
+                    <small class="text-gray-400">
+                      <em>Well hello, you!</em>
+                    </small>
+                  </div>
                 </.td>
                 <.td>
                   <.role project_user={project_user} />
@@ -432,99 +519,121 @@
             <small class="block my-1 text-xs text-gray-600">
               View and manage security settings for this project.
             </small>
+            <.permissions_message
+              :if={!can_edit_project(assigns)}
+              section="multi-factor authentication settings."
+            />
           </div>
           <div class="hidden sm:block" aria-hidden="true">
             <div class="py-2"></div>
           </div>
-          <%= if can_edit_project(assigns) do %>
-            <div id="project-settings-#" class="bg-white p-4 rounded-md">
-              <div class="flex items-center justify-between">
-                <span class="flex flex-grow flex-col">
-                  <span
-                    class="text-sm font-medium leading-6 text-gray-900"
-                    id="availability-label"
-                  >
-                    Multi-Factor Authentication
-                  </span>
-                  <span
-                    class="text-sm text-gray-500"
-                    id="availability-description"
-                  >
-                    Requiring multi-factor authentication (MFA) adds an
-                    additional layer of security by requiring users to enable
-                    MFA on their accounts before they are allowed access this
-                    project.
-                  </span>
-                </span>
-              </div>
-              <div>
-                <h6 class="font-medium text-black"></h6>
-                <p class="block my-1 text-xs text-gray-600"></p>
-                <div class="hidden sm:block" aria-hidden="true">
-                  <div class="py-2"></div>
-                </div>
-                <div class="flex items-center">
-                  <button
-                    id="toggle-mfa-switch"
-                    type="button"
-                    class={"#{if @project.requires_mfa, do: "bg-indigo-600", else: "bg-gray-200"} relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:ring-offset-2"}
-                    role="switch"
-                    phx-click="toggle-mfa"
-                    aria-checked={@project.requires_mfa}
-                    aria-labelledby="require-mfa-label"
-                    aria-describedby="require-mfa-description"
-                  >
-                    <span
-                      aria-hidden="true"
-                      class={"#{if @project.requires_mfa, do: "translate-x-5", else: "translate-x-0"} pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out"}
-                    >
-                    </span>
-                  </button>
-                  <span class="ml-3 text-sm" id="require-mfa-label">
-                    <span class="font-medium text-gray-900">Require MFA?</span>
-                    <span class="text-gray-500">
-                      <%= if @project.requires_mfa do %>
-                        (currently required for this project)
-                      <% else %>
-                        (currently optional for this project)
-                      <% end %>
-                    </span>
-                  </span>
-                </div>
-              </div>
-            </div>
-          <% end %>
-        </LightningWeb.Components.Common.panel_content>
-        <LightningWeb.Components.Common.panel_content for_hash="vcs">
-          <%= if  @github_enabled do %>
-            <div :if={@can_install_github}>
-              <div :if={@show_github_setup} class="bg-white p-4 rounded-md">
-                <h6 class="font-medium text-black">
-                  Install Github App to get started
-                </h6>
-                <small class="block my-1 text-xs text-gray-600">
-                  Easily keep your Project synced to a Github Repository
-                </small>
-                <small class="block my-1 text-xs text-gray-600">
-                  To get started you will need to install the OpenFn Github application (admin access require)
-                </small>
-                <div class="hidden sm:block" aria-hidden="true">
-                  <div class="py-2"></div>
-                </div>
-                <button
-                  type="button"
-                  phx-click="install_app"
-                  phx-value-id={@project.id}
-                  class="bg-primary-600 hover:bg-primary-700 inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+
+          <div class="bg-white p-4 rounded-md">
+            <div class="flex items-center justify-between">
+              <span class="flex flex-grow flex-col">
+                <span
+                  class="text-sm font-medium leading-6 text-gray-900"
+                  id="availability-label"
                 >
-                  Install Github
-                </button>
-              </div>
+                  Multi-Factor Authentication
+                </span>
+                <span class="text-sm text-gray-500" id="availability-description">
+                  Requiring multi-factor authentication (MFA) adds an
+                  additional layer of security by requiring users to enable
+                  MFA on their accounts before they are allowed access this
+                  project.
+                </span>
+              </span>
+            </div>
+            <div>
+              <h6 class="font-medium text-black"></h6>
+              <p class="block my-1 text-xs text-gray-600"></p>
               <div class="hidden sm:block" aria-hidden="true">
                 <div class="py-2"></div>
               </div>
+              <div class="flex items-center">
+                <button
+                  id="toggle-mfa-switch"
+                  type="button"
+                  class={"#{if @project.requires_mfa, do: "bg-indigo-600", else: "bg-gray-200"} #{if !can_edit_project(assigns), do: "cursor-not-allowed opacity-50", else: "cursor-pointer"} relative inline-flex h-6 w-11 flex-shrink-0 rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:ring-offset-2"}
+                  role="switch"
+                  phx-click="toggle-mfa"
+                  aria-checked={@project.requires_mfa}
+                  aria-labelledby="require-mfa-label"
+                  aria-describedby="require-mfa-description"
+                  {if !can_edit_project(assigns), do: ["phx-hook": "Tooltip", "data-placement": "bottom", "aria-label": "You do not have permission to perform this action"], else: []}
+                >
+                  <span
+                    aria-hidden="true"
+                    class={"#{if @project.requires_mfa, do: "translate-x-5", else: "translate-x-0"} pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out"}
+                  >
+                  </span>
+                </button>
+                <span class="ml-3 text-sm" id="require-mfa-label">
+                  <span class="font-medium text-gray-900">Require MFA?</span>
+                  <span class="text-gray-500">
+                    <%= if @project.requires_mfa do %>
+                      (currently required for this project)
+                    <% else %>
+                      (currently optional for this project)
+                    <% end %>
+                  </span>
+                </span>
+              </div>
+            </div>
+          </div>
+        </LightningWeb.Components.Common.panel_content>
+        <LightningWeb.Components.Common.panel_content for_hash="vcs">
+          <div>
+            <h6 class="font-medium text-black">Version Control</h6>
+            <small class="block my-1 text-xs text-gray-600">
+              View or modify external version control settings for this project.
+            </small>
+            <.permissions_message
+              :if={!@can_install_github}
+              section={"version control configuration#{@can_initiate_github_sync && " but you can initiate a sync." || "."}"}
+            />
+          </div>
+          <div class="hidden sm:block" aria-hidden="true">
+            <div class="py-2"></div>
+          </div>
+          <%= if  @github_enabled do %>
+            <div>
+              <div :if={@show_github_setup} class="bg-white p-4 rounded-md">
+                <h6 class="font-medium text-black">
+                  Connect this project to a GitHub repo
+                </h6>
+                <small class="block my-1 text-xs text-gray-600">
+                  Click to install the OpenFn app in a GitHub organization & repository.
+                  (You will need admin access.)
+                </small>
+                <div class="hidden sm:block" aria-hidden="true">
+                  <div class="py-2"></div>
+                </div>
+                <.button
+                  type="button"
+                  disabled={
+                    !@can_install_github ||
+                      has_pending_installation?(
+                        @project,
+                        @pending_github_installation
+                      )
+                  }
+                  phx-click="install_app"
+                  phx-value-id={@project.id}
+                  tooltip={
+                    install_github_tooltip(
+                      @project,
+                      @can_install_github,
+                      @pending_github_installation
+                    )
+                  }
+                >
+                  Connect to GitHub
+                </.button>
+              </div>
               <div :if={!@show_github_setup} class="bg-white p-4 rounded-md">
-                <h6 class="font-medium text-black">Sync to Github</h6>
+                <h6 class="font-medium text-black">Sync to GitHub</h6>
                 <small class="block my-1 text-xs text-gray-600">
                   Configure a two-way sync between this lightning project and a
                   GitHub repo. See
@@ -571,7 +680,7 @@
                       <Form.select_field
                         :if={@show_repo_setup && !@show_sync_button}
                         form={f}
-                        disabled={@show_sync_button}
+                        disabled={!@can_install_github || @show_sync_button}
                         name={:repo}
                         id="project-repo"
                         phx-change="repo_selected"
@@ -604,7 +713,7 @@
                       <Form.select_field
                         :if={@show_repo_setup && !@show_sync_button}
                         form={f}
-                        disabled={@loading_branches}
+                        disabled={!@can_install_github || @loading_branches}
                         phx-change="branch_selected"
                         name={:branch}
                         id="project-branch"
@@ -634,7 +743,7 @@
                         <Form.select_field
                           :if={@show_repo_setup && !@show_sync_button}
                           form={f}
-                          disabled={@loading_branches}
+                          disabled={!@can_install_github || @loading_branches}
                           phx-change="branch_selected"
                           name={:branch}
                           id="project-branch"
@@ -656,79 +765,169 @@
                         :if={!@show_sync_button}
                         phx-disable-with="Saving"
                         disabled={
-                          !@project_repo_connection["repo"] ||
+                          !@can_install_github ||
+                            !@project_repo_connection["repo"] ||
                             !@project_repo_connection["branch"]
                         }
                       >
                         Connect Branch
                       </Form.submit_button>
-                      <button
+                      <.button
                         :if={@show_sync_button}
+                        disabled={!@can_initiate_github_sync}
                         type="button"
-                        phx-click="run_sync"
+                        tooltip={
+                          !@can_initiate_github_sync &&
+                            "Contact an editor or admin to sync."
+                        }
+                        phx-click="initiate_sync"
                         phx-value-id={@project.id}
                         class="bg-primary-600 hover:bg-primary-700 inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
                       >
-                        Sync to Branch
-                      </button>
+                        Initiate Sync to Branch
+                      </.button>
                     </div>
-                    <div>
+                    <div :if={@can_install_github}>
                       <div>
                         <small>
                           Need to change the repository or branch?
+                          <button
+                            class="text-primary-600"
+                            phx-click="reinstall_app"
+                          >
+                            Re-configure your GitHub permissions (admin access required)
+                          </button>
                         </small>
-                        <button
-                          type="button"
-                          phx-click="reinstall_clip"
-                          phx-value-id={@project.id}
-                          class="my-2 text-xs text-primary-600"
-                        >
-                          Re-configure your Github permissions (admin access required)
-                        </button>
                       </div>
                       <div>
                         <small>
                           No longer need to sync your project?
+                          <button
+                            class="text-red-500"
+                            phx-click={
+                              LightningWeb.Components.Modal.show_modal(
+                                "delete_connection_modal"
+                              )
+                            }
+                            phx-value-id={@project.id}
+                          >
+                            Remove github connection
+                          </button>
                         </small>
-                        <button
-                          type="button"
-                          phx-click={
-                            LightningWeb.Components.Modal.show_modal(
-                              "delete_connection_modal"
-                            )
-                          }
-                          phx-value-id={@project.id}
-                          class="my-2 text-xs text-danger-500"
-                        >
-                          Remove github connection
-                        </button>
                       </div>
                     </div>
                   </div>
                 </.form>
               </div>
-              <DeleteConnectionModal.modal id="delete_connection_modal">
-                <span> Here is the stuff</span>
-              </DeleteConnectionModal.modal>
-            </div>
-            <div :if={!@can_install_github} class="bg-white p-4 rounded-md">
-              <h6 class="font-medium text-black">
-                Sync to Github
-              </h6>
-              <small class="block mt-1 text-xs text-gray-600">
-                Ask an admin to install our github app to start syncing your project
-              </small>
+              <DeleteConnectionModal.modal id="delete_connection_modal" />
             </div>
           <% else %>
             <div class="bg-white p-4 rounded-md">
               <h6 class="font-medium text-black">
-                Sync to Github
+                Sync to GitHub
               </h6>
               <small class="block mt-1 text-xs text-gray-600">
                 Version Control is not configured for this Lightning instance. Contact the superuser for more information.
               </small>
             </div>
           <% end %>
+        </LightningWeb.Components.Common.panel_content>
+        <LightningWeb.Components.Common.panel_content for_hash="data-storage">
+          <div>
+            <h6 class="font-medium text-black">Data Storage</h6>
+            <small class="block my-1 text-xs text-gray-600">
+              View or modify data storage settings for this project.
+            </small>
+            <.permissions_message
+              :if={!@can_edit_data_retention}
+              role={@current_user.role}
+              section="data storage settings."
+            />
+          </div>
+          <div class="hidden sm:block" aria-hidden="true">
+            <div class="py-2"></div>
+          </div>
+          <div class="bg-white p-4 rounded-md">
+            <div class="text-black text-sm">
+              <div class="font-medium">
+                Input/Output Data Storage Policy
+              </div>
+              <div class="block mt-1 mb-3">
+                Should OpenFn store input/output data for workflow runs?
+                <a
+                  href="https://docs.openfn.org/documentation/next/manage-projects/io-data-storage"
+                  class="ml-1 text-indigo-600"
+                >
+                  Learn more...
+                </a>
+              </div>
+            </div>
+
+            <.form
+              :let={f}
+              for={@project_changeset}
+              id="retention-settings-form"
+              phx-change="validate"
+              phx-submit="save"
+            >
+              <div class="space-y-2">
+                <%!-- TODO: add this to the list of options for https://github.com/OpenFn/Lightning/issues/1694 --%>
+                <%!-- {:retain_with_errors, "Only retain input/output data when a run fails"}, --%>
+                <%= for {value, text} <- [
+                  {:retain_all, "Retain input/output data for all workflow runs"},
+                  {:erase_all, "Never retain input/output data (zero-persistence)"}
+                  ] do %>
+                  <div class="relative flex items-start">
+                    <div class="flex h-6 items-center">
+                      <.input
+                        type="radio"
+                        id={value}
+                        disabled={!@can_edit_data_retention}
+                        field={f[:retention_policy]}
+                        checked={checked?(@project_changeset, value)}
+                        value={value}
+                        class="h-4 w-4 border-gray-300 text-indigo-600 focus:ring-indigo-600"
+                      />
+                    </div>
+                    <div class="ml-3 leading-6">
+                      <label for={value} class="text-sm text-neutral-950">
+                        <%= text %>
+                      </label>
+                    </div>
+                  </div>
+                <% end %>
+              </div>
+              <div
+                :if={not checked?(@project_changeset, :retain_all)}
+                id="heads-up-description"
+                class="mt-2 ml-7 text-gray-700 bg-orange-50 p-3 border-l-4 border-l-orange-400"
+              >
+                <span class="font-medium">Heads Up!</span>
+
+                <p>
+                  When enabled, you will no longer be able to retry workflow runs as no data will be stored.
+                </p>
+              </div>
+              <div class="mt-4">
+                <button
+                  disabled={!@can_edit_data_retention}
+                  class="mt-3 mr-1 inline-flex w-full justify-center rounded-md px-3 py-2 text-sm font-semibold shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:mt-0 sm:w-auto bg-white text-gray-900"
+                  phx-click="cancel-retention-change"
+                >
+                  Cancel
+                </button>
+                <Form.submit_button
+                  disabled={
+                    not @project_changeset.valid? or
+                      not @can_edit_data_retention
+                  }
+                  phx-disable-with="Saving"
+                >
+                  Save
+                </Form.submit_button>
+              </div>
+            </.form>
+          </div>
         </LightningWeb.Components.Common.panel_content>
       </div>
     </div>

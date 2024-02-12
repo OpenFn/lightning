@@ -3,9 +3,11 @@ defmodule Lightning.Projects.Project do
   Project model
   """
   use Ecto.Schema
+
   import Ecto.Changeset
 
-  alias Lightning.Projects.{ProjectUser, ProjectCredential}
+  alias Lightning.Projects.ProjectCredential
+  alias Lightning.Projects.ProjectUser
   alias Lightning.Workflows.Workflow
 
   @type t :: %__MODULE__{
@@ -14,6 +16,8 @@ defmodule Lightning.Projects.Project do
           project_users: [ProjectUser.t()] | Ecto.Association.NotLoaded.t()
         }
 
+  @type retention_policy_type :: :retain_all | :retain_with_errors | :erase_all
+
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id
   schema "projects" do
@@ -21,6 +25,10 @@ defmodule Lightning.Projects.Project do
     field :description, :string
     field :scheduled_deletion, :utc_datetime
     field :requires_mfa, :boolean, default: false
+
+    field :retention_policy, Ecto.Enum,
+      values: [:retain_all, :retain_with_errors, :erase_all],
+      default: :retain_all
 
     has_many :project_users, ProjectUser
     has_many :users, through: [:project_users, :user]
@@ -37,7 +45,14 @@ defmodule Lightning.Projects.Project do
   # TODO: schedule_deletion shouldn't be changed by user input
   def changeset(project, attrs) do
     project
-    |> cast(attrs, [:id, :name, :description, :scheduled_deletion, :requires_mfa])
+    |> cast(attrs, [
+      :id,
+      :name,
+      :description,
+      :scheduled_deletion,
+      :requires_mfa,
+      :retention_policy
+    ])
     |> cast_assoc(:project_users)
     |> validate()
   end

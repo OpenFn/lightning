@@ -4,9 +4,15 @@ defmodule Lightning.Workflows do
   """
 
   import Ecto.Query
-  alias Lightning.Repo
+
   alias Lightning.Projects.Project
-  alias Lightning.Workflows.{Edge, Job, Workflow, Trigger, Trigger, Query}
+  alias Lightning.Repo
+  alias Lightning.Workflows.Edge
+  alias Lightning.Workflows.Job
+  alias Lightning.Workflows.Query
+  alias Lightning.Workflows.Trigger
+  alias Lightning.Workflows.Trigger
+  alias Lightning.Workflows.Workflow
 
   @doc """
   Returns the list of workflows.
@@ -87,22 +93,6 @@ defmodule Lightning.Workflows do
   end
 
   @doc """
-  Deletes a workflow.
-
-  ## Examples
-
-      iex> delete_workflow(workflow)
-      {:ok, %Workflow{}}
-
-      iex> delete_workflow(workflow)
-      {:error, %Ecto.Changeset{}}
-
-  """
-  def delete_workflow(%Workflow{} = workflow) do
-    Repo.delete(workflow)
-  end
-
-  @doc """
   Returns an `%Ecto.Changeset{}` for tracking workflow changes.
 
   ## Examples
@@ -116,20 +106,16 @@ defmodule Lightning.Workflows do
   end
 
   @doc """
-  Retrieves a list of Workflows with their jobs and triggers preloaded.
+  Retrieves a list of active Workflows with their jobs and triggers preloaded.
   """
   @spec get_workflows_for(Project.t()) :: [Workflow.t()]
   def get_workflows_for(%Project{} = project) do
-    get_workflows_for_query(project)
-    |> Repo.all()
-  end
-
-  def get_workflows_for_query(%Project{} = project) do
     from(w in Workflow,
       preload: [:triggers, :edges, jobs: [:credential, :workflow]],
       where: is_nil(w.deleted_at) and w.project_id == ^project.id,
       order_by: [asc: w.name]
     )
+    |> Repo.all()
   end
 
   @spec to_project_space([Workflow.t()]) :: %{}
@@ -163,9 +149,9 @@ defmodule Lightning.Workflows do
 
   """
   def mark_for_deletion(workflow, _attrs \\ %{}) do
-    workflow_jobs_query =
-      from(j in Lightning.Workflows.Job,
-        where: j.workflow_id == ^workflow.id
+    workflow_triggers_query =
+      from(t in Lightning.Workflows.Trigger,
+        where: t.workflow_id == ^workflow.id
       )
 
     Repo.transaction(fn ->
@@ -174,7 +160,7 @@ defmodule Lightning.Workflows do
       })
       |> Repo.update()
 
-      Repo.update_all(workflow_jobs_query, set: [enabled: false])
+      Repo.update_all(workflow_triggers_query, set: [enabled: false])
     end)
   end
 
@@ -308,5 +294,24 @@ defmodule Lightning.Workflows do
     trigger
     |> Trigger.changeset(attrs)
     |> Repo.update()
+  end
+
+  @doc """
+    Check if workflow exist
+  """
+  def workflow_exists?(project_id, workflow_name) do
+    query =
+      from w in Workflow,
+        where: w.project_id == ^project_id and w.name == ^workflow_name
+
+    Repo.exists?(query)
+  end
+
+  @doc """
+  A way to ensure the consistency of nodes.
+  This query orders jobs based on their `inserted_at` timestamps in ascending order
+  """
+  def jobs_ordered_subquery do
+    from(j in Job, order_by: [asc: j.inserted_at])
   end
 end

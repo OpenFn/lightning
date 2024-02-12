@@ -279,7 +279,10 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodModalComponent do
             </span>
 
             <button
-              phx-click="close_webhook_modal"
+              phx-click={
+                JS.hide(to: "#webhooks_auth_method_modal")
+                |> JS.push("close_webhook_modal")
+              }
               phx-target={@myself}
               type="button"
               class="rounded-md bg-white text-gray-400 hover:text-gray-500 focus:outline-none"
@@ -371,7 +374,7 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodModalComponent do
         <% end %>
       </ul>
     </div>
-    <.modal_footer>
+    <.modal_footer class="mt-6 mx-6">
       <div class="sm:flex sm:flex-row-reverse">
         <button
           type="button"
@@ -388,7 +391,7 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodModalComponent do
 
   defp auth_methods_table(assigns) do
     ~H"""
-    <div class="mt-4">
+    <div class="-my-4 mx-px">
       <LightningWeb.WorkflowLive.Components.webhook_auth_methods_table
         auth_methods={@project_auth_methods}
         current_user={@current_user}
@@ -450,7 +453,7 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodModalComponent do
         </:action>
       </LightningWeb.WorkflowLive.Components.webhook_auth_methods_table>
     </div>
-    <.modal_footer>
+    <.modal_footer class="mt-6 mx-6">
       <div class="flex justify-between content-center ">
         <div class="flex flex-wrap items-center">
           <.link
@@ -535,7 +538,7 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodModalComponent do
           </span>
         </label>
       </div>
-      <.modal_footer>
+      <.modal_footer class="mx-6 mt-6">
         <button
           type="submit"
           disabled={

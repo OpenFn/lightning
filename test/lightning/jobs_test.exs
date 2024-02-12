@@ -1,7 +1,7 @@
 defmodule Lightning.JobsTest do
   use Lightning.DataCase, async: true
 
-  alias Lightning.Attempt
+  alias Lightning.Run
   alias Lightning.Invocation
   alias Lightning.Jobs
   alias Lightning.Repo
@@ -70,7 +70,7 @@ defmodule Lightning.JobsTest do
         Jobs.get_job!(Ecto.UUID.generate())
       end
 
-      assert Jobs.get_job(Ecto.UUID.generate()) == nil
+      assert Jobs.get_job_with_credential(Ecto.UUID.generate()) == nil
     end
 
     test "change_job/1 returns a job changeset" do
@@ -112,7 +112,7 @@ defmodule Lightning.JobsTest do
         source_job_id: job.id,
         workflow: job.workflow,
         target_job_id: other_job.id,
-        condition: :on_job_failure
+        condition_type: :on_job_failure
       })
 
       assert Jobs.get_downstream_jobs_for(job) == [
@@ -143,50 +143,18 @@ defmodule Lightning.JobsTest do
 
       update_attrs = %{
         body: "some updated body",
-        enabled: false,
         name: "some updated name"
       }
 
       assert {:ok, %Job{} = job} = Jobs.update_job(job, update_attrs)
       assert job.body == "some updated body"
-      assert job.enabled == false
+
       assert job.name == "some updated name"
     end
 
     test "update_job/2 with invalid data returns error changeset" do
       job = insert(:job)
       assert {:error, %Ecto.Changeset{}} = Jobs.update_job(job, @invalid_attrs)
-    end
-
-    test "delete_job/1 deletes the job" do
-      job = insert(:job)
-      assert {:ok, %Job{}} = Jobs.delete_job(job)
-      assert_raise Ecto.NoResultsError, fn -> Jobs.get_job!(job.id) end
-    end
-
-    test "delete_job/1 can't delete job with downstream jobs" do
-      job = insert(:job)
-
-      {:ok, job1} =
-        Jobs.create_job(%{
-          body: "some body",
-          enabled: true,
-          name: "some name",
-          adaptor: "@openfn/language-common",
-          workflow_id: job.workflow_id
-        })
-
-      insert(:edge, %{
-        condition: :on_job_success,
-        source_job: job,
-        target_job: job1,
-        workflow: job.workflow
-      })
-
-      {:error, changeset} = Jobs.delete_job(job)
-
-      assert %{workflow: ["This job is associated with downstream jobs"]} =
-               errors_on(changeset)
     end
   end
 
@@ -195,7 +163,6 @@ defmodule Lightning.JobsTest do
       assert_raise Postgrex.Error, fn ->
         Jobs.create_job(%{
           body: "some body",
-          enabled: true,
           name: "some name",
           adaptor: "@openfn/language-common"
         })
@@ -215,7 +182,6 @@ defmodule Lightning.JobsTest do
       assert {:ok, %Job{} = job} =
                Jobs.create_job(%{
                  body: "some body",
-                 enabled: true,
                  name: "some name",
                  trigger: %{type: "webhook", comment: "foo"},
                  adaptor: "@openfn/language-common",
@@ -237,7 +203,6 @@ defmodule Lightning.JobsTest do
     test "with valid data creates a job" do
       valid_attrs = %{
         body: "some body",
-        enabled: true,
         name: "some name",
         adaptor: "@openfn/language-common",
         workflow_id: insert(:workflow).id
@@ -245,7 +210,6 @@ defmodule Lightning.JobsTest do
 
       assert {:ok, %Job{} = job} = Jobs.create_job(valid_attrs)
       assert job.body == "some body"
-      assert job.enabled == true
       assert job.name == "some name"
     end
 
@@ -256,7 +220,6 @@ defmodule Lightning.JobsTest do
         Jobs.create_job(%{
           name: "job 1",
           body: "some body",
-          enabled: true,
           adaptor: "@openfn/language-common",
           trigger: %{type: "webhook"},
           workflow_id: workflow.id
@@ -266,7 +229,6 @@ defmodule Lightning.JobsTest do
         Jobs.create_job(%{
           name: "job 2",
           body: "some body",
-          enabled: true,
           adaptor: "@openfn/language-common",
           trigger: %{type: "on_job_success", upstream_job_id: upstream_job.id},
           workflow_id: workflow.id
@@ -281,7 +243,6 @@ defmodule Lightning.JobsTest do
       {:ok, %Job{} = upstream_job} =
         Jobs.create_job(%{
           body: "some body",
-          enabled: true,
           name: "job 1",
           adaptor: "@openfn/language-common",
           trigger: %{type: "webhook"},
@@ -293,7 +254,6 @@ defmodule Lightning.JobsTest do
       {:ok, %Job{} = _job} =
         Jobs.create_job(%{
           body: "some body",
-          enabled: true,
           name: "job 2",
           adaptor: "@openfn/language-common",
           trigger: %{type: "on_job_success", upstream_job_id: upstream_job.id},
@@ -323,15 +283,15 @@ defmodule Lightning.JobsTest do
 
       Scheduler.enqueue_cronjobs()
 
-      attempt = Repo.one(Lightning.Attempt)
+      run = Repo.one(Lightning.Run)
 
-      assert attempt.starting_trigger_id == trigger.id
+      assert run.starting_trigger_id == trigger.id
 
-      attempt =
-        Repo.preload(attempt, dataclip: Invocation.Query.dataclip_with_body())
+      run =
+        Repo.preload(run, dataclip: Invocation.Query.dataclip_with_body())
 
-      assert attempt.dataclip.type == :global
-      assert attempt.dataclip.body == %{}
+      assert run.dataclip.type == :global
+      assert run.dataclip.body == %{}
     end
   end
 
@@ -357,8 +317,8 @@ defmodule Lightning.JobsTest do
 
       dataclip = insert(:dataclip)
 
-      attempt =
-        insert(:attempt,
+      run =
+        insert(:run,
           work_order:
             build(:workorder,
               workflow: job.workflow,
@@ -369,34 +329,34 @@ defmodule Lightning.JobsTest do
           starting_trigger: trigger,
           state: :success,
           dataclip: dataclip,
-          runs: [
-            build(:run,
+          steps: [
+            build(:step,
               exit_reason: "success",
               job: job,
               input_dataclip: dataclip,
               output_dataclip:
-                build(:dataclip, type: :run_result, body: %{"changed" => true})
+                build(:dataclip, type: :step_result, body: %{"changed" => true})
             )
           ]
         )
 
-      [old_run] = attempt.runs
+      [old_step] = run.steps
 
       _result = Scheduler.enqueue_cronjobs()
 
-      new_attempt =
-        Attempt
+      new_run =
+        Run
         |> last(:inserted_at)
         |> preload(dataclip: ^Invocation.Query.dataclip_with_body())
         |> Repo.one()
 
-      assert attempt.dataclip.type == :http_request
-      assert old_run.input_dataclip.type == :http_request
-      assert old_run.input_dataclip.body == %{}
+      assert run.dataclip.type == :http_request
+      assert old_step.input_dataclip.type == :http_request
+      assert old_step.input_dataclip.body == %{}
 
-      refute new_attempt.id == attempt.id
-      assert new_attempt.dataclip.type == :run_result
-      assert new_attempt.dataclip.body == old_run.output_dataclip.body
+      refute new_run.id == run.id
+      assert new_run.dataclip.type == :step_result
+      assert new_run.dataclip.body == old_step.output_dataclip.body
     end
   end
 end

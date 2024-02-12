@@ -1,4 +1,10 @@
-import React, { memo, useCallback, useRef, useState } from 'react';
+import React, {
+  SyntheticEvent,
+  memo,
+  useCallback,
+  useRef,
+  useState,
+} from 'react';
 import { Handle, NodeProps, Position } from 'reactflow';
 import {
   CheckCircleIcon,
@@ -17,7 +23,7 @@ type ValidationResult = {
 const iconBaseStyle = 'mx-1';
 const iconNormalStyle =
   iconBaseStyle + ' text-primary-500 hover:text-primary-900';
-const iconErrorStyle = iconBaseStyle + 'text-red-500 hover:text-red-600';
+const iconErrorStyle = iconBaseStyle + ' text-red-500 hover:text-red-600';
 
 // Dispatch an event up to the WorkflowDiagram
 // This works better than interfacing to the store correctly
@@ -43,6 +49,10 @@ const PlaceholderJobNode = ({ id, selected }: NodeProps<NodeData>) => {
   });
 
   const handleKeyDown = (evt: React.KeyboardEvent<HTMLInputElement>) => {
+    if (evt.code === 'Escape') {
+      handleCancel();
+      return;
+    }
     if (evt.target.value.trim() === '') {
       setValidationResult({
         isValid: false,
@@ -52,9 +62,6 @@ const PlaceholderJobNode = ({ id, selected }: NodeProps<NodeData>) => {
     }
     if (evt.code === 'Enter') {
       validationResult.isValid && handleCommit();
-    }
-    if (evt.code === 'Escape') {
-      handleCancel();
     }
   };
 
@@ -86,20 +93,28 @@ const PlaceholderJobNode = ({ id, selected }: NodeProps<NodeData>) => {
   };
 
   // TODO what if a name hasn't been entered?
-  const handleCommit = useCallback(() => {
-    if (textRef.current) {
-      dispatch(textRef.current, 'commit-placeholder', {
-        id,
-        name: textRef.current.value,
-      });
-    }
-  }, [textRef]);
+  const handleCommit = useCallback(
+    (evt?: SyntheticEvent) => {
+      if (textRef.current) {
+        dispatch(textRef.current, 'commit-placeholder', {
+          id,
+          name: textRef.current.value,
+        });
+      }
+      evt?.stopPropagation();
+    },
+    [textRef]
+  );
 
-  const handleCancel = useCallback(() => {
-    if (textRef.current) {
-      dispatch(textRef.current, 'cancel-placeholder', { id });
-    }
-  }, [textRef]);
+  const handleCancel = useCallback(
+    (evt?: SyntheticEvent) => {
+      if (textRef.current) {
+        dispatch(textRef.current, 'cancel-placeholder', { id });
+      }
+      evt?.stopPropagation();
+    },
+    [textRef]
+  );
 
   return (
     <div

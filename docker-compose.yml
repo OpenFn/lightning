@@ -52,7 +52,7 @@ services:
       - '${LIGHTNING_EXTERNAL_PORT:-127.0.0.1:${PORT}}:${URL_PORT}'
 
   worker:
-    image: 'ws-worker:latest'
+    image: 'openfn/ws-worker:latest'
     deploy:
       resources:
         limits:
@@ -65,7 +65,7 @@ services:
     env_file:
       - '.env'
     command:
-      ['pnpm', 'start:prod', '-l', 'ws://web:${LIGHTNING_EXTERNAL_PORT}/worker']
+      ['pnpm', 'start:prod', '-l', 'ws://web:${URL_PORT}/worker']
     restart: '${DOCKER_RESTART_POLICY:-unless-stopped}'
     stop_grace_period: '3s'
     expose:

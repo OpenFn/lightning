@@ -58,6 +58,16 @@ defmodule Lightning.PromEx do
 
   @impl true
   def plugins do
+    stalled_run_threshold_seconds =
+      Application.get_env(:lightning, :metrics)[
+        :stalled_run_threshold_seconds
+      ]
+
+    run_performance_age_seconds =
+      Application.get_env(:lightning, :metrics)[
+        :run_performance_age_seconds
+      ]
+
     [
       # PromEx built in plugins
       Plugins.Application,
@@ -66,12 +76,13 @@ defmodule Lightning.PromEx do
        router: LightningWeb.Router, endpoint: LightningWeb.Endpoint},
       Plugins.Ecto,
       Plugins.Oban,
-      Plugins.PhoenixLiveView
-      # Plugins.Absinthe,
-      # Plugins.Broadway,
-
+      Plugins.PhoenixLiveView,
       # Add your own PromEx metrics plugins
-      # Lightning.Users.PromExPlugin
+      {
+        Lightning.Runs.PromExPlugin,
+        stalled_run_threshold_seconds: stalled_run_threshold_seconds,
+        run_performance_age_seconds: run_performance_age_seconds
+      }
     ]
   end
 

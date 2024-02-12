@@ -7,20 +7,23 @@ defmodule Lightning.Projects do
     max_attempts: 1
 
   import Ecto.Query, warn: false
+
+  alias Lightning.Accounts.User
   alias Lightning.Accounts.UserNotifier
-  alias Lightning.Attempt
-  alias Lightning.AttemptRun
-  alias Lightning.Workflows.Trigger
-  alias Lightning.Workflows.Job
+  alias Lightning.ExportUtils
+  alias Lightning.Invocation.Dataclip
+  alias Lightning.Invocation.Step
+  alias Lightning.Projects.Events
+  alias Lightning.Projects.Project
+  alias Lightning.Projects.ProjectCredential
+  alias Lightning.Projects.ProjectUser
   alias Lightning.Projects.ProjectUser
   alias Lightning.Repo
-
-  alias Lightning.Projects.{Project, ProjectCredential}
-  alias Lightning.Accounts.User
-  alias Lightning.ExportUtils
+  alias Lightning.Run
+  alias Lightning.RunStep
+  alias Lightning.Workflows.Job
+  alias Lightning.Workflows.Trigger
   alias Lightning.Workflows.Workflow
-  alias Lightning.InvocationReason
-  alias Lightning.Invocation.{Run, Dataclip}
   alias Lightning.WorkOrder
 
   require Logger
@@ -123,6 +126,32 @@ defmodule Lightning.Projects do
   end
 
   @doc """
+  Get all project users for a given project
+  """
+  def get_project_users!(id) do
+    from(pu in ProjectUser,
+      join: u in assoc(pu, :user),
+      where: pu.project_id == ^id,
+      order_by: u.first_name,
+      preload: [user: u]
+    )
+    |> Repo.all()
+  end
+
+  @doc """
+  Lists emails of users with `:owner` or `:admin` roles in the project
+  """
+  @spec list_project_admin_emails(Ecto.UUID.t()) :: [String.t(), ...] | []
+  def list_project_admin_emails(id) do
+    from(pu in ProjectUser,
+      join: u in assoc(pu, :user),
+      where: pu.project_id == ^id and pu.role in ^[:admin, :owner],
+      select: u.email
+    )
+    |> Repo.all()
+  end
+
+  @doc """
   Creates a project.
 
   ## Examples
@@ -138,6 +167,11 @@ defmodule Lightning.Projects do
     %Project{}
     |> Project.changeset(attrs)
     |> Repo.insert()
+    |> tap(fn result ->
+      with {:ok, project} <- result do
+        Events.project_created(project)
+      end
+    end)
   end
 
   @doc """
@@ -178,7 +212,7 @@ defmodule Lightning.Projects do
 
   @doc """
   Deletes a project and its related data, including workflows, work orders,
-  runs, jobs, attempts, triggers, project users, project credentials, and dataclips
+  steps, jobs, runs, triggers, project users, project credentials, and dataclips
 
   ## Examples
 
@@ -198,19 +232,15 @@ defmodule Lightning.Projects do
     end)
 
     Repo.transaction(fn ->
-      project_attempts_query(project) |> Repo.delete_all()
+      project_runs_query(project) |> Repo.delete_all()
 
-      project_attempt_run_query(project) |> Repo.delete_all()
+      project_run_step_query(project) |> Repo.delete_all()
 
       project_workorders_query(project) |> Repo.delete_all()
 
-      project_run_invocation_reasons(project) |> Repo.delete_all()
-
-      project_runs_query(project) |> Repo.delete_all()
+      project_steps_query(project) |> Repo.delete_all()
 
       project_jobs_query(project) |> Repo.delete_all()
-
-      project_trigger_invocation_reason(project) |> Repo.delete_all()
 
       project_triggers_query(project) |> Repo.delete_all()
 
@@ -219,8 +249,6 @@ defmodule Lightning.Projects do
       project_users_query(project) |> Repo.delete_all()
 
       project_credentials_query(project) |> Repo.delete_all()
-
-      project_dataclip_invocation_reason(project) |> Repo.delete_all()
 
       project_dataclips_query(project) |> Repo.delete_all()
 
@@ -234,43 +262,38 @@ defmodule Lightning.Projects do
 
       project
     end)
+    |> tap(fn result ->
+      with {:ok, _project} <- result do
+        Events.project_deleted(project)
+      end
+    end)
   end
 
-  def project_trigger_invocation_reason(project) do
-    from(ir in InvocationReason,
-      join: tr in assoc(ir, :trigger),
-      join: w in assoc(tr, :workflow),
-      where: w.project_id == ^project.id
-    )
+  @spec project_retention_policy_for(Run.t()) ::
+          Project.retention_policy_type()
+  def project_retention_policy_for(%Run{work_order_id: wo_id}) do
+    query =
+      from(wo in WorkOrder,
+        join: wf in assoc(wo, :workflow),
+        join: p in assoc(wf, :project),
+        where: wo.id == ^wo_id,
+        select: p.retention_policy
+      )
+
+    Repo.one(query)
   end
 
-  def project_dataclip_invocation_reason(project) do
-    from(ir in InvocationReason,
-      join: d in assoc(ir, :dataclip),
-      where: d.project_id == ^project.id
-    )
-  end
-
-  def project_run_invocation_reasons(project) do
-    from(ir in InvocationReason,
-      join: r in assoc(ir, :run),
-      join: j in assoc(r, :job),
-      join: w in assoc(j, :workflow),
-      where: w.project_id == ^project.id
-    )
-  end
-
-  def project_attempts_query(project) do
-    from(att in Attempt,
+  def project_runs_query(project) do
+    from(att in Run,
       join: wo in assoc(att, :work_order),
       join: w in assoc(wo, :workflow),
       where: w.project_id == ^project.id
     )
   end
 
-  def project_attempt_run_query(project) do
-    from(ar in AttemptRun,
-      join: att in assoc(ar, :attempt),
+  def project_run_step_query(project) do
+    from(as in RunStep,
+      join: att in assoc(as, :run),
       join: wo in assoc(att, :work_order),
       join: w in assoc(wo, :workflow),
       where: w.project_id == ^project.id
@@ -291,9 +314,9 @@ defmodule Lightning.Projects do
     )
   end
 
-  def project_runs_query(project) do
-    from(r in Run,
-      join: j in assoc(r, :job),
+  def project_steps_query(project) do
+    from(s in Step,
+      join: j in assoc(s, :job),
       join: w in assoc(j, :workflow),
       where: w.project_id == ^project.id
     )
@@ -413,7 +436,7 @@ defmodule Lightning.Projects do
     |> String.replace(~r/^\-+|\-+$/, "")
   end
 
-  def is_member_of?(%Project{id: project_id}, %User{id: user_id}) do
+  def member_of?(%Project{id: project_id}, %User{id: user_id}) do
     from(p in Project,
       join: pu in assoc(p, :project_users),
       where: pu.user_id == ^user_id and p.id == ^project_id,
@@ -454,8 +477,9 @@ defmodule Lightning.Projects do
   @doc """
   Given a project, this function sets a scheduled deletion
   date based on the PURGE_DELETED_AFTER_DAYS environment variable. If no ENV is
-  set, this date defaults to NOW but the automatic project purge cronjob will never
-  run. (Note that subsequent logins will be blocked for projects pending deletion.)
+  set, this date defaults to NOW but the automatic project purge cronjob will
+  never run. (Note that subsequent logins will be blocked for projects pending
+  deletion.)
   """
   def schedule_project_deletion(project) do
     date =
@@ -465,11 +489,11 @@ defmodule Lightning.Projects do
       end
 
     Repo.transaction(fn ->
-      jobs = project_jobs_query(project) |> Repo.all()
+      triggers = project_triggers_query(project) |> Repo.all()
 
-      jobs
-      |> Enum.each(fn job ->
-        Lightning.Jobs.update_job(job, %{"enabled" => false})
+      triggers
+      |> Enum.each(fn trigger ->
+        Lightning.Workflows.update_trigger(trigger, %{"enabled" => false})
       end)
 
       project =

@@ -9,7 +9,7 @@ type Store = ReturnType<typeof createWorkflowStore>;
 export function mount(
   el: HTMLElement,
   workflowStore: Store,
-  onSelectionChange: (id?: string) => void
+  onSelectionChange: (id: string | null) => void
 ) {
   const componentRoot = createRoot(el);
 
@@ -20,7 +20,7 @@ export function mount(
     componentRoot.render(
       <WorkflowDiagram
         ref={el}
-        selection={selection}
+        selection={selection || null}
         store={workflowStore}
         onSelectionChange={onSelectionChange}
       />

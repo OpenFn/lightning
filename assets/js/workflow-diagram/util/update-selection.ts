@@ -1,4 +1,4 @@
-import { styleItem } from '../styles';
+import { sortOrderForSvg, styleItem } from '../styles';
 import { Flow } from '../types';
 
 /**
@@ -12,7 +12,7 @@ import { Flow } from '../types';
  *
  * TODO: as an optimisation, consider exiting early once we've updated both selected items
  */
-export default (model: Flow.Model, newSelection?: string) => {
+export default (model: Flow.Model, newSelection: string | null) => {
   const updatedModel = {
     nodes: model.nodes.map(updateItem) as Flow.Node[],
     edges: model.edges.map(updateItem) as Flow.Edge[],
@@ -21,20 +21,18 @@ export default (model: Flow.Model, newSelection?: string) => {
   // we have no way of knowing whether the selection is a node or id
   // so we have to do both
   function updateItem(item: Flow.Edge | Flow.Node) {
-    if (item.selected && item.id !== newSelection) {
-      return styleItem({
-        ...item,
-        selected: false,
-      });
-    }
-    if (item.id === newSelection) {
-      return styleItem({
-        ...item,
-        selected: true,
-      });
-    }
+    return styleItem({
+      ...item,
+      selected: item.id === newSelection,
+    });
     return item;
   }
 
-  return updatedModel;
+  // Must put selected edge LAST to ensure it stays on top.
+  const sortedModel = {
+    ...updatedModel,
+    edges: updatedModel.edges.sort(sortOrderForSvg),
+  };
+
+  return sortedModel;
 };

@@ -2,8 +2,8 @@ defmodule LightningWeb.UserSessionController do
   use LightningWeb, :controller
 
   alias Lightning.Accounts
-  alias LightningWeb.UserAuth
   alias Lightning.Accounts.User
+  alias LightningWeb.UserAuth
 
   def new(conn, _params) do
     render(conn, "new.html",
@@ -70,7 +70,7 @@ defmodule LightningWeb.UserSessionController do
     |> UserAuth.log_out_user()
   end
 
-  def auth_handler_url() do
+  def auth_handler_url do
     case Lightning.AuthProviders.get_handlers() do
       {:ok, []} ->
         nil

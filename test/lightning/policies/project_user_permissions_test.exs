@@ -102,41 +102,37 @@ defmodule Lightning.Policies.ProjectUserPermissionsTest do
   end
 
   describe "Project users with the :viewer role" do
-    test "cannot create / delete workflows, create / edit / delete / run / rerun jobs, and edit the project name or description",
+    test "cannot create / delete workflows, create / edit / run / rerun jobs, and edit the project name or description",
          %{
            project: project,
            viewer: viewer
          } do
       ~w(
-        create_job
         create_workflow
-        delete_job
         delete_workflow
-        edit_job
-        edit_project_description
-        edit_project_name
+        edit_workflow
         provision_project
-        rerun_job
-        run_job
+        edit_project
+        write_webhook_auth_method
+        create_project_credential
+        run_workflow
       )a |> (&refute_can(ProjectUsers, &1, viewer, project)).()
     end
   end
 
   describe "Project users with the :editor role" do
-    test "can create / delete workflows and create / edit / delete / run / rerun jobs in the project",
+    test "can create / delete workflows and create / edit / run / rerun jobs in the project",
          %{
            project: project,
            editor: editor
          } do
       ~w(
-        create_job
         create_workflow
-        delete_job
         delete_workflow
-        edit_job
+        edit_workflow
+        create_project_credential
         provision_project
-        rerun_job
-        run_job
+        run_workflow
       )a |> (&assert_can(ProjectUsers, &1, editor, project)).()
     end
 
@@ -146,50 +142,46 @@ defmodule Lightning.Policies.ProjectUserPermissionsTest do
            editor: editor
          } do
       ~w(
-          edit_project_description
-          edit_project_name
+          edit_project
+          write_webhook_auth_method
         )a |> (&refute_can(ProjectUsers, &1, editor, project)).()
     end
   end
 
   describe "Project users with the :admin role" do
-    test "can create / delete workflows, create / edit / delete / run / rerun jobs, edit the project name, and edit the project description.",
+    test "can create / delete workflows, create / edit / run / rerun jobs, edit the project name, and edit the project description.",
          %{
            project: project,
            admin: admin
          } do
       ~w(
-          create_job
           create_workflow
-          delete_job
           delete_workflow
-          edit_job
-          edit_project_description
-          edit_project_name
+          edit_workflow
+          edit_project
           provision_project
-          rerun_job
-          run_job
+          write_webhook_auth_method
+          create_project_credential
+          run_workflow
         )a |> (&assert_can(ProjectUsers, &1, admin, project)).()
     end
   end
 
   describe "Project users with the :owner role" do
-    test "can create / delete workflows, create / edit / delete / run / rerun jobs, edit the project name, and edit the project description.",
+    test "can create / delete workflows, create / edit / run / rerun jobs, edit the project name, and edit the project description.",
          %{
            project: project,
            owner: owner
          } do
       ~w(
-        create_job
         create_workflow
-        delete_job
         delete_workflow
-        edit_job
-        edit_project_description
-        edit_project_name
+        edit_workflow
+        edit_project
         provision_project
-        rerun_job
-        run_job
+        write_webhook_auth_method
+        create_project_credential
+        run_workflow
       )a |> (&assert_can(ProjectUsers, &1, owner, project)).()
     end
   end

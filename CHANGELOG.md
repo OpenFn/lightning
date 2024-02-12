@@ -10,6 +10,593 @@ and this project adheres to
 
 ### Added
 
+### Changed
+
+- Block github installation if there's a pending installation in another project
+  [#1731](https://github.com/OpenFn/Lightning/issues/1731)
+
+### Fixed
+
+## [v2.0.0] - 2024-02-10
+
+> At the time of writing there are no more big changes planned and testing has
+> gone well. Thanks to everyone who's helped to kick the tyres during the "rc"
+> phase. There are still a _lot of **new features** coming_, so please:
+>
+> - watch our [**Public Roadmap**](https://github.com/orgs/OpenFn/projects/3) to
+>   stay abreast of our core team's backlog,
+> - request a feature in the
+>   [**Community Forum**](https://community.openfn.org),
+> - raise a
+>   [**new issue**](https://github.com/OpenFn/lightning/issues/new/choose) if
+>   you spot a bug,
+> - and head over to the
+>   [**Contributing**](https://github.com/OpenFn/lightning/?tab=readme-ov-file#contribute-to-this-project)
+>   section to lend a hand.
+>
+> Head to [**docs.openfn.org**](https://docs.openfn.org) for product
+> documentation and help with v1 to v2 migration.
+
+### Added
+
+### Changed
+
+- Bump `@openfn/worker` to `v0.8.1`
+- Only show GoogleSheets and Salesforce credential options if Oauth clients are
+  registered with the instance via ENV
+  [#1734](https://github.com/OpenFn/Lightning/issues/1734)
+
+### Fixed
+
+- Use standard table type for webhook auth methods
+  [#1514](https://github.com/OpenFn/Lightning/issues/1514)
+- Make disabled button for "Connect to GitHub" clear, add tooltip
+  [#1732](https://github.com/OpenFn/Lightning/issues/1715)
+
+## [v2.0.0-rc12] - 2024-02-09
+
+### Added
+
+- Add RunQueue extension to allow claim customization.
+  [#1715](https://github.com/OpenFn/Lightning/issues/1715)
+- Add support for Salesforce OAuth2 credentials
+  [#1633](https://github.com/OpenFn/Lightning/issues/1633)
+
+### Changed
+
+- Use `PAYLOAD_SIZE_KB` in k6 load testing script, set thresholds on wait time,
+  set default payload size to `2kb`
+
+### Fixed
+
+- Adds more detail to work order states on dashboard
+  [#1677](https://github.com/OpenFn/lightning/issues/1677)
+- Fix Output & Logs in inspector fails to show sometimes
+  [#1702](https://github.com/OpenFn/lightning/issues/1702)
+
+## [v2.0.0-rc11] - 2024-02-08
+
+### Added
+
+### Changed
+
+### Fixed
+
+- Bumped Phoenix LiveView from `0.20.4` to `0.20.5` to fix canvas selection
+  issue [#1724](https://github.com/OpenFn/lightning/issues/1724)
+
+## [v2.0.0-rc10] - 2024-02-08
+
+### Added
+
+### Changed
+
+- Implemented safeguards to prevent deletion of jobs with associated run history
+  [#1570](https://github.com/OpenFn/Lightning/issues/1570)
+
+### Fixed
+
+- Fixed inspector dataclip body not getting updated after dataclip is wiped
+  [#1718](https://github.com/OpenFn/Lightning/issues/1718)
+- Fixed work orders getting retried despite having wiped dataclips
+  [#1721](https://github.com/OpenFn/Lightning/issues/1721)
+
+## [v2.0.0-rc9] 2024-02-05
+
+### Added
+
+- Persist impact tracking configuration and reports
+  [#1684](https://github.com/OpenFn/Lightning/issues/1684)
+- Add zero-persistence project setting
+  [#1209](https://github.com/OpenFn/Lightning/issues/1209)
+- Wipe dataclip after use when zero-persistence is enabled
+  [#1212](https://github.com/OpenFn/Lightning/issues/1212)
+- Show appropriate message when a wiped dataclip is viewed
+  [#1211](https://github.com/OpenFn/Lightning/issues/1211)
+- Disable selecting work orders having wiped dataclips in the history page
+  [#1210](https://github.com/OpenFn/Lightning/issues/1210)
+- Hide rerun button in inspector when the selected step has a wiped dataclip
+  [#1639](https://github.com/OpenFn/Lightning/issues/1639)
+- Add rate limiter to webhook endpoints and runtime limiter for runs.
+  [#639](https://github.com/OpenFn/Lightning/issues/639)
+
+### Changed
+
+### Fixed
+
+- Prevented secret scrubber from over-eagerly adding \*\*\* between all
+  characters if an empty string secret was provided as a credential field value
+  (e.g., {"username": "come-on-in", "password": ""})
+  [#1585](https://github.com/OpenFn/Lightning/issues/1585)
+- Fixed permissions issue that allowed viewer/editor to modify webhook auth
+  methods. These permissions only belong to project owners and admins
+  [#1692](https://github.com/OpenFn/Lightning/issues/1692)
+- Fixed bug that was duplicating inbound http_requests, resulting in unnecessary
+  data storage [#1695](https://github.com/OpenFn/Lightning/issues/1695)
+- Fixed permissions issue that allowed editors to set up new Github connections
+  [#1703](https://github.com/OpenFn/Lightning/issues/1703)
+- Fixed permissions issue that allowed viewers to initiate syncs to github
+  [#1704](https://github.com/OpenFn/Lightning/issues/1704)
+- Fixed inspector view stuck at processing when following a crashed run
+  [#1711](https://github.com/OpenFn/Lightning/issues/1711)
+- Fixed inspector dataclip selector not getting updated after running manual run
+  [#1714](https://github.com/OpenFn/Lightning/issues/1714)
+
+## [v2.0.0-rc8] - 2024-01-30
+
+### Added
+
+- Shim code to interact with the Impact Tracking service
+  [#1671](https://github.com/OpenFn/Lightning/issues/1671)
+
+### Changed
+
+- Standardized naming of "attempts" to "runs". This had already been done in the
+  front-end, but this change cleans up the backend, the database, and the
+  interface with the worker. Make sure to **run migrations** and update your
+  ENV/secrets to use `WORKER_RUNS_PRIVATE_KEY` rather than
+  `WORKER_ATTEMPTS_PRIVATE_KEY`
+  [#1657](https://github.com/OpenFn/Lightning/issues/1657)
+- Required `@openfn/ws-worker@0.8.0` or above.
+
+### Fixed
+
+## [v2.0.0-rc7] - 2024-01-26
+
+### Added
+
+- Store webhook request headers in Dataclips for use in jobs.
+  [#1638](https://github.com/OpenFn/Lightning/issues/1638)
+
+### Changed
+
+- Display `http_request` dataclips to the user as they will be provided to the
+  worker as "input" state to avoid confusion while writing jobs.
+  [1664](https://github.com/OpenFn/Lightning/issues/1664)
+- Named-spaced all worker environment variables with `WORKER_` and added
+  documentation for how to configure them.
+  [#1672](https://github.com/OpenFn/Lightning/pull/1672)
+- Bumped to `@openfn/ws-worker@0.6.0`
+- Bumped to `@openfn/cli@0.4.15`
+
+### Fixed
+
+- Fix Run via Docker [#1653](https://github.com/OpenFn/Lightning/issues/1653)
+- Fix remaining warnings, enable "warnings as errors"
+  [#1642](https://github.com/OpenFn/Lightning/issues/1642)
+- Fix workflow dashboard bug when viewed for newly created workflows with only
+  unfinished run steps. [#1674](https://github.com/OpenFn/Lightning/issues/1674)
+
+## [v2.0.0-rc5] - 2024-01-22
+
+### Added
+
+### Changed
+
+- Made two significant backend changes that don't impact UI/UX but **require
+  migrations** and should make Lightning developer lives easier by updating
+  parts of the backend to match terms now used in the frontend:
+  - Renamed the `Runs` model and table to `Steps`
+    [#1571](https://github.com/OpenFn/Lightning/issues/1571)
+  - Renamed the `AttemptRuns` model and table to `AttemptSteps`
+    [#1571](https://github.com/OpenFn/Lightning/issues/1571)
+
+### Fixed
+
+## [v2.0.0-rc4] - 2024-01-19
+
+### Added
+
+- Scrub output dataclips in the UI to avoid unintentional secret exposure
+  [#1606](https://github.com/OpenFn/Lightning/issues/1606)
+
+### Changed
+
+- Bump to `@openfn/cli@0.4.14`
+- Do not persist the active tab setting on the job editor
+  [#1504](https://github.com/OpenFn/Lightning/issues/1504)
+- Make condition label optional
+  [#1648](https://github.com/OpenFn/Lightning/issues/1648)
+
+### Fixed
+
+- Fix credential body getting leaked to sentry incase of errors
+  [#1600](https://github.com/OpenFn/Lightning/issues/1600)
+- Fixed validation on Javascript edge conditions
+  [#1602](https://github.com/OpenFn/Lightning/issues/1602)
+- Removed unused code from `run_live` directory
+  [#1625](https://github.com/OpenFn/Lightning/issues/1625)
+- Edge condition expressions not correctly being handled during provisioning
+  [#openfn/kit#560](https://github.com/OpenFn/kit/pull/560)
+
+## [v2.0.0-rc3] 2024-01-12
+
+### Added
+
+- Custom metric to track stalled attempts
+  [#1559](https://github.com/OpenFn/Lightning/issues/1559)
+- Dashboard with project and workflow stats
+  [#755](https://github.com/OpenFn/Lightning/issues/755)
+- Add search by ID on the history page
+  [#1468](https://github.com/OpenFn/Lightning/issues/1468)
+- Custom metric to support autoscaling
+  [#1607](https://github.com/OpenFn/Lightning/issues/1607)
+
+### Changed
+
+- Bumped CLI version to `0.4.13`
+- Bumped worker version to `0.5.0`
+- Give project editors and viewers read only access to project settings instead
+  [#1477](https://github.com/OpenFn/Lightning/issues/1477)
+
+### Fixed
+
+- Throw an error when Lightning.MetadataService.get_adaptor_path/1 returns an
+  adaptor path that is nil
+  [#1601](https://github.com/OpenFn/Lightning/issues/1601)
+- Fix failure due to creating work order from a newly created job
+  [#1572](https://github.com/OpenFn/Lightning/issues/1572)
+- Fixes on the dashboard and links
+  [#1610](https://github.com/OpenFn/Lightning/issues/1610) and
+  [#1608](https://github.com/OpenFn/Lightning/issues/1608)
+
+## [2.0.0-rc2] - 2024-01-08
+
+### Added
+
+### Changed
+
+### Fixed
+
+- Restored left-alignment for step list items on run detail and inspector
+  [a6e4ada](https://github.com/OpenFn/Lightning/commit/a6e4adafd558269cfd690e7c4fdd8f9fe66c5f62)
+- Inspector: fixed attempt/run language for "skipped" tooltip
+  [fd7dd0c](https://github.com/OpenFn/Lightning/commit/fd7dd0ca8128dfba2902e5aa6a2259e2073f0f10)
+- Inspector: fixed failure to save during "save & run" from inspector
+  [#1596](https://github.com/OpenFn/Lightning/issues/1596)
+- Inspector: fixed key bindings for save & run (retry vs. new work order)
+  getting overridden when user focuses on the Monaco editor
+  [#1596](https://github.com/OpenFn/Lightning/issues/1596)
+
+## [2.0.0-rc1] - 2024-01-05
+
+### Why does this repo go from `v0` to `v2.0`?
+
+Lightning is the _2nd version_ of the OpenFn platform. While much of the core
+technology is the same, there are breaking changes between `v1.105` (pre-2024)
+and `v2` ("OpenFn Lightning").
+
+For customers using OpenFn `v1`, a migration guide will be provided at
+[docs.openfn.org](https://docs.openfn.org)
+
+### Added
+
+- Link to the job inspctor for a selected run from the history interface
+  [#1524](https://github.com/OpenFn/Lightning/issues/1524)
+- Reprocess an existing work order from the job inspector by default (instead of
+  always creating a new work order)
+  [#1524](https://github.com/OpenFn/Lightning/issues/1524)
+- Bumped worker to support edge conditions between trigger and first job
+  `"@openfn/ws-worker": "^0.4.0"`
+
+### Changed
+
+- Updated naming to prepare for v2 release
+  [#1248](https://github.com/OpenFn/Lightning/issues/1248); the major change is
+  that each time a work order (the typical unit of business value for an
+  organization, e.g. "execute workflow ABC for patient 123") is executed, it is
+  called a "run". Previously, it was called an "attempt". The hierarchy is now:
+
+  ```
+  Build-Time: Projects > Workflows > Steps
+  Run-Time: Work Orders > Runs > Steps
+  ```
+
+  Note the name changes here are reflected in the UI, but not all tables/models
+  will be changed until [1571](https://github.com/OpenFn/Lightning/issues/1571)
+  is delivered.
+
+### Fixed
+
+## [v0.12.2] - 2023-12-24
+
+### Added
+
+### Changed
+
+- Bumped worker to address occasional git install issue
+  `"@openfn/ws-worker": "^0.3.2"`
+
+### Fixed
+
+- Fix RuntimeError: found duplicate ID "google-sheets-inner-form" for
+  GoogleSheetsComponent [#1578](https://github.com/OpenFn/Lightning/issues/1578)
+- Extend export script to include new JS expression edge type
+  [#1540](https://github.com/OpenFn/Lightning/issues/1540)
+- Fix regression for attempt viewer log line highlighting
+  [#1589](https://github.com/OpenFn/Lightning/issues/1589)
+
+## [v0.12.1] - 2023-12-21
+
+### Added
+
+### Changed
+
+- Hide project security setting tab from non-authorized users
+  [#1477](https://github.com/OpenFn/Lightning/issues/1477)
+
+### Fixed
+
+- History page crashes if job is removed from workflow after it's been run
+  [#1568](https://github.com/OpenFn/Lightning/issues/1568)
+
+## [v0.12.0] - 2023-12-15
+
+### Added
+
+- Add ellipsis for long job names on the canvas
+  [#1217](https://github.com/OpenFn/Lightning/issues/1217)
+- Fix Credential Creation Page UI
+  [#1064](https://github.com/OpenFn/Lightning/issues/1064)
+- Custom metric to track Attempt queue delay
+  [#1556](https://github.com/OpenFn/Lightning/issues/1556)
+- Expand work order row when a `workorder_id` is specified in the filter
+  [#1515](https://github.com/OpenFn/Lightning/issues/1515)
+- Allow Javascript expressions as conditions for edges
+  [#1498](https://github.com/OpenFn/Lightning/issues/1498)
+
+### Changed
+
+- Derive dataclip in inspector from the attempt & step
+  [#1551](https://github.com/OpenFn/Lightning/issues/1551)
+- Updated CLI to 0.4.10 (fixes logging)
+- Changed UserBackupToken model to use UTC timestamps (6563cb77)
+- Restore FK relationship between `work_orders` and `attempts` pending a
+  decision re: further partitioning.
+  [#1254](https://github.com/OpenFn/Lightning/issues/1254)
+
+### Fixed
+
+- New credential doesn't appear in inspector until refresh
+  [#1531](https://github.com/OpenFn/Lightning/issues/1531)
+- Metadata not refreshing when credential is updated
+  [#791](https://github.com/OpenFn/Lightning/issues/791)
+- Adjusted z-index for Monaco Editor's sibling element to resolve layout
+  conflict [#1329](https://github.com/OpenFn/Lightning/issues/1329)
+- Demo script sets up example Runs with their log lines in a consistant order.
+  [#1487](https://github.com/OpenFn/Lightning/issues/1487)
+- Initial credential creation `changes` show `after` as `null` rather a value
+  [#1118](https://github.com/OpenFn/Lightning/issues/1118)
+- AttemptViewer flashing/rerendering when Jobs are running
+  [#1550](https://github.com/OpenFn/Lightning/issues/1550)
+- Not able to create a new Job when clicking the Check icon on the placeholder
+  [#1537](https://github.com/OpenFn/Lightning/issues/1537)
+- Improve selection logic on WorkflowDiagram
+  [#1220](https://github.com/OpenFn/Lightning/issues/1220)
+
+## [v0.11.0] - 2023-12-06
+
+### Added
+
+- Improved UI when manually creating Attempts via the Job Editor
+  [#1474](https://github.com/OpenFn/Lightning/issues/1474)
+- Increased the maximum inbound webhook request size to 10MB and added
+  protection against _very large_ payloads with a 100MB "max_skip_body_length"
+  [#1247](https://github.com/OpenFn/Lightning/issues/1247)
+
+### Changed
+
+- Use the internal port of the web container for the worker configuration in
+  docker-compose setup. [#1485](https://github.com/OpenFn/Lightning/pull/1485)
+
+### Fixed
+
+## [v0.10.6] - 2023-12-05
+
+### Added
+
+### Changed
+
+- Limit entries count on term work orders search
+  [#1461](https://github.com/OpenFn/Lightning/issues/1461)
+- Scrub log lines using multiple credentials samples
+  [#1519](https://github.com/OpenFn/Lightning/issues/1519)
+- Remove custom telemetry plumbing.
+  [1259](https://github.com/OpenFn/Lightning/issues/1259)
+- Enhance UX to prevent modal closure when Monaco/Dataclip editor is focused
+  [#1510](https://github.com/OpenFn/Lightning/pull/1510)
+
+### Fixed
+
+- Use checkbox on boolean credential fields rather than a text input field
+  [#1430](https://github.com/OpenFn/Lightning/issues/1430)
+- Allow users to retry work orders that failed before their first run was
+  created [#1417](https://github.com/OpenFn/Lightning/issues/1417)
+- Fix to ensure webhook auth modal is closed when cancel or close are selected.
+  [#1508](https://github.com/OpenFn/Lightning/issues/1508)
+- Enable user to reauthorize and obtain a new refresh token.
+  [#1495](https://github.com/OpenFn/Lightning/issues/1495)
+- Save credential body with types declared on schema
+  [#1518](https://github.com/OpenFn/Lightning/issues/1518)
+
+## [v0.10.5] - 2023-12-03
+
+### Added
+
+### Changed
+
+- Only add history page filters when needed for simpler multi-select status
+  interface and shorter page URLs
+  [#1331](https://github.com/OpenFn/Lightning/issues/1331)
+- Use dynamic Endpoint config only on prod
+  [#1435](https://github.com/OpenFn/Lightning/issues/1435)
+- Validate schema field with any of expected values
+  [#1502](https://github.com/OpenFn/Lightning/issues/1502)
+
+### Fixed
+
+- Fix for liveview crash when token expires or gets deleted after mount
+  [#1318](https://github.com/OpenFn/Lightning/issues/1318)
+- Remove two obsolete methods related to Run: `Lightning.Invocation.delete_run`
+  and `Lightning.Invocation.Run.new_from`.
+  [#1254](https://github.com/OpenFn/Lightning/issues/1254)
+- Remove obsolete field `previous_id` from `runs` table.
+  [#1254](https://github.com/OpenFn/Lightning/issues/1254)
+- Fix for missing data in 'created' audit trail events for webhook auth methods
+  [#1500](https://github.com/OpenFn/Lightning/issues/1500)
+
+## [v0.10.4] - 2023-11-30
+
+### Added
+
+### Changed
+
+- Increased History search timeout to 30s
+  [#1461](https://github.com/OpenFn/Lightning/issues/1461)
+
+### Fixed
+
+- Tooltip text clears later than the background
+  [#1094](https://github.com/OpenFn/Lightning/issues/1094)
+- Temporary fix to superuser UI for managing project users
+  [#1145](https://github.com/OpenFn/Lightning/issues/1145)
+- Fix for adding ellipses on credential info on job editor heading
+  [#1428](https://github.com/OpenFn/Lightning/issues/1428)
+
+## [v0.10.3] - 2023-11-28
+
+### Added
+
+- Dimmed/greyed out triggers and edges on the canvas when they are disabled
+  [#1464](https://github.com/OpenFn/Lightning/issues/1464)
+- Async loading on the history page to improve UX on long DB queries
+  [#1279](https://github.com/OpenFn/Lightning/issues/1279)
+- Audit trail events for webhook auth (deletion method) change
+  [#1165](https://github.com/OpenFn/Lightning/issues/1165)
+
+### Changed
+
+- Sort project collaborators by first name
+  [#1326](https://github.com/OpenFn/Lightning/issues/1326)
+- Work orders will now be set in a "pending" state when retries are enqueued.
+  [#1340](https://github.com/OpenFn/Lightning/issues/1340)
+- Avoid printing 2FA codes by default
+  [#1322](https://github.com/OpenFn/Lightning/issues/1322)
+
+### Fixed
+
+- Create new workflow button sizing regression
+  [#1405](https://github.com/OpenFn/Lightning/issues/1405)
+- Google credential creation and automatic closing of oAuth tab
+  [#1109](https://github.com/OpenFn/Lightning/issues/1109)
+- Exporting project breaks the navigation of the page
+  [#1440](https://github.com/OpenFn/Lightning/issues/1440)
+
+## [v0.10.2] - 2023-11-21
+
+### Added
+
+### Changed
+
+- Added `max_frame_size` to the Cowboy websockets protocol options in an attempt
+  to address [#1421](https://github.com/OpenFn/Lightning/issues/1421)
+
+### Fixed
+
+## [v0.10.1] - 2023-11-21
+
+### Added
+
+### Changed
+
+### Fixed
+
+- Work Order ID was not displayed properly in history page
+  [#1423](https://github.com/OpenFn/Lightning/issues/1423)
+
+## [v0.10.0] - 2023-11-21
+
+### 🚨 Breaking change warning! 🚨
+
+This release will contain breaking changes as we've significantly improved both
+the workflow building and execution systems.
+
+#### Nodes and edges
+
+Before, workflows were represented as a list of jobs and triggers. For greater
+flexibility and control of complex workflows, we've moved towards a more robust
+"nodes and edges" approach. Where jobs in a workflow (a node) can be connected
+by edges.
+
+Triggers still exist, but live "outside" the directed acyclic graph (DAG) and
+are used to automatically create work orders and attempts.
+
+We've provided migrations that bring `v0.9.3` workflows in line with the
+`v0.10.0` requirements.
+
+#### Scalable workers
+
+Before, Lightning spawned child processes to execute attempts in sand-boxed
+NodeVMs on the same server. This created inefficiencies and security
+vulnerabilities. Now, the Lightning web server adds attempts to a queue and
+multiple worker applications can pull from that queue to process work.
+
+In dev mode, this all happens automatically and on one machine, but in most
+high-availability production environments the workers will be on another server.
+
+Attempts are now handled entirely by the workers, and they report back to
+Lightning. Exit reasons, final attempt states, error types and error messages
+are either entirely new or handled differently now, but we have provided
+migration scripts that will work to bring _most_ `v0.9.3` runs, attempts, and
+work orders up to `v0.10.0`, though the granularity of `v0.9.3` states and exits
+will be less than `v0.10.0` and the final states are not guaranteed to be
+accurate for workflows with multiple branches and leaf nodes with varying exit
+reasons.
+
+The migration scripts can be run with a single function call in SetupUtils from
+a connect `iex` session:
+
+```
+Lightning.SetupUtils.approximate_state_for_attempts_and_workorders()
+```
+
+Note that (like lots of _other_ functionality in `SetupUtils`, calling this
+function is a destructive action and you should only do it if you've backed up
+your data and you know what you're doing.)
+
+As always, we recommend backing up your data before migrating. (And thanks for
+bearing with us as we move towards our first stable Lightning release.)
+
+### Added
+
+- Fix flaky job name input behavior on error
+  [#1218](https://github.com/OpenFn/Lightning/issues/1218)
+- Added a hover effect on copy and add button for adaptors examples
+  [#1297](https://github.com/OpenFn/Lightning/issues/1297)
+- Migration helper code to move from `v0.9.3` to `v0.10.0` added to SetupUtils
+  [#1363](https://github.com/OpenFn/Lightning/issues/1363)
+- Option to start with `RTM=false iex -S mix phx.server` for opting out of the
+  dev-mode automatic runtime manager.
 - Webhook Authentication Methods database and CRUD operations
   [#1152](https://github.com/OpenFn/Lightning/issues/1152)
 - Creation and Edit of webhook webhook authentication methods UI
@@ -35,12 +622,25 @@ and this project adheres to
   [#1189](https://github.com/OpenFn/Lightning/issues/1189)
 - Add plumbing to support the use of PromEx
   [#1199](https://github.com/OpenFn/Lightning/issues/1199)
-- Add warning text to PromEx config 
-  [#1222] (https://github.com/OpenFn/Lightning/issues/1222)
+- Add warning text to PromEx config
+  [#1222](https://github.com/OpenFn/Lightning/issues/1222)
 - Track and filter on webhook controller state in :telemetry metrics
   [#1192](https://github.com/OpenFn/Lightning/issues/1192)
 - Secure PromEx metrics endpoint by default
   [#1223](https://github.com/OpenFn/Lightning/issues/1223)
+- Partition `log_lines` table based on `attempt_id`
+  [#1254](https://github.com/OpenFn/Lightning/issues/1254)
+- Remove foreign key from `attempts` in preparation for partitioning
+  `work_orders` [#1254](https://github.com/OpenFn/Lightning/issues/1254)
+- Remove `Workflows.delete_workflow`. It is no longer in use and would require
+  modification to not leave orphaned attempts given the removal of the foreign
+  key from `attempts`. [#1254](https://github.com/OpenFn/Lightning/issues/1254)
+- Show tooltip for cloned runs in history page
+  [#1327](https://github.com/OpenFn/Lightning/issues/1327)
+- Have user create workflow name before moving to the canvas
+  [#1103](https://github.com/OpenFn/Lightning/issues/1103)
+- Allow PromEx authorization to be disabled
+  [#1483](https://github.com/OpenFn/Lightning/issues/1483)
 
 ### Changed
 
@@ -48,11 +648,31 @@ and this project adheres to
   [#1176](https://github.com/OpenFn/Lightning/issues/1176)
 - Update "Delete" to "Delete Job" on Job panel and include javascript deletion
   confirmation [#1105](https://github.com/OpenFn/Lightning/issues/1105)
+- Move "Enabled" property from "Jobs" to "Edges"
+  [#895](https://github.com/OpenFn/Lightning/issues/895)
+- Incorrect wording on the "Delete" tooltip
+  [#1313](https://github.com/OpenFn/Lightning/issues/1313)
 
 ### Fixed
 
-- [#1140](https://github.com/OpenFn/Lightning/issues/1140) Adaptor icons load
-  gracefully
+- Fixed janitor lost query calculation
+  [#1400](https://github.com/OpenFn/Lightning/issues/1400)
+- Adaptor icons load gracefully
+  [#1140](https://github.com/OpenFn/Lightning/issues/1140)
+- Selected dataclip gets lost when starting a manual work order from the
+  inspector interface [#1283](https://github.com/OpenFn/Lightning/issues/1283)
+- Ensure that the whole edge when selected is highlighted
+  [#1160](https://github.com/OpenFn/Lightning/issues/1160)
+- Fix "Reconfigure Github" button in Project Settings
+  [#1386](https://github.com/OpenFn/Lightning/issues/1386)
+- Make janitor also clean up runs inside an attempt
+  [#1348](https://github.com/OpenFn/Lightning/issues/1348)
+- Modify CompleteRun to return error changeset when run not found
+  [#1393](https://github.com/OpenFn/Lightning/issues/1393)
+- Drop invocation reasons from DB
+  [#1412](https://github.com/OpenFn/Lightning/issues/1412)
+- Fix inconsistency in ordering of child nodes in the workflow diagram
+  [#1406](https://github.com/OpenFn/Lightning/issues/1406)
 
 ## [v0.9.3] - 2023-09-27
 
@@ -72,13 +692,10 @@ and this project adheres to
 
 - Fix long name on workflow cards
   [#1102](https://github.com/OpenFn/Lightning/issues/1102)
-
 - Fix highlighted Edge can get out of sync with selected Edge
   [#1099](https://github.com/OpenFn/Lightning/issues/1099)
-
 - Creating a new user without a password fails and there is no user feedback
   [#731](https://github.com/OpenFn/Lightning/issues/731)
-
 - Crash when setting up version control
   [#1112](https://github.com/OpenFn/Lightning/issues/1112)
 
@@ -104,7 +721,6 @@ and this project adheres to
 
 - Modified audit trail to handle lots of different kind of audit events
   [#271](https://github.com/OpenFn/Lightning/issues/271)/[#44](https://github.com/OpenFn/Lightning/issues/44)
-
 - Fix randomly unresponsive job panel after job deletion
   [#1113](https://github.com/OpenFn/Lightning/issues/1113)
 
@@ -175,7 +791,7 @@ and this project adheres to
 
 - Moved Save and Run button to bottom of the Job edit modal
   [#1026](https://github.com/OpenFn/Lightning/issues/1026)
-- Allow a manual workorder to save the workflow before creating the workorder
+- Allow a manual work order to save the workflow before creating the work order
   [#959](https://github.com/OpenFn/Lightning/issues/959)
 
 ### Fixed
@@ -289,8 +905,8 @@ and this project adheres to
 
 ### Changed
 
-- Unless otherwise specified, only show workorders with activity in last 14 days
-  [#968](https://github.com/OpenFn/Lightning/issues/968)
+- Unless otherwise specified, only show work orders with activity in last 14
+  days [#968](https://github.com/OpenFn/Lightning/issues/968)
 
 ### Fixed
 
@@ -383,7 +999,7 @@ the Nodes and Edges [epic](https://github.com/OpenFn/Lightning/issues/793).
 
 ### Added
 
-- Ability to rerun workorders from start by selecting one of more of them from
+- Ability to rerun work orders from start by selecting one of more of them from
   the History page and clicking the "Rerun" button.
   [#659](https://github.com/OpenFn/Lightning/issues/659)
 
@@ -682,8 +1298,8 @@ the Nodes and Edges [epic](https://github.com/OpenFn/Lightning/issues/793).
 - Better error handling in the docs panel
 - Disable credential ownership transfer in dev and prod environments
 - Add project settings page
-- Change Workorder filters to apply to the aggregate state of the workorder and
-  not the run directly
+- Change Work Order filters to apply to the aggregate state of the work order
+  and not the run directly
 - Enable jobs by default
 - Set log level to info
 - Add Beta checkbox to register page
@@ -700,9 +1316,9 @@ the Nodes and Edges [epic](https://github.com/OpenFn/Lightning/issues/793).
 
 ### Fixed
 
-- Fixed bug that attempted to execute HTML scripts in dataclips
-- Fixed bug that prevented workorders from displaying in the order of their last
-  run, descending.
+- Fixed bug that tried to execute HTML scripts in dataclips
+- Fixed bug that prevented work orders from displaying in the order of their
+  last run, descending.
 - Remove alerts after set timeout or close
 
 ## [0.3.0] - 2022-11-21
@@ -712,7 +1328,7 @@ the Nodes and Edges [epic](https://github.com/OpenFn/Lightning/issues/793).
 - Add seed data for demo site
 - Create adaptor credentials through a form
 - Configure cron expressions through a form
-- View runs grouped by workorders and attempts
+- View runs grouped by work orders and attempts
 - Run an existing Job with any dataclip uuid from the Job form
 
 ### Changed
@@ -722,9 +1338,10 @@ the Nodes and Edges [epic](https://github.com/OpenFn/Lightning/issues/793).
 - Reverse the relationship between Jobs and Triggers. Triggers now can exist on
   their own; setting the stage for branching and merging workflows
 - Updated Elixir and frontend dependencies
-- [BREAKING CHANGE] Pipeline now uses WorkOrders, previous data is not
+- [BREAKING CHANGE] Pipeline now uses Work Orders, previous data is not
   compatible.
-- Runs, Dataclips and Attempts now all correctly use usec resolution timestamps.
+- Runs, Dataclips and Attempts now all correctly use `usec` resolution
+  timestamps.
 - Upgraded LiveView to 0.18.0
 - Upgraded Elixir to 1.14.1 and OTP 25
 - Workflow Job editor now behaves like a panel

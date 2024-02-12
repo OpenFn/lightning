@@ -16,17 +16,17 @@ defmodule Lightning.Workflows.Job do
     being the default).
   """
   use Ecto.Schema
+
   import Ecto.Changeset
 
   alias Lightning.Credentials.Credential
+  alias Lightning.Projects.ProjectCredential
   alias Lightning.Workflows.Workflow
-  alias Lightning.Projects.{ProjectCredential}
 
   @type t :: %__MODULE__{
           __meta__: Ecto.Schema.Metadata.t(),
           id: Ecto.UUID.t() | nil,
           body: String.t() | nil,
-          enabled: boolean(),
           name: String.t() | nil,
           adaptor: String.t() | nil,
           credential: nil | Credential.t() | Ecto.Association.NotLoaded.t(),
@@ -38,7 +38,6 @@ defmodule Lightning.Workflows.Job do
   schema "jobs" do
     field :body, :string
 
-    field :enabled, :boolean, default: true
     field :name, :string
     field :adaptor, :string, default: "@openfn/language-common@latest"
 
@@ -47,9 +46,11 @@ defmodule Lightning.Workflows.Job do
     belongs_to :workflow, Workflow
     has_one :project, through: [:workflow, :project]
 
+    has_many :steps, Lightning.Invocation.Step
+
     field :delete, :boolean, virtual: true
 
-    timestamps()
+    timestamps(type: :utc_datetime_usec)
   end
 
   def new(attrs \\ %{}) do
@@ -58,28 +59,24 @@ defmodule Lightning.Workflows.Job do
 
   @doc false
   def changeset(job, attrs) do
-    change =
-      job
-      |> cast(attrs, [
-        :id,
-        # Note: we can drop inserted_at once there's a reliable way to sort yaml for export
-        :inserted_at,
-        :name,
-        :body,
-        :enabled,
-        :adaptor,
-        :project_credential_id,
-        :workflow_id
-      ])
-
-    change
+    job
+    |> cast(attrs, [
+      :id,
+      # Note: we can drop inserted_at once there's a reliable way to sort yaml for export
+      :inserted_at,
+      :name,
+      :body,
+      :adaptor,
+      :project_credential_id,
+      :workflow_id
+    ])
     |> validate()
     |> unique_constraint(:name, name: "jobs_name_workflow_id_index")
   end
 
   def validate(changeset) do
     changeset
-    |> validate_required([:name, :body, :enabled, :adaptor])
+    |> validate_required([:name, :body, :adaptor])
     |> assoc_constraint(:workflow)
     |> validate_length(:name, max: 100)
     |> validate_format(:name, ~r/^[a-zA-Z0-9_\- ]*$/)

@@ -2,22 +2,41 @@ defmodule Lightning.SetupUtils do
   @moduledoc """
   SetupUtils encapsulates logic for setting up initial data for various sites.
   """
-
-  alias Lightning.{
-    Projects,
-    Accounts,
-    Jobs,
-    Workflows,
-    Repo,
-    Credentials,
-    WorkOrders,
-    VersionControl
-  }
-
-  alias Lightning.Invocation.Run
-  alias Ecto.Multi
-
   import Ecto.Query
+  import Ecto.Changeset
+
+  alias Lightning.Accounts
+  alias Lightning.Credentials
+  alias Lightning.Jobs
+  alias Lightning.Projects
+  alias Lightning.Repo
+  alias Lightning.Runs
+  alias Lightning.VersionControl
+  alias Lightning.Workflows
+  alias Lightning.WorkOrders
+
+  defmodule Ticker do
+    @moduledoc """
+    Time ticker to assure time progress/sequence specially for multiple logs.
+    """
+    use Agent
+
+    def start_link(%DateTime{} = start_time) do
+      Agent.start_link(fn -> start_time end)
+    end
+
+    def next(ticker) do
+      Agent.get_and_update(ticker, fn time ->
+        increment = :rand.uniform(4) + 1
+        next = DateTime.add(time, increment, :millisecond)
+        {next, next}
+      end)
+    end
+
+    def stop(pid) do
+      Agent.stop(pid)
+    end
+  end
 
   @spec setup_demo(nil | maybe_improper_list | map) :: %{
           jobs: [...],
@@ -30,10 +49,8 @@ defmodule Lightning.SetupUtils do
   Creates initial data and returns the created records.
   """
   def setup_demo(opts \\ [create_super: false]) do
-    users = create_users(opts)
-
     %{super_user: super_user, admin: admin, editor: editor, viewer: viewer} =
-      users
+      create_users(opts)
 
     %{
       project: openhie_project,
@@ -81,12 +98,16 @@ defmodule Lightning.SetupUtils do
   defp to_log_lines(log) do
     log
     |> String.split("\n")
-    |> Enum.map(fn log ->
-      %{message: log, timestamp: DateTime.utc_now()}
+    |> Enum.with_index()
+    |> Enum.map(fn {log, index} ->
+      %{
+        message: log,
+        timestamp: DateTime.utc_now() |> DateTime.add(index, :millisecond)
+      }
     end)
   end
 
-  defp create_dhis2_credential(project, user_id) do
+  defp create_dhis2_credential(%Accounts.User{id: user_id}) do
     {:ok, credential} =
       Credentials.create_credential(%{
         body: %{
@@ -96,10 +117,7 @@ defmodule Lightning.SetupUtils do
         },
         name: "DHIS2 play",
         user_id: user_id,
-        schema: "dhis2",
-        project_credentials: [
-          %{project_id: project.id}
-        ]
+        schema: "dhis2"
       })
 
     credential
@@ -168,6 +186,12 @@ defmodule Lightning.SetupUtils do
         project_id: project.id
       })
 
+    {:ok, source_trigger} =
+      Workflows.build_trigger(%{
+        type: :webhook,
+        workflow_id: workflow.id
+      })
+
     {:ok, job_1} =
       Jobs.create_job(%{
         name: "Job 1 - Check if age is over 18 months",
@@ -181,21 +205,7 @@ defmodule Lightning.SetupUtils do
           });
         """,
         adaptor: "@openfn/language-common@latest",
-        enabled: true,
         workflow_id: workflow.id
-      })
-
-    {:ok, source_trigger} =
-      Workflows.build_trigger(%{
-        type: :webhook,
-        workflow_id: workflow.id
-      })
-
-    {:ok, _job_1_edge} =
-      Workflows.create_edge(%{
-        workflow_id: workflow.id,
-        source_trigger: source_trigger,
-        target_job: job_1
       })
 
     {:ok, job_2} =
@@ -208,23 +218,31 @@ defmodule Lightning.SetupUtils do
           });
         """,
         adaptor: "@openfn/language-common@latest",
-        enabled: true,
         workflow_id: workflow.id
+      })
+
+    {:ok, _job_1_edge} =
+      Workflows.create_edge(%{
+        workflow_id: workflow.id,
+        source_trigger: source_trigger,
+        target_job: job_1,
+        enabled: true
       })
 
     Workflows.create_edge(%{
       workflow_id: workflow.id,
       source_job: job_1,
-      condition: :on_job_success,
-      target_job_id: job_2.id
+      condition_type: :on_job_success,
+      target_job_id: job_2.id,
+      enabled: true
     })
 
-    user_id = List.first(project_users).user_id
+    user = get_most_privileged_user!(project)
 
-    dhis2_credential = create_dhis2_credential(project, user_id)
+    dhis2_credential = create_dhis2_credential(user)
 
     {:ok, job_3} =
-      Jobs.create_job(%{
+      Workflows.Job.changeset(%Workflows.Job{}, %{
         name: "Job 3 - Upload to DHIS2",
         body: """
           create('trackedEntityInstances', {
@@ -243,17 +261,20 @@ defmodule Lightning.SetupUtils do
           });
         """,
         adaptor: "@openfn/language-dhis2@latest",
-        enabled: true,
-        workflow_id: workflow.id,
-        project_credential_id:
-          List.first(dhis2_credential.project_credentials).id
+        workflow_id: workflow.id
       })
+      |> put_assoc(:project_credential, %{
+        project: project,
+        credential: dhis2_credential
+      })
+      |> Repo.insert()
 
     Workflows.create_edge(%{
       workflow_id: workflow.id,
       source_job: job_2,
-      condition: :on_job_success,
-      target_job_id: job_3.id
+      condition_type: :on_job_success,
+      target_job_id: job_3.id,
+      enabled: true
     })
 
     input_dataclip =
@@ -268,7 +289,7 @@ defmodule Lightning.SetupUtils do
         type: :http_request
       })
 
-    run_params = [
+    step_params = [
       %{
         job_id: job_2.id,
         exit_reason: "success",
@@ -291,8 +312,6 @@ defmodule Lightning.SetupUtils do
           [CLI] ✔ Writing output to /tmp/output-1686850600-169521-1drewz.json
           [CLI] ✔ Done in 304ms! ✨
           """),
-        started_at: DateTime.utc_now() |> DateTime.add(-45, :second),
-        finished_at: DateTime.utc_now() |> DateTime.add(-40, :second),
         input_dataclip_id:
           create_dataclip(%{
             body: %{
@@ -302,23 +321,20 @@ defmodule Lightning.SetupUtils do
               }
             },
             project_id: project.id,
-            type: :run_result
+            type: :step_result
           }).id,
-        output_dataclip_id:
-          create_dataclip(%{
-            body: %{
-              data: %{
-                age_in_months: 19,
-                name: "Genevieve Wimplemews"
-              },
-              names: [
-                "Genevieve",
-                "Wimplemews"
-              ]
+        output_dataclip:
+          %{
+            data: %{
+              age_in_months: 19,
+              name: "Genevieve Wimplemews"
             },
-            project_id: project.id,
-            type: :run_result
-          }).id
+            names: [
+              "Genevieve",
+              "Wimplemews"
+            ]
+          }
+          |> Jason.encode!()
       },
       %{
         job_id: job_3.id,
@@ -363,60 +379,42 @@ defmodule Lightning.SetupUtils do
           """),
         started_at: DateTime.utc_now() |> DateTime.add(-35, :second),
         finished_at: DateTime.utc_now() |> DateTime.add(-30, :second),
-        input_dataclip_id:
-          create_dataclip(%{
-            body: %{
-              data: %{
+        output_dataclip:
+          %{
+            data: %{
+              httpStatus: "OK",
+              httpStatusCode: 200,
+              message: "Import was successful.",
+              response: %{
+                importSummaries: [
+                  %{
+                    href:
+                      "https://play.dhis2.org/dev/api/trackedEntityInstances/iqJrb85GmJb",
+                    reference: "iqJrb85GmJb",
+                    responseType: "ImportSummary",
+                    status: "SUCCESS"
+                  }
+                ],
+                imported: 1,
+                responseType: "ImportSummaries",
+                status: "SUCCESS",
+                total: 1,
+                updated: 0
+              },
+              status: "OK"
+            },
+            names: [
+              "Genevieve",
+              "Wimplemews"
+            ],
+            references: [
+              %{
                 age_in_months: 19,
                 name: "Genevieve Wimplemews"
-              },
-              names: [
-                "Genevieve",
-                "Wimplemews"
-              ]
-            },
-            project_id: project.id,
-            type: :run_result
-          }).id,
-        output_dataclip_id:
-          create_dataclip(%{
-            body: %{
-              data: %{
-                httpStatus: "OK",
-                httpStatusCode: 200,
-                message: "Import was successful.",
-                response: %{
-                  importSummaries: [
-                    %{
-                      href:
-                        "https://play.dhis2.org/dev/api/trackedEntityInstances/iqJrb85GmJb",
-                      reference: "iqJrb85GmJb",
-                      responseType: "ImportSummary",
-                      status: "SUCCESS"
-                    }
-                  ],
-                  imported: 1,
-                  responseType: "ImportSummaries",
-                  status: "SUCCESS",
-                  total: 1,
-                  updated: 0
-                },
-                status: "OK"
-              },
-              names: [
-                "Genevieve",
-                "Wimplemews"
-              ],
-              references: [
-                %{
-                  age_in_months: 19,
-                  name: "Genevieve Wimplemews"
-                }
-              ]
-            },
-            project_id: project.id,
-            type: :run_result
-          }).id
+              }
+            ]
+          }
+          |> Jason.encode!()
       }
     ]
 
@@ -425,7 +423,7 @@ defmodule Lightning.SetupUtils do
         workflow,
         source_trigger,
         input_dataclip,
-        run_params
+        step_params
       )
 
     %{
@@ -467,16 +465,16 @@ defmodule Lightning.SetupUtils do
         fn(state => state);
         """,
         adaptor: "@openfn/language-http@latest",
-        enabled: true,
         workflow_id: openhie_workflow.id
       })
 
     {:ok, _openhie_root_edge} =
       Workflows.create_edge(%{
         workflow_id: openhie_workflow.id,
-        condition: :always,
+        condition_type: :always,
         source_trigger: openhie_trigger,
-        target_job: fhir_standard_data
+        target_job: fhir_standard_data,
+        enabled: true
       })
 
     {:ok, send_to_openhim} =
@@ -488,16 +486,8 @@ defmodule Lightning.SetupUtils do
         fn(state => state);
         """,
         adaptor: "@openfn/language-http@latest",
-        enabled: true,
+        # enabled: true,
         workflow_id: openhie_workflow.id
-      })
-
-    {:ok, _send_to_openhim_edge} =
-      Workflows.create_edge(%{
-        workflow_id: openhie_workflow.id,
-        condition: :on_job_success,
-        target_job_id: send_to_openhim.id,
-        source_job_id: fhir_standard_data.id
       })
 
     {:ok, notify_upload_successful} =
@@ -509,16 +499,8 @@ defmodule Lightning.SetupUtils do
         fn(state => state);
         """,
         adaptor: "@openfn/language-http@latest",
-        enabled: true,
+        # enabled: true,
         workflow_id: openhie_workflow.id
-      })
-
-    {:ok, _success_upload} =
-      Workflows.create_edge(%{
-        workflow_id: openhie_workflow.id,
-        condition: :on_job_success,
-        target_job_id: notify_upload_successful.id,
-        source_job_id: send_to_openhim.id
       })
 
     {:ok, notify_upload_failed} =
@@ -530,16 +512,35 @@ defmodule Lightning.SetupUtils do
         fn(state => state);
         """,
         adaptor: "@openfn/language-http@latest",
-        enabled: true,
+        # enabled: true,
         workflow_id: openhie_workflow.id
+      })
+
+    {:ok, _send_to_openhim_edge} =
+      Workflows.create_edge(%{
+        workflow_id: openhie_workflow.id,
+        condition_type: :on_job_success,
+        target_job_id: send_to_openhim.id,
+        source_job_id: fhir_standard_data.id,
+        enabled: true
+      })
+
+    {:ok, _success_upload} =
+      Workflows.create_edge(%{
+        workflow_id: openhie_workflow.id,
+        condition_type: :on_job_success,
+        target_job_id: notify_upload_successful.id,
+        source_job_id: send_to_openhim.id,
+        enabled: true
       })
 
     {:ok, _failed_upload} =
       Workflows.create_edge(%{
         workflow_id: openhie_workflow.id,
-        condition: :on_job_failure,
+        condition_type: :on_job_failure,
         target_job_id: notify_upload_failed.id,
-        source_job_id: send_to_openhim.id
+        source_job_id: send_to_openhim.id,
+        enabled: true
       })
 
     http_body = %{
@@ -555,16 +556,7 @@ defmodule Lightning.SetupUtils do
         type: :http_request
       })
 
-    output_dataclip_payload = %{
-      body: %{data: http_body, references: []},
-      project_id: openhie_project.id,
-      type: :run_result
-    }
-
-    [output_dataclip_1, output_dataclip_2, output_dataclip_3] =
-      Enum.map(1..3, fn _n -> create_dataclip(output_dataclip_payload) end)
-
-    run_params = [
+    step_params = [
       %{
         job_id: fhir_standard_data.id,
         exit_reason: "success",
@@ -588,10 +580,8 @@ defmodule Lightning.SetupUtils do
           [CLI] ✔ Writing output to /tmp/output-1686840746-126941-i2yb2g.json
           [CLI] ✔ Done in 223ms! ✨
           """),
-        started_at: DateTime.utc_now() |> DateTime.add(1, :second),
-        finished_at: DateTime.utc_now() |> DateTime.add(2, :second),
         input_dataclip_id: dataclip.id,
-        output_dataclip_id: output_dataclip_1.id
+        output_dataclip: %{data: http_body, references: []} |> Jason.encode!()
       },
       %{
         job_id: send_to_openhim.id,
@@ -615,10 +605,7 @@ defmodule Lightning.SetupUtils do
           [CLI] ✔ Writing output to /tmp/output-1686840746-126941-i2yb2g.json
           [CLI] ✔ Done in 223ms! ✨
           """),
-        started_at: DateTime.utc_now() |> DateTime.add(3, :second),
-        finished_at: DateTime.utc_now() |> DateTime.add(4, :second),
-        input_dataclip_id: output_dataclip_1.id,
-        output_dataclip_id: output_dataclip_2.id
+        output_dataclip: %{data: http_body, references: []} |> Jason.encode!()
       },
       %{
         job_id: notify_upload_successful.id,
@@ -642,10 +629,7 @@ defmodule Lightning.SetupUtils do
           [CLI] ✔ Writing output to /tmp/output-1686840747-126941-16ewhef.json
           [CLI] ✔ Done in 209ms! ✨
           """),
-        started_at: DateTime.utc_now() |> DateTime.add(5, :second),
-        finished_at: DateTime.utc_now() |> DateTime.add(6, :second),
-        input_dataclip_id: output_dataclip_2.id,
-        output_dataclip_id: output_dataclip_3.id
+        output_dataclip: %{data: http_body, references: []} |> Jason.encode!()
       }
     ]
 
@@ -654,7 +638,7 @@ defmodule Lightning.SetupUtils do
         openhie_workflow,
         openhie_trigger,
         dataclip,
-        run_params
+        step_params
       )
 
     %{
@@ -671,7 +655,7 @@ defmodule Lightning.SetupUtils do
   end
 
   def create_dhis2_project(project_users) do
-    {:ok, dhis2_project} =
+    {:ok, project} =
       Projects.create_project(%{
         name: "dhis2-project",
         project_users: project_users
@@ -680,14 +664,15 @@ defmodule Lightning.SetupUtils do
     {:ok, dhis2_workflow} =
       Workflows.create_workflow(%{
         name: "DHIS2 to Sheets",
-        project_id: dhis2_project.id
+        project_id: project.id
       })
 
-    user_id = List.first(project_users).user_id
-    dhis2_credential = create_dhis2_credential(dhis2_project, user_id)
+    user = get_most_privileged_user!(project)
+
+    dhis2_credential = create_dhis2_credential(user)
 
     {:ok, get_dhis2_data} =
-      Jobs.create_job(%{
+      Workflows.Job.changeset(%Workflows.Job{}, %{
         name: "Get DHIS2 data",
         # Note: we can drop inserted_at once there's a reliable way to sort yaml for export
         inserted_at: NaiveDateTime.utc_now(),
@@ -695,11 +680,14 @@ defmodule Lightning.SetupUtils do
         get('trackedEntityInstances/PQfMcpmXeFE');
         """,
         adaptor: "@openfn/language-dhis2@latest",
-        enabled: true,
-        workflow_id: dhis2_workflow.id,
-        project_credential_id:
-          List.first(dhis2_credential.project_credentials).id
+        # enabled: true,
+        workflow_id: dhis2_workflow.id
       })
+      |> put_assoc(:project_credential, %{
+        project: project,
+        credential: dhis2_credential
+      })
+      |> Repo.insert()
 
     {:ok, dhis_trigger} =
       Workflows.build_trigger(%{
@@ -711,9 +699,10 @@ defmodule Lightning.SetupUtils do
     {:ok, _root_edge} =
       Workflows.create_edge(%{
         workflow_id: dhis2_workflow.id,
-        condition: :always,
+        condition_type: :always,
         source_trigger: dhis_trigger,
-        target_job: get_dhis2_data
+        target_job: get_dhis2_data,
+        enabled: true
       })
 
     {:ok, upload_to_google_sheet} =
@@ -725,16 +714,17 @@ defmodule Lightning.SetupUtils do
         fn(state => state);
         """,
         adaptor: "@openfn/language-http@latest",
-        enabled: true,
+        # enabled: true,
         workflow_id: dhis2_workflow.id
       })
 
     {:ok, _success_upload} =
       Workflows.create_edge(%{
         workflow_id: dhis2_workflow.id,
-        condition: :on_job_success,
+        condition_type: :on_job_success,
         target_job_id: upload_to_google_sheet.id,
-        source_job_id: get_dhis2_data.id
+        source_job_id: get_dhis2_data.id,
+        enabled: true
       })
 
     input_dataclip =
@@ -771,30 +761,12 @@ defmodule Lightning.SetupUtils do
             %{}
           ]
         },
-        project_id: dhis2_project.id,
+        project_id: project.id,
         type: :http_request
       })
 
-    output_dataclip =
-      create_dataclip(%{
-        body: %{
-          data: %{
-            spreadsheetId: "wv5ftwhte",
-            tableRange: "A3:D3",
-            updates: %{
-              updatedCells: 4
-            }
-          },
-          references: [
-            %{}
-          ]
-        },
-        project_id: dhis2_project.id,
-        type: :run_result
-      })
-
     # Make it fail for demo purposes
-    run_params = [
+    step_params = [
       %{
         job_id: get_dhis2_data.id,
         exit_reason: "success",
@@ -818,10 +790,21 @@ defmodule Lightning.SetupUtils do
             [CMP] ℹ Added import statement for @openfn/language-dhis2@latest
             [CMP] ℹ Added export * statement for @openfn/language-dhis2@latest
           """),
-        started_at: DateTime.utc_now() |> DateTime.add(1, :second),
-        finished_at: DateTime.utc_now() |> DateTime.add(2, :second),
         input_dataclip_id: input_dataclip.id,
-        output_dataclip_id: output_dataclip.id
+        output_dataclip:
+          %{
+            data: %{
+              spreadsheetId: "wv5ftwhte",
+              tableRange: "A3:D3",
+              updates: %{
+                updatedCells: 4
+              }
+            },
+            references: [
+              %{}
+            ]
+          }
+          |> Jason.encode!()
       },
       %{
         job_id: upload_to_google_sheet.id,
@@ -842,10 +825,7 @@ defmodule Lightning.SetupUtils do
           [R/T] ℹ Resolved adaptor @openfn/language-http to version 4.2.8
           [CLI] ✘ Error: 503 Service Unavailable, please try again later
           [CLI] ✘ Took 1.634s.
-          """),
-        started_at: DateTime.utc_now() |> DateTime.add(3, :second),
-        finished_at: DateTime.utc_now() |> DateTime.add(4, :second),
-        input_dataclip_id: output_dataclip.id
+          """)
       }
     ]
 
@@ -854,11 +834,11 @@ defmodule Lightning.SetupUtils do
         dhis2_workflow,
         dhis_trigger,
         input_dataclip,
-        run_params
+        step_params
       )
 
     %{
-      project: dhis2_project,
+      project: project,
       workflow: dhis2_workflow,
       workorders: [failure_dhis2_workorder],
       jobs: [get_dhis2_data, upload_to_google_sheet]
@@ -873,14 +853,13 @@ defmodule Lightning.SetupUtils do
     ])
 
     delete_all_entities([
-      Lightning.Attempt,
-      Lightning.AttemptRun,
+      Lightning.Run,
+      Lightning.RunStep,
       Lightning.AuthProviders.AuthConfig,
-      Lightning.Auditing.Model,
+      Lightning.Auditing.Audit,
       Lightning.Projects.ProjectCredential,
       Lightning.WorkOrder,
-      Lightning.InvocationReason,
-      Lightning.Invocation.Run,
+      Lightning.Invocation.Step,
       Lightning.Credentials.Credential,
       Lightning.Workflows.Job,
       Lightning.Workflows.Trigger,
@@ -913,60 +892,122 @@ defmodule Lightning.SetupUtils do
          workflow,
          trigger,
          input_dataclip,
-         run_params
+         step_params
        ) do
-    attempt_finished_at =
-      DateTime.utc_now()
-      |> DateTime.add(length(run_params) * 2, :second)
+    workflow |> Repo.preload(:project)
+    {:ok, ticker} = Ticker.start_link(DateTime.utc_now())
 
-    [%{exit_reason: final_run_exit_reason} | _rest] = Enum.reverse(run_params)
+    workorder =
+      Repo.transaction(fn ->
+        workorder =
+          %{runs: [run]} =
+          WorkOrders.build_for(trigger, %{
+            workflow: workflow,
+            dataclip: input_dataclip
+          })
+          |> then(fn changeset ->
+            [run] = changeset |> get_change(:runs)
 
-    {:ok, %{workorder: workorder, attempt: attempt}} =
-      Multi.new()
-      |> Multi.insert(
-        :workorder,
-        WorkOrders.build_for(trigger, %{
-          workflow: workflow,
-          dataclip: input_dataclip,
-          last_activity: attempt_finished_at
-        })
-      )
-      |> Multi.update(:attempt, fn %{workorder: %{attempts: [attempt]}} ->
-        runs =
-          Enum.map(run_params, fn params ->
-            log_lines =
-              Enum.map(params.log_lines, fn line ->
-                Map.merge(line, %{attempt_id: attempt.id})
-              end)
+            put_change(changeset, :runs, [
+              run
+              |> change(%{state: :claimed, claimed_at: Ticker.next(ticker)})
+            ])
+          end)
+          |> Repo.insert!()
 
-            params
-            |> Map.merge(%{log_lines: log_lines})
-            |> Run.new()
+        Runs.start_run(run)
+
+        _steps =
+          step_params
+          |> Enum.reduce(%{}, fn step, previous ->
+            step_id = Ecto.UUID.generate()
+
+            input_dataclip_id =
+              Map.get(
+                step,
+                :input_dataclip_id,
+                Map.get(previous, :output_dataclip_id, input_dataclip.id)
+              )
+
+            Runs.start_step(%{
+              run_id: run.id,
+              step_id: step_id,
+              job_id: step.job_id,
+              input_dataclip_id: input_dataclip_id,
+              started_at: Ticker.next(ticker)
+            })
+
+            step.log_lines
+            |> Enum.each(fn line ->
+              Runs.append_run_log(run, %{
+                step_id: step_id,
+                message: line.message,
+                timestamp: Ticker.next(ticker)
+              })
+            end)
+
+            complete_step_params =
+              %{
+                run_id: run.id,
+                project_id: workflow.project_id,
+                step_id: step_id,
+                reason: step.exit_reason,
+                finished_at: Ticker.next(ticker)
+              }
+              |> Map.merge(
+                if step[:output_dataclip] do
+                  %{
+                    output_dataclip_id: Ecto.UUID.generate(),
+                    output_dataclip: step.output_dataclip
+                  }
+                else
+                  %{}
+                end
+              )
+
+            {:ok, step} = Runs.complete_step(complete_step_params)
+
+            step
           end)
 
-        attempt
-        |> Repo.preload([:runs])
-        |> Ecto.Changeset.change(%{
-          state:
-            if(final_run_exit_reason == "success", do: :success, else: :failed),
-          claimed_at: DateTime.utc_now() |> DateTime.add(1, :second),
-          started_at: DateTime.utc_now() |> DateTime.add(1, :second),
-          finished_at: attempt_finished_at
-        })
-        |> Ecto.Changeset.put_assoc(:runs, runs)
-      end)
-      |> Repo.transaction()
+        state =
+          List.last(step_params)
+          |> Map.get(:exit_reason)
+          |> case do
+            "fail" -> "failed"
+            reason -> reason
+          end
 
-    Lightning.WorkOrders.update_state(attempt)
+        {:ok, _} = Runs.complete_run(run, %{state: state})
+
+        workorder
+      end)
+
+    Ticker.stop(ticker)
 
     workorder
-    |> Ecto.Changeset.change(last_activity: attempt_finished_at)
-    |> Repo.update()
   end
 
   defp create_dataclip(params) do
     {:ok, dataclip} = Lightning.Invocation.create_dataclip(params)
 
     dataclip
+  end
+
+  defp get_most_privileged_user!(project) do
+    Ecto.assoc(project, :project_users)
+    |> with_cte("role_ordering",
+      as:
+        fragment(
+          "SELECT * FROM UNNEST(?::varchar[]) WITH ORDINALITY o(role, ord)",
+          ~w[owner admin editor viewer]
+        )
+    )
+    |> join(:inner, [pu], o in "role_ordering", on: pu.role == o.role)
+    |> join(:inner, [pu], u in assoc(pu, :user))
+    |> order_by([pu, o], asc: o.ord)
+    |> select([pu, _o, u], u)
+    |> limit(1)
+    |> Repo.one!()
   end
 end

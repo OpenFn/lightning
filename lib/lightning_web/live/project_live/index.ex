@@ -4,8 +4,8 @@ defmodule LightningWeb.ProjectLive.Index do
   """
   use LightningWeb, :live_view
 
-  alias Lightning.Policies.Users
   alias Lightning.Policies.Permissions
+  alias Lightning.Policies.Users
   alias Lightning.Projects
 
   @impl true
@@ -52,7 +52,7 @@ defmodule LightningWeb.ProjectLive.Index do
     |> assign(
       page_title: "New Project",
       active_menu_item: :projects,
-      project: %Lightning.Projects.Project{},
+      project: %Lightning.Projects.Project{project_users: []},
       users: Lightning.Accounts.list_users()
     )
   end

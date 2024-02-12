@@ -1,13 +1,19 @@
 defmodule LightningWeb.ProjectLiveTest do
   use LightningWeb.ConnCase, async: false
 
+  alias Lightning.Repo
+  alias Lightning.Name
+
   import Phoenix.LiveViewTest
   import Lightning.ProjectsFixtures
   import Lightning.AccountsFixtures
   import Lightning.Factories
+  import LightningWeb.CredentialLiveHelpers
 
   import Lightning.ApplicationHelpers,
     only: [dynamically_absorb_delay: 1, put_temporary_env: 3]
+
+  alias Lightning.Projects
 
   @cert """
   -----BEGIN RSA PRIVATE KEY-----
@@ -64,7 +70,7 @@ defmodule LightningWeb.ProjectLiveTest do
       |> render_change()
 
       index_live
-      |> form("#project-form")
+      |> form("#project-users-form")
       |> render_submit()
 
       assert_patch(index_live, Routes.project_index_path(conn, :index))
@@ -72,7 +78,7 @@ defmodule LightningWeb.ProjectLiveTest do
     end
 
     test "saves new project", %{conn: conn} do
-      user = user_fixture()
+      user = insert(:user, first_name: "1st", last_name: "user")
 
       {:ok, index_live, _html} =
         live(conn, Routes.project_index_path(conn, :index))
@@ -90,16 +96,16 @@ defmodule LightningWeb.ProjectLiveTest do
       |> form("#project-form", project: @create_attrs)
       |> render_change()
 
-      index_live
-      |> element("#member_list")
-      |> render_hook("select_item", %{"id" => user.id})
-
-      assert index_live
-             |> element("button", "Add")
-             |> render_click() =~ "editor"
+      user_index = find_user_index_in_list(index_live, user)
 
       index_live
-      |> form("#project-form")
+      |> form("#project-users-form",
+        project: %{
+          "project_users" => %{
+            user_index => %{"user_id" => user.id, "role" => "editor"}
+          }
+        }
+      )
       |> render_submit()
 
       assert_patch(index_live, Routes.project_index_path(conn, :index))
@@ -141,10 +147,12 @@ defmodule LightningWeb.ProjectLiveTest do
       assert html =~
                "Export your project as code, to save this version or edit your project locally"
 
-      assert index_live |> element("a", "Export project") |> has_element?()
+      assert index_live
+             |> element(~s{a[target="_blank"]}, "Export project")
+             |> has_element?()
 
       assert index_live
-             |> element("a", "Export project")
+             |> element(~s{a[target="_blank"]}, "Export project")
              |> render_click()
              |> follow_redirect(conn, "/download/yaml?id=#{project.id}")
     end
@@ -292,26 +300,113 @@ defmodule LightningWeb.ProjectLiveTest do
       refute index_live |> element("project-#{project.id}") |> has_element?()
     end
 
-    test "Edits a project", %{conn: conn} do
-      user = user_fixture()
-      project = project_fixture()
+    test "Edits a project", %{conn: conn, user: superuser} do
+      user1 = insert(:user, first_name: "2")
+      user2 = insert(:user, first_name: "3")
+      project = insert(:project)
 
       {:ok, view, _html} = live(conn, ~p"/settings/projects/#{project.id}")
 
       view
-      |> element("#member_list")
-      |> render_hook("select_item", %{"id" => user.id})
-
-      assert view
-             |> element("button", "Add")
-             |> render_click() =~ "editor"
-
-      view
-      |> form("#project-form")
+      |> form("#project-users-form",
+        project: %{
+          "project_users" => %{
+            find_user_index_in_list(view, user1) => %{
+              "user_id" => user1.id,
+              "role" => "editor"
+            },
+            find_user_index_in_list(view, user2) => %{
+              "user_id" => user2.id,
+              "role" => "viewer"
+            }
+          }
+        }
+      )
       |> render_submit()
 
       assert_patch(view, ~p"/settings/projects")
       assert render(view) =~ "Project updated successfully"
+
+      updated_project =
+        Repo.preload(project, [:project_users], force: true)
+
+      assert Enum.count(updated_project.project_users) == 2
+
+      for p_user <- updated_project.project_users do
+        assert p_user.user_id in [user1.id, user2.id]
+        refute p_user.user_id == superuser.id
+      end
+    end
+  end
+
+  describe "download exported project" do
+    setup :register_and_log_in_user
+    setup :create_project_for_current_user
+
+    setup %{project: project} do
+      {:ok, workflow: insert(:simple_workflow, project: project)}
+    end
+
+    test "having edge with condition_type=always", %{
+      conn: conn,
+      project: project,
+      workflow: %{edges: [edge]}
+    } do
+      edge
+      |> Ecto.Changeset.change(%{condition_type: :always})
+      |> Lightning.Repo.update!()
+
+      response = get(conn, "/download/yaml?id=#{project.id}") |> response(200)
+
+      assert response =~ ~S[condition_type: always]
+    end
+
+    test "having edge with condition_type=on_job_success", %{
+      conn: conn,
+      project: project,
+      workflow: %{edges: [edge]}
+    } do
+      edge
+      |> Ecto.Changeset.change(%{condition_type: :on_job_success})
+      |> Lightning.Repo.update!()
+
+      response = get(conn, "/download/yaml?id=#{project.id}") |> response(200)
+
+      assert response =~ ~S[condition_type: on_job_success]
+    end
+
+    test "having edge with condition_type=on_job_failure", %{
+      conn: conn,
+      project: project,
+      workflow: %{edges: [edge]}
+    } do
+      edge
+      |> Ecto.Changeset.change(%{condition_type: :on_job_failure})
+      |> Lightning.Repo.update!()
+
+      response = get(conn, "/download/yaml?id=#{project.id}") |> response(200)
+
+      assert response =~ ~S[condition_type: on_job_failure]
+    end
+
+    test "having edge with condition_type=js_expression", %{
+      conn: conn,
+      project: project,
+      workflow: %{edges: [edge]}
+    } do
+      edge
+      |> Ecto.Changeset.change(%{
+        condition_type: :js_expression,
+        condition_label: "not underaged",
+        condition_expression: "state.data.age > 18"
+      })
+      |> Lightning.Repo.update!()
+
+      response = get(conn, "/download/yaml?id=#{project.id}") |> response(200)
+
+      assert response =~ ~S[condition_type: js_expression]
+      assert response =~ ~S[condition_label: not underaged]
+      assert response =~ ~S[condition_expression: state.data.age > 18]
     end
   end
 
@@ -319,25 +414,25 @@ defmodule LightningWeb.ProjectLiveTest do
     setup :register_and_log_in_user
 
     test "Access project settings page", %{conn: conn, user: user} do
-      another_user = user_fixture()
+      another_user = insert(:user)
 
-      {:ok, project_1} =
-        Lightning.Projects.create_project(%{
+      project_1 =
+        insert(:project,
           name: "project-1",
           project_users: [%{user_id: user.id}]
-        })
+        )
 
-      {:ok, project_2} =
-        Lightning.Projects.create_project(%{
+      project_2 =
+        insert(:project,
           name: "project-2",
           project_users: [%{user_id: user.id}]
-        })
+        )
 
-      {:ok, project_3} =
-        Lightning.Projects.create_project(%{
+      project_3 =
+        insert(:project,
           name: "project-3",
           project_users: [%{user_id: another_user.id}]
-        })
+        )
 
       {:ok, view, _html} = live(conn, ~p"/projects/#{project_1}/w")
 
@@ -453,7 +548,7 @@ defmodule LightningWeb.ProjectLiveTest do
           Routes.project_project_settings_path(conn, :index, project.id)
         )
 
-      assert html =~ "Install Github App to get started"
+      assert html =~ "Connect this project to a GitHub repo"
     end
 
     @tag role: :admin
@@ -482,6 +577,64 @@ defmodule LightningWeb.ProjectLiveTest do
         )
 
       assert html =~ "Repository"
+    end
+
+    test "button to install app is disabled if there's a pending installation in another project",
+         %{
+           conn: conn,
+           user: user
+         } do
+      put_temporary_env(:lightning, :github_app,
+        cert: @cert,
+        app_id: "111111",
+        app_name: "test-github"
+      )
+
+      project = insert(:project, project_users: [%{user: user, role: :admin}])
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/settings#vcs"
+        )
+
+      assert view |> has_element?("button", "Connect to GitHub")
+      refute view |> has_element?("button:disabled", "Connect to GitHub")
+
+      # insert another project
+      project2 = insert(:project, project_users: [%{user: user, role: :admin}])
+
+      insert(:project_repo_connection, %{
+        project: project2,
+        user: user,
+        repo: nil,
+        branch: nil,
+        github_installation_id: nil
+      })
+
+      {:ok, view, html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/settings#vcs"
+        )
+
+      assert view |> has_element?("button:disabled", "Connect to GitHub")
+      assert html =~ "You have a pending github installation in another project."
+
+      # another User can install github though
+      project_user2 =
+        insert(:project_user, user: build(:user), project: project, role: :admin)
+
+      conn = log_in_user(conn, project_user2.user)
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/settings#vcs"
+        )
+
+      assert view |> has_element?("button", "Connect to GitHub")
+      refute view |> has_element?("button:disabled", "Connect to GitHub")
     end
 
     @tag role: :admin
@@ -688,7 +841,7 @@ defmodule LightningWeb.ProjectLiveTest do
         )
 
       assert view |> render_click("delete_repo_connection", %{}) =~
-               "Install Github"
+               "Connect to GitHub"
     end
 
     @tag role: :admin
@@ -726,7 +879,7 @@ defmodule LightningWeb.ProjectLiveTest do
       project: project
     } do
       project_user =
-        Lightning.Projects.get_project_with_users!(project.id).project_users
+        Lightning.Projects.get_project_users!(project.id)
         |> List.first()
 
       {:ok, _view, html} =
@@ -793,21 +946,133 @@ defmodule LightningWeb.ProjectLiveTest do
       assert html =~ credential.user.email
     end
 
-    test "project admin can view project security page",
+    test "authorized project users can create new credentials in the project credentials page",
          %{
            conn: conn,
            user: user
          } do
-      project = insert(:project, project_users: [%{user: user, role: :admin}])
+      [:admin, :editor]
+      |> Enum.each(fn role ->
+        {:ok, project} =
+          Lightning.Projects.create_project(%{
+            name: "project-1",
+            project_users: [%{user_id: user.id, role: role}]
+          })
 
-      {:ok, _view, html} =
+        {:ok, view, html} =
+          live(
+            conn,
+            Routes.project_project_settings_path(conn, :index, project.id) <>
+              "#credentials"
+          )
+
+        credential_name = "My Credential"
+
+        refute html =~ credential_name
+
+        view |> select_credential_type("http")
+        view |> click_continue()
+
+        assert view
+               |> fill_credential(%{
+                 name: credential_name,
+                 body: %{
+                   username: "foo",
+                   password: "bar",
+                   baseUrl: "http://localhost"
+                 }
+               })
+
+        {:ok, _view, html} =
+          view
+          |> click_save()
+          |> follow_redirect(
+            conn,
+            ~p"/projects/#{project}/settings#credentials"
+          )
+
+        assert html =~ credential_name
+      end)
+    end
+
+    test "non authorized project users can't create new credentials in the project credentials page",
+         %{
+           conn: conn,
+           user: user
+         } do
+      {:ok, project} =
+        Lightning.Projects.create_project(%{
+          name: "project-1",
+          project_users: [%{user_id: user.id, role: :viewer}]
+        })
+
+      {:ok, view, html} =
         live(
           conn,
           Routes.project_project_settings_path(conn, :index, project.id) <>
-            "#security"
+            "#credentials"
         )
 
-      assert html =~ "Multi-Factor Authentication"
+      credential_name = "My Credential"
+
+      refute html =~ credential_name
+
+      view |> select_credential_type("http")
+      view |> click_continue()
+
+      assert view
+             |> fill_credential(%{
+               name: credential_name,
+               body: %{
+                 username: "foo",
+                 password: "bar",
+                 baseUrl: "http://localhost"
+               }
+             })
+
+      {:ok, _view, html} =
+        view
+        |> click_save()
+        |> follow_redirect(
+          conn,
+          ~p"/projects/#{project}/settings#credentials"
+        )
+
+      assert html =~ "You are not authorized to perform this action."
+      refute html =~ credential_name
+    end
+
+    test "click on cancel button to close credential creation modal", %{
+      conn: conn,
+      user: user
+    } do
+      {:ok, project} =
+        Lightning.Projects.create_project(%{
+          name: "project-1",
+          project_users: [%{user_id: user.id, role: :viewer}]
+        })
+
+      credential_name = "My Credential"
+
+      {:ok, view, html} =
+        live(
+          conn,
+          Routes.project_project_settings_path(conn, :index, project.id) <>
+            "#credentials"
+        )
+
+      refute html =~ credential_name
+
+      {:ok, _view, html} =
+        view
+        |> element("footer button", "Cancel")
+        |> render_click()
+        |> follow_redirect(
+          conn,
+          ~p"/projects/#{project}/settings#credentials"
+        )
+
+      refute html =~ credential_name
     end
 
     test "project admin can't edit project name and description with invalid data",
@@ -919,7 +1184,7 @@ defmodule LightningWeb.ProjectLiveTest do
 
     test "project members can edit their own digest frequency and failure alert settings",
          %{conn: conn, user: authenticated_user} do
-      unauthenticated_user = user_fixture()
+      unauthenticated_user = user_fixture(first_name: "Bob")
 
       {:ok, project} =
         Lightning.Projects.create_project(%{
@@ -997,6 +1262,29 @@ defmodule LightningWeb.ProjectLiveTest do
       assert view |> has_element?("#{form_id} option[selected]", "Daily")
     end
 
+    test "all project users can view project security page",
+         %{
+           conn: conn
+         } do
+      project = insert(:project)
+
+      # project editor and viewer cannot see the settings page
+
+      [:admin, :owner, :editor, :viewer]
+      |> Enum.each(fn role ->
+        {conn, _user} = setup_project_user(conn, project, role)
+
+        {:ok, view, html} =
+          live(
+            conn,
+            Routes.project_project_settings_path(conn, :index, project.id)
+          )
+
+        assert has_element?(view, "#tab-item-security")
+        assert html =~ "Multi-Factor Authentication"
+      end)
+    end
+
     test "project admin can toggle MFA requirement",
          %{
            conn: conn,
@@ -1020,7 +1308,7 @@ defmodule LightningWeb.ProjectLiveTest do
              |> render_click() =~ "Project MFA requirement updated successfully"
     end
 
-    test "only users with admin level role can toggle MFA requirement", %{
+    test "project editors and viewers cannot toggle MFA requirement", %{
       conn: conn,
       user: user
     } do
@@ -1041,9 +1329,12 @@ defmodule LightningWeb.ProjectLiveTest do
 
         assert html =~ "Project settings"
 
-        refute has_element?(view, "#toggle-mfa-switch")
+        toggle_button = element(view, "#toggle-mfa-switch")
 
-        assert render_click(view, "toggle-mfa") =~
+        assert render(toggle_button) =~
+                 "You do not have permission to perform this action"
+
+        assert render_click(toggle_button) =~
                  "You are not authorized to perform this action."
       end)
     end
@@ -1081,22 +1372,12 @@ defmodule LightningWeb.ProjectLiveTest do
       end)
     end
 
-    test "all project users can see the project webhook auth methods", %{
-      conn: conn
-    } do
+    test "all project users can see the project webhook auth methods" do
       project = insert(:project)
       auth_methods = insert_list(4, :webhook_auth_method, project: project)
 
-      for project_user <-
-            Enum.map([:editor, :admin, :owner, :viewer], fn role ->
-              insert(:project_user,
-                role: role,
-                project: project,
-                user: build(:user)
-              )
-            end) do
-        conn = log_in_user(conn, project_user.user)
-
+      for conn <-
+            build_project_user_conns(project, [:editor, :admin, :owner, :viewer]) do
         {:ok, _view, html} =
           live(
             conn,
@@ -1109,7 +1390,7 @@ defmodule LightningWeb.ProjectLiveTest do
       end
     end
 
-    test "authorized project users can add a new project webhook auth method",
+    test "owners/admins can add a new project webhook auth method, editors/viewers can't",
          %{
            conn: conn
          } do
@@ -1118,16 +1399,7 @@ defmodule LightningWeb.ProjectLiveTest do
       settings_path =
         Routes.project_project_settings_path(conn, :index, project.id)
 
-      for project_user <-
-            Enum.map([:editor, :admin, :owner], fn role ->
-              insert(:project_user,
-                role: role,
-                project: project,
-                user: build(:user)
-              )
-            end) do
-        conn = log_in_user(conn, project_user.user)
-
+      for conn <- build_project_user_conns(project, [:owner, :admin]) do
         {:ok, view, _html} =
           live(
             conn,
@@ -1154,7 +1426,7 @@ defmodule LightningWeb.ProjectLiveTest do
                |> element("form#choose_auth_type_form_#{modal_id}")
                |> has_element?()
 
-        credential_name = "#{project_user.role}credentialname"
+        credential_name = Name.generate()
 
         refute render(view) =~ credential_name
 
@@ -1183,6 +1455,22 @@ defmodule LightningWeb.ProjectLiveTest do
           )
 
         assert html =~ credential_name
+      end
+
+      for conn <- build_project_user_conns(project, [:editor, :viewer]) do
+        {:ok, view, _html} =
+          live(
+            conn,
+            settings_path
+          )
+
+        assert view
+               |> element("button#add_new_auth_method:disabled")
+               |> has_element?()
+
+        modal_id = "new_auth_method_modal"
+
+        refute view |> element("##{modal_id}") |> has_element?()
       end
     end
 
@@ -1213,7 +1501,7 @@ defmodule LightningWeb.ProjectLiveTest do
       refute view |> element("#new_auth_method_modal") |> has_element?()
     end
 
-    test "authorized project users can add edit a project webhook auth method",
+    test "owners/admins can add edit a project webhook auth method, editors/viewers can't",
          %{
            conn: conn
          } do
@@ -1228,16 +1516,7 @@ defmodule LightningWeb.ProjectLiveTest do
       settings_path =
         Routes.project_project_settings_path(conn, :index, project.id)
 
-      for project_user <-
-            Enum.map([:editor, :admin, :owner], fn role ->
-              insert(:project_user,
-                role: role,
-                project: project,
-                user: build(:user)
-              )
-            end) do
-        conn = log_in_user(conn, project_user.user)
-
+      for conn <- build_project_user_conns(project, [:owner, :admin]) do
         {:ok, view, _html} =
           live(
             conn,
@@ -1252,7 +1531,7 @@ defmodule LightningWeb.ProjectLiveTest do
 
         assert view |> element("##{modal_id}") |> has_element?()
 
-        credential_name = "#{project_user.role}credentialname"
+        credential_name = Name.generate()
 
         refute render(view) =~ credential_name
 
@@ -1277,6 +1556,24 @@ defmodule LightningWeb.ProjectLiveTest do
           )
 
         assert html =~ credential_name
+      end
+
+      for conn <- build_project_user_conns(project, [:editor, :viewer]) do
+        {:ok, view, _html} =
+          live(
+            conn,
+            settings_path
+          )
+
+        assert view
+               |> element(
+                 "a#edit_auth_method_link_#{auth_method.id}.cursor-not-allowed"
+               )
+               |> has_element?()
+
+        modal_id = "edit_auth_#{auth_method.id}_modal"
+
+        refute view |> element("##{modal_id}") |> has_element?()
       end
     end
 
@@ -1307,7 +1604,9 @@ defmodule LightningWeb.ProjectLiveTest do
         )
 
       assert view
-             |> element("a#edit_auth_method_link_#{auth_method.id}")
+             |> element(
+               "a#edit_auth_method_link_#{auth_method.id}.cursor-not-allowed"
+             )
              |> has_element?()
 
       refute view
@@ -1330,7 +1629,7 @@ defmodule LightningWeb.ProjectLiveTest do
 
       project_user =
         insert(:project_user,
-          role: :editor,
+          role: :admin,
           project: project,
           user: build(:user)
         )
@@ -1407,7 +1706,7 @@ defmodule LightningWeb.ProjectLiveTest do
 
       project_user =
         insert(:project_user,
-          role: :editor,
+          role: :admin,
           project: project,
           user: build(:user)
         )
@@ -1468,5 +1767,332 @@ defmodule LightningWeb.ProjectLiveTest do
       assert view |> has_element?("##{form_id}_password_action_button", "Copy")
       assert render(view) =~ auth_method.password
     end
+  end
+
+  test "owners and admins can delete a project webhook auth method",
+       %{conn: conn} do
+    project = insert(:project)
+
+    for role <- [:owner, :admin] do
+      auth_method =
+        insert(:webhook_auth_method,
+          project: project,
+          auth_type: :basic
+        )
+
+      project_user =
+        insert(:project_user,
+          role: role,
+          project: project,
+          user: build(:user)
+        )
+
+      settings_path =
+        Routes.project_project_settings_path(conn, :index, project.id)
+
+      conn = log_in_user(conn, project_user.user)
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          settings_path
+        )
+
+      assert view
+             |> element("a#delete_auth_method_link_#{auth_method.id}")
+             |> has_element?()
+
+      modal_id = "delete_auth_#{auth_method.id}_modal"
+
+      assert view
+             |> element("#delete_auth_method_#{modal_id}_#{auth_method.id}")
+             |> has_element?()
+
+      view
+      |> form("#delete_auth_method_#{modal_id}_#{auth_method.id}",
+        delete_confirmation_changeset: %{confirmation: "DELETE"}
+      )
+      |> render_submit()
+
+      flash =
+        assert_redirect(
+          view,
+          settings_path <> "#webhook_security"
+        )
+
+      assert flash["info"] ==
+               "Your Webhook Authentication method has been deleted."
+    end
+
+    for role <- [:editor, :viewer] do
+      auth_method =
+        insert(:webhook_auth_method,
+          project: project,
+          auth_type: :basic
+        )
+
+      project_user =
+        insert(:project_user,
+          role: role,
+          project: project,
+          user: build(:user)
+        )
+
+      settings_path =
+        Routes.project_project_settings_path(conn, :index, project.id)
+
+      conn = log_in_user(conn, project_user.user)
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          settings_path
+        )
+
+      refute view
+             |> element("a#delete_auth_method_link_#{auth_method.id}")
+             |> has_element?()
+
+      modal_id = "delete_auth_#{auth_method.id}_modal"
+
+      refute view
+             |> element("#delete_auth_method_#{modal_id}_#{auth_method.id}")
+             |> has_element?()
+    end
+  end
+
+  describe "data-storage" do
+    setup :register_and_log_in_user
+    setup :create_project_for_current_user
+
+    @tag role: :owner
+    test "project owner can view these settings", %{conn: conn, project: project} do
+      {:ok, _view, html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/settings#data-storage"
+        )
+
+      assert html =~ "Input/Output Data Storage Policy"
+    end
+
+    @tag role: :admin
+    test "project admin can view these settings", %{conn: conn, project: project} do
+      {:ok, view, html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/settings#data-storage"
+        )
+
+      assert html =~ "Input/Output Data Storage Policy"
+      assert html =~ "Should OpenFn store input/output data for workflow runs?"
+
+      # retain_all is the default
+      assert ["checked"] ==
+               view
+               |> element("#retain_all")
+               |> render()
+               |> Floki.parse_fragment!()
+               |> Floki.attribute("input", "checked")
+
+      # TODO - this will be implemented in https://github.com/OpenFn/Lightning/issues/1694
+      # refute ["checked"] ==
+      #          view
+      #          |> element("#retain_with_errors")
+      #          |> render()
+      #          |> Floki.parse_fragment!()
+      #          |> Floki.attribute("input", "checked")
+
+      refute ["checked"] ==
+               view
+               |> element("#erase_all")
+               |> render()
+               |> Floki.parse_fragment!()
+               |> Floki.attribute("input", "checked")
+
+      # heads up not shown for retain all
+      refute html =~ "heads-up-description"
+
+      # 3 radio buttons descriptions
+      assert "Retain input/output data for all workflow runs" =
+               view
+               |> element(~s{label#[for="retain_all"]})
+               |> render()
+               |> Floki.parse_fragment!()
+               |> Floki.text()
+               |> String.trim()
+
+      # TODO - this will be implemented in https://github.com/OpenFn/Lightning/issues/1694
+      # assert "Only retain input/output data when a run fails" =
+      #          view
+      #          |> element(~s{label#[for="retain_with_errors"]})
+      #          |> render()
+      #          |> Floki.parse_fragment!()
+      #          |> Floki.text()
+      #          |> String.trim()
+
+      assert "Never retain input/output data (zero-persistence)" =
+               view
+               |> element(~s{label#[for="erase_all"]})
+               |> render()
+               |> Floki.parse_fragment!()
+               |> Floki.text()
+               |> String.trim()
+
+      # TODO - this will be implemented in https://github.com/OpenFn/Lightning/issues/1694
+      # show heads up for retain_with_errors
+      # view
+      # |> form("#retention-settings-form",
+      #   project: %{
+      #     retention_policy: "retain_with_errors"
+      #   }
+      # )
+      # |> render_change()
+
+      # assert ["checked"] ==
+      #          view
+      #          |> element("#retain_with_errors")
+      #          |> render()
+      #          |> Floki.parse_fragment!()
+      #          |> Floki.attribute("input", "checked")
+
+      # assert "When enabled, you will no longer be able to retry workflow runs as no data will be stored." =
+      #          view
+      #          |> element("#heads-up-description")
+      #          |> render()
+      #          |> Floki.parse_fragment!()
+      #          |> Floki.find("p")
+      #          |> Floki.text()
+      #          |> String.trim()
+
+      # show heads up for erase all
+      view
+      |> form("#retention-settings-form",
+        project: %{
+          retention_policy: "erase_all"
+        }
+      )
+      |> render_change()
+
+      assert ["checked"] ==
+               view
+               |> element("#erase_all")
+               |> render()
+               |> Floki.parse_fragment!()
+               |> Floki.attribute("input", "checked")
+
+      assert "When enabled, you will no longer be able to retry workflow runs as no data will be stored." =
+               view
+               |> element("#heads-up-description")
+               |> render()
+               |> Floki.parse_fragment!()
+               |> Floki.find("p")
+               |> Floki.text()
+               |> String.trim()
+    end
+
+    @tag role: :editor
+    test "project editor does not have permission", %{
+      conn: conn,
+      project: project
+    } do
+      {:ok, _view, html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/settings#data-storage"
+        )
+
+      assert html =~ "Input/Output Data Storage Policy"
+      assert html =~ "You cannot modify this project&#39;s data storage"
+    end
+
+    @tag role: :viewer
+    test "project viewer does not have permission", %{
+      conn: conn,
+      project: project
+    } do
+      {:ok, _view, html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/settings#data-storage"
+        )
+
+      assert html =~ "Input/Output Data Storage Policy"
+      assert html =~ "You cannot modify this project&#39;s data storage"
+    end
+
+    @tag role: :admin
+    test "project admin can change the retention policy", %{
+      conn: conn,
+      project: project
+    } do
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/settings#data-storage"
+        )
+
+      # save, navigate to other page and saved option is checked when come back
+      Enum.reduce(
+        # TODO - this will be implemented in https://github.com/OpenFn/Lightning/issues/1694
+        # ["retain_with_errors", "erase_all", "retain_all"],
+        ["erase_all", "retain_all"],
+        view,
+        fn policy, view ->
+          view
+          |> form("#retention-settings-form",
+            project: %{
+              retention_policy: policy
+            }
+          )
+          |> render_change()
+
+          assert ["checked"] ==
+                   view
+                   |> element("#" <> policy)
+                   |> render()
+                   |> Floki.parse_fragment!()
+                   |> Floki.attribute("input", "checked")
+
+          html =
+            view
+            |> form("#retention-settings-form")
+            |> render_submit()
+
+          assert html =~ "Project updated successfully"
+          assert html =~ "Input/Output Data Storage Policy"
+
+          assert policy ==
+                   project.id
+                   |> Projects.get_project!()
+                   |> Map.get(:retention_policy)
+                   |> Atom.to_string()
+
+          live(conn, ~p"/projects/#{project.id}/w")
+
+          {:ok, view, _html} =
+            live(conn, ~p"/projects/#{project.id}/settings#data-storage")
+
+          assert ["checked"] ==
+                   view
+                   |> element("#" <> policy)
+                   |> render()
+                   |> Floki.parse_fragment!()
+                   |> Floki.attribute("input", "checked")
+
+          view
+        end
+      )
+    end
+  end
+
+  defp find_user_index_in_list(view, user) do
+    Floki.parse_fragment!(render(view))
+    |> Floki.find("#project-users-form tbody tr")
+    |> Enum.find_index(fn el ->
+      Floki.find(el, "td:first-child()") |> Floki.text() =~
+        "#{user.first_name} #{user.last_name}"
+    end)
+    |> to_string()
   end
 end

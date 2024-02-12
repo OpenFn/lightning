@@ -1,8 +1,9 @@
 defmodule Lightning.AuthProviders.AuthConfigForm do
   @moduledoc false
-  alias Lightning.AuthProviders.{Handler, WellKnown}
-
   import Ecto.Changeset
+
+  alias Lightning.AuthProviders.Handler
+  alias Lightning.AuthProviders.WellKnown
 
   @types %{
     name: :string,

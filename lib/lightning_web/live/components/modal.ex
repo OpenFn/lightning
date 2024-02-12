@@ -22,13 +22,18 @@ defmodule LightningWeb.Components.Modal do
   slot :inner_block, required: true
   slot :title
   slot :subtitle
-  slot :footer
+
+  slot :footer do
+    attr :class, :string
+  end
 
   def modal(%{type: "default"} = assigns) do
     ~H"""
     <div
       id={@id}
       phx-mounted={@show && show_modal(@id)}
+      phx-on-close={hide_modal(@id)}
+      phx-hook="ModalHook"
       class={"#{@position} z-50 hidden"}
       {@rest}
     >
@@ -45,15 +50,15 @@ defmodule LightningWeb.Components.Modal do
         aria-modal="true"
         tabindex="0"
       >
-        <div class="flex min-h-full items-center justify-center">
-          <div class={"#{@width} p-4 sm:p-6 lg:py-8"}>
+        <div class="flex flex-col min-h-full items-center justify-center">
+          <div class={@width}>
             <.focus_wrap
               id={"#{@id}-container"}
               phx-mounted={@show && show_modal(@on_open, @id)}
               phx-window-keydown={hide_modal(@on_close, @id)}
               phx-key="escape"
               phx-click-away={hide_modal(@on_close, @id)}
-              class="hidden relative rounded-xl bg-white pl-[0px] pt-[24px] pr-[0px] shadow-lg shadow-zinc-700/10 ring-1 ring-zinc-700/10 transition"
+              class="hidden relative rounded-xl bg-white py-[24px] shadow-lg shadow-zinc-700/10 ring-1 ring-zinc-700/10 transition"
             >
               <header :if={@title != []} class="pl-[24px] pr-[24px]">
                 <h1
@@ -62,17 +67,21 @@ defmodule LightningWeb.Components.Modal do
                 >
                   <%= render_slot(@title) %>
                 </h1>
-                <p
-                  :if={@subtitle != []}
-                  class="mt-2 text-sm leading-4.5 text-zinc-600"
-                >
-                  <%= render_slot(@subtitle) %>
-                </p>
+                <%= for subtitle <- @subtitle do %>
+                  <p class="mt-2 text-sm leading-4.5 text-zinc-600">
+                    <%= render_slot(subtitle) %>
+                  </p>
+                <% end %>
               </header>
               <div class="flex-grow bg-gray-100 h-0.5 my-[16px]"></div>
               <section class="pl-[0px] pr-[0px]">
                 <%= render_slot(@inner_block) %>
               </section>
+              <%= for footer <- @footer do %>
+                <.modal_footer class={footer |> Map.get(:class)}>
+                  <%= render_slot(footer) %>
+                </.modal_footer>
+              <% end %>
             </.focus_wrap>
           </div>
         </div>
@@ -81,10 +90,13 @@ defmodule LightningWeb.Components.Modal do
     """
   end
 
+  attr :class, :any, default: ""
+  slot :inner_block, required: true
+
   def modal_footer(assigns) do
     ~H"""
     <div class="flex-grow bg-gray-100 h-0.5 mt-[16px]"></div>
-    <footer class="rounded-b-xl pt-[12px] pb-[12px] pr-[24px] pl-[24px]">
+    <footer class={@class}>
       <%= render_slot(@inner_block) %>
     </footer>
     """

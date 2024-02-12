@@ -4,6 +4,7 @@ defmodule Lightning.Projects.ProvisionerTest do
   alias Lightning.Projects.Provisioner
   alias Lightning.ProjectsFixtures
   import Lightning.Factories
+  import LightningWeb.CoreComponents, only: [translate_error: 1]
 
   describe "parse_document/2 with a new project" do
     test "with invalid data" do
@@ -129,7 +130,7 @@ defmodule Lightning.Projects.ProvisionerTest do
 
       {:ok, project} = Provisioner.import_document(project, user, body)
 
-      assert project.workflows |> Enum.at(0) |> Map.get(:edges) |> length() == 1
+      assert project.workflows |> Enum.at(0) |> Map.get(:edges) |> length() == 2
 
       third_job_id = Ecto.UUID.generate()
 
@@ -172,7 +173,7 @@ defmodule Lightning.Projects.ProvisionerTest do
 
       {:ok, project} = Provisioner.import_document(project, user, body)
 
-      assert project.workflows |> Enum.at(0) |> Map.get(:edges) |> length() == 1
+      assert project.workflows |> Enum.at(0) |> Map.get(:edges) |> length() == 2
 
       %{id: third_job_id} = Lightning.Factories.insert(:job)
 
@@ -222,7 +223,7 @@ defmodule Lightning.Projects.ProvisionerTest do
           body
           |> add_entity_to_workflow(workflow_id, "edges", %{
             "id" => other_edge_id,
-            "condition" => "on_job_success"
+            "condition_type" => "on_job_success"
           })
         )
 
@@ -268,9 +269,14 @@ defmodule Lightning.Projects.ProvisionerTest do
 
       refute second_job_id in workflow_job_ids
 
-      assert project.workflows
-             |> Enum.at(0)
-             |> then(fn w -> w.edges end) == [],
+      edges =
+        project.workflows
+        |> Enum.at(0)
+        |> then(& &1.edges)
+
+      assert edges |> length() == 1
+
+      refute edges |> Enum.any?(&(&1.source_job_id == second_job_id)),
              "The edge associated with the deleted job should be removed"
     end
 
@@ -330,6 +336,7 @@ defmodule Lightning.Projects.ProvisionerTest do
     second_job_id = Ecto.UUID.generate()
     trigger_id = Ecto.UUID.generate()
     workflow_id = Ecto.UUID.generate()
+    trigger_edge_id = Ecto.UUID.generate()
     job_edge_id = Ecto.UUID.generate()
 
     body = %{
@@ -360,9 +367,16 @@ defmodule Lightning.Projects.ProvisionerTest do
           ],
           "edges" => [
             %{
+              "id" => trigger_edge_id,
+              "source_trigger_id" => trigger_id,
+              "condition_label" => "Always",
+              "condition_type" => "js_expression",
+              "condition_expression" => "true"
+            },
+            %{
               "id" => job_edge_id,
               "source_job_id" => first_job_id,
-              "condition" => "on_job_success",
+              "condition_type" => "on_job_success",
               "target_job_id" => second_job_id
             }
           ]
@@ -384,7 +398,7 @@ defmodule Lightning.Projects.ProvisionerTest do
   defp flatten_errors(changeset) do
     Ecto.Changeset.traverse_errors(
       changeset,
-      &LightningWeb.Components.NewInputs.translate_error/1
+      &translate_error/1
     )
   end
 

@@ -2,127 +2,9 @@ defmodule LightningWeb.WorkflowLive.Components do
   @moduledoc false
   use LightningWeb, :component
 
-  alias LightningWeb.Components.Form
   alias Lightning.Workflows.Trigger
+  alias LightningWeb.Components.Form
   alias Phoenix.LiveView.JS
-
-  def workflow_list(assigns) do
-    ~H"""
-    <div class="w-full">
-      <div class="mt-9 grid grid-cols-1 gap-5 sm:grid-cols-2 sm:gap-6 lg:grid-cols-4">
-        <.create_workflow_card
-          project={@project}
-          can_create_workflow={@can_create_workflow}
-        />
-        <%= for workflow <- @workflows do %>
-          <.workflow_card
-            can_delete_workflow={@can_delete_workflow}
-            workflow={%{workflow | name: workflow.name || "Untitled"}}
-            project={@project}
-            trigger_enabled={Enum.any?(workflow.triggers, & &1.enabled)}
-          />
-        <% end %>
-      </div>
-    </div>
-    """
-  end
-
-  attr :project, :map, required: true
-  attr :can_delete_workflow, :boolean, default: false
-  attr :workflow, :map, required: true
-  attr :trigger_enabled, :boolean
-
-  def workflow_card(assigns) do
-    assigns =
-      assigns
-      |> assign(
-        relative_updated_at:
-          Timex.Format.DateTime.Formatters.Relative.format!(
-            assigns.workflow.updated_at,
-            "{relative}"
-          )
-      )
-
-    ~H"""
-    <div>
-      <div class="flex flex-1 items-center justify-between truncate rounded-md border border-gray-200 bg-white hover:bg-gray-50">
-        <.link
-          id={"workflow-card-#{@workflow.id}"}
-          navigate={~p"/projects/#{@project.id}/w/#{@workflow.id}"}
-          class="flex-1 rounded-md"
-          role="button"
-        >
-          <div class="px-4 py-2 text-sm">
-            <div class="flex items-center">
-              <span
-                class="flex-shrink truncate text-gray-900 hover:text-gray-600 font-medium"
-                style="max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"
-              >
-                <%= @workflow.name %>
-              </span>
-            </div>
-            <%= if @trigger_enabled do %>
-              <p class="text-gray-500 text-xs">
-                Updated <%= @relative_updated_at %>
-              </p>
-            <% else %>
-              <div class="flex items-center">
-                <div style="background: #8b5f0d" class="w-2 h-2 rounded-full"></div>
-                <div>
-                  <p class="text-[#8b5f0d] text-xs">
-                    &nbsp; Disabled
-                  </p>
-                </div>
-              </div>
-            <% end %>
-          </div>
-        </.link>
-        <div class="flex-shrink-0 pr-2">
-          <div
-            :if={@can_delete_workflow}
-            class="inline-flex h-8 w-8 items-center justify-center rounded-full text-gray-400 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
-          >
-            <.link
-              href="#"
-              phx-click="delete_workflow"
-              phx-value-id={@workflow.id}
-              data-confirm="Are you sure you'd like to delete this workflow?"
-              class="inline-flex h-8 w-8 items-center justify-center rounded-full text-gray-400 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
-            >
-              <Icon.trash class="h-5 w-5 text-slate-300 hover:text-rose-700" />
-            </.link>
-          </div>
-        </div>
-      </div>
-    </div>
-    """
-  end
-
-  def create_workflow_card(assigns) do
-    ~H"""
-    <div>
-      <.link
-        navigate={~p"/projects/#{@project.id}/w/new"}
-        class="col-span-1 rounded-md"
-        role={@can_create_workflow && "button"}
-      >
-        <div class={"flex flex-1 items-center justify-between truncate rounded-md border border-gray-200 text-white " <> (if @can_create_workflow, do: "bg-primary-600 hover:bg-primary-700", else: "bg-gray-400")}>
-          <div class="flex-1 truncate px-4 py-2 text-sm">
-            <span class="font-medium">
-              Create new workflow
-            </span>
-            <p class="text-gray-200 text-xs">Automate a process</p>
-          </div>
-          <div class="flex-shrink-0 pr-2">
-            <div class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-transparent focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
-              <Icon.plus_circle />
-            </div>
-          </div>
-        </div>
-      </.link>
-    </div>
-    """
-  end
 
   attr :socket, :map, required: true
   attr :project, :map, required: true
@@ -179,8 +61,11 @@ defmodule LightningWeb.WorkflowLive.Components do
 
   def panel(assigns) do
     ~H"""
-    <div class="absolute right-0 sm:m-4 w-full sm:w-1/2 md:w-1/3 lg:w-1/4" id={@id}>
-      <div class="divide-y divide-gray-200 overflow-hidden rounded-lg bg-white shadow">
+    <div
+      class="absolute right-0 sm:m-4 w-full sm:w-1/2 md:w-1/3 lg:w-1/4 max-h-content"
+      id={@id}
+    >
+      <div class="divide-y divide-gray-200 rounded-lg bg-white shadow">
         <div class="flex px-4 py-5 sm:px-6">
           <div class="grow font-bold">
             <%= @title %>
@@ -224,9 +109,7 @@ defmodule LightningWeb.WorkflowLive.Components do
     ~H"""
     <div class="md:grid md:grid-cols-6 md:gap-4 p-2 @container">
       <% Phoenix.HTML.Form.hidden_inputs_for(@form) %>
-      <div class="col-span-6">
-        <Form.check_box form={@form} field={:enabled} disabled={!@editable} />
-      </div>
+      <div class="col-span-6"></div>
       <div class="col-span-6 @md:col-span-4">
         <Form.text_field
           form={@form}
@@ -275,6 +158,7 @@ defmodule LightningWeb.WorkflowLive.Components do
   attr :form, :map, required: true
   attr :cancel_url, :string, required: true
   attr :disabled, :boolean, required: true
+  attr :can_write_webhook_auth_method, :boolean, required: true
   attr :webhook_url, :string, required: true
   attr :on_change, :any, required: true
   attr :selected_trigger, Trigger, required: true
@@ -283,7 +167,9 @@ defmodule LightningWeb.WorkflowLive.Components do
   def trigger_form(%{form: form} = assigns) do
     assigns =
       assign(assigns,
-        type: form.source |> Ecto.Changeset.get_field(:type),
+        type:
+          form.source
+          |> Ecto.Changeset.get_field(:type),
         trigger_enabled: Map.get(form.params, "enabled", form.data.enabled)
       )
 
@@ -340,19 +226,15 @@ defmodule LightningWeb.WorkflowLive.Components do
             </div>
           </div>
           <div>
-            <div
-              class="flex items-center inline-block"
-              id="webhook-authentication-tooltip-div"
-              aria-label="Add an extra layer of security with Webhook authentication."
-              phx-hook="Tooltip"
-            >
-              <span class="text-sm font-medium text-secondary-700 mr-1">
+            <div>
+              <span class="text-sm font-medium text-secondary-700">
                 Webhook Authentication
               </span>
               <span class="inline-block relative cursor-pointer">
-                <Heroicons.information_circle
-                  solid
-                  class="w-4 h-4 text-primary-600 opacity-50"
+                <Common.tooltip
+                  id="webhook-authentication-disabled-tooltip"
+                  title="Require requests to this endpoint to use specific authentication protocols."
+                  class="inline-grid"
                 />
               </span>
             </div>
@@ -367,7 +249,7 @@ defmodule LightningWeb.WorkflowLive.Components do
                     href="#"
                     class={[
                       "text-indigo-400 underline not-italic inline-flex items-center",
-                      if(@action == :new or @disabled,
+                      if(@action == :new or !@can_write_webhook_auth_method,
                         do: "text-gray-500 cursor-not-allowed",
                         else: ""
                       )
@@ -405,7 +287,11 @@ defmodule LightningWeb.WorkflowLive.Components do
                 <div>
                   <.link
                     href="#"
-                    class="text-primary-700 underline hover:text-primary-800"
+                    class={[
+                      "text-primary-700 underline hover:text-primary-800",
+                      !@can_write_webhook_auth_method &&
+                        "text-gray-500 cursor-not-allowed"
+                    ]}
                     phx-click={show_modal("webhooks_auth_method_modal")}
                   >
                     Manage authentication
@@ -427,6 +313,7 @@ defmodule LightningWeb.WorkflowLive.Components do
       form={@form}
       field={:enabled}
       label="Disable this trigger"
+      disabled={@disabled}
       checked_value={false}
       unchecked_value={true}
       value={@trigger_enabled}
@@ -457,55 +344,102 @@ defmodule LightningWeb.WorkflowLive.Components do
   attr :disabled, :boolean, required: true
   attr :cancel_url, :string, required: true
 
-  def edge_form(assigns) do
+  def edge_form(%{form: form} = assigns) do
     edge_options =
-      case assigns.form.source |> Ecto.Changeset.apply_changes() do
+      case form.source |> Ecto.Changeset.apply_changes() do
         %{source_trigger_id: nil, source_job_id: job_id}
         when not is_nil(job_id) ->
           [
             "On Success": "on_job_success",
-            "On Failure": "on_job_failure"
+            "On Failure": "on_job_failure",
+            Always: "always",
+            "Matches a Javascript Expression": "js_expression"
           ]
 
         %{source_trigger_id: trigger_id} when not is_nil(trigger_id) ->
           [
-            Always: "always"
+            Always: "always",
+            "Matches a Javascript Expression": "js_expression"
           ]
 
         _ ->
           []
       end
 
-    assigns = assigns |> assign(:edge_options, edge_options)
+    assigns =
+      assigns
+      |> assign(:edge_options, edge_options)
+      |> assign(
+        :edge_enabled,
+        Map.get(form.params, "enabled", form.data.enabled)
+      )
+      |> assign(
+        :edge_condition,
+        Map.get(
+          form.params,
+          "condition_type",
+          Atom.to_string(form.data.condition_type)
+        )
+      )
 
     ~H"""
     <% Phoenix.HTML.Form.hidden_inputs_for(@form) %>
-
-    <Form.label_field
-      form={@form}
-      field={:condition}
-      title="Condition"
-      for={Phoenix.HTML.Form.input_id(@form, :condition)}
-    />
-    <.old_error field={@form[:condition]} />
-    <%= if Phoenix.HTML.Form.input_value(@form, :condition) == :always do %>
-      <Form.select_field
-        form={@form}
-        name={:condition}
-        values={@edge_options}
-        disabled={true}
-      />
-      <div class="max-w-xl text-sm text-gray-500 mt-2">
-        <p>Jobs connected to a trigger are always run.</p>
+    <.old_error field={@form[:condition_type]} />
+    <div class="grid grid-flow-row gap-4 auto-rows-max">
+      <div>
+        <.input
+          type="select"
+          label="Condition"
+          field={@form[:condition_type]}
+          options={@edge_options}
+          disabled={@disabled}
+        />
       </div>
-    <% else %>
-      <Form.select_field
-        form={@form}
-        name={:condition}
-        values={@edge_options}
-        disabled={@disabled}
-      />
-    <% end %>
+      <%= if @edge_condition == "js_expression" do %>
+        <div>
+          <.input
+            type="text"
+            label="Condition Label"
+            field={@form[:condition_label]}
+            maxlength="255"
+          />
+        </div>
+        <div>
+          <.label>
+            JS Expression
+            <p class="font-normal text-xs text-gray-500 ">
+              To match on output of last Step
+            </p>
+            <.input
+              type="textarea"
+              field={@form[:condition_expression]}
+              class="h-24"
+              phx-debounce="300"
+              maxlength="255"
+            />
+          </.label>
+        </div>
+      <% end %>
+      <%= if Phoenix.HTML.Form.input_value(@form, :source_trigger_id) do %>
+        <div class="max-w-xl text-sm text-gray-500 mt-3">
+          <p>This path will be active if its trigger is enabled.</p>
+        </div>
+      <% else %>
+        <div class="mt-7 border-t flex flex-col justify-between">
+          <h2 class=" flex mt-3">
+            <Form.check_box
+              form={@form}
+              field={:enabled}
+              disabled={@disabled}
+              label="Disable this path"
+              checked_value={false}
+              unchecked_value={true}
+              value={@edge_enabled}
+            />
+          </h2>
+        </div>
+      <% end %>
+    </div>
     """
   end
 
@@ -640,93 +574,113 @@ defmodule LightningWeb.WorkflowLive.Components do
       )
 
     ~H"""
-    <div class="flow-root">
-      <div class="-mx-4 -my-2 overflow-x-auto sm:-mx-6 lg:-mx-8">
-        <div class="inline-block min-w-full py-2 align-middle sm:px-6 lg:px-8">
-          <table class={["min-w-full border-y border-gray-200 bg-white", @class]}>
-            <thead class="bg-slate-100 border-gray-200 border-y">
-              <tr class="sm:px-6 lg:px-8">
-                <th
-                  :if={@on_row_select}
-                  scope="col"
-                  class="relative px-7 sm:w-12 sm:px-6"
-                >
-                  <span class="sr-only">Select</span>
-                </th>
-                <th
-                  scope="col"
-                  class={[
-                    "min-w-[10rem] py-2.5 text-left text-sm font-normal text-gray-900",
-                    if(!@on_row_select, do: "pl-4")
-                  ]}
-                >
-                  Name
-                </th>
-                <th
-                  scope="col"
-                  class="min-w-[7rem] py-2.5 text-left text-sm font-normal text-gray-900"
-                >
-                  Auth.Type
-                </th>
-                <th
-                  scope="col"
-                  class="min-w-[10rem] py-2.5 text-left text-sm font-normal text-gray-900"
-                >
-                  Linked Triggers
-                </th>
-                <th
-                  scope="col"
-                  class="min-w-[4rem] py-2.5 text-right text-sm font-normal text-gray-900"
-                >
-                </th>
-              </tr>
-            </thead>
-            <tbody class="divide-y divide-gray-200 bg-white">
-              <tr
-                :for={auth_method <- @auth_methods}
-                class="hover:bg-[#F2EEFD] transition-colors duration-200"
-                id={auth_method.id}
-                phx-hook="ShowActionsOnRowHover"
-              >
-                <td :if={@on_row_select} class="relative sm:w-12 sm:px-6">
-                  <input
-                    id={"select_#{auth_method.id}"}
-                    phx-value-selection={to_string(!@row_selected?.(auth_method))}
-                    type="checkbox"
-                    class="absolute left-4 top-1/2 -mt-2 h-4 w-4 rounded border-gray-300 text-[#1992CC] focus:ring-indigo-600"
-                    phx-click={@on_row_select.(auth_method)}
-                    checked={@row_selected?.(auth_method)}
-                  />
-                </td>
-                <td class={[
-                  "whitespace-nowrap py-2.5 text-sm text-gray-900 text-ellipsis overflow-hidden max-w-[15rem] pr-5",
-                  if(!@on_row_select, do: "pl-4")
-                ]}>
-                  <%= auth_method.name %>
-                </td>
-                <td class="whitespace-nowrap text-sm text-gray-900">
-                  <.humanized_auth_method_type auth_method={auth_method} />
-                </td>
-                <td class="whitespace-nowrap text-sm text-gray-900">
-                  <%= render_slot(@linked_triggers, auth_method) %>
-                </td>
-                <td
-                  :if={@action != []}
-                  class="text-right px-4 hover-content font-normal opacity-0 transition-opacity duration-300 whitespace-nowrap"
-                >
-                  <div
-                    :for={action <- @action}
-                    class="flex items-center inline-flex gap-x-2"
-                  >
-                    <%= render_slot(action, auth_method) %>
-                  </div>
-                </td>
-              </tr>
-            </tbody>
-          </table>
+    <.table class={@class}>
+      <.tr class="sm:px-6 lg:px-8">
+        <.th :if={@on_row_select} class="relative px-7 sm:w-12 sm:px-6">
+          <span class="sr-only">Select</span>
+        </.th>
+        <.th class={"min-w-[10rem] py-2.5 text-left text-sm font-normal
+        text-gray-900 #{!@on_row_select && "pl-4"}"}>
+          Name
+        </.th>
+        <.th class="min-w-[7rem] py-2.5 text-left text-sm font-normal text-gray-900">
+          Type
+        </.th>
+        <.th class="min-w-[10rem] py-2.5 text-left text-sm font-normal text-gray-900">
+          Linked Triggers
+        </.th>
+        <.th class="min-w-[4rem] py-2.5 text-right text-sm font-normal text-gray-900">
+        </.th>
+      </.tr>
+
+      <.tr
+        :for={auth_method <- @auth_methods}
+        class="hover:bg-[#F2EEFD] transition-colors duration-200"
+        id={auth_method.id}
+        phx-hook="ShowActionsOnRowHover"
+      >
+        <.td :if={@on_row_select} class="relative sm:w-12 sm:px-6">
+          <input
+            id={"select_#{auth_method.id}"}
+            phx-value-selection={to_string(!@row_selected?.(auth_method))}
+            type="checkbox"
+            class="absolute left-4 top-1/2 -mt-2 h-4 w-4 rounded border-gray-300 text-[#1992CC] focus:ring-indigo-600"
+            phx-click={@on_row_select.(auth_method)}
+            checked={@row_selected?.(auth_method)}
+          />
+        </.td>
+        <.td class={
+          "whitespace-nowrap py-2.5 text-sm text-gray-900 text-ellipsis
+          overflow-hidden max-w-[15rem] pr-5 #{!@on_row_select && "pl-4"}"}>
+          <%= auth_method.name %>
+        </.td>
+        <.td class="whitespace-nowrap text-sm text-gray-900">
+          <.humanized_auth_method_type auth_method={auth_method} />
+        </.td>
+        <.td class="whitespace-nowrap text-sm text-gray-900">
+          <%= render_slot(@linked_triggers, auth_method) %>
+        </.td>
+        <.td
+          :if={@action != []}
+          class="text-right px-4 hover-content font-normal opacity-0 transition-opacity duration-300 whitespace-nowrap"
+        >
+          <div :for={action <- @action} class="flex items-center inline-flex gap-x-2">
+            <%= render_slot(action, auth_method) %>
+          </div>
+        </.td>
+      </.tr>
+    </.table>
+    """
+  end
+
+  def create_workflow_modal(assigns) do
+    ~H"""
+    <.modal id="workflow_modal" width="w-full max-w-xl">
+      <:title>
+        <div class="flex justify-between">
+          Let's get started
+          <button
+            phx-click={hide_modal("workflow_modal")}
+            type="button"
+            class="rounded-md bg-white text-gray-400 hover:text-gray-500 focus:outline-none"
+            aria-label={gettext("close")}
+          >
+            <span class="sr-only">Close</span>
+            <Heroicons.x_mark solid class="h-5 w-5 stroke-current" />
+          </button>
         </div>
-      </div>
-    </div>
+      </:title>
+      <.form
+        for={@form}
+        id={@form.id}
+        phx-change="validate_workflow"
+        phx-submit="create_work_flow"
+        class="mx-6"
+      >
+        <.input field={@form[:name]} type="text" label="Workflow Name" />
+      </.form>
+      <:footer class="mx-6 mt-6">
+        <div class="flex gap-x-5 justify-end relative">
+          <.link
+            class="justify-center rounded-md bg-white px-4 py-3 text-sm font-semibold text-gray-500 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:mt-0 sm:w-auto"
+            phx-click={hide_modal("workflow_modal")}
+          >
+            Cancel
+          </.link>
+          <span class="group">
+            <button
+              disabled={not @form.source.valid?}
+              id="workflow_button"
+              form={@form.id}
+              type="submit"
+              class=" justify-center rounded-md bg-primary-600 disabled:bg-primary-300 px-6 py-3 text-sm font-semibold text-white shadow-sm hover:bg-primary-500 disabled:outline-0 focus:outline-2 focus:outline-indigo-600 focus:outline-offset-2 active:outlin-2 active:outline-indigo-600 active:outline-offset-2"
+            >
+              Create Workflow
+            </button>
+          </span>
+        </div>
+      </:footer>
+    </.modal>
     """
   end
 end

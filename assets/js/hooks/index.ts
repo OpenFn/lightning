@@ -3,8 +3,18 @@ import { PhoenixHook } from './PhoenixHook';
 
 import LogLineHighlight from './LogLineHighlight';
 import ElapsedIndicator from './ElapsedIndicator';
+import TabSelector from './TabSelector';
+import { initiateSaveAndRun } from '../common';
 
-export { LogLineHighlight, ElapsedIndicator };
+export { LogLineHighlight, ElapsedIndicator, TabSelector };
+
+export const ModalHook = {
+  mounted() {
+    this.handleEvent('close_modal', () => {
+      this.liveSocket.execJS(this.el, this.el.getAttribute('phx-on-close'));
+    });
+  },
+} as PhoenixHook;
 
 export const ShowActionsOnRowHover = {
   mounted() {
@@ -89,9 +99,25 @@ export const Tooltip = {
     }
 
     let content = this.el.ariaLabel;
+    let placement = this.el.dataset.placement
+      ? this.el.dataset.placement
+      : 'top';
+    let allowHTML = this.el.dataset.allowHtml
+      ? this.el.dataset.allowHtml
+      : 'false';
     this._tippyInstance = tippy(this.el, {
-      content: content,
+      placement: placement,
+      animation: false,
+      allowHTML: allowHTML === 'true',
+      interactive: true,
     });
+    this._tippyInstance.setContent(content);
+  },
+  updated() {
+    let content = this.el.ariaLabel;
+    if (content && this._tippyInstance) {
+      this._tippyInstance.setContent(content);
+    }
   },
   destroyed() {
     if (this._tippyInstance) this._tippyInstance.unmount();
@@ -121,6 +147,17 @@ export const collapsiblePanel = {
       const target = event.target;
       target.classList.toggle('collapsed');
       document.dispatchEvent(new Event('update-layout'));
+    });
+  },
+} as PhoenixHook;
+
+export const BlurDataclipEditor = {
+  mounted() {
+    this.el.addEventListener('keydown', event => {
+      if (event.key === 'Escape') {
+        document.activeElement.blur();
+        event.stopImmediatePropagation();
+      }
     });
   },
 } as PhoenixHook;
@@ -155,6 +192,16 @@ function createKeyCombinationHook(
 }
 
 /**
+ * Function to dispatch a click event on the provided element.
+ *
+ * @param e - The keyboard event triggering the action.
+ * @param el - The HTML element to which the action will be applied.
+ */
+function clickAction(e: KeyboardEvent, el: HTMLElement) {
+  initiateSaveAndRun(el);
+}
+
+/**
  * Function to dispatch a submit event on the provided element.
  *
  * @param e - The keyboard event triggering the action.
@@ -176,8 +223,13 @@ function closeAction(e: KeyboardEvent, el: HTMLElement) {
 
 const isCtrlOrMetaS = (e: KeyboardEvent) =>
   (e.ctrlKey || e.metaKey) && e.key === 's';
+
 const isCtrlOrMetaEnter = (e: KeyboardEvent) =>
-  (e.ctrlKey || e.metaKey) && e.key === 'Enter';
+  (e.ctrlKey || e.metaKey) && !e.shiftKey && e.key === 'Enter';
+
+const isCtrlOrMetaShiftEnter = (e: KeyboardEvent) =>
+  (e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'Enter';
+
 const isEscape = (e: KeyboardEvent) => e.key === 'Escape';
 
 /**
@@ -191,9 +243,14 @@ export const SaveViaCtrlS = createKeyCombinationHook(
 /**
  * Hook to trigger a save and run action on the job panel when the Ctrl (or Cmd on Mac) + Enter key combination is pressed.
  */
-export const SaveAndRunViaCtrlEnter = createKeyCombinationHook(
+export const DefaultRunViaCtrlEnter = createKeyCombinationHook(
   isCtrlOrMetaEnter,
-  submitAction
+  clickAction
+);
+
+export const AltRunViaCtrlShiftEnter = createKeyCombinationHook(
+  isCtrlOrMetaShiftEnter,
+  clickAction
 );
 
 /**

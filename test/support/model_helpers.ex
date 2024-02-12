@@ -44,4 +44,52 @@ defmodule Lightning.ModelHelpers do
     |> Enum.map(fn field -> {field, model |> Map.get(field)} end)
     |> Enum.into(%{})
   end
+
+  @doc """
+  Convenience function for counting the number of records for a query or model.
+  """
+  def count_for(query) do
+    import Ecto.Query
+
+    select(query, count()) |> Lightning.Repo.one!()
+  end
+
+  @doc """
+  A helper that transforms changeset errors into a map of messages.
+
+      assert {:error, changeset} = Accounts.create_user(%{password: "short"})
+      assert "password is too short" in errors_on(changeset).password
+      assert %{password: ["password is too short"]} = errors_on(changeset)
+
+  """
+  def errors_on(changeset) do
+    Ecto.Changeset.traverse_errors(changeset, fn {message, opts} ->
+      Regex.replace(~r"%{(\w+)}", message, fn _, key ->
+        opts |> Keyword.get(String.to_existing_atom(key), key) |> to_string()
+      end)
+    end)
+  end
+
+  @doc """
+  Checks that the provided record is the only record of that type persisted in
+  the database.
+  """
+  def only_record_for_type?(expected_instance) do
+    import Ecto.Query
+
+    %{__struct__: model} = expected_instance
+
+    from(r in model,
+      where: r.id == ^expected_instance.id,
+      left_join: others in ^model,
+      on: others.id != ^expected_instance.id,
+      select: [count(r.id), count(others.id)]
+    )
+    |> Lightning.Repo.one!()
+    |> case do
+      [1, 0] -> true
+      [1, _] -> false
+      [0, _] -> {:error, "No record found for #{inspect(expected_instance)}"}
+    end
+  end
 end

@@ -4,6 +4,7 @@ defmodule Lightning.ProjectsTest do
   alias Lightning.Projects.ProjectUser
   alias Lightning.Projects
   alias Lightning.Projects.Project
+  alias Lightning.Accounts.User
 
   import Lightning.ProjectsFixtures
   import Lightning.AccountsFixtures
@@ -56,6 +57,25 @@ defmodule Lightning.ProjectsTest do
         |> Repo.preload(project_users: [:user])
 
       assert Projects.get_project_with_users!(project.id) == project
+    end
+
+    test "get_project_users!/1 returns the project users in order of first name" do
+      user_a = user_fixture(first_name: "Anna")
+      user_b = user_fixture(first_name: "Bob")
+
+      project =
+        project_fixture(
+          project_users: [
+            %{user_id: user_a.id},
+            %{user_id: user_b.id}
+          ]
+        )
+
+      assert [
+               %ProjectUser{user: %User{first_name: "Anna"}},
+               %ProjectUser{user: %User{first_name: "Bob"}}
+             ] =
+               Projects.get_project_users!(project.id)
     end
 
     test "get_project_user!/1 returns the project_user with given id" do
@@ -217,52 +237,56 @@ defmodule Lightning.ProjectsTest do
 
       p1_dataclip = insert(:dataclip, body: %{foo: "bar"}, project: p1)
 
+      p1_step_1 = insert(:step, input_dataclip: p1_dataclip, job: e1.target_job)
+      p1_step_2 = insert(:step, input_dataclip: p1_dataclip, job: e1.target_job)
+
       insert(:workorder,
         trigger: t1,
         dataclip: p1_dataclip,
         workflow: w1,
-        attempts: [
-          build(:attempt,
+        runs: [
+          build(:run,
             starting_trigger: e1.source_trigger,
             dataclip: p1_dataclip,
-            runs: [
-              build(:run, input_dataclip: p1_dataclip, job: e1.target_job)
-            ]
+            steps: [p1_step_1],
+            log_lines: build_list(2, :log_line, step: p1_step_1)
           ),
-          build(:attempt,
+          build(:run,
             starting_trigger: e1.source_trigger,
             dataclip: p1_dataclip,
             created_by: p1_user,
-            runs: [
-              build(:run, input_dataclip: p1_dataclip, job: e1.target_job)
-            ]
+            steps: [p1_step_2],
+            log_lines: build_list(2, :log_line, step: p1_step_1)
           )
         ]
       )
 
       p2_dataclip = insert(:dataclip, body: %{foo: "bar"}, project: p2)
 
+      p2_step = insert(:step, input_dataclip: p2_dataclip, job: e2.target_job)
+
+      p2_log_line = build(:log_line, step: p2_step)
+
       insert(:workorder,
         trigger: t2,
         workflow: w2,
         dataclip: p2_dataclip,
-        attempts:
-          build_list(1, :attempt,
+        runs:
+          build_list(1, :run,
             starting_trigger: e2.source_trigger,
             dataclip: p2_dataclip,
-            runs: [
-              build(:run, input_dataclip: p2_dataclip, job: e2.target_job)
-            ]
+            steps: [p2_step],
+            log_lines: [p2_log_line]
           )
       )
 
-      runs_query = Lightning.Projects.project_runs_query(p1)
+      steps_query = Lightning.Projects.project_steps_query(p1)
 
       work_order_query = Lightning.Projects.project_workorders_query(p1)
 
-      attempt_query = Lightning.Projects.project_attempts_query(p1)
+      run_query = Lightning.Projects.project_runs_query(p1)
 
-      attempt_run_query = Lightning.Projects.project_attempt_run_query(p1)
+      run_step_query = Lightning.Projects.project_run_step_query(p1)
 
       pu_query = Lightning.Projects.project_users_query(p1)
 
@@ -272,13 +296,13 @@ defmodule Lightning.ProjectsTest do
 
       jobs_query = Lightning.Projects.project_jobs_query(p1)
 
-      assert runs_query |> Repo.aggregate(:count, :id) == 2
+      assert steps_query |> Repo.aggregate(:count, :id) == 2
 
       assert work_order_query |> Repo.aggregate(:count, :id) == 1
 
-      assert attempt_query |> Repo.aggregate(:count, :id) == 2
+      assert run_query |> Repo.aggregate(:count, :id) == 2
 
-      assert attempt_run_query |> Repo.aggregate(:count, :id) == 2
+      assert run_step_query |> Repo.aggregate(:count, :id) == 2
 
       assert pu_query |> Repo.aggregate(:count, :id) == 1
 
@@ -290,15 +314,18 @@ defmodule Lightning.ProjectsTest do
       assert jobs_query |> Repo.aggregate(:count, :id) == 5,
              "There should be only five jobs"
 
+      assert Repo.all(Lightning.Invocation.LogLine)
+             |> Enum.count() == 5
+
       assert {:ok, %Project{}} = Projects.delete_project(p1)
 
-      assert runs_query |> Repo.aggregate(:count, :id) == 0
+      assert steps_query |> Repo.aggregate(:count, :id) == 0
 
       assert work_order_query |> Repo.aggregate(:count, :id) == 0
 
-      assert attempt_query |> Repo.aggregate(:count, :id) == 0
+      assert run_query |> Repo.aggregate(:count, :id) == 0
 
-      assert attempt_run_query |> Repo.aggregate(:count, :id) == 0
+      assert run_step_query |> Repo.aggregate(:count, :id) == 0
 
       assert pu_query |> Repo.aggregate(:count, :id) == 0
 
@@ -308,13 +335,15 @@ defmodule Lightning.ProjectsTest do
 
       assert jobs_query |> Repo.aggregate(:count, :id) == 0
 
+      assert only_record_for_type?(p2_log_line)
+
       assert_raise Ecto.NoResultsError, fn ->
         Projects.get_project!(p1.id)
       end
 
       assert p2.id == Projects.get_project!(p2.id).id
 
-      assert Lightning.Projects.project_runs_query(p2)
+      assert Lightning.Projects.project_steps_query(p2)
              |> Repo.aggregate(:count, :id) == 1
     end
 
@@ -452,18 +481,18 @@ defmodule Lightning.ProjectsTest do
 
       %{project: project} = full_project_fixture()
 
-      project_jobs = Projects.project_jobs_query(project) |> Repo.all()
+      project_triggers = Projects.project_triggers_query(project) |> Repo.all()
 
-      assert Enum.all?(project_jobs, & &1.enabled)
+      assert Enum.all?(project_triggers, & &1.enabled)
 
       assert project.scheduled_deletion == nil
 
       now = DateTime.utc_now() |> DateTime.add(-1, :second)
       {:ok, project} = Projects.schedule_project_deletion(project)
 
-      project_jobs = Projects.project_jobs_query(project) |> Repo.all()
+      project_triggers = Projects.project_triggers_query(project) |> Repo.all()
 
-      assert Enum.all?(project_jobs, &(!&1.enabled))
+      assert Enum.all?(project_triggers, &(!&1.enabled))
 
       assert project.scheduled_deletion != nil
       assert Timex.diff(project.scheduled_deletion, now, :days) == days
@@ -492,6 +521,58 @@ defmodule Lightning.ProjectsTest do
         |> errors_on()
 
       assert errors[:scheduled_deletion] == nil
+    end
+  end
+
+  describe "project_retention_policy_for/1" do
+    test "returns the correct retention policy for the project associated to the Run" do
+      for policy <- Ecto.Enum.values(Project, :retention_policy) do
+        project = insert(:project, retention_policy: policy)
+        dataclip = insert(:dataclip, project: project)
+
+        %{triggers: [trigger]} =
+          workflow = insert(:simple_workflow, project: project)
+
+        %{runs: [run]} =
+          work_order_for(trigger, workflow: workflow, dataclip: dataclip)
+          |> insert()
+
+        assert Projects.project_retention_policy_for(run) == policy
+      end
+    end
+  end
+
+  describe "list_project_admin_emails/1" do
+    test "lists emails for users with admin or owner roles in the project" do
+      project = insert(:project)
+
+      owner =
+        insert(:project_user, project: project, role: :owner, user: build(:user))
+
+      admin =
+        insert(:project_user, project: project, role: :admin, user: build(:user))
+
+      editor =
+        insert(:project_user,
+          project: project,
+          role: :editor,
+          user: build(:user)
+        )
+
+      viewer =
+        insert(:project_user,
+          project: project,
+          role: :viewer,
+          user: build(:user)
+        )
+
+      emails = Projects.list_project_admin_emails(project.id)
+
+      assert owner.user.email in emails
+      assert admin.user.email in emails
+
+      refute editor.user.email in emails
+      refute viewer.user.email in emails
     end
   end
 
@@ -555,13 +636,13 @@ defmodule Lightning.ProjectsTest do
       workflow: workflow_1,
       source_trigger: build(:trigger, workflow: workflow_1),
       target_job: workflow_1_job,
-      condition: :always
+      condition_type: :always
     )
 
     insert(:edge,
       workflow: workflow_1,
       source_job: workflow_1_job,
-      condition: :on_job_failure,
+      condition_type: :on_job_failure,
       target_job:
         insert(:job,
           name: "on fail",
@@ -575,7 +656,7 @@ defmodule Lightning.ProjectsTest do
     insert(:edge,
       workflow: workflow_1,
       source_job: workflow_1_job,
-      condition: :on_job_success,
+      condition_type: :on_job_success,
       target_job:
         insert(:job,
           name: "on success",
@@ -602,13 +683,13 @@ defmodule Lightning.ProjectsTest do
           cron_expression: "0 23 * * *"
         ),
       target_job: workflow_2_job,
-      condition: :always
+      condition_type: :always
     )
 
     insert(:edge,
       workflow: workflow_2,
       source_job: workflow_2_job,
-      condition: :on_job_success,
+      condition_type: :on_job_success,
       target_job:
         insert(:job,
           name: "on cron failure",

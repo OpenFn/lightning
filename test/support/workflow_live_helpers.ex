@@ -4,6 +4,7 @@ defmodule Lightning.WorkflowLive.Helpers do
   import Lightning.Factories
   import ExUnit.Assertions
 
+  alias Lightning.Projects.Project
   alias Lightning.Workflows.Job
 
   # Interaction Helpers
@@ -178,6 +179,12 @@ defmodule Lightning.WorkflowLive.Helpers do
     |> Enum.find_index(fn j -> j["id"] == job.id end)
   end
 
+  def get_index_of_edge(view, edge) do
+    :sys.get_state(view.pid).socket.assigns.workflow_params
+    |> Map.get("edges")
+    |> Enum.find_index(fn e -> e["id"] == edge.id end)
+  end
+
   def get_workflow_params(view) do
     :sys.get_state(view.pid).socket.assigns.workflow_params
   end
@@ -210,7 +217,7 @@ defmodule Lightning.WorkflowLive.Helpers do
           %{
             "id" => Ecto.UUID.generate(),
             "source_trigger_id" => trigger_id,
-            "condition" => :always,
+            "condition_type" => :always,
             "target_job_id" => job_id
           }
         ],
@@ -276,6 +283,21 @@ defmodule Lightning.WorkflowLive.Helpers do
     view
     |> find_a_tag(path, text_filter)
     |> has_element?()
+  end
+
+  def has_history_link_pattern?(
+        html,
+        %Project{id: project_id},
+        pattern,
+        text \\ ""
+      )
+      when is_binary(html) do
+    pattern = String.replace(pattern, "[", "\\[") |> String.replace("]", "\\]")
+
+    Regex.match?(
+      ~r{<a href="/projects/#{project_id}/history\?.*#{pattern}.*#{text}.*</a>}s,
+      html
+    )
   end
 
   def has_workflow_card?(view, workflow) do
@@ -352,9 +374,9 @@ defmodule Lightning.WorkflowLive.Helpers do
       build(:workflow, project: project)
       |> with_job(job_1)
       |> with_trigger(trigger)
-      |> with_edge({trigger, job_1}, %{condition: :always})
+      |> with_edge({trigger, job_1}, %{condition_type: :always})
       |> with_job(job_2)
-      |> with_edge({job_1, job_2}, %{condition: :on_job_success})
+      |> with_edge({job_1, job_2}, %{condition_type: :on_job_success})
       |> insert()
 
     %{workflow: workflow |> Lightning.Repo.preload([:jobs, :triggers, :edges])}

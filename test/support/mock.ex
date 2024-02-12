@@ -3,7 +3,7 @@ defmodule Lightning.Stub do
   @behaviour Lightning.API
 
   @impl true
-  def current_time(), do: Lightning.API.current_time()
+  def current_time, do: Lightning.API.current_time()
 
   @impl true
   def broadcast(topic, msg), do: Lightning.API.broadcast(topic, msg)
@@ -14,7 +14,7 @@ defmodule Lightning.Stub do
   @doc """
   Resets the current time to the current time.
   """
-  def reset_time() do
+  def reset_time do
     Lightning.Mock
     |> Mox.stub(:current_time, fn -> DateTime.utc_now() end)
   end

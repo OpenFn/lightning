@@ -50,7 +50,7 @@ defmodule LightningWeb.JobLiveTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}?s=1&j=1"
+          ~p"/projects/#{project.id}/w/#{workflow.id}?step=1&j=1"
         )
 
       # Trigger tooltip

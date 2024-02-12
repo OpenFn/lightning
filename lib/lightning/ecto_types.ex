@@ -19,8 +19,8 @@ defmodule Lightning.UnixDateTime do
   @doc """
   Cast a Unix timestamp to a DateTime.
 
-  Accepts integers and strings, and will attempt to parse the string as an
-  integer. If the integer is 13 digits long, it will be parsed as a millisecond
+  Accepts integers and strings, and will try to parse the string as an  integer.
+  If the integer is 13 digits long, it will be parsed as a millisecond
   timestamp, and as a microsecond timestamp if it is 16 digits long.
   """
   def cast(u) do
@@ -94,7 +94,7 @@ defmodule Lightning.LogMessage do
      |> IO.iodata_to_binary()}
   end
 
-  def cast(d) when is_map(d) or is_list(d) do
+  def cast(d) when is_map(d) or is_list(d) or is_nil(d) do
     Jason.encode(d)
   end
 

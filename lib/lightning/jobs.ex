@@ -4,11 +4,13 @@ defmodule Lightning.Jobs do
   """
 
   import Ecto.Query, warn: false
-  alias Lightning.Repo
 
-  alias Lightning.Workflows.{Edge, Workflow}
-  alias Lightning.Workflows.{Job, Query}
   alias Lightning.Projects.Project
+  alias Lightning.Repo
+  alias Lightning.Workflows.Edge
+  alias Lightning.Workflows.Job
+  alias Lightning.Workflows.Query
+  alias Lightning.Workflows.Workflow
 
   @doc """
   Returns the list of jobs.
@@ -84,7 +86,7 @@ defmodule Lightning.Jobs do
 
   def get_downstream_jobs_for(job_id, edge_condition) do
     downstream_query(job_id)
-    |> where([_, e], e.condition == ^edge_condition)
+    |> where([_, e], e.condition_type == ^edge_condition)
     |> Repo.all()
   end
 
@@ -114,8 +116,9 @@ defmodule Lightning.Jobs do
   """
   def get_job!(id), do: Repo.get!(Job |> preload([:workflow]), id)
 
-  def get_job(id) do
-    from(j in Job, preload: [:workflow]) |> Repo.get(id)
+  def get_job_with_credential(id) do
+    Repo.get(Job, id)
+    |> Repo.preload(:credential)
   end
 
   @doc """
@@ -152,39 +155,6 @@ defmodule Lightning.Jobs do
     job
     |> Job.changeset(attrs)
     |> Repo.update()
-  end
-
-  @doc """
-  Deletes a job.
-
-  ## Examples
-
-      iex> delete_job(job)
-      {:ok, %Job{}}
-
-      iex> delete_job(job)
-      {:error, %Ecto.Changeset{}}
-
-  """
-  def delete_job(%Job{} = job) do
-    changeset = job |> Ecto.Changeset.change()
-
-    get_downstream_jobs_for(job)
-    |> case do
-      [_ | _] ->
-        error =
-          Ecto.Changeset.add_error(
-            changeset,
-            :workflow,
-            "This job is associated with downstream jobs"
-          )
-
-        {:error, error}
-
-      _ ->
-        changeset
-        |> Repo.delete()
-    end
   end
 
   @doc """

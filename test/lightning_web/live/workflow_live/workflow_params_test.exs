@@ -23,14 +23,16 @@ defmodule LightningWeb.WorkflowNewLive.WorkflowParamsTest do
         %{
           "id" => Ecto.UUID.generate(),
           "source_trigger_id" => trigger_1_id,
-          "condition" => "on_job_failure",
-          "target_job_id" => job_1_id
+          "condition_type" => "on_job_failure",
+          "target_job_id" => job_1_id,
+          "enabled" => true
         },
         %{
           "id" => Ecto.UUID.generate(),
           "source_job_id" => job_1_id,
-          "condition" => "on_job_success",
-          "target_job_id" => job_2_id
+          "condition_type" => "on_job_success",
+          "target_job_id" => job_2_id,
+          "enabled" => true
         }
       ]
     }
@@ -55,15 +57,21 @@ defmodule LightningWeb.WorkflowNewLive.WorkflowParamsTest do
       assert %{
                "edges" => [
                  %{
-                   "condition" => "on_job_failure",
-                   "errors" => %{},
+                   "condition_type" => "on_job_failure",
+                   "enabled" => true,
+                   "errors" => %{
+                     "condition_type" => [
+                       "The condition must be 'Always' or 'JS expression' when the source is trigger."
+                     ]
+                   },
                    "id" => _,
                    "source_job_id" => nil,
                    "source_trigger_id" => ^trigger_1_id,
                    "target_job_id" => ^job_1_id
                  },
                  %{
-                   "condition" => "on_job_success",
+                   "condition_type" => "on_job_success",
+                   "enabled" => true,
                    "errors" => %{},
                    "id" => _,
                    "source_job_id" => ^job_1_id,
@@ -71,26 +79,59 @@ defmodule LightningWeb.WorkflowNewLive.WorkflowParamsTest do
                    "target_job_id" => ^job_2_id
                  }
                ],
+               "errors" => %{
+                 "edges" => [
+                   %{
+                     "condition_type" => [
+                       "The condition must be 'Always' or 'JS expression' when the source is trigger."
+                     ]
+                   },
+                   %{}
+                 ],
+                 "jobs" => [
+                   %{
+                     "body" => ["This field can't be blank."],
+                     "name" => ["This field can't be blank."]
+                   },
+                   %{"body" => ["This field can't be blank."]}
+                 ],
+                 "name" => ["This field can't be blank."]
+               },
                "jobs" => [
                  %{
-                   "errors" => %{"name" => ["can't be blank"]},
+                   "adaptor" => "@openfn/language-common@latest",
+                   "body" => "",
+                   "errors" => %{
+                     "body" => ["This field can't be blank."],
+                     "name" => ["This field can't be blank."]
+                   },
                    "id" => ^job_1_id,
-                   "name" => ""
+                   "name" => _,
+                   "project_credential_id" => nil
                  },
                  %{
-                   "errors" => %{},
+                   "adaptor" => "@openfn/language-common@latest",
+                   "body" => "",
+                   "errors" => %{"body" => ["This field can't be blank."]},
                    "id" => ^job_2_id,
-                   "name" => "job-2"
+                   "name" => "job-2",
+                   "project_credential_id" => nil
                  }
                ],
+               "name" => nil,
+               "project_id" => nil,
                "triggers" => [
                  %{
+                   "cron_expression" => "",
                    "errors" => %{},
+                   "has_auth_method" => nil,
                    "id" => ^trigger_1_id,
                    "type" => "webhook"
                  }
                ]
-             } = changeset |> WorkflowParams.to_map()
+             } =
+               changeset
+               |> WorkflowParams.to_map()
     end
 
     test "creates a serializable map for a Workflow changeset that already has associations",
@@ -119,7 +160,8 @@ defmodule LightningWeb.WorkflowNewLive.WorkflowParamsTest do
       assert %{
                "edges" => [
                  %{
-                   "condition" => "on_job_failure",
+                   "condition_type" => "on_job_failure",
+                   "enabled" => true,
                    "errors" => %{},
                    "id" => _,
                    "source_job_id" => nil,
@@ -127,7 +169,8 @@ defmodule LightningWeb.WorkflowNewLive.WorkflowParamsTest do
                    "target_job_id" => ^job_1_id
                  },
                  %{
-                   "condition" => "on_job_success",
+                   "condition_type" => "on_job_success",
+                   "enabled" => true,
                    "errors" => %{},
                    "id" => _,
                    "source_job_id" => ^job_1_id,
@@ -135,32 +178,53 @@ defmodule LightningWeb.WorkflowNewLive.WorkflowParamsTest do
                    "target_job_id" => ^job_2_id
                  }
                ],
+               "errors" => %{
+                 "jobs" => [
+                   %{"body" => ["This field can't be blank."]},
+                   %{
+                     "body" => ["This field can't be blank."],
+                     "name" => ["This field can't be blank."]
+                   },
+                   %{"body" => ["This field can't be blank."]}
+                 ],
+                 "name" => ["This field can't be blank."]
+               },
                "jobs" => [
                  %{
                    "adaptor" => "@openfn/language-common@latest",
                    "body" => "",
-                   "project_credential_id" => nil,
-                   "enabled" => true,
-                   "errors" => %{"body" => ["can't be blank"]},
+                   "errors" => %{"body" => ["This field can't be blank."]},
+                   "id" => ^job_3_id,
                    "name" => "job-3",
-                   "id" => ^job_3_id
+                   "project_credential_id" => nil
                  },
                  %{
-                   "errors" => %{"name" => ["can't be blank"]},
+                   "adaptor" => "@openfn/language-common@latest",
+                   "body" => "",
+                   "errors" => %{
+                     "body" => ["This field can't be blank."],
+                     "name" => ["This field can't be blank."]
+                   },
                    "id" => ^job_1_id,
-                   "project_credential_id" => nil,
-                   "name" => ""
+                   "name" => "",
+                   "project_credential_id" => nil
                  },
                  %{
-                   "errors" => %{},
+                   "adaptor" => "@openfn/language-common@latest",
+                   "body" => "",
+                   "errors" => %{"body" => ["This field can't be blank."]},
                    "id" => ^job_2_id,
-                   "project_credential_id" => nil,
-                   "name" => "job-2"
+                   "name" => "job-2",
+                   "project_credential_id" => nil
                  }
                ],
+               "name" => "",
+               "project_id" => nil,
                "triggers" => [
                  %{
+                   "cron_expression" => "",
                    "errors" => %{},
+                   "has_auth_method" => nil,
                    "id" => ^trigger_1_id,
                    "type" => "webhook"
                  }
@@ -175,21 +239,45 @@ defmodule LightningWeb.WorkflowNewLive.WorkflowParamsTest do
 
       assert %{
                "edges" => [],
+               "errors" => %{
+                 "jobs" => [
+                   %{},
+                   %{
+                     "body" => ["This field can't be blank."],
+                     "name" => ["This field can't be blank."]
+                   },
+                   %{"body" => ["This field can't be blank."]}
+                 ],
+                 "name" => ["This field can't be blank."]
+               },
                "jobs" => [
                  %{
-                   "errors" => %{"name" => ["can't be blank"]},
+                   "adaptor" => "@openfn/language-common@latest",
+                   "body" => "",
+                   "errors" => %{
+                     "body" => ["This field can't be blank."],
+                     "name" => ["This field can't be blank."]
+                   },
                    "id" => ^job_1_id,
-                   "name" => ""
+                   "name" => "",
+                   "project_credential_id" => nil
                  },
                  %{
-                   "errors" => %{},
+                   "adaptor" => "@openfn/language-common@latest",
+                   "body" => "",
+                   "errors" => %{"body" => ["This field can't be blank."]},
                    "id" => ^job_2_id,
-                   "name" => "job-2"
+                   "name" => "job-2",
+                   "project_credential_id" => nil
                  }
                ],
+               "name" => nil,
+               "project_id" => nil,
                "triggers" => [
                  %{
+                   "cron_expression" => "",
                    "errors" => %{},
+                   "has_auth_method" => nil,
                    "id" => ^trigger_1_id,
                    "type" => "webhook"
                  }
@@ -221,7 +309,8 @@ defmodule LightningWeb.WorkflowNewLive.WorkflowParamsTest do
       assert WorkflowParams.to_patches(original_params, params) ==
                [
                  %{op: "remove", path: "/jobs/1"},
-                 %{op: "remove", path: "/jobs/0"}
+                 %{op: "remove", path: "/jobs/0"},
+                 %{op: "remove", path: "/errors/jobs"}
                ]
     end
   end

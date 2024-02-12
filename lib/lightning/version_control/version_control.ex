@@ -7,17 +7,27 @@ defmodule Lightning.VersionControl do
   """
 
   import Ecto.Query, warn: false
+
   alias Lightning.Repo
-  alias Lightning.VersionControl.ProjectRepoConnection
   alias Lightning.VersionControl.GithubClient
+  alias Lightning.VersionControl.ProjectRepoConnection
 
   @doc """
   Creates a connection between a project and a github repo
   """
   def create_github_connection(attrs) do
-    %ProjectRepoConnection{}
-    |> ProjectRepoConnection.changeset(attrs)
-    |> Repo.insert()
+    changeset = ProjectRepoConnection.changeset(%ProjectRepoConnection{}, attrs)
+    user_id = Ecto.Changeset.get_field(changeset, :user_id)
+
+    pending_installation = user_id && get_pending_user_installation(user_id)
+
+    if is_nil(pending_installation) do
+      Repo.insert(changeset)
+    else
+      changeset
+      |> Ecto.Changeset.add_error(:user_id, "user has pending installation")
+      |> Ecto.Changeset.apply_action(:insert)
+    end
   end
 
   @doc """
@@ -90,7 +100,7 @@ defmodule Lightning.VersionControl do
     end
   end
 
-  def run_sync(project_id, user_name) do
+  def initiate_sync(project_id, user_name) do
     with %ProjectRepoConnection{} = repo_connection <-
            Repo.get_by(ProjectRepoConnection, project_id: project_id) do
       GithubClient.fire_repository_dispatch(
@@ -101,7 +111,7 @@ defmodule Lightning.VersionControl do
     end
   end
 
-  def github_enabled?() do
+  def github_enabled? do
     Application.get_env(:lightning, :github_app, [])
     |> then(fn config ->
       Keyword.get(config, :cert) && Keyword.get(config, :app_id)

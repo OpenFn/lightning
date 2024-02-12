@@ -1,8 +1,10 @@
 defmodule LightningWeb.WorkflowLive.JobView do
   use LightningWeb, :component
-  alias LightningWeb.WorkflowLive.EditorPane
 
   import LightningWeb.WorkflowLive.Components
+
+  alias Lightning.Credentials
+  alias LightningWeb.WorkflowLive.EditorPane
 
   attr :id, :string, required: true
   slot :top
@@ -56,7 +58,7 @@ defmodule LightningWeb.WorkflowLive.JobView do
   attr :project, :map, required: true
   attr :close_url, :any, required: true
   attr :socket, :any, required: true
-  attr :follow_attempt_id, :any, default: nil
+  attr :follow_run_id, :any, default: nil
 
   slot :footer
 
@@ -73,7 +75,9 @@ defmodule LightningWeb.WorkflowLive.JobView do
         <div class="flex h-14 place-content-stretch">
           <div class="basis-1/3 flex items-center gap-4 pl-4">
             <.adaptor_block adaptor={@job.adaptor} />
-            <.credential_block credential={@job.credential} />
+            <.credential_block credential={
+              fetch_credential(@form[:project_credential_id].value)
+            } />
           </div>
           <div class="basis-1/3 font-semibold flex items-center justify-center">
             <%= @job.name %>
@@ -118,17 +122,19 @@ defmodule LightningWeb.WorkflowLive.JobView do
         panel_title="Output & Logs"
         class="border h-full"
       >
-        <%= if @follow_attempt_id do %>
-          <div class="h-full">
-            <%= live_render(
-              @socket,
-              LightningWeb.AttemptLive.AttemptViewerLive,
-              id: "attempt-viewer-#{@follow_attempt_id}",
-              session: %{"attempt_id" => @follow_attempt_id, "job_id" => @job.id},
-              sticky: true,
-              container: {:div, class: "h-full"}
-            ) %>
-          </div>
+        <%= if @follow_run_id do %>
+          <%= live_render(
+            @socket,
+            LightningWeb.RunLive.RunViewerLive,
+            id: "run-viewer-#{@follow_run_id}",
+            session: %{
+              "run_id" => @follow_run_id,
+              "job_id" => @job.id,
+              "project_id" => @project.id,
+              "user_id" => @current_user.id
+            },
+            container: {:div, class: "h-full"}
+          ) %>
         <% else %>
           <div class="w-1/2 h-16 text-center m-auto pt-4">
             <div class="text-gray-500 pb-2">
@@ -146,12 +152,21 @@ defmodule LightningWeb.WorkflowLive.JobView do
 
   defp credential_block(assigns) do
     ~H"""
-    <div class="flex items-center gap-2">
+    <div
+      id="modal-header-credential-block"
+      class="flex items-center gap-2 whitespace-nowrap"
+    >
       <%= if @credential do %>
         <Heroicons.lock_closed class="w-6 h-6 text-gray-500" />
-        <span class="text-xs text-gray-500 font-semibold grow">
-          <%= @credential.name %>
-        </span>
+
+        <div class="group cursor-default flex items-center ">
+          <span class="text-xs text-gray-500 font-semibold truncate w-48">
+            <%= @credential.name %>
+          </span>
+          <div class="absolute top-11 left-96 hidden group-hover:flex bg-black text-white text-xs rounded py-1 px-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-100 transform -translate-x-1/2">
+            <%= @credential.name %>
+          </div>
+        </div>
       <% else %>
         <Heroicons.lock_open class="w-6 h-6 text-gray-500" />
         <span class="text-xs text-gray-500 font-semibold grow">
@@ -174,17 +189,28 @@ defmodule LightningWeb.WorkflowLive.JobView do
       )
 
     ~H"""
-    <div class="grid grid-rows-2 grid-flow-col">
+    <div class="grid grid-rows-2 grid-flow-col whitespace-nowrap">
       <div class="row-span-2 flex items-center mr-2">
         <Heroicons.cube class="w-6 h-6 text-gray-500" />
       </div>
-      <div class="text-xs text-gray-500 font-semibold">
-        <%= @package_name %>
+
+      <div class="group cursor-default flex items-center ">
+        <span class="text-xs text-gray-500 font-semibold truncate w-48">
+          <%= @package_name %>
+        </span>
+        <div class="absolute top-11 left-16 ml-2 hidden group-hover:flex bg-black text-white text-xs rounded py-1 px-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-100">
+          <%= @package_name %>
+        </div>
       </div>
       <div class="text-xs text-gray-500 font-semibold font-mono">
         <%= @version %>
       </div>
     </div>
     """
+  end
+
+  defp fetch_credential(project_credential_id) do
+    project_credential_id && byte_size(project_credential_id) > 0 &&
+      Credentials.get_credential_by_project_credential(project_credential_id)
   end
 end

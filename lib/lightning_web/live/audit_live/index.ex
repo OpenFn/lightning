@@ -3,8 +3,10 @@ defmodule LightningWeb.AuditLive.Index do
   LiveView for listing Audit events
   """
   use LightningWeb, :live_view
+
   alias Lightning.Auditing
-  alias Lightning.Policies.{Users, Permissions}
+  alias Lightning.Policies.Permissions
+  alias Lightning.Policies.Users
 
   @impl true
   def mount(_params, _session, socket) do
@@ -43,8 +45,11 @@ defmodule LightningWeb.AuditLive.Index do
   end
 
   def diff(assigns) do
-    lhs = assigns.metadata.before
     rhs = assigns.metadata.after
+
+    lhs =
+      assigns.metadata.before ||
+        Enum.into(rhs, %{}, fn {key, _val} -> {key, nil} end)
 
     assigns =
       assign(assigns,

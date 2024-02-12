@@ -4,11 +4,11 @@ defmodule Lightning.MixProject do
   def project do
     [
       app: :lightning,
-      version: "0.10.0-pre4",
+      version: "2.0.0",
       elixir: "~> 1.15",
       elixirc_paths: elixirc_paths(Mix.env()),
       elixirc_options: [
-        warnings_as_errors: false
+        warnings_as_errors: true
       ],
       compilers: Mix.compilers(),
       start_permanent: Mix.env() == :prod,
@@ -31,6 +31,19 @@ defmodule Lightning.MixProject do
       name: "Lightning",
       docs: docs()
     ]
+    |> then(fn project ->
+      if System.get_env("UMBRELLA") == "true" do
+        project ++
+          [
+            build_path: "../../_build",
+            config_path: "../../config/config.exs",
+            deps_path: "../../deps",
+            lockfile: "../../mix.lock"
+          ]
+      else
+        project
+      end
+    end)
   end
 
   # Configuration for the OTP application.
@@ -39,7 +52,7 @@ defmodule Lightning.MixProject do
   def application do
     [
       mod: {Lightning.Application, [:timex]},
-      extra_applications: [:logger, :runtime_tools, :os_mon]
+      extra_applications: [:logger, :runtime_tools, :os_mon, :scrivener]
     ]
   end
 
@@ -58,7 +71,7 @@ defmodule Lightning.MixProject do
       {:bypass, "~> 2.1"},
       {:cachex, "~> 3.4"},
       {:cloak_ecto, "~> 1.2.0"},
-      {:credo, "~> 1.7.1", only: [:test, :dev]},
+      {:credo, "~> 1.7.3", only: [:test, :dev]},
       {:crontab, "~> 1.1"},
       {:dialyxir, "~> 1.4.2", only: [:test, :dev], runtime: false},
       {:ecto_enum, "~> 1.4"},
@@ -75,13 +88,14 @@ defmodule Lightning.MixProject do
       {:hackney, "~> 1.18"},
       {:heroicons, "~> 0.5.3"},
       {:httpoison, "~> 1.8"},
-      {:jason, "~> 1.2"},
+      {:jason, "~> 1.4"},
       {:joken, "~> 2.6.0"},
       {:jsonpatch, "~> 1.0.2"},
       {:junit_formatter, "~> 3.0", only: [:test]},
       {:libcluster, "~> 3.3"},
       {:mimic, "~> 1.7.2", only: :test},
       {:mix_test_watch, "~> 1.0", only: [:test, :dev], runtime: false},
+      {:mock, "~> 0.3.8", only: :test},
       {:mox, "~> 1.0.2", only: :test},
       {:oauth2, "~> 2.1"},
       {:oban, "~> 2.13"},
@@ -95,18 +109,18 @@ defmodule Lightning.MixProject do
       {:opentelemetry_phoenix, "~> 1.1.1"},
       {:opentelemetry_tesla, "~> 2.2.0"},
       {:petal_components, "~> 1.2.0"},
-      {:phoenix, "~> 1.7.0"},
+      {:phoenix, "~> 1.7.11"},
       {:phoenix_ecto, "~> 4.4"},
       {:phoenix_html, "~> 3.3"},
       {:phoenix_live_dashboard, "~> 0.8"},
       {:phoenix_live_reload, "~> 1.2", only: :dev},
-      {:phoenix_live_view, "~> 0.20.1"},
+      {:phoenix_live_view, "~> 0.20.5"},
       {:phoenix_storybook, "~> 0.5.2"},
       {:plug_cowboy, "~> 2.5"},
       {:postgrex, ">= 0.0.0"},
       {:prom_ex, "~> 1.8.0"},
       {:rambo, "~> 0.3.4"},
-      {:scrivener_ecto, "~> 2.7"},
+      {:scrivener, "~> 2.7"},
       {:sentry, "~> 8.0"},
       {:sobelow, "~> 0.13.0", only: [:test, :dev], runtime: false},
       {:sweet_xml, "~> 0.7.1", only: [:test]},
@@ -118,6 +132,7 @@ defmodule Lightning.MixProject do
       {:tesla, "~> 1.4"},
       {:timex, "~> 3.7"},
       {:unplug, "~> 1.0"},
+      {:replug, "~> 0.1.0"},
       {:phoenix_swoosh, "~> 1.0"},
       {:hammer_backend_mnesia, "~> 0.6"},
       {:hammer, "~> 6.0"},
@@ -157,13 +172,13 @@ defmodule Lightning.MixProject do
         "coveralls.html",
         "format --check-formatted",
         "dialyzer",
-        "credo --all",
+        "credo --strict --all",
         "sobelow"
       ]
     ]
   end
 
-  defp docs() do
+  defp docs do
     [
       # The main page in the docs
       main: "readme",
@@ -185,8 +200,8 @@ defmodule Lightning.MixProject do
         Accounts: [
           ~r/Lightning.Accounts/
         ],
-        Attempts: [
-          ~r/Lightning.Attempts/
+        Runs: [
+          ~r/Lightning.Runs/
         ],
         WorkOrders: [
           ~r/Lightning.WorkOrders/
@@ -212,10 +227,15 @@ defmodule Lightning.MixProject do
         Workflows: [
           ~r/Lightning.Workflow/
         ],
-        Other: [
-          ~r/Lightning.Graph/,
+        "Custom Data Types": [
           ~r/Lightning.LogMessage/,
           ~r/Lightning.UnixDateTime/
+        ],
+        Web: [
+          ~r/LightningWeb/
+        ],
+        Other: [
+          ~r/Lightning.Graph/
         ]
       ]
     ]

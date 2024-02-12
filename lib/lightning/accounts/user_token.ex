@@ -18,12 +18,12 @@ defmodule Lightning.Accounts.UserToken do
   """
 
   use Ecto.Schema
-  import Ecto.Query
+  use Joken.Config
+
   import Ecto.Changeset
+  import Ecto.Query
 
   alias Lightning.Accounts.User
-
-  use Joken.Config
 
   @hash_algorithm :sha256
   @rand_size 32

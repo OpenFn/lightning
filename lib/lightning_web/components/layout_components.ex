@@ -105,6 +105,7 @@ defmodule LightningWeb.LayoutComponents do
   def page_content(assigns) do
     ~H"""
     <div class="flex h-full w-full flex-col">
+      <%= if assigns[:banner], do: render_slot(@banner) %>
       <%= if assigns[:header], do: render_slot(@header) %>
       <div class="flex-auto bg-secondary-100 relative">
         <section
@@ -118,13 +119,24 @@ defmodule LightningWeb.LayoutComponents do
     """
   end
 
+  attr :current_user, Lightning.Accounts.User
+  attr :socket, Phoenix.LiveView.Socket
+  slot :title
+  slot :period
+  slot :inner_block
+
   def header(assigns) do
     ~H"""
     <div class="flex-none bg-white shadow-sm">
       <div class="max-w-7xl mx-auto h-20 sm:px-6 lg:px-8 flex items-center">
-        <h1 class="text-3xl font-bold text-secondary-900 flex items-center grow">
+        <h1 class="text-3xl font-bold text-secondary-900 flex items-center">
           <%= if assigns[:title], do: render_slot(@title) %>
         </h1>
+        <%= if assigns[:period] do %>
+          <span class="ml-2 mt-3 text-xs">
+            <%= render_slot(@period) %>
+          </span>
+        <% end %>
         <div class="grow"></div>
         <%= if assigns[:inner_block], do: render_slot(@inner_block) %>
         <%= if assigns[:current_user] do %>
@@ -169,9 +181,12 @@ defmodule LightningWeb.LayoutComponents do
     """
   end
 
+  attr :class, :string, default: ""
+  slot :inner_block, required: true
+
   def centered(assigns) do
     ~H"""
-    <div class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+    <div class={["max-w-7xl mx-auto py-6 sm:px-6 lg:px-8", @class]}>
       <%= render_slot(@inner_block) %>
     </div>
     """

@@ -10,7 +10,9 @@ import Config
 config :lightning,
   ecto_repos: [Lightning.Repo]
 
-config :lightning, Lightning.Repo, types: Lightning.PostgrexTypes
+config :lightning, Lightning.Repo,
+  types: Lightning.PostgrexTypes,
+  log: :debug
 
 config :hammer,
   backend:
@@ -27,6 +29,11 @@ config :lightning, LightningWeb.Endpoint,
   ],
   pubsub_server: Lightning.PubSub,
   live_view: [signing_salt: "EfrmuOUr"]
+
+config :lightning, Lightning.Extensions,
+  rate_limiter: Lightning.Extensions.RateLimiter,
+  usage_limiter: Lightning.Extensions.UsageLimiter,
+  run_queue: Lightning.Extensions.FifoRunQueue
 
 config :joken, default_signer: "secret"
 
@@ -54,6 +61,10 @@ config :oauth2, adapter: Tesla.Adapter.Hackney
 config :lightning, :oauth_clients,
   google: [
     wellknown_url: "https://accounts.google.com/.well-known/openid-configuration"
+  ],
+  salesforce: [
+    wellknown_url:
+      "https://login.salesforce.com/.well-known/openid-configuration"
   ]
 
 # Configure esbuild (the version is required)
@@ -109,9 +120,7 @@ config :lightning, Lightning.FailureAlerter,
   rate_limit: 3
 
 # Disables / Hides the credential transfer feature for beta (in LightningWeb.CredentialLive.Edit)
-config :lightning, LightningWeb,
-  allow_credential_transfer: false,
-  enable_google_credential: true
+config :lightning, LightningWeb, allow_credential_transfer: false
 
 # Rather than default  since httpc doesnt have certificate checking
 config :tesla, adapter: Tesla.Adapter.Hackney

@@ -28,7 +28,7 @@ defmodule Lightning.FactoriesTest do
     setup :create_project_for_current_user
     setup :create_workflow_trigger_job
 
-    test "with_attempt associates a new attempt to a workorder", %{
+    test "with_run associates a new run to a workorder", %{
       workflow: workflow,
       trigger: trigger,
       job: job
@@ -37,27 +37,26 @@ defmodule Lightning.FactoriesTest do
 
       assert work_order =
                Factories.insert(:workorder, workflow: workflow)
-               |> Factories.with_attempt(
+               |> Factories.with_run(
                  dataclip: dataclip,
                  starting_trigger: trigger,
-                 runs: [
+                 steps: [
                    %{
                      job: job,
                      started_at: Factories.build(:timestamp),
                      finished_at: nil,
-                     exit_code: nil,
                      input_dataclip: dataclip
                    }
                  ]
                )
 
-      attempt_id = hd(Repo.all(Lightning.Attempt)).id
+      run_id = hd(Repo.all(Lightning.Run)).id
 
-      assert hd(work_order.attempts).id == attempt_id
+      assert hd(work_order.runs).id == run_id
 
-      work_order = Repo.preload(work_order, :attempts)
+      work_order = Repo.preload(work_order, :runs)
 
-      assert hd(work_order.attempts).id == attempt_id
+      assert hd(work_order.runs).id == run_id
     end
   end
 

@@ -2,10 +2,13 @@ defmodule LightningWeb.Hooks do
   @moduledoc """
   LiveView Hooks
   """
+  use LightningWeb, :verified_routes
+
+  import Phoenix.Component
+  import Phoenix.LiveView
+
   alias Lightning.Policies.Permissions
   alias Lightning.Policies.ProjectUsers
-  import Phoenix.LiveView
-  import Phoenix.Component
 
   @doc """
   Finds and assigns a project to the socket, if a user doesn't have access
@@ -15,6 +18,17 @@ defmodule LightningWeb.Hooks do
   this is for liveviews that may or may not have a `project_id` depending on
   usage - like `DashboardLive`.
   """
+
+  def on_mount(
+        :project_scope,
+        _params,
+        _session,
+        %{assigns: %{current_user: nil}} = socket
+      ) do
+    # redirect if there's no current user
+    {:halt, redirect(socket, to: ~p"/users/log_in")}
+  end
+
   def on_mount(:project_scope, %{"project_id" => project_id}, _session, socket) do
     %{current_user: current_user} = socket.assigns
 
@@ -31,7 +45,7 @@ defmodule LightningWeb.Hooks do
 
     cond do
       can_access_project and project.requires_mfa and !current_user.mfa_enabled ->
-        {:halt, redirect(socket, to: "/mfa_required")}
+        {:halt, redirect(socket, to: ~p"/mfa_required")}
 
       can_access_project ->
         {:cont,

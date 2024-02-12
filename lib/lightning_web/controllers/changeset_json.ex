@@ -3,10 +3,12 @@ defmodule LightningWeb.ChangesetJSON do
   Renders changesets as JSON.
   """
 
+  import LightningWeb.CoreComponents, only: [translate_error: 1]
+
   def error(%Ecto.Changeset{} = changeset) do
     Ecto.Changeset.traverse_errors(
       changeset,
-      &LightningWeb.Components.NewInputs.translate_error/1
+      &translate_error/1
     )
   end
 

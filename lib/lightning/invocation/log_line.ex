@@ -11,11 +11,13 @@ defmodule Lightning.Invocation.LogLine do
   See [`LogMessage`](`Lightning.LogMessage`) for more information.
   """
   use Ecto.Schema
+
   import Ecto.Changeset
 
-  alias Lightning.Attempt
-  alias Lightning.Invocation.Run
+  alias Lightning.Invocation.Step
   alias Lightning.LogMessage
+  alias Lightning.Run
+  alias Lightning.Scrubber
   alias Lightning.UnixDateTime
 
   @type t :: %__MODULE__{
@@ -23,13 +25,14 @@ defmodule Lightning.Invocation.LogLine do
           id: Ecto.UUID.t() | nil,
           message: String.t(),
           timestamp: DateTime.t(),
-          run: Run.t() | Ecto.Association.NotLoaded.t() | nil,
-          attempt: Attempt.t() | Ecto.Association.NotLoaded.t() | nil
+          step: Step.t() | Ecto.Association.NotLoaded.t() | nil,
+          run: Run.t() | Ecto.Association.NotLoaded.t() | nil
         }
 
-  @primary_key {:id, :binary_id, autogenerate: true}
+  @primary_key false
   @foreign_key_type :binary_id
   schema "log_lines" do
+    field :id, Ecto.UUID
     field :source, :string
 
     field :level, Ecto.Enum,
@@ -38,38 +41,42 @@ defmodule Lightning.Invocation.LogLine do
 
     field :message, LogMessage, default: ""
 
+    belongs_to :step, Step
     belongs_to :run, Run
-    belongs_to :attempt, Attempt
 
     field :timestamp, UnixDateTime
   end
 
-  def new(%Attempt{} = attempt, attrs \\ %{}) do
+  def new(%Run{} = run, attrs \\ %{}, scrubber) do
     %__MODULE__{id: Ecto.UUID.generate()}
-    |> cast(attrs, [:message, :timestamp, :run_id, :attempt_id, :level, :source])
-    |> put_assoc(:attempt, attempt)
-    |> validate()
+    |> cast(attrs, [:message, :timestamp, :step_id, :run_id, :level, :source])
+    |> put_assoc(:run, run)
+    |> validate(scrubber)
   end
 
-  @doc false
-  def changeset(log_line, attrs) do
-    log_line
-    |> cast(attrs, [:message, :timestamp, :run_id, :attempt_id, :level, :source])
-    |> validate()
-  end
-
-  def validate(changeset) do
+  def validate(changeset, scrubber \\ nil) do
     changeset
     |> validate_required([:message, :timestamp])
     |> validate_length(:source, max: 8)
+    |> assoc_constraint(:step)
     |> assoc_constraint(:run)
-    |> assoc_constraint(:attempt)
     |> validate_change(:message, fn _, message ->
-      if is_nil(message) do
-        [message: "can't be nil"]
+      # cast converts [nil] into "null"
+      if message == "null" do
+        [message: "This field can't be blank."]
       else
         []
       end
     end)
+    |> maybe_scrub(scrubber)
   end
+
+  defp maybe_scrub(%Ecto.Changeset{valid?: true} = changeset, scrubber)
+       when scrubber != nil do
+    {:ok, message} = fetch_change(changeset, :message)
+    scrubbed = Scrubber.scrub(scrubber, message)
+    put_change(changeset, :message, scrubbed)
+  end
+
+  defp maybe_scrub(changeset, _scrubber), do: changeset
 end

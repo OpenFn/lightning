@@ -59,6 +59,10 @@ config :lightning, :github_app,
   app_id: github_app_id,
   app_name: github_app_name
 
+if System.get_env("RTM") == "false" do
+  config :lightning, Lightning.Runtime.RuntimeManager, start: false
+end
+
 image_tag = System.get_env("IMAGE_TAG")
 branch = System.get_env("BRANCH")
 commit = System.get_env("COMMIT")
@@ -78,6 +82,10 @@ config :lightning, :oauth_clients,
   google: [
     client_id: System.get_env("GOOGLE_CLIENT_ID"),
     client_secret: System.get_env("GOOGLE_CLIENT_SECRET")
+  ],
+  salesforce: [
+    client_id: System.get_env("SALESFORCE_CLIENT_ID"),
+    client_secret: System.get_env("SALESFORCE_CLIENT_SECRET")
   ]
 
 config :lightning,
@@ -96,40 +104,34 @@ base_oban_cron = [
    args: %{"type" => "monthly_project_digest"}}
 ]
 
-conditional_cron =
-  if System.get_env("PURGE_DELETED_AFTER_DAYS") != 0,
-    do:
-      base_oban_cron ++
-        [
-          {"0 2 * * *", Lightning.WebhookAuthMethods,
-           args: %{"type" => "purge_deleted"}},
-          {"0 2 * * *", Lightning.Credentials,
-           args: %{"type" => "purge_deleted"}},
-          {"*/5 * * * *", Lightning.Janitor},
-          {"0 2 * * *", Lightning.Accounts, args: %{"type" => "purge_deleted"}},
-          {"0 2 * * *", Lightning.Projects, args: %{"type" => "purge_deleted"}}
-        ],
-    else: base_oban_cron
+purge_cron =
+  if System.get_env("PURGE_DELETED_AFTER_DAYS") != "0",
+    do: [
+      {"0 2 * * *", Lightning.WebhookAuthMethods,
+       args: %{"type" => "purge_deleted"}},
+      {"0 2 * * *", Lightning.Credentials, args: %{"type" => "purge_deleted"}},
+      {"*/5 * * * *", Lightning.Janitor},
+      {"0 2 * * *", Lightning.Accounts, args: %{"type" => "purge_deleted"}},
+      {"0 2 * * *", Lightning.Projects, args: %{"type" => "purge_deleted"}}
+    ],
+    else: []
+
+impact_tracking_cron = [{"0 */1 * * *", Lightning.ImpactTracking.Worker}]
+
+all_cron = base_oban_cron ++ purge_cron ++ impact_tracking_cron
 
 config :lightning, Oban,
+  name: Lightning.Oban,
   repo: Lightning.Repo,
   plugins: [
-    {Oban.Plugins.Cron, crontab: conditional_cron}
+    {Oban.Plugins.Cron, crontab: all_cron}
   ],
-  shutdown_grace_period:
-    System.get_env("MAX_RUN_DURATION", "60000")
-    |> String.to_integer(),
+  shutdown_grace_period: :timer.minutes(2),
   dispatch_cooldown: 100,
   queues: [
     scheduler: 1,
     workflow_failures: 1,
-    background: 1,
-    runs:
-      System.get_env(
-        "GLOBAL_RUNS_CONCURRENCY",
-        :erlang.system_info(:logical_processors_available) |> to_string()
-      )
-      |> String.to_integer()
+    background: 1
   ]
 
 # https://plausible.io/ is an open-source, privacy-friendly alternative to
@@ -149,13 +151,19 @@ config :lightning,
        |> String.to_integer()
 
 config :lightning,
-       :max_run_duration,
-       System.get_env("MAX_RUN_DURATION", "60000")
+       :max_run_duration_seconds,
+       System.get_env("WORKER_MAX_RUN_DURATION_SECONDS", "60")
        |> String.to_integer()
 
 config :lightning,
+       :max_dataclip_size_bytes,
+       System.get_env("MAX_DATACLIP_SIZE_MB", "10")
+       |> String.to_integer()
+       |> Kernel.*(1_000_000)
+
+config :lightning,
        :queue_result_retention_period,
-       System.get_env("QUEUE_RESULT_RETENTION_PERIOD", "60")
+       System.get_env("QUEUE_RESULT_RETENTION_PERIOD_SECONDS", "60")
        |> String.to_integer()
 
 config :lightning,
@@ -177,19 +185,6 @@ end
 url_port = String.to_integer(System.get_env("URL_PORT", "443"))
 url_scheme = System.get_env("URL_SCHEME", "https")
 
-# The webserver port will always prefer and environment variable _when_
-# given, otherwise it uses the existing config and lastly defaults to 4000.
-port =
-  (System.get_env("PORT") ||
-     Application.get_env(:lightning, LightningWeb.Endpoint)
-     |> Keyword.get(:http, port: nil)
-     |> Keyword.get(:port) ||
-     4000)
-  |> case do
-    p when is_binary(p) -> String.to_integer(p)
-    p when is_integer(p) -> p
-  end
-
 # Use the `PRIMARY_ENCRYPTION_KEY` env variable if available, else fall back
 # to defaults.
 # Defaults are set for `dev` and `test` modes.
@@ -199,40 +194,17 @@ config :lightning, Lightning.Vault,
       Application.get_env(:lightning, Lightning.Vault, [])
       |> Keyword.get(:primary_encryption_key, nil)
 
-# Binding to loopback ipv4 address prevents access from other machines.
-# http: [ip: {0, 0, 0, 0}, port: 4000],
-# Set `http.ip` to {127, 0, 0, 1} to block access from other machines.
-# Note that this may interfere with Docker networking.
-# Enable IPv6 and bind on all interfaces.
-# Set it to {0, 0, 0, 0, 0, 0, 0, 1} for local network only access.
-# See the documentation on https://hexdocs.pm/plug_cowboy/Plug.Cowboy.html
-# for details about using IPv6 vs IPv4 and loopback vs public addresses.
-listen_address =
-  (System.get_env("LISTEN_ADDRESS") ||
-     Application.get_env(:lightning, LightningWeb.Endpoint)
-     |> Keyword.get(:http, ip: nil)
-     |> Keyword.get(:ip) ||
-     {127, 0, 0, 1})
-  |> case do
-    p when is_binary(p) ->
-      p
-      |> String.split(".")
-      |> Enum.map(&String.to_integer/1)
-      |> List.to_tuple()
-
-    p when is_tuple(p) ->
-      p
-  end
-
-config :lightning, LightningWeb.Endpoint,
-  http: [
-    ip: listen_address,
-    port: port,
-    compress: true
-  ]
-
 if log_level = System.get_env("LOG_LEVEL") do
-  config :logger, level: log_level |> String.to_atom()
+  allowed_log_levels =
+    ~w[emergency alert critical error warning warn notice info debug]
+
+  if log_level in allowed_log_levels do
+    config :logger, level: log_level |> String.to_atom()
+  else
+    raise """
+    Invalid LOG_LEVEL, must be on of #{allowed_log_levels |> Enum.join(", ")}
+    """
+  end
 end
 
 if config_env() == :prod do
@@ -267,6 +239,13 @@ if config_env() == :prod do
       """
 
   host = System.get_env("URL_HOST") || "example.com"
+  port = String.to_integer(System.get_env("PORT") || "4000")
+
+  listen_address =
+    System.get_env("LISTEN_ADDRESS", "127.0.0.1")
+    |> String.split(".")
+    |> Enum.map(&String.to_integer/1)
+    |> List.to_tuple()
 
   origins =
     case System.get_env("ORIGINS") do
@@ -276,8 +255,25 @@ if config_env() == :prod do
 
   config :lightning, LightningWeb.Endpoint,
     url: [host: host, port: url_port, scheme: url_scheme],
+    http: [
+      ip: listen_address,
+      port: port,
+      compress: true
+    ],
     secret_key_base: secret_key_base,
     check_origin: origins,
+    http: [
+      protocol_options: [
+        max_frame_size:
+          Application.get_env(:lightning, :max_dataclip_size_bytes, 10_000_000),
+        # Note that if a request is more than 10x the max dataclip size, we cut
+        # the connection immediately to prevent memory issues via the
+        # :max_skip_body_length setting.
+        max_skip_body_length:
+          Application.get_env(:lightning, :max_dataclip_size_bytes, 10_000_000) *
+            10
+      ]
+    ],
     server: true
 
   # ## Using releases
@@ -294,8 +290,14 @@ end
 if config_env() == :test do
   # When running tests, set the number of database connections to the number
   # of cores available.
+  schedulers = :erlang.system_info(:schedulers_online)
+
   config :lightning, Lightning.Repo,
-    pool_size: :erlang.system_info(:schedulers_online) + 4
+    pool_size: Enum.max([schedulers + 8, schedulers * 2])
+
+  config :ex_unit,
+    assert_receive_timeout:
+      System.get_env("ASSERT_RECEIVE_TIMEOUT", "600") |> String.to_integer()
 end
 
 release =
@@ -331,7 +333,23 @@ config :lightning, Lightning.PromEx,
   ],
   metrics_server: :disabled,
   datasource_id: System.get_env("PROMEX_DATASOURCE_ID") || "",
+  metrics_endpoint_authorization_required:
+    System.get_env("PROMEX_METRICS_ENDPOINT_AUTHORIZATION_REQUIRED") != "no",
   metrics_endpoint_token:
     System.get_env("PROMEX_METRICS_ENDPOINT_TOKEN") ||
       :crypto.strong_rand_bytes(100),
   metrics_endpoint_scheme: System.get_env("PROMEX_ENDPOINT_SCHEME") || "https"
+
+config :lightning, :metrics,
+  stalled_run_threshold_seconds:
+    String.to_integer(
+      System.get_env("METRICS_STALLED_RUN_THRESHOLD_SECONDS", "3600")
+    ),
+  run_performance_age_seconds:
+    String.to_integer(
+      System.get_env("METRICS_RUN_PERFORMANCE_AGE_SECONDS", "300")
+    )
+
+config :lightning, :impact_tracking,
+  enabled: System.get_env("IMPACT_TRACKING_ENABLED") == "true",
+  host: System.get_env("IMPACT_TRACKER_HOST", "https://impact.openfn.org")

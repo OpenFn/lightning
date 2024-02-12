@@ -1,7 +1,8 @@
 defmodule LightningWeb.API.JobJSON do
   @moduledoc false
-  alias LightningWeb.Router.Helpers, as: Routes
   import LightningWeb.API.Helpers
+
+  alias LightningWeb.Router.Helpers, as: Routes
 
   @fields ~w(name)a
 

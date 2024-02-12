@@ -8,26 +8,23 @@ defmodule Lightning.Accounts do
     max_attempts: 1
 
   import Ecto.Query, warn: false
+
   alias Ecto.Multi
-  alias Lightning.Repo
-
-  alias Lightning.Accounts.{
-    User,
-    UserBackupCode,
-    UserToken,
-    UserTOTP,
-    UserNotifier
-  }
-
+  alias Lightning.Accounts.User
+  alias Lightning.Accounts.UserBackupCode
+  alias Lightning.Accounts.UserNotifier
+  alias Lightning.Accounts.UserToken
+  alias Lightning.Accounts.UserTOTP
   alias Lightning.Credentials
+  alias Lightning.Repo
 
   require Logger
 
   def has_activity_in_projects?(%User{id: id} = _user) do
     count =
-      from(invocation_reason in Lightning.InvocationReason,
-        where: invocation_reason.user_id == ^id,
-        select: count(invocation_reason.id)
+      from(run in Lightning.Run,
+        where: run.created_by_id == ^id,
+        select: count(run.id)
       )
       |> Repo.one()
 
@@ -67,9 +64,9 @@ defmodule Lightning.Accounts do
   @impl Oban.Worker
   def perform(%Oban.Job{args: %{"type" => "purge_deleted"}}) do
     users_with_activities =
-      from(invocation_reason in Lightning.InvocationReason,
+      from(run in Lightning.Run,
         join: user in Lightning.Accounts.User,
-        on: invocation_reason.user_id == user.id,
+        on: run.created_by_id == user.id,
         select: user.id,
         distinct: true
       )
@@ -257,8 +254,7 @@ defmodule Lightning.Accounts do
     Enum.map_reduce(backup_codes, false, fn backup, valid? ->
       if Plug.Crypto.secure_compare(backup.code, user_code) and
            is_nil(backup.used_at) do
-        {Ecto.Changeset.change(backup, %{used_at: NaiveDateTime.utc_now()}),
-         true}
+        {Ecto.Changeset.change(backup, %{used_at: DateTime.utc_now()}), true}
       else
         {backup, valid?}
       end
@@ -939,7 +935,7 @@ defmodule Lightning.Accounts do
   This triggers the setup page on fresh installs.
   """
   @spec has_one_superuser?() :: boolean()
-  def has_one_superuser?() do
+  def has_one_superuser? do
     from(u in User, select: count(), where: u.role == :superuser)
     |> Repo.one() >= 1
   end

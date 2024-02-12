@@ -3,9 +3,11 @@ defmodule Lightning.Projects.ProjectCredential do
   Join table to assign credentials to a project
   """
   use Ecto.Schema
+
   import Ecto.Changeset
-  alias Lightning.Projects.Project
+
   alias Lightning.Credentials.Credential
+  alias Lightning.Projects.Project
 
   @type t :: %__MODULE__{
           __meta__: Ecto.Schema.Metadata.t(),
@@ -19,7 +21,7 @@ defmodule Lightning.Projects.ProjectCredential do
   schema "project_credentials" do
     belongs_to :credential, Credential
     belongs_to :project, Project
-    field :delete, :boolean, virtual: true
+    field :delete, :boolean, virtual: true, default: false
 
     timestamps()
   end

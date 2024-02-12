@@ -11,10 +11,14 @@ defmodule Lightning.Projects.Provisioner do
   import Ecto.Changeset
   import Ecto.Query
 
-  alias Lightning.Projects.{Project, ProjectUser}
-  alias Lightning.Workflows.{Job, Trigger, Workflow, Edge}
-  alias Lightning.Accounts.{User}
+  alias Lightning.Accounts.User
+  alias Lightning.Projects.Project
+  alias Lightning.Projects.ProjectUser
   alias Lightning.Repo
+  alias Lightning.Workflows.Edge
+  alias Lightning.Workflows.Job
+  alias Lightning.Workflows.Trigger
+  alias Lightning.Workflows.Workflow
 
   @doc """
   Import a project.
@@ -114,7 +118,7 @@ defmodule Lightning.Projects.Provisioner do
 
   defp job_changeset(job, attrs) do
     job
-    |> cast(attrs, [:id, :name, :body, :enabled, :adaptor, :delete])
+    |> cast(attrs, [:id, :name, :body, :adaptor, :delete])
     |> validate_required([:id])
     |> unique_constraint(:id, name: :jobs_pkey)
     |> Job.validate()
@@ -147,7 +151,10 @@ defmodule Lightning.Projects.Provisioner do
       :id,
       :source_job_id,
       :source_trigger_id,
-      :condition,
+      :enabled,
+      :condition_expression,
+      :condition_type,
+      :condition_label,
       :target_job_id,
       :delete
     ])

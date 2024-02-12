@@ -1,10 +1,11 @@
 defmodule LightningWeb.OidcController do
   use LightningWeb, :controller
 
+  alias Lightning.Accounts
   alias Lightning.AuthProviders
   alias Lightning.AuthProviders.Handler
-  alias Lightning.Accounts
-  alias LightningWeb.{UserAuth, OauthCredentialHelper}
+  alias LightningWeb.OauthCredentialHelper
+  alias LightningWeb.UserAuth
 
   action_fallback LightningWeb.FallbackController
 
@@ -68,6 +69,16 @@ defmodule LightningWeb.OidcController do
       code: code
     )
 
-    html(conn, "<html><body>You may close this window</body></html>")
+    html(conn, """
+      <html>
+        <body>
+          <script type="text/javascript">
+            window.onload = function() {
+              window.close();
+            }
+          </script>
+        </body>
+      </html>
+    """)
   end
 end

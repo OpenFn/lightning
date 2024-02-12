@@ -4,8 +4,8 @@ defmodule Lightning.Credentials.Schema do
   changesets for a given schema.
   """
 
-  alias ExJsonSchema.Validator
   alias Ecto.Changeset
+  alias ExJsonSchema.Validator
 
   @type t :: %__MODULE__{
           name: String.t() | nil,
@@ -43,9 +43,9 @@ defmodule Lightning.Credentials.Schema do
     |> new(name)
   end
 
-  @spec validate(changeset :: Ecto.Changeset.t(), schema :: __MODULE__.t()) ::
+  @spec validate(changeset :: Ecto.Changeset.t(), schema :: t()) ::
           Ecto.Changeset.t()
-  def validate(changeset, %__MODULE__{} = schema) do
+  def validate(changeset, schema) do
     validation =
       Validator.validate(
         schema.root,
@@ -76,12 +76,38 @@ defmodule Lightning.Credentials.Schema do
     |> Enum.any?(fn required_field -> field == required_field end)
   end
 
+  defp error_to_changeset(
+         %{
+           error: %Validator.Error.AnyOf{invalid: alternatives}
+         } = error_map,
+         changeset
+       ) do
+    formats =
+      Enum.map(alternatives, fn %{errors: [%{error: %{expected: format}}]} ->
+        format
+      end)
+
+    error_map
+    |> Map.put(:error, %{any_of: formats})
+    |> error_to_changeset(changeset)
+  end
+
   defp error_to_changeset(%{path: path, error: error}, changeset) do
     field = String.slice(path, 2..-1) |> String.to_existing_atom()
 
     case error do
       %{expected: "uri"} ->
         Changeset.add_error(changeset, field, "expected to be a URI")
+
+      %{any_of: formats} ->
+        formats =
+          formats
+          |> Enum.map_join(" or ", fn
+            "uri" -> "a URI"
+            <<"ipv", char>> -> "an IPv#{char - ?0} address"
+          end)
+
+        Changeset.add_error(changeset, field, "expected to be #{formats}")
 
       %{missing: fields} ->
         Enum.reduce(fields, changeset, fn field, changeset ->

@@ -4,9 +4,11 @@ defmodule Lightning.VersionControl.GithubClient do
   to github from Lightning
   """
   use Tesla
-  require Logger
+
   alias Lightning.VersionControl.GithubError
   alias Lightning.VersionControl.GithubToken
+
+  require Logger
 
   plug(Tesla.Middleware.BaseUrl, "https://api.github.com")
   plug(Tesla.Middleware.JSON)
@@ -73,11 +75,11 @@ defmodule Lightning.VersionControl.GithubClient do
            ])}
 
         {:ok, %{status: 404, body: body}} ->
-          Logger.error("Unexpected Github Response: #{inspect(body)}")
+          Logger.error("Unexpected GitHub Response: #{inspect(body)}")
 
           error =
             GithubError.installation_not_found(
-              "Github Installation APP ID is misconfigured",
+              "GitHub Installation APP ID is misconfigured",
               body
             )
 
@@ -86,11 +88,11 @@ defmodule Lightning.VersionControl.GithubClient do
           {:error, error}
 
         {:ok, %{status: 401, body: body}} ->
-          Logger.error("Unexpected Github Response: #{inspect(body)}")
+          Logger.error("Unexpected GitHub Response: #{inspect(body)}")
 
           error =
             GithubError.invalid_certificate(
-              "Github Certificate is misconfigured",
+              "GitHub Certificate is misconfigured",
               body
             )
 

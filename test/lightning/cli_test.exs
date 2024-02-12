@@ -87,7 +87,7 @@ defmodule Lightning.CLITest do
     end
   end
 
-  defp expect_command() do
+  defp expect_command do
     assert_received {"/usr/bin/env", ["sh", "-c", command], opts}
 
     {command, opts}

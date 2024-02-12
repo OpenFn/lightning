@@ -49,14 +49,13 @@ defmodule LightningWeb.Endpoint do
     if: {LightningWeb.PromExPlugAuthorization, nil},
     do: {PromEx.Plug, prom_ex_module: Lightning.PromEx}
 
+  plug Replug,
+    plug: Plug.Parsers,
+    opts: {LightningWeb.PlugConfigs, :plug_parsers}
+
   plug Plug.Telemetry, event_prefix: [:phoenix, :endpoint]
 
   plug Plugs.WebhookAuth
-
-  plug Plug.Parsers,
-    parsers: [:urlencoded, :multipart, :json],
-    pass: ["*/*"],
-    json_decoder: Phoenix.json_library()
 
   plug Sentry.PlugContext
 

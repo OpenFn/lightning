@@ -4,27 +4,27 @@ defmodule Lightning.Policies.ProjectUsers do
   """
   @behaviour Bodyguard.Policy
 
-  alias Lightning.Projects
-  alias Lightning.Projects.{ProjectUser, Project}
   alias Lightning.Accounts.User
+  alias Lightning.Projects
+  alias Lightning.Projects.Project
+  alias Lightning.Projects.ProjectUser
 
   @type actions ::
-          :run_job
-          | :edit_job
-          | :rerun_job
-          | :create_job
-          | :delete_job
+          :run_workflow
+          | :edit_workflow
           | :access_project
+          | :edit_project
           | :delete_project
           | :delete_workflow
           | :create_workflow
-          | :edit_project_name
           | :edit_digest_alerts
           | :edit_failure_alerts
-          | :edit_project_description
           | :provision_project
-          | :create_webhook_auth_method
-          | :edit_webhook_auth_method
+          | :create_project_credential
+          | :edit_data_retention
+          | :write_webhook_auth_method
+          | :write_github_connection
+          | :initiate_github_sync
 
   @doc """
   authorize/3 takes an action, a user, and a project. It checks the user's role
@@ -46,23 +46,21 @@ defmodule Lightning.Policies.ProjectUsers do
   def authorize(:access_project, %User{} = user, %Project{} = project),
     do:
       is_nil(project.scheduled_deletion) and
-        Projects.is_member_of?(project, user)
+        Projects.member_of?(project, user)
 
   def authorize(:delete_project, %User{} = user, %Project{} = project),
     do: Projects.get_project_user_role(user, project) == :owner
 
-  def authorize(
-        action,
-        %User{id: id} = _user,
-        %ProjectUser{user_id: user_id} = _project
-      )
-      when action in [:edit_digest_alerts, :edit_failure_alerts],
+  def authorize(action, %User{id: id}, %ProjectUser{user_id: user_id})
+      when action in [
+             :edit_digest_alerts,
+             :edit_failure_alerts
+           ],
       do: id == user_id
 
   def authorize(action, %User{} = user, %Project{} = project)
       when action in [
-             :edit_project_name,
-             :edit_project_description
+             :edit_project
            ],
       do: Projects.get_project_user_role(user, project) in [:owner, :admin]
 
@@ -71,18 +69,26 @@ defmodule Lightning.Policies.ProjectUsers do
     authorize(action, user, project_user)
   end
 
+  def authorize(:edit_data_retention, _user, %ProjectUser{role: role}) do
+    role in [:owner, :admin]
+  end
+
+  def authorize(action, %User{}, %ProjectUser{} = project_user)
+      when action in [
+             :write_webhook_auth_method,
+             :write_github_connection
+           ],
+      do: project_user.role in [:owner, :admin]
+
   def authorize(action, %User{}, %ProjectUser{} = project_user)
       when action in [
              :create_workflow,
-             :edit_job,
-             :create_job,
-             :delete_job,
+             :edit_workflow,
              :delete_workflow,
-             :run_job,
-             :rerun_job,
+             :run_workflow,
              :provision_project,
-             :create_webhook_auth_method,
-             :edit_webhook_auth_method
+             :create_project_credential,
+             :initiate_github_sync
            ],
       do: project_user.role in [:owner, :admin, :editor]
 end

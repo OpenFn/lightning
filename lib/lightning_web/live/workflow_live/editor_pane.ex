@@ -1,5 +1,6 @@
 defmodule LightningWeb.WorkflowLive.EditorPane do
   use LightningWeb, :live_component
+  alias Lightning.Credentials
   alias LightningWeb.JobLive.JobBuilderComponents
 
   attr :id, :string, required: true
@@ -38,7 +39,7 @@ defmodule LightningWeb.WorkflowLive.EditorPane do
           form[:adaptor].value
           |> Lightning.AdaptorRegistry.resolve_adaptor(),
         source: form[:body].value,
-        credential: form[:credential].value,
+        credential: fetch_credential(form[:project_credential_id].value),
         job_id: form[:id].value
       )
 
@@ -80,5 +81,10 @@ defmodule LightningWeb.WorkflowLive.EditorPane do
     send(self(), {"form_changed", params})
 
     {:noreply, socket}
+  end
+
+  defp fetch_credential(project_credential_id) do
+    project_credential_id &&
+      Credentials.get_credential_by_project_credential(project_credential_id)
   end
 end

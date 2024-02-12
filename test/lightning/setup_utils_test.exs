@@ -1,7 +1,6 @@
 defmodule Lightning.SetupUtilsTest do
   alias Lightning.Invocation
   use Lightning.DataCase, async: true
-  # use Mimic
 
   alias Lightning.{Accounts, Projects, Workflows, Jobs, SetupUtils}
   alias Lightning.Accounts.User
@@ -78,30 +77,30 @@ defmodule Lightning.SetupUtilsTest do
              end)
 
       assert Enum.find(loaded_flow.edges, fn e ->
-               e.condition == :always &&
+               e.condition_type == :always &&
                  e.target_job_id == fhir_standard_data.id
              end)
 
       assert Enum.find(loaded_flow.edges, fn e ->
-               e.condition == :on_job_success &&
+               e.condition_type == :on_job_success &&
                  e.source_job_id == fhir_standard_data.id &&
                  e.target_job_id == send_to_openhim.id
              end)
 
       assert Enum.find(loaded_flow.edges, fn e ->
-               e.condition == :on_job_success &&
+               e.condition_type == :on_job_success &&
                  e.source_job_id == fhir_standard_data.id &&
                  e.target_job_id == send_to_openhim.id
              end)
 
       assert Enum.find(loaded_flow.edges, fn e ->
-               e.condition == :on_job_success &&
+               e.condition_type == :on_job_success &&
                  e.target_job_id == notify_upload_successful.id &&
                  e.source_job_id == send_to_openhim.id
              end)
 
       assert Enum.find(loaded_flow.edges, fn e ->
-               e.condition == :on_job_failure &&
+               e.condition_type == :on_job_failure &&
                  e.target_job_id == notify_upload_failed.id &&
                  e.source_job_id == send_to_openhim.id
              end)
@@ -111,12 +110,12 @@ defmodule Lightning.SetupUtilsTest do
         |> Repo.preload([:edges, :triggers])
 
       assert Enum.find(loaded_dhis_flow.edges, fn e ->
-               e.condition == :always &&
+               e.condition_type == :always &&
                  e.target_job_id == get_dhis2_data.id
              end)
 
       assert Enum.find(loaded_dhis_flow.edges, fn e ->
-               e.condition == :on_job_success &&
+               e.condition_type == :on_job_success &&
                  e.source_job_id == get_dhis2_data.id &&
                  e.target_job_id == upload_to_google_sheet.id
              end)
@@ -163,7 +162,13 @@ defmodule Lightning.SetupUtilsTest do
           ]
         )
 
-      workflow = Repo.preload(workflow, [:edges, :jobs, :triggers, :project])
+      workflow =
+        Repo.preload(workflow, [:edges, :triggers, :project, jobs: [:credential]])
+
+      assert workflow.jobs
+             |> Enum.find(&(&1.name =~ "Job 3"))
+             |> Map.get(:credential),
+             "Job 3 should have a credential"
 
       assert workflow.project.id == project.id
 
@@ -185,7 +190,6 @@ defmodule Lightning.SetupUtilsTest do
                });
              """
 
-      assert job_1.enabled
       assert job_1.adaptor == "@openfn/language-common@latest"
 
       assert job_2.name == "Job 2 - Convert data to DHIS2 format"
@@ -197,7 +201,6 @@ defmodule Lightning.SetupUtilsTest do
                });
              """
 
-      assert job_2.enabled
       assert job_2.adaptor == "@openfn/language-common@latest"
 
       assert job_3.name == "Job 3 - Upload to DHIS2"
@@ -219,32 +222,31 @@ defmodule Lightning.SetupUtilsTest do
                });
              """
 
-      assert job_3.enabled
       assert job_3.adaptor == "@openfn/language-dhis2@latest"
 
-      runs =
-        workorder |> get_runs_from_workorder()
+      steps =
+        workorder |> get_steps_from_workorder()
 
-      first_run =
-        runs
+      first_step =
+        steps
         |> Enum.at(0)
-        |> Repo.preload([:input_dataclip, :output_dataclip, :previous])
+        |> Repo.preload([:input_dataclip, :output_dataclip])
 
-      last_run =
-        runs
+      last_step =
+        steps
         |> Enum.at(1)
-        |> Repo.preload([:input_dataclip, :output_dataclip, :previous])
+        |> Repo.preload([:input_dataclip, :output_dataclip])
 
-      # first run is older than second run
+      # first step is older than second step
       assert DateTime.diff(
-               first_run.finished_at,
-               last_run.finished_at,
-               :second
+               first_step.finished_at,
+               last_step.finished_at,
+               :millisecond
              ) < 0
 
-      assert first_run.exit_reason == "success"
+      assert first_step.exit_reason == "success"
 
-      assert get_dataclip_body(first_run.input_dataclip.id) |> Jason.decode!() ==
+      assert get_dataclip_body(first_step.input_dataclip.id) |> Jason.decode!() ==
                %{
                  "data" => %{
                    "age_in_months" => 19,
@@ -252,7 +254,7 @@ defmodule Lightning.SetupUtilsTest do
                  }
                }
 
-      assert get_dataclip_body(first_run.output_dataclip.id) |> Jason.decode!() ==
+      assert get_dataclip_body(first_step.output_dataclip.id) |> Jason.decode!() ==
                %{
                  "data" => %{
                    "age_in_months" => 19,
@@ -261,7 +263,7 @@ defmodule Lightning.SetupUtilsTest do
                  "names" => ["Genevieve", "Wimplemews"]
                }
 
-      assert Invocation.assemble_logs_for_run(first_run) ==
+      assert Invocation.assemble_logs_for_step(first_step) <> "\n" ==
                """
                -- THIS IS ONLY A SAMPLE --
                [CLI] ℹ Versions:
@@ -281,9 +283,9 @@ defmodule Lightning.SetupUtilsTest do
                [CLI] ✔ Done in 304ms! ✨
                """
 
-      assert last_run.exit_reason == "success"
+      assert last_step.exit_reason == "success"
 
-      assert get_dataclip_body(last_run.input_dataclip.id) |> Jason.decode!() ==
+      assert get_dataclip_body(last_step.input_dataclip.id) |> Jason.decode!() ==
                %{
                  "data" => %{
                    "age_in_months" => 19,
@@ -292,7 +294,7 @@ defmodule Lightning.SetupUtilsTest do
                  "names" => ["Genevieve", "Wimplemews"]
                }
 
-      assert get_dataclip_body(last_run.output_dataclip.id) |> Jason.decode!() ==
+      assert get_dataclip_body(last_step.output_dataclip.id) |> Jason.decode!() ==
                %{
                  "data" => %{
                    "httpStatus" => "OK",
@@ -322,7 +324,7 @@ defmodule Lightning.SetupUtilsTest do
                  ]
                }
 
-      assert Invocation.assemble_logs_for_run(last_run) ==
+      assert Invocation.assemble_logs_for_step(last_step) <> "\n" ==
                """
                -- THIS IS ONLY A SAMPLE --
                [CLI] ℹ Versions:
@@ -361,9 +363,9 @@ defmodule Lightning.SetupUtilsTest do
                [CLI] ✔ Done in 2.052s! ✨
                """
 
-      assert last_run.exit_reason == "success"
+      assert last_step.exit_reason == "success"
 
-      assert get_dataclip_body(last_run.input_dataclip.id) |> Jason.decode!() ==
+      assert get_dataclip_body(last_step.input_dataclip.id) |> Jason.decode!() ==
                %{
                  "data" => %{
                    "age_in_months" => 19,
@@ -372,7 +374,7 @@ defmodule Lightning.SetupUtilsTest do
                  "names" => ["Genevieve", "Wimplemews"]
                }
 
-      assert get_dataclip_body(last_run.output_dataclip.id) |> Jason.decode!() ==
+      assert get_dataclip_body(last_step.output_dataclip.id) |> Jason.decode!() ==
                %{
                  "data" => %{
                    "httpStatus" => "OK",
@@ -402,7 +404,7 @@ defmodule Lightning.SetupUtilsTest do
                  ]
                }
 
-      assert Invocation.assemble_logs_for_run(last_run) == """
+      assert Invocation.assemble_logs_for_step(last_step) <> "\n" == """
              -- THIS IS ONLY A SAMPLE --
              [CLI] ℹ Versions:
                   ▸ node.js                   18.12.0
@@ -520,7 +522,6 @@ defmodule Lightning.SetupUtilsTest do
              fn(state => state);
              """
 
-      assert fhir_standard_data.enabled
       assert fhir_standard_data.adaptor == "@openfn/language-http@latest"
 
       assert send_to_openhim.name == "Send to OpenHIM to route to SHR"
@@ -529,7 +530,6 @@ defmodule Lightning.SetupUtilsTest do
              fn(state => state);
              """
 
-      assert send_to_openhim.enabled
       assert send_to_openhim.adaptor == "@openfn/language-http@latest"
 
       assert notify_upload_successful.name == "Notify CHW upload successful"
@@ -538,7 +538,6 @@ defmodule Lightning.SetupUtilsTest do
              fn(state => state);
              """
 
-      assert notify_upload_successful.enabled
       assert notify_upload_successful.adaptor == "@openfn/language-http@latest"
 
       assert notify_upload_failed.name == "Notify CHW upload failed"
@@ -547,41 +546,44 @@ defmodule Lightning.SetupUtilsTest do
              fn(state => state);
              """
 
-      assert notify_upload_failed.enabled
       assert notify_upload_failed.adaptor == "@openfn/language-http@latest"
 
-      runs =
-        openhie_workorder |> get_runs_from_workorder()
+      steps =
+        openhie_workorder |> get_steps_from_workorder()
 
-      first_run =
-        runs
+      first_step =
+        steps
         |> Enum.at(0)
-        |> Repo.preload([:input_dataclip, :output_dataclip, :previous])
+        |> Repo.preload([:input_dataclip, :output_dataclip])
 
-      second_run =
-        runs
+      second_step =
+        steps
         |> Enum.at(1)
-        |> Repo.preload([:input_dataclip, :output_dataclip, :previous])
+        |> Repo.preload([:input_dataclip, :output_dataclip])
 
-      last_run =
-        runs
+      last_step =
+        steps
         |> Enum.at(2)
-        |> Repo.preload([:input_dataclip, :output_dataclip, :previous])
+        |> Repo.preload([:input_dataclip, :output_dataclip])
 
-      # first run is older than second run
+      # first step is older than second step
       assert DateTime.diff(
-               first_run.finished_at,
-               second_run.finished_at,
-               :second
+               first_step.finished_at,
+               second_step.finished_at,
+               :millisecond
              ) < 0
 
-      # second run is older than last run
-      assert DateTime.diff(second_run.finished_at, last_run.finished_at, :second) <
+      # second step is older than last step
+      assert DateTime.diff(
+               second_step.finished_at,
+               last_step.finished_at,
+               :millisecond
+             ) <
                0
 
-      assert first_run.exit_reason == "success"
+      assert first_step.exit_reason == "success"
 
-      assert get_dataclip_body(first_run.input_dataclip.id) |> Jason.decode!() ==
+      assert get_dataclip_body(first_step.input_dataclip.id) |> Jason.decode!() ==
                %{
                  "data" => %{
                    "formId" => "early_enrollment",
@@ -593,7 +595,7 @@ defmodule Lightning.SetupUtilsTest do
                  }
                }
 
-      assert get_dataclip_body(first_run.output_dataclip.id) |> Jason.decode!() ==
+      assert get_dataclip_body(first_step.output_dataclip.id) |> Jason.decode!() ==
                %{
                  "data" => %{
                    "formId" => "early_enrollment",
@@ -606,7 +608,7 @@ defmodule Lightning.SetupUtilsTest do
                  "references" => []
                }
 
-      assert Invocation.assemble_logs_for_run(first_run) ==
+      assert Invocation.assemble_logs_for_step(first_step) <> "\n" ==
                """
                -- THIS IS ONLY A SAMPLE --
                [CLI] ℹ Versions:
@@ -627,9 +629,9 @@ defmodule Lightning.SetupUtilsTest do
                [CLI] ✔ Done in 223ms! ✨
                """
 
-      assert last_run.exit_reason == "success"
+      assert last_step.exit_reason == "success"
 
-      assert get_dataclip_body(last_run.input_dataclip.id) |> Jason.decode!() ==
+      assert get_dataclip_body(last_step.input_dataclip.id) |> Jason.decode!() ==
                %{
                  "data" => %{
                    "formId" => "early_enrollment",
@@ -642,7 +644,7 @@ defmodule Lightning.SetupUtilsTest do
                  "references" => []
                }
 
-      assert get_dataclip_body(last_run.output_dataclip.id) |> Jason.decode!() ==
+      assert get_dataclip_body(last_step.output_dataclip.id) |> Jason.decode!() ==
                %{
                  "data" => %{
                    "formId" => "early_enrollment",
@@ -655,7 +657,7 @@ defmodule Lightning.SetupUtilsTest do
                  "references" => []
                }
 
-      assert Invocation.assemble_logs_for_run(last_run) ==
+      assert Invocation.assemble_logs_for_step(last_step) <> "\n" ==
                """
                -- THIS IS ONLY A SAMPLE --
                [CLI] ℹ Versions:
@@ -675,9 +677,9 @@ defmodule Lightning.SetupUtilsTest do
                [CLI] ✔ Done in 209ms! ✨
                """
 
-      assert second_run.exit_reason == "success"
+      assert second_step.exit_reason == "success"
 
-      assert get_dataclip_body(second_run.input_dataclip.id) |> Jason.decode!() ==
+      assert get_dataclip_body(second_step.input_dataclip.id) |> Jason.decode!() ==
                %{
                  "data" => %{
                    "formId" => "early_enrollment",
@@ -690,7 +692,7 @@ defmodule Lightning.SetupUtilsTest do
                  "references" => []
                }
 
-      assert get_dataclip_body(second_run.output_dataclip.id) |> Jason.decode!() ==
+      assert get_dataclip_body(second_step.output_dataclip.id) |> Jason.decode!() ==
                %{
                  "data" => %{
                    "formId" => "early_enrollment",
@@ -703,24 +705,25 @@ defmodule Lightning.SetupUtilsTest do
                  "references" => []
                }
 
-      assert Invocation.assemble_logs_for_run(second_run) == """
-             -- THIS IS ONLY A SAMPLE --
-             [CLI] ℹ Versions:
-                  ▸ node.js                  18.12.0
-                  ▸ cli                      0.0.32
-                  ▸ runtime                  0.0.20
-                  ▸ compiler                 0.0.26
-                  ▸ @openfn/language-http    4.2.6
-             [CLI] ✔ Loaded state from /tmp/state-1686840746-126941-1hou2fm.json
-             [CLI] ℹ Loaded typedefs for @openfn/language-http@latest
-             [CMP] ℹ Added import statement for @openfn/language-http
-             [CMP] ℹ Added export * statement for @openfn/language-http
-             [CLI] ✔ Compiled job from /tmp/expression-1686840746-126941-1wuk06h.js
-             [R/T] ℹ Resolved adaptor @openfn/language-http to version 4.2.6
-             [R/T] ✔ Operation 1 complete in 0ms
-             [CLI] ✔ Writing output to /tmp/output-1686840746-126941-i2yb2g.json
-             [CLI] ✔ Done in 223ms! ✨
-             """
+      assert Invocation.assemble_logs_for_step(second_step) <> "\n" ==
+               """
+               -- THIS IS ONLY A SAMPLE --
+               [CLI] ℹ Versions:
+                    ▸ node.js                  18.12.0
+                    ▸ cli                      0.0.32
+                    ▸ runtime                  0.0.20
+                    ▸ compiler                 0.0.26
+                    ▸ @openfn/language-http    4.2.6
+               [CLI] ✔ Loaded state from /tmp/state-1686840746-126941-1hou2fm.json
+               [CLI] ℹ Loaded typedefs for @openfn/language-http@latest
+               [CMP] ℹ Added import statement for @openfn/language-http
+               [CMP] ℹ Added export * statement for @openfn/language-http
+               [CLI] ✔ Compiled job from /tmp/expression-1686840746-126941-1wuk06h.js
+               [R/T] ℹ Resolved adaptor @openfn/language-http to version 4.2.6
+               [R/T] ✔ Operation 1 complete in 0ms
+               [CLI] ✔ Writing output to /tmp/output-1686840746-126941-i2yb2g.json
+               [CLI] ✔ Done in 223ms! ✨
+               """
     end
 
     test "create_dhis2_project/1", %{
@@ -759,7 +762,6 @@ defmodule Lightning.SetupUtilsTest do
              get('trackedEntityInstances/PQfMcpmXeFE');
              """
 
-      assert get_dhis2_data.enabled
       assert get_dhis2_data.adaptor == "@openfn/language-dhis2@latest"
 
       assert upload_to_google_sheet.name == "Upload to Google Sheet"
@@ -768,20 +770,19 @@ defmodule Lightning.SetupUtilsTest do
              fn(state => state);
              """
 
-      assert upload_to_google_sheet.enabled
       assert upload_to_google_sheet.adaptor == "@openfn/language-http@latest"
 
-      runs =
-        failure_dhis2_workorder |> get_runs_from_workorder()
+      steps =
+        failure_dhis2_workorder |> get_steps_from_workorder()
 
-      failed_run =
-        runs
+      failed_step =
+        steps
         |> Enum.at(1)
-        |> Repo.preload([:input_dataclip, :output_dataclip, :previous])
+        |> Repo.preload([:input_dataclip, :output_dataclip])
 
-      assert failed_run.exit_reason == "fail"
+      assert failed_step.exit_reason == "fail"
 
-      assert get_dataclip_body(failed_run.input_dataclip.id) |> Jason.decode!() ==
+      assert get_dataclip_body(failed_step.input_dataclip.id) |> Jason.decode!() ==
                %{
                  "data" => %{
                    "spreadsheetId" => "wv5ftwhte",
@@ -791,9 +792,9 @@ defmodule Lightning.SetupUtilsTest do
                  "references" => [%{}]
                }
 
-      assert failed_run.output_dataclip == nil
+      assert failed_step.output_dataclip == nil
 
-      assert Invocation.assemble_logs_for_run(failed_run) ==
+      assert Invocation.assemble_logs_for_step(failed_step) <> "\n" ==
                """
                -- THIS IS ONLY A SAMPLE --
                [CLI] ℹ Versions:
@@ -819,10 +820,14 @@ defmodule Lightning.SetupUtilsTest do
     end
 
     test "all initial data gets wiped out of database" do
-      assert Lightning.Accounts.list_users() |> Enum.count() == 4
+      assert Lightning.Accounts.list_users() |> Enum.count() > 0
       assert Lightning.Projects.list_projects() |> Enum.count() == 2
       assert Lightning.Workflows.list_workflows() |> Enum.count() == 2
       assert Lightning.Jobs.list_jobs() |> Enum.count() == 6
+      assert Repo.all(Lightning.Invocation.Step) |> Enum.count() == 5
+
+      assert Repo.all(Lightning.Invocation.LogLine)
+             |> Enum.count() > 0
 
       Lightning.SetupUtils.tear_down(destroy_super: true)
 
@@ -830,13 +835,21 @@ defmodule Lightning.SetupUtilsTest do
       assert Lightning.Projects.list_projects() |> Enum.count() == 0
       assert Lightning.Workflows.list_workflows() |> Enum.count() == 0
       assert Lightning.Jobs.list_jobs() |> Enum.count() == 0
+      assert Repo.all(Lightning.Invocation.Step) |> Enum.count() == 0
+
+      assert Repo.all(Lightning.Invocation.LogLine)
+             |> Enum.count() == 0
     end
 
     test "all initial data gets wiped out of database except superusers" do
-      assert Lightning.Accounts.list_users() |> Enum.count() == 4
+      assert Lightning.Accounts.list_users() |> Enum.count() > 1
       assert Lightning.Projects.list_projects() |> Enum.count() == 2
       assert Lightning.Workflows.list_workflows() |> Enum.count() == 2
       assert Lightning.Jobs.list_jobs() |> Enum.count() == 6
+      assert Repo.all(Lightning.Invocation.Step) |> Enum.count() == 5
+
+      assert Repo.all(Lightning.Invocation.LogLine)
+             |> Enum.count() > 0
 
       Lightning.SetupUtils.tear_down(destroy_super: false)
 
@@ -844,6 +857,10 @@ defmodule Lightning.SetupUtilsTest do
       assert Lightning.Projects.list_projects() |> Enum.count() == 0
       assert Lightning.Workflows.list_workflows() |> Enum.count() == 0
       assert Lightning.Jobs.list_jobs() |> Enum.count() == 0
+      assert Repo.all(Lightning.Invocation.Step) |> Enum.count() == 0
+
+      assert Repo.all(Lightning.Invocation.LogLine)
+             |> Enum.count() == 0
     end
   end
 
@@ -855,11 +872,14 @@ defmodule Lightning.SetupUtilsTest do
     |> Repo.one()
   end
 
-  defp get_runs_from_workorder(workorder, attempt_idx \\ 0) do
-    workorder
-    |> Repo.preload(attempts: [:runs])
-    |> Map.get(:attempts)
-    |> Enum.at(attempt_idx)
-    |> Map.get(:runs)
+  defp get_steps_from_workorder(workorder, run_idx \\ 0) do
+    run_query =
+      Ecto.assoc(workorder, :runs)
+      |> offset(^run_idx)
+      |> limit(1)
+
+    from(a in run_query, preload: [:steps])
+    |> Repo.one()
+    |> Map.get(:steps)
   end
 end

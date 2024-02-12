@@ -11,14 +11,13 @@ defmodule Lightning.Workflows.Scheduler do
     # This unique period ensures that cron jobs are only enqueued once across a cluster
     unique: [period: 59]
 
-  require Logger
-
   alias Lightning.Invocation
-  alias Lightning.Invocation.Dataclip
   alias Lightning.Repo
-  alias Lightning.WorkOrders
   alias Lightning.Workflows
   alias Lightning.Workflows.Edge
+  alias Lightning.WorkOrders
+
+  require Logger
 
   @impl Oban.Worker
   def perform(%Oban.Job{}), do: enqueue_cronjobs()
@@ -28,7 +27,7 @@ defmodule Lightning.Workflows.Scheduler do
   (defaults to the current time).
   """
   @spec enqueue_cronjobs(DateTime.t()) :: :ok
-  def enqueue_cronjobs(), do: enqueue_cronjobs(DateTime.utc_now())
+  def enqueue_cronjobs, do: enqueue_cronjobs(DateTime.utc_now())
 
   def enqueue_cronjobs(date_time) do
     date_time
@@ -52,24 +51,19 @@ defmodule Lightning.Workflows.Scheduler do
         # default_state_for_job(id)
         # %{id: uuid, type: :global, body: %{arbitrary: true}}
 
-        dataclip =
-          %{
+        WorkOrders.create_for(trigger,
+          dataclip: %{
             type: :global,
             body: %{},
             project_id: job.workflow.project_id
-          }
-          |> Dataclip.new()
-          |> Repo.insert!()
-
-        WorkOrders.create_for(trigger,
-          dataclip: dataclip,
+          },
           workflow: job.workflow
         )
 
       dataclip ->
         Logger.debug(fn ->
           # coveralls-ignore-start
-          "Starting cronjob #{job.id} using the final state of its last successful run."
+          "Starting cronjob #{job.id} using the final state of its last successful execution."
           # coveralls-ignore-stop
         end)
 
@@ -81,14 +75,14 @@ defmodule Lightning.Workflows.Scheduler do
   end
 
   defp last_state_for_job(id) do
-    run =
+    step =
       %Workflows.Job{id: id}
-      |> Invocation.Query.last_successful_run_for_job()
+      |> Invocation.Query.last_successful_step_for_job()
       |> Repo.one()
 
-    case run do
+    case step do
       nil -> nil
-      run -> Invocation.get_output_dataclip_query(run) |> Repo.one()
+      step -> Invocation.get_output_dataclip_query(step) |> Repo.one()
     end
   end
 end

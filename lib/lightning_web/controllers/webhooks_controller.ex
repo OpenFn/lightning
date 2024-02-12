@@ -1,46 +1,41 @@
 defmodule LightningWeb.WebhooksController do
   use LightningWeb, :controller
 
-  require OpenTelemetry.Tracer
-
+  alias Lightning.Extensions.RateLimiter
+  alias Lightning.Extensions.RateLimiting.Context
   alias Lightning.Workflows
   alias Lightning.WorkOrders
 
+  require OpenTelemetry.Tracer
+
   @spec create(Plug.Conn.t(), %{path: binary()}) :: Plug.Conn.t()
-  def create(conn, %{"path" => path}) do
-    path = Enum.join(path, "/")
-    start_opts = %{path: path}
+  def create(conn, _params) do
+    with %Workflows.Trigger{enabled: true, workflow: %{project_id: project_id}} =
+           trigger <- conn.assigns.trigger,
+         :ok <-
+           RateLimiter.limit_request(conn, %Context{project_id: project_id}, []) do
+      {:ok, work_order} =
+        WorkOrders.create_for(trigger,
+          workflow: trigger.workflow,
+          dataclip: %{
+            body: conn.body_params,
+            request: build_request(conn),
+            type: :http_request,
+            project_id: project_id
+          }
+        )
 
-    :telemetry.span([:lightning, :workorder, :webhook], start_opts, fn ->
-      {conn, metadata} =
-        OpenTelemetry.Tracer.with_span "lightning.api.webhook", %{
-          attributes: start_opts
-        } do
-          conn = handle_create(conn)
-          {conn, %{status: Plug.Conn.Status.reason_atom(conn.status)}}
-        end
+      conn |> json(%{work_order_id: work_order.id})
+    else
+      {:error, _reason, message} ->
+        conn
+        |> put_status(:too_many_requests)
+        |> json(%{"error" => message})
 
-      {conn, start_opts |> Map.merge(metadata)}
-    end)
-  end
-
-  defp handle_create(conn) do
-    case conn.assigns.trigger do
       nil ->
-        conn |> put_status(:not_found) |> json(%{"error" => "Webhook not found"})
-
-      %Workflows.Trigger{enabled: true} = trigger ->
-        {:ok, work_order} =
-          WorkOrders.create_for(trigger,
-            workflow: trigger.workflow,
-            dataclip: %{
-              body: conn.body_params,
-              type: :http_request,
-              project_id: trigger.workflow.project_id
-            }
-          )
-
-        conn |> json(%{work_order_id: work_order.id})
+        conn
+        |> put_status(:not_found)
+        |> json(%{"error" => "Webhook not found"})
 
       _disabled ->
         put_status(conn, :forbidden)
@@ -49,5 +44,9 @@ defmodule LightningWeb.WebhooksController do
             "Unable to process request, trigger is disabled. Enable it on OpenFn to allow requests to this endpoint."
         })
     end
+  end
+
+  defp build_request(%Plug.Conn{} = conn) do
+    %{headers: conn.req_headers |> Enum.into(%{})}
   end
 end

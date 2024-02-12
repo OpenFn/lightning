@@ -1,15 +1,15 @@
 defmodule Lightning.FailureAlerter do
   @moduledoc false
 
-  alias Lightning.Attempt
+  alias Lightning.Run
 
   def alert_on_failure(nil), do: nil
 
-  def alert_on_failure(%Attempt{state: state}) when state == :success,
+  def alert_on_failure(%Run{state: state}) when state == :success,
     do: nil
 
-  def alert_on_failure(%Attempt{} = attempt) do
-    workflow = attempt.work_order.workflow
+  def alert_on_failure(%Run{} = run) do
+    workflow = run.work_order.workflow
 
     Lightning.Accounts.get_users_to_alert_for_project(%{
       id: workflow.project_id
@@ -18,9 +18,10 @@ defmodule Lightning.FailureAlerter do
       %{
         "workflow_id" => workflow.id,
         "workflow_name" => workflow.name,
-        "work_order_id" => attempt.work_order_id,
-        "attempt_id" => attempt.id,
-        "attempt_logs" => attempt.log_lines,
+        "work_order_id" => run.work_order_id,
+        "run_id" => run.id,
+        "project_id" => workflow.project_id,
+        "run_logs" => run.log_lines,
         "recipient" => user
       }
       |> Lightning.FailureAlerter.alert()
@@ -31,15 +32,16 @@ defmodule Lightning.FailureAlerter do
         "workflow_id" => workflow_id,
         "workflow_name" => workflow_name,
         "work_order_id" => work_order_id,
-        "attempt_id" => attempt_id,
-        "attempt_logs" => attempt_logs,
+        "run_id" => run_id,
+        "project_id" => project_id,
+        "run_logs" => run_logs,
         "recipient" => recipient
       }) do
     [time_scale: time_scale, rate_limit: rate_limit] =
       Application.fetch_env!(:lightning, __MODULE__)
 
-    # TODO: add this when https://github.com/OpenFn/Lightning/pull/1304 is merged.
-    # attempt_url = LightningWeb.RouteHelpers.show_attempt_url(project_id, run_id)
+    run_url =
+      LightningWeb.RouteHelpers.show_run_url(project_id, run_id)
 
     # rate limiting per workflow AND user
     bucket_key = "#{workflow_id}::#{recipient.id}"
@@ -56,10 +58,9 @@ defmodule Lightning.FailureAlerter do
           count: count,
           time_scale: time_scale,
           rate_limit: rate_limit,
-          attempt_id: attempt_id,
-          # TODO: add this when https://github.com/OpenFn/Lightning/pull/1304 is merged.
-          # attempt_url: attempt_url,
-          attempt_logs: attempt_logs,
+          run_id: run_id,
+          run_url: run_url,
+          run_logs: run_logs,
           workflow_name: workflow_name,
           workflow_id: workflow_id,
           recipient: recipient

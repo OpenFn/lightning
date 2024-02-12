@@ -1,0 +1,19 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$comment": "OAuth2",
+  "properties": {
+    "access_token": {
+      "title": "Access Token",
+      "type": "string",
+      "description": "Your Google Sheets access token",
+      "writeOnly": true,
+      "minLength": 1,
+      "examples": [
+        "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiIsIng1dCI6IjlGWERwYmZNRlQyU3ZRdVhoODQ2WVR3RUlCdyIsI"
+      ]
+    }
+  },
+  "type": "object",
+  "additionalProperties": true,
+  "required": ["access_token"]
+}

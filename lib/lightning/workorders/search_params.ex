@@ -1,6 +1,6 @@
 defmodule Lightning.WorkOrders.SearchParams do
   @moduledoc """
-  This module is used to parse search parameters for workorders and provide
+  This module is used to parse search parameters for work orders and provide
   a query to the database.
   """
 
@@ -9,8 +9,15 @@ defmodule Lightning.WorkOrders.SearchParams do
   use Ecto.Schema
   import Ecto.Changeset
 
-  @statuses ~w(success failed pending killed crashed running)
-  @search_fields ~w(body log)
+  @statuses ~w(pending running success failed crashed killed cancelled lost exception)
+  @statuses_set MapSet.new(@statuses, fn x -> String.to_existing_atom(x) end)
+  @search_fields ~w(id body log)
+
+  defmacro status_list do
+    quote do
+      unquote(@statuses)
+    end
+  end
 
   @type t :: %__MODULE__{
           status: [String.t()],
@@ -25,7 +32,7 @@ defmodule Lightning.WorkOrders.SearchParams do
 
   @primary_key false
   embedded_schema do
-    field(:status, {:array, :string}, default: @statuses)
+    field(:status, {:array, :string})
     field(:search_fields, {:array, :string}, default: @search_fields)
     field(:search_term, :string)
     field(:workflow_id, :binary_id)
@@ -64,6 +71,10 @@ defmodule Lightning.WorkOrders.SearchParams do
     end)
   end
 
+  def all_statuses_set?(%{status: status_list}) do
+    MapSet.equal?(@statuses_set, MapSet.new(status_list))
+  end
+
   defp from_uri(params) do
     statuses =
       Enum.map(params, fn {key, value} ->
@@ -71,7 +82,7 @@ defmodule Lightning.WorkOrders.SearchParams do
           key
         end
       end)
-      |> Enum.filter(fn v -> v end)
+      |> Enum.reject(&is_nil/1)
 
     search_fields =
       Enum.map(params, fn {key, value} ->
@@ -79,7 +90,7 @@ defmodule Lightning.WorkOrders.SearchParams do
           key
         end
       end)
-      |> Enum.filter(fn v -> v end)
+      |> Enum.reject(&is_nil/1)
 
     params
     |> Map.put_new("status", statuses)
@@ -88,7 +99,6 @@ defmodule Lightning.WorkOrders.SearchParams do
 
   def to_uri_params(search_params) do
     search_params
-    |> merge_fields(@statuses)
     |> merge_fields(@search_fields)
     |> dates_to_string()
   end

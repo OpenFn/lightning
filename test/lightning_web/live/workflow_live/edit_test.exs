@@ -1,12 +1,15 @@
 defmodule LightningWeb.WorkflowLive.EditTest do
+  alias Lightning.Repo
   use LightningWeb.ConnCase, async: true
   import Phoenix.LiveViewTest
   import Lightning.WorkflowLive.Helpers
   import Lightning.WorkflowsFixtures
   import Lightning.JobsFixtures
   import Lightning.Factories
+  import Ecto.Query
 
   alias LightningWeb.CredentialLiveHelpers
+  alias Lightning.Workflows.Workflow
 
   setup :register_and_log_in_user
   setup :create_project_for_current_user
@@ -17,7 +20,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       %{job: job}
     end
 
-    test "open credential modal from the job inspector (edit_job)", %{
+    test "open credential modal from the job inspector (edit_workflow)", %{
       conn: conn,
       project: project,
       job: job
@@ -26,10 +29,6 @@ defmodule LightningWeb.WorkflowLive.EditTest do
         live(conn, ~p"/projects/#{project.id}/w/#{job.workflow_id}?s=#{job.id}")
 
       assert has_element?(view, "#job-pane-#{job.id}")
-
-      assert view
-             |> element("#new-credential-launcher", "New credential")
-             |> render_click()
 
       assert has_element?(view, "#credential-type-picker")
       view |> CredentialLiveHelpers.select_credential_type("http")
@@ -46,15 +45,11 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       {:ok, view, _html} =
         live(conn, ~p"/projects/#{project.id}/w/#{job.workflow_id}?s=#{job.id}")
 
-      assert view
-             |> element("#new-credential-launcher", "New credential")
-             |> render_click()
-
       view |> CredentialLiveHelpers.select_credential_type("raw")
       view |> CredentialLiveHelpers.click_continue()
 
       view
-      |> form("#credential-form",
+      |> form("#credential-form-new",
         credential: %{
           name: "newly created credential",
           body: Jason.encode!(%{"a" => 1})
@@ -91,16 +86,25 @@ defmodule LightningWeb.WorkflowLive.EditTest do
               op: "add",
               path: "/jobs/0/errors",
               value: %{
-                "body" => ["can't be blank"],
-                "name" => ["can't be blank"]
+                "body" => ["This field can't be blank."],
+                "name" => ["This field can't be blank."]
               }
             },
-            %{op: "add", path: "/jobs/0/enabled", value: true},
             %{op: "add", path: "/jobs/0/body", value: ""},
             %{
               op: "add",
               path: "/jobs/0/adaptor",
               value: "@openfn/language-common@latest"
+            },
+            %{
+              op: "add",
+              path: "/errors/jobs",
+              value: [
+                %{
+                  "body" => ["This field can't be blank."],
+                  "name" => ["This field can't be blank."]
+                }
+              ]
             }
           ]
         }
@@ -115,12 +119,14 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       workflow_name = view |> get_workflow_params() |> Map.get("name")
 
-      refute workflow_name == "", "the workflow should have a pre-filled name"
+      assert workflow_name == ""
 
       assert view |> element("#workflow_name_form") |> render() =~ workflow_name
+
       assert view |> save_is_disabled?()
 
-      view |> fill_workflow_name("My Workflow")
+      workflow_name = "My Workflow"
+      view |> fill_workflow_name(workflow_name)
 
       assert view |> save_is_disabled?()
 
@@ -132,8 +138,6 @@ defmodule LightningWeb.WorkflowLive.EditTest do
                ~r(value="@openfn/[a-z-]+@latest"),
              "should not have @latest selected by default"
 
-      view |> element("#new-credential-launcher") |> render_click()
-
       view |> CredentialLiveHelpers.select_credential_type("dhis2")
 
       view |> CredentialLiveHelpers.click_continue()
@@ -142,7 +146,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       view
       |> CredentialLiveHelpers.fill_credential(%{
         name: "My Credential",
-        body: %{username: "foo", password: "bar", hostUrl: "baz"}
+        body: %{username: "foo", password: "bar", hostUrl: "http://someurl"}
       })
 
       view |> CredentialLiveHelpers.click_save()
@@ -160,7 +164,18 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       view |> click_save()
 
-      refute view |> has_pending_changes()
+      assert %{id: workflow_id} =
+               Lightning.Repo.one(
+                 from w in Workflow,
+                   where:
+                     w.project_id == ^project.id and
+                       w.name ==
+                         ^workflow_name
+               )
+
+      #
+      %{"info" => "Workflow saved"} =
+        assert_redirected(view, ~p"/projects/#{project.id}/w/#{workflow_id}")
     end
 
     @tag role: :viewer
@@ -210,7 +225,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
              |> render_submit() =~ "Workflow saved"
     end
 
-    test "when a job has an empty body an error message is rendered", %{
+    test "renders error message when a job has an empty body", %{
       conn: conn,
       project: project,
       workflow: workflow
@@ -227,15 +242,15 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       view |> change_editor_text("some body")
 
       refute view |> render() =~
-               "The job can&#39;t be blank"
+               "The step can&#39;t be blank"
 
       view |> change_editor_text("")
 
       assert view |> render() =~
-               "The job can&#39;t be blank"
+               "The step can&#39;t be blank"
     end
 
-    test "users can edit an existing workflow", %{
+    test "allows editing job name", %{
       conn: conn,
       project: project,
       workflow: workflow
@@ -255,9 +270,82 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       assert view |> job_form_has_error(job_2, "name", "can't be blank")
       assert view |> save_is_disabled?()
 
-      assert view |> fill_job_fields(job_2, %{name: "My Other Job"})
+      new_job_name = "My Other Job"
+
+      assert view |> fill_job_fields(job_2, %{name: new_job_name}) =~
+               new_job_name
 
       assert view |> save_is_disabled?()
+    end
+
+    test "opens edge Path form and saves the JS expression", %{
+      conn: conn,
+      project: project,
+      workflow: workflow
+    } do
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project.id}/w/#{workflow.id}")
+
+      form_html = view |> select_node(Enum.at(workflow.jobs, 0))
+
+      assert form_html =~ "Job Name"
+      refute form_html =~ "Path"
+
+      form_html = view |> select_node(Enum.at(workflow.edges, 0))
+
+      assert form_html =~ "Path"
+
+      assert form_html =~
+               ~S[<option selected="selected" value="always">Always</option><option value="js_expression">Matches a Javascript Expression</option></select>]
+
+      edge_on_edit = Enum.at(workflow.edges, 1)
+      form_html = view |> select_node(edge_on_edit)
+
+      assert form_html =~
+               ~S[<option selected="selected" value="on_job_success">On Success</option>]
+
+      refute form_html =~ "Condition Label"
+
+      form_html =
+        view
+        |> form("#workflow-form", %{
+          "workflow" => %{
+            "edges" => %{"1" => %{"condition_type" => "js_expression"}}
+          }
+        })
+        |> render_change()
+
+      assert form_html =~ "Condition Label"
+
+      assert form_html =~
+               ~S[<option selected="selected" value="js_expression">Matches a Javascript Expression</option>]
+
+      view
+      |> form("#workflow-form", %{
+        "workflow" => %{
+          "edges" => %{
+            "1" => %{
+              "condition_label" => "My JS Expression",
+              "condition_expression" => "state.data.field === 33"
+            }
+          }
+        }
+      })
+      |> render_change()
+
+      view
+      |> form("#workflow-form")
+      |> render_submit()
+
+      assert Map.delete(Repo.reload!(edge_on_edit), :updated_at) ==
+               Map.delete(
+                 Map.merge(edge_on_edit, %{
+                   condition_type: :js_expression,
+                   condition_label: "My JS Expression",
+                   condition_expression: "state.data.field === 33"
+                 }),
+                 :updated_at
+               )
     end
 
     @tag role: :editor
@@ -271,7 +359,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       # Test that the delete event doesn't work even if the button is disabled.
       assert view |> force_event(:delete_node, job_1) =~
-               "Delete all descendant jobs first."
+               "Delete all descendant steps first."
 
       view |> select_node(job_2)
       assert_patched(view, ~p"/projects/#{project}/w/#{workflow}?s=#{job_2}")
@@ -289,7 +377,10 @@ defmodule LightningWeb.WorkflowLive.EditTest do
     end
 
     @tag role: :editor
-    test "can't the first job of a workflow", %{conn: conn, project: project} do
+    test "can't delete the only step in a workflow", %{
+      conn: conn,
+      project: project
+    } do
       trigger = build(:trigger, type: :webhook)
 
       job =
@@ -312,7 +403,87 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       assert view |> delete_job_button_is_disabled?(job)
 
       assert view |> force_event(:delete_node, job) =~
-               "You can&#39;t delete the first job of a workflow."
+               "You can&#39;t delete the first step of a workflow."
+    end
+
+    @tag role: :editor
+    test "can't delete a step that has already been ran", %{
+      conn: conn,
+      project: project
+    } do
+      trigger = build(:trigger, type: :webhook)
+
+      [job_a, job_b, job_c] = insert_list(3, :job)
+
+      workflow =
+        build(:workflow)
+        |> with_job(job_a)
+        |> with_job(job_b)
+        |> with_job(job_c)
+        |> with_trigger(trigger)
+        |> with_edge({trigger, job_a})
+        |> with_edge({job_a, job_b})
+        |> with_edge({job_a, job_c})
+        |> insert()
+
+      insert(:step, job: job_b)
+
+      {:ok, view, _html} = live(conn, ~p"/projects/#{project}/w/#{workflow}")
+
+      view |> select_node(job_b)
+
+      assert view |> delete_job_button_is_disabled?(job_b)
+
+      assert view |> force_event(:delete_node, job_b) =~
+               "You can&#39;t delete a step with associated history"
+
+      view |> select_node(job_c)
+
+      refute view |> delete_job_button_is_disabled?(job_b)
+    end
+
+    @tag role: :editor
+    test "can't delete any job that has downstream jobs",
+         %{
+           conn: conn,
+           project: project
+         } do
+      trigger = build(:trigger, type: :webhook)
+
+      [job_a, job_b, job_c] = build_list(3, :job)
+
+      workflow =
+        build(:workflow)
+        |> with_job(job_a)
+        |> with_job(job_b)
+        |> with_job(job_c)
+        |> with_trigger(trigger)
+        |> with_edge({trigger, job_a})
+        |> with_edge({job_a, job_b})
+        |> with_edge({job_b, job_c})
+        |> insert()
+
+      {:ok, view, html} =
+        live(conn, ~p"/projects/#{project}/w/#{workflow}?s=#{job_a}")
+
+      assert view |> delete_job_button_is_disabled?(job_a)
+
+      assert html =~
+               "You can&#39;t delete a step that other downstream steps depend on"
+
+      assert view |> force_event(:delete_node, job_a) =~
+               "Delete all descendant steps first"
+
+      {:ok, view, html} =
+        live(conn, ~p"/projects/#{project}/w/#{workflow}?s=#{job_b}")
+
+      assert view |> delete_job_button_is_disabled?(job_b)
+
+      assert html =~
+               "You can&#39;t delete a step that other downstream steps depend on"
+
+      assert view |> force_event(:delete_node, job_a) =~
+               "Delete all descendant steps first"
     end
 
     @tag role: :viewer
@@ -330,7 +501,8 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       view |> select_node(workflow.edges |> Enum.at(0))
 
-      assert view |> input_is_disabled?("[name='workflow[edges][0][condition]']")
+      assert view
+             |> input_is_disabled?("[name='workflow[edges][0][condition_type]']")
 
       assert view |> save_is_disabled?()
       job_1 = workflow.jobs |> Enum.at(0)
@@ -365,6 +537,46 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       assert view |> force_event(:validate) =~
                "You are not authorized to perform this action."
+    end
+
+    test "can enable/disable any edge between two jobs", %{
+      conn: conn,
+      project: project,
+      workflow: workflow
+    } do
+      edge =
+        Enum.find(workflow.edges, fn edge -> edge.source_job_id != nil end)
+
+      assert edge.enabled
+
+      {:ok, view, html} =
+        live(conn, ~p"/projects/#{project.id}/w/#{workflow.id}?s=#{edge.id}")
+
+      idx = get_index_of_edge(view, edge)
+
+      assert html =~ "Disable this path"
+
+      assert view
+             |> element("#workflow_edges_#{idx}_enabled")
+             |> has_element?()
+
+      view
+      |> form("#workflow-form", %{
+        "workflow" => %{"edges" => %{to_string(idx) => %{"enabled" => false}}}
+      })
+      |> render_change()
+
+      view
+      |> form("#workflow-form")
+      |> render_submit()
+
+      edge = Repo.reload!(edge)
+
+      refute edge.enabled
+
+      assert view
+             |> element("#workflow_edges_#{idx}_enabled[checked]")
+             |> has_element?()
     end
   end
 end

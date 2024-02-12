@@ -3,10 +3,8 @@ defmodule Lightning.WorkflowsTest do
 
   import Lightning.Factories
 
-  alias Lightning.{
-    Workflows,
-    Jobs
-  }
+  alias Lightning.Workflows
+  alias Lightning.Workflows.Trigger
 
   describe "workflows" do
     test "list_workflows/0 returns all workflows" do
@@ -64,27 +62,6 @@ defmodule Lightning.WorkflowsTest do
       assert workflow.name == "some-updated-name"
     end
 
-    test "delete_workflow/1 deletes the workflow" do
-      workflow = insert(:workflow)
-
-      job_1 = insert(:job, name: "job 1", workflow: workflow)
-      job_2 = insert(:job, name: "job 2", workflow: workflow)
-
-      assert {:ok, %Workflows.Workflow{}} = Workflows.delete_workflow(workflow)
-
-      assert_raise Ecto.NoResultsError, fn ->
-        Workflows.get_workflow!(workflow.id)
-      end
-
-      assert_raise Ecto.NoResultsError, fn ->
-        Jobs.get_job!(job_1.id)
-      end
-
-      assert_raise Ecto.NoResultsError, fn ->
-        Jobs.get_job!(job_2.id)
-      end
-    end
-
     test "change_workflow/1 returns a workflow changeset" do
       workflow = insert(:workflow)
       assert %Ecto.Changeset{} = Workflows.change_workflow(workflow)
@@ -126,9 +103,7 @@ defmodule Lightning.WorkflowsTest do
           target_job: job_1
         })
 
-      # Disabled Job
       insert(:job, %{
-        enabled: false,
         workflow: t2.workflow
       })
 
@@ -156,7 +131,7 @@ defmodule Lightning.WorkflowsTest do
         edges: [
           %{
             source_trigger_id: trigger_id,
-            condition: :always,
+            condition_type: :always,
             target_job_id: job_id
           }
         ]
@@ -186,7 +161,7 @@ defmodule Lightning.WorkflowsTest do
           %{
             source_trigger_id: trigger_id,
             target_job_id: job_id,
-            condition: :always
+            condition_type: :always
           }
         ]
       }
@@ -203,7 +178,7 @@ defmodule Lightning.WorkflowsTest do
             id: edge.id,
             source_trigger_id: trigger_id,
             target_job_id: job_id,
-            condition: :always
+            condition_type: :always
           }
         ]
       }
@@ -297,7 +272,7 @@ defmodule Lightning.WorkflowsTest do
       insert(:edge,
         workflow: w1,
         source_job: w1_job,
-        condition: :on_job_failure,
+        condition_type: :on_job_failure,
         target_job:
           insert(:job,
             name: "on fail",
@@ -309,7 +284,7 @@ defmodule Lightning.WorkflowsTest do
       insert(:edge,
         workflow: w1,
         source_job: w1_job,
-        condition: :on_job_success,
+        condition_type: :on_job_success,
         target_job:
           insert(:job,
             name: "on success",
@@ -329,7 +304,7 @@ defmodule Lightning.WorkflowsTest do
       insert(:edge,
         workflow: w2,
         source_job: w2_job,
-        condition: :on_job_failure,
+        condition_type: :on_job_failure,
         target_job:
           insert(:job,
             name: "on fail",
@@ -389,29 +364,27 @@ defmodule Lightning.WorkflowsTest do
     end
 
     test "mark_for_deletion/2", %{project: project, w1: w1, w2: w2} do
-      results = Workflows.get_workflows_for(project)
+      workflows = Workflows.get_workflows_for(project)
 
-      assert length(results) == 2
+      assert length(workflows) == 2
 
       assert w1.deleted_at == nil
-
       assert w2.deleted_at == nil
 
-      job_1 = insert(:job, name: "job 1", workflow: w1)
-      job_2 = insert(:job, name: "job 2", workflow: w1)
+      %{id: trigger_1_id} = insert(:trigger, workflow: w1, enabled: true)
+      %{id: trigger_2_id} = insert(:trigger, workflow: w1, enabled: true)
 
-      # mark delete at request of a workflows and disable all associated jobs
+      # request workflow deletion (and disable all associated triggers)
       assert {:ok, _workflow} = Workflows.mark_for_deletion(w1)
 
       assert Workflows.get_workflow!(w1.id).deleted_at != nil
-
       assert Workflows.get_workflow!(w2.id).deleted_at == nil
 
+      # check that get_workflows_for/1 doesn't return those marked for deletion
       assert length(Workflows.get_workflows_for(project)) == 1
 
-      assert Jobs.get_job!(job_1.id).enabled == false
-
-      assert Jobs.get_job!(job_2.id).enabled == false
+      assert Repo.get(Trigger, trigger_1_id) |> Map.get(:enabled) == false
+      assert Repo.get(Trigger, trigger_2_id) |> Map.get(:enabled) == false
     end
   end
 end

@@ -23,6 +23,16 @@ defmodule Lightning.PromExTest do
   end
 
   test "returns enabled plugins" do
+    stalled_run_threshold_seconds =
+      Application.get_env(:lightning, :metrics)[
+        :stalled_run_threshold_seconds
+      ]
+
+    performance_age_seconds =
+      Application.get_env(:lightning, :metrics)[
+        :run_performance_age_seconds
+      ]
+
     expected = [
       PromEx.Plugins.Application,
       PromEx.Plugins.Beam,
@@ -30,7 +40,12 @@ defmodule Lightning.PromExTest do
        router: LightningWeb.Router, endpoint: LightningWeb.Endpoint},
       PromEx.Plugins.Ecto,
       PromEx.Plugins.Oban,
-      PromEx.Plugins.PhoenixLiveView
+      PromEx.Plugins.PhoenixLiveView,
+      {
+        Lightning.Runs.PromExPlugin,
+        stalled_run_threshold_seconds: stalled_run_threshold_seconds,
+        run_performance_age_seconds: performance_age_seconds
+      }
     ]
 
     assert Lightning.PromEx.plugins() == expected

@@ -8,6 +8,19 @@ defmodule Lightning.Application do
 
   @impl true
   def start(_type, _args) do
+    # Initialize ETS table for adapter lookup
+    :ets.new(:adapter_lookup, [:named_table, :public, read_concurrency: true])
+
+    :ets.insert(
+      :adapter_lookup,
+      {"googlesheets", Lightning.AuthProviders.Google}
+    )
+
+    :ets.insert(
+      :adapter_lookup,
+      {"salesforce_oauth", Lightning.AuthProviders.Salesforce}
+    )
+
     :opentelemetry_cowboy.setup()
     OpentelemetryPhoenix.setup(adapter: :cowboy2)
     OpentelemetryEcto.setup([:lightning, :repo])
@@ -89,12 +102,11 @@ defmodule Lightning.Application do
       adaptor_registry_childspec,
       adaptor_service_childspec,
       {Lightning.TaskWorker, name: :cli_task_worker},
-      Lightning.Runtime.RuntimeManager
+      {Lightning.Runtime.RuntimeManager,
+       worker_secret: Lightning.Config.worker_secret()}
       # Start a worker by calling: Lightning.Worker.start_link(arg)
       # {Lightning.Worker, arg}
     ]
-
-    System.shell("kill $(lsof -n -i :2222 | grep LISTEN | awk '{print $2}')")
 
     # See https://hexdocs.pm/elixir/Supervisor.html
     # for other strategies and supported options
@@ -130,7 +142,7 @@ defmodule Lightning.Application do
     state
   end
 
-  def oban_opts() do
+  def oban_opts do
     Application.get_env(:lightning, Oban)
   end
 end

@@ -12,9 +12,6 @@ defmodule Lightning.TelemetryTest do
     assert metrics |> summary?([:lightning, :workorder, :webhook, :stop])
     assert metrics |> distribution?([:lightning, :workorder, :webhook, :stop])
 
-    assert metrics |> summary?([:oban, :job, :stop])
-    assert metrics |> distribution?([:oban, :job, :stop])
-
     assert metrics |> summary?([:lightning, :ui, :projects, :history, :stop])
 
     assert metrics

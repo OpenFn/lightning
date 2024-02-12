@@ -83,7 +83,7 @@ defmodule Lightning.Accounts.UserNotifier do
     """)
   end
 
-  defp permanent_deletion_grace() do
+  defp permanent_deletion_grace do
     grace_period = Application.get_env(:lightning, :purge_deleted_after_days)
 
     if grace_period <= 0 do
@@ -187,7 +187,9 @@ defmodule Lightning.Accounts.UserNotifier do
         "workflow_id" => workflow.id
       })
 
-    url(~p"/projects/#{workflow.project_id}/runs?#{%{"filters" => uri_params}}")
+    url(
+      ~p"/projects/#{workflow.project_id}/history?#{%{"filters" => uri_params}}"
+    )
   end
 
   defp build_email(%{
@@ -248,12 +250,12 @@ defmodule Lightning.Accounts.UserNotifier do
     deliver(user.email, title, body)
   end
 
-  defp human_readable_grace_period() do
+  defp human_readable_grace_period do
     grace_period = Application.get_env(:lightning, :purge_deleted_after_days)
     if grace_period > 0, do: "#{grace_period} day(s) from today", else: "today"
   end
 
-  defp instance_admin_email() do
+  defp instance_admin_email do
     Application.get_env(:lightning, :email_addresses) |> Keyword.get(:admin)
   end
 

@@ -16,11 +16,13 @@ defmodule Lightning.Workflows.Edge do
   alias Lightning.Workflows.Trigger
   alias Lightning.Workflows.Workflow
 
-  @type edge_condition() :: :always | :on_job_success | :on_job_failure
+  @type edge_condition() ::
+          :always | :on_job_success | :on_job_failure | :js_expression
   @type t() :: %__MODULE__{
           __meta__: Ecto.Schema.Metadata.t(),
           id: Ecto.UUID.t() | nil,
-          condition: edge_condition(),
+          condition_type: edge_condition(),
+          enabled: boolean(),
           workflow: nil | Workflow.t() | Ecto.Association.NotLoaded.t(),
           source_job: nil | Job.t() | Ecto.Association.NotLoaded.t(),
           source_trigger: nil | Trigger.t() | Ecto.Association.NotLoaded.t(),
@@ -28,7 +30,7 @@ defmodule Lightning.Workflows.Edge do
           delete: boolean()
         }
 
-  @conditions [:on_job_success, :on_job_failure, :always]
+  @conditions [:on_job_success, :on_job_failure, :always, :js_expression]
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id
   schema "workflow_edges" do
@@ -37,7 +39,11 @@ defmodule Lightning.Workflows.Edge do
     belongs_to :source_trigger, Trigger
     belongs_to :target_job, Job
 
-    field :condition, Ecto.Enum, values: @conditions
+    field :condition_type, Ecto.Enum, values: @conditions
+    field :condition_expression, :string
+    field :condition_label, :string
+
+    field :enabled, :boolean, default: true
 
     field :delete, :boolean, virtual: true
 
@@ -56,8 +62,11 @@ defmodule Lightning.Workflows.Edge do
       :workflow_id,
       :source_job_id,
       :source_trigger_id,
-      :condition,
-      :target_job_id
+      :condition_type,
+      :enabled,
+      :target_job_id,
+      :condition_label,
+      :condition_expression
     ])
     |> validate()
   end
@@ -68,7 +77,7 @@ defmodule Lightning.Workflows.Edge do
     |> assoc_constraint(:source_trigger)
     |> assoc_constraint(:source_job)
     |> assoc_constraint(:target_job)
-    |> validate_required([:condition])
+    |> validate_required([:condition_type])
     |> validate_node_in_same_workflow()
     |> foreign_key_constraint(:workflow_id)
     |> validate_exclusive(
@@ -76,21 +85,46 @@ defmodule Lightning.Workflows.Edge do
       "source_job_id and source_trigger_id are mutually exclusive"
     )
     |> validate_source_condition()
+    |> validate_js_condition()
     |> validate_different_nodes()
   end
 
   defp validate_source_condition(changeset) do
-    [:source_trigger_id, :condition]
-    |> Enum.map(&get_field(changeset, &1))
-    |> case do
-      [trigger, _condition] when not is_nil(trigger) ->
-        changeset
-        |> validate_inclusion(:condition, [:always],
-          message: "must be :always when source is a trigger"
-        )
+    if nil != get_field(changeset, :source_trigger_id) do
+      changeset
+      |> validate_inclusion(:condition_type, [:always, :js_expression],
+        message: "must be :always or :js_expression when source is a trigger"
+      )
+    else
+      changeset
+    end
+  end
 
-      _ ->
-        changeset
+  defp validate_js_condition(changeset) do
+    if :js_expression == get_field(changeset, :condition_type) do
+      changeset
+      |> validate_required([:condition_expression])
+      |> validate_condition_expression()
+    else
+      changeset
+    end
+  end
+
+  defp validate_condition_expression(%{valid?: false} = changeset), do: changeset
+
+  defp validate_condition_expression(changeset) do
+    js_expr = get_field(changeset, :condition_expression)
+
+    if String.match?(js_expr, ~r/(import\b|require\b|process\b|await\b|eval\b)/) do
+      add_error(
+        changeset,
+        :condition_expression,
+        "contains unacceptable words"
+      )
+    else
+      changeset
+      |> validate_length(:condition_label, max: 255)
+      |> validate_length(:condition_expression, max: 255)
     end
   end
 
@@ -108,7 +142,7 @@ defmodule Lightning.Workflows.Edge do
           "target_job_id must be different from source_job_id"
         )
 
-      _ ->
+      _else ->
         changeset
     end
   end

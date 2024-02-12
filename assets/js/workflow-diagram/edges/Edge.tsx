@@ -1,5 +1,5 @@
 import React, { FC } from 'react';
-import { StepEdge, EdgeProps, EdgeLabelRenderer } from 'reactflow';
+import { SmoothStepEdge, EdgeProps, EdgeLabelRenderer } from 'reactflow';
 import { labelStyles } from '../styles';
 
 const CustomEdge: FC<EdgeProps> = props => {
@@ -12,7 +12,7 @@ const CustomEdge: FC<EdgeProps> = props => {
   const labelY = (sourceY + targetY) / 2;
   return (
     <>
-      <StepEdge {...stepEdgeProps} />
+      <SmoothStepEdge {...stepEdgeProps} />
       {label && (
         <EdgeLabelRenderer>
           <div
@@ -21,7 +21,7 @@ const CustomEdge: FC<EdgeProps> = props => {
               transform: `translate(-50%, -50%) translate(${labelX}px,${labelY}px)`,
               background: 'white',
               pointerEvents: 'all',
-              ...labelStyles(selected),
+              ...labelStyles(selected, stepEdgeProps.data),
             }}
             className="nodrag nopan cursor-pointer"
           >

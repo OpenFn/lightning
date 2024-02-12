@@ -9,6 +9,28 @@ defmodule LightningWeb.Components.Icon do
 
   use LightningWeb, :component
 
+  @spec dataclip_icon_color(atom) :: String.t() | nil
+  def dataclip_icon_color(type) do
+    case type do
+      :step_result -> "bg-purple-500 text-purple-900"
+      :http_request -> "bg-green-500 text-green-900"
+      :global -> "bg-blue-500 text-blue-900"
+      :saved_input -> "bg-yellow-500 text-yellow-900"
+      _ -> nil
+    end
+  end
+
+  @spec dataclip_icon_class(atom) :: String.t() | nil
+  def dataclip_icon_class(type) do
+    case type do
+      :saved_input -> "hero-pencil-square"
+      :global -> "hero-globe-alt"
+      :step_result -> "hero-document-text"
+      :http_request -> "hero-document-arrow-down"
+      nil -> nil
+    end
+  end
+
   def workflows(assigns), do: Heroicons.square_3_stack_3d(assigns)
 
   def runs(assigns), do: Heroicons.rectangle_stack(assigns)

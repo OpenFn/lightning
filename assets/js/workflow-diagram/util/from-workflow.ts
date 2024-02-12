@@ -1,27 +1,40 @@
 import { Lightning, Flow, Positions } from '../types';
-import { styleEdge } from '../styles';
+import { sortOrderForSvg, styleEdge, styleItem, styleNode } from '../styles';
 
-function getEdgeLabel(condition: string) {
-  if (condition) {
-    if (condition === 'on_job_success') {
-      return '✓';
-    }
-    if (condition === 'on_job_failure') {
-      return 'X';
-    }
-    if (condition === 'always') {
-      return '∞';
-    }
+function getEdgeLabel(edge: Lightning.Edge) {
+  let label = '( )';
+
+  switch (edge.condition_type) {
+    case 'on_job_success':
+      label = '✓';
+      break;
+    case 'on_job_failure':
+      label = 'X';
+      break;
+    case 'always':
+      label = '∞';
+      break;
+    case 'js_expression':
+      const condition_label = edge.condition_label;
+
+      if (condition_label) {
+        if (condition_label.length > 16) {
+          label = condition_label.slice(0, 16) + '...';
+        } else {  
+          label = condition_label;
+        }
+      }
+      break;
   }
-  // some code expression
-  return '{}';
+
+  return label;
 }
 
 const fromWorkflow = (
   workflow: Lightning.Workflow,
   positions: Positions,
   placeholders: Flow.Model = { nodes: [], edges: [] },
-  selectedId?: string
+  selectedId: string | null
 ): Flow.Model => {
   const allowPlaceholder = placeholders.nodes.length === 0;
 
@@ -57,20 +70,31 @@ const fromWorkflow = (
         if (type === 'trigger') {
           model.data.trigger = {
             type: (node as Lightning.TriggerNode).type,
+            enabled: (node as Lightning.TriggerNode).enabled,
           };
         }
+        styleNode(model);
       } else {
         const edge = item as Lightning.Edge;
         model.source = edge.source_trigger_id || edge.source_job_id;
         model.target = edge.target_job_id;
         model.type = 'step';
-        model.label = getEdgeLabel(edge.condition);
+        model.label = getEdgeLabel(edge);
         model.markerEnd = {
           type: 'arrowclosed',
           width: 32,
           height: 32,
         };
-        model.data = { condition: edge.condition };
+        model.data = { condition_type: edge.condition_type, enabled: edge.enabled };
+
+        // Note: we don't allow the user to disable the edge that goes from a
+        // trigger to a job, but we want to show it as if it were disabled when
+        // the source trigger is disabled. This code does that.
+        const source = nodes.find(x => x.id == model.source);
+        if (source.type == 'trigger') {
+          model.data.enabled = source?.data.enabled;
+        }
+
         styleEdge(model);
       }
 
@@ -83,16 +107,19 @@ const fromWorkflow = (
       if (selectedId == n.id) {
         n.selected = true;
       }
-      return n;
+      return styleNode(n);
     }),
   ] as Flow.Node[];
-  const edges = [...placeholders.edges] as Flow.Edge[];
+
+  const edges = [...placeholders.edges.map(e => styleEdge(e))] as Flow.Edge[];
 
   process(workflow.jobs, nodes, 'job');
   process(workflow.triggers, nodes, 'trigger');
   process(workflow.edges, edges, 'edge');
 
-  return { nodes, edges };
+  const sortedEdges = edges.sort(sortOrderForSvg);
+
+  return { nodes, edges: sortedEdges };
 };
 
 export default fromWorkflow;

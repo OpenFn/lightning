@@ -2,7 +2,6 @@ defmodule Lightning.AccountsTest do
   use Lightning.DataCase, async: true
 
   alias Lightning.AccountsFixtures
-  alias Lightning.InvocationFixtures
   alias Lightning.Credentials
   alias Lightning.Jobs
   alias Lightning.JobsFixtures
@@ -14,13 +13,29 @@ defmodule Lightning.AccountsTest do
   alias Lightning.Accounts.{User, UserBackupCode, UserToken, UserTOTP}
   import Lightning.AccountsFixtures
   import Lightning.Factories
-  import Ecto.Query
 
-  test "has_activity_in_projects?/1 returns true if user is has activity in a project (is associated to invocation reasons) and false otherwise." do
+  test "has_activity_in_projects?/1 returns true if user has activity in a project (is associated with a run) and false otherwise." do
     user = AccountsFixtures.user_fixture()
     another_user = AccountsFixtures.user_fixture()
 
-    InvocationFixtures.reason_fixture(user_id: user.id)
+    workflow = insert(:workflow)
+    trigger = insert(:trigger, workflow: workflow)
+    dataclip = insert(:dataclip)
+
+    work_order =
+      insert(:workorder,
+        workflow: workflow,
+        trigger: trigger,
+        dataclip: dataclip
+      )
+
+    _run =
+      insert(:run,
+        created_by: user,
+        work_order: work_order,
+        starting_trigger: trigger,
+        dataclip: dataclip
+      )
 
     assert Accounts.has_activity_in_projects?(user)
     refute Accounts.has_activity_in_projects?(another_user)
@@ -28,7 +43,7 @@ defmodule Lightning.AccountsTest do
 
   test "list_users/0 returns all users" do
     user = user_fixture()
-    assert Accounts.list_users() == [user]
+    assert user in Accounts.list_users()
   end
 
   test "list_api_token/1 returns all user tokens" do
@@ -479,44 +494,26 @@ defmodule Lightning.AccountsTest do
 
   describe "purge user" do
     test "purging a user removes that user from projects they are members of and deletes them from the system" do
-      user_1 = user_fixture()
-      user_2 = user_fixture()
+      %{project_users: [proj_user1]} =
+        insert(:project,
+          project_users: [%{user: build(:user), failure_alert: true}]
+        )
 
-      Lightning.Projects.create_project(%{
-        name: "some-name",
-        project_users: [%{user_id: user_1.id}]
-      })
+      %{project_users: [proj_user2]} =
+        insert(:project,
+          project_users: [%{user: build(:user), failure_alert: true}]
+        )
 
-      Lightning.Projects.create_project(%{
-        name: "some-name",
-        project_users: [%{user_id: user_2.id}]
-      })
+      assert Repo.get(ProjectUser, proj_user1.id)
+      assert Repo.get(User, proj_user1.user_id)
 
-      assert 2 == Repo.all(ProjectUser) |> Enum.count()
-      assert 2 == Repo.all(User) |> Enum.count()
+      :ok = Accounts.purge_user(proj_user1.user_id)
 
-      :ok = Accounts.purge_user(user_1.id)
+      refute Repo.get(ProjectUser, proj_user1.id)
+      refute Repo.get(User, proj_user1.user_id)
 
-      assert 1 == Repo.all(ProjectUser) |> Enum.count()
-      assert 1 == Repo.all(User) |> Enum.count()
-
-      remaining_projs = Repo.all(ProjectUser)
-      remaining_users = Repo.all(User)
-
-      assert 1 == Enum.count(remaining_projs)
-      assert 1 == Enum.count(remaining_users)
-
-      assert remaining_projs
-             |> Enum.any?(fn x -> x.user_id == user_2.id end)
-
-      refute remaining_projs
-             |> Enum.any?(fn x -> x.user_id == user_1.id end)
-
-      assert remaining_users
-             |> Enum.any?(fn x -> x.id == user_2.id end)
-
-      refute remaining_users
-             |> Enum.any?(fn x -> x.id == user_1.id end)
+      assert Repo.get(ProjectUser, proj_user2.id)
+      assert Repo.get(User, proj_user2.user_id)
     end
 
     test "purging a user sets all project credentials that use their credentials to nil" do
@@ -571,11 +568,11 @@ defmodule Lightning.AccountsTest do
       CredentialsFixtures.credential_fixture(user_id: user_1.id)
       CredentialsFixtures.credential_fixture(user_id: user_2.id)
 
-      assert 3 == Repo.all(Credentials.Credential) |> Enum.count()
+      assert count_for(Credentials.Credential) == 3
 
       :ok = Accounts.purge_user(user_1.id)
 
-      assert 1 == Repo.all(Credentials.Credential) |> Enum.count()
+      assert count_for(Credentials.Credential) == 1
 
       refute Repo.all(Credentials.Credential)
              |> Enum.any?(fn x -> x.user_id == user_1.id end)
@@ -586,28 +583,43 @@ defmodule Lightning.AccountsTest do
   end
 
   describe "The default Oban function Accounts.perform/1" do
-    test "prevents users that are still linked to an invocation reason from being deleted" do
+    test "prevents users that are still linked to a run from being deleted" do
       user =
         user_fixture(
           scheduled_deletion: DateTime.utc_now() |> Timex.shift(seconds: -10)
         )
 
-      InvocationFixtures.reason_fixture(user_id: user.id)
+      workflow = insert(:workflow)
+      trigger = insert(:trigger, workflow: workflow)
+      dataclip = insert(:dataclip)
 
-      assert 1 = Repo.all(User) |> Enum.count()
+      work_order =
+        insert(:workorder,
+          workflow: workflow,
+          trigger: trigger,
+          dataclip: dataclip
+        )
+
+      _run =
+        insert(:run,
+          created_by: user,
+          work_order: work_order,
+          starting_trigger: trigger,
+          dataclip: dataclip
+        )
+
+      assert count_for(User) >= 1
 
       {:ok, %{users_deleted: users_deleted}} =
         Accounts.perform(%Oban.Job{args: %{"type" => "purge_deleted"}})
 
-      # We still have one user in database
-      assert 1 == Repo.all(User) |> Enum.count()
+      assert Repo.get(User, user.id)
 
-      # No user has been deleted
-      assert 0 == users_deleted |> Enum.count()
+      refute user.id in Enum.map(users_deleted, & &1.id)
     end
 
     test "removes all users past deletion date when called with type 'purge_deleted'" do
-      user_to_delete =
+      %{id: id_of_deleted} =
         user_fixture(
           scheduled_deletion: DateTime.utc_now() |> Timex.shift(seconds: -10)
         )
@@ -616,15 +628,8 @@ defmodule Lightning.AccountsTest do
         scheduled_deletion: DateTime.utc_now() |> Timex.shift(seconds: 10)
       )
 
-      count_before = Repo.all(User) |> Enum.count()
-
-      {:ok, %{users_deleted: users_deleted}} =
+      {:ok, %{users_deleted: [%{id: ^id_of_deleted}]}} =
         Accounts.perform(%Oban.Job{args: %{"type" => "purge_deleted"}})
-
-      assert count_before - 1 == Repo.all(User) |> Enum.count()
-      assert 1 == users_deleted |> Enum.count()
-
-      assert user_to_delete.id == users_deleted |> Enum.at(0) |> Map.get(:id)
     end
 
     test "removes user from project users before deleting them" do
@@ -780,7 +785,7 @@ defmodule Lightning.AccountsTest do
       assert changed_user.confirmed_at != user.confirmed_at
 
       assert Accounts.update_user_email(user, token) == :error,
-             "Attempting to reuse the same token should return :error"
+             "Trying to reuse the same token should return :error"
 
       refute Repo.get_by(UserToken, user_id: user.id),
              "The token should not exist after using it"
@@ -794,7 +799,7 @@ defmodule Lightning.AccountsTest do
 
     test "does not update email if token expired", %{user: user, token: token} do
       {1, nil} =
-        Repo.update_all(UserToken, set: [inserted_at: ~N[2020-01-01 00:00:00]])
+        Repo.update_all(UserToken, set: [inserted_at: ~U[2020-01-01 00:00:00Z]])
 
       assert Accounts.update_user_email(user, token) == :error
       assert Repo.get!(User, user.id).email == user.email
@@ -1022,7 +1027,7 @@ defmodule Lightning.AccountsTest do
 
     test "does not return user for expired token", %{token: token} do
       {1, nil} =
-        Repo.update_all(UserToken, set: [inserted_at: ~N[2020-01-01 00:00:00]])
+        Repo.update_all(UserToken, set: [inserted_at: ~U[2020-01-01 00:00:00Z]])
 
       refute Accounts.get_user_by_auth_token(token)
     end
@@ -1055,7 +1060,7 @@ defmodule Lightning.AccountsTest do
 
     test "does not return user for expired token", %{token: token} do
       {1, nil} =
-        Repo.update_all(UserToken, set: [inserted_at: ~N[2020-01-01 00:00:00]])
+        Repo.update_all(UserToken, set: [inserted_at: ~U[2020-01-01 00:00:00Z]])
 
       refute Accounts.get_user_by_session_token(token)
     end
@@ -1142,7 +1147,7 @@ defmodule Lightning.AccountsTest do
 
     test "does not confirm email if token expired", %{user: user, token: token} do
       {1, nil} =
-        Repo.update_all(UserToken, set: [inserted_at: ~N[2020-01-01 00:00:00]])
+        Repo.update_all(UserToken, set: [inserted_at: ~U[2020-01-01 00:00:00Z]])
 
       assert Accounts.confirm_user(token) == :error
       refute Repo.get!(User, user.id).confirmed_at
@@ -1196,7 +1201,7 @@ defmodule Lightning.AccountsTest do
 
     test "does not return the user if token expired", %{user: user, token: token} do
       {1, nil} =
-        Repo.update_all(UserToken, set: [inserted_at: ~N[2020-01-01 00:00:00]])
+        Repo.update_all(UserToken, set: [inserted_at: ~U[2020-01-01 00:00:00Z]])
 
       refute Accounts.get_user_by_reset_password_token(token)
       assert Repo.get_by(UserToken, user_id: user.id)
@@ -1251,10 +1256,61 @@ defmodule Lightning.AccountsTest do
     end
   end
 
-  test "delete_user/1 deletes the user" do
-    user = user_fixture()
-    assert {:ok, %User{}} = Accounts.delete_user(user)
-    assert_raise Ecto.NoResultsError, fn -> Accounts.get_user!(user.id) end
+  describe "delete_user/1" do
+    test "delete_user/1 deletes the user" do
+      user = user_fixture()
+      assert {:ok, %User{}} = Accounts.delete_user(user)
+      assert_raise Ecto.NoResultsError, fn -> Accounts.get_user!(user.id) end
+    end
+
+    test "removes any associated Run and RunStep records" do
+      user_1 = user_fixture()
+      user_2 = user_fixture()
+
+      run_1 = insert_run(user_1)
+      run_2 = insert_run(user_1)
+      run_3 = insert_run(user_2)
+
+      _run_step_1_1 = insert_run_step(run_1)
+      _run_step_1_2 = insert_run_step(run_1)
+      _run_step_2_1 = insert_run_step(run_2)
+      run_step_3_1 = insert_run_step(run_3)
+
+      Accounts.delete_user(user_1)
+
+      assert only_record_for_type?(run_3)
+
+      assert only_record_for_type?(run_step_3_1)
+    end
+
+    test "removes any associated LogLine records" do
+      user_1 = user_fixture()
+      user_2 = user_fixture()
+
+      insert_run(user_1, build_list(2, :log_line))
+      insert_run(user_1, build_list(2, :log_line))
+
+      run_3 = insert_run(user_2)
+      log_line_3_1 = insert(:log_line, run: run_3)
+
+      Accounts.delete_user(user_1)
+
+      assert only_record_for_type?(log_line_3_1)
+    end
+
+    defp insert_run(user, log_lines \\ []) do
+      insert(:run,
+        created_by: user,
+        work_order: build(:workorder),
+        dataclip: build(:dataclip),
+        starting_job: build(:job),
+        log_lines: log_lines
+      )
+    end
+
+    defp insert_run_step(run) do
+      insert(:run_step, run: run, step: build(:step))
+    end
   end
 
   describe "scheduling a user for deletion" do

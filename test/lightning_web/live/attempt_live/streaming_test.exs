@@ -1,0 +1,146 @@
+defmodule LightningWeb.RunLive.StreamingTest do
+  use Lightning.DataCase, async: true
+
+  alias LightningWeb.RunLive.Streaming
+
+  defp create_steps_dataclips(_context) do
+    user = insert(:user)
+    project = insert(:project, project_users: [%{user: user}])
+
+    credential1 =
+      insert(:credential,
+        name: "My Credential1",
+        body: %{
+          secret: "55"
+        },
+        user: user
+      )
+
+    credential2 =
+      insert(:credential,
+        name: "My Credential2",
+        body: %{
+          pin: 123_456,
+          looks_like_a_number: "789"
+        },
+        user: user
+      )
+
+    credential3 =
+      insert(:credential,
+        name: "My Credential3",
+        body: %{
+          foo: "bar"
+        },
+        user: user
+      )
+
+    project_credential1 =
+      insert(:project_credential, credential: credential1, project: project)
+
+    project_credential2 =
+      insert(:project_credential, credential: credential2, project: project)
+
+    project_credential3 =
+      insert(:project_credential, credential: credential3, project: project)
+
+    workflow = insert(:workflow, project: project)
+    trigger = insert(:trigger, workflow: workflow)
+
+    job1 =
+      insert(:job, project_credential: project_credential1, workflow: workflow)
+
+    job2 =
+      insert(:job, project_credential: project_credential2, workflow: workflow)
+
+    job3 =
+      insert(:job, project_credential: project_credential3, workflow: workflow)
+
+    output_dataclip =
+      insert(:dataclip,
+        project: project,
+        type: :step_result,
+        body: %{
+          integer: 123_456,
+          another_no: 789,
+          third_no: 125_534,
+          map: %{list: [%{"any-key" => "some-bars"}]},
+          bool: true,
+          foo: "bar"
+        }
+      )
+
+    input_dataclip = insert(:dataclip)
+
+    now = DateTime.utc_now()
+
+    step1 = insert(:step, job: job1, started_at: now)
+
+    step2 =
+      insert(:step,
+        exit_reason: "success",
+        job: job2,
+        input_dataclip: input_dataclip,
+        output_dataclip: output_dataclip,
+        started_at: DateTime.add(now, 1, :microsecond)
+      )
+
+    step3 =
+      insert(:step, job: job3, started_at: DateTime.add(now, 2, :microsecond))
+
+    run =
+      insert(:run,
+        work_order:
+          build(:workorder,
+            workflow: workflow,
+            dataclip: input_dataclip,
+            trigger: trigger,
+            state: :success
+          ),
+        starting_trigger: trigger,
+        state: :success,
+        dataclip: input_dataclip,
+        steps: [step1, step2]
+      )
+
+    insert(:run_step, run: run, step: step1)
+    insert(:run_step, run: run, step: step2)
+    insert(:run_step, run: run, step: step3)
+
+    %{
+      run: run,
+      output_dataclip: output_dataclip,
+      job: job2,
+      step2: step2
+    }
+  end
+
+  describe "get_dataclip_lines" do
+    setup :create_steps_dataclips
+
+    test "streams scrubbed lines from step_result dataclip", %{
+      step2: selected_step
+    } do
+      dataclip_lines =
+        Streaming.get_dataclip_lines(selected_step, :output_dataclip)
+        |> elem(1)
+        |> Enum.to_list()
+
+      # foo: "bar" is not scrubbed because it is from a following job executed on step3
+      expected_lines = [
+        ~S("integer":***),
+        ~S("another_no":***),
+        ~S("third_no":12***34),
+        ~S("map":{"list":[{"any-key":"some-***s"}]}),
+        ~S("bool":true),
+        ~S("foo":"bar")
+      ]
+
+      Enum.each(dataclip_lines, fn %{line: line} ->
+        Enum.any?(expected_lines, fn expected_line ->
+          String.contains?(line, expected_line)
+        end)
+      end)
+    end
+  end
+end

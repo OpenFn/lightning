@@ -2,11 +2,12 @@ defmodule Lightning.Workflows.Query do
   @moduledoc """
   Query module for finding Jobs.
   """
-  alias Lightning.Workflows.Job
-  alias Lightning.Projects.Project
-  alias Lightning.Accounts.User
-  alias Lightning.Workflows.Edge
   import Ecto.Query
+
+  alias Lightning.Accounts.User
+  alias Lightning.Projects.Project
+  alias Lightning.Workflows.Edge
+  alias Lightning.Workflows.Job
 
   @doc """
   Returns all jobs accessible to a user, via their projects

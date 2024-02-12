@@ -1,9 +1,12 @@
 defmodule Lightning.Graph do
+  @moduledoc """
+  A graph model for workflows transversal.
+  """
   defstruct nodes: MapSet.new(), edges: MapSet.new()
   @type t :: %__MODULE__{nodes: MapSet.t(), edges: MapSet.t()}
 
   @spec new() :: t()
-  def new(), do: %__MODULE__{nodes: MapSet.new(), edges: MapSet.new()}
+  def new, do: %__MODULE__{nodes: MapSet.new(), edges: MapSet.new()}
 
   @spec add_edge(t(), atom, atom) :: t()
   def add_edge(graph, from, to) do

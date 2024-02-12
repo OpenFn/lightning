@@ -50,11 +50,21 @@ defmodule Lightning.WebhookAuthMethodsTest do
       {:ok, auth_method} =
         WebhookAuthMethods.create_auth_method(valid_attrs, actor: user)
 
-      assert Repo.get_by(WebhookAuthMethodAudit.base_query(),
-               item_id: auth_method.id,
-               event: "created",
-               actor_id: user.id
-             )
+      assert audit =
+               Repo.get_by(WebhookAuthMethodAudit.base_query(),
+                 item_id: auth_method.id,
+                 actor_id: user.id
+               )
+
+      assert audit.event == "created"
+
+      assert audit.changes.before |> is_nil()
+
+      assert decode_encrypted_binary(audit.changes.after["username"]) ==
+               auth_method.username
+
+      assert decode_encrypted_binary(audit.changes.after["password"]) ==
+               auth_method.password
     end
 
     test "returns error when attributes are invalid", %{
@@ -122,11 +132,20 @@ defmodule Lightning.WebhookAuthMethodsTest do
 
       # saves 2 audit records
       # created
-      assert Repo.get_by(WebhookAuthMethodAudit.base_query(),
-               item_id: auth_method.id,
-               event: "created",
-               actor_id: user.id
-             )
+      assert audit =
+               Repo.get_by(WebhookAuthMethodAudit.base_query(),
+                 item_id: auth_method.id,
+                 event: "created",
+                 actor_id: user.id
+               )
+
+      assert audit.changes.before |> is_nil()
+
+      assert decode_encrypted_binary(audit.changes.after["username"]) ==
+               auth_method.username
+
+      assert decode_encrypted_binary(audit.changes.after["password"]) ==
+               auth_method.password
 
       # added to trigger
       added_to_trigger =
@@ -136,7 +155,7 @@ defmodule Lightning.WebhookAuthMethodsTest do
           actor_id: user.id
         )
 
-      assert added_to_trigger.changes == %Lightning.Auditing.Model.Changes{
+      assert added_to_trigger.changes == %Lightning.Auditing.Audit.Changes{
                before: %{"trigger_id" => nil},
                after: %{"trigger_id" => trigger.id}
              }
@@ -173,7 +192,7 @@ defmodule Lightning.WebhookAuthMethodsTest do
           actor_id: user.id
         )
 
-      assert audit.changes == %Lightning.Auditing.Model.Changes{
+      assert audit.changes == %Lightning.Auditing.Audit.Changes{
                before: %{"name" => auth_method.name},
                after: %{"name" => new_auth_method.name}
              }
@@ -218,7 +237,7 @@ defmodule Lightning.WebhookAuthMethodsTest do
           actor_id: user.id
         )
 
-      assert added_to_trigger.changes == %Lightning.Auditing.Model.Changes{
+      assert added_to_trigger.changes == %Lightning.Auditing.Audit.Changes{
                before: %{"trigger_id" => nil},
                after: %{"trigger_id" => trigger.id}
              }
@@ -263,7 +282,7 @@ defmodule Lightning.WebhookAuthMethodsTest do
             actor_id: user.id
           )
 
-        assert audit.changes == %Lightning.Auditing.Model.Changes{
+        assert audit.changes == %Lightning.Auditing.Audit.Changes{
                  before: %{"trigger_id" => nil},
                  after: %{"trigger_id" => trigger.id}
                }
@@ -278,7 +297,7 @@ defmodule Lightning.WebhookAuthMethodsTest do
             actor_id: user.id
           )
 
-        assert audit.changes == %Lightning.Auditing.Model.Changes{
+        assert audit.changes == %Lightning.Auditing.Audit.Changes{
                  after: %{"trigger_id" => nil},
                  before: %{"trigger_id" => trigger.id}
                }
@@ -367,7 +386,7 @@ defmodule Lightning.WebhookAuthMethodsTest do
     end
   end
 
-  describe "find_by_id!/2" do
+  describe "find_by_id!/1" do
     test "retrieves the auth method by id" do
       auth_method = insert(:webhook_auth_method)
 
@@ -393,5 +412,104 @@ defmodule Lightning.WebhookAuthMethodsTest do
                Repo.get(Lightning.Workflows.WebhookAuthMethod, auth_method.id)
              )
     end
+  end
+
+  test "schedule_for_deletion/2 schedules a webhook auth method for deletion" do
+    user = insert(:user)
+    webhook_auth_method = insert(:webhook_auth_method)
+
+    assert webhook_auth_method.scheduled_deletion == nil
+
+    days = Application.get_env(:lightning, :purge_deleted_after_days, 0)
+    now = DateTime.utc_now() |> DateTime.truncate(:second)
+
+    {:ok, changeset} =
+      Lightning.WebhookAuthMethods.schedule_for_deletion(webhook_auth_method,
+        actor: user
+      )
+
+    assert changeset.scheduled_deletion != nil
+
+    assert Timex.diff(changeset.scheduled_deletion, now, :days) ==
+             days
+
+    # Check for audit log entry
+    audit =
+      Lightning.Auditing.list_all()
+      |> Enum.find(fn audit ->
+        audit.item_id == changeset.id and
+          audit.event == "deleted" and
+          audit.item_type == "webhook_auth_method"
+      end)
+
+    assert audit
+    assert audit.actor_id == user.id
+    assert audit.changes.before == %{"scheduled_deletion" => nil}
+
+    # Truncate the fractional seconds from the audit log and append 'Z' for UTC
+    audit_scheduled_deletion =
+      String.split(audit.changes.after["scheduled_deletion"], ".")
+      |> List.first()
+      |> Kernel.<>("Z")
+
+    # Assertion
+    assert %{"scheduled_deletion" => audit_scheduled_deletion} == %{
+             "scheduled_deletion" =>
+               DateTime.to_iso8601(changeset.scheduled_deletion)
+           }
+  end
+
+  test "schedule_for_deletion/2 returns error when webhook auth method is already scheduled for deletion" do
+    user = insert(:user)
+
+    webhook_auth_method =
+      insert(:webhook_auth_method, scheduled_deletion: DateTime.utc_now())
+
+    initial_audit_entries_count =
+      Lightning.Auditing.list_all()
+      |> Enum.count(fn audit ->
+        audit.item_id == webhook_auth_method.id and audit.event == "deleted"
+      end)
+
+    result =
+      Lightning.WebhookAuthMethods.schedule_for_deletion(webhook_auth_method,
+        actor: user
+      )
+
+    assert {:error, _changeset} = result
+
+    final_audit_entries_count =
+      Lightning.Auditing.list_all()
+      |> Enum.count(fn audit ->
+        audit.item_id == webhook_auth_method.id and audit.event == "deleted"
+      end)
+
+    assert final_audit_entries_count == initial_audit_entries_count
+  end
+
+  test "schedule_for_deletion/2 returns error with invalid changeset" do
+    user = insert(:user)
+
+    auth_method =
+      insert(:webhook_auth_method, name: nil, username: nil, password: nil)
+
+    result =
+      Lightning.WebhookAuthMethods.schedule_for_deletion(
+        auth_method,
+        actor: user
+      )
+
+    assert {:error, %Ecto.Changeset{} = changeset} = result
+
+    assert changeset.valid? == false
+  end
+
+  defp decode_encrypted_binary(data) do
+    {:ok, val} =
+      data
+      |> Base.decode64!()
+      |> Lightning.Encrypted.Binary.load()
+
+    val
   end
 end

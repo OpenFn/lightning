@@ -4,6 +4,7 @@ defmodule LightningWeb.WorkflowNewLive.WorkflowParams do
 
   The front end editor uses JSON patches to represent changes to the workflow.
   """
+  import LightningWeb.CoreComponents, only: [translate_errors: 1]
 
   @doc """
   Produce a new set of params by applying the given form params to the current
@@ -86,7 +87,6 @@ defmodule LightningWeb.WorkflowNewLive.WorkflowParams do
             :name,
             :adaptor,
             :body,
-            :enabled,
             :project_credential_id
           ]),
         triggers:
@@ -96,7 +96,8 @@ defmodule LightningWeb.WorkflowNewLive.WorkflowParams do
             :id,
             :type,
             :cron_expression,
-            :has_auth_method
+            :has_auth_method,
+            :enabled
           ]),
         edges:
           changeset
@@ -106,7 +107,9 @@ defmodule LightningWeb.WorkflowNewLive.WorkflowParams do
             :id,
             :source_trigger_id,
             :source_job_id,
-            :condition,
+            :enabled,
+            :condition_type,
+            :condition_label,
             :target_job_id
           ])
       }
@@ -131,11 +134,7 @@ defmodule LightningWeb.WorkflowNewLive.WorkflowParams do
       end)
 
     to_serializable(model, fields)
-    |> Map.put(
-      :errors,
-      Ecto.Changeset.traverse_errors(changeset, fn {msg, _opts} -> msg end)
-      |> Map.take(fields)
-    )
+    |> Map.put(:errors, translate_errors(changeset))
     |> Map.merge(fields_dropped_by_required)
   end
 

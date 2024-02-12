@@ -6,7 +6,6 @@ defmodule LightningWeb.ProjectLive.DeleteConnectionModal do
   attr :id, :string, required: true
   attr :show, :boolean, default: false
   attr :on_cancel, JS, default: %JS{}
-  slot :inner_block, required: true
 
   def modal(assigns) do
     ~H"""
@@ -44,7 +43,7 @@ defmodule LightningWeb.ProjectLive.DeleteConnectionModal do
             >
               <div>
                 <span class="text-black">
-                  Remove Github Connection
+                  Remove GitHub Connection
                 </span>
                 <hr />
                 <div class="hidden sm:block" aria-hidden="true">

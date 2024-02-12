@@ -2,22 +2,24 @@ defmodule Lightning.Credentials.Credential do
   @moduledoc """
   The Credential model.
   """
+  use Ecto.Schema
+
+  import Ecto.Changeset
+
+  alias Lightning.Accounts.User
+  alias Lightning.Projects.ProjectCredential
+
   @type t :: %__MODULE__{
           __meta__: Ecto.Schema.Metadata.t(),
           id: Ecto.UUID.t() | nil,
           body: nil | %{}
         }
 
-  use Ecto.Schema
-  alias Lightning.Accounts.User
-  alias Lightning.Projects.ProjectCredential
-  import Ecto.Changeset
-
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id
   schema "credentials" do
     field :name, :string
-    field :body, Lightning.Encrypted.Map
+    field :body, Lightning.Encrypted.Map, redact: true
     field :production, :boolean, default: false
     field :schema, :string
     field :scheduled_deletion, :utc_datetime
@@ -48,19 +50,17 @@ defmodule Lightning.Credentials.Credential do
   end
 
   defp validate_transfer_ownership(changeset) do
-    user_id = get_field(changeset, :user_id)
-    credential_id = get_field(changeset, :id)
+    if changed?(changeset, :user_id) && get_field(changeset, :id) do
+      user_id = get_field(changeset, :user_id)
+      credential_id = get_field(changeset, :id)
 
-    if credential_id != nil do
       diff =
         Lightning.Credentials.invalid_projects_for_user(
           credential_id,
           user_id
         )
 
-      if Enum.empty?(diff) do
-        changeset
-      else
+      if Enum.any?(diff) do
         owner = Lightning.Accounts.get_user!(user_id)
 
         diff_projects_names =
@@ -74,6 +74,8 @@ defmodule Lightning.Credentials.Credential do
           :user_id,
           "Invalid owner: #{owner.first_name} #{owner.last_name} doesn't have access to #{Enum.join(diff_projects_names, ", ")}. Please grant them access or select another owner."
         )
+      else
+        changeset
       end
     else
       changeset

@@ -3,9 +3,9 @@ defmodule LightningWeb.Components.NewInputs do
   A temporary module that will serve as a place to put new inputs that conform
   with the newer CoreComponents conventions introduced in Phoenix 1.7.
   """
-  alias Phoenix.LiveView.JS
-
   use Phoenix.Component
+
+  alias Phoenix.LiveView.JS
 
   @doc """
   Renders a button.
@@ -15,49 +15,69 @@ defmodule LightningWeb.Components.NewInputs do
       <.button>Send!</.button>
       <.button phx-click="go" class="ml-2">Send!</.button>
   """
-  attr :id, :string, default: "no-id"
+  attr :id, :string, default: ""
   attr :type, :string, default: "button", values: ["button", "submit"]
-  attr :class, :string, default: nil
+  attr :class, :any, default: ""
+
+  attr :color_class, :any,
+    default: "bg-primary-600 hover:bg-primary-700 text-white"
+
   attr :rest, :global, include: ~w(disabled form name value)
   attr :tooltip, :any, default: nil
 
   slot :inner_block, required: true
 
   def button(assigns) do
-    assigns = tooltip_when_disabled(assigns)
-
     ~H"""
-    <span {@span_attrs}>
+    <.tooltip_when_disabled
+      id={@rest[:id]}
+      tooltip={@tooltip}
+      disabled={@rest[:disabled]}
+    >
       <button
+        id={@id}
         type={@type}
         class={[
-          "inline-flex justify-center py-2 px-4 border border-transparent
-      shadow-sm text-sm font-medium rounded-md text-white focus:outline-none
-      focus:ring-2 focus:ring-offset-2 focus:ring-primary-500",
-          "bg-primary-600 hover:bg-primary-700",
+          "inline-flex justify-center py-2 px-4 border border-transparent",
+          "shadow-sm text-sm font-medium rounded-md focus:outline-none",
+          "focus:ring-2 focus:ring-offset-2 focus:ring-primary-500",
           "disabled:bg-primary-300",
-          "phx-submit-loading:opacity-75 ",
+          "phx-submit-loading:opacity-75",
+          @color_class,
           @class
         ]}
         {@rest}
       >
         <%= render_slot(@inner_block) %>
       </button>
+    </.tooltip_when_disabled>
+    """
+  end
+
+  attr :id, :string, required: true
+  attr :disabled, :boolean, default: false
+  attr :tooltip, :string, default: nil
+
+  slot :inner_block, required: true
+
+  defp tooltip_when_disabled(%{disabled: true, tooltip: tooltip} = assigns)
+       when not is_nil(tooltip) do
+    ~H"""
+    <span
+      id={"#{@id}-tooltip"}
+      phx-hook="Tooltip"
+      aria-label={@tooltip}
+      data-allow-html="true"
+    >
+      <%= render_slot(@inner_block) %>
     </span>
     """
   end
 
   defp tooltip_when_disabled(assigns) do
-    with true <- Map.get(assigns.rest, :disabled, false),
-         tooltip when not is_nil(tooltip) <- Map.get(assigns, :tooltip) do
-      assign(assigns, :span_attrs, %{
-        "id" => assigns.id,
-        "phx-hook" => "Tooltip",
-        "aria-label" => tooltip
-      })
-    else
-      _ -> assign(assigns, :span_attrs, %{})
-    end
+    ~H"""
+    <%= render_slot(@inner_block) %>
+    """
   end
 
   @doc """
@@ -123,7 +143,10 @@ defmodule LightningWeb.Components.NewInputs do
   def input(%{field: %Phoenix.HTML.FormField{} = field} = assigns) do
     assigns
     |> assign(field: nil, id: assigns.id || field.id)
-    |> assign(:errors, Enum.map(field.errors, &translate_error(&1)))
+    |> assign(
+      :errors,
+      Enum.map(field.errors, &LightningWeb.CoreComponents.translate_error(&1))
+    )
     |> assign_new(:name, fn ->
       if assigns.multiple, do: field.name <> "[]", else: field.name
     end)
@@ -216,7 +239,6 @@ defmodule LightningWeb.Components.NewInputs do
           name={@name}
           id={@id}
           value={Phoenix.HTML.Form.normalize_value(@type, @value)}
-          phx-debounce="blur"
           class={[
             "focus:outline focus:outline-2 focus:outline-offset-1 block w-full rounded-lg text-slate-900 focus:ring-0 sm:text-sm sm:leading-6",
             "phx-no-feedback:border-slate-300 phx-no-feedback:focus:border-slate-400 disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-500",
@@ -258,7 +280,32 @@ defmodule LightningWeb.Components.NewInputs do
     """
   end
 
-  # All other inputs text, datetime-local, url, password, etc. are handled here...
+  def input(%{type: "radio"} = assigns) do
+    ~H"""
+    <input
+      type="radio"
+      id={@id}
+      name={@name}
+      checked={@checked}
+      value={@value}
+      class="h-4 w-4 border-gray-300 text-indigo-600 focus:ring-indigo-600"
+      {@rest}
+    />
+    """
+  end
+
+  def input(%{type: "hidden"} = assigns) do
+    ~H"""
+    <input
+      type="hidden"
+      name={@name}
+      id={@id}
+      value={Phoenix.HTML.Form.normalize_value(@type, @value)}
+    />
+    """
+  end
+
+  # All other inputs text, datetime-local, url etc. are handled here...
   def input(assigns) do
     ~H"""
     <div phx-feedback-for={@name}>
@@ -268,7 +315,6 @@ defmodule LightningWeb.Components.NewInputs do
         name={@name}
         id={@id}
         value={Phoenix.HTML.Form.normalize_value(@type, @value)}
-        phx-debounce="blur"
         class={[
           "focus:outline focus:outline-2 focus:outline-offset-1 mt-2 block w-full rounded-lg text-slate-900 focus:ring-0 sm:text-sm sm:leading-6",
           "phx-no-feedback:border-slate-300 phx-no-feedback:focus:border-slate-400 disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-500",
@@ -280,7 +326,7 @@ defmodule LightningWeb.Components.NewInputs do
         ]}
         {@rest}
       />
-      <div class="error-space h-6">
+      <div :if={Enum.any?(@errors)} class="error-space h-6">
         <.error :for={msg <- @errors}><%= msg %></.error>
       </div>
     </div>
@@ -291,11 +337,15 @@ defmodule LightningWeb.Components.NewInputs do
   Renders a label.
   """
   attr :for, :any, default: nil
+  attr :class, :any, default: ""
   slot :inner_block, required: true
 
   def label(assigns) do
     ~H"""
-    <label for={@for} class="block text-sm font-semibold leading-6 text-slate-800">
+    <label
+      for={@for}
+      class={["block text-sm font-semibold leading-6 text-slate-800", @class]}
+    >
       <%= render_slot(@inner_block) %>
     </label>
     """
@@ -310,7 +360,7 @@ defmodule LightningWeb.Components.NewInputs do
     ~H"""
     <p
       data-tag="error_message"
-      class="mt-3 inline-flex items-center gap-x-1.5 text-xs text-danger-600 phx-no-feedback:hidden"
+      class="mt-3 inline-flex items-center gap-x-1.5 text-xs text-danger-600"
     >
       <.icon name="hero-exclamation-circle" class="h-4 w-4" />
       <%= render_slot(@inner_block) %>
@@ -338,38 +388,11 @@ defmodule LightningWeb.Components.NewInputs do
   """
   attr :name, :string, required: true
   attr :class, :string, default: nil
+  attr :rest, :global
 
   def icon(%{name: "hero-" <> _} = assigns) do
     ~H"""
-    <span class={[@name, @class]} />
+    <span class={[@name, @class]} {@rest} />
     """
-  end
-
-  @doc """
-  Translates an error message using gettext.
-  """
-  def translate_error({msg, opts}) do
-    # When using gettext, we typically pass the strings we want
-    # to translate as a static argument:
-    #
-    #     # Translate the number of files with plural rules
-    #     dngettext("errors", "1 file", "%{count} files", count)
-    #
-    # However the error messages in our forms and APIs are generated
-    # dynamically, so we need to translate them by calling Gettext
-    # with our gettext backend as first argument. Translations are
-    # available in the errors.po file (as we use the "errors" domain).
-    if count = opts[:count] do
-      Gettext.dngettext(LightningWeb.Gettext, "errors", msg, msg, count, opts)
-    else
-      Gettext.dgettext(LightningWeb.Gettext, "errors", msg, opts)
-    end
-  end
-
-  @doc """
-  Translates the errors for a field from a keyword list of errors.
-  """
-  def translate_errors(errors, field) when is_list(errors) do
-    for {^field, {msg, opts}} <- errors, do: translate_error({msg, opts})
   end
 end

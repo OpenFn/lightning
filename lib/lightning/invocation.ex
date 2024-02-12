@@ -5,12 +5,19 @@ defmodule Lightning.Invocation do
 
   import Ecto.Query, warn: false
   import Lightning.Helpers, only: [coerce_json_field: 2]
+
+  alias Lightning.Invocation.Dataclip
+  alias Lightning.Invocation.Query
+  alias Lightning.Invocation.Step
+  alias Lightning.Projects.Project
+  alias Lightning.Repo
   alias Lightning.WorkOrder
   alias Lightning.WorkOrders.SearchParams
-  alias Lightning.Repo
 
-  alias Lightning.Invocation.{Dataclip, Run, Query}
-  alias Lightning.Projects.Project
+  @workorders_search_timeout 30_000
+  @workorders_count_limit 50
+
+  def get_workorders_count_limit, do: @workorders_count_limit
 
   @doc """
   Returns the list of dataclips.
@@ -40,27 +47,67 @@ defmodule Lightning.Invocation do
   end
 
   def list_dataclips_for_job(%Lightning.Workflows.Job{id: job_id}) do
-    from(r in Run,
-      join: d in assoc(r, :input_dataclip),
-      where: r.job_id == ^job_id,
-      select: %Dataclip{
-        id: d.id,
-        body: d.body,
-        type: d.type,
-        project_id: d.project_id,
-        inserted_at: d.inserted_at,
-        updated_at: d.updated_at
-      },
-      distinct: [desc: d.inserted_at],
-      order_by: [desc: d.inserted_at],
-      limit: 3
-    )
+    Query.last_n_for_job(job_id, 5)
+    |> Query.select_as_input()
+    |> where([d], is_nil(d.wiped_at))
     |> Repo.all()
   end
 
   @spec get_dataclip_details!(id :: Ecto.UUID.t()) :: Dataclip.t()
   def get_dataclip_details!(id),
     do: Repo.get!(Query.dataclip_with_body(), id)
+
+  @spec get_dataclip_for_run(run_id :: Ecto.UUID.t()) ::
+          Dataclip.t() | nil
+  def get_dataclip_for_run(run_id) do
+    query =
+      from d in Query.dataclip_with_body(),
+        join: a in Lightning.Run,
+        on: a.dataclip_id == d.id and a.id == ^run_id
+
+    Repo.one(query)
+  end
+
+  @spec get_dataclip_for_run_and_job(
+          run_id :: Ecto.UUID.t(),
+          job_id :: Ecto.UUID.t()
+        ) ::
+          Dataclip.t() | nil
+  def get_dataclip_for_run_and_job(run_id, job_id) do
+    query =
+      from d in Query.dataclip_with_body(),
+        join: s in Lightning.Invocation.Step,
+        on: s.input_dataclip_id == d.id and s.job_id == ^job_id,
+        join: a in assoc(s, :runs),
+        on: a.id == ^run_id
+
+    Repo.one(query)
+  end
+
+  @spec get_step_for_run_and_job(
+          run_id :: Ecto.UUID.t(),
+          job_id :: Ecto.UUID.t()
+        ) ::
+          Lightning.Invocation.Step.t() | nil
+  def get_step_for_run_and_job(run_id, job_id) do
+    query =
+      from s in Lightning.Invocation.Step,
+        join: a in assoc(s, :runs),
+        on: a.id == ^run_id,
+        where: s.job_id == ^job_id
+
+    Repo.one(query)
+  end
+
+  @spec get_step_count_for_run(run_id :: Ecto.UUID.t()) :: non_neg_integer()
+  def get_step_count_for_run(run_id) do
+    query =
+      from s in Lightning.Invocation.Step,
+        join: a in assoc(s, :runs),
+        on: a.id == ^run_id
+
+    Repo.aggregate(query, :count)
+  end
 
   @doc """
   Gets a single dataclip.
@@ -83,7 +130,7 @@ defmodule Lightning.Invocation do
   Gets a single dataclip given one of:
 
   - a Dataclip uuid
-  - a Run model
+  - a Step model
 
   Returns `nil` if the Dataclip does not exist.
 
@@ -95,30 +142,30 @@ defmodule Lightning.Invocation do
       iex> get_dataclip("27b73932-16c7-4a72-86a3-85d805ccff98")
       nil
 
-      iex> get_dataclip(%Run{id: "a uuid"})
+      iex> get_dataclip(%Step{id: "a uuid"})
       %Dataclip{}
 
   """
-  @spec get_dataclip(run_or_uuid :: Run.t() | Ecto.UUID.t()) ::
+  @spec get_dataclip(step_or_uuid :: Step.t() | Ecto.UUID.t()) ::
           Dataclip.t() | nil
-  def get_dataclip(%Run{} = run) do
-    get_dataclip_query(run) |> Repo.one()
+  def get_dataclip(%Step{} = step) do
+    get_dataclip_query(step) |> Repo.one()
   end
 
   def get_dataclip(id), do: Repo.get(Dataclip, id)
 
   @doc """
-  Query for retrieving the dataclip that was the result of a successful run.
+  Query for retrieving the dataclip that was the result of a successful step.
   """
-  def get_output_dataclip_query(%Run{} = run) do
-    Ecto.assoc(run, :output_dataclip)
+  def get_output_dataclip_query(%Step{} = step) do
+    Ecto.assoc(step, :output_dataclip)
   end
 
   @doc """
-  Query for retrieving the dataclip that a runs starting dataclip.
+  Query for retrieving the dataclip that was step's starting dataclip.
   """
-  def get_dataclip_query(%Run{} = run) do
-    Ecto.assoc(run, :input_dataclip)
+  def get_dataclip_query(%Step{} = step) do
+    Ecto.assoc(step, :input_dataclip)
   end
 
   @doc """
@@ -193,105 +240,89 @@ defmodule Lightning.Invocation do
   end
 
   @doc """
-  Returns the list of runs.
+  Returns the list of steps.
 
   ## Examples
 
-      iex> list_runs()
-      [%Run{}, ...]
+      iex> list_steps()
+      [%Step{}, ...]
 
   """
-  def list_runs do
-    Repo.all(Run)
+  def list_steps do
+    Repo.all(Step)
   end
 
-  @spec list_runs_for_project_query(Lightning.Projects.Project.t()) ::
+  @spec list_steps_for_project_query(Lightning.Projects.Project.t()) ::
           Ecto.Query.t()
-  def list_runs_for_project_query(%Project{id: project_id}) do
-    from(r in Run,
-      join: j in assoc(r, :job),
+  def list_steps_for_project_query(%Project{id: project_id}) do
+    from(s in Step,
+      join: j in assoc(s, :job),
       join: w in assoc(j, :workflow),
       where: w.project_id == ^project_id,
-      order_by: [desc: r.inserted_at, desc: r.started_at],
+      order_by: [desc: s.inserted_at, desc: s.started_at],
       preload: [job: j]
     )
   end
 
-  @spec list_runs_for_project(Lightning.Projects.Project.t(), keyword | map) ::
+  @spec list_steps_for_project(Lightning.Projects.Project.t(), keyword | map) ::
           Scrivener.Page.t()
-  def list_runs_for_project(%Project{} = project, params \\ %{}) do
-    list_runs_for_project_query(project)
+  def list_steps_for_project(%Project{} = project, params \\ %{}) do
+    list_steps_for_project_query(project)
     |> Repo.paginate(params)
   end
 
   @doc """
-  Gets a single run.
+  Gets a single step.
 
-  Raises `Ecto.NoResultsError` if the Run does not exist.
+  Raises `Ecto.NoResultsError` if the Step does not exist.
 
   ## Examples
 
-      iex> get_run!(123)
-      %Run{}
+      iex> get_step!(123)
+      %Step{}
 
-      iex> get_run!(456)
+      iex> get_step!(456)
       ** (Ecto.NoResultsError)
 
   """
-  @spec get_run!(Ecto.UUID.t()) :: Run.t()
-  def get_run!(id), do: Repo.get!(Run, id)
+  @spec get_step!(Ecto.UUID.t()) :: Step.t()
+  def get_step!(id), do: Repo.get!(Step, id)
 
   @doc """
-  Fetches a run and preloads the job via the run's event.
+  Fetches a step and preloads the job via the step's event.
   """
-  def get_run_with_job!(id),
-    do: from(r in Run, where: r.id == ^id, preload: :job) |> Repo.one!()
+  def get_step_with_job!(id),
+    do: from(s in Step, where: s.id == ^id, preload: :job) |> Repo.one!()
 
   @doc """
-  Creates a run.
+  Creates a step.
 
   ## Examples
 
-      iex> create_run(%{field: value})
-      {:ok, %Run{}}
+      iex> create_step(%{field: value})
+      {:ok, %Step{}}
 
-      iex> create_run(%{field: bad_value})
+      iex> create_step(%{field: bad_value})
       {:error, %Ecto.Changeset{}}
 
   """
-  def create_run(attrs \\ %{}) do
-    %Run{}
-    |> Run.changeset(attrs)
+  def create_step(attrs \\ %{}) do
+    %Step{}
+    |> Step.changeset(attrs)
     |> Repo.insert()
   end
 
   @doc """
-  Deletes a run.
+  Returns an `%Ecto.Changeset{}` for tracking step changes.
 
   ## Examples
 
-      iex> delete_run(run)
-      {:ok, %Run{}}
-
-      iex> delete_run(run)
-      {:error, %Ecto.Changeset{}}
+      iex> change_step(step)
+      %Ecto.Changeset{data: %Step{}}
 
   """
-  def delete_run(%Run{} = run) do
-    Repo.delete(run)
-  end
-
-  @doc """
-  Returns an `%Ecto.Changeset{}` for tracking run changes.
-
-  ## Examples
-
-      iex> change_run(run)
-      %Ecto.Changeset{data: %Run{}}
-
-  """
-  def change_run(%Run{} = run, attrs \\ %{}) do
-    Run.changeset(run, attrs)
+  def change_step(%Step{} = step, attrs \\ %{}) do
+    Step.changeset(step, attrs)
   end
 
   @doc """
@@ -314,9 +345,26 @@ defmodule Lightning.Invocation do
 
   def search_workorders(
         %Project{} = project,
-        %SearchParams{} = search_params,
+        %SearchParams{search_term: search_term} = search_params,
         params \\ %{}
       ) do
+    params =
+      update_in(
+        params,
+        [:options],
+        fn options ->
+          [timeout: @workorders_search_timeout]
+          |> Keyword.merge(options || [])
+          |> then(fn options ->
+            if search_term do
+              Keyword.put(options, :limit, @workorders_count_limit)
+            else
+              options
+            end
+          end)
+        end
+      )
+
     project
     |> search_workorders_query(search_params)
     |> Repo.paginate(params)
@@ -324,20 +372,33 @@ defmodule Lightning.Invocation do
 
   def search_workorders_query(
         %Project{id: project_id},
-        %SearchParams{} = search_params
+        %SearchParams{status: status_list} = search_params
       ) do
+    status_filter =
+      if SearchParams.all_statuses_set?(search_params) do
+        []
+      else
+        status_list
+      end
+
     base_query(project_id)
     |> filter_by_workorder_id(search_params.workorder_id)
     |> filter_by_workflow_id(search_params.workflow_id)
-    |> filter_by_statuses(search_params.status)
+    |> filter_by_statuses(status_filter)
     |> filter_by_wo_date_after(search_params.wo_date_after)
     |> filter_by_wo_date_before(search_params.wo_date_before)
     |> filter_by_date_after(search_params.date_after)
     |> filter_by_date_before(search_params.date_before)
-    |> filter_by_body_or_log(
+    |> filter_by_body_or_log_or_id(
       search_params.search_fields,
       search_params.search_term
     )
+  end
+
+  def exclude_wiped_dataclips(work_order_query) do
+    work_order_query
+    |> join(:inner, [workorder: wo], assoc(wo, :dataclip), as: :dataclip)
+    |> where([dataclip: d], is_nil(d.wiped_at))
   end
 
   defp base_query(project_id) do
@@ -348,7 +409,11 @@ defmodule Lightning.Invocation do
       as: :workflow,
       where: workflow.project_id == ^project_id,
       select: workorder,
-      preload: [workflow: workflow, attempts: [runs: :job]],
+      preload: [
+        workflow: workflow,
+        runs: [steps: [:job, :input_dataclip]],
+        dataclip: []
+      ],
       order_by: [desc_nulls_first: workorder.last_activity],
       distinct: true
     )
@@ -405,59 +470,73 @@ defmodule Lightning.Invocation do
     )
   end
 
-  defp filter_by_body_or_log(query, _search_fields, nil), do: query
+  defp filter_by_body_or_log_or_id(query, _search_fields, nil), do: query
 
-  defp filter_by_body_or_log(query, search_fields, search_term) do
-    case search_fields do
-      [:body, :log] ->
-        from(
-          [workorder: workorder] in query,
-          left_join: attempt in assoc(workorder, :attempts),
-          left_join: log_line in assoc(attempt, :log_lines),
-          left_join: run in assoc(attempt, :runs),
-          left_join: dataclip in assoc(run, :input_dataclip),
-          where:
-            fragment(
-              "CAST(? AS TEXT) iLIKE ?",
-              dataclip.body,
-              ^"%#{search_term}%"
-            ) or
-              fragment(
-                "CAST(? AS TEXT) iLIKE ?",
-                log_line.message,
-                ^"%#{search_term}%"
-              )
+  defp filter_by_body_or_log_or_id(query, search_fields, search_term) do
+    query = build_search_fields_query(query, search_fields)
+
+    from query, where: ^build_search_fields_where(search_fields, search_term)
+  end
+
+  defp build_search_fields_where(search_fields, search_term) do
+    Enum.reduce(search_fields, dynamic(false), fn
+      :body, dynamic ->
+        dynamic(
+          [input_dataclip: dataclip],
+          ^dynamic or ilike(type(dataclip.body, :string), ^"%#{search_term}%")
         )
 
-      [:body] ->
-        from(
-          [workorder: workorder] in query,
-          left_join: attempt in assoc(workorder, :attempts),
-          left_join: run in assoc(attempt, :runs),
-          left_join: dataclip in assoc(run, :input_dataclip),
-          where:
-            fragment(
-              "CAST(? AS TEXT) iLIKE ?",
-              dataclip.body,
-              ^"%#{search_term}%"
-            )
+      :id, dynamic ->
+        dynamic(
+          [workorder: wo, runs: att, steps: step],
+          ^dynamic or like(type(wo.id, :string), ^"%#{search_term}%") or
+            like(type(att.id, :string), ^"%#{search_term}%") or
+            like(type(step.id, :string), ^"%#{search_term}%")
         )
 
-      [:log] ->
-        from(
-          [workorder: workorder] in query,
-          left_join: attempt in assoc(workorder, :attempts),
-          left_join: log_line in assoc(attempt, :log_lines),
-          where:
-            fragment(
-              "CAST(? AS TEXT) iLIKE ?",
-              log_line.message,
-              ^"%#{search_term}%"
-            )
+      :log, dynamic ->
+        dynamic(
+          [log_lines: log_line],
+          ^dynamic or
+            ilike(type(log_line.message, :string), ^"%#{search_term}%")
         )
+    end)
+  end
 
-      true ->
-        query
+  defp build_search_fields_query(base_query, search_fields) do
+    Enum.reduce(search_fields, base_query, fn
+      :body, query ->
+        from [steps: step] in safe_join_steps(query),
+          left_join: dataclip in assoc(step, :input_dataclip),
+          as: :input_dataclip
+
+      :log, query ->
+        from [runs: run] in safe_join_runs(query),
+          left_join: log_line in assoc(run, :log_lines),
+          as: :log_lines
+
+      :id, query ->
+        safe_join_steps(query)
+    end)
+  end
+
+  defp safe_join_runs(query) do
+    if has_named_binding?(query, :runs) do
+      query
+    else
+      join(query, :left, [workorder: workorder], assoc(workorder, :runs),
+        as: :runs
+      )
+    end
+  end
+
+  defp safe_join_steps(query) do
+    if has_named_binding?(query, :steps) do
+      query
+    else
+      from [runs: run] in safe_join_runs(query),
+        left_join: step in assoc(run, :steps),
+        as: :steps
     end
   end
 
@@ -465,14 +544,14 @@ defmodule Lightning.Invocation do
     from(wo in Lightning.WorkOrder, where: wo.id in ^ids)
   end
 
-  def with_attempts(query) do
-    runs_query =
-      from(r in Lightning.Invocation.Run,
-        as: :runs,
-        join: j in assoc(r, :job),
-        join: d in assoc(r, :input_dataclip),
+  def with_runs(query) do
+    steps_query =
+      from(s in Lightning.Invocation.Step,
+        as: :steps,
+        join: j in assoc(s, :job),
+        join: d in assoc(s, :input_dataclip),
         as: :input,
-        order_by: [asc: r.finished_at],
+        order_by: [asc: s.finished_at],
         preload: [
           job:
             ^from(job in Lightning.Workflows.Job,
@@ -481,49 +560,42 @@ defmodule Lightning.Invocation do
         ]
       )
 
-    attempts_query =
-      from(a in Lightning.Attempt,
+    runs_query =
+      from(a in Lightning.Run,
         order_by: [desc: a.inserted_at],
-        preload: [runs: ^runs_query]
-      )
-
-    dataclips_query =
-      from(d in Lightning.Invocation.Dataclip,
-        select: %{id: d.id, type: d.type}
+        preload: [steps: ^steps_query]
       )
 
     # we can use a ^custom_query to control (order_by ...) the way preloading is done
     from(wo in query,
       preload: [
-        reason:
-          ^from(r in Lightning.InvocationReason,
-            preload: [dataclip: ^dataclips_query]
-          ),
         workflow:
           ^from(wf in Lightning.Workflows.Workflow,
             select: %{id: wf.id, name: wf.name, project_id: wf.project_id}
           ),
-        attempts: ^attempts_query
+        runs: ^runs_query
       ]
     )
   end
 
   @doc """
-  Return all logs for a run as a list
+  Return all logs for a step as a list
   """
-  @spec logs_for_run(Run.t()) :: list()
-  def logs_for_run(%Run{} = run) do
-    Ecto.assoc(run, :log_lines)
+  @spec logs_for_step(Step.t()) :: list()
+  def logs_for_step(%Step{} = step) do
+    Ecto.assoc(step, :log_lines)
     |> order_by([l], asc: l.timestamp)
     |> Repo.all()
   end
 
-  def assemble_logs_for_run(nil), do: nil
+  def assemble_logs_for_step(nil), do: nil
 
   @doc """
-  Return all logs for a run as a string of text, separated by new line \n breaks
+  Return all logs for a step as a string of text, separated by new line \n breaks
   """
-  @spec assemble_logs_for_run(Run.t()) :: binary()
-  def assemble_logs_for_run(%Run{} = run),
-    do: logs_for_run(run) |> Enum.map_join("\n", fn log -> log.message end)
+  @spec assemble_logs_for_step(Step.t()) :: binary()
+  def assemble_logs_for_step(%Step{} = step),
+    do:
+      logs_for_step(step)
+      |> Enum.map_join("\n", fn log -> log.message end)
 end

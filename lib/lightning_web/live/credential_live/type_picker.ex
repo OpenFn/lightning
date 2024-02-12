@@ -1,77 +1,38 @@
 defmodule LightningWeb.CredentialLive.TypePicker do
   use LightningWeb, :live_component
 
-  alias LightningWeb.Components.Common
-
   @impl true
   def render(assigns) do
     ~H"""
-    <div class="mt-10 sm:mt-0">
-      <div class="lg:grid lg:grid-cols-3 md:gap-6">
-        <div class="lg:col-span-1 hidden @2xl:block">
-          <div class="px-4 sm:px-0">
-            <p class="mt-1 text-sm text-gray-600">
-              Decide which type credential you would like to create.
-            </p>
+    <div class="container mx-auto px-4">
+      <.form
+        :let={f}
+        id="credential-type-picker"
+        for={%{"selected" => @selected}}
+        as={:type}
+        phx-target={@myself}
+        phx-change="type_changed"
+      >
+        <div class="grid grid-cols-2 md:grid-cols-4 sm:grid-cols-3 gap-4 overflow-auto max-h-99">
+          <div
+            :for={{name, key, logo} <- @type_options}
+            class="flex items-center p-2"
+          >
+            <%= Phoenix.HTML.Form.radio_button(f, :selected, key,
+              class: "h-4 w-4 border-gray-300 text-indigo-600 focus:ring-indigo-500"
+            ) %>
+            <LightningWeb.Components.Form.label_field
+              form={f}
+              field={:selected}
+              for={"credential-type-picker_selected_#{key}"}
+              title={name}
+              logo={logo}
+              class="ml-3 block text-sm font-medium text-gray-700"
+              value={key}
+            />
           </div>
         </div>
-        <div class="mt-5 lg:col-span-3 xl:col-span-2 md:mt-0">
-          <div class="shadow sm:rounded-md">
-            <div class="space-y-6 bg-white px-4 py-5 sm:p-6">
-              <fieldset>
-                <legend class="contents text-base font-medium text-gray-900">
-                  Types
-                </legend>
-                <p class="text-sm text-gray-500">
-                  These are the different kinds of credentials that can be created.
-                </p>
-                <.form
-                  :let={f}
-                  id="credential-type-picker"
-                  for={%{"selected" => @selected}}
-                  as={:type}
-                  phx-target={@myself}
-                  phx-change="type_changed"
-                  phx-submit="confirm_type"
-                >
-                  <div class="md:columns-3 columns-2">
-                    <div
-                      :for={{name, key} <- @type_options}
-                      class="flex items-center pt-4"
-                    >
-                      <%= Phoenix.HTML.Form.radio_button(f, :selected, key,
-                        class:
-                          "h-4 w-4 border-gray-300 text-indigo-600 focus:ring-indigo-500"
-                      ) %>
-                      <LightningWeb.Components.Form.label_field
-                        form={f}
-                        field={:selected}
-                        for={"credential-type-picker_selected_#{key}"}
-                        title={name}
-                        class="ml-3 block text-sm font-medium text-gray-700"
-                        value={key}
-                      />
-                    </div>
-                  </div>
-                </.form>
-              </fieldset>
-            </div>
-            <div class="bg-gray-50 px-4 py-3 text-right sm:px-6">
-              <Common.button
-                disabled={!@selected}
-                phx-click={@on_confirm}
-                phx-target={@phx_target || @myself}
-                phx-value-selected={@selected}
-              >
-                <div class="h-full">
-                  <span class="inline-block align-middle">Continue</span>
-                  <Heroicons.arrow_long_right class="h-4 w-4 inline-block" />
-                </div>
-              </Common.button>
-            </div>
-          </div>
-        </div>
-      </div>
+      </.form>
     </div>
     """
   end
@@ -80,33 +41,48 @@ defmodule LightningWeb.CredentialLive.TypePicker do
   def mount(socket) do
     {:ok, schemas_path} = Application.fetch_env(:lightning, :schemas_path)
 
-    enable_google_credential =
-      Application.get_env(:lightning, LightningWeb, [])
-      |> Keyword.get(:enable_google_credential)
-
     schemas_options =
       Path.wildcard("#{schemas_path}/*.json")
       |> Enum.map(fn p ->
         name = p |> Path.basename() |> String.replace(".json", "")
-        {name |> Phoenix.HTML.Form.humanize(), name}
+        {name |> Phoenix.HTML.Form.humanize(), name, nil}
       end)
+
+    oauth_clients =
+      Application.get_env(:lightning, :oauth_clients)
 
     type_options =
       schemas_options
-      |> append_if_missing({"Raw JSON", "raw"})
-      |> append_if_missing({"Googlesheets", "googlesheets"})
+      |> Enum.concat([{"Raw JSON", "raw", nil}])
+      |> handle_oauth_item(
+        {"GoogleSheets", "googlesheets",
+         Routes.static_path(socket, "/images/oauth-2.png")},
+        get_in(oauth_clients, [:google, :client_id])
+      )
+      |> handle_oauth_item(
+        {
+          "Salesforce",
+          "salesforce_oauth",
+          Routes.static_path(socket, "/images/oauth-2.png")
+        },
+        get_in(oauth_clients, [:salesforce, :client_id])
+      )
       |> Enum.sort_by(& &1, :asc)
-      |> Enum.filter(fn {_, key} ->
-        case key do
-          "googlesheets" ->
-            enable_google_credential
-
-          _ ->
-            true
-        end
-      end)
 
     {:ok, socket |> assign(type_options: type_options)}
+  end
+
+  defp handle_oauth_item(list, {_label, id, _image} = item, client_id) do
+    if is_nil(client_id) || Enum.member?(list, item) do
+      # Replace
+      Enum.reject(list, fn {_first, second, _third} -> second == id end)
+    else
+      Enum.map(list, fn
+        {_old_label, old_id, _old_image} when old_id == id -> item
+        old_item -> old_item
+      end)
+      |> append_if_missing(item)
+    end
   end
 
   defp append_if_missing(list, item) do
@@ -125,7 +101,16 @@ defmodule LightningWeb.CredentialLive.TypePicker do
   end
 
   @impl true
-  def handle_event("type_changed", %{"type" => %{"selected" => type}}, socket) do
-    {:noreply, socket |> assign(selected: type)}
+  def handle_event(
+        "type_changed",
+        %{"type" => %{"selected" => type}},
+        socket
+      ) do
+    send(self(), {:credential_type_changed, type})
+    {:noreply, socket}
+  end
+
+  def handle_event("type_changed", %{"_target" => ["type", "selected"]}, socket) do
+    {:noreply, socket}
   end
 end

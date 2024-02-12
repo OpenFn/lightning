@@ -2,19 +2,49 @@ defmodule LightningWeb.WorkflowLive.IndexTest do
   use LightningWeb.ConnCase, async: true
   import Phoenix.LiveViewTest
 
+  import Mock
   import Lightning.Factories
+  import Lightning.WorkflowsFixtures
   import Lightning.WorkflowLive.Helpers
+
+  alias Lightning.Extensions.UsageLimiter
+  alias LightningWeb.Components.Modal
 
   setup :register_and_log_in_user
   setup :create_project_for_current_user
   setup :create_workflow
 
   describe "index" do
-    test "renders a list of workflows", %{conn: conn, project: project} do
+    test "renders an empty list of workflows", %{conn: conn, project: project} do
       {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/w")
 
       assert view
              |> element("#workflows-#{project.id}", "No workflows yet")
+    end
+
+    test "renders a component on runtime limit exceeded", %{
+      conn: conn,
+      project: %{id: project_id}
+    } do
+      with_mock UsageLimiter,
+        check_limits: fn %{project_id: ^project_id} ->
+          {:error, :too_many_runs,
+           %{
+             position: :banner,
+             function: &Modal.modal_footer/1,
+             attrs: [
+               inner_block: [
+                 %{
+                   inner_block: fn nil, nil -> "Some text" end
+                 }
+               ]
+             ]
+           }}
+        end do
+        {:ok, _view, html} = live(conn, ~p"/projects/#{project_id}/w")
+
+        assert html =~ "Some text"
+      end
     end
 
     test "only users with MFA enabled can access workflows for a project with MFA requirement",
@@ -45,27 +75,164 @@ defmodule LightningWeb.WorkflowLive.IndexTest do
       end)
     end
 
-    test "lists all workflows for a project", %{
+    test "shows the Dashboard for a project", %{
       conn: conn,
-      project: project
+      project: project,
+      workflow: new_workflow
     } do
-      workflow_one = insert(:workflow, project: project, name: "One")
-      workflow_two = insert(:workflow, project: project, name: "Two")
+      workflow1 =
+        complex_workflow_with_runs(
+          name: "One",
+          project: project,
+          last_workorder_failed: true
+        )
+
+      workflow2 =
+        complex_workflow_with_runs(
+          name: "Two",
+          project: project,
+          last_workorder_failed: false
+        )
 
       {:ok, view, html} = live(conn, ~p"/projects/#{project.id}/w")
 
-      assert html =~ "Create new workflow"
+      assert Regex.match?(~r{<h1.*Dashboard.*</h1>}s, html)
 
+      # Metrics
+      # 10 total workorders
+      # 10 total runs (4 pending)
+      # 2 successful runs out of 4 completed
+      # 2 work orders failed out of 10
+      assert Regex.match?(~r/Work Orders.*?<div>\s*10.*\(6 pending\)/s, html)
+
+      pending_and_date_filter =
+        Timex.now()
+        |> Timex.shift(months: -1)
+        |> Date.to_string()
+        |> then(fn date ->
+          "filters[date_after]=&amp;filters[date_before]=&amp;filters[id]=true&amp;filters[log]=true&amp;filters[pending]=true&amp;filters[running]=true&amp;filters[wo_date_after]=#{date}"
+        end)
+
+      assert html
+             |> has_history_link_pattern?(
+               project,
+               pending_and_date_filter,
+               "6 pending"
+             )
+
+      assert Regex.match?(~r/Runs.*?<div>\s*10.*">\s*\(6 pending\)/s, html)
+
+      assert Regex.match?(
+               ~r/Successful Runs.*<div>\s*2.*">\s*\(50.0%\)/s,
+               html
+             )
+
+      assert Regex.match?(
+               ~r/Work Orders in failed state.*<div>\s*2.*">\s*\(20.0%\)/s,
+               html
+             )
+
+      failed_filter_pattern =
+        "filters[cancelled]=true.*filters[crashed]=true.*filters[exception]=true.*filters[failed]=true.*filters[killed]=true.*filters[lost]=true"
+
+      assert html
+             |> has_history_link_pattern?(
+               project,
+               failed_filter_pattern,
+               "View all"
+             )
+
+      refute html
+             |> has_history_link_pattern?(
+               project,
+               "filters[success]=true"
+             )
+
+      # Header
+      assert Regex.match?(~r/Workflows.*h3>/s, html)
+
+      assert Regex.match?(
+               ~r/<button.*id="open-modal-button".*Create new workflow.*button>/s,
+               html
+             )
+
+      # Workflow links
       assert view
              |> has_link?(
-               ~p"/projects/#{project.id}/w/#{workflow_one.id}",
+               ~p"/projects/#{project.id}/w/#{workflow1.id}",
                "One"
              )
 
       assert view
              |> has_link?(
-               ~p"/projects/#{project.id}/w/#{workflow_two.id}",
+               ~p"/projects/#{project.id}/w/#{workflow2.id}",
                "Two"
+             )
+
+      assert view
+             |> has_link?(
+               ~p"/projects/#{project.id}/w/#{new_workflow.id}",
+               new_workflow.name
+             )
+
+      refute html
+             |> has_history_link_pattern?(
+               project,
+               "filters[workflow_id]=#{new_workflow.id}"
+             )
+
+      # Work orders links
+      workorders_count = "4"
+
+      # work order date filter without status filter
+      date_filter =
+        Timex.now()
+        |> Timex.shift(months: -1)
+        |> Date.to_string()
+        |> then(fn date ->
+          "filters[date_after]=&amp;filters[date_before]=&amp;filters[id]=true&amp;filters[log]=true&amp;filters[wo_date_after]=#{date}"
+        end)
+
+      assert html
+             |> has_history_link_pattern?(
+               project,
+               "filters[workflow_id]=#{workflow1.id}.*#{date_filter}",
+               workorders_count
+             )
+
+      assert html
+             |> has_history_link_pattern?(
+               project,
+               "filters[workflow_id]=#{workflow2.id}.*#{date_filter}",
+               workorders_count
+             )
+
+      # Failed runs links
+      failed_runs_count = "1"
+
+      assert html
+             |> has_history_link_pattern?(
+               project,
+               "filters[workflow_id]=#{workflow1.id}.*#{failed_filter_pattern}",
+               failed_runs_count
+             )
+
+      assert html
+             |> has_history_link_pattern?(
+               project,
+               "filters[workflow_id]=#{workflow2.id}.*#{failed_filter_pattern}",
+               failed_runs_count
+             )
+
+      assert Regex.match?(
+               ~r/(8 steps.*#{round(5 / 7 * 100 * 100) / 100}% success)/s,
+               html
+             )
+
+      # Last workflow with placeholders
+      assert Regex.match?(
+               ~r{Two.*#{new_workflow.name}.*Nothing last.*0.*N/A.*0.*N/A}s,
+               html
              )
     end
   end
@@ -78,18 +245,11 @@ defmodule LightningWeb.WorkflowLive.IndexTest do
     } do
       {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/w")
 
-      assert view
-             |> has_link?(
-               ~p"/projects/#{project.id}/w/new",
-               "Create new workflow"
-             )
-
-      {:ok, _view, html} =
+      {:ok, _, html} =
         view
-        |> click_create_workflow()
-        # click create workflow redirects to ~p"/projects/8d498ad1-5ee0-4378-b687-805640b751df/w/new"
+        |> form("#new_workflow", new_workflow: %{name: "New workflow"})
+        |> render_submit()
         |> follow_redirect(conn)
-        # then because user is redirected back to ~p"/projects/8d498ad1-5ee0-4378-b687-805640b751df/w" due to lack of permission
         |> follow_redirect(conn)
 
       assert html =~ "You are not authorized to perform this action."
@@ -101,13 +261,19 @@ defmodule LightningWeb.WorkflowLive.IndexTest do
       project: project
     } do
       {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/w")
+      query_params = %{name: "New workflow"}
+      query_string = URI.encode_query(query_params)
 
-      {:ok, view, _html} =
+      {:ok, _, html} =
         view
-        |> click_create_workflow()
-        |> follow_redirect(conn, "/projects/#{project.id}/w/new")
+        |> form("#new_workflow", new_workflow: %{name: "New workflow"})
+        |> render_submit()
+        |> follow_redirect(
+          conn,
+          "/projects/#{project.id}/w/new?#{query_string}"
+        )
 
-      assert view |> element("div[id^=workflow-edit-]") |> has_element?()
+      assert html =~ "New workflow"
     end
 
     test "only users with MFA enabled can create workflows for a project with MFA requirement",
@@ -148,13 +314,10 @@ defmodule LightningWeb.WorkflowLive.IndexTest do
     } do
       {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/w")
 
-      refute view
-             |> has_delete_workflow_link?(workflow),
-             "shouldn't have a delete link on the page"
+      refute view |> has_delete_workflow_link?(workflow)
 
       assert view |> render_click("delete_workflow", %{"id" => workflow.id}) =~
-               "You are not authorized to perform this action.",
-             "shouldn't be able to delete a workflow by sending an event"
+               "You are not authorized to perform this action."
     end
 
     @tag role: :editor
@@ -167,16 +330,12 @@ defmodule LightningWeb.WorkflowLive.IndexTest do
 
       assert has_workflow_card?(view, workflow)
 
-      assert view
-             |> has_delete_workflow_link?(workflow),
-             "should have a delete link on the page"
+      assert view |> has_delete_workflow_link?(workflow)
 
       assert view |> click_delete_workflow(workflow) =~
-               "Workflow successfully deleted.",
-             "should be able to delete a workflow by sending an event"
+               "Workflow successfully deleted."
 
-      refute has_workflow_card?(view, workflow),
-             "shouldn't have the workflow card on the page"
+      refute has_workflow_card?(view, workflow)
     end
   end
 end

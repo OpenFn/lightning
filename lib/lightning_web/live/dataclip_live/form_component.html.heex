@@ -1,13 +1,5 @@
 <div id={"dataclip-#{@id}"}>
-  <.form
-    :let={f}
-    for={@changeset}
-    id="dataclip-form"
-    phx-target={@myself}
-    phx-debounce="500"
-    phx-change="validate"
-    phx-submit="save"
-  >
+  <.form :let={f} for={@changeset} id="dataclip-form" phx-target={@myself}>
     <div class="grid grid-cols-6 gap-6">
       <div class="col-span-3">
         <%= Phoenix.HTML.Form.label(f, :type,

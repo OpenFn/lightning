@@ -38,7 +38,7 @@ export const create = (parentNode: Flow.Node) => {
       type: 'step',
       source: parentNode.id,
       target: targetId,
-      data: { condition: 'on_job_success', placeholder: true },
+      data: { condition_type: 'on_job_success', placeholder: true },
     })
   );
 
@@ -48,7 +48,7 @@ export const create = (parentNode: Flow.Node) => {
 export default (
   ref: HTMLElement | null,
   store: StoreApi<WorkflowState>,
-  requestSelectionChange: (id?: string) => void // TODO more like changeSelection
+  requestSelectionChange: (id: string | null) => void // TODO more like changeSelection
 ) => {
   // TODO in new-workflow, we need to take a placeholder as a prop
   const [placeholders, setPlaceholders] = useState<Flow.Model>({
@@ -82,9 +82,8 @@ export default (
     [addToStore, placeholders]
   );
 
-  const cancel = useCallback((evt: CustomEvent<any>) => {
+  const cancel = useCallback((_evt?: CustomEvent<any>) => {
     setPlaceholders({ nodes: [], edges: [] });
-    requestSelectionChange(undefined);
   }, []);
 
   useEffect(() => {
@@ -101,5 +100,5 @@ export default (
     }
   }, [commit, cancel, ref]);
 
-  return { placeholders, add };
+  return { placeholders, add, cancel };
 };

@@ -22,14 +22,14 @@ import type { WorkflowState } from '../workflow-editor/store';
 import type { Flow, Positions } from './types';
 
 type WorkflowDiagramProps = {
-  selection?: string | null;
-  onSelectionChange: (id?: string) => void;
+  selection: string | null;
+  onSelectionChange: (id: string | null) => void;
   store: StoreApi<WorkflowState>;
 };
 
 type ChartCache = {
   positions: Positions;
-  lastSelection?: string;
+  lastSelection: string | null;
   lastLayout?: string;
 };
 
@@ -40,24 +40,20 @@ export default React.forwardRef<HTMLElement, WorkflowDiagramProps>(
     const [model, setModel] = useState<Flow.Model>({ nodes: [], edges: [] });
 
     const updateSelection = useCallback(
-      (id?: string) => {
-        if (id !== selection) {
-          onSelectionChange(id);
-        }
+      (id?: string | null) => {
+        id = id || null;
+
+        chartCache.current.lastSelection = id;
+        onSelectionChange(id);
       },
       [onSelectionChange, selection]
     );
 
-    const requestSelectionChange = useCallback((id?: string) => {
-      chartCache.current.lastSelection = id;
-      updateSelection(id);
-    }, []);
-
-    const { placeholders, add: addPlaceholder } = usePlaceholders(
-      ref,
-      store,
-      requestSelectionChange
-    );
+    const {
+      placeholders,
+      add: addPlaceholder,
+      cancel: cancelPlaceholder,
+    } = usePlaceholders(ref, store, updateSelection);
 
     const workflow = useStore(
       store!,
@@ -73,7 +69,7 @@ export default React.forwardRef<HTMLElement, WorkflowDiagramProps>(
     const chartCache = useRef<ChartCache>({
       positions: {},
       // This will set the initial selection into the cache
-      lastSelection: selection ?? undefined,
+      lastSelection: selection,
       lastLayout: undefined,
     });
 
@@ -120,13 +116,9 @@ export default React.forwardRef<HTMLElement, WorkflowDiagramProps>(
     }, [workflow, flow, placeholders]);
 
     useEffect(() => {
-      let newSelection = selection ?? undefined; // indirection is mostly for type safety
-      if (chartCache.current.lastSelection != newSelection) {
-        chartCache.current.lastSelection = newSelection;
-        const updatedModel = updateSelectionStyles(model, newSelection);
-        setModel(updatedModel);
-      }
-    }, [model, selection]);
+      const updatedModel = updateSelectionStyles(model, selection);
+      setModel(updatedModel);
+    }, [selection]);
 
     const onNodesChange = useCallback(
       (changes: NodeChange[]) => {
@@ -141,6 +133,8 @@ export default React.forwardRef<HTMLElement, WorkflowDiagramProps>(
         if ((event.target as HTMLElement).closest('[name=add-node]')) {
           addPlaceholder(node);
         } else {
+          if (node.type != 'placeholder') cancelPlaceholder();
+
           updateSelection(node.id);
         }
       },
@@ -149,6 +143,7 @@ export default React.forwardRef<HTMLElement, WorkflowDiagramProps>(
 
     const handleEdgeClick = useCallback(
       (_event: React.MouseEvent, edge: Flow.Edge) => {
+        cancelPlaceholder();
         updateSelection(edge.id);
       },
       [updateSelection]
@@ -157,7 +152,8 @@ export default React.forwardRef<HTMLElement, WorkflowDiagramProps>(
     const handleBackgroundClick = useCallback(
       (event: React.MouseEvent) => {
         if (event.target.classList?.contains('react-flow__pane')) {
-          updateSelection(undefined);
+          cancelPlaceholder();
+          updateSelection(null);
         }
       },
       [updateSelection]

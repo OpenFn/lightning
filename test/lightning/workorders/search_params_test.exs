@@ -46,17 +46,13 @@ defmodule Lightning.WorkOrders.SearchParamsTest do
     test "sets search params values that are not given to default values" do
       assert SearchParams.to_uri_params(%{
                "body" => false,
-               "failed" => false,
+               "failed" => true,
                "workflow_id" => "babd29f7-bf15-4a66-af21-51209217ebd4"
              }) == %{
+               "id" => true,
                "log" => true,
                "body" => false,
-               "crashed" => true,
-               "pending" => true,
-               "killed" => true,
-               "running" => true,
-               "success" => true,
-               "failed" => false,
+               "failed" => true,
                "wo_date_after" => nil,
                "wo_date_before" => nil,
                "date_after" => nil,
@@ -69,21 +65,18 @@ defmodule Lightning.WorkOrders.SearchParamsTest do
       now = DateTime.utc_now()
 
       assert SearchParams.to_uri_params(%{
+               "body" => true,
                "log" => false,
+               "id" => false,
                "crashed" => true,
-               "failed" => false,
                "date_after" => now,
                "wo_date_before" => now,
                "workflow_id" => "babd29f7-bf15-4a66-af21-51209217ebd4"
              }) == %{
-               "log" => false,
                "body" => true,
+               "log" => false,
+               "id" => false,
                "crashed" => true,
-               "pending" => true,
-               "failed" => false,
-               "success" => true,
-               "killed" => true,
-               "running" => true,
                "wo_date_after" => nil,
                "wo_date_before" => now |> DateTime.to_string(),
                "date_after" => now |> DateTime.to_string(),

@@ -9,7 +9,6 @@ workflows:
       webhook-job:
         name: webhook job
         adaptor: '@openfn/language-common@latest'
-        enabled: true
         # credential:
         # globals:
         body: |
@@ -18,7 +17,6 @@ workflows:
       on-fail:
         name: on fail
         adaptor: '@openfn/language-common@latest'
-        enabled: true
         # credential:
         # globals:
         body: |
@@ -27,7 +25,6 @@ workflows:
       on-success:
         name: on success
         adaptor: '@openfn/language-common@latest'
-        enabled: true
         # credential:
         # globals:
         body: |
@@ -35,26 +32,29 @@ workflows:
     triggers:
       webhook:
         type: webhook
+        enabled: true
     edges:
       webhook->webhook-job:
         source_trigger: webhook
         target_job: webhook-job
-        condition: always
+        condition_type: always
+        enabled: true
       webhook-job->on-fail:
         source_job: webhook-job
         target_job: on-fail
-        condition: on_job_failure
+        condition_type: on_job_failure
+        enabled: true
       webhook-job->on-success:
         source_job: webhook-job
         target_job: on-success
-        condition: on_job_success
+        condition_type: on_job_success
+        enabled: true
   workflow-2:
     name: workflow 2
     jobs:
       some-cronjob:
         name: some cronjob
         adaptor: '@openfn/language-common@latest'
-        enabled: true
         # credential:
         # globals:
         body: |
@@ -62,7 +62,6 @@ workflows:
       on-cron-failure:
         name: on cron failure
         adaptor: '@openfn/language-common@latest'
-        enabled: true
         # credential:
         # globals:
         body: |
@@ -71,12 +70,15 @@ workflows:
       cron:
         type: cron
         cron_expression: '0 23 * * *'
+        enabled: true
     edges:
       cron->some-cronjob:
         source_trigger: cron
         target_job: some-cronjob
-        condition: always
+        condition_type: always
+        enabled: true
       some-cronjob->on-cron-failure:
         source_job: some-cronjob
         target_job: on-cron-failure
-        condition: on_job_success
+        condition_type: on_job_success
+        enabled: true 

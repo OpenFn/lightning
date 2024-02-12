@@ -2,6 +2,9 @@ defmodule Lightning.MetadataService do
   @moduledoc """
   Retrieves metadata for a given credential and adaptor using the OpenFn CLI.
   """
+  alias Lightning.AdaptorService
+  alias Lightning.CLI
+  alias Lightning.Credentials.Credential
 
   defmodule Error do
     @type t :: %__MODULE__{type: String.t()}
@@ -21,10 +24,6 @@ defmodule Lightning.MetadataService do
 
   @adaptor_service :adaptor_service
   @cli_task_worker :cli_task_worker
-
-  alias Lightning.AdaptorService
-  alias Lightning.CLI
-  alias Lightning.Credentials.Credential
 
   @doc """
   Retrieve metadata for a given adaptor and credential.
@@ -77,7 +76,9 @@ defmodule Lightning.MetadataService do
         {:error, Error.new("no_credential")}
 
       {adaptor_path, %Credential{body: credential_body}} ->
-        {:ok, {adaptor_path, %{"configuration" => credential_body}}}
+        {:ok,
+         {adaptor_path,
+          %{"configuration" => Lightning.RedactedMap.new(credential_body)}}}
     end
   end
 
@@ -91,8 +92,20 @@ defmodule Lightning.MetadataService do
 
   defp get_adaptor_path(adaptor) do
     case AdaptorService.install(@adaptor_service, adaptor) do
-      {:error, _} -> {:error, Error.new("no_matching_adaptor")}
-      {:ok, %{path: path}} -> {:ok, path}
+      {:error, _} ->
+        {:error, Error.new("no_matching_adaptor")}
+
+      {:ok, %{path: path}} when not is_nil(path) ->
+        {:ok, path}
+
+      other ->
+        Sentry.capture_message("AdaptorService.install failed",
+          level: "warning",
+          message: inspect(other),
+          extra: %{adaptor: adaptor}
+        )
+
+        {:error, Error.new("adaptor_service_install_error")}
     end
   end
 

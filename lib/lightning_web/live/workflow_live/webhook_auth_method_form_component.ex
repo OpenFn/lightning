@@ -1,10 +1,10 @@
 defmodule LightningWeb.WorkflowLive.WebhookAuthMethodFormComponent do
   @moduledoc false
 
-  alias Lightning.Projects.Project
   use LightningWeb, :live_component
 
   alias Lightning.Accounts
+  alias Lightning.Projects.Project
   alias Lightning.WebhookAuthMethods
   alias Lightning.Workflows.WebhookAuthMethod
   alias Phoenix.LiveView.JS
@@ -116,7 +116,8 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodFormComponent do
 
     if changeset.valid? do
       case WebhookAuthMethods.schedule_for_deletion(
-             socket.assigns.webhook_auth_method
+             socket.assigns.webhook_auth_method,
+             actor: socket.assigns.current_user
            ) do
         {:ok, _} ->
           {:noreply,
@@ -245,7 +246,7 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodFormComponent do
           </.label>
           <.input type="text" field={f[:confirmation]} />
         </div>
-        <.modal_footer>
+        <.modal_footer class="mx-6 mt-6">
           <div class="sm:flex sm:flex-row-reverse">
             <button
               id="delete_trigger_auth_methods_button"
@@ -309,7 +310,7 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodFormComponent do
           </div>
           <.input type="text" field={f[:code]} label="2FA Code" inputmode="numeric" />
         </div>
-        <.modal_footer>
+        <.modal_footer class="mx-6 mt-6">
           <div class="sm:flex sm:flex-row-reverse">
             <button
               type="submit"
@@ -334,7 +335,7 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodFormComponent do
 
   def render(assigns) do
     ~H"""
-    <div id="create_edit_webhook_auth_method">
+    <div id="write_webhook_auth_method">
       <%!-- <%= if @webhook_auth_method.auth_type do %> --%>
       <.form
         :let={f}
@@ -402,7 +403,7 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodFormComponent do
               />
           <% end %>
         </div>
-        <.modal_footer>
+        <.modal_footer class="mx-6 mt-6">
           <div class="sm:flex sm:flex-row-reverse">
             <button
               type="submit"
@@ -441,7 +442,10 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodFormComponent do
       ~H"""
       <button
         type="button"
-        phx-click="close_webhook_modal"
+        phx-click={
+          JS.hide(to: "#webhooks_auth_method_modal")
+          |> JS.push("close_webhook_modal")
+        }
         phx-target="#webhooks_auth_method_modal-container"
         class="mt-3 inline-flex w-full justify-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:mt-0 sm:w-auto"
       >
