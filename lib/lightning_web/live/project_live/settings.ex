@@ -323,7 +323,10 @@ defmodule LightningWeb.ProjectLive.Settings do
 
       %{app_name: app_name} ->
         {:ok, _connection} =
-          VersionControl.create_github_connection(user_id, project_id)
+          VersionControl.create_github_connection(%{
+            user_id: user_id,
+            project_id: project_id
+          })
 
         {:noreply,
          redirect(socket,
@@ -356,10 +359,10 @@ defmodule LightningWeb.ProjectLive.Settings do
         {:ok, _} = VersionControl.remove_github_connection(project_id)
 
         {:ok, _connection} =
-          VersionControl.create_github_connection(
-            user_id,
-            project_id
-          )
+          VersionControl.create_github_connection(%{
+            user_id: user_id,
+            project_id: project_id
+          })
 
         {:noreply,
          redirect(socket, external: "https://github.com/apps/#{app_name}")}
