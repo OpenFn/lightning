@@ -11,6 +11,8 @@ and this project adheres to
 ### Added
 
 ### Changed
+- Renamed ImpactTracking to UsageTracking
+  [#1729](https://github.com/OpenFn/lightning/issues/1729)
 
 ### Fixed
 

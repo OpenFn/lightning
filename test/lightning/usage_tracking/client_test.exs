@@ -1,9 +1,9 @@
-defmodule Lightning.ImpactTracking.ClientTest do
+defmodule Lightning.UsageTracking.ClientTest do
   use ExUnit.Case, async: false
 
   import Tesla.Mock
 
-  alias Lightning.ImpactTracking.Client
+  alias Lightning.UsageTracking.Client
 
   @host "https://foo.bar"
   @url "#{@host}/api/metrics"

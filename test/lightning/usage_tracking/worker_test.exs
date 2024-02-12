@@ -1,7 +1,7 @@
-defmodule Lightning.ImpactTracking.WorkerTest do
+defmodule Lightning.UsageTracking.WorkerTest do
   use Lightning.DataCase, async: false
 
-  alias Lightning.ImpactTracking.{Client, Configuration, Report, Worker}
+  alias Lightning.UsageTracking.{Client, Configuration, Report, Worker}
 
   import Mock
   import Lightning.ApplicationHelpers, only: [put_temporary_env: 3]
@@ -11,7 +11,7 @@ defmodule Lightning.ImpactTracking.WorkerTest do
 
   describe "tracking is enabled" do
     setup do
-      put_temporary_env(:lightning, :impact_tracking,
+      put_temporary_env(:lightning, :usage_tracking,
         enabled: true,
         host: @host
       )
@@ -39,7 +39,7 @@ defmodule Lightning.ImpactTracking.WorkerTest do
       end
     end
 
-    test "sends an empty JSON object to the impact tracker" do
+    test "sends an empty JSON object to the usage tracker" do
       with_mock Client,
         submit_metrics: &mock_submit_metrics_ok/2 do
         Worker.perform(%{})
@@ -86,7 +86,7 @@ defmodule Lightning.ImpactTracking.WorkerTest do
 
   describe "tracking is disabled" do
     setup do
-      put_temporary_env(:lightning, :impact_tracking,
+      put_temporary_env(:lightning, :usage_tracking,
         enabled: false,
         host: "https://foo.bar"
       )

@@ -1,6 +1,6 @@
-defmodule Lightning.ImpactTracking.Worker do
+defmodule Lightning.UsageTracking.Worker do
   @moduledoc """
-  Ensures repeated submissions of anonymised metrics to the Impact Tracker
+  Ensures repeated submissions of anonymised metrics to the Usage Tracker
   service
 
 
@@ -9,17 +9,17 @@ defmodule Lightning.ImpactTracking.Worker do
     queue: :background,
     max_attempts: 1
 
-  alias Lightning.ImpactTracking.Client
-  alias Lightning.ImpactTracking.Configuration
-  alias Lightning.ImpactTracking.Report
   alias Lightning.Repo
+  alias Lightning.UsageTracking.Client
+  alias Lightning.UsageTracking.Configuration
+  alias Lightning.UsageTracking.Report
 
   @impl Oban.Worker
   def perform(_opts) do
-    if Application.get_env(:lightning, :impact_tracking)[:enabled] do
+    if Application.get_env(:lightning, :usage_tracking)[:enabled] do
       find_configuration()
 
-      host = Application.get_env(:lightning, :impact_tracking)[:host]
+      host = Application.get_env(:lightning, :usage_tracking)[:host]
 
       metrics = %{}
 

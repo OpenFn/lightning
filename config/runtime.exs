@@ -116,9 +116,9 @@ purge_cron =
     ],
     else: []
 
-impact_tracking_cron = [{"0 */1 * * *", Lightning.ImpactTracking.Worker}]
+usage_tracking_cron = [{"0 */1 * * *", Lightning.UsageTracking.Worker}]
 
-all_cron = base_oban_cron ++ purge_cron ++ impact_tracking_cron
+all_cron = base_oban_cron ++ purge_cron ++ usage_tracking_cron
 
 config :lightning, Oban,
   name: Lightning.Oban,
@@ -350,6 +350,6 @@ config :lightning, :metrics,
       System.get_env("METRICS_RUN_PERFORMANCE_AGE_SECONDS", "300")
     )
 
-config :lightning, :impact_tracking,
-  enabled: System.get_env("IMPACT_TRACKING_ENABLED") == "true",
-  host: System.get_env("IMPACT_TRACKER_HOST", "https://impact.openfn.org")
+config :lightning, :usage_tracking,
+  enabled: System.get_env("USAGE_TRACKING_ENABLED") == "true",
+  host: System.get_env("USAGE_TRACKER_HOST", "https://impact.openfn.org")
