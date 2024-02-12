@@ -63,7 +63,12 @@ defmodule LightningWeb.Components.NewInputs do
   defp tooltip_when_disabled(%{disabled: true, tooltip: tooltip} = assigns)
        when not is_nil(tooltip) do
     ~H"""
-    <span id={"#{@id}-tooltip"} phx-hook="Tooltip" aria-label={@tooltip}>
+    <span
+      id={"#{@id}-tooltip"}
+      phx-hook="Tooltip"
+      aria-label={@tooltip}
+      data-allow-html="true"
+    >
       <%= render_slot(@inner_block) %>
     </span>
     """

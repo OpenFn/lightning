@@ -612,12 +612,21 @@
                 </div>
                 <.button
                   type="button"
-                  disabled={!@can_install_github}
+                  disabled={
+                    !@can_install_github ||
+                      has_pending_installation?(
+                        @project,
+                        @pending_github_installation
+                      )
+                  }
                   phx-click="install_app"
                   phx-value-id={@project.id}
                   tooltip={
-                    !@can_install_github &&
-                      "You're not allowed to configure repository connections for this project."
+                    install_github_tooltip(
+                      @project,
+                      @can_install_github,
+                      @pending_github_installation
+                    )
                   }
                 >
                   Connect to GitHub
