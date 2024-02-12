@@ -290,9 +290,7 @@
                 module={LightningWeb.CredentialLive.FormComponent}
                 action={:edit}
                 credential_type={nil}
-                credential={
-                  credential |> Lightning.Repo.preload(:project_credentials)
-                }
+                credential={credential}
                 projects={[]}
                 project={@project}
                 show_project_credentials={false}
