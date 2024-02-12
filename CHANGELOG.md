@@ -14,6 +14,9 @@ and this project adheres to
 
 ### Fixed
 
+- Editing credentials doesn't work from project scope
+  [#1743](https://github.com/OpenFn/Lightning/issues/1743)
+
 ## [v2.0.0] - 2024-02-10
 
 > At the time of writing there are no more big changes planned and testing has
