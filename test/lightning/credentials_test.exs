@@ -58,9 +58,7 @@ defmodule Lightning.CredentialsTest do
         )
         |> Repo.preload(:user)
 
-      assert Credentials.list_credentials(project) == [
-               credential |> unload_relation(:project_credentials)
-             ]
+      assert Credentials.list_credentials(project) == [credential]
     end
 
     test "get_credential!/1 returns the credential with given id" do
