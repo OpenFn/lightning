@@ -12,6 +12,7 @@ defmodule Lightning.UsageTracking.WorkerTest do
   describe "tracking is enabled" do
     setup do
       put_temporary_env(:lightning, :usage_tracking,
+        cleartext_uuids_enabled: false,
         enabled: true,
         host: @host
       )
@@ -49,8 +50,6 @@ defmodule Lightning.UsageTracking.WorkerTest do
     end
 
     test "persists a report indicating successful submission" do
-      metrics = @metrics
-
       with_mock Client,
         submit_metrics: &mock_submit_metrics_ok/2 do
         Worker.perform(%{})
@@ -58,13 +57,12 @@ defmodule Lightning.UsageTracking.WorkerTest do
 
       report = Report |> Repo.one()
 
-      assert %Report{submitted: true, data: ^metrics} = report
+      assert %Report{submitted: true} = report
       assert DateTime.diff(DateTime.utc_now(), report.submitted_at, :second) < 1
+      assert_data_populated(report)
     end
 
     test "persists a report indicating unsuccessful submission" do
-      metrics = @metrics
-
       with_mock Client,
         submit_metrics: &mock_submit_metrics_error/2 do
         Worker.perform(%{})
@@ -72,8 +70,36 @@ defmodule Lightning.UsageTracking.WorkerTest do
 
       report = Report |> Repo.one()
 
-      assert %Report{submitted: false, data: ^metrics, submitted_at: nil} =
-               report
+      assert %Report{submitted: false, submitted_at: nil} = report
+      assert_data_populated(report)
+    end
+
+    test "correctly communicates exclusion of cleartext uuids" do
+      with_mock Client,
+        submit_metrics: &mock_submit_metrics_ok/2 do
+        Worker.perform(%{})
+      end
+
+      %Report{data: data} = Report |> Repo.one()
+
+      assert data["instance"]["cleartext_uuid"] == nil
+    end
+
+    test "correctly communicates inclusion of cleartext uuids" do
+      put_temporary_env(:lightning, :usage_tracking,
+        cleartext_uuids_enabled: true,
+        enabled: true,
+        host: "https://foo.bar"
+      )
+
+      with_mock Client,
+        submit_metrics: &mock_submit_metrics_ok/2 do
+        Worker.perform(%{})
+      end
+
+      %Report{data: data} = Report |> Repo.one()
+
+      assert data["instance"]["cleartext_uuid"] != nil
     end
 
     test "indicates that processing succeeded" do
@@ -87,6 +113,7 @@ defmodule Lightning.UsageTracking.WorkerTest do
   describe "tracking is disabled" do
     setup do
       put_temporary_env(:lightning, :usage_tracking,
+        cleartext_uuids_enabled: false,
         enabled: false,
         host: "https://foo.bar"
       )
@@ -131,7 +158,9 @@ defmodule Lightning.UsageTracking.WorkerTest do
     end
   end
 
-  def mock_submit_metrics_ok(_metrics, _host), do: :ok
+  defp mock_submit_metrics_ok(_metrics, _host), do: :ok
 
-  def mock_submit_metrics_error(_metrics, _host), do: :error
+  defp mock_submit_metrics_error(_metrics, _host), do: :error
+
+  defp assert_data_populated(report), do: assert(report.data["version"])
 end
