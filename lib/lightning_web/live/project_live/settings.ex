@@ -125,6 +125,10 @@ defmodule LightningWeb.ProjectLive.Settings do
        github_enabled: VersionControl.github_enabled?(),
        can_install_github: can_write_github_connection,
        can_initiate_github_sync: can_initiate_github_sync,
+       pending_github_installation:
+         VersionControl.get_pending_user_installation(
+           socket.assigns.current_user.id
+         ),
        selected_credential_type: nil
      )}
   end
@@ -617,5 +621,32 @@ defmodule LightningWeb.ProjectLive.Settings do
       Role based permissions: You cannot modify this project's <%= @section %>
     </small>
     """
+  end
+
+  defp has_pending_installation?(%{id: project_id}, %{
+         project_id: installation_project_id
+       }) do
+    project_id != installation_project_id
+  end
+
+  defp has_pending_installation?(_project, _installation) do
+    false
+  end
+
+  defp install_github_tooltip(project, can_install_github, pending_installation) do
+    case {can_install_github,
+          has_pending_installation?(project, pending_installation)} do
+      {false, _} ->
+        "You're not allowed to configure repository connections for this project."
+
+      {_, true} ->
+        """
+        You have a pending github installation in another project.
+        <a href="#{~p"/projects/#{pending_installation.project_id}/settings#vcs"}" class="underline text-blue-400">Click here</a> to complete it / remove it before proceeding
+        """
+
+      _other ->
+        nil
+    end
   end
 end

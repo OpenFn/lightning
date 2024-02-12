@@ -43,6 +43,33 @@ defmodule Lightning.VersionControlTest do
       assert repo_connection.project_id == project.id
     end
 
+    test "create_github_connection/1 errors out when the user has an existing pending connection" do
+      project1 = insert(:project)
+      project2 = insert(:project)
+      user = insert(:user)
+
+      # insert existing installation
+      insert(:project_repo_connection, %{
+        project: project1,
+        user: user,
+        repo: nil,
+        branch: nil,
+        github_installation_id: nil
+      })
+
+      attrs = %{
+        project_id: project2.id,
+        user_id: user.id
+      }
+
+      assert {:error, changeset} =
+               VersionControl.create_github_connection(attrs)
+
+      assert changeset.errors == [
+               {:user_id, {"user has pending installation", []}}
+             ]
+    end
+
     test "given a project_id, branch and repo it should update a connection" do
       project = insert(:project)
       user = insert(:user)

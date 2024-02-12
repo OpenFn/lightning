@@ -579,6 +579,64 @@ defmodule LightningWeb.ProjectLiveTest do
       assert html =~ "Repository"
     end
 
+    test "button to install app is disabled if there's a pending installation in another project",
+         %{
+           conn: conn,
+           user: user
+         } do
+      put_temporary_env(:lightning, :github_app,
+        cert: @cert,
+        app_id: "111111",
+        app_name: "test-github"
+      )
+
+      project = insert(:project, project_users: [%{user: user, role: :admin}])
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/settings#vcs"
+        )
+
+      assert view |> has_element?("button", "Connect to GitHub")
+      refute view |> has_element?("button:disabled", "Connect to GitHub")
+
+      # insert another project
+      project2 = insert(:project, project_users: [%{user: user, role: :admin}])
+
+      insert(:project_repo_connection, %{
+        project: project2,
+        user: user,
+        repo: nil,
+        branch: nil,
+        github_installation_id: nil
+      })
+
+      {:ok, view, html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/settings#vcs"
+        )
+
+      assert view |> has_element?("button:disabled", "Connect to GitHub")
+      assert html =~ "You have a pending github installation in another project."
+
+      # another User can install github though
+      project_user2 =
+        insert(:project_user, user: build(:user), project: project, role: :admin)
+
+      conn = log_in_user(conn, project_user2.user)
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/settings#vcs"
+        )
+
+      assert view |> has_element?("button", "Connect to GitHub")
+      refute view |> has_element?("button:disabled", "Connect to GitHub")
+    end
+
     @tag role: :admin
     test "Flashes an error when APP ID is wrong", %{
       conn: conn,

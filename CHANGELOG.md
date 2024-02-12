@@ -12,6 +12,9 @@ and this project adheres to
 
 ### Changed
 
+- Block github installation if there's a pending installation in another project
+  [#1731](https://github.com/OpenFn/Lightning/issues/1731)
+
 ### Fixed
 
 ## [v2.0.0] - 2024-02-10
