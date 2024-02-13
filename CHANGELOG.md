@@ -18,6 +18,8 @@ and this project adheres to
   [#1731](https://github.com/OpenFn/Lightning/issues/1731)
 
 ### Fixed
+- Expand work order button balloons randomly
+  [#1737](https://github.com/OpenFn/Lightning/issues/1737)
 
 ## [v2.0.0] - 2024-02-10
 
