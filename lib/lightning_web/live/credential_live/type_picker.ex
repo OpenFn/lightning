@@ -19,6 +19,7 @@ defmodule LightningWeb.CredentialLive.TypePicker do
             class="flex items-center p-2"
           >
             <%= Phoenix.HTML.Form.radio_button(f, :selected, key,
+              id: "credential-type-picker_selected_#{key}",
               class: "h-4 w-4 border-gray-300 text-indigo-600 focus:ring-indigo-500"
             ) %>
             <LightningWeb.Components.Form.label_field

@@ -282,23 +282,25 @@
                         Edit
                       </.link>
                     </span>
+                    <.live_component
+                      id={"edit-credential-#{credential.id}-modal"}
+                      module={LightningWeb.CredentialLive.FormComponent}
+                      action={:edit}
+                      credential_type={nil}
+                      credential={credential}
+                      projects={[]}
+                      project={@project}
+                      show_project_credentials={false}
+                      can_create_project_credential={
+                        @can_create_project_credential
+                      }
+                      return_to={
+                        ~p"/projects/#{@project.id}/settings#credentials"
+                      }
+                    />
                   <% end %>
                 </.td>
               </.tr>
-              <.live_component
-                id={"edit-credential-#{credential.id}-modal"}
-                module={LightningWeb.CredentialLive.FormComponent}
-                action={:edit}
-                credential_type={nil}
-                credential={
-                  credential |> Lightning.Repo.preload(:project_credentials)
-                }
-                projects={[]}
-                project={@project}
-                show_project_credentials={false}
-                can_create_project_credential={@can_create_project_credential}
-                return_to={~p"/projects/#{@project.id}/settings#credentials"}
-              />
             <% end %>
           </.table>
         </LightningWeb.Components.Common.panel_content>
