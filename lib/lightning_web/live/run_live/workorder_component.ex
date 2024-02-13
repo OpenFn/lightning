@@ -162,7 +162,7 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
             <%= if @work_order.runs !== [] do %>
               <button
                 id={"toggle_details_for_#{@work_order.id}"}
-                class="w-auto rounded-full p-3 hover:bg-gray-100"
+                class="w-10 rounded-full p-3 hover:bg-gray-100"
                 phx-click="toggle_details"
                 phx-target={@myself}
               >
@@ -304,7 +304,7 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
     ~H"""
     <%= if wo_dataclip_available?(@work_order) do %>
       <.link
-        id={"view-dataclip-#{@work_order.dataclip_id}"}
+        id={"view-dataclip-#{@work_order.dataclip_id}-for-#{@work_order.id}"}
         navigate={
           ~p"/projects/#{@work_order.workflow.project_id}/dataclips/#{@work_order.dataclip_id}/show"
         }
@@ -320,7 +320,7 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
       </.link>
     <% else %>
       <span
-        id={"view-dataclip-#{@work_order.dataclip_id}"}
+        id={"view-dataclip-#{@work_order.dataclip_id}-for-#{@work_order.id}"}
         title={@work_order.dataclip_id}
         class="font-normal text-xs whitespace-nowrap text-ellipsis
               p-1 rounded-md font-mono text-indigo-300 cursor-pointer

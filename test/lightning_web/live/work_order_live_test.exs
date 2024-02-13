@@ -228,17 +228,23 @@ defmodule LightningWeb.WorkOrderLiveTest do
       parsed_html = Floki.parse_fragment!(html)
 
       refute parsed_html
-             |> Floki.find(~s{a#view-dataclip-#{wiped_dataclip.id}})
+             |> Floki.find(
+               ~s{a#view-dataclip-#{wiped_dataclip.id}-for-#{work_order.id}}
+             )
              |> Enum.any?(),
              "dataclip link not available"
 
       assert parsed_html
-             |> Floki.find(~s{span#view-dataclip-#{wiped_dataclip.id}})
+             |> Floki.find(
+               ~s{span#view-dataclip-#{wiped_dataclip.id}-for-#{work_order.id}}
+             )
              |> Enum.any?()
 
       dataclip_element =
         parsed_html
-        |> Floki.find(~s{span#view-dataclip-#{wiped_dataclip.id}})
+        |> Floki.find(
+          ~s{span#view-dataclip-#{wiped_dataclip.id}-for-#{work_order.id}}
+        )
         |> hd()
 
       dataclip_html = Floki.raw_html(dataclip_element)
@@ -264,17 +270,23 @@ defmodule LightningWeb.WorkOrderLiveTest do
       parsed_html = Floki.parse_fragment!(html)
 
       refute parsed_html
-             |> Floki.find(~s{a#view-dataclip-#{wiped_dataclip.id}})
+             |> Floki.find(
+               ~s{a#view-dataclip-#{wiped_dataclip.id}-for-#{work_order.id}}
+             )
              |> Enum.any?(),
              "dataclip link not available"
 
       assert parsed_html
-             |> Floki.find(~s{span#view-dataclip-#{wiped_dataclip.id}})
+             |> Floki.find(
+               ~s{span#view-dataclip-#{wiped_dataclip.id}-for-#{work_order.id}}
+             )
              |> Enum.any?()
 
       dataclip_html =
         parsed_html
-        |> Floki.find(~s{span#view-dataclip-#{wiped_dataclip.id}})
+        |> Floki.find(
+          ~s{span#view-dataclip-#{wiped_dataclip.id}-for-#{work_order.id}}
+        )
         |> hd()
         |> Floki.raw_html()
 
@@ -298,7 +310,9 @@ defmodule LightningWeb.WorkOrderLiveTest do
         |> Floki.parse_fragment!()
 
       assert parsed_html
-             |> Floki.find(~s{a#view-dataclip-#{wiped_dataclip.id}})
+             |> Floki.find(
+               ~s{a#view-dataclip-#{wiped_dataclip.id}-for-#{work_order.id}}
+             )
              |> Enum.any?(),
              "dataclip link available"
     end
