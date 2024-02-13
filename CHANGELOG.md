@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+- `Added` for new features.
+- `Changed` for changes in existing functionality.
+- `Deprecated` for soon-to-be removed features.
+- `Removed` for now removed features.
+- `Fixed` for any bug fixes.
+- `Security` in case of vulnerabilities.
+
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
@@ -11,16 +18,22 @@ and this project adheres to
 ### Added
 
 ### Changed
+
+### Fixed
+
+## [v2.0.1] - 2024-02-13
+
+### Changed
+
 - Renamed ImpactTracking to UsageTracking
   [#1729](https://github.com/OpenFn/lightning/issues/1729)
-
 - Block github installation if there's a pending installation in another project
   [#1731](https://github.com/OpenFn/Lightning/issues/1731)
 
 ### Fixed
+
 - Expand work order button balloons randomly
   [#1737](https://github.com/OpenFn/Lightning/issues/1737)
-
 - Editing credentials doesn't work from project scope
   [#1743](https://github.com/OpenFn/Lightning/issues/1743)
 
@@ -43,8 +56,6 @@ and this project adheres to
 >
 > Head to [**docs.openfn.org**](https://docs.openfn.org) for product
 > documentation and help with v1 to v2 migration.
-
-### Added
 
 ### Changed
 
@@ -83,18 +94,12 @@ and this project adheres to
 
 ## [v2.0.0-rc11] - 2024-02-08
 
-### Added
-
-### Changed
-
 ### Fixed
 
 - Bumped Phoenix LiveView from `0.20.4` to `0.20.5` to fix canvas selection
   issue [#1724](https://github.com/OpenFn/lightning/issues/1724)
 
 ## [v2.0.0-rc10] - 2024-02-08
-
-### Added
 
 ### Changed
 
@@ -126,8 +131,6 @@ and this project adheres to
   [#1639](https://github.com/OpenFn/Lightning/issues/1639)
 - Add rate limiter to webhook endpoints and runtime limiter for runs.
   [#639](https://github.com/OpenFn/Lightning/issues/639)
-
-### Changed
 
 ### Fixed
 
@@ -166,8 +169,6 @@ and this project adheres to
   [#1657](https://github.com/OpenFn/Lightning/issues/1657)
 - Required `@openfn/ws-worker@0.8.0` or above.
 
-### Fixed
-
 ## [v2.0.0-rc7] - 2024-01-26
 
 ### Added
@@ -196,8 +197,6 @@ and this project adheres to
 
 ## [v2.0.0-rc5] - 2024-01-22
 
-### Added
-
 ### Changed
 
 - Made two significant backend changes that don't impact UI/UX but **require
@@ -207,8 +206,6 @@ and this project adheres to
     [#1571](https://github.com/OpenFn/Lightning/issues/1571)
   - Renamed the `AttemptRuns` model and table to `AttemptSteps`
     [#1571](https://github.com/OpenFn/Lightning/issues/1571)
-
-### Fixed
 
 ## [v2.0.0-rc4] - 2024-01-19
 
@@ -269,10 +266,6 @@ and this project adheres to
 
 ## [2.0.0-rc2] - 2024-01-08
 
-### Added
-
-### Changed
-
 ### Fixed
 
 - Restored left-alignment for step list items on run detail and inspector
@@ -323,11 +316,7 @@ For customers using OpenFn `v1`, a migration guide will be provided at
   will be changed until [1571](https://github.com/OpenFn/Lightning/issues/1571)
   is delivered.
 
-### Fixed
-
 ## [v0.12.2] - 2023-12-24
-
-### Added
 
 ### Changed
 
@@ -344,8 +333,6 @@ For customers using OpenFn `v1`, a migration guide will be provided at
   [#1589](https://github.com/OpenFn/Lightning/issues/1589)
 
 ## [v0.12.1] - 2023-12-21
-
-### Added
 
 ### Changed
 
@@ -416,11 +403,7 @@ For customers using OpenFn `v1`, a migration guide will be provided at
 - Use the internal port of the web container for the worker configuration in
   docker-compose setup. [#1485](https://github.com/OpenFn/Lightning/pull/1485)
 
-### Fixed
-
 ## [v0.10.6] - 2023-12-05
-
-### Added
 
 ### Changed
 
@@ -448,8 +431,6 @@ For customers using OpenFn `v1`, a migration guide will be provided at
 
 ## [v0.10.5] - 2023-12-03
 
-### Added
-
 ### Changed
 
 - Only add history page filters when needed for simpler multi-select status
@@ -473,8 +454,6 @@ For customers using OpenFn `v1`, a migration guide will be provided at
   [#1500](https://github.com/OpenFn/Lightning/issues/1500)
 
 ## [v0.10.4] - 2023-11-30
-
-### Added
 
 ### Changed
 
@@ -521,20 +500,12 @@ For customers using OpenFn `v1`, a migration guide will be provided at
 
 ## [v0.10.2] - 2023-11-21
 
-### Added
-
 ### Changed
 
 - Added `max_frame_size` to the Cowboy websockets protocol options in an attempt
   to address [#1421](https://github.com/OpenFn/Lightning/issues/1421)
 
-### Fixed
-
 ## [v0.10.1] - 2023-11-21
-
-### Added
-
-### Changed
 
 ### Fixed
 
@@ -718,11 +689,7 @@ bearing with us as we move towards our first stable Lightning release.)
 - Save icons from the `adaptors` repo locally and load them in the job editor
   [#943](https://github.com/OpenFn/Lightning/issues/943)
 
-### Fixed
-
 ## [v0.9.1] - 2023-09-19
-
-### Added
 
 ### Changed
 
@@ -781,10 +748,6 @@ bearing with us as we move towards our first stable Lightning release.)
 
 ## [v0.8.2] - 2023-08-31
 
-### Added
-
-### Changed
-
 ### Fixed
 
 - Lack of differentiation between top of job editor modal and top menu was
@@ -792,16 +755,12 @@ bearing with us as we move towards our first stable Lightning release.)
 
 ## [v0.8.1] - 2023-08-31
 
-### Added
-
 ### Changed
 
 - Moved Save and Run button to bottom of the Job edit modal
   [#1026](https://github.com/OpenFn/Lightning/issues/1026)
 - Allow a manual work order to save the workflow before creating the work order
   [#959](https://github.com/OpenFn/Lightning/issues/959)
-
-### Fixed
 
 ## [v0.8.0] - 2023-08-31
 
@@ -825,8 +784,6 @@ bearing with us as we move towards our first stable Lightning release.)
 - Show GitHub installation ID and repo link to help setup/debugging for version
   control [1059](https://github.com/OpenFn/Lightning/issues/1059)
 
-### Changed
-
 ### Fixed
 
 - Fixed issue where job names were being incorrectly hyphenated during
@@ -839,8 +796,6 @@ bearing with us as we move towards our first stable Lightning release.)
   editor [1030](https://github.com/OpenFn/Lightning/issues/1030)
 
 ## [v0.7.3] - 2023-08-15
-
-### Added
 
 ### Changed
 
@@ -856,8 +811,6 @@ bearing with us as we move towards our first stable Lightning release.)
 
 ## [v0.7.2] - 2023-08-10
 
-### Added
-
 ### Changed
 
 - NodeJs security patch [1009](https://github.com/OpenFn/Lightning/pull/1009)
@@ -865,10 +818,6 @@ bearing with us as we move towards our first stable Lightning release.)
 ### Fixed
 
 ## [v0.7.1] - 2023-08-04
-
-### Added
-
-### Changed
 
 ### Fixed
 
@@ -908,31 +857,19 @@ bearing with us as we move towards our first stable Lightning release.)
 
 ## [v0.7.0-pre5] - 2023-07-28
 
-### Added
-
 ### Changed
 
 - Unless otherwise specified, only show work orders with activity in last 14
   days [#968](https://github.com/OpenFn/Lightning/issues/968)
 
-### Fixed
-
 ## [v0.7.0-pre4] - 2023-07-27
-
-### Added
 
 ### Changed
 
 - Don't add cast fragments if the search_term is nil
   [#968](https://github.com/OpenFn/Lightning/issues/968)
 
-### Fixed
-
 ## [v0.7.0-pre3] - 2023-07-26
-
-### Added
-
-### Changed
 
 ### Fixed
 
@@ -977,8 +914,6 @@ the Nodes and Edges [epic](https://github.com/OpenFn/Lightning/issues/793).
 - Add feature to bulk rerun work orders from a specific step in their workflow;
   e.g., "rerun these 50 work orders, starting each at step 4."
   [#906](https://github.com/OpenFn/Lightning/pull/906)
-
-### Changed
 
 ### Fixed
 
@@ -1217,10 +1152,6 @@ the Nodes and Edges [epic](https://github.com/OpenFn/Lightning/issues/793).
 - Users can receive a digest email reporting on a specified project.
   [#638](https://github.com/OpenFn/Lightning/issues/638)
   [#585](https://github.com/OpenFn/Lightning/issues/585)
-
-### Changed
-
-### Fixed
 
 ## [0.4.3] - 2023-03-06
 
@@ -1496,11 +1427,3 @@ credential schemas like "oauth" or "basic auth" which define attributes for
 - View job runs along with their logs, exit code, start and end time
 - View data clips that have initiated job runs (http requests for webhooks, run
   results)
-
-### Changed
-
--
-
-### Removed
-
--
