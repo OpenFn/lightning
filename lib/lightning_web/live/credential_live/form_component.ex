@@ -25,34 +25,32 @@ defmodule LightningWeb.CredentialLive.FormComponent do
     :return_to
   ]
 
+  defp from_env(key),
+    do:
+      Application.fetch_env!(:lightning, LightningWeb)
+      |> Keyword.get(key)
+
   @impl true
   def mount(socket) do
-    allow_credential_transfer =
-      Application.fetch_env!(:lightning, LightningWeb)
-      |> Keyword.get(:allow_credential_transfer)
+    allow_credential_transfer = from_env(:allow_credential_transfer)
 
     {:ok,
      socket
-     |> assign(
-       allow_credential_transfer: allow_credential_transfer,
-       available_projects: [],
-       type: nil,
-       button: [],
-       scopes: []
-     )}
+     |> assign(allow_credential_transfer: allow_credential_transfer)
+     |> assign(available_projects: [])
+     |> assign(scopes: [])
+     |> assign(configure_credential: false)}
   end
 
   @impl true
   def update(%{body: body}, socket) do
-    {:ok,
-     socket
-     |> update(:changeset, fn changeset, %{credential: credential} ->
-       params =
-         changeset.params
-         |> Map.put("body", body)
+    updated_socket =
+      update(socket, :changeset, fn changeset, %{credential: credential} ->
+        params = changeset.params |> Map.put("body", body)
+        Credentials.change_credential(credential, params)
+      end)
 
-       Credentials.change_credential(credential, params)
-     end)}
+    {:ok, updated_socket}
   end
 
   def update(%{projects: projects} = assigns, socket) do
@@ -60,35 +58,31 @@ defmodule LightningWeb.CredentialLive.FormComponent do
 
     {:ok,
      socket
-     |> assign(type: nil)
-     |> assign_credential_type(assigns)
-     |> assign(
-       can_create_project_credential: assigns.can_create_project_credential
-     )
+     #  |> assign_credential_type(assigns)
      |> assign(
        assigns
        |> Map.filter(&match?({k, _} when k in @valid_assigns, &1))
      )
+     |> assign_selected_scopes(assigns.credential)
      |> assign_new(:show_project_credentials, fn -> true end)
+     |> assign(changeset: Credentials.change_credential(assigns.credential))
+     |> assign(all_projects: projects |> Enum.map(&{&1.name, &1.id}))
+     |> assign(selected_project: "")
      |> assign(
-       changeset: Credentials.change_credential(assigns.credential),
-       all_projects: projects |> Enum.map(&{&1.name, &1.id}),
-       selected_project: "",
        users:
          Enum.map(Lightning.Accounts.list_users(), fn user ->
            [
              key: "#{user.first_name} #{user.last_name} (#{user.email})",
              value: user.id
            ]
-         end),
-       schema: nil,
+         end)
+     )
+     |> assign(schema: nil)
+     |> assign(
        update_body: fn body ->
          update_body(pid, assigns.id, body)
        end
      )
-     |> update(:type, fn _, %{changeset: changeset} ->
-       changeset |> Ecto.Changeset.fetch_field!(:schema)
-     end)
      |> update(
        :available_projects,
        fn _,
@@ -101,12 +95,24 @@ defmodule LightningWeb.CredentialLive.FormComponent do
      )}
   end
 
-  defp assign_credential_type(socket, assigns) do
-    if credential_type = Map.get(assigns, :credential_type, false) do
-      assign(socket, credential_type: credential_type)
-    else
-      assign(socket, credential_type: assigns.credential.schema)
-    end
+  # defp assign_credential_type(socket, assigns) do
+  #   if credential_type = Map.get(assigns, :credential_type, false) do
+  #     assign(socket, credential_type: credential_type)
+  #   else
+  #     assign(socket, credential_type: assigns.credential.schema)
+  #   end
+  # end
+
+  defp assign_selected_scopes(socket, %{body: nil}) do
+    assign(socket, scopes: [])
+  end
+
+  defp assign_selected_scopes(socket, %{body: %{"scope" => scope}}) do
+    assign(socket, scopes: scope |> String.split() |> IO.inspect())
+  end
+
+  defp assign_selected_scopes(socket, %{body: %{}}) do
+    assign(socket, scopes: [])
   end
 
   @impl true
@@ -143,7 +149,7 @@ defmodule LightningWeb.CredentialLive.FormComponent do
     changeset =
       Credentials.change_credential(socket.assigns.credential, %{schema: type})
 
-    {:noreply, socket |> assign(type: type, changeset: changeset)}
+    {:noreply, socket |> assign(credential_type: type, changeset: changeset)}
   end
 
   @impl true
@@ -253,7 +259,7 @@ defmodule LightningWeb.CredentialLive.FormComponent do
     {:noreply,
      socket
      |> assign(
-       type: socket.assigns.credential_type,
+       chose_credential_type: false,
        changeset: changeset
      )}
   end
@@ -269,7 +275,7 @@ defmodule LightningWeb.CredentialLive.FormComponent do
   end
 
   @impl true
-  def render(%{type: nil} = assigns) do
+  def render(%{chose_credential_type: true} = assigns) do
     ~H"""
     <div class="text-xs">
       <.modal id={@id} width="xl:min-w-1/3 min-w-1/2 max-w-full">
@@ -320,7 +326,7 @@ defmodule LightningWeb.CredentialLive.FormComponent do
     """
   end
 
-  def render(%{type: _} = assigns) do
+  def render(%{chose_credential_type: false} = assigns) do
     ~H"""
     <div class="mt-10 sm:mt-0">
       <.modal id={@id} width="xl:min-w-1/3 min-w-1/2 max-w-full">
@@ -351,7 +357,7 @@ defmodule LightningWeb.CredentialLive.FormComponent do
             :let={{fieldset, _valid?}}
             id={@credential.id || "new"}
             form={f}
-            type={@type}
+            type={@credential_type}
             update_body={@update_body}
           >
             <div class="space-y-6 bg-white px-4 py-5 sm:p-6">
@@ -373,7 +379,7 @@ defmodule LightningWeb.CredentialLive.FormComponent do
                   <div class="border-t border-secondary-200"></div>
                 </div>
                 <!-- # TODO: Make this part of the fieldset -->
-                <%= if @type === "salesforce_oauth" do %>
+                <%= if @credential_type === "salesforce_oauth" do %>
                   <LightningWeb.CredentialLive.Salesforce.scopes
                     id={"scope_selection_#{@credential.id || "new"}"}
                     on_change="scopes_changed"
