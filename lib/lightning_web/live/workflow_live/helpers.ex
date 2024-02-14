@@ -3,7 +3,10 @@ defmodule LightningWeb.WorkflowLive.Helpers do
   Helper functions for the Workflow LiveViews.
   """
 
+  alias Lightning.Extensions.UsageLimiting
+  alias Lightning.Extensions.UsageLimiting.Action
   alias Lightning.Repo
+  alias Lightning.Services.UsageLimiter
 
   alias Lightning.Workflows
   alias Lightning.WorkOrder
@@ -23,12 +26,19 @@ defmodule LightningWeb.WorkflowLive.Helpers do
            }}
           | {:error, Ecto.Changeset.t(Workflows.Workflow.t())}
           | {:error, Ecto.Changeset.t(WorkOrders.Manual.t())}
+          | {:error, UsageLimiting.message()}
   def save_and_run(workflow_changeset, params, opts) do
     Lightning.Repo.transact(fn ->
-      with {:ok, workflow} <- save_workflow(workflow_changeset),
-           {:ok, manual} <- build_manual_workorder(params, workflow, opts),
-           {:ok, workorder} <- WorkOrders.create_for(manual) do
-        {:ok, %{workorder: workorder, workflow: workflow}}
+      case UsageLimiter.limit_action(%Action{type: :new_workorder}, opts) do
+        {:error, _reason, message} ->
+          {:error, message}
+
+        :ok ->
+          with {:ok, workflow} <- save_workflow(workflow_changeset),
+               {:ok, manual} <- build_manual_workorder(params, workflow, opts),
+               {:ok, workorder} <- WorkOrders.create_for(manual) do
+            {:ok, %{workorder: workorder, workflow: workflow}}
+          end
       end
     end)
   end

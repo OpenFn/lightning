@@ -1,8 +1,10 @@
 defmodule LightningWeb.WebhooksController do
   use LightningWeb, :controller
 
-  alias Lightning.Extensions.RateLimiter
   alias Lightning.Extensions.RateLimiting.Context
+  alias Lightning.Extensions.UsageLimiting.Action
+  alias Lightning.Services.RateLimiter
+  alias Lightning.Services.UsageLimiter
   alias Lightning.Workflows
   alias Lightning.WorkOrders
 
@@ -13,7 +15,11 @@ defmodule LightningWeb.WebhooksController do
     with %Workflows.Trigger{enabled: true, workflow: %{project_id: project_id}} =
            trigger <- conn.assigns.trigger,
          :ok <-
-           RateLimiter.limit_request(conn, %Context{project_id: project_id}, []) do
+           RateLimiter.limit_request(conn, %Context{project_id: project_id}, []),
+         :ok <-
+           UsageLimiter.limit_action(%Action{type: :new_workorder}, %Context{
+             project_id: project_id
+           }) do
       {:ok, work_order} =
         WorkOrders.create_for(trigger,
           workflow: trigger.workflow,
@@ -27,7 +33,7 @@ defmodule LightningWeb.WebhooksController do
 
       conn |> json(%{work_order_id: work_order.id})
     else
-      {:error, _reason, message} ->
+      {:error, _reason, %{text: message}} ->
         conn
         |> put_status(:too_many_requests)
         |> json(%{"error" => message})

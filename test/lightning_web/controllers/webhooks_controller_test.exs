@@ -57,7 +57,7 @@ defmodule LightningWeb.WebhooksControllerTest do
     test "returns 429 on rate limiting", %{conn: conn} do
       with_mock RateLimiter,
         limit_request: fn _conn, _context, _opts ->
-          {:error, :too_many_workorders, "Too many workorders"}
+          {:error, :too_many_workorders, %{text: "Too many workorders"}}
         end do
         %{triggers: [trigger]} =
           insert(:simple_workflow) |> Lightning.Repo.preload(:triggers)
