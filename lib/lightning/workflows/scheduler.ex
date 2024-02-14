@@ -3,7 +3,6 @@ defmodule Lightning.Workflows.Scheduler do
   The Scheduler is responsible for finding jobs that are ready to run based on
   their cron schedule, and then running them.
   """
-
   use Oban.Worker,
     queue: :scheduler,
     priority: 1,
@@ -11,8 +10,11 @@ defmodule Lightning.Workflows.Scheduler do
     # This unique period ensures that cron jobs are only enqueued once across a cluster
     unique: [period: 59]
 
+  alias Lightning.Extensions.UsageLimiting.Action
+  alias Lightning.Extensions.UsageLimiting.Context
   alias Lightning.Invocation
   alias Lightning.Repo
+  alias Lightning.Services.UsageLimiter
   alias Lightning.Workflows
   alias Lightning.Workflows.Edge
   alias Lightning.WorkOrders
@@ -37,40 +39,46 @@ defmodule Lightning.Workflows.Scheduler do
 
   @spec invoke_cronjob(Edge.t()) :: {:ok, map()} | {:error, map()}
   defp invoke_cronjob(%Edge{target_job: job, source_trigger: trigger}) do
-    case last_state_for_job(job.id) do
-      nil ->
-        Logger.debug(fn ->
-          # coveralls-ignore-start
-          "Starting cronjob #{job.id} for the first time. (No previous final state.)"
-          # coveralls-ignore-stop
-        end)
+    with %{project_id: project_id} <- job.workflow,
+         :ok <-
+           UsageLimiter.limit_action(%Action{type: :new_workorder}, %Context{
+             project_id: project_id
+           }) do
+      case last_state_for_job(job.id) do
+        nil ->
+          Logger.debug(fn ->
+            # coveralls-ignore-start
+            "Starting cronjob #{job.id} for the first time. (No previous final state.)"
+            # coveralls-ignore-stop
+          end)
 
-        # Add a facility to specify _which_ global state should be use as
-        # the first initial state for a cron-triggered job.
-        # The implementation would look like:
-        # default_state_for_job(id)
-        # %{id: uuid, type: :global, body: %{arbitrary: true}}
+          # Add a facility to specify _which_ global state should be use as
+          # the first initial state for a cron-triggered job.
+          # The implementation would look like:
+          # default_state_for_job(id)
+          # %{id: uuid, type: :global, body: %{arbitrary: true}}
 
-        WorkOrders.create_for(trigger,
-          dataclip: %{
-            type: :global,
-            body: %{},
-            project_id: job.workflow.project_id
-          },
-          workflow: job.workflow
-        )
+          WorkOrders.create_for(trigger,
+            dataclip: %{
+              type: :global,
+              body: %{},
+              project_id: project_id
+            },
+            workflow: job.workflow
+          )
 
-      dataclip ->
-        Logger.debug(fn ->
-          # coveralls-ignore-start
-          "Starting cronjob #{job.id} using the final state of its last successful execution."
-          # coveralls-ignore-stop
-        end)
+        dataclip ->
+          Logger.debug(fn ->
+            # coveralls-ignore-start
+            "Starting cronjob #{job.id} using the final state of its last successful execution."
+            # coveralls-ignore-stop
+          end)
 
-        WorkOrders.create_for(trigger,
-          dataclip: dataclip,
-          workflow: job.workflow
-        )
+          WorkOrders.create_for(trigger,
+            dataclip: dataclip,
+            workflow: job.workflow
+          )
+      end
     end
   end
 

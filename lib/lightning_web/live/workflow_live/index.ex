@@ -63,20 +63,22 @@ defmodule LightningWeb.WorkflowLive.Index do
 
   @impl true
   def mount(_params, _session, socket) do
+    %{current_user: current_user, project: project} = socket.assigns
+
     can_create_workflow =
       ProjectUsers
       |> Permissions.can?(
         :create_workflow,
-        socket.assigns.current_user,
-        socket.assigns.project
+        current_user,
+        project
       )
 
     can_delete_workflow =
       ProjectUsers
       |> Permissions.can?(
         :delete_workflow,
-        socket.assigns.current_user,
-        socket.assigns.project
+        current_user,
+        project
       )
 
     socket
@@ -84,12 +86,10 @@ defmodule LightningWeb.WorkflowLive.Index do
       can_delete_workflow: can_delete_workflow,
       can_create_workflow: can_create_workflow
     )
-    |> assign_workflow_form(
-      NewWorkflowForm.validate(%{}, socket.assigns.project.id)
-    )
+    |> assign_workflow_form(NewWorkflowForm.validate(%{}, project.id))
     |> then(fn socket ->
       case UsageLimiter.check_limits(%Context{
-             project_id: socket.assigns.project.id
+             project_id: project.id
            }) do
         :ok ->
           {:ok, socket}
