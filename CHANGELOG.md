@@ -21,7 +21,12 @@ and this project adheres to
 
 ### Fixed
 
-- Unable to refresh OAuth2 credentials after token expiration
+## [v2.0.2] - 2024-02-14
+
+### Fixed
+
+- Fixed a bug with the OAuth2 credential refresh flow that prevented
+  GoogleSheets jobs from running after token expiration
   [#1735](https://github.com/OpenFn/Lightning/issues/1735)
 
 ## [v2.0.1] - 2024-02-13
