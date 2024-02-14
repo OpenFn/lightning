@@ -21,6 +21,9 @@ and this project adheres to
 
 ### Fixed
 
+- Unable to refresh OAuth2 credentials after token expiration
+  [#1735](https://github.com/OpenFn/Lightning/issues/1735)
+
 ## [v2.0.1] - 2024-02-13
 
 ### Changed
