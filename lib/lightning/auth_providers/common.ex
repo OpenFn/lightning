@@ -39,7 +39,7 @@ defmodule Lightning.AuthProviders.Common do
 
       extra_params =
         token.other_params
-        |> Enum.map(fn {key, value} -> {String.to_existing_atom(key), value} end)
+        |> Enum.map(fn {key, value} -> {String.to_atom(key), value} end)
         |> Map.new()
 
       token_params
