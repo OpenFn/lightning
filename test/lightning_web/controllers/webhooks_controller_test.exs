@@ -4,7 +4,8 @@ defmodule LightningWeb.WebhooksControllerTest do
   import Lightning.Factories
   import Mock
 
-  alias Lightning.Extensions.RateLimiter
+  alias Lightning.Services.RateLimiter
+  alias Lightning.Services.UsageLimiter
   alias Lightning.Repo
   alias Lightning.Runs
   alias Lightning.WorkOrders
@@ -57,13 +58,30 @@ defmodule LightningWeb.WebhooksControllerTest do
     test "returns 429 on rate limiting", %{conn: conn} do
       with_mock RateLimiter,
         limit_request: fn _conn, _context, _opts ->
-          {:error, :too_many_workorders, %{text: "Too many workorders"}}
+          {:error, :too_many_workorders,
+           %{text: "Too many workorders in the last minute"}}
         end do
         %{triggers: [trigger]} =
           insert(:simple_workflow) |> Lightning.Repo.preload(:triggers)
 
         conn = post(conn, "/i/#{trigger.id}")
-        assert json_response(conn, 429) == %{"error" => "Too many workorders"}
+
+        assert json_response(conn, 429) == %{
+                 "error" => "Too many workorders in the last minute"
+               }
+      end
+    end
+
+    test "returns 429 on usage limiting", %{conn: conn} do
+      with_mock UsageLimiter,
+        limit_action: fn _action, _context ->
+          {:error, :too_many_actions, %{text: "Runs limit exceeded"}}
+        end do
+        %{triggers: [trigger]} =
+          insert(:simple_workflow) |> Lightning.Repo.preload(:triggers)
+
+        conn = post(conn, "/i/#{trigger.id}")
+        assert json_response(conn, 429) == %{"error" => "Runs limit exceeded"}
       end
     end
 
