@@ -6,8 +6,10 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
   import Lightning.Factories
 
   import Ecto.Query
+  import Mock
 
   alias Lightning.Invocation
+  alias Lightning.Services.UsageLimiter
   alias Lightning.Workflows.Workflow
 
   setup :register_and_log_in_user
@@ -259,6 +261,41 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       |> render_change()
 
       assert view |> has_element?("#manual-job-#{job.id} form", "Invalid JSON")
+    end
+
+    test "can't run if limit is exceeded", %{
+      conn: conn,
+      project: %{id: project_id},
+      workflow: w
+    } do
+      job = w.jobs |> hd
+
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project_id}/w/#{w}?#{[s: job, m: "expand"]}")
+
+      assert Invocation.list_dataclips_for_job(job) |> Enum.count() == 0
+
+      body = %{"a" => 1}
+
+      with_mock(
+        UsageLimiter,
+        limit_action: fn %{type: :new_workorder}, %{project_id: ^project_id} ->
+          {:error, :too_many_actions, %{text: "Runs limit exceeded"}}
+        end
+      ) do
+        assert view
+               |> form("#manual-job-#{job.id} form",
+                 manual: %{
+                   body: Jason.encode!(body)
+                 }
+               )
+               |> render_submit()
+               |> Floki.parse_fragment!()
+               |> Floki.find("#flash")
+               |> Floki.find("p")
+               |> Floki.text() =~
+                 "Runs limit exceeded"
+      end
     end
 
     test "can run a job", %{conn: conn, project: p, workflow: w} do

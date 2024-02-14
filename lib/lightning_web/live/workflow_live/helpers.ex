@@ -5,6 +5,7 @@ defmodule LightningWeb.WorkflowLive.Helpers do
 
   alias Lightning.Extensions.UsageLimiting
   alias Lightning.Extensions.UsageLimiting.Action
+  alias Lightning.Extensions.UsageLimiting.Context
   alias Lightning.Repo
   alias Lightning.Services.UsageLimiter
 
@@ -29,7 +30,11 @@ defmodule LightningWeb.WorkflowLive.Helpers do
           | {:error, UsageLimiting.message()}
   def save_and_run(workflow_changeset, params, opts) do
     Lightning.Repo.transact(fn ->
-      case UsageLimiter.limit_action(%Action{type: :new_workorder}, opts) do
+      %{id: project_id} = Keyword.fetch!(opts, :project)
+
+      case UsageLimiter.limit_action(%Action{type: :new_workorder}, %Context{
+             project_id: project_id
+           }) do
         {:error, _reason, message} ->
           {:error, message}
 
