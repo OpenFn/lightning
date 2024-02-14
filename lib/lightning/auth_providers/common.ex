@@ -39,7 +39,8 @@ defmodule Lightning.AuthProviders.Common do
 
       extra_params =
         token.other_params
-        |> Enum.map(fn {key, value} -> {String.to_atom(key), value} end)
+        |> Enum.reject(fn {key, _} -> key not in ["scope", "instance_url"] end)
+        |> Enum.map(fn {key, value} -> {String.to_existing_atom(key), value} end)
         |> Map.new()
 
       token_params
