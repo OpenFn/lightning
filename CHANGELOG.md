@@ -19,6 +19,8 @@ and this project adheres to
 
 ### Changed
 
+- Bumped @openfn/ws-worker to `v1.0`
+
 ### Fixed
 
 ## [v2.0.2] - 2024-02-14
