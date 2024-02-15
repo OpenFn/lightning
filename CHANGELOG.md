@@ -19,6 +19,10 @@ and this project adheres to
 
 ### Changed
 
+- Bumped @openfn/ws-worker to `v1.0` (this is used in dev mode when starting the
+  worker from your mix app: `RTM=true iex -S mix phx.server`)
+- Bumped @openfn/cli to `v1.0` (this is used for adaptor docs and magic)
+
 ### Fixed
 
 ## [v2.0.2] - 2024-02-14
