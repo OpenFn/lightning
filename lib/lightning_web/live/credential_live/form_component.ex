@@ -633,7 +633,7 @@ defmodule LightningWeb.CredentialLive.FormComponent do
     if Enum.member?(list, item), do: list, else: list ++ [item]
   end
 
-  defp list_users() do
+  defp list_users do
     Lightning.Accounts.list_users()
     |> Enum.map(fn user ->
       [
