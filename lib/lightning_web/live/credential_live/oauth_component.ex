@@ -11,6 +11,7 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
   attr :form, :map, required: true
   attr :id, :string, required: true
   attr :update_body, :any, required: true
+  attr :action, :any, required: true
   attr :provider, :any, required: true
   slot :inner_block
 
@@ -40,6 +41,7 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
          [
            module: __MODULE__,
            form: @form,
+           action: @action,
            token_body_changeset: @token_body_changeset,
            update_body: @update_body,
            provider: @provider,
@@ -94,29 +96,24 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
         <%= Phoenix.HTML.Form.hidden_input(body_form, :scope) %>
         <%= Phoenix.HTML.Form.hidden_input(body_form, :instance_url) %>
       </div>
-      <div class="lg:grid lg:grid-cols-2 grid-cols-1 grid-flow-col mt-5">
-        <.authorize_button
-          :if={@show_authorize}
-          authorize_url={@authorize_url}
-          socket={@socket}
-          myself={@myself}
-          provider={@provider}
-        />
-        <.disabled_authorize_button
-          :if={!@show_authorize}
-          authorize_url={@authorize_url}
-          socket={@socket}
-          myself={@myself}
-          provider={@provider}
-        />
-        <.error_block
-          :if={@error}
-          type={@error}
-          myself={@myself}
-          provider={@provider}
-        />
-        <.userinfo :if={@userinfo} userinfo={@userinfo} />
-      </div>
+      <%!-- <div class="lg:grid lg:grid-cols-2 grid-cols-1 grid-flow-col mt-5"> --%>
+      <.authorize_button
+        :if={@action in [:new] and @show_authorize}
+        authorize_url={@authorize_url}
+        socket={@socket}
+        myself={@myself}
+        provider={@provider}
+      />
+      <.disabled_authorize_button
+        :if={@action in [:new] and !@show_authorize}
+        authorize_url={@authorize_url}
+        socket={@socket}
+        myself={@myself}
+        provider={@provider}
+      />
+      <.userinfo :if={@userinfo} userinfo={@userinfo} />
+      <.error_block :if={@error} type={@error} myself={@myself} provider={@provider} />
+      <%!-- </div> --%>
     </fieldset>
     """
   end
@@ -398,14 +395,25 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
 
   def userinfo(assigns) do
     ~H"""
-    <div class="flex flex-col items-center self-center">
-      <div class="flex-none">
-        <img src={@userinfo["picture"]} class="h-12 w-12 rounded-full" />
-      </div>
-      <div class="flex mb-1 ml-2">
-        <span class="font-medium text-lg text-gray-700">
-          <%= @userinfo["name"] %>
-        </span>
+    <div class="-ml-4 -mt-4 flex flex-wrap items-center justify-between sm:flex-nowrap">
+      <div class="ml-4 mt-4">
+        <div class="flex items-center">
+          <div class="flex-shrink-0">
+            <img
+              src={@userinfo["picture"]}
+              class="h-12 w-12 rounded-full"
+              alt="User profile picture"
+            />
+          </div>
+          <div class="ml-4">
+            <h3 class="text-base font-semibold leading-6 text-gray-900">
+              <%= @userinfo["name"] %>
+            </h3>
+            <p class="text-sm text-gray-500">
+              <a href="#">@tom_cook</a>
+            </p>
+          </div>
+        </div>
       </div>
     </div>
     """
@@ -423,6 +431,7 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
         %{
           form: _form,
           id: _id,
+          action: _action,
           token_body_changeset: _changeset,
           update_body: _body,
           provider: _provider
@@ -469,6 +478,7 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
          %{
            form: form,
            id: id,
+           action: action,
            token_body_changeset: token_body_changeset,
            update_body: update_body,
            provider: provider
@@ -483,7 +493,8 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
       token: token,
       error: token_error(token),
       update_body: update_body,
-      provider: provider
+      provider: provider,
+      action: action
     )
   end
 

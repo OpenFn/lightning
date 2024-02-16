@@ -163,13 +163,11 @@ defmodule Lightning.AuthProviders.Common do
   Constructs the authorization URL with the given client, state, scopes, and options.
   """
   def authorize_url(client, state, scopes, opts \\ []) do
-    scope = scopes |> Enum.join(" ")
-
     OAuth2.Client.authorize_url!(
       client,
       opts ++
         [
-          scope: scope,
+          scope: Enum.join(scopes, " "),
           state: state,
           access_type: "offline",
           prompt: "consent"

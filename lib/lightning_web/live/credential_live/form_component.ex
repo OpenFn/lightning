@@ -41,22 +41,11 @@ defmodule LightningWeb.CredentialLive.FormComponent do
      |> assign(type_options: type_options)
      |> assign(credential_type: false)
      |> assign(available_projects: [])
+     |> assign(dirty: false)
      |> assign(allow_credential_transfer: allow_credential_transfer)}
   end
 
-  defp update_available_projects(socket) do
-    update(
-      socket,
-      :available_projects,
-      fn _,
-         %{
-           all_projects: all_projects,
-           changeset: changeset
-         } ->
-        filter_available_projects(changeset, all_projects)
-      end
-    )
-  end
+  # Unselecting selected %{"_target" => ["chatbot_api"]}
 
   @impl true
   def update(%{body: body}, socket) do
@@ -126,7 +115,13 @@ defmodule LightningWeb.CredentialLive.FormComponent do
       scopes: selected_scopes
     )
 
-    {:noreply, socket |> assign(:scopes, selected_scopes)}
+    saved_scopes = get_scopes(socket.assigns.credential)
+    diff_scopes = Enum.sort(selected_scopes) == Enum.sort(saved_scopes)
+
+    {:noreply,
+     socket
+     |> assign(scopes: selected_scopes)
+     |> assign(dirty: !diff_scopes)}
   end
 
   def handle_event(
@@ -350,6 +345,7 @@ defmodule LightningWeb.CredentialLive.FormComponent do
             :let={{fieldset, _valid?}}
             id={@credential.id || "new"}
             form={f}
+            action={@action}
             type={@credential_type}
             update_body={@update_body}
           >
@@ -377,6 +373,7 @@ defmodule LightningWeb.CredentialLive.FormComponent do
                     id={"scope_selection_#{@credential.id || "new"}"}
                     on_change="scopes_changed"
                     target={@myself}
+                    dirty={@dirty}
                     selected_scopes={@scopes}
                   />
                 <% end %>
@@ -441,17 +438,16 @@ defmodule LightningWeb.CredentialLive.FormComponent do
   attr :id, :string, required: false
   attr :update_body, :any, required: false
   attr :phx_target, :any, default: nil
+  attr :action, :any, required: false
   slot :inner_block
 
-  @doc """
-  Switcher components for different types of credentials.
-  """
-  def form_component(%{type: "googlesheets"} = assigns) do
+  defp form_component(%{type: "googlesheets"} = assigns) do
     ~H"""
     <OauthComponent.fieldset
       :let={l}
       id={@id}
       form={@form}
+      action={@action}
       update_body={@update_body}
       provider={Lightning.AuthProviders.Google}
     >
@@ -460,12 +456,13 @@ defmodule LightningWeb.CredentialLive.FormComponent do
     """
   end
 
-  def form_component(%{type: "salesforce_oauth"} = assigns) do
+  defp form_component(%{type: "salesforce_oauth"} = assigns) do
     ~H"""
     <OauthComponent.fieldset
       :let={l}
       id={@id}
       form={@form}
+      action={@action}
       update_body={@update_body}
       provider={Lightning.AuthProviders.Salesforce}
     >
@@ -474,7 +471,7 @@ defmodule LightningWeb.CredentialLive.FormComponent do
     """
   end
 
-  def form_component(%{type: "raw"} = assigns) do
+  defp form_component(%{type: "raw"} = assigns) do
     ~H"""
     <RawBodyComponent.fieldset :let={l} form={@form}>
       <%= render_slot(@inner_block, l) %>
@@ -482,7 +479,7 @@ defmodule LightningWeb.CredentialLive.FormComponent do
     """
   end
 
-  def form_component(%{type: _schema} = assigns) do
+  defp form_component(%{type: _schema} = assigns) do
     ~H"""
     <JsonSchemaBodyComponent.fieldset :let={l} form={@form}>
       <%= render_slot(@inner_block, l) %>
@@ -495,7 +492,7 @@ defmodule LightningWeb.CredentialLive.FormComponent do
   attr :phx_target, :any, default: nil
   attr :form, :map, required: true
 
-  def project_credentials(assigns) do
+  defp project_credentials(assigns) do
     ~H"""
     <div class="col-span-3">
       <%= Phoenix.HTML.Form.label(@form, :project_credentials, "Project Access",
@@ -560,7 +557,7 @@ defmodule LightningWeb.CredentialLive.FormComponent do
   attr :users, :list, required: true
   attr :form, :map, required: true
 
-  def credential_transfer(assigns) do
+  defp credential_transfer(assigns) do
     ~H"""
     <div class="hidden sm:block" aria-hidden="true">
       <div class="border-t border-secondary-200 mb-6"></div>
@@ -585,6 +582,20 @@ defmodule LightningWeb.CredentialLive.FormComponent do
       </div>
     </fieldset>
     """
+  end
+
+  defp update_available_projects(socket) do
+    update(
+      socket,
+      :available_projects,
+      fn _,
+         %{
+           all_projects: all_projects,
+           changeset: changeset
+         } ->
+        filter_available_projects(changeset, all_projects)
+      end
+    )
   end
 
   defp get_type_options(socket, schemas_path) do
