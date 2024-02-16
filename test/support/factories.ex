@@ -21,6 +21,104 @@ defmodule Lightning.Factories do
     }
   end
 
+  def canonical_project_factory(attrs) do
+    user = insert(:user)
+
+    credential =
+      insert(:credential,
+        user_id: user.id,
+        name: "new credential",
+        body: %{"foo" => "super-secret"}
+      )
+
+    project_credential =
+      build(:project_credential,
+        id: Ecto.UUID.generate(),
+        credential: credential,
+        project: nil
+      )
+
+    workflow_1_trigger = build(:trigger)
+
+    workflow_1_job_1 =
+      build(:job,
+        name: "webhook job",
+        # Note: we can drop inserted_at once there's a reliable way to sort yaml for export
+        inserted_at: NaiveDateTime.utc_now() |> Timex.shift(seconds: 0),
+        body: "console.log('webhook job')\nfn(state => state)",
+        project_credential_id: project_credential.id
+      )
+
+    workflow_1_job_2 =
+      build(:job,
+        name: "on fail",
+        # Note: we can drop inserted_at once there's a reliable way to sort yaml for export
+        inserted_at: NaiveDateTime.utc_now() |> Timex.shift(seconds: 1),
+        body: "console.log('on fail')\nfn(state => state)"
+      )
+
+    workflow_1_job_3 =
+      build(:job,
+        name: "on success",
+        # Note: we can drop inserted_at once there's a reliable way to sort yaml for export
+        inserted_at: NaiveDateTime.utc_now() |> Timex.shift(seconds: 2)
+      )
+
+    workflow_1 =
+      build(:workflow, name: "workflow 1", project: nil)
+      |> with_trigger(workflow_1_trigger)
+      |> with_job(workflow_1_job_1)
+      |> with_job(workflow_1_job_2)
+      |> with_job(workflow_1_job_3)
+      |> with_edge({workflow_1_trigger, workflow_1_job_1},
+        condition_type: :always
+      )
+      |> with_edge({workflow_1_job_1, workflow_1_job_2},
+        condition_type: :on_job_failure
+      )
+      |> with_edge({workflow_1_job_2, workflow_1_job_3},
+        condition_type: :on_job_success
+      )
+
+    workflow_2_trigger =
+      build(:trigger,
+        type: :cron,
+        cron_expression: "0 23 * * *"
+      )
+
+    workflow_2_job_1 =
+      build(:job,
+        name: "some cronjob",
+        # Note: we can drop inserted_at once there's a reliable way to sort yaml for export
+        inserted_at: NaiveDateTime.utc_now() |> Timex.shift(seconds: 3)
+      )
+
+    workflow_2_job_2 =
+      build(:job,
+        name: "on cron failure",
+        # Note: we can drop inserted_at once there's a reliable way to sort yaml for export
+        inserted_at: NaiveDateTime.utc_now() |> Timex.shift(seconds: 4)
+      )
+
+    workflow_2 =
+      build(:workflow, name: "workflow 2", project: nil)
+      |> with_trigger(workflow_2_trigger)
+      |> with_job(workflow_2_job_1)
+      |> with_job(workflow_2_job_2)
+      |> with_edge({workflow_2_trigger, workflow_2_job_1},
+        condition_type: :always
+      )
+      |> with_edge({workflow_2_job_1, workflow_2_job_2},
+        condition_type: :on_job_success
+      )
+
+    build(:project,
+      project_credentials: [project_credential],
+      workflows: fn -> [workflow_1, workflow_2] end
+    )
+    |> merge_attributes(attrs)
+  end
+
   def project_factory do
     %Lightning.Projects.Project{
       name: sequence(:project_name, &"project-#{&1}")
@@ -288,8 +386,7 @@ defmodule Lightning.Factories do
     trigger =
       build(:trigger,
         type: :webhook,
-        enabled: true,
-        cron_expression: "* * * * *"
+        enabled: true
       )
 
     job =

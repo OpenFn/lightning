@@ -602,102 +602,8 @@ defmodule Lightning.ProjectsTest do
 
   @spec full_project_fixture(attrs :: Keyword.t()) :: %{optional(any) => any}
   def full_project_fixture(attrs \\ []) when is_list(attrs) do
-    user = insert(:user)
-
-    project =
-      build(:project, project_users: [%{user: user}])
-      |> ExMachina.merge_attributes(attrs)
-      |> insert()
-
-    workflow_1 = insert(:workflow, project: project, name: "workflow 1")
-
-    workflow_2 = insert(:workflow, project: project, name: "workflow 2")
-
-    credential =
-      insert(:credential,
-        user_id: user.id,
-        name: "new credential",
-        body: %{"foo" => "super-secret"},
-        projects: [project]
-      )
-
-    workflow_1_job =
-      insert(:job,
-        name: "webhook job",
-        # Note: we can drop inserted_at once there's a reliable way to sort yaml for export
-        inserted_at: NaiveDateTime.utc_now() |> Timex.shift(seconds: 0),
-        project: project,
-        workflow: workflow_1,
-        project_credential: %{credential: credential, project: project},
-        body: "console.log('webhook job')\nfn(state => state)"
-      )
-
-    insert(:edge,
-      workflow: workflow_1,
-      source_trigger: build(:trigger, workflow: workflow_1),
-      target_job: workflow_1_job,
-      condition_type: :always
-    )
-
-    insert(:edge,
-      workflow: workflow_1,
-      source_job: workflow_1_job,
-      condition_type: :on_job_failure,
-      target_job:
-        insert(:job,
-          name: "on fail",
-          # Note: we can drop inserted_at once there's a reliable way to sort yaml for export
-          inserted_at: NaiveDateTime.utc_now() |> Timex.shift(seconds: 1),
-          workflow: workflow_1,
-          body: "console.log('on fail')\nfn(state => state)"
-        )
-    )
-
-    insert(:edge,
-      workflow: workflow_1,
-      source_job: workflow_1_job,
-      condition_type: :on_job_success,
-      target_job:
-        insert(:job,
-          name: "on success",
-          # Note: we can drop inserted_at once there's a reliable way to sort yaml for export
-          inserted_at: NaiveDateTime.utc_now() |> Timex.shift(seconds: 2),
-          workflow: workflow_1
-        )
-    )
-
-    workflow_2_job =
-      insert(:job,
-        name: "some cronjob",
-        # Note: we can drop inserted_at once there's a reliable way to sort yaml for export
-        inserted_at: NaiveDateTime.utc_now() |> Timex.shift(seconds: 3),
-        workflow: workflow_2
-      )
-
-    insert(:edge,
-      workflow: workflow_2,
-      source_trigger:
-        build(:trigger,
-          workflow: workflow_2,
-          type: :cron,
-          cron_expression: "0 23 * * *"
-        ),
-      target_job: workflow_2_job,
-      condition_type: :always
-    )
-
-    insert(:edge,
-      workflow: workflow_2,
-      source_job: workflow_2_job,
-      condition_type: :on_job_success,
-      target_job:
-        insert(:job,
-          name: "on cron failure",
-          # Note: we can drop inserted_at once there's a reliable way to sort yaml for export
-          inserted_at: NaiveDateTime.utc_now() |> Timex.shift(seconds: 4),
-          workflow: workflow_2
-        )
-    )
+    %{workflows: [workflow_1, workflow_2]} =
+      project = canonical_project_fixture(attrs)
 
     insert(:job,
       name: "unrelated job"
@@ -707,8 +613,8 @@ defmodule Lightning.ProjectsTest do
       project: project,
       workflow_1: workflow_1,
       workflow_2: workflow_2,
-      workflow_1_job: workflow_1_job,
-      workflow_2_job: workflow_2_job
+      workflow_1_job: hd(workflow_1.jobs),
+      workflow_2_job: hd(workflow_2.jobs)
     }
   end
 end
