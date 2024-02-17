@@ -12,6 +12,7 @@ defmodule LightningWeb.CredentialLive.Salesforce do
   attr :id, :string, required: true
   attr :on_change, :any, required: true
   attr :target, :any, required: true
+  attr :authorize_url, :string, required: true
   attr :dirty, :boolean, required: true
   attr :selected_scopes, :any, required: true
 
@@ -57,7 +58,7 @@ defmodule LightningWeb.CredentialLive.Salesforce do
           </div>
         <% end %>
       </div>
-      <div class={"#{if !@dirty, do: "opacity-0", else: "opacity-100"} transition-opacity ease-in duration-700 rounded-md bg-blue-50 p-4 mt-4"}>
+      <div class={"#{if !@dirty, do: "opacity-0", else: "opacity-100"} transition-opacity ease-in duration-700 rounded-md bg-blue-50 border border-blue-100 p-1 my-4"}>
         <div class="flex">
           <div class="flex-shrink-0">
             <svg
@@ -79,7 +80,8 @@ defmodule LightningWeb.CredentialLive.Salesforce do
             </p>
             <p class="mt-3 text-sm md:ml-6 md:mt-0">
               <a
-                href="#"
+                target="_blank"
+                href={@authorize_url}
                 class="whitespace-nowrap font-medium text-blue-700 hover:text-blue-600"
               >
                 Re-authenticate <span aria-hidden="true"> &rarr;</span>

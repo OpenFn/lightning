@@ -41,6 +41,7 @@ defmodule LightningWeb.CredentialLive.FormComponent do
      |> assign(type_options: type_options)
      |> assign(credential_type: false)
      |> assign(available_projects: [])
+     |> assign(authorize_url: nil)
      |> assign(dirty: false)
      |> assign(allow_credential_transfer: allow_credential_transfer)}
   end
@@ -54,6 +55,10 @@ defmodule LightningWeb.CredentialLive.FormComponent do
        params = changeset.params |> Map.put("body", body)
        Credentials.change_credential(credential, params)
      end)}
+  end
+
+  def update(%{authorize_url: authorize_url}, socket) do
+    {:ok, socket |> assign(authorize_url: authorize_url)}
   end
 
   def update(%{projects: projects} = assigns, socket) do
@@ -71,6 +76,10 @@ defmodule LightningWeb.CredentialLive.FormComponent do
       update_body(pid, assigns.id, body)
     end
 
+    update_authorize_url = fn authorize_url ->
+      update_authorize_url(pid, assigns.id, authorize_url)
+    end
+
     page = if assigns.action === :new, do: :first, else: :second
 
     credential_type = assigns.credential.schema || false
@@ -83,6 +92,7 @@ defmodule LightningWeb.CredentialLive.FormComponent do
      |> assign(scopes: scopes)
      |> assign(changeset: changeset)
      |> assign(update_body: update_body)
+     |> assign(update_authorize_url: update_authorize_url)
      |> assign(all_projects: all_projects)
      |> assign(credential_type: credential_type)
      |> assign(selected_project: nil)
@@ -136,6 +146,14 @@ defmodule LightningWeb.CredentialLive.FormComponent do
      socket
      |> assign(changeset: changeset)
      |> assign(credential_type: type)}
+  end
+
+  def handle_event(
+        "credential_type_selected",
+        %{"_target" => ["selected"]},
+        socket
+      ) do
+    {:noreply, socket}
   end
 
   def handle_event("change_page", _, socket) do
@@ -348,6 +366,7 @@ defmodule LightningWeb.CredentialLive.FormComponent do
             action={@action}
             type={@credential_type}
             update_body={@update_body}
+            update_authorize_url={@update_authorize_url}
           >
             <div class="space-y-6 bg-white px-4 py-5 sm:p-6">
               <fieldset>
@@ -371,9 +390,10 @@ defmodule LightningWeb.CredentialLive.FormComponent do
                 <%= if @credential_type === "salesforce_oauth" do %>
                   <LightningWeb.CredentialLive.Salesforce.scopes
                     id={"scope_selection_#{@credential.id || "new"}"}
-                    on_change="scopes_changed"
-                    target={@myself}
                     dirty={@dirty}
+                    target={@myself}
+                    on_change="scopes_changed"
+                    authorize_url={@authorize_url}
                     selected_scopes={@scopes}
                   />
                 <% end %>
@@ -413,7 +433,7 @@ defmodule LightningWeb.CredentialLive.FormComponent do
             <div class="sm:flex sm:flex-row-reverse">
               <button
                 type="submit"
-                disabled={!@changeset.valid?}
+                disabled={!@changeset.valid? or @dirty}
                 class="inline-flex w-full justify-center rounded-md disabled:bg-primary-300 bg-primary-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary-500 sm:ml-3 sm:w-auto"
               >
                 Save
@@ -437,6 +457,7 @@ defmodule LightningWeb.CredentialLive.FormComponent do
   attr :form, :map, required: true
   attr :id, :string, required: false
   attr :update_body, :any, required: false
+  attr :update_authorize_url, :any, required: false
   attr :phx_target, :any, default: nil
   attr :action, :any, required: false
   slot :inner_block
@@ -449,6 +470,7 @@ defmodule LightningWeb.CredentialLive.FormComponent do
       form={@form}
       action={@action}
       update_body={@update_body}
+      update_authorize_url={@update_authorize_url}
       provider={Lightning.AuthProviders.Google}
     >
       <%= render_slot(@inner_block, l) %>
@@ -464,6 +486,7 @@ defmodule LightningWeb.CredentialLive.FormComponent do
       form={@form}
       action={@action}
       update_body={@update_body}
+      update_authorize_url={@update_authorize_url}
       provider={Lightning.AuthProviders.Salesforce}
     >
       <%= render_slot(@inner_block, l) %>
@@ -671,6 +694,10 @@ defmodule LightningWeb.CredentialLive.FormComponent do
   # requires a `pid`
   defp update_body(pid, id, body) do
     send_update(pid, __MODULE__, id: id, body: body)
+  end
+
+  defp update_authorize_url(pid, id, authorize_url) do
+    send_update(pid, __MODULE__, id: id, authorize_url: authorize_url)
   end
 
   defp project_name(projects, id) do

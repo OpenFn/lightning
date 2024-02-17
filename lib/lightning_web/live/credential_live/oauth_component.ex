@@ -11,6 +11,7 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
   attr :form, :map, required: true
   attr :id, :string, required: true
   attr :update_body, :any, required: true
+  attr :update_authorize_url, :any, required: true
   attr :action, :any, required: true
   attr :provider, :any, required: true
   slot :inner_block
@@ -29,6 +30,7 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
       assigns
       |> assign(
         update_body: assigns.update_body,
+        update_authorize_url: assigns.update_authorize_url,
         valid?: parent_valid? and token_body_changeset.valid?,
         token_body_changeset: token_body_changeset
       )
@@ -44,6 +46,7 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
            action: @action,
            token_body_changeset: @token_body_changeset,
            update_body: @update_body,
+           update_authorize_url: @update_authorize_url,
            provider: @provider,
            id: "inner-form-#{@id}"
          ],
@@ -434,6 +437,7 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
           action: _action,
           token_body_changeset: _changeset,
           update_body: _body,
+          update_authorize_url: _update_authorize_url,
           provider: _provider
         } = params,
         socket
@@ -481,6 +485,7 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
            action: action,
            token_body_changeset: token_body_changeset,
            update_body: update_body,
+           update_authorize_url: update_authorize_url,
            provider: provider
          },
          token
@@ -493,6 +498,7 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
       token: token,
       error: token_error(token),
       update_body: update_body,
+      update_authorize_url: update_authorize_url,
       provider: provider,
       action: action
     )
@@ -552,6 +558,8 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
         build_state(socket.id, __MODULE__, socket.assigns.id),
         scopes
       )
+
+    socket.assigns.update_authorize_url.(authorize_url)
 
     {:ok, socket |> assign(authorize_url: authorize_url)}
   end
