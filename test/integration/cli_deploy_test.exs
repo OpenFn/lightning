@@ -77,10 +77,68 @@ defmodule Lightning.CliDeployTest do
 
       System.cmd(@cli_path, ["deploy", "-c", config_path, "--no-confirm"])
 
-      assert [project] = Lightning.Repo.all(Lightning.Projects.Project)
+      assert [project] =
+               Lightning.Repo.all(Lightning.Projects.Project)
+               |> Lightning.Repo.preload(workflows: [:jobs, :triggers, :edges])
 
       assert project.name == "a-test-project"
       assert project.description == "This is only a test"
+
+      assert Enum.count(project.workflows) == 2
+
+      # workflow 1
+      workflow_1 = Enum.find(project.workflows, &(&1.name == "workflow 1"))
+      [trigger] = workflow_1.triggers
+
+      assert match?(
+               %{type: :webhook, cron_expression: nil, enabled: true},
+               trigger
+             )
+
+      assert Enum.count(workflow_1.jobs) == 3
+      # webhook job
+      edge_1 =
+        Enum.find(workflow_1.edges, fn edge ->
+          edge.source_trigger_id == trigger.id
+        end)
+
+      job_1 = Enum.find(workflow_1.jobs, &(&1.id == edge_1.target_job_id))
+
+      assert match?(
+               %{
+                 name: "webhook job",
+                 adaptor: "@openfn/language-common@latest",
+                 body: "console.log('webhook job')\nfn(state => state)\n"
+               },
+               job_1
+             )
+
+      # workflow 2
+      workflow_2 = Enum.find(project.workflows, &(&1.name == "workflow 2"))
+      [trigger] = workflow_2.triggers
+
+      assert match?(
+               %{type: :cron, cron_expression: "0 23 * * *", enabled: true},
+               trigger
+             )
+
+      assert Enum.count(workflow_2.jobs) == 2
+      # cron job
+      edge =
+        Enum.find(workflow_2.edges, fn edge ->
+          edge.source_trigger_id == trigger.id
+        end)
+
+      job = Enum.find(workflow_2.jobs, &(&1.id == edge.target_job_id))
+
+      assert match?(
+               %{
+                 name: "some cronjob",
+                 adaptor: "@openfn/language-common@latest",
+                 body: "console.log('hello!');\n"
+               },
+               job
+             )
     end
 
     test "deploy updates to an existing project on a Lightning server", %{
