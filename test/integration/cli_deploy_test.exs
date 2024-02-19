@@ -10,15 +10,13 @@ defmodule Lightning.CliDeployTest do
 
   @cli_path Application.app_dir(:lightning, "priv/openfn/bin/openfn")
 
-  @moduletag :tmp_dir
+  @moduletag tmp_dir: true, integration: true
 
   describe "The openfn CLI can be used to" do
     setup %{tmp_dir: tmp_dir} do
       url = LightningWeb.Endpoint.url()
-      user = insert(:user)
+      user = insert(:user, role: :superuser)
       token = Accounts.generate_api_token(user)
-      project = Lightning.ProjectsFixtures.canonical_project_fixture()
-      insert(:project_user, project: project, user: user, role: :admin)
 
       config = %{
         endpoint: url,
@@ -29,16 +27,20 @@ defmodule Lightning.CliDeployTest do
 
       config_path = Path.join(tmp_dir, "testConfig.json")
 
-      %{user: user, config: config, config_path: config_path, project: project}
+      %{user: user, config: config, config_path: config_path}
     end
 
     test "pull a valid project from a Lightning server", %{
-      project: project,
+      user: user,
       config: config,
       config_path: config_path
     } do
-      File.write(config_path, Jason.encode!(config))
+      project = Lightning.ProjectsFixtures.canonical_project_fixture()
+      insert(:project_user, project: project, user: user, role: :admin)
+
       # Try to pull
+      File.write(config_path, Jason.encode!(config))
+
       System.cmd(
         @cli_path,
         ["pull", project.id, "-c", config_path]
@@ -60,21 +62,36 @@ defmodule Lightning.CliDeployTest do
       assert actual_yaml == expected_yaml
     end
 
-    test "deploy a new project to a Lightning server", %{user: _user} do
-      # System.cmd(
-      #   "openfn",
-      #   ["deploy", "-c", "./tmp/testConfig.json"],
-      #   into: IO.stream()
-      # )
-    end
-
-    test "deploy updates to an existing project on a Lightning server", %{
-      project:
-        %{workflows: [%{jobs: [job_to_update | _rest]} = workflow_1 | _]} =
-          project,
+    test "deploy a new project to a Lightning server", %{
       config: config,
       config_path: config_path
     } do
+      # there's no project
+      assert [] == Lightning.Repo.all(Lightning.Projects.Project)
+
+      # Lets use the canonical spec
+      specPath = Path.expand("test/fixtures/canonical_project.yaml")
+
+      config = %{config | specPath: specPath}
+      File.write(config_path, Jason.encode!(config))
+
+      System.cmd(@cli_path, ["deploy", "-c", config_path, "--no-confirm"])
+
+      assert [project] = Lightning.Repo.all(Lightning.Projects.Project)
+
+      assert project.name == "a-test-project"
+      assert project.description == "This is only a test"
+    end
+
+    test "deploy updates to an existing project on a Lightning server", %{
+      user: user,
+      config: config,
+      config_path: config_path
+    } do
+      %{workflows: [%{jobs: [job_to_update | _rest]} = workflow_1 | _]} =
+        project = Lightning.ProjectsFixtures.canonical_project_fixture()
+
+      insert(:project_user, project: project, user: user, role: :admin)
       # Lets Pull to get the intial state and spec
       File.write(config_path, Jason.encode!(config))
 
