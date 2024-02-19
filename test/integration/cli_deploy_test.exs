@@ -35,12 +35,28 @@ defmodule Lightning.CliDeployTest do
       config: config,
       config_path: config_path
     } do
-      project = Lightning.ProjectsFixtures.canonical_project_fixture()
-      insert(:project_user, project: project, user: user, role: :admin)
-
-      # Try to pull
+      # write config
       File.write(config_path, Jason.encode!(config))
 
+      project = Lightning.ProjectsFixtures.canonical_project_fixture()
+
+      # Try to pull for a non project user
+      {logs, _exit_code} =
+        System.cmd(
+          @cli_path,
+          ["pull", project.id, "-c", config_path]
+        )
+
+      assert logs =~ "Failed to authorize request with endpoint"
+      assert logs =~ "403 Forbidden"
+
+      # state and spec files are not saved
+      refute File.exists?(config.statePath)
+      refute File.exists?(config.specPath)
+
+      insert(:project_user, project: project, user: user, role: :admin)
+
+      # Try to pull with a project user
       System.cmd(
         @cli_path,
         ["pull", project.id, "-c", config_path]
@@ -63,6 +79,7 @@ defmodule Lightning.CliDeployTest do
     end
 
     test "deploy a new project to a Lightning server", %{
+      user: user,
       config: config,
       config_path: config_path
     } do
@@ -74,6 +91,24 @@ defmodule Lightning.CliDeployTest do
 
       config = %{config | specPath: specPath}
       File.write(config_path, Jason.encode!(config))
+
+      # only a superuser can deploy a new project
+      # lets update the user's role to a normal user
+      user |> Ecto.Changeset.change(%{role: :user}) |> Lightning.Repo.update!()
+
+      {logs, _} =
+        System.cmd(@cli_path, ["deploy", "-c", config_path, "--no-confirm"])
+
+      assert logs =~ "Failed to authorize request with endpoint"
+      assert logs =~ "403 Forbidden"
+      # no project has been created
+      assert [] == Lightning.Repo.all(Lightning.Projects.Project)
+
+      # lets update the user's role to a superuser
+      user
+      |> Lightning.Repo.reload()
+      |> Ecto.Changeset.change(%{role: :superuser})
+      |> Lightning.Repo.update!()
 
       System.cmd(@cli_path, ["deploy", "-c", config_path, "--no-confirm"])
 
