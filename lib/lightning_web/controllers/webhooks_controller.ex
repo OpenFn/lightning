@@ -1,8 +1,9 @@
 defmodule LightningWeb.WebhooksController do
   use LightningWeb, :controller
 
-  alias Lightning.Extensions.RateLimiting.Context
+  alias Lightning.Extensions.RateLimiting
   alias Lightning.Extensions.UsageLimiting.Action
+  alias Lightning.Extensions.UsageLimiting.Context
   alias Lightning.Services.RateLimiter
   alias Lightning.Services.UsageLimiter
   alias Lightning.Workflows
@@ -15,7 +16,11 @@ defmodule LightningWeb.WebhooksController do
     with %Workflows.Trigger{enabled: true, workflow: %{project_id: project_id}} =
            trigger <- conn.assigns.trigger,
          :ok <-
-           RateLimiter.limit_request(conn, %Context{project_id: project_id}, []),
+           RateLimiter.limit_request(
+             conn,
+             %RateLimiting.Context{project_id: project_id},
+             []
+           ),
          :ok <-
            UsageLimiter.limit_action(%Action{type: :new_workorder}, %Context{
              project_id: project_id

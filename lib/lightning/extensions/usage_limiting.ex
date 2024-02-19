@@ -2,8 +2,7 @@ defmodule Lightning.Extensions.UsageLimiting do
   @moduledoc """
   Rate limiting for Lightning workloads that depends on Runtime.
   """
-  @type action_error :: :too_many_actions | :unknown
-  @type limit_error :: :too_many_runs | :too_many_workorders | :unknown
+  @type error_reason :: :too_many_runs | :unknown_project
 
   @type message :: %{
           position: atom(),
@@ -32,8 +31,8 @@ defmodule Lightning.Extensions.UsageLimiting do
   end
 
   @callback check_limits(context :: Context.t()) ::
-              :ok | {:error, limit_error(), message()}
+              :ok | {:error, error_reason(), message()}
 
   @callback limit_action(action :: Action.t(), context :: Context.t()) ::
-              :ok | {:error, action_error(), message()}
+              :ok | {:error, error_reason(), message()}
 end
