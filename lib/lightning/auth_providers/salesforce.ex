@@ -21,8 +21,6 @@ defmodule Lightning.AuthProviders.Salesforce do
 
   @impl true
   def get_token(client, params) do
-    IO.inspect(client, label: "client")
-    IO.inspect(params, label: "params")
     Common.get_token(client, params) |> Common.introspect(:salesforce)
   end
 

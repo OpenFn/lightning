@@ -39,10 +39,10 @@ defmodule LightningWeb.CredentialLive.FormComponent do
      socket
      |> assign(scopes: [])
      |> assign(type_options: type_options)
+     |> assign(scopes_changed: false)
+     |> assign(authorization_status: nil)
      |> assign(credential_type: false)
      |> assign(available_projects: [])
-     |> assign(authorize_url: nil)
-     |> assign(scopes_changed: false)
      |> assign(allow_credential_transfer: allow_credential_transfer)}
   end
 
@@ -54,6 +54,10 @@ defmodule LightningWeb.CredentialLive.FormComponent do
        Credentials.change_credential(credential, params)
      end)
      |> assign(scopes_changed: false)}
+  end
+
+  def update(%{authorization_status: status}, socket) do
+    {:ok, assign(socket, authorization_status: status)}
   end
 
   def update(%{projects: projects} = assigns, socket) do
@@ -352,11 +356,12 @@ defmodule LightningWeb.CredentialLive.FormComponent do
           <.form_component
             :let={{fieldset, _valid?}}
             id={@credential.id || "new"}
+            parent_id={@id}
             form={f}
-            action={@action}
-            scopes_changed={@scopes_changed}
             type={@credential_type}
+            action={@action}
             update_body={@update_body}
+            scopes_changed={@scopes_changed}
           >
             <div class="space-y-6 bg-white px-4 py-5 sm:p-6">
               <fieldset>
@@ -382,7 +387,6 @@ defmodule LightningWeb.CredentialLive.FormComponent do
                     id={"scope_selection_#{@credential.id || "new"}"}
                     target={@myself}
                     on_change="scopes_changed"
-                    authorize_url={@authorize_url}
                     selected_scopes={@scopes}
                     credential_type={@credential_type}
                   />
@@ -423,7 +427,10 @@ defmodule LightningWeb.CredentialLive.FormComponent do
             <div class="sm:flex sm:flex-row-reverse">
               <button
                 type="submit"
-                disabled={!@changeset.valid? or @scopes_changed}
+                disabled={
+                  !@changeset.valid? or @scopes_changed or
+                    @authorization_status !== :success
+                }
                 class="inline-flex w-full justify-center rounded-md disabled:bg-primary-300 bg-primary-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary-500 sm:ml-3 sm:w-auto"
               >
                 Save
@@ -443,12 +450,13 @@ defmodule LightningWeb.CredentialLive.FormComponent do
     """
   end
 
+  attr :id, :string, required: false
   attr :type, :string, required: true
   attr :form, :map, required: true
-  attr :id, :string, required: false
-  attr :update_body, :any, required: false
-  attr :phx_target, :any, default: nil
   attr :action, :any, required: false
+  attr :phx_target, :any, default: nil
+  attr :parent_id, :string, required: false
+  attr :update_body, :any, required: false
   attr :scopes_changed, :boolean, required: false
   slot :inner_block
 
@@ -459,8 +467,9 @@ defmodule LightningWeb.CredentialLive.FormComponent do
       id={@id}
       form={@form}
       action={@action}
-      update_body={@update_body}
       provider="google"
+      parent_id={@parent_id}
+      update_body={@update_body}
     >
       <%= render_slot(@inner_block, l) %>
     </OauthComponent.fieldset>
@@ -474,9 +483,10 @@ defmodule LightningWeb.CredentialLive.FormComponent do
       id={@id}
       form={@form}
       action={@action}
+      provider="salesforce"
+      parent_id={@parent_id}
       update_body={@update_body}
       scopes_changed={@scopes_changed}
-      provider="salesforce"
     >
       <%= render_slot(@inner_block, l) %>
     </OauthComponent.fieldset>

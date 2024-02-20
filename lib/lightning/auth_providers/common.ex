@@ -34,19 +34,11 @@ defmodule Lightning.AuthProviders.Common do
     Converts an OAuth2 token to a TokenBody struct.
     """
     def from_oauth2_token(token) do
-      token_params =
-        Map.from_struct(token)
-
-      extra_params =
-        token.other_params
-        |> Enum.filter(fn {key, _} ->
-          key in ~W[access_token refresh_token expires_at scope instance_url]
-        end)
-        |> Enum.map(fn {key, value} -> {String.to_existing_atom(key), value} end)
-        |> Map.new()
-
-      token_params
-      |> Map.merge(extra_params)
+      Map.from_struct(token)
+      |> Map.merge(token.other_params)
+      |> Enum.into(%{}, fn {key, value} ->
+        {key |> to_string(), value}
+      end)
       |> new()
     end
 
@@ -111,6 +103,9 @@ defmodule Lightning.AuthProviders.Common do
 
       {:ok, %{status: status}} when status >= 500 ->
         {:error, "Received #{status} from #{wellknown_url}"}
+
+      {:error, reason} ->
+        {:error, reason}
     end
   end
 
@@ -142,20 +137,24 @@ defmodule Lightning.AuthProviders.Common do
 
       {:error, :invalid_config}
     else
-      {:ok, wellknown} = get_wellknown(provider)
+      case get_wellknown(provider) do
+        {:ok, wellknown} ->
+          client =
+            OAuth2.Client.new(strategy: OAuth2.Strategy.AuthCode)
+            |> OAuth2.Client.put_serializer("application/json", Jason)
+            |> Map.merge(%{
+              authorize_url: wellknown.authorization_endpoint,
+              token_url: wellknown.token_endpoint,
+              client_id: config[:client_id],
+              client_secret: config[:client_secret],
+              redirect_uri: opts[:callback_url]
+            })
 
-      client =
-        OAuth2.Client.new(strategy: OAuth2.Strategy.AuthCode)
-        |> OAuth2.Client.put_serializer("application/json", Jason)
-        |> Map.merge(%{
-          authorize_url: wellknown.authorization_endpoint,
-          token_url: wellknown.token_endpoint,
-          client_id: config[:client_id],
-          client_secret: config[:client_secret],
-          redirect_uri: opts[:callback_url]
-        })
+          {:ok, client}
 
-      {:ok, client}
+        {:error, :timeout} ->
+          {:error, :timeout}
+      end
     end
   end
 
@@ -190,7 +189,6 @@ defmodule Lightning.AuthProviders.Common do
         {"Content-Type", "application/x-www-form-urlencoded"}
       ]
     )
-    |> IO.inspect()
     |> handle_introspection_result(token)
   end
 

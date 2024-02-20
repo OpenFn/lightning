@@ -5,7 +5,6 @@ defmodule LightningWeb.CredentialLive.Scopes do
   attr :id, :string, required: true
   attr :on_change, :any, required: true
   attr :target, :any, required: true
-  attr :authorize_url, :string, required: true
   attr :credential_type, :string, required: true
   attr :selected_scopes, :any, required: true
 
