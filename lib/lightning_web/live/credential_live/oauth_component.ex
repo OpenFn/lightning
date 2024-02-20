@@ -11,8 +11,8 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
   attr :form, :map, required: true
   attr :id, :string, required: true
   attr :update_body, :any, required: true
-  attr :update_authorize_url, :any, required: true
   attr :action, :any, required: true
+  attr :scopes_changed, :boolean, default: false
   attr :provider, :any, required: true
   slot :inner_block
 
@@ -30,7 +30,6 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
       assigns
       |> assign(
         update_body: assigns.update_body,
-        update_authorize_url: assigns.update_authorize_url,
         valid?: parent_valid? and token_body_changeset.valid?,
         token_body_changeset: token_body_changeset
       )
@@ -44,9 +43,9 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
            module: __MODULE__,
            form: @form,
            action: @action,
+           scopes_changed: @scopes_changed,
            token_body_changeset: @token_body_changeset,
            update_body: @update_body,
-           update_authorize_url: @update_authorize_url,
            provider: @provider,
            id: "inner-form-#{@id}"
          ],
@@ -87,6 +86,9 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
         show_authorize:
           !(assigns.authorizing || assigns.error || assigns.userinfo)
       )
+      |> assign(
+        display_banner: assigns.scopes_changed && assigns.action === :edit
+      )
 
     ~H"""
     <fieldset id={@id}>
@@ -99,7 +101,38 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
         <%= Phoenix.HTML.Form.hidden_input(body_form, :scope) %>
         <%= Phoenix.HTML.Form.hidden_input(body_form, :instance_url) %>
       </div>
-      <%!-- <div class="lg:grid lg:grid-cols-2 grid-cols-1 grid-flow-col mt-5"> --%>
+      <div class={"#{if @display_banner, do: "opacity-100", else: "opacity-0"} transition-opacity ease-in duration-700 rounded-md bg-blue-50 border border-blue-100 p-1 my-4"}>
+        <div class="flex">
+          <div class="flex-shrink-0">
+            <svg
+              class="h-5 w-5 text-blue-400"
+              viewBox="0 0 20 20"
+              fill="currentColor"
+              aria-hidden="true"
+            >
+              <path
+                fill-rule="evenodd"
+                d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a.75.75 0 000 1.5h.253a.25.25 0 01.244.304l-.459 2.066A1.75 1.75 0 0010.747 15H11a.75.75 0 000-1.5h-.253a.25.25 0 01-.244-.304l.459-2.066A1.75 1.75 0 009.253 9H9z"
+                clip-rule="evenodd"
+              />
+            </svg>
+          </div>
+          <div class="ml-3 flex-1 md:flex md:justify-between">
+            <p class="text-sm text-slate-700">
+              Please re-authenticate to save your credential with the updated scopes
+            </p>
+            <p class="mt-3 text-sm md:ml-6 md:mt-0">
+              <a
+                target="_blank"
+                href={@authorize_url}
+                class="whitespace-nowrap font-medium text-blue-700 hover:text-blue-600"
+              >
+                Re-authenticate <span aria-hidden="true"> &rarr;</span>
+              </a>
+            </p>
+          </div>
+        </div>
+      </div>
       <.authorize_button
         :if={@action in [:new] and @show_authorize}
         authorize_url={@authorize_url}
@@ -107,16 +140,31 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
         myself={@myself}
         provider={@provider}
       />
-      <.disabled_authorize_button
-        :if={@action in [:new] and !@show_authorize}
-        authorize_url={@authorize_url}
-        socket={@socket}
+      <%!-- <div
+        :if={@fetching_data}
+        class="border border-blue-300 shadow rounded-md p-4 max-w-sm w-full mx-auto"
+      >
+        <div class="animate-pulse flex space-x-4">
+          <div class="rounded-full bg-slate-700 h-10 w-10"></div>
+          <div class="flex-1 space-y-6 py-1">
+            <div class="h-2 bg-slate-700 rounded"></div>
+            <div class="space-y-3">
+              <div class="grid grid-cols-3 gap-4">
+                <div class="h-2 bg-slate-700 rounded col-span-2"></div>
+                <div class="h-2 bg-slate-700 rounded col-span-1"></div>
+              </div>
+              <div class="h-2 bg-slate-700 rounded"></div>
+            </div>
+          </div>
+        </div>
+      </div> --%>
+      <.userinfo
+        :if={@userinfo}
         myself={@myself}
-        provider={@provider}
+        userinfo={@userinfo}
+        authorize_url={@authorize_url}
       />
-      <.userinfo :if={@userinfo} userinfo={@userinfo} />
       <.error_block :if={@error} type={@error} myself={@myself} provider={@provider} />
-      <%!-- </div> --%>
     </fieldset>
     """
   end
@@ -167,18 +215,6 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
         <span class="text-xl">
           Sign in with <%= provider_name(@provider) |> String.capitalize() %>
         </span>
-      </div>
-      <div class="text-sm ml-1">
-        Not working?
-        <.link
-          href={@authorize_url}
-          target="_blank"
-          phx-target={@myself}
-          phx-click="authorize_click"
-          class="hover:underline text-primary-900"
-        >
-          Reauthorize.
-        </.link>
       </div>
     </div>
     """
@@ -413,10 +449,22 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
               <%= @userinfo["name"] %>
             </h3>
             <p class="text-sm text-gray-500">
-              <a href="#">@tom_cook</a>
+              <a href="#"><%= @userinfo["email"] %></a>
             </p>
           </div>
         </div>
+        <%!-- <div class="text-sm ml-1">
+          Not working?
+          <.link
+            href={@authorize_url}
+            target="_blank"
+            phx-target={@myself}
+            phx-click="authorize_click"
+            class="hover:underline text-primary-900"
+          >
+            Reauthorize.
+          </.link>
+        </div> --%>
       </div>
     </div>
     """
@@ -435,9 +483,9 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
           form: _form,
           id: _id,
           action: _action,
+          scopes_changed: _scopes_changed,
           token_body_changeset: _changeset,
           update_body: _body,
-          update_authorize_url: _update_authorize_url,
           provider: _provider
         } = params,
         socket
@@ -483,9 +531,9 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
            form: form,
            id: id,
            action: action,
+           scopes_changed: scopes_changed,
            token_body_changeset: token_body_changeset,
            update_body: update_body,
-           update_authorize_url: update_authorize_url,
            provider: provider
          },
          token
@@ -498,9 +546,9 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
       token: token,
       error: token_error(token),
       update_body: update_body,
-      update_authorize_url: update_authorize_url,
       provider: provider,
-      action: action
+      action: action,
+      scopes_changed: scopes_changed
     )
   end
 
@@ -558,8 +606,6 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
         build_state(socket.id, __MODULE__, socket.assigns.id),
         scopes
       )
-
-    socket.assigns.update_authorize_url.(authorize_url)
 
     {:ok, socket |> assign(authorize_url: authorize_url)}
   end
