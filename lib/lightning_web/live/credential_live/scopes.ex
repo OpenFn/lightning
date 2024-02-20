@@ -1,28 +1,22 @@
-defmodule LightningWeb.CredentialLive.Salesforce do
+defmodule LightningWeb.CredentialLive.Scopes do
   @moduledoc false
   use LightningWeb, :component
-
-  @salesforce_scopes ~w(cdp_query_api pardot_api cdp_profile_api chatter_api cdp_ingest_api
-  eclair_api wave_api api custom_permissions id lightning content openid full visualforce
-  web chatbot_api user_registration_api forgot_password cdp_api sfap_api interaction_api)
-
-  @predefined_salesforce_scopes ~w(refresh_token)
-  # @predefined_google_scopes ~W(spreadsheets userinfo.profile)
 
   attr :id, :string, required: true
   attr :on_change, :any, required: true
   attr :target, :any, required: true
   attr :authorize_url, :string, required: true
+  attr :credential_type, :string, required: true
   attr :selected_scopes, :any, required: true
 
-  def scopes(assigns) do
+  def scopes_picklist(assigns) do
+    {enabled_scopes, disabled_scopes} =
+      assigns.credential_type |> credential_type_to_provider |> get_scopes
+
     assigns =
       assigns
-      |> Map.put_new(
-        :scopes,
-        @predefined_salesforce_scopes ++ @salesforce_scopes
-      )
-      |> Map.put_new(:disabled_scopes, @predefined_salesforce_scopes)
+      |> Map.put_new(:scopes, (disabled_scopes ++ enabled_scopes) |> Enum.sort())
+      |> Map.put_new(:disabled_scopes, disabled_scopes)
 
     ~H"""
     <div id={@id}>
@@ -35,10 +29,10 @@ defmodule LightningWeb.CredentialLive.Salesforce do
           />
         </div>
         <div class="flex flex-row text-xs">
-          Learn more about Salesforce permissions
+          Learn more about <%= provider(@credential_type) %> permissions
           <a
             target="_blank"
-            href="https://help.salesforce.com/s/articleView?id=sf.remoteaccess_oauth_tokens_scopes.htm&type=5"
+            href={oauth2_scopes_help_url(@credential_type)}
             class="whitespace-nowrap font-medium text-blue-700 hover:text-blue-600"
           >
             &nbsp;here
@@ -53,10 +47,7 @@ defmodule LightningWeb.CredentialLive.Salesforce do
                 id={"#{@id}_#{scope}"}
                 type="checkbox"
                 name={scope}
-                checked={
-                  Enum.member?(@selected_scopes, scope) or
-                    Enum.member?(@disabled_scopes, scope)
-                }
+                checked={Enum.member?(@disabled_scopes ++ @selected_scopes, scope)}
                 disabled={Enum.member?(@disabled_scopes, scope)}
                 phx-change={@on_change}
                 phx-target={@target}
@@ -69,5 +60,42 @@ defmodule LightningWeb.CredentialLive.Salesforce do
       </div>
     </div>
     """
+  end
+
+  defp credential_type_to_provider(credential_type) do
+    case credential_type do
+      "googlesheets" -> "google"
+      "salesforce_oauth" -> "salesforce"
+    end
+  end
+
+  def get_scopes(provider) do
+    case provider do
+      "google" ->
+        {[], ~W(userinfo.email userinfo.profile spreadsheets)}
+
+      "salesforce" ->
+        {~w(cdp_query_api pardot_api cdp_profile_api chatter_api cdp_ingest_api
+      eclair_api wave_api api custom_permissions id lightning content openid full visualforce
+      web chatbot_api user_registration_api forgot_password cdp_api sfap_api interaction_api),
+         ~w(refresh_token)}
+    end
+  end
+
+  defp provider(credential_type) do
+    case credential_type do
+      "googlesheets" -> "Google"
+      "salesforce_oauth" -> "Salesforce"
+    end
+  end
+
+  defp oauth2_scopes_help_url(credential_type) do
+    case credential_type do
+      "googlesheets" ->
+        "https://developers.google.com/identity/protocols/oauth2/scopes"
+
+      "salesforce_oauth" ->
+        "https://help.salesforce.com/s/articleView?id=sf.remoteaccess_oauth_tokens_scopes.htm&type=5"
+    end
   end
 end

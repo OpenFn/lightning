@@ -376,14 +376,15 @@ defmodule LightningWeb.CredentialLive.FormComponent do
                 <div class="hidden sm:block" aria-hidden="true">
                   <div class="border-t border-secondary-200"></div>
                 </div>
-                <!-- # TODO: Make this part of the fieldset -->
-                <%= if @credential_type === "salesforce_oauth" do %>
-                  <LightningWeb.CredentialLive.Salesforce.scopes
+                <!-- # TODO: Make this part of the fieldset to avoid the if block -->
+                <%= if @credential_type in ["salesforce_oauth", "googlesheets"] do %>
+                  <LightningWeb.CredentialLive.Scopes.scopes_picklist
                     id={"scope_selection_#{@credential.id || "new"}"}
                     target={@myself}
                     on_change="scopes_changed"
                     authorize_url={@authorize_url}
                     selected_scopes={@scopes}
+                    credential_type={@credential_type}
                   />
                 <% end %>
                 <%= fieldset %>
@@ -459,7 +460,7 @@ defmodule LightningWeb.CredentialLive.FormComponent do
       form={@form}
       action={@action}
       update_body={@update_body}
-      provider={Lightning.AuthProviders.Google}
+      provider="google"
     >
       <%= render_slot(@inner_block, l) %>
     </OauthComponent.fieldset>
@@ -475,7 +476,7 @@ defmodule LightningWeb.CredentialLive.FormComponent do
       action={@action}
       update_body={@update_body}
       scopes_changed={@scopes_changed}
-      provider={Lightning.AuthProviders.Salesforce}
+      provider="salesforce"
     >
       <%= render_slot(@inner_block, l) %>
     </OauthComponent.fieldset>

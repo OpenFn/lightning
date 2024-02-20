@@ -190,6 +190,7 @@ defmodule Lightning.AuthProviders.Common do
         {"Content-Type", "application/x-www-form-urlencoded"}
       ]
     )
+    |> IO.inspect()
     |> handle_introspection_result(token)
   end
 

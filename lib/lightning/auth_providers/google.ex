@@ -14,13 +14,11 @@ defmodule Lightning.AuthProviders.Google do
 
   @impl true
   def authorize_url(client, state, scopes \\ [], opts \\ []) do
-    default_scopes = [
-      "https://www.googleapis.com/auth/spreadsheets",
-      "https://www.googleapis.com/auth/userinfo.profile"
-    ]
+    scopes =
+      scopes
+      |> Enum.map(fn scope -> "https://www.googleapis.com/auth/#{scope}" end)
 
-    combined_scopes = scopes ++ default_scopes
-    Common.authorize_url(client, state, combined_scopes, opts)
+    Common.authorize_url(client, state, scopes, opts)
   end
 
   @impl true
