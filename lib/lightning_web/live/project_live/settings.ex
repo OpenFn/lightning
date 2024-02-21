@@ -384,7 +384,7 @@ defmodule LightningWeb.ProjectLive.Settings do
     %{project: project} = socket.assigns
 
     {:ok, %{github_installation_id: github_installation_id}} =
-      VersionControl.add_github_repo_and_branch(
+      VersionControl.connect_github_repo(
         project.id,
         params["repo"],
         params["branch"]
