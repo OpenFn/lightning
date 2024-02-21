@@ -70,30 +70,6 @@ defmodule Lightning.VersionControlTest do
              ]
     end
 
-    test "given a project_id, branch and repo it should update a connection" do
-      project = insert(:project)
-      user = insert(:user)
-
-      attrs = %{project_id: project.id, user_id: user.id}
-
-      assert Repo.aggregate(ProjectRepoConnection, :count) == 0
-
-      VersionControl.create_github_connection(attrs)
-
-      assert Repo.aggregate(ProjectRepoConnection, :count) == 1
-
-      assert {:ok, updated_connection} =
-               VersionControl.add_github_repo_and_branch(
-                 project.id,
-                 "some_repo",
-                 "some_branch"
-               )
-
-      assert updated_connection.project_id == project.id
-      assert updated_connection.branch == "some_branch"
-      assert updated_connection.repo == "some_repo"
-    end
-
     test "add_github_installation_id/2 updates the installation_id for the correct project for the given user" do
       project1 = insert(:project)
       project2 = insert(:project)
@@ -138,6 +114,89 @@ defmodule Lightning.VersionControlTest do
           "some_installation"
         )
       end
+    end
+  end
+
+  describe "connect_github_repo/3" do
+    setup do
+      Tesla.Mock.mock(fn env ->
+        case env.url do
+          "https://api.github.com/app/installations/some-id/access_tokens" ->
+            %Tesla.Env{status: 201, body: %{"token" => "some-token"}}
+
+          # create blob
+          "https://api.github.com/repos/some/repo/git/blobs" ->
+            %Tesla.Env{
+              status: 201,
+              body: %{"sha" => "3a0f86fb8db8eea7ccbb9a95f325ddbedfb25e15"}
+            }
+
+          # get commit on master branch
+          "https://api.github.com/repos/some/repo/commits/heads/master" ->
+            %Tesla.Env{
+              status: 200,
+              body: %{
+                "sha" => "6dcb09b5b57875f334f61aebed695e2e4193db5e",
+                "commit" => %{
+                  "tree" => %{
+                    "sha" => "6dcb09b5b57875f334f61aebed695e2e4193db5e"
+                  }
+                }
+              }
+            }
+
+          # create commit
+          "https://api.github.com/repos/some/repo/git/commits" ->
+            %Tesla.Env{
+              status: 201,
+              body: %{"sha" => "7638417db6d59f3c431d3e1f261cc637155684cd"}
+            }
+
+          # create tree
+          "https://api.github.com/repos/some/repo/git/trees" ->
+            %Tesla.Env{
+              status: 201,
+              body: %{"sha" => "cd8274d15fa3ae2ab983129fb037999f264ba9a7"}
+            }
+
+          # update a reference. in this case, the master branch
+          "https://api.github.com/repos/some/repo/git/refs/heads/master" ->
+            %Tesla.Env{
+              status: 200,
+              body: %{"ref" => "refs/heads/master"}
+            }
+        end
+      end)
+
+      :ok
+    end
+
+    test "given a project_id, branch and repo it should update a connection" do
+      project = insert(:project)
+      user = insert(:user)
+
+      assert Repo.aggregate(ProjectRepoConnection, :count) == 0
+
+      insert(:project_repo_connection, %{
+        project: project,
+        user: user,
+        github_installation_id: "some-id",
+        branch: nil,
+        repo: nil
+      })
+
+      assert Repo.aggregate(ProjectRepoConnection, :count) == 1
+
+      assert {:ok, updated_connection} =
+               VersionControl.connect_github_repo(
+                 project.id,
+                 "some/repo",
+                 "master"
+               )
+
+      assert updated_connection.project_id == project.id
+      assert updated_connection.branch == "master"
+      assert updated_connection.repo == "some/repo"
     end
   end
 end

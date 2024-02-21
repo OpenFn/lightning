@@ -794,6 +794,7 @@
                         <small>
                           Need to change the repository or branch?
                           <button
+                            type="button"
                             class="text-primary-600"
                             phx-click="reinstall_app"
                           >
@@ -805,6 +806,7 @@
                         <small>
                           No longer need to sync your project?
                           <button
+                            type="button"
                             class="text-red-500"
                             phx-click={
                               LightningWeb.Components.Modal.show_modal(
