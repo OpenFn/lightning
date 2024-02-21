@@ -31,7 +31,8 @@ defmodule Lightning.WorkOrdersTest do
       workflow: workflow,
       trigger: trigger
     } do
-      Lightning.WorkOrders.subscribe(workflow.project_id)
+      project_id = workflow.project_id
+      Lightning.WorkOrders.subscribe(project_id)
       dataclip = insert(:dataclip)
 
       {:ok, workorder} =
@@ -48,6 +49,10 @@ defmodule Lightning.WorkOrdersTest do
       assert run.dataclip_id == dataclip.id
 
       workorder_id = workorder.id
+
+      assert_received %Lightning.WorkOrders.Events.RunCreated{
+        project_id: ^project_id
+      }
 
       assert_received %Lightning.WorkOrders.Events.WorkOrderCreated{
         work_order: %{id: ^workorder_id}
@@ -84,8 +89,8 @@ defmodule Lightning.WorkOrdersTest do
 
     test "creates a manual workorder", %{workflow: workflow, job: job} do
       user = insert(:user)
-
-      Lightning.WorkOrders.subscribe(workflow.project_id)
+      project_id = workflow.project_id
+      Lightning.WorkOrders.subscribe(project_id)
 
       assert {:ok, manual} =
                Lightning.WorkOrders.Manual.new(
@@ -114,7 +119,9 @@ defmodule Lightning.WorkOrdersTest do
 
       assert run.created_by.id == user.id
 
-      assert_received %Lightning.WorkOrders.Events.RunCreated{}
+      assert_received %Lightning.WorkOrders.Events.RunCreated{
+        project_id: ^project_id
+      }
 
       workorder_id = workorder.id
 
