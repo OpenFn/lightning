@@ -788,6 +788,10 @@ defmodule LightningWeb.WorkflowLive.Edit do
     end
   end
 
+  def handle_event("validate", %{"workflow" => params}, socket) do
+    {:noreply, handle_new_params(socket, params)}
+  end
+
   # TODO: remove this and the matching hidden input when issue resolved in LiveView.
   # The hidden input is a workaround for a bug in LiveView where the form is
   # considered for recovery because it has a submit button, but skips the
@@ -796,10 +800,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
   # not be applied.
   def handle_event("validate", %{"_ignore_me" => _}, socket) do
     {:noreply, socket}
-  end
-
-  def handle_event("validate", %{"workflow" => params}, socket) do
-    {:noreply, handle_new_params(socket, params)}
   end
 
   def handle_event("save", params, socket) do
