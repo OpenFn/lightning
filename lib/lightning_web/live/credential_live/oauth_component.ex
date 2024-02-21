@@ -178,7 +178,10 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
 
   def reauthorize_banner(assigns) do
     ~H"""
-    <div class="rounded-md bg-blue-50 border border-blue-100 p-2 mt-5">
+    <div
+      id="re-authorize-banner"
+      class="rounded-md bg-blue-50 border border-blue-100 p-2 mt-5"
+    >
       <div class="flex">
         <div class="flex-shrink-0">
           <svg

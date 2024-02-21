@@ -898,6 +898,79 @@ defmodule LightningWeb.CredentialLiveTest do
              } = token
     end
 
+    test "re-authenticate banner is not rendered the first time we pick permissions",
+         %{
+           bypass: bypass,
+           conn: conn,
+           user: _user
+         } do
+      expect_wellknown(bypass)
+
+      {:ok, index_live, _html} = live(conn, ~p"/credentials")
+
+      index_live |> select_credential_type("salesforce_oauth")
+      index_live |> click_continue()
+
+      assert index_live
+             |> has_element?("#scope_selection_new")
+
+      refute index_live |> has_element?("#reauthorize-banner")
+      assert index_live |> has_element?("#authorize-button")
+
+      ~W(cdp_query_api pardot_api cdp_profile_api chatter_api cdp_ingest_api)
+      |> Enum.each(fn scope ->
+        index_live
+        |> element("#scope_selection_new_#{scope}")
+        |> render_change(%{"_target" => [scope], "#{scope}" => "on"})
+      end)
+
+      refute index_live |> has_element?("#reauthorize-banner")
+      assert index_live |> has_element?("#authorize-button")
+    end
+
+    test "re-authenticate banner rendered when scopes are changed",
+         %{
+           bypass: bypass,
+           conn: conn,
+           user: user
+         } do
+      expect_wellknown(bypass)
+
+      credential =
+        insert(:credential,
+          name: "my-credential",
+          schema: "salesforce_oauth",
+          body: %{
+            "access_token" => "access_token",
+            "refresh_token" => "refresh_token",
+            "expires_at" => Timex.now() |> Timex.shift(days: 4),
+            "scope" => "cdp_query_api pardot_api cdp_profile_api"
+          },
+          user: user
+        )
+
+      {:ok, index_live, _html} = live(conn, ~p"/credentials")
+
+      index_live |> select_credential_type("salesforce_oauth")
+      index_live |> click_continue()
+
+      assert index_live
+             |> has_element?("#scope_selection_new")
+
+      refute index_live |> has_element?("#re-authorize-banner")
+      refute index_live |> has_element?("#re-authorize-button")
+
+      ~W(chatter_api cdp_ingest_api)
+      |> Enum.each(fn scope ->
+        index_live
+        |> element("#scope_selection_#{credential.id}_#{scope}")
+        |> render_change(%{"_target" => [scope], "#{scope}" => "on"})
+      end)
+
+      assert index_live |> has_element?("#re-authorize-banner")
+      assert index_live |> has_element?("#re-authorize-button")
+    end
+
     test "correctly renders a valid existing token", %{
       conn: conn,
       user: user,
@@ -940,49 +1013,6 @@ defmodule LightningWeb.CredentialLiveTest do
 
       assert edit_live |> has_element?("h3", "Test User")
     end
-
-    # test "renders an error when a token has no refresh token", %{
-    #   conn: conn,
-    #   user: user,
-    #   bypass: bypass
-    # } do
-    #   expect_wellknown(bypass)
-
-    #   expires_at = DateTime.to_unix(DateTime.utc_now()) + 3600
-
-    #   credential =
-    #     credential_fixture(
-    #       user_id: user.id,
-    #       schema: "salesforce_oauth",
-    #       body: %{
-    #         access_token: "ya29.a0AVvZ...",
-    #         refresh_token: "",
-    #         expires_at: expires_at,
-    #         scope: "scope1 scope2"
-    #       }
-    #     )
-
-    #   {:ok, edit_live, _html} = live(conn, ~p"/credentials")
-
-    #   # # Wait for next `send_update` triggered by the token Task calls
-    #   assert_receive {:plug_conn, :sent}
-
-    #   # assert_receive {:phoenix, :send_update, _}
-
-    #   # Wait for the userinfo endpoint to be called
-    #   assert wait_for_assigns(edit_live, :no_refresh_token, credential.id),
-    #          ":userinfo has not been set yet."
-
-    #   edit_live |> render()
-
-    #   assert edit_live |> has_element?("h3", "Test User")
-
-    #   # edit_live
-    #   # |> element("#inner-form-#{credential.id}")
-    #   # |> render()
-
-    #   assert edit_live |> element("p") |> render() |> IO.inspect()
-    # end
 
     test "renewing an expired but valid token", %{
       user: user,
