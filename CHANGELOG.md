@@ -19,6 +19,9 @@ and this project adheres to
 - Actual metrics will now be submitted by Lightning to the Usage Tracker.
   [#1742](https://github.com/OpenFn/lightning/issues/1742)
 
+- Added a support link to the menu that goes to the instance admin contact
+  [#1783](https://github.com/OpenFn/lightning/issues/1783)
+
 ### Changed
 - Usage Tracking submissions are now opt-out, rather than opt-in.
   [#1742](https://github.com/OpenFn/lightning/issues/1742)
