@@ -101,7 +101,9 @@ Lightning.TaskWorker.html
 Lightning.UnixDateTime.html
 Lightning.UsageTracking.Client.html
 Lightning.UsageTracking.Configuration.html
+Lightning.UsageTracking.OSInstrumenter.html
 Lightning.UsageTracking.Report.html
+Lightning.UsageTracking.ReportData.html
 Lightning.UsageTracking.ResponseProcessor.html
 Lightning.UsageTracking.Worker.html
 Lightning.Validators.html
@@ -257,8 +259,8 @@ dist/merriweather-latin-ext-300-normal-K6L27CZ5.woff2
 dist/merriweather-vietnamese-300-italic-EHHNZPUO.woff2
 dist/merriweather-vietnamese-300-normal-U376L4Z4.woff2
 dist/remixicon-NKANDIL5.woff2
-dist/search_data-23666F88.js
-dist/sidebar_items-4A570709.js
+dist/search_data-D7F21612.js
+dist/sidebar_items-1AC10552.js
 index.html
 provisioning.html
 readme.html
