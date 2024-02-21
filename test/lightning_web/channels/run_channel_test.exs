@@ -253,7 +253,7 @@ defmodule LightningWeb.RunChannelTest do
 
       with_mock(
         UsageLimiter,
-        limit_action: fn %{type: :new_run}, %{project_id: ^project_id} ->
+        limit_action: fn %{type: :fetch_run}, %{project_id: ^project_id} ->
           {:error, :too_many_runs, %{text: "some error message"}}
         end
       ) do

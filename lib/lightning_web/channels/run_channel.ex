@@ -63,7 +63,7 @@ defmodule LightningWeb.RunChannel do
     }
 
     UsageLimiter.limit_action(
-      %Action{type: :new_run},
+      %Action{type: :fetch_run},
       %Context{project_id: project_id, user_id: nil}
     )
     |> case do
