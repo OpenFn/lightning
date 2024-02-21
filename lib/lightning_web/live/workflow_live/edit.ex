@@ -304,6 +304,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
           phx-hook="SaveViaCtrlS"
           phx-change="validate"
         >
+          <input type="hidden" name="_ignore_me" />
           <.single_inputs_for
             :let={{jf}}
             :if={@selected_job}
@@ -789,6 +790,16 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
   def handle_event("validate", %{"workflow" => params}, socket) do
     {:noreply, handle_new_params(socket, params)}
+  end
+
+  # TODO: remove this and the matching hidden input when issue resolved in LiveView.
+  # The hidden input is a workaround for a bug in LiveView where the form is
+  # considered for recovery because it has a submit button, but skips the
+  # recovery because it has no inputs.
+  # This causes the LiveView to not be set as joined, and further diffs to
+  # not be applied.
+  def handle_event("validate", %{"_ignore_me" => _}, socket) do
+    {:noreply, socket}
   end
 
   def handle_event("save", params, socket) do

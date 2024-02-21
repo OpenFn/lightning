@@ -25,6 +25,9 @@ and this project adheres to
 
 ### Fixed
 
+- Non-responsive workflow canvas after web socket disconnection
+  [#1750](https://github.com/OpenFn/lightning/issues/1750)
+
 ## [v2.0.2] - 2024-02-14
 
 ### Fixed
