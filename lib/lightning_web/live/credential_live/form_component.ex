@@ -40,7 +40,7 @@ defmodule LightningWeb.CredentialLive.FormComponent do
      |> assign(scopes: [])
      |> assign(type_options: type_options)
      |> assign(scopes_changed: false)
-     |> assign(authorization_status: nil)
+     |> assign(authorization_status: :success)
      |> assign(credential_type: false)
      |> assign(available_projects: [])
      |> assign(allow_credential_transfer: allow_credential_transfer)}
