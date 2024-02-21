@@ -4,7 +4,7 @@ import Config
 config :lightning, Lightning.Repo,
   username: "postgres",
   password: "postgres",
-  hostname: "localhost",
+  hostname: System.get_env("POSTGRES_HOST") || "localhost",
   database: "lightning_dev",
   show_sensitive_data_on_connection_error: true,
   pool_size: 10
