@@ -971,6 +971,37 @@ defmodule LightningWeb.CredentialLiveTest do
       assert index_live |> has_element?("#re-authorize-button")
     end
 
+    test "rendering error component for various error type" do
+      render_component(
+        &LightningWeb.CredentialLive.OauthComponent.error_block/1,
+        type: :token_failed
+      ) =~ "Failed retrieving the token from the provider"
+
+      render_component(
+        &LightningWeb.CredentialLive.OauthComponent.error_block/1,
+        type: :refresh_failed,
+        authorize_url: "https://www",
+        myself: nil,
+        provider: "salesforce"
+      ) =~ "Failed renewing your access token"
+
+      render_component(
+        &LightningWeb.CredentialLive.OauthComponent.error_block/1,
+        type: :userinfo_failed,
+        authorize_url: "https://www",
+        myself: nil,
+        provider: "salesforce"
+      ) =~ "Failed retrieving your information"
+
+      render_component(
+        &LightningWeb.CredentialLive.OauthComponent.error_block/1,
+        type: :no_refresh_token,
+        authorize_url: "https://www",
+        myself: nil,
+        provider: "salesforce"
+      ) =~ "The token is missing it's"
+    end
+
     test "correctly renders a valid existing token", %{
       conn: conn,
       user: user,
@@ -1442,37 +1473,6 @@ defmodule LightningWeb.CredentialLiveTest do
 
       assert edit_live |> has_element?("h3", "Test User")
     end
-
-    # test "renders an error when a token has no refresh token", %{
-    #   conn: conn,
-    #   user: user,
-    #   bypass: bypass
-    # } do
-    #   expect_wellknown(bypass)
-
-    #   expires_at = DateTime.to_unix(DateTime.utc_now()) + 3600
-
-    #   credential_fixture(
-    #     user_id: user.id,
-    #     schema: "googlesheets",
-    #     body: %{
-    #       access_token: "ya29.a0AVvZ...",
-    #       refresh_token: "",
-    #       expires_at: expires_at,
-    #       scope: "scope1 scope2"
-    #     }
-    #   )
-
-    #   {:ok, edit_live, _html} = live(conn, ~p"/credentials")
-
-    #   # Wait for next `send_update` triggered by the token Task calls
-    #   assert_receive {:plug_conn, :sent}
-
-    #   # edit_live
-    #   # |> element("#inner-form-#{credential.id}")
-
-    #   assert edit_live |> has_element?("p", " The token is missing it's")
-    # end
 
     test "renewing an expired but valid token", %{
       user: user,
