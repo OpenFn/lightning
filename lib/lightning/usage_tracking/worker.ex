@@ -13,17 +13,22 @@ defmodule Lightning.UsageTracking.Worker do
   alias Lightning.UsageTracking.Client
   alias Lightning.UsageTracking.Configuration
   alias Lightning.UsageTracking.Report
+  alias Lightning.UsageTracking.ReportData
 
   @impl Oban.Worker
   def perform(_opts) do
-    if Application.get_env(:lightning, :usage_tracking)[:enabled] do
-      find_configuration()
+    env = Application.get_env(:lightning, :usage_tracking)
 
-      host = Application.get_env(:lightning, :usage_tracking)[:host]
+    if env[:enabled] do
+      config = find_configuration()
 
-      metrics = %{}
+      cleartext_uuids_enabled = env[:cleartext_uuids_enabled]
 
-      Client.submit_metrics(metrics, host) |> create_report(metrics)
+      host = env[:host]
+
+      data = ReportData.generate(config, cleartext_uuids_enabled)
+
+      Client.submit_metrics(data, host) |> create_report(data)
     end
 
     :ok
@@ -35,12 +40,10 @@ defmodule Lightning.UsageTracking.Worker do
     end
   end
 
-  defp create_report(:ok, metrics) do
-    %Report{data: metrics, submitted: true, submitted_at: DateTime.utc_now()}
+  defp create_report(:ok, data) do
+    %Report{data: data, submitted: true, submitted_at: DateTime.utc_now()}
     |> Repo.insert()
   end
 
-  defp create_report(:error, metrics) do
-    %Report{data: metrics} |> Repo.insert()
-  end
+  defp create_report(:error, data), do: %Report{data: data} |> Repo.insert()
 end

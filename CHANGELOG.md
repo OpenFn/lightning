@@ -16,8 +16,14 @@ and this project adheres to
 ## [Unreleased]
 
 ### Added
+- Actual metrics will now be submitted by Lightning to the Usage Tracker.
+  [#1742](https://github.com/OpenFn/lightning/issues/1742)
 
 ### Changed
+- Usage Tracking submissions are now opt-out, rather than opt-in.
+  [#1742](https://github.com/OpenFn/lightning/issues/1742)
+- Usage Tracking submissions will now run daily rather than hourly.
+  [#1742](https://github.com/OpenFn/lightning/issues/1742)
 
 - Bumped @openfn/ws-worker to `v1.0` (this is used in dev mode when starting the
   worker from your mix app: `RTM=true iex -S mix phx.server`)

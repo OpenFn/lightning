@@ -116,7 +116,7 @@ purge_cron =
     ],
     else: []
 
-usage_tracking_cron = [{"0 */1 * * *", Lightning.UsageTracking.Worker}]
+usage_tracking_cron = [{"0 2 * * *", Lightning.UsageTracking.Worker}]
 
 all_cron = base_oban_cron ++ purge_cron ++ usage_tracking_cron
 
@@ -351,5 +351,6 @@ config :lightning, :metrics,
     )
 
 config :lightning, :usage_tracking,
-  enabled: System.get_env("USAGE_TRACKING_ENABLED") == "true",
+  cleartext_uuids_enabled: System.get_env("USAGE_TRACKING_UUIDS") == "cleartext",
+  enabled: System.get_env("USAGE_TRACKING_ENABLED") != "false",
   host: System.get_env("USAGE_TRACKER_HOST", "https://impact.openfn.org")
