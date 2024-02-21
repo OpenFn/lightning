@@ -17,6 +17,9 @@ and this project adheres to
 
 ### Added
 
+- Display and edit OAuth credentials
+  scopes[#1706](https://github.com/OpenFn/Lightning/issues/1706)
+
 ### Changed
 
 ### Fixed
