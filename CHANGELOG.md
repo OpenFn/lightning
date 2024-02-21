@@ -17,6 +17,9 @@ and this project adheres to
 
 ### Added
 
+- Added a support link to the menu that goes to the instance admin contact
+  [#1783](https://github.com/OpenFn/lightning/issues/1783)
+
 ### Changed
 
 - Bumped @openfn/ws-worker to `v1.0` (this is used in dev mode when starting the

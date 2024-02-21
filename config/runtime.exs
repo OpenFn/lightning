@@ -73,7 +73,7 @@ config :lightning, :image_info,
   commit: commit
 
 config :lightning, :email_addresses,
-  admin: System.get_env("EMAIL_ADMIN", "admin@openfn.org")
+  admin: System.get_env("EMAIL_ADMIN", "support@openfn.org")
 
 config :lightning, :adaptor_service,
   adaptors_path: System.get_env("ADAPTORS_PATH", "./priv/openfn")
