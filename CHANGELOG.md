@@ -16,14 +16,24 @@ and this project adheres to
 ## [Unreleased]
 
 ### Added
+
+### Changed
+
+### Fixed
+
+## [v2.0.3] 2024-02-21
+
+### Added
+
 - Actual metrics will now be submitted by Lightning to the Usage Tracker.
   [#1742](https://github.com/OpenFn/lightning/issues/1742)
-
 - Added a support link to the menu that goes to the instance admin contact
   [#1783](https://github.com/OpenFn/lightning/issues/1783)
 
 ### Changed
-- Usage Tracking submissions are now opt-out, rather than opt-in.
+
+- Usage Tracking submissions are now opt-out, rather than opt-in. Hashed UUIDs
+  to ensure anonymity are default.
   [#1742](https://github.com/OpenFn/lightning/issues/1742)
 - Usage Tracking submissions will now run daily rather than hourly.
   [#1742](https://github.com/OpenFn/lightning/issues/1742)
