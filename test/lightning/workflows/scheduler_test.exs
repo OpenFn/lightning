@@ -9,7 +9,7 @@ defmodule Lightning.Workflows.SchedulerTest do
   alias Lightning.Workflows.Scheduler
   alias Lightning.Extensions.UsageLimiting.Action
   alias Lightning.Extensions.UsageLimiting.Context
-  alias Lightning.Services.UsageLimiter
+  alias Lightning.Extensions.UsageLimiter
 
   describe "enqueue_cronjobs/1" do
     test "enqueues a cron job that's never been run before" do

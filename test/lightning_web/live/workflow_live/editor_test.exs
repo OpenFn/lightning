@@ -9,7 +9,7 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
   import Mock
 
   alias Lightning.Invocation
-  alias Lightning.Services.UsageLimiter
+  alias Lightning.Extensions.UsageLimiter
   alias Lightning.Workflows.Workflow
 
   setup :register_and_log_in_user

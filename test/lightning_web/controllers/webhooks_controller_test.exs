@@ -4,8 +4,8 @@ defmodule LightningWeb.WebhooksControllerTest do
   import Lightning.Factories
   import Mock
 
-  alias Lightning.Services.RateLimiter
-  alias Lightning.Services.UsageLimiter
+  alias Lightning.Extensions.RateLimiter
+  alias Lightning.Extensions.UsageLimiter
   alias Lightning.Repo
   alias Lightning.Runs
   alias Lightning.WorkOrders
