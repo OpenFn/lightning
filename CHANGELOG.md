@@ -18,6 +18,8 @@ and this project adheres to
 ### Added
 
 ### Changed
+- Stop sending `operating_system_detail` to the usage tracker
+  [#1785](https://github.com/OpenFn/lightning/issues/1785)
 
 ### Fixed
 

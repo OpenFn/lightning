@@ -10,7 +10,6 @@ defmodule Lightning.UsageTracking.ReportData do
   alias Lightning.Projects.Project
   alias Lightning.Repo
   alias Lightning.UsageTracking.Configuration
-  alias Lightning.UsageTracking.OSInstrumenter
   alias Lightning.Workflows.Workflow
 
   @lightning_version Lightning.MixProject.project()[:version]
@@ -31,9 +30,9 @@ defmodule Lightning.UsageTracking.ReportData do
     |> instrument_identity(cleartext_enabled)
     |> Map.merge(%{
       no_of_users: no_of_users(),
+      operating_system: operating_system_name(),
       version: @lightning_version
     })
-    |> Map.merge(OSInstrumenter.instrument(operating_system_name()))
   end
 
   defp instrument_identity(identity, false = _cleartext_enabled) do
