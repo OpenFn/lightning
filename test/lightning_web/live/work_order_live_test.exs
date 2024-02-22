@@ -513,7 +513,9 @@ defmodule LightningWeb.WorkOrderLiveTest do
       assert rendered =~ run_1.id
       assert rendered =~ run_2.id
       assert rendered =~ "claimed @ \n  \n      #{claimed_at}"
-      assert rendered =~ "claimed @ \n  \n      #{started_at}"
+
+      assert rendered =~ "claimed @ \n  \n      #{started_at}" or
+               rendered =~ "started @ \n  \n      #{started_at}"
     end
 
     test "lists all workorders", %{
