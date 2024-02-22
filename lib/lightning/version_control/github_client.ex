@@ -58,8 +58,16 @@ defmodule Lightning.VersionControl.GithubClient do
     post(client, "/repos/#{repo}/git/commits", body)
   end
 
+  def create_ref(client, repo, body) do
+    post(client, "/repos/#{repo}/git/refs", body)
+  end
+
   def update_ref(client, repo, ref, body) do
     post(client, "/repos/#{repo}/git/refs/#{ref}", body)
+  end
+
+  def delete_ref(client, repo, ref) do
+    delete(client, "/repos/#{repo}/git/refs/#{ref}")
   end
 
   def build_client(installation_id) do

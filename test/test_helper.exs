@@ -1,6 +1,13 @@
 Code.put_compiler_option(:warnings_as_errors, true)
 # Report which tests are synchronous
 # Rexbug.start("ExUnit.Server.add_sync_module/_")
+Mox.defmock(Lightning.GithubClient.Mock, for: Tesla.Adapter)
+
+Application.put_env(
+  :lightning,
+  :tesla,
+  {Lightning.VersionControl.GithubClient, [adapter: Lightning.GithubClient.Mock]}
+)
 
 :ok = Application.ensure_started(:ex_machina)
 

@@ -6,6 +6,7 @@ defmodule Lightning.VersionControlTest do
 
   import Lightning.Factories
   import Lightning.ApplicationHelpers, only: [put_temporary_env: 3]
+  import Mox
 
   @cert """
   -----BEGIN RSA PRIVATE KEY-----
@@ -132,52 +133,57 @@ defmodule Lightning.VersionControlTest do
         app_name: "test-github"
       )
 
-      Tesla.Mock.mock(fn env ->
+      expect(Lightning.GithubClient.Mock, :call, fn env, _opts ->
         case env.url do
           "https://api.github.com/app/installations/some-id/access_tokens" ->
-            %Tesla.Env{status: 201, body: %{"token" => "some-token"}}
+            {:ok, %Tesla.Env{status: 201, body: %{"token" => "some-token"}}}
 
           # create blob
           "https://api.github.com/repos/some/repo/git/blobs" ->
-            %Tesla.Env{
-              status: 201,
-              body: %{"sha" => "3a0f86fb8db8eea7ccbb9a95f325ddbedfb25e15"}
-            }
+            {:ok,
+             %Tesla.Env{
+               status: 201,
+               body: %{"sha" => "3a0f86fb8db8eea7ccbb9a95f325ddbedfb25e15"}
+             }}
 
           # get commit on master branch
           "https://api.github.com/repos/some/repo/commits/heads/master" ->
-            %Tesla.Env{
-              status: 200,
-              body: %{
-                "sha" => "6dcb09b5b57875f334f61aebed695e2e4193db5e",
-                "commit" => %{
-                  "tree" => %{
-                    "sha" => "6dcb09b5b57875f334f61aebed695e2e4193db5e"
-                  }
-                }
-              }
-            }
+            {:ok,
+             %Tesla.Env{
+               status: 200,
+               body: %{
+                 "sha" => "6dcb09b5b57875f334f61aebed695e2e4193db5e",
+                 "commit" => %{
+                   "tree" => %{
+                     "sha" => "6dcb09b5b57875f334f61aebed695e2e4193db5e"
+                   }
+                 }
+               }
+             }}
 
           # create commit
           "https://api.github.com/repos/some/repo/git/commits" ->
-            %Tesla.Env{
-              status: 201,
-              body: %{"sha" => "7638417db6d59f3c431d3e1f261cc637155684cd"}
-            }
+            {:ok,
+             %Tesla.Env{
+               status: 201,
+               body: %{"sha" => "7638417db6d59f3c431d3e1f261cc637155684cd"}
+             }}
 
           # create tree
           "https://api.github.com/repos/some/repo/git/trees" ->
-            %Tesla.Env{
-              status: 201,
-              body: %{"sha" => "cd8274d15fa3ae2ab983129fb037999f264ba9a7"}
-            }
+            {:ok,
+             %Tesla.Env{
+               status: 201,
+               body: %{"sha" => "cd8274d15fa3ae2ab983129fb037999f264ba9a7"}
+             }}
 
           # update a reference. in this case, the master branch
           "https://api.github.com/repos/some/repo/git/refs/heads/master" ->
-            %Tesla.Env{
-              status: 200,
-              body: %{"ref" => "refs/heads/master"}
-            }
+            {:ok,
+             %Tesla.Env{
+               status: 200,
+               body: %{"ref" => "refs/heads/master"}
+             }}
         end
       end)
 
