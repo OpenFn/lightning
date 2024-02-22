@@ -15,6 +15,22 @@ defmodule LightningWeb.WebhooksControllerTest do
   Record.defrecordp(:span, @fields)
 
   describe "a POST request to '/i'" do
+    test "returns 402 when run limit has been reached", %{conn: conn} do
+      with_mock UsageLimiter,
+        limit_action: fn _action, _context ->
+          {:error, :too_many_runs, %{text: "Runs limit exceeded"}}
+        end do
+        %{triggers: [trigger]} =
+          insert(:simple_workflow) |> Lightning.Repo.preload(:triggers)
+
+        conn = post(conn, "/i/#{trigger.id}")
+
+        assert json_response(conn, 402) == %{
+                 "error" => "Runs limit exceeded"
+               }
+      end
+    end
+
     test "returns 404 when trigger does not exist", %{conn: conn} do
       conn = post(conn, "/i/bar")
       assert json_response(conn, 404) == %{"error" => "Webhook not found"}
@@ -69,19 +85,6 @@ defmodule LightningWeb.WebhooksControllerTest do
         assert json_response(conn, 429) == %{
                  "error" => "Too many work orders in the last minute"
                }
-      end
-    end
-
-    test "returns 429 on usage limiting", %{conn: conn} do
-      with_mock UsageLimiter,
-        limit_action: fn _action, _context ->
-          {:error, :too_many_runs, %{text: "Runs limit exceeded"}}
-        end do
-        %{triggers: [trigger]} =
-          insert(:simple_workflow) |> Lightning.Repo.preload(:triggers)
-
-        conn = post(conn, "/i/#{trigger.id}")
-        assert json_response(conn, 429) == %{"error" => "Runs limit exceeded"}
       end
     end
 

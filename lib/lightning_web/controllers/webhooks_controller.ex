@@ -38,9 +38,14 @@ defmodule LightningWeb.WebhooksController do
 
       conn |> json(%{work_order_id: work_order.id})
     else
-      {:error, _reason, %{text: message}} ->
+      {:error, reason, %{text: message}} ->
+        status =
+          if reason == :too_many_requests,
+            do: :too_many_requests,
+            else: :payment_required
+
         conn
-        |> put_status(:too_many_requests)
+        |> put_status(status)
         |> json(%{"error" => message})
 
       nil ->
