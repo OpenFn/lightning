@@ -1,4 +1,13 @@
 <LayoutComponents.page_content>
+  <:banner>
+    <%= if assigns[:banner] do %>
+      <%= Phoenix.LiveView.TagEngine.component(
+        @banner.function,
+        @banner.attrs,
+        {__ENV__.module, __ENV__.function, __ENV__.file, __ENV__.line}
+      ) %>
+    <% end %>
+  </:banner>
   <:header>
     <LayoutComponents.header current_user={@current_user}>
       <:title><%= @page_title %></:title>
