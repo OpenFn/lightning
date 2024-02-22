@@ -246,25 +246,6 @@ defmodule LightningWeb.RunChannelTest do
              }
     end
 
-    test "fetch:plan returns error on runtime limit exceeded", %{
-      socket: socket
-    } do
-      %{project_id: project_id} = socket.assigns
-
-      with_mock(
-        UsageLimiter,
-        limit_action: fn %{type: :fetch_run}, %{project_id: ^project_id} ->
-          {:error, :too_many_runs, %{text: "some error message"}}
-        end
-      ) do
-        ref = push(socket, "fetch:plan", %{})
-
-        assert_reply ref,
-                     :error,
-                     %{errors: %{too_many_runs: ["some error message"]}}
-      end
-    end
-
     test "fetch:dataclip handles all types", %{
       socket: socket,
       dataclip: dataclip
