@@ -32,7 +32,7 @@ defmodule Lightning.Workflows.SchedulerTest do
         Scheduler.enqueue_cronjobs()
 
         assert_called(
-          UsageLimiter.limit_action(%Action{type: :new_workorder}, %Context{
+          UsageLimiter.limit_action(%Action{type: :new_run}, %Context{
             project_id: job.workflow.project_id
           })
         )
@@ -99,7 +99,7 @@ defmodule Lightning.Workflows.SchedulerTest do
         Scheduler.enqueue_cronjobs()
 
         assert_called(
-          UsageLimiter.limit_action(%Action{type: :new_workorder}, %Context{
+          UsageLimiter.limit_action(%Action{type: :new_run}, %Context{
             project_id: job.workflow.project_id
           })
         )

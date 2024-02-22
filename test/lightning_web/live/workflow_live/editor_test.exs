@@ -279,7 +279,7 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
 
       with_mock(
         UsageLimiter,
-        limit_action: fn %{type: :new_workorder}, %{project_id: ^project_id} ->
+        limit_action: fn %{type: :new_run}, %{project_id: ^project_id} ->
           {:error, :too_many_actions, %{text: "Runs limit exceeded"}}
         end
       ) do

@@ -41,7 +41,7 @@ defmodule Lightning.Workflows.Scheduler do
   defp invoke_cronjob(%Edge{target_job: job, source_trigger: trigger}) do
     with %{project_id: project_id} <- job.workflow,
          :ok <-
-           UsageLimiter.limit_action(%Action{type: :new_workorder}, %Context{
+           UsageLimiter.limit_action(%Action{type: :new_run}, %Context{
              project_id: project_id
            }) do
       case last_state_for_job(job.id) do

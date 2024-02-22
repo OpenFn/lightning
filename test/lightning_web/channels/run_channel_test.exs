@@ -1,13 +1,11 @@
 defmodule LightningWeb.RunChannelTest do
   use LightningWeb.ChannelCase
 
-  alias Lightning.Extensions.UsageLimiter
   alias Lightning.Invocation.Dataclip
   alias Lightning.Invocation.Step
   alias Lightning.Workers
 
   import Ecto.Query
-  import Mock
   import Lightning.Factories
   import Lightning.BypassHelpers
 

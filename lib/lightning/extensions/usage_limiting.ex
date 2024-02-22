@@ -14,7 +14,7 @@ defmodule Lightning.Extensions.UsageLimiting do
   defmodule Action do
     @moduledoc false
     @type t :: %__MODULE__{
-            type: :new_run | :fetch_run | :new_workflow | :new_workorder
+            type: :new_run | :new_workflow
           }
 
     defstruct [:type]

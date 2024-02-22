@@ -32,7 +32,7 @@ defmodule LightningWeb.WorkflowLive.Helpers do
     Lightning.Repo.transact(fn ->
       %{id: project_id} = Keyword.fetch!(opts, :project)
 
-      case UsageLimiter.limit_action(%Action{type: :new_workorder}, %Context{
+      case UsageLimiter.limit_action(%Action{type: :new_run}, %Context{
              project_id: project_id
            }) do
         {:error, _reason, message} ->

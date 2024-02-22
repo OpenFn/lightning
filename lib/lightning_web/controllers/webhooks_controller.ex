@@ -22,7 +22,7 @@ defmodule LightningWeb.WebhooksController do
              []
            ),
          :ok <-
-           UsageLimiter.limit_action(%Action{type: :new_workorder}, %Context{
+           UsageLimiter.limit_action(%Action{type: :new_run}, %Context{
              project_id: project_id
            }) do
       {:ok, work_order} =
