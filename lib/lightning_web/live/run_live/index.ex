@@ -145,6 +145,7 @@ defmodule LightningWeb.RunLive.Index do
 
     {:noreply,
      socket
+     |> LiveHelpers.check_limits(project.id)
      |> assign(
        filters: filters,
        page_title: "History",
@@ -188,11 +189,10 @@ defmodule LightningWeb.RunLive.Index do
 
   @impl true
   def handle_async(:load_workorders, {:ok, searched_page}, socket) do
-    %{async_page: async_page, project: %{id: project_id}} = socket.assigns
+    %{async_page: async_page} = socket.assigns
 
     {:noreply,
      socket
-     |> LiveHelpers.check_limits(project_id)
      |> assign(
        page: searched_page,
        async_page: AsyncResult.ok(async_page, searched_page)
@@ -201,11 +201,10 @@ defmodule LightningWeb.RunLive.Index do
   end
 
   def handle_async(:load_workorders, {:exit, reason}, socket) do
-    %{async_page: async_page, project: %{id: project_id}} = socket.assigns
+    %{async_page: async_page} = socket.assigns
 
     {:noreply,
      socket
-     |> LiveHelpers.check_limits(project_id)
      |> assign(
        page: @empty_page,
        async_page: AsyncResult.failed(async_page, {:exit, reason})
@@ -240,8 +239,6 @@ defmodule LightningWeb.RunLive.Index do
   @impl true
   def handle_info(%mod{run: run}, socket)
       when mod in [Events.RunCreated, Events.RunUpdated] do
-    %{project: %{id: project_id}} = socket.assigns
-
     %{work_order: work_order} =
       Lightning.Repo.preload(
         run,
@@ -255,10 +252,7 @@ defmodule LightningWeb.RunLive.Index do
         force: true
       )
 
-    {:noreply,
-     socket
-     |> LiveHelpers.check_limits(project_id)
-     |> update_page(work_order)}
+    {:noreply, socket |> update_page(work_order)}
   end
 
   @impl true
@@ -278,8 +272,6 @@ defmodule LightningWeb.RunLive.Index do
       |> Map.merge(%{"workorder_id" => work_order.id})
       |> SearchParams.new()
 
-    socket = LiveHelpers.check_limits(socket, project.id)
-
     # Note that this may or may not contain the new work order, depending on the filters.
     case Invocation.search_workorders(project, params) do
       %{entries: []} -> {:noreply, socket}
@@ -292,8 +284,6 @@ defmodule LightningWeb.RunLive.Index do
         %Events.WorkOrderUpdated{work_order: work_order},
         socket
       ) do
-    %{project: %{id: project_id}} = socket.assigns
-
     work_order =
       Lightning.Repo.preload(
         work_order,
@@ -301,10 +291,7 @@ defmodule LightningWeb.RunLive.Index do
         force: true
       )
 
-    {:noreply,
-     socket
-     |> LiveHelpers.check_limits(project_id)
-     |> update_page(work_order)}
+    {:noreply, socket |> update_page(work_order)}
   end
 
   @impl true
@@ -347,14 +334,10 @@ defmodule LightningWeb.RunLive.Index do
   end
 
   def handle_event("bulk-rerun", attrs, socket) do
-    %{can_run_workflow: can_run_workflow?, project: %{id: project_id}} =
-      socket.assigns
-
-    with true <- can_run_workflow?,
+    with true <- socket.assigns.can_run_workflow,
          {:ok, count} <- handle_bulk_rerun(socket, attrs) do
       {:noreply,
        socket
-       |> LiveHelpers.check_limits(project_id)
        |> put_flash(
          :info,
          "New run#{if count > 1, do: "s", else: ""} enqueued for #{count} workorder#{if count > 1, do: "s", else: ""}"
