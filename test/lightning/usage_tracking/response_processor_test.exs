@@ -22,4 +22,9 @@ defmodule Lightning.UsageTracking.ResponseProcessorTest do
 
     assert(ResponseProcessor.successful?(env))
   end
+
+  test "anything other than a Tesla.Env struct is considered unsuccessful" do
+    refute(ResponseProcessor.successful?(:nxdomain))
+    refute(ResponseProcessor.successful?(:econnrefused))
+  end
 end
