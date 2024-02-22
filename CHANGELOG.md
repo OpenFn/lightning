@@ -22,6 +22,8 @@ and this project adheres to
   [#1785](https://github.com/OpenFn/lightning/issues/1785)
 
 ### Fixed
+- Make handling of usage tracking errors more robust.
+  [#1787](https://github.com/OpenFn/lightning/issues/1787)
 
 ## [v2.0.3] 2024-02-21
 
