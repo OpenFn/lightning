@@ -17,6 +17,9 @@ and this project adheres to
 
 ### Added
 
+- Allows limiting creation of new runs and retries.
+  [#1754](https://github.com/OpenFn/Lightning/issues/1754)
+
 ### Changed
 
 ### Fixed
@@ -172,8 +175,6 @@ and this project adheres to
   [#1715](https://github.com/OpenFn/Lightning/issues/1715)
 - Add support for Salesforce OAuth2 credentials
   [#1633](https://github.com/OpenFn/Lightning/issues/1633)
-- Limit creation of trigger and manual work order.
-  [#1754](https://github.com/OpenFn/Lightning/issues/1754)
 
 ### Changed
 
