@@ -3,10 +3,14 @@ defmodule LightningWeb.WorkOrderLiveTest do
 
   import Phoenix.LiveViewTest
   import Lightning.Factories
+  import Mock
 
   alias Lightning.Runs
+  alias Lightning.Extensions.UsageLimiter
   alias Lightning.WorkOrders.Events
   alias Lightning.WorkOrders.SearchParams
+
+  alias LightningWeb.Components.Modal
   alias LightningWeb.LiveHelpers
 
   alias Phoenix.LiveView.AsyncResult
@@ -100,6 +104,31 @@ defmodule LightningWeb.WorkOrderLiveTest do
   end
 
   describe "Index" do
+    test "renders a banner when run limit has been reached", %{
+      conn: conn,
+      project: %{id: project_id}
+    } do
+      with_mock UsageLimiter,
+        check_limits: fn %{project_id: ^project_id} ->
+          {:error, :too_many_runs,
+           %{
+             position: :banner,
+             function: &Modal.modal_footer/1,
+             attrs: [
+               inner_block: [
+                 %{
+                   inner_block: fn nil, nil -> "Some text" end
+                 }
+               ]
+             ]
+           }}
+        end do
+        {:ok, _view, html} = live(conn, ~p"/projects/#{project_id}/w")
+
+        assert html =~ "Some text"
+      end
+    end
+
     test "only users with MFA enabled can access workorders for a project with MFA requirement",
          %{
            conn: conn
@@ -1742,17 +1771,44 @@ defmodule LightningWeb.WorkOrderLiveTest do
 
     @tag role: :editor
     test "Project editors can rerun from a step",
-         %{conn: conn, project: project, run: run} do
+         %{conn: conn, project: %{id: project_id}, run: run} do
       [step | _rest] = run.steps
 
       {:ok, view, _html} =
-        live(conn, Routes.project_run_index_path(conn, :index, project.id))
+        live(conn, ~p"/projects/#{project_id}/history")
 
       assert view
              |> render_click("rerun", %{
                "run_id" => run.id,
                "step_id" => step.id
              })
+    end
+
+    @tag role: :editor
+    test "Project editors can't rerun when limit has been reached",
+         %{conn: conn, project: %{id: project_id}, run: run} do
+      [step | _rest] = run.steps
+
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project_id}/history")
+
+      with_mock(
+        UsageLimiter,
+        limit_action: fn %{type: :new_run}, %{project_id: ^project_id} ->
+          {:error, :too_many_actions, %{text: "Runs limit exceeded"}}
+        end
+      ) do
+        view
+        |> render_click("rerun", %{
+          "run_id" => run.id,
+          "step_id" => step.id
+        })
+        |> Floki.parse_fragment!()
+        |> Floki.find("#flash")
+        |> Floki.find("p")
+        |> Floki.text() =~
+          "Runs limit exceeded"
+      end
     end
 
     @tag role: :viewer

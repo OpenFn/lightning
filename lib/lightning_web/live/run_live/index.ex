@@ -6,15 +6,18 @@ defmodule LightningWeb.RunLive.Index do
 
   import Ecto.Changeset, only: [get_change: 2]
 
+  alias Lightning.Extensions.UsageLimiting.Action
+  alias Lightning.Extensions.UsageLimiting.Context
   alias Lightning.Invocation
   alias Lightning.Invocation.Step
   alias Lightning.Policies.Permissions
   alias Lightning.Policies.ProjectUsers
+  alias Lightning.Services.UsageLimiter
   alias Lightning.WorkOrders
   alias Lightning.WorkOrders.Events
   alias Lightning.WorkOrders.SearchParams
-  alias LightningWeb.RunLive.Components
   alias LightningWeb.LiveHelpers
+  alias LightningWeb.RunLive.Components
 
   alias Phoenix.LiveView.AsyncResult
   alias Phoenix.LiveView.JS
@@ -318,9 +321,24 @@ defmodule LightningWeb.RunLive.Index do
       socket.assigns
 
     if can_run_workflow? do
-      WorkOrders.retry(run_id, step_id, created_by: current_user)
+      with :ok <-
+             UsageLimiter.limit_action(%Action{type: :new_run}, %Context{
+               project_id: project_id
+             }),
+           {:ok, _run} <-
+             WorkOrders.retry(run_id, step_id, created_by: current_user) do
+        {:noreply, LiveHelpers.check_limits(socket, project_id)}
+      else
+        {:error, _reason, %{text: error_text}} ->
+          {:noreply,
+           socket
+           |> put_flash(:error, error_text)}
 
-      {:noreply, LiveHelpers.check_limits(socket, project_id)}
+        {:error, _changeset} ->
+          {:noreply,
+           socket
+           |> put_flash(:error, "Oops! an error occured during retry.")}
+      end
     else
       {:noreply,
        socket
@@ -329,10 +347,14 @@ defmodule LightningWeb.RunLive.Index do
   end
 
   def handle_event("bulk-rerun", attrs, socket) do
-    with true <- socket.assigns.can_run_workflow,
+    %{can_run_workflow: can_run_workflow?, project: %{id: project_id}} =
+      socket.assigns
+
+    with true <- can_run_workflow?,
          {:ok, count} <- handle_bulk_rerun(socket, attrs) do
       {:noreply,
        socket
+       |> LiveHelpers.check_limits(project_id)
        |> put_flash(
          :info,
          "New run#{if count > 1, do: "s", else: ""} enqueued for #{count} workorder#{if count > 1, do: "s", else: ""}"

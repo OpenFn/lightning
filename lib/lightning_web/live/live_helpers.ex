@@ -169,7 +169,7 @@ defmodule LightningWeb.LiveHelpers do
   end
 
   def check_limits(%{assigns: assigns} = socket, project_id) do
-    {:ok, %{socket | assigns: check_limits(assigns, project_id)}}
+    %{socket | assigns: check_limits(assigns, project_id)}
   end
 
   def check_limits(assigns, project_id) do

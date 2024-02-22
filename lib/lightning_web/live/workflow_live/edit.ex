@@ -5,6 +5,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
   import LightningWeb.Components.NewInputs
   import LightningWeb.WorkflowLive.Components
 
+  alias Lightning.Extensions.UsageLimiting.Action
+  alias Lightning.Extensions.UsageLimiting.Context
   alias Lightning.Invocation
   alias Lightning.Policies.Permissions
   alias Lightning.Policies.ProjectUsers
@@ -13,6 +15,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
   alias Lightning.Runs.Events.DataclipUpdated
   alias Lightning.Runs.Events.RunUpdated
   alias Lightning.Runs.Events.StepCompleted
+  alias Lightning.Services.UsageLimiter
   alias Lightning.Workflows
   alias Lightning.Workflows.Job
   alias Lightning.Workflows.Trigger
@@ -899,17 +902,28 @@ defmodule LightningWeb.WorkflowLive.Edit do
         %{"run_id" => run_id, "step_id" => step_id},
         socket
       ) do
-    if socket.assigns.can_run_workflow do
-      case Lightning.Repo.update(%{socket.assigns.changeset | action: :update}) do
-        {:ok, workflow} ->
-          {:ok, run} =
-            WorkOrders.retry(run_id, step_id,
-              created_by: socket.assigns.current_user
-            )
+    %{
+      can_run_workflow: can_run_workflow?,
+      current_user: current_user,
+      changeset: changeset,
+      project: %{id: project_id}
+    } = socket.assigns
 
-          Runs.subscribe(run)
+    if can_run_workflow? do
+      with :ok <-
+             UsageLimiter.limit_action(%Action{type: :new_run}, %Context{
+               project_id: project_id
+             }),
+           {:ok, workflow} <-
+             Workflows.update_workflow(%{changeset | action: :update}),
+           {:ok, run} <-
+             WorkOrders.retry(run_id, step_id, created_by: current_user) do
+        Runs.subscribe(run)
 
-          {:noreply, socket |> assign_workflow(workflow) |> follow_run(run)}
+        {:noreply, socket |> assign_workflow(workflow) |> follow_run(run)}
+      else
+        {:error, _reason, %{text: error_text}} ->
+          {:noreply, put_flash(socket, :error, error_text)}
 
         {:error, changeset} ->
           {

@@ -8,9 +8,9 @@ defmodule LightningWeb.WorkflowLive.Index do
   alias Lightning.Policies.Permissions
   alias Lightning.Policies.ProjectUsers
   alias Lightning.Workflows
+  alias LightningWeb.LiveHelpers
   alias LightningWeb.WorkflowLive.DashboardComponents
   alias LightningWeb.WorkflowLive.NewWorkflowForm
-  alias LightningWeb.LiveHelpers
 
   alias Phoenix.LiveView.TagEngine
 
