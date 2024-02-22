@@ -5,13 +5,12 @@ defmodule LightningWeb.WorkflowLive.Index do
   import LightningWeb.WorkflowLive.Components
 
   alias Lightning.DashboardStats
-  alias Lightning.Extensions.UsageLimiting.Context
   alias Lightning.Policies.Permissions
   alias Lightning.Policies.ProjectUsers
-  alias Lightning.Services.UsageLimiter
   alias Lightning.Workflows
   alias LightningWeb.WorkflowLive.DashboardComponents
   alias LightningWeb.WorkflowLive.NewWorkflowForm
+  alias LightningWeb.LiveHelpers
 
   alias Phoenix.LiveView.TagEngine
 
@@ -28,7 +27,9 @@ defmodule LightningWeb.WorkflowLive.Index do
   attr :banner, :map, default: nil
 
   @impl true
-  def render(assigns) do
+  def render(%{project: %{id: project_id}} = assigns) do
+    assigns = LiveHelpers.check_limits(assigns, project_id)
+
     ~H"""
     <LayoutComponents.page_content>
       <:banner>
@@ -81,23 +82,13 @@ defmodule LightningWeb.WorkflowLive.Index do
         project
       )
 
-    socket
-    |> assign(
-      can_delete_workflow: can_delete_workflow,
-      can_create_workflow: can_create_workflow
-    )
-    |> assign_workflow_form(NewWorkflowForm.validate(%{}, project.id))
-    |> then(fn socket ->
-      case UsageLimiter.check_limits(%Context{
-             project_id: project.id
-           }) do
-        :ok ->
-          {:ok, socket}
-
-        {:error, _reason, %{position: position} = component} ->
-          {:ok, socket |> assign(position, component)}
-      end
-    end)
+    {:ok,
+     socket
+     |> assign(
+       can_delete_workflow: can_delete_workflow,
+       can_create_workflow: can_create_workflow
+     )
+     |> assign_workflow_form(NewWorkflowForm.validate(%{}, project.id))}
   end
 
   @impl true

@@ -4,8 +4,12 @@ defmodule LightningWeb.LiveHelpers do
   """
   import Phoenix.Component
 
+  alias Lightning.Extensions.UsageLimiting.Context
+  alias Lightning.Services.UsageLimiter
+
   alias LightningWeb.Components.Common
   alias LightningWeb.Components.Icon
+
   alias Phoenix.LiveView.JS
 
   def live_info_block(assigns) do
@@ -162,5 +166,21 @@ defmodule LightningWeb.LiveHelpers do
       {"ease-out duration-300", "opacity-100", "opacity-0"}
     )
     |> JS.hide()
+  end
+
+  def check_limits(%{assigns: assigns} = socket, project_id) do
+    {:ok, %{socket | assigns: check_limits(assigns, project_id)}}
+  end
+
+  def check_limits(assigns, project_id) do
+    case UsageLimiter.check_limits(%Context{
+           project_id: project_id
+         }) do
+      :ok ->
+        assigns
+
+      {:error, _reason, %{position: position} = component} ->
+        assign(assigns, position, component)
+    end
   end
 end
