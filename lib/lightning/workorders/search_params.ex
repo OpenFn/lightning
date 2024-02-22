@@ -4,6 +4,8 @@ defmodule Lightning.WorkOrders.SearchParams do
   a query to the database.
   """
 
+  # What should be defaults
+
   use Ecto.Schema
   import Ecto.Changeset
 
