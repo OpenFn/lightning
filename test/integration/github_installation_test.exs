@@ -6,9 +6,9 @@ defmodule Lightning.Integration.GithubInstallationTest do
   import Phoenix.LiveViewTest
   import Lightning.Factories
 
-  @github_repo "midigofrank/openfn"
+  @github_repo "OpenFn/github_integration_testing"
   @github_base_branch "main"
-  @github_installation_id "47518341"
+  @github_installation_id "41010069"
   @github_assets_dir Application.app_dir(:lightning, "priv/github")
 
   @moduletag :integration
