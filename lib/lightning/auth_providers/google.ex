@@ -11,8 +11,8 @@ defmodule Lightning.AuthProviders.Google do
 
   def scopes,
     do: %{
-      enabled: [],
-      disabled: ~W(userinfo.email userinfo.profile spreadsheets)
+      optional: [],
+      mandatory: ~W(userinfo.email userinfo.profile spreadsheets)
     }
 
   def scopes_doc_url,

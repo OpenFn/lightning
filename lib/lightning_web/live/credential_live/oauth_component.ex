@@ -83,7 +83,7 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
     display_authorize_button =
       assigns.action === :new and assigns.authorization_status === nil
 
-    display_userinfo_skeleton =
+    display_userinfo_loader =
       assigns.authorization_status === :pending && !display_reauthorize_banner
 
     display_userinfo =
@@ -103,7 +103,7 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
       end)
       |> assign(display_reauthorize_banner: display_reauthorize_banner)
       |> assign(display_authorize_button: display_authorize_button)
-      |> assign(display_userinfo_skeleton: display_userinfo_skeleton)
+      |> assign(display_userinfo_loader: display_userinfo_loader)
       |> assign(display_userinfo: display_userinfo)
       |> assign(display_error: display_error)
 
@@ -132,7 +132,7 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
         myself={@myself}
         provider={@provider}
       />
-      <.userinfo_skeleton :if={@display_userinfo_skeleton} provider={@provider} />
+      <.userinfo_loader :if={@display_userinfo_loader} provider={@provider} />
       <.userinfo
         :if={@display_userinfo}
         myself={@myself}
@@ -220,9 +220,9 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
     """
   end
 
-  def userinfo_skeleton(assigns) do
+  def userinfo_loader(assigns) do
     ~H"""
-    <div id="userinfo_skeleton" class="mt-5">
+    <div id="userinfo_loader" class="mt-5">
       <.text_ping_loader>
         Authenticating with <%= @provider %>
       </.text_ping_loader>
@@ -657,11 +657,11 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
     end)
     |> assign_new(:authorize_url, fn %{client: client} ->
       if client do
-        %{enabled: enabled_scopes, disabled: disabled_scopes} =
+        %{optional: optional_scopes, mandatory: mandatory_scopes} =
           socket.assigns.adapter.scopes
 
         state = build_state(socket.id, __MODULE__, socket.assigns.id)
-        scopes = enabled_scopes ++ disabled_scopes
+        scopes = optional_scopes ++ mandatory_scopes
 
         socket.assigns.adapter.authorize_url(client, state, scopes)
       end

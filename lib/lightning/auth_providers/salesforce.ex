@@ -11,11 +11,11 @@ defmodule Lightning.AuthProviders.Salesforce do
 
   def scopes,
     do: %{
-      enabled:
+      optional:
         ~w(cdp_query_api pardot_api cdp_profile_api chatter_api cdp_ingest_api
     eclair_api wave_api api custom_permissions id lightning content openid full visualforce
     web chatbot_api user_registration_api forgot_password cdp_api sfap_api interaction_api),
-      disabled: ~w(refresh_token)
+      mandatory: ~w(refresh_token)
     }
 
   def scopes_doc_url,

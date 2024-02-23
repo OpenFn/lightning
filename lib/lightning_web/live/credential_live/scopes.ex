@@ -13,14 +13,16 @@ defmodule LightningWeb.CredentialLive.Scopes do
   def scopes_picklist(assigns) do
     adapter = Credentials.lookup_adapter(assigns.schema)
 
-    %{enabled: enabled_scopes, disabled: disabled_scopes} = adapter.scopes()
+    %{optional: optional_scopes, mandatory: mandatory_scopes} = adapter.scopes()
 
-    scopes = disabled_scopes ++ enabled_scopes
+    scopes = mandatory_scopes ++ optional_scopes
+    checked_scopes = mandatory_scopes ++ assigns.selected_scopes
 
     assigns =
       assigns
       |> Map.put_new(:scopes, Enum.sort(scopes))
-      |> Map.put_new(:disabled_scopes, disabled_scopes)
+      |> Map.put_new(:mandatory_scopes, mandatory_scopes)
+      |> Map.put_new(:checked_scopes, checked_scopes)
       |> Map.put_new(:provider, adapter.provider_name())
       |> Map.put_new(:doc_url, adapter.scopes_doc_url())
 
@@ -53,8 +55,8 @@ defmodule LightningWeb.CredentialLive.Scopes do
                 id={"#{@id}_#{scope}"}
                 type="checkbox"
                 name={scope}
-                checked={Enum.member?(@disabled_scopes ++ @selected_scopes, scope)}
-                disabled={Enum.member?(@disabled_scopes, scope)}
+                checked={scope in @checked_scopes}
+                disabled={scope in @mandatory_scopes}
                 phx-change={@on_change}
                 phx-target={@target}
                 class="form-check-input appearance-none h-4 w-4 border border-gray-300 rounded-sm bg-white checked:disabled:bg-blue-300 checked:disabled:border-blue-300 checked:bg-blue-600 checked:border-blue-600 focus:outline-none transition duration-200 mt-1 align-top bg-no-repeat bg-center bg-contain float-left cursor-pointer"
