@@ -770,7 +770,7 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
          %{
            conn: conn,
            project: project,
-           workflow: %{jobs: [job_1 | _rest]} = workflow
+           workflow: %{jobs: [job_1 | _rest], triggers: [trigger]} = workflow
          } do
       input_dataclip = insert(:dataclip, project: project, type: :http_request)
 
@@ -781,7 +781,7 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
           runs: [
             build(:run,
               dataclip: input_dataclip,
-              starting_job: job_1,
+              starting_trigger: trigger,
               steps: [
                 build(:step,
                   job: job_1,
