@@ -692,7 +692,7 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
   end
 
   defp handle_code_update(code, socket) do
-    client = socket.assigns.client |> IO.inspect(label: "The OAuth2 Client")
+    client = socket.assigns.client
 
     # NOTE: there can be _no_ refresh token if something went wrong like if the
     # previous auth didn't receive a refresh_token

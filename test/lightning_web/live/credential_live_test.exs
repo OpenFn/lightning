@@ -769,7 +769,10 @@ defmodule LightningWeb.CredentialLiveTest do
       Lightning.ApplicationHelpers.put_temporary_env(:lightning, :oauth_clients,
         salesforce: [
           client_id: "foo",
-          client_secret: "bar"
+          client_secret: "bar",
+          prod_wellknown_url: "http://localhost:#{bypass.port}/auth/.well-known",
+          sandbox_wellknown_url:
+            "http://localhost:#{bypass.port}/auth/.well-known"
         ]
       )
 
@@ -1004,6 +1007,7 @@ defmodule LightningWeb.CredentialLiveTest do
 
     test "correctly renders a valid existing token", %{
       conn: conn,
+      wellknown_url: wellknown_url,
       user: user,
       bypass: bypass
     } do
@@ -1011,7 +1015,7 @@ defmodule LightningWeb.CredentialLiveTest do
 
       expect_userinfo(
         bypass,
-        Lightning.AuthProviders.Common.get_wellknown!(:salesforce),
+        Lightning.AuthProviders.Common.get_wellknown!(wellknown_url),
         %{
           picture: "image.png",
           name: "Test User"
@@ -1054,7 +1058,10 @@ defmodule LightningWeb.CredentialLiveTest do
       Lightning.ApplicationHelpers.put_temporary_env(:lightning, :oauth_clients,
         salesforce: [
           client_id: "foo",
-          client_secret: "bar"
+          client_secret: "bar",
+          prod_wellknown_url: "http://localhost:#{bypass.port}/auth/.well-known",
+          sandbox_wellknown_url:
+            "http://localhost:#{bypass.port}/auth/.well-known"
         ]
       )
 
@@ -1229,7 +1236,10 @@ defmodule LightningWeb.CredentialLiveTest do
         google: [client_id: "foo"],
         salesforce: [
           client_id: "foo",
-          client_secret: "bar"
+          client_secret: "bar",
+          prod_wellknown_url: "http://localhost:#{bypass.port}/auth/.well-known",
+          sandbox_wellknown_url:
+            "http://localhost:#{bypass.port}/auth/.well-known"
         ]
       )
 
@@ -1317,7 +1327,8 @@ defmodule LightningWeb.CredentialLiveTest do
       Lightning.ApplicationHelpers.put_temporary_env(:lightning, :oauth_clients,
         google: [
           client_id: "foo",
-          client_secret: "bar"
+          client_secret: "bar",
+          wellknown_url: "http://localhost:#{bypass.port}/auth/.well-known"
         ]
       )
 
@@ -1441,8 +1452,7 @@ defmodule LightningWeb.CredentialLiveTest do
 
       expect_userinfo(
         bypass,
-        Lightning.AuthProviders.Common.get_wellknown!(wellknown_url)
-        |> IO.inspect(),
+        Lightning.AuthProviders.Common.get_wellknown!(wellknown_url),
         %{
           picture: "image.png",
           name: "Test User"
@@ -1502,7 +1512,6 @@ defmodule LightningWeb.CredentialLiveTest do
             access_token: "ya29.a0AVvZ...",
             refresh_token: "1//03vpp6Li...",
             expires_at: expires_at,
-            sandbox: "false",
             scope: "scope1 scope2"
           }
         )
@@ -1621,7 +1630,6 @@ defmodule LightningWeb.CredentialLiveTest do
             access_token: "ya29.a0AVvZ...",
             refresh_token: "1//03vpp6Li...",
             expires_at: expires_at,
-            sandbox: "false",
             scope: "scope1 scope2"
           }
         )

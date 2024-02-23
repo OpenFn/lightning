@@ -348,6 +348,14 @@ defmodule LightningWeb.RunChannelTest do
 
       wellknown_url = "http://localhost:#{bypass.port}/auth/.well-known"
 
+      Lightning.ApplicationHelpers.put_temporary_env(:lightning, :oauth_clients,
+        google: [
+          client_id: "foo",
+          client_secret: "bar",
+          wellknown_url: wellknown_url
+        ]
+      )
+
       expect_wellknown(bypass)
 
       new_expiry = credential.body["expires_at"] + 3600

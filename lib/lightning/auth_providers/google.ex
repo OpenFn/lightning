@@ -19,7 +19,8 @@ defmodule Lightning.AuthProviders.Google do
     do: "https://developers.google.com/identity/protocols/oauth2/scopes"
 
   def wellknown_url(_sandbox) do
-    "https://accounts.google.com/.well-known/openid-configuration"
+    config = Common.get_config(:google)
+    config[:wellknown_url]
   end
 
   @impl true
@@ -48,7 +49,6 @@ defmodule Lightning.AuthProviders.Google do
 
   @impl true
   def refresh_token(token, wellknown_url) do
-    IO.inspect(wellknown_url, label: "wellknown")
     {:ok, %OAuth2.Client{} = client} = build_client(wellknown_url)
     refresh_token(client, token, wellknown_url)
   end

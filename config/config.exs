@@ -59,8 +59,15 @@ config :swoosh, :api_client, Swoosh.ApiClient.Hackney
 config :oauth2, adapter: Tesla.Adapter.Hackney
 
 config :lightning, :oauth_clients,
-  google: [],
-  salesforce: []
+  google: [
+    wellknown_url: "https://accounts.google.com/.well-known/openid-configuration"
+  ],
+  salesforce: [
+    prod_wellknown_url:
+      "https://login.salesforce.com/.well-known/openid-configuration",
+    sandbox_wellknown_url:
+      "https://test.salesforce.com/.well-known/openid-configuration"
+  ]
 
 # Configure esbuild (the version is required)
 config :esbuild,

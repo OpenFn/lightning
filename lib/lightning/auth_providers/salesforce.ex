@@ -23,8 +23,9 @@ defmodule Lightning.AuthProviders.Salesforce do
       "https://help.salesforce.com/s/articleView?id=sf.remoteaccess_oauth_tokens_scopes.htm&type=5"
 
   def wellknown_url(sandbox) do
-    prefix = if sandbox, do: "test", else: "login"
-    "https://#{prefix}.salesforce.com/.well-known/openid-configuration"
+    key = if sandbox, do: :sandbox_wellknown_url, else: :prod_wellknown_url
+    config = Common.get_config(:salesforce)
+    config[key]
   end
 
   @impl true
