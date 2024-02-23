@@ -17,6 +17,7 @@ defmodule LightningWeb.ProjectLive.Settings do
   alias Lightning.WebhookAuthMethods
   alias Lightning.Workflows.WebhookAuthMethod
   alias LightningWeb.Components.Form
+  alias LightningWeb.Components.NewInputs
   alias LightningWeb.ProjectLive.DeleteConnectionModal
 
   require Logger
@@ -383,24 +384,29 @@ defmodule LightningWeb.ProjectLive.Settings do
   def handle_event("save_repo", params, socket) do
     %{project: project} = socket.assigns
 
-    {:ok, %{github_installation_id: github_installation_id}} =
-      VersionControl.connect_github_repo(
-        project.id,
-        params["repo"],
-        params["branch"]
-      )
+    if socket.assigns.can_install_github do
+      {:ok, %{github_installation_id: github_installation_id}} =
+        VersionControl.connect_github_repo(
+          project.id,
+          params["repo"],
+          params["branch"]
+        )
 
-    {:noreply,
-     socket
-     |> assign(
-       show_repo_setup: false,
-       show_sync_button: true,
-       project_repo_connection: %{
-         "branch" => params["branch"],
-         "repo" => params["repo"],
-         "github_installation_id" => github_installation_id
-       }
-     )}
+      {:noreply,
+       socket
+       |> assign(
+         show_repo_setup: false,
+         show_sync_button: true,
+         project_repo_connection: %{
+           "branch" => params["branch"],
+           "repo" => params["repo"],
+           "github_installation_id" => github_installation_id
+         }
+       )}
+    else
+      {:noreply,
+       put_flash(socket, :error, "You are not authorized to perform this action")}
+    end
   end
 
   def handle_event(

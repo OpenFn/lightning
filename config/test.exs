@@ -4,7 +4,8 @@ import Config
 config :bcrypt_elixir, :log_rounds, 1
 
 # mock adapter for tesla
-# config :tesla, Lightning.VersionControl.GithubClient, adapter: Tesla.Mock
+config :tesla, Lightning.VersionControl.GithubClient,
+  adapter: Lightning.GithubClient.Mock
 
 config :tesla, Mix.Tasks.Lightning.InstallAdaptorIcons, adapter: Tesla.Mock
 

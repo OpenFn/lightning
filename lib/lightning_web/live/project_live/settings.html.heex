@@ -758,8 +758,19 @@
                       </div>
                     </div>
                   <% end %>
-                  <div class="hidden sm:block" aria-hidden="true">
-                    <div class="py-4"></div>
+                  <div class="bg-amber-200 flex gap-3 rounded-md p-3 my-4">
+                    <NewInputs.input
+                      type="checkbox"
+                      field={f[:accept]}
+                      class="text-blue-500"
+                      required="true"
+                      disabled={!@can_install_github}
+                    />
+                    <span>
+                      I understand that <code>.github/workflows/pull.yml</code>
+                      and <code>.github/workflows/deploy.yml</code>
+                      will be commited into the selected branch and any existing versions of these files will be overwritten
+                    </span>
                   </div>
                   <div class="grid grid-cols gap-6">
                     <div class="md:col-span-2">

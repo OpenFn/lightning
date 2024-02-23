@@ -3,7 +3,6 @@ defmodule Lightning.VersionControl.GithubClientTest do
   alias Lightning.VersionControl
   import Lightning.Factories
   import Lightning.ApplicationHelpers, only: [put_temporary_env: 3]
-  import Mox
 
   @cert """
   -----BEGIN RSA PRIVATE KEY-----
@@ -19,7 +18,7 @@ defmodule Lightning.VersionControl.GithubClientTest do
         app_name: "test-github"
       )
 
-      expect(Lightning.GithubClient.Mock, :call, fn env, _opts ->
+      Mox.stub(Lightning.GithubClient.Mock, :call, fn env, _opts ->
         case env.url do
           "https://api.github.com/app/installations/some-id/access_tokens" ->
             {:ok, %Tesla.Env{status: 401, body: %{}}}
@@ -96,7 +95,7 @@ defmodule Lightning.VersionControl.GithubClientTest do
         app_name: "test-github"
       )
 
-      expect(Lightning.GithubClient.Mock, :call, fn env, _opts ->
+      Mox.stub(Lightning.GithubClient.Mock, :call, fn env, _opts ->
         case env.url do
           "https://api.github.com/app/installations/some-id/access_tokens" ->
             {:ok, %Tesla.Env{status: 201, body: %{"token" => "some-token"}}}

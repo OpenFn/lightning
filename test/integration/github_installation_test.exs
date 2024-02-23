@@ -11,6 +11,8 @@ defmodule Lightning.Integration.GithubInstallationTest do
   @github_installation_id "47518341"
   @github_assets_dir Application.app_dir(:lightning, "priv/github")
 
+  @moduletag :integration
+
   setup _ do
     Mox.stub_with(
       Lightning.GithubClient.Mock,
@@ -29,13 +31,7 @@ defmodule Lightning.Integration.GithubInstallationTest do
     test_branch_name = "test/#{Ecto.UUID.generate()}"
 
     on_exit(fn ->
-      # File.rm_rf(tmp_dir)
-
-      GithubClient.delete_ref(
-        client,
-        @github_repo,
-        "refs/heads/#{test_branch_name}"
-      )
+      File.rm_rf(tmp_dir)
     end)
 
     user = insert(:user)
@@ -140,6 +136,15 @@ defmodule Lightning.Integration.GithubInstallationTest do
       curr_file_path = Path.join(curr_dir, relative_path)
       assert File.read!(file) == File.read!(curr_file_path)
     end
+
+    # delete the branch.
+    # fails to work if done in the `on_exit` callback because the stub
+    # only works for the given process, but I guess the process is already dead at `on_exit`???
+    GithubClient.delete_ref(
+      client,
+      @github_repo,
+      "refs/heads/#{test_branch_name}"
+    )
   end
 
   defp download_project(branch, working_dir, target_dir) do

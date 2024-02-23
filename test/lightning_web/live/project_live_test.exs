@@ -13,8 +13,6 @@ defmodule LightningWeb.ProjectLiveTest do
   import Lightning.ApplicationHelpers,
     only: [dynamically_absorb_delay: 1, put_temporary_env: 3]
 
-  import Mox
-
   alias Lightning.Projects
 
   @cert """
@@ -27,84 +25,6 @@ defmodule LightningWeb.ProjectLiveTest do
     raw_name: "some name"
   }
   @invalid_attrs %{raw_name: nil}
-
-  setup do
-    expect(Lightning.GithubClient.Mock, :call, fn env, _opts ->
-      case env.url do
-        "https://api.github.com/app/installations/bad-id/access_tokens" ->
-          {:ok, %Tesla.Env{status: 404, body: %{}}}
-
-        "https://api.github.com/app/installations/wrong-cert/access_tokens" ->
-          {:ok, %Tesla.Env{status: 401, body: %{}}}
-
-        "https://api.github.com/app/installations/some-id/access_tokens" ->
-          {:ok, %Tesla.Env{status: 201, body: %{"token" => "some-token"}}}
-          |> IO.inspect()
-
-        "https://api.github.com/installation/repositories" ->
-          {:ok,
-           %Tesla.Env{
-             status: 200,
-             body: %{"repositories" => [%{"full_name" => "org/repo"}]}
-           }}
-
-        "https://api.github.com/repos/some/repo/branches" ->
-          {:ok, %Tesla.Env{status: 200, body: [%{"name" => "master"}]}}
-
-        "https://api.github.com/repos/some/repo/dispatches" ->
-          {:ok, %Tesla.Env{status: 204}}
-
-        # create blob
-        "https://api.github.com/repos/some/repo/git/blobs" ->
-          {:ok,
-           %Tesla.Env{
-             status: 201,
-             body: %{"sha" => "3a0f86fb8db8eea7ccbb9a95f325ddbedfb25e15"}
-           }}
-
-        # get commit on master branch
-        "https://api.github.com/repos/some/repo/commits/heads/master" ->
-          {:ok,
-           %Tesla.Env{
-             status: 200,
-             body: %{
-               "sha" => "6dcb09b5b57875f334f61aebed695e2e4193db5e",
-               "commit" => %{
-                 "tree" => %{
-                   "sha" => "6dcb09b5b57875f334f61aebed695e2e4193db5e"
-                 }
-               }
-             }
-           }}
-
-        # create commit
-        "https://api.github.com/repos/some/repo/git/commits" ->
-          {:ok,
-           %Tesla.Env{
-             status: 201,
-             body: %{"sha" => "7638417db6d59f3c431d3e1f261cc637155684cd"}
-           }}
-
-        # create tree
-        "https://api.github.com/repos/some/repo/git/trees" ->
-          {:ok,
-           %Tesla.Env{
-             status: 201,
-             body: %{"sha" => "cd8274d15fa3ae2ab983129fb037999f264ba9a7"}
-           }}
-
-        # update a reference. in this case, the master branch
-        "https://api.github.com/repos/some/repo/git/refs/heads/master" ->
-          {:ok,
-           %Tesla.Env{
-             status: 200,
-             body: %{"ref" => "refs/heads/master"}
-           }}
-      end
-    end)
-
-    :ok
-  end
 
   describe "Index as a regular user" do
     setup :register_and_log_in_user
@@ -572,6 +492,30 @@ defmodule LightningWeb.ProjectLiveTest do
     setup :register_and_log_in_user
     setup :create_project_for_current_user
 
+    setup do
+      Mox.stub(Lightning.GithubClient.Mock, :call, fn env, _opts ->
+        case env.url do
+          "https://api.github.com/app/installations/some-id/access_tokens" ->
+            {:ok, %Tesla.Env{status: 201, body: %{"token" => "some-token"}}}
+
+          "https://api.github.com/installation/repositories" ->
+            {:ok,
+             %Tesla.Env{
+               status: 200,
+               body: %{"repositories" => [%{"full_name" => "org/repo"}]}
+             }}
+
+          "https://api.github.com/repos/some/repo/branches" ->
+            {:ok, %Tesla.Env{status: 200, body: [%{"name" => "master"}]}}
+
+          "https://api.github.com/repos/some/repo/dispatches" ->
+            {:ok, %Tesla.Env{status: 204}}
+        end
+      end)
+
+      :ok
+    end
+
     test "access project settings page", %{conn: conn, project: project} do
       {:ok, _view, html} =
         live(
@@ -708,6 +652,12 @@ defmodule LightningWeb.ProjectLiveTest do
         github_installation_id: "bad-id"
       })
 
+      Mox.expect(Lightning.GithubClient.Mock, :call, fn
+        %{url: "https://api.github.com/app/installations/bad-id/access_tokens"},
+        _opts ->
+          {:ok, %Tesla.Env{status: 404, body: %{}}}
+      end)
+
       {:ok, view, _html} =
         live(
           conn,
@@ -741,6 +691,15 @@ defmodule LightningWeb.ProjectLiveTest do
         branch: "some-branch",
         github_installation_id: "wrong-cert"
       })
+
+      Mox.expect(Lightning.GithubClient.Mock, :call, fn
+        %{
+          url:
+            "https://api.github.com/app/installations/wrong-cert/access_tokens"
+        },
+        _opts ->
+          {:ok, %Tesla.Env{status: 401, body: %{}}}
+      end)
 
       {:ok, view, _html} =
         live(
@@ -911,8 +870,71 @@ defmodule LightningWeb.ProjectLiveTest do
         project: project,
         user: user,
         branch: nil,
-        repo: nil
+        repo: nil,
+        github_installation_id: "some-id"
       })
+
+      Mox.expect(Lightning.GithubClient.Mock, :call, 9, fn env, _opts ->
+        case env.url do
+          # called twice. in LiveView and when commiting workflow files
+          "https://api.github.com/app/installations/some-id/access_tokens" ->
+            {:ok, %Tesla.Env{status: 201, body: %{"token" => "some-token"}}}
+
+          "https://api.github.com/installation/repositories" ->
+            {:ok,
+             %Tesla.Env{
+               status: 200,
+               body: %{"repositories" => [%{"full_name" => "some/repo"}]}
+             }}
+
+          # create blob. called twice (for push.yml and deploy.yml)
+          "https://api.github.com/repos/some/repo/git/blobs" ->
+            {:ok,
+             %Tesla.Env{
+               status: 201,
+               body: %{"sha" => "3a0f86fb8db8eea7ccbb9a95f325ddbedfb25e15"}
+             }}
+
+          # get commit on master branch
+          "https://api.github.com/repos/some/repo/commits/heads/master" ->
+            {:ok,
+             %Tesla.Env{
+               status: 200,
+               body: %{
+                 "sha" => "6dcb09b5b57875f334f61aebed695e2e4193db5e",
+                 "commit" => %{
+                   "tree" => %{
+                     "sha" => "6dcb09b5b57875f334f61aebed695e2e4193db5e"
+                   }
+                 }
+               }
+             }}
+
+          # create commit
+          "https://api.github.com/repos/some/repo/git/commits" ->
+            {:ok,
+             %Tesla.Env{
+               status: 201,
+               body: %{"sha" => "7638417db6d59f3c431d3e1f261cc637155684cd"}
+             }}
+
+          # create tree
+          "https://api.github.com/repos/some/repo/git/trees" ->
+            {:ok,
+             %Tesla.Env{
+               status: 201,
+               body: %{"sha" => "cd8274d15fa3ae2ab983129fb037999f264ba9a7"}
+             }}
+
+          # update a reference. in this case, the master branch
+          "https://api.github.com/repos/some/repo/git/refs/heads/master" ->
+            {:ok,
+             %Tesla.Env{
+               status: 200,
+               body: %{"ref" => "refs/heads/master"}
+             }}
+        end
+      end)
 
       {:ok, view, _html} =
         live(
@@ -923,6 +945,39 @@ defmodule LightningWeb.ProjectLiveTest do
       assert view
              |> render_click("save_repo", %{branch: "master", repo: "some/repo"}) =~
                "Repository:\n                            <a href=\"https://www.github.com/some/repo\" target=\"_blank\" class=\"hover:underline text-primary-600\">\nsome/repo"
+    end
+
+    test "project editors and viewers cannot save github repo connection", %{
+      project: project,
+      conn: conn,
+      user: admin
+    } do
+      put_temporary_env(:lightning, :github_app,
+        cert: @cert,
+        app_id: "111111",
+        app_name: "test-github"
+      )
+
+      insert(:project_repo_connection, %{
+        project: project,
+        user: admin,
+        branch: nil,
+        repo: nil,
+        github_installation_id: "some-id"
+      })
+
+      for {conn, _user} <- setup_project_users(conn, project, [:viewer, :editor]) do
+        {:ok, view, _html} =
+          live(
+            conn,
+            ~p"/projects/#{project.id}/settings#vcs"
+          )
+
+        html =
+          render_click(view, "save_repo", %{branch: "master", repo: "some/repo"})
+
+        assert html =~ "You are not authorized to perform this action"
+      end
     end
 
     @tag role: :admin

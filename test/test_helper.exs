@@ -3,12 +3,6 @@ Code.put_compiler_option(:warnings_as_errors, true)
 # Rexbug.start("ExUnit.Server.add_sync_module/_")
 Mox.defmock(Lightning.GithubClient.Mock, for: Tesla.Adapter)
 
-Application.put_env(
-  :lightning,
-  :tesla,
-  {Lightning.VersionControl.GithubClient, [adapter: Lightning.GithubClient.Mock]}
-)
-
 :ok = Application.ensure_started(:ex_machina)
 
 Mimic.copy(:hackney)
@@ -21,7 +15,10 @@ Mimic.copy(Mix.Tasks.Lightning.InstallSchemas)
 # Other ExUnit configuration can be found in `config/runtime.exs`,
 # for example to change the `assert_receive` timeout, configure it using the
 # `ASSERT_RECEIVE_TIMEOUT` environment variable.
-ExUnit.configure(formatters: [JUnitFormatter, ExUnit.CLIFormatter])
+ExUnit.configure(
+  formatters: [JUnitFormatter, ExUnit.CLIFormatter],
+  exclude: [:integration]
+)
 
 ExUnit.start()
 Ecto.Adapters.SQL.Sandbox.mode(Lightning.Repo, :manual)
