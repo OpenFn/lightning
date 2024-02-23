@@ -657,13 +657,12 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
     end)
     |> assign_new(:authorize_url, fn %{client: client} ->
       if client do
-        %{optional: optional_scopes, mandatory: mandatory_scopes} =
+        %{optional: _optional_scopes, mandatory: mandatory_scopes} =
           socket.assigns.adapter.scopes
 
         state = build_state(socket.id, __MODULE__, socket.assigns.id)
-        scopes = optional_scopes ++ mandatory_scopes
 
-        socket.assigns.adapter.authorize_url(client, state, scopes)
+        socket.assigns.adapter.authorize_url(client, state, mandatory_scopes)
       end
     end)
   end
