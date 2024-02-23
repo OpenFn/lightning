@@ -41,7 +41,7 @@ defmodule LightningWeb.CredentialLive.FormComponent do
      |> assign(type_options: type_options)
      |> assign(scopes_changed: false)
      |> assign(authorization_status: :success)
-     |> assign(credential_type: false)
+     |> assign(schema: false)
      |> assign(available_projects: [])
      |> assign(allow_credential_transfer: allow_credential_transfer)}
   end
@@ -77,7 +77,7 @@ defmodule LightningWeb.CredentialLive.FormComponent do
 
     page = if assigns.action === :new, do: :first, else: :second
 
-    credential_type = assigns.credential.schema || false
+    schema = assigns.credential.schema || false
 
     {:ok,
      socket
@@ -88,7 +88,7 @@ defmodule LightningWeb.CredentialLive.FormComponent do
      |> assign(changeset: changeset)
      |> assign(update_body: update_body)
      |> assign(all_projects: all_projects)
-     |> assign(credential_type: credential_type)
+     |> assign(schema: schema)
      |> assign(selected_project: nil)
      |> assign_new(:show_project_credentials, fn -> true end)
      |> update_available_projects()}
@@ -99,7 +99,7 @@ defmodule LightningWeb.CredentialLive.FormComponent do
     changeset =
       Credentials.change_credential(
         socket.assigns.credential,
-        credential_params |> Map.put("schema", socket.assigns.credential_type)
+        credential_params |> Map.put("schema", socket.assigns.schema)
       )
       |> Map.put(:action, :validate)
 
@@ -129,7 +129,7 @@ defmodule LightningWeb.CredentialLive.FormComponent do
   end
 
   def handle_event(
-        "credential_type_selected",
+        "schema_selected",
         %{"selected" => type} = _params,
         socket
       ) do
@@ -139,11 +139,11 @@ defmodule LightningWeb.CredentialLive.FormComponent do
     {:noreply,
      socket
      |> assign(changeset: changeset)
-     |> assign(credential_type: type)}
+     |> assign(schema: type)}
   end
 
   def handle_event(
-        "credential_type_selected",
+        "schema_selected",
         %{"_target" => ["selected"]},
         socket
       ) do
@@ -272,10 +272,10 @@ defmodule LightningWeb.CredentialLive.FormComponent do
         <div class="container mx-auto px-4">
           <.form
             :let={f}
-            id="credential-type-picker"
+            id="credential-schema-picker"
             for={%{}}
             phx-target={@myself}
-            phx-change="credential_type_selected"
+            phx-change="schema_selected"
           >
             <div class="grid grid-cols-2 md:grid-cols-4 sm:grid-cols-3 gap-4 overflow-auto max-h-99">
               <div
@@ -283,14 +283,14 @@ defmodule LightningWeb.CredentialLive.FormComponent do
                 class="flex items-center p-2"
               >
                 <%= Phoenix.HTML.Form.radio_button(f, :selected, key,
-                  id: "credential-type-picker_selected_#{key}",
+                  id: "credential-schema-picker_selected_#{key}",
                   class:
                     "h-4 w-4 border-gray-300 text-indigo-600 focus:ring-indigo-500"
                 ) %>
                 <LightningWeb.Components.Form.label_field
                   form={f}
                   field={:selected}
-                  for={"credential-type-picker_selected_#{key}"}
+                  for={"credential-schema-picker_selected_#{key}"}
                   title={name}
                   logo={logo}
                   class="ml-3 block text-sm font-medium text-gray-700"
@@ -304,7 +304,7 @@ defmodule LightningWeb.CredentialLive.FormComponent do
           <div class="sm:flex sm:flex-row-reverse">
             <button
               type="submit"
-              disabled={!@credential_type}
+              disabled={!@schema}
               phx-click="change_page"
               phx-target={@myself}
               class="inline-flex w-full justify-center rounded-md disabled:bg-primary-300 bg-primary-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary-500 sm:ml-3 sm:w-auto"
@@ -356,9 +356,10 @@ defmodule LightningWeb.CredentialLive.FormComponent do
           <.form_component
             :let={{fieldset, _valid?}}
             id={@credential.id || "new"}
+            schema={@schema}
             parent_id={@id}
             form={f}
-            type={@credential_type}
+            type={@schema}
             action={@action}
             update_body={@update_body}
             scopes_changed={@scopes_changed}
@@ -382,13 +383,13 @@ defmodule LightningWeb.CredentialLive.FormComponent do
                   <div class="border-t border-secondary-200"></div>
                 </div>
                 <!-- # TODO: Make this part of the fieldset to avoid the if block -->
-                <%= if @credential_type in ["salesforce_oauth", "googlesheets"] do %>
+                <%= if @schema in ["salesforce_oauth", "googlesheets"] do %>
                   <LightningWeb.CredentialLive.Scopes.scopes_picklist
                     id={"scope_selection_#{@credential.id || "new"}"}
                     target={@myself}
                     on_change="scopes_changed"
                     selected_scopes={@scopes}
-                    credential_type={@credential_type}
+                    schema={@schema}
                   />
                 <% end %>
                 <%= fieldset %>
@@ -456,6 +457,7 @@ defmodule LightningWeb.CredentialLive.FormComponent do
   attr :action, :any, required: false
   attr :phx_target, :any, default: nil
   attr :parent_id, :string, required: false
+  attr :schema, :string, required: false
   attr :update_body, :any, required: false
   attr :scopes_changed, :boolean, required: false
   slot :inner_block
@@ -467,7 +469,7 @@ defmodule LightningWeb.CredentialLive.FormComponent do
       id={@id}
       form={@form}
       action={@action}
-      provider="google"
+      schema={@schema}
       parent_id={@parent_id}
       update_body={@update_body}
     >
@@ -483,7 +485,7 @@ defmodule LightningWeb.CredentialLive.FormComponent do
       id={@id}
       form={@form}
       action={@action}
-      provider="salesforce"
+      schema={@schema}
       parent_id={@parent_id}
       update_body={@update_body}
       scopes_changed={@scopes_changed}
@@ -718,7 +720,7 @@ defmodule LightningWeb.CredentialLive.FormComponent do
   end
 
   defp save_credential(
-         %{assigns: %{changeset: changeset, credential_type: schema_name}} =
+         %{assigns: %{changeset: changeset, schema: schema_name}} =
            socket,
          :new,
          credential_params

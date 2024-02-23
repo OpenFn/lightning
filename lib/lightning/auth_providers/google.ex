@@ -7,6 +7,17 @@ defmodule Lightning.AuthProviders.Google do
   alias Lightning.AuthProviders.Common
   require Logger
 
+  def provider_name, do: "Google"
+
+  def scopes,
+    do: %{
+      enabled: [],
+      disabled: ~W(userinfo.email userinfo.profile spreadsheets)
+    }
+
+  def scopes_doc_url,
+    do: "https://developers.google.com/identity/protocols/oauth2/scopes"
+
   @impl true
   def build_client(opts \\ []) do
     Common.build_client(:google, opts)
@@ -14,12 +25,12 @@ defmodule Lightning.AuthProviders.Google do
 
   @impl true
   def authorize_url(client, state, scopes \\ [], opts \\ []) do
-    scopes =
-      scopes
-      |> Enum.map(fn scope -> "https://www.googleapis.com/auth/#{scope}" end)
+    scopes = Enum.map(scopes, &urlify_scope/1)
 
     Common.authorize_url(client, state, scopes, opts)
   end
+
+  defp urlify_scope(scope), do: "https://www.googleapis.com/auth/#{scope}"
 
   @impl true
   def get_token(client, params) do

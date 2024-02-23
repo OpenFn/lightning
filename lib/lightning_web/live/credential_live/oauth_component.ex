@@ -5,6 +5,7 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
   import LightningWeb.OauthCredentialHelper
 
   alias Lightning.AuthProviders.Common
+  alias Lightning.Credentials
 
   require Logger
 
@@ -14,7 +15,7 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
   attr :update_body, :any, required: true
   attr :action, :any, required: true
   attr :scopes_changed, :boolean, default: false
-  attr :provider, :any, required: true
+  attr :schema, :string, required: true
   slot :inner_block
 
   def fieldset(assigns) do
@@ -47,7 +48,7 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
            scopes_changed: @scopes_changed,
            token_body_changeset: @token_body_changeset,
            update_body: @update_body,
-           provider: @provider,
+           schema: @schema,
            id: "inner-form-#{@id}",
            parent_id: @parent_id
          ],
@@ -66,7 +67,7 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
           No Client Configured
         </div>
         <span class="text-sm">
-          <%= @provider |> String.capitalize() %> authorization has not been set up on this instance.
+          <%= @provider %> authorization has not been set up on this instance.
         </span>
       </div>
     </div>
@@ -164,14 +165,14 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
           src={
             Routes.static_path(
               @socket,
-              "/images/#{@provider}.png"
+              "/images/#{String.downcase(@provider)}.png"
             )
           }
           alt="Authorizing..."
           class="w-10 h-10 bg-white rounded"
         />
       </div>
-      <span class="text-xl">Sign in with <%= String.capitalize(@provider) %></span>
+      <span class="text-xl">Sign in with <%= @provider %></span>
     </.link>
     """
   end
@@ -223,7 +224,7 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
     ~H"""
     <div id="userinfo_skeleton" class="mt-5">
       <.text_ping_loader>
-        Authenticating with <%= String.capitalize(@provider) %>
+        Authenticating with <%= @provider %>
       </.text_ping_loader>
     </div>
     """
@@ -387,7 +388,7 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
   end
 
   def helpblock(
-        %{provider: "google", type: :userinfo_failed} =
+        %{provider: "Google", type: :userinfo_failed} =
           assigns
       ) do
     ~H"""
@@ -408,7 +409,7 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
   end
 
   def helpblock(
-        %{provider: "google", type: :no_refresh_token} =
+        %{provider: "Google", type: :no_refresh_token} =
           assigns
       ) do
     ~H"""
@@ -429,7 +430,7 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
   end
 
   def helpblock(
-        %{provider: "google", type: :refresh_failed} =
+        %{provider: "Google", type: :refresh_failed} =
           assigns
       ) do
     ~H"""
@@ -450,7 +451,7 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
   end
 
   def helpblock(
-        %{provider: "salesforce", type: :userinfo_failed} =
+        %{provider: "Salesforce", type: :userinfo_failed} =
           assigns
       ) do
     ~H"""
@@ -471,7 +472,7 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
   end
 
   def helpblock(
-        %{provider: "salesforce", type: :no_refresh_token} =
+        %{provider: "Salesforce", type: :no_refresh_token} =
           assigns
       ) do
     ~H"""
@@ -492,7 +493,7 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
   end
 
   def helpblock(
-        %{provider: "salesforce", type: :refresh_failed} =
+        %{provider: "Salesforce", type: :refresh_failed} =
           assigns
       ) do
     ~H"""
@@ -563,7 +564,7 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
           scopes_changed: _scopes_changed,
           token_body_changeset: _changeset,
           update_body: _body,
-          provider: _provider
+          schema: _schema
         } = params,
         socket
       ) do
@@ -623,10 +624,12 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
            scopes_changed: scopes_changed,
            token_body_changeset: token_body_changeset,
            update_body: update_body,
-           provider: provider
+           schema: schema
          },
          token
        ) do
+    adapter = Credentials.lookup_adapter(schema)
+
     socket
     |> assign(
       form: form,
@@ -635,7 +638,8 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
       token_body_changeset: token_body_changeset,
       token: token,
       update_body: update_body,
-      provider: provider,
+      adapter: adapter,
+      provider: adapter.provider_name,
       action: action,
       scopes_changed: scopes_changed
     )
@@ -653,23 +657,15 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
     end)
     |> assign_new(:authorize_url, fn %{client: client} ->
       if client do
-        {_, default_scopes} =
-          LightningWeb.CredentialLive.Scopes.get_scopes(socket.assigns.provider)
+        %{enabled: enabled_scopes, disabled: disabled_scopes} =
+          socket.assigns.adapter.scopes
 
-        module_name(socket.assigns.provider).authorize_url(
-          client,
-          build_state(socket.id, __MODULE__, socket.assigns.id),
-          default_scopes
-        )
+        state = build_state(socket.id, __MODULE__, socket.assigns.id)
+        scopes = enabled_scopes ++ disabled_scopes
+
+        socket.assigns.adapter.authorize_url(client, state, scopes)
       end
     end)
-  end
-
-  defp module_name(provider) do
-    case provider do
-      "google" -> Lightning.AuthProviders.Google
-      "salesforce" -> Lightning.AuthProviders.Salesforce
-    end
   end
 
   defp handle_code_update(code, socket) do
@@ -678,7 +674,7 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
     # NOTE: there can be _no_ refresh token if something went wrong like if the
     # previous auth didn't receive a refresh_token
 
-    case module_name(socket.assigns.provider).get_token(client, code: code) do
+    case socket.assigns.adapter.get_token(client, code: code) do
       {:ok, client} ->
         client.token
         |> token_to_params()
@@ -710,12 +706,11 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
   end
 
   defp handle_scopes_update(scopes, socket) do
+    state = build_state(socket.id, __MODULE__, socket.assigns.id)
+
     authorize_url =
-      module_name(socket.assigns.provider).authorize_url(
-        socket.assigns.client,
-        build_state(socket.id, __MODULE__, socket.assigns.id),
-        scopes
-      )
+      socket.assigns.client
+      |> socket.assigns.adapter.authorize_url(state, scopes)
 
     {:ok, socket |> assign(authorize_url: authorize_url)}
   end
@@ -759,7 +754,7 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
   defp get_userinfo(pid, socket) do
     %{id: id, client: client, token: token} = socket.assigns
 
-    module_name(socket.assigns.provider).get_userinfo(client, token)
+    socket.assigns.adapter.get_userinfo(client, token)
     |> case do
       {:ok, resp} ->
         send_update(pid, __MODULE__, id: id, userinfo: resp.body)
@@ -775,7 +770,7 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
     %{id: id, client: client, update_body: update_body, token: token} =
       socket.assigns
 
-    module_name(socket.assigns.provider).refresh_token(client, token)
+    socket.assigns.adapter.refresh_token(client, token)
     |> case do
       {:ok, token} ->
         update_body.(token |> token_to_params())
@@ -791,7 +786,7 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
   end
 
   defp build_client(socket) do
-    module_name(socket.assigns.provider).build_client(
+    socket.assigns.adapter.build_client(
       callback_url: LightningWeb.RouteHelpers.oidc_callback_url()
     )
   end

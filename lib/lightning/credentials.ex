@@ -585,7 +585,7 @@ defmodule Lightning.Credentials do
     end
   end
 
-  defp lookup_adapter(schema) do
+  def lookup_adapter(schema) do
     case :ets.lookup(:adapter_lookup, schema) do
       [{^schema, adapter}] -> adapter
       [] -> nil

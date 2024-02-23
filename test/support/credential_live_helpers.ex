@@ -10,7 +10,7 @@ defmodule LightningWeb.CredentialLiveHelpers do
   def select_credential_type(live, type) do
     html =
       live
-      |> form("#credential-type-picker", selected: type)
+      |> form("#credential-schema-picker", selected: type)
       |> render_change()
 
     assert Floki.parse_fragment!(html)

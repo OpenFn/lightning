@@ -30,7 +30,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       assert has_element?(view, "#job-pane-#{job.id}")
 
-      assert has_element?(view, "#credential-type-picker")
+      assert has_element?(view, "#credential-schema-picker")
       view |> CredentialLiveHelpers.select_credential_type("http")
       view |> CredentialLiveHelpers.click_continue()
 

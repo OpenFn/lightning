@@ -7,6 +7,21 @@ defmodule Lightning.AuthProviders.Salesforce do
   alias Lightning.AuthProviders.Common
   require Logger
 
+  def provider_name, do: "Salesforce"
+
+  def scopes,
+    do: %{
+      enabled:
+        ~w(cdp_query_api pardot_api cdp_profile_api chatter_api cdp_ingest_api
+    eclair_api wave_api api custom_permissions id lightning content openid full visualforce
+    web chatbot_api user_registration_api forgot_password cdp_api sfap_api interaction_api),
+      disabled: ~w(refresh_token)
+    }
+
+  def scopes_doc_url,
+    do:
+      "https://help.salesforce.com/s/articleView?id=sf.remoteaccess_oauth_tokens_scopes.htm&type=5"
+
   @impl true
   def build_client(opts \\ []) do
     Common.build_client(:salesforce, opts)

@@ -982,7 +982,7 @@ defmodule LightningWeb.CredentialLiveTest do
         type: :refresh_failed,
         authorize_url: "https://www",
         myself: nil,
-        provider: "salesforce"
+        provider: "Salesforce"
       ) =~ "Failed renewing your access token"
 
       render_component(
@@ -990,7 +990,7 @@ defmodule LightningWeb.CredentialLiveTest do
         type: :userinfo_failed,
         authorize_url: "https://www",
         myself: nil,
-        provider: "salesforce"
+        provider: "Salesforce"
       ) =~ "Failed retrieving your information"
 
       render_component(
@@ -998,7 +998,7 @@ defmodule LightningWeb.CredentialLiveTest do
         type: :no_refresh_token,
         authorize_url: "https://www",
         myself: nil,
-        provider: "salesforce"
+        provider: "Salesforce"
       ) =~ "The token is missing it's"
     end
 
