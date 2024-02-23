@@ -1038,7 +1038,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
       when not is_nil(job) ->
         dataclip =
           assigns[:follow_run] &&
-            get_selected_dataclip(assigns[:follow_run].id, job.id)
+            get_selected_dataclip(assigns[:follow_run], job.id)
 
         changeset =
           WorkOrders.Manual.new(
@@ -1078,11 +1078,13 @@ defmodule LightningWeb.WorkflowLive.Edit do
     |> assign(show_wiped_dataclip_selector: is_map(step_dataclip))
   end
 
-  defp get_selected_dataclip(run_id, job_id) do
-    dataclip = Invocation.get_dataclip_for_run_and_job(run_id, job_id)
+  defp get_selected_dataclip(run, job_id) do
+    dataclip = Invocation.get_dataclip_for_run_and_job(run.id, job_id)
 
-    if is_nil(dataclip) and Invocation.get_step_count_for_run(run_id) == 0 do
-      Invocation.get_dataclip_for_run(run_id)
+    if is_nil(dataclip) and
+         (run.starting_job_id == job_id ||
+            Invocation.get_step_count_for_run(run.id) == 0) do
+      Invocation.get_dataclip_for_run(run.id)
     else
       dataclip
     end
