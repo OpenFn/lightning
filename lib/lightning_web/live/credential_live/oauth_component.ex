@@ -131,7 +131,7 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
         myself={@myself}
         provider={@provider}
       />
-      <.userinfo_skeleton :if={@display_userinfo_skeleton} />
+      <.userinfo_skeleton :if={@display_userinfo_skeleton} provider={@provider} />
       <.userinfo
         :if={@display_userinfo}
         myself={@myself}
@@ -171,7 +171,7 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
           class="w-10 h-10 bg-white rounded"
         />
       </div>
-      <span class="text-xl">Sign in with <%= @provider %></span>
+      <span class="text-xl">Sign in with <%= String.capitalize(@provider) %></span>
     </.link>
     """
   end
@@ -221,23 +221,10 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
 
   def userinfo_skeleton(assigns) do
     ~H"""
-    <div
-      id="userinfo_skeleton"
-      class="border border-slate-300 shadow rounded-md mt-5 p-4 max-w"
-    >
-      <div class="animate-pulse flex space-x-4">
-        <div class="rounded-full bg-slate-700 h-10 w-10"></div>
-        <div class="flex-1 space-y-6 py-1">
-          <div class="h-2 bg-slate-700 rounded"></div>
-          <div class="space-y-3">
-            <div class="grid grid-cols-3 gap-4">
-              <div class="h-2 bg-slate-700 rounded col-span-2"></div>
-              <div class="h-2 bg-slate-700 rounded col-span-1"></div>
-            </div>
-            <div class="h-2 bg-slate-700 rounded"></div>
-          </div>
-        </div>
-      </div>
+    <div id="userinfo_skeleton" class="mt-5">
+      <.text_ping_loader>
+        Authenticating with <%= String.capitalize(@provider) %>
+      </.text_ping_loader>
     </div>
     """
   end
