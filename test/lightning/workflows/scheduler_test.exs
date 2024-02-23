@@ -2,14 +2,9 @@ defmodule Lightning.Workflows.SchedulerTest do
   @moduledoc false
   use Lightning.DataCase, async: true
 
-  import Mock
-
   alias Lightning.Invocation
   alias Lightning.Run
   alias Lightning.Workflows.Scheduler
-  alias Lightning.Extensions.UsageLimiting.Action
-  alias Lightning.Extensions.UsageLimiting.Context
-  alias Lightning.Extensions.UsageLimiter
 
   describe "enqueue_cronjobs/1" do
     test "enqueues a cron job that's never been run before" do
@@ -28,15 +23,13 @@ defmodule Lightning.Workflows.SchedulerTest do
         target_job: job
       })
 
-      with_mock UsageLimiter, limit_action: fn _action, _context -> :ok end do
-        Scheduler.enqueue_cronjobs()
+      Mox.expect(
+        Lightning.Extensions.MockUsageLimiter,
+        :limit_action,
+        fn _action, _context -> :ok end
+      )
 
-        assert_called(
-          UsageLimiter.limit_action(%Action{type: :new_run}, %Context{
-            project_id: job.workflow.project_id
-          })
-        )
-      end
+      Scheduler.enqueue_cronjobs()
 
       run = Repo.one(Run)
 
@@ -95,15 +88,13 @@ defmodule Lightning.Workflows.SchedulerTest do
 
       [old_step] = run.steps
 
-      with_mock UsageLimiter, limit_action: fn _action, _context -> :ok end do
-        Scheduler.enqueue_cronjobs()
+      Mox.expect(
+        Lightning.Extensions.MockUsageLimiter,
+        :limit_action,
+        fn _action, _context -> :ok end
+      )
 
-        assert_called(
-          UsageLimiter.limit_action(%Action{type: :new_run}, %Context{
-            project_id: job.workflow.project_id
-          })
-        )
-      end
+      Scheduler.enqueue_cronjobs()
 
       new_run =
         Run

@@ -2,10 +2,12 @@ defmodule LightningWeb.WebhooksControllerTest do
   use LightningWeb.ConnCase, async: false
 
   import Lightning.Factories
-  import Mock
 
-  alias Lightning.Extensions.RateLimiter
-  alias Lightning.Extensions.UsageLimiter
+  alias Lightning.Extensions.MockRateLimiter
+  alias Lightning.Extensions.StubRateLimiter
+  alias Lightning.Extensions.MockUsageLimiter
+  alias Lightning.Extensions.StubUsageLimiter
+
   alias Lightning.Repo
   alias Lightning.Runs
   alias Lightning.WorkOrders
@@ -15,20 +17,19 @@ defmodule LightningWeb.WebhooksControllerTest do
   Record.defrecordp(:span, @fields)
 
   describe "a POST request to '/i'" do
+    setup [:stub_rate_limiter_ok, :stub_usage_limiter_ok]
+
     test "returns 402 when run limit has been reached", %{conn: conn} do
-      with_mock UsageLimiter,
-        limit_action: fn _action, _context ->
-          {:error, :too_many_runs, %{text: "Runs limit exceeded"}}
-        end do
-        %{triggers: [trigger]} =
-          insert(:simple_workflow) |> Lightning.Repo.preload(:triggers)
+      Mox.stub(MockUsageLimiter, :limit_action, &StubUsageLimiter.limit_action/2)
 
-        conn = post(conn, "/i/#{trigger.id}")
+      %{triggers: [trigger]} =
+        insert(:simple_workflow) |> Lightning.Repo.preload(:triggers)
 
-        assert json_response(conn, 402) == %{
-                 "error" => "Runs limit exceeded"
-               }
-      end
+      conn = post(conn, "/i/#{trigger.id}")
+
+      assert json_response(conn, 402) == %{
+               "error" => "Runs limit exceeded"
+             }
     end
 
     test "returns 404 when trigger does not exist", %{conn: conn} do
@@ -36,7 +37,7 @@ defmodule LightningWeb.WebhooksControllerTest do
       assert json_response(conn, 404) == %{"error" => "Webhook not found"}
     end
 
-    test "returns 413 with a body exceeding the limit" do
+    test "returns 413 with a body exceeding the limit", %{conn: conn} do
       %{triggers: [trigger]} =
         insert(:simple_workflow) |> Repo.preload(:triggers)
 
@@ -45,16 +46,7 @@ defmodule LightningWeb.WebhooksControllerTest do
       smaller_body =
         %{"data" => %{a: String.duplicate("a", 500_000)}}
 
-      assert {:ok, %Tesla.Env{status: 200}} =
-               [
-                 {Tesla.Middleware.BaseUrl, "http://localhost:4002"},
-                 Tesla.Middleware.JSON
-               ]
-               |> Tesla.client()
-               |> Tesla.post(
-                 "/i/#{trigger.id}",
-                 smaller_body
-               )
+      assert post(conn, "/i/#{trigger.id}", smaller_body)
 
       exceeding_body =
         %{"data" => %{a: String.duplicate("a", 2_000_000)}}
@@ -72,20 +64,16 @@ defmodule LightningWeb.WebhooksControllerTest do
     end
 
     test "returns 429 on rate limiting", %{conn: conn} do
-      with_mock RateLimiter,
-        limit_request: fn _conn, _context, _opts ->
-          {:error, :too_many_requests,
-           %{text: "Too many work orders in the last minute"}}
-        end do
-        %{triggers: [trigger]} =
-          insert(:simple_workflow) |> Lightning.Repo.preload(:triggers)
+      Mox.stub(MockRateLimiter, :limit_request, &StubRateLimiter.limit_request/3)
 
-        conn = post(conn, "/i/#{trigger.id}")
+      %{triggers: [trigger]} =
+        insert(:simple_workflow) |> Lightning.Repo.preload(:triggers)
 
-        assert json_response(conn, 429) == %{
-                 "error" => "Too many work orders in the last minute"
-               }
-      end
+      conn = post(conn, "/i/#{trigger.id}")
+
+      assert json_response(conn, 429) == %{
+               "error" => "Too many runs in the last minute"
+             }
     end
 
     test "creates a pending workorder with a valid trigger", %{conn: conn} do

@@ -22,3 +22,17 @@ ExUnit.configure(
 
 ExUnit.start()
 Ecto.Adapters.SQL.Sandbox.mode(Lightning.Repo, :manual)
+
+Mox.defmock(Lightning.Extensions.MockRateLimiter,
+  for: Lightning.Extensions.RateLimiting
+)
+
+Mox.defmock(Lightning.Extensions.MockUsageLimiter,
+  for: Lightning.Extensions.UsageLimiting
+)
+
+Application.put_env(:lightning, Lightning.Extensions,
+  rate_limiter: Lightning.Extensions.MockRateLimiter,
+  usage_limiter: Lightning.Extensions.MockUsageLimiter,
+  run_queue: Lightning.Extensions.FifoRunQueue
+)

@@ -10,24 +10,11 @@ defmodule LightningWeb.ProjectLiveTest do
   import Lightning.ApplicationHelpers,
     only: [dynamically_absorb_delay: 1, put_temporary_env: 3]
 
-  import Mock
-
-  alias Lightning.Extensions.UsageLimiter
   alias Lightning.Name
   alias Lightning.Projects
   alias Lightning.Repo
 
-  defmodule Banner do
-    use LightningWeb, :component
-
-    def text(assigns) do
-      ~H"""
-      <div>
-        Some text
-      </div>
-      """
-    end
-  end
+  setup :stub_usage_limiter_ok
 
   @cert """
   -----BEGIN RSA PRIVATE KEY-----
@@ -66,20 +53,16 @@ defmodule LightningWeb.ProjectLiveTest do
       conn: conn,
       project: %{id: project_id}
     } do
-      with_mock UsageLimiter,
-        check_limits: fn %{project_id: ^project_id} ->
-          {:error, :too_many_runs,
-           %{
-             position: :banner,
-             function: &Banner.text/1,
-             attrs: %{}
-           }}
-        end do
-        {:ok, _live, html} =
-          live(conn, ~p"/projects/#{project_id}/settings")
+      Mox.stub(
+        Lightning.Extensions.MockUsageLimiter,
+        :check_limits,
+        &Lightning.Extensions.StubUsageLimiter.check_limits/1
+      )
 
-        assert html =~ "Some text"
-      end
+      {:ok, _live, html} =
+        live(conn, ~p"/projects/#{project_id}/settings")
+
+      assert html =~ "Some banner text"
     end
 
     test "lists all projects", %{conn: conn, project: project} do

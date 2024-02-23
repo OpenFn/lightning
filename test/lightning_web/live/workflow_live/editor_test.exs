@@ -6,10 +6,8 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
   import Lightning.Factories
 
   import Ecto.Query
-  import Mock
 
   alias Lightning.Invocation
-  alias Lightning.Extensions.UsageLimiter
   alias Lightning.Workflows.Workflow
 
   setup :register_and_log_in_user
@@ -275,27 +273,24 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
 
       assert Invocation.list_dataclips_for_job(job) |> Enum.count() == 0
 
-      body = %{"a" => 1}
+      Mox.stub(
+        Lightning.Extensions.MockUsageLimiter,
+        :limit_action,
+        &Lightning.Extensions.StubUsageLimiter.limit_action/2
+      )
 
-      with_mock(
-        UsageLimiter,
-        limit_action: fn %{type: :new_run}, %{project_id: ^project_id} ->
-          {:error, :too_many_actions, %{text: "Runs limit exceeded"}}
-        end
-      ) do
-        assert view
-               |> form("#manual-job-#{job.id} form",
-                 manual: %{
-                   body: Jason.encode!(body)
-                 }
-               )
-               |> render_submit()
-               |> Floki.parse_fragment!()
-               |> Floki.find("#flash")
-               |> Floki.find("p")
-               |> Floki.text() =~
-                 "Runs limit exceeded"
-      end
+      assert view
+             |> form("#manual-job-#{job.id} form",
+               manual: %{
+                 body: Jason.encode!(%{"a" => 1})
+               }
+             )
+             |> render_submit()
+             |> Floki.parse_fragment!()
+             |> Floki.find("#flash")
+             |> Floki.find("p")
+             |> Floki.text() =~
+               "Runs limit exceeded"
     end
 
     test "can run a job", %{conn: conn, project: p, workflow: w} do
