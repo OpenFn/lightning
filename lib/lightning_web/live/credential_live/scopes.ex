@@ -1,7 +1,8 @@
 defmodule LightningWeb.CredentialLive.Scopes do
   @moduledoc false
-  alias Lightning.Credentials
   use LightningWeb, :component
+
+  alias Lightning.Credentials
 
   attr :id, :string, required: true
   attr :on_change, :any, required: true
