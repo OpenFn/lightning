@@ -16,6 +16,8 @@ and this project adheres to
 ## [Unreleased]
 
 ### Added
+- Push `.github/workflows/{pull,deploy}.yml` files when user connects branch
+  [#1046](https://github.com/OpenFn/lightning/issues/1046)
 
 ### Changed
 
