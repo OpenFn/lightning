@@ -688,6 +688,84 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       assert render(element) =~ "selected"
     end
 
+    test "shows the body of selected dataclip correctly after retrying a workorder from a non-first step",
+         %{
+           conn: conn,
+           project: project,
+           workflow:
+             %{jobs: [job_1, job_2 | _rest], triggers: [trigger]} = workflow
+         } do
+      input_dataclip = insert(:dataclip, project: project, type: :http_request)
+
+      output_dataclip =
+        insert(:dataclip,
+          project: project,
+          type: :step_result,
+          body: %{"uuid" => Ecto.UUID.generate()}
+        )
+
+      %{runs: [run]} =
+        insert(:workorder,
+          workflow: workflow,
+          dataclip: input_dataclip,
+          state: :failed,
+          runs: [
+            build(:run,
+              dataclip: input_dataclip,
+              starting_trigger: trigger,
+              state: :failed,
+              steps: [
+                build(:step,
+                  job: job_1,
+                  input_dataclip: input_dataclip,
+                  output_dataclip: output_dataclip,
+                  exit_reason: "success",
+                  started_at: build(:timestamp),
+                  finished_at: build(:timestamp)
+                ),
+                build(:step,
+                  job: job_2,
+                  input_dataclip: output_dataclip,
+                  output_dataclip: build(:dataclip),
+                  exit_reason: "fail",
+                  started_at: build(:timestamp),
+                  finished_at: build(:timestamp)
+                )
+              ]
+            )
+          ]
+        )
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project}/w/#{workflow}?#{[s: job_2.id, a: run.id, m: "expand"]}"
+        )
+
+      # retry workorder
+      view
+      |> element("#save-and-run", "Rerun from here")
+      |> render_click()
+
+      path = assert_patch(view)
+
+      {:ok, view, _html} = live(conn, path)
+
+      # the run input dataclip is selected
+      element =
+        view
+        |> element(
+          "select#manual_run_form_dataclip_id  option[value='#{output_dataclip.id}']"
+        )
+
+      assert render(element) =~ "selected"
+
+      # the body is rendered correctly
+      form = element(view, "#manual-job-#{job_2.id} form")
+      assert render(form) =~ output_dataclip.body["uuid"]
+      refute render(form) =~ "Input data for this step has not been retained"
+    end
+
     test "does not show the dataclip select input if the step dataclip is not available",
          %{
            conn: conn,
