@@ -49,21 +49,17 @@ defmodule LightningWeb.CredentialLive.Scopes do
       </h3>
       <div class="grid grid-cols-4 gap-1">
         <%= for scope <- @scopes do %>
-          <div class="form-check">
-            <label class="form-check-label inline-block">
-              <input
-                id={"#{@id}_#{scope}"}
-                type="checkbox"
-                name={scope}
-                checked={scope in @checked_scopes}
-                disabled={scope in @mandatory_scopes}
-                phx-change={@on_change}
-                phx-target={@target}
-                class="form-check-input appearance-none h-4 w-4 border border-gray-300 rounded-sm bg-white checked:disabled:bg-blue-300 checked:disabled:border-blue-300 checked:bg-blue-600 checked:border-blue-600 focus:outline-none transition duration-200 mt-1 align-top bg-no-repeat bg-center bg-contain float-left cursor-pointer"
-              />
-              <span class="ml-2"><%= scope %></span>
-            </label>
-          </div>
+          <.input
+            id={"#{@id}_#{scope}"}
+            type="checkbox"
+            name={scope}
+            value={scope}
+            checked={scope in @checked_scopes}
+            disabled={scope in @mandatory_scopes}
+            phx-change={@on_change}
+            phx-target={@target}
+            label={scope}
+          />
         <% end %>
       </div>
     </div>

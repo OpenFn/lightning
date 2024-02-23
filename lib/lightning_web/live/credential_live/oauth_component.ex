@@ -16,6 +16,7 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
   attr :action, :any, required: true
   attr :scopes_changed, :boolean, default: false
   attr :schema, :string, required: true
+  attr :sandbox_value, :boolean, default: false
   slot :inner_block
 
   def fieldset(assigns) do
@@ -48,6 +49,7 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
            scopes_changed: @scopes_changed,
            token_body_changeset: @token_body_changeset,
            update_body: @update_body,
+           sandbox_value: @sandbox_value,
            schema: @schema,
            id: "inner-form-#{@id}",
            parent_id: @parent_id
@@ -96,6 +98,7 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
       |> update(:form, fn form, %{token_body_changeset: token_body_changeset} ->
         # Merge in any changes that have been made to the TokenBody changeset
         # _inside_ this component.
+
         %{
           form
           | params: Map.put(form.params, "body", token_body_changeset.params)
@@ -116,10 +119,9 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
         <%= Phoenix.HTML.Form.hidden_input(body_form, :refresh_token) %>
         <%= Phoenix.HTML.Form.hidden_input(body_form, :expires_at) %>
         <%= Phoenix.HTML.Form.hidden_input(body_form, :scope) %>
+        <%= Phoenix.HTML.Form.hidden_input(body_form, :sandbox) %>
         <%= Phoenix.HTML.Form.hidden_input(body_form, :instance_url) %>
       </div>
-      <%!-- transition-opacity ease-in duration-700 --%>
-
       <.reauthorize_banner
         :if={@display_reauthorize_banner}
         authorize_url={@authorize_url}
@@ -562,6 +564,7 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
           parent_id: _parent_id,
           action: _action,
           scopes_changed: _scopes_changed,
+          sandbox_value: _sandbox_value,
           token_body_changeset: _changeset,
           update_body: _body,
           schema: _schema
@@ -607,11 +610,27 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
     handle_scopes_update(scopes, socket)
   end
 
+  def update(%{sandbox: sandbox}, socket) do
+    wellknown_url = socket.assigns.adapter.wellknown_url(sandbox)
+
+    {:ok, client} = build_client(socket, wellknown_url)
+    state = build_state(socket.id, __MODULE__, socket.assigns.id)
+
+    authorize_url =
+      socket.assigns.adapter.authorize_url(client, state, socket.assigns.scopes)
+
+    {:ok,
+     socket
+     |> assign(sandbox: sandbox, client: client, authorize_url: authorize_url)}
+  end
+
   defp reset_assigns(socket) do
     socket
     |> assign_new(:userinfo, fn -> nil end)
     |> assign_new(:authorization_error, fn -> nil end)
     |> assign_new(:authorization_status, fn -> nil end)
+    |> assign_new(:sandbox, fn -> false end)
+    |> assign_new(:scopes, fn -> [] end)
   end
 
   defp update_assigns(
@@ -622,6 +641,7 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
            parent_id: parent_id,
            action: action,
            scopes_changed: scopes_changed,
+           sandbox_value: sandbox_value,
            token_body_changeset: token_body_changeset,
            update_body: update_body,
            schema: schema
@@ -639,6 +659,7 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
       token: token,
       update_body: update_body,
       adapter: adapter,
+      sandbox: sandbox_value,
       provider: adapter.provider_name,
       action: action,
       scopes_changed: scopes_changed
@@ -646,10 +667,13 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
   end
 
   defp update_client(socket) do
+    wellknown_url =
+      socket.assigns.adapter.wellknown_url(socket.assigns.sandbox)
+
     socket
     |> assign_new(:client, fn %{token: token} ->
       socket
-      |> build_client()
+      |> build_client(wellknown_url)
       |> case do
         {:ok, client} -> client |> Map.put(:token, token)
         {:error, _} -> nil
@@ -668,15 +692,18 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
   end
 
   defp handle_code_update(code, socket) do
-    client = socket.assigns.client
+    client = socket.assigns.client |> IO.inspect(label: "The OAuth2 Client")
 
     # NOTE: there can be _no_ refresh token if something went wrong like if the
     # previous auth didn't receive a refresh_token
 
-    case socket.assigns.adapter.get_token(client, code: code) do
+    wellknown_url = socket.assigns.adapter.wellknown_url(socket.assigns.sandbox)
+
+    case socket.assigns.adapter.get_token(client, wellknown_url, code: code) do
       {:ok, client} ->
         client.token
         |> token_to_params()
+        |> maybe_add_sandbox(socket)
         |> socket.assigns.update_body.()
 
         send_update(LightningWeb.CredentialLive.FormComponent,
@@ -711,7 +738,8 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
       socket.assigns.client
       |> socket.assigns.adapter.authorize_url(state, scopes)
 
-    {:ok, socket |> assign(authorize_url: authorize_url)}
+    {:ok,
+     socket |> assign(scopes: scopes) |> assign(authorize_url: authorize_url)}
   end
 
   @impl true
@@ -751,9 +779,12 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
   end
 
   defp get_userinfo(pid, socket) do
-    %{id: id, client: client, token: token} = socket.assigns
+    %{id: id, client: client, token: token, sandbox: sandbox, adapter: adapter} =
+      socket.assigns
 
-    socket.assigns.adapter.get_userinfo(client, token)
+    wellknown_url = adapter.wellknown_url(sandbox)
+
+    adapter.get_userinfo(client, token, wellknown_url)
     |> case do
       {:ok, resp} ->
         send_update(pid, __MODULE__, id: id, userinfo: resp.body)
@@ -766,13 +797,21 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
   end
 
   defp refresh_token(pid, socket) do
-    %{id: id, client: client, update_body: update_body, token: token} =
-      socket.assigns
+    %{
+      id: id,
+      client: client,
+      update_body: update_body,
+      token: token,
+      sandbox: sandbox,
+      adapter: adapter
+    } = socket.assigns
 
-    socket.assigns.adapter.refresh_token(client, token)
+    wellknown_url = adapter.wellknown_url(sandbox)
+
+    adapter.refresh_token(client, token, wellknown_url)
     |> case do
       {:ok, token} ->
-        update_body.(token |> token_to_params())
+        update_body.(token |> token_to_params() |> maybe_add_sandbox(socket))
 
         Logger.debug("Retrieving userinfo")
         Task.start(fn -> get_userinfo(pid, socket) end)
@@ -784,8 +823,9 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
     end
   end
 
-  defp build_client(socket) do
+  defp build_client(socket, wellknown_url) do
     socket.assigns.adapter.build_client(
+      wellknown_url,
       callback_url: LightningWeb.RouteHelpers.oidc_callback_url()
     )
   end
@@ -821,5 +861,13 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
         k in [:access_token, :refresh_token, :expires_at]
       end)
     )
+  end
+
+  defp maybe_add_sandbox(token, socket) do
+    if socket.assigns.provider === "Salesforce" do
+      Map.put_new(token, :sandbox, socket.assigns.sandbox)
+    else
+      token
+    end
   end
 end

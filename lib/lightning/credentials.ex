@@ -572,8 +572,10 @@ defmodule Lightning.Credentials do
         if Common.still_fresh(token) do
           {:ok, credential}
         else
+          wellknown_url = adapter.wellknown_url(token.sandbox)
+
           {:ok, refreshed_token} =
-            adapter.refresh_token(token)
+            adapter.refresh_token(token, wellknown_url)
 
           update_credential(credential, %{
             body:

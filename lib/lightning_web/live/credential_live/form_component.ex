@@ -65,6 +65,9 @@ defmodule LightningWeb.CredentialLive.FormComponent do
 
     users = list_users()
     scopes = get_scopes(assigns.credential)
+
+    sandbox_value = get_sandbox_value(assigns.credential)
+
     changeset = Credentials.change_credential(assigns.credential)
     all_projects = Enum.map(projects, &{&1.name, &1.id})
 
@@ -85,6 +88,7 @@ defmodule LightningWeb.CredentialLive.FormComponent do
      |> assign(page: page)
      |> assign(users: users)
      |> assign(scopes: scopes)
+     |> assign(sandbox_value: sandbox_value)
      |> assign(changeset: changeset)
      |> assign(update_body: update_body)
      |> assign(all_projects: all_projects)
@@ -126,6 +130,17 @@ defmodule LightningWeb.CredentialLive.FormComponent do
      socket
      |> assign(scopes: selected_scopes)
      |> assign(scopes_changed: !diff_scopes)}
+  end
+
+  def handle_event("check_sandbox", %{"sandbox" => value}, socket) do
+    sandbox_value = String.to_atom(value)
+
+    send_update(LightningWeb.CredentialLive.OauthComponent,
+      id: "inner-form-#{socket.assigns.credential.id || "new"}",
+      sandbox: sandbox_value
+    )
+
+    {:noreply, socket |> assign(sandbox_value: sandbox_value)}
   end
 
   def handle_event(
@@ -361,6 +376,7 @@ defmodule LightningWeb.CredentialLive.FormComponent do
             form={f}
             type={@schema}
             action={@action}
+            sandbox_value={@sandbox_value}
             update_body={@update_body}
             scopes_changed={@scopes_changed}
           >
@@ -390,6 +406,15 @@ defmodule LightningWeb.CredentialLive.FormComponent do
                     on_change="scopes_changed"
                     selected_scopes={@scopes}
                     schema={@schema}
+                  />
+
+                  <.input
+                    type="checkbox"
+                    name="sandbox"
+                    value={@sandbox_value}
+                    phx-change="check_sandbox"
+                    label="Is this a sandbox?"
+                    class="mb-2"
                   />
                 <% end %>
                 <%= fieldset %>
@@ -458,6 +483,7 @@ defmodule LightningWeb.CredentialLive.FormComponent do
   attr :phx_target, :any, default: nil
   attr :parent_id, :string, required: false
   attr :schema, :string, required: false
+  attr :sandbox_value, :boolean, default: false
   attr :update_body, :any, required: false
   attr :scopes_changed, :boolean, required: false
   slot :inner_block
@@ -488,6 +514,7 @@ defmodule LightningWeb.CredentialLive.FormComponent do
       schema={@schema}
       parent_id={@parent_id}
       update_body={@update_body}
+      sandbox_value={@sandbox_value}
       scopes_changed={@scopes_changed}
     >
       <%= render_slot(@inner_block, l) %>
@@ -680,6 +707,11 @@ defmodule LightningWeb.CredentialLive.FormComponent do
 
   defp get_scopes(%{body: %{"scope" => scope}}), do: String.split(scope)
   defp get_scopes(_), do: []
+
+  defp get_sandbox_value(%{body: %{"sandbox" => sandbox}}),
+    do: String.to_atom(sandbox)
+
+  defp get_sandbox_value(_), do: false
 
   defp modal_title(assigns) do
     ~H"""

@@ -22,9 +22,14 @@ defmodule Lightning.AuthProviders.Salesforce do
     do:
       "https://help.salesforce.com/s/articleView?id=sf.remoteaccess_oauth_tokens_scopes.htm&type=5"
 
+  def wellknown_url(sandbox) do
+    prefix = if sandbox, do: "test", else: "login"
+    "https://#{prefix}.salesforce.com/.well-known/openid-configuration"
+  end
+
   @impl true
-  def build_client(opts \\ []) do
-    Common.build_client(:salesforce, opts)
+  def build_client(wellknown_url, opts \\ []) do
+    Common.build_client(:salesforce, wellknown_url, opts)
   end
 
   @impl true
@@ -35,24 +40,25 @@ defmodule Lightning.AuthProviders.Salesforce do
   end
 
   @impl true
-  def get_token(client, params) do
-    Common.get_token(client, params) |> Common.introspect(:salesforce)
+  def get_token(client, wellknown_url, params) do
+    Common.get_token(client, params)
+    |> Common.introspect(:salesforce, wellknown_url)
   end
 
   @impl true
-  def refresh_token(client, token) do
+  def refresh_token(client, token, wellknown_url) do
     Common.refresh_token(client, token)
-    |> Common.introspect(:salesforce)
+    |> Common.introspect(:salesforce, wellknown_url)
   end
 
   @impl true
-  def refresh_token(token) do
-    {:ok, %OAuth2.Client{} = client} = build_client()
-    refresh_token(client, token)
+  def refresh_token(token, wellknown_url) do
+    {:ok, %OAuth2.Client{} = client} = build_client(wellknown_url)
+    refresh_token(client, token, wellknown_url)
   end
 
   @impl true
-  def get_userinfo(client, token) do
-    Common.get_userinfo(client, token, :salesforce)
+  def get_userinfo(client, token, wellknown_url) do
+    Common.get_userinfo(client, token, wellknown_url)
   end
 end

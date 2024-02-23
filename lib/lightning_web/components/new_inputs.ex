@@ -162,7 +162,7 @@ defmodule LightningWeb.Components.NewInputs do
 
     ~H"""
     <div phx-feedback-for={@name}>
-      <label class="flex items-center gap-4 text-sm leading-6 text-slate-600">
+      <label class="flex items-center gap-2 text-sm leading-6 text-slate-600">
         <input type="hidden" name={@name} value="false" />
         <input
           type="checkbox"
@@ -170,7 +170,10 @@ defmodule LightningWeb.Components.NewInputs do
           name={@name}
           value="true"
           checked={@checked}
-          class="rounded border-slate-300 text-slate-900 focus:ring-0"
+          class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-600
+            checked:disabled:bg-indigo-300 checked:disabled:border-indigo-300
+            checked:bg-indigo-600 checked:border-indigo-600 focus:outline-none
+            transition duration-200 cursor-pointer text-indigo-600"
           {@rest}
         />
         <%= @label %>
