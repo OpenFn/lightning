@@ -288,8 +288,7 @@ defmodule Lightning.Factories do
     trigger =
       build(:trigger,
         type: :webhook,
-        enabled: true,
-        cron_expression: "* * * * *"
+        enabled: true
       )
 
     job =

@@ -144,7 +144,6 @@ defmodule LightningWeb.API.ProvisioningControllerTest do
       assert %{
                "id" => ^trigger_id,
                "type" => "webhook",
-               "cron_expression" => "* * * * *",
                "enabled" => true
              } = trigger_json
 
