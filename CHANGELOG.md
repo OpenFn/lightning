@@ -17,6 +17,9 @@ and this project adheres to
 
 ### Added
 
+- Display and edit OAuth credentials
+  scopes[#1706](https://github.com/OpenFn/Lightning/issues/1706)
+
 ### Changed
 - Stop sending `operating_system_detail` to the usage tracker
   [#1785](https://github.com/OpenFn/lightning/issues/1785)

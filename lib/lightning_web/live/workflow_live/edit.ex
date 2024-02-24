@@ -994,10 +994,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
     {:noreply, socket}
   end
 
-  def handle_info({:credential_type_changed, type}, socket) do
-    {:noreply, socket |> assign(:selected_credential_type, type)}
-  end
-
   def handle_info(%DataclipUpdated{dataclip: dataclip}, socket) do
     dataclip = Invocation.get_dataclip_details!(dataclip.id)
 

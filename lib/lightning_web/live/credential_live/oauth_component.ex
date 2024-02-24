@@ -5,13 +5,18 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
   import LightningWeb.OauthCredentialHelper
 
   alias Lightning.AuthProviders.Common
+  alias Lightning.Credentials
 
   require Logger
 
   attr :form, :map, required: true
   attr :id, :string, required: true
+  attr :parent_id, :string, required: true
   attr :update_body, :any, required: true
-  attr :provider, :any, required: true
+  attr :action, :any, required: true
+  attr :scopes_changed, :boolean, default: false
+  attr :schema, :string, required: true
+  attr :sandbox_value, :boolean, default: false
   slot :inner_block
 
   def fieldset(assigns) do
@@ -40,10 +45,14 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
          [
            module: __MODULE__,
            form: @form,
+           action: @action,
+           scopes_changed: @scopes_changed,
            token_body_changeset: @token_body_changeset,
            update_body: @update_body,
-           provider: @provider,
-           id: "inner-form-#{@id}"
+           sandbox_value: @sandbox_value,
+           schema: @schema,
+           id: "inner-form-#{@id}",
+           parent_id: @parent_id
          ],
          {__ENV__.module, __ENV__.function, __ENV__.file, __ENV__.line}
        ), @valid?}
@@ -60,7 +69,7 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
           No Client Configured
         </div>
         <span class="text-sm">
-          <%= provider_name(@provider) |> String.capitalize() %> authorization has not been set up on this instance.
+          <%= @provider %> authorization has not been set up on this instance.
         </span>
       </div>
     </div>
@@ -68,20 +77,38 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
   end
 
   def render(assigns) do
+    display_reauthorize_banner =
+      assigns.scopes_changed &&
+        (assigns.authorization_status === :success ||
+           (assigns.authorization_status === nil && assigns.action === :edit))
+
+    display_authorize_button =
+      assigns.action === :new and assigns.authorization_status === nil
+
+    display_userinfo_loader =
+      assigns.authorization_status === :pending && !display_reauthorize_banner
+
+    display_userinfo =
+      assigns.authorization_status === :success && !display_reauthorize_banner
+
+    display_error = assigns.authorization_status === :error
+
     assigns =
       assigns
       |> update(:form, fn form, %{token_body_changeset: token_body_changeset} ->
         # Merge in any changes that have been made to the TokenBody changeset
         # _inside_ this component.
+
         %{
           form
           | params: Map.put(form.params, "body", token_body_changeset.params)
         }
       end)
-      |> assign(
-        show_authorize:
-          !(assigns.authorizing || assigns.error || assigns.userinfo)
-      )
+      |> assign(display_reauthorize_banner: display_reauthorize_banner)
+      |> assign(display_authorize_button: display_authorize_button)
+      |> assign(display_userinfo_loader: display_userinfo_loader)
+      |> assign(display_userinfo: display_userinfo)
+      |> assign(display_error: display_error)
 
     ~H"""
     <fieldset id={@id}>
@@ -92,31 +119,35 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
         <%= Phoenix.HTML.Form.hidden_input(body_form, :refresh_token) %>
         <%= Phoenix.HTML.Form.hidden_input(body_form, :expires_at) %>
         <%= Phoenix.HTML.Form.hidden_input(body_form, :scope) %>
+        <%= Phoenix.HTML.Form.hidden_input(body_form, :sandbox) %>
         <%= Phoenix.HTML.Form.hidden_input(body_form, :instance_url) %>
       </div>
-      <div class="lg:grid lg:grid-cols-2 grid-cols-1 grid-flow-col mt-5">
-        <.authorize_button
-          :if={@show_authorize}
-          authorize_url={@authorize_url}
-          socket={@socket}
-          myself={@myself}
-          provider={@provider}
-        />
-        <.disabled_authorize_button
-          :if={!@show_authorize}
-          authorize_url={@authorize_url}
-          socket={@socket}
-          myself={@myself}
-          provider={@provider}
-        />
-        <.error_block
-          :if={@error}
-          type={@error}
-          myself={@myself}
-          provider={@provider}
-        />
-        <.userinfo :if={@userinfo} userinfo={@userinfo} />
-      </div>
+      <.reauthorize_banner
+        :if={@display_reauthorize_banner}
+        authorize_url={@authorize_url}
+        myself={@myself}
+      />
+      <.authorize_button
+        :if={@display_authorize_button}
+        authorize_url={@authorize_url}
+        socket={@socket}
+        myself={@myself}
+        provider={@provider}
+      />
+      <.userinfo_loader :if={@display_userinfo_loader} provider={@provider} />
+      <.userinfo
+        :if={@display_userinfo}
+        myself={@myself}
+        userinfo={@userinfo}
+        authorize_url={@authorize_url}
+      />
+      <.error_block
+        :if={@display_error}
+        type={@authorization_error}
+        myself={@myself}
+        provider={@provider}
+        authorize_url={@authorize_url}
+      />
     </fieldset>
     """
   end
@@ -136,115 +167,97 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
           src={
             Routes.static_path(
               @socket,
-              "/images/#{provider_name(@provider)}.png"
+              "/images/#{String.downcase(@provider)}.png"
             )
           }
           alt="Authorizing..."
           class="w-10 h-10 bg-white rounded"
         />
       </div>
-      <span class="text-xl">Sign in with <%= provider_name(@provider) %></span>
+      <span class="text-xl">Sign in with <%= @provider %></span>
     </.link>
     """
   end
 
-  def disabled_authorize_button(assigns) do
+  def reauthorize_banner(assigns) do
     ~H"""
-    <div>
-      <div class="bg-primary-300 text-white font-bold py-1 px-1 pr-3 rounded inline-flex items-center">
-        <div class="py-1 px-1 mr-2 bg-white rounded">
-          <img
-            src={
-              Routes.static_path(
-                @socket,
-                "/images/#{provider_name(@provider)}.png"
-              )
-            }
-            alt="Authorizing..."
-            class="w-10 h-10 bg-white rounded"
-          />
+    <div
+      id="re-authorize-banner"
+      class="rounded-md bg-blue-50 border border-blue-100 p-2 mt-5"
+    >
+      <div class="flex">
+        <div class="flex-shrink-0">
+          <svg
+            class="h-5 w-5 text-blue-400"
+            viewBox="0 0 20 20"
+            fill="currentColor"
+            aria-hidden="true"
+          >
+            <path
+              fill-rule="evenodd"
+              d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a.75.75 0 000 1.5h.253a.25.25 0 01.244.304l-.459 2.066A1.75 1.75 0 0010.747 15H11a.75.75 0 000-1.5h-.253a.25.25 0 01-.244-.304l.459-2.066A1.75 1.75 0 009.253 9H9z"
+              clip-rule="evenodd"
+            />
+          </svg>
         </div>
-        <span class="text-xl">
-          Sign in with <%= provider_name(@provider) |> String.capitalize() %>
-        </span>
-      </div>
-      <div class="text-sm ml-1">
-        Not working?
-        <.link
-          href={@authorize_url}
-          target="_blank"
-          phx-target={@myself}
-          phx-click="authorize_click"
-          class="hover:underline text-primary-900"
-        >
-          Reauthorize.
-        </.link>
+        <div class="ml-3 flex-1 md:flex md:justify-between">
+          <p class="text-sm text-slate-700">
+            Please re-authenticate to save your credential with the updated scopes
+          </p>
+          <p class="mt-3 text-sm md:ml-6 md:mt-0">
+            <.link
+              href={@authorize_url}
+              id="re-authorize-button"
+              target="_blank"
+              class="whitespace-nowrap font-medium text-blue-700 hover:text-blue-600"
+              phx-click="authorize_click"
+              phx-target={@myself}
+            >
+              Re-authenticate <span aria-hidden="true"> &rarr;</span>
+            </.link>
+          </p>
+        </div>
       </div>
     </div>
     """
   end
 
-  def error_block(%{type: :userinfo_failed} = assigns) do
+  def userinfo_loader(assigns) do
     ~H"""
-    <div class="mx-auto pt-2 max-w-md">
-      <div class="text-center">
-        <Heroicons.exclamation_triangle class="h-6 w-6 text-red-600 inline-block" />
-        <div class="text-base font-medium text-gray-900">
-          Something went wrong.
-        </div>
-        <p class="text-sm mt-2">
-          Failed retrieving your information.
-        </p>
-        <p class="text-sm mt-2">
-          Please
-          <a
-            href="#"
-            phx-click="try_userinfo_again"
-            phx-target={@myself}
-            class="hover:underline text-primary-900"
-          >
-            try again.
-          </a>
-        </p>
-        <.helpblock provider={@provider} type={@type} />
-      </div>
+    <div id="userinfo_loader" class="mt-5">
+      <.text_ping_loader>
+        Authenticating with <%= @provider %>
+      </.text_ping_loader>
     </div>
     """
   end
 
   def error_block(%{type: :token_failed} = assigns) do
     ~H"""
-    <div class="mx-auto pt-2 max-w-md">
-      <div class="text-center">
-        <Heroicons.exclamation_triangle class="h-6 w-6 text-red-600 inline-block" />
-        <div class="text-base font-medium text-gray-900">
-          Something went wrong.
+    <div class="rounded-md bg-yellow-50 border border-yellow-200 p-4">
+      <div class="flex">
+        <div class="flex-shrink-0">
+          <svg
+            class="h-5 w-5 text-yellow-400"
+            viewBox="0 0 20 20"
+            fill="currentColor"
+            aria-hidden="true"
+          >
+            <path
+              fill-rule="evenodd"
+              d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z"
+              clip-rule="evenodd"
+            />
+          </svg>
         </div>
-        <p class="text-sm mt-2">
-          Failed retrieving the token from the provider
-        </p>
-      </div>
-    </div>
-    """
-  end
-
-  def error_block(%{type: :no_refresh_token} = assigns) do
-    ~H"""
-    <div class="mx-auto pt-2 max-w-md">
-      <div class="text-center">
-        <Heroicons.exclamation_triangle class="h-6 w-6 text-red-600 inline-block" />
-        <div class="text-base font-medium text-gray-900">
-          Something went wrong.
+        <div class="ml-3">
+          <h3 class="text-sm font-medium text-yellow-800">Something went wrong.</h3>
+          <div class="mt-2 text-sm text-yellow-700">
+            <p class="text-sm mt-2">
+              Failed retrieving the token from the provider
+            </p>
+          </div>
         </div>
-        <p class="text-sm mt-2">
-          The token is missing it's
-          <code class="bg-gray-200 rounded-md p-1">refresh_token</code>
-          value.
-        </p>
-        <p class="text-sm mt-2">
-          Please reauthorize.
-        </p>
-        <.helpblock provider={@provider} type={@type} />
       </div>
     </div>
     """
@@ -252,26 +265,132 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
 
   def error_block(%{type: :refresh_failed} = assigns) do
     ~H"""
-    <div class="mx-auto pt-2 max-w-md">
-      <div class="text-center">
-        <Heroicons.exclamation_triangle class="h-6 w-6 text-red-600 inline-block" />
-        <div class="text-base font-medium text-gray-900">
-          Something went wrong.
+    <div class="rounded-md bg-yellow-50 border border-yellow-200 p-4">
+      <div class="flex">
+        <div class="flex-shrink-0">
+          <svg
+            class="h-5 w-5 text-yellow-400"
+            viewBox="0 0 20 20"
+            fill="currentColor"
+            aria-hidden="true"
+          >
+            <path
+              fill-rule="evenodd"
+              d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z"
+              clip-rule="evenodd"
+            />
+          </svg>
         </div>
-        <p class="text-sm mt-2">
-          Failed renewing your access token.
-        </p>
-        <p class="text-sm mt-2">
-          Please try again.
-        </p>
-        <.helpblock provider={@provider} type={@type} />
+        <div class="ml-3">
+          <h3 class="text-sm font-medium text-yellow-800">Something went wrong.</h3>
+          <div class="mt-2 text-sm text-yellow-700">
+            <p class="text-sm mt-2">
+              Failed renewing your access token. Please try again
+              <.link
+                href={@authorize_url}
+                target="_blank"
+                phx-target={@myself}
+                phx-click="authorize_click"
+                class="hover:underline text-primary-900"
+              >
+                here
+                <Heroicons.arrow_top_right_on_square class="h-4 w-4 text-indigo-600 inline-block" />.
+              </.link>
+            </p>
+            <p class="text-sm mt-2"></p>
+            <.helpblock provider={@provider} type={@type} />
+          </div>
+        </div>
+      </div>
+    </div>
+    """
+  end
+
+  def error_block(%{type: :userinfo_failed} = assigns) do
+    ~H"""
+    <div class="rounded-md bg-yellow-50 border border-yellow-200 p-4">
+      <div class="flex">
+        <div class="flex-shrink-0">
+          <svg
+            class="h-5 w-5 text-yellow-400"
+            viewBox="0 0 20 20"
+            fill="currentColor"
+            aria-hidden="true"
+          >
+            <path
+              fill-rule="evenodd"
+              d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z"
+              clip-rule="evenodd"
+            />
+          </svg>
+        </div>
+        <div class="ml-3">
+          <h3 class="text-sm font-medium text-yellow-800">Something went wrong.</h3>
+          <div class="mt-2 text-sm text-yellow-700">
+            <p class="text-sm mt-2">
+              Failed retrieving your information. Please
+              <a
+                href="#"
+                phx-click="try_userinfo_again"
+                phx-target={@myself}
+                class="hover:underline text-primary-900"
+              >
+                try again.
+              </a>
+            </p>
+            <.helpblock provider={@provider} type={@type} />
+          </div>
+        </div>
+      </div>
+    </div>
+    """
+  end
+
+  def error_block(%{type: :no_refresh_token} = assigns) do
+    ~H"""
+    <div class="rounded-md bg-yellow-50 border border-yellow-200 p-4">
+      <div class="flex">
+        <div class="flex-shrink-0">
+          <svg
+            class="h-5 w-5 text-yellow-400"
+            viewBox="0 0 20 20"
+            fill="currentColor"
+            aria-hidden="true"
+          >
+            <path
+              fill-rule="evenodd"
+              d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z"
+              clip-rule="evenodd"
+            />
+          </svg>
+        </div>
+        <div class="ml-3">
+          <h3 class="text-sm font-medium text-yellow-800">Something went wrong.</h3>
+          <div class="mt-2 text-sm text-yellow-700">
+            <p class="text-sm mt-2">
+              The token is missing it's
+              <code class="bg-gray-200 rounded-md p-1">refresh_token</code>
+              value. Please reauthorize <.link
+                href={@authorize_url}
+                target="_blank"
+                phx-target={@myself}
+                phx-click="authorize_click"
+                class="hover:underline text-primary-900"
+              >
+            here
+            <Heroicons.arrow_top_right_on_square class="h-4 w-4 text-indigo-600 inline-block" />.
+          </.link>.
+            </p>
+            <.helpblock provider={@provider} type={@type} />
+          </div>
+        </div>
       </div>
     </div>
     """
   end
 
   def helpblock(
-        %{provider: Lightning.AuthProviders.Google, type: :userinfo_failed} =
+        %{provider: "Google", type: :userinfo_failed} =
           assigns
       ) do
     ~H"""
@@ -292,7 +411,7 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
   end
 
   def helpblock(
-        %{provider: Lightning.AuthProviders.Google, type: :no_refresh_token} =
+        %{provider: "Google", type: :no_refresh_token} =
           assigns
       ) do
     ~H"""
@@ -313,7 +432,7 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
   end
 
   def helpblock(
-        %{provider: Lightning.AuthProviders.Google, type: :refresh_failed} =
+        %{provider: "Google", type: :refresh_failed} =
           assigns
       ) do
     ~H"""
@@ -334,7 +453,7 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
   end
 
   def helpblock(
-        %{provider: Lightning.AuthProviders.Salesforce, type: :userinfo_failed} =
+        %{provider: "Salesforce", type: :userinfo_failed} =
           assigns
       ) do
     ~H"""
@@ -355,7 +474,7 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
   end
 
   def helpblock(
-        %{provider: Lightning.AuthProviders.Salesforce, type: :no_refresh_token} =
+        %{provider: "Salesforce", type: :no_refresh_token} =
           assigns
       ) do
     ~H"""
@@ -376,7 +495,7 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
   end
 
   def helpblock(
-        %{provider: Lightning.AuthProviders.Salesforce, type: :refresh_failed} =
+        %{provider: "Salesforce", type: :refresh_failed} =
           assigns
       ) do
     ~H"""
@@ -398,14 +517,33 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
 
   def userinfo(assigns) do
     ~H"""
-    <div class="flex flex-col items-center self-center">
-      <div class="flex-none">
-        <img src={@userinfo["picture"]} class="h-12 w-12 rounded-full" />
-      </div>
-      <div class="flex mb-1 ml-2">
-        <span class="font-medium text-lg text-gray-700">
-          <%= @userinfo["name"] %>
-        </span>
+    <div class="flex flex-wrap items-center justify-between sm:flex-nowrap mt-5">
+      <div class="flex items-center">
+        <img
+          src={@userinfo["picture"]}
+          class="h-14 w-14 rounded-full"
+          alt={@userinfo["name"]}
+        />
+        <div class="ml-4">
+          <h3 class="text-base font-semibold leading-6 text-gray-900">
+            <%= @userinfo["name"] %>
+          </h3>
+          <p class="text-sm text-gray-500">
+            <a href="#"><%= @userinfo["email"] %></a>
+          </p>
+          <div class="text-sm mt-1">
+            Not working?
+            <.link
+              href={@authorize_url}
+              target="_blank"
+              phx-target={@myself}
+              phx-click="authorize_click"
+              class="hover:underline text-primary-900"
+            >
+              Reauthorize.
+            </.link>
+          </div>
+        </div>
       </div>
     </div>
     """
@@ -415,7 +553,7 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
   def mount(socket) do
     subscribe(socket.id)
 
-    {:ok, socket |> assign(userinfo: nil)}
+    {:ok, reset_assigns(socket)}
   end
 
   @impl true
@@ -423,9 +561,13 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
         %{
           form: _form,
           id: _id,
+          parent_id: _parent_id,
+          action: _action,
+          scopes_changed: _scopes_changed,
+          sandbox_value: _sandbox_value,
           token_body_changeset: _changeset,
           update_body: _body,
-          provider: _provider
+          schema: _schema
         } = params,
         socket
       ) do
@@ -443,25 +585,52 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
   end
 
   def update(%{code: code}, socket) do
-    handle_code_update(code, socket)
+    if socket.assigns.authorization_status !== :success do
+      handle_code_update(code, socket)
+    else
+      {:ok, socket}
+    end
   end
 
   def update(%{error: error}, socket) do
-    {:ok, socket |> assign(error: error, authorizing: false)}
+    {:ok,
+     socket |> assign(authorization_error: error, authorization_status: :error)}
   end
 
   def update(%{userinfo: userinfo}, socket) do
-    {:ok, socket |> assign(userinfo: userinfo, authorizing: false, error: nil)}
+    send_update(LightningWeb.CredentialLive.FormComponent,
+      id: socket.assigns.parent_id,
+      authorization_status: :success
+    )
+
+    {:ok, socket |> assign(userinfo: userinfo, authorization_status: :success)}
   end
 
   def update(%{scopes: scopes}, socket) do
     handle_scopes_update(scopes, socket)
   end
 
+  def update(%{sandbox: sandbox}, socket) do
+    wellknown_url = socket.assigns.adapter.wellknown_url(sandbox)
+
+    {:ok, client} = build_client(socket, wellknown_url)
+    state = build_state(socket.id, __MODULE__, socket.assigns.id)
+
+    authorize_url =
+      socket.assigns.adapter.authorize_url(client, state, socket.assigns.scopes)
+
+    {:ok,
+     socket
+     |> assign(sandbox: sandbox, client: client, authorize_url: authorize_url)}
+  end
+
   defp reset_assigns(socket) do
     socket
     |> assign_new(:userinfo, fn -> nil end)
-    |> assign_new(:authorizing, fn -> false end)
+    |> assign_new(:authorization_error, fn -> nil end)
+    |> assign_new(:authorization_status, fn -> nil end)
+    |> assign_new(:sandbox, fn -> false end)
+    |> assign_new(:scopes, fn -> [] end)
   end
 
   defp update_assigns(
@@ -469,29 +638,42 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
          %{
            form: form,
            id: id,
+           parent_id: parent_id,
+           action: action,
+           scopes_changed: scopes_changed,
+           sandbox_value: sandbox_value,
            token_body_changeset: token_body_changeset,
            update_body: update_body,
-           provider: provider
+           schema: schema
          },
          token
        ) do
+    adapter = Credentials.lookup_adapter(schema)
+
     socket
     |> assign(
       form: form,
       id: id,
+      parent_id: parent_id,
       token_body_changeset: token_body_changeset,
       token: token,
-      error: token_error(token),
       update_body: update_body,
-      provider: provider
+      adapter: adapter,
+      sandbox: sandbox_value,
+      provider: adapter.provider_name,
+      action: action,
+      scopes_changed: scopes_changed
     )
   end
 
   defp update_client(socket) do
+    wellknown_url =
+      socket.assigns.adapter.wellknown_url(socket.assigns.sandbox)
+
     socket
     |> assign_new(:client, fn %{token: token} ->
       socket
-      |> build_client()
+      |> build_client(wellknown_url)
       |> case do
         {:ok, client} -> client |> Map.put(:token, token)
         {:error, _} -> nil
@@ -499,11 +681,12 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
     end)
     |> assign_new(:authorize_url, fn %{client: client} ->
       if client do
-        socket.assigns.provider.authorize_url(
-          client,
-          build_state(socket.id, __MODULE__, socket.assigns.id),
-          []
-        )
+        %{optional: _optional_scopes, mandatory: mandatory_scopes} =
+          socket.assigns.adapter.scopes
+
+        state = build_state(socket.id, __MODULE__, socket.assigns.id)
+
+        socket.assigns.adapter.authorize_url(client, state, mandatory_scopes)
       end
     end)
   end
@@ -514,40 +697,54 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
     # NOTE: there can be _no_ refresh token if something went wrong like if the
     # previous auth didn't receive a refresh_token
 
-    case socket.assigns.provider.get_token(client, code: code) do
+    wellknown_url = socket.assigns.adapter.wellknown_url(socket.assigns.sandbox)
+
+    case socket.assigns.adapter.get_token(client, wellknown_url, code: code) do
       {:ok, client} ->
         client.token
         |> token_to_params()
+        |> maybe_add_sandbox(socket)
         |> socket.assigns.update_body.()
 
-        {:ok, socket |> assign(authorizing: false, client: client)}
-
-      {:error, %OAuth2.Response{status_code: 400, body: body}} ->
-        Logger.error("Failed retrieving token from provider:\n#{inspect(body)}")
-
-        send_update(self(), __MODULE__,
-          id: socket.assigns.id,
-          error: :token_failed
+        send_update(LightningWeb.CredentialLive.FormComponent,
+          id: socket.assigns.parent_id,
+          authorization_status: :success
         )
 
-        {:ok, socket}
+        {:ok,
+         socket
+         |> assign(
+           authorization_status: :success,
+           scopes_changed: false,
+           client: client
+         )}
+
+      {:error, %OAuth2.Response{status_code: 400, body: body} = _response} ->
+        Logger.error("Failed retrieving token from provider:\n#{inspect(body)}")
+
+        {:ok,
+         socket
+         |> assign(
+           authorization_error: :token_failed,
+           authorization_status: :error
+         )}
     end
   end
 
   defp handle_scopes_update(scopes, socket) do
-    authorize_url =
-      socket.assigns.provider.authorize_url(
-        socket.assigns.client,
-        build_state(socket.id, __MODULE__, socket.assigns.id),
-        scopes
-      )
+    state = build_state(socket.id, __MODULE__, socket.assigns.id)
 
-    {:ok, socket |> assign(authorize_url: authorize_url)}
+    authorize_url =
+      socket.assigns.client
+      |> socket.assigns.adapter.authorize_url(state, scopes)
+
+    {:ok,
+     socket |> assign(scopes: scopes) |> assign(authorize_url: authorize_url)}
   end
 
   @impl true
   def handle_event("authorize_click", _, socket) do
-    {:noreply, socket |> assign(authorizing: true, userinfo: nil, error: nil)}
+    {:noreply, socket |> assign(authorization_status: :pending)}
   end
 
   def handle_event("try_userinfo_again", _, socket) do
@@ -555,7 +752,7 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
 
     pid = self()
     Task.start(fn -> get_userinfo(pid, socket) end)
-    {:noreply, socket |> assign(authorizing: true, error: nil, userinfo: nil)}
+    {:noreply, socket |> assign(authorization_status: :pending)}
   end
 
   defp maybe_fetch_userinfo(%{assigns: %{client: nil}} = socket) do
@@ -576,17 +773,18 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
         Logger.debug("Refreshing expired token")
         Task.start(fn -> refresh_token(pid, socket) end)
       end
-
-      socket |> assign(authorizing: true)
-    else
-      socket
     end
+
+    socket
   end
 
   defp get_userinfo(pid, socket) do
-    %{id: id, client: client, token: token} = socket.assigns
+    %{id: id, client: client, token: token, sandbox: sandbox, adapter: adapter} =
+      socket.assigns
 
-    socket.assigns.provider.get_userinfo(client, token)
+    wellknown_url = adapter.wellknown_url(sandbox)
+
+    adapter.get_userinfo(client, token, wellknown_url)
     |> case do
       {:ok, resp} ->
         send_update(pid, __MODULE__, id: id, userinfo: resp.body)
@@ -599,13 +797,21 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
   end
 
   defp refresh_token(pid, socket) do
-    %{id: id, client: client, update_body: update_body, token: token} =
-      socket.assigns
+    %{
+      id: id,
+      client: client,
+      update_body: update_body,
+      token: token,
+      sandbox: sandbox,
+      adapter: adapter
+    } = socket.assigns
 
-    socket.assigns.provider.refresh_token(client, token)
+    wellknown_url = adapter.wellknown_url(sandbox)
+
+    adapter.refresh_token(client, token, wellknown_url)
     |> case do
       {:ok, token} ->
-        update_body.(token |> token_to_params())
+        update_body.(token |> token_to_params() |> maybe_add_sandbox(socket))
 
         Logger.debug("Retrieving userinfo")
         Task.start(fn -> get_userinfo(pid, socket) end)
@@ -617,8 +823,9 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
     end
   end
 
-  defp build_client(socket) do
-    socket.assigns.provider.build_client(
+  defp build_client(socket, wellknown_url) do
+    socket.assigns.adapter.build_client(
+      wellknown_url,
       callback_url: LightningWeb.RouteHelpers.oidc_callback_url()
     )
   end
@@ -656,19 +863,11 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
     )
   end
 
-  defp token_error(token) do
-    if is_nil(token.refresh_token) and token.access_token do
-      :no_refresh_token
+  defp maybe_add_sandbox(token, socket) do
+    if socket.assigns.provider === "Salesforce" do
+      Map.put_new(token, :sandbox, socket.assigns.sandbox)
     else
-      nil
+      token
     end
-  end
-
-  defp provider_name(Lightning.AuthProviders.Salesforce) do
-    "salesforce"
-  end
-
-  defp provider_name(Lightning.AuthProviders.Google) do
-    "google"
   end
 end

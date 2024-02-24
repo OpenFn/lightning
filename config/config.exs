@@ -63,8 +63,10 @@ config :lightning, :oauth_clients,
     wellknown_url: "https://accounts.google.com/.well-known/openid-configuration"
   ],
   salesforce: [
-    wellknown_url:
-      "https://login.salesforce.com/.well-known/openid-configuration"
+    prod_wellknown_url:
+      "https://login.salesforce.com/.well-known/openid-configuration",
+    sandbox_wellknown_url:
+      "https://test.salesforce.com/.well-known/openid-configuration"
   ]
 
 # Configure esbuild (the version is required)

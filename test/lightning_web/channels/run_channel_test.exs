@@ -346,11 +346,13 @@ defmodule LightningWeb.RunChannelTest do
     test "fetch:credential", %{socket: socket, credential: credential} do
       bypass = Bypass.open()
 
+      wellknown_url = "http://localhost:#{bypass.port}/auth/.well-known"
+
       Lightning.ApplicationHelpers.put_temporary_env(:lightning, :oauth_clients,
         google: [
           client_id: "foo",
           client_secret: "bar",
-          wellknown_url: "http://localhost:#{bypass.port}/auth/.well-known"
+          wellknown_url: wellknown_url
         ]
       )
 
@@ -360,7 +362,7 @@ defmodule LightningWeb.RunChannelTest do
 
       expect_token(
         bypass,
-        Lightning.AuthProviders.Common.get_wellknown!(:google),
+        Lightning.AuthProviders.Common.get_wellknown!(wellknown_url),
         Map.put(credential.body, "expires_at", new_expiry)
       )
 
@@ -370,6 +372,7 @@ defmodule LightningWeb.RunChannelTest do
         "access_token" => "ya29.a0AWY7CknfkidjXaoDTuNi",
         "expires_at" => ^new_expiry,
         "refresh_token" => "1//03dATMQTmE5NSCgYIARAAGAMSNwF",
+        "sandbox" => false,
         "scope" => "https://www.googleapis.com/auth/spreadsheets"
       }
     end

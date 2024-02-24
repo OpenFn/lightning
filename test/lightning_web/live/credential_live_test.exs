@@ -770,18 +770,21 @@ defmodule LightningWeb.CredentialLiveTest do
         salesforce: [
           client_id: "foo",
           client_secret: "bar",
-          wellknown_url: "http://localhost:#{bypass.port}/auth/.well-known",
-          introspect_url:
-            "http://localhost:#{bypass.port}/services/oauth2/introspect"
+          prod_wellknown_url: "http://localhost:#{bypass.port}/auth/.well-known",
+          sandbox_wellknown_url:
+            "http://localhost:#{bypass.port}/auth/.well-known"
         ]
       )
 
-      {:ok, bypass: bypass}
+      {:ok,
+       bypass: bypass,
+       wellknown_url: "http://localhost:#{bypass.port}/auth/.well-known"}
     end
 
     test "allows the user to define and save a new salesforce oauth credential",
          %{
            bypass: bypass,
+           wellknown_url: wellknown_url,
            conn: conn,
            user: user
          } do
@@ -789,7 +792,7 @@ defmodule LightningWeb.CredentialLiveTest do
 
       expect_token(
         bypass,
-        Lightning.AuthProviders.Common.get_wellknown!(:salesforce),
+        Lightning.AuthProviders.Common.get_wellknown!(wellknown_url),
         %{
           access_token: "ya29.a0AVvZ...",
           refresh_token: "1//03vpp6Li...",
@@ -802,7 +805,7 @@ defmodule LightningWeb.CredentialLiveTest do
 
       expect_userinfo(
         bypass,
-        Lightning.AuthProviders.Common.get_wellknown!(:salesforce),
+        Lightning.AuthProviders.Common.get_wellknown!(wellknown_url),
         """
         {"picture": "image.png", "name": "Test User"}
         """
@@ -810,7 +813,7 @@ defmodule LightningWeb.CredentialLiveTest do
 
       expect_introspect(
         bypass,
-        Lightning.AuthProviders.Common.get_wellknown!(:salesforce),
+        Lightning.AuthProviders.Common.get_wellknown!(wellknown_url),
         %{
           access_token: "ya29.a0AVvZ...",
           refresh_token: "1//03vpp6Li...",
@@ -868,7 +871,7 @@ defmodule LightningWeb.CredentialLiveTest do
       # Rerender as the broadcast above has altered the LiveView state
       index_live |> render()
 
-      assert index_live |> has_element?("span", "Test User")
+      assert index_live |> has_element?("h3", "Test User")
 
       refute index_live |> submit_disabled()
 
@@ -898,8 +901,113 @@ defmodule LightningWeb.CredentialLiveTest do
              } = token
     end
 
+    test "re-authenticate banner is not rendered the first time we pick permissions",
+         %{
+           bypass: bypass,
+           conn: conn,
+           user: _user
+         } do
+      expect_wellknown(bypass)
+
+      {:ok, index_live, _html} = live(conn, ~p"/credentials")
+
+      index_live |> select_credential_type("salesforce_oauth")
+      index_live |> click_continue()
+
+      assert index_live
+             |> has_element?("#scope_selection_new")
+
+      refute index_live |> has_element?("#reauthorize-banner")
+      assert index_live |> has_element?("#authorize-button")
+
+      ~W(cdp_query_api pardot_api cdp_profile_api chatter_api cdp_ingest_api)
+      |> Enum.each(fn scope ->
+        index_live
+        |> element("#scope_selection_new_#{scope}")
+        |> render_change(%{"_target" => [scope], "#{scope}" => "on"})
+      end)
+
+      refute index_live |> has_element?("#reauthorize-banner")
+      assert index_live |> has_element?("#authorize-button")
+    end
+
+    test "re-authenticate banner rendered when scopes are changed",
+         %{
+           bypass: bypass,
+           conn: conn,
+           user: user
+         } do
+      expect_wellknown(bypass)
+
+      credential =
+        insert(:credential,
+          name: "my-credential",
+          schema: "salesforce_oauth",
+          body: %{
+            "access_token" => "access_token",
+            "refresh_token" => "refresh_token",
+            "expires_at" => Timex.now() |> Timex.shift(days: 4),
+            "scope" => "cdp_query_api pardot_api cdp_profile_api"
+          },
+          user: user
+        )
+
+      {:ok, index_live, _html} = live(conn, ~p"/credentials")
+
+      index_live |> select_credential_type("salesforce_oauth")
+      index_live |> click_continue()
+
+      assert index_live
+             |> has_element?("#scope_selection_new")
+
+      refute index_live |> has_element?("#re-authorize-banner")
+      refute index_live |> has_element?("#re-authorize-button")
+
+      ~W(chatter_api cdp_ingest_api)
+      |> Enum.each(fn scope ->
+        index_live
+        |> element("#scope_selection_#{credential.id}_#{scope}")
+        |> render_change(%{"_target" => [scope], "#{scope}" => "on"})
+      end)
+
+      assert index_live |> has_element?("#re-authorize-banner")
+      assert index_live |> has_element?("#re-authorize-button")
+    end
+
+    test "rendering error component for various error type" do
+      render_component(
+        &LightningWeb.CredentialLive.OauthComponent.error_block/1,
+        type: :token_failed
+      ) =~ "Failed retrieving the token from the provider"
+
+      render_component(
+        &LightningWeb.CredentialLive.OauthComponent.error_block/1,
+        type: :refresh_failed,
+        authorize_url: "https://www",
+        myself: nil,
+        provider: "Salesforce"
+      ) =~ "Failed renewing your access token"
+
+      render_component(
+        &LightningWeb.CredentialLive.OauthComponent.error_block/1,
+        type: :userinfo_failed,
+        authorize_url: "https://www",
+        myself: nil,
+        provider: "Salesforce"
+      ) =~ "Failed retrieving your information"
+
+      render_component(
+        &LightningWeb.CredentialLive.OauthComponent.error_block/1,
+        type: :no_refresh_token,
+        authorize_url: "https://www",
+        myself: nil,
+        provider: "Salesforce"
+      ) =~ "The token is missing it's"
+    end
+
     test "correctly renders a valid existing token", %{
       conn: conn,
+      wellknown_url: wellknown_url,
       user: user,
       bypass: bypass
     } do
@@ -907,7 +1015,7 @@ defmodule LightningWeb.CredentialLiveTest do
 
       expect_userinfo(
         bypass,
-        Lightning.AuthProviders.Common.get_wellknown!(:salesforce),
+        Lightning.AuthProviders.Common.get_wellknown!(wellknown_url),
         %{
           picture: "image.png",
           name: "Test User"
@@ -938,40 +1046,7 @@ defmodule LightningWeb.CredentialLiveTest do
 
       edit_live |> render()
 
-      assert edit_live |> has_element?("span", "Test User")
-    end
-
-    test "renders an error when a token has no refresh token", %{
-      conn: conn,
-      user: user,
-      bypass: bypass
-    } do
-      expect_wellknown(bypass)
-
-      expires_at = DateTime.to_unix(DateTime.utc_now()) + 3600
-
-      credential =
-        credential_fixture(
-          user_id: user.id,
-          schema: "salesforce_oauth",
-          body: %{
-            access_token: "ya29.a0AVvZ...",
-            refresh_token: "",
-            expires_at: expires_at,
-            scope: "scope1 scope2"
-          }
-        )
-
-      {:ok, edit_live, _html} = live(conn, ~p"/credentials")
-
-      # Wait for next `send_update` triggered by the token Task calls
-      assert_receive {:plug_conn, :sent}
-
-      edit_live
-      |> element("#inner-form-#{credential.id}")
-      |> render()
-
-      assert edit_live |> has_element?("p", "The token is missing it's")
+      assert edit_live |> has_element?("h3", "Test User")
     end
 
     test "renewing an expired but valid token", %{
@@ -984,17 +1059,19 @@ defmodule LightningWeb.CredentialLiveTest do
         salesforce: [
           client_id: "foo",
           client_secret: "bar",
-          wellknown_url: "http://localhost:#{bypass.port}/auth/.well-known",
-          introspect_url:
-            "http://localhost:#{bypass.port}/services/oauth2/introspect"
+          prod_wellknown_url: "http://localhost:#{bypass.port}/auth/.well-known",
+          sandbox_wellknown_url:
+            "http://localhost:#{bypass.port}/auth/.well-known"
         ]
       )
+
+      wellknown_url = "http://localhost:#{bypass.port}/auth/.well-known"
 
       expect_wellknown(bypass)
 
       expect_userinfo(
         bypass,
-        Lightning.AuthProviders.Common.get_wellknown!(:salesforce),
+        Lightning.AuthProviders.Common.get_wellknown!(wellknown_url),
         """
         {"picture": "image.png", "name": "Test User"}
         """
@@ -1016,7 +1093,7 @@ defmodule LightningWeb.CredentialLiveTest do
 
       expect_token(
         bypass,
-        Lightning.AuthProviders.Common.get_wellknown!(:salesforce),
+        Lightning.AuthProviders.Common.get_wellknown!(wellknown_url),
         %{
           access_token: "ya29.a0AVvZ...",
           refresh_token: "1//03vpp6Li...",
@@ -1029,7 +1106,7 @@ defmodule LightningWeb.CredentialLiveTest do
 
       expect_introspect(
         bypass,
-        Lightning.AuthProviders.Common.get_wellknown!(:salesforce)
+        Lightning.AuthProviders.Common.get_wellknown!(wellknown_url)
       )
 
       {:ok, edit_live, _html} = live(conn, ~p"/credentials")
@@ -1039,12 +1116,13 @@ defmodule LightningWeb.CredentialLiveTest do
 
       edit_live |> render()
 
-      assert edit_live |> has_element?("span", "Test User")
+      assert edit_live |> has_element?("h3", "Test User")
     end
 
     @tag :capture_log
     test "failing to retrieve userinfo", %{
       user: user,
+      wellknown_url: wellknown_url,
       bypass: bypass,
       conn: conn
     } do
@@ -1052,7 +1130,7 @@ defmodule LightningWeb.CredentialLiveTest do
 
       expect_userinfo(
         bypass,
-        Lightning.AuthProviders.Common.get_wellknown!(:salesforce),
+        Lightning.AuthProviders.Common.get_wellknown!(wellknown_url),
         {400,
          """
          {
@@ -1079,7 +1157,7 @@ defmodule LightningWeb.CredentialLiveTest do
 
       {:ok, edit_live, _html} = live(conn, ~p"/credentials")
 
-      assert wait_for_assigns(edit_live, :error, credential.id)
+      assert wait_for_assigns(edit_live, :authorization_status, credential.id)
 
       edit_live |> render()
 
@@ -1089,7 +1167,7 @@ defmodule LightningWeb.CredentialLiveTest do
       # Now respond with success
       expect_userinfo(
         bypass,
-        Lightning.AuthProviders.Common.get_wellknown!(:salesforce),
+        Lightning.AuthProviders.Common.get_wellknown!(wellknown_url),
         """
         {"picture": "image.png", "name": "Test User"}
         """
@@ -1099,12 +1177,13 @@ defmodule LightningWeb.CredentialLiveTest do
 
       assert wait_for_assigns(edit_live, :userinfo, credential.id)
 
-      assert edit_live |> has_element?("span", "Test User")
+      assert edit_live |> has_element?("h3", "Test User")
     end
 
     @tag :capture_log
     test "renewing an expired but invalid token", %{
       user: user,
+      wellknown_url: wellknown_url,
       bypass: bypass,
       conn: conn
     } do
@@ -1112,7 +1191,7 @@ defmodule LightningWeb.CredentialLiveTest do
 
       expect_token(
         bypass,
-        Lightning.AuthProviders.Common.get_wellknown!(:salesforce),
+        Lightning.AuthProviders.Common.get_wellknown!(wellknown_url),
         {400,
          """
          {
@@ -1139,12 +1218,12 @@ defmodule LightningWeb.CredentialLiveTest do
 
       {:ok, edit_live, _html} = live(conn, ~p"/credentials")
 
-      assert wait_for_assigns(edit_live, :error, credential.id)
+      assert wait_for_assigns(edit_live, :authorization_status, credential.id)
 
       edit_live |> render()
 
       assert edit_live
-             |> has_element?("p", "Failed renewing your access token.")
+             |> has_element?("p", " Failed renewing your access token.")
     end
 
     test "salesforce oauth credential will render a scope pick list", %{
@@ -1158,9 +1237,9 @@ defmodule LightningWeb.CredentialLiveTest do
         salesforce: [
           client_id: "foo",
           client_secret: "bar",
-          wellknown_url: "http://localhost:#{bypass.port}/auth/.well-known",
-          introspect_url:
-            "http://localhost:#{bypass.port}/services/oauth2/introspect"
+          prod_wellknown_url: "http://localhost:#{bypass.port}/auth/.well-known",
+          sandbox_wellknown_url:
+            "http://localhost:#{bypass.port}/auth/.well-known"
         ]
       )
 
@@ -1253,11 +1332,14 @@ defmodule LightningWeb.CredentialLiveTest do
         ]
       )
 
-      {:ok, bypass: bypass}
+      {:ok,
+       bypass: bypass,
+       wellknown_url: "http://localhost:#{bypass.port}/auth/.well-known"}
     end
 
     test "allows the user to define and save a new google sheets credential", %{
       bypass: bypass,
+      wellknown_url: wellknown_url,
       conn: conn,
       user: user
     } do
@@ -1265,7 +1347,7 @@ defmodule LightningWeb.CredentialLiveTest do
 
       expect_token(
         bypass,
-        Lightning.AuthProviders.Common.get_wellknown!(:google),
+        Lightning.AuthProviders.Common.get_wellknown!(wellknown_url),
         %{
           access_token: "ya29.a0AVvZ...",
           refresh_token: "1//03vpp6Li...",
@@ -1278,7 +1360,7 @@ defmodule LightningWeb.CredentialLiveTest do
 
       expect_userinfo(
         bypass,
-        Lightning.AuthProviders.Common.get_wellknown!(:google),
+        Lightning.AuthProviders.Common.get_wellknown!(wellknown_url),
         """
         {"picture": "image.png", "name": "Test User"}
         """
@@ -1331,7 +1413,7 @@ defmodule LightningWeb.CredentialLiveTest do
       # Rerender as the broadcast above has altered the LiveView state
       index_live |> render()
 
-      assert index_live |> has_element?("span", "Test User")
+      assert index_live |> has_element?("h3", "Test User")
 
       refute index_live |> submit_disabled()
 
@@ -1362,6 +1444,7 @@ defmodule LightningWeb.CredentialLiveTest do
 
     test "correctly renders a valid existing token", %{
       conn: conn,
+      wellknown_url: wellknown_url,
       user: user,
       bypass: bypass
     } do
@@ -1369,7 +1452,7 @@ defmodule LightningWeb.CredentialLiveTest do
 
       expect_userinfo(
         bypass,
-        Lightning.AuthProviders.Common.get_wellknown!(:google),
+        Lightning.AuthProviders.Common.get_wellknown!(wellknown_url),
         %{
           picture: "image.png",
           name: "Test User"
@@ -1400,44 +1483,12 @@ defmodule LightningWeb.CredentialLiveTest do
 
       edit_live |> render()
 
-      assert edit_live |> has_element?("span", "Test User")
-    end
-
-    test "renders an error when a token has no refresh token", %{
-      conn: conn,
-      user: user,
-      bypass: bypass
-    } do
-      expect_wellknown(bypass)
-
-      expires_at = DateTime.to_unix(DateTime.utc_now()) + 3600
-
-      credential =
-        credential_fixture(
-          user_id: user.id,
-          schema: "googlesheets",
-          body: %{
-            access_token: "ya29.a0AVvZ...",
-            refresh_token: "",
-            expires_at: expires_at,
-            scope: "scope1 scope2"
-          }
-        )
-
-      {:ok, edit_live, _html} = live(conn, ~p"/credentials")
-
-      # Wait for next `send_update` triggered by the token Task calls
-      assert_receive {:plug_conn, :sent}
-
-      edit_live
-      |> element("#inner-form-#{credential.id}")
-      |> render()
-
-      assert edit_live |> has_element?("p", "The token is missing it's")
+      assert edit_live |> has_element?("h3", "Test User")
     end
 
     test "renewing an expired but valid token", %{
       user: user,
+      wellknown_url: wellknown_url,
       bypass: bypass,
       conn: conn
     } do
@@ -1445,7 +1496,7 @@ defmodule LightningWeb.CredentialLiveTest do
 
       expect_userinfo(
         bypass,
-        Lightning.AuthProviders.Common.get_wellknown!(:google),
+        Lightning.AuthProviders.Common.get_wellknown!(wellknown_url),
         """
         {"picture": "image.png", "name": "Test User"}
         """
@@ -1467,7 +1518,7 @@ defmodule LightningWeb.CredentialLiveTest do
 
       expect_token(
         bypass,
-        Lightning.AuthProviders.Common.get_wellknown!(:google),
+        Lightning.AuthProviders.Common.get_wellknown!(wellknown_url),
         %{
           access_token: "ya29.a0AVvZ...",
           refresh_token: "1//03vpp6Li...",
@@ -1485,12 +1536,13 @@ defmodule LightningWeb.CredentialLiveTest do
 
       edit_live |> render()
 
-      assert edit_live |> has_element?("span", "Test User")
+      assert edit_live |> has_element?("h3", "Test User")
     end
 
     @tag :capture_log
     test "failing to retrieve userinfo", %{
       user: user,
+      wellknown_url: wellknown_url,
       bypass: bypass,
       conn: conn
     } do
@@ -1498,7 +1550,7 @@ defmodule LightningWeb.CredentialLiveTest do
 
       expect_userinfo(
         bypass,
-        Lightning.AuthProviders.Common.get_wellknown!(:google),
+        Lightning.AuthProviders.Common.get_wellknown!(wellknown_url),
         {400,
          """
          {
@@ -1524,7 +1576,7 @@ defmodule LightningWeb.CredentialLiveTest do
 
       {:ok, edit_live, _html} = live(conn, ~p"/credentials")
 
-      assert wait_for_assigns(edit_live, :error, credential.id)
+      assert wait_for_assigns(edit_live, :authorization_status, credential.id)
 
       edit_live |> render()
 
@@ -1534,7 +1586,7 @@ defmodule LightningWeb.CredentialLiveTest do
       # Now respond with success
       expect_userinfo(
         bypass,
-        Lightning.AuthProviders.Common.get_wellknown!(:google),
+        Lightning.AuthProviders.Common.get_wellknown!(wellknown_url),
         """
         {"picture": "image.png", "name": "Test User"}
         """
@@ -1544,12 +1596,13 @@ defmodule LightningWeb.CredentialLiveTest do
 
       assert wait_for_assigns(edit_live, :userinfo, credential.id)
 
-      assert edit_live |> has_element?("span", "Test User")
+      assert edit_live |> has_element?("h3", "Test User")
     end
 
     @tag :capture_log
     test "renewing an expired but invalid token", %{
       user: user,
+      wellknown_url: wellknown_url,
       bypass: bypass,
       conn: conn
     } do
@@ -1557,7 +1610,7 @@ defmodule LightningWeb.CredentialLiveTest do
 
       expect_token(
         bypass,
-        Lightning.AuthProviders.Common.get_wellknown!(:google),
+        Lightning.AuthProviders.Common.get_wellknown!(wellknown_url),
         {400,
          """
          {
@@ -1583,7 +1636,7 @@ defmodule LightningWeb.CredentialLiveTest do
 
       {:ok, edit_live, _html} = live(conn, ~p"/credentials")
 
-      assert wait_for_assigns(edit_live, :error, credential.id)
+      assert wait_for_assigns(edit_live, :authorization_status, credential.id)
 
       edit_live |> render()
 

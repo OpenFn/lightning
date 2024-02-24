@@ -468,6 +468,11 @@ defmodule LightningWeb.ProjectLive.Settings do
     end
   end
 
+  def handle_info({:forward, mod, opts}, socket) do
+    send_update(mod, opts)
+    {:noreply, socket}
+  end
+
   def handle_info({:repos_fetched, result}, socket) do
     case result do
       {:error, error} ->

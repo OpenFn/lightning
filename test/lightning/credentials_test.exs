@@ -612,7 +612,6 @@ defmodule Lightning.CredentialsTest do
         %{provider: :salesforce, schema: "salesforce_oauth"}
       ]
       |> Enum.each(fn oauth ->
-        # Setup OAuth client environment for the current provider
         Lightning.ApplicationHelpers.put_temporary_env(
           :lightning,
           :oauth_clients,
@@ -621,21 +620,27 @@ defmodule Lightning.CredentialsTest do
              [
                client_id: "client_id",
                client_secret: "secret",
-               wellknown_url: "http://localhost:#{bypass.port}/auth/.well-known"
+               wellknown_url: "http://localhost:#{bypass.port}/auth/.well-known",
+               prod_wellknown_url:
+                 "http://localhost:#{bypass.port}/auth/.well-known",
+               sandbox_wellknown_url:
+                 "http://localhost:#{bypass.port}/auth/.well-known"
              ]}
           ]
         )
+
+        wellknown_url = "http://localhost:#{bypass.port}/auth/.well-known"
 
         expect_wellknown(bypass)
 
         expect_token(
           bypass,
-          Lightning.AuthProviders.Common.get_wellknown!(oauth.provider)
+          Lightning.AuthProviders.Common.get_wellknown!(wellknown_url)
         )
 
         expect_introspect(
           bypass,
-          Lightning.AuthProviders.Common.get_wellknown!(oauth.provider)
+          Lightning.AuthProviders.Common.get_wellknown!(wellknown_url)
         )
 
         credential =
