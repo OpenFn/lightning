@@ -13,7 +13,7 @@
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-EPF2X7PV.js"></script>
-    <script src="dist/sidebar_items-21756633.js"></script>
+    <script src="dist/sidebar_items-E417B376.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -165,7 +165,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#build_client/2" translate="no">build_client(provider, opts \\ [])</a>
+        <a href="#build_client/3" translate="no">build_client(provider, wellknown_url, opts \\ [])</a>
 
       </div>
 
@@ -195,7 +195,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#get_userinfo/3" translate="no">get_userinfo(client, token, provider)</a>
+        <a href="#get_userinfo/3" translate="no">get_userinfo(client, token, wellknown_url)</a>
 
       </div>
 
@@ -205,7 +205,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#get_wellknown/1" translate="no">get_wellknown(provider)</a>
+        <a href="#get_wellknown/1" translate="no">get_wellknown(wellknown_url)</a>
 
       </div>
 
@@ -215,7 +215,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#get_wellknown!/1" translate="no">get_wellknown!(provider)</a>
+        <a href="#get_wellknown!/1" translate="no">get_wellknown!(wellknown_url)</a>
 
       </div>
 
@@ -225,7 +225,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#introspect/2" translate="no">introspect(result, provider)</a>
+        <a href="#introspect/3" translate="no">introspect(result, provider, wellknown_url)</a>
 
       </div>
 
@@ -278,7 +278,7 @@ will expire before the default buffer (in the next 5 minutes) we return
     </a>
     <h1 class="signature" translate="no">authorize_url(client, state, scopes, opts \\ [])</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers/common.ex#L165" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers/common.ex#L163" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -291,18 +291,18 @@ will expire before the default buffer (in the next 5 minutes) we return
 <p>Constructs the authorization URL with the given client, state, scopes, and options.</p>
   </section>
 </section>
-<section class="detail" id="build_client/2">
+<section class="detail" id="build_client/3">
 
-    <span id="build_client/1"></span>
+    <span id="build_client/2"></span>
 
   <div class="detail-header">
-    <a href="#build_client/2" class="detail-link" title="Link to this function">
+    <a href="#build_client/3" class="detail-link" title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">build_client(provider, opts \\ [])</h1>
+    <h1 class="signature" translate="no">build_client(provider, wellknown_url, opts \\ [])</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers/common.ex#L134" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers/common.ex#L128" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -324,7 +324,7 @@ will expire before the default buffer (in the next 5 minutes) we return
     </a>
     <h1 class="signature" translate="no">get_config(provider)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers/common.ex#L240" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers/common.ex#L237" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -346,7 +346,7 @@ will expire before the default buffer (in the next 5 minutes) we return
     </a>
     <h1 class="signature" translate="no">get_token(client, params)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers/common.ex#L70" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers/common.ex#L64" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -366,9 +366,9 @@ will expire before the default buffer (in the next 5 minutes) we return
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">get_userinfo(client, token, provider)</h1>
+    <h1 class="signature" translate="no">get_userinfo(client, token, wellknown_url)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers/common.ex#L95" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers/common.ex#L89" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -388,9 +388,9 @@ will expire before the default buffer (in the next 5 minutes) we return
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">get_wellknown(provider)</h1>
+    <h1 class="signature" translate="no">get_wellknown(wellknown_url)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers/common.ex#L104" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers/common.ex#L98" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -410,9 +410,9 @@ will expire before the default buffer (in the next 5 minutes) we return
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">get_wellknown!(provider)</h1>
+    <h1 class="signature" translate="no">get_wellknown!(wellknown_url)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers/common.ex#L120" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers/common.ex#L114" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -425,16 +425,16 @@ will expire before the default buffer (in the next 5 minutes) we return
 <p>Fetches the well-known configuration from the OAuth provider and raises an error if not successful.</p>
   </section>
 </section>
-<section class="detail" id="introspect/2">
+<section class="detail" id="introspect/3">
 
   <div class="detail-header">
-    <a href="#introspect/2" class="detail-link" title="Link to this function">
+    <a href="#introspect/3" class="detail-link" title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">introspect(result, provider)</h1>
+    <h1 class="signature" translate="no">introspect(result, provider, wellknown_url)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers/common.ex#L180" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers/common.ex#L176" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -456,7 +456,7 @@ will expire before the default buffer (in the next 5 minutes) we return
     </a>
     <h1 class="signature" translate="no">refresh_token(client, token)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers/common.ex#L76" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers/common.ex#L70" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -482,7 +482,7 @@ will expire before the default buffer (in the next 5 minutes) we return
     </a>
     <h1 class="signature" translate="no">still_fresh(token_body, threshold \\ 5, time_unit \\ :minute)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers/common.ex#L217" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers/common.ex#L214" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
