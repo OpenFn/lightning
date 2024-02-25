@@ -399,24 +399,23 @@ defmodule LightningWeb.CredentialLive.FormComponent do
                   <div class="border-t border-secondary-200"></div>
                 </div>
                 <!-- # TODO: Make this part of the fieldset to avoid the if block -->
-                <%= if @schema in ["salesforce_oauth", "googlesheets"] do %>
-                  <LightningWeb.CredentialLive.Scopes.scopes_picklist
-                    id={"scope_selection_#{@credential.id || "new"}"}
-                    target={@myself}
-                    on_change="scopes_changed"
-                    selected_scopes={@scopes}
-                    schema={@schema}
-                  />
-
-                  <.input
-                    type="checkbox"
-                    name="sandbox"
-                    value={@sandbox_value}
-                    phx-change="check_sandbox"
-                    label="Is this a sandbox?"
-                    class="mb-2"
-                  />
-                <% end %>
+                <LightningWeb.CredentialLive.Scopes.scopes_picklist
+                  :if={@schema in ["salesforce_oauth", "googlesheets"]}
+                  id={"scope_selection_#{@credential.id || "new"}"}
+                  target={@myself}
+                  on_change="scopes_changed"
+                  selected_scopes={@scopes}
+                  schema={@schema}
+                />
+                <.input
+                  :if={@schema in ["salesforce_oauth"]}
+                  type="checkbox"
+                  name="sandbox"
+                  value={@sandbox_value}
+                  phx-change="check_sandbox"
+                  label="Sandbox instance?"
+                  class="mb-2"
+                />
                 <%= fieldset %>
               </div>
 
@@ -708,8 +707,13 @@ defmodule LightningWeb.CredentialLive.FormComponent do
   defp get_scopes(%{body: %{"scope" => scope}}), do: String.split(scope)
   defp get_scopes(_), do: []
 
-  defp get_sandbox_value(%{body: %{"sandbox" => sandbox}}),
-    do: String.to_atom(sandbox)
+  defp get_sandbox_value(%{body: %{"sandbox" => sandbox}}) do
+    if is_boolean(sandbox) do
+      sandbox
+    else
+      String.to_atom(sandbox)
+    end
+  end
 
   defp get_sandbox_value(_), do: false
 
