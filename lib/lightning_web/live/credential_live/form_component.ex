@@ -413,7 +413,7 @@ defmodule LightningWeb.CredentialLive.FormComponent do
                   name="sandbox"
                   value={@sandbox_value}
                   phx-change="check_sandbox"
-                  label="Is this a sandbox?"
+                  label="Sandbox instance?"
                   class="mb-2"
                 />
                 <%= fieldset %>

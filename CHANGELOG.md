@@ -21,6 +21,10 @@ and this project adheres to
 
 ### Fixed
 
+- Fixed error in Credentials without `sanbox` field set; only display `sandbox`
+  field for Salesforce oauth credentials.
+  [#1798](https://github.com/OpenFn/lightning/issues/1798)
+
 ## [v2.0.4] - 2024-02-24
 
 ### Added
