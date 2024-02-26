@@ -42,7 +42,35 @@ defmodule Lightning.VersionControl.GithubClient do
     end
   end
 
-  defp build_client(installation_id) do
+  def create_blob(client, repo, body) do
+    post(client, "/repos/#{repo}/git/blobs", body)
+  end
+
+  def create_tree(client, repo, body) do
+    post(client, "/repos/#{repo}/git/trees", body)
+  end
+
+  def get_commit(client, repo, ref) do
+    get(client, "/repos/#{repo}/commits/#{ref}")
+  end
+
+  def create_commit(client, repo, body) do
+    post(client, "/repos/#{repo}/git/commits", body)
+  end
+
+  def create_ref(client, repo, body) do
+    post(client, "/repos/#{repo}/git/refs", body)
+  end
+
+  def update_ref(client, repo, ref, body) do
+    post(client, "/repos/#{repo}/git/refs/#{ref}", body)
+  end
+
+  def delete_ref(client, repo, ref) do
+    delete(client, "/repos/#{repo}/git/refs/#{ref}")
+  end
+
+  def build_client(installation_id) do
     %{cert: cert, app_id: app_id} =
       Application.get_env(:lightning, :github_app)
       |> Map.new()

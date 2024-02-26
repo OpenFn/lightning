@@ -10,7 +10,10 @@ defmodule Lightning.VersionControl do
 
   alias Lightning.Repo
   alias Lightning.VersionControl.GithubClient
+  alias Lightning.VersionControl.GithubError
   alias Lightning.VersionControl.ProjectRepoConnection
+
+  @github_assets_dir Application.app_dir(:lightning, "priv/github")
 
   @doc """
   Creates a connection between a project and a github repo
@@ -70,17 +73,28 @@ defmodule Lightning.VersionControl do
     |> Repo.update()
   end
 
-  def add_github_repo_and_branch(project_id, repo, branch) do
-    pending_installation =
+  def connect_github_repo(project_id, repo, branch) do
+    installation =
       Repo.one!(
         from(prc in ProjectRepoConnection,
-          where: prc.project_id == ^project_id
+          where:
+            prc.project_id == ^project_id and
+              not is_nil(prc.github_installation_id)
         )
       )
 
-    pending_installation
-    |> ProjectRepoConnection.changeset(%{repo: repo, branch: branch})
-    |> Repo.update()
+    case push_workflow_files(installation.github_installation_id, repo, branch) do
+      {:ok, _result} ->
+        installation
+        |> ProjectRepoConnection.changeset(%{repo: repo, branch: branch})
+        |> Repo.update()
+
+      {:error, %Tesla.Env{body: body}} ->
+        {:error, body}
+
+      {:error, other} ->
+        {:error, other}
+    end
   end
 
   def fetch_installation_repos(project_id) do
@@ -116,5 +130,64 @@ defmodule Lightning.VersionControl do
     |> then(fn config ->
       Keyword.get(config, :cert) && Keyword.get(config, :app_id)
     end)
+  end
+
+  @spec push_workflow_files(
+          installation_id :: String.t(),
+          repo :: String.t(),
+          branch :: String.t()
+        ) :: {:ok, Tesla.Env.t()} | {:error, Tesla.Env.t() | GithubError.t()}
+  defp push_workflow_files(installation_id, repo, branch) do
+    with {:ok, client} <- GithubClient.build_client(installation_id),
+         {:ok, %{status: 201, body: pull_blob}} <-
+           GithubClient.create_blob(client, repo, %{content: pull_yml()}),
+         {:ok, %{status: 201, body: deploy_blob}} <-
+           GithubClient.create_blob(client, repo, %{content: deploy_yml()}),
+         {:ok, %{status: 200, body: base_commit}} <-
+           GithubClient.get_commit(client, repo, "heads/#{branch}"),
+         {:ok, %{status: 201, body: created_tree}} <-
+           GithubClient.create_tree(client, repo, %{
+             base_tree: base_commit["commit"]["tree"]["sha"],
+             tree: [
+               %{
+                 path: ".github/workflows/pull.yml",
+                 mode: "100644",
+                 type: "blob",
+                 sha: pull_blob["sha"]
+               },
+               %{
+                 path: ".github/workflows/deploy.yml",
+                 mode: "100644",
+                 type: "blob",
+                 sha: deploy_blob["sha"]
+               }
+             ]
+           }),
+         {:ok, %{status: 201, body: created_commit}} <-
+           GithubClient.create_commit(client, repo, %{
+             message: "configure OpenFn",
+             tree: created_tree["sha"],
+             parents: [base_commit["sha"]]
+           }),
+         {:ok, %{status: 200, body: updated_ref}} <-
+           GithubClient.update_ref(client, repo, "heads/#{branch}", %{
+             sha: created_commit["sha"]
+           }) do
+      {:ok, updated_ref}
+    else
+      {:ok, %Tesla.Env{} = result} ->
+        {:error, result}
+
+      other ->
+        other
+    end
+  end
+
+  defp pull_yml do
+    @github_assets_dir |> Path.join("pull.yml") |> File.read!()
+  end
+
+  defp deploy_yml do
+    @github_assets_dir |> Path.join("deploy.yml") |> File.read!()
   end
 end

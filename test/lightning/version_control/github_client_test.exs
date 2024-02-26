@@ -18,21 +18,23 @@ defmodule Lightning.VersionControl.GithubClientTest do
         app_name: "test-github"
       )
 
-      Tesla.Mock.mock(fn env ->
+      Mox.stub(Lightning.GithubClient.Mock, :call, fn env, _opts ->
         case env.url do
           "https://api.github.com/app/installations/some-id/access_tokens" ->
-            %Tesla.Env{status: 401, body: %{}}
+            {:ok, %Tesla.Env{status: 401, body: %{}}}
 
           "https://api.github.com/app/installations/fail-id/access_tokens" ->
-            %Tesla.Env{status: 404, body: %{}}
+            {:ok, %Tesla.Env{status: 404, body: %{}}}
 
           "https://api.github.com/installation/repositories" ->
-            %Tesla.Env{status: 404, body: %{}}
+            {:ok, %Tesla.Env{status: 404, body: %{}}}
 
           "https://api.github.com/repos/some/repo/branches" ->
-            %Tesla.Env{status: 401, body: %{}}
+            {:ok, %Tesla.Env{status: 401, body: %{}}}
         end
       end)
+
+      :ok
     end
 
     @tag :capture_log
@@ -93,24 +95,27 @@ defmodule Lightning.VersionControl.GithubClientTest do
         app_name: "test-github"
       )
 
-      Tesla.Mock.mock(fn env ->
+      Mox.stub(Lightning.GithubClient.Mock, :call, fn env, _opts ->
         case env.url do
           "https://api.github.com/app/installations/some-id/access_tokens" ->
-            %Tesla.Env{status: 201, body: %{"token" => "some-token"}}
+            {:ok, %Tesla.Env{status: 201, body: %{"token" => "some-token"}}}
 
           "https://api.github.com/installation/repositories" ->
-            %Tesla.Env{
-              status: 200,
-              body: %{"repositories" => [%{"full_name" => "org/repo"}]}
-            }
+            {:ok,
+             %Tesla.Env{
+               status: 200,
+               body: %{"repositories" => [%{"full_name" => "org/repo"}]}
+             }}
 
           "https://api.github.com/repos/some/repo/branches" ->
-            %Tesla.Env{status: 200, body: [%{"name" => "master"}]}
+            {:ok, %Tesla.Env{status: 200, body: [%{"name" => "master"}]}}
 
           "https://api.github.com/repos/some/repo/dispatches" ->
-            %Tesla.Env{status: 204, body: %{}}
+            {:ok, %Tesla.Env{status: 204, body: %{}}}
         end
       end)
+
+      :ok
     end
 
     test "client can fetch installation repos" do
