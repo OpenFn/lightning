@@ -19,6 +19,10 @@ and this project adheres to
 
 ### Changed
 
+- Require setting `IS_RESETTABLE_DEMO` to "yes" via ENV before allowing the
+  destructive `Demo.reset_demo/0` function from being called.
+  [#1720](https://github.com/OpenFn/lightning/issues/1720)
+
 ### Fixed
 
 ## [v2.0.5] - 2024-02-25
