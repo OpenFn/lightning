@@ -49,11 +49,10 @@ defmodule Lightning.Runs.PromExPluginText do
           [@stalled_run_threshold_seconds]
         }
 
-      [stalled_run_polling | _] =
-        PromExPlugin.polling_metrics(plugin_config())
+      stalled_run_polling =
+        plugin_config() |> find_metric_group(:lightning_stalled_run_metrics)
 
       assert %PromEx.MetricTypes.Polling{
-               group_name: :lightning_stalled_run_metrics,
                poll_rate: 5000,
                measurements_mfa: ^expected_mfa,
                metrics: [metric | _]
@@ -67,7 +66,7 @@ defmodule Lightning.Runs.PromExPluginText do
              } = metric
     end
 
-    test "returns a polling instance for run performance" do
+    test "returns a polling group for run queue metrics" do
       expected_mfa =
         {
           Lightning.Runs.PromExPlugin,
@@ -75,30 +74,61 @@ defmodule Lightning.Runs.PromExPluginText do
           [@run_performance_age_seconds]
         }
 
-      [_ | [run_performance_polling]] =
-        PromExPlugin.polling_metrics(plugin_config())
+      run_performance_polling =
+        plugin_config() |> find_metric_group(:lightning_run_queue_metrics)
 
       assert %PromEx.MetricTypes.Polling{
-               group_name: :lightning_run_queue_metrics,
                poll_rate: 5000,
-               measurements_mfa: ^expected_mfa,
-               metrics: [metric | _]
+               measurements_mfa: ^expected_mfa
              } = run_performance_polling
+    end
 
-      assert %Telemetry.Metrics.LastValue{
-               name: [
-                 :lightning,
-                 :run,
-                 :queue,
-                 :claim,
-                 :average_duration,
-                 :milliseconds
-               ],
-               event_name: [:lightning, :run, :queue, :claim],
-               description: "The average time taken before a run is claimed",
-               measurement: :average_duration,
-               unit: :millisecond
-             } = metric
+    test "run queue metrics group includes claim duration metric" do
+      %{metrics: metrics} =
+        plugin_config() |> find_metric_group(:lightning_run_queue_metrics)
+
+      metric =
+        metrics
+        |> find_metric([
+          :lightning,
+          :run,
+          :queue,
+          :claim,
+          :average_duration,
+          :milliseconds
+        ])
+
+      assert(
+        %Telemetry.Metrics.LastValue{
+          event_name: [:lightning, :run, :queue, :claim],
+          description: "The average time taken before a run is claimed",
+          measurement: :average_duration,
+          unit: :millisecond
+        } = metric
+      )
+    end
+
+    defp find_metric_group(plugin_config, group_name) do
+      [group | []] =
+        plugin_config
+        |> PromExPlugin.polling_metrics()
+        |> Enum.filter(fn
+          %{group_name: ^group_name} -> true
+          _ -> false
+        end)
+
+      group
+    end
+
+    defp find_metric(metrics, metric_name) do
+      [metric | []] =
+        metrics
+        |> Enum.filter(fn
+          %{name: ^metric_name} -> true
+          _ -> false
+        end)
+
+      metric
     end
   end
 
