@@ -758,7 +758,10 @@
                       </div>
                     </div>
                   <% end %>
-                  <div class="bg-amber-200 flex gap-3 rounded-md p-3 my-4">
+                  <div
+                    :if={@show_repo_setup && !@show_sync_button}
+                    class="bg-amber-200 flex gap-3 rounded-md p-3 my-4"
+                  >
                     <NewInputs.input
                       type="checkbox"
                       field={f[:accept]}
