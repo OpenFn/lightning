@@ -151,8 +151,8 @@ defmodule Lightning.AuthProviders.Common do
 
           {:ok, client}
 
-        {:error, :timeout} ->
-          {:error, :timeout}
+        {:error, reason} ->
+          {:error, reason}
       end
     end
   end
