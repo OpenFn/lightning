@@ -382,27 +382,8 @@ defmodule LightningWeb.ProjectLive.Settings do
   end
 
   def handle_event("save_repo", %{"repo" => repo, "branch" => branch}, socket) do
-    %{project: project} = socket.assigns
-
     if socket.assigns.can_install_github do
-      {:ok, %{github_installation_id: github_installation_id}} =
-        VersionControl.connect_github_repo(
-          project.id,
-          repo,
-          branch
-        )
-
-      {:noreply,
-       socket
-       |> assign(
-         show_repo_setup: false,
-         show_sync_button: true,
-         project_repo_connection: %{
-           "branch" => branch,
-           "repo" => repo,
-           "github_installation_id" => github_installation_id
-         }
-       )}
+      {:noreply, connect_github_repo(socket, repo, branch)}
     else
       {:noreply,
        put_flash(socket, :error, "You are not authorized to perform this action")}
@@ -658,6 +639,29 @@ defmodule LightningWeb.ProjectLive.Settings do
 
       _other ->
         nil
+    end
+  end
+
+  defp connect_github_repo(socket, repo, branch) do
+    case VersionControl.connect_github_repo(
+           socket.assigns.project.id,
+           repo,
+           branch
+         ) do
+      {:ok, %{github_installation_id: github_installation_id}} ->
+        socket
+        |> assign(
+          show_repo_setup: false,
+          show_sync_button: true,
+          project_repo_connection: %{
+            "branch" => branch,
+            "repo" => repo,
+            "github_installation_id" => github_installation_id
+          }
+        )
+
+      {:error, _error} ->
+        put_flash(socket, :error, "Oops! Error connecting to github")
     end
   end
 end

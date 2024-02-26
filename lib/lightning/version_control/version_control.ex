@@ -8,9 +8,9 @@ defmodule Lightning.VersionControl do
 
   import Ecto.Query, warn: false
 
-  alias Lightning.VersionControl.GithubError
   alias Lightning.Repo
   alias Lightning.VersionControl.GithubClient
+  alias Lightning.VersionControl.GithubError
   alias Lightning.VersionControl.ProjectRepoConnection
 
   @github_assets_dir Application.app_dir(:lightning, "priv/github")

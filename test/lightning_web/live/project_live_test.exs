@@ -943,8 +943,64 @@ defmodule LightningWeb.ProjectLiveTest do
         )
 
       assert view
-             |> render_click("save_repo", %{branch: "master", repo: "some/repo"}) =~
+             |> render_submit("save_repo", %{branch: "master", repo: "some/repo"}) =~
                "Repository:\n                            <a href=\"https://www.github.com/some/repo\" target=\"_blank\" class=\"hover:underline text-primary-600\">\nsome/repo"
+    end
+
+    @tag role: :admin
+    test "flashes an error when an error occurs when saving the repo connection",
+         %{
+           conn: conn,
+           project: project,
+           user: user
+         } do
+      put_temporary_env(:lightning, :github_app,
+        cert: @cert,
+        app_id: "111111",
+        app_name: "test-github"
+      )
+
+      insert(:project_repo_connection, %{
+        project: project,
+        user: user,
+        branch: nil,
+        repo: nil,
+        github_installation_id: "some-id"
+      })
+
+      Mox.expect(Lightning.GithubClient.Mock, :call, 4, fn env, _opts ->
+        case env.url do
+          # called twice. in LiveView and when commiting workflow files
+          "https://api.github.com/app/installations/some-id/access_tokens" ->
+            {:ok, %Tesla.Env{status: 201, body: %{"token" => "some-token"}}}
+
+          "https://api.github.com/installation/repositories" ->
+            {:ok,
+             %Tesla.Env{
+               status: 200,
+               body: %{"repositories" => [%{"full_name" => "some/repo"}]}
+             }}
+
+          # return 403 when creating blob.
+          "https://api.github.com/repos/some/repo/git/blobs" ->
+            {:ok,
+             %Tesla.Env{
+               status: 403,
+               body: %{}
+             }}
+        end
+      end)
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/settings#vcs"
+        )
+
+      html =
+        render_submit(view, "save_repo", %{branch: "master", repo: "some/repo"})
+
+      assert html =~ "Oops! Error connecting to github"
     end
 
     test "project editors and viewers cannot save github repo connection", %{
