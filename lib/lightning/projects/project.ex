@@ -86,7 +86,8 @@ defmodule Lightning.Projects.Project do
 
     history_retention_period = get_field(changeset, :history_retention_period)
 
-    if changeset.valid? and dataclip_retention_period > history_retention_period do
+    if changeset.valid? and is_integer(dataclip_retention_period) and
+         dataclip_retention_period > history_retention_period do
       add_error(
         changeset,
         :dataclip_retention_period,
