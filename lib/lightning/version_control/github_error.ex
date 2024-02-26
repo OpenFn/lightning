@@ -2,6 +2,7 @@ defmodule Lightning.VersionControl.GithubError do
   @moduledoc """
   GitHub Error exception
   """
+  @type t :: %__MODULE__{}
   defexception [:code, :message, :meta]
 
   def new(code, msg, meta) when is_binary(msg) do

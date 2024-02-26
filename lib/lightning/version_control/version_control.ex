@@ -8,6 +8,7 @@ defmodule Lightning.VersionControl do
 
   import Ecto.Query, warn: false
 
+  alias Lightning.VersionControl.GithubError
   alias Lightning.Repo
   alias Lightning.VersionControl.GithubClient
   alias Lightning.VersionControl.ProjectRepoConnection
@@ -90,6 +91,9 @@ defmodule Lightning.VersionControl do
 
       {:error, %Tesla.Env{body: body}} ->
         {:error, body}
+
+      {:error, other} ->
+        {:error, other}
     end
   end
 
@@ -132,7 +136,7 @@ defmodule Lightning.VersionControl do
           installation_id :: String.t(),
           repo :: String.t(),
           branch :: String.t()
-        ) :: {:ok, Tesla.Env.t()} | {:error, Tesla.Env.t()}
+        ) :: {:ok, Tesla.Env.t()} | {:error, Tesla.Env.t() | GithubError.t()}
   defp push_workflow_files(installation_id, repo, branch) do
     with {:ok, client} <- GithubClient.build_client(installation_id),
          {:ok, %{status: 201, body: pull_blob}} <-
@@ -173,6 +177,9 @@ defmodule Lightning.VersionControl do
     else
       {:ok, %Tesla.Env{} = result} ->
         {:error, result}
+
+      other ->
+        other
     end
   end
 
