@@ -381,15 +381,15 @@ defmodule LightningWeb.ProjectLive.Settings do
      |> push_patch(to: ~p"/projects/#{project_id}/settings#vcs")}
   end
 
-  def handle_event("save_repo", params, socket) do
+  def handle_event("save_repo", %{"repo" => repo, "branch" => branch}, socket) do
     %{project: project} = socket.assigns
 
     if socket.assigns.can_install_github do
       {:ok, %{github_installation_id: github_installation_id}} =
         VersionControl.connect_github_repo(
           project.id,
-          params["repo"],
-          params["branch"]
+          repo,
+          branch
         )
 
       {:noreply,
@@ -398,8 +398,8 @@ defmodule LightningWeb.ProjectLive.Settings do
          show_repo_setup: false,
          show_sync_button: true,
          project_repo_connection: %{
-           "branch" => params["branch"],
-           "repo" => params["repo"],
+           "branch" => branch,
+           "repo" => repo,
            "github_installation_id" => github_installation_id
          }
        )}

@@ -128,6 +128,11 @@ defmodule Lightning.VersionControl do
     end)
   end
 
+  @spec push_workflow_files(
+          installation_id :: String.t(),
+          repo :: String.t(),
+          branch :: String.t()
+        ) :: {:ok, Tesla.Env.t()} | {:error, Tesla.Env.t()}
   defp push_workflow_files(installation_id, repo, branch) do
     with {:ok, client} <- GithubClient.build_client(installation_id),
          {:ok, %{status: 201, body: pull_blob}} <-
@@ -168,9 +173,6 @@ defmodule Lightning.VersionControl do
     else
       {:ok, %Tesla.Env{} = result} ->
         {:error, result}
-
-      other ->
-        other
     end
   end
 
