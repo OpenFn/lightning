@@ -70,7 +70,7 @@ defmodule Lightning.Runs.PromExPluginText do
       expected_mfa =
         {
           Lightning.Runs.PromExPlugin,
-          :run_claim_duration,
+          :run_queue_metrics,
           [@run_performance_age_seconds]
         }
 
@@ -188,12 +188,12 @@ defmodule Lightning.Runs.PromExPluginText do
     end
   end
 
-  describe ".run_claim_duration" do
+  describe ".run_queue_metrics" do
     setup do
       %{event: [:lightning, :run, :queue, :claim], age: 20}
     end
 
-    test "executes a metric that returns the average queue delay",
+    test "triggers a metric that returns the average queue delay",
          %{event: event, age: age} do
       # Comfortable offset in the hopes it will prevent flickering
       eligible_offset = -(age - 10)
@@ -219,7 +219,7 @@ defmodule Lightning.Runs.PromExPluginText do
       expected_performance_ms =
         (duration_until_claimed_1 + duration_until_claimed_2) * 1000 / 2
 
-      PromExPlugin.run_claim_duration(age)
+      PromExPlugin.run_queue_metrics(age)
 
       assert_received {
         ^event,
@@ -229,7 +229,7 @@ defmodule Lightning.Runs.PromExPluginText do
       }
     end
 
-    test "does not fire a metric if the Repo is not available when called",
+    test "does not trigger metrics if the Repo is not available when called",
          %{event: event, age: age} do
       # This scenario occurs during server startup
       ref =
@@ -243,7 +243,7 @@ defmodule Lightning.Runs.PromExPluginText do
         [:passthrough],
         whereis: fn _name -> nil end
       ) do
-        PromExPlugin.run_claim_duration(age)
+        PromExPlugin.run_queue_metrics(age)
       end
 
       refute_received {
