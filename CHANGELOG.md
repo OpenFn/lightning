@@ -21,6 +21,9 @@ and this project adheres to
 
 ### Changed
 
+- Change bucket size used by the run queue delay custom metric.
+  [#1790](https://github.com/OpenFn/lightning/issues/1790)
+
 ### Fixed
 
 ## [v2.0.5] - 2024-02-25
