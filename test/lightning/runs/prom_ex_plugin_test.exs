@@ -4,7 +4,10 @@ defmodule Lightning.Runs.PromExPluginText do
   import Lightning.Factories
   import Mock
 
+  alias Lightning.Run
   alias Lightning.Runs.PromExPlugin
+
+  require Run
 
   @queue_metrics_period_seconds 5
   @poll_rate @queue_metrics_period_seconds * 1000
@@ -73,7 +76,7 @@ defmodule Lightning.Runs.PromExPluginText do
         {
           Lightning.Runs.PromExPlugin,
           :run_queue_metrics,
-          [@run_performance_age_seconds]
+          [@run_performance_age_seconds, @queue_metrics_period_seconds]
         }
 
       run_performance_polling =
@@ -128,6 +131,30 @@ defmodule Lightning.Runs.PromExPluginText do
         %Telemetry.Metrics.LastValue{
           event_name: [:lightning, :run, :queue, :available],
           description: "The number of available runs in the queue",
+          measurement: :count
+        } = metric
+      )
+    end
+
+    test "run queue metrics group includes number of runs finalised" do
+      %{metrics: metrics} =
+        plugin_config() |> find_metric_group(:lightning_run_queue_metrics)
+
+      metric =
+        metrics
+        |> find_metric([
+          :lightning,
+          :run,
+          :queue,
+          :finalised,
+          :count
+        ])
+
+      assert(
+        %Telemetry.Metrics.LastValue{
+          event_name: [:lightning, :run, :queue, :finalised],
+          description:
+            "The number of runs finalised during the consideration window",
           measurement: :count
         } = metric
       )
@@ -218,7 +245,8 @@ defmodule Lightning.Runs.PromExPluginText do
       %{
         age: 20,
         available_event: [:lightning, :run, :queue, :available],
-        claim_event: [:lightning, :run, :queue, :claim]
+        claim_event: [:lightning, :run, :queue, :claim],
+        finalised_event: [:lightning, :run, :queue, :finalised]
       }
     end
 
@@ -249,7 +277,7 @@ defmodule Lightning.Runs.PromExPluginText do
       expected_performance_ms =
         (duration_until_claimed_1 + duration_until_claimed_2) * 1000 / 2
 
-      PromExPlugin.run_queue_metrics(age)
+      PromExPlugin.run_queue_metrics(age, @queue_metrics_period_seconds)
 
       assert_received {
         ^event,
@@ -274,7 +302,47 @@ defmodule Lightning.Runs.PromExPluginText do
       _available_run_3 = available_run(now, 0)
       _other_run = other_run(now, 0, 0)
 
-      PromExPlugin.run_queue_metrics(age)
+      PromExPlugin.run_queue_metrics(age, @queue_metrics_period_seconds)
+
+      assert_received {
+        ^event,
+        ^ref,
+        %{count: 3},
+        %{}
+      }
+    end
+
+    test "triggers a metric to count finalised runs", config do
+      %{finalised_event: event, age: age} = config
+
+      ref =
+        :telemetry_test.attach_event_handlers(
+          self(),
+          [event]
+        )
+
+      now = DateTime.utc_now()
+
+      _excluded_not_finalised =
+        now |> run_with_finished_at(0, :available)
+
+      _excluded_outside_window =
+        now
+        |> run_with_finished_at(-(@queue_metrics_period_seconds + 1), :success)
+
+      _included_finalised_1 =
+        now
+        |> run_with_finished_at(0, :cancelled)
+
+      _included_finalised_2 =
+        now
+        |> run_with_finished_at(0, :success)
+
+      _included_finalised_3 =
+        now
+        |> run_with_finished_at(0, :failed)
+
+      PromExPlugin.run_queue_metrics(age, @queue_metrics_period_seconds)
 
       assert_received {
         ^event,
@@ -304,7 +372,7 @@ defmodule Lightning.Runs.PromExPluginText do
         [:passthrough],
         whereis: fn _name -> nil end
       ) do
-        PromExPlugin.run_queue_metrics(age)
+        PromExPlugin.run_queue_metrics(age, @queue_metrics_period_seconds)
       end
 
       refute_received {
@@ -396,6 +464,40 @@ defmodule Lightning.Runs.PromExPluginText do
     end
   end
 
+  describe ".count_finalised_runs" do
+    test "triggers an event counting all runs finalised within the window" do
+      now = DateTime.utc_now()
+      window_seconds = 10
+      include_offset = -(window_seconds - 1)
+      exclude_offset = -(window_seconds + 1)
+      final_states = Run.final_states()
+
+      finalised_count = Enum.count(final_states)
+
+      assert finalised_count > 0
+
+      # Build the finalised runs
+      for state <- final_states do
+        now |> run_with_finished_at(include_offset, state)
+      end
+
+      _excluded_outside_window_1 =
+        now |> run_with_finished_at(exclude_offset, hd(final_states))
+
+      _excluded_outside_window_2 =
+        now |> run_with_finished_at(exclude_offset, hd(final_states))
+
+      _excluded_not_finalised =
+        now |> run_with_finished_at(include_offset, :available)
+
+      threshold_time = DateTime.add(now, -window_seconds)
+
+      assert(
+        PromExPlugin.count_finalised_runs(threshold_time) == finalised_count
+      )
+    end
+  end
+
   defp available_run(now, time_offset) do
     insert(
       :run,
@@ -416,6 +518,21 @@ defmodule Lightning.Runs.PromExPluginText do
       state: :claimed,
       inserted_at: inserted_at,
       claimed_at: claimed_at,
+      dataclip: build(:dataclip),
+      starting_job: build(:job),
+      work_order: build(:workorder)
+    )
+  end
+
+  defp run_with_finished_at(now, finished_at_offset, state) do
+    inserted_at = DateTime.add(now, -100)
+    finished_at = DateTime.add(now, finished_at_offset)
+
+    insert(
+      :run,
+      state: state,
+      inserted_at: inserted_at,
+      finished_at: finished_at,
       dataclip: build(:dataclip),
       starting_job: build(:job),
       work_order: build(:workorder)

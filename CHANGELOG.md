@@ -16,6 +16,8 @@ and this project adheres to
 ## [Unreleased]
 
 ### Added
+- Add custom metric to track the number of finalised runs.
+  [#1790](https://github.com/OpenFn/lightning/issues/1790)
 
 ### Changed
 
