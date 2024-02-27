@@ -94,6 +94,31 @@ defmodule Lightning.Accounts.UserNotifier do
   end
 
   @doc """
+  Deliver an email to notify the user about a data retention setting change made in their project
+  """
+  @spec send_data_retention_change_email(
+          user :: map(),
+          updated_project :: map()
+        ) :: {:ok, term()} | {:error, term()}
+  def send_data_retention_change_email(user, updated_project) do
+    deliver(
+      user.email,
+      "Important Update to Your #{updated_project.name} Data-Retention Policy",
+      """
+      Hi #{user.first_name},
+
+      We'd like to inform you that the data retention policy for your project, #{updated_project.name}, was recently updated.
+      If you haven't approved this, we recommend logging into your Lightning account to reset the retention policy.
+
+      Should you require assistance with your account, feel free to contact #{admin()}.
+
+      Best regards,
+      The OpenFn Team
+      """
+    )
+  end
+
+  @doc """
   Deliver an email to notify the user about their account being deleted
   """
   def send_deletion_notification_email(user) do

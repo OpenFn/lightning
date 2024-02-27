@@ -91,7 +91,7 @@ defmodule Lightning.Projects.Project do
       add_error(
         changeset,
         :dataclip_retention_period,
-        "must be less or equal to the history retention period"
+        "dataclip retention period must be less or equal to the history retention period"
       )
     else
       changeset

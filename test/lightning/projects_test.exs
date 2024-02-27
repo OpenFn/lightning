@@ -10,6 +10,7 @@ defmodule Lightning.ProjectsTest do
   import Lightning.AccountsFixtures
   import Lightning.CredentialsFixtures
   import Lightning.Factories
+  import Swoosh.TestAssertions
 
   describe "projects" do
     @invalid_attrs %{name: nil}
@@ -141,6 +142,73 @@ defmodule Lightning.ProjectsTest do
                Projects.update_project(project, update_attrs)
 
       assert project.requires_mfa
+    end
+
+    test "update_project/2 updates the data retention periods" do
+      project =
+        insert(:project,
+          project_users:
+            Enum.map(
+              [
+                :viewer,
+                :editor,
+                :admin,
+                :owner
+              ],
+              fn role -> build(:project_user, user: build(:user), role: role) end
+            )
+        )
+
+      update_attrs = %{
+        history_retention_period: 14,
+        dataclip_retention_period: 7
+      }
+
+      assert {:ok, %Project{} = updated_project} =
+               Projects.update_project(project, update_attrs)
+
+      # admins and owners receives an email
+      admins =
+        Enum.filter(project.project_users, fn %{role: role} ->
+          role in [:admin, :owner]
+        end)
+
+      assert Enum.count(admins) == 2
+
+      for %{user: user} <- admins do
+        assert_email_sent(data_retention_change_email(user, updated_project))
+      end
+
+      # editors and viewers do not receive any email
+      non_admins =
+        Enum.filter(project.project_users, fn %{role: role} ->
+          role in [:editor, :viewer]
+        end)
+
+      assert Enum.count(non_admins) == 2
+
+      for %{user: user} <- non_admins do
+        assert_email_not_sent(data_retention_change_email(user, updated_project))
+      end
+
+      # no email is sent when there's no change
+      assert {:ok, updated_project} =
+               Projects.update_project(updated_project, update_attrs)
+
+      for %{user: user} <- project.project_users do
+        assert_email_not_sent(data_retention_change_email(user, updated_project))
+      end
+
+      # no email is sent when there's an error in the changeset
+      assert {:error, _changeset} =
+               Projects.update_project(updated_project, %{
+                 history_retention_period: "xyz",
+                 dataclip_retention_period: 7
+               })
+
+      for %{user: user} <- project.project_users do
+        assert_email_not_sent(data_retention_change_email(user, updated_project))
+      end
     end
 
     test "update_project/2 with invalid data returns error changeset" do
@@ -616,5 +684,29 @@ defmodule Lightning.ProjectsTest do
       workflow_1_job: hd(workflow_1.jobs),
       workflow_2_job: hd(workflow_2.jobs)
     }
+  end
+
+  defp data_retention_change_email(user, project) do
+    body = """
+    Hi #{user.first_name},
+
+    We'd like to inform you that the data retention policy for your project, #{project.name}, was recently updated.
+    If you haven't approved this, we recommend logging into your Lightning account to reset the retention policy.
+
+    Should you require assistance with your account, feel free to contact #{Application.get_env(:lightning, :email_addresses)[:admin]}.
+
+    Best regards,
+    The OpenFn Team
+    """
+
+    Swoosh.Email.new()
+    |> Swoosh.Email.to(user.email)
+    |> Swoosh.Email.from(
+      {"Lightning", Application.get_env(:lightning, :email_addresses)[:admin]}
+    )
+    |> Swoosh.Email.subject(
+      "Important Update to Your #{project.name} Data-Retention Policy"
+    )
+    |> Swoosh.Email.text_body(body)
   end
 end
