@@ -26,7 +26,18 @@ defmodule Lightning.Runs.PromExPlugin do
           measurement: :delay,
           description: "Queue delay for runs",
           reporter_options: [
-            buckets: exponential!(100, 2, 10)
+            buckets: [
+              100,
+              200,
+              400,
+              800,
+              1_500,
+              5_000,
+              15_000,
+              30_000,
+              50_000,
+              100_000
+            ]
           ],
           tags: [],
           unit: :millisecond
