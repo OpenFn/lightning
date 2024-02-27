@@ -23,6 +23,9 @@ and this project adheres to
 
 - Change bucket size used by the run queue delay custom metric.
   [#1790](https://github.com/OpenFn/lightning/issues/1790)
+- Require setting `IS_RESETTABLE_DEMO` to "yes" via ENV before allowing the
+  destructive `Demo.reset_demo/0` function from being called.
+  [#1720](https://github.com/OpenFn/lightning/issues/1720)
 
 ### Fixed
 
