@@ -18,6 +18,8 @@ and this project adheres to
 ### Added
 - Push `.github/workflows/{pull,deploy}.yml` files when user connects branch
   [#1046](https://github.com/OpenFn/lightning/issues/1046)
+- Allow admins to set project retention periods
+  [#1760](https://github.com/OpenFn/lightning/issues/1760)
 
 ### Changed
 

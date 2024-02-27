@@ -871,133 +871,144 @@
               for={@project_changeset}
               id="retention-settings-form"
               phx-change="validate"
-              phx-submit="save"
-              class="space-y-4"
+              phx-submit="save_retention_settings"
             >
-              <div>
-                <div class="text-black text-sm">
-                  <div class="font-medium">
-                    History Retention Period
+              <div class="space-y-6">
+                <div>
+                  <div class="text-black text-sm">
+                    <div class="font-medium">
+                      History Retention Period
+                    </div>
+                    <div class="block mt-1 mb-3">
+                      Select how long your run history is stored in OpenFn before being removed from the servers.
+                      <br /> This includes all Work Orders, Runs, and Logs.
+                    </div>
                   </div>
-                  <div class="block mt-1 mb-3">
-                    Select how long your run history is stored in OpenFn before being removed from the servers.
-                    <br /> This includes all Work Orders, Runs, and Logs.
-                  </div>
-                </div>
 
-                <div class="space-y-2">
-                  <.input
-                    type="select"
-                    prompt="Select Period"
-                    options={
-                      Enum.map([7, 14, 30, 90, 180, 365], fn days ->
-                        "#{days} Days"
-                      end)
-                    }
-                    disabled={!@can_edit_data_retention}
-                    field={f[:history_retention_period]}
-                    class="h-4 w-4 border-gray-300 text-indigo-600 focus:ring-indigo-600"
-                  />
-                </div>
-              </div>
-              <div>
-                <div class="text-black text-sm">
-                  <div class="font-medium">
-                    Input/Output Data Storage Policy
-                  </div>
-                  <div class="block mt-1 mb-3">
-                    Should OpenFn store input/output data for workflow runs?
-                    <a
-                      href="https://docs.openfn.org/documentation/next/manage-projects/io-data-storage"
-                      class="ml-1 text-indigo-600"
-                    >
-                      Learn more...
-                    </a>
+                  <div class="">
+                    <.input
+                      type="select"
+                      prompt="Select Period"
+                      options={
+                        Enum.map([7, 14, 30, 90, 180, 365], fn days ->
+                          {"#{days} Days", days}
+                        end)
+                      }
+                      disabled={!@can_edit_data_retention}
+                      field={f[:history_retention_period]}
+                      class="h-4 w-4 border-gray-300 text-indigo-600 focus:ring-indigo-600"
+                    />
                   </div>
                 </div>
+                <div class="inset-0 flex items-center" aria-hidden="true">
+                  <div class="w-full border-t border-gray-300"></div>
+                </div>
+                <div>
+                  <div class="text-black text-sm">
+                    <div class="font-medium">
+                      Input/Output Data Storage Policy
+                    </div>
+                    <div class="block mt-1 mb-3">
+                      Should OpenFn store input/output data for workflow runs?
+                      <a
+                        href="https://docs.openfn.org/documentation/next/manage-projects/io-data-storage"
+                        class="ml-1 text-indigo-600"
+                      >
+                        Learn more...
+                      </a>
+                    </div>
+                  </div>
 
-                <div class="space-y-2">
-                  <%!-- TODO: add this to the list of options for https://github.com/OpenFn/Lightning/issues/1694 --%>
-                  <%!-- {:retain_with_errors, "Only retain input/output data when a run fails"}, --%>
-                  <%= for {value, text} <- [
+                  <div class="space-y-2">
+                    <%!-- TODO: add this to the list of options for https://github.com/OpenFn/Lightning/issues/1694 --%>
+                    <%!-- {:retain_with_errors, "Only retain input/output data when a run fails"}, --%>
+                    <%= for {value, text} <- [
                   {:retain_all, "Retain input/output data for all workflow runs"},
                   {:erase_all, "Never retain input/output data (zero-persistence)"}
                   ] do %>
-                    <div class="relative flex items-start">
-                      <div class="flex h-6 items-center">
-                        <.input
-                          type="radio"
-                          id={value}
-                          disabled={!@can_edit_data_retention}
-                          field={f[:retention_policy]}
-                          checked={checked?(@project_changeset, value)}
-                          value={value}
-                          class="h-4 w-4 border-gray-300 text-indigo-600 focus:ring-indigo-600"
-                        />
+                      <div class="relative flex items-start">
+                        <div class="flex h-6 items-center">
+                          <.input
+                            type="radio"
+                            id={value}
+                            disabled={!@can_edit_data_retention}
+                            field={f[:retention_policy]}
+                            checked={checked?(@project_changeset, value)}
+                            value={value}
+                            class="h-4 w-4 border-gray-300 text-indigo-600 focus:ring-indigo-600"
+                          />
+                        </div>
+                        <div class="ml-3 leading-6">
+                          <label for={value} class="text-sm text-neutral-950">
+                            <%= text %>
+                          </label>
+                        </div>
                       </div>
-                      <div class="ml-3 leading-6">
-                        <label for={value} class="text-sm text-neutral-950">
-                          <%= text %>
-                        </label>
-                      </div>
+                    <% end %>
+                  </div>
+                  <div
+                    :if={not checked?(@project_changeset, :retain_all)}
+                    id="heads-up-description"
+                    class="mt-2 ml-7 text-gray-700 bg-orange-50 p-3 border-l-4 border-l-orange-400"
+                  >
+                    <span class="font-medium">Heads Up!</span>
+
+                    <p>
+                      When enabled, you will no longer be able to retry workflow runs as no data will be stored.
+                    </p>
+                  </div>
+                </div>
+                <div class="inset-0 flex items-center" aria-hidden="true">
+                  <div class="w-full border-t border-gray-300"></div>
+                </div>
+                <div>
+                  <div class={"text-black text-sm #{if to_string(f[:history_retention_period].value) == "", do: "text-opacity-30"}"}>
+                    <div class="font-medium">
+                      Input/Output Data Retention Period
                     </div>
-                  <% end %>
-                </div>
-                <div
-                  :if={not checked?(@project_changeset, :retain_all)}
-                  id="heads-up-description"
-                  class="mt-2 ml-7 text-gray-700 bg-orange-50 p-3 border-l-4 border-l-orange-400"
-                >
-                  <span class="font-medium">Heads Up!</span>
-
-                  <p>
-                    When enabled, you will no longer be able to retry workflow runs as no data will be stored.
-                  </p>
-                </div>
-              </div>
-              <div>
-                <div class="text-black text-sm">
-                  <div class="font-medium">
-                    Input/Output Data Retention Period
+                    <div class="block mt-1 mb-3">
+                      Select how long input/output data is stored. Once input/output data is removed for a given run, you will no longer
+                      be able to retry that run.
+                    </div>
                   </div>
-                  <div class="block mt-1 mb-3">
-                    Select how long input/output data is stored. Once input/output data is removed for a given run, you will no longer
-                    be able to retry that run.
+
+                  <div class="space-y-2">
+                    <.input
+                      type="select"
+                      prompt="Select Period"
+                      options={
+                        Enum.map([7, 14, 30, 90, 180, 365], fn days ->
+                          {"#{days} Days", days}
+                        end)
+                      }
+                      disabled={
+                        !@can_edit_data_retention or
+                          to_string(f[:history_retention_period].value) == ""
+                      }
+                      field={f[:dataclip_retention_period]}
+                      class="h-4 w-4 border-gray-300 text-indigo-600 focus:ring-indigo-600"
+                    />
                   </div>
                 </div>
-
-                <div class="space-y-2">
-                  <.input
-                    type="select"
-                    prompt="Select Period"
-                    options={
-                      Enum.map([7, 14, 30, 90, 180, 365], fn days ->
-                        "#{days} Days"
-                      end)
-                    }
+                <div class="mt-4">
+                  <button
+                    type="button"
                     disabled={!@can_edit_data_retention}
-                    field={f[:dataclip_retention_period]}
-                    class="h-4 w-4 border-gray-300 text-indigo-600 focus:ring-indigo-600"
-                  />
+                    class="mt-3 mr-1 inline-flex w-full justify-center rounded-md px-3 py-2 text-sm font-semibold shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:mt-0 sm:w-auto bg-white text-gray-900"
+                    phx-click="cancel-retention-change"
+                  >
+                    Cancel
+                  </button>
+                  <Form.submit_button
+                    disabled={
+                      not @project_changeset.valid? or
+                        not @can_edit_data_retention
+                    }
+                    phx-disable-with="Saving"
+                  >
+                    Save
+                  </Form.submit_button>
                 </div>
-              </div>
-              <div class="mt-4">
-                <button
-                  disabled={!@can_edit_data_retention}
-                  class="mt-3 mr-1 inline-flex w-full justify-center rounded-md px-3 py-2 text-sm font-semibold shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:mt-0 sm:w-auto bg-white text-gray-900"
-                  phx-click="cancel-retention-change"
-                >
-                  Cancel
-                </button>
-                <Form.submit_button
-                  disabled={
-                    not @project_changeset.valid? or
-                      not @can_edit_data_retention
-                  }
-                  phx-disable-with="Saving"
-                >
-                  Save
-                </Form.submit_button>
               </div>
             </.form>
           </div>
