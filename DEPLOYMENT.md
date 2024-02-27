@@ -84,16 +84,19 @@ Note that for secure deployments, it's recommended to use a combination of
 - `URL_HOST` - the host, used for writing urls (e.g., `demo.openfn.org`)
 - `URL_PORT` - the port, usually `443` for production
 - `URL_SCHEME` - the scheme for writing urls, (e.g., `https`)
-- `USAGE_TRACKER_HOST` - the host that receives usage tracking submissions 
+- `USAGE_TRACKER_HOST` - the host that receives usage tracking submissions
   (defaults to https://impact.openfn.org)
-- `USAGE_TRACKING_ENABLED` - enables the submission of anonymised usage data
-  to OpenFn (defaults to `true`).
-- `USAGE_TRACKING_UUIDS` - indicates whether submissions should include cleartext
-  uuids or not. Options are `cleartext` or `hashed_only`, with the default being
-  `hashed_only`.
+- `USAGE_TRACKING_ENABLED` - enables the submission of anonymised usage data to
+  OpenFn (defaults to `true`).
+- `USAGE_TRACKING_UUIDS` - indicates whether submissions should include
+  cleartext uuids or not. Options are `cleartext` or `hashed_only`, with the
+  default being `hashed_only`.
 - `QUEUE_RESULT_RETENTION_PERIOD_SECONDS` - the number of seconds to keep
   completed (successful) `ObanJobs` in the queue (not to be confused with runs
   and/or history)
+- `IS_RESETTABLE_DEMO` - If set to `yes` it allows this instance to be reset to
+  the initial "Lightning Demo" state. Note that this will destroy _most_ of what
+  you have in your database!
 
 ### Google
 
