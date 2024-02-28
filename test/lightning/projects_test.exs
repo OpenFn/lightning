@@ -593,6 +593,15 @@ defmodule Lightning.ProjectsTest do
     end
   end
 
+  describe "list_projects_having_history_retention/0" do
+    test "returns a list of projects having history_retention_period set" do
+      project_1 = insert(:project, history_retention_period: 7)
+      _project_2 = insert(:project, history_retention_period: nil)
+
+      assert [project_1] == Projects.list_projects_having_history_retention()
+    end
+  end
+
   describe "project_retention_policy_for/1" do
     test "returns the correct retention policy for the project associated to the Run" do
       for policy <- Ecto.Enum.values(Project, :retention_policy) do

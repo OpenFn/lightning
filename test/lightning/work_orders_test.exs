@@ -1694,4 +1694,540 @@ defmodule Lightning.WorkOrdersTest do
       assert work_order.state == :running
     end
   end
+
+  describe "delete_history_for/1" do
+    test "returns error for a project whose history retention is not set" do
+      project = insert(:project, history_retention_period: nil)
+
+      assert {:error, _} = WorkOrders.delete_history_for(project)
+    end
+
+    test "deletes history for workorders based on last_activity" do
+      project = insert(:project, history_retention_period: 7)
+
+      %{triggers: [trigger], jobs: [job | _rest]} =
+        workflow = insert(:simple_workflow, project: project)
+
+      now = DateTime.utc_now()
+
+      workorder_to_delete =
+        insert(:workorder,
+          workflow: workflow,
+          last_activity: Timex.shift(now, days: -7),
+          trigger: trigger,
+          dataclip: build(:dataclip),
+          runs: [
+            build(:run,
+              starting_trigger: trigger,
+              dataclip: build(:dataclip),
+              log_lines: [build(:log_line)],
+              steps: [build(:step, job: job)]
+            )
+          ]
+        )
+
+      workorder_to_remain =
+        insert(:workorder,
+          workflow: workflow,
+          last_activity: Timex.shift(now, days: -6),
+          trigger: trigger,
+          dataclip: build(:dataclip),
+          runs: [
+            build(:run,
+              starting_trigger: trigger,
+              dataclip: build(:dataclip),
+              log_lines: [build(:log_line)],
+              steps: [build(:step, job: job)]
+            )
+          ]
+        )
+
+      assert {:ok, _} = WorkOrders.delete_history_for(project)
+
+      # deleted history
+      refute Lightning.Repo.get(Lightning.WorkOrder, workorder_to_delete.id)
+      run_to_delete = hd(workorder_to_delete.runs)
+      refute Lightning.Repo.get(Lightning.Run, run_to_delete.id)
+      step_to_delete = hd(run_to_delete.steps)
+      refute Lightning.Repo.get(Lightning.Invocation.Step, step_to_delete.id)
+      log_line_to_delete = hd(run_to_delete.log_lines)
+
+      refute Lightning.Repo.get_by(
+               Lightning.Invocation.LogLine,
+               id: log_line_to_delete.id
+             )
+
+      # remaining history
+      assert Lightning.Repo.get(Lightning.WorkOrder, workorder_to_remain.id)
+      run_to_remain = hd(workorder_to_remain.runs)
+      assert Lightning.Repo.get(Lightning.Run, run_to_remain.id)
+      step_to_remain = hd(run_to_remain.steps)
+      assert Lightning.Repo.get(Lightning.Invocation.Step, step_to_remain.id)
+      log_line_to_remain = hd(run_to_remain.log_lines)
+
+      assert Lightning.Repo.get_by(
+               Lightning.Invocation.LogLine,
+               id: log_line_to_remain.id
+             )
+
+      # extra checks. Jobs, Triggers, Workflows are not deleted
+      assert Repo.get(Lightning.Workflows.Job, job.id)
+      assert Repo.get(Lightning.Workflows.Trigger, trigger.id)
+      assert Repo.get(Lightning.Workflows.Workflow, workflow.id)
+    end
+
+    test "deletes project dataclips not associated to any work order correctly" do
+      project = insert(:project, history_retention_period: 7)
+      workflow = insert(:simple_workflow, project: project)
+      now = DateTime.utc_now()
+
+      # pre_retention means it exists earlier than the retention cut off time
+      # post_retention means it exists later than the retention cut off time
+
+      pre_retention_dataclip =
+        insert(:dataclip,
+          project: project,
+          inserted_at: Timex.shift(now, days: -8)
+        )
+
+      post_retention_dataclip =
+        insert(:dataclip,
+          project: project,
+          inserted_at: Timex.shift(now, days: -6)
+        )
+
+      # opharn to mean not associated to any workorder
+      opharn_pre_retention_dataclip =
+        insert(:dataclip,
+          project: project,
+          inserted_at: Timex.shift(now, days: -8)
+        )
+
+      opharn_post_retention_dataclip =
+        insert(:dataclip,
+          project: project,
+          inserted_at: Timex.shift(now, days: -6)
+        )
+
+      # to delete
+      workorder_to_delete_1 =
+        insert(:workorder,
+          workflow: workflow,
+          last_activity: Timex.shift(now, days: -8),
+          dataclip: post_retention_dataclip
+        )
+
+      # note that we've used pre_retention_dataclip for these 2 workorders.
+      # to delete
+      workorder_to_delete_2 =
+        insert(:workorder,
+          workflow: workflow,
+          last_activity: Timex.shift(now, days: -8),
+          dataclip: pre_retention_dataclip
+        )
+
+      # will remain
+      workorder_to_remain =
+        insert(:workorder,
+          workflow: workflow,
+          last_activity: Timex.shift(now, days: -6),
+          dataclip: pre_retention_dataclip
+        )
+
+      assert {:ok, _} = WorkOrders.delete_history_for(project)
+
+      # the workorders are deleted correctly
+      refute Lightning.Repo.get(Lightning.WorkOrder, workorder_to_delete_1.id)
+      refute Lightning.Repo.get(Lightning.WorkOrder, workorder_to_delete_2.id)
+      assert Lightning.Repo.get(Lightning.WorkOrder, workorder_to_remain.id)
+
+      # pre_retention_dataclip still exists
+      # this is because it is still linked to workorder_to_remain
+      assert workorder_to_delete_2.dataclip_id == pre_retention_dataclip.id
+      assert workorder_to_remain.dataclip_id == pre_retention_dataclip.id
+      assert Repo.get(Lightning.Invocation.Dataclip, pre_retention_dataclip.id)
+
+      # post_retention_dataclip still exists
+      # this is because it exists later than the cut off time
+      assert workorder_to_delete_1.dataclip_id == post_retention_dataclip.id
+      assert Repo.get(Lightning.Invocation.Dataclip, post_retention_dataclip.id)
+
+      # opharn_post_retention_dataclip still exists
+      # this is because it exists later than the cut off time
+      assert Repo.get(
+               Lightning.Invocation.Dataclip,
+               opharn_post_retention_dataclip.id
+             )
+
+      # opharn_pre_retention_dataclip is deleted
+      # this is because it exists earlier than the cut off time
+      refute Repo.get(
+               Lightning.Invocation.Dataclip,
+               opharn_pre_retention_dataclip.id
+             )
+    end
+
+    test "deletes project dataclips not associated to any run correctly" do
+      project = insert(:project, history_retention_period: 7)
+
+      %{triggers: [trigger]} =
+        workflow = insert(:simple_workflow, project: project)
+
+      now = DateTime.utc_now()
+
+      # pre_retention means it exists earlier than the retention cut off time
+      # post_retention means it exists later than the retention cut off time
+
+      pre_retention_dataclip =
+        insert(:dataclip,
+          project: project,
+          inserted_at: Timex.shift(now, days: -8)
+        )
+
+      post_retention_dataclip =
+        insert(:dataclip,
+          project: project,
+          inserted_at: Timex.shift(now, days: -6)
+        )
+
+      # opharn to mean not associated to any workorder
+      opharn_pre_retention_dataclip =
+        insert(:dataclip,
+          project: project,
+          inserted_at: Timex.shift(now, days: -8)
+        )
+
+      opharn_post_retention_dataclip =
+        insert(:dataclip,
+          project: project,
+          inserted_at: Timex.shift(now, days: -6)
+        )
+
+      # to delete
+      workorder_to_delete_1 =
+        insert(:workorder,
+          workflow: workflow,
+          trigger: trigger,
+          last_activity: Timex.shift(now, days: -8)
+        )
+
+      run_to_delete_1 =
+        insert(:run,
+          work_order: workorder_to_delete_1,
+          starting_trigger: trigger,
+          dataclip: post_retention_dataclip
+        )
+
+      # note that we've used pre_retention_dataclip for these 2 runs.
+      # to delete
+      run_to_delete_2 =
+        insert(:run,
+          work_order: workorder_to_delete_1,
+          starting_trigger: trigger,
+          dataclip: pre_retention_dataclip
+        )
+
+      # will remain
+      workorder_to_remain =
+        insert(:workorder,
+          workflow: workflow,
+          last_activity: Timex.shift(now, days: -6)
+        )
+
+      run_to_remain =
+        insert(:run,
+          work_order: workorder_to_remain,
+          starting_trigger: trigger,
+          dataclip: pre_retention_dataclip
+        )
+
+      assert {:ok, _} = WorkOrders.delete_history_for(project)
+
+      # the runs are deleted correctly
+      refute Lightning.Repo.get(Lightning.Run, run_to_delete_1.id)
+      refute Lightning.Repo.get(Lightning.Run, run_to_delete_2.id)
+      assert Lightning.Repo.get(Lightning.Run, run_to_remain.id)
+
+      # pre_retention_dataclip still exists
+      # this is because it is still linked to run_to_remain
+      assert run_to_delete_2.dataclip_id == pre_retention_dataclip.id
+      assert run_to_remain.dataclip_id == pre_retention_dataclip.id
+      assert Repo.get(Lightning.Invocation.Dataclip, pre_retention_dataclip.id)
+
+      # post_retention_dataclip still exists
+      # this is because it exists later than the cut off time
+      assert run_to_delete_1.dataclip_id == post_retention_dataclip.id
+      assert Repo.get(Lightning.Invocation.Dataclip, post_retention_dataclip.id)
+
+      # opharn_post_retention_dataclip still exists
+      # this is because it exists later than the cut off time
+      assert Repo.get(
+               Lightning.Invocation.Dataclip,
+               opharn_post_retention_dataclip.id
+             )
+
+      # opharn_pre_retention_dataclip is deleted
+      # this is because it exists earlier than the cut off time
+      refute Repo.get(
+               Lightning.Invocation.Dataclip,
+               opharn_pre_retention_dataclip.id
+             )
+    end
+
+    test "deletes project dataclips not associated to any step input_dataclip correctly" do
+      project = insert(:project, history_retention_period: 7)
+
+      %{triggers: [trigger], jobs: [job | _rest]} =
+        workflow = insert(:simple_workflow, project: project)
+
+      now = DateTime.utc_now()
+
+      # pre_retention means it exists earlier than the retention cut off time
+      # post_retention means it exists later than the retention cut off time
+
+      pre_retention_dataclip =
+        insert(:dataclip,
+          project: project,
+          inserted_at: Timex.shift(now, days: -8)
+        )
+
+      post_retention_dataclip =
+        insert(:dataclip,
+          project: project,
+          inserted_at: Timex.shift(now, days: -6)
+        )
+
+      # opharn to mean not associated to any workorder
+      opharn_pre_retention_dataclip =
+        insert(:dataclip,
+          project: project,
+          inserted_at: Timex.shift(now, days: -8)
+        )
+
+      opharn_post_retention_dataclip =
+        insert(:dataclip,
+          project: project,
+          inserted_at: Timex.shift(now, days: -6)
+        )
+
+      # to delete
+      workorder_to_delete_1 =
+        insert(:workorder,
+          workflow: workflow,
+          trigger: trigger,
+          last_activity: Timex.shift(now, days: -8)
+        )
+
+      run_to_delete_1 =
+        insert(:run,
+          work_order: workorder_to_delete_1,
+          starting_trigger: trigger,
+          dataclip: build(:dataclip)
+        )
+
+      step_to_delete_1 =
+        insert(:step,
+          runs: [run_to_delete_1],
+          job: job,
+          input_dataclip: post_retention_dataclip
+        )
+
+      # note that we've used pre_retention_dataclip for these 2 steps.
+      # to delete
+      run_to_delete_2 =
+        insert(:run,
+          work_order: workorder_to_delete_1,
+          starting_trigger: trigger,
+          dataclip: build(:dataclip)
+        )
+
+      step_to_delete_2 =
+        insert(:step,
+          runs: [run_to_delete_2],
+          job: job,
+          input_dataclip: pre_retention_dataclip
+        )
+
+      # will remain
+      workorder_to_remain =
+        insert(:workorder,
+          workflow: workflow,
+          last_activity: Timex.shift(now, days: -6)
+        )
+
+      run_to_remain =
+        insert(:run,
+          work_order: workorder_to_remain,
+          starting_trigger: trigger,
+          dataclip: build(:dataclip)
+        )
+
+      step_to_remain =
+        insert(:step,
+          runs: [run_to_remain],
+          job: job,
+          input_dataclip: pre_retention_dataclip
+        )
+
+      assert {:ok, _} = WorkOrders.delete_history_for(project)
+
+      # the steps are deleted correctly
+      refute Lightning.Repo.get(Lightning.Invocation.Step, step_to_delete_1.id)
+      refute Lightning.Repo.get(Lightning.Invocation.Step, step_to_delete_2.id)
+      assert Lightning.Repo.get(Lightning.Invocation.Step, step_to_remain.id)
+
+      # pre_retention_dataclip still exists
+      # this is because it is still linked to step_to_remain
+      assert step_to_delete_2.input_dataclip_id == pre_retention_dataclip.id
+      assert step_to_remain.input_dataclip_id == pre_retention_dataclip.id
+      assert Repo.get(Lightning.Invocation.Dataclip, pre_retention_dataclip.id)
+
+      # post_retention_dataclip still exists
+      # this is because it exists later than the cut off time
+      assert step_to_delete_1.input_dataclip_id == post_retention_dataclip.id
+      assert Repo.get(Lightning.Invocation.Dataclip, post_retention_dataclip.id)
+
+      # opharn_post_retention_dataclip still exists
+      # this is because it exists later than the cut off time
+      assert Repo.get(
+               Lightning.Invocation.Dataclip,
+               opharn_post_retention_dataclip.id
+             )
+
+      # opharn_pre_retention_dataclip is deleted
+      # this is because it exists earlier than the cut off time
+      refute Repo.get(
+               Lightning.Invocation.Dataclip,
+               opharn_pre_retention_dataclip.id
+             )
+    end
+
+    test "deletes project dataclips not associated to any step output_dataclip correctly" do
+      project = insert(:project, history_retention_period: 7)
+
+      %{triggers: [trigger], jobs: [job | _rest]} =
+        workflow = insert(:simple_workflow, project: project)
+
+      now = DateTime.utc_now()
+
+      # pre_retention means it exists earlier than the retention cut off time
+      # post_retention means it exists later than the retention cut off time
+
+      pre_retention_dataclip =
+        insert(:dataclip,
+          project: project,
+          inserted_at: Timex.shift(now, days: -8)
+        )
+
+      post_retention_dataclip =
+        insert(:dataclip,
+          project: project,
+          inserted_at: Timex.shift(now, days: -6)
+        )
+
+      # opharn to mean not associated to any workorder
+      opharn_pre_retention_dataclip =
+        insert(:dataclip,
+          project: project,
+          inserted_at: Timex.shift(now, days: -8)
+        )
+
+      opharn_post_retention_dataclip =
+        insert(:dataclip,
+          project: project,
+          inserted_at: Timex.shift(now, days: -6)
+        )
+
+      # to delete
+      workorder_to_delete_1 =
+        insert(:workorder,
+          workflow: workflow,
+          trigger: trigger,
+          last_activity: Timex.shift(now, days: -8)
+        )
+
+      run_to_delete_1 =
+        insert(:run,
+          work_order: workorder_to_delete_1,
+          starting_trigger: trigger,
+          dataclip: build(:dataclip)
+        )
+
+      step_to_delete_1 =
+        insert(:step,
+          runs: [run_to_delete_1],
+          job: job,
+          output_dataclip: post_retention_dataclip
+        )
+
+      # note that we've used pre_retention_dataclip for these 2 steps.
+      # to delete
+      run_to_delete_2 =
+        insert(:run,
+          work_order: workorder_to_delete_1,
+          starting_trigger: trigger,
+          dataclip: build(:dataclip)
+        )
+
+      step_to_delete_2 =
+        insert(:step,
+          runs: [run_to_delete_2],
+          job: job,
+          output_dataclip: pre_retention_dataclip
+        )
+
+      # will remain
+      workorder_to_remain =
+        insert(:workorder,
+          workflow: workflow,
+          last_activity: Timex.shift(now, days: -6)
+        )
+
+      run_to_remain =
+        insert(:run,
+          work_order: workorder_to_remain,
+          starting_trigger: trigger,
+          dataclip: build(:dataclip)
+        )
+
+      step_to_remain =
+        insert(:step,
+          runs: [run_to_remain],
+          job: job,
+          output_dataclip: pre_retention_dataclip
+        )
+
+      assert {:ok, _} = WorkOrders.delete_history_for(project)
+
+      # the steps are deleted correctly
+      refute Lightning.Repo.get(Lightning.Invocation.Step, step_to_delete_1.id)
+      refute Lightning.Repo.get(Lightning.Invocation.Step, step_to_delete_2.id)
+      assert Lightning.Repo.get(Lightning.Invocation.Step, step_to_remain.id)
+
+      # pre_retention_dataclip still exists
+      # this is because it is still linked to step_to_remain
+      assert step_to_delete_2.output_dataclip_id == pre_retention_dataclip.id
+      assert step_to_remain.output_dataclip_id == pre_retention_dataclip.id
+      assert Repo.get(Lightning.Invocation.Dataclip, pre_retention_dataclip.id)
+
+      # post_retention_dataclip still exists
+      # this is because it exists later than the cut off time
+      assert step_to_delete_1.output_dataclip_id == post_retention_dataclip.id
+      assert Repo.get(Lightning.Invocation.Dataclip, post_retention_dataclip.id)
+
+      # opharn_post_retention_dataclip still exists
+      # this is because it exists later than the cut off time
+      assert Repo.get(
+               Lightning.Invocation.Dataclip,
+               opharn_post_retention_dataclip.id
+             )
+
+      # opharn_pre_retention_dataclip is deleted
+      # this is because it exists earlier than the cut off time
+      refute Repo.get(
+               Lightning.Invocation.Dataclip,
+               opharn_pre_retention_dataclip.id
+             )
+    end
+  end
 end

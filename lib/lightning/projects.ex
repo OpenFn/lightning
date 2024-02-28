@@ -92,6 +92,14 @@ defmodule Lightning.Projects do
   end
 
   @doc """
+  Lists all projects that have history retention
+  """
+  @spec list_projects_having_history_retention() :: [] | [Project.t(), ...]
+  def list_projects_having_history_retention do
+    Repo.all(from(p in Project, where: not is_nil(p.history_retention_period)))
+  end
+
+  @doc """
   Gets a single project.
 
   Raises `Ecto.NoResultsError` if the Project does not exist.
