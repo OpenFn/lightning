@@ -75,18 +75,18 @@ defmodule Lightning.Projects.Project do
   end
 
   defp validate_dataclip_retention_period(changeset) do
+    changeset =
+      if get_field(changeset, :retention_policy) == :erase_all do
+        put_change(changeset, :dataclip_retention_period, nil)
+      else
+        changeset
+      end
+
     dataclip_retention_period = get_change(changeset, :dataclip_retention_period)
 
     changeset =
       if dataclip_retention_period do
         validate_required(changeset, [:history_retention_period])
-      else
-        changeset
-      end
-
-    changeset =
-      if get_field(changeset, :retention_policy) == :erase_all do
-        put_change(changeset, :dataclip_retention_period, nil)
       else
         changeset
       end
