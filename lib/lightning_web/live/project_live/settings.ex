@@ -234,6 +234,20 @@ defmodule LightningWeb.ProjectLive.Settings do
     end
   end
 
+  def handle_event(
+        "save_retention_settings",
+        %{"project" => project_params},
+        socket
+      ) do
+    if socket.assigns.can_edit_data_retention do
+      save_project(socket, project_params)
+    else
+      {:noreply,
+       socket
+       |> put_flash(:error, "You are not authorized to perform this action.")}
+    end
+  end
+
   def handle_event("toggle-mfa", _params, socket) do
     if can_edit_project(socket.assigns) do
       project = socket.assigns.project

@@ -37,6 +37,8 @@ and this project adheres to
 - Automatically create Github workflows in a target repository/branch when users
   set up a Github repo::OpenFn project sync
   [#1046](https://github.com/OpenFn/lightning/issues/1046)
+- Allow admins to set project retention periods
+  [#1760](https://github.com/OpenFn/lightning/issues/1760)
 
 ### Changed
 
