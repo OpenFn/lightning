@@ -475,10 +475,6 @@ defmodule LightningWeb.ProjectLive.Settings do
     end
   end
 
-  def handle_info({:credential_type_changed, type}, socket) do
-    {:noreply, socket |> assign(:selected_credential_type, type)}
-  end
-
   defp error_message(error) do
     case error do
       %{code: :installation_not_found} ->
