@@ -187,9 +187,41 @@ defmodule Lightning.Projects do
 
   """
   def update_project(%Project{} = project, attrs) do
-    project
-    |> Project.changeset(attrs)
-    |> Repo.update()
+    changeset = Project.changeset(project, attrs)
+
+    case Repo.update(changeset) do
+      {:ok, updated_project} ->
+        if retention_setting_updated?(changeset) do
+          send_data_retention_change_email(updated_project)
+        end
+
+        {:ok, updated_project}
+
+      error ->
+        error
+    end
+  end
+
+  defp retention_setting_updated?(changeset) do
+    Map.has_key?(changeset.changes, :history_retention_period) or
+      Map.has_key?(changeset.changes, :dataclip_retention_period)
+  end
+
+  defp send_data_retention_change_email(updated_project) do
+    users_query =
+      from pu in Ecto.assoc(updated_project, :project_users),
+        join: u in assoc(pu, :user),
+        where: pu.role in ^[:admin, :owner],
+        select: u
+
+    users = Repo.all(users_query)
+
+    Enum.each(users, fn user ->
+      UserNotifier.send_data_retention_change_email(
+        user,
+        updated_project
+      )
+    end)
   end
 
   @doc """
