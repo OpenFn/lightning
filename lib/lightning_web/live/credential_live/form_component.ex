@@ -40,7 +40,6 @@ defmodule LightningWeb.CredentialLive.FormComponent do
      |> assign(scopes: [])
      |> assign(type_options: type_options)
      |> assign(scopes_changed: false)
-     |> assign(authorization_status: :success)
      |> assign(schema: false)
      |> assign(available_projects: [])
      |> assign(allow_credential_transfer: allow_credential_transfer)}
@@ -54,10 +53,6 @@ defmodule LightningWeb.CredentialLive.FormComponent do
        Credentials.change_credential(credential, params)
      end)
      |> assign(scopes_changed: false)}
-  end
-
-  def update(%{authorization_status: status}, socket) do
-    {:ok, assign(socket, authorization_status: status)}
   end
 
   def update(%{projects: projects} = assigns, socket) do
@@ -372,7 +367,6 @@ defmodule LightningWeb.CredentialLive.FormComponent do
             :let={{fieldset, _valid?}}
             id={@credential.id || "new"}
             schema={@schema}
-            parent_id={@id}
             form={f}
             type={@schema}
             action={@action}
@@ -452,10 +446,7 @@ defmodule LightningWeb.CredentialLive.FormComponent do
             <div class="sm:flex sm:flex-row-reverse">
               <button
                 type="submit"
-                disabled={
-                  !@changeset.valid? or @scopes_changed or
-                    @authorization_status !== :success
-                }
+                disabled={!@changeset.valid? or @scopes_changed}
                 class="inline-flex w-full justify-center rounded-md disabled:bg-primary-300 bg-primary-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary-500 sm:ml-3 sm:w-auto"
               >
                 Save
@@ -480,7 +471,6 @@ defmodule LightningWeb.CredentialLive.FormComponent do
   attr :form, :map, required: true
   attr :action, :any, required: false
   attr :phx_target, :any, default: nil
-  attr :parent_id, :string, required: false
   attr :schema, :string, required: false
   attr :sandbox_value, :boolean, default: false
   attr :update_body, :any, required: false
@@ -495,7 +485,6 @@ defmodule LightningWeb.CredentialLive.FormComponent do
       form={@form}
       action={@action}
       schema={@schema}
-      parent_id={@parent_id}
       update_body={@update_body}
     >
       <%= render_slot(@inner_block, l) %>
@@ -511,7 +500,6 @@ defmodule LightningWeb.CredentialLive.FormComponent do
       form={@form}
       action={@action}
       schema={@schema}
-      parent_id={@parent_id}
       update_body={@update_body}
       sandbox_value={@sandbox_value}
       scopes_changed={@scopes_changed}

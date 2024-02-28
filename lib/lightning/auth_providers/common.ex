@@ -151,8 +151,8 @@ defmodule Lightning.AuthProviders.Common do
 
           {:ok, client}
 
-        {:error, :timeout} ->
-          {:error, :timeout}
+        {:error, reason} ->
+          {:error, reason}
       end
     end
   end
@@ -204,6 +204,8 @@ defmodule Lightning.AuthProviders.Common do
   defp handle_introspection_result({:ok, %{status: status}}, _token)
        when status not in 200..202,
        do: {:error, nil}
+
+  defp handle_introspection_result({:error, _reason}, _token), do: {:error, nil}
 
   @doc """
   Checks if a token is still valid or must be refreshed. If expires_at is nil,

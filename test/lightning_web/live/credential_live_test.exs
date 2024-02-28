@@ -977,7 +977,10 @@ defmodule LightningWeb.CredentialLiveTest do
     test "rendering error component for various error type" do
       render_component(
         &LightningWeb.CredentialLive.OauthComponent.error_block/1,
-        type: :token_failed
+        type: :token_failed,
+        authorize_url: "https://www",
+        myself: nil,
+        provider: "Salesforce"
       ) =~ "Failed retrieving the token from the provider"
 
       render_component(
@@ -1038,7 +1041,7 @@ defmodule LightningWeb.CredentialLiveTest do
 
       {:ok, edit_live, _html} = live(conn, ~p"/credentials")
 
-      assert_receive {:phoenix, :send_update, _}
+      # assert_receive {:phoenix, :send_update, _}
 
       # Wait for the userinfo endpoint to be called
       assert wait_for_assigns(edit_live, :userinfo, credential.id),
@@ -1157,7 +1160,7 @@ defmodule LightningWeb.CredentialLiveTest do
 
       {:ok, edit_live, _html} = live(conn, ~p"/credentials")
 
-      assert wait_for_assigns(edit_live, :authorization_status, credential.id)
+      assert wait_for_assigns(edit_live, :oauth_progress, credential.id)
 
       edit_live |> render()
 
@@ -1218,7 +1221,7 @@ defmodule LightningWeb.CredentialLiveTest do
 
       {:ok, edit_live, _html} = live(conn, ~p"/credentials")
 
-      assert wait_for_assigns(edit_live, :authorization_status, credential.id)
+      assert wait_for_assigns(edit_live, :oauth_progress, credential.id)
 
       edit_live |> render()
 
@@ -1475,8 +1478,6 @@ defmodule LightningWeb.CredentialLiveTest do
 
       {:ok, edit_live, _html} = live(conn, ~p"/credentials")
 
-      assert_receive {:phoenix, :send_update, _}
-
       # Wait for the userinfo endpoint to be called
       assert wait_for_assigns(edit_live, :userinfo, credential.id),
              ":userinfo has not been set yet."
@@ -1576,7 +1577,7 @@ defmodule LightningWeb.CredentialLiveTest do
 
       {:ok, edit_live, _html} = live(conn, ~p"/credentials")
 
-      assert wait_for_assigns(edit_live, :authorization_status, credential.id)
+      assert wait_for_assigns(edit_live, :oauth_progress, credential.id)
 
       edit_live |> render()
 
@@ -1636,7 +1637,7 @@ defmodule LightningWeb.CredentialLiveTest do
 
       {:ok, edit_live, _html} = live(conn, ~p"/credentials")
 
-      assert wait_for_assigns(edit_live, :authorization_status, credential.id)
+      assert wait_for_assigns(edit_live, :oauth_progress, credential.id)
 
       edit_live |> render()
 

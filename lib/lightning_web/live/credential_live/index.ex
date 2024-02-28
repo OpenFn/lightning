@@ -65,14 +65,10 @@ defmodule LightningWeb.CredentialLive.Index do
      |> assign(credentials: list_credentials(socket.assigns.current_user.id))}
   end
 
-  @impl true
-  def handle_info({:credential_type_changed, type}, socket) do
-    {:noreply, socket |> assign(selected_credential_type: type)}
-  end
-
   @doc """
   A generic handler for forwarding updates from PubSub
   """
+  @impl true
   def handle_info({:forward, mod, opts}, socket) do
     send_update(mod, opts)
     {:noreply, socket}

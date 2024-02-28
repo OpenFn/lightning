@@ -6,12 +6,17 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
 
   alias Lightning.AuthProviders.Common
   alias Lightning.Credentials
+  alias Phoenix.LiveView.AsyncResult
 
   require Logger
 
+  @oauth_states %{
+    success: [:userinfo_received],
+    failure: [:token_failed, :userinfo_failed, :refresh_failed]
+  }
+
   attr :form, :map, required: true
   attr :id, :string, required: true
-  attr :parent_id, :string, required: true
   attr :update_body, :any, required: true
   attr :action, :any, required: true
   attr :scopes_changed, :boolean, default: false
@@ -51,8 +56,7 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
            update_body: @update_body,
            sandbox_value: @sandbox_value,
            schema: @schema,
-           id: "inner-form-#{@id}",
-           parent_id: @parent_id
+           id: "inner-form-#{@id}"
          ],
          {__ENV__.module, __ENV__.function, __ENV__.file, __ENV__.line}
        ), @valid?}
@@ -77,38 +81,26 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
   end
 
   def render(assigns) do
-    display_reauthorize_banner =
-      assigns.scopes_changed &&
-        (assigns.authorization_status === :success ||
-           (assigns.authorization_status === nil && assigns.action === :edit))
+    display_loader = display_loader?(assigns.oauth_progress)
+    display_reauthorize_banner = display_reauthorize_banner?(assigns)
 
     display_authorize_button =
-      assigns.action === :new and assigns.authorization_status === nil
-
-    display_userinfo_loader =
-      assigns.authorization_status === :pending && !display_reauthorize_banner
+      display_authorize_button?(assigns, display_reauthorize_banner)
 
     display_userinfo =
-      assigns.authorization_status === :success && !display_reauthorize_banner
+      display_userinfo?(assigns.oauth_progress, display_reauthorize_banner)
 
-    display_error = assigns.authorization_status === :error
+    display_error =
+      display_error?(assigns.oauth_progress, display_reauthorize_banner)
 
     assigns =
       assigns
-      |> update(:form, fn form, %{token_body_changeset: token_body_changeset} ->
-        # Merge in any changes that have been made to the TokenBody changeset
-        # _inside_ this component.
-
-        %{
-          form
-          | params: Map.put(form.params, "body", token_body_changeset.params)
-        }
-      end)
-      |> assign(display_reauthorize_banner: display_reauthorize_banner)
-      |> assign(display_authorize_button: display_authorize_button)
-      |> assign(display_userinfo_loader: display_userinfo_loader)
-      |> assign(display_userinfo: display_userinfo)
-      |> assign(display_error: display_error)
+      |> update_form()
+      |> assign(:display_loader, display_loader)
+      |> assign(:display_reauthorize_banner, display_reauthorize_banner)
+      |> assign(:display_authorize_button, display_authorize_button)
+      |> assign(:display_userinfo, display_userinfo)
+      |> assign(:display_error, display_error)
 
     ~H"""
     <fieldset id={@id}>
@@ -127,6 +119,14 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
         authorize_url={@authorize_url}
         myself={@myself}
       />
+      <.text_ping_loader :if={@display_loader}>
+        <%= case @oauth_progress do %>
+          <% :started  -> %>
+            Authenticating with <%= @provider %>
+          <% _ -> %>
+            Fetching user data from <%= @provider %>
+        <% end %>
+      </.text_ping_loader>
       <.authorize_button
         :if={@display_authorize_button}
         authorize_url={@authorize_url}
@@ -134,16 +134,15 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
         myself={@myself}
         provider={@provider}
       />
-      <.userinfo_loader :if={@display_userinfo_loader} provider={@provider} />
       <.userinfo
         :if={@display_userinfo}
         myself={@myself}
-        userinfo={@userinfo}
+        userinfo={@userinfo.result}
         authorize_url={@authorize_url}
       />
       <.error_block
         :if={@display_error}
-        type={@authorization_error}
+        type={@oauth_progress}
         myself={@myself}
         provider={@provider}
         authorize_url={@authorize_url}
@@ -222,16 +221,6 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
     """
   end
 
-  def userinfo_loader(assigns) do
-    ~H"""
-    <div id="userinfo_loader" class="mt-5">
-      <.text_ping_loader>
-        Authenticating with <%= @provider %>
-      </.text_ping_loader>
-    </div>
-    """
-  end
-
   def error_block(%{type: :token_failed} = assigns) do
     ~H"""
     <div class="rounded-md bg-yellow-50 border border-yellow-200 p-4">
@@ -254,7 +243,17 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
           <h3 class="text-sm font-medium text-yellow-800">Something went wrong.</h3>
           <div class="mt-2 text-sm text-yellow-700">
             <p class="text-sm mt-2">
-              Failed retrieving the token from the provider
+              Failed retrieving the token from the provider. Please try again
+              <.link
+                href={@authorize_url}
+                target="_blank"
+                phx-target={@myself}
+                phx-click="authorize_click"
+                class="hover:underline text-primary-900"
+              >
+                here
+                <Heroicons.arrow_top_right_on_square class="h-4 w-4 text-indigo-600 inline-block" />.
+              </.link>
             </p>
           </div>
         </div>
@@ -561,7 +560,6 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
         %{
           form: _form,
           id: _id,
-          parent_id: _parent_id,
           action: _action,
           scopes_changed: _scopes_changed,
           sandbox_value: _sandbox_value,
@@ -585,25 +583,15 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
   end
 
   def update(%{code: code}, socket) do
-    if socket.assigns.authorization_status !== :success do
-      handle_code_update(code, socket)
-    else
-      {:ok, socket}
-    end
-  end
+    %{adapter: adapter, client: client, sandbox: sandbox} = socket.assigns
+    wellknown_url = adapter.wellknown_url(sandbox)
 
-  def update(%{error: error}, socket) do
     {:ok,
-     socket |> assign(authorization_error: error, authorization_status: :error)}
-  end
-
-  def update(%{userinfo: userinfo}, socket) do
-    send_update(LightningWeb.CredentialLive.FormComponent,
-      id: socket.assigns.parent_id,
-      authorization_status: :success
-    )
-
-    {:ok, socket |> assign(userinfo: userinfo, authorization_status: :success)}
+     socket
+     |> assign(:oauth_progress, :code_received)
+     |> start_async(:token, fn ->
+       fetch_token(adapter, client, code, wellknown_url)
+     end)}
   end
 
   def update(%{scopes: scopes}, socket) do
@@ -626,11 +614,11 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
 
   defp reset_assigns(socket) do
     socket
-    |> assign_new(:userinfo, fn -> nil end)
-    |> assign_new(:authorization_error, fn -> nil end)
-    |> assign_new(:authorization_status, fn -> nil end)
-    |> assign_new(:sandbox, fn -> false end)
     |> assign_new(:scopes, fn -> [] end)
+    |> assign_new(:token, fn -> %AsyncResult{} end)
+    |> assign_new(:userinfo, fn -> %AsyncResult{} end)
+    |> assign_new(:oauth_progress, fn -> :not_started end)
+    |> assign_new(:sandbox, fn -> false end)
   end
 
   defp update_assigns(
@@ -638,7 +626,6 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
          %{
            form: form,
            id: id,
-           parent_id: parent_id,
            action: action,
            scopes_changed: scopes_changed,
            sandbox_value: sandbox_value,
@@ -654,9 +641,8 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
     |> assign(
       form: form,
       id: id,
-      parent_id: parent_id,
       token_body_changeset: token_body_changeset,
-      token: token,
+      token: AsyncResult.ok(token),
       update_body: update_body,
       adapter: adapter,
       sandbox: sandbox_value,
@@ -675,7 +661,7 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
       socket
       |> build_client(wellknown_url)
       |> case do
-        {:ok, client} -> client |> Map.put(:token, token)
+        {:ok, client} -> client |> Map.put(:token, token.result)
         {:error, _} -> nil
       end
     end)
@@ -691,46 +677,6 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
     end)
   end
 
-  defp handle_code_update(code, socket) do
-    client = socket.assigns.client
-
-    # NOTE: there can be _no_ refresh token if something went wrong like if the
-    # previous auth didn't receive a refresh_token
-
-    wellknown_url = socket.assigns.adapter.wellknown_url(socket.assigns.sandbox)
-
-    case socket.assigns.adapter.get_token(client, wellknown_url, code: code) do
-      {:ok, client} ->
-        client.token
-        |> token_to_params()
-        |> maybe_add_sandbox(socket)
-        |> socket.assigns.update_body.()
-
-        send_update(LightningWeb.CredentialLive.FormComponent,
-          id: socket.assigns.parent_id,
-          authorization_status: :success
-        )
-
-        {:ok,
-         socket
-         |> assign(
-           authorization_status: :success,
-           scopes_changed: false,
-           client: client
-         )}
-
-      {:error, %OAuth2.Response{status_code: 400, body: body} = _response} ->
-        Logger.error("Failed retrieving token from provider:\n#{inspect(body)}")
-
-        {:ok,
-         socket
-         |> assign(
-           authorization_error: :token_failed,
-           authorization_status: :error
-         )}
-    end
-  end
-
   defp handle_scopes_update(scopes, socket) do
     state = build_state(socket.id, __MODULE__, socket.assigns.id)
 
@@ -744,15 +690,23 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
 
   @impl true
   def handle_event("authorize_click", _, socket) do
-    {:noreply, socket |> assign(authorization_status: :pending)}
+    {:noreply, socket |> assign(oauth_progress: :started)}
   end
 
   def handle_event("try_userinfo_again", _, socket) do
     Logger.debug("Attempting to retrieve userinfo again...")
 
-    pid = self()
-    Task.start(fn -> get_userinfo(pid, socket) end)
-    {:noreply, socket |> assign(authorization_status: :pending)}
+    %{adapter: adapter, client: client, token: token, sandbox: sandbox} =
+      socket.assigns
+
+    wellknown_url = adapter.wellknown_url(sandbox)
+
+    {:noreply,
+     socket
+     |> assign(:oauth_progress, :requesting_userinfo)
+     |> start_async(:userinfo, fn ->
+       get_userinfo(adapter, client, token.result, wellknown_url)
+     end)}
   end
 
   defp maybe_fetch_userinfo(%{assigns: %{client: nil}} = socket) do
@@ -760,66 +714,147 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
   end
 
   defp maybe_fetch_userinfo(socket) do
-    %{token_body_changeset: token_body_changeset, token: token} = socket.assigns
+    if changed?(socket, :token) and socket.assigns.token_body_changeset.valid? do
+      %{client: client, adapter: adapter, sandbox: sandbox, token: token} =
+        socket.assigns
 
-    if socket |> changed?(:token) and token_body_changeset.valid? do
-      pid = self()
+      wellknown_url = adapter.wellknown_url(sandbox)
 
-      # TODO: We should change all those Task.start(fn) with assign_async/4 (https://hexdocs.pm/phoenix_live_view/Phoenix.LiveView.html#assign_async/4)
-      if Common.still_fresh(token) do
-        Logger.debug("Retrieving userinfo")
-        Task.start(fn -> get_userinfo(pid, socket) end)
+      if Common.still_fresh(token.result) do
+        start_async(socket, :userinfo, fn ->
+          get_userinfo(adapter, client, token.result, wellknown_url)
+        end)
       else
-        Logger.debug("Refreshing expired token")
-        Task.start(fn -> refresh_token(pid, socket) end)
+        start_async(socket, :token, fn ->
+          refresh_token(adapter, client, token.result, wellknown_url)
+        end)
       end
-    end
-
-    socket
-  end
-
-  defp get_userinfo(pid, socket) do
-    %{id: id, client: client, token: token, sandbox: sandbox, adapter: adapter} =
-      socket.assigns
-
-    wellknown_url = adapter.wellknown_url(sandbox)
-
-    adapter.get_userinfo(client, token, wellknown_url)
-    |> case do
-      {:ok, resp} ->
-        send_update(pid, __MODULE__, id: id, userinfo: resp.body)
-
-      {:error, resp} ->
-        Logger.error("Failed retrieving userinfo with:\n#{inspect(resp)}")
-
-        send_update(pid, __MODULE__, id: id, error: :userinfo_failed)
+    else
+      socket
     end
   end
 
-  defp refresh_token(pid, socket) do
+  @impl true
+  def handle_async(:token, {:ok, {:ok, token}}, socket) do
     %{
-      id: id,
       client: client,
-      update_body: update_body,
-      token: token,
+      adapter: adapter,
       sandbox: sandbox,
-      adapter: adapter
+      provider: provider,
+      update_body: update_body
     } = socket.assigns
 
     wellknown_url = adapter.wellknown_url(sandbox)
 
+    parsed_token =
+      token
+      |> token_to_params()
+      |> maybe_add_sandbox(sandbox, provider)
+
+    update_body.(parsed_token)
+
+    {:noreply,
+     socket
+     |> assign(:oauth_progress, :token_received)
+     |> assign(token: AsyncResult.ok(parsed_token))
+     |> start_async(:userinfo, fn ->
+       get_userinfo(adapter, client, parsed_token, wellknown_url)
+     end)}
+  end
+
+  def handle_async(:token, {:ok, {:error, {:token_failed, reason}}}, socket) do
+    Logger.error("Failed retrieving token from provider:\n#{inspect(reason)}")
+
+    {:noreply,
+     socket
+     |> assign(:oauth_progress, :token_failed)
+     |> assign(:scopes_changed, false)
+     |> assign(token: AsyncResult.failed(%AsyncResult{}, reason))}
+  end
+
+  def handle_async(:token, {:ok, {:error, {:refresh_failed, reason}}}, socket) do
+    Logger.error("Failed refreshing token from provider:\n#{inspect(reason)}")
+
+    {:noreply,
+     socket
+     |> assign(:oauth_progress, :refresh_failed)
+     |> assign(:scopes_changed, false)
+     |> assign(token: AsyncResult.failed(%AsyncResult{}, reason))}
+  end
+
+  def handle_async(:token, {:exit, reason}, socket) do
+    Logger.error(reason)
+
+    {:noreply,
+     socket
+     |> assign(:oauth_progress, :token_failed)
+     |> assign(:scopes_changed, false)
+     |> assign(token: AsyncResult.failed(%AsyncResult{}, "Network error"))}
+  end
+
+  def handle_async(:userinfo, {:ok, {:ok, userinfo}}, socket) do
+    {:noreply,
+     socket
+     |> assign(:oauth_progress, :userinfo_received)
+     |> assign(scopes_changed: false)
+     |> assign(userinfo: AsyncResult.ok(userinfo))}
+  end
+
+  def handle_async(
+        :userinfo,
+        {:ok, {:error, {:userinfo_failed, reason}}},
+        socket
+      ) do
+    Logger.error(
+      "Failed retrieving user data from provider:\n#{inspect(reason)}"
+    )
+
+    {:noreply,
+     socket
+     |> assign(:oauth_progress, :userinfo_failed)
+     |> assign(scopes_changed: false)
+     |> assign(userinfo: AsyncResult.failed(%AsyncResult{}, reason))}
+  end
+
+  def handle_async(:userinfo, {:exit, reason}, socket) do
+    Logger.error(inspect(reason))
+
+    {:noreply,
+     socket
+     |> assign(:oauth_progress, :userinfo_failed)
+     |> assign(:scopes_changed, false)
+     |> assign(userinfo: AsyncResult.failed(%AsyncResult{}, "Network error"))}
+  end
+
+  defp get_userinfo(adapter, client, token, wellknown_url) do
+    adapter.get_userinfo(client, token, wellknown_url)
+    |> case do
+      {:ok, resp} ->
+        {:ok, resp.body}
+
+      {:error, resp} ->
+        {:error, {:userinfo_failed, resp}}
+    end
+  end
+
+  defp refresh_token(adapter, client, token, wellknown_url) do
     adapter.refresh_token(client, token, wellknown_url)
     |> case do
-      {:ok, token} ->
-        update_body.(token |> token_to_params() |> maybe_add_sandbox(socket))
-
-        Logger.debug("Retrieving userinfo")
-        Task.start(fn -> get_userinfo(pid, socket) end)
+      {:ok, fresh_token} ->
+        {:ok, fresh_token}
 
       {:error, reason} ->
-        Logger.error("Failed refreshing valid token: #{inspect(reason)}")
+        {:error, {:refresh_failed, reason}}
+    end
+  end
 
-        send_update(pid, __MODULE__, id: id, error: :refresh_failed)
+  defp fetch_token(adapter, client, code, wellknown_url) do
+    case adapter.get_token(client, wellknown_url, code: code) do
+      {:ok, %{token: token} = _response} ->
+        {:ok, token}
+
+      {:error, %OAuth2.Response{body: body}} ->
+        {:error, {:token_failed, body}}
     end
   end
 
@@ -863,11 +898,58 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
     )
   end
 
-  defp maybe_add_sandbox(token, socket) do
-    if socket.assigns.provider === "Salesforce" do
-      Map.put_new(token, :sandbox, socket.assigns.sandbox)
+  defp maybe_add_sandbox(token, sandbox, provider) do
+    if provider === "Salesforce" do
+      Map.put_new(token, :sandbox, sandbox)
     else
       token
     end
+  end
+
+  defp display_loader?(oauth_progress) do
+    oauth_progress not in List.flatten([:not_started | Map.values(@oauth_states)])
+  end
+
+  defp display_reauthorize_banner?(%{
+         action: action,
+         scopes_changed: scopes_changed,
+         oauth_progress: oauth_progress
+       }) do
+    case action do
+      :new ->
+        scopes_changed &&
+          oauth_progress in (@oauth_states.success ++
+                               @oauth_states.failure)
+
+      :edit ->
+        scopes_changed && oauth_progress not in [:started]
+
+      _ ->
+        false
+    end
+  end
+
+  defp display_authorize_button?(
+         %{action: action, oauth_progress: oauth_progress},
+         display_reauthorize_banner
+       ) do
+    action == :new && oauth_progress == :not_started &&
+      !display_reauthorize_banner
+  end
+
+  defp display_userinfo?(oauth_progress, display_reauthorize_banner) do
+    oauth_progress == :userinfo_received && !display_reauthorize_banner
+  end
+
+  defp display_error?(oauth_progress, display_reauthorize_banner) do
+    oauth_progress in @oauth_states.failure && !display_reauthorize_banner
+  end
+
+  defp update_form(assigns) do
+    update(assigns, :form, fn form,
+                              %{token_body_changeset: token_body_changeset} ->
+      params = Map.put(form.params, "body", token_body_changeset.params)
+      %{form | params: params}
+    end)
   end
 end
