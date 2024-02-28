@@ -205,6 +205,8 @@ defmodule Lightning.AuthProviders.Common do
        when status not in 200..202,
        do: {:error, nil}
 
+  defp handle_introspection_result({:error, _reason}, _token), do: {:error, nil}
+
   @doc """
   Checks if a token is still valid or must be refreshed. If expires_at is nil,
   it will return `false`, forcing a refresh. If the token has already expired or
