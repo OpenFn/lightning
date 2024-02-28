@@ -11,6 +11,7 @@ defmodule LightningWeb.CredentialLiveTest do
   import Ecto.Query
 
   alias Lightning.Credentials
+  alias Phoenix.LiveView.JS
 
   @create_attrs %{
     name: "some name",
@@ -672,6 +673,72 @@ defmodule LightningWeb.CredentialLiveTest do
       view |> form("#credential-form-#{credential.id}") |> render_submit()
 
       assert_redirected(view, ~p"/credentials")
+    end
+
+    test "shows a flash error when project credentials list is stale/outdated",
+         %{
+           conn: conn,
+           project: project,
+           user: user
+         } do
+      %{project_credentials: [proj_credential1]} =
+        credential =
+        insert(:credential,
+          user_id: user.id,
+          body: %{
+            a: 1
+          },
+          project_credentials: [
+            %{project_id: project.id}
+          ],
+          schema: "raw"
+        )
+        |> Repo.preload([:projects, :project_credentials])
+
+      {:ok, view, _html} = live(conn, ~p"/credentials")
+
+      JS.focus_first(to: "#edit-credential-#{credential.id}-modal-content")
+
+      # user session 1 tries to update the credential
+      # view
+      # |> element("#project_list_for_#{credential.id}")
+      # |> render_change(selected_project: %{"id" => project.id})
+
+      # user session 1 starts to update the credential
+      assert view
+             |> form("#credential-form-#{credential.id}",
+               credential: %{name: "new name"}
+             )
+             |> render_change()
+
+      # user session 2 adds a project to this credential
+      project_other_session =
+        insert(:project, project_users: [%{user_id: user.id}])
+
+      update_attrs = %{
+        project_credentials: [
+          Map.from_struct(proj_credential1),
+          %{project_id: project_other_session.id}
+        ]
+      }
+
+      assert {:ok, credential} =
+               Credentials.update_credential(credential, update_attrs)
+
+      # user session 1 submits the form
+      # assert {:ok, _view, _html} =
+      view
+      |> form("#credential-form-#{credential.id}")
+      |> render_submit()
+
+      # |> follow_redirect(conn, ~p"/credentials")
+
+      assert {"/credentials",
+              %{
+                "error" =>
+                  "Credential was updated by another session. Please try again."
+              }} =
+               assert_redirect(view)
     end
 
     test "marks a credential for use in a 'production' system", %{

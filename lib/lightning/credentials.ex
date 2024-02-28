@@ -173,8 +173,6 @@ defmodule Lightning.Credentials do
   def update_credential(%Credential{} = credential, attrs) do
     changeset = credential |> change_credential(attrs) |> cast_body_change()
 
-    # IO.inspect attrs
-
     Multi.new()
     |> Multi.update(:credential, changeset)
     |> derive_events(changeset)
