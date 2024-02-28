@@ -667,70 +667,124 @@ defmodule Lightning.ProjectsTest do
       assert project_to_delete.id ==
                projects_deleted |> Enum.at(0) |> Map.get(:id)
     end
+  end
 
-    test "wipes all dataclips past their projects dataclip_retention_period" do
+  describe "Project dataclip retention period" do
+    setup do
       project_1 = insert(:project, dataclip_retention_period: 10)
       project_2 = insert(:project, dataclip_retention_period: 5)
       project_3 = insert(:project)
 
-      dataclips = [
-        # Dataclip for project_1, should not be wiped (within retention period)
-        {project_1, -9, false},
-        # Dataclips for project_1, should be wiped (past retention period)
-        {project_1, -11, true},
-        # Dataclip for project_1, should be wiped (equal to retention period)
-        {project_1, -10, true},
-        # Dataclip for project_2, should be wiped (past retention period)
-        {project_2, -6, true},
-        # Dataclip for project_3, won't be wiped (project_3 has no dataclip_retention_period set)
-        {project_3, -2, false}
-      ]
+      {:ok, project_1: project_1, project_2: project_2, project_3: project_3}
+    end
 
-      inserted_dataclips =
-        Enum.map(dataclips, fn {project, days_shift, _} ->
-          insert(:dataclip,
-            project: project,
-            request: %{star: "sadio mane"},
-            body: %{team: "senegal"},
-            inserted_at: Timex.now() |> Timex.shift(days: days_shift, hours: -1)
-          )
-        end)
+    test "does not wipe dataclips within the retention period", %{
+      project_1: project_1
+    } do
+      dataclip_1 =
+        insert(:dataclip,
+          project: project_1,
+          request: %{star: "sadio mane"},
+          type: :http_request,
+          body: %{team: "senegal"},
+          inserted_at: Timex.now() |> Timex.shift(days: -9)
+        )
 
-      {count, wiped_dataclips} =
+      Projects.perform(%Oban.Job{args: %{"type" => "wipe_dataclips"}})
+
+      dataclip_1 = dataclip_with_body_and_request(dataclip_1)
+
+      assert dataclip_1.request === %{"star" => "sadio mane"}
+      assert dataclip_1.body === %{"team" => "senegal"}
+      assert dataclip_1.wiped_at == nil
+    end
+
+    test "wipes dataclips past the retention period", %{project_1: project_1} do
+      dataclip_2 =
+        insert(:dataclip,
+          project: project_1,
+          request: %{star: "sadio mane"},
+          type: :step_result,
+          body: %{team: "senegal"},
+          inserted_at: Timex.now() |> Timex.shift(days: -11)
+        )
+
+      {_count, wiped_dataclips} =
         Projects.perform(%Oban.Job{args: %{"type" => "wipe_dataclips"}})
 
-      assert count == 3
-      assert length(wiped_dataclips) == 3
+      assert Enum.any?(wiped_dataclips, fn dataclip ->
+               dataclip.id == dataclip_2.id
+             end)
 
-      for {_, _, should_be_wiped} <- dataclips do
-        dataclip =
-          Enum.at(
-            inserted_dataclips,
-            Enum.find_index(dataclips, fn {_, _, wiped} ->
-              wiped == should_be_wiped
-            end)
-          )
+      dataclip_2 = dataclip_with_body_and_request(dataclip_2)
 
-        reloaded_dataclip = dataclip_with_body_and_request(dataclip)
+      refute dataclip_2.request
+      refute dataclip_2.body
+      assert dataclip_2.wiped_at !== nil
+    end
 
-        if should_be_wiped do
-          assert Enum.any?(wiped_dataclips, fn wiped_dataclip ->
-                   wiped_dataclip.id == dataclip.id
-                 end)
+    test "wipes dataclips equal to the retention period", %{project_1: project_1} do
+      dataclip_3 =
+        insert(:dataclip,
+          project: project_1,
+          request: %{star: "sadio mane"},
+          type: :saved_input,
+          body: %{team: "senegal"},
+          inserted_at: Timex.now() |> Timex.shift(days: -10, hours: -1)
+        )
 
-          assert reloaded_dataclip.request == nil
-          assert reloaded_dataclip.body == nil
-          assert reloaded_dataclip.wiped_at != nil
-        else
-          assert Enum.all?(wiped_dataclips, fn wiped_dataclip ->
-                   wiped_dataclip.id != dataclip.id
-                 end)
+      {_count, wiped_dataclips} =
+        Projects.perform(%Oban.Job{args: %{"type" => "wipe_dataclips"}})
 
-          assert reloaded_dataclip.request == %{"star" => "sadio mane"}
-          assert reloaded_dataclip.body == %{"team" => "senegal"}
-          assert reloaded_dataclip.wiped_at == nil
-        end
-      end
+      assert Enum.any?(wiped_dataclips, fn dataclip ->
+               dataclip.id == dataclip_3.id
+             end)
+
+      dataclip_3 = dataclip_with_body_and_request(dataclip_3)
+
+      refute dataclip_3.request
+      refute dataclip_3.body
+      assert dataclip_3.wiped_at !== nil
+    end
+
+    test "does not wipe dataclips without a set retention period", %{
+      project_3: project_3
+    } do
+      dataclip_5 =
+        insert(:dataclip,
+          project: project_3,
+          request: %{star: "sadio mane"},
+          type: :saved_input,
+          body: %{team: "senegal"},
+          inserted_at: Timex.now() |> Timex.shift(days: -2)
+        )
+
+      Projects.perform(%Oban.Job{args: %{"type" => "wipe_dataclips"}})
+
+      dataclip_5 = dataclip_with_body_and_request(dataclip_5)
+
+      assert dataclip_5.request === %{"star" => "sadio mane"}
+      assert dataclip_5.body === %{"team" => "senegal"}
+      assert dataclip_5.wiped_at == nil
+    end
+
+    test "does not wipe global dataclips", %{project_2: project_2} do
+      dataclip_6 =
+        insert(:dataclip,
+          project: project_2,
+          request: %{star: "sadio mane"},
+          type: :global,
+          body: %{team: "senegal"},
+          inserted_at: Timex.now() |> Timex.shift(days: -6)
+        )
+
+      Projects.perform(%Oban.Job{args: %{"type" => "wipe_dataclips"}})
+
+      dataclip_6 = dataclip_with_body_and_request(dataclip_6)
+
+      assert dataclip_6.request === %{"star" => "sadio mane"}
+      assert dataclip_6.body === %{"team" => "senegal"}
+      assert dataclip_6.wiped_at == nil
     end
   end
 
