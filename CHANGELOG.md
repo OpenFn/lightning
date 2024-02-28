@@ -26,6 +26,8 @@ and this project adheres to
 - Require setting `IS_RESETTABLE_DEMO` to "yes" via ENV before allowing the
   destructive `Demo.reset_demo/0` function from being called.
   [#1720](https://github.com/OpenFn/lightning/issues/1720)
+- Remove version display condition that was redundant due to shadowing
+  [#1819](https://github.com/OpenFn/lightning/issues/1819)
 
 ### Fixed
 
