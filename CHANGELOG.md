@@ -50,6 +50,8 @@ and this project adheres to
 
 - Fix series of sentry issues related to OAuth credentials
   [#1799](https://github.com/OpenFn/lightning/issues/1799)
+- Show flash error when editing stale project credentials
+  [#1795](https://github.com/OpenFn/lightning/issues/1795)
 
 ## [v2.0.5] - 2024-02-25
 
