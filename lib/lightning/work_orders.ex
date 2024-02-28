@@ -32,11 +32,11 @@ defmodule Lightning.WorkOrders do
   import Ecto.Query
   import Lightning.Validators
 
-  alias Lightning.Invocation.LogLine
   alias Ecto.Multi
   alias Lightning.Accounts.User
   alias Lightning.Graph
   alias Lightning.Invocation.Dataclip
+  alias Lightning.Invocation.LogLine
   alias Lightning.Invocation.Step
   alias Lightning.Projects.Project
   alias Lightning.Repo
