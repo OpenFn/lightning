@@ -109,26 +109,20 @@ defmodule Lightning.Runs.PromExPluginText do
     end
 
     defp find_metric_group(plugin_config, group_name) do
-      [group | []] =
-        plugin_config
-        |> PromExPlugin.polling_metrics()
-        |> Enum.filter(fn
-          %{group_name: ^group_name} -> true
-          _ -> false
-        end)
-
-      group
+      plugin_config
+      |> PromExPlugin.polling_metrics()
+      |> Enum.find(fn
+        %{group_name: ^group_name} -> true
+        _ -> false
+      end)
     end
 
     defp find_metric(metrics, metric_name) do
-      [metric | []] =
-        metrics
-        |> Enum.filter(fn
-          %{name: ^metric_name} -> true
-          _ -> false
-        end)
-
-      metric
+      metrics
+      |> Enum.find(fn
+        %{name: ^metric_name} -> true
+        _ -> false
+      end)
     end
   end
 
