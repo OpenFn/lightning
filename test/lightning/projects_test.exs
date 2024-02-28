@@ -705,7 +705,7 @@ defmodule Lightning.ProjectsTest do
       {"Lightning", Application.get_env(:lightning, :email_addresses)[:admin]}
     )
     |> Swoosh.Email.subject(
-      "Important Update to Your #{project.name} Data-Retention Policy"
+      "Important Update to Your #{project.name} Data Retention Policy"
     )
     |> Swoosh.Email.text_body(body)
   end

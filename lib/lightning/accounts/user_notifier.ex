@@ -103,7 +103,7 @@ defmodule Lightning.Accounts.UserNotifier do
   def send_data_retention_change_email(user, updated_project) do
     deliver(
       user.email,
-      "Important Update to Your #{updated_project.name} Data-Retention Policy",
+      "Important Update to Your #{updated_project.name} Data Retention Policy",
       """
       Hi #{user.first_name},
 
