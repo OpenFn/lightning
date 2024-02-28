@@ -367,7 +367,7 @@ defmodule Lightning.CredentialsTest do
   end
 
   describe "update_credential/2" do
-    test "succeeds with valid data" do
+    test "succeeds with valid data and associating with new project" do
       user = insert(:user)
 
       project =
@@ -404,6 +404,12 @@ defmodule Lightning.CredentialsTest do
 
       assert credential.body == %{}
       assert credential.name == "some updated name"
+
+      assert %{project_credentials: project_credentials} =
+               credential |> Repo.preload(:project_credentials)
+
+      assert MapSet.new(Enum.map(project_credentials, & &1.project_id)) ==
+               MapSet.new([project.id, new_project.id])
 
       audit_events =
         from(a in Audit.base_query(),
@@ -471,6 +477,64 @@ defmodule Lightning.CredentialsTest do
                  "ssl" => true,
                  "allowSelfSignedCert" => false
                })
+    end
+
+    test "does not raise error when credential doesn't have the latest project credentials" do
+      user1 = insert(:user)
+      user2 = insert(:user)
+
+      project1 =
+        insert(:project,
+          project_users: [%{user_id: user1.id}, %{user_id: user2.id}]
+        )
+
+      project2 =
+        insert(:project,
+          project_users: [%{user_id: user1.id}, %{user_id: user2.id}]
+        )
+
+      %{
+        project_credentials: [
+          %{id: project_credential_id1},
+          %{id: _project_credential_id2}
+        ]
+      } =
+        credential =
+        insert(:credential,
+          user_id: user2.id,
+          body: %{
+            a: "1"
+          },
+          project_credentials: [
+            %{project_id: project1.id},
+            %{project_id: project2.id}
+          ],
+          schema: "raw"
+        )
+        |> Repo.preload(:project_credentials)
+
+      params_with_missing_project_credential = %{
+        "body" => Jason.encode!(%{a: 2}),
+        "name" => credential.name,
+        "production" => "false",
+        "project_credentials" => %{
+          "0" => %{
+            "_persistent_id" => "0",
+            "delete" => "false",
+            "id" => project_credential_id1,
+            "project_id" => project1.id
+          }
+        }
+      }
+
+      assert_raise RuntimeError,
+                   ~r/.*`:on_replace` option of this relation\nis set to `:raise`.*/,
+                   fn ->
+                     Credentials.update_credential(
+                       credential,
+                       params_with_missing_project_credential
+                     )
+                   end
     end
 
     test "returns error changeset with invalid data" do

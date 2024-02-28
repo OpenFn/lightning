@@ -118,6 +118,12 @@ defmodule Lightning.Credentials do
     Repo.one(query)
   end
 
+  def get_credential_for_update!(id) do
+    Credential
+    |> Repo.get!(id)
+    |> Repo.preload([:project_credentials, :projects])
+  end
+
   @doc """
   Creates a credential.
 
@@ -166,6 +172,8 @@ defmodule Lightning.Credentials do
   """
   def update_credential(%Credential{} = credential, attrs) do
     changeset = credential |> change_credential(attrs) |> cast_body_change()
+
+    # IO.inspect attrs
 
     Multi.new()
     |> Multi.update(:credential, changeset)

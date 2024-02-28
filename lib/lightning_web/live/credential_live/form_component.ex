@@ -727,15 +727,31 @@ defmodule LightningWeb.CredentialLive.FormComponent do
     end)
   end
 
-  defp save_credential(socket, :edit, credential_params) do
-    case Credentials.update_credential(
-           socket.assigns.credential,
-           credential_params
-         ) do
-      {:ok, _credential} ->
+  defp save_credential(
+         socket,
+         :edit,
+         credential_params
+       ) do
+    %{credential: form_credential} = socket.assigns
+
+    with true <- is_credential_up_to_date(form_credential),
+         {:ok, _credential} <-
+           Credentials.update_credential(form_credential, credential_params) do
+      {:noreply,
+       socket
+       |> put_flash(:info, "Credential updated successfully")
+       |> push_redirect(to: socket.assigns.return_to)}
+    else
+      false ->
+        credential = Credentials.get_credential_for_update!(form_credential.id)
+
         {:noreply,
          socket
-         |> put_flash(:info, "Credential updated successfully")
+         |> assign(credential: credential)
+         |> put_flash(
+           :error,
+           "Credential was updated by another session. Please try again."
+         )
          |> push_redirect(to: socket.assigns.return_to)}
 
       {:error, %Ecto.Changeset{} = changeset} ->
@@ -787,5 +803,15 @@ defmodule LightningWeb.CredentialLive.FormComponent do
 
     all_projects
     |> Enum.reject(fn {_, credential_id} -> credential_id in existing_ids end)
+  end
+
+  defp is_credential_up_to_date(%{
+         id: form_credential_id,
+         updated_at: form_credential_ts
+       }) do
+    %{updated_at: db_credential_ts} =
+      Credentials.get_credential!(form_credential_id)
+
+    db_credential_ts == form_credential_ts
   end
 end
