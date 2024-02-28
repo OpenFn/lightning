@@ -25,12 +25,6 @@ defmodule LightningWeb.Components.Common do
            "Docker image tag found: '#{image}' tagged release build from #{commit}",
            :release}
 
-        # If running in docker and tag doesn't match :vsn, display image tag.
-        image != nil and image != vsn and image != "edge" ->
-          {image,
-           "Detected image tag that does not match application version #{vsn}; image tag '#{image}' built from #{commit}",
-           :warn}
-
         # If running in docker and tag doesn't match :vsn, display commit.
         image != nil and image != vsn ->
           {commit,
