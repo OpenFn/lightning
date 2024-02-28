@@ -16,10 +16,13 @@ and this project adheres to
 ## [Unreleased]
 
 ### Added
+
 - Push `.github/workflows/{pull,deploy}.yml` files when user connects branch
   [#1046](https://github.com/OpenFn/lightning/issues/1046)
 - Allow admins to set project retention periods
   [#1760](https://github.com/OpenFn/lightning/issues/1760)
+- Automatically wipe input/output data after a their retention period
+  [#1762](https://github.com/OpenFn/lightning/issues/1762)
 
 ### Changed
 

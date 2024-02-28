@@ -671,80 +671,66 @@ defmodule Lightning.ProjectsTest do
     test "wipes all dataclips past their projects dataclip_retention_period" do
       project_1 = insert(:project, dataclip_retention_period: 10)
       project_2 = insert(:project, dataclip_retention_period: 5)
+      project_3 = insert(:project)
 
-      # Dataclip for project_1, should not be wiped (within retention period)
-      dataclip_1 =
-        insert(:dataclip,
-          project: project_1,
-          request: %{star: "sadio mane"},
-          body: %{team: "senegal"},
-          inserted_at: Timex.now() |> Timex.shift(days: -9)
-        )
+      dataclips = [
+        # Dataclip for project_1, should not be wiped (within retention period)
+        {project_1, -9, false},
+        # Dataclips for project_1, should be wiped (past retention period)
+        {project_1, -11, true},
+        # Dataclip for project_1, should be wiped (equal to retention period)
+        {project_1, -10, true},
+        # Dataclip for project_2, should be wiped (past retention period)
+        {project_2, -6, true},
+        # Dataclip for project_3, won't be wiped (project_3 has no dataclip_retention_period set)
+        {project_3, -2, false}
+      ]
 
-      # Dataclips for project_1, should be wiped (past retention period)
-      dataclip_2 =
-        insert(:dataclip,
-          project: project_1,
-          request: %{star: "sadio mane"},
-          body: %{team: "senegal"},
-          inserted_at: Timex.now() |> Timex.shift(days: -11)
-        )
-
-      # Dataclip for project_1, should be wiped (equal to retention period)
-      dataclip_3 =
-        insert(:dataclip,
-          project: project_1,
-          request: %{star: "sadio mane"},
-          body: %{team: "senegal"},
-          inserted_at: Timex.now() |> Timex.shift(days: -10, hours: -1)
-        )
-
-      # Dataclip for project_2, should be wiped (past retention period)
-      dataclip_4 =
-        insert(:dataclip,
-          project: project_2,
-          request: %{star: "sadio mane"},
-          body: %{team: "senegal"},
-          inserted_at: Timex.now() |> Timex.shift(days: -6)
-        )
+      inserted_dataclips =
+        Enum.map(dataclips, fn {project, days_shift, _} ->
+          insert(:dataclip,
+            project: project,
+            request: %{star: "sadio mane"},
+            body: %{team: "senegal"},
+            inserted_at: Timex.now() |> Timex.shift(days: days_shift, hours: -1)
+          )
+        end)
 
       {count, wiped_dataclips} =
         Projects.perform(%Oban.Job{args: %{"type" => "wipe_dataclips"}})
 
       assert count == 3
+      assert length(wiped_dataclips) == 3
 
-      # Assert that the returned wiped dataclips match the expected ones
-      assert Enum.count(wiped_dataclips) == 3
+      for {_, _, should_be_wiped} <- dataclips do
+        dataclip =
+          Enum.at(
+            inserted_dataclips,
+            Enum.find_index(dataclips, fn {_, _, wiped} ->
+              wiped == should_be_wiped
+            end)
+          )
 
-      assert Enum.all?(wiped_dataclips, fn dataclip ->
-               dataclip.wiped_at != nil
-             end)
+        reloaded_dataclip = dataclip_with_body_and_request(dataclip)
 
-      assert Enum.any?(wiped_dataclips, fn dataclip ->
-               dataclip.id == dataclip_2.id
-             end)
+        if should_be_wiped do
+          assert Enum.any?(wiped_dataclips, fn wiped_dataclip ->
+                   wiped_dataclip.id == dataclip.id
+                 end)
 
-      assert Enum.any?(wiped_dataclips, fn dataclip ->
-               dataclip.id == dataclip_3.id
-             end)
+          assert reloaded_dataclip.request == nil
+          assert reloaded_dataclip.body == nil
+          assert reloaded_dataclip.wiped_at != nil
+        else
+          assert Enum.all?(wiped_dataclips, fn wiped_dataclip ->
+                   wiped_dataclip.id != dataclip.id
+                 end)
 
-      assert Enum.any?(wiped_dataclips, fn dataclip ->
-               dataclip.id == dataclip_4.id
-             end)
-
-      # Reload dataclips to check their state after wiping
-      dataclip_1 = Repo.get(Dataclip, dataclip_1.id)
-
-      dataclip_1 = dataclip_with_body_and_request(dataclip_1)
-      dataclip_2 = dataclip_with_body_and_request(dataclip_2)
-
-      assert dataclip_1.request === %{"star" => "sadio mane"}
-      assert dataclip_1.body === %{"team" => "senegal"}
-      assert dataclip_1.wiped_at == nil
-
-      refute dataclip_2.request
-      refute dataclip_2.body
-      assert dataclip_2.wiped_at !== nil
+          assert reloaded_dataclip.request == %{"star" => "sadio mane"}
+          assert reloaded_dataclip.body == %{"team" => "senegal"}
+          assert reloaded_dataclip.wiped_at == nil
+        end
+      end
     end
   end
 
@@ -790,8 +776,10 @@ defmodule Lightning.ProjectsTest do
     |> Swoosh.Email.text_body(body)
   end
 
-  defp dataclip_with_body_and_request(dataclip),
-    do:
-      from(Dataclip, select: [:wiped_at, :body, :request])
-      |> Lightning.Repo.get(dataclip.id)
+  defp dataclip_with_body_and_request(dataclip) do
+    reloaded_dataclip = Repo.get(Dataclip, dataclip.id)
+
+    from(Dataclip, select: [:wiped_at, :body, :request])
+    |> Lightning.Repo.get(reloaded_dataclip.id)
+  end
 end
