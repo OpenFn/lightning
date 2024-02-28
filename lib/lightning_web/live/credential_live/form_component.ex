@@ -808,9 +808,8 @@ defmodule LightningWeb.CredentialLive.FormComponent do
 
   defp credential_up_to_date?(form_credential) do
     db_credential = Credentials.get_credential_for_update!(form_credential.id)
-    fields = Credential.__schema__(:fields)
+    fields = [:project_credentials | Credential.__schema__(:fields)]
 
-    Map.take(db_credential, fields) == Map.take(form_credential, fields) and
-      db_credential.project_credentials == form_credential.project_credentials
+    Map.take(db_credential, fields) == Map.take(form_credential, fields)
   end
 end
