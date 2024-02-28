@@ -89,4 +89,56 @@ defmodule LightningWeb.Components.CommonTest do
                "M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"
     end
   end
+
+  describe "version_chip on tag mismatch where image_tag == 'edge'" do
+    setup do
+      prev = Application.get_env(:lightning, :image_info)
+
+      Application.put_env(:lightning, :image_info,
+        image_tag: "edge",
+        branch: "main",
+        commit: "abcdef7"
+      )
+
+      on_exit(fn ->
+        Application.put_env(:lightning, :image_info, prev)
+      end)
+    end
+
+    test "displays the SHA and a cube" do
+      html = render_component(&LightningWeb.Components.Common.version_chip/1)
+
+      assert html =~ "Docker image tag found"
+      assert html =~ "unreleased build"
+      assert html =~ "abcdef7"
+
+      # Check for the cube icon
+      assert html =~
+               "M21 7.5l-9-5.25L3 7.5m18 0l-9 5.25m9-5.25v9l-9 5.25M3 7.5l9 5.25M3 7.5v9l9 5.25m0-9v9"
+    end
+  end
+
+  describe "version_chip all other cases" do
+    setup do
+      prev = Application.get_env(:lightning, :image_info)
+
+      Application.put_env(:lightning, :image_info,
+        image_tag: nil,
+        branch: "main",
+        commit: "abcdef7"
+      )
+
+      on_exit(fn ->
+        Application.put_env(:lightning, :image_info, prev)
+      end)
+    end
+
+    test "displays the Lightning version without an icon" do
+      html = render_component(&LightningWeb.Components.Common.version_chip/1)
+
+      assert html =~ "Lightning v2.0.5"
+      assert html =~ "OpenFn/Lightning v2.0.5"
+      refute html =~ "<svg"
+    end
+  end
 end
