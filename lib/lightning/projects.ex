@@ -48,6 +48,7 @@ defmodule Lightning.Projects do
 
   def perform(%Oban.Job{args: %{"type" => "data_retention"}}) do
     wipe_dataclips()
+    :ok
   end
 
   defp wipe_dataclips() do
@@ -56,7 +57,7 @@ defmodule Lightning.Projects do
         join: p in assoc(d, :project),
         where: d.type in [:http_request, :step_result, :saved_input],
         where:
-          d.inserted_at <=
+          d.inserted_at <
             fragment(
               "NOW() - (? || ' days')::interval",
               p.dataclip_retention_period
