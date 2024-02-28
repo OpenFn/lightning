@@ -676,6 +676,8 @@ defmodule Lightning.ProjectsTest do
       dataclip_1 =
         insert(:dataclip,
           project: project_1,
+          request: %{star: "sadio mane"},
+          body: %{team: "senegal"},
           inserted_at: Timex.now() |> Timex.shift(days: -9)
         )
 
@@ -683,6 +685,8 @@ defmodule Lightning.ProjectsTest do
       dataclip_2 =
         insert(:dataclip,
           project: project_1,
+          request: %{star: "sadio mane"},
+          body: %{team: "senegal"},
           inserted_at: Timex.now() |> Timex.shift(days: -11)
         )
 
@@ -690,6 +694,8 @@ defmodule Lightning.ProjectsTest do
       dataclip_3 =
         insert(:dataclip,
           project: project_1,
+          request: %{star: "sadio mane"},
+          body: %{team: "senegal"},
           inserted_at: Timex.now() |> Timex.shift(days: -10, hours: -1)
         )
 
@@ -697,6 +703,8 @@ defmodule Lightning.ProjectsTest do
       dataclip_4 =
         insert(:dataclip,
           project: project_2,
+          request: %{star: "sadio mane"},
+          body: %{team: "senegal"},
           inserted_at: Timex.now() |> Timex.shift(days: -6)
         )
 
@@ -727,9 +735,16 @@ defmodule Lightning.ProjectsTest do
       # Reload dataclips to check their state after wiping
       dataclip_1 = Repo.get(Dataclip, dataclip_1.id)
 
-      assert dataclip_1.request != nil
-      assert dataclip_1.body != nil
+      dataclip_1 = dataclip_with_body_and_request(dataclip_1)
+      dataclip_2 = dataclip_with_body_and_request(dataclip_2)
+
+      assert dataclip_1.request === %{"star" => "sadio mane"}
+      assert dataclip_1.body === %{"team" => "senegal"}
       assert dataclip_1.wiped_at == nil
+
+      refute dataclip_2.request
+      refute dataclip_2.body
+      assert dataclip_2.wiped_at !== nil
     end
   end
 
@@ -774,4 +789,9 @@ defmodule Lightning.ProjectsTest do
     )
     |> Swoosh.Email.text_body(body)
   end
+
+  defp dataclip_with_body_and_request(dataclip),
+    do:
+      from(Dataclip, select: [:wiped_at, :body, :request])
+      |> Lightning.Repo.get(dataclip.id)
 end
