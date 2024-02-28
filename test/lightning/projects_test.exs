@@ -1,7 +1,7 @@
 defmodule Lightning.ProjectsTest do
-  alias Lightning.Invocation.Dataclip
   use Lightning.DataCase, async: false
 
+  alias Lightning.Invocation.Dataclip
   alias Lightning.Projects.ProjectUser
   alias Lightning.Projects
   alias Lightning.Projects.Project

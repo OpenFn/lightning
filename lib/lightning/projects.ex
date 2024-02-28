@@ -51,7 +51,7 @@ defmodule Lightning.Projects do
     :ok
   end
 
-  defp wipe_dataclips() do
+  defp wipe_dataclips do
     dataclip_update_query =
       from(d in Dataclip,
         join: p in assoc(d, :project),
