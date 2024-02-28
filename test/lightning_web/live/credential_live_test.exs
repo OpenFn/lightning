@@ -726,12 +726,11 @@ defmodule LightningWeb.CredentialLiveTest do
                Credentials.update_credential(credential, update_attrs)
 
       # user session 1 submits the form
-      # assert {:ok, _view, _html} =
-      view
-      |> form("#credential-form-#{credential.id}")
-      |> render_submit()
-
-      # |> follow_redirect(conn, ~p"/credentials")
+      assert {:ok, _view, _html} =
+               view
+               |> form("#credential-form-#{credential.id}")
+               |> render_submit()
+               |> follow_redirect(conn, ~p"/credentials")
 
       assert {"/credentials",
               %{
