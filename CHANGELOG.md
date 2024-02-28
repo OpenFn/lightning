@@ -29,6 +29,9 @@ and this project adheres to
 
 ### Fixed
 
+- Fix series of sentry issues related to OAuth credentials
+  [#1799](https://github.com/OpenFn/lightning/issues/1799)
+
 ## [v2.0.5] - 2024-02-25
 
 ### Added
