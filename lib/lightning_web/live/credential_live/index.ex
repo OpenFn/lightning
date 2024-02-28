@@ -68,6 +68,7 @@ defmodule LightningWeb.CredentialLive.Index do
   @doc """
   A generic handler for forwarding updates from PubSub
   """
+  @impl true
   def handle_info({:forward, mod, opts}, socket) do
     send_update(mod, opts)
     {:noreply, socket}
