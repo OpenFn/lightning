@@ -970,7 +970,7 @@
                   <div class="w-full border-t border-gray-300"></div>
                 </div>
                 <div>
-                  <div class={"text-black text-sm #{if to_string(f[:history_retention_period].value) == "", do: "text-opacity-30"}"}>
+                  <div class={"text-black text-sm #{if to_string(f[:history_retention_period].value) == "" or checked?(@project_changeset, :erase_all), do: "text-opacity-30"}"}>
                     <div class="font-medium">
                       Input/Output Data Retention Period
                     </div>
@@ -991,7 +991,8 @@
                       }
                       disabled={
                         !@can_edit_data_retention or
-                          to_string(f[:history_retention_period].value) == ""
+                          to_string(f[:history_retention_period].value) == "" or
+                          checked?(@project_changeset, :erase_all)
                       }
                       field={f[:dataclip_retention_period]}
                       class="h-4 w-4 border-gray-300 text-indigo-600 focus:ring-indigo-600"

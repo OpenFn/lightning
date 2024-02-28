@@ -2271,10 +2271,11 @@ defmodule LightningWeb.ProjectLiveTest do
     end
 
     @tag role: :admin
-    test "project admin can change the retention periods", %{
-      conn: conn,
-      project: project
-    } do
+    test "dataclip retention period is disabled if the history period has not been set",
+         %{
+           conn: conn,
+           project: project
+         } do
       {:ok, view, _html} =
         live(
           conn,
@@ -2282,6 +2283,8 @@ defmodule LightningWeb.ProjectLiveTest do
         )
 
       # dataclip retention period is disabled if the history period has not been set
+      assert is_nil(project.history_retention_period)
+
       assert has_element?(
                view,
                "#retention-settings-form_dataclip_retention_period:disabled"
@@ -2304,6 +2307,69 @@ defmodule LightningWeb.ProjectLiveTest do
                view,
                "#retention-settings-form_dataclip_retention_period"
              )
+    end
+
+    @tag role: :admin
+    test "dataclip retention period is disabled if the retention_policy has been set to erase_all",
+         %{
+           conn: conn,
+           project: project
+         } do
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/settings#data-storage"
+        )
+
+      # let us enable it first by setting the history retention period
+      view
+      |> form("#retention-settings-form",
+        project: %{
+          history_retention_period: 7
+        }
+      )
+      |> render_change()
+
+      refute has_element?(
+               view,
+               "#retention-settings-form_dataclip_retention_period:disabled"
+             )
+
+      # now let's set the retention policy to erase_all
+      view
+      |> form("#retention-settings-form",
+        project: %{
+          retention_policy: "erase_all"
+        }
+      )
+      |> render_change()
+
+      assert has_element?(
+               view,
+               "#retention-settings-form_dataclip_retention_period:disabled"
+             )
+    end
+
+    @tag role: :admin
+    test "project admin can change the retention periods", %{
+      conn: conn,
+      project: project
+    } do
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/settings#data-storage"
+        )
+
+      # let's first set the history retention period
+
+      view
+      |> form("#retention-settings-form",
+        project: %{
+          history_retention_period: 7
+        }
+      )
+      |> render_change()
 
       # trying to set the dataclip retention period more than the history period shows error
       refute render(view) =~
