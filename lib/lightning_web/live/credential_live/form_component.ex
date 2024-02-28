@@ -7,6 +7,7 @@ defmodule LightningWeb.CredentialLive.FormComponent do
   import Ecto.Changeset, only: [fetch_field!: 2, put_assoc: 3]
 
   alias Lightning.Credentials
+  alias Lightning.Credentials.Credential
   alias LightningWeb.Components.NewInputs
   alias LightningWeb.CredentialLive.JsonSchemaBodyComponent
   alias LightningWeb.CredentialLive.OauthComponent
@@ -734,7 +735,7 @@ defmodule LightningWeb.CredentialLive.FormComponent do
        ) do
     %{credential: form_credential} = socket.assigns
 
-    with true <- is_credential_up_to_date(form_credential),
+    with true <- credential_up_to_date?(form_credential),
          {:ok, _credential} <-
            Credentials.update_credential(form_credential, credential_params) do
       {:noreply,
@@ -805,13 +806,11 @@ defmodule LightningWeb.CredentialLive.FormComponent do
     |> Enum.reject(fn {_, credential_id} -> credential_id in existing_ids end)
   end
 
-  defp is_credential_up_to_date(%{
-         id: form_credential_id,
-         updated_at: form_credential_ts
-       }) do
-    %{updated_at: db_credential_ts} =
-      Credentials.get_credential!(form_credential_id)
+  defp credential_up_to_date?(form_credential) do
+    db_credential = Credentials.get_credential_for_update!(form_credential.id)
+    fields = Credential.__schema__(:fields)
 
-    db_credential_ts == form_credential_ts
+    Map.take(db_credential, fields) == Map.take(form_credential, fields) and
+      db_credential.project_credentials == form_credential.project_credentials
   end
 end

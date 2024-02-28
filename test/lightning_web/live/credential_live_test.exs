@@ -697,14 +697,9 @@ defmodule LightningWeb.CredentialLiveTest do
 
       {:ok, view, _html} = live(conn, ~p"/credentials")
 
+      # user session 1 opens the edit modal
       JS.focus_first(to: "#edit-credential-#{credential.id}-modal-content")
 
-      # user session 1 tries to update the credential
-      # view
-      # |> element("#project_list_for_#{credential.id}")
-      # |> render_change(selected_project: %{"id" => project.id})
-
-      # user session 1 starts to update the credential
       assert view
              |> form("#credential-form-#{credential.id}",
                credential: %{name: "new name"}
@@ -725,12 +720,11 @@ defmodule LightningWeb.CredentialLiveTest do
       assert {:ok, credential} =
                Credentials.update_credential(credential, update_attrs)
 
-      # user session 1 submits the form
-      assert {:ok, _view, _html} =
-               view
-               |> form("#credential-form-#{credential.id}")
-               |> render_submit()
-               |> follow_redirect(conn, ~p"/credentials")
+      # user session 1 submits the form without the new project credential
+      view
+      |> form("#credential-form-#{credential.id}")
+      |> render_submit()
+      |> follow_redirect(conn, ~p"/credentials")
 
       assert {"/credentials",
               %{
