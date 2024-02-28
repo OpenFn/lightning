@@ -46,6 +46,23 @@ defmodule Lightning.Projects do
     {:ok, %{projects_deleted: projects_to_delete}}
   end
 
+  def perform(%Oban.Job{args: %{"type" => "wipe_dataclips"}}) do
+    dataclip_update_query =
+      from(d in Dataclip,
+        join: p in assoc(d, :project),
+        where:
+          d.inserted_at <=
+            fragment(
+              "NOW() - (? || ' days')::interval",
+              p.dataclip_retention_period
+            ),
+        update: [set: [request: nil, body: nil, wiped_at: ^DateTime.utc_now()]],
+        select: d
+      )
+
+    Repo.update_all(dataclip_update_query, [])
+  end
+
   @doc """
   Returns the list of projects.
 

@@ -1,4 +1,5 @@
 defmodule Lightning.ProjectsTest do
+  alias Lightning.Invocation.Dataclip
   use Lightning.DataCase, async: false
 
   alias Lightning.Projects.ProjectUser
@@ -665,6 +666,70 @@ defmodule Lightning.ProjectsTest do
 
       assert project_to_delete.id ==
                projects_deleted |> Enum.at(0) |> Map.get(:id)
+    end
+
+    test "wipes all dataclips past their projects dataclip_retention_period" do
+      project_1 = insert(:project, dataclip_retention_period: 10)
+      project_2 = insert(:project, dataclip_retention_period: 5)
+
+      # Dataclip for project_1, should not be wiped (within retention period)
+      dataclip_1 =
+        insert(:dataclip,
+          project: project_1,
+          inserted_at: Timex.now() |> Timex.shift(days: -9)
+        )
+
+      # Dataclips for project_1, should be wiped (past retention period)
+      dataclip_2 =
+        insert(:dataclip,
+          project: project_1,
+          inserted_at: Timex.now() |> Timex.shift(days: -11)
+        )
+
+      # Dataclip for project_1, should be wiped (equal to retention period)
+      dataclip_3 =
+        insert(:dataclip,
+          project: project_1,
+          inserted_at: Timex.now() |> Timex.shift(days: -10, hours: -1)
+        )
+
+      # Dataclip for project_2, should be wiped (past retention period)
+      dataclip_4 =
+        insert(:dataclip,
+          project: project_2,
+          inserted_at: Timex.now() |> Timex.shift(days: -6)
+        )
+
+      {count, wiped_dataclips} =
+        Projects.perform(%Oban.Job{args: %{"type" => "wipe_dataclips"}})
+
+      assert count == 3
+
+      # Assert that the returned wiped dataclips match the expected ones
+      assert Enum.count(wiped_dataclips) == 3
+
+      assert Enum.all?(wiped_dataclips, fn dataclip ->
+               dataclip.wiped_at != nil
+             end)
+
+      assert Enum.any?(wiped_dataclips, fn dataclip ->
+               dataclip.id == dataclip_2.id
+             end)
+
+      assert Enum.any?(wiped_dataclips, fn dataclip ->
+               dataclip.id == dataclip_3.id
+             end)
+
+      assert Enum.any?(wiped_dataclips, fn dataclip ->
+               dataclip.id == dataclip_4.id
+             end)
+
+      # Reload dataclips to check their state after wiping
+      dataclip_1 = Repo.get(Dataclip, dataclip_1.id)
+
+      assert dataclip_1.request != nil
+      assert dataclip_1.body != nil
+      assert dataclip_1.wiped_at == nil
     end
   end
 
