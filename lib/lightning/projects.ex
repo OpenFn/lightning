@@ -50,6 +50,7 @@ defmodule Lightning.Projects do
     dataclip_update_query =
       from(d in Dataclip,
         join: p in assoc(d, :project),
+        where: d.type in [:http_request, :step_result, :saved_input],
         where:
           d.inserted_at <=
             fragment(
