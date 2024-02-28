@@ -46,7 +46,11 @@ defmodule Lightning.Projects do
     {:ok, %{projects_deleted: projects_to_delete}}
   end
 
-  def perform(%Oban.Job{args: %{"type" => "wipe_dataclips"}}) do
+  def perform(%Oban.Job{args: %{"type" => "data_retention"}}) do
+    wipe_dataclips()
+  end
+
+  defp wipe_dataclips() do
     dataclip_update_query =
       from(d in Dataclip,
         join: p in assoc(d, :project),

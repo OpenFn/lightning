@@ -117,7 +117,7 @@ purge_cron =
       {"*/5 * * * *", Lightning.Janitor},
       {"0 2 * * *", Lightning.Accounts, args: %{"type" => "purge_deleted"}},
       {"0 2 * * *", Lightning.Projects, args: %{"type" => "purge_deleted"}},
-      {"0 2 * * *", Lightning.Projects, args: %{"type" => "wipe_dataclips"}}
+      {"0 2 * * *", Lightning.Projects, args: %{"type" => "data_retention"}}
     ],
     else: []
 

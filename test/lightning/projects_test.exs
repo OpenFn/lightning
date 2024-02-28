@@ -690,7 +690,7 @@ defmodule Lightning.ProjectsTest do
           inserted_at: Timex.now() |> Timex.shift(days: -9)
         )
 
-      Projects.perform(%Oban.Job{args: %{"type" => "wipe_dataclips"}})
+      Projects.perform(%Oban.Job{args: %{"type" => "data_retention"}})
 
       dataclip_1 = dataclip_with_body_and_request(dataclip_1)
 
@@ -710,7 +710,7 @@ defmodule Lightning.ProjectsTest do
         )
 
       {_count, wiped_dataclips} =
-        Projects.perform(%Oban.Job{args: %{"type" => "wipe_dataclips"}})
+        Projects.perform(%Oban.Job{args: %{"type" => "data_retention"}})
 
       assert Enum.any?(wiped_dataclips, fn dataclip ->
                dataclip.id == dataclip_2.id
@@ -734,7 +734,7 @@ defmodule Lightning.ProjectsTest do
         )
 
       {_count, wiped_dataclips} =
-        Projects.perform(%Oban.Job{args: %{"type" => "wipe_dataclips"}})
+        Projects.perform(%Oban.Job{args: %{"type" => "data_retention"}})
 
       assert Enum.any?(wiped_dataclips, fn dataclip ->
                dataclip.id == dataclip_3.id
@@ -759,7 +759,7 @@ defmodule Lightning.ProjectsTest do
           inserted_at: Timex.now() |> Timex.shift(days: -2)
         )
 
-      Projects.perform(%Oban.Job{args: %{"type" => "wipe_dataclips"}})
+      Projects.perform(%Oban.Job{args: %{"type" => "data_retention"}})
 
       dataclip_5 = dataclip_with_body_and_request(dataclip_5)
 
@@ -778,7 +778,7 @@ defmodule Lightning.ProjectsTest do
           inserted_at: Timex.now() |> Timex.shift(days: -6)
         )
 
-      Projects.perform(%Oban.Job{args: %{"type" => "wipe_dataclips"}})
+      Projects.perform(%Oban.Job{args: %{"type" => "data_retention"}})
 
       dataclip_6 = dataclip_with_body_and_request(dataclip_6)
 
