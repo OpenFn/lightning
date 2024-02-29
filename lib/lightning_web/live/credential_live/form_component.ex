@@ -7,6 +7,7 @@ defmodule LightningWeb.CredentialLive.FormComponent do
   import Ecto.Changeset, only: [fetch_field!: 2, put_assoc: 3]
 
   alias Lightning.Credentials
+  alias Lightning.Credentials.Credential
   alias LightningWeb.Components.NewInputs
   alias LightningWeb.CredentialLive.JsonSchemaBodyComponent
   alias LightningWeb.CredentialLive.OauthComponent
@@ -17,6 +18,7 @@ defmodule LightningWeb.CredentialLive.FormComponent do
     :id,
     :action,
     :credential,
+    :current_user,
     :projects,
     :on_save,
     :button,
@@ -727,15 +729,44 @@ defmodule LightningWeb.CredentialLive.FormComponent do
     end)
   end
 
-  defp save_credential(socket, :edit, credential_params) do
-    case Credentials.update_credential(
-           socket.assigns.credential,
-           credential_params
-         ) do
-      {:ok, _credential} ->
+  defp save_credential(
+         socket,
+         :edit,
+         credential_params
+       ) do
+    %{credential: form_credential} = socket.assigns
+
+    with {:uptodate, true} <-
+           {:uptodate, credential_up_to_date?(form_credential)},
+         {:same_user, true} <-
+           {:same_user,
+            socket.assigns.current_user.id == socket.assigns.credential.user_id},
+         {:ok, _credential} <-
+           Credentials.update_credential(form_credential, credential_params) do
+      {:noreply,
+       socket
+       |> put_flash(:info, "Credential updated successfully")
+       |> push_redirect(to: socket.assigns.return_to)}
+    else
+      {:uptodate, false} ->
+        credential = Credentials.get_credential_for_update!(form_credential.id)
+
         {:noreply,
          socket
-         |> put_flash(:info, "Credential updated successfully")
+         |> assign(credential: credential)
+         |> put_flash(
+           :error,
+           "Credential was updated by another session. Please try again."
+         )
+         |> push_redirect(to: socket.assigns.return_to)}
+
+      {:same_user, false} ->
+        {:noreply,
+         socket
+         |> put_flash(
+           :error,
+           "Invalid credentials. Please log in again."
+         )
          |> push_redirect(to: socket.assigns.return_to)}
 
       {:error, %Ecto.Changeset{} = changeset} ->
@@ -787,5 +818,12 @@ defmodule LightningWeb.CredentialLive.FormComponent do
 
     all_projects
     |> Enum.reject(fn {_, credential_id} -> credential_id in existing_ids end)
+  end
+
+  defp credential_up_to_date?(form_credential) do
+    db_credential = Credentials.get_credential_for_update!(form_credential.id)
+    fields = [:project_credentials | Credential.__schema__(:fields)]
+
+    Map.take(db_credential, fields) == Map.take(form_credential, fields)
   end
 end

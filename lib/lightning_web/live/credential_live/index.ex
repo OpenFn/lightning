@@ -13,6 +13,7 @@ defmodule LightningWeb.CredentialLive.Index do
     {:ok,
      assign(
        socket,
+       current_user: socket.assigns.current_user,
        credentials: list_credentials(socket.assigns.current_user.id),
        active_menu_item: :credentials,
        selected_credential_type: nil,

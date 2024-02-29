@@ -118,6 +118,12 @@ defmodule Lightning.Credentials do
     Repo.one(query)
   end
 
+  def get_credential_for_update!(id) do
+    Credential
+    |> Repo.get!(id)
+    |> Repo.preload([:project_credentials, :projects])
+  end
+
   @doc """
   Creates a credential.
 
