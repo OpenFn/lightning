@@ -17,6 +17,11 @@ and this project adheres to
 
 ### Added
 
+- Allow admins to set project retention periods
+  [#1760](https://github.com/OpenFn/lightning/issues/1760)
+- Automatically wipe input/output data after their retention period
+  [#1762](https://github.com/OpenFn/lightning/issues/1762)
+
 ### Changed
 
 ### Fixed
@@ -37,8 +42,6 @@ and this project adheres to
 - Automatically create Github workflows in a target repository/branch when users
   set up a Github repo::OpenFn project sync
   [#1046](https://github.com/OpenFn/lightning/issues/1046)
-- Allow admins to set project retention periods
-  [#1760](https://github.com/OpenFn/lightning/issues/1760)
 
 ### Changed
 

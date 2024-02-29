@@ -1,6 +1,7 @@
 defmodule Lightning.ProjectsTest do
   use Lightning.DataCase, async: false
 
+  alias Lightning.Invocation.Dataclip
   alias Lightning.Projects.ProjectUser
   alias Lightning.Projects
   alias Lightning.Projects.Project
@@ -668,6 +669,91 @@ defmodule Lightning.ProjectsTest do
     end
   end
 
+  describe "Project dataclip retention period" do
+    test "does not wipe dataclips within the retention period" do
+      project = insert(:project, dataclip_retention_period: 10)
+
+      dataclip_1 =
+        insert(:dataclip,
+          project: project,
+          request: %{star: "sadio mane"},
+          type: :http_request,
+          body: %{team: "senegal"},
+          inserted_at: Timex.now() |> Timex.shift(days: -9)
+        )
+
+      :ok = Projects.perform(%Oban.Job{args: %{"type" => "data_retention"}})
+
+      dataclip_1 = dataclip_with_body_and_request(dataclip_1)
+
+      assert dataclip_1.request === %{"star" => "sadio mane"}
+      assert dataclip_1.body === %{"team" => "senegal"}
+      assert dataclip_1.wiped_at == nil
+    end
+
+    test "wipes dataclips past the retention period" do
+      project = insert(:project, dataclip_retention_period: 10)
+
+      dataclip =
+        insert(:dataclip,
+          project: project,
+          request: %{star: "sadio mane"},
+          type: :step_result,
+          body: %{team: "senegal"},
+          inserted_at: Timex.now() |> Timex.shift(days: -11)
+        )
+
+      :ok = Projects.perform(%Oban.Job{args: %{"type" => "data_retention"}})
+
+      dataclip = dataclip_with_body_and_request(dataclip)
+
+      refute dataclip.request
+      refute dataclip.body
+      refute is_nil(dataclip.wiped_at)
+    end
+
+    test "does not wipe dataclips without a set retention period" do
+      project = insert(:project)
+
+      dataclip =
+        insert(:dataclip,
+          project: project,
+          request: %{star: "sadio mane"},
+          type: :saved_input,
+          body: %{team: "senegal"}
+        )
+
+      :ok = Projects.perform(%Oban.Job{args: %{"type" => "data_retention"}})
+
+      dataclip = dataclip_with_body_and_request(dataclip)
+
+      assert dataclip.request == %{"star" => "sadio mane"}
+      assert dataclip.body == %{"team" => "senegal"}
+      assert is_nil(dataclip.wiped_at)
+    end
+
+    test "does not wipe global dataclips" do
+      project = insert(:project, dataclip_retention_period: 5)
+
+      dataclip =
+        insert(:dataclip,
+          project: project,
+          request: %{star: "sadio mane"},
+          type: :global,
+          body: %{team: "senegal"},
+          inserted_at: Timex.now() |> Timex.shift(days: -6)
+        )
+
+      :ok = Projects.perform(%Oban.Job{args: %{"type" => "data_retention"}})
+
+      dataclip = dataclip_with_body_and_request(dataclip)
+
+      assert dataclip.request === %{"star" => "sadio mane"}
+      assert dataclip.body === %{"team" => "senegal"}
+      assert is_nil(dataclip.wiped_at)
+    end
+  end
+
   @spec full_project_fixture(attrs :: Keyword.t()) :: %{optional(any) => any}
   def full_project_fixture(attrs \\ []) when is_list(attrs) do
     %{workflows: [workflow_1, workflow_2]} =
@@ -708,5 +794,12 @@ defmodule Lightning.ProjectsTest do
       "Important Update to Your #{project.name} Data Retention Policy"
     )
     |> Swoosh.Email.text_body(body)
+  end
+
+  defp dataclip_with_body_and_request(dataclip) do
+    reloaded_dataclip = Repo.get(Dataclip, dataclip.id)
+
+    from(Dataclip, select: [:wiped_at, :body, :request])
+    |> Lightning.Repo.get(reloaded_dataclip.id)
   end
 end
