@@ -46,6 +46,38 @@ defmodule Lightning.Projects do
     {:ok, %{projects_deleted: projects_to_delete}}
   end
 
+  def perform(%Oban.Job{args: %{"type" => "data_retention"}}) do
+    list_projects_having_dataclip_retention()
+    |> Enum.each(fn project -> wipe_dataclips_for(project) end)
+
+    :ok
+  end
+
+  defp wipe_dataclips_for(%Project{dataclip_retention_period: period} = project) do
+    {count, _} =
+      from(d in Dataclip,
+        where: d.project_id == ^project.id,
+        where: d.type in [:http_request, :step_result, :saved_input],
+        where: d.inserted_at < ago(^period, "day"),
+        update: [set: [request: nil, body: nil, wiped_at: ^DateTime.utc_now()]]
+      )
+      |> Repo.update_all([])
+
+    {:ok, count}
+  end
+
+  defp wipe_dataclips_for(_project) do
+    {:error, :missing_dataclip_retention_period}
+  end
+
+  @doc """
+  Lists all projects that have dataclip retention period
+  """
+  @spec list_projects_having_dataclip_retention() :: [] | [Project.t(), ...]
+  def list_projects_having_dataclip_retention do
+    Repo.all(from(p in Project, where: not is_nil(p.dataclip_retention_period)))
+  end
+
   @doc """
   Returns the list of projects.
 
