@@ -40,6 +40,8 @@ and this project adheres to
 - Automatically create Github workflows in a target repository/branch when users
   set up a Github repo::OpenFn project sync
   [#1046](https://github.com/OpenFn/lightning/issues/1046)
+- Allows limiting creation of new runs and retries.
+  [#1754](https://github.com/OpenFn/Lightning/issues/1754)
 
 ### Changed
 
