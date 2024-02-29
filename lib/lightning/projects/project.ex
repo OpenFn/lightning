@@ -75,8 +75,11 @@ defmodule Lightning.Projects.Project do
   end
 
   defp validate_dataclip_retention_period(changeset) do
+    history_retention_period = get_field(changeset, :history_retention_period)
+
     changeset =
-      if get_field(changeset, :retention_policy) == :erase_all do
+      if is_nil(history_retention_period) or
+           get_field(changeset, :retention_policy) == :erase_all do
         put_change(changeset, :dataclip_retention_period, nil)
       else
         changeset
@@ -90,8 +93,6 @@ defmodule Lightning.Projects.Project do
       else
         changeset
       end
-
-    history_retention_period = get_field(changeset, :history_retention_period)
 
     if changeset.valid? and is_integer(dataclip_retention_period) and
          dataclip_retention_period > history_retention_period do

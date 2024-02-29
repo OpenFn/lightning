@@ -2321,19 +2321,32 @@ defmodule LightningWeb.ProjectLiveTest do
           ~p"/projects/#{project.id}/settings#data-storage"
         )
 
+      selected_dataclip_option =
+        element(
+          view,
+          "#retention-settings-form_dataclip_retention_period option[selected]"
+        )
+
+      # nothing has been selected for the dataclip period
+      refute has_element?(selected_dataclip_option)
+
       # let us enable it first by setting the history retention period
       view
-      |> form("#retention-settings-form",
+      |> form("#retention-settings-form")
+      |> render_change(%{
         project: %{
-          history_retention_period: 7
+          history_retention_period: 14,
+          dataclip_retention_period: 7
         }
-      )
-      |> render_change()
+      })
 
       refute has_element?(
                view,
                "#retention-settings-form_dataclip_retention_period:disabled"
              )
+
+      # 7 Days has been selected for the dataclip period
+      assert render(selected_dataclip_option) =~ "7 Days"
 
       # now let's set the retention policy to erase_all
       view
@@ -2348,6 +2361,9 @@ defmodule LightningWeb.ProjectLiveTest do
                view,
                "#retention-settings-form_dataclip_retention_period:disabled"
              )
+
+      # 7 days gets cleared
+      assert render(selected_dataclip_option) =~ "Select Period"
     end
 
     @tag role: :admin

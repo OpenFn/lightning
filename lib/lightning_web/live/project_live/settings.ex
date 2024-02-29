@@ -201,10 +201,17 @@ defmodule LightningWeb.ProjectLive.Settings do
   end
 
   @impl true
-  def handle_event("validate", %{"project" => project_params}, socket) do
+  def handle_event("validate", %{"project" => params}, socket) do
+    params =
+      if params["retention_policy"] == "erase_all" do
+        Map.merge(params, %{"dataclip_retention_period" => nil})
+      else
+        params
+      end
+
     changeset =
       socket.assigns.project
-      |> Projects.change_project(project_params)
+      |> Projects.change_project(params)
       |> Map.put(:action, :validate)
 
     {:noreply, assign(socket, :project_changeset, changeset)}
