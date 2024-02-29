@@ -36,9 +36,7 @@ defmodule Lightning.WorkOrders do
   alias Lightning.Accounts.User
   alias Lightning.Graph
   alias Lightning.Invocation.Dataclip
-  alias Lightning.Invocation.LogLine
   alias Lightning.Invocation.Step
-  alias Lightning.Projects.Project
   alias Lightning.Repo
   alias Lightning.Run
   alias Lightning.Runs
@@ -449,71 +447,6 @@ defmodule Lightning.WorkOrders do
       preload: ^preloads
     )
     |> Repo.one()
-  end
-
-  def delete_history_for(%Project{history_retention_period: period} = project)
-      when is_integer(period) do
-    workflows_query = from w in Ecto.assoc(project, :workflows), select: w.id
-
-    workorders_query =
-      from wo in WorkOrder,
-        where:
-          wo.workflow_id in subquery(workflows_query) and
-            wo.last_activity < ago(^period, "day"),
-        select: wo.id
-
-    runs_query =
-      from r in Run,
-        where: r.work_order_id in subquery(workorders_query),
-        select: r.id
-
-    run_steps_query =
-      from rs in RunStep,
-        where: rs.run_id in subquery(runs_query),
-        select: rs.step_id
-
-    log_lines_query = from l in LogLine, where: l.run_id in subquery(runs_query)
-
-    dataclips_subset_query =
-      from d in Dataclip,
-        left_join: wo in WorkOrder,
-        on: d.id == wo.dataclip_id,
-        left_join: r in Run,
-        on: d.id == r.dataclip_id,
-        left_join: s in Step,
-        on: d.id == s.input_dataclip_id or d.id == s.output_dataclip_id,
-        where: d.project_id == ^project.id,
-        where: d.inserted_at < ago(^period, "day"),
-        where: is_nil(wo.dataclip_id),
-        where: is_nil(r.dataclip_id),
-        where: is_nil(s.input_dataclip_id),
-        where: is_nil(s.output_dataclip_id),
-        select: d.id
-
-    dataclips_query =
-      from d in Dataclip, where: d.id in subquery(dataclips_subset_query)
-
-    Multi.new()
-    |> Multi.delete_all(:log_lines, log_lines_query)
-    |> Multi.delete_all(:run_steps, run_steps_query)
-    |> Multi.delete_all(:steps, fn %{run_steps: {_, step_ids}} ->
-      from s in Step, where: s.id in ^step_ids
-    end)
-    |> Multi.delete_all(:runs, runs_query)
-    |> Multi.delete_all(:workorders, workorders_query)
-    |> Multi.delete_all(:dataclips, dataclips_query)
-    |> Repo.transaction()
-    |> case do
-      {:ok, result} ->
-        {:ok, result}
-
-      {:error, _operation, failed_value, _changes} ->
-        {:error, failed_value}
-    end
-  end
-
-  def delete_history_for(_project) do
-    {:error, :missing_history_retention_period}
   end
 
   defdelegate subscribe(project_id), to: Events
