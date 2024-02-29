@@ -106,7 +106,7 @@ defmodule Lightning.Runs.PromExPlugin do
     Polling.build(
       :lightning_run_queue_metrics,
       5000,
-      {__MODULE__, :run_claim_duration, [run_age_seconds]},
+      {__MODULE__, :run_queue_metrics, [run_age_seconds]},
       [
         last_value(
           [
@@ -126,12 +126,10 @@ defmodule Lightning.Runs.PromExPlugin do
     )
   end
 
-  def run_claim_duration(run_age_seconds) do
-    trigger_run_claim_duration(Process.whereis(Repo), run_age_seconds)
-  end
-
-  defp trigger_run_claim_duration(nil, _run_age_seconds) do
-    nil
+  def run_queue_metrics(run_age_seconds) do
+    if pid = Process.whereis(Repo) do
+      trigger_run_claim_duration(pid, run_age_seconds)
+    end
   end
 
   defp trigger_run_claim_duration(repo_pid, run_age_seconds) do

@@ -105,8 +105,8 @@ defmodule LightningWeb.Components.CommonTest do
     test "displays the Lightning version without an icon" do
       html = render_component(&LightningWeb.Components.Common.version_chip/1)
 
-      assert html =~ "Lightning v2.0.5"
-      assert html =~ "OpenFn/Lightning v2.0.5"
+      assert html =~ "Lightning v#{Application.spec(:lightning, :vsn)}"
+      assert html =~ "OpenFn/Lightning v#{Application.spec(:lightning, :vsn)}"
       refute html =~ "<svg"
     end
   end
