@@ -118,6 +118,7 @@ ENV ADAPTORS_PATH /app/priv/openfn
 COPY --from=builder --chown=lightning:root /app/_build/${MIX_ENV}/rel/lightning ./
 COPY --from=builder --chown=lightning:root /app/priv/openfn ./priv/openfn
 COPY --from=builder --chown=lightning:root /app/priv/schemas ./priv/schemas
+COPY --from=builder --chown=lightning:root /app/priv/github ./priv/github
 
 USER lightning
 
