@@ -105,7 +105,8 @@ base_oban_cron = [
   {"0 10 * * 1", Lightning.DigestEmailWorker,
    args: %{"type" => "weekly_project_digest"}},
   {"0 10 1 * *", Lightning.DigestEmailWorker,
-   args: %{"type" => "monthly_project_digest"}}
+   args: %{"type" => "monthly_project_digest"}},
+  {"0 2 * * *", Lightning.Projects, args: %{"type" => "data_retention"}}
 ]
 
 purge_cron =
@@ -116,8 +117,7 @@ purge_cron =
       {"0 2 * * *", Lightning.Credentials, args: %{"type" => "purge_deleted"}},
       {"*/5 * * * *", Lightning.Janitor},
       {"0 2 * * *", Lightning.Accounts, args: %{"type" => "purge_deleted"}},
-      {"0 2 * * *", Lightning.Projects, args: %{"type" => "purge_deleted"}},
-      {"0 2 * * *", Lightning.Projects, args: %{"type" => "data_retention"}}
+      {"0 2 * * *", Lightning.Projects, args: %{"type" => "purge_deleted"}}
     ],
     else: []
 

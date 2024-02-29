@@ -21,6 +21,8 @@ and this project adheres to
   [#1760](https://github.com/OpenFn/lightning/issues/1760)
 - Automatically wipe input/output data after their retention period
   [#1762](https://github.com/OpenFn/lightning/issues/1762)
+- Automatically delete work order history after a their retention period
+  [#1761](https://github.com/OpenFn/lightning/issues/1761)
 
 ### Changed
 

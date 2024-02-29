@@ -111,13 +111,10 @@ defmodule Lightning.Runs do
   """
   @spec wipe_dataclips(Run.t()) :: :ok
   def wipe_dataclips(%Run{} = run) do
-    query =
-      from(d in Ecto.assoc(run, :dataclip),
-        update: [set: [request: nil, body: nil, wiped_at: ^DateTime.utc_now()]],
-        select: d
-      )
-
-    query
+    run
+    |> Ecto.assoc(:dataclip)
+    |> select([d], d)
+    |> Lightning.Invocation.Query.wipe_dataclips()
     |> Repo.update_all([])
     |> then(fn {1, [dataclip]} ->
       Events.dataclip_updated(run.id, dataclip)
