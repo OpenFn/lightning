@@ -9,7 +9,6 @@ defmodule Lightning.Integration.GithubInstallationTest do
   @github_repo "OpenFn/github_integration_testing"
   @github_base_branch "main"
   @github_installation_id "41010069"
-  @github_assets_dir Application.app_dir(:lightning, "priv/github")
 
   @moduletag :integration
 
@@ -127,7 +126,12 @@ defmodule Lightning.Integration.GithubInstallationTest do
       assert File.exists?(downloaded_yml_path)
 
       assert File.read!(downloaded_yml_path) ==
-               [@github_assets_dir, yml_file] |> Path.join() |> File.read!()
+               [
+                 :code.priv_dir(:lightning),
+                 "deploy/#{yml_file}"
+               ]
+               |> Path.join()
+               |> File.read!()
     end
 
     # all other previous files exist in the current dir

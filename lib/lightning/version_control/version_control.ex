@@ -13,8 +13,6 @@ defmodule Lightning.VersionControl do
   alias Lightning.VersionControl.GithubError
   alias Lightning.VersionControl.ProjectRepoConnection
 
-  @github_assets_dir Application.app_dir(:lightning, "priv/github")
-
   @doc """
   Creates a connection between a project and a github repo
   """
@@ -184,10 +182,14 @@ defmodule Lightning.VersionControl do
   end
 
   defp pull_yml do
-    @github_assets_dir |> Path.join("pull.yml") |> File.read!()
+    :code.priv_dir(:lightning)
+    |> Path.join("github/pull.yml")
+    |> File.read!()
   end
 
   defp deploy_yml do
-    @github_assets_dir |> Path.join("deploy.yml") |> File.read!()
+    :code.priv_dir(:lightning)
+    |> Path.join("github/deploy.yml")
+    |> File.read!()
   end
 end
