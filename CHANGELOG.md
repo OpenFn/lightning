@@ -23,11 +23,6 @@ and this project adheres to
 
 - Show flash error when editing stale project credentials
   [#1795](https://github.com/OpenFn/lightning/issues/1795)
-
-## [v2.0.7] - 2024-02-29
-
-### Fixed
-
 - Fixed bug with Github sync installation on docker-based deployments
   [#1845](https://github.com/OpenFn/lightning/issues/1845)
 
