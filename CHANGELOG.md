@@ -21,6 +21,10 @@ and this project adheres to
 
 ### Fixed
 
+## [v2.0.8] - 2024-02-29
+
+### Fixed
+
 - Show flash error when editing stale project credentials
   [#1795](https://github.com/OpenFn/lightning/issues/1795)
 - Fixed bug with Github sync installation on docker-based deployments
