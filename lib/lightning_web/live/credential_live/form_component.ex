@@ -18,6 +18,7 @@ defmodule LightningWeb.CredentialLive.FormComponent do
     :id,
     :action,
     :credential,
+    :current_user,
     :projects,
     :on_save,
     :button,
@@ -735,7 +736,11 @@ defmodule LightningWeb.CredentialLive.FormComponent do
        ) do
     %{credential: form_credential} = socket.assigns
 
-    with true <- credential_up_to_date?(form_credential),
+    with {:uptodate, true} <-
+           {:uptodate, credential_up_to_date?(form_credential)},
+         {:same_user, true} <-
+           {:same_user,
+            socket.assigns.current_user.id == socket.assigns.credential.user_id},
          {:ok, _credential} <-
            Credentials.update_credential(form_credential, credential_params) do
       {:noreply,
@@ -743,7 +748,7 @@ defmodule LightningWeb.CredentialLive.FormComponent do
        |> put_flash(:info, "Credential updated successfully")
        |> push_redirect(to: socket.assigns.return_to)}
     else
-      false ->
+      {:uptodate, false} ->
         credential = Credentials.get_credential_for_update!(form_credential.id)
 
         {:noreply,
@@ -752,6 +757,15 @@ defmodule LightningWeb.CredentialLive.FormComponent do
          |> put_flash(
            :error,
            "Credential was updated by another session. Please try again."
+         )
+         |> push_redirect(to: socket.assigns.return_to)}
+
+      {:same_user, false} ->
+        {:noreply,
+         socket
+         |> put_flash(
+           :error,
+           "Invalid credentials. Please login again."
          )
          |> push_redirect(to: socket.assigns.return_to)}
 

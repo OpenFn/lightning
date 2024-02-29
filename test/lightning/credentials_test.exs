@@ -479,18 +479,17 @@ defmodule Lightning.CredentialsTest do
                })
     end
 
-    test "does not raise error when credential doesn't have the latest project credentials" do
-      user1 = insert(:user)
-      user2 = insert(:user)
+    test "raise error when credential doesn't have the latest project credentials" do
+      user = insert(:user)
 
       project1 =
         insert(:project,
-          project_users: [%{user_id: user1.id}, %{user_id: user2.id}]
+          project_users: [%{user_id: user.id}]
         )
 
       project2 =
         insert(:project,
-          project_users: [%{user_id: user1.id}, %{user_id: user2.id}]
+          project_users: [%{user_id: user.id}]
         )
 
       %{
@@ -501,7 +500,7 @@ defmodule Lightning.CredentialsTest do
       } =
         credential =
         insert(:credential,
-          user_id: user2.id,
+          user_id: user.id,
           body: %{
             a: "1"
           },
