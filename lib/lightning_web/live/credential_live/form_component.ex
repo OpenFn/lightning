@@ -765,7 +765,7 @@ defmodule LightningWeb.CredentialLive.FormComponent do
          socket
          |> put_flash(
            :error,
-           "Invalid credentials. Please login again."
+           "Invalid credentials. Please log in again."
          )
          |> push_redirect(to: socket.assigns.return_to)}
 
