@@ -21,6 +21,13 @@ and this project adheres to
 
 ### Fixed
 
+## [v2.0.7] - 2024-02-29
+
+### Fixed
+
+- Fixed bug with Github sync installation on docker-based deployments
+  [#1845](https://github.com/OpenFn/lightning/issues/1845)
+
 ## [v2.0.6] - 2024-02-29
 
 ### Added
@@ -45,10 +52,6 @@ and this project adheres to
   [#1799](https://github.com/OpenFn/lightning/issues/1799)
 
 ## [v2.0.5] - 2024-02-25
-
-### Added
-
-### Changed
 
 ### Fixed
 
