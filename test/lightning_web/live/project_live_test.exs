@@ -2362,8 +2362,8 @@ defmodule LightningWeb.ProjectLiveTest do
                "#retention-settings-form_dataclip_retention_period:disabled"
              )
 
-      # 7 days gets cleared
-      assert render(selected_dataclip_option) =~ "Select Period"
+      # 7 days gets cleared. Nothing is now selected
+      refute has_element?(selected_dataclip_option)
     end
 
     @tag role: :admin
