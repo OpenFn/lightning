@@ -16,7 +16,17 @@ and this project adheres to
 ## [Unreleased]
 
 ### Added
-- Push `.github/workflows/{pull,deploy}.yml` files when user connects branch
+
+### Changed
+
+### Fixed
+
+## [v2.0.6] - 2024-02-29
+
+### Added
+
+- Automatically create Github workflows in a target repository/branch when users
+  set up a Github repo::OpenFn project sync
   [#1046](https://github.com/OpenFn/lightning/issues/1046)
 
 ### Changed
