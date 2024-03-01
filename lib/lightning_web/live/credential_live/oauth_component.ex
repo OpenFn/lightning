@@ -749,7 +749,7 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
     parsed_token =
       token
       |> token_to_params()
-      |> maybe_add_sandbox(sandbox, provider)
+      |> maybe_add_specific_provider_params(socket.assigns, provider)
 
     update_body.(parsed_token)
 
@@ -898,12 +898,14 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
     )
   end
 
-  defp maybe_add_sandbox(token, sandbox, provider) do
-    if provider === "Salesforce" do
-      Map.put_new(token, :sandbox, sandbox)
-    else
-      token
-    end
+  defp maybe_add_specific_provider_params(token_params, assigns, "Salesforce") do
+    assigns
+    |> Map.take([:sandbox, :apiVersion])
+    |> Map.merge(token_params)
+  end
+
+  defp maybe_add_specific_provider_params(token_params, _assigns, _provider) do
+    token_params
   end
 
   defp display_loader?(oauth_progress) do
