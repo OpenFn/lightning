@@ -1,5 +1,5 @@
 defmodule LightningWeb.HooksTest do
-  use LightningWeb.ConnCase, async: false
+  use LightningWeb.ConnCase, async: true
   import Phoenix.LiveViewTest
 
   import Lightning.Factories
