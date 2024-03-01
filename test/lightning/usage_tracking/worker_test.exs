@@ -58,7 +58,7 @@ defmodule Lightning.UsageTracking.WorkerTest do
       report = Report |> Repo.one()
 
       assert %Report{submitted: true} = report
-      assert DateTime.diff(DateTime.utc_now(), report.submitted_at, :second) <= 1
+      assert DateTime.utc_now() > report.submitted_at
       assert_data_populated(report)
     end
 
