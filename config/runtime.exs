@@ -352,6 +352,10 @@ config :lightning, :metrics,
   run_performance_age_seconds:
     String.to_integer(
       System.get_env("METRICS_RUN_PERFORMANCE_AGE_SECONDS", "300")
+    ),
+  run_queue_metrics_period_seconds:
+    String.to_integer(
+      System.get_env("METRICS_RUN_QUEUE_METRICS_PERIOD_SECONDS", "5")
     )
 
 config :lightning, :usage_tracking,

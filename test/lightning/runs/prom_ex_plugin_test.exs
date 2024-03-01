@@ -6,6 +6,8 @@ defmodule Lightning.Runs.PromExPluginText do
 
   alias Lightning.Runs.PromExPlugin
 
+  @queue_metrics_period_seconds 5
+  @poll_rate @queue_metrics_period_seconds * 1000
   @run_performance_age_seconds 4
   @stalled_run_threshold_seconds 333
 
@@ -53,7 +55,7 @@ defmodule Lightning.Runs.PromExPluginText do
         plugin_config() |> find_metric_group(:lightning_stalled_run_metrics)
 
       assert %PromEx.MetricTypes.Polling{
-               poll_rate: 5000,
+               poll_rate: @poll_rate,
                measurements_mfa: ^expected_mfa,
                metrics: [metric | _]
              } = stalled_run_polling
@@ -78,7 +80,7 @@ defmodule Lightning.Runs.PromExPluginText do
         plugin_config() |> find_metric_group(:lightning_run_queue_metrics)
 
       assert %PromEx.MetricTypes.Polling{
-               poll_rate: 5000,
+               poll_rate: @poll_rate,
                measurements_mfa: ^expected_mfa
              } = run_performance_polling
     end
@@ -357,6 +359,7 @@ defmodule Lightning.Runs.PromExPluginText do
   defp plugin_config do
     [
       {:run_performance_age_seconds, @run_performance_age_seconds},
+      {:run_queue_metrics_period_seconds, @queue_metrics_period_seconds},
       {:stalled_run_threshold_seconds, @stalled_run_threshold_seconds}
     ]
   end

@@ -33,6 +33,11 @@ defmodule Lightning.PromExTest do
         :run_performance_age_seconds
       ]
 
+    run_metrics_period =
+      Application.get_env(:lightning, :metrics)[
+        :run_queue_metrics_period_seconds
+      ]
+
     expected = [
       PromEx.Plugins.Application,
       PromEx.Plugins.Beam,
@@ -43,8 +48,9 @@ defmodule Lightning.PromExTest do
       PromEx.Plugins.PhoenixLiveView,
       {
         Lightning.Runs.PromExPlugin,
-        stalled_run_threshold_seconds: stalled_run_threshold_seconds,
-        run_performance_age_seconds: performance_age_seconds
+        run_queue_metrics_period_seconds: run_metrics_period,
+        run_performance_age_seconds: performance_age_seconds,
+        stalled_run_threshold_seconds: stalled_run_threshold_seconds
       }
     ]
 
