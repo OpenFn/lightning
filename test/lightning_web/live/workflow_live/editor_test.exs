@@ -287,10 +287,8 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
              )
              |> render_submit()
              |> Floki.parse_fragment!()
-             |> Floki.find("#flash")
-             |> Floki.find("p")
-             |> Floki.text() =~
-               "Runs limit exceeded"
+
+      assert view |> has_element?("#flash p", "Runs limit exceeded")
     end
 
     test "can run a job", %{conn: conn, project: p, workflow: w} do

@@ -1793,11 +1793,8 @@ defmodule LightningWeb.WorkOrderLiveTest do
         "run_id" => run.id,
         "step_id" => step.id
       })
-      |> Floki.parse_fragment!()
-      |> Floki.find("#flash")
-      |> Floki.find("p")
-      |> Floki.text() =~
-        "Runs limit exceeded"
+
+      assert view |> has_element?("#flash p", "Runs limit exceeded")
     end
 
     @tag role: :viewer
