@@ -53,6 +53,7 @@ defmodule Lightning.WorkOrders do
           {:workflow, Workflow.t()}
           | {:dataclip, Dataclip.t()}
           | {:created_by, User.t()}
+          | {:without_run, boolean()}
 
   @doc """
   Create a new Work Order.
@@ -70,7 +71,13 @@ defmodule Lightning.WorkOrders do
     |> Multi.put(:workflow, opts[:workflow])
     |> get_or_insert_dataclip(opts[:dataclip])
     |> Multi.insert(:workorder, fn %{dataclip: dataclip} ->
-      build_for(trigger, Map.new(opts) |> Map.put(:dataclip, dataclip))
+      without_run? = Keyword.fetch!(opts, :without_run)
+
+      build_for(
+        trigger,
+        Map.new(opts) |> Map.put(:dataclip, dataclip),
+        without_run?
+      )
     end)
     |> broadcast_workorder_creation()
     |> transact_and_return_work_order()
@@ -88,11 +95,14 @@ defmodule Lightning.WorkOrders do
     Multi.new()
     |> get_or_insert_dataclip(manual)
     |> Multi.insert(:workorder, fn %{dataclip: dataclip} ->
-      build_for(manual.job, %{
-        workflow: manual.workflow,
-        dataclip: dataclip,
-        created_by: manual.created_by
-      })
+      build_for(
+        manual.job,
+        %{
+          workflow: manual.workflow,
+          dataclip: dataclip,
+          created_by: manual.created_by
+        }
+      )
     end)
     |> Multi.put(:workflow, manual.workflow)
     |> broadcast_workorder_creation()
@@ -154,17 +164,30 @@ defmodule Lightning.WorkOrders do
     get_or_insert_dataclip(multi, Dataclip.new(params))
   end
 
-  @spec build_for(Trigger.t() | Job.t(), map()) ::
+  @spec build_for(Trigger.t() | Job.t(), map(), boolean()) ::
           Ecto.Changeset.t(WorkOrder.t())
-  def build_for(%Trigger{} = trigger, attrs) do
-    %WorkOrder{}
+  def build_for(trigger_or_job, attrs, without_run? \\ false)
+
+  def build_for(%Trigger{} = trigger, attrs, without_run?) do
+    if without_run? do
+      %WorkOrder{state: :rejected}
+    else
+      %WorkOrder{}
+    end
     |> change()
     |> put_assoc(:workflow, attrs[:workflow])
     |> put_assoc(:trigger, trigger)
     |> put_assoc(:dataclip, attrs[:dataclip])
-    |> put_assoc(:runs, [
-      Run.for(trigger, %{dataclip: attrs[:dataclip]})
-    ])
+    |> then(fn changeset ->
+      if without_run? do
+        changeset |> put_assoc(:runs, [])
+      else
+        changeset
+        |> put_assoc(:runs, [
+          Run.for(trigger, %{dataclip: attrs[:dataclip]})
+        ])
+      end
+    end)
     |> validate_required_assoc(:workflow)
     |> validate_required_assoc(:trigger)
     |> validate_required_assoc(:dataclip)
@@ -172,17 +195,24 @@ defmodule Lightning.WorkOrders do
     |> assoc_constraint(:workflow)
   end
 
-  def build_for(%Job{} = job, attrs) do
+  def build_for(%Job{} = job, attrs, without_run?) do
     %WorkOrder{}
     |> change()
     |> put_assoc(:workflow, attrs[:workflow])
     |> put_assoc(:dataclip, attrs[:dataclip])
-    |> put_assoc(:runs, [
-      Run.for(job, %{
-        dataclip: attrs[:dataclip],
-        created_by: attrs[:created_by]
-      })
-    ])
+    |> then(fn changeset ->
+      if without_run? do
+        changeset |> put_assoc(:runs, [])
+      else
+        changeset
+        |> put_assoc(:runs, [
+          Run.for(job, %{
+            dataclip: attrs[:dataclip],
+            created_by: attrs[:created_by]
+          })
+        ])
+      end
+    end)
     |> validate_required_assoc(:workflow)
     |> validate_required_assoc(:dataclip)
     |> assoc_constraint(:trigger)

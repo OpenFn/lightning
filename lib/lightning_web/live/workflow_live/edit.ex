@@ -5,6 +5,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
   import LightningWeb.Components.NewInputs
   import LightningWeb.WorkflowLive.Components
 
+  alias Lightning.Extensions.Message
   alias Lightning.Extensions.UsageLimiting.Action
   alias Lightning.Extensions.UsageLimiting.Context
   alias Lightning.Invocation
@@ -967,9 +968,19 @@ defmodule LightningWeb.WorkflowLive.Edit do
       {:error, :unauthorized}
     end
     |> case do
-      {:ok, %{workorder: workorder, workflow: workflow}} ->
-        %{runs: [run]} = workorder
+      {:ok,
+       %{
+         workorder: %{runs: []},
+         workflow: workflow,
+         message: %Message{text: flash_text}
+       }} ->
+        {:noreply,
+         socket
+         |> put_flash(:info, flash_text)
+         |> assign(limit_exceeded?: true)
+         |> assign_workflow(workflow)}
 
+      {:ok, %{workorder: %{runs: [run]}, workflow: workflow}} ->
         Runs.subscribe(run)
 
         {:noreply,
@@ -1125,30 +1136,28 @@ defmodule LightningWeb.WorkflowLive.Edit do
     |> assign(manual_run_form: to_form(changeset, id: "manual_run_form"))
   end
 
-  defp save_and_run_disabled?(attrs) do
-    case attrs do
-      %{manual_run_form: nil} ->
+  defp save_and_run_disabled?(%{limit_exceeded?: true}), do: true
+
+  defp save_and_run_disabled?(%{manual_run_form: nil}), do: true
+
+  defp save_and_run_disabled?(%{
+         manual_run_form: manual_run_form,
+         changeset: changeset,
+         can_edit_workflow: can_edit_workflow,
+         can_run_workflow: can_run_workflow
+       }) do
+    form_valid =
+      if manual_run_form.source.errors == [
+           created_by: {"can't be blank", [validation: :required]}
+         ] and Map.get(manual_run_form.params, "dataclip_id") do
         true
+      else
+        !Enum.any?(manual_run_form.source.errors)
+      end
 
-      %{
-        manual_run_form: manual_run_form,
-        changeset: changeset,
-        can_edit_workflow: can_edit_workflow,
-        can_run_workflow: can_run_workflow
-      } ->
-        form_valid =
-          if manual_run_form.source.errors == [
-               created_by: {"can't be blank", [validation: :required]}
-             ] and Map.get(manual_run_form.params, "dataclip_id") do
-            true
-          else
-            !Enum.any?(manual_run_form.source.errors)
-          end
-
-        !form_valid or
-          !changeset.valid? or
-          !(can_edit_workflow or can_run_workflow)
-    end
+    !form_valid or
+      !changeset.valid? or
+      !(can_edit_workflow or can_run_workflow)
   end
 
   defp editor_is_empty(form, job) do

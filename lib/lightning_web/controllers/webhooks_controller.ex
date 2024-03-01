@@ -15,10 +15,7 @@ defmodule LightningWeb.WebhooksController do
   def create(conn, _params) do
     with %Workflows.Trigger{enabled: true, workflow: %{project_id: project_id}} =
            trigger <- conn.assigns.trigger,
-         :ok <-
-           UsageLimiter.limit_action(%Action{type: :new_run}, %Context{
-             project_id: project_id
-           }),
+         message <- check_action_limit(project_id),
          :ok <-
            RateLimiter.limit_request(
              conn,
@@ -33,7 +30,8 @@ defmodule LightningWeb.WebhooksController do
             request: build_request(conn),
             type: :http_request,
             project_id: project_id
-          }
+          },
+          without_run: message != nil
         )
 
       conn |> json(%{work_order_id: work_order.id})
@@ -59,6 +57,19 @@ defmodule LightningWeb.WebhooksController do
           message:
             "Unable to process request, trigger is disabled. Enable it on OpenFn to allow requests to this endpoint."
         })
+    end
+  end
+
+  defp check_action_limit(project_id) do
+    case UsageLimiter.limit_action(
+           %Action{type: :new_run},
+           %Context{project_id: project_id}
+         ) do
+      {:error, _reason, message} ->
+        message
+
+      :ok ->
+        nil
     end
   end
 
