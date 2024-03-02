@@ -19,6 +19,8 @@ and this project adheres to
 
 ### Changed
 
+- Bumping to Elixir 1.16.1 and Erlang 26.2.2
+
 ### Fixed
 
 ## [v2.0.8] - 2024-02-29

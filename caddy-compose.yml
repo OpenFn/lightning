@@ -1,0 +1,8 @@
+version: '3'
+services:
+  caddy:
+    image: caddy:2.7.6
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+    ports:
+      - 8080:80

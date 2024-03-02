@@ -1,0 +1,249 @@
+diff --git a/lib/lightning/invocation.ex b/lib/lightning/invocation.ex
+index d19ee181..e1bbde9b 100644
+--- a/lib/lightning/invocation.ex
++++ b/lib/lightning/invocation.ex
+@@ -361,19 +361,19 @@ defmodule Lightning.Invocation do
+   def filter_run_status_where(statuses) do
+     Enum.reduce(statuses, dynamic(false), fn
+       :pending, query ->
+-        dynamic([runs: r], ^query or is_nil(r.exit_code))
++        dynamic([last_run: r], ^query or is_nil(r.exit_code))
+ 
+       :success, query ->
+-        dynamic([runs: r], ^query or r.exit_code == 0)
++        dynamic([last_run: r], ^query or r.exit_code == 0)
+ 
+       :failure, query ->
+-        dynamic([runs: r], ^query or r.exit_code == 1)
++        dynamic([last_run: r], ^query or r.exit_code == 1)
+ 
+       :timeout, query ->
+-        dynamic([runs: r], ^query or r.exit_code == 2)
++        dynamic([last_run: r], ^query or r.exit_code == 2)
+ 
+       :crash, query ->
+-        dynamic([runs: r], ^query or r.exit_code > 2)
++        dynamic([last_run: r], ^query or r.exit_code > 2)
+ 
+       _, query ->
+         # Not a where parameter
+@@ -381,60 +381,102 @@ defmodule Lightning.Invocation do
+     end)
+   end
+ 
+-  def filter_run_body_and_logs_where(_search_term, search_fields)
+-      when search_fields == [] do
+-    dynamic(true)
+-  end
+-
+-  def filter_run_body_and_logs_where(search_term, search_fields)
+-      when search_fields != [] do
+-    Enum.reduce(search_fields, dynamic(false), fn
+-      :log, query ->
+-        dynamic(
+-          [log_lines: l],
+-          ^query or
+-            fragment(
+-              "cast(?  as VARCHAR) ilike ?",
+-              l.body,
+-              ^"%#{search_term}%"
+-            )
+-        )
++  def filter_run_body_and_logs_where(search_term, search_fields) do
++    if is_nil(search_term) do
++      dynamic(true)
++    else
++      Enum.reduce(search_fields || [], dynamic(false), fn
++        :log, query ->
++          dynamic(
++            [log_lines: l],
++            ^query or
++              fragment(
++                "cast(?  as VARCHAR) ilike ?",
++                l.body,
++                ^"%#{search_term}%"
++              )
++          )
+ 
+-      :body, query ->
+-        dynamic(
+-          [input: i],
+-          ^query or
+-            fragment("cast(?  as VARCHAR) ilike ?", i.body, ^"%#{search_term}%")
+-        )
++        :body, query ->
++          dynamic(
++            [input: i],
++            ^query or
++              fragment(
++                "cast(?  as VARCHAR) ilike ?",
++                i.body,
++                ^"%#{search_term}%"
++              )
++          )
+ 
+-      _, query ->
+-        query
+-    end)
++        _, query ->
++          query
++      end)
++    end
+   end
+ 
+   def list_work_orders_for_project_query(
+         %Project{id: project_id},
+         %SearchParams{} = search_params
+       ) do
++    # last_attempts =
++    #   from(att in Lightning.Attempt,
++    #     group_by: att.work_order_id,
++    #     select: %{
++    #       work_order_id: att.work_order_id,
++    #       last_inserted_at: max(att.inserted_at)
++    #     }
++    #   )
++
++    # last_runs =
++    #   from(r in Lightning.Invocation.Run,
++    #     join: att in assoc(r, :attempts),
++    #     distinct: att.id,
++    #     order_by: [desc_nulls_first: r.finished_at],
++    #     select: %{
++    #       attempt_id: att.id,
++    #       last_finished_at: r.finished_at
++    #     }
++    #   )
++
++    last_attempt_inner =
++      from a in Lightning.Attempt,
++        where: parent_as(:last_attempt).id == a.id,
++        order_by: [desc: a.inserted_at],
++        limit: 1
++
+     last_attempts =
+       from(att in Lightning.Attempt,
+-        group_by: att.work_order_id,
++        as: :last_attempt,
++        inner_lateral_join: lai in subquery(last_attempt_inner),
++        on: true,
+         select: %{
+           work_order_id: att.work_order_id,
+-          last_inserted_at: max(att.inserted_at)
++          attempt_id: lai.id,
++          last_inserted_at: lai.inserted_at
+         }
+       )
+ 
++    last_run_inner =
++      from r in Run,
++        where: parent_as(:last_run).run_id == r.id,
++        order_by: [
++          desc_nulls_first: r.finished_at,
++          desc_nulls_first: r.started_at
++        ],
++        select: [:finished_at, :exit_code],
++        limit: 1
++
+     last_runs =
+-      from(r in Lightning.Invocation.Run,
+-        join: att in assoc(r, :attempts),
+-        distinct: att.id,
+-        order_by: [desc_nulls_first: r.finished_at],
++      from ar in Lightning.AttemptRun,
++        as: :last_run,
++        inner_lateral_join: arr in subquery(last_run_inner),
++        on: true,
++        distinct: ar.attempt_id,
+         select: %{
+-          attempt_id: att.id,
+-          last_finished_at: r.finished_at
++          attempt_id: ar.attempt_id,
++          last_finished_at: arr.finished_at,
++          exit_code: arr.exit_code
+         }
+-      )
+ 
+     # TODO: Refactor to remove the fragment used here; it causes timezone issues
+     from(wo in Lightning.WorkOrder,
+@@ -443,14 +485,17 @@ defmodule Lightning.Invocation do
+       as: :workflow,
+       join: att in assoc(wo, :attempts),
+       join: last in subquery(last_attempts),
+-      on:
+-        last.last_inserted_at == att.inserted_at and wo.id == last.work_order_id,
++      # on:
++      #   last.last_inserted_at == att.inserted_at and wo.id == last.work_order_id,
++      on: last.work_order_id == wo.id,
+       join: r in assoc(att, :runs),
+       as: :runs,
+       join: last_run in subquery(last_runs),
+-      on:
+-        (att.id == last_run.attempt_id and
+-           last_run.last_finished_at == r.finished_at) or is_nil(r.finished_at),
++      as: :last_run,
++      # on:
++      #   (att.id == last_run.attempt_id and
++      #      last_run.last_finished_at == r.finished_at) or is_nil(r.finished_at),
++      on: last_run.attempt_id == last.attempt_id,
+       join: att_re in assoc(att, :reason),
+       join: d in assoc(r, :input_dataclip),
+       as: :input,
+@@ -472,15 +517,11 @@ defmodule Lightning.Invocation do
+       select: %{
+         id: wo.id,
+         workflow_id: wo.workflow_id,
+-        last_finished_at:
+-          fragment(
+-            "nullif(max(coalesce(?, 'infinity')), 'infinity')",
+-            r.finished_at
+-          )
+-          |> selected_as(:last_finished_at)
++        last_finished_at: last_run.last_finished_at
+       },
+-      group_by: wo.id,
+-      order_by: [desc_nulls_first: selected_as(:last_finished_at)]
++      distinct: [desc: wo.id],
++      # group_by: [wo.id, wo.workflow_id, last_run.last_finished_at],
++      order_by: [desc_nulls_first: last_run.last_finished_at]
+     )
+   end
+ 
+@@ -548,16 +589,15 @@ defmodule Lightning.Invocation do
+       fn current_value ->
+         {current_value,
+          Enum.map(current_value, fn e ->
+-           %{
+-             id: e.id,
+-             workflow_id: e.workflow_id,
+-             last_finished_at:
+-               if is_nil(e.last_finished_at) do
+-                 nil
+-               else
+-                 DateTime.from_naive!(e.last_finished_at, "Etc/UTC")
+-               end
+-           }
++           Map.replace!(
++             e,
++             :last_finished_at,
++             if is_nil(e.last_finished_at) do
++               nil
++             else
++               DateTime.from_naive!(e.last_finished_at, "Etc/UTC")
++             end
++           )
+          end)}
+       end
+     )
+diff --git a/test/lightning/invocation_test.exs b/test/lightning/invocation_test.exs
+index 0836589d..a83b25a5 100644
+--- a/test/lightning/invocation_test.exs
++++ b/test/lightning/invocation_test.exs
+@@ -943,6 +943,7 @@ defmodule Lightning.InvocationTest do
+ 
+       assert [%{id: ^id_failure}] =
+                actual_filter_by_status(project, %{"failure" => true})
++               |> IO.inspect()
+ 
+       assert [%{id: ^id_success}] =
+                actual_filter_by_status(project, %{"success" => true})

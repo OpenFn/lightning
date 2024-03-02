@@ -1,0 +1,35 @@
+{
+  "name": "myproject",
+  "workflows": [
+    {
+      "key": "workflow1",
+      "name": "workflow1",
+      "jobs": [
+        {
+          "name": "job1",
+          "key": "job1",
+          "trigger": { "type": "webhook" },
+          "adaptor": "language-fhir",
+          "enabled": true,
+          "credential": "abc",
+          "body": "fn(state: state)"
+        }
+      ]
+    },
+    {
+      "key": "workflow2",
+      "name": "workflow2",
+      "jobs": [
+        {
+          "name": "job222",
+          "key": "job2",
+          "trigger": { "type": "webhook" },
+          "adaptor": "language-fhir",
+          "enabled": true,
+          "credential": "abc",
+          "body": "fn(state: state)"
+        }
+      ]
+    }
+  ]
+}

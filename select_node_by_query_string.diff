@@ -1,0 +1,167 @@
+diff --git a/assets/js/workflow-editor/index.ts b/assets/js/workflow-editor/index.ts
+index ccbd1ac8..6872f1fc 100644
+--- a/assets/js/workflow-editor/index.ts
++++ b/assets/js/workflow-editor/index.ts
+@@ -112,16 +112,40 @@ export default {
+     });
+   },
+   selectJob(id: string) {
+-    const url = this.editJobUrl.replace(':job_id', id);
+-    this.liveSocket.pushHistoryPatch(url, 'push', this.el);
++    const url = new URL(window.location.href);
++    const params = new URLSearchParams(url.search);
++
++    params.set('selected', id);
++
++    this.liveSocket.pushHistoryPatch(
++      new URL("?" + params.toString(), url),
++      'push',
++      this.el
++    );
+   },
+   selectTrigger(id: string) {
+-    const url = this.editTriggerUrl.replace(':trigger_id', id);
+-    this.liveSocket.pushHistoryPatch(url, 'push', this.el);
++    const url = new URL(window.location.href);
++    const params = new URLSearchParams(url.search);
++
++    params.set('selected', id);
++
++    this.liveSocket.pushHistoryPatch(
++      new URL("?" + params.toString(), url),
++      'push',
++      this.el
++    );
+   },
+   selectEdge(id: string) {
+-    const url = this.editEdgeUrl.replace(':edge_id', id);
+-    this.liveSocket.pushHistoryPatch(url, 'push', this.el);
++    const url = new URL(window.location.href);
++    const params = new URLSearchParams(url.search);
++
++    params.set('selected', id);
++
++    this.liveSocket.pushHistoryPatch(
++      new URL("?" + params.toString(), url),
++      'push',
++      this.el
++    );
+   },
+   unselectNode() {
+     this.liveSocket.pushHistoryPatch(this.el.dataset.baseUrl!, 'push', this.el);
+diff --git a/lib/lightning_web/live/workflow_live/components.ex b/lib/lightning_web/live/workflow_live/components.ex
+index ba3827dd..ffe214be 100644
+--- a/lib/lightning_web/live/workflow_live/components.ex
++++ b/lib/lightning_web/live/workflow_live/components.ex
+@@ -289,11 +289,23 @@ defmodule LightningWeb.WorkflowLive.Components do
+ 
+   def edge_form(assigns) do
+     assigns =
+-      assigns
+-      |> assign(:edge_options,
+-        "On Success": "on_job_success",
+-        "On Failure": "on_job_failure"
+-      )
++      assigns.form.source
++      |> Ecto.Changeset.get_field(:source_job_id)
++      |> case do
++        nil ->
++          assigns
++          |> assign(
++            :edge_options,
++            []
++          )
++
++        _ ->
++          assigns
++          |> assign(:edge_options,
++            "On Success": "on_job_success",
++            "On Failure": "on_job_failure"
++          )
++      end
+ 
+     ~H"""
+     <div class="h-full bg-white shadow-xl ring-1 ring-black ring-opacity-5">
+@@ -326,9 +338,9 @@ defmodule LightningWeb.WorkflowLive.Components do
+             disabled={@disabled}
+           />
+         </div>
+-        <pre>
+-          <%= inspect @form.source %>
+-        </pre>
++        <code>
++          <%= inspect(@form.source) %>
++        </code>
+       </div>
+     </div>
+     """
+diff --git a/lib/lightning_web/live/workflow_live_new.ex b/lib/lightning_web/live/workflow_live_new.ex
+index 93ff6265..6647007f 100644
+--- a/lib/lightning_web/live/workflow_live_new.ex
++++ b/lib/lightning_web/live/workflow_live_new.ex
+@@ -6,6 +6,9 @@ defmodule LightningWeb.WorkflowNewLive do
+   alias Lightning.Policies.Permissions
+   alias Lightning.Workflows
+   alias Lightning.Workflows.Workflow
++  alias Lightning.Workflows.Edge
++  alias Lightning.Jobs.Job
++  alias Lightning.Jobs.Trigger
+   alias LightningWeb.Components.Form
+   alias LightningWeb.WorkflowNewLive.WorkflowParams
+ 
+@@ -189,9 +192,31 @@ defmodule LightningWeb.WorkflowNewLive do
+      )}
+   end
+ 
++  def maybe_select_node(socket, params) do
++    case params do
++      %{"selected" => id} ->
++        found =
++          [:jobs, :triggers, :edges]
++          |> Enum.find(fn field ->
++            socket.assigns.changeset
++            |> Ecto.Changeset.get_change(field, [])
++            |> Enum.find(fn changeset ->
++              changeset |> Ecto.Changeset.get_field(:id) == id
++            end)
++          end)
++
++        select_node(socket, found)
++
++      _ ->
++        socket
++    end
++  end
++
+   @impl true
+   def handle_params(params, _url, socket) do
+-    {:noreply, apply_action(socket, socket.assigns.live_action, params)}
++    {:noreply,
++     apply_action(socket, socket.assigns.live_action, params)
++     |> maybe_select_node(params)}
+   end
+ 
+   def apply_action(socket, :new, _params) do
+@@ -398,17 +423,17 @@ defmodule LightningWeb.WorkflowNewLive do
+     |> assign(selected_job: nil, selected_trigger: nil, selected_edge: nil)
+   end
+ 
+-  defp select_node(socket, [{type, value}]) do
+-    case type do
+-      :job ->
++  defp select_node(socket, value = %{}) do
++    case value do
++      %Job{} ->
+         socket
+         |> assign(selected_job: value, selected_trigger: nil, selected_edge: nil)
+ 
+-      :trigger ->
++      %Trigger{} ->
+         socket
+         |> assign(selected_job: nil, selected_trigger: value, selected_edge: nil)
+ 
+-      :edge ->
++      %Edge{} ->
+         socket
+         |> assign(selected_job: nil, selected_trigger: nil, selected_edge: value)
+     end

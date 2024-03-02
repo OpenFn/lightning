@@ -1,0 +1,36 @@
+# Lightning Example
+
+## Section
+
+```elixir
+import Ecto.Query
+alias Lightning.Repo
+```
+
+```elixir
+workflow_id = "2364444b-dcc1-446c-a674-a101cdc0e218"
+```
+
+```elixir
+from(
+  j in Lightning.Workflows.Workflow,
+  where: j.id == ^workflow_id,
+  preload: [:edges]
+)
+|> Repo.all()
+```
+
+```elixir
+%{a: 1}
+```
+
+```elixir
+trigger = Repo.get(Lightning.Jobs.Trigger, "97c8acb6-e681-4a8d-a0f0-5a5862714f4a")
+
+from(e in Lightning.Workflows.Edge,
+  where: e.source_trigger_id == ^trigger.id,
+  preload: [:target_job],
+  select: e.target_job_id
+)
+|> Lightning.Repo.one!()
+```
