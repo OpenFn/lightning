@@ -107,12 +107,13 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
       <div :for={
         body_form <- Phoenix.HTML.FormData.to_form(:credential, @form, :body, [])
       }>
-        <%= Phoenix.HTML.Form.hidden_input(body_form, :access_token) %>
-        <%= Phoenix.HTML.Form.hidden_input(body_form, :refresh_token) %>
-        <%= Phoenix.HTML.Form.hidden_input(body_form, :expires_at) %>
         <%= Phoenix.HTML.Form.hidden_input(body_form, :scope) %>
         <%= Phoenix.HTML.Form.hidden_input(body_form, :sandbox) %>
+        <%= Phoenix.HTML.Form.hidden_input(body_form, :expires_at) %>
+        <%= Phoenix.HTML.Form.hidden_input(body_form, :api_version) %>
+        <%= Phoenix.HTML.Form.hidden_input(body_form, :access_token) %>
         <%= Phoenix.HTML.Form.hidden_input(body_form, :instance_url) %>
+        <%= Phoenix.HTML.Form.hidden_input(body_form, :refresh_token) %>
       </div>
       <.reauthorize_banner
         :if={@display_reauthorize_banner}
@@ -610,6 +611,10 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
     {:ok,
      socket
      |> assign(sandbox: sandbox, client: client, authorize_url: authorize_url)}
+  end
+
+  def update(%{api_version: api_version}, socket) do
+    {:ok, socket |> assign(sandbox: api_version)}
   end
 
   defp reset_assigns(socket) do

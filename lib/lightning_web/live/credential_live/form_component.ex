@@ -65,6 +65,8 @@ defmodule LightningWeb.CredentialLive.FormComponent do
 
     sandbox_value = get_sandbox_value(assigns.credential)
 
+    api_version = get_api_version(assigns.credential)
+
     changeset = Credentials.change_credential(assigns.credential)
     all_projects = Enum.map(projects, &{&1.name, &1.id})
 
@@ -86,6 +88,7 @@ defmodule LightningWeb.CredentialLive.FormComponent do
      |> assign(users: users)
      |> assign(scopes: scopes)
      |> assign(sandbox_value: sandbox_value)
+     |> assign(api_version: api_version)
      |> assign(changeset: changeset)
      |> assign(update_body: update_body)
      |> assign(all_projects: all_projects)
@@ -138,6 +141,18 @@ defmodule LightningWeb.CredentialLive.FormComponent do
     )
 
     {:noreply, socket |> assign(sandbox_value: sandbox_value)}
+  end
+
+  def handle_event("api_version", %{"api_version" => version}, socket) do
+    {:noreply,
+     socket
+     |> update(:changeset, fn changeset, %{credential: credential} ->
+       body = %{changeset.params["body"] | "api_version" => version}
+       params = changeset.params |> Map.put("body", body)
+       IO.inspect(params)
+       Credentials.change_credential(credential, params)
+     end)
+     |> assign(api_version: version)}
   end
 
   def handle_event(
@@ -410,6 +425,16 @@ defmodule LightningWeb.CredentialLive.FormComponent do
                   value={@sandbox_value}
                   phx-change="check_sandbox"
                   label="Sandbox instance?"
+                  class="mb-2"
+                />
+
+                <.input
+                  :if={@schema in ["salesforce_oauth"]}
+                  type="text"
+                  name="api_version"
+                  value={@api_version}
+                  phx-change="api_version"
+                  label="API Version"
                   class="mb-2"
                 />
                 <%= fieldset %>
@@ -706,6 +731,10 @@ defmodule LightningWeb.CredentialLive.FormComponent do
   end
 
   defp get_sandbox_value(_), do: false
+
+  defp get_api_version(%{body: %{"apiVersion" => api_version}}), do: api_version
+
+  defp get_api_version(_), do: nil
 
   defp modal_title(assigns) do
     ~H"""
