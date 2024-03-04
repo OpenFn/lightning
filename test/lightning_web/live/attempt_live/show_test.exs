@@ -7,6 +7,8 @@ defmodule LightningWeb.RunLive.ShowTest do
   alias Lightning.WorkOrders
   alias Phoenix.LiveView.AsyncResult
 
+  setup :stub_rate_limiter_ok
+
   describe "handle_async/3" do
     setup :register_and_log_in_user
     setup :create_project_for_current_user

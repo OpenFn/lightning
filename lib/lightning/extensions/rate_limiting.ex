@@ -5,7 +5,7 @@ defmodule Lightning.Extensions.RateLimiting do
   alias Plug.Conn
 
   @type request_error :: :too_many_requests | :unknown
-  @type message :: Lightning.Extensions.UsageLimiting.message()
+  @type message :: Lightning.Extensions.Message.t()
 
   defmodule Context do
     @moduledoc """
