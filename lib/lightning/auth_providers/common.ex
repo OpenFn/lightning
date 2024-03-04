@@ -53,7 +53,8 @@ defmodule Lightning.AuthProviders.Common do
         :expires_at,
         :scope,
         :instance_url,
-        :sandbox
+        :sandbox,
+        :api_version
       ])
       |> validate_required([:access_token, :refresh_token])
     end

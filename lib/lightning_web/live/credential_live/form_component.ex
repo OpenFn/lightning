@@ -65,7 +65,10 @@ defmodule LightningWeb.CredentialLive.FormComponent do
 
     sandbox_value = get_sandbox_value(assigns.credential)
 
-    api_version = get_api_version(assigns.credential)
+    IO.inspect(assigns.credential.body)
+
+    api_version =
+      get_api_version(assigns.credential) |> IO.inspect(label: "api_version")
 
     changeset = Credentials.change_credential(assigns.credential)
     all_projects = Enum.map(projects, &{&1.name, &1.id})
@@ -144,15 +147,12 @@ defmodule LightningWeb.CredentialLive.FormComponent do
   end
 
   def handle_event("api_version", %{"api_version" => version}, socket) do
-    {:noreply,
-     socket
-     |> update(:changeset, fn changeset, %{credential: credential} ->
-       body = %{changeset.params["body"] | "api_version" => version}
-       params = changeset.params |> Map.put("body", body)
-       IO.inspect(params)
-       Credentials.change_credential(credential, params)
-     end)
-     |> assign(api_version: version)}
+    send_update(LightningWeb.CredentialLive.OauthComponent,
+      id: "inner-form-#{socket.assigns.credential.id || "new"}",
+      api_version: version
+    )
+
+    {:noreply, socket |> assign(api_version: version)}
   end
 
   def handle_event(
@@ -388,6 +388,7 @@ defmodule LightningWeb.CredentialLive.FormComponent do
             type={@schema}
             action={@action}
             sandbox_value={@sandbox_value}
+            api_version={@api_version}
             update_body={@update_body}
             scopes_changed={@scopes_changed}
           >
@@ -500,6 +501,7 @@ defmodule LightningWeb.CredentialLive.FormComponent do
   attr :phx_target, :any, default: nil
   attr :schema, :string, required: false
   attr :sandbox_value, :boolean, default: false
+  attr :api_version, :string, default: ""
   attr :update_body, :any, required: false
   attr :scopes_changed, :boolean, required: false
   slot :inner_block
@@ -529,6 +531,7 @@ defmodule LightningWeb.CredentialLive.FormComponent do
       schema={@schema}
       update_body={@update_body}
       sandbox_value={@sandbox_value}
+      api_version={@api_version}
       scopes_changed={@scopes_changed}
     >
       <%= render_slot(@inner_block, l) %>
@@ -732,7 +735,7 @@ defmodule LightningWeb.CredentialLive.FormComponent do
 
   defp get_sandbox_value(_), do: false
 
-  defp get_api_version(%{body: %{"apiVersion" => api_version}}), do: api_version
+  defp get_api_version(%{body: %{"api_version" => api_version}}), do: api_version
 
   defp get_api_version(_), do: nil
 

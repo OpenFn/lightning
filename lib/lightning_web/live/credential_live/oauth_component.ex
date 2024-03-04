@@ -22,6 +22,7 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
   attr :scopes_changed, :boolean, default: false
   attr :schema, :string, required: true
   attr :sandbox_value, :boolean, default: false
+  attr :api_version, :string, required: false
   slot :inner_block
 
   def fieldset(assigns) do
@@ -55,6 +56,7 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
            token_body_changeset: @token_body_changeset,
            update_body: @update_body,
            sandbox_value: @sandbox_value,
+           api_version: @api_version,
            schema: @schema,
            id: "inner-form-#{@id}"
          ],
@@ -564,6 +566,7 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
           action: _action,
           scopes_changed: _scopes_changed,
           sandbox_value: _sandbox_value,
+          api_version: _api_version,
           token_body_changeset: _changeset,
           update_body: _body,
           schema: _schema
@@ -599,6 +602,10 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
     handle_scopes_update(scopes, socket)
   end
 
+  def update(%{api_version: api_version}, socket) do
+    {:ok, socket |> assign(api_version: api_version)}
+  end
+
   def update(%{sandbox: sandbox}, socket) do
     wellknown_url = socket.assigns.adapter.wellknown_url(sandbox)
 
@@ -611,10 +618,6 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
     {:ok,
      socket
      |> assign(sandbox: sandbox, client: client, authorize_url: authorize_url)}
-  end
-
-  def update(%{api_version: api_version}, socket) do
-    {:ok, socket |> assign(sandbox: api_version)}
   end
 
   defp reset_assigns(socket) do
@@ -634,6 +637,7 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
            action: action,
            scopes_changed: scopes_changed,
            sandbox_value: sandbox_value,
+           api_version: api_version,
            token_body_changeset: token_body_changeset,
            update_body: update_body,
            schema: schema
@@ -651,6 +655,7 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
       update_body: update_body,
       adapter: adapter,
       sandbox: sandbox_value,
+      api_version: api_version,
       provider: adapter.provider_name,
       action: action,
       scopes_changed: scopes_changed
@@ -905,7 +910,7 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
 
   defp maybe_add_specific_provider_params(token_params, assigns, "Salesforce") do
     assigns
-    |> Map.take([:sandbox, :apiVersion])
+    |> Map.take([:sandbox, :api_version])
     |> Map.merge(token_params)
   end
 
