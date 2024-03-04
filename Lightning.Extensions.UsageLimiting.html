@@ -13,7 +13,7 @@
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-EPF2X7PV.js"></script>
-    <script src="dist/sidebar_items-850A568B.js"></script>
+    <script src="dist/sidebar_items-A319B135.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -125,7 +125,7 @@ Pages
 </button>
 
 
-    <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/extensions/runtime_limiting.ex#L1" title="View Source" class="icon-action" rel="help">
+    <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/extensions/usage_limiting.ex#L1" title="View Source" class="icon-action" rel="help">
       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
       <span class="sr-only">View Source</span>
     </a>
@@ -155,15 +155,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#t:action_error/0" translate="no">action_error()</a>
-
-      </div>
-
-    </div>
-
-    <div class="summary-row">
-      <div class="summary-signature">
-        <a href="#t:limit_error/0" translate="no">limit_error()</a>
+        <a href="#t:error_reason/0" translate="no">error_reason()</a>
 
       </div>
 
@@ -212,16 +204,16 @@ Pages
       <span class="text">Types</span>
     </h1>
     <div class="types-list">
-<section class="detail" id="t:action_error/0">
+<section class="detail" id="t:error_reason/0">
 
   <div class="detail-header">
-    <a href="#t:action_error/0" class="detail-link" title="Link to this type">
+    <a href="#t:error_reason/0" class="detail-link" title="Link to this type">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this type</span>
     </a>
-    <h1 class="signature" translate="no">action_error()</h1>
+    <h1 class="signature" translate="no">error_reason()</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/extensions/runtime_limiting.ex#L5" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/extensions/usage_limiting.ex#L5" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -233,35 +225,7 @@ Pages
 
       <div class="specs">
 
-          <pre translate="no"><span class="attribute">@type</span> action_error() :: :too_many_actions | :unknown</pre>
-
-      </div>
-
-
-  </section>
-</section>
-<section class="detail" id="t:limit_error/0">
-
-  <div class="detail-header">
-    <a href="#t:limit_error/0" class="detail-link" title="Link to this type">
-      <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this type</span>
-    </a>
-    <h1 class="signature" translate="no">limit_error()</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/extensions/runtime_limiting.ex#L6" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
-
-
-  </div>
-
-  <section class="docstring">
-
-      <div class="specs">
-
-          <pre translate="no"><span class="attribute">@type</span> limit_error() :: :too_many_runs | :too_many_workorders | :unknown</pre>
+          <pre translate="no"><span class="attribute">@type</span> error_reason() :: :too_many_runs | :unknown_project</pre>
 
       </div>
 
@@ -277,7 +241,7 @@ Pages
     </a>
     <h1 class="signature" translate="no">message()</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/extensions/runtime_limiting.ex#L8" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/extensions/usage_limiting.ex#L6" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -289,12 +253,7 @@ Pages
 
       <div class="specs">
 
-          <pre translate="no"><span class="attribute">@type</span> message() :: %{
-  position: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">atom</a>(),
-  text: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>() | nil,
-  function: (... -&gt; <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">any</a>()),
-  attrs: <a href="https://hexdocs.pm/elixir/Keyword.html#t:t/0">Keyword.t</a>()
-}</pre>
+          <pre translate="no"><span class="attribute">@type</span> message() :: <a href="Lightning.Extensions.Message.html#t:t/0">Lightning.Extensions.Message.t</a>()</pre>
 
       </div>
 
@@ -322,7 +281,7 @@ Pages
     </a>
     <h1 class="signature" translate="no">check_limits(context)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/extensions/runtime_limiting.ex#L34" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/extensions/usage_limiting.ex#L27" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -335,7 +294,7 @@ Pages
       <div class="specs">
 
           <pre translate="no"><span class="attribute">@callback</span> check_limits(context :: Lightning.Extensions.UsageLimiting.Context.t()) ::
-  :ok | {:error, <a href="#t:limit_error/0">limit_error</a>(), <a href="#t:message/0">message</a>()}</pre>
+  :ok | {:error, <a href="#t:error_reason/0">error_reason</a>(), <a href="#t:message/0">message</a>()}</pre>
 
       </div>
 
@@ -351,7 +310,7 @@ Pages
     </a>
     <h1 class="signature" translate="no">limit_action(action, context)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/extensions/runtime_limiting.ex#L37" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/extensions/usage_limiting.ex#L30" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -366,7 +325,7 @@ Pages
           <pre translate="no"><span class="attribute">@callback</span> limit_action(
   action :: Lightning.Extensions.UsageLimiting.Action.t(),
   context :: Lightning.Extensions.UsageLimiting.Context.t()
-) :: :ok | {:error, <a href="#t:action_error/0">action_error</a>(), <a href="#t:message/0">message</a>()}</pre>
+) :: :ok | {:error, <a href="#t:error_reason/0">error_reason</a>(), <a href="#t:message/0">message</a>()}</pre>
 
       </div>
 

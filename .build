@@ -39,6 +39,7 @@ Lightning.Demo.html
 Lightning.Env.html
 Lightning.ExportUtils.html
 Lightning.Extensions.FifoRunQueue.html
+Lightning.Extensions.Message.html
 Lightning.Extensions.RateLimiter.html
 Lightning.Extensions.RateLimiting.Context.html
 Lightning.Extensions.RateLimiting.html
@@ -257,8 +258,8 @@ dist/merriweather-latin-ext-300-normal-K6L27CZ5.woff2
 dist/merriweather-vietnamese-300-italic-EHHNZPUO.woff2
 dist/merriweather-vietnamese-300-normal-U376L4Z4.woff2
 dist/remixicon-NKANDIL5.woff2
-dist/search_data-760A21AE.js
-dist/sidebar_items-850A568B.js
+dist/search_data-6F1408ED.js
+dist/sidebar_items-A319B135.js
 index.html
 provisioning.html
 readme.html
