@@ -2,6 +2,7 @@ defmodule LightningWeb.Dev.ComponentsLive do
   # Internal Development Page for viewing and working on components.
   # Access this page at /dev/components
   @moduledoc false
+  alias Lightning.Run
   use LightningWeb, {:live_view, layout: {LightningWeb.Layouts, :blank}}
 
   alias LightningWeb.Components.Viewers
@@ -45,6 +46,8 @@ defmodule LightningWeb.Dev.ComponentsLive do
               <Viewers.dataclip_viewer
                 id="dataclip-viewer"
                 stream={@streams.dataclip}
+                run_state={%Run{state: :success}}
+                input_or_output={:output}
                 stream_empty?={false}
                 class=""
               />
@@ -54,12 +57,18 @@ defmodule LightningWeb.Dev.ComponentsLive do
             <Viewers.log_viewer
               id="log-viewer-data"
               stream={@log_lines}
+              run_state={%Run{state: :success}}
               highlight_id={@highlight_id}
               stream_empty?={false}
             />
           </.variation>
           <.variation title="Empty">
-            <Viewers.log_viewer id="log-viewer" stream={[]} stream_empty?={true} />
+            <Viewers.log_viewer
+              id="log-viewer"
+              stream={[]}
+              stream_empty?={true}
+              run_state={%Run{state: :crashed}}
+            />
           </.variation>
         </ul>
       </div>
