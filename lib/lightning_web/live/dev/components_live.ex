@@ -2,9 +2,9 @@ defmodule LightningWeb.Dev.ComponentsLive do
   # Internal Development Page for viewing and working on components.
   # Access this page at /dev/components
   @moduledoc false
-  alias Lightning.Run
   use LightningWeb, {:live_view, layout: {LightningWeb.Layouts, :blank}}
 
+  alias Lightning.Run
   alias LightningWeb.Components.Viewers
 
   @impl true
