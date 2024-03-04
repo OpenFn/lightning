@@ -17,6 +17,9 @@ and this project adheres to
 
 ### Added
 
+- Add API Version field to Salesforce OAuth credentials
+  [#1838](https://github.com/OpenFn/lightning/issues/1838)
+
 ### Changed
 
 ### Fixed
