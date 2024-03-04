@@ -135,6 +135,7 @@ defmodule LightningWeb.RunLive.RunViewerLive do
                 <Viewers.log_viewer
                   id={"run-log-#{run.id}"}
                   highlight_id={@selected_step_id}
+                  run_state={run.state}
                   stream={@streams.log_lines}
                   stream_empty?={@log_lines_stream_empty?}
                 />
@@ -150,6 +151,7 @@ defmodule LightningWeb.RunLive.RunViewerLive do
                   <Viewers.step_dataclip_viewer
                     id={"step-input-#{@selected_step_id}"}
                     class="overflow-auto h-full"
+                    run_state={@run.result.state}
                     stream={@streams.input_dataclip}
                     stream_empty?={@input_dataclip_stream_empty?}
                     step={@selected_step}
@@ -174,6 +176,7 @@ defmodule LightningWeb.RunLive.RunViewerLive do
                     class="overflow-auto h-full"
                     stream={@streams.output_dataclip}
                     stream_empty?={@output_dataclip_stream_empty?}
+                    run_state={@run.result.state}
                     step={@selected_step}
                     dataclip={@output_dataclip}
                     input_or_output={:output}

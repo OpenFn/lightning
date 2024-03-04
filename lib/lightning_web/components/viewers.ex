@@ -16,6 +16,8 @@ defmodule LightningWeb.Components.Viewers do
   alias LightningWeb.Components.Icon
   alias Phoenix.LiveView.AsyncResult
 
+  require Lightning.Run
+
   @doc """
   Renders out a log line stream
 
@@ -38,6 +40,8 @@ defmodule LightningWeb.Components.Viewers do
     doc: "A stream of `Lightning.Invocation.LogLine` structs"
 
   attr :stream_empty?, :boolean, required: true
+
+  attr :run_state, :any, required: true
 
   attr :highlight_id, :string,
     default: nil,
@@ -77,18 +81,31 @@ defmodule LightningWeb.Components.Viewers do
           </span>
         </div>
       </div>
-      <div
-        :if={@stream_empty?}
-        id={"#{@id}-nothing-yet"}
-        class={[
+      <%= if @run_state in Lightning.Run.final_states() and @stream_empty? do %>
+        <div class={[
           "m-2 relative rounded-md",
           "p-12 text-center col-span-full"
-        ]}
-      >
-        <.text_ping_loader>
-          Nothing yet
-        </.text_ping_loader>
-      </div>
+        ]}>
+          <span class="relative inline-flex">
+            <div class="inline-flex">
+              No logs were received for this run.
+            </div>
+          </span>
+        </div>
+      <% else %>
+        <div
+          :if={@stream_empty?}
+          id={"#{@id}-nothing-yet"}
+          class={[
+            "m-2 relative rounded-md",
+            "p-12 text-center col-span-full"
+          ]}
+        >
+          <.text_ping_loader>
+            Nothing yet
+          </.text_ping_loader>
+        </div>
+      <% end %>
     </div>
     """
   end
@@ -102,6 +119,10 @@ defmodule LightningWeb.Components.Viewers do
     """
 
   attr :stream_empty?, :boolean, required: true
+
+  attr :run_state, :any, required: true
+
+  attr :input_or_output, :atom, required: true, values: [:input, :output]
 
   attr :class, :string,
     default: nil,
@@ -140,18 +161,31 @@ defmodule LightningWeb.Components.Viewers do
           </div>
         </div>
       </div>
-      <div
-        :if={@stream_empty?}
-        id={"#{@id}-nothing-yet"}
-        class={[
+      <%= if @run_state in Lightning.Run.final_states() and @stream_empty? do %>
+        <div class={[
           "m-2 relative rounded-md",
           "p-12 text-center col-span-full"
-        ]}
-      >
-        <.text_ping_loader>
-          Nothing yet
-        </.text_ping_loader>
-      </div>
+        ]}>
+          <span class="relative inline-flex">
+            <div class="inline-flex">
+              No <%= @input_or_output %> state could be saved for this run.
+            </div>
+          </span>
+        </div>
+      <% else %>
+        <div
+          :if={@stream_empty?}
+          id={"#{@id}-nothing-yet"}
+          class={[
+            "m-2 relative rounded-md",
+            "p-12 text-center col-span-full"
+          ]}
+        >
+          <.text_ping_loader>
+            Nothing yet
+          </.text_ping_loader>
+        </div>
+      <% end %>
     </div>
     """
   end
@@ -165,6 +199,8 @@ defmodule LightningWeb.Components.Viewers do
     """
 
   attr :stream_empty?, :boolean, required: true
+
+  attr :run_state, :any, required: true
 
   attr :class, :string,
     default: nil,
@@ -197,6 +233,8 @@ defmodule LightningWeb.Components.Viewers do
         class={@class}
         stream={@stream}
         stream_empty?={@stream_empty?}
+        input_or_output={@input_or_output}
+        run_state={@run_state}
         type={
           case @dataclip do
             %AsyncResult{ok?: true, result: %{type: type}} -> type
