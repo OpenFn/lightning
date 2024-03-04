@@ -3,7 +3,7 @@ defmodule Lightning.WorkOrders.Events do
 
   defmodule WorkOrderCreated do
     @moduledoc false
-    defstruct work_order: nil
+    defstruct work_order: nil, project_id: nil
   end
 
   defmodule WorkOrderUpdated do
@@ -24,7 +24,7 @@ defmodule Lightning.WorkOrders.Events do
   def work_order_created(project_id, work_order) do
     Lightning.broadcast(
       topic(project_id),
-      %WorkOrderCreated{work_order: work_order}
+      %WorkOrderCreated{work_order: work_order, project_id: project_id}
     )
   end
 
