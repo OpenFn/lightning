@@ -147,6 +147,10 @@ defmodule Lightning.Factories do
     }
   end
 
+  def usage_tracking_daily_report_configuration_factory do
+    %Lightning.UsageTracking.DailyReportConfiguration{}
+  end
+
   # ----------------------------------------------------------------------------
   # Helpers
   # ----------------------------------------------------------------------------
