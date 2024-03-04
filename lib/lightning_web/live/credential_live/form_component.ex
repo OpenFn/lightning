@@ -65,10 +65,7 @@ defmodule LightningWeb.CredentialLive.FormComponent do
 
     sandbox_value = get_sandbox_value(assigns.credential)
 
-    IO.inspect(assigns.credential.body)
-
-    api_version =
-      get_api_version(assigns.credential) |> IO.inspect(label: "api_version")
+    api_version = get_api_version(assigns.credential)
 
     changeset = Credentials.change_credential(assigns.credential)
     all_projects = Enum.map(projects, &{&1.name, &1.id})
@@ -421,22 +418,26 @@ defmodule LightningWeb.CredentialLive.FormComponent do
                 />
                 <.input
                   :if={@schema in ["salesforce_oauth"]}
-                  type="checkbox"
-                  name="sandbox"
-                  value={@sandbox_value}
-                  phx-change="check_sandbox"
-                  label="Sandbox instance?"
                   class="mb-2"
+                  name="sandbox"
+                  type="checkbox"
+                  value={@sandbox_value}
+                  label="Sandbox instance?"
+                  phx-change="check_sandbox"
+                  phx-target={@myself}
+                  id="salesforce_sandbox_instance_checkbox"
                 />
 
                 <.input
                   :if={@schema in ["salesforce_oauth"]}
                   type="text"
+                  class="mb-2"
                   name="api_version"
+                  label="API Version"
                   value={@api_version}
                   phx-change="api_version"
-                  label="API Version"
-                  class="mb-2"
+                  phx-target={@myself}
+                  id="salesforce_api_version_input"
                 />
                 <%= fieldset %>
               </div>

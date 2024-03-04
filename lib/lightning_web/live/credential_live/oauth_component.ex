@@ -22,7 +22,7 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
   attr :scopes_changed, :boolean, default: false
   attr :schema, :string, required: true
   attr :sandbox_value, :boolean, default: false
-  attr :api_version, :string, required: false
+  attr :api_version, :string, default: ""
   slot :inner_block
 
   def fieldset(assigns) do
