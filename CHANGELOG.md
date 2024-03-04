@@ -19,6 +19,8 @@ and this project adheres to
 
 - Allows limiting creation of new runs and retries.
   [#1754](https://github.com/OpenFn/Lightning/issues/1754)
+- Add specific messages for log, input, and output tabs when a run is lost
+  [#1757](https://github.com/OpenFn/lightning/issues/1757)
 
 ### Changed
 
