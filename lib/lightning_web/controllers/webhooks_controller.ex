@@ -15,7 +15,7 @@ defmodule LightningWeb.WebhooksController do
   def create(conn, _params) do
     with %Workflows.Trigger{enabled: true, workflow: %{project_id: project_id}} =
            trigger <- conn.assigns.trigger,
-         message <- check_action_limit(project_id),
+         {:ok, without_run?} <- check_action_limit(project_id),
          :ok <-
            RateLimiter.limit_request(
              conn,
@@ -31,7 +31,7 @@ defmodule LightningWeb.WebhooksController do
             type: :http_request,
             project_id: project_id
           },
-          without_run: message != nil
+          without_run: without_run?
         )
 
       conn |> json(%{work_order_id: work_order.id})
@@ -65,11 +65,13 @@ defmodule LightningWeb.WebhooksController do
            %Action{type: :new_run},
            %Context{project_id: project_id}
          ) do
-      {:error, _reason, message} ->
-        message
-
       :ok ->
-        nil
+        {:ok, false}
+
+      {:error, :too_many_runs, _message} ->
+        {:ok, true}
+
+      error -> error
     end
   end
 
