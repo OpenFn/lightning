@@ -261,6 +261,36 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       assert view |> has_element?("#manual-job-#{job.id} form", "Invalid JSON")
     end
 
+    test "can't run if limit is exceeded", %{
+      conn: conn,
+      project: %{id: project_id},
+      workflow: w
+    } do
+      job = w.jobs |> hd
+
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project_id}/w/#{w}?#{[s: job, m: "expand"]}")
+
+      assert Invocation.list_dataclips_for_job(job) |> Enum.count() == 0
+
+      Mox.stub(
+        Lightning.Extensions.MockUsageLimiter,
+        :limit_action,
+        &Lightning.Extensions.StubUsageLimiter.limit_action/2
+      )
+
+      assert view
+             |> form("#manual-job-#{job.id} form",
+               manual: %{
+                 body: Jason.encode!(%{"a" => 1})
+               }
+             )
+             |> render_submit()
+             |> Floki.parse_fragment!()
+
+      assert view |> has_element?("#flash p", "Runs limit exceeded")
+    end
+
     test "can run a job", %{conn: conn, project: p, workflow: w} do
       job = w.jobs |> hd
 
@@ -900,80 +930,9 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
          %{
            conn: conn,
            project: project,
-           workflow: %{jobs: [job_1, job_2 | _rest]} = workflow
+           workflow: %{jobs: [_job_1, job_2 | _rest]} = workflow
          } do
-      input_dataclip = insert(:dataclip, project: project, type: :http_request)
-
-      output_dataclip =
-        insert(:dataclip,
-          project: project,
-          type: :step_result,
-          body: %{"val" => Ecto.UUID.generate()}
-        )
-
-      %{runs: [run]} =
-        workorder =
-        insert(:workorder,
-          workflow: workflow,
-          dataclip: input_dataclip,
-          state: :success,
-          runs: [
-            build(:run,
-              dataclip: input_dataclip,
-              starting_job: job_1,
-              state: :success,
-              steps: [
-                build(:step,
-                  job: job_1,
-                  input_dataclip: input_dataclip,
-                  output_dataclip: output_dataclip,
-                  started_at: build(:timestamp),
-                  finished_at: build(:timestamp),
-                  exit_reason: "success"
-                ),
-                build(:step,
-                  job: job_2,
-                  input_dataclip: output_dataclip,
-                  output_dataclip:
-                    build(:dataclip,
-                      type: :step_result,
-                      body: %{}
-                    ),
-                  started_at: build(:timestamp),
-                  finished_at: build(:timestamp),
-                  exit_reason: "success"
-                )
-              ]
-            )
-          ]
-        )
-
-      # insert 3 new dataclips
-      dataclips = insert_list(3, :dataclip, project: project)
-
-      # associate dataclips with job 2
-      for dataclip <- dataclips do
-        insert(:workorder,
-          workflow: workflow,
-          dataclip: dataclip,
-          runs: [
-            build(:run,
-              dataclip: dataclip,
-              starting_job: job_2,
-              steps: [
-                build(:step,
-                  job: job_2,
-                  input_dataclip: dataclip,
-                  output_dataclip: nil,
-                  started_at: build(:timestamp),
-                  finished_at: nil,
-                  exit_reason: nil
-                )
-              ]
-            )
-          ]
-        )
-      end
+      {dataclips, %{runs: [run]} = workorder} = rerun_setup(project, workflow)
 
       {:ok, view, _html} =
         live(
@@ -1015,6 +974,32 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
 
       refute html =~ run.id
       assert html =~ new_run.id
+    end
+
+    test "can't retry when limit has been reached",
+         %{
+           conn: conn,
+           project: project,
+           workflow: %{jobs: [_job_1, job_2 | _rest]} = workflow
+         } do
+      {_dataclips, %{runs: [run]} = workorder} = rerun_setup(project, workflow)
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project}/w/#{workflow}?#{[s: job_2.id, a: run.id, m: "expand"]}"
+        )
+
+      # user gets option to rerun
+      assert has_element?(view, "button", "Rerun from here")
+      assert has_element?(view, "button", "Create New Work Order")
+
+      view |> element("button", "Rerun from here") |> render_click()
+
+      all_runs =
+        Lightning.Repo.preload(workorder, [:runs], force: true).runs
+
+      assert Enum.count(all_runs) == 2
     end
 
     test "followed run with wiped dataclip renders the page correctly",
@@ -1454,5 +1439,81 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
         assert html =~ output_dataclip.body["output"]
       end
     end
+  end
+
+  defp rerun_setup(project, %{jobs: [job_1, job_2 | _rest]} = workflow) do
+    input_dataclip = insert(:dataclip, project: project, type: :http_request)
+
+    output_dataclip =
+      insert(:dataclip,
+        project: project,
+        type: :step_result,
+        body: %{"val" => Ecto.UUID.generate()}
+      )
+
+    workorder =
+      insert(:workorder,
+        workflow: workflow,
+        dataclip: input_dataclip,
+        state: :success,
+        runs: [
+          build(:run,
+            dataclip: input_dataclip,
+            starting_job: job_1,
+            state: :success,
+            steps: [
+              build(:step,
+                job: job_1,
+                input_dataclip: input_dataclip,
+                output_dataclip: output_dataclip,
+                started_at: build(:timestamp),
+                finished_at: build(:timestamp),
+                exit_reason: "success"
+              ),
+              build(:step,
+                job: job_2,
+                input_dataclip: output_dataclip,
+                output_dataclip:
+                  build(:dataclip,
+                    type: :step_result,
+                    body: %{}
+                  ),
+                started_at: build(:timestamp),
+                finished_at: build(:timestamp),
+                exit_reason: "success"
+              )
+            ]
+          )
+        ]
+      )
+
+    # insert 3 new dataclips
+    dataclips = insert_list(3, :dataclip, project: project)
+
+    # associate dataclips with job 2
+    for dataclip <- dataclips do
+      insert(:workorder,
+        workflow: workflow,
+        dataclip: dataclip,
+        runs: [
+          build(:run,
+            dataclip: dataclip,
+            starting_job: job_2,
+            steps: [
+              build(:step,
+                job: job_2,
+                input_dataclip: dataclip,
+                output_dataclip: nil,
+                started_at: build(:timestamp),
+                finished_at: nil,
+                exit_reason: nil
+              )
+            ]
+          )
+        ]
+      )
+    end
+
+    {dataclips, workorder}
   end
 end

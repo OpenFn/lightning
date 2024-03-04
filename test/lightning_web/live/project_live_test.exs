@@ -1,9 +1,6 @@
 defmodule LightningWeb.ProjectLiveTest do
   use LightningWeb.ConnCase, async: false
 
-  alias Lightning.Repo
-  alias Lightning.Name
-
   import Phoenix.LiveViewTest
   import Lightning.ProjectsFixtures
   import Lightning.AccountsFixtures
@@ -13,7 +10,11 @@ defmodule LightningWeb.ProjectLiveTest do
   import Lightning.ApplicationHelpers,
     only: [dynamically_absorb_delay: 1, put_temporary_env: 3]
 
+  alias Lightning.Name
   alias Lightning.Projects
+  alias Lightning.Repo
+
+  setup :stub_usage_limiter_ok
 
   @cert """
   -----BEGIN RSA PRIVATE KEY-----
@@ -47,6 +48,22 @@ defmodule LightningWeb.ProjectLiveTest do
 
   describe "Index as a super user" do
     setup [:register_and_log_in_superuser, :create_project_for_current_user]
+
+    test "renders a banner when run limit has been reached", %{
+      conn: conn,
+      project: %{id: project_id}
+    } do
+      Mox.stub(
+        Lightning.Extensions.MockUsageLimiter,
+        :check_limits,
+        &Lightning.Extensions.StubUsageLimiter.check_limits/1
+      )
+
+      {:ok, _live, html} =
+        live(conn, ~p"/projects/#{project_id}/settings")
+
+      assert html =~ "Some banner text"
+    end
 
     test "lists all projects", %{conn: conn, project: project} do
       {:ok, _index_live, html} =

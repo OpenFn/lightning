@@ -14,7 +14,6 @@ defmodule LightningWeb.ConnCase do
   by setting `use LightningWeb.ConnCase, async: true`, although
   this option is not recommended for other databases.
   """
-
   use ExUnit.CaseTemplate
 
   using do
@@ -35,6 +34,8 @@ defmodule LightningWeb.ConnCase do
       import Lightning.LiveViewHelpers
       import Lightning.ModelHelpers
       import Plug.HTML
+
+      setup :stub_usage_limiter_ok
     end
   end
 
@@ -183,5 +184,34 @@ defmodule LightningWeb.ConnCase do
       Phoenix.ConnTest.build_conn()
       |> log_in_user(project_user.user)
     end)
+  end
+
+  alias Lightning.Extensions.MockRateLimiter
+  alias Lightning.Extensions.MockUsageLimiter
+
+  @doc """
+  Stub rate limiter for success
+  """
+  def stub_rate_limiter_ok(_context) do
+    Mox.stub(MockRateLimiter, :limit_request, fn _conn, _ctx, _opts ->
+      :ok
+    end)
+
+    :ok
+  end
+
+  @doc """
+  Stub usage limiter for success
+  """
+  def stub_usage_limiter_ok(_context) do
+    Mox.stub(MockUsageLimiter, :check_limits, fn _context ->
+      :ok
+    end)
+
+    Mox.stub(MockUsageLimiter, :limit_action, fn _action, _ctx ->
+      :ok
+    end)
+
+    :ok
   end
 end
