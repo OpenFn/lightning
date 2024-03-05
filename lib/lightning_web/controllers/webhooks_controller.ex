@@ -71,7 +71,8 @@ defmodule LightningWeb.WebhooksController do
       {:error, :too_many_runs, _message} ->
         {:ok, true}
 
-      error -> error
+      error ->
+        error
     end
   end
 

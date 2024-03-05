@@ -95,14 +95,11 @@ defmodule Lightning.WorkOrders do
     Multi.new()
     |> get_or_insert_dataclip(manual)
     |> Multi.insert(:workorder, fn %{dataclip: dataclip} ->
-      build_for(
-        manual.job,
-        %{
-          workflow: manual.workflow,
-          dataclip: dataclip,
-          created_by: manual.created_by
-        }
-      )
+      build_for(manual.job, %{
+        workflow: manual.workflow,
+        dataclip: dataclip,
+        created_by: manual.created_by
+      })
     end)
     |> Multi.put(:workflow, manual.workflow)
     |> broadcast_workorder_creation()

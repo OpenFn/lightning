@@ -33,7 +33,8 @@ defmodule LightningWeb.WebhooksControllerTest do
 
     test "returns 402 when run limit has been reached", %{conn: conn} do
       Mox.stub(MockUsageLimiter, :limit_action, fn _action, _ctx ->
-        {:error, :runs_hard_limit, %Lightning.Extensions.Message{text: "Runs limit exceeded"}}
+        {:error, :runs_hard_limit,
+         %Lightning.Extensions.Message{text: "Runs limit exceeded"}}
       end)
 
       %{triggers: [trigger]} =
