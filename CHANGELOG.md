@@ -21,6 +21,8 @@ and this project adheres to
   [#1754](https://github.com/OpenFn/Lightning/issues/1754)
 - Add specific messages for log, input, and output tabs when a run is lost
   [#1757](https://github.com/OpenFn/lightning/issues/1757)
+- Soft and hard limits for runs created by webhook trigger.
+  [#1859](https://github.com/OpenFn/Lightning/issues/1859)
 
 ### Changed
 
