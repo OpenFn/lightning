@@ -59,6 +59,36 @@ defmodule Lightning.WorkOrdersTest do
       }
     end
 
+    test "creating a webhook triggered workorder without runs", %{
+      workflow: workflow,
+      trigger: trigger
+    } do
+      project_id = workflow.project_id
+      Lightning.WorkOrders.subscribe(project_id)
+      dataclip = insert(:dataclip)
+
+      {:ok, %{id: workorder_id} = workorder} =
+        WorkOrders.create_for(trigger,
+          dataclip: dataclip,
+          workflow: workflow,
+          without_run: true
+        )
+
+      assert workorder.workflow_id == workflow.id
+      assert workorder.trigger_id == trigger.id
+      assert workorder.dataclip_id == dataclip.id
+      assert workorder.dataclip.type == :http_request
+      assert workorder.runs == []
+
+      refute_received %Lightning.WorkOrders.Events.RunCreated{
+        project_id: ^project_id
+      }
+
+      assert_received %Lightning.WorkOrders.Events.WorkOrderCreated{
+        work_order: %{id: ^workorder_id}
+      }
+    end
+
     @tag trigger_type: :cron
     test "creating a cron triggered workorder", %{
       workflow: workflow,
