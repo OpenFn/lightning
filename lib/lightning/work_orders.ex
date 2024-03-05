@@ -71,7 +71,7 @@ defmodule Lightning.WorkOrders do
     |> Multi.put(:workflow, opts[:workflow])
     |> get_or_insert_dataclip(opts[:dataclip])
     |> Multi.insert(:workorder, fn %{dataclip: dataclip} ->
-      without_run? = Keyword.fetch!(opts, :without_run)
+      without_run? = Keyword.get(opts, :without_run, false)
 
       build_for(
         trigger,
