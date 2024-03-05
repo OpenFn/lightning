@@ -603,6 +603,14 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
   end
 
   def update(%{api_version: api_version}, socket) do
+    socket.assigns.token.result
+    |> token_to_params()
+    |> maybe_add_specific_provider_params(
+      socket.assigns,
+      socket.assigns.provider
+    )
+    |> socket.assigns.update_body.()
+
     {:ok, socket |> assign(api_version: api_version)}
   end
 
