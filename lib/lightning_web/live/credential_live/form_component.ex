@@ -740,10 +740,11 @@ defmodule LightningWeb.CredentialLive.FormComponent do
          {:same_user, true} <-
            {:same_user,
             socket.assigns.current_user.id == socket.assigns.credential.user_id},
-         {:ok, _credential} <-
+         {:ok, credential} <-
            Credentials.update_credential(form_credential, credential_params) do
       {:noreply,
        socket
+       |> assign(credential: credential)
        |> put_flash(:info, "Credential updated successfully")
        |> push_redirect(to: socket.assigns.return_to)}
     else
