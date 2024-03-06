@@ -13,7 +13,7 @@ defmodule Lightning.WorkOrders.Events do
 
   defmodule RunCreated do
     @moduledoc false
-    defstruct run: nil, project_id: nil
+    defstruct run: nil, project_id: nil, from_rejected_workorder: false
   end
 
   defmodule RunUpdated do
