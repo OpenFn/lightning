@@ -38,7 +38,7 @@ defmodule LightningWeb.Components.NewInputs do
         id={@id}
         type={@type}
         class={[
-          "inline-flex justify-center py-2 px-4 border border-transparent",
+          "inline-flex justify-center items-center py-2 px-4 border border-transparent",
           "shadow-sm text-sm font-medium rounded-md focus:outline-none",
           "focus:ring-2 focus:ring-offset-2 focus:ring-primary-500",
           "disabled:bg-primary-300",
@@ -186,13 +186,13 @@ defmodule LightningWeb.Components.NewInputs do
   def input(%{type: "select"} = assigns) do
     ~H"""
     <div phx-feedback-for={@name}>
-      <.label for={@id}><%= @label %></.label>
+      <.label :if={@label} class="mb-2" for={@id}><%= @label %></.label>
       <select
         id={@id}
         name={@name}
         class={[
-          "block w-full rounded-md border border-secondary-300 bg-white mt-2",
-          "text-sm shadow-sm",
+          "block w-full rounded-lg border border-secondary-300 bg-white",
+          "sm:text-sm shadow-sm",
           "focus:border-primary-300 focus:ring focus:ring-primary-200 focus:ring-opacity-50",
           "disabled:cursor-not-allowed"
         ]}
@@ -312,14 +312,14 @@ defmodule LightningWeb.Components.NewInputs do
   def input(assigns) do
     ~H"""
     <div phx-feedback-for={@name}>
-      <.label for={@id}><%= @label %></.label>
+      <.label :if={@label} for={@id} class="mb-2"><%= @label %></.label>
       <input
         type={@type}
         name={@name}
         id={@id}
         value={Phoenix.HTML.Form.normalize_value(@type, @value)}
         class={[
-          "focus:outline focus:outline-2 focus:outline-offset-1 mt-2 block w-full rounded-lg text-slate-900 focus:ring-0 sm:text-sm sm:leading-6",
+          "focus:outline focus:outline-2 focus:outline-offset-1 block w-full rounded-lg text-slate-900 focus:ring-0 sm:text-sm sm:leading-6",
           "phx-no-feedback:border-slate-300 phx-no-feedback:focus:border-slate-400 disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-500",
           @class,
           @errors == [] &&

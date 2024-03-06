@@ -486,42 +486,62 @@
           <div class="hidden sm:block" aria-hidden="true">
             <div class="py-2"></div>
           </div>
-          <.table id="collaborators">
-            <.tr>
-              <.th>Collaborator</.th>
-              <.th>Role</.th>
-              <.th>Failure Alert</.th>
-              <.th>Digest</.th>
-            </.tr>
-
-            <%= for project_user <- @project_users do %>
-              <.tr id={"project_user-#{project_user.id}"}>
-                <.td>
-                  <.user project_user={project_user} />
-                  <div :if={project_user.user.email == @current_user.email}>
-                    <small class="text-gray-400">
-                      <em>Well hello, you!</em>
-                    </small>
-                  </div>
-                </.td>
-                <.td>
-                  <.role project_user={project_user} />
-                </.td>
-                <.td>
-                  <.failure_alert
-                    current_user={@current_user}
-                    project_user={project_user}
-                  />
-                </.td>
-                <.td>
-                  <.digest
-                    current_user={@current_user}
-                    project_user={project_user}
-                  />
-                </.td>
+          <div>
+            <div class="flex items-center flex-row-reverse mb-8">
+              <div class="mt-4 sm:ml-16 sm:mt-0">
+                <.button
+                  type="button"
+                  phx-click="toggle_collaborators_modal"
+                  disabled={!@can_add_project_user}
+                >
+                  Add collaborator
+                </.button>
+                <.live_component
+                  :if={@can_add_project_user && @show_collaborators_modal}
+                  module={LightningWeb.ProjectLive.NewCollaboratorComponent}
+                  id="add_collaborators_modal"
+                  project={@project}
+                  project_users={@project_users}
+                />
+              </div>
+            </div>
+            <.table id="collaborators">
+              <.tr>
+                <.th>Collaborator</.th>
+                <.th>Role</.th>
+                <.th>Failure Alert</.th>
+                <.th>Digest</.th>
               </.tr>
-            <% end %>
-          </.table>
+
+              <%= for project_user <- @project_users do %>
+                <.tr id={"project_user-#{project_user.id}"}>
+                  <.td>
+                    <.user project_user={project_user} />
+                    <div :if={project_user.user.email == @current_user.email}>
+                      <small class="text-gray-400">
+                        <em>Well hello, you!</em>
+                      </small>
+                    </div>
+                  </.td>
+                  <.td>
+                    <.role project_user={project_user} />
+                  </.td>
+                  <.td>
+                    <.failure_alert
+                      current_user={@current_user}
+                      project_user={project_user}
+                    />
+                  </.td>
+                  <.td>
+                    <.digest
+                      current_user={@current_user}
+                      project_user={project_user}
+                    />
+                  </.td>
+                </.tr>
+              <% end %>
+            </.table>
+          </div>
         </LightningWeb.Components.Common.panel_content>
 
         <LightningWeb.Components.Common.panel_content for_hash="security">

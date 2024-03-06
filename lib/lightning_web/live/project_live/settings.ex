@@ -32,6 +32,11 @@ defmodule LightningWeb.ProjectLive.Settings do
     project_users =
       Projects.get_project_users!(project.id)
 
+    project_user =
+      Enum.find(project_users, fn project_user ->
+        project_user.user_id == current_user.id
+      end)
+
     credentials = Credentials.list_credentials(project)
     auth_methods = WebhookAuthMethods.list_for_project(project)
 
@@ -48,13 +53,16 @@ defmodule LightningWeb.ProjectLive.Settings do
       |> Permissions.can?(
         :edit_project,
         current_user,
-        project
+        project_user
       )
 
-    project_user =
-      Enum.find(project_users, fn project_user ->
-        project_user.user_id == current_user.id
-      end)
+    can_add_project_user =
+      Permissions.can?(
+        ProjectUsers,
+        :add_project_user,
+        current_user,
+        project_user
+      )
 
     can_edit_data_retention =
       Permissions.can?(
@@ -114,6 +122,7 @@ defmodule LightningWeb.ProjectLive.Settings do
        project_changeset: Projects.change_project(socket.assigns.project),
        can_delete_project: can_delete_project,
        can_edit_project: can_edit_project,
+       can_add_project_user: can_add_project_user,
        can_edit_data_retention: can_edit_data_retention,
        can_write_webhook_auth_method: can_write_webhook_auth_method,
        can_create_project_credential: can_create_project_credential,
@@ -131,7 +140,8 @@ defmodule LightningWeb.ProjectLive.Settings do
          VersionControl.get_pending_user_installation(
            socket.assigns.current_user.id
          ),
-       selected_credential_type: nil
+       selected_credential_type: nil,
+       show_collaborators_modal: false
      )}
   end
 
@@ -259,6 +269,15 @@ defmodule LightningWeb.ProjectLive.Settings do
          "You are not authorized to perform this action."
        )}
     end
+  end
+
+  def handle_event("toggle_collaborators_modal", _params, socket) do
+    {:noreply,
+     socket
+     |> assign(
+       :show_collaborators_modal,
+       !socket.assigns.show_collaborators_modal
+     )}
   end
 
   def handle_event(
@@ -451,6 +470,16 @@ defmodule LightningWeb.ProjectLive.Settings do
   end
 
   @impl true
+  def handle_info(:collaborators_updated, socket) do
+    project_users =
+      Projects.get_project_users!(socket.assigns.project.id)
+
+    {:noreply,
+     socket
+     |> assign(project_users: project_users)
+     |> put_flash(:success, "Collaborators updated successfully!")}
+  end
+
   def handle_info({:branches_fetched, branches_result}, socket) do
     case branches_result do
       {:error, error} ->
