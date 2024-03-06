@@ -21,6 +21,8 @@ and this project adheres to
   [#1754](https://github.com/OpenFn/Lightning/issues/1754)
 - Add specific messages for log, input, and output tabs when a run is lost
   [#1757](https://github.com/OpenFn/lightning/issues/1757)
+- Verify only stale project credentials  
+  [#1861](https://github.com/OpenFn/lightning/issues/1861)
 
 ### Changed
 
