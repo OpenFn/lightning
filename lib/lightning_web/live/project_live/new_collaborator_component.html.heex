@@ -23,13 +23,15 @@
       </div>
     </:title>
     <:subtitle>
-      <span class="italic text-xs">
+      <span class="text-xs">
         Enter the email address and role of new collaborator(s) to invite them to this project
       </span>
     </:subtitle>
 
     <.form
       :let={f}
+      id={"#{@id}_form"}
+      as={:project}
       for={@changeset}
       phx-target={@myself}
       phx-change="validate"
@@ -42,7 +44,7 @@
             field={f[:collaborators]}
             prepend={[%CollaboratorProject.Collaborator{}]}
           >
-            <div class="col-span-3 flex flex-col-reverse">
+            <div class="col-span-3">
               <.input
                 label="Email Address"
                 type="text"
@@ -51,7 +53,7 @@
                 required="true"
               />
             </div>
-            <div class="col-span-2 flex flex-col-reverse">
+            <div class="col-span-2 pt-8">
               <.input
                 type="select"
                 prompt="Select Role"
@@ -65,7 +67,7 @@
                 required="true"
               />
             </div>
-            <div class="col-span-1 flex flex-col-reverse">
+            <div class="col-span-1 pt-8">
               <input
                 type="hidden"
                 name={"#{f.name}[collaborators_sort][]"}
