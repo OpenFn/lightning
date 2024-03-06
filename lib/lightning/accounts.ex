@@ -105,6 +105,14 @@ defmodule Lightning.Accounts do
   end
 
   @doc """
+  Returns the list of users with the given emails
+  """
+  def list_users_by_emails(emails) do
+    query = from u in User, where: u.email in ^emails
+    Repo.all(query)
+  end
+
+  @doc """
   Gets a user by email.
 
   ## Examples
