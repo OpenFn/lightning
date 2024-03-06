@@ -21,7 +21,7 @@ defmodule LightningWeb.ProjectLive.NewCollaboratorComponent do
   end
 
   @impl true
-  def handle_event("validate", %{"collaborator_project" => params}, socket) do
+  def handle_event("validate", %{"project" => params}, socket) do
     changeset =
       CollaboratorProject.changeset(socket.assigns.collaborator_project, params)
 
@@ -30,7 +30,7 @@ defmodule LightningWeb.ProjectLive.NewCollaboratorComponent do
 
   def handle_event(
         "add_collaborators",
-        %{"collaborator_project" => params},
+        %{"project" => params},
         %{assigns: assigns} = socket
       ) do
     with {:ok, project_users} <-

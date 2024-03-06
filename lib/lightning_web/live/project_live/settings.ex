@@ -476,7 +476,7 @@ defmodule LightningWeb.ProjectLive.Settings do
 
     {:noreply,
      socket
-     |> assign(project_users: project_users)
+     |> assign(project_users: project_users, show_collaborators_modal: false)
      |> put_flash(:success, "Collaborators updated successfully!")}
   end
 
@@ -508,6 +508,12 @@ defmodule LightningWeb.ProjectLive.Settings do
       _ ->
         {:noreply, socket}
     end
+  end
+
+  # catch all callback. Needed for tests because of Swoosh emails in tests
+  def handle_info(msg, socket) do
+    Logger.debug("Received unknown message: #{inspect(msg)}")
+    {:noreply, socket}
   end
 
   defp error_message(error) do

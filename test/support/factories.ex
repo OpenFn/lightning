@@ -131,6 +131,7 @@ defmodule Lightning.Factories do
       email: sequence(:email, &"email-#{&1}@example.com"),
       password: "hello world!",
       first_name: "anna",
+      last_name: sequence(:name, &"last-name-#{&1}"),
       hashed_password: Bcrypt.hash_pwd_salt("hello world!")
     }
   end

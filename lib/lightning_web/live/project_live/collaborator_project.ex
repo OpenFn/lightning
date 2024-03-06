@@ -8,7 +8,7 @@ defmodule LightningWeb.ProjectLive.CollaboratorProject do
     embeds_many :collaborators, Collaborator, on_replace: :delete do
       field :email, :string
       field :user_id, :binary_id
-      field :role, Lightning.Projects.ProjectUser.RolesEnum
+      field :role, Ecto.Enum, values: [:viewer, :editor, :admin]
     end
   end
 
@@ -81,10 +81,10 @@ defmodule LightningWeb.ProjectLive.CollaboratorProject do
       |> validate_change(:email, fn :email, _email ->
         cond do
           is_nil(existing_user) ->
-            [email: "no user exists with this email"]
+            [email: "There is no account connected this email"]
 
           Enum.find(current_project_users, &(&1.user_id == existing_user.id)) ->
-            [email: "this user is already part of this project"]
+            [email: "This account is already part of this project"]
 
           true ->
             []
