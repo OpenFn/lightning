@@ -6,6 +6,11 @@ defmodule Lightning.WorkflowsTest do
   alias Lightning.Workflows
   alias Lightning.Workflows.Trigger
 
+  setup do
+    # Carbonite.override_mode(Lightning.Repo, to: :capture)
+    :ok
+  end
+
   describe "workflows" do
     test "list_workflows/0 returns all workflows" do
       workflow = insert(:workflow)

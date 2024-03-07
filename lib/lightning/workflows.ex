@@ -76,7 +76,15 @@ defmodule Lightning.Workflows do
 
   """
   def update_workflow(%Ecto.Changeset{} = changeset) do
-    Repo.update(changeset)
+    Ecto.Multi.new()
+    |> Carbonite.Multi.insert_transaction(%{meta: %{"type" => "updated"}})
+    |> Ecto.Multi.update(:workflow, changeset)
+    |> Repo.transaction()
+    |> case do
+      {:ok, %{workflow: workflow}} -> {:ok, workflow}
+      {:error, :workflow, changeset} -> {:error, changeset}
+      err -> err
+    end
   end
 
   @doc """
@@ -95,7 +103,7 @@ defmodule Lightning.Workflows do
     workflow
     |> maybe_preload([:jobs, :triggers, :edges], attrs)
     |> Workflow.changeset(attrs)
-    |> Repo.update()
+    |> update_workflow()
   end
 
   # Helper to preload associations only if they are present in the attributes
