@@ -512,6 +512,7 @@
                 <.th>Role</.th>
                 <.th>Failure Alert</.th>
                 <.th>Digest</.th>
+                <.th>Actions</.th>
               </.tr>
 
               <%= for project_user <- @project_users do %>
@@ -536,6 +537,34 @@
                   <.td>
                     <.digest
                       current_user={@current_user}
+                      project_user={project_user}
+                    />
+                  </.td>
+                  <.td>
+                    <button
+                      type="button"
+                      phx-click={show_modal("remove_#{project_user.id}_modal")}
+                      class="inline-flex items-center gap-x-2 rounded-md bg-white px-3.5 py-2.5 text-sm  text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                      disabled={
+                        !user_removable?(
+                          project_user,
+                          @current_user,
+                          @can_remove_project_user
+                        )
+                      }
+                    >
+                      <Heroicons.minus_circle class="w-5 h-5" />
+                      Remove Collaborator
+                    </button>
+                    <.confirm_user_removal_modal
+                      :if={
+                        user_removable?(
+                          project_user,
+                          @current_user,
+                          @can_remove_project_user
+                        )
+                      }
+                      id={"remove_#{project_user.id}_modal"}
                       project_user={project_user}
                     />
                   </.td>

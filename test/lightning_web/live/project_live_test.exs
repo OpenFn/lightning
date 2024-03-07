@@ -2543,6 +2543,141 @@ defmodule LightningWeb.ProjectLiveTest do
         end
       end
     end
+
+    test "only authorized users can remove a collaborator", %{
+      conn: conn
+    } do
+      project = insert(:project)
+
+      for {conn, _user} <- setup_project_users(conn, project, [:viewer, :editor]) do
+        project_user =
+          insert(:project_user,
+            project: project,
+            user: build(:user),
+            role: :viewer
+          )
+
+        {:ok, view, _html} =
+          live(
+            conn,
+            ~p"/projects/#{project.id}/settings#collaboration"
+          )
+
+        # modal is not present
+        refute has_element?(view, "#remove_#{project_user.id}_modal")
+
+        # try sending the event either way
+        html =
+          render_click(view, "remove_project_user", %{
+            "project_user_id" => project_user.id
+          })
+
+        assert html =~ "You are not authorized to perform this action"
+
+        # project user still exists
+        assert Repo.get(Lightning.Projects.ProjectUser, project_user.id)
+      end
+
+      for {conn, _user} <- setup_project_users(conn, project, [:owner, :admin]) do
+        project_user =
+          insert(:project_user,
+            project: project,
+            user: build(:user),
+            role: :viewer
+          )
+
+        {:ok, view, _html} =
+          live(
+            conn,
+            ~p"/projects/#{project.id}/settings#collaboration"
+          )
+
+        # modal is present
+        assert has_element?(view, "#remove_#{project_user.id}_modal")
+
+        # try clicking the confirm button
+        html =
+          view
+          |> element("#remove_#{project_user.id}_modal_confirm_button")
+          |> render_click()
+
+        refute html =~ "You are not authorized to perform this action"
+        assert html =~ "Collaborator removed successfully!"
+
+        # project user is removed
+        refute Repo.get(Lightning.Projects.ProjectUser, project_user.id)
+        # user is not deleted
+        assert Repo.get(Lightning.Accounts.User, project_user.user_id)
+      end
+    end
+
+    test "removing an owner project user is not allowed",
+         %{
+           conn: conn
+         } do
+      project = insert(:project)
+
+      for {conn, _user} <- setup_project_users(conn, project, [:owner, :admin]) do
+        project_user =
+          insert(:project_user,
+            project: project,
+            user: build(:user),
+            role: :owner
+          )
+
+        {:ok, view, _html} =
+          live(
+            conn,
+            ~p"/projects/#{project.id}/settings#collaboration"
+          )
+
+        # modal is not present
+        refute has_element?(view, "#remove_#{project_user.id}_modal")
+
+        # try sending the event either way
+        html =
+          render_click(view, "remove_project_user", %{
+            "project_user_id" => project_user.id
+          })
+
+        assert html =~ "You are not authorized to perform this action"
+
+        # project user still exists
+        assert Repo.get(Lightning.Projects.ProjectUser, project_user.id)
+      end
+    end
+
+    test "users cannot remove themselves",
+         %{
+           conn: conn
+         } do
+      project = insert(:project)
+
+      for {conn, user} <- setup_project_users(conn, project, [:owner, :admin]) do
+        project_user =
+          Repo.get_by(Lightning.Projects.ProjectUser, user_id: user.id)
+
+        {:ok, view, _html} =
+          live(
+            conn,
+            ~p"/projects/#{project.id}/settings#collaboration"
+          )
+
+        # modal is not present
+        refute has_element?(view, "#remove_#{project_user.id}_modal")
+
+        # try sending the event either way
+        html =
+          render_click(view, "remove_project_user", %{
+            "project_user_id" => project_user.id
+          })
+
+        assert html =~ "You are not authorized to perform this action"
+
+        # project user still exists
+        assert Repo.get(Lightning.Projects.ProjectUser, project_user.id)
+      end
+    end
   end
 
   defp find_user_index_in_list(view, user) do

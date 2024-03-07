@@ -64,6 +64,14 @@ defmodule LightningWeb.ProjectLive.Settings do
         project_user
       )
 
+    can_remove_project_user =
+      Permissions.can?(
+        ProjectUsers,
+        :remove_project_user,
+        current_user,
+        project_user
+      )
+
     can_edit_data_retention =
       Permissions.can?(
         ProjectUsers,
@@ -123,6 +131,7 @@ defmodule LightningWeb.ProjectLive.Settings do
        can_delete_project: can_delete_project,
        can_edit_project: can_edit_project,
        can_add_project_user: can_add_project_user,
+       can_remove_project_user: can_remove_project_user,
        can_edit_data_retention: can_edit_data_retention,
        can_write_webhook_auth_method: can_write_webhook_auth_method,
        can_create_project_credential: can_create_project_credential,
@@ -322,6 +331,34 @@ defmodule LightningWeb.ProjectLive.Settings do
       digest ->
         Projects.update_project_user(project_user, %{digest: digest})
         |> dispatch_flash(socket)
+    end
+  end
+
+  def handle_event(
+        "remove_project_user",
+        %{"project_user_id" => project_user_id},
+        %{assigns: assigns} = socket
+      ) do
+    project_user = Projects.get_project_user!(project_user_id)
+
+    if user_removable?(
+         project_user,
+         assigns.current_user,
+         assigns.can_remove_project_user
+       ) do
+      Projects.delete_project_user!(project_user)
+
+      {:noreply,
+       socket
+       |> put_flash(:info, "Collaborator removed successfully!")
+       |> assign(
+         :project_users,
+         Projects.get_project_users!(assigns.project.id)
+       )}
+    else
+      {:noreply,
+       socket
+       |> put_flash(:error, "You are not authorized to perform this action")}
     end
   end
 
@@ -623,7 +660,10 @@ defmodule LightningWeb.ProjectLive.Settings do
 
   def user(assigns) do
     ~H"""
-    <%= @project_user.user.first_name %> <%= @project_user.user.last_name %>
+    <div>
+      <%= @project_user.user.first_name %> <%= @project_user.user.last_name %>
+    </div>
+    <span class="text-xs"><%= @project_user.user.email %></span>
     """
   end
 
@@ -700,5 +740,60 @@ defmodule LightningWeb.ProjectLive.Settings do
       {:error, _error} ->
         put_flash(socket, :error, "Oops! Error connecting to github")
     end
+  end
+
+  defp confirm_user_removal_modal(assigns) do
+    ~H"""
+    <.modal id={@id} width="max-w-md">
+      <:title>
+        <div class="flex justify-between">
+          <span class="font-bold">
+            Remove <%= @project_user.user.first_name %> <%= @project_user.user.last_name %>
+          </span>
+
+          <button
+            phx-click={hide_modal(@id)}
+            type="button"
+            class="rounded-md bg-white text-gray-400 hover:text-gray-500 focus:outline-none"
+            aria-label={gettext("close")}
+          >
+            <span class="sr-only">Close</span>
+            <Heroicons.x_mark solid class="h-5 w-5 stroke-current" />
+          </button>
+        </div>
+      </:title>
+      <div class="px-6">
+        <p class="text-sm text-gray-500">
+          Are you sure you want to remove "<%= @project_user.user.first_name %> <%= @project_user.user.last_name %>" from this project?
+          They will nolonger have access.
+          Do you wish to proceed with this action?
+        </p>
+      </div>
+      <div class="flex flex-row-reverse gap-4 mx-6 mt-2">
+        <.button
+          id={"#{@id}_confirm_button"}
+          type="button"
+          phx-value-project_user_id={@project_user.id}
+          phx-click="remove_project_user"
+          color_class="bg-red-600 hover:bg-red-700 text-white"
+          phx-disable-with="Removing..."
+        >
+          Confirm
+        </.button>
+        <button
+          type="button"
+          phx-click={hide_modal(@id)}
+          class="inline-flex items-center rounded-md bg-white px-3.5 py-2.5 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
+        >
+          Cancel
+        </button>
+      </div>
+    </.modal>
+    """
+  end
+
+  defp user_removable?(project_user, current_user, can_remove_project_user) do
+    can_remove_project_user and project_user.role != :owner and
+      project_user.user_id != current_user.id
   end
 end

@@ -16,6 +16,7 @@ defmodule Lightning.Policies.ProjectUsers do
           | :edit_project
           | :delete_project
           | :add_project_user
+          | :remove_project_user
           | :delete_workflow
           | :create_workflow
           | :edit_digest_alerts
@@ -70,7 +71,8 @@ defmodule Lightning.Policies.ProjectUsers do
              :write_github_connection,
              :edit_project,
              :edit_data_retention,
-             :add_project_user
+             :add_project_user,
+             :remove_project_user
            ],
       do: project_user.role in [:owner, :admin]
 
