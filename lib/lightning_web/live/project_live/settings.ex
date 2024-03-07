@@ -477,7 +477,7 @@ defmodule LightningWeb.ProjectLive.Settings do
     {:noreply,
      socket
      |> assign(project_users: project_users, show_collaborators_modal: false)
-     |> put_flash(:success, "Collaborators updated successfully!")}
+     |> put_flash(:info, "Collaborators updated successfully!")}
   end
 
   def handle_info({:branches_fetched, branches_result}, socket) do
