@@ -1,5 +1,8 @@
 defmodule LightningWeb.ProjectLive.CollaboratorProject do
-  @moduledoc false
+  @moduledoc """
+  This schema is used for building the changeset for adding new collaborators to a project.
+  It is mirroring the `Project -> ProjectUser` relationship.
+  """
 
   use Ecto.Schema
   import Ecto.Changeset
