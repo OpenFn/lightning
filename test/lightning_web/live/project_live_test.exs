@@ -2370,6 +2370,8 @@ defmodule LightningWeb.ProjectLiveTest do
         |> form("#add_collaborators_modal_form")
         |> render_change(project: %{"collaborators_drop" => [0]})
 
+        html = modal |> render() |> Floki.parse_fragment!()
+
         # we now have 1 email input and we dont have any button to remove the input
         assert Floki.find(html, "[type='text'][name$='[email]']") |> Enum.count() ==
                  1
