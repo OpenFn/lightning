@@ -152,4 +152,11 @@ defmodule Lightning.UsageTracking do
   defp enqueue(date) do
     Oban.insert(Lightning.Oban, ReportWorker.new(%{date: date}))
   end
+
+  def find_enabled_daily_report_config do
+    case Repo.one(DailyReportConfiguration) do
+      %{tracking_enabled_at: nil} -> nil
+      possible_config -> possible_config
+    end
+  end
 end
