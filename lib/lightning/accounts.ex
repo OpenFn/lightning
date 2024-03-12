@@ -10,6 +10,7 @@ defmodule Lightning.Accounts do
   import Ecto.Query, warn: false
 
   alias Ecto.Multi
+  alias Lightning.Accounts.Events
   alias Lightning.Accounts.User
   alias Lightning.Accounts.UserBackupCode
   alias Lightning.Accounts.UserNotifier
@@ -355,7 +356,12 @@ defmodule Lightning.Accounts do
     |> Ecto.Changeset.apply_action(:insert)
     |> case do
       {:ok, data} ->
-        struct(User, data) |> Repo.insert()
+        struct(User, data)
+        |> Repo.insert()
+        |> tap(fn
+          {:ok, user} -> Events.user_registered(user)
+          _error -> :ok
+        end)
 
       {:error, changeset} ->
         {:error, changeset}
