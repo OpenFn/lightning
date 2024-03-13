@@ -20,7 +20,8 @@ defmodule LightningWeb.Components.NewInputs do
   attr :class, :any, default: ""
 
   attr :color_class, :any,
-    default: "bg-primary-600 hover:bg-primary-700 text-white"
+    default:
+      "bg-primary-600 hover:bg-primary-700 text-white focus:ring-primary-500 disabled:bg-primary-300"
 
   attr :rest, :global, include: ~w(disabled form name value)
   attr :tooltip, :any, default: nil
@@ -29,19 +30,14 @@ defmodule LightningWeb.Components.NewInputs do
 
   def button(assigns) do
     ~H"""
-    <.tooltip_when_disabled
-      id={@rest[:id]}
-      tooltip={@tooltip}
-      disabled={@rest[:disabled]}
-    >
+    <.tooltip_when_disabled id={@id} tooltip={@tooltip} disabled={@rest[:disabled]}>
       <button
         id={@id}
         type={@type}
         class={[
           "inline-flex justify-center items-center py-2 px-4 border border-transparent",
           "shadow-sm text-sm font-medium rounded-md focus:outline-none",
-          "focus:ring-2 focus:ring-offset-2 focus:ring-primary-500",
-          "disabled:bg-primary-300",
+          "focus:ring-2 focus:ring-offset-2",
           "phx-submit-loading:opacity-75",
           @color_class,
           @class

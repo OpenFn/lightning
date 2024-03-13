@@ -2563,6 +2563,12 @@ defmodule LightningWeb.ProjectLiveTest do
             ~p"/projects/#{project.id}/settings#collaboration"
           )
 
+        tooltip =
+          element(view, "#remove_project_user_#{project_user.id}_button-tooltip")
+
+        assert has_element?(tooltip)
+        assert render(tooltip) =~ "You do not have permission to remove a user"
+
         # modal is not present
         refute has_element?(view, "#remove_#{project_user.id}_modal")
 
@@ -2591,6 +2597,11 @@ defmodule LightningWeb.ProjectLiveTest do
             conn,
             ~p"/projects/#{project.id}/settings#collaboration"
           )
+
+        tooltip =
+          element(view, "#remove_project_user_#{project_user.id}_button-tooltip")
+
+        refute has_element?(tooltip)
 
         # modal is present
         assert has_element?(view, "#remove_#{project_user.id}_modal")
@@ -2631,6 +2642,12 @@ defmodule LightningWeb.ProjectLiveTest do
             ~p"/projects/#{project.id}/settings#collaboration"
           )
 
+        tooltip =
+          element(view, "#remove_project_user_#{project_user.id}_button-tooltip")
+
+        assert has_element?(tooltip)
+        assert render(tooltip) =~ "You cannot remove an owner"
+
         # modal is not present
         refute has_element?(view, "#remove_#{project_user.id}_modal")
 
@@ -2662,6 +2679,12 @@ defmodule LightningWeb.ProjectLiveTest do
             conn,
             ~p"/projects/#{project.id}/settings#collaboration"
           )
+
+        tooltip =
+          element(view, "#remove_project_user_#{project_user.id}_button-tooltip")
+
+        assert has_element?(tooltip)
+        assert render(tooltip) =~ "You cannot remove yourself"
 
         # modal is not present
         refute has_element?(view, "#remove_#{project_user.id}_modal")

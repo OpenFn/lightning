@@ -792,6 +792,22 @@ defmodule LightningWeb.ProjectLive.Settings do
     """
   end
 
+  defp remove_user_tooltip(project_user, current_user, can_remove_project_user) do
+    cond do
+      !can_remove_project_user ->
+        "You do not have permission to remove a user"
+
+      project_user.user_id == current_user.id ->
+        "You cannot remove yourself"
+
+      project_user.role == :owner ->
+        "You cannot remove an owner"
+
+      true ->
+        ""
+    end
+  end
+
   defp user_removable?(project_user, current_user, can_remove_project_user) do
     can_remove_project_user and project_user.role != :owner and
       project_user.user_id != current_user.id
