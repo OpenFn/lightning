@@ -8,7 +8,7 @@
     <:title>
       <div class="flex justify-between">
         <span class="font-bold">
-          Add a new collaborator
+          Add new collaborator(s)
         </span>
 
         <button
@@ -106,7 +106,9 @@
             type="submit"
             phx-disable-with="Adding..."
           >
-            Save Collaborators
+            Save Collaborator<%= if(Enum.count(f[:collaborators].value) > 1,
+              do: "(s)"
+            ) %>
           </.button>
           <button
             type="button"
