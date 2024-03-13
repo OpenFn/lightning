@@ -5,25 +5,25 @@ defmodule LightningWeb.ProjectLive.NewCollaboratorComponent do
 
   alias Lightning.Accounts.UserNotifier
   alias Lightning.Projects
-  alias LightningWeb.ProjectLive.CollaboratorProject
+  alias LightningWeb.ProjectLive.Collaborators
   alias Phoenix.LiveView.JS
 
   @impl true
   def update(assigns, socket) do
-    collaborator_project = %CollaboratorProject{}
+    collaborators = %Collaborators{}
 
-    changeset = CollaboratorProject.changeset(collaborator_project, %{})
+    changeset = Collaborators.changeset(collaborators, %{})
 
     {:ok,
      socket
      |> assign(assigns)
-     |> assign(collaborator_project: collaborator_project, changeset: changeset)}
+     |> assign(collaborators: collaborators, changeset: changeset)}
   end
 
   @impl true
   def handle_event("validate", %{"project" => params}, socket) do
     changeset =
-      CollaboratorProject.changeset(socket.assigns.collaborator_project, params)
+      Collaborators.changeset(socket.assigns.collaborators, params)
 
     {:noreply, assign(socket, changeset: changeset)}
   end
@@ -34,8 +34,8 @@ defmodule LightningWeb.ProjectLive.NewCollaboratorComponent do
         %{assigns: assigns} = socket
       ) do
     with {:ok, project_users} <-
-           CollaboratorProject.prepare_for_insertion(
-             assigns.collaborator_project,
+           Collaborators.prepare_for_insertion(
+             assigns.collaborators,
              params,
              assigns.project_users
            ),
