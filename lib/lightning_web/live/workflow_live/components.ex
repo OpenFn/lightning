@@ -514,16 +514,16 @@ defmodule LightningWeb.WorkflowLive.Components do
     <div
       id={@id}
       lv-keep-class
-      class={["w-full flex flex-col p-4 collapsible-panel", @class]}
+      class={["w-full flex flex-col collapsible-panel bg-slate-100", @class]}
     >
-      <div class="flex-0">
+      <div class="flex-0 m-0">
         <div
           id={"#{@id}-panel-header"}
-          class="flex justify-between items-center panel-header"
+          class="flex justify-between items-center panel-header p-2 px-4"
         >
           <div
             id={"#{@id}-panel-header-title"}
-            class="text-center font-semibold text-secondary-700 mb-2 panel-header-title"
+            class="text-center font-semibold text-secondary-700 panel-header-title text-xs"
           >
             <%= @panel_title %>
           </div>
@@ -534,7 +534,7 @@ defmodule LightningWeb.WorkflowLive.Components do
               href="#"
               phx-click={JS.dispatch("collapse", to: "##{@id}")}
             >
-              <Heroicons.minus_small class="w-10 h-10 p-2 hover:bg-gray-200 text-gray-600 rounded-lg" />
+              <Heroicons.minus_circle class="w-5 h-5 hover:bg-gray-200 text-gray-600 rounded-lg" />
             </a>
             <a
               id={"#{@id}-panel-ezxpand-icon"}
@@ -549,7 +549,7 @@ defmodule LightningWeb.WorkflowLive.Components do
       </div>
       <div
         id={"#{@id}-panel-content"}
-        class="panel-content min-h-0 min-w-0 flex-1 pt-2"
+        class="panel-content min-h-0 min-w-0 flex-1 pt-2 p-4 pb-2 bg-white"
       >
         <%= render_slot(@inner_block) %>
       </div>

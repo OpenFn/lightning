@@ -81,9 +81,9 @@ defmodule LightningWeb.WorkflowLive.Edit do
           <div
             :if={@selected_job && @selection_mode == "expand"}
             class={[
-              "fixed left-0 top-0 right-0 bottom-0 m-8 flex-wrap",
+              "fixed left-0 top-0 right-0 bottom-0 m-0 flex-wrap",
               "hidden opacity-0",
-              "bg-white inset-0 z-30 overflow-hidden rounded-lg drop-shadow-[0_35px_35px_rgba(0,0,0,0.25)]"
+              "bg-white inset-0 z-30 overflow-hidden drop-shadow-[0_35px_35px_rgba(0,0,0,0.25)]"
             ]}
             phx-mounted={fade_in()}
             phx-remove={fade_out()}
@@ -155,15 +155,15 @@ defmodule LightningWeb.WorkflowLive.Edit do
                     >
                       <%= if processing(@follow_run) do %>
                         <.icon
-                          name="hero-arrow-path-mini"
+                          name="hero-arrow-path"
                           class="w-4 h-4 animate-spin mr-1"
                         /> Processing
                       <% else %>
                         <%= if step_retryable?(@step, @manual_run_form, @selectable_dataclips) do %>
-                          <.icon name="hero-arrow-path-mini" class="w-4 h-4 mr-1" />
-                          Rerun from here
+                          <.icon name="hero-play-mini" class="w-4 h-4 mr-1" />
+                          Retry from here
                         <% else %>
-                          <.icon name="hero-play-solid" class="w-4 h-4 mr-1" />
+                          <.icon name="hero-play-mini" class="w-4 h-4 mr-1" />
                           Create New Work Order
                         <% end %>
                       <% end %>
@@ -518,7 +518,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
     ~H"""
     <.link patch={"#{@base_url}?s=#{@job.id}&m=expand"} class={@button_classes}>
-      <.icon name="hero-code-bracket-mini" class="w-4 h-4 text-grey-400" />
+      <.icon name="hero-code-bracket" class="w-4 h-4 text-grey-400" />
     </.link>
 
     <.save_is_blocked_error :if={@is_empty}>
