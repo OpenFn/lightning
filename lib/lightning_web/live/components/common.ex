@@ -71,6 +71,8 @@ defmodule LightningWeb.Components.Common do
   attr :id, :string, required: true
   attr :title, :string, required: true
   attr :class, :string, default: ""
+  attr :icon, :string, default: "hero-information-circle-solid"
+  attr :icon_class, :string, default: "w-4 h-4 text-primary-600 opacity-50"
 
   def tooltip(assigns) do
     classes = ~w"
@@ -81,9 +83,8 @@ defmodule LightningWeb.Components.Common do
 
     ~H"""
     <span class={@class} id={@id} aria-label={@title} phx-hook="Tooltip">
-      <Heroicons.information_circle
-        solid
-        class="w-4 h-4 text-primary-600 opacity-50"
+      <.icon name={@icon}
+        class={@icon_class}
       />
     </span>
     """
