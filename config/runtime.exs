@@ -18,10 +18,6 @@ if System.get_env("PHX_SERVER") && System.get_env("RELEASE_NAME") do
   config :lightning, LightningWeb.Endpoint, server: true
 end
 
-config :lightning,
-       :is_resettable_demo,
-       System.get_env("IS_RESETTABLE_DEMO") == "yes"
-
 decoded_cert =
   System.get_env("GITHUB_CERT")
   |> case do
@@ -212,6 +208,10 @@ if log_level = System.get_env("LOG_LEVEL") do
 end
 
 if config_env() == :prod do
+  config :lightning,
+         :is_resettable_demo,
+         System.get_env("IS_RESETTABLE_DEMO") == "yes"
+
   database_url =
     System.get_env("DATABASE_URL") ||
       raise """

@@ -31,8 +31,9 @@ config :lightning, Lightning.Repo,
 config :lightning, Lightning.Vault,
   primary_encryption_key: "M1zzWU6Ego6jV/FUS7e/sj7yF9kRIutgR8uLQ9czrVc="
 
-# We don't run a server during test. If one is required,
-# you can enable the server option below.
+config :lightning, is_resettable_demo: true
+
+# Runs the server for websocket endpoint to listen to the worker
 config :lightning, LightningWeb.Endpoint,
   http: [port: 4002],
   secret_key_base:
