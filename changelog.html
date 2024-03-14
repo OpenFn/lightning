@@ -150,13 +150,14 @@ and this project adheres to
 </h3>
 <ul><li>Allows limiting creation of new runs and retries.
 <a href="https://github.com/OpenFn/Lightning/issues/1754">#1754</a></li><li>Add specific messages for log, input, and output tabs when a run is lost
-<a href="https://github.com/OpenFn/lightning/issues/1757">#1757</a></li></ul><h3 id="changed" class="section-heading">
+<a href="https://github.com/OpenFn/lightning/issues/1757">#1757</a></li><li>Soft and hard limits for runs created by webhook trigger.
+<a href="https://github.com/OpenFn/Lightning/issues/1859">#1859</a></li></ul><h3 id="changed" class="section-heading">
   <a href="#changed" class="hover-link">
     <i class="ri-link-m" aria-hidden="true"></i>
   </a>
   <span class="text">Changed</span>
 </h3>
-<h3 id="fixed" class="section-heading">
+<ul><li>Upgrade Elixir to 1.16.2</li></ul><h3 id="fixed" class="section-heading">
   <a href="#fixed" class="hover-link">
     <i class="ri-link-m" aria-hidden="true"></i>
   </a>
@@ -906,7 +907,7 @@ work orders up to <code class="inline">v0.10.0</code>, though the granularity of
 will be less than <code class="inline">v0.10.0</code> and the final states are not guaranteed to be
 accurate for workflows with multiple branches and leaf nodes with varying exit
 reasons.</p><p>The migration scripts can be run with a single function call in SetupUtils from
-a connect <code class="inline">iex</code> session:</p><pre><code class="makeup elixir" translate="no"><span class="nc">Lightning.SetupUtils</span><span class="o">.</span><span class="n">approximate_state_for_attempts_and_workorders</span><span class="p" data-group-id="9037191061-1">(</span><span class="p" data-group-id="9037191061-1">)</span></code></pre><p>Note that (like lots of <em>other</em> functionality in <code class="inline">SetupUtils</code>, calling this
+a connect <code class="inline">iex</code> session:</p><pre><code class="makeup elixir" translate="no"><span class="nc">Lightning.SetupUtils</span><span class="o">.</span><span class="n">approximate_state_for_attempts_and_workorders</span><span class="p" data-group-id="0792480108-1">(</span><span class="p" data-group-id="0792480108-1">)</span></code></pre><p>Note that (like lots of <em>other</em> functionality in <code class="inline">SetupUtils</code>, calling this
 function is a destructive action and you should only do it if you've backed up
 your data and you know what you're doing.)</p><p>As always, we recommend backing up your data before migrating. (And thanks for
 bearing with us as we move towards our first stable Lightning release.)</p><h3 id="added-14" class="section-heading">
