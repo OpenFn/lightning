@@ -358,9 +358,8 @@ defmodule Lightning.Accounts do
       {:ok, data} ->
         struct(User, data)
         |> Repo.insert()
-        |> tap(fn
-          {:ok, user} -> Events.user_registered(user)
-          _error -> :ok
+        |> tap(fn result ->
+          with {:ok, user} <- result, do: Events.user_registered(user)
         end)
 
       {:error, changeset} ->
