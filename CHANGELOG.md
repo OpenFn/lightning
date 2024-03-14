@@ -26,6 +26,8 @@ and this project adheres to
 
 ### Changed
 
+- Upgrade Elixir to 1.16.2
+
 ### Fixed
 
 ## [v2.0.8] - 2024-02-29
