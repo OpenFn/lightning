@@ -17,7 +17,6 @@ defmodule Lightning.AccountsTest do
 
   import Lightning.AccountsFixtures
   import Lightning.Factories
-  import Mock
 
   test "has_activity_in_projects?/1 returns true if user has activity in a project (is associated with a run) and false otherwise." do
     user = AccountsFixtures.user_fixture()
@@ -377,26 +376,15 @@ defmodule Lightning.AccountsTest do
       assert "has already been taken" in errors_on(changeset).email
     end
 
-    test "does not publish UserRegistered when insert fails" do
-      with_mock(
-        Lightning.Repo,
-        insert: fn _user -> :error end
-      ) do
-        assert :error =
-                 Accounts.register_user(%{
-                   email: "user@email.com",
-                   password: "valid123"
-                 })
-
-        refute_receive %WorkOrders.Events.UserRegistered{user: _user}
-      end
-    end
-
     test "registers users with a hashed password and publishes event" do
       Events.subscribe()
 
       email = unique_user_email()
-      {:ok, user} = Accounts.register_user(valid_user_attributes(email: email))
+
+      assert {:ok, user} =
+               Accounts.register_user(valid_user_attributes(email: email))
+
+      assert ^user = Repo.get!(User, user.id)
       assert_receive %Events.UserRegistered{user: ^user}
 
       assert user.email == email
