@@ -93,7 +93,7 @@ defmodule Lightning.Credentials.Schema do
   end
 
   defp error_to_changeset(%{path: path, error: error}, changeset) do
-    field = String.slice(path, 2..-1) |> String.to_existing_atom()
+    field = String.slice(path, 2..-1//1) |> String.to_existing_atom()
 
     case error do
       %{expected: "uri"} ->

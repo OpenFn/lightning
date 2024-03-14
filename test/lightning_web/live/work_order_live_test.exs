@@ -516,6 +516,14 @@ defmodule LightningWeb.WorkOrderLiveTest do
 
       dataclip = insert(:dataclip)
 
+      insert(:workorder,
+        workflow: workflow,
+        trigger: trigger,
+        dataclip: dataclip,
+        last_activity: DateTime.utc_now(),
+        state: :rejected
+      )
+
       work_order =
         insert(:workorder,
           workflow: workflow,
@@ -542,7 +550,7 @@ defmodule LightningWeb.WorkOrderLiveTest do
         )
 
       {:ok, view, html} =
-        live_async(conn, Routes.project_run_index_path(conn, :index, project.id))
+        live_async(conn, ~p"/projects/#{project.id}/history")
 
       assert html =~ "History"
 
@@ -556,6 +564,20 @@ defmodule LightningWeb.WorkOrderLiveTest do
       assert table =~ LiveHelpers.display_short_uuid(dataclip.id)
 
       refute table =~ LiveHelpers.display_short_uuid(run_id)
+
+      assert view
+             |> element(
+               "section#inner_content div[data-entity='work_order_list'] > div:first-child > div:first-child > div:last-child"
+             )
+             |> render() =~
+               "Enqueued"
+
+      assert view
+             |> element(
+               "section#inner_content div[data-entity='work_order_list'] > div:last-child > div:first-child > div:last-child"
+             )
+             |> render() =~
+               "Rejected"
 
       # toggle work_order details
       # TODO move to test work_order_component
@@ -669,6 +691,7 @@ defmodule LightningWeb.WorkOrderLiveTest do
       assert html =~ "Status"
 
       status_filters = [
+        "rejected",
         "success",
         "failed",
         "running",

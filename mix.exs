@@ -10,7 +10,6 @@ defmodule Lightning.MixProject do
       elixirc_options: [
         warnings_as_errors: true
       ],
-      compilers: Mix.compilers(),
       start_permanent: Mix.env() == :prod,
       aliases: aliases(),
       deps: deps(),
