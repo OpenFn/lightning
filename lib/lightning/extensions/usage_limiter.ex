@@ -5,12 +5,8 @@ defmodule Lightning.Extensions.UsageLimiter do
   @behaviour Lightning.Extensions.UsageLimiting
 
   @impl true
-  def check_limits(_context) do
-    :ok
-  end
+  def check_limits(_context), do: :ok
 
   @impl true
-  def limit_action(_action, _context) do
-    :ok
-  end
+  def limit_action(_action, _context), do: :ok
 end

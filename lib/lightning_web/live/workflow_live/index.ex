@@ -5,11 +5,10 @@ defmodule LightningWeb.WorkflowLive.Index do
   import LightningWeb.WorkflowLive.Components
 
   alias Lightning.DashboardStats
-  alias Lightning.Extensions.UsageLimiting.Context
   alias Lightning.Policies.Permissions
   alias Lightning.Policies.ProjectUsers
-  alias Lightning.Services.UsageLimiter
   alias Lightning.Workflows
+  alias LightningWeb.LiveHelpers
   alias LightningWeb.WorkflowLive.DashboardComponents
   alias LightningWeb.WorkflowLive.NewWorkflowForm
 
@@ -28,7 +27,9 @@ defmodule LightningWeb.WorkflowLive.Index do
   attr :banner, :map, default: nil
 
   @impl true
-  def render(assigns) do
+  def render(%{project: %{id: project_id}} = assigns) do
+    assigns = LiveHelpers.check_limits(assigns, project_id)
+
     ~H"""
     <LayoutComponents.page_content>
       <:banner>
@@ -63,42 +64,31 @@ defmodule LightningWeb.WorkflowLive.Index do
 
   @impl true
   def mount(_params, _session, socket) do
+    %{current_user: current_user, project: project} = socket.assigns
+
     can_create_workflow =
       ProjectUsers
       |> Permissions.can?(
         :create_workflow,
-        socket.assigns.current_user,
-        socket.assigns.project
+        current_user,
+        project
       )
 
     can_delete_workflow =
       ProjectUsers
       |> Permissions.can?(
         :delete_workflow,
-        socket.assigns.current_user,
-        socket.assigns.project
+        current_user,
+        project
       )
 
-    socket
-    |> assign(
-      can_delete_workflow: can_delete_workflow,
-      can_create_workflow: can_create_workflow
-    )
-    |> assign_workflow_form(
-      NewWorkflowForm.validate(%{}, socket.assigns.project.id)
-    )
-    |> then(fn socket ->
-      case UsageLimiter.check_limits(%Context{
-             project_id: socket.assigns.project.id
-           }) do
-        :ok ->
-          {:ok, socket}
-
-        {:error, reason, %{position: position} = component}
-        when reason in [:too_many_runs, :too_many_workorders] ->
-          {:ok, socket |> assign(position, component)}
-      end
-    end)
+    {:ok,
+     socket
+     |> assign(
+       can_delete_workflow: can_delete_workflow,
+       can_create_workflow: can_create_workflow
+     )
+     |> assign_workflow_form(NewWorkflowForm.validate(%{}, project.id))}
   end
 
   @impl true

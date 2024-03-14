@@ -68,6 +68,22 @@ defmodule Lightning.Workflows do
 
   ## Examples
 
+      iex> update_workflow(changeset)
+      {:ok, %Workflow{}}
+
+      iex> update_workflow(changeset)
+      {:error, %Ecto.Changeset{}}
+
+  """
+  def update_workflow(%Ecto.Changeset{} = changeset) do
+    Repo.update(changeset)
+  end
+
+  @doc """
+  Updates a workflow.
+
+  ## Examples
+
       iex> update_workflow(workflow, %{field: new_value})
       {:ok, %Workflow{}}
 

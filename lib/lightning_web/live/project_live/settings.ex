@@ -18,6 +18,7 @@ defmodule LightningWeb.ProjectLive.Settings do
   alias Lightning.Workflows.WebhookAuthMethod
   alias LightningWeb.Components.Form
   alias LightningWeb.Components.NewInputs
+  alias LightningWeb.LiveHelpers
   alias LightningWeb.ProjectLive.DeleteConnectionModal
 
   require Logger
@@ -183,7 +184,12 @@ defmodule LightningWeb.ProjectLive.Settings do
 
   @impl true
   def handle_params(params, _url, socket) do
-    {:noreply, socket |> apply_action(socket.assigns.live_action, params)}
+    %{project: %{id: project_id}, live_action: live_action} = socket.assigns
+
+    {:noreply,
+     socket
+     |> LiveHelpers.check_limits(project_id)
+     |> apply_action(live_action, params)}
   end
 
   defp apply_action(socket, :index, _params) do

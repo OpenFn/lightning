@@ -172,6 +172,7 @@ defmodule LightningWeb.RunLive.Show do
                   id={"run-log-#{run.id}"}
                   highlight_id={@selected_step_id}
                   stream={@streams.log_lines}
+                  run_state={@run.result.state}
                   stream_empty?={@log_lines_stream_empty?}
                 />
               </Common.panel_content>
@@ -180,6 +181,7 @@ defmodule LightningWeb.RunLive.Show do
                   id={"step-input-#{@selected_step_id}"}
                   stream={@streams.input_dataclip}
                   stream_empty?={@input_dataclip_stream_empty?}
+                  run_state={@run.result.state}
                   step={@selected_step}
                   dataclip={@input_dataclip}
                   input_or_output={:input}
@@ -193,6 +195,7 @@ defmodule LightningWeb.RunLive.Show do
                   id={"step-output-#{@selected_step_id}"}
                   stream={@streams.output_dataclip}
                   stream_empty?={@output_dataclip_stream_empty?}
+                  run_state={@run.result.state}
                   step={@selected_step}
                   dataclip={@output_dataclip}
                   input_or_output={:output}

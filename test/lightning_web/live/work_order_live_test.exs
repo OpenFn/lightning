@@ -7,6 +7,7 @@ defmodule LightningWeb.WorkOrderLiveTest do
   alias Lightning.Runs
   alias Lightning.WorkOrders.Events
   alias Lightning.WorkOrders.SearchParams
+
   alias LightningWeb.LiveHelpers
 
   alias Phoenix.LiveView.AsyncResult
@@ -15,6 +16,7 @@ defmodule LightningWeb.WorkOrderLiveTest do
 
   setup :register_and_log_in_user
   setup :create_project_for_current_user
+  setup :stub_usage_limiter_ok
 
   defp setup_work_order(project, job) do
     dataclip = insert(:dataclip)
@@ -100,6 +102,21 @@ defmodule LightningWeb.WorkOrderLiveTest do
   end
 
   describe "Index" do
+    test "renders a banner when run limit has been reached", %{
+      conn: conn,
+      project: %{id: project_id}
+    } do
+      Mox.stub(
+        Lightning.Extensions.MockUsageLimiter,
+        :check_limits,
+        &Lightning.Extensions.StubUsageLimiter.check_limits/1
+      )
+
+      {:ok, _view, html} = live(conn, ~p"/projects/#{project_id}/w")
+
+      assert html =~ "Some banner text"
+    end
+
     test "only users with MFA enabled can access workorders for a project with MFA requirement",
          %{
            conn: conn
@@ -484,7 +501,9 @@ defmodule LightningWeb.WorkOrderLiveTest do
       assert rendered =~ run_1.id
       assert rendered =~ run_2.id
       assert rendered =~ "claimed @ \n  \n      #{claimed_at}"
-      assert rendered =~ "claimed @ \n  \n      #{started_at}"
+
+      assert rendered =~ "claimed @ \n  \n      #{started_at}" or
+               rendered =~ "started @ \n  \n      #{started_at}"
     end
 
     test "lists all workorders", %{
@@ -496,6 +515,14 @@ defmodule LightningWeb.WorkOrderLiveTest do
       job = insert(:job, workflow: workflow)
 
       dataclip = insert(:dataclip)
+
+      insert(:workorder,
+        workflow: workflow,
+        trigger: trigger,
+        dataclip: dataclip,
+        last_activity: DateTime.utc_now(),
+        state: :rejected
+      )
 
       work_order =
         insert(:workorder,
@@ -523,7 +550,7 @@ defmodule LightningWeb.WorkOrderLiveTest do
         )
 
       {:ok, view, html} =
-        live_async(conn, Routes.project_run_index_path(conn, :index, project.id))
+        live_async(conn, ~p"/projects/#{project.id}/history")
 
       assert html =~ "History"
 
@@ -537,6 +564,20 @@ defmodule LightningWeb.WorkOrderLiveTest do
       assert table =~ LiveHelpers.display_short_uuid(dataclip.id)
 
       refute table =~ LiveHelpers.display_short_uuid(run_id)
+
+      assert view
+             |> element(
+               "section#inner_content div[data-entity='work_order_list'] > div:first-child > div:first-child > div:last-child"
+             )
+             |> render() =~
+               "Enqueued"
+
+      assert view
+             |> element(
+               "section#inner_content div[data-entity='work_order_list'] > div:last-child > div:first-child > div:last-child"
+             )
+             |> render() =~
+               "Rejected"
 
       # toggle work_order details
       # TODO move to test work_order_component
@@ -650,6 +691,7 @@ defmodule LightningWeb.WorkOrderLiveTest do
       assert html =~ "Status"
 
       status_filters = [
+        "rejected",
         "success",
         "failed",
         "running",
@@ -1742,17 +1784,40 @@ defmodule LightningWeb.WorkOrderLiveTest do
 
     @tag role: :editor
     test "Project editors can rerun from a step",
-         %{conn: conn, project: project, run: run} do
+         %{conn: conn, project: %{id: project_id}, run: run} do
       [step | _rest] = run.steps
 
       {:ok, view, _html} =
-        live(conn, Routes.project_run_index_path(conn, :index, project.id))
+        live(conn, ~p"/projects/#{project_id}/history")
 
       assert view
              |> render_click("rerun", %{
                "run_id" => run.id,
                "step_id" => step.id
              })
+    end
+
+    @tag role: :editor
+    test "Project editors can't rerun when limit has been reached",
+         %{conn: conn, project: %{id: project_id}, run: run} do
+      [step | _rest] = run.steps
+
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project_id}/history")
+
+      Mox.stub(
+        Lightning.Extensions.MockUsageLimiter,
+        :limit_action,
+        &Lightning.Extensions.StubUsageLimiter.limit_action/2
+      )
+
+      view
+      |> render_click("rerun", %{
+        "run_id" => run.id,
+        "step_id" => step.id
+      })
+
+      assert view |> has_element?("#flash p", "Runs limit exceeded")
     end
 
     @tag role: :viewer

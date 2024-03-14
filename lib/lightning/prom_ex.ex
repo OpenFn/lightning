@@ -68,6 +68,11 @@ defmodule Lightning.PromEx do
         :run_performance_age_seconds
       ]
 
+    run_queue_metrics_period_seconds =
+      Application.get_env(:lightning, :metrics)[
+        :run_queue_metrics_period_seconds
+      ]
+
     [
       # PromEx built in plugins
       Plugins.Application,
@@ -80,8 +85,9 @@ defmodule Lightning.PromEx do
       # Add your own PromEx metrics plugins
       {
         Lightning.Runs.PromExPlugin,
-        stalled_run_threshold_seconds: stalled_run_threshold_seconds,
-        run_performance_age_seconds: run_performance_age_seconds
+        run_queue_metrics_period_seconds: run_queue_metrics_period_seconds,
+        run_performance_age_seconds: run_performance_age_seconds,
+        stalled_run_threshold_seconds: stalled_run_threshold_seconds
       }
     ]
   end

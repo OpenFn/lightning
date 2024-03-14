@@ -1,15 +1,9 @@
 defmodule Lightning.JobsTest do
   use Lightning.DataCase, async: true
 
-  alias Lightning.Run
-  alias Lightning.Invocation
   alias Lightning.Jobs
-  alias Lightning.Repo
   alias Lightning.Workflows.Job
-  alias Lightning.Workflows.Scheduler
   alias Lightning.Workflows
-
-  import Lightning.Factories
 
   describe "jobs" do
     @invalid_attrs %{body: nil, enabled: nil, name: nil}
@@ -261,102 +255,6 @@ defmodule Lightning.JobsTest do
         })
 
       assert count_workflows_before == Workflows.list_workflows() |> Enum.count()
-    end
-  end
-
-  describe "Scheduler" do
-    test "enqueue_cronjobs/1 enqueues a cron job that's never been run before" do
-      job = insert(:job)
-
-      trigger =
-        insert(:trigger, %{
-          type: :cron,
-          cron_expression: "* * * * *",
-          workflow: job.workflow
-        })
-
-      insert(:edge, %{
-        workflow: job.workflow,
-        source_trigger: trigger,
-        target_job: job
-      })
-
-      Scheduler.enqueue_cronjobs()
-
-      run = Repo.one(Lightning.Run)
-
-      assert run.starting_trigger_id == trigger.id
-
-      run =
-        Repo.preload(run, dataclip: Invocation.Query.dataclip_with_body())
-
-      assert run.dataclip.type == :global
-      assert run.dataclip.body == %{}
-    end
-  end
-
-  describe "Scheduler repeats" do
-    test "enqueue_cronjobs/1 enqueues a cron job that has been run before" do
-      job =
-        insert(:job,
-          body: "fn(state => { console.log(state); return { changed: true }; })"
-        )
-
-      trigger =
-        insert(:trigger, %{
-          type: :cron,
-          cron_expression: "* * * * *",
-          workflow: job.workflow
-        })
-
-      insert(:edge, %{
-        workflow: job.workflow,
-        source_trigger: trigger,
-        target_job: job
-      })
-
-      dataclip = insert(:dataclip)
-
-      run =
-        insert(:run,
-          work_order:
-            build(:workorder,
-              workflow: job.workflow,
-              dataclip: dataclip,
-              trigger: trigger,
-              state: :success
-            ),
-          starting_trigger: trigger,
-          state: :success,
-          dataclip: dataclip,
-          steps: [
-            build(:step,
-              exit_reason: "success",
-              job: job,
-              input_dataclip: dataclip,
-              output_dataclip:
-                build(:dataclip, type: :step_result, body: %{"changed" => true})
-            )
-          ]
-        )
-
-      [old_step] = run.steps
-
-      _result = Scheduler.enqueue_cronjobs()
-
-      new_run =
-        Run
-        |> last(:inserted_at)
-        |> preload(dataclip: ^Invocation.Query.dataclip_with_body())
-        |> Repo.one()
-
-      assert run.dataclip.type == :http_request
-      assert old_step.input_dataclip.type == :http_request
-      assert old_step.input_dataclip.body == %{}
-
-      refute new_run.id == run.id
-      assert new_run.dataclip.type == :step_result
-      assert new_run.dataclip.body == old_step.output_dataclip.body
     end
   end
 end

@@ -80,7 +80,7 @@ defmodule LightningWeb.JobLive.AdaptorPicker do
   def display_name_for_adaptor(name) do
     if String.starts_with?(name, "@openfn/language-") do
       # Show most relevant slice of the name for standard adaptors
-      {String.slice(name, 17..-1), name}
+      {String.slice(name, 17..-1//1), name}
     else
       # Display full adaptor names for non-standard OpenFn adaptors
       name

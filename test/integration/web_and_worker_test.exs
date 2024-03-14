@@ -20,7 +20,7 @@ defmodule Lightning.WebAndWorkerTest do
   end
 
   describe "webhook triggered runs" do
-    setup :register_and_log_in_superuser
+    setup [:register_and_log_in_superuser, :stub_rate_limiter_ok]
 
     @tag :integration
     @tag timeout: 20_000

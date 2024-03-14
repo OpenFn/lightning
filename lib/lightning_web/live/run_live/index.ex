@@ -6,14 +6,19 @@ defmodule LightningWeb.RunLive.Index do
 
   import Ecto.Changeset, only: [get_change: 2]
 
+  alias Lightning.Extensions.UsageLimiting.Action
+  alias Lightning.Extensions.UsageLimiting.Context
   alias Lightning.Invocation
   alias Lightning.Invocation.Step
   alias Lightning.Policies.Permissions
   alias Lightning.Policies.ProjectUsers
+  alias Lightning.Services.UsageLimiter
   alias Lightning.WorkOrders
   alias Lightning.WorkOrders.Events
   alias Lightning.WorkOrders.SearchParams
+  alias LightningWeb.LiveHelpers
   alias LightningWeb.RunLive.Components
+
   alias Phoenix.LiveView.AsyncResult
   alias Phoenix.LiveView.JS
 
@@ -84,6 +89,7 @@ defmodule LightningWeb.RunLive.Index do
       )
 
     statuses = [
+      %{id: :rejected, label: "Rejected"},
       %{id: :pending, label: "Enqueued"},
       %{id: :running, label: "Running"},
       %{id: :success, label: "Success"},
@@ -140,6 +146,7 @@ defmodule LightningWeb.RunLive.Index do
 
     {:noreply,
      socket
+     |> LiveHelpers.check_limits(project.id)
      |> assign(
        filters: filters,
        page_title: "History",
@@ -246,7 +253,7 @@ defmodule LightningWeb.RunLive.Index do
         force: true
       )
 
-    {:noreply, update_page(socket, work_order)}
+    {:noreply, socket |> update_page(work_order)}
   end
 
   @impl true
@@ -257,9 +264,9 @@ defmodule LightningWeb.RunLive.Index do
   """
   def handle_info(
         %Events.WorkOrderCreated{work_order: work_order},
-        %{assigns: assigns} = socket
+        socket
       ) do
-    %{project: project, filters: filters} = assigns
+    %{project: project, filters: filters} = socket.assigns
 
     params =
       filters
@@ -285,7 +292,7 @@ defmodule LightningWeb.RunLive.Index do
         force: true
       )
 
-    {:noreply, update_page(socket, work_order)}
+    {:noreply, socket |> update_page(work_order)}
   end
 
   @impl true
@@ -294,10 +301,32 @@ defmodule LightningWeb.RunLive.Index do
         %{"run_id" => run_id, "step_id" => step_id},
         socket
       ) do
-    if socket.assigns.can_run_workflow do
-      WorkOrders.retry(run_id, step_id, created_by: socket.assigns.current_user)
+    %{
+      project: %{id: project_id},
+      can_run_workflow: can_run_workflow?,
+      current_user: current_user
+    } =
+      socket.assigns
 
-      {:noreply, socket}
+    if can_run_workflow? do
+      with :ok <-
+             UsageLimiter.limit_action(%Action{type: :new_run}, %Context{
+               project_id: project_id
+             }),
+           {:ok, _run} <-
+             WorkOrders.retry(run_id, step_id, created_by: current_user) do
+        {:noreply, LiveHelpers.check_limits(socket, project_id)}
+      else
+        {:error, _reason, %{text: error_text}} ->
+          {:noreply,
+           socket
+           |> put_flash(:error, error_text)}
+
+        {:error, _changeset} ->
+          {:noreply,
+           socket
+           |> put_flash(:error, "Oops! an error occured during retry.")}
+      end
     else
       {:noreply,
        socket

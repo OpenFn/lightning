@@ -71,6 +71,7 @@ defmodule LightningWeb.RunLive.Components do
   def state_pill(%{state: state} = assigns) do
     chip_styles = %{
       # only workorder states...
+      rejected: "bg-red-300 text-gray-800",
       pending: "bg-gray-200 text-gray-800",
       running: "bg-blue-200 text-blue-800",
       #  run and workorder states...
@@ -103,6 +104,7 @@ defmodule LightningWeb.RunLive.Components do
   def display_text_from_state(state) do
     case state do
       # only workorder states...
+      :rejected -> "Rejected"
       :pending -> "Enqueued"
       :running -> "Running"
       # run & workorder states...

@@ -54,16 +54,25 @@ defmodule Lightning.Runs.PromExPlugin do
     {:ok, run_performance_age_seconds} =
       opts |> Keyword.fetch(:run_performance_age_seconds)
 
+    {:ok, run_queue_metrics_period_seconds} =
+      opts |> Keyword.fetch(:run_queue_metrics_period_seconds)
+
     [
-      stalled_run_metrics(stalled_run_threshold_seconds),
-      run_performance_metrics(run_performance_age_seconds)
+      stalled_run_metrics(
+        stalled_run_threshold_seconds,
+        run_queue_metrics_period_seconds
+      ),
+      run_performance_metrics(
+        run_performance_age_seconds,
+        run_queue_metrics_period_seconds
+      )
     ]
   end
 
-  defp stalled_run_metrics(threshold_seconds) do
+  defp stalled_run_metrics(threshold_seconds, period_in_seconds) do
     Polling.build(
       :lightning_stalled_run_metrics,
-      5000,
+      period_in_seconds * 1000,
       {__MODULE__, :stalled_run_count, [threshold_seconds]},
       [
         last_value(
@@ -102,10 +111,10 @@ defmodule Lightning.Runs.PromExPlugin do
     :telemetry.execute(@stalled_event, %{count: count}, %{})
   end
 
-  defp run_performance_metrics(run_age_seconds) do
+  defp run_performance_metrics(run_age_seconds, period_in_seconds) do
     Polling.build(
       :lightning_run_queue_metrics,
-      5000,
+      period_in_seconds * 1000,
       {__MODULE__, :run_queue_metrics, [run_age_seconds]},
       [
         last_value(
