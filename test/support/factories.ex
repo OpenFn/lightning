@@ -371,7 +371,7 @@ defmodule Lightning.Factories do
   end
 
   def work_order_for(trigger_or_job, attrs) do
-    Lightning.WorkOrders.build_for(trigger_or_job, attrs)
+    Lightning.WorkOrders.build_for(trigger_or_job, Map.new(attrs))
     |> Ecto.Changeset.apply_changes()
   end
 

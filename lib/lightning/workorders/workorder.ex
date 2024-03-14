@@ -29,6 +29,7 @@ defmodule Lightning.WorkOrder do
       values:
         Enum.concat(
           [
+            :rejected,
             :pending,
             :running
           ],
