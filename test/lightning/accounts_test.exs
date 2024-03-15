@@ -1,6 +1,11 @@
 defmodule Lightning.AccountsTest do
   use Lightning.DataCase, async: true
 
+  alias Lightning.Accounts.Events
+  alias Lightning.Accounts.User
+  alias Lightning.Accounts.UserBackupCode
+  alias Lightning.Accounts.UserToken
+  alias Lightning.Accounts.UserTOTP
   alias Lightning.AccountsFixtures
   alias Lightning.Credentials
   alias Lightning.Jobs
@@ -10,7 +15,6 @@ defmodule Lightning.AccountsTest do
   alias Lightning.Accounts
   alias Lightning.Projects.ProjectUser
 
-  alias Lightning.Accounts.{User, UserBackupCode, UserToken, UserTOTP}
   import Lightning.AccountsFixtures
   import Lightning.Factories
 
@@ -367,12 +371,22 @@ defmodule Lightning.AccountsTest do
       {:error, changeset} =
         Accounts.register_user(%{email: String.upcase(email)})
 
+      refute_receive %Events.UserRegistered{user: _user}
+
       assert "has already been taken" in errors_on(changeset).email
     end
 
-    test "registers users with a hashed password" do
+    test "registers users with a hashed password and publishes event" do
+      Events.subscribe()
+
       email = unique_user_email()
-      {:ok, user} = Accounts.register_user(valid_user_attributes(email: email))
+
+      assert {:ok, user} =
+               Accounts.register_user(valid_user_attributes(email: email))
+
+      assert ^user = Repo.get!(User, user.id)
+      assert_receive %Events.UserRegistered{user: ^user}
+
       assert user.email == email
       assert user.role == :user
       assert is_binary(user.hashed_password)

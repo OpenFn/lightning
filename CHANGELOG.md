@@ -23,6 +23,8 @@ and this project adheres to
   [#1757](https://github.com/OpenFn/lightning/issues/1757)
 - Soft and hard limits for runs created by webhook trigger.
   [#1859](https://github.com/OpenFn/Lightning/issues/1859)
+- Publish an event when a new user is registered
+  [#1873](https://github.com/OpenFn/lightning/issues/1873)
 
 ### Changed
 
