@@ -4,6 +4,7 @@ defmodule Lightning.WorkOrdersTest do
   import Lightning.Factories
 
   alias Lightning.WorkOrders
+  alias Lightning.WorkOrders.Events
 
   describe "create_for/2" do
     setup context do
@@ -50,11 +51,11 @@ defmodule Lightning.WorkOrdersTest do
 
       workorder_id = workorder.id
 
-      assert_received %Lightning.WorkOrders.Events.RunCreated{
+      assert_received %Events.RunCreated{
         project_id: ^project_id
       }
 
-      assert_received %Lightning.WorkOrders.Events.WorkOrderCreated{
+      assert_received %Events.WorkOrderCreated{
         work_order: %{id: ^workorder_id}
       }
     end
@@ -80,11 +81,11 @@ defmodule Lightning.WorkOrdersTest do
       assert workorder.dataclip.type == :http_request
       assert workorder.runs == []
 
-      refute_received %Lightning.WorkOrders.Events.RunCreated{
+      refute_received %Events.RunCreated{
         project_id: ^project_id
       }
 
-      assert_received %Lightning.WorkOrders.Events.WorkOrderCreated{
+      assert_received %Events.WorkOrderCreated{
         work_order: %{id: ^workorder_id}
       }
     end
@@ -112,7 +113,7 @@ defmodule Lightning.WorkOrdersTest do
 
       workorder_id = workorder.id
 
-      assert_received %Lightning.WorkOrders.Events.WorkOrderCreated{
+      assert_received %Events.WorkOrderCreated{
         work_order: %{id: ^workorder_id}
       }
     end
@@ -149,13 +150,13 @@ defmodule Lightning.WorkOrdersTest do
 
       assert run.created_by.id == user.id
 
-      assert_received %Lightning.WorkOrders.Events.RunCreated{
+      assert_received %Events.RunCreated{
         project_id: ^project_id
       }
 
       workorder_id = workorder.id
 
-      assert_received %Lightning.WorkOrders.Events.WorkOrderCreated{
+      assert_received %Events.WorkOrderCreated{
         work_order: %{id: ^workorder_id}
       }
     end
@@ -185,14 +186,14 @@ defmodule Lightning.WorkOrdersTest do
     end
 
     test "retrying a run from the start", %{
-      workflow: workflow,
+      workflow: %{project_id: project_id} = workflow,
       trigger: trigger,
       jobs: [job | _rest]
     } do
       user = insert(:user)
       dataclip = insert(:dataclip)
       # create existing complete run
-      %{runs: [run]} =
+      %{id: wo_id, runs: [%{id: run_id} = run]} =
         insert(:workorder,
           workflow: workflow,
           trigger: trigger,
@@ -209,7 +210,24 @@ defmodule Lightning.WorkOrdersTest do
           ]
         )
 
-      {:ok, retry_run} = WorkOrders.retry(run, step, created_by: user)
+      Events.subscribe(project_id)
+
+      {:ok, %{id: new_run_id} = retry_run} =
+        WorkOrders.retry(run, step, created_by: user)
+
+      assert_received %Events.WorkOrderUpdated{
+        work_order: %{id: ^wo_id}
+      }
+
+      refute_received %Events.RunCreated{
+        run: %{id: ^run_id},
+        project_id: ^project_id
+      }
+
+      assert_received %Events.RunCreated{
+        run: %{id: ^new_run_id},
+        project_id: ^project_id
+      }
 
       refute retry_run.id == run.id
       assert retry_run.dataclip_id == dataclip.id
@@ -384,7 +402,7 @@ defmodule Lightning.WorkOrdersTest do
 
       workorder_id = workorder.id
 
-      assert_received %Lightning.WorkOrders.Events.WorkOrderUpdated{
+      assert_received %Events.WorkOrderUpdated{
         work_order: %{id: ^workorder_id}
       }
     end

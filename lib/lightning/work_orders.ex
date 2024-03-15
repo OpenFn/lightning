@@ -296,6 +296,12 @@ defmodule Lightning.WorkOrders do
         {:ok, run}
       end
     end)
+    |> tap(fn result ->
+      with {:ok, run} <- result do
+        %{workflow: workflow} = Repo.preload(starting_job, [:workflow])
+        Events.run_created(workflow.project_id, run)
+      end
+    end)
   end
 
   defp do_retry(_workorder, _wiped_dataclip, _starting_job, _steps, _user) do
