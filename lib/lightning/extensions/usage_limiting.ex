@@ -2,7 +2,7 @@ defmodule Lightning.Extensions.UsageLimiting do
   @moduledoc """
   Rate limiting for Lightning workloads that depends on Runtime.
   """
-  @type error_reason :: :too_many_runs | :unknown_project
+  @type error_reason :: :too_many_runs | :runs_hard_limit | :unknown_project
   @type message :: Lightning.Extensions.Message.t()
 
   defmodule Action do

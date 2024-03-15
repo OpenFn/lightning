@@ -53,6 +53,7 @@ defmodule Lightning.WorkOrders do
           {:workflow, Workflow.t()}
           | {:dataclip, Dataclip.t()}
           | {:created_by, User.t()}
+          | {:without_run, boolean()}
 
   @doc """
   Create a new Work Order.
@@ -70,9 +71,22 @@ defmodule Lightning.WorkOrders do
     |> Multi.put(:workflow, opts[:workflow])
     |> get_or_insert_dataclip(opts[:dataclip])
     |> Multi.insert(:workorder, fn %{dataclip: dataclip} ->
-      build_for(trigger, Map.new(opts) |> Map.put(:dataclip, dataclip))
+      without_run? = Keyword.get(opts, :without_run, false)
+
+      attrs =
+        opts
+        |> Map.new()
+        |> Map.put(:dataclip, dataclip)
+        |> then(fn attrs ->
+          if without_run? do
+            attrs |> Map.put(:state, :rejected)
+          else
+            attrs
+          end
+        end)
+
+      build_for(trigger, attrs)
     end)
-    |> broadcast_workorder_creation()
     |> transact_and_return_work_order()
   end
 
@@ -80,7 +94,6 @@ defmodule Lightning.WorkOrders do
     Multi.new()
     |> Multi.put(:workflow, opts[:workflow])
     |> Multi.insert(:workorder, build_for(job, opts |> Map.new()))
-    |> broadcast_workorder_creation()
     |> transact_and_return_work_order()
   end
 
@@ -95,27 +108,16 @@ defmodule Lightning.WorkOrders do
       })
     end)
     |> Multi.put(:workflow, manual.workflow)
-    |> broadcast_workorder_creation()
     |> transact_and_return_work_order()
-  end
-
-  defp broadcast_workorder_creation(multi) do
-    multi
-    |> Multi.run(
-      :broadcast_workorder,
-      fn _repo, %{workorder: %{runs: runs} = workorder, workflow: workflow} ->
-        Enum.each(runs, &Events.run_created(workflow.project_id, &1))
-        Events.work_order_created(workflow.project_id, workorder)
-        {:ok, nil}
-      end
-    )
   end
 
   defp transact_and_return_work_order(multi) do
     multi
     |> Repo.transaction()
     |> case do
-      {:ok, %{workorder: workorder}} ->
+      {:ok, %{workorder: workorder, workflow: workflow}} ->
+        Enum.each(workorder.runs, &Events.run_created(workflow.project_id, &1))
+        Events.work_order_created(workflow.project_id, workorder)
         {:ok, workorder}
 
       {:error, _op, changeset, _changes} ->
@@ -157,14 +159,27 @@ defmodule Lightning.WorkOrders do
   @spec build_for(Trigger.t() | Job.t(), map()) ::
           Ecto.Changeset.t(WorkOrder.t())
   def build_for(%Trigger{} = trigger, attrs) do
-    %WorkOrder{}
+    state = Map.get(attrs, :state)
+
+    if state do
+      %WorkOrder{state: state}
+    else
+      %WorkOrder{}
+    end
     |> change()
     |> put_assoc(:workflow, attrs[:workflow])
     |> put_assoc(:trigger, trigger)
     |> put_assoc(:dataclip, attrs[:dataclip])
-    |> put_assoc(:runs, [
-      Run.for(trigger, %{dataclip: attrs[:dataclip]})
-    ])
+    |> then(fn changeset ->
+      if state == :rejected do
+        changeset |> put_assoc(:runs, [])
+      else
+        changeset
+        |> put_assoc(:runs, [
+          Run.for(trigger, %{dataclip: attrs[:dataclip]})
+        ])
+      end
+    end)
     |> validate_required_assoc(:workflow)
     |> validate_required_assoc(:trigger)
     |> validate_required_assoc(:dataclip)
@@ -279,6 +294,12 @@ defmodule Lightning.WorkOrders do
       with {:ok, run} <- Runs.enqueue(changeset),
            {:ok, _workorder} <- update_state(run) do
         {:ok, run}
+      end
+    end)
+    |> tap(fn result ->
+      with {:ok, run} <- result do
+        %{workflow: workflow} = Repo.preload(starting_job, [:workflow])
+        Events.run_created(workflow.project_id, run)
       end
     end)
   end

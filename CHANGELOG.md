@@ -16,17 +16,26 @@ and this project adheres to
 ## [Unreleased]
 
 ### Added
+- Polling metric to track number of available runs.
+  [#1790](https://github.com/OpenFn/lightning/issues/1790)
 
 - Allows limiting creation of new runs and retries.
   [#1754](https://github.com/OpenFn/Lightning/issues/1754)
 - Add specific messages for log, input, and output tabs when a run is lost
   [#1757](https://github.com/OpenFn/lightning/issues/1757)
-- Verify only stale project credentials  
-  [#1861](https://github.com/OpenFn/lightning/issues/1861)
+- Soft and hard limits for runs created by webhook trigger.
+  [#1859](https://github.com/OpenFn/Lightning/issues/1859)
+- Publish an event when a new user is registered
+  [#1873](https://github.com/OpenFn/lightning/issues/1873)
 
 ### Changed
 
+- Upgrade Elixir to 1.16.2
+
 ### Fixed
+
+- Verify only stale project credentials
+  [#1861](https://github.com/OpenFn/lightning/issues/1861)
 
 ## [v2.0.8] - 2024-02-29
 
