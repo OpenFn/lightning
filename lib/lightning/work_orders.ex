@@ -87,7 +87,6 @@ defmodule Lightning.WorkOrders do
 
       build_for(trigger, attrs)
     end)
-    |> broadcast_workorder_creation()
     |> transact_and_return_work_order()
   end
 
@@ -95,7 +94,6 @@ defmodule Lightning.WorkOrders do
     Multi.new()
     |> Multi.put(:workflow, opts[:workflow])
     |> Multi.insert(:workorder, build_for(job, opts |> Map.new()))
-    |> broadcast_workorder_creation()
     |> transact_and_return_work_order()
   end
 
@@ -110,27 +108,16 @@ defmodule Lightning.WorkOrders do
       })
     end)
     |> Multi.put(:workflow, manual.workflow)
-    |> broadcast_workorder_creation()
     |> transact_and_return_work_order()
-  end
-
-  defp broadcast_workorder_creation(multi) do
-    multi
-    |> Multi.run(
-      :broadcast_workorder,
-      fn _repo, %{workorder: %{runs: runs} = workorder, workflow: workflow} ->
-        Enum.each(runs, &Events.run_created(workflow.project_id, &1))
-        Events.work_order_created(workflow.project_id, workorder)
-        {:ok, nil}
-      end
-    )
   end
 
   defp transact_and_return_work_order(multi) do
     multi
     |> Repo.transaction()
     |> case do
-      {:ok, %{workorder: workorder}} ->
+      {:ok, %{workorder: workorder, workflow: workflow}} ->
+        Enum.each(workorder.runs, &Events.run_created(workflow.project_id, &1))
+        Events.work_order_created(workflow.project_id, workorder)
         {:ok, workorder}
 
       {:error, _op, changeset, _changes} ->
