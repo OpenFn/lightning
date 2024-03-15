@@ -7,7 +7,7 @@
     <meta name="generator" content="ExDoc v0.30.9">
     <meta name="project" content="Lightning v2.0.8">
 
-    <title>LightningWeb.OidcController — Lightning v2.0.8</title>
+    <title>Lightning.Accounts.Events — Lightning v2.0.8</title>
     <link rel="stylesheet" href="dist/html-elixir-XFYN5IVA.css" />
 
 
@@ -125,16 +125,20 @@ Pages
 </button>
 
 
-    <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/oidc_controller.ex#L1" title="View Source" class="icon-action" rel="help">
+    <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts/events.ex#L1" title="View Source" class="icon-action" rel="help">
       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
       <span class="sr-only">View Source</span>
     </a>
 
-  <span translate="no">LightningWeb.OidcController</span> 
+  <span translate="no">Lightning.Accounts.Events</span> 
   <small class="app-vsn" translate="no">(Lightning v2.0.8)</small>
 
 </h1>
 
+
+  <section id="moduledoc">
+<p>Publishes and subscribe to events related to user accounts.</p>
+  </section>
 
 
   <section id="summary" class="details-list">
@@ -151,22 +155,17 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#new/2" translate="no">new(conn, map)</a>
+        <a href="#subscribe/0" translate="no">subscribe()</a>
 
       </div>
-
-        <div class="summary-synopsis"><p>Once the user has completed the authorization flow from above, they are
-returned here, and the authorization code is used to log them in.</p></div>
 
     </div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#show/2" translate="no">show(conn, map)</a>
+        <a href="#user_registered/1" translate="no">user_registered(user)</a>
 
       </div>
-
-        <div class="summary-synopsis"><p>Given a known provider, redirect them to the authorize url on the provider</p></div>
 
     </div>
 
@@ -183,16 +182,16 @@ returned here, and the authorization code is used to log them in.</p></div>
       <span class="text">Functions</span>
     </h1>
     <div class="functions-list">
-<section class="detail" id="new/2">
+<section class="detail" id="subscribe/0">
 
   <div class="detail-header">
-    <a href="#new/2" class="detail-link" title="Link to this function">
+    <a href="#subscribe/0" class="detail-link" title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">new(conn, map)</h1>
+    <h1 class="signature" translate="no">subscribe()</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/oidc_controller.ex#L32" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts/events.ex#L20" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -202,20 +201,19 @@ returned here, and the authorization code is used to log them in.</p></div>
 
   <section class="docstring">
 
-<p>Once the user has completed the authorization flow from above, they are
-returned here, and the authorization code is used to log them in.</p>
+
   </section>
 </section>
-<section class="detail" id="show/2">
+<section class="detail" id="user_registered/1">
 
   <div class="detail-header">
-    <a href="#show/2" class="detail-link" title="Link to this function">
+    <a href="#user_registered/1" class="detail-link" title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">show(conn, map)</h1>
+    <h1 class="signature" translate="no">user_registered(user)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/oidc_controller.ex#L17" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts/events.ex#L13" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -225,7 +223,7 @@ returned here, and the authorization code is used to log them in.</p>
 
   <section class="docstring">
 
-<p>Given a known provider, redirect them to the authorize url on the provider</p>
+
   </section>
 </section>
 
