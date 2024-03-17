@@ -2444,19 +2444,19 @@ defmodule LightningWeb.WorkOrderLiveTest do
           )
         )
 
-      refute html =~ "Rerun from..."
+      refute html =~ "Retry from"
 
       # All work orders have been selected
       refute render_change(view, "toggle_all_selections", %{
                all_selections: true
-             }) =~ "Rerun from..."
+             }) =~ "Retry from"
 
       # uncheck 1 work order
       view
       |> form("#selection-form-#{work_order_3.id}")
       |> render_change(%{selected: false})
 
-      assert render_async(view) =~ "Rerun from..."
+      assert render_async(view) =~ "Retry from"
     end
 
     @tag role: :viewer
