@@ -683,7 +683,7 @@
                       <Components.async_filler message="There was an error loading the work orders" />
                     </:failed>
                     <%= for workorder <- searched_page.entries do %>
-                      <div class="last:pb-1">
+                      <div class="">
                         <.live_component
                           module={LightningWeb.RunLive.WorkOrderComponent}
                           id={workorder.id}

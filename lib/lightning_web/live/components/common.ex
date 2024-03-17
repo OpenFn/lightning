@@ -83,9 +83,7 @@ defmodule LightningWeb.Components.Common do
 
     ~H"""
     <span class={@class} id={@id} aria-label={@title} phx-hook="Tooltip">
-      <.icon name={@icon}
-        class={@icon_class}
-      />
+      <.icon name={@icon} class={@icon_class} />
     </span>
     """
   end

@@ -220,75 +220,76 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
         </div>
       </div>
       <%= if @show_details do %>
-        <%= for {run, index} <- @runs |> Enum.reverse() |> Enum.with_index(1) |> Enum.reverse() do %>
-          <div
-            id={"run_#{run.id}"}
-            class={
-              if index != Enum.count(@runs) and !@show_prev_runs,
-                do: "hidden",
-                else: "outline outline-2 outline-gray-300 rounded mt-2 mb-4 mx-4"
-            }
-          >
+        <div class="flex flex-col bg-gray-100 gap-3 p-3">
+          <%= for {run, index} <- @runs |> Enum.reverse() |> Enum.with_index(1) |> Enum.reverse() do %>
             <div
-              class="flex bg-gray-200 text-xs py-2 grid grid-cols-6"
-              role="rowgroup"
+              id={"run_#{run.id}"}
+              class={
+                if index != Enum.count(@runs) and !@show_prev_runs,
+                  do: "hidden",
+                  else: "outline outline-2 outline-gray-300 rounded"
+              }
             >
-              <div role="columnheader" class="col-span-3 pl-4">
-                Run
-                <.link navigate={~p"/projects/#{@project.id}/runs/#{run.id}"}>
-                  <span
-                    title={run.id}
-                    class="font-normal text-xs whitespace-nowrap text-ellipsis
+              <div
+                class="flex bg-gray-200 text-xs py-2 grid grid-cols-6"
+                role="rowgroup"
+              >
+                <div role="columnheader" class="col-span-3 pl-4">
+                  Run
+                  <.link navigate={~p"/projects/#{@project.id}/runs/#{run.id}"}>
+                    <span
+                      title={run.id}
+                      class="font-normal text-xs whitespace-nowrap text-ellipsis
                             inline-block rounded-md font-mono
                             text-indigo-400 hover:underline underline-offset-2
                             hover:text-indigo-500"
-                  >
-                    <%= display_short_uuid(run.id) %>
-                  </span>
-                </.link>
-                <%= if Enum.count(@runs) > 1 do %>
-                  (<%= index %>/<%= Enum.count(@runs) %><%= if index !=
-                                                                 Enum.count(@runs),
-                                                               do: ")" %>
-                  <%= if index == Enum.count(@runs) do %>
-                    <span>
-                      &bull; <a
-                        id={"toggle_runs_for_#{@work_order.id}"}
-                        href="#"
-                        class="text-indigo-400"
-                        phx-click="toggle_runs"
-                        phx-target={@myself}
-                      >
-                        <%= if @show_prev_runs, do: "hide", else: "show" %> previous</a>)
+                    >
+                      <%= display_short_uuid(run.id) %>
                     </span>
+                  </.link>
+                  <%= if Enum.count(@runs) > 1 do %>
+                    (<%= index %>/<%= Enum.count(@runs) %><%= if index !=
+                                                                   Enum.count(@runs),
+                                                                 do: ")" %>
+                    <%= if index == Enum.count(@runs) do %>
+                      <span>
+                        &bull; <a
+                          id={"toggle_runs_for_#{@work_order.id}"}
+                          href="#"
+                          class="text-indigo-400"
+                          phx-click="toggle_runs"
+                          phx-target={@myself}
+                        >
+                        <%= if @show_prev_runs, do: "hide", else: "show" %> previous</a>)
+                      </span>
+                    <% end %>
                   <% end %>
-                <% end %>
+                </div>
+                <div role="columnheader" class="col-span-2 px-4">
+                  <%= case run.state do %>
+                    <% :available -> %>
+                      enqueued @ <.timestamp timestamp={run.inserted_at} />
+                    <% :claimed -> %>
+                      claimed @ <.timestamp timestamp={run.claimed_at} />
+                    <% :started -> %>
+                      started @ <.timestamp timestamp={run.started_at} />
+                    <% _state -> %>
+                      finished @ <.timestamp timestamp={run.finished_at} />
+                  <% end %>
+                </div>
+                <div role="columnheader" class="col-span-1 px-4">
+                  <%= run.state %>
+                </div>
               </div>
-              <div role="columnheader" class="col-span-2 px-4">
-                <%= case run.state do %>
-                  <% :available -> %>
-                    enqueued @ <.timestamp timestamp={run.inserted_at} />
-                  <% :claimed -> %>
-                    claimed @ <.timestamp timestamp={run.claimed_at} />
-                  <% :started -> %>
-                    started @ <.timestamp timestamp={run.started_at} />
-                  <% _state -> %>
-                    finished @ <.timestamp timestamp={run.finished_at} />
-                <% end %>
-              </div>
-              <div role="columnheader" class="col-span-1 px-4">
-                <%= run.state %>
-              </div>
+              <.run_item
+                can_edit_data_retention={@can_edit_data_retention}
+                can_run_workflow={@can_run_workflow}
+                run={run}
+                project={@project}
+              />
             </div>
-
-            <.run_item
-              can_edit_data_retention={@can_edit_data_retention}
-              can_run_workflow={@can_run_workflow}
-              run={run}
-              project={@project}
-            />
-          </div>
-        <% end %>
+          <% end %>
+        </div>
       <% end %>
     </div>
     """
