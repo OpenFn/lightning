@@ -282,7 +282,7 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
                       finished @ <.timestamp timestamp={run.finished_at} />
                   <% end %>
                 </div>
-                <div role="columnheader" class="col-span-1 px-4 text-right">
+                <div role="columnheader" class="ml-3 col-span-1 px-4">
                   <%= run.state %>
                 </div>
               </div>
