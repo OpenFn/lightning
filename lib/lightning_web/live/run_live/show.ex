@@ -114,7 +114,7 @@ defmodule LightningWeb.RunLive.Show do
                 :let={step}
                 id={"step-list-#{run.id}"}
                 steps={@steps}
-                class="flex-1"
+                class="flex-1 items-center"
               >
                 <.link patch={"?step=#{step.id}"} id={"select-step-#{step.id}"}>
                   <.step_item
@@ -123,7 +123,6 @@ defmodule LightningWeb.RunLive.Show do
                       DateTime.compare(step.inserted_at, run.inserted_at) == :lt
                     }
                     selected={step.id == @selected_step_id}
-                    show_inspector_link={true}
                     run_id={run.id}
                     project_id={@project}
                   />

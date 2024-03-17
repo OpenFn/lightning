@@ -48,7 +48,7 @@ defmodule LightningWeb.RunLive.Components do
 
   def list_item(assigns) do
     ~H"""
-    <li class="px-4 py-4 sm:px-0">
+    <li class="px-0 py-2 xl:px-3 xl:py-3 2xl:px-4 2xl:py-4">
       <div class="flex justify-between items-baseline text-sm @md/viewer:text-base">
         <%= for label <- @label do %>
           <dt class={["font-medium items-center", label[:class]]}>
@@ -199,15 +199,8 @@ defmodule LightningWeb.RunLive.Components do
   def step_list(assigns) do
     ~H"""
     <ul {@rest} role="list" class="-mb-8">
-      <li :for={step <- @steps} data-step-id={step.id} class="group">
-        <div class="relative pb-8">
-          <span
-            class="absolute left-4 top-4 -ml-px h-full w-0.5 bg-gray-200 group-last:hidden"
-            aria-hidden="true"
-          >
-          </span>
-          <%= render_slot(@inner_block, step) %>
-        </div>
+      <li :for={step <- @steps} data-step-id={step.id} class="group p-2">
+        <%= render_slot(@inner_block, step) %>
       </li>
     </ul>
     """
@@ -215,7 +208,6 @@ defmodule LightningWeb.RunLive.Components do
 
   attr :step, Lightning.Invocation.Step, required: true
   attr :is_clone, :boolean, default: false
-  attr :show_inspector_link, :boolean, default: false
   attr :run_id, :string
   attr :project_id, :string
   attr :selected, :boolean, default: false
@@ -229,7 +221,7 @@ defmodule LightningWeb.RunLive.Components do
     ~H"""
     <div
       class={[
-        "relative flex space-x-3 border-r-4",
+        "relative flex space-x-3 border-r-4 items-center",
         if(@selected,
           do: "border-primary-500",
           else: "border-transparent hover:border-gray-300"
@@ -239,7 +231,7 @@ defmodule LightningWeb.RunLive.Components do
       {@rest}
     >
       <div class="flex items-center">
-        <.step_state_circle step={@step} />
+        <.step_icon reason={@step.exit_reason} error_type={@step.error_type} />
       </div>
       <div class={[
         "flex min-w-0 flex-1 space-x-1 pt-1.5 pr-1.5",
@@ -265,18 +257,16 @@ defmodule LightningWeb.RunLive.Components do
         <% end %>
         <div class="flex text-sm space-x-1 text-gray-900">
           <%= @step.job.name %>
-          <%= if @show_inspector_link do %>
-            <.link navigate={
+          <.link navigate={
                 ~p"/projects/#{@project_id}/w/#{@step.job.workflow_id}"
                   <> "?a=#{@run_id}&m=expand&s=#{@step.job_id}"
               }>
-              <.icon
-                title="Inspect Step"
-                name="hero-code-bracket-square-mini"
-                class="h-4 w-4 mb-2 hover:text-primary-400"
-              />
-            </.link>
-          <% end %>
+            <.icon
+              title="Inspect Step"
+              name="hero-document-magnifying-glass-mini"
+              class="h-5 w-5 mb-1 hover:text-primary-400"
+            />
+          </.link>
         </div>
         <div class="flex-grow whitespace-nowrap text-right text-sm text-gray-500">
           <.step_duration step={@step} />
@@ -444,9 +434,9 @@ defmodule LightningWeb.RunLive.Components do
               }
             >
               <.icon
-                name="hero-code-bracket-square-mini"
+                name="hero-document-magnifying-glass-mini"
                 title="Inspect Step"
-                class="h-4 w-4 mb-2"
+                class="h-5 w-5 mb-1"
               />
             </.link>
           </div>
@@ -482,7 +472,7 @@ defmodule LightningWeb.RunLive.Components do
         phx-value-step_id={@step.id}
         title="Rerun workflow from here"
       >
-        <.icon name="hero-play-mini" class="h-4 w-4 mb-1" />
+        <.icon name="hero-play-circle-mini" class="h-5 w-5 mb-1" />
       </span>
     <% else %>
       <span
