@@ -542,7 +542,7 @@ defmodule LightningWeb.WorkflowLive.Components do
               class="hidden panel-expand-icon"
               phx-click={JS.dispatch("expand-panel", to: "##{@id}")}
             >
-              <Heroicons.plus class="w-10 h-10 p-2 hover:bg-gray-200 text-gray-600 rounded-lg" />
+              <Heroicons.plus_circle class="w-5 h-5 hover:bg-gray-200 text-gray-600 rounded-lg" />
             </a>
           </div>
         </div>
