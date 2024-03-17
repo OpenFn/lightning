@@ -32,6 +32,7 @@ defmodule Lightning.Accounts.User do
     field :disabled, :boolean, default: false
     field :mfa_enabled, :boolean, default: false
     field :scheduled_deletion, :utc_datetime
+    field :github_oauth_token, Lightning.Encrypted.Map, redact: true
 
     has_one :user_totp, Lightning.Accounts.UserTOTP
     has_many :credentials, Lightning.Credentials.Credential

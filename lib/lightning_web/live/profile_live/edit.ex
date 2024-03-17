@@ -3,11 +3,14 @@ defmodule LightningWeb.ProfileLive.Edit do
   LiveView for user profile page.
   """
   use LightningWeb, :live_view
+  alias LightningWeb.OauthCredentialHelper
 
   on_mount {LightningWeb.Hooks, :assign_projects}
 
   @impl true
   def mount(_params, _session, socket) do
+    # for github oauth setup
+    OauthCredentialHelper.subscribe("profile:#{socket.assigns.current_user.id}")
     {:ok, socket |> assign(:active_menu_item, :profile)}
   end
 
@@ -19,6 +22,11 @@ defmodule LightningWeb.ProfileLive.Edit do
        socket.assigns.live_action,
        params
      )}
+  end
+
+  def handle_info({:forward, mod, opts}, socket) do
+    send_update(mod, opts)
+    {:noreply, socket}
   end
 
   defp apply_action(socket, :edit, _params) do

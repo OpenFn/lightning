@@ -138,6 +138,12 @@
     id={"#{@user.id}_mfa_section"}
     user={@user}
   />
+
+  <.live_component
+    module={LightningWeb.ProfileLive.GithubComponent}
+    id={"#{@user.id}_github_section"}
+    user={@user}
+  />
   <div class="bg-white shadow-sm ring-1 ring-gray-900/5 sm:rounded-xl md:col-span-2 mb-4">
     <div class="px-4 py-6 sm:p-8">
       <span class="text-xl">Delete account</span>
