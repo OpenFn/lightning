@@ -210,6 +210,7 @@ defmodule LightningWeb.RunLive.Components do
   attr :is_clone, :boolean, default: false
   attr :run_id, :string
   attr :project_id, :string
+  attr :job_id, :string, default: nil
   attr :selected, :boolean, default: false
   attr :class, :string, default: ""
   attr :rest, :global
@@ -256,17 +257,19 @@ defmodule LightningWeb.RunLive.Components do
           </div>
         <% end %>
         <div class="flex text-sm space-x-1 text-gray-900">
-          <%= @step.job.name %>
-          <.link navigate={
+          <span><%= @step.job.name %></span>
+          <%= unless @job_id == @step.job.id do %>
+            <.link navigate={
                 ~p"/projects/#{@project_id}/w/#{@step.job.workflow_id}"
                   <> "?a=#{@run_id}&m=expand&s=#{@step.job_id}"
               }>
-            <.icon
-              title="Inspect Step"
-              name="hero-document-magnifying-glass-mini"
-              class="h-5 w-5 mb-1 hover:text-primary-400"
-            />
-          </.link>
+              <.icon
+                title="Inspect Step"
+                name="hero-document-magnifying-glass-mini"
+                class="h-5 w-5 mb-1 hover:text-primary-400"
+              />
+            </.link>
+          <% end %>
         </div>
         <div class="flex-grow whitespace-nowrap text-right text-sm text-gray-500">
           <.step_duration step={@step} />
