@@ -183,13 +183,18 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
                 <%= @workflow_name %>
               </h1>
               <span class="mt-2 text-gray-700">
-                <span
-                  title={@work_order.id}
-                  class="font-normal text-xs whitespace-nowrap text-ellipsis
-                    rounded-md font-mono inline-block"
-                >
-                  <%= display_short_uuid(@work_order.id) %>
-                </span>
+                <.link navigate={
+                  ~p"/projects/#{@work_order.workflow.project_id}/history?filters[workorder_id]=#{@work_order.id}"
+                }>
+                  <span
+                    title={@work_order.id}
+                    class="font-normal text-xs whitespace-nowrap text-ellipsis
+                rounded-md font-mono text-indigo-400 hover:underline inline-block
+                underline-offset-2 hover:text-indigo-500"
+                  >
+                    <%= display_short_uuid(@work_order.id) %>
+                  </span>
+                </.link>
                 &bull;
                 <.workorder_dataclip_link
                   work_order={@work_order}
@@ -277,7 +282,7 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
                       finished @ <.timestamp timestamp={run.finished_at} />
                   <% end %>
                 </div>
-                <div role="columnheader" class="col-span-1 px-4">
+                <div role="columnheader" class="col-span-1 px-4 text-right">
                   <%= run.state %>
                 </div>
               </div>
@@ -307,7 +312,7 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
         <span
           title={@work_order.dataclip_id}
           class="font-normal text-xs whitespace-nowrap text-ellipsis
-                p-1 rounded-md font-mono text-indigo-400 hover:underline
+                rounded-md font-mono text-indigo-400 hover:underline
                 underline-offset-2 hover:text-indigo-500"
         >
           <%= display_short_uuid(@work_order.dataclip_id) %>
