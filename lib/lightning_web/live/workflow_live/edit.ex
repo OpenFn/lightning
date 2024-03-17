@@ -81,7 +81,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
           <div
             :if={@selected_job && @selection_mode == "expand"}
             class={[
-              "fixed left-0 top-0 right-0 bottom-0 m-0 flex-wrap",
+              "fixed left-0 top-0 right-0 bottom-0 flex-wrap",
               "hidden opacity-0",
               "bg-white inset-0 z-30 overflow-hidden drop-shadow-[0_35px_35px_rgba(0,0,0,0.25)]"
             ]}
