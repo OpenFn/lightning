@@ -464,7 +464,7 @@ defmodule LightningWeb.RunLive.Components do
       >
         <.timestamp timestamp={@step.finished_at} style={:wrapped} />
       </div>
-      <div class="py-2 px-4 text-xs text-gray-500 font-mono" role="cell">
+      <div class="py-2 px-4 text-xs text-gray-500 font-mono text-right" role="cell">
         <%= @step.exit_reason %><%= if @step.error_type, do: ":#{@step.error_type}" %>
       </div>
     </div>
