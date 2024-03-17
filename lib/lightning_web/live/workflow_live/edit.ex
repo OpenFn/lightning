@@ -228,7 +228,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
                   </div>
                   <.with_changes_indicator changeset={@changeset}>
                     <Form.submit_button
-                      class=""
                       phx-disable-with="Saving..."
                       disabled={!@can_edit_workflow or !@changeset.valid?}
                       form="workflow-form"

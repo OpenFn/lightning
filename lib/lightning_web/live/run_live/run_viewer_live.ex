@@ -88,15 +88,17 @@ defmodule LightningWeb.RunLive.RunViewerLive do
               :let={step}
               id={"step-list-#{run.id}"}
               steps={@steps}
-              class="flex-1"
+              class="flex-1 items-center"
             >
               <.step_item
                 step={step}
+                run_id={run.id}
                 is_clone={DateTime.compare(step.inserted_at, run.inserted_at) == :lt}
                 phx-click="select_step"
                 phx-value-id={step.id}
                 selected={step.id == @selected_step_id}
                 class="cursor-pointer"
+                project_id={@project}
               />
             </.step_list>
           </div>
