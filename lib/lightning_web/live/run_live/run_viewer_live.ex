@@ -93,6 +93,7 @@ defmodule LightningWeb.RunLive.RunViewerLive do
               <.step_item
                 step={step}
                 run_id={run.id}
+                job_id={@job_id}
                 is_clone={DateTime.compare(step.inserted_at, run.inserted_at) == :lt}
                 phx-click="select_step"
                 phx-value-id={step.id}
