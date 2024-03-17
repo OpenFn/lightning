@@ -235,7 +235,7 @@ defmodule LightningWeb.RunLive.Components do
         <.step_icon reason={@step.exit_reason} error_type={@step.error_type} />
       </div>
       <div class={[
-        "flex min-w-0 flex-1 space-x-1 pt-1.5 pr-1.5",
+        "flex min-w-0 flex-1 space-x-1 pr-1.5 items-center",
         if(@is_clone, do: "opacity-50")
       ]}>
         <%= if @is_clone do %>
@@ -256,7 +256,7 @@ defmodule LightningWeb.RunLive.Components do
             </span>
           </div>
         <% end %>
-        <div class="flex text-sm space-x-1 text-gray-900">
+        <div class="flex text-sm space-x-1 text-gray-900 items-center">
           <span><%= @step.job.name %></span>
           <%= unless @job_id == @step.job.id do %>
             <.link navigate={
@@ -266,7 +266,7 @@ defmodule LightningWeb.RunLive.Components do
               <.icon
                 title="Inspect Step"
                 name="hero-document-magnifying-glass-mini"
-                class="h-5 w-5 mb-1 hover:text-primary-400"
+                class="h-5 w-5 hover:text-primary-400 items-center"
               />
             </.link>
           <% end %>
@@ -439,7 +439,7 @@ defmodule LightningWeb.RunLive.Components do
               <.icon
                 name="hero-document-magnifying-glass-mini"
                 title="Inspect Step"
-                class="h-5 w-5 mb-1"
+                class="h-5 w-5"
               />
             </.link>
           </div>
@@ -475,7 +475,7 @@ defmodule LightningWeb.RunLive.Components do
         phx-value-step_id={@step.id}
         title="Rerun workflow from here"
       >
-        <.icon name="hero-play-circle-mini" class="h-5 w-5 mb-1" />
+        <.icon name="hero-play-circle-mini" class="h-5 w-5" />
       </span>
     <% else %>
       <span
