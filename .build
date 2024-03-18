@@ -107,6 +107,7 @@ Lightning.UsageTracking.DailyReportConfiguration.html
 Lightning.UsageTracking.DayWorker.html
 Lightning.UsageTracking.Report.html
 Lightning.UsageTracking.ReportData.html
+Lightning.UsageTracking.ReportWorker.html
 Lightning.UsageTracking.ResponseProcessor.html
 Lightning.UsageTracking.Worker.html
 Lightning.UsageTracking.html
@@ -262,8 +263,8 @@ dist/merriweather-latin-ext-300-normal-K6L27CZ5.woff2
 dist/merriweather-vietnamese-300-italic-EHHNZPUO.woff2
 dist/merriweather-vietnamese-300-normal-U376L4Z4.woff2
 dist/remixicon-NKANDIL5.woff2
-dist/search_data-6ADCBD91.js
-dist/sidebar_items-3C5343BC.js
+dist/search_data-E4D89809.js
+dist/sidebar_items-2F085411.js
 index.html
 provisioning.html
 readme.html
