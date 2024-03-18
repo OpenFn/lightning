@@ -1,7 +1,19 @@
 defmodule Lightning.UsageTracking.ProjectMetricsService do
+  import Ecto.Query
+
+  alias Lightning.Repo
   alias Lightning.Projects.Project
   alias Lightning.UsageTracking.UserService
   alias Lightning.UsageTracking.WorkflowMetricsService
+
+  def find_eligible_projects(date) do
+    report_time = report_date_as_time(date)
+    query = from p in Project,
+      where: p.inserted_at <= ^report_time,
+      preload: [:users, [workflows: [:jobs, runs: [steps: [:job]]]]]
+
+    query |> Repo.all()
+  end
 
   def generate_metrics(project, cleartext_enabled, date) do
     %Project{id: id, users: users} = project
@@ -34,5 +46,11 @@ defmodule Lightning.UsageTracking.ProjectMetricsService do
     |> Enum.map(fn workflow ->
       WorkflowMetricsService.generate_metrics(workflow, cleartext_enabled, date)
     end)
+  end
+
+  defp report_date_as_time(date) do
+    {:ok, datetime, _offset} = "#{date}T23:59:59Z" |> DateTime.from_iso8601()
+
+    datetime
   end
 end
