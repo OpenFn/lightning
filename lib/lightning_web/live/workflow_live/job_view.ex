@@ -73,7 +73,7 @@ defmodule LightningWeb.WorkflowLive.JobView do
     <.container id={"job-edit-view-#{@job.id}"}>
       <:top>
         <div class="flex p-4 gap-6">
-          <div class="flex items-center font-semibold">
+          <div class="flex items-baseline font-semibold">
             <span>
               <.icon
                 name="hero-code-bracket-mini"
@@ -155,7 +155,7 @@ defmodule LightningWeb.WorkflowLive.JobView do
 
   defp credential_block(assigns) do
     ~H"""
-    <div id="modal-header-credential-block" class="flex items-center">
+    <div id="modal-header-credential-block" class="flex items-baseline">
       <%= if @credential do %>
         <Common.tooltip
           id="credential-name-tooltip"
@@ -168,7 +168,13 @@ defmodule LightningWeb.WorkflowLive.JobView do
           <%= @credential.name %>
         </span>
       <% else %>
-        <.icon name="hero-lock-open" class="w-4 h-4 text-gray-500" />
+        <Common.tooltip
+          id="credential-name-tooltip"
+          title="This step doesn't use a credential."
+          class="mr-2"
+          icon_class="text-gray-500 h-4 w-4"
+          icon="hero-lock-open-mini"
+        />
         <span class="text-xs text-gray-500 font-semibold">
           No Credential
         </span>
@@ -189,7 +195,7 @@ defmodule LightningWeb.WorkflowLive.JobView do
       )
 
     ~H"""
-    <div id="modal-header-adaptor-block" class="flex items-center">
+    <div id="modal-header-adaptor-block" class="flex items-baseline">
       <Common.tooltip
         id="adaptor-name-tooltip"
         title={"Adaptor: " <> @package_name <> "@" <> @version}

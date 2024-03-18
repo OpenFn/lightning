@@ -16,9 +16,10 @@ and this project adheres to
 ## [Unreleased]
 
 ### Added
+
+- Support for smaller screens on history and inspector.
 - Polling metric to track number of available runs.
   [#1790](https://github.com/OpenFn/lightning/issues/1790)
-
 - Allows limiting creation of new runs and retries.
   [#1754](https://github.com/OpenFn/Lightning/issues/1754)
 - Add specific messages for log, input, and output tabs when a run is lost
