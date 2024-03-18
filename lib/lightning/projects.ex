@@ -210,6 +210,27 @@ defmodule Lightning.Projects do
     |> Repo.update()
   end
 
+  @spec add_project_users(Project.t(), [map(), ...]) ::
+          {:ok, [ProjectUser.t(), ...]} | {:error, Ecto.Changeset.t()}
+  def add_project_users(project, project_users) do
+    # make the current users an empty list to avoid deleting existing project users
+    project = %{project | project_users: []}
+    params = %{project_users: project_users}
+
+    with {:ok, updated_project} <- update_project(project, params) do
+      emails =
+        Enum.map(
+          updated_project.project_users,
+          fn pu ->
+            UserNotifier.new(%{type: "project_addition", project_user_id: pu.id})
+          end
+        )
+
+      Oban.insert_all(Lightning.Oban, emails)
+      {:ok, updated_project.project_users}
+    end
+  end
+
   @spec delete_project_user!(ProjectUser.t()) :: ProjectUser.t()
   def delete_project_user!(%ProjectUser{} = project_user) do
     Repo.delete!(project_user)

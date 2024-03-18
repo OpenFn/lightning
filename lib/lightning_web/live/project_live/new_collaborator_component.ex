@@ -3,7 +3,6 @@ defmodule LightningWeb.ProjectLive.NewCollaboratorComponent do
 
   use LightningWeb, :live_component
 
-  alias Lightning.Accounts.UserNotifier
   alias Lightning.Projects
   alias LightningWeb.ProjectLive.Collaborators
   alias Phoenix.LiveView.JS
@@ -39,27 +38,13 @@ defmodule LightningWeb.ProjectLive.NewCollaboratorComponent do
              params,
              assigns.project_users
            ),
-         {:ok, updated_project} <-
-           Projects.update_project(%{assigns.project | project_users: []}, %{
-             project_users: project_users
-           }) do
+         {:ok, _} <-
+           Projects.add_project_users(assigns.project, project_users) do
       send(self(), :collaborators_updated)
-      send_email_to_users(updated_project, updated_project.project_users)
       {:noreply, socket}
     else
       {:error, changeset} ->
         {:noreply, assign(socket, changeset: changeset)}
     end
-  end
-
-  defp send_email_to_users(project, project_users) do
-    project_users = Lightning.Repo.preload(project_users, [:user])
-
-    Enum.map(project_users, fn project_user ->
-      UserNotifier.deliver_project_addition_notification(
-        project_user.user,
-        project
-      )
-    end)
   end
 end

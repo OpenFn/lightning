@@ -5,6 +5,10 @@ defmodule Lightning.Accounts.UserNotifier do
 
   use LightningWeb, :html
 
+  use Oban.Worker,
+    queue: :background,
+    max_attempts: 1
+
   import Swoosh.Email
 
   alias Lightning.Accounts.User
@@ -15,6 +19,26 @@ defmodule Lightning.Accounts.UserNotifier do
   alias Lightning.WorkOrders.SearchParams
 
   defp admin, do: Application.get_env(:lightning, :email_addresses)[:admin]
+
+  @impl Oban.Worker
+  def perform(%{
+        args: %{
+          "type" => "project_addition",
+          "project_user_id" => project_user_id
+        }
+      }) do
+    project_user =
+      project_user_id
+      |> Projects.get_project_user!()
+      |> Lightning.Repo.preload([:user, :project])
+
+    deliver_project_addition_notification(
+      project_user.user,
+      project_user.project
+    )
+
+    :ok
+  end
 
   # Delivers the email using the application mailer.
   defp deliver(recipient, subject, body) do
