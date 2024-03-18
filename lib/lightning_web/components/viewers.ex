@@ -330,7 +330,7 @@ defmodule LightningWeb.Components.Viewers do
     >
       <div class="hidden group-hover:block font-mono">type: <%= @type %></div>
       <div class={[
-        "rounded-bl-md p-1 opacity-70 group-hover:opacity-100 content-center",
+        "rounded-bl-md rounded-tr-md p-1 opacity-70 group-hover:opacity-100 content-center",
         @color
       ]}>
         <.icon :if={@icon} name={@icon} class="h-4 w-4 inline-block align-middle" />

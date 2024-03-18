@@ -48,9 +48,6 @@ defmodule LightningWeb.JobLive.JobBuilderComponents do
           </svg>
         </div>
         <span class="inline-block align-middle">
-          <%!-- <.text_ping_loader>
-            Loading code editor
-          </.text_ping_loader> --%>
           Loading...
         </span>
       </div>

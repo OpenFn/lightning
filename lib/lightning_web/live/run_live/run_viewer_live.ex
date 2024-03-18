@@ -64,12 +64,17 @@ defmodule LightningWeb.RunLive.RunViewerLive do
               <.list_item>
                 <:label>Started</:label>
                 <:value>
-                  <%= if run.started_at,
-                    do:
-                      Timex.Format.DateTime.Formatters.Relative.format!(
+                  <%= if run.started_at do %>
+                    <Common.wrapper_tooltip
+                      id={run.id <> "start-tip"}
+                      tooltip={DateTime.to_iso8601(run.started_at)}
+                    >
+                      <%= Timex.Format.DateTime.Formatters.Relative.format!(
                         run.started_at,
                         "{relative}"
                       ) %>
+                    </Common.wrapper_tooltip>
+                  <% end %>
                 </:value>
               </.list_item>
               <.list_item>

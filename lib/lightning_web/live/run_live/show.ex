@@ -78,24 +78,33 @@ defmodule LightningWeb.RunLive.Show do
                 <.list_item>
                   <:label>Started</:label>
                   <:value>
-                    <%= if run.started_at,
-                      do:
-                        Timex.format!(
+                    <%= if run.started_at do %>
+                      <Common.wrapper_tooltip
+                        id={run.id <> "start-tip"}
+                        tooltip={DateTime.to_iso8601(run.started_at)}
+                      >
+                        <%= Timex.Format.DateTime.Formatters.Relative.format!(
                           run.started_at,
-                          "%d/%b/%y, %H:%M:%S",
-                          :strftime
+                          "{relative}"
                         ) %>
+                      </Common.wrapper_tooltip>
+                    <% end %>
                   </:value>
                 </.list_item>
                 <.list_item>
                   <:label>Finished</:label>
                   <:value>
-                    <%= if run.finished_at,
-                      do:
-                        Timex.Format.DateTime.Formatters.Relative.format!(
+                    <%= if run.finished_at do %>
+                      <Common.wrapper_tooltip
+                        id={run.id <> "start-tip"}
+                        tooltip={DateTime.to_iso8601(run.finished_at)}
+                      >
+                        <%= Timex.Format.DateTime.Formatters.Relative.format!(
                           run.finished_at,
                           "{relative}"
                         ) %>
+                      </Common.wrapper_tooltip>
+                    <% end %>
                   </:value>
                 </.list_item>
                 <.list_item>

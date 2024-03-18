@@ -88,6 +88,24 @@ defmodule LightningWeb.Components.Common do
     """
   end
 
+  attr :id, :string, required: true
+  attr :tooltip, :string, default: nil
+  slot :inner_block, required: true
+
+  def wrapper_tooltip(%{tooltip: tooltip} = assigns)
+      when not is_nil(tooltip) do
+    ~H"""
+    <span
+      id={"#{@id}-tooltip"}
+      phx-hook="Tooltip"
+      aria-label={@tooltip}
+      data-allow-html="true"
+    >
+      <%= render_slot(@inner_block) %>
+    </span>
+    """
+  end
+
   attr :text, :string, required: false
   slot :inner_block, required: false
   attr :disabled, :boolean, default: false
