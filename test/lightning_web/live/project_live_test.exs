@@ -2266,6 +2266,443 @@ defmodule LightningWeb.ProjectLiveTest do
     end
   end
 
+  describe "projects settings:collaboration" do
+    setup :register_and_log_in_user
+
+    test "only authorized users can access the add collaborators modal", %{
+      conn: conn
+    } do
+      project = insert(:project)
+
+      for {conn, _user} <- setup_project_users(conn, project, [:viewer, :editor]) do
+        {:ok, view, _html} =
+          live(
+            conn,
+            ~p"/projects/#{project.id}/settings#collaboration"
+          )
+
+        button = element(view, "#show_collaborators_modal_button")
+        assert has_element?(button)
+
+        # modal is not present
+        refute has_element?(view, "#add_collaborators_modal")
+
+        # try clicking the button
+        assert_raise ArgumentError, ~r/is disabled/, fn ->
+          render_click(button)
+        end
+
+        # send event either way
+        refute render_click(view, "toggle_collaborators_modal") =~
+                 "Enter the email address and role of new collaborator"
+
+        # modal is still not present
+        refute has_element?(view, "#add_collaborators_modal")
+      end
+
+      for {conn, _user} <- setup_project_users(conn, project, [:owner, :admin]) do
+        {:ok, view, _html} =
+          live(
+            conn,
+            ~p"/projects/#{project.id}/settings#collaboration"
+          )
+
+        button = element(view, "#show_collaborators_modal_button")
+        assert has_element?(button)
+
+        # modal is not present
+        refute has_element?(view, "#add_collaborators_modal")
+
+        # try clicking the button
+        assert render_click(button) =~
+                 "Enter the email address and role of new collaborator"
+
+        # modal is now present
+        assert has_element?(view, "#add_collaborators_modal")
+      end
+    end
+
+    test "user can add and remove inputs for adding collaborators", %{
+      conn: conn
+    } do
+      project = insert(:project)
+
+      for {conn, _user} <- setup_project_users(conn, project, [:owner, :admin]) do
+        {:ok, view, _html} =
+          live(
+            conn,
+            ~p"/projects/#{project.id}/settings#collaboration"
+          )
+
+        # Open Modal
+        view
+        |> element("#show_collaborators_modal_button")
+        |> render_click()
+
+        modal = element(view, "#add_collaborators_modal")
+
+        html = modal |> render() |> Floki.parse_fragment!()
+
+        # we only have 1 email input by default
+        assert Floki.find(html, "[type='text'][name$='[email]']") |> Enum.count() ==
+                 1
+
+        # we dont have any button to remove the input
+        assert Floki.find(html, "button[name$='[collaborators_drop][]']")
+               |> Enum.count() == 0
+
+        # lets click to add another row
+        view
+        |> form("#add_collaborators_modal_form")
+        |> render_change(project: %{"collaborators_sort" => [0, "new"]})
+
+        html = modal |> render() |> Floki.parse_fragment!()
+
+        # we now have 2 email inputs and 2 buttons to remove the inputs
+        assert Floki.find(html, "[type='text'][name$='[email]']") |> Enum.count() ==
+                 2
+
+        assert Floki.find(html, "button[name$='[collaborators_drop][]']")
+               |> Enum.count() == 2
+
+        # lets click to remove the first row
+        view
+        |> form("#add_collaborators_modal_form")
+        |> render_change(project: %{"collaborators_drop" => [0]})
+
+        html = modal |> render() |> Floki.parse_fragment!()
+
+        # we now have 1 email input and we dont have any button to remove the input
+        assert Floki.find(html, "[type='text'][name$='[email]']") |> Enum.count() ==
+                 1
+
+        assert Floki.find(html, "button[name$='[collaborators_drop][]']")
+               |> Enum.count() == 0
+      end
+    end
+
+    test "adding a non existent user displays an appropriate error message", %{
+      conn: conn
+    } do
+      project = insert(:project)
+
+      for {conn, _user} <- setup_project_users(conn, project, [:owner, :admin]) do
+        {:ok, view, _html} =
+          live(
+            conn,
+            ~p"/projects/#{project.id}/settings#collaboration"
+          )
+
+        # Open Modal
+        view
+        |> element("#show_collaborators_modal_button")
+        |> render_click()
+
+        modal = element(view, "#add_collaborators_modal")
+
+        refute render(modal) =~ "There is no account connected this email"
+        email = "nonexists@localtests.com"
+        refute Lightning.Accounts.get_user_by_email(email)
+
+        # lets submit the form
+
+        view
+        |> form("#add_collaborators_modal_form",
+          project: %{
+            "collaborators" => %{"0" => %{"email" => email, "role" => "editor"}}
+          }
+        )
+        |> render_submit()
+
+        assert render(modal) =~ "There is no account connected this email"
+      end
+    end
+
+    test "adding an existing project user displays an appropriate error message",
+         %{
+           conn: conn
+         } do
+      project = insert(:project)
+
+      for {conn, user} <- setup_project_users(conn, project, [:owner, :admin]) do
+        {:ok, view, _html} =
+          live(
+            conn,
+            ~p"/projects/#{project.id}/settings#collaboration"
+          )
+
+        # Open Modal
+        view
+        |> element("#show_collaborators_modal_button")
+        |> render_click()
+
+        modal = element(view, "#add_collaborators_modal")
+
+        refute render(modal) =~ "This account is already part of this project"
+
+        # lets submit the form
+
+        view
+        |> form("#add_collaborators_modal_form",
+          project: %{
+            "collaborators" => %{
+              "0" => %{"email" => user.email, "role" => "editor"}
+            }
+          }
+        )
+        |> render_submit()
+
+        assert render(modal) =~ "This account is already part of this project"
+      end
+    end
+
+    test "adding an owner project user is not allowed",
+         %{
+           conn: conn
+         } do
+      project = insert(:project)
+
+      for {conn, _user} <- setup_project_users(conn, project, [:owner, :admin]) do
+        {:ok, view, _html} =
+          live(
+            conn,
+            ~p"/projects/#{project.id}/settings#collaboration"
+          )
+
+        # Open Modal
+        view
+        |> element("#show_collaborators_modal_button")
+        |> render_click()
+
+        modal = element(view, "#add_collaborators_modal")
+
+        refute render(modal) =~ "is invalid"
+
+        # lets submit the form
+        view
+        |> form("#add_collaborators_modal_form")
+        |> render_submit(
+          project: %{
+            "collaborators" => %{
+              "0" => %{"email" => "dummy@email.com", "role" => "owner"}
+            }
+          }
+        )
+
+        assert render(modal) =~ "is invalid"
+      end
+    end
+
+    test "user can add collaborators successfully",
+         %{
+           conn: conn
+         } do
+      project = insert(:project)
+
+      for {conn, _user} <- setup_project_users(conn, project, [:owner, :admin]) do
+        {:ok, view, html} =
+          live(
+            conn,
+            ~p"/projects/#{project.id}/settings#collaboration"
+          )
+
+        [admin, editor, viewer] = insert_list(3, :user)
+
+        # user is not shown in the page
+        for new_user <- [admin, editor, viewer] do
+          refute html =~ new_user.last_name
+        end
+
+        # Open Modal
+        view
+        |> element("#show_collaborators_modal_button")
+        |> render_click()
+
+        # lets click to add 2 more rows
+        view
+        |> form("#add_collaborators_modal_form")
+        |> render_change(project: %{"collaborators_sort" => [0, "new", "new"]})
+
+        # lets submit the form
+        view
+        |> form("#add_collaborators_modal_form",
+          project: %{
+            "collaborators" => %{
+              "0" => %{"email" => admin.email, "role" => "admin"},
+              "1" => %{"email" => editor.email, "role" => "editor"},
+              "2" => %{"email" => viewer.email, "role" => "viewer"}
+            }
+          }
+        )
+        |> render_submit()
+
+        updated_html = render(view)
+        # users are shown in the page
+        for new_user <- [admin, editor, viewer] do
+          assert updated_html =~ new_user.last_name
+        end
+      end
+    end
+
+    test "only authorized users can remove a collaborator", %{
+      conn: conn
+    } do
+      project = insert(:project)
+
+      for {conn, _user} <- setup_project_users(conn, project, [:viewer, :editor]) do
+        project_user =
+          insert(:project_user,
+            project: project,
+            user: build(:user),
+            role: :viewer
+          )
+
+        {:ok, view, _html} =
+          live(
+            conn,
+            ~p"/projects/#{project.id}/settings#collaboration"
+          )
+
+        tooltip =
+          element(view, "#remove_project_user_#{project_user.id}_button-tooltip")
+
+        assert has_element?(tooltip)
+        assert render(tooltip) =~ "You do not have permission to remove a user"
+
+        # modal is not present
+        refute has_element?(view, "#remove_#{project_user.id}_modal")
+
+        # try sending the event either way
+        html =
+          render_click(view, "remove_project_user", %{
+            "project_user_id" => project_user.id
+          })
+
+        assert html =~ "You are not authorized to perform this action"
+
+        # project user still exists
+        assert Repo.get(Lightning.Projects.ProjectUser, project_user.id)
+      end
+
+      for {conn, _user} <- setup_project_users(conn, project, [:owner, :admin]) do
+        project_user =
+          insert(:project_user,
+            project: project,
+            user: build(:user),
+            role: :viewer
+          )
+
+        {:ok, view, _html} =
+          live(
+            conn,
+            ~p"/projects/#{project.id}/settings#collaboration"
+          )
+
+        tooltip =
+          element(view, "#remove_project_user_#{project_user.id}_button-tooltip")
+
+        refute has_element?(tooltip)
+
+        # modal is present
+        assert has_element?(view, "#remove_#{project_user.id}_modal")
+
+        # try clicking the confirm button
+        html =
+          view
+          |> element("#remove_#{project_user.id}_modal_confirm_button")
+          |> render_click()
+
+        refute html =~ "You are not authorized to perform this action"
+        assert html =~ "Collaborator removed successfully!"
+
+        # project user is removed
+        refute Repo.get(Lightning.Projects.ProjectUser, project_user.id)
+        # user is not deleted
+        assert Repo.get(Lightning.Accounts.User, project_user.user_id)
+      end
+    end
+
+    test "removing an owner project user is not allowed",
+         %{
+           conn: conn
+         } do
+      project = insert(:project)
+
+      for {conn, _user} <- setup_project_users(conn, project, [:owner, :admin]) do
+        project_user =
+          insert(:project_user,
+            project: project,
+            user: build(:user),
+            role: :owner
+          )
+
+        {:ok, view, _html} =
+          live(
+            conn,
+            ~p"/projects/#{project.id}/settings#collaboration"
+          )
+
+        tooltip =
+          element(view, "#remove_project_user_#{project_user.id}_button-tooltip")
+
+        assert has_element?(tooltip)
+        assert render(tooltip) =~ "You cannot remove an owner"
+
+        # modal is not present
+        refute has_element?(view, "#remove_#{project_user.id}_modal")
+
+        # try sending the event either way
+        html =
+          render_click(view, "remove_project_user", %{
+            "project_user_id" => project_user.id
+          })
+
+        assert html =~ "You are not authorized to perform this action"
+
+        # project user still exists
+        assert Repo.get(Lightning.Projects.ProjectUser, project_user.id)
+      end
+    end
+
+    test "users cannot remove themselves",
+         %{
+           conn: conn
+         } do
+      project = insert(:project)
+
+      for {conn, user} <- setup_project_users(conn, project, [:owner, :admin]) do
+        project_user =
+          Repo.get_by(Lightning.Projects.ProjectUser, user_id: user.id)
+
+        {:ok, view, _html} =
+          live(
+            conn,
+            ~p"/projects/#{project.id}/settings#collaboration"
+          )
+
+        tooltip =
+          element(view, "#remove_project_user_#{project_user.id}_button-tooltip")
+
+        assert has_element?(tooltip)
+        assert render(tooltip) =~ "You cannot remove yourself"
+
+        # modal is not present
+        refute has_element?(view, "#remove_#{project_user.id}_modal")
+
+        # try sending the event either way
+        html =
+          render_click(view, "remove_project_user", %{
+            "project_user_id" => project_user.id
+          })
+
+        assert html =~ "You are not authorized to perform this action"
+
+        # project user still exists
+        assert Repo.get(Lightning.Projects.ProjectUser, project_user.id)
+      end
+    end
+  end
+
   defp find_user_index_in_list(view, user) do
     Floki.parse_fragment!(render(view))
     |> Floki.find("#project-users-form tbody tr")

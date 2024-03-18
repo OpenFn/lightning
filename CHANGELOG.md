@@ -16,9 +16,9 @@ and this project adheres to
 ## [Unreleased]
 
 ### Added
+
 - Polling metric to track number of available runs.
   [#1790](https://github.com/OpenFn/lightning/issues/1790)
-
 - Allows limiting creation of new runs and retries.
   [#1754](https://github.com/OpenFn/Lightning/issues/1754)
 - Add specific messages for log, input, and output tabs when a run is lost
@@ -27,6 +27,10 @@ and this project adheres to
   [#1859](https://github.com/OpenFn/Lightning/issues/1859)
 - Publish an event when a new user is registered
   [#1873](https://github.com/OpenFn/lightning/issues/1873)
+- Adds ability to add project collaborators from existing users
+  [#1836](https://github.com/OpenFn/lightning/issues/1836)
+- Added ability to remove project collaborators
+  [#1837](https://github.com/OpenFn/lightning/issues/1837)
 
 ### Changed
 
