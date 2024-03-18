@@ -1,6 +1,7 @@
 defmodule Lightning.UsageTracking.ProjectMetricsServiceTest do
   use Lightning.DataCase
 
+  alias Lightning.Projects.Project
   alias Lightning.UsageTracking.ProjectMetricsService
   alias Lightning.UsageTracking.WorkflowMetricsService
 
@@ -17,20 +18,35 @@ defmodule Lightning.UsageTracking.ProjectMetricsServiceTest do
         report_time: ~U[2024-02-05 23:59:59Z]
       )
 
-    _other_project =
+    eligible_workflow_1 =
+      insert(:workflow, project: project, inserted_at: ~U[2024-02-05 23:59:59Z])
+      |> Repo.preload([:runs, :jobs])
+    eligible_workflow_2 =
+      insert(:workflow, project: project, inserted_at: ~U[2024-02-05 23:59:59Z])
+      |> Repo.preload([:runs, :jobs])
+    ineligible_workflow =
+      insert(:workflow, project: project, inserted_at: ~U[2024-02-06 00:00:00Z])
+      |> Repo.preload([:runs, :jobs])
+
+    other_project =
       build_project(
         3,
         Ecto.UUID.generate(),
         active_user_threshold_time: ~U[2023-11-08 00:00:00Z],
         report_time: ~U[2024-02-05 23:59:59Z]
       )
+    _other_workflow =
+      insert(:workflow, project: other_project, inserted_at: ~U[2024-02-05 23:59:59Z])
 
     %{
       active_user_count: active_user_count,
       date: ~D[2024-02-05],
+      eligible_workflow_1: eligible_workflow_1,
+      eligible_workflow_2: eligible_workflow_2,
       hashed_id:
         "EECF8CFDD120E8DF8D9A12CA92AC3E815908223F95CFB11F19261A3C0EB34AEC",
-      project: project,
+      ineligible_workflow: ineligible_workflow,
+      project: Repo.get(Project, project_id) |> Repo.preload([:users, workflows: [:runs, :jobs]]),
       project_id: project_id
     }
   end
@@ -110,26 +126,34 @@ defmodule Lightning.UsageTracking.ProjectMetricsServiceTest do
              } = ProjectMetricsService.generate_metrics(project, enabled, date)
     end
 
-    test "includes data for associated workflows", %{
+    test "includes data for workflows existing on or before date", %{
       date: date,
+      eligible_workflow_1: eligible_workflow_1,
+      eligible_workflow_2: eligible_workflow_2,
       enabled: enabled,
+      ineligible_workflow: ineligible_workflow,
       project: project
     } do
-      [workflow_1, workflow_2] = project.workflows
-
       %{workflows: workflows} =
         ProjectMetricsService.generate_metrics(project, enabled, date)
 
       workflows
       |> assert_workflow_metrics(
-        workflow: workflow_1,
+        workflow: eligible_workflow_1,
         cleartext_enabled: enabled,
         date: date
       )
 
       workflows
       |> assert_workflow_metrics(
-        workflow: workflow_2,
+        workflow: eligible_workflow_2,
+        cleartext_enabled: enabled,
+        date: date
+      )
+
+      workflows
+      |> refute_workflow_metrics(
+        workflow: ineligible_workflow,
         cleartext_enabled: enabled,
         date: date
       )
@@ -188,26 +212,34 @@ defmodule Lightning.UsageTracking.ProjectMetricsServiceTest do
              } = ProjectMetricsService.generate_metrics(project, enabled, date)
     end
 
-    test "includes data for associated workflows", %{
+    test "includes data for workflows existing on or before date", %{
       date: date,
+      eligible_workflow_1: eligible_workflow_1,
+      eligible_workflow_2: eligible_workflow_2,
       enabled: enabled,
+      ineligible_workflow: ineligible_workflow,
       project: project
     } do
-      [workflow_1, workflow_2] = project.workflows
-
       %{workflows: workflows} =
         ProjectMetricsService.generate_metrics(project, enabled, date)
 
       workflows
       |> assert_workflow_metrics(
-        workflow: workflow_1,
+        workflow: eligible_workflow_1,
         cleartext_enabled: enabled,
         date: date
       )
 
       workflows
       |> assert_workflow_metrics(
-        workflow: workflow_2,
+        workflow: eligible_workflow_2,
+        cleartext_enabled: enabled,
+        date: date
+      )
+
+      workflows
+      |> refute_workflow_metrics(
+        workflow: ineligible_workflow,
         cleartext_enabled: enabled,
         date: date
       )
@@ -229,8 +261,6 @@ defmodule Lightning.UsageTracking.ProjectMetricsServiceTest do
             report_time
           )
       )
-
-    insert_list(count, :workflow, project: project)
 
     project |> Repo.preload([:users, workflows: [:jobs, :runs]])
   end
@@ -311,6 +341,12 @@ defmodule Lightning.UsageTracking.ProjectMetricsServiceTest do
       WorkflowMetricsService.generate_metrics(workflow, cleartext_enabled, date)
 
     assert workflow_metrics == expected_metrics
+  end
+
+  defp refute_workflow_metrics(workflows_metrics, opts) do
+    workflow = opts |> Keyword.get(:workflow)
+
+    refute workflows_metrics |> find_instrumentation(workflow.id)
   end
 
   defp find_instrumentation(instrumented_collection, identity) do

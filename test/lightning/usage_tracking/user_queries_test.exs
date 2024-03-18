@@ -320,7 +320,6 @@ defmodule Lightning.UsageTracking.UserQueriesTest do
     end
   end
 
-
   defp contains(result, desired_user) do
     result |> Enum.find(fn user -> user.id == desired_user.id end)
   end

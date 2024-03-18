@@ -43,6 +43,7 @@ defmodule Lightning.UsageTracking.ProjectMetricsService do
 
   defp instrument_workflows(project, cleartext_enabled, date) do
     project.workflows
+    |> WorkflowMetricsService.find_eligible_workflows(date)
     |> Enum.map(fn workflow ->
       WorkflowMetricsService.generate_metrics(workflow, cleartext_enabled, date)
     end)

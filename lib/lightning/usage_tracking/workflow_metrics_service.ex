@@ -2,6 +2,11 @@ defmodule Lightning.UsageTracking.WorkflowMetricsService do
 
   alias Lightning.UsageTracking.RunService
 
+  def find_eligible_workflows(workflows, date) do
+    workflows
+    |> Enum.filter(fn workflow -> eligible_workflow?(workflow, date) end)
+  end
+
   def generate_metrics(workflow, cleartext_enabled, date) do
     runs = RunService.finished_runs(workflow.runs, date)
     steps = RunService.finished_steps(workflow.runs, date)
@@ -29,4 +34,30 @@ defmodule Lightning.UsageTracking.WorkflowMetricsService do
   end
 
   defp build_hash(uuid), do: Base.encode16(:crypto.hash(:sha256, uuid))
+
+  defp eligible_workflow?(%{deleted_at: nil, inserted_at: inserted_at}, date) do
+    # inserted_date = inserted_at |> DateTime.to_date()
+
+    if Date.compare(inserted_at, date) == :gt do
+      false
+    else
+      true
+    end
+  end
+
+  defp eligible_workflow?(
+    %{deleted_at: deleted_at, inserted_at: inserted_at},
+    date
+  ) do
+    # deleted_date = deleted_at |> DateTime.to_date()
+    # inserted_date = inserted_at |> DateTime.to_date()
+
+    if Date.compare(inserted_at, date) == :gt ||
+      Date.compare(deleted_at, date) != :gt
+      do
+      false
+    else
+      true
+    end
+  end
 end
