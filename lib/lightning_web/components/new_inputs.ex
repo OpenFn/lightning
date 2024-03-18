@@ -392,7 +392,10 @@ defmodule LightningWeb.Components.NewInputs do
 
   def icon(%{name: "hero-" <> _} = assigns) do
     ~H"""
-    <span class={[@naked && "text-gray-500 hover:text-primary-400", @name, @class]} {@rest} />
+    <span
+      class={[@naked && "text-gray-500 hover:text-primary-400", @name, @class]}
+      {@rest}
+    />
     """
   end
 end
