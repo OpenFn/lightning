@@ -188,6 +188,8 @@ LightningWeb.Plugs.WebhookAuth.html
 LightningWeb.ProfileLive.Edit.html
 LightningWeb.ProfileLive.FormComponent.html
 LightningWeb.ProfileLive.MfaComponent.html
+LightningWeb.ProjectLive.Collaborators.Collaborator.html
+LightningWeb.ProjectLive.Collaborators.html
 LightningWeb.ProjectLive.FormComponent.html
 LightningWeb.ProjectLive.Index.html
 LightningWeb.ProjectLive.MFARequired.html
@@ -263,8 +265,8 @@ dist/merriweather-latin-ext-300-normal-K6L27CZ5.woff2
 dist/merriweather-vietnamese-300-italic-EHHNZPUO.woff2
 dist/merriweather-vietnamese-300-normal-U376L4Z4.woff2
 dist/remixicon-NKANDIL5.woff2
-dist/search_data-07429E8B.js
-dist/sidebar_items-2F085411.js
+dist/search_data-F186CE0B.js
+dist/sidebar_items-C031828A.js
 index.html
 provisioning.html
 readme.html

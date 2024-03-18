@@ -7,7 +7,7 @@
     <meta name="generator" content="ExDoc v0.30.9">
     <meta name="project" content="Lightning v2.0.8">
 
-    <title>Lightning.Policies.Provisioning — Lightning v2.0.8</title>
+    <title>LightningWeb.ProjectLive.Collaborators.Collaborator — Lightning v2.0.8</title>
     <link rel="stylesheet" href="dist/html-elixir-XFYN5IVA.css" />
 
 
@@ -125,151 +125,18 @@ Pages
 </button>
 
 
-    <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/policies/provisioning.ex#L1" title="View Source" class="icon-action" rel="help">
+    <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/project_live/collaborators.ex#L11" title="View Source" class="icon-action" rel="help">
       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
       <span class="sr-only">View Source</span>
     </a>
 
-  <span translate="no">Lightning.Policies.Provisioning</span> 
+  <span translate="no">LightningWeb.ProjectLive.Collaborators.Collaborator</span> 
   <small class="app-vsn" translate="no">(Lightning v2.0.8)</small>
 
 </h1>
 
 
-  <section id="moduledoc">
-<p>The Bodyguard Policy module for users roles.</p>
-  </section>
 
-
-  <section id="summary" class="details-list">
-    <h1 class="section-heading">
-      <a class="hover-link" href="#summary">
-        <i class="ri-link-m" aria-hidden="true"></i>
-      </a>
-      <span class="text">Summary</span>
-    </h1>
-<div class="summary-types summary">
-  <h2>
-    <a href="#types">Types</a>
-  </h2>
-
-    <div class="summary-row">
-      <div class="summary-signature">
-        <a href="#t:actions/0" translate="no">actions()</a>
-
-      </div>
-
-    </div>
-
-</div>
-<div class="summary-functions summary">
-  <h2>
-    <a href="#functions">Functions</a>
-  </h2>
-
-    <div class="summary-row">
-      <div class="summary-signature">
-        <a href="#authorize/3" translate="no">authorize(arg1, user, project)</a>
-
-      </div>
-
-        <div class="summary-synopsis"><p>authorize/3 takes an action, a user, and a project. It checks the user's role
-for this project and returns <code class="inline">true</code> if the user can perform the action and
-false if they cannot.</p></div>
-
-    </div>
-
-</div>
-
-  </section>
-
-
-  <section id="types" class="details-list">
-    <h1 class="section-heading">
-      <a class="hover-link" href="#types">
-        <i class="ri-link-m" aria-hidden="true"></i>
-      </a>
-      <span class="text">Types</span>
-    </h1>
-    <div class="types-list">
-<section class="detail" id="t:actions/0">
-
-  <div class="detail-header">
-    <a href="#t:actions/0" class="detail-link" title="Link to this type">
-      <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this type</span>
-    </a>
-    <h1 class="signature" translate="no">actions()</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/policies/provisioning.ex#L11" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
-
-
-  </div>
-
-  <section class="docstring">
-
-      <div class="specs">
-
-          <pre translate="no"><span class="attribute">@type</span> actions() :: :provision_project</pre>
-
-      </div>
-
-
-  </section>
-</section>
-
-    </div>
-  </section>
-
-  <section id="functions" class="details-list">
-    <h1 class="section-heading">
-      <a class="hover-link" href="#functions">
-        <i class="ri-link-m" aria-hidden="true"></i>
-      </a>
-      <span class="text">Functions</span>
-    </h1>
-    <div class="functions-list">
-<section class="detail" id="authorize/3">
-
-  <div class="detail-header">
-    <a href="#authorize/3" class="detail-link" title="Link to this function">
-      <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
-    </a>
-    <h1 class="signature" translate="no">authorize(arg1, user, project)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/policies/provisioning.ex#L28" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
-
-
-  </div>
-
-  <section class="docstring">
-
-      <div class="specs">
-
-          <pre translate="no"><span class="attribute">@spec</span> authorize(
-  <a href="#t:actions/0">actions</a>(),
-  <a href="Lightning.Accounts.User.html#t:t/0">Lightning.Accounts.User.t</a>(),
-  <a href="Lightning.Projects.Project.html#t:t/0">Lightning.Projects.Project.t</a>()
-) :: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">boolean</a>()</pre>
-
-      </div>
-
-<p>authorize/3 takes an action, a user, and a project. It checks the user's role
-for this project and returns <code class="inline">true</code> if the user can perform the action and
-false if they cannot.</p><p>Note that permissions are grouped by action.</p><p>We deny by default, so if a user's role is not added to the allow roles list
-for a particular action they are denied.</p><p>Only a superuser can provision a new project.</p><p>Owners and admins can update existing projects.</p>
-  </section>
-</section>
-
-    </div>
-  </section>
 
       <footer class="footer">
         <p>
