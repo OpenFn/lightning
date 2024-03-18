@@ -259,14 +259,18 @@ defmodule LightningWeb.RunLive.Components do
         <div class="flex text-sm space-x-1 text-gray-900 items-center">
           <span><%= @step.job.name %></span>
           <%= unless @job_id == @step.job.id do %>
-            <.link navigate={
+            <.link
+              class="pl-1"
+              navigate={
                 ~p"/projects/#{@project_id}/w/#{@step.job.workflow_id}"
                   <> "?a=#{@run_id}&m=expand&s=#{@step.job_id}"
-              }>
+              }
+            >
               <.icon
+                naked
                 title="Inspect Step"
                 name="hero-document-magnifying-glass-mini"
-                class="h-5 w-5 hover:text-primary-400 items-center"
+                class="h-5 w-5"
               />
             </.link>
           <% end %>
@@ -430,13 +434,14 @@ defmodule LightningWeb.RunLive.Components do
               <.step_rerun_tag {assigns} />
             <% end %>
             <.link
-              class="hover:text-primary-400 cursor-pointer"
+              class="cursor-pointer"
               navigate={
                 ~p"/projects/#{@project_id}/w/#{@step.job.workflow_id}"
                   <> "?a=#{@run.id}&m=expand&s=#{@step.job_id}"
               }
             >
               <.icon
+                naked
                 name="hero-document-magnifying-glass-mini"
                 title="Inspect Step"
                 class="h-5 w-5"
@@ -483,7 +488,7 @@ defmodule LightningWeb.RunLive.Components do
         phx-value-step_id={@step.id}
         title="Rerun workflow from here"
       >
-        <.icon name="hero-play-circle-mini" class="h-5 w-5" />
+        <.icon naked name="hero-play-circle-mini" class="h-5 w-5" />
       </span>
     <% else %>
       <span

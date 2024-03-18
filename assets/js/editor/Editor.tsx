@@ -69,6 +69,10 @@ const defaultOptions: MonacoProps['options'] = {
   codeLens: false,
   wordBasedSuggestions: false,
 
+  fontFamily: 'Fira Code VF',
+  fontSize: 14,
+  fontLigatures: true,
+
   suggest: {
     showKeywords: false,
     showModules: false, // hides global this
