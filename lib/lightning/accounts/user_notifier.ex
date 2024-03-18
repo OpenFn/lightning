@@ -94,7 +94,7 @@ defmodule Lightning.Accounts.UserNotifier do
   def deliver_project_addition_notification(user, project) do
     role = Projects.get_project_user_role(user, project) |> Atom.to_string()
 
-    url = ~p"/projects/#{project.id}/w"
+    url = LightningWeb.RouteHelpers.project_dashboard_url(project.id)
 
     deliver(user.email, "Project #{project.name}", """
 
