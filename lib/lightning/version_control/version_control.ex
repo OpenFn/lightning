@@ -9,9 +9,13 @@ defmodule Lightning.VersionControl do
   import Ecto.Query, warn: false
 
   alias Lightning.Repo
+  alias Lightning.Accounts.User
+  alias Lightning.VersionControl.Events
   alias Lightning.VersionControl.GithubClient
   alias Lightning.VersionControl.GithubError
   alias Lightning.VersionControl.ProjectRepoConnection
+
+  defdelegate subscribe(user), to: Events
 
   @doc """
   Creates a connection between a project and a github repo
@@ -120,6 +124,75 @@ defmodule Lightning.VersionControl do
         repo_connection.repo,
         user_name
       )
+    end
+  end
+
+  def fetch_github_oauth_token(code) do
+    app_config = Application.fetch_env!(:lightning, :github_app)
+
+    query_params = [
+      client_id: app_config[:client_id],
+      client_secret: app_config[:client_secret],
+      code: code
+    ]
+
+    response =
+      Tesla.post(
+        Tesla.client([Tesla.Middleware.JSON]),
+        "https://github.com/login/oauth/access_token",
+        %{},
+        query: query_params,
+        headers: [{"accept", "application/vnd.github+json"}]
+      )
+
+    case response do
+      {:ok, %{body: %{"access_token" => _} = body}} ->
+        {:ok, body}
+
+      {:ok, %{body: body}} ->
+        {:error, body}
+
+      other ->
+        other
+    end
+  end
+
+  def save_github_oauth_token(%User{} = user, token) do
+    token =
+      token
+      |> maybe_add_access_token_expiry_date()
+      |> maybe_add_refresh_token_expiry_date()
+
+    user
+    |> User.github_token_changeset(%{github_oauth_token: token})
+    |> Repo.update()
+    |> tap(fn
+      {:ok, user} ->
+        Events.oauth_token_added(user)
+
+      _other ->
+        :ok
+    end)
+  end
+
+  defp maybe_add_access_token_expiry_date(token) do
+    if expires_in = token["expires_in"] do
+      Map.merge(token, %{
+        "expires_at" => DateTime.utc_now() |> DateTime.add(expires_in)
+      })
+    else
+      token
+    end
+  end
+
+  defp maybe_add_refresh_token_expiry_date(token) do
+    if expires_in = token["refresh_token_expires_in"] do
+      Map.merge(token, %{
+        "refresh_token_expires_at" =>
+          DateTime.utc_now() |> DateTime.add(expires_in)
+      })
+    else
+      token
     end
   end
 

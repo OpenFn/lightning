@@ -3,14 +3,13 @@ defmodule LightningWeb.ProfileLive.Edit do
   LiveView for user profile page.
   """
   use LightningWeb, :live_view
-  alias LightningWeb.OauthCredentialHelper
+  alias Lightning.VersionControl
 
   on_mount {LightningWeb.Hooks, :assign_projects}
 
   @impl true
   def mount(_params, _session, socket) do
-    # for github oauth setup
-    OauthCredentialHelper.subscribe("profile:#{socket.assigns.current_user.id}")
+    VersionControl.subscribe(socket.assigns.current_user)
     {:ok, socket |> assign(:active_menu_item, :profile)}
   end
 
@@ -24,9 +23,27 @@ defmodule LightningWeb.ProfileLive.Edit do
      )}
   end
 
-  def handle_info({:forward, mod, opts}, socket) do
-    send_update(mod, opts)
-    {:noreply, socket}
+  @impl true
+  def handle_info(
+        %Lightning.VersionControl.Events.OauthTokenAdded{user: user},
+        socket
+      ) do
+    {:noreply,
+     socket
+     |> assign(current_user: user)
+     |> put_flash(:info, "Github account linked successfully")}
+  end
+
+  def handle_info(
+        %Lightning.VersionControl.Events.OauthTokenFailed{},
+        socket
+      ) do
+    {:noreply,
+     socket
+     |> put_flash(
+       :error,
+       "Oops! Github account failed to link. Please try again"
+     )}
   end
 
   defp apply_action(socket, :edit, _params) do

@@ -263,6 +263,12 @@ defmodule Lightning.Accounts.User do
     change(user, confirmed_at: now)
   end
 
+  def github_token_changeset(user, attrs) do
+    user
+    |> cast(attrs, [:github_oauth_token])
+    |> validate_required([:github_oauth_token])
+  end
+
   @doc """
   Verifies the password.
 

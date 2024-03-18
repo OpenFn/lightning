@@ -3,15 +3,10 @@ defmodule LightningWeb.ProfileLive.GithubComponent do
   Component to enable MFA on a User's account
   """
   use LightningWeb, :live_component
-  alias LightningWeb.OauthCredentialHelper
 
   @impl true
   def update(%{user: _user} = assigns, socket) do
     {:ok, assign(socket, assigns)}
-  end
-
-  def update(%{code: code}, socket) do
-    {:ok, socket}
   end
 
   @impl true
@@ -35,7 +30,7 @@ defmodule LightningWeb.ProfileLive.GithubComponent do
             <.button>Disconnect from Github</.button>
           <% else %>
             <.link
-              href={"https://github.com/login/oauth/authorize" <> build_query_params(@socket, assigns)}
+              href={"https://github.com/login/oauth/authorize?" <> build_query_params(@socket)}
               target="_blank"
               class="text-center py-2 px-4 shadow-sm text-sm font-medium rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 bg-primary-600 hover:bg-primary-700 text-white"
             >
@@ -48,22 +43,14 @@ defmodule LightningWeb.ProfileLive.GithubComponent do
     """
   end
 
-  defp build_query_params(socket, assigns) do
-    state =
-      OauthCredentialHelper.build_state(
-        "profile:#{assigns.user.id}",
-        __MODULE__,
-        assigns.id
-      )
-
+  defp build_query_params(socket) do
     client_id =
       Application.get_env(:lightning, :github_app, [])
       |> Keyword.get(:client_id, nil)
 
-    redirect_url = Routes.oidc_url(socket, :new)
+    redirect_url = Routes.oauth_url(socket, :new, "github")
 
-    params =
-      %{state: state, client_id: client_id, redirect_uri: redirect_url} |> dbg()
+    params = %{client_id: client_id, redirect_uri: redirect_url}
 
     Plug.Conn.Query.encode(params)
   end
