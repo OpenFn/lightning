@@ -275,6 +275,36 @@ export default function Editor({
   }, [monaco, metadata]);
 
   useEffect(() => {
+    if (monaco) {
+      monaco.editor.defineTheme('default', {
+        base: 'vs-dark',
+        inherit: true,
+        rules: [
+          {
+            background: '#334155',
+            token: '',
+          },
+        ],
+        colors: {
+          'editor.foreground': '#E2E8F0',
+          'editor.background': '#334155', // slate-600
+          // 'editor.background': '#24292e',
+          // 'editor.selectionBackground': '#4c2889',
+          // 'editor.inactiveSelectionBackground': '#444d56',
+          // 'editor.lineHighlightBackground': '#94A3B8',
+          'editor.lineHighlightBackground': '#475569', // slate-600
+          // 'editorCursor.foreground': '#ffffff',
+          // 'editorWhitespace.foreground': '#6a737d',
+          // 'editorIndentGuide.background': '#6a737d',
+          // 'editorIndentGuide.activeBackground': '#f6f8fa',
+          // 'editor.selectionHighlightBorder': '#444d56',
+        },
+      });
+      monaco.editor.setTheme('default');
+    }
+  });
+
+  useEffect(() => {
     // Create a node to hold overflow widgets
     // This needs to be at the top level so that tooltips clip over Lightning UIs
     const overflowNode = document.createElement('div');
@@ -323,7 +353,7 @@ export default function Editor({
       </div>
       <Monaco
         defaultLanguage="javascript"
-        theme="vs-dark"
+        theme="default"
         defaultPath="/job.js"
         value={source || DEFAULT_TEXT}
         options={options}
