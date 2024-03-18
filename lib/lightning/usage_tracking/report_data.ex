@@ -31,6 +31,7 @@ defmodule Lightning.UsageTracking.ReportData do
       generated_at: DateTime.utc_now(),
       instance: instrument_instance(configuration, cleartext_enabled, date),
       projects: instrument_projects(cleartext_enabled, date),
+      report_date: date,
       version: "2"
     }
   end

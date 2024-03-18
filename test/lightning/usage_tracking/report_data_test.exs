@@ -362,6 +362,15 @@ defmodule Lightning.UsageTracking.ReportDataTest do
     } do
       assert %{version: "2"} = ReportData.generate(report_config, enabled, date)
     end
+
+    test "indicates the applicable report date", %{
+      cleartext_enabled: enabled,
+      config: report_config,
+      date: date
+    } do
+      assert %{report_date: ^date} =
+        ReportData.generate(report_config, enabled, date)
+    end
   end
 
   describe ".generate/3 - cleartext uuids enabled" do
@@ -561,6 +570,15 @@ defmodule Lightning.UsageTracking.ReportDataTest do
       date: date
     } do
       assert %{version: "2"} = ReportData.generate(report_config, enabled, date)
+    end
+
+    test "indicates the applicable report date", %{
+      cleartext_enabled: enabled,
+      config: report_config,
+      date: date
+    } do
+      assert %{report_date: ^date} =
+        ReportData.generate(report_config, enabled, date)
     end
   end
 
