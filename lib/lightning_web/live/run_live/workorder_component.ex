@@ -209,13 +209,21 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
           class="py-1 px-4 text-sm font-normal text-left rtl:text-right text-gray-500"
           role="cell"
         >
-          <.timestamp timestamp={@work_order.inserted_at} style={:wrapped} />
+          <.timestamp
+            tooltip_prefix="Work order received at"
+            timestamp={@work_order.inserted_at}
+            style={:wrapped}
+          />
         </div>
         <div
           class="py-1 px-4 text-sm font-normal text-left rtl:text-right text-gray-500"
           role="cell"
         >
-          <.timestamp timestamp={@work_order.last_activity} style={:wrapped} />
+          <.timestamp
+            tooltip_prefix="Last activity for this work order at"
+            timestamp={@work_order.last_activity}
+            style={:wrapped}
+          />
         </div>
         <div
           class="py-1 px-4 text-sm font-normal text-left rtl:text-right text-gray-500"
@@ -273,13 +281,29 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
                 <div role="columnheader" class="col-span-2 px-4">
                   <%= case run.state do %>
                     <% :available -> %>
-                      enqueued @ <.timestamp timestamp={run.inserted_at} />
+                      enqueued @
+                      <.timestamp
+                        tooltip_prefix="Run created at"
+                        timestamp={run.inserted_at}
+                      />
                     <% :claimed -> %>
-                      claimed @ <.timestamp timestamp={run.claimed_at} />
+                      claimed @
+                      <.timestamp
+                        tooltip_prefix="Run claimed by worker at"
+                        timestamp={run.claimed_at}
+                      />
                     <% :started -> %>
-                      started @ <.timestamp timestamp={run.started_at} />
+                      started @
+                      <.timestamp
+                        tooltip_prefix="Run started at"
+                        timestamp={run.started_at}
+                      />
                     <% _state -> %>
-                      finished @ <.timestamp timestamp={run.finished_at} />
+                      finished @
+                      <.timestamp
+                        tooltip_prefix="Run finished at"
+                        timestamp={run.finished_at}
+                      />
                   <% end %>
                 </div>
                 <div role="columnheader" class="ml-3 col-span-1 px-4">
