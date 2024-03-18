@@ -34,6 +34,9 @@ and this project adheres to
 
 ### Fixed
 
+- Verify only stale project credentials
+  [#1861](https://github.com/OpenFn/lightning/issues/1861)
+
 ## [v2.0.8] - 2024-02-29
 
 ### Fixed
