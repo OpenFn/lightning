@@ -32,15 +32,15 @@
               </Settings.menu_item>
             <% end %>
           <% else %>
-            <Settings.menu_item to={"mailto:" <> Application.get_env(:lightning, :email_addresses)[:admin]}>
+            <Settings.menu_item href="https://docs.openfn.org">
               <Heroicons.book_open mini class="h-5 w-5 inline-block mr-2" />
               <span class="inline-block align-middle">Documentation</span>
             </Settings.menu_item>
-            <Settings.menu_item to="https://docs.openfn.org">
+            <Settings.menu_item href="https://community.openfn.org">
               <Heroicons.user_group mini class="h-5 w-5 inline-block mr-2" />
               <span class="inline-block align-middle">Community</span>
             </Settings.menu_item>
-            <Settings.menu_item to="https://community.openfn.org">
+            <Settings.menu_item href={"mailto:" <> Application.get_env(:lightning, :email_addresses)[:admin]}>
               <Heroicons.lifebuoy mini class="h-5 w-5 inline-block mr-2" />
               <span class="inline-block align-middle">Support</span>
             </Settings.menu_item>
