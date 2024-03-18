@@ -105,9 +105,10 @@
             id="save_collaborators_button"
             type="submit"
             phx-disable-with="Adding..."
+            disabled={!@changeset.valid?}
           >
             Save Collaborator<%= if(Enum.count(f[:collaborators].value) > 1,
-              do: "(s)"
+              do: "s"
             ) %>
           </.button>
           <button
