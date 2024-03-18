@@ -90,6 +90,7 @@ defmodule Lightning.UsageTracking.ReportData do
       from p in Project,
         preload: [:users, [workflows: [:jobs, runs: [:steps]]]]
     )
+    Usagetracking
     |> Enum.map(&instrument_project(&1, cleartext_enabled))
   end
 
