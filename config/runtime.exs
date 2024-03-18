@@ -1,4 +1,5 @@
 import Config
+import Dotenvy
 
 # config/runtime.exs is executed for all environments, including
 # during releases. It is executed after compilation and before the
@@ -8,10 +9,13 @@ import Config
 
 # Use Vapor to load configuration from environment variables, files, etc.
 # Then merge the resulting configuration into the Application config.
-env_config = Vapor.load!(Lightning.Env)
 
-env_config
-|> Enum.each(fn {k, v} -> config(:lightning, k, v |> Enum.into([])) end)
+source!([
+  ".env",
+  ".#{config_env()}.env",
+  ".#{config_env()}.override.env",
+  System.get_env()
+])
 
 # Start the phoenix server if environment is set and running in a release
 if System.get_env("PHX_SERVER") && System.get_env("RELEASE_NAME") do
@@ -75,6 +79,38 @@ if start_rtm = System.get_env("RTM") do
   config :lightning, Lightning.Runtime.RuntimeManager,
     start: start_rtm |> String.to_existing_atom()
 end
+
+config :lightning, :workers,
+  private_key:
+    env!(
+      "WORKER_RUNS_PRIVATE_KEY",
+      fn encoded ->
+        encoded
+        |> Base.decode64(padding: false)
+        |> case do
+          {:ok, pem} -> pem
+          :error -> raise "Could not decode PEM"
+        end
+      end,
+      Application.get_env(:lightning, :workers, []) |> Keyword.get(:private_key)
+    )
+    |> tap(fn v ->
+      unless v do
+        raise "No worker private key found, please set WORKER_RUNS_PRIVATE_KEY"
+      end
+    end),
+  worker_secret:
+    env!(
+      "WORKER_SECRET",
+      :string!,
+      Application.get_env(:lightning, :workers, [])
+      |> Keyword.get(:worker_secret)
+    )
+    |> tap(fn v ->
+      unless v do
+        raise "No worker secret found, please set WORKER_SECRET"
+      end
+    end)
 
 image_tag = System.get_env("IMAGE_TAG")
 branch = System.get_env("BRANCH")
@@ -269,7 +305,6 @@ if config_env() == :prod do
       nil -> true
       str -> String.split(str, ",")
     end
-    |> IO.inspect()
 
   config :lightning, LightningWeb.Endpoint,
     url: [host: host, port: url_port, scheme: url_scheme],
