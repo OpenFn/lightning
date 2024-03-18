@@ -10,6 +10,7 @@ defmodule Lightning.UsageTracking.Report do
     field :data, :map
     field :submitted, :boolean
     field :submitted_at, :utc_datetime_usec
+    field :report_date, :date
 
     timestamps()
   end

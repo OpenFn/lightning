@@ -10,14 +10,12 @@ defmodule Lightning.UsageTracking.DayWorker do
   alias Lightning.UsageTracking
 
   @impl Oban.Worker
-  def perform(_opts) do
-    env = Application.get_env(:lightning, :usage_tracking)
-
-    if env[:enabled] do
-      UsageTracking.enable_daily_report(DateTime.utc_now())
-    else
-      UsageTracking.disable_daily_report()
-    end
+  def perform(%{args: %{"batch_size" => batch_size}}) do
+    UsageTracking.enqueue_reports(
+      Application.get_env(:lightning, :usage_tracking)[:enabled],
+      DateTime.utc_now(),
+      batch_size
+    )
 
     :ok
   end
