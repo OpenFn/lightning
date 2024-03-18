@@ -29,6 +29,8 @@ and this project adheres to
   [#1873](https://github.com/OpenFn/lightning/issues/1873)
 - Adds ability to add project collaborators from existing users
   [#1836](https://github.com/OpenFn/lightning/issues/1836)
+- Added ability to remove project collaborators
+  [#1837](https://github.com/OpenFn/lightning/issues/1837)
 
 ### Changed
 

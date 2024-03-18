@@ -210,6 +210,11 @@ defmodule Lightning.Projects do
     |> Repo.update()
   end
 
+  @spec delete_project_user!(ProjectUser.t()) :: ProjectUser.t()
+  def delete_project_user!(%ProjectUser{} = project_user) do
+    Repo.delete!(project_user)
+  end
+
   @doc """
   Deletes a project and its related data, including workflows, work orders,
   steps, jobs, runs, triggers, project users, project credentials, and dataclips
