@@ -6,10 +6,6 @@ defmodule Lightning.UsageTracking.ReportDataTest do
   alias Lightning.UsageTracking.Configuration
   alias Lightning.UsageTracking.ReportData
 
-  def setup do
-    %{config: Repo.insert!(%Configuration{})}
-  end
-
   describe ".generate/2 - cleartext uuids disabled" do
     setup [:setup_config, :setup_cleartext_uuids_disabled]
 

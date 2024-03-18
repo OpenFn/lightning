@@ -18,9 +18,11 @@ if System.get_env("PHX_SERVER") && System.get_env("RELEASE_NAME") do
   config :lightning, LightningWeb.Endpoint, server: true
 end
 
-config :lightning,
-       :is_resettable_demo,
-       System.get_env("IS_RESETTABLE_DEMO") == "yes"
+if is_resettable_demo = System.get_env("IS_RESETTABLE_DEMO") do
+  config :lightning,
+         :is_resettable_demo,
+         is_resettable_demo == "yes"
+end
 
 decoded_cert =
   System.get_env("GITHUB_CERT")
@@ -63,8 +65,15 @@ config :lightning, :github_app,
   app_id: github_app_id,
   app_name: github_app_name
 
-if System.get_env("RTM") == "false" do
-  config :lightning, Lightning.Runtime.RuntimeManager, start: false
+if start_rtm = System.get_env("RTM") do
+  unless start_rtm in ["true", "false"] do
+    raise """
+    Expected `RTM` value to either be "true" or "false".
+    """
+  end
+
+  config :lightning, Lightning.Runtime.RuntimeManager,
+    start: start_rtm |> String.to_existing_atom()
 end
 
 image_tag = System.get_env("IMAGE_TAG")
@@ -97,6 +106,11 @@ config :lightning,
     System.get_env("SCHEMAS_PATH") ||
       Application.get_env(:lightning, :schemas_path) || "./priv"
 
+config :lightning,
+       :purge_deleted_after_days,
+       System.get_env("PURGE_DELETED_AFTER_DAYS", "7")
+       |> String.to_integer()
+
 base_oban_cron = [
   {"* * * * *", Lightning.Workflows.Scheduler},
   {"* * * * *", ObanPruner},
@@ -109,7 +123,7 @@ base_oban_cron = [
 ]
 
 purge_cron =
-  if System.get_env("PURGE_DELETED_AFTER_DAYS") != "0",
+  if Application.get_env(:lightning, :purge_deleted_after_days) > 0,
     do: [
       {"0 2 * * *", Lightning.WebhookAuthMethods,
        args: %{"type" => "purge_deleted"}},
@@ -150,11 +164,6 @@ if System.get_env("PLAUSIBLE_SRC"),
     )
 
 config :lightning,
-       :purge_deleted_after_days,
-       System.get_env("PURGE_DELETED_AFTER_DAYS", "7")
-       |> String.to_integer()
-
-config :lightning,
        :max_run_duration_seconds,
        System.get_env("WORKER_MAX_RUN_DURATION_SECONDS", "60")
        |> String.to_integer()
@@ -173,7 +182,7 @@ config :lightning,
 config :lightning,
        :init_project_for_new_user,
        System.get_env("INIT_PROJECT_FOR_NEW_USER", "false")
-       |> String.to_atom()
+       |> String.to_existing_atom()
 
 # To actually send emails you need to configure the mailer to use a real
 # adapter. You may configure the swoosh api client of your choice. We
@@ -211,13 +220,17 @@ if log_level = System.get_env("LOG_LEVEL") do
   end
 end
 
+database_url = System.get_env("DATABASE_URL")
+
+config :lightning, Lightning.Repo, url: database_url
+
 if config_env() == :prod do
-  database_url =
-    System.get_env("DATABASE_URL") ||
-      raise """
-      environment variable DATABASE_URL is missing.
-      For example: ecto://USER:PASS@HOST/DATABASE
-      """
+  unless database_url do
+    raise """
+    environment variable DATABASE_URL is missing.
+    For example: ecto://USER:PASS@HOST/DATABASE
+    """
+  end
 
   maybe_ipv6 = if System.get_env("ECTO_IPV6"), do: [:inet6], else: []
   enforce_repo_ssl = System.get_env("DISABLE_DB_SSL") != "true"
@@ -243,7 +256,7 @@ if config_env() == :prod do
       """
 
   host = System.get_env("URL_HOST") || "example.com"
-  port = String.to_integer(System.get_env("PORT") || "4000")
+  port = String.to_integer(System.get_env("PORT", "4000"))
 
   listen_address =
     System.get_env("LISTEN_ADDRESS", "127.0.0.1")
@@ -256,6 +269,7 @@ if config_env() == :prod do
       nil -> true
       str -> String.split(str, ",")
     end
+    |> IO.inspect()
 
   config :lightning, LightningWeb.Endpoint,
     url: [host: host, port: url_port, scheme: url_scheme],
