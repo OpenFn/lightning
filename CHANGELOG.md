@@ -17,6 +17,14 @@ and this project adheres to
 
 ### Added
 
+### Changed
+
+### Fixed
+
+## [v2.0.9] - 2024-03-19
+
+### Added
+
 - Support for smaller screens on history and inspector.
   [#1908](https://github.com/OpenFn/lightning/issues/1908)
 - Polling metric to track number of available runs.
