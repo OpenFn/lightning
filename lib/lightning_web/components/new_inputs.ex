@@ -383,15 +383,19 @@ defmodule LightningWeb.Components.NewInputs do
   ## Examples
 
       <.icon name="hero-x-mark-solid" />
-      <.icon name="hero-arrow-path" class="ml-1 w-3 h-3 animate-spin" />
+      <.icon name="hero-play-circle" class="ml-1 w-3 h-3 animate-spin" />
   """
   attr :name, :string, required: true
   attr :class, :string, default: nil
+  attr :naked, :boolean, default: false
   attr :rest, :global
 
   def icon(%{name: "hero-" <> _} = assigns) do
     ~H"""
-    <span class={[@name, @class]} {@rest} />
+    <span
+      class={[@naked && "text-gray-500 hover:text-primary-400", @name, @class]}
+      {@rest}
+    />
     """
   end
 end

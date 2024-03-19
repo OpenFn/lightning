@@ -47,7 +47,9 @@ defmodule LightningWeb.JobLive.JobBuilderComponents do
             </path>
           </svg>
         </div>
-        <span class="inline-block align-middle">Loading...</span>
+        <span class="inline-block align-middle">
+          Loading...
+        </span>
       </div>
     </div>
     """

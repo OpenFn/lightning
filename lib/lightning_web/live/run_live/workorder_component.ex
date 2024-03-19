@@ -100,7 +100,7 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
       role="rowgroup"
       class={if @entry_selected, do: "bg-gray-50", else: "bg-white"}
     >
-      <div role="row" class="grid grid-cols-8 items-center">
+      <div role="row" class="grid grid-cols-6 items-center">
         <div
           role="cell"
           class="col-span-3 py-1 px-4 text-sm font-normal text-left rtl:text-right text-gray-500"
@@ -183,13 +183,18 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
                 <%= @workflow_name %>
               </h1>
               <span class="mt-2 text-gray-700">
-                <span
-                  title={@work_order.id}
-                  class="font-normal text-xs whitespace-nowrap text-ellipsis
-                    rounded-md font-mono inline-block"
-                >
-                  <%= display_short_uuid(@work_order.id) %>
-                </span>
+                <.link navigate={
+                  ~p"/projects/#{@work_order.workflow.project_id}/history?filters[workorder_id]=#{@work_order.id}"
+                }>
+                  <span
+                    title={@work_order.id}
+                    class="font-normal text-xs whitespace-nowrap text-ellipsis
+                rounded-md font-mono text-indigo-400 hover:underline inline-block
+                underline-offset-2 hover:text-indigo-500"
+                  >
+                    <%= display_short_uuid(@work_order.id) %>
+                  </span>
+                </.link>
                 &bull;
                 <.workorder_dataclip_link
                   work_order={@work_order}
@@ -204,25 +209,21 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
           class="py-1 px-4 text-sm font-normal text-left rtl:text-right text-gray-500"
           role="cell"
         >
-          <.timestamp timestamp={@work_order.inserted_at} style={:wrapped} />
+          <.timestamp
+            tooltip_prefix="Work order received at"
+            timestamp={@work_order.inserted_at}
+            style={:wrapped}
+          />
         </div>
         <div
           class="py-1 px-4 text-sm font-normal text-left rtl:text-right text-gray-500"
           role="cell"
         >
-          <.timestamp timestamp={@work_order.last_activity} style={:wrapped} />
-        </div>
-        <div
-          class="py-1 px-4 text-sm font-normal text-left rtl:text-right text-gray-500"
-          role="cell"
-        >
-          --
-        </div>
-        <div
-          class="py-1 px-4 text-sm font-normal text-left rtl:text-right text-gray-500"
-          role="cell"
-        >
-          --
+          <.timestamp
+            tooltip_prefix="Last activity for this work order at"
+            timestamp={@work_order.last_activity}
+            style={:wrapped}
+          />
         </div>
         <div
           class="py-1 px-4 text-sm font-normal text-left rtl:text-right text-gray-500"
@@ -232,18 +233,21 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
         </div>
       </div>
       <%= if @show_details do %>
-        <%= for {run, index} <- @runs |> Enum.reverse() |> Enum.with_index(1) |> Enum.reverse() do %>
-          <div
-            id={"run_#{run.id}"}
-            class={
-              if index != Enum.count(@runs) and !@show_prev_runs,
-                do: "hidden",
-                else: ""
-            }
-          >
-            <div>
-              <div class="flex gap-1 items-center bg-gray-200 pl-28 text-xs py-2">
-                <div>
+        <div class="flex flex-col bg-gray-100 gap-3 p-3">
+          <%= for {run, index} <- @runs |> Enum.reverse() |> Enum.with_index(1) |> Enum.reverse() do %>
+            <div
+              id={"run_#{run.id}"}
+              class={
+                if index != Enum.count(@runs) and !@show_prev_runs,
+                  do: "hidden",
+                  else: "outline outline-2 outline-gray-300 rounded"
+              }
+            >
+              <div
+                class="flex bg-gray-200 text-xs py-2 grid grid-cols-6"
+                role="rowgroup"
+              >
+                <div role="columnheader" class="col-span-3 pl-4">
                   Run
                   <.link navigate={~p"/projects/#{@project.id}/runs/#{run.id}"}>
                     <span
@@ -273,28 +277,48 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
                       </span>
                     <% end %>
                   <% end %>
+                </div>
+                <div role="columnheader" class="col-span-2 px-4">
                   <%= case run.state do %>
                     <% :available -> %>
-                      enqueued @ <.timestamp timestamp={run.inserted_at} />
+                      enqueued @
+                      <.timestamp
+                        tooltip_prefix="Run created at"
+                        timestamp={run.inserted_at}
+                      />
                     <% :claimed -> %>
-                      claimed @ <.timestamp timestamp={run.claimed_at} />
+                      claimed @
+                      <.timestamp
+                        tooltip_prefix="Run claimed by worker at"
+                        timestamp={run.claimed_at}
+                      />
                     <% :started -> %>
-                      started @ <.timestamp timestamp={run.started_at} />
+                      started @
+                      <.timestamp
+                        tooltip_prefix="Run started at"
+                        timestamp={run.started_at}
+                      />
                     <% _state -> %>
-                      <%= run.state %> @ <.timestamp timestamp={run.finished_at} />
+                      finished @
+                      <.timestamp
+                        tooltip_prefix="Run finished at"
+                        timestamp={run.finished_at}
+                      />
                   <% end %>
                 </div>
+                <div role="columnheader" class="ml-3 col-span-1 px-4">
+                  <%= run.state %>
+                </div>
               </div>
+              <.run_item
+                can_edit_data_retention={@can_edit_data_retention}
+                can_run_workflow={@can_run_workflow}
+                run={run}
+                project={@project}
+              />
             </div>
-
-            <.run_item
-              can_edit_data_retention={@can_edit_data_retention}
-              can_run_workflow={@can_run_workflow}
-              run={run}
-              project={@project}
-            />
-          </div>
-        <% end %>
+          <% end %>
+        </div>
       <% end %>
     </div>
     """
@@ -312,7 +336,7 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
         <span
           title={@work_order.dataclip_id}
           class="font-normal text-xs whitespace-nowrap text-ellipsis
-                p-1 rounded-md font-mono text-indigo-400 hover:underline
+                rounded-md font-mono text-indigo-400 hover:underline
                 underline-offset-2 hover:text-indigo-500"
         >
           <%= display_short_uuid(@work_order.dataclip_id) %>
