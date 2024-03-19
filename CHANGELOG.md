@@ -41,6 +41,8 @@ and this project adheres to
   [#1836](https://github.com/OpenFn/lightning/issues/1836)
 - Added ability to remove project collaborators
   [#1837](https://github.com/OpenFn/lightning/issues/1837)
+- TSVector index to log_lines, and gin index to dataclips
+  [#1898](https://github.com/OpenFn/lightning/issues/1898)
 
 ### Changed
 
