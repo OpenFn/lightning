@@ -557,7 +557,7 @@ defmodule Lightning.UsageTrackingTest do
     end
   end
 
-  describe "find_enabled_daily_report_config/0" do
+  describe ".find_enabled_daily_report_config/0" do
     test "returns existing config if it is enabled" do
       expected_config = UsageTracking.enable_daily_report(DateTime.utc_now())
 
@@ -576,5 +576,36 @@ defmodule Lightning.UsageTrackingTest do
     test "returns nil if the config does not exist" do
       assert UsageTracking.find_enabled_daily_report_config() == nil
     end
+  end
+
+  describe ".find_eligible_projects" do
+    setup do
+      %{date: ~D[2024-02-05]}
+    end
+
+    test "returns all projects created before the date", %{date: date} do
+      eligible_project_1 =
+        insert(:project, inserted_at: ~U[2024-02-05 23:59:58Z])
+
+      eligible_project_2 =
+        insert(:project, inserted_at: ~U[2024-02-04 23:59:59Z])
+
+      ineligible_project_1 =
+        insert(:project, inserted_at: ~U[2024-02-06 00:00:00Z])
+
+      ineligible_project_2 =
+        insert(:project, inserted_at: ~U[2024-02-06 00:00:01Z])
+
+      result = UsageTracking.find_eligible_projects(date)
+
+      assert result |> contains?(eligible_project_1)
+      assert result |> contains?(eligible_project_2)
+      refute result |> contains?(ineligible_project_1)
+      refute result |> contains?(ineligible_project_2)
+    end
+  end
+
+  defp contains?(result, desired_project) do
+    result |> Enum.find(fn project -> project.id == desired_project.id end)
   end
 end

@@ -4,6 +4,7 @@ defmodule Lightning.UsageTracking do
   """
   import Ecto.Query
 
+  alias Lightning.Projects.Project
   alias Lightning.Repo
   alias Lightning.UsageTracking.DailyReportConfiguration
   alias Lightning.UsageTracking.Report
@@ -158,5 +159,22 @@ defmodule Lightning.UsageTracking do
       %{tracking_enabled_at: nil} -> nil
       possible_config -> possible_config
     end
+  end
+
+  def find_eligible_projects(date) do
+    report_time = report_date_as_time(date)
+
+    query =
+      from p in Project,
+        where: p.inserted_at <= ^report_time,
+        preload: [:users, [workflows: [:jobs, runs: [steps: [:job]]]]]
+
+    query |> Repo.all()
+  end
+
+  defp report_date_as_time(date) do
+    {:ok, datetime, _offset} = "#{date}T23:59:59Z" |> DateTime.from_iso8601()
+
+    datetime
   end
 end
