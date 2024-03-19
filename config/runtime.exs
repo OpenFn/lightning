@@ -170,10 +170,10 @@ purge_cron =
     ],
     else: []
 
-usage_tracking_daily_batch_size = 
+usage_tracking_daily_batch_size =
   "USAGE_TRACKING_DAILY_BATCH_SIZE"
   |> System.get_env("50")
-  |> String.to_integer
+  |> String.to_integer()
 
 usage_tracking_cron = [
   {
