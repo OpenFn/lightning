@@ -483,7 +483,7 @@ defmodule Lightning.Invocation do
       :body, dynamic ->
         dynamic(
           [input_dataclip: dataclip],
-          ^dynamic or ilike(type(dataclip.body, :string), ^"%#{search_term}%")
+          ^dynamic or like(type(dataclip.body, :string), ^"%#{search_term}%")
         )
 
       :id, dynamic ->
