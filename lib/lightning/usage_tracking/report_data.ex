@@ -17,14 +17,14 @@ defmodule Lightning.UsageTracking.ReportData do
 
   @lightning_version Lightning.MixProject.project()[:version]
 
-  def generate(configuration, cleartext_enabled) do
-    %{
-      generated_at: DateTime.utc_now(),
-      instance: instrument_instance(configuration, cleartext_enabled),
-      projects: instrument_projects(cleartext_enabled),
-      version: "1"
-    }
-  end
+  # def generate(configuration, cleartext_enabled) do
+  #   %{
+  #     generated_at: DateTime.utc_now(),
+  #     instance: instrument_instance(configuration, cleartext_enabled),
+  #     projects: instrument_projects(cleartext_enabled),
+  #     version: "1"
+  #   }
+  # end
 
   def generate(configuration, cleartext_enabled, date) do
     %{
