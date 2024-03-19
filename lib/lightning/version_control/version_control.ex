@@ -8,8 +8,8 @@ defmodule Lightning.VersionControl do
 
   import Ecto.Query, warn: false
 
-  alias Lightning.Repo
   alias Lightning.Accounts.User
+  alias Lightning.Repo
   alias Lightning.VersionControl.Events
   alias Lightning.VersionControl.GithubClient
   alias Lightning.VersionControl.GithubError
