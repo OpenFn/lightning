@@ -19,6 +19,9 @@ and this project adheres to
 
 ### Changed
 
+- Replace v1 usage tracking with v2 usage tracking.
+  [#1853](https://github.com/OpenFn/lightning/issues/1853)
+
 ### Fixed
 
 ## [v2.0.10]
@@ -48,6 +51,8 @@ and this project adheres to
   [#1836](https://github.com/OpenFn/lightning/issues/1836)
 - Added ability to remove project collaborators
   [#1837](https://github.com/OpenFn/lightning/issues/1837)
+- Added new usage tracking submission code.
+  [#1853](https://github.com/OpenFn/lightning/issues/1853)
 
 ### Changed
 
