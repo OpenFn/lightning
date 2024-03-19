@@ -275,6 +275,8 @@ defmodule Lightning.VersionControl do
     ])
   end
 
+  @spec save_oauth_token(User.t(), map(), notify: boolean()) ::
+          {:ok, User.t()} | {:error, Ecto.Changeset.t()}
   def save_oauth_token(%User{} = user, token, opts \\ [notify: true]) do
     token =
       token

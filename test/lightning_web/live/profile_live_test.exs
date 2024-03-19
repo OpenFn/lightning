@@ -402,6 +402,46 @@ defmodule LightningWeb.ProfileLiveTest do
       refute has_element?(view, "#disconnect-github-button")
     end
 
+    test "users see option to reconnect if the refresh token has expired", %{
+      conn: conn,
+      user: user
+    } do
+      # active refresh token
+      expired_token = %{
+        "access_token" => "access-token",
+        "refresh_token" => "refresh-token",
+        "expires_at" => DateTime.utc_now() |> DateTime.add(-20),
+        "refresh_token_expires_at" => DateTime.utc_now() |> DateTime.add(20)
+      }
+
+      user
+      |> Ecto.Changeset.change(%{github_oauth_token: expired_token})
+      |> Repo.update!()
+
+      {:ok, view, _html} = live(conn, ~p"/profile")
+      refute has_element?(view, "#connect-github-link")
+      assert has_element?(view, "#disconnect-github-button")
+
+      # expired refresh token
+      expired_token = %{
+        "access_token" => "access-token",
+        "refresh_token" => "refresh-token",
+        "expires_at" => DateTime.utc_now() |> DateTime.add(-20),
+        "refresh_token_expires_at" => DateTime.utc_now() |> DateTime.add(-20)
+      }
+
+      user
+      |> Ecto.Changeset.change(%{github_oauth_token: expired_token})
+      |> Repo.update!()
+
+      {:ok, view, _html} = live(conn, ~p"/profile")
+      connect_button = element(view, "#connect-github-link")
+      assert has_element?(connect_button)
+      assert render(connect_button) =~ "Reconnect your Github Account"
+      assert render(connect_button) =~ "Your token has expired"
+      refute has_element?(view, "#disconnect-github-button")
+    end
+
     test "users can disconnect their github accounts using non-expiry access tokens",
          %{
            conn: conn,
