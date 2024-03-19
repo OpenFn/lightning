@@ -22,6 +22,8 @@ and this project adheres to
   [#1894](https://github.com/OpenFn/lightning/issues/1894)
 
 ### Changed
+- Remove code supporting V1 usage tracking submissions.
+  [#1853](https://github.com/OpenFn/lightning/issues/1853)
 
 ### Fixed
 
