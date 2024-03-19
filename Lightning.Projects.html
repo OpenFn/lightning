@@ -5,15 +5,15 @@
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="generator" content="ExDoc v0.30.9">
-    <meta name="project" content="Lightning v2.0.9">
+    <meta name="project" content="Lightning v2.0.10">
 
-    <title>Lightning.Projects — Lightning v2.0.9</title>
+    <title>Lightning.Projects — Lightning v2.0.10</title>
     <link rel="stylesheet" href="dist/html-elixir-XFYN5IVA.css" />
 
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-EPF2X7PV.js"></script>
-    <script src="dist/sidebar_items-BD9F97F4.js"></script>
+    <script src="dist/sidebar_items-49908FE3.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -72,7 +72,7 @@
 Lightning
       </a>
       <div class="sidebar-projectVersion" translate="no">
-        v2.0.9
+        v2.0.10
       </div>
     </div>
     <ul id="sidebar-listNav" class="sidebar-listNav" role="tablist">
@@ -131,7 +131,7 @@ Pages
     </a>
 
   <span translate="no">Lightning.Projects</span> 
-  <small class="app-vsn" translate="no">(Lightning v2.0.9)</small>
+  <small class="app-vsn" translate="no">(Lightning v2.0.10)</small>
 
 </h1>
 
@@ -612,8 +612,8 @@ deletion.)</p></div>
   </a>
   <span class="text">Examples</span>
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">change_project</span><span class="p" data-group-id="6995181619-1">(</span><span class="n">project</span><span class="p" data-group-id="6995181619-1">)</span><span class="w">
-</span><span class="p" data-group-id="6995181619-2">%</span><span class="nc" data-group-id="6995181619-2">Ecto.Changeset</span><span class="p" data-group-id="6995181619-2">{</span><span class="ss">data</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="6995181619-3">%</span><span class="nc" data-group-id="6995181619-3">Project</span><span class="p" data-group-id="6995181619-3">{</span><span class="p" data-group-id="6995181619-3">}</span><span class="p" data-group-id="6995181619-2">}</span></code></pre>
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">change_project</span><span class="p" data-group-id="7022388320-1">(</span><span class="n">project</span><span class="p" data-group-id="7022388320-1">)</span><span class="w">
+</span><span class="p" data-group-id="7022388320-2">%</span><span class="nc" data-group-id="7022388320-2">Ecto.Changeset</span><span class="p" data-group-id="7022388320-2">{</span><span class="ss">data</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="7022388320-3">%</span><span class="nc" data-group-id="7022388320-3">Project</span><span class="p" data-group-id="7022388320-3">{</span><span class="p" data-group-id="7022388320-3">}</span><span class="p" data-group-id="7022388320-2">}</span></code></pre>
   </section>
 </section>
 <section class="detail" id="create_project/1">
@@ -643,11 +643,11 @@ deletion.)</p></div>
   </a>
   <span class="text">Examples</span>
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">create_project</span><span class="p" data-group-id="4672914956-1">(</span><span class="p" data-group-id="4672914956-2">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">value</span><span class="p" data-group-id="4672914956-2">}</span><span class="p" data-group-id="4672914956-1">)</span><span class="w">
-</span><span class="p" data-group-id="4672914956-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="4672914956-4">%</span><span class="nc" data-group-id="4672914956-4">Project</span><span class="p" data-group-id="4672914956-4">{</span><span class="p" data-group-id="4672914956-4">}</span><span class="p" data-group-id="4672914956-3">}</span><span class="w">
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">create_project</span><span class="p" data-group-id="2324632301-1">(</span><span class="p" data-group-id="2324632301-2">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">value</span><span class="p" data-group-id="2324632301-2">}</span><span class="p" data-group-id="2324632301-1">)</span><span class="w">
+</span><span class="p" data-group-id="2324632301-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="2324632301-4">%</span><span class="nc" data-group-id="2324632301-4">Project</span><span class="p" data-group-id="2324632301-4">{</span><span class="p" data-group-id="2324632301-4">}</span><span class="p" data-group-id="2324632301-3">}</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">create_project</span><span class="p" data-group-id="4672914956-5">(</span><span class="p" data-group-id="4672914956-6">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">bad_value</span><span class="p" data-group-id="4672914956-6">}</span><span class="p" data-group-id="4672914956-5">)</span><span class="w">
-</span><span class="p" data-group-id="4672914956-7">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="4672914956-8">%</span><span class="nc" data-group-id="4672914956-8">Ecto.Changeset</span><span class="p" data-group-id="4672914956-8">{</span><span class="p" data-group-id="4672914956-8">}</span><span class="p" data-group-id="4672914956-7">}</span></code></pre>
+</span><span class="gp unselectable">iex&gt; </span><span class="n">create_project</span><span class="p" data-group-id="2324632301-5">(</span><span class="p" data-group-id="2324632301-6">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">bad_value</span><span class="p" data-group-id="2324632301-6">}</span><span class="p" data-group-id="2324632301-5">)</span><span class="w">
+</span><span class="p" data-group-id="2324632301-7">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="2324632301-8">%</span><span class="nc" data-group-id="2324632301-8">Ecto.Changeset</span><span class="p" data-group-id="2324632301-8">{</span><span class="p" data-group-id="2324632301-8">}</span><span class="p" data-group-id="2324632301-7">}</span></code></pre>
   </section>
 </section>
 <section class="detail" id="delete_project/1">
@@ -676,11 +676,11 @@ steps, jobs, runs, triggers, project users, project credentials, and dataclips</
   </a>
   <span class="text">Examples</span>
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">delete_project</span><span class="p" data-group-id="4460349102-1">(</span><span class="n">project</span><span class="p" data-group-id="4460349102-1">)</span><span class="w">
-</span><span class="p" data-group-id="4460349102-2">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="4460349102-3">%</span><span class="nc" data-group-id="4460349102-3">Project</span><span class="p" data-group-id="4460349102-3">{</span><span class="p" data-group-id="4460349102-3">}</span><span class="p" data-group-id="4460349102-2">}</span><span class="w">
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">delete_project</span><span class="p" data-group-id="4088487479-1">(</span><span class="n">project</span><span class="p" data-group-id="4088487479-1">)</span><span class="w">
+</span><span class="p" data-group-id="4088487479-2">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="4088487479-3">%</span><span class="nc" data-group-id="4088487479-3">Project</span><span class="p" data-group-id="4088487479-3">{</span><span class="p" data-group-id="4088487479-3">}</span><span class="p" data-group-id="4088487479-2">}</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">delete_project</span><span class="p" data-group-id="4460349102-4">(</span><span class="n">project</span><span class="p" data-group-id="4460349102-4">)</span><span class="w">
-</span><span class="p" data-group-id="4460349102-5">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="4460349102-6">%</span><span class="nc" data-group-id="4460349102-6">Ecto.Changeset</span><span class="p" data-group-id="4460349102-6">{</span><span class="p" data-group-id="4460349102-6">}</span><span class="p" data-group-id="4460349102-5">}</span></code></pre>
+</span><span class="gp unselectable">iex&gt; </span><span class="n">delete_project</span><span class="p" data-group-id="4088487479-4">(</span><span class="n">project</span><span class="p" data-group-id="4088487479-4">)</span><span class="w">
+</span><span class="p" data-group-id="4088487479-5">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="4088487479-6">%</span><span class="nc" data-group-id="4088487479-6">Ecto.Changeset</span><span class="p" data-group-id="4088487479-6">{</span><span class="p" data-group-id="4088487479-6">}</span><span class="p" data-group-id="4088487479-5">}</span></code></pre>
   </section>
 </section>
 <section class="detail" id="delete_project_user!/1">
@@ -743,8 +743,8 @@ steps, jobs, runs, triggers, project users, project credentials, and dataclips</
   </a>
   <span class="text">Examples</span>
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">export_project</span><span class="p" data-group-id="5477364698-1">(</span><span class="ss">:yaml</span><span class="p">,</span><span class="w"> </span><span class="n">project_id</span><span class="p" data-group-id="5477364698-1">)</span><span class="w">
-</span><span class="p" data-group-id="5477364698-2">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="n">string</span><span class="p" data-group-id="5477364698-2">}</span></code></pre>
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">export_project</span><span class="p" data-group-id="5159951898-1">(</span><span class="ss">:yaml</span><span class="p">,</span><span class="w"> </span><span class="n">project_id</span><span class="p" data-group-id="5159951898-1">)</span><span class="w">
+</span><span class="p" data-group-id="5159951898-2">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="n">string</span><span class="p" data-group-id="5159951898-2">}</span></code></pre>
   </section>
 </section>
 <section class="detail" id="get_project/1">
@@ -794,10 +794,10 @@ steps, jobs, runs, triggers, project users, project credentials, and dataclips</
   </a>
   <span class="text">Examples</span>
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">get_project!</span><span class="p" data-group-id="5865487428-1">(</span><span class="mi">123</span><span class="p" data-group-id="5865487428-1">)</span><span class="w">
-</span><span class="p" data-group-id="5865487428-2">%</span><span class="nc" data-group-id="5865487428-2">Project</span><span class="p" data-group-id="5865487428-2">{</span><span class="p" data-group-id="5865487428-2">}</span><span class="w">
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">get_project!</span><span class="p" data-group-id="8694041946-1">(</span><span class="mi">123</span><span class="p" data-group-id="8694041946-1">)</span><span class="w">
+</span><span class="p" data-group-id="8694041946-2">%</span><span class="nc" data-group-id="8694041946-2">Project</span><span class="p" data-group-id="8694041946-2">{</span><span class="p" data-group-id="8694041946-2">}</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">get_project!</span><span class="p" data-group-id="5865487428-3">(</span><span class="mi">456</span><span class="p" data-group-id="5865487428-3">)</span><span class="w">
+</span><span class="gp unselectable">iex&gt; </span><span class="n">get_project!</span><span class="p" data-group-id="8694041946-3">(</span><span class="mi">456</span><span class="p" data-group-id="8694041946-3">)</span><span class="w">
 </span><span class="gt">** (Ecto.NoResultsError)</span></code></pre>
   </section>
 </section>
@@ -892,10 +892,10 @@ steps, jobs, runs, triggers, project users, project credentials, and dataclips</
   </a>
   <span class="text">Examples</span>
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">get_project_user!</span><span class="p" data-group-id="2384056755-1">(</span><span class="mi">123</span><span class="p" data-group-id="2384056755-1">)</span><span class="w">
-</span><span class="p" data-group-id="2384056755-2">%</span><span class="nc" data-group-id="2384056755-2">ProjectUser</span><span class="p" data-group-id="2384056755-2">{</span><span class="p" data-group-id="2384056755-2">}</span><span class="w">
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">get_project_user!</span><span class="p" data-group-id="1220783662-1">(</span><span class="mi">123</span><span class="p" data-group-id="1220783662-1">)</span><span class="w">
+</span><span class="p" data-group-id="1220783662-2">%</span><span class="nc" data-group-id="1220783662-2">ProjectUser</span><span class="p" data-group-id="1220783662-2">{</span><span class="p" data-group-id="1220783662-2">}</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">get_project_user!</span><span class="p" data-group-id="2384056755-3">(</span><span class="mi">456</span><span class="p" data-group-id="2384056755-3">)</span><span class="w">
+</span><span class="gp unselectable">iex&gt; </span><span class="n">get_project_user!</span><span class="p" data-group-id="1220783662-3">(</span><span class="mi">456</span><span class="p" data-group-id="1220783662-3">)</span><span class="w">
 </span><span class="gt">** (Ecto.NoResultsError)</span></code></pre>
   </section>
 </section>
@@ -925,16 +925,16 @@ Possible roles are :admin, :viewer, :editor, and :owner</p><h2 id="get_project_u
   </a>
   <span class="text">Examples</span>
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">get_project_user_role</span><span class="p" data-group-id="4241273909-1">(</span><span class="n">user</span><span class="p">,</span><span class="w"> </span><span class="n">project</span><span class="p" data-group-id="4241273909-1">)</span><span class="w">
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">get_project_user_role</span><span class="p" data-group-id="8668599767-1">(</span><span class="n">user</span><span class="p">,</span><span class="w"> </span><span class="n">project</span><span class="p" data-group-id="8668599767-1">)</span><span class="w">
 </span><span class="ss">:admin</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">get_project_user_role</span><span class="p" data-group-id="4241273909-2">(</span><span class="n">user</span><span class="p">,</span><span class="w"> </span><span class="n">project</span><span class="p" data-group-id="4241273909-2">)</span><span class="w">
+</span><span class="gp unselectable">iex&gt; </span><span class="n">get_project_user_role</span><span class="p" data-group-id="8668599767-2">(</span><span class="n">user</span><span class="p">,</span><span class="w"> </span><span class="n">project</span><span class="p" data-group-id="8668599767-2">)</span><span class="w">
 </span><span class="ss">:viewer</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">get_project_user_role</span><span class="p" data-group-id="4241273909-3">(</span><span class="n">user</span><span class="p">,</span><span class="w"> </span><span class="n">project</span><span class="p" data-group-id="4241273909-3">)</span><span class="w">
+</span><span class="gp unselectable">iex&gt; </span><span class="n">get_project_user_role</span><span class="p" data-group-id="8668599767-3">(</span><span class="n">user</span><span class="p">,</span><span class="w"> </span><span class="n">project</span><span class="p" data-group-id="8668599767-3">)</span><span class="w">
 </span><span class="ss">:editor</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">get_project_user_role</span><span class="p" data-group-id="4241273909-4">(</span><span class="n">user</span><span class="p">,</span><span class="w"> </span><span class="n">project</span><span class="p" data-group-id="4241273909-4">)</span><span class="w">
+</span><span class="gp unselectable">iex&gt; </span><span class="n">get_project_user_role</span><span class="p" data-group-id="8668599767-4">(</span><span class="n">user</span><span class="p">,</span><span class="w"> </span><span class="n">project</span><span class="p" data-group-id="8668599767-4">)</span><span class="w">
 </span><span class="ss">:owner</span></code></pre>
   </section>
 </section>
@@ -985,10 +985,10 @@ Possible roles are :admin, :viewer, :editor, and :owner</p><h2 id="get_project_u
   </a>
   <span class="text">Examples</span>
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">get_project!</span><span class="p" data-group-id="3775999655-1">(</span><span class="mi">123</span><span class="p" data-group-id="3775999655-1">)</span><span class="w">
-</span><span class="p" data-group-id="3775999655-2">%</span><span class="nc" data-group-id="3775999655-2">Project</span><span class="p" data-group-id="3775999655-2">{</span><span class="p" data-group-id="3775999655-2">}</span><span class="w">
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">get_project!</span><span class="p" data-group-id="3362716974-1">(</span><span class="mi">123</span><span class="p" data-group-id="3362716974-1">)</span><span class="w">
+</span><span class="p" data-group-id="3362716974-2">%</span><span class="nc" data-group-id="3362716974-2">Project</span><span class="p" data-group-id="3362716974-2">{</span><span class="p" data-group-id="3362716974-2">}</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">get_project!</span><span class="p" data-group-id="3775999655-3">(</span><span class="mi">456</span><span class="p" data-group-id="3775999655-3">)</span><span class="w">
+</span><span class="gp unselectable">iex&gt; </span><span class="n">get_project!</span><span class="p" data-group-id="3362716974-3">(</span><span class="mi">456</span><span class="p" data-group-id="3362716974-3">)</span><span class="w">
 </span><span class="gt">** (Ecto.NoResultsError)</span></code></pre>
   </section>
 </section>
@@ -1105,8 +1105,8 @@ Possible roles are :admin, :viewer, :editor, and :owner</p><h2 id="get_project_u
   </a>
   <span class="text">Examples</span>
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">list_projects</span><span class="p" data-group-id="9121292070-1">(</span><span class="p" data-group-id="9121292070-1">)</span><span class="w">
-</span><span class="p" data-group-id="9121292070-2">[</span><span class="p" data-group-id="9121292070-3">%</span><span class="nc" data-group-id="9121292070-3">Project</span><span class="p" data-group-id="9121292070-3">{</span><span class="p" data-group-id="9121292070-3">}</span><span class="p">,</span><span class="w"> </span><span class="n">...</span><span class="p" data-group-id="9121292070-2">]</span></code></pre>
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">list_projects</span><span class="p" data-group-id="5561230850-1">(</span><span class="p" data-group-id="5561230850-1">)</span><span class="w">
+</span><span class="p" data-group-id="5561230850-2">[</span><span class="p" data-group-id="5561230850-3">%</span><span class="nc" data-group-id="5561230850-3">Project</span><span class="p" data-group-id="5561230850-3">{</span><span class="p" data-group-id="5561230850-3">}</span><span class="p">,</span><span class="w"> </span><span class="n">...</span><span class="p" data-group-id="5561230850-2">]</span></code></pre>
   </section>
 </section>
 <section class="detail" id="member_of?/2">
@@ -1550,11 +1550,11 @@ deletion.)</p>
   </a>
   <span class="text">Examples</span>
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">update_project</span><span class="p" data-group-id="2473284480-1">(</span><span class="n">project</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="2473284480-2">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">new_value</span><span class="p" data-group-id="2473284480-2">}</span><span class="p" data-group-id="2473284480-1">)</span><span class="w">
-</span><span class="p" data-group-id="2473284480-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="2473284480-4">%</span><span class="nc" data-group-id="2473284480-4">Project</span><span class="p" data-group-id="2473284480-4">{</span><span class="p" data-group-id="2473284480-4">}</span><span class="p" data-group-id="2473284480-3">}</span><span class="w">
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">update_project</span><span class="p" data-group-id="1426872160-1">(</span><span class="n">project</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="1426872160-2">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">new_value</span><span class="p" data-group-id="1426872160-2">}</span><span class="p" data-group-id="1426872160-1">)</span><span class="w">
+</span><span class="p" data-group-id="1426872160-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="1426872160-4">%</span><span class="nc" data-group-id="1426872160-4">Project</span><span class="p" data-group-id="1426872160-4">{</span><span class="p" data-group-id="1426872160-4">}</span><span class="p" data-group-id="1426872160-3">}</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">update_project</span><span class="p" data-group-id="2473284480-5">(</span><span class="n">project</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="2473284480-6">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">bad_value</span><span class="p" data-group-id="2473284480-6">}</span><span class="p" data-group-id="2473284480-5">)</span><span class="w">
-</span><span class="p" data-group-id="2473284480-7">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="2473284480-8">%</span><span class="nc" data-group-id="2473284480-8">Ecto.Changeset</span><span class="p" data-group-id="2473284480-8">{</span><span class="p" data-group-id="2473284480-8">}</span><span class="p" data-group-id="2473284480-7">}</span></code></pre>
+</span><span class="gp unselectable">iex&gt; </span><span class="n">update_project</span><span class="p" data-group-id="1426872160-5">(</span><span class="n">project</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="1426872160-6">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">bad_value</span><span class="p" data-group-id="1426872160-6">}</span><span class="p" data-group-id="1426872160-5">)</span><span class="w">
+</span><span class="p" data-group-id="1426872160-7">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="1426872160-8">%</span><span class="nc" data-group-id="1426872160-8">Ecto.Changeset</span><span class="p" data-group-id="1426872160-8">{</span><span class="p" data-group-id="1426872160-8">}</span><span class="p" data-group-id="1426872160-7">}</span></code></pre>
   </section>
 </section>
 <section class="detail" id="update_project_user/2">
@@ -1582,11 +1582,11 @@ deletion.)</p>
   </a>
   <span class="text">Examples</span>
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">update_project_user</span><span class="p" data-group-id="0526789927-1">(</span><span class="n">project_user</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="0526789927-2">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">new_value</span><span class="p" data-group-id="0526789927-2">}</span><span class="p" data-group-id="0526789927-1">)</span><span class="w">
-</span><span class="p" data-group-id="0526789927-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="0526789927-4">%</span><span class="nc" data-group-id="0526789927-4">ProjectUser</span><span class="p" data-group-id="0526789927-4">{</span><span class="p" data-group-id="0526789927-4">}</span><span class="p" data-group-id="0526789927-3">}</span><span class="w">
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">update_project_user</span><span class="p" data-group-id="2583787133-1">(</span><span class="n">project_user</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="2583787133-2">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">new_value</span><span class="p" data-group-id="2583787133-2">}</span><span class="p" data-group-id="2583787133-1">)</span><span class="w">
+</span><span class="p" data-group-id="2583787133-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="2583787133-4">%</span><span class="nc" data-group-id="2583787133-4">ProjectUser</span><span class="p" data-group-id="2583787133-4">{</span><span class="p" data-group-id="2583787133-4">}</span><span class="p" data-group-id="2583787133-3">}</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">update_project_user</span><span class="p" data-group-id="0526789927-5">(</span><span class="n">projectUser</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="0526789927-6">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">bad_value</span><span class="p" data-group-id="0526789927-6">}</span><span class="p" data-group-id="0526789927-5">)</span><span class="w">
-</span><span class="p" data-group-id="0526789927-7">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="0526789927-8">%</span><span class="nc" data-group-id="0526789927-8">Ecto.Changeset</span><span class="p" data-group-id="0526789927-8">{</span><span class="p" data-group-id="0526789927-8">}</span><span class="p" data-group-id="0526789927-7">}</span></code></pre>
+</span><span class="gp unselectable">iex&gt; </span><span class="n">update_project_user</span><span class="p" data-group-id="2583787133-5">(</span><span class="n">projectUser</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="2583787133-6">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">bad_value</span><span class="p" data-group-id="2583787133-6">}</span><span class="p" data-group-id="2583787133-5">)</span><span class="w">
+</span><span class="p" data-group-id="2583787133-7">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="2583787133-8">%</span><span class="nc" data-group-id="2583787133-8">Ecto.Changeset</span><span class="p" data-group-id="2583787133-8">{</span><span class="p" data-group-id="2583787133-8">}</span><span class="p" data-group-id="2583787133-7">}</span></code></pre>
   </section>
 </section>
 <section class="detail" id="url_safe_project_name/1">
@@ -1636,8 +1636,8 @@ deletion.)</p>
   </a>
   <span class="text">Examples</span>
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">validate_for_deletion</span><span class="p" data-group-id="9345169771-1">(</span><span class="n">project</span><span class="p" data-group-id="9345169771-1">)</span><span class="w">
-</span><span class="p" data-group-id="9345169771-2">%</span><span class="nc" data-group-id="9345169771-2">Ecto.Changeset</span><span class="p" data-group-id="9345169771-2">{</span><span class="ss">data</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="9345169771-3">%</span><span class="nc" data-group-id="9345169771-3">Project</span><span class="p" data-group-id="9345169771-3">{</span><span class="p" data-group-id="9345169771-3">}</span><span class="p" data-group-id="9345169771-2">}</span></code></pre>
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">validate_for_deletion</span><span class="p" data-group-id="2157892679-1">(</span><span class="n">project</span><span class="p" data-group-id="2157892679-1">)</span><span class="w">
+</span><span class="p" data-group-id="2157892679-2">%</span><span class="nc" data-group-id="2157892679-2">Ecto.Changeset</span><span class="p" data-group-id="2157892679-2">{</span><span class="ss">data</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="2157892679-3">%</span><span class="nc" data-group-id="2157892679-3">Project</span><span class="p" data-group-id="2157892679-3">{</span><span class="p" data-group-id="2157892679-3">}</span><span class="p" data-group-id="2157892679-2">}</span></code></pre>
   </section>
 </section>
 
