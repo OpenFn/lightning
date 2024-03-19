@@ -556,4 +556,25 @@ defmodule Lightning.UsageTrackingTest do
              ) == :ok
     end
   end
+
+  describe "find_enabled_daily_report_config/0" do
+    test "returns existing config if it is enabled" do
+      expected_config = UsageTracking.enable_daily_report(DateTime.utc_now())
+
+      returned_config = UsageTracking.find_enabled_daily_report_config()
+
+      assert returned_config == expected_config
+    end
+
+    test "returns nil if the config exists but is disabled" do
+      UsageTracking.enable_daily_report(DateTime.utc_now())
+      UsageTracking.disable_daily_report()
+
+      assert UsageTracking.find_enabled_daily_report_config() == nil
+    end
+
+    test "returns nil if the config does not exist" do
+      assert UsageTracking.find_enabled_daily_report_config() == nil
+    end
+  end
 end
