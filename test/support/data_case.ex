@@ -34,6 +34,9 @@ defmodule Lightning.DataCase do
   end
 
   setup tags do
+    # Default to Hackney adapter so that Bypass dependent tests continue working
+    Mox.stub_with(Lightning.Tesla.Mock, Tesla.Adapter.Hackney)
+
     pid =
       Ecto.Adapters.SQL.Sandbox.start_owner!(Lightning.Repo,
         shared: not tags[:async]

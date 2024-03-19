@@ -1,7 +1,6 @@
 defmodule LightningWeb.ProfileLive.GithubComponent do
-  @moduledoc """
-  Component to enable MFA on a User's account
-  """
+  @moduledoc false
+
   use LightningWeb, :live_component
   alias Lightning.VersionControl
 
@@ -48,6 +47,7 @@ defmodule LightningWeb.ProfileLive.GithubComponent do
           </span>
           <%= if token_valid?(@user.github_oauth_token) do %>
             <.button
+              id="disconnect-github-button"
               type="button"
               phx-click={show_modal("disconnect_github_modal")}
               color_class="text-white bg-danger-600 hover:bg-danger-700"

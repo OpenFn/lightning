@@ -344,4 +344,159 @@ defmodule LightningWeb.ProfileLiveTest do
       assert flash["info"] == "MFA Setup successfully!"
     end
   end
+
+  describe "Github Component" do
+    setup :register_and_log_in_user
+
+    test "users get updated after successfully connecting to github", %{
+      conn: conn
+    } do
+      expected_token = %{"access_token" => "1234567"}
+
+      Mox.expect(Lightning.Tesla.Mock, :call, fn
+        %{url: "https://github.com/login/oauth/access_token"}, _opts ->
+          {:ok, %Tesla.Env{body: expected_token}}
+      end)
+
+      {:ok, view, _html} = live(conn, ~p"/profile")
+      assert has_element?(view, "#connect-github-link")
+      refute has_element?(view, "#disconnect-github-button")
+
+      # mock redirect from github
+      get(conn, ~p"/oauth/github/callback?code=123456")
+
+      flash = assert_redirect(view, ~p"/profile")
+
+      assert flash["info"] == "Github account linked successfully"
+
+      {:ok, view, _html} = live(conn, ~p"/profile")
+
+      refute has_element?(view, "#connect-github-link")
+      assert has_element?(view, "#disconnect-github-button")
+    end
+
+    test "users get updated after failing to connect to github", %{
+      conn: conn
+    } do
+      expected_resp = %{"error" => "something happened"}
+
+      Mox.expect(Lightning.Tesla.Mock, :call, fn
+        %{url: "https://github.com/login/oauth/access_token"}, _opts ->
+          {:ok, %Tesla.Env{body: expected_resp}}
+      end)
+
+      {:ok, view, _html} = live(conn, ~p"/profile")
+      assert has_element?(view, "#connect-github-link")
+      refute has_element?(view, "#disconnect-github-button")
+
+      # mock redirect from github
+      get(conn, ~p"/oauth/github/callback?code=123456")
+
+      :ok = refute_redirected(view, ~p"/profile")
+
+      assert render(view) =~
+               "Oops! Github account failed to link. Please try again"
+
+      # button to connect is still available
+      assert has_element?(view, "#connect-github-link")
+      refute has_element?(view, "#disconnect-github-button")
+    end
+
+    test "users can disconnect their github accounts using non-expiry access tokens",
+         %{
+           conn: conn,
+           user: user
+         } do
+      expected_token = %{"access_token" => "1234567"}
+
+      user =
+        user
+        |> Ecto.Changeset.change(%{github_oauth_token: expected_token})
+        |> Repo.update!()
+
+      app_config = Application.fetch_env!(:lightning, :github_app)
+
+      url_to_hit =
+        "https://api.github.com/applications/#{app_config[:client_id]}/grant"
+
+      Mox.expect(Lightning.GithubClient.Mock, :call, fn
+        %{url: ^url_to_hit}, _opts ->
+          {:ok, %Tesla.Env{status: 204}}
+      end)
+
+      {:ok, view, _html} = live(conn, ~p"/profile")
+      refute has_element?(view, "#connect-github-link")
+      assert has_element?(view, "#disconnect-github-button")
+
+      result =
+        view
+        |> element("#disconnect_github_modal_confirm_button")
+        |> render_click()
+
+      {:ok, view, html} = follow_redirect(result, conn, ~p"/profile")
+
+      assert html =~ "Github connection removed successfully"
+
+      assert has_element?(view, "#connect-github-link")
+      refute has_element?(view, "#disconnect-github-button")
+
+      updated_user = Lightning.Repo.reload(user)
+      assert is_nil(updated_user.github_oauth_token)
+    end
+
+    test "users can disconnect their github accounts using expiry access tokens",
+         %{
+           conn: conn,
+           user: user
+         } do
+      # expired access token
+      expected_token = %{
+        "access_token" => "access-token",
+        "refresh_token" => "refresh-token",
+        "expires_at" => DateTime.utc_now() |> DateTime.add(-20),
+        "refresh_token_expires_at" => DateTime.utc_now() |> DateTime.add(1000)
+      }
+
+      user =
+        user
+        |> Ecto.Changeset.change(%{github_oauth_token: expected_token})
+        |> Repo.update!()
+
+      app_config = Application.fetch_env!(:lightning, :github_app)
+
+      url_to_delete =
+        "https://api.github.com/applications/#{app_config[:client_id]}/grant"
+
+      Mox.expect(Lightning.GithubClient.Mock, :call, fn
+        %{url: ^url_to_delete}, _opts ->
+          {:ok, %Tesla.Env{status: 204}}
+      end)
+
+      url_to_refresh_token = "https://github.com/login/oauth/access_token"
+
+      Mox.expect(Lightning.Tesla.Mock, :call, fn
+        %{url: ^url_to_refresh_token}, _opts ->
+          {:ok, %Tesla.Env{body: %{"access_token" => "updated-access-token"}}}
+      end)
+
+      {:ok, view, _html} = live(conn, ~p"/profile")
+      refute has_element?(view, "#connect-github-link")
+      assert has_element?(view, "#disconnect-github-button")
+
+      result =
+        view
+        |> element("#disconnect_github_modal_confirm_button")
+        |> render_click()
+
+      {:ok, view, html} = follow_redirect(result, conn, ~p"/profile")
+
+      assert html =~ "Github connection removed successfully"
+
+      assert has_element?(view, "#connect-github-link")
+      refute has_element?(view, "#disconnect-github-button")
+
+      updated_user = Lightning.Repo.reload(user)
+      assert is_nil(updated_user.github_oauth_token)
+    end
+  end
 end

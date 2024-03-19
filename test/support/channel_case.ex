@@ -38,6 +38,9 @@ defmodule LightningWeb.ChannelCase do
     Mox.stub_with(Lightning.Mock, Lightning.Stub)
     # Application.put_env(:lightning, Lightning, Lightning.Mock)
 
+    # Default to Hackney adapter so that Bypass dependent tests continue working
+    Mox.stub_with(Lightning.Tesla.Mock, Tesla.Adapter.Hackney)
+
     pid =
       Ecto.Adapters.SQL.Sandbox.start_owner!(Lightning.Repo,
         shared: not tags[:async]
