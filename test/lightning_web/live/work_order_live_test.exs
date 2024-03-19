@@ -500,6 +500,9 @@ defmodule LightningWeb.WorkOrderLiveTest do
 
       assert rendered =~ run_1.id
       assert rendered =~ run_2.id
+
+      open_browser(view)
+
       assert rendered =~ "claimed @ \n  \n      #{claimed_at}"
 
       assert rendered =~ "claimed @ \n  \n      #{started_at}" or
@@ -804,7 +807,7 @@ defmodule LightningWeb.WorkOrderLiveTest do
         |> element(
           "section#inner_content div[data-entity='work_order_list'] > div:first-child > div:last-child"
         )
-        |> render()
+        |> render_async()
 
       assert div =~ "Failed"
     end
@@ -891,42 +894,31 @@ defmodule LightningWeb.WorkOrderLiveTest do
 
       assert html =~ "Workflow"
 
-      assert view
-             |> element("#select-workflow-#{job.workflow_id}")
-             |> has_element?()
+      assert has_workflow_in_dropdown?(view, job.workflow_id)
 
-      assert view
-             |> element("#select-workflow-#{job_two.workflow_id}")
-             |> has_element?()
+      refute has_workflow_in_dropdown?(view, job_other_project.workflow_id)
 
-      refute view
-             |> element("#select-workflow-#{job_other_project.workflow_id}")
-             |> has_element?()
-
-      assert view
-             |> element("#select-workflow-#{job_two.workflow_id}")
-             |> render_click()
+      assert has_workflow_in_dropdown?(view, job_two.workflow_id)
+      select_workflow_in_dropdown(view, job_two.workflow_id)
 
       div =
         view
         |> element(
           "section#inner_content div[data-entity='work_order_list'] > div:first-child"
         )
-        |> render()
+        |> render_async()
 
       refute div =~ "workflow 1"
       assert div =~ "workflow 2"
 
-      assert view
-             |> element("#select-workflow-#{job.workflow_id}")
-             |> render_click()
+      select_workflow_in_dropdown(view, job.workflow_id)
 
       div =
         view
         |> element(
           "section#inner_content div[data-entity='work_order_list'] > div:first-child"
         )
-        |> render()
+        |> render_async()
 
       assert div =~ "workflow 1"
       refute div =~ "workflow 2"
@@ -1030,38 +1022,32 @@ defmodule LightningWeb.WorkOrderLiveTest do
 
       assert div =~ "Failed"
 
-      view
-      |> search_for("xxxx", [])
+      view |> search_for("xxxx", [])
 
       refute workflow_displayed(view, "workflow 1")
       refute workflow_displayed(view, "workflow 2")
 
-      view
-      |> search_for("xxxx", [:body, :log])
+      view |> search_for("xxxx", [:body, :log])
 
       refute workflow_displayed(view, "workflow 1")
       refute workflow_displayed(view, "workflow 2")
 
-      view
-      |> search_for("eliaswalyba", [:body, :log])
+      view |> search_for("eliaswalyba", [:body, :log])
 
       assert workflow_displayed(view, "workflow 1")
       refute workflow_displayed(view, "workflow 2")
 
-      view
-      |> search_for("qassim", [:body, :log])
+      view |> search_for("qassim", [:body, :log])
 
       refute workflow_displayed(view, "workflow 1")
       assert workflow_displayed(view, "workflow 2")
 
-      view
-      |> search_for("some log", [:body])
+      view |> search_for("some log", [:body])
 
       refute workflow_displayed(view, "workflow 1")
       refute workflow_displayed(view, "workflow 2")
 
-      view
-      |> search_for("some log", [:log])
+      view |> search_for("some log", [:log])
 
       refute workflow_displayed(view, "workflow 1")
       refute workflow_displayed(view, "workflow 2")
@@ -1110,15 +1096,11 @@ defmodule LightningWeb.WorkOrderLiveTest do
       {:ok, view, _html} =
         live(conn, Routes.project_run_index_path(conn, :index, project.id))
 
-      view
-      |> element("#select-workflow-#{workflow.id}")
-      |> render_click()
+      view |> select_workflow_in_dropdown(workflow.id)
 
       assert has_element?(view, "#select_all")
 
-      view
-      |> element("#select-workflow-#{workflow_two.id}")
-      |> render_click()
+      view |> select_workflow_in_dropdown(workflow_two.id)
 
       refute has_element?(view, "#select_all")
     end
@@ -1714,14 +1696,10 @@ defmodule LightningWeb.WorkOrderLiveTest do
     end
 
     view
-    |> form("#run-search-form",
-      filters: filter_attrs
-    )
+    |> form("#run-search-form", filters: filter_attrs)
     |> render_submit()
 
     render_async(view)
-
-    :ok
   end
 
   def workflow_displayed(view, name) do
@@ -2704,7 +2682,7 @@ defmodule LightningWeb.WorkOrderLiveTest do
 
   describe "timestamp" do
     test "default option" do
-      now = NaiveDateTime.utc_now()
+      now = DateTime.utc_now()
 
       assert render_component(&LightningWeb.RunLive.Components.timestamp/1,
                timestamp: now
@@ -2717,7 +2695,7 @@ defmodule LightningWeb.WorkOrderLiveTest do
     end
 
     test "wrapped option" do
-      now = NaiveDateTime.utc_now()
+      now = DateTime.utc_now()
 
       html =
         render_component(&LightningWeb.RunLive.Components.timestamp/1,
@@ -2733,7 +2711,7 @@ defmodule LightningWeb.WorkOrderLiveTest do
     end
 
     test "with time only option" do
-      now = NaiveDateTime.utc_now()
+      now = DateTime.utc_now()
 
       html =
         render_component(&LightningWeb.RunLive.Components.timestamp/1,
@@ -2747,5 +2725,17 @@ defmodule LightningWeb.WorkOrderLiveTest do
 
       assert html =~ Timex.format!(now, "%H:%M:%S", :strftime)
     end
+  end
+
+  defp select_workflow_in_dropdown(view, workflow_id) do
+    view
+    |> element("#select-workflow-#{workflow_id}")
+    |> render_click()
+
+    view |> render_async()
+  end
+
+  defp has_workflow_in_dropdown?(view, workflow_id) do
+    view |> element("#select-workflow-#{workflow_id}") |> has_element?()
   end
 end

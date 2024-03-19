@@ -533,8 +533,8 @@ defmodule LightningWeb.RunLive.Components do
     end
   end
 
-  attr :timestamp, :any, required: true
-  attr :style, :atom, default: :default
+  attr :timestamp, :map, required: true
+  attr :style, :atom, default: :default, values: [:default, :wrapped, :time_only]
   attr :tooltip_prefix, :string, default: ""
 
   def timestamp(assigns) do
@@ -552,8 +552,8 @@ defmodule LightningWeb.RunLive.Components do
       <% end %>
     <% else %>
       <Common.wrapper_tooltip
-        id={DateTime.to_iso8601(@timestamp) <> DateTime.to_iso8601(@timestamp)}
-        tooltip={@tooltip_prefix <> " " <> DateTime.to_iso8601(@timestamp)}
+        id={DateTime.to_unix(@timestamp, :microsecond)}
+        tooltip={"#{@tooltip_prefix} #{DateTime.to_iso8601(@timestamp)}"}
       >
         <%= case @style do %>
           <% :default -> %>
