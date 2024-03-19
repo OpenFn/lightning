@@ -130,7 +130,6 @@ defmodule LightningWeb.RunLive.Index do
     do: %{
       "workflow_id" => "",
       "search_term" => "",
-      "body" => "true",
       "log" => "true",
       "date_after" =>
         Timex.now() |> Timex.shift(days: -30) |> DateTime.to_string(),
