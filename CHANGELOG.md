@@ -35,6 +35,8 @@ and this project adheres to
 ### Changed
 
 - Upgrade Elixir to 1.16.2
+- Remove all values from `.env.example`.
+  [#1904](https://github.com/OpenFn/lightning/issues/1904)
 
 ### Fixed
 
