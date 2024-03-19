@@ -258,6 +258,7 @@ export default function Editor({
         'update-layout',
         listeners.current.updateLayout
       );
+      window.addEventListener("resize", listeners.current.updateLayout);
     },
     []
   );
