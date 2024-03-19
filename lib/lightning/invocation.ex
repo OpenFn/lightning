@@ -495,12 +495,22 @@ defmodule Lightning.Invocation do
         )
 
       :log, dynamic ->
+        ts_query = for_tsquery_partial_match(search_term)
+
         dynamic(
           [log_lines: log_line],
           ^dynamic or
-            ilike(type(log_line.message, :string), ^"%#{search_term}%")
+            fragment(
+              "? @@ to_tsquery('english_nostop', ?)",
+              log_line.search_vector,
+              ^ts_query
+            )
         )
     end)
+  end
+
+  defp for_tsquery_partial_match(string) do
+    "'" <> String.replace(string, "'", " ", global: true) <> "':*"
   end
 
   defp build_search_fields_query(base_query, search_fields) do
