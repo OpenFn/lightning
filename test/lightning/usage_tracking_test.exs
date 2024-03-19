@@ -271,6 +271,8 @@ defmodule Lightning.UsageTrackingTest do
   end
 
   describe ".reportable_dates/1" do
+    # NOTE: When modifying these dates, ensure that the range spans a year
+    # boundary to better detect date sorting issues
     setup do
       %{batch_size: 10}
     end
@@ -278,17 +280,17 @@ defmodule Lightning.UsageTrackingTest do
     test "returns range of reportable dates between the boundary dates", %{
       batch_size: batch_size
     } do
-      start_after = ~D[2024-02-12]
-      today = ~D[2024-02-20]
+      start_after = ~D[2023-12-28]
+      today = ~D[2024-01-05]
 
       expected_dates = [
-        ~D[2024-02-13],
-        ~D[2024-02-14],
-        ~D[2024-02-15],
-        ~D[2024-02-16],
-        ~D[2024-02-17],
-        ~D[2024-02-18],
-        ~D[2024-02-19]
+        ~D[2023-12-29],
+        ~D[2023-12-30],
+        ~D[2023-12-31],
+        ~D[2024-01-01],
+        ~D[2024-01-02],
+        ~D[2024-01-03],
+        ~D[2024-01-04]
       ]
 
       dates = UsageTracking.reportable_dates(start_after, today, batch_size)
@@ -299,8 +301,8 @@ defmodule Lightning.UsageTrackingTest do
     test "returns empty list if no reportable dates", %{
       batch_size: batch_size
     } do
-      start_after = ~D[2024-02-19]
-      today = ~D[2024-02-20]
+      start_after = ~D[2024-01-04]
+      today = ~D[2024-01-05]
 
       assert UsageTracking.reportable_dates(start_after, today, batch_size) == []
     end
@@ -308,8 +310,8 @@ defmodule Lightning.UsageTrackingTest do
     test "returns empty list if start_after is today", %{
       batch_size: batch_size
     } do
-      start_after = ~D[2024-02-20]
-      today = ~D[2024-02-20]
+      start_after = ~D[2024-01-05]
+      today = ~D[2024-01-05]
 
       assert UsageTracking.reportable_dates(start_after, today, batch_size) == []
     end
@@ -317,8 +319,8 @@ defmodule Lightning.UsageTrackingTest do
     test "returns empty list if start_after is after today", %{
       batch_size: batch_size
     } do
-      start_after = ~D[2024-02-21]
-      today = ~D[2024-02-20]
+      start_after = ~D[2024-01-06]
+      today = ~D[2024-01-05]
 
       assert UsageTracking.reportable_dates(start_after, today, batch_size) == []
     end
@@ -326,27 +328,27 @@ defmodule Lightning.UsageTrackingTest do
     test "excludes any reportable days for which reports exist", %{
       batch_size: batch_size
     } do
-      start_after = ~D[2024-02-12]
-      today = ~D[2024-02-20]
+      start_after = ~D[2023-12-28]
+      today = ~D[2024-01-05]
 
       _before_start =
-        insert(:usage_tracking_report, report_date: ~D[2024-02-11])
+        insert(:usage_tracking_report, report_date: ~D[2023-12-27])
 
       _exclude_date_1 =
-        insert(:usage_tracking_report, report_date: ~D[2024-02-17])
+        insert(:usage_tracking_report, report_date: ~D[2024-01-03])
 
       _exclude_date_2 =
-        insert(:usage_tracking_report, report_date: ~D[2024-02-14])
+        insert(:usage_tracking_report, report_date: ~D[2024-01-01])
 
       _nil_date =
         insert(:usage_tracking_report, report_date: nil)
 
       expected_dates = [
-        ~D[2024-02-13],
-        ~D[2024-02-15],
-        ~D[2024-02-16],
-        ~D[2024-02-18],
-        ~D[2024-02-19]
+        ~D[2023-12-29],
+        ~D[2023-12-30],
+        ~D[2023-12-31],
+        ~D[2024-01-02],
+        ~D[2024-01-04]
       ]
 
       dates = UsageTracking.reportable_dates(start_after, today, batch_size)
@@ -355,23 +357,23 @@ defmodule Lightning.UsageTrackingTest do
     end
 
     test "number of reportable days is constrained by batch size" do
-      start_after = ~D[2024-02-12]
-      today = ~D[2024-02-20]
+      start_after = ~D[2023-12-28]
+      today = ~D[2024-01-05]
       batch_size = 3
 
       # Use existing reports to ensure that the batching is applied to the output
       # dates and not the input dates. The presence of these two entries will
       # remove the first two dates from consideration for batching.
       _batch_padding_1 =
-        insert(:usage_tracking_report, report_date: ~D[2024-02-13])
+        insert(:usage_tracking_report, report_date: ~D[2023-12-29])
 
       _batch_padding_2 =
-        insert(:usage_tracking_report, report_date: ~D[2024-02-14])
+        insert(:usage_tracking_report, report_date: ~D[2023-12-30])
 
       expected_dates = [
-        ~D[2024-02-15],
-        ~D[2024-02-16],
-        ~D[2024-02-17]
+        ~D[2023-12-31],
+        ~D[2024-01-01],
+        ~D[2024-01-02]
       ]
 
       dates = UsageTracking.reportable_dates(start_after, today, batch_size)
