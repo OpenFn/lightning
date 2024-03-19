@@ -5,9 +5,9 @@
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="generator" content="ExDoc v0.30.9">
-    <meta name="project" content="Lightning v2.0.8">
+    <meta name="project" content="Lightning v2.0.9-pre5">
 
-    <title>LightningWeb.Components.NewInputs — Lightning v2.0.8</title>
+    <title>LightningWeb.Components.NewInputs — Lightning v2.0.9-pre5</title>
     <link rel="stylesheet" href="dist/html-elixir-XFYN5IVA.css" />
 
 
@@ -72,7 +72,7 @@
 Lightning
       </a>
       <div class="sidebar-projectVersion" translate="no">
-        v2.0.8
+        v2.0.9-pre5
       </div>
     </div>
     <ul id="sidebar-listNav" class="sidebar-listNav" role="tablist">
@@ -131,7 +131,7 @@ Pages
     </a>
 
   <span translate="no">LightningWeb.Components.NewInputs</span> 
-  <small class="app-vsn" translate="no">(Lightning v2.0.8)</small>
+  <small class="app-vsn" translate="no">(Lightning v2.0.9-pre5)</small>
 
 </h1>
 
@@ -295,7 +295,7 @@ with the newer CoreComponents conventions introduced in Phoenix 1.7.</p>
     </a>
     <h1 class="signature" translate="no">icon(assigns)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/components/new_inputs.ex#L392" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/components/new_inputs.ex#L393" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -316,13 +316,13 @@ within your compiled app.css by the plugin in your <code class="inline">assets/t
   <span class="text">Examples</span>
 </h2>
 <pre><code class="makeup elixir" translate="no"><span class="o">&lt;</span><span class="o">.</span><span class="n">icon</span><span class="w"> </span><span class="n">name</span><span class="o">=</span><span class="s">&quot;hero-x-mark-solid&quot;</span><span class="w"> </span><span class="o">/</span><span class="o">&gt;</span><span class="w">
-</span><span class="o">&lt;</span><span class="o">.</span><span class="n">icon</span><span class="w"> </span><span class="n">name</span><span class="o">=</span><span class="s">&quot;hero-arrow-path&quot;</span><span class="w"> </span><span class="n">class</span><span class="o">=</span><span class="s">&quot;ml-1 w-3 h-3 animate-spin&quot;</span><span class="w"> </span><span class="o">/</span><span class="o">&gt;</span></code></pre><h2 id="icon/1-attributes" class="section-heading">
+</span><span class="o">&lt;</span><span class="o">.</span><span class="n">icon</span><span class="w"> </span><span class="n">name</span><span class="o">=</span><span class="s">&quot;hero-play-circle&quot;</span><span class="w"> </span><span class="n">class</span><span class="o">=</span><span class="s">&quot;ml-1 w-3 h-3 animate-spin&quot;</span><span class="w"> </span><span class="o">/</span><span class="o">&gt;</span></code></pre><h2 id="icon/1-attributes" class="section-heading">
   <a href="#icon/1-attributes" class="hover-link">
     <i class="ri-link-m" aria-hidden="true"></i>
   </a>
   <span class="text">Attributes</span>
 </h2>
-<ul><li><code class="inline">name</code> (<code class="inline">:string</code>) (required)</li><li><code class="inline">class</code> (<code class="inline">:string</code>) - Defaults to <code class="inline">nil</code>.</li><li>Global attributes are accepted.</li></ul>
+<ul><li><code class="inline">name</code> (<code class="inline">:string</code>) (required)</li><li><code class="inline">class</code> (<code class="inline">:string</code>) - Defaults to <code class="inline">nil</code>.</li><li><code class="inline">naked</code> (<code class="inline">:boolean</code>) - Defaults to <code class="inline">false</code>.</li><li>Global attributes are accepted.</li></ul>
   </section>
 </section>
 <section class="detail" id="input/1">
@@ -359,8 +359,8 @@ for more information.</p><h2 id="input/1-examples" class="section-heading">
   </a>
   <span class="text">Examples</span>
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="o">&lt;</span><span class="o">.</span><span class="n">input</span><span class="w"> </span><span class="n">field</span><span class="o">=</span><span class="p" data-group-id="6258312079-1">{</span><span class="na">@form</span><span class="p" data-group-id="6258312079-2">[</span><span class="ss">:email</span><span class="p" data-group-id="6258312079-2">]</span><span class="p" data-group-id="6258312079-1">}</span><span class="w"> </span><span class="n">type</span><span class="o">=</span><span class="s">&quot;email&quot;</span><span class="w"> </span><span class="o">/</span><span class="o">&gt;</span><span class="w">
-</span><span class="o">&lt;</span><span class="o">.</span><span class="n">input</span><span class="w"> </span><span class="n">name</span><span class="o">=</span><span class="s">&quot;my-input&quot;</span><span class="w"> </span><span class="n">errors</span><span class="o">=</span><span class="p" data-group-id="6258312079-3">{</span><span class="p" data-group-id="6258312079-4">[</span><span class="s">&quot;oh no!&quot;</span><span class="p" data-group-id="6258312079-4">]</span><span class="p" data-group-id="6258312079-3">}</span><span class="w"> </span><span class="o">/</span><span class="o">&gt;</span></code></pre><h2 id="input/1-attributes" class="section-heading">
+<pre><code class="makeup elixir" translate="no"><span class="o">&lt;</span><span class="o">.</span><span class="n">input</span><span class="w"> </span><span class="n">field</span><span class="o">=</span><span class="p" data-group-id="4909842236-1">{</span><span class="na">@form</span><span class="p" data-group-id="4909842236-2">[</span><span class="ss">:email</span><span class="p" data-group-id="4909842236-2">]</span><span class="p" data-group-id="4909842236-1">}</span><span class="w"> </span><span class="n">type</span><span class="o">=</span><span class="s">&quot;email&quot;</span><span class="w"> </span><span class="o">/</span><span class="o">&gt;</span><span class="w">
+</span><span class="o">&lt;</span><span class="o">.</span><span class="n">input</span><span class="w"> </span><span class="n">name</span><span class="o">=</span><span class="s">&quot;my-input&quot;</span><span class="w"> </span><span class="n">errors</span><span class="o">=</span><span class="p" data-group-id="4909842236-3">{</span><span class="p" data-group-id="4909842236-4">[</span><span class="s">&quot;oh no!&quot;</span><span class="p" data-group-id="4909842236-4">]</span><span class="p" data-group-id="4909842236-3">}</span><span class="w"> </span><span class="o">/</span><span class="o">&gt;</span></code></pre><h2 id="input/1-attributes" class="section-heading">
   <a href="#input/1-attributes" class="hover-link">
     <i class="ri-link-m" aria-hidden="true"></i>
   </a>
