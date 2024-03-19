@@ -104,11 +104,16 @@ Lightning.UsageTracking.Client.html
 Lightning.UsageTracking.Configuration.html
 Lightning.UsageTracking.DailyReportConfiguration.html
 Lightning.UsageTracking.DayWorker.html
+Lightning.UsageTracking.ProjectMetricsService.html
 Lightning.UsageTracking.Report.html
 Lightning.UsageTracking.ReportData.html
 Lightning.UsageTracking.ReportWorker.html
 Lightning.UsageTracking.ResponseProcessor.html
+Lightning.UsageTracking.RunService.html
+Lightning.UsageTracking.UserQueries.html
+Lightning.UsageTracking.UserService.html
 Lightning.UsageTracking.Worker.html
+Lightning.UsageTracking.WorkflowMetricsService.html
 Lightning.UsageTracking.html
 Lightning.Validators.html
 Lightning.Vault.html
@@ -264,8 +269,8 @@ dist/merriweather-latin-ext-300-normal-K6L27CZ5.woff2
 dist/merriweather-vietnamese-300-italic-EHHNZPUO.woff2
 dist/merriweather-vietnamese-300-normal-U376L4Z4.woff2
 dist/remixicon-NKANDIL5.woff2
-dist/search_data-7155EB0F.js
-dist/sidebar_items-8BCBE1FF.js
+dist/search_data-E755F0BF.js
+dist/sidebar_items-BD9F97F4.js
 index.html
 provisioning.html
 readme.html
