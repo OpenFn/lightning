@@ -490,7 +490,12 @@ defmodule LightningWeb.WorkOrderLiveTest do
         )
 
       claimed_at = format_timestamp(run_1.claimed_at)
+      claimed_unix = DateTime.to_unix(run_1.claimed_at, :microsecond)
+      claimed_iso = DateTime.to_iso8601(run_1.claimed_at)
+
       started_at = format_timestamp(run_2.started_at)
+      started_unix = DateTime.to_unix(run_2.started_at, :microsecond)
+      started_iso = DateTime.to_iso8601(run_2.started_at)
 
       {:ok, view, _html} =
         live_async(conn, Routes.project_run_index_path(conn, :index, project.id))
@@ -501,12 +506,11 @@ defmodule LightningWeb.WorkOrderLiveTest do
       assert rendered =~ run_1.id
       assert rendered =~ run_2.id
 
-      open_browser(view)
+      assert rendered =~
+               "claimed @\n                  \n  <span id=\"#{claimed_unix}-tooltip\" phx-hook=\"Tooltip\" aria-label=\"Run claimed by worker at #{claimed_iso}\" data-allow-html=\"true\">\n  \n    \n        #{claimed_at}"
 
-      assert rendered =~ "claimed @ \n  \n      #{claimed_at}"
-
-      assert rendered =~ "claimed @ \n  \n      #{started_at}" or
-               rendered =~ "started @ \n  \n      #{started_at}"
+      assert rendered =~
+               "started @\n                  \n  <span id=\"#{started_unix}-tooltip\" phx-hook=\"Tooltip\" aria-label=\"Run started at #{started_iso}\" data-allow-html=\"true\">\n  \n    \n        #{started_at}"
     end
 
     test "lists all workorders", %{
