@@ -83,6 +83,7 @@ defmodule Lightning.UsageTracking do
     start_after
     |> candidate_dates(today)
     |> remove_existing_dates()
+    |> Enum.sort(Date)
     |> Enum.take(batch_size)
   end
 
