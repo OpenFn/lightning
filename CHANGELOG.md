@@ -19,6 +19,9 @@ and this project adheres to
 
 ### Changed
 
+- Support for smaller screens on history and inspector.
+  [#1908](https://github.com/OpenFn/lightning/issues/1908)
+
 ### Fixed
 
 ## [v2.2.0] - 2024-03-21
@@ -67,8 +70,8 @@ and this project adheres to
 
 ### Added
 
-- Support for smaller screens on history and inspector.
-  [#1908](https://github.com/OpenFn/lightning/issues/1908)
+- Enable users to connect to their Github accounts
+  [#1894](https://github.com/OpenFn/lightning/issues/1894)
 - Polling metric to track number of available runs.
   [#1790](https://github.com/OpenFn/lightning/issues/1790)
 - Allows limiting creation of new runs and retries.
