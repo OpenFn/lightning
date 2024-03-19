@@ -127,7 +127,7 @@ defmodule Lightning.VersionControl do
     end
   end
 
-  def fetch_github_oauth_token(code) do
+  def exchange_code_for_oauth_token(code) do
     app_config = Application.fetch_env!(:lightning, :github_app)
 
     query_params = [
@@ -136,16 +136,9 @@ defmodule Lightning.VersionControl do
       code: code
     ]
 
-    response =
-      Tesla.post(
-        Tesla.client([Tesla.Middleware.JSON]),
-        "https://github.com/login/oauth/access_token",
-        %{},
-        query: query_params,
-        headers: [{"accept", "application/vnd.github+json"}]
-      )
+    client = GithubClient.build_oauth_client()
 
-    case response do
+    case Tesla.post(client, "/access_token", %{}, query: query_params) do
       {:ok, %{body: %{"access_token" => _} = body}} ->
         {:ok, body}
 
@@ -157,7 +150,103 @@ defmodule Lightning.VersionControl do
     end
   end
 
-  def save_github_oauth_token(%User{} = user, token) do
+  def refresh_oauth_token(refresh_token) do
+    app_config = Application.fetch_env!(:lightning, :github_app)
+
+    query_params = [
+      client_id: app_config[:client_id],
+      client_secret: app_config[:client_secret],
+      grant_type: "refresh_token",
+      refresh_token: refresh_token
+    ]
+
+    client = GithubClient.build_oauth_client()
+
+    case Tesla.post(client, "/access_token", %{}, query: query_params) do
+      {:ok, %{body: %{"access_token" => _} = body}} ->
+        {:ok, body}
+
+      {:ok, %{body: body}} ->
+        {:error, body}
+
+      other ->
+        other
+    end
+  end
+
+  def oauth_token_valid?(token) do
+    case token do
+      %{"refresh_token_expires_at" => expiry} ->
+        {:ok, expiry, _offset} = DateTime.from_iso8601(expiry)
+        now = DateTime.utc_now()
+        DateTime.after?(expiry, now)
+
+      %{"access_token" => _access_token} ->
+        true
+
+      _other ->
+        false
+    end
+  end
+
+  # token that expires
+  def fetch_user_access_token(
+        %User{
+          github_oauth_token: %{"refresh_token_expires_at" => _expiry} = token
+        } = user
+      ) do
+    if oauth_token_valid?(token) do
+      maybe_refresh_access_token(user)
+    else
+      {:error, :expired}
+    end
+  end
+
+  # token that doesn't expire
+  def fetch_user_access_token(%User{
+        github_oauth_token: %{"access_token" => access_token}
+      }) do
+    {:ok, access_token}
+  end
+
+  defp maybe_refresh_access_token(%User{github_oauth_token: token} = user) do
+    {:ok, access_token_expiry, _offset} =
+      DateTime.from_iso8601(token["expires_at"])
+
+    now = DateTime.utc_now()
+
+    if DateTime.after?(access_token_expiry, now) do
+      {:ok, token["access_token"]}
+    else
+      with {:ok, refreshed_token} <- refresh_oauth_token(token["refresh_token"]),
+           {:ok, _user} <- save_oauth_token(user, refreshed_token, notify: false) do
+        {:ok, refreshed_token["access_token"]}
+      end
+    end
+  end
+
+  def delete_oauth_grant(%User{} = user) do
+    app_config = Application.fetch_env!(:lightning, :github_app)
+
+    with {:ok, access_token} <- fetch_user_access_token(user),
+         {:ok, %{status: 204}} <-
+           GithubClient.delete_app_grant(
+             basic_auth_client(app_config),
+             app_config[:client_id],
+             access_token
+           ) do
+      user |> Ecto.Changeset.change(%{github_oauth_token: nil}) |> Repo.update()
+    end
+  end
+
+  defp basic_auth_client(app_config) do
+    Tesla.client([
+      {Tesla.Middleware.BasicAuth,
+       [username: app_config[:client_id], password: app_config[:client_secret]]}
+    ])
+  end
+
+  def save_oauth_token(%User{} = user, token, opts \\ [notify: true]) do
     token =
       token
       |> maybe_add_access_token_expiry_date()
@@ -168,7 +257,9 @@ defmodule Lightning.VersionControl do
     |> Repo.update()
     |> tap(fn
       {:ok, user} ->
-        Events.oauth_token_added(user)
+        if opts[:notify] do
+          Events.oauth_token_added(user)
+        end
 
       _other ->
         :ok

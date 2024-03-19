@@ -6,9 +6,9 @@ defmodule LightningWeb.OauthController do
 
   def new(conn, %{"provider" => "github", "code" => code}) do
     if user = conn.assigns.current_user do
-      case VersionControl.fetch_github_oauth_token(code) do
+      case VersionControl.exchange_code_for_oauth_token(code) do
         {:ok, token} ->
-          VersionControl.save_github_oauth_token(user, token)
+          VersionControl.save_oauth_token(user, token)
 
         {:error, reason} ->
           VersionControl.Events.oauth_token_failed(user, reason)

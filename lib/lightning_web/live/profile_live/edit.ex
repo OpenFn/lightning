@@ -25,13 +25,13 @@ defmodule LightningWeb.ProfileLive.Edit do
 
   @impl true
   def handle_info(
-        %Lightning.VersionControl.Events.OauthTokenAdded{user: user},
+        %Lightning.VersionControl.Events.OauthTokenAdded{},
         socket
       ) do
     {:noreply,
      socket
-     |> assign(current_user: user)
-     |> put_flash(:info, "Github account linked successfully")}
+     |> put_flash(:info, "Github account linked successfully")
+     |> push_navigate(to: ~p"/profile")}
   end
 
   def handle_info(
