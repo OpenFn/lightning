@@ -127,6 +127,12 @@ defmodule Lightning.VersionControl do
     end
   end
 
+  @doc """
+  Fetches the oauth access token using the code received from the callback url
+  For more info: https://docs.github.com/en/apps/creating-github-apps/authenticating-with-a-github-app/generating-a-user-access-token-for-a-github-app
+  """
+  @spec exchange_code_for_oauth_token(code :: String.t()) ::
+          {:ok, map()} | {:error, map()}
   def exchange_code_for_oauth_token(code) do
     app_config = Application.fetch_env!(:lightning, :github_app)
 
@@ -150,6 +156,12 @@ defmodule Lightning.VersionControl do
     end
   end
 
+  @doc """
+  Fetches a new access token using the given refresh token
+  For more info: https://docs.github.com/en/apps/creating-github-apps/authenticating-with-a-github-app/refreshing-user-access-tokens
+  """
+  @spec refresh_oauth_token(refresh_token :: String.t()) ::
+          {:ok, map()} | {:error, map()}
   def refresh_oauth_token(refresh_token) do
     app_config = Application.fetch_env!(:lightning, :github_app)
 
@@ -174,6 +186,13 @@ defmodule Lightning.VersionControl do
     end
   end
 
+  @doc """
+  Checks if the given token has expired.
+  Github supports access tokens that expire and those that don't.
+  If the `access token` expires, then a `refresh token` is also availed.
+  This function simply checks if the token has a `refresh_token`, if yes, it proceeds to check the expiry date
+  """
+  @spec oauth_token_valid?(token :: map()) :: boolean()
   def oauth_token_valid?(token) do
     case token do
       %{"refresh_token_expires_at" => expiry} ->
@@ -189,6 +208,12 @@ defmodule Lightning.VersionControl do
     end
   end
 
+  @doc """
+  Fecthes the access token for the given `User`.
+  If the access token has expired, it `refreshes` the token and updates the `User` column accordingly
+  """
+  @spec fetch_user_access_token(User.t()) ::
+          {:ok, String.t()} | {:error, :expired | map()}
   # token that expires
   def fetch_user_access_token(
         %User{
@@ -225,7 +250,11 @@ defmodule Lightning.VersionControl do
     end
   end
 
-  def delete_oauth_grant(%User{} = user) do
+  @doc """
+  Deletes the authorization for the github app and updates the user details accordingly
+  """
+  @spec delete_github_ouath_grant(User.t()) :: {:ok, User.t()} | {:error, any()}
+  def delete_github_ouath_grant(%User{} = user) do
     app_config = Application.fetch_env!(:lightning, :github_app)
 
     with {:ok, access_token} <- fetch_user_access_token(user),

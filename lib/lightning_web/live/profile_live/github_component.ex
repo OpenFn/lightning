@@ -12,7 +12,7 @@ defmodule LightningWeb.ProfileLive.GithubComponent do
 
   @impl true
   def handle_event("disconnect-github", _params, socket) do
-    case VersionControl.delete_oauth_grant(socket.assigns.user) do
+    case VersionControl.delete_github_ouath_grant(socket.assigns.user) do
       {:ok, _user} ->
         {:noreply,
          socket
@@ -49,12 +49,15 @@ defmodule LightningWeb.ProfileLive.GithubComponent do
           <%= if token_valid?(@user.github_oauth_token) do %>
             <.button
               type="button"
-              phx-click="disconnect-github"
-              phx-target={@myself}
-              color_class="text-white bg-danger-500 hover:bg-danger-700"
+              phx-click={show_modal("disconnect_github_modal")}
+              color_class="text-white bg-danger-600 hover:bg-danger-700"
             >
               Disconnect from Github
             </.button>
+            <.confirm_github_disconnection_modal
+              id="disconnect_github_modal"
+              myself={@myself}
+            />
           <% else %>
             <.link
               id="connect-github-link"
@@ -86,5 +89,53 @@ defmodule LightningWeb.ProfileLive.GithubComponent do
     params = %{client_id: client_id, redirect_uri: redirect_url}
 
     Plug.Conn.Query.encode(params)
+  end
+
+  defp confirm_github_disconnection_modal(assigns) do
+    ~H"""
+    <.modal id={@id} width="max-w-md">
+      <:title>
+        <div class="flex justify-between">
+          <span class="font-bold">
+            Disconnect from GitHub?
+          </span>
+          <button
+            phx-click={hide_modal(@id)}
+            type="button"
+            class="rounded-md bg-white text-gray-400 hover:text-gray-500 focus:outline-none"
+            aria-label={gettext("close")}
+          >
+            <span class="sr-only">Close</span>
+            <Heroicons.x_mark solid class="h-5 w-5 stroke-current" />
+          </button>
+        </div>
+      </:title>
+      <div class="px-6">
+        <p class="text-sm text-gray-500">
+          You are about to disconnect your OpenFn account from GitHub.
+          Until you reconnect, you will not be able to set up or modify version control for your projects.
+        </p>
+      </div>
+      <div class="flex flex-row-reverse gap-4 mx-6 mt-2">
+        <.button
+          id={"#{@id}_confirm_button"}
+          type="button"
+          color_class="bg-red-600 hover:bg-red-700 text-white"
+          phx-disable-with="Disconnecting..."
+          phx-click="disconnect-github"
+          phx-target={@myself}
+        >
+          Disconnect
+        </.button>
+        <button
+          type="button"
+          phx-click={hide_modal(@id)}
+          class="inline-flex items-center rounded-md bg-white px-3.5 py-2.5 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
+        >
+          Cancel
+        </button>
+      </div>
+    </.modal>
+    """
   end
 end
