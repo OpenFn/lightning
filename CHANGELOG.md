@@ -21,6 +21,13 @@ and this project adheres to
 
 ### Fixed
 
+## [v2.0.10]
+
+### Changed
+
+- Updated anonymous usage tracker submissions
+  [#1853](https://github.com/OpenFn/lightning/issues/1853)
+
 ## [v2.0.9] - 2024-03-19
 
 ### Added
