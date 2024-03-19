@@ -136,12 +136,12 @@ defmodule LightningWeb.RunLive.ShowTest do
       html = step_list_item(view, run, step)
 
       assert html =~ job_a.name
-      assert html =~ "success"
+      assert html =~ "text-green-500"
 
       html = step_list_item(view, run, step_2)
 
       assert html =~ job_b.name
-      assert html =~ "running"
+      assert html =~ "Running..."
 
       view |> select_step(run, job_b.name)
 
