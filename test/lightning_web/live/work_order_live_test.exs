@@ -1031,12 +1031,18 @@ defmodule LightningWeb.WorkOrderLiveTest do
       refute workflow_displayed(view, "workflow 1")
       refute workflow_displayed(view, "workflow 2")
 
-      view |> search_for("xxxx", [:body, :log])
+      view
+      |> search_for("xxxx", [:log])
 
       refute workflow_displayed(view, "workflow 1")
       refute workflow_displayed(view, "workflow 2")
 
-      view |> search_for("eliaswalyba", [:body, :log])
+      view
+      |> form("#run-toggle-form", filters: %{"body" => "true"})
+      |> render_change()
+
+      view
+      |> search_for("eliaswalyba", [:body, :log])
 
       assert workflow_displayed(view, "workflow 1")
       refute workflow_displayed(view, "workflow 2")
@@ -1688,7 +1694,7 @@ defmodule LightningWeb.WorkOrderLiveTest do
   end
 
   def search_for(view, term, types) when types == [] do
-    search_for(view, term, [:body, :log])
+    search_for(view, term, [:log])
   end
 
   def search_for(view, term, types) do
