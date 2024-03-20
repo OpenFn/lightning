@@ -45,34 +45,50 @@ defmodule LightningWeb.ProfileLive.GithubComponent do
               Linking your OpenFn account to your Github account allows you to manage version control across your projects.
             </span>
           </span>
-          <%= if token_valid?(@user.github_oauth_token) do %>
-            <.button
-              id="disconnect-github-button"
-              type="button"
-              phx-click={show_modal("disconnect_github_modal")}
-              color_class="text-white bg-danger-500 hover:bg-danger-700"
-            >
-              Disconnect from Github
-            </.button>
-            <.confirm_github_disconnection_modal
-              id="disconnect_github_modal"
-              myself={@myself}
-            />
+          <%= if oauth_enabled?() do %>
+            <%= if token_valid?(@user.github_oauth_token) do %>
+              <.button
+                id="disconnect-github-button"
+                type="button"
+                phx-click={show_modal("disconnect_github_modal")}
+                color_class="text-white bg-danger-500 hover:bg-danger-700"
+              >
+                Disconnect from Github
+              </.button>
+              <.confirm_github_disconnection_modal
+                id="disconnect_github_modal"
+                myself={@myself}
+              />
+            <% else %>
+              <.link
+                id="connect-github-link"
+                href={"https://github.com/login/oauth/authorize?" <> build_query_params(@socket)}
+                target="_blank"
+                class="text-center py-2 px-4 shadow-sm text-sm font-medium rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 bg-primary-600 hover:bg-primary-700 text-white"
+                {if @user.github_oauth_token, do: ["phx-hook": "Tooltip", "aria-label": "Your token has expired"], else: []}
+              >
+                <%= if @user.github_oauth_token, do: "Reconnect", else: "Connect" %> your Github Account
+              </.link>
+            <% end %>
           <% else %>
-            <.link
-              id="connect-github-link"
-              href={"https://github.com/login/oauth/authorize?" <> build_query_params(@socket)}
-              target="_blank"
-              class="text-center py-2 px-4 shadow-sm text-sm font-medium rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 bg-primary-600 hover:bg-primary-700 text-white"
-              {if @user.github_oauth_token, do: ["phx-hook": "Tooltip", "aria-label": "Your token has expired"], else: []}
+            <.button
+              id="github-oauth-not-enabled"
+              type="button"
+              disabled
+              tooltip="Github OAuth has not been enabled for this instance."
             >
-              <%= if @user.github_oauth_token, do: "Reconnect", else: "Connect" %> your Github Account
-            </.link>
+              Connect to GitHub
+            </.button>
           <% end %>
         </div>
       </div>
     </div>
     """
+  end
+
+  defp oauth_enabled? do
+    Application.get_env(:lightning, :github_app, [])
+    |> Keyword.get(:client_id)
   end
 
   defp token_valid?(token) do
