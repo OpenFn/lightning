@@ -40,7 +40,7 @@ defmodule Lightning.Accounts.UserNotifierTest do
           project_users: [%{user_id: user.id}]
         )
 
-      url = ~p"/projects/#{project.id}/w"
+      url = LightningWeb.RouteHelpers.project_dashboard_url(project.id)
 
       UserNotifier.deliver_project_addition_notification(
         user,

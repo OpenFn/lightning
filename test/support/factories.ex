@@ -131,6 +131,7 @@ defmodule Lightning.Factories do
       email: sequence(:email, &"email-#{&1}@example.com"),
       password: "hello world!",
       first_name: "anna",
+      last_name: sequence(:name, &"last-name-#{&1}"),
       hashed_password: Bcrypt.hash_pwd_salt("hello world!")
     }
   end
@@ -141,9 +142,30 @@ defmodule Lightning.Factories do
     }
   end
 
+  def user_token_factory do
+    %Lightning.Accounts.UserToken{
+      token: fn -> Ecto.UUID.generate() end
+    }
+  end
+
   def backup_code_factory do
     %Lightning.Accounts.UserBackupCode{
       code: Lightning.Accounts.UserBackupCode.generate_backup_code()
+    }
+  end
+
+  def usage_tracking_daily_report_configuration_factory do
+    %Lightning.UsageTracking.DailyReportConfiguration{}
+  end
+
+  def usage_tracking_report_factory do
+    now = DateTime.utc_now()
+
+    %Lightning.UsageTracking.Report{
+      data: %{},
+      submitted: true,
+      submitted_at: now,
+      report_date: DateTime.to_date(now)
     }
   end
 
@@ -367,7 +389,7 @@ defmodule Lightning.Factories do
   end
 
   def work_order_for(trigger_or_job, attrs) do
-    Lightning.WorkOrders.build_for(trigger_or_job, attrs)
+    Lightning.WorkOrders.build_for(trigger_or_job, Map.new(attrs))
     |> Ecto.Changeset.apply_changes()
   end
 

@@ -28,7 +28,7 @@ defmodule Lightning.DashboardStatsTest do
                last_workorder: %{state: nil, updated_at: nil},
                last_failed_workorder: %{state: nil, updated_at: nil},
                step_count: 0,
-               step_success_rate: 0.0,
+               step_success_rate: +0.0,
                workorders_count: 0
              } = DashboardStats.get_workflow_stats(workflow)
     end

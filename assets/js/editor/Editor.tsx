@@ -69,6 +69,10 @@ const defaultOptions: MonacoProps['options'] = {
   codeLens: false,
   wordBasedSuggestions: false,
 
+  fontFamily: 'Fira Code VF',
+  fontSize: 14,
+  fontLigatures: true,
+
   suggest: {
     showKeywords: false,
     showModules: false, // hides global this
@@ -254,6 +258,7 @@ export default function Editor({
         'update-layout',
         listeners.current.updateLayout
       );
+      window.addEventListener('resize', listeners.current.updateLayout);
     },
     []
   );
@@ -273,6 +278,27 @@ export default function Editor({
       };
     }
   }, [monaco, metadata]);
+
+  useEffect(() => {
+    if (monaco) {
+      monaco.editor.defineTheme('default', {
+        base: 'vs-dark',
+        inherit: true,
+        rules: [],
+        colors: {
+          'editor.foreground': '#E2E8F0',
+          'editor.background': '#334155', // slate-700
+          'editor.lineHighlightBackground': '#475569', // slate-600
+          'editor.selectionBackground': '#4f5b66',
+          'editorCursor.foreground': '#c0c5ce',
+          'editorWhitespace.foreground': '#65737e',
+          'editorIndentGuide.background': '#65737F',
+          'editorIndentGuide.activeBackground': '#FBC95A',
+        },
+      });
+      monaco.editor.setTheme('default');
+    }
+  });
 
   useEffect(() => {
     // Create a node to hold overflow widgets
@@ -323,7 +349,7 @@ export default function Editor({
       </div>
       <Monaco
         defaultLanguage="javascript"
-        theme="vs-dark"
+        theme="default"
         defaultPath="/job.js"
         value={source || DEFAULT_TEXT}
         options={options}

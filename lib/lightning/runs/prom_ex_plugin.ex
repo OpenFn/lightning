@@ -12,6 +12,7 @@ defmodule Lightning.Runs.PromExPlugin do
   alias Lightning.Repo
   alias Lightning.Run
 
+  @available_count_event [:lightning, :run, :queue, :available]
   @average_claim_event [:lightning, :run, :queue, :claim]
   @stalled_event [:lightning, :run, :queue, :stalled]
 
@@ -130,6 +131,12 @@ defmodule Lightning.Runs.PromExPlugin do
           description: "The average time taken before a run is claimed",
           measurement: :average_duration,
           unit: :millisecond
+        ),
+        last_value(
+          [:lightning, :run, :queue, :available, :count],
+          event_name: @available_count_event,
+          description: "The number of available runs in the queue",
+          measurement: :count
         )
       ]
     )
@@ -137,13 +144,14 @@ defmodule Lightning.Runs.PromExPlugin do
 
   def run_queue_metrics(run_age_seconds) do
     if pid = Process.whereis(Repo) do
-      trigger_run_claim_duration(pid, run_age_seconds)
+      check_repo_state(pid)
+
+      trigger_run_claim_duration(run_age_seconds)
+      trigger_available_runs_count()
     end
   end
 
-  defp trigger_run_claim_duration(repo_pid, run_age_seconds) do
-    check_repo_state(repo_pid)
-
+  defp trigger_run_claim_duration(run_age_seconds) do
     average_duration =
       calculate_average_claim_duration(DateTime.utc_now(), run_age_seconds)
 
@@ -192,5 +200,15 @@ defmodule Lightning.Runs.PromExPlugin do
     # the Repo GenServer is available.
 
     :sys.get_state(repo_pid)
+  end
+
+  defp trigger_available_runs_count do
+    query = from r in Run, where: r.state == :available
+
+    :telemetry.execute(
+      @available_count_event,
+      %{count: Repo.aggregate(query, :count)},
+      %{}
+    )
   end
 end

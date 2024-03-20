@@ -64,12 +64,17 @@ defmodule LightningWeb.RunLive.RunViewerLive do
               <.list_item>
                 <:label>Started</:label>
                 <:value>
-                  <%= if run.started_at,
-                    do:
-                      Timex.Format.DateTime.Formatters.Relative.format!(
+                  <%= if run.started_at do %>
+                    <Common.wrapper_tooltip
+                      id={run.id <> "start-tip"}
+                      tooltip={DateTime.to_iso8601(run.started_at)}
+                    >
+                      <%= Timex.Format.DateTime.Formatters.Relative.format!(
                         run.started_at,
                         "{relative}"
                       ) %>
+                    </Common.wrapper_tooltip>
+                  <% end %>
                 </:value>
               </.list_item>
               <.list_item>
@@ -88,15 +93,18 @@ defmodule LightningWeb.RunLive.RunViewerLive do
               :let={step}
               id={"step-list-#{run.id}"}
               steps={@steps}
-              class="flex-1"
+              class="flex-1 items-center"
             >
               <.step_item
                 step={step}
+                run_id={run.id}
+                job_id={@job_id}
                 is_clone={DateTime.compare(step.inserted_at, run.inserted_at) == :lt}
                 phx-click="select_step"
                 phx-value-id={step.id}
                 selected={step.id == @selected_step_id}
                 class="cursor-pointer"
+                project_id={@project}
               />
             </.step_list>
           </div>
@@ -135,6 +143,7 @@ defmodule LightningWeb.RunLive.RunViewerLive do
                 <Viewers.log_viewer
                   id={"run-log-#{run.id}"}
                   highlight_id={@selected_step_id}
+                  run_state={run.state}
                   stream={@streams.log_lines}
                   stream_empty?={@log_lines_stream_empty?}
                 />
@@ -150,6 +159,7 @@ defmodule LightningWeb.RunLive.RunViewerLive do
                   <Viewers.step_dataclip_viewer
                     id={"step-input-#{@selected_step_id}"}
                     class="overflow-auto h-full"
+                    run_state={@run.result.state}
                     stream={@streams.input_dataclip}
                     stream_empty?={@input_dataclip_stream_empty?}
                     step={@selected_step}
@@ -174,6 +184,7 @@ defmodule LightningWeb.RunLive.RunViewerLive do
                     class="overflow-auto h-full"
                     stream={@streams.output_dataclip}
                     stream_empty?={@output_dataclip_stream_empty?}
+                    run_state={@run.result.state}
                     step={@selected_step}
                     dataclip={@output_dataclip}
                     input_or_output={:output}

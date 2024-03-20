@@ -19,8 +19,23 @@ defmodule LightningWeb.WebhooksControllerTest do
   describe "a POST request to '/i'" do
     setup [:stub_rate_limiter_ok, :stub_usage_limiter_ok]
 
-    test "returns 402 when run limit has been reached", %{conn: conn} do
+    test "returns 200 when run soft limit has been reached", %{conn: conn} do
       Mox.stub(MockUsageLimiter, :limit_action, &StubUsageLimiter.limit_action/2)
+
+      %{triggers: [trigger]} =
+        insert(:simple_workflow) |> Lightning.Repo.preload(:triggers)
+
+      conn = post(conn, "/i/#{trigger.id}")
+
+      assert %{"work_order_id" => work_order_id} = json_response(conn, 200)
+      assert Ecto.UUID.dump(work_order_id)
+    end
+
+    test "returns 402 when run limit has been reached", %{conn: conn} do
+      Mox.stub(MockUsageLimiter, :limit_action, fn _action, _ctx ->
+        {:error, :runs_hard_limit,
+         %Lightning.Extensions.Message{text: "Runs limit exceeded"}}
+      end)
 
       %{triggers: [trigger]} =
         insert(:simple_workflow) |> Lightning.Repo.preload(:triggers)

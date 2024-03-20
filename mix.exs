@@ -4,13 +4,12 @@ defmodule Lightning.MixProject do
   def project do
     [
       app: :lightning,
-      version: "2.0.8",
+      version: "2.0.10",
       elixir: "~> 1.15",
       elixirc_paths: elixirc_paths(Mix.env()),
       elixirc_options: [
         warnings_as_errors: true
       ],
-      compilers: Mix.compilers(),
       start_permanent: Mix.env() == :prod,
       aliases: aliases(),
       deps: deps(),
@@ -135,7 +134,7 @@ defmodule Lightning.MixProject do
       {:phoenix_swoosh, "~> 1.0"},
       {:hammer_backend_mnesia, "~> 0.6"},
       {:hammer, "~> 6.0"},
-      {:vapor, "~> 0.10.0"},
+      {:dotenvy, "~> 0.8.0"},
       # MFA
       {:nimble_totp, "~> 1.0"},
       {:eqrcode, "~> 0.1"}

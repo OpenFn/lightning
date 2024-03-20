@@ -110,6 +110,29 @@ defmodule Lightning.Runs.PromExPluginText do
       )
     end
 
+    test "run queue metrics group includes number of available runs" do
+      %{metrics: metrics} =
+        plugin_config() |> find_metric_group(:lightning_run_queue_metrics)
+
+      metric =
+        metrics
+        |> find_metric([
+          :lightning,
+          :run,
+          :queue,
+          :available,
+          :count
+        ])
+
+      assert(
+        %Telemetry.Metrics.LastValue{
+          event_name: [:lightning, :run, :queue, :available],
+          description: "The number of available runs in the queue",
+          measurement: :count
+        } = metric
+      )
+    end
+
     defp find_metric_group(plugin_config, group_name) do
       plugin_config
       |> PromExPlugin.polling_metrics()
@@ -192,11 +215,16 @@ defmodule Lightning.Runs.PromExPluginText do
 
   describe ".run_queue_metrics" do
     setup do
-      %{event: [:lightning, :run, :queue, :claim], age: 20}
+      %{
+        age: 20,
+        available_event: [:lightning, :run, :queue, :available],
+        claim_event: [:lightning, :run, :queue, :claim]
+      }
     end
 
-    test "triggers a metric that returns the average queue delay",
-         %{event: event, age: age} do
+    test "triggers a metric that returns the average queue delay", config do
+      %{claim_event: event, age: age} = config
+
       # Comfortable offset in the hopes it will prevent flickering
       eligible_offset = -(age - 10)
       ineligible_offset = -(age + 1)
@@ -231,13 +259,44 @@ defmodule Lightning.Runs.PromExPluginText do
       }
     end
 
-    test "does not trigger metrics if the Repo is not available when called",
-         %{event: event, age: age} do
-      # This scenario occurs during server startup
+    test "triggers a metric with the number of available runs", config do
+      %{available_event: event, age: age} = config
+
       ref =
         :telemetry_test.attach_event_handlers(
           self(),
           [event]
+        )
+
+      now = DateTime.utc_now()
+      _available_run_1 = available_run(now, 0)
+      _available_run_2 = available_run(now, 0)
+      _available_run_3 = available_run(now, 0)
+      _other_run = other_run(now, 0, 0)
+
+      PromExPlugin.run_queue_metrics(age)
+
+      assert_received {
+        ^event,
+        ^ref,
+        %{count: 3},
+        %{}
+      }
+    end
+
+    test "doesn't trigger metrics if Repo is unavailable", config do
+      # This scenario occurs during server startup
+
+      %{
+        age: age,
+        available_event: available_event,
+        claim_event: claim_event
+      } = config
+
+      ref =
+        :telemetry_test.attach_event_handlers(
+          self(),
+          [available_event, claim_event]
         )
 
       with_mock(
@@ -249,7 +308,14 @@ defmodule Lightning.Runs.PromExPluginText do
       end
 
       refute_received {
-        ^event,
+        ^available_event,
+        ^ref,
+        %{count: _count},
+        %{}
+      }
+
+      refute_received {
+        ^claim_event,
         ^ref,
         %{average_duration: _duration},
         %{}

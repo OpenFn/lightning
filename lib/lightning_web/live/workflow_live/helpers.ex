@@ -23,7 +23,8 @@ defmodule LightningWeb.WorkflowLive.Helpers do
           {:ok,
            %{
              workorder: WorkOrder.t(),
-             workflow: Workflows.Workflow.t()
+             workflow: Workflows.Workflow.t(),
+             message: UsageLimiting.message()
            }}
           | {:error, Ecto.Changeset.t(Workflows.Workflow.t())}
           | {:error, Ecto.Changeset.t(WorkOrders.Manual.t())}

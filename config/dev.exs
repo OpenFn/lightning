@@ -42,9 +42,40 @@ config :lightning,
 config :lightning, Lightning.Vault,
   primary_encryption_key: "M1zzWU6Ego6jV/FUS7e/sj7yF9kRIutgR8uLQ9czrVc="
 
-config :lightning, Lightning.Runtime.RuntimeManager,
-  start: true,
-  env: [{"NODE_OPTIONS", "--dns-result-order=ipv4first"}]
+config :lightning, Lightning.Runtime.RuntimeManager, start: true
+
+config :lightning, :workers,
+  private_key: """
+  -----BEGIN PRIVATE KEY-----
+  MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQCpnpkjo7vhBrXa
+  cQk4xufVKZgWnb0b1UFHd52b2Zi3Qo4R+5+QNRc7hzxvDjJQ2tJ2l4cxjfuoad3h
+  FyiHRRMdVTsSqa/1S0dk9ws9aN/gGEow+EIN2/RY4JW5f0xYDRx84lT7n7gxesbp
+  82KNL/LO8ZnKzIEEnKy0zbMA3vLGW8sVhpS9QRRql4VukkNo4eZvavCL6DCCn9Rj
+  Z7ykKHNlOxMDdmHbxD1c7mPspumRodS0+w/p9kr70XnWx2Itsnzs8DUz1GE70yc7
+  jfR/od7VTv5k3vYMDwOqolSH8LZrIpaopB7AberqCuvgGsuOO3vM+6biddfFQPL0
+  hsohrq/FAgMBAAECggEABHV4DrXJKvswLW13RP5r+oojYCs5XQS+hV07NjoCh7ha
+  LIk+z12pHkl9AmmPIEAzjcAh/HpNBhPyXzs3arobUu2tcqolrZism2NBimKG/OJM
+  +pVfUMBaRgcK9VthUf2jC0b8qoV78OEKkmMLHi1ts2Vds5t4o/rL/dzCbeChsfeN
+  mRWaAAAADdaPAU9rX0G72V0GzjpSn8tbymMghwdKTSjt5Xr8s7zGmD5MoIwL47d3
+  O/z9FwdfjYkdXbn30+BOcdpGWU9TfY7EpcTETCwkYXREcdqgKSGSg+M55C9Moc+E
+  2OuSsKtht/A6OXuqCORymRScACc5OLAWvMkX0xncgQKBgQDdLAgASDmM8giPfUdz
+  GyQ+IUXYtx91xqOW0uuqQ7V/PcUmXqdKs8vaRxlQ0j9hqsvMuu4iUa6j/qBrCai9
+  mZh2IczrrIub7LB0p3ZzTLmqLSxAWKYML6/MOV7AyuY7Xt8wiNYaikELf/wu7DUD
+  G+hwVe0TZMBnerRHrxwXeyyHMQKBgQDEVF1Alvfyx+Bxpxwc4N07quqj6zPytScJ
+  xaoPUoIXVYVH4T6/YJLRQEHV/m2HV6+cmAD/x8L1nAesfAayNoaw8PPTXiRVym5k
+  KMYu+amJAAIBygcK8c8w7NCY4NL2g6brYPInPnxnF/tHEgybudDzdnYikG2chr5x
+  18dUpmB01QKBgQCHs+N44NfG3h5YhCKZwpZ7NIkZjkpURjvLZ8DHKGItHyZfA4ab
+  tDOoyyUCTO4sq9H93NgN4JZJ8wpUgomxQ5OjL9v+4lCKrDAccz+fQP1OKAdVt86x
+  /XRc1vqHSjb3SJ+itOLBSADe4HlIBRAFx1LX0jDzTEctdsE0loGi+qV4kQKBgGtZ
+  HawFYAmVlHlQQCTiJtVLPQTnw/2/Y1sKg1Phb1RG5JtK475Mlbpoghb6CPVp0pGy
+  40j39vfImsGLBzZGbhsthIRcA04NY5LMYKCqzjIkmPRVfMhVM06zDdOpinBTx98H
+  oSAoIGlWSYSwr8guL7wPV8TKZ8SgQF2K+GimmDMJAoGANA0h5UNuHFZI8cg7SwR3
+  UHrjyn9sMGQcn6CUnpgHEtZa9i0Dw4Wcx0j7KcKV68XIIisIqRweFDvgrUC/XJiD
+  8awEXEW3Y84FisbI3snDpqTHIPnsh4zaJfbHzr4HEeW9qeCKbmYrvC+nQJD+vu3J
+  3wneQ/c7fH6DI81VAtBtMWA=
+  -----END PRIVATE KEY-----
+  """,
+  worker_secret: "ZOr2sjacHZnql7WYETL2x61d6RDdecnyLWieoG+bX6Q="
 
 # ## SSL Support
 #
@@ -101,3 +132,5 @@ if System.get_env("EXPORT_OTEL") == "true" do
 else
   config :opentelemetry, traces_exporter: :none
 end
+
+config :lightning, :is_resettable_demo, true
