@@ -19,6 +19,10 @@ and this project adheres to
 
 ### Changed
 
+- Give priority to manual runs (over webhook requests and cron) so that active
+  users on the inspector don't have to wait ages for thier work during high load
+  periods [#1918](https://github.com/OpenFn/lightning/issues/1918)
+
 ### Fixed
 
 ## [v2.1.0] - 2024-03-20

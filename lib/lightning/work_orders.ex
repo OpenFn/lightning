@@ -104,7 +104,8 @@ defmodule Lightning.WorkOrders do
       build_for(manual.job, %{
         workflow: manual.workflow,
         dataclip: dataclip,
-        created_by: manual.created_by
+        created_by: manual.created_by,
+        priority: :immediate
       })
     end)
     |> Multi.put(:workflow, manual.workflow)
@@ -195,7 +196,8 @@ defmodule Lightning.WorkOrders do
     |> put_assoc(:runs, [
       Run.for(job, %{
         dataclip: attrs[:dataclip],
-        created_by: attrs[:created_by]
+        created_by: attrs[:created_by],
+        priority: attrs[:priority]
       })
     ])
     |> validate_required_assoc(:workflow)
