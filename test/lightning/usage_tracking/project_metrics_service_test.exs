@@ -59,33 +59,6 @@ defmodule Lightning.UsageTracking.ProjectMetricsServiceTest do
     }
   end
 
-  describe ".find_eligible_projects" do
-    setup do
-      %{date: ~D[2024-02-05]}
-    end
-
-    test "returns all projects created before the date", %{date: date} do
-      eligible_project_1 =
-        insert(:project, inserted_at: ~U[2024-02-05 23:59:58Z])
-
-      eligible_project_2 =
-        insert(:project, inserted_at: ~U[2024-02-04 23:59:59Z])
-
-      ineligible_project_1 =
-        insert(:project, inserted_at: ~U[2024-02-06 00:00:00Z])
-
-      ineligible_project_2 =
-        insert(:project, inserted_at: ~U[2024-02-06 00:00:01Z])
-
-      result = ProjectMetricsService.find_eligible_projects(date)
-
-      assert result |> contains?(eligible_project_1)
-      assert result |> contains?(eligible_project_2)
-      refute result |> contains?(ineligible_project_1)
-      refute result |> contains?(ineligible_project_2)
-    end
-  end
-
   describe ".generate_metrics/3 - cleartext disabled" do
     setup context do
       context |> Map.merge(%{enabled: false})

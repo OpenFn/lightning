@@ -4,6 +4,7 @@ defmodule Lightning.UsageTracking.ReportData do
 
 
   """
+  alias Lightning.UsageTracking
   alias Lightning.UsageTracking.DailyReportConfiguration
   alias Lightning.UsageTracking.ProjectMetricsService
   alias Lightning.UsageTracking.UserService
@@ -56,7 +57,7 @@ defmodule Lightning.UsageTracking.ReportData do
 
   defp instrument_projects(cleartext_enabled, date) do
     date
-    |> ProjectMetricsService.find_eligible_projects()
+    |> UsageTracking.find_eligible_projects()
     |> Enum.map(fn project ->
       ProjectMetricsService.generate_metrics(project, cleartext_enabled, date)
     end)
