@@ -19,10 +19,19 @@ and this project adheres to
 
 - TSVector index to log_lines, and gin index to dataclips
   [#1898](https://github.com/OpenFn/lightning/issues/1898)
+- Add API Version field to Salesforce OAuth credentials
+  [#1838](https://github.com/OpenFn/lightning/issues/1838)
 
 ### Changed
 
 ### Fixed
+
+## [v2.0.10]
+
+### Changed
+
+- Updated anonymous usage tracker submissions
+  [#1853](https://github.com/OpenFn/lightning/issues/1853)
 
 ## [v2.0.9] - 2024-03-19
 
