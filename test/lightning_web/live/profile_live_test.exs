@@ -437,7 +437,7 @@ defmodule LightningWeb.ProfileLiveTest do
       {:ok, view, _html} = live(conn, ~p"/profile")
       connect_button = element(view, "#connect-github-link")
       assert has_element?(connect_button)
-      assert render(connect_button) =~ "Reconnect your Github Account"
+      assert render(connect_button) =~ "Reconnect your GitHub account"
       assert render(connect_button) =~ "Your token has expired"
       refute has_element?(view, "#disconnect-github-button")
     end
