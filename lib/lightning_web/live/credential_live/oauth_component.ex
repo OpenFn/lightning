@@ -22,6 +22,7 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
   attr :scopes_changed, :boolean, default: false
   attr :schema, :string, required: true
   attr :sandbox_value, :boolean, default: false
+  attr :api_version, :string, default: ""
   slot :inner_block
 
   def fieldset(assigns) do
@@ -55,6 +56,7 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
            token_body_changeset: @token_body_changeset,
            update_body: @update_body,
            sandbox_value: @sandbox_value,
+           api_version: @api_version,
            schema: @schema,
            id: "inner-form-#{@id}"
          ],
@@ -107,12 +109,13 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
       <div :for={
         body_form <- Phoenix.HTML.FormData.to_form(:credential, @form, :body, [])
       }>
-        <%= Phoenix.HTML.Form.hidden_input(body_form, :access_token) %>
-        <%= Phoenix.HTML.Form.hidden_input(body_form, :refresh_token) %>
-        <%= Phoenix.HTML.Form.hidden_input(body_form, :expires_at) %>
         <%= Phoenix.HTML.Form.hidden_input(body_form, :scope) %>
         <%= Phoenix.HTML.Form.hidden_input(body_form, :sandbox) %>
+        <%= Phoenix.HTML.Form.hidden_input(body_form, :expires_at) %>
+        <%= Phoenix.HTML.Form.hidden_input(body_form, :api_version) %>
+        <%= Phoenix.HTML.Form.hidden_input(body_form, :access_token) %>
         <%= Phoenix.HTML.Form.hidden_input(body_form, :instance_url) %>
+        <%= Phoenix.HTML.Form.hidden_input(body_form, :refresh_token) %>
       </div>
       <.reauthorize_banner
         :if={@display_reauthorize_banner}
@@ -563,6 +566,7 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
           action: _action,
           scopes_changed: _scopes_changed,
           sandbox_value: _sandbox_value,
+          api_version: _api_version,
           token_body_changeset: _changeset,
           update_body: _body,
           schema: _schema
@@ -598,6 +602,18 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
     handle_scopes_update(scopes, socket)
   end
 
+  def update(%{api_version: api_version}, socket) do
+    socket.assigns.token.result
+    |> token_to_params()
+    |> maybe_add_specific_provider_params(
+      socket.assigns,
+      socket.assigns.provider
+    )
+    |> socket.assigns.update_body.()
+
+    {:ok, socket |> assign(api_version: api_version)}
+  end
+
   def update(%{sandbox: sandbox}, socket) do
     wellknown_url = socket.assigns.adapter.wellknown_url(sandbox)
 
@@ -629,6 +645,7 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
            action: action,
            scopes_changed: scopes_changed,
            sandbox_value: sandbox_value,
+           api_version: api_version,
            token_body_changeset: token_body_changeset,
            update_body: update_body,
            schema: schema
@@ -646,6 +663,7 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
       update_body: update_body,
       adapter: adapter,
       sandbox: sandbox_value,
+      api_version: api_version,
       provider: adapter.provider_name,
       action: action,
       scopes_changed: scopes_changed
@@ -749,7 +767,7 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
     parsed_token =
       token
       |> token_to_params()
-      |> maybe_add_sandbox(sandbox, provider)
+      |> maybe_add_specific_provider_params(socket.assigns, provider)
 
     update_body.(parsed_token)
 
@@ -898,12 +916,14 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
     )
   end
 
-  defp maybe_add_sandbox(token, sandbox, provider) do
-    if provider === "Salesforce" do
-      Map.put_new(token, :sandbox, sandbox)
-    else
-      token
-    end
+  defp maybe_add_specific_provider_params(token_params, assigns, "Salesforce") do
+    assigns
+    |> Map.take([:sandbox, :api_version])
+    |> Map.merge(token_params)
+  end
+
+  defp maybe_add_specific_provider_params(token_params, _assigns, _provider) do
+    token_params
   end
 
   defp display_loader?(oauth_progress) do
