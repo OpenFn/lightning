@@ -170,7 +170,18 @@ purge_cron =
     ],
     else: []
 
-usage_tracking_cron = [{"0 2 * * *", Lightning.UsageTracking.Worker}]
+usage_tracking_daily_batch_size =
+  "USAGE_TRACKING_DAILY_BATCH_SIZE"
+  |> System.get_env("10")
+  |> String.to_integer()
+
+usage_tracking_cron = [
+  {
+    "0 2 * * *",
+    Lightning.UsageTracking.DayWorker,
+    args: %{"batch_size" => usage_tracking_daily_batch_size}
+  }
+]
 
 all_cron = base_oban_cron ++ purge_cron ++ usage_tracking_cron
 
