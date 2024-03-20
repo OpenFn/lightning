@@ -50,7 +50,7 @@ defmodule LightningWeb.ProfileLive.GithubComponent do
               id="disconnect-github-button"
               type="button"
               phx-click={show_modal("disconnect_github_modal")}
-              color_class="text-white bg-danger-600 hover:bg-danger-700"
+              color_class="text-white bg-danger-500 hover:bg-danger-700"
             >
               Disconnect from Github
             </.button>
