@@ -139,15 +139,14 @@ defmodule Lightning.WorkOrdersTest do
                )
                |> Ecto.Changeset.apply_action(:validate)
 
-      assert {:ok, workorder} = WorkOrders.create_for(manual)
-      assert [run] = workorder.runs
-
+      assert {:ok, %{runs: [run]} = workorder} = WorkOrders.create_for(manual)
       assert workorder.dataclip.type == :saved_input
 
       assert workorder.dataclip.body == %{
                "key_left" => "value_left"
              }
 
+      assert run.priority == :immediate
       assert run.created_by.id == user.id
 
       assert_received %Events.RunCreated{

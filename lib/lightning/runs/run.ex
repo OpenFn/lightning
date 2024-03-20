@@ -95,7 +95,7 @@ defmodule Lightning.Run do
   end
 
   def for(%Job{} = job, attrs) do
-    %__MODULE__{}
+    %__MODULE__{priority: attrs[:priority]}
     |> change()
     |> put_assoc(:starting_job, job)
     |> put_assoc(:created_by, attrs[:created_by])
