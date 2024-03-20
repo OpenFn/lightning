@@ -667,256 +667,52 @@
           <div class="hidden sm:block" aria-hidden="true">
             <div class="py-2"></div>
           </div>
-          <%= if  @github_enabled do %>
-            <div>
-              <div :if={@show_github_setup} class="bg-white p-4 rounded-md">
-                <h6 class="font-medium text-black">
-                  Connect this project to a GitHub repo
-                </h6>
-                <small class="block my-1 text-xs text-gray-600">
-                  Click to install the OpenFn app in a GitHub organization & repository.
-                  (You will need admin access.)
-                </small>
-                <div class="hidden sm:block" aria-hidden="true">
-                  <div class="py-2"></div>
-                </div>
-                <.button
-                  type="button"
-                  disabled={
-                    !@can_install_github ||
-                      has_pending_installation?(
-                        @project,
-                        @pending_github_installation
-                      )
-                  }
-                  phx-click="install_app"
-                  phx-value-id={@project.id}
-                  tooltip={
-                    install_github_tooltip(
-                      @project,
-                      @can_install_github,
-                      @pending_github_installation
-                    )
-                  }
-                >
-                  Connect to GitHub
-                </.button>
-              </div>
-              <div :if={!@show_github_setup} class="bg-white p-4 rounded-md">
-                <h6 class="font-medium text-black">Sync to GitHub</h6>
-                <small class="block my-1 text-xs text-gray-600">
-                  Configure a two-way sync between this lightning project and a
-                  GitHub repo. See
-                  <.link
-                    href="https://docs.openfn.org/documentation/deploy/portability#automated-version-control-with-github-and-lightning"
-                    target="_blank"
-                    class="hover:underline text-primary-600"
-                  >
-                    portability docs
-                  </.link>
-                  for full documentation on associated GitHub actions and
-                  automated workflows.
-                </small>
-
-                <.form
-                  :let={f}
-                  for={@project_repo_connection}
-                  id="project-vcs-form"
-                  phx-submit="save_repo"
-                >
-                  <div class="hidden sm:block" aria-hidden="true">
-                    <div class="py-2"></div>
-                  </div>
-                  <div class="grid grid-cols gap-6">
-                    <div class="md:col-span-2">
-                      <small class="font-medium my-1 text-xs text-black">
-                        <span>
-                          <%= if @show_repo_setup && !@show_sync_button do %>
-                            Repository
-                          <% end %>
-                          <%= if @show_sync_button do %>
-                            Repository:
-                            <.link
-                              href={"https://www.github.com/" <> @project_repo_connection["repo"]}
-                              target="_blank"
-                              class="hover:underline text-primary-600"
-                            >
-                              <%= @project_repo_connection["repo"] %>
-                            </.link>
-                          <% end %>
-                        </span>
-                      </small>
-
-                      <Form.select_field
-                        :if={@show_repo_setup && !@show_sync_button}
-                        form={f}
-                        disabled={!@can_install_github || @show_sync_button}
-                        name={:repo}
-                        id="project-repo"
-                        phx-change="repo_selected"
-                        prompt={
-                          @project_repo_connection["repo"] ||
-                            "Select a Repository"
-                        }
-                        values={@repos}
-                      />
-                    </div>
-                  </div>
-                  <div class="hidden sm:block" aria-hidden="true">
-                    <div class="py-1"></div>
-                  </div>
-                  <div class="grid grid-cols gap-6">
-                    <div class="md:col-span-2">
-                      <small class="font-medium my-1 text-xs text-black">
-                        <span>
-                          <%= if @show_repo_setup && !@show_sync_button do %>
-                            Branch
-                          <% end %>
-                          <%= if @show_sync_button do %>
-                            Branch:
-                            <span class="text-xs font-mono bg-gray-200 rounded-md p-1">
-                              <%= @project_repo_connection["branch"] %>
-                            </span>
-                          <% end %>
-                        </span>
-                      </small>
-                      <Form.select_field
-                        :if={@show_repo_setup && !@show_sync_button}
-                        form={f}
-                        disabled={!@can_install_github || @loading_branches}
-                        phx-change="branch_selected"
-                        name={:branch}
-                        id="project-branch"
-                        values={@branches}
-                        prompt={
-                          @project_repo_connection["branch"] || "Select a branch"
-                        }
-                      />
-                    </div>
-                  </div>
-                  <%= if @show_sync_button do %>
-                    <div class="hidden sm:block" aria-hidden="true">
-                      <div class="py-1"></div>
-                    </div>
-                    <div class="grid grid-cols gap-6 mb-3">
-                      <div class="md:col-span-2">
-                        <small class="font-medium my-1 text-xs text-black">
-                          <span>
-                            GitHub Installation ID:
-                            <span class="text-xs font-mono bg-gray-200 rounded-md p-1">
-                              <%= @project_repo_connection[
-                                "github_installation_id"
-                              ] %>
-                            </span>
-                          </span>
-                        </small>
-                        <Form.select_field
-                          :if={@show_repo_setup && !@show_sync_button}
-                          form={f}
-                          disabled={!@can_install_github || @loading_branches}
-                          phx-change="branch_selected"
-                          name={:branch}
-                          id="project-branch"
-                          values={@branches}
-                          prompt={
-                            @project_repo_connection["branch"] ||
-                              "Select a branch"
-                          }
-                        />
-                      </div>
-                    </div>
-                  <% end %>
-                  <div
-                    :if={@show_repo_setup && !@show_sync_button}
-                    class="bg-amber-200 flex gap-3 rounded-md p-3 my-4"
-                  >
-                    <NewInputs.input
-                      type="checkbox"
-                      field={f[:accept]}
-                      class="text-blue-500"
-                      required="true"
-                      disabled={!@can_install_github}
+          <div class="bg-white p-4 rounded-md">
+            <%= if  @github_enabled do %>
+              <%= if @project_repo_connection do %>
+                <.live_component
+                  id="github-sync-component"
+                  module={LightningWeb.ProjectLive.GithubSyncComponent}
+                  user={@current_user}
+                  project_repo_connection={@project_repo_connection}
+                  project={@project}
+                  edit_mode={false}
+                  can_install_github={@can_install_github}
+                  can_initiate_github_sync={@can_initiate_github_sync}
+                />
+              <% else %>
+                <%= if @can_install_github do %>
+                  <%= if user_has_valid_oauth_token(@current_user) do %>
+                    <.live_component
+                      id="github-sync-component"
+                      module={LightningWeb.ProjectLive.GithubSyncComponent}
+                      user={@current_user}
+                      project_repo_connection={%VersionControl.ProjectRepoConnection{}}
+                      project={@project}
+                      edit_mode={true}
+                      can_install_github={@can_install_github}
+                      can_initiate_github_sync={@can_initiate_github_sync}
                     />
-                    <span>
-                      I understand that <code>.github/workflows/pull.yml</code>
-                      and <code>.github/workflows/deploy.yml</code>
-                      will be commited into the selected branch and any existing versions of these files will be overwritten
-                    </span>
-                  </div>
-                  <div class="grid grid-cols gap-6">
-                    <div class="md:col-span-2">
-                      <Form.submit_button
-                        :if={!@show_sync_button}
-                        phx-disable-with="Saving"
-                        disabled={
-                          !@can_install_github ||
-                            !@project_repo_connection["repo"] ||
-                            !@project_repo_connection["branch"]
-                        }
-                      >
-                        Connect Branch
-                      </Form.submit_button>
-                      <.button
-                        :if={@show_sync_button}
-                        disabled={!@can_initiate_github_sync}
-                        type="button"
-                        tooltip={
-                          !@can_initiate_github_sync &&
-                            "Contact an editor or admin to sync."
-                        }
-                        phx-click="initiate_sync"
-                        phx-value-id={@project.id}
-                        class="bg-primary-600 hover:bg-primary-700 inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
-                      >
-                        Initiate Sync to Branch
-                      </.button>
-                    </div>
-                    <div :if={@can_install_github}>
-                      <div>
-                        <small>
-                          Need to change the repository or branch?
-                          <button
-                            type="button"
-                            class="text-primary-600"
-                            phx-click="reinstall_app"
-                          >
-                            Re-configure your GitHub permissions (admin access required)
-                          </button>
-                        </small>
-                      </div>
-                      <div>
-                        <small>
-                          No longer need to sync your project?
-                          <button
-                            type="button"
-                            class="text-red-500"
-                            phx-click={
-                              LightningWeb.Components.Modal.show_modal(
-                                "delete_connection_modal"
-                              )
-                            }
-                            phx-value-id={@project.id}
-                          >
-                            Remove github connection
-                          </button>
-                        </small>
-                      </div>
-                    </div>
-                  </div>
-                </.form>
-              </div>
-              <DeleteConnectionModal.modal id="delete_connection_modal" />
-            </div>
-          <% else %>
-            <div class="bg-white p-4 rounded-md">
+                  <% else %>
+                    <h6 class="font-medium text-black">
+                      Connect your OpenFn account to GitHub
+                    </h6>
+                    <small class="block mt-1 text-xs text-gray-600">
+                      To create a new GitHub version control connection you must first connect your OpenFn account to GitHub.
+                      Please click the button below to get started.
+                    </small>
+                  <% end %>
+                <% end %>
+              <% end %>
+            <% else %>
               <h6 class="font-medium text-black">
                 Sync to GitHub
               </h6>
               <small class="block mt-1 text-xs text-gray-600">
                 Version Control is not configured for this Lightning instance. Contact the superuser for more information.
               </small>
-            </div>
-          <% end %>
+            <% end %>
+          </div>
         </LightningWeb.Components.Common.panel_content>
         <LightningWeb.Components.Common.panel_content for_hash="data-storage">
           <div>
