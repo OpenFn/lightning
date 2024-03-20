@@ -53,7 +53,7 @@ defmodule LightningWeb.ProfileLive.GithubComponent do
                 phx-click={show_modal("disconnect_github_modal")}
                 color_class="text-white bg-danger-500 hover:bg-danger-700"
               >
-                Disconnect from Github
+                Disconnect from GitHub
               </.button>
               <.confirm_github_disconnection_modal
                 id="disconnect_github_modal"
@@ -67,7 +67,7 @@ defmodule LightningWeb.ProfileLive.GithubComponent do
                 class="text-center py-2 px-4 shadow-sm text-sm font-medium rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 bg-primary-600 hover:bg-primary-700 text-white"
                 {if @user.github_oauth_token, do: ["phx-hook": "Tooltip", "aria-label": "Your token has expired"], else: []}
               >
-                <%= if @user.github_oauth_token, do: "Reconnect", else: "Connect" %> your Github Account
+                <%= if @user.github_oauth_token, do: "Reconnect", else: "Connect" %> your GitHub account
               </.link>
             <% end %>
           <% else %>
@@ -77,7 +77,7 @@ defmodule LightningWeb.ProfileLive.GithubComponent do
               disabled
               tooltip="Github OAuth has not been enabled for this instance."
             >
-              Connect to GitHub
+              Connect your GitHub account
             </.button>
           <% end %>
         </div>
