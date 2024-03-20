@@ -191,7 +191,10 @@ establish clusters.</li><li><code class="inline">LISTEN_ADDRESS</code>&quot; - t
 <a href="#encryption">Encryption</a>.</li><li><code class="inline">SCHEMAS_PATH</code> - path to the credential schemas that provide forms for
 different adaptors</li><li><code class="inline">SECRET_KEY_BASE</code> - a secret key used as a base to generate secrets for
 encrypting and signing data.</li><li><code class="inline">SENTRY_DSN</code> - if using Sentry for error monitoring, your DSN</li><li><code class="inline">URL_HOST</code> - the host, used for writing urls (e.g., <code class="inline">demo.openfn.org</code>)</li><li><code class="inline">URL_PORT</code> - the port, usually <code class="inline">443</code> for production</li><li><code class="inline">URL_SCHEME</code> - the scheme for writing urls, (e.g., <code class="inline">https</code>)</li><li><code class="inline">USAGE_TRACKER_HOST</code> - the host that receives usage tracking submissions
-(defaults to <a href="https://impact.openfn.org">https://impact.openfn.org</a>)</li><li><code class="inline">USAGE_TRACKING_ENABLED</code> - enables the submission of anonymised usage data to
+(defaults to <a href="https://impact.openfn.org">https://impact.openfn.org</a>).</li><li><code class="inline">USAGE_TRACKING_DAILY_BATCH_SIZE</code> - the number of days that will be reported
+on with each run of <code class="inline">UsageTracking.DayWorker</code>. This will only have a
+noticeable effect in cases where there is a backlog, or where reports are
+being generated retroactively (defaults to 10).</li><li><code class="inline">USAGE_TRACKING_ENABLED</code> - enables the submission of anonymised usage data to
 OpenFn (defaults to <code class="inline">true</code>).</li><li><code class="inline">USAGE_TRACKING_UUIDS</code> - indicates whether submissions should include
 cleartext uuids or not. Options are <code class="inline">cleartext</code> or <code class="inline">hashed_only</code>, with the
 default being <code class="inline">hashed_only</code>.</li><li><code class="inline">QUEUE_RESULT_RETENTION_PERIOD_SECONDS</code> - the number of seconds to keep
