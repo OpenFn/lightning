@@ -13,22 +13,6 @@ defmodule Lightning.VersionControl.GithubClient do
   plug(Tesla.Middleware.BaseUrl, "https://api.github.com")
   plug(Tesla.Middleware.JSON)
 
-  def installation_repos(installation_id) do
-    with {:ok, client} <- build_client(installation_id),
-         {:ok, %Tesla.Env{status: 200, body: body}} <-
-           get(client, "/installation/repositories") do
-      {:ok, Enum.map(body["repositories"], fn g_repo -> g_repo["full_name"] end)}
-    end
-  end
-
-  def get_repo_branches(installation_id, repo_name) do
-    with {:ok, client} <- build_client(installation_id),
-         {:ok, %Tesla.Env{status: 200, body: body}} <-
-           get(client, "/repos/#{repo_name}/branches") do
-      {:ok, Enum.map(body, fn b -> b["name"] end)}
-    end
-  end
-
   def fire_repository_dispatch(installation_id, repo_name, user_email) do
     with {:ok, client} <- build_client(installation_id),
          {:ok, %Tesla.Env{status: 204}} <-
@@ -40,6 +24,18 @@ defmodule Lightning.VersionControl.GithubClient do
            }) do
       {:ok, :fired}
     end
+  end
+
+  def get_installations(client) do
+    get(client, "/user/installations")
+  end
+
+  def get_installation_repos(client) do
+    get(client, "/installation/repositories")
+  end
+
+  def get_repo_branches(client, repo_name) do
+    get(client, "/repos/#{repo_name}/branches")
   end
 
   def create_blob(client, repo, body) do
