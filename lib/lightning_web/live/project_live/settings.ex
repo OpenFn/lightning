@@ -112,12 +112,7 @@ defmodule LightningWeb.ProjectLive.Settings do
         project_user
       )
 
-    {show_github_setup, show_repo_setup, show_sync_button,
-     project_repo_connection} = repo_settings(project)
-
-    if show_repo_setup and connected?(socket) do
-      collect_project_repo_connections(socket.assigns.project.id)
-    end
+    repo_connection = VersionControl.get_repo_connection(project.id)
 
     {:ok,
      socket
@@ -135,42 +130,13 @@ defmodule LightningWeb.ProjectLive.Settings do
        can_edit_data_retention: can_edit_data_retention,
        can_write_webhook_auth_method: can_write_webhook_auth_method,
        can_create_project_credential: can_create_project_credential,
-       show_github_setup: show_github_setup,
-       show_repo_setup: show_repo_setup,
-       show_sync_button: show_sync_button,
-       project_repo_connection: project_repo_connection,
-       repos: [],
-       branches: [],
-       loading_branches: false,
+       project_repo_connection: repo_connection,
        github_enabled: VersionControl.github_enabled?(),
        can_install_github: can_write_github_connection,
        can_initiate_github_sync: can_initiate_github_sync,
-       pending_github_installation:
-         VersionControl.get_pending_user_installation(
-           socket.assigns.current_user.id
-         ),
        selected_credential_type: nil,
        show_collaborators_modal: false
      )}
-  end
-
-  defp repo_settings(%Project{id: project_id}) do
-    repo_connection = VersionControl.get_repo_connection(project_id)
-
-    project_repo_connection = %{"repo" => nil, "branch" => nil}
-
-    # {show_github_setup, show_repo_setup, show_sync_button}
-    case repo_connection do
-      nil ->
-        {true, false, false, project_repo_connection}
-
-      %{repo: nil} ->
-        {false, true, false, project_repo_connection}
-
-      %{repo: r, branch: b, github_installation_id: g} ->
-        {false, true, true,
-         %{"repo" => r, "branch" => b, "github_installation_id" => g}}
-    end
   end
 
   # we should only run this if repo setting is pending
@@ -380,76 +346,6 @@ defmodule LightningWeb.ProjectLive.Settings do
       {:noreply,
        socket
        |> put_flash(:error, "You are not authorized to perform this action")}
-    end
-  end
-
-  def handle_event("install_app", _, socket) do
-    user_id = socket.assigns.current_user.id
-    project_id = socket.assigns.project.id
-
-    case Application.get_env(:lightning, :github_app) |> Map.new() do
-      %{app_name: nil} ->
-        Logger.error("GitHub App Name not configured")
-        # Send to sentry and show cozy error
-        error =
-          GithubError.misconfigured("GitHub App Name Misconfigured", %{
-            app_name: nil
-          })
-
-        Sentry.capture_exception(error)
-
-        {:noreply,
-         socket
-         |> put_flash(
-           :error,
-           "Sorry, it seems that the GitHub App Name has not been properly configured for this instance of Lighting. Please contact the instance administrator"
-         )}
-
-      %{app_name: app_name} ->
-        {:ok, _connection} =
-          VersionControl.create_github_connection(%{
-            user_id: user_id,
-            project_id: project_id
-          })
-
-        {:noreply,
-         redirect(socket,
-           external: "https://github.com/apps/#{app_name}"
-         )}
-    end
-  end
-
-  def handle_event("reinstall_app", _, socket) do
-    user_id = socket.assigns.current_user.id
-    project_id = socket.assigns.project.id
-
-    case Application.get_env(:lightning, :github_app) |> Map.new() do
-      %{app_name: nil} ->
-        error =
-          GithubError.misconfigured("GitHub App Name Misconfigured", %{
-            app_name: nil
-          })
-
-        Sentry.capture_exception(error)
-
-        {:noreply,
-         socket
-         |> put_flash(
-           :error,
-           "Sorry, it seems that the GitHub App Name has not been properly configured for this instance of Lighting. Please contact the instance administrator"
-         )}
-
-      %{app_name: app_name} ->
-        {:ok, _} = VersionControl.remove_github_connection(project_id)
-
-        {:ok, _connection} =
-          VersionControl.create_github_connection(%{
-            user_id: user_id,
-            project_id: project_id
-          })
-
-        {:noreply,
-         redirect(socket, external: "https://github.com/apps/#{app_name}")}
     end
   end
 
@@ -832,5 +728,9 @@ defmodule LightningWeb.ProjectLive.Settings do
   defp user_removable?(project_user, current_user, can_remove_project_user) do
     can_remove_project_user and project_user.role != :owner and
       project_user.user_id != current_user.id
+  end
+
+  defp user_has_valid_oauth_token(user) do
+    VersionControl.oauth_token_valid?(user.github_oauth_token)
   end
 end

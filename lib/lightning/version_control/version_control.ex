@@ -99,23 +99,6 @@ defmodule Lightning.VersionControl do
     end
   end
 
-  def fetch_installation_repos(project_id) do
-    with %ProjectRepoConnection{} = repo_connection <-
-           Repo.get_by(ProjectRepoConnection, project_id: project_id) do
-      GithubClient.installation_repos(repo_connection.github_installation_id)
-    end
-  end
-
-  def fetch_repo_branches(project_id, repo_name) do
-    with %ProjectRepoConnection{} = repo_connection <-
-           Repo.get_by(ProjectRepoConnection, project_id: project_id) do
-      GithubClient.get_repo_branches(
-        repo_connection.github_installation_id,
-        repo_name
-      )
-    end
-  end
-
   def initiate_sync(project_id, user_name) do
     with %ProjectRepoConnection{} = repo_connection <-
            Repo.get_by(ProjectRepoConnection, project_id: project_id) do
@@ -124,6 +107,50 @@ defmodule Lightning.VersionControl do
         repo_connection.repo,
         user_name
       )
+    end
+  end
+
+  def fetch_user_installations(user) do
+    with {:ok, access_token} <- fetch_user_access_token(user) do
+      client =
+        Tesla.client([
+          {Tesla.Middleware.Headers,
+           [
+             {"Authorization", "Bearer #{access_token}"}
+           ]}
+        ])
+
+      case GithubClient.get_installations(client) do
+        {:ok, %{status: 200, body: body}} ->
+          {:ok, body}
+
+        {:ok, %{body: body}} ->
+          {:error, body}
+      end
+    end
+  end
+
+  def fetch_installation_repos(installation_id) do
+    with {:ok, client} <- GithubClient.build_client(installation_id) do
+      case GithubClient.get_installations(client) do
+        {:ok, %{status: 200, body: body}} ->
+          {:ok, body}
+
+        {:ok, %{body: body}} ->
+          {:error, body}
+      end
+    end
+  end
+
+  def fetch_repo_branches(installation_id, repo_name) do
+    with {:ok, client} <- GithubClient.build_client(installation_id) do
+      case GithubClient.get_repo_branches(client, repo_name) do
+        {:ok, %{status: 200, body: body}} ->
+          {:ok, body}
+
+        {:ok, %{body: body}} ->
+          {:error, body}
+      end
     end
   end
 
@@ -317,7 +344,8 @@ defmodule Lightning.VersionControl do
   def github_enabled? do
     Application.get_env(:lightning, :github_app, [])
     |> then(fn config ->
-      Keyword.get(config, :cert) && Keyword.get(config, :app_id)
+      Keyword.get(config, :cert) && Keyword.get(config, :app_id) &&
+        Keyword.get(config, :client_id) && Keyword.get(config, :client_secret)
     end)
   end
 
