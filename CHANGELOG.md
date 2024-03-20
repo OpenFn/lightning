@@ -17,6 +17,8 @@ and this project adheres to
 
 ### Added
 
+- TSVector index to log_lines, and gin index to dataclips
+  [#1898](https://github.com/OpenFn/lightning/issues/1898)
 - Add API Version field to Salesforce OAuth credentials
   [#1838](https://github.com/OpenFn/lightning/issues/1838)
 
