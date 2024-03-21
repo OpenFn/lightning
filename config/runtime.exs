@@ -147,29 +147,17 @@ config :lightning,
        System.get_env("PURGE_DELETED_AFTER_DAYS", "7")
        |> String.to_integer()
 
-base_oban_cron = [
+base_cron = [
   {"* * * * *", Lightning.Workflows.Scheduler},
   {"* * * * *", ObanPruner},
+  {"*/5 * * * *", Lightning.Janitor},
   {"0 10 * * *", Lightning.DigestEmailWorker,
    args: %{"type" => "daily_project_digest"}},
   {"0 10 * * 1", Lightning.DigestEmailWorker,
    args: %{"type" => "weekly_project_digest"}},
   {"0 10 1 * *", Lightning.DigestEmailWorker,
-   args: %{"type" => "monthly_project_digest"}},
-  {"0 2 * * *", Lightning.Projects, args: %{"type" => "data_retention"}}
+   args: %{"type" => "monthly_project_digest"}}
 ]
-
-purge_cron =
-  if Application.get_env(:lightning, :purge_deleted_after_days) > 0,
-    do: [
-      {"0 2 * * *", Lightning.WebhookAuthMethods,
-       args: %{"type" => "purge_deleted"}},
-      {"0 2 * * *", Lightning.Credentials, args: %{"type" => "purge_deleted"}},
-      {"*/5 * * * *", Lightning.Janitor},
-      {"0 2 * * *", Lightning.Accounts, args: %{"type" => "purge_deleted"}},
-      {"0 2 * * *", Lightning.Projects, args: %{"type" => "purge_deleted"}}
-    ],
-    else: []
 
 usage_tracking_daily_batch_size =
   "USAGE_TRACKING_DAILY_BATCH_SIZE"
@@ -178,13 +166,25 @@ usage_tracking_daily_batch_size =
 
 usage_tracking_cron = [
   {
-    "0 2 * * *",
+    "30 1 * * *",
     Lightning.UsageTracking.DayWorker,
     args: %{"batch_size" => usage_tracking_daily_batch_size}
   }
 ]
 
-all_cron = base_oban_cron ++ purge_cron ++ usage_tracking_cron
+cleanup_cron =
+  if Application.get_env(:lightning, :purge_deleted_after_days) > 0,
+    do: [
+      {"1 2 * * *", Lightning.Projects, args: %{"type" => "data_retention"}},
+      {"2 2 * * *", Lightning.Accounts, args: %{"type" => "purge_deleted"}},
+      {"3 2 * * *", Lightning.Credentials, args: %{"type" => "purge_deleted"}},
+      {"4 2 * * *", Lightning.Projects, args: %{"type" => "purge_deleted"}},
+      {"5 2 * * *", Lightning.WebhookAuthMethods,
+       args: %{"type" => "purge_deleted"}}
+    ],
+    else: []
+
+all_cron = base_cron ++ usage_tracking_cron ++ cleanup_cron
 
 config :lightning, Oban,
   name: Lightning.Oban,
