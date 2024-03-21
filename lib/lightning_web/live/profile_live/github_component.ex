@@ -3,6 +3,7 @@ defmodule LightningWeb.ProfileLive.GithubComponent do
 
   use LightningWeb, :live_component
   alias Lightning.VersionControl
+  alias LightningWeb.Components.GithubComponents
 
   @impl true
   def update(%{user: _user} = assigns, socket) do
@@ -60,15 +61,10 @@ defmodule LightningWeb.ProfileLive.GithubComponent do
                 myself={@myself}
               />
             <% else %>
-              <.link
+              <GithubComponents.connect_to_github_link
                 id="connect-github-link"
-                href={"https://github.com/login/oauth/authorize?" <> build_query_params(@socket)}
-                target="_blank"
-                class="text-center py-2 px-4 shadow-sm text-sm font-medium rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 bg-primary-600 hover:bg-primary-700 text-white"
-                {if @user.github_oauth_token, do: ["phx-hook": "Tooltip", "aria-label": "Your token has expired"], else: []}
-              >
-                <%= if @user.github_oauth_token, do: "Reconnect", else: "Connect" %> your GitHub account
-              </.link>
+                user={@user}
+              />
             <% end %>
           <% else %>
             <.button
@@ -93,18 +89,6 @@ defmodule LightningWeb.ProfileLive.GithubComponent do
 
   defp token_valid?(token) do
     VersionControl.oauth_token_valid?(token)
-  end
-
-  defp build_query_params(socket) do
-    client_id =
-      Application.get_env(:lightning, :github_app, [])
-      |> Keyword.fetch!(:client_id)
-
-    redirect_url = Routes.oauth_url(socket, :new, "github")
-
-    params = %{client_id: client_id, redirect_uri: redirect_url}
-
-    Plug.Conn.Query.encode(params)
   end
 
   defp confirm_github_disconnection_modal(assigns) do
