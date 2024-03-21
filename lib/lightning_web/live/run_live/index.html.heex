@@ -97,7 +97,6 @@
                 <div class="font-medium mt-4 mb-2 text-gray-500 text-sm">
                   Status
                 </div>
-
                 <div class="relative inline-block text-left w-44">
                   <div>
                     <button
@@ -566,7 +565,7 @@
                 role="table"
                 data-entity="work_order_index"
               >
-                <div class="bg-gray-100 grid grid-cols-8" role="row">
+                <div class="bg-gray-100 grid grid-cols-6" role="row">
                   <div
                     role="columnheader"
                     class="flex items-center col-span-3 py-3.5 px-4 text-sm font-normal text-left rtl:text-right text-gray-500"
@@ -614,7 +613,7 @@
                             class="rounded bg-white px-2 py-1 text-xs font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
                             phx-click={show_modal("bulk-rerun-from-start-modal")}
                           >
-                            Rerun
+                            Retry
                           </button>
                           <button
                             :if={
@@ -626,7 +625,7 @@
                             class="rounded bg-white px-2 py-1 text-xs font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
                             phx-click={show_modal("bulk-rerun-from-job-modal")}
                           >
-                            Rerun from...
+                            Retry from step
                           </button>
                         <% end %>
                       </div>
@@ -655,31 +654,6 @@
                       </span>
                     </div>
                   </div>
-
-                  <div
-                    role="columnheader"
-                    class="px-4 py-3.5 text-sm font-normal text-left rtl:text-right text-gray-500"
-                  >
-                    <div>
-                      <p class="text-sm text-gray-500 mb-1">Step</p>
-                      <span class="text-gray-700 mt-2 font-medium">
-                        STARTED AT
-                      </span>
-                    </div>
-                  </div>
-
-                  <div
-                    role="columnheader"
-                    class="px-4 py-3.5 text-sm font-normal text-left rtl:text-right text-gray-500"
-                  >
-                    <div>
-                      <p class="text-sm text-gray-500 mb-1">Step</p>
-                      <span class="text-gray-700 mt-2 font-medium">
-                        FINISHED AT
-                      </span>
-                    </div>
-                  </div>
-
                   <div
                     role="columnheader"
                     class="px-4 py-3.5 text-sm font-normal text-left rtl:text-right text-gray-500"
@@ -708,19 +682,21 @@
                       <Components.async_filler message="There was an error loading the work orders" />
                     </:failed>
                     <%= for workorder <- searched_page.entries do %>
-                      <.live_component
-                        module={LightningWeb.RunLive.WorkOrderComponent}
-                        id={workorder.id}
-                        work_order={workorder}
-                        project={@project}
-                        can_edit_data_retention={@can_edit_data_retention}
-                        can_run_workflow={@can_run_workflow}
-                        entry_selected={
-                          Enum.any?(@selected_work_orders, fn wo ->
-                            wo.id == workorder.id
-                          end)
-                        }
-                      />
+                      <div class="">
+                        <.live_component
+                          module={LightningWeb.RunLive.WorkOrderComponent}
+                          id={workorder.id}
+                          work_order={workorder}
+                          project={@project}
+                          can_edit_data_retention={@can_edit_data_retention}
+                          can_run_workflow={@can_run_workflow}
+                          entry_selected={
+                            Enum.any?(@selected_work_orders, fn wo ->
+                              wo.id == workorder.id
+                            end)
+                          }
+                        />
+                      </div>
                     <% end %>
                   </.async_result>
                 </div>

@@ -85,7 +85,11 @@ Note that for secure deployments, it's recommended to use a combination of
 - `URL_PORT` - the port, usually `443` for production
 - `URL_SCHEME` - the scheme for writing urls, (e.g., `https`)
 - `USAGE_TRACKER_HOST` - the host that receives usage tracking submissions
-  (defaults to https://impact.openfn.org)
+  (defaults to https://impact.openfn.org).
+- `USAGE_TRACKING_DAILY_BATCH_SIZE` - the number of days that will be reported
+  on with each run of `UsageTracking.DayWorker`. This will only have a
+  noticeable effect in cases where there is a backlog, or where reports are
+  being generated retroactively (defaults to 10).
 - `USAGE_TRACKING_ENABLED` - enables the submission of anonymised usage data to
   OpenFn (defaults to `true`).
 - `USAGE_TRACKING_UUIDS` - indicates whether submissions should include

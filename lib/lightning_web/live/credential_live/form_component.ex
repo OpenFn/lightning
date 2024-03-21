@@ -7,7 +7,6 @@ defmodule LightningWeb.CredentialLive.FormComponent do
   import Ecto.Changeset, only: [fetch_field!: 2, put_assoc: 3]
 
   alias Lightning.Credentials
-  alias Lightning.Credentials.Credential
   alias LightningWeb.Components.NewInputs
   alias LightningWeb.CredentialLive.JsonSchemaBodyComponent
   alias LightningWeb.CredentialLive.OauthComponent
@@ -65,6 +64,8 @@ defmodule LightningWeb.CredentialLive.FormComponent do
 
     sandbox_value = get_sandbox_value(assigns.credential)
 
+    api_version = get_api_version(assigns.credential)
+
     changeset = Credentials.change_credential(assigns.credential)
     all_projects = Enum.map(projects, &{&1.name, &1.id})
 
@@ -86,6 +87,7 @@ defmodule LightningWeb.CredentialLive.FormComponent do
      |> assign(users: users)
      |> assign(scopes: scopes)
      |> assign(sandbox_value: sandbox_value)
+     |> assign(api_version: api_version)
      |> assign(changeset: changeset)
      |> assign(update_body: update_body)
      |> assign(all_projects: all_projects)
@@ -138,6 +140,15 @@ defmodule LightningWeb.CredentialLive.FormComponent do
     )
 
     {:noreply, socket |> assign(sandbox_value: sandbox_value)}
+  end
+
+  def handle_event("api_version", %{"api_version" => version}, socket) do
+    send_update(LightningWeb.CredentialLive.OauthComponent,
+      id: "inner-form-#{socket.assigns.credential.id || "new"}",
+      api_version: version
+    )
+
+    {:noreply, socket |> assign(api_version: version)}
   end
 
   def handle_event(
@@ -373,6 +384,7 @@ defmodule LightningWeb.CredentialLive.FormComponent do
             type={@schema}
             action={@action}
             sandbox_value={@sandbox_value}
+            api_version={@api_version}
             update_body={@update_body}
             scopes_changed={@scopes_changed}
           >
@@ -405,12 +417,26 @@ defmodule LightningWeb.CredentialLive.FormComponent do
                 />
                 <.input
                   :if={@schema in ["salesforce_oauth"]}
-                  type="checkbox"
-                  name="sandbox"
-                  value={@sandbox_value}
-                  phx-change="check_sandbox"
-                  label="Sandbox instance?"
                   class="mb-2"
+                  name="sandbox"
+                  type="checkbox"
+                  value={@sandbox_value}
+                  label="Sandbox instance?"
+                  phx-change="check_sandbox"
+                  phx-target={@myself}
+                  id="salesforce_sandbox_instance_checkbox"
+                />
+
+                <.input
+                  :if={@schema in ["salesforce_oauth"]}
+                  type="text"
+                  class="mb-2"
+                  name="api_version"
+                  label="API Version"
+                  value={@api_version}
+                  phx-change="api_version"
+                  phx-target={@myself}
+                  id="salesforce_api_version_input"
                 />
                 <%= fieldset %>
               </div>
@@ -475,6 +501,7 @@ defmodule LightningWeb.CredentialLive.FormComponent do
   attr :phx_target, :any, default: nil
   attr :schema, :string, required: false
   attr :sandbox_value, :boolean, default: false
+  attr :api_version, :string, default: ""
   attr :update_body, :any, required: false
   attr :scopes_changed, :boolean, required: false
   slot :inner_block
@@ -504,6 +531,7 @@ defmodule LightningWeb.CredentialLive.FormComponent do
       schema={@schema}
       update_body={@update_body}
       sandbox_value={@sandbox_value}
+      api_version={@api_version}
       scopes_changed={@scopes_changed}
     >
       <%= render_slot(@inner_block, l) %>
@@ -707,6 +735,10 @@ defmodule LightningWeb.CredentialLive.FormComponent do
 
   defp get_sandbox_value(_), do: false
 
+  defp get_api_version(%{body: %{"api_version" => api_version}}), do: api_version
+
+  defp get_api_version(_), do: nil
+
   defp modal_title(assigns) do
     ~H"""
     <%= if @action in [:edit] do %>
@@ -737,7 +769,7 @@ defmodule LightningWeb.CredentialLive.FormComponent do
     %{credential: form_credential} = socket.assigns
 
     with {:uptodate, true} <-
-           {:uptodate, credential_up_to_date?(form_credential)},
+           {:uptodate, credential_projects_up_to_date?(form_credential)},
          {:same_user, true} <-
            {:same_user,
             socket.assigns.current_user.id == socket.assigns.credential.user_id},
@@ -820,10 +852,10 @@ defmodule LightningWeb.CredentialLive.FormComponent do
     |> Enum.reject(fn {_, credential_id} -> credential_id in existing_ids end)
   end
 
-  defp credential_up_to_date?(form_credential) do
+  defp credential_projects_up_to_date?(form_credential) do
     db_credential = Credentials.get_credential_for_update!(form_credential.id)
-    fields = [:project_credentials | Credential.__schema__(:fields)]
 
-    Map.take(db_credential, fields) == Map.take(form_credential, fields)
+    Map.get(db_credential, :project_credentials) ==
+      Map.get(form_credential, :project_credentials)
   end
 end

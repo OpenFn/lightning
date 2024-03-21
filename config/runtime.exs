@@ -1,4 +1,5 @@
 import Config
+import Dotenvy
 
 # config/runtime.exs is executed for all environments, including
 # during releases. It is executed after compilation and before the
@@ -8,19 +9,24 @@ import Config
 
 # Use Vapor to load configuration from environment variables, files, etc.
 # Then merge the resulting configuration into the Application config.
-env_config = Vapor.load!(Lightning.Env)
 
-env_config
-|> Enum.each(fn {k, v} -> config(:lightning, k, v |> Enum.into([])) end)
+source!([
+  ".env",
+  ".#{config_env()}.env",
+  ".#{config_env()}.override.env",
+  System.get_env()
+])
 
 # Start the phoenix server if environment is set and running in a release
 if System.get_env("PHX_SERVER") && System.get_env("RELEASE_NAME") do
   config :lightning, LightningWeb.Endpoint, server: true
 end
 
-config :lightning,
-       :is_resettable_demo,
-       System.get_env("IS_RESETTABLE_DEMO") == "yes"
+if is_resettable_demo = System.get_env("IS_RESETTABLE_DEMO") do
+  config :lightning,
+         :is_resettable_demo,
+         is_resettable_demo == "yes"
+end
 
 decoded_cert =
   System.get_env("GITHUB_CERT")
@@ -63,9 +69,48 @@ config :lightning, :github_app,
   app_id: github_app_id,
   app_name: github_app_name
 
-if System.get_env("RTM") == "false" do
-  config :lightning, Lightning.Runtime.RuntimeManager, start: false
+if start_rtm = System.get_env("RTM") do
+  unless start_rtm in ["true", "false"] do
+    raise """
+    Expected `RTM` value to either be "true" or "false".
+    """
+  end
+
+  config :lightning, Lightning.Runtime.RuntimeManager,
+    start: start_rtm |> String.to_existing_atom()
 end
+
+config :lightning, :workers,
+  private_key:
+    env!(
+      "WORKER_RUNS_PRIVATE_KEY",
+      fn encoded ->
+        encoded
+        |> Base.decode64(padding: false)
+        |> case do
+          {:ok, pem} -> pem
+          :error -> raise "Could not decode PEM"
+        end
+      end,
+      Application.get_env(:lightning, :workers, []) |> Keyword.get(:private_key)
+    )
+    |> tap(fn v ->
+      unless v do
+        raise "No worker private key found, please set WORKER_RUNS_PRIVATE_KEY"
+      end
+    end),
+  worker_secret:
+    env!(
+      "WORKER_SECRET",
+      :string!,
+      Application.get_env(:lightning, :workers, [])
+      |> Keyword.get(:worker_secret)
+    )
+    |> tap(fn v ->
+      unless v do
+        raise "No worker secret found, please set WORKER_SECRET"
+      end
+    end)
 
 image_tag = System.get_env("IMAGE_TAG")
 branch = System.get_env("BRANCH")
@@ -97,6 +142,11 @@ config :lightning,
     System.get_env("SCHEMAS_PATH") ||
       Application.get_env(:lightning, :schemas_path) || "./priv"
 
+config :lightning,
+       :purge_deleted_after_days,
+       System.get_env("PURGE_DELETED_AFTER_DAYS", "7")
+       |> String.to_integer()
+
 base_oban_cron = [
   {"* * * * *", Lightning.Workflows.Scheduler},
   {"* * * * *", ObanPruner},
@@ -110,7 +160,7 @@ base_oban_cron = [
 ]
 
 purge_cron =
-  if System.get_env("PURGE_DELETED_AFTER_DAYS") != "0",
+  if Application.get_env(:lightning, :purge_deleted_after_days) > 0,
     do: [
       {"0 2 * * *", Lightning.WebhookAuthMethods,
        args: %{"type" => "purge_deleted"}},
@@ -121,7 +171,18 @@ purge_cron =
     ],
     else: []
 
-usage_tracking_cron = [{"0 2 * * *", Lightning.UsageTracking.Worker}]
+usage_tracking_daily_batch_size =
+  "USAGE_TRACKING_DAILY_BATCH_SIZE"
+  |> System.get_env("10")
+  |> String.to_integer()
+
+usage_tracking_cron = [
+  {
+    "0 2 * * *",
+    Lightning.UsageTracking.DayWorker,
+    args: %{"batch_size" => usage_tracking_daily_batch_size}
+  }
+]
 
 all_cron = base_oban_cron ++ purge_cron ++ usage_tracking_cron
 
@@ -151,11 +212,6 @@ if System.get_env("PLAUSIBLE_SRC"),
     )
 
 config :lightning,
-       :purge_deleted_after_days,
-       System.get_env("PURGE_DELETED_AFTER_DAYS", "7")
-       |> String.to_integer()
-
-config :lightning,
        :max_run_duration_seconds,
        System.get_env("WORKER_MAX_RUN_DURATION_SECONDS", "60")
        |> String.to_integer()
@@ -174,7 +230,7 @@ config :lightning,
 config :lightning,
        :init_project_for_new_user,
        System.get_env("INIT_PROJECT_FOR_NEW_USER", "false")
-       |> String.to_atom()
+       |> String.to_existing_atom()
 
 # To actually send emails you need to configure the mailer to use a real
 # adapter. You may configure the swoosh api client of your choice. We
@@ -212,13 +268,17 @@ if log_level = System.get_env("LOG_LEVEL") do
   end
 end
 
+database_url = System.get_env("DATABASE_URL")
+
+config :lightning, Lightning.Repo, url: database_url
+
 if config_env() == :prod do
-  database_url =
-    System.get_env("DATABASE_URL") ||
-      raise """
-      environment variable DATABASE_URL is missing.
-      For example: ecto://USER:PASS@HOST/DATABASE
-      """
+  unless database_url do
+    raise """
+    environment variable DATABASE_URL is missing.
+    For example: ecto://USER:PASS@HOST/DATABASE
+    """
+  end
 
   maybe_ipv6 = if System.get_env("ECTO_IPV6"), do: [:inet6], else: []
   enforce_repo_ssl = System.get_env("DISABLE_DB_SSL") != "true"
@@ -244,7 +304,7 @@ if config_env() == :prod do
       """
 
   host = System.get_env("URL_HOST") || "example.com"
-  port = String.to_integer(System.get_env("PORT") || "4000")
+  port = String.to_integer(System.get_env("PORT", "4000"))
 
   listen_address =
     System.get_env("LISTEN_ADDRESS", "127.0.0.1")

@@ -10,6 +10,9 @@ defmodule Lightning.UsageTracking.ReportData do
   alias Lightning.Projects.Project
   alias Lightning.Repo
   alias Lightning.UsageTracking.Configuration
+  alias Lightning.UsageTracking.DailyReportConfiguration
+  alias Lightning.UsageTracking.ProjectMetricsService
+  alias Lightning.UsageTracking.UserService
   alias Lightning.Workflows.Workflow
 
   @lightning_version Lightning.MixProject.project()[:version]
@@ -23,6 +26,16 @@ defmodule Lightning.UsageTracking.ReportData do
     }
   end
 
+  def generate(configuration, cleartext_enabled, date) do
+    %{
+      generated_at: DateTime.utc_now(),
+      instance: instrument_instance(configuration, cleartext_enabled, date),
+      projects: instrument_projects(cleartext_enabled, date),
+      report_date: date,
+      version: "2"
+    }
+  end
+
   defp instrument_instance(configuration, cleartext_enabled) do
     %Configuration{instance_id: instance_id} = configuration
 
@@ -30,6 +43,19 @@ defmodule Lightning.UsageTracking.ReportData do
     |> instrument_identity(cleartext_enabled)
     |> Map.merge(%{
       no_of_users: no_of_users(),
+      operating_system: operating_system_name(),
+      version: @lightning_version
+    })
+  end
+
+  defp instrument_instance(configuration, cleartext_enabled, date) do
+    %DailyReportConfiguration{instance_id: instance_id} = configuration
+
+    instance_id
+    |> instrument_identity(cleartext_enabled)
+    |> Map.merge(%{
+      no_of_active_users: UserService.no_of_active_users(date),
+      no_of_users: UserService.no_of_users(date),
       operating_system: operating_system_name(),
       version: @lightning_version
     })
@@ -66,6 +92,14 @@ defmodule Lightning.UsageTracking.ReportData do
         preload: [:users, [workflows: [:jobs, runs: [:steps]]]]
     )
     |> Enum.map(&instrument_project(&1, cleartext_enabled))
+  end
+
+  defp instrument_projects(cleartext_enabled, date) do
+    date
+    |> ProjectMetricsService.find_eligible_projects()
+    |> Enum.map(fn project ->
+      ProjectMetricsService.generate_metrics(project, cleartext_enabled, date)
+    end)
   end
 
   defp instrument_project(project, cleartext_enabled) do

@@ -22,6 +22,7 @@ defmodule Lightning.AuthProviders.Common do
       field :scope, :string
       field :instance_url, :string
       field :sandbox, :boolean, default: false
+      field :api_version, :string, default: nil
     end
 
     @doc """
@@ -52,7 +53,8 @@ defmodule Lightning.AuthProviders.Common do
         :expires_at,
         :scope,
         :instance_url,
-        :sandbox
+        :sandbox,
+        :api_version
       ])
       |> validate_required([:access_token, :refresh_token])
     end

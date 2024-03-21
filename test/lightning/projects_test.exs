@@ -474,6 +474,17 @@ defmodule Lightning.ProjectsTest do
       assert Projects.get_project_user_role(user_2, project) == :editor
     end
 
+    test "export_project/2 as yaml works on project with no workflows" do
+      project = project_fixture(name: "newly-created-project")
+
+      expected_yaml =
+        "name: newly-created-project\n# description:\n# credentials:\n# globals:\n# workflows:"
+
+      {:ok, generated_yaml} = Projects.export_project(:yaml, project.id)
+
+      assert generated_yaml == expected_yaml
+    end
+
     test "export_project/2 as yaml" do
       %{project: project} =
         full_project_fixture(

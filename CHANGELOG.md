@@ -17,12 +17,6 @@ and this project adheres to
 
 ### Added
 
-- Allows limiting creation of new runs and retries.
-  [#1754](https://github.com/OpenFn/Lightning/issues/1754)
-- Add specific messages for log, input, and output tabs when a run is lost
-  [#1757](https://github.com/OpenFn/lightning/issues/1757)
-- Soft and hard limits for runs created by webhook trigger.
-  [#1859](https://github.com/OpenFn/Lightning/issues/1859)
 - Allow admins to set project retention periods
   [#1760](https://github.com/OpenFn/lightning/issues/1760)
 - Automatically wipe input/output data after their retention period
@@ -32,9 +26,66 @@ and this project adheres to
 
 ### Changed
 
-- Upgrade Elixir to 1.16.2
+- Give priority to manual runs (over webhook requests and cron) so that active
+  users on the inspector don't have to wait ages for thier work during high load
+  periods [#1918](https://github.com/OpenFn/lightning/issues/1918)
 
 ### Fixed
+
+## [v2.1.0] - 2024-03-20
+
+### Added
+
+- TSVector index to log_lines, and gin index to dataclips
+  [#1898](https://github.com/OpenFn/lightning/issues/1898)
+- Add API Version field to Salesforce OAuth credentials
+  [#1838](https://github.com/OpenFn/lightning/issues/1838)
+
+### Changed
+
+- Replace v1 usage tracking with v2 usage tracking.
+  [#1853](https://github.com/OpenFn/lightning/issues/1853)
+
+## [v2.0.10]
+
+### Changed
+
+- Updated anonymous usage tracker submissions
+  [#1853](https://github.com/OpenFn/lightning/issues/1853)
+
+## [v2.0.9] - 2024-03-19
+
+### Added
+
+- Support for smaller screens on history and inspector.
+  [#1908](https://github.com/OpenFn/lightning/issues/1908)
+- Polling metric to track number of available runs.
+  [#1790](https://github.com/OpenFn/lightning/issues/1790)
+- Allows limiting creation of new runs and retries.
+  [#1754](https://github.com/OpenFn/Lightning/issues/1754)
+- Add specific messages for log, input, and output tabs when a run is lost
+  [#1757](https://github.com/OpenFn/lightning/issues/1757)
+- Soft and hard limits for runs created by webhook trigger.
+  [#1859](https://github.com/OpenFn/Lightning/issues/1859)
+- Publish an event when a new user is registered
+  [#1873](https://github.com/OpenFn/lightning/issues/1873)
+- Adds ability to add project collaborators from existing users
+  [#1836](https://github.com/OpenFn/lightning/issues/1836)
+- Added ability to remove project collaborators
+  [#1837](https://github.com/OpenFn/lightning/issues/1837)
+- Added new usage tracking submission code.
+  [#1853](https://github.com/OpenFn/lightning/issues/1853)
+
+### Changed
+
+- Upgrade Elixir to 1.16.2
+- Remove all values from `.env.example`.
+  [#1904](https://github.com/OpenFn/lightning/issues/1904)
+
+### Fixed
+
+- Verify only stale project credentials
+  [#1861](https://github.com/OpenFn/lightning/issues/1861)
 
 ## [v2.0.8] - 2024-02-29
 

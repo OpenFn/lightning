@@ -10,6 +10,7 @@ defmodule Lightning.Accounts do
   import Ecto.Query, warn: false
 
   alias Ecto.Multi
+  alias Lightning.Accounts.Events
   alias Lightning.Accounts.User
   alias Lightning.Accounts.UserBackupCode
   alias Lightning.Accounts.UserNotifier
@@ -101,6 +102,14 @@ defmodule Lightning.Accounts do
   """
   def list_users do
     Repo.all(User)
+  end
+
+  @doc """
+  Returns the list of users with the given emails
+  """
+  def list_users_by_emails(emails) do
+    query = from u in User, where: u.email in ^emails
+    Repo.all(query)
   end
 
   @doc """
@@ -355,7 +364,11 @@ defmodule Lightning.Accounts do
     |> Ecto.Changeset.apply_action(:insert)
     |> case do
       {:ok, data} ->
-        struct(User, data) |> Repo.insert()
+        struct(User, data)
+        |> Repo.insert()
+        |> tap(fn result ->
+          with {:ok, user} <- result, do: Events.user_registered(user)
+        end)
 
       {:error, changeset} ->
         {:error, changeset}

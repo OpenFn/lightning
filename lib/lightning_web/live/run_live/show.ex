@@ -78,24 +78,33 @@ defmodule LightningWeb.RunLive.Show do
                 <.list_item>
                   <:label>Started</:label>
                   <:value>
-                    <%= if run.started_at,
-                      do:
-                        Timex.format!(
+                    <%= if run.started_at do %>
+                      <Common.wrapper_tooltip
+                        id={run.id <> "start-tip"}
+                        tooltip={DateTime.to_iso8601(run.started_at)}
+                      >
+                        <%= Timex.Format.DateTime.Formatters.Relative.format!(
                           run.started_at,
-                          "%d/%b/%y, %H:%M:%S",
-                          :strftime
+                          "{relative}"
                         ) %>
+                      </Common.wrapper_tooltip>
+                    <% end %>
                   </:value>
                 </.list_item>
                 <.list_item>
                   <:label>Finished</:label>
                   <:value>
-                    <%= if run.finished_at,
-                      do:
-                        Timex.Format.DateTime.Formatters.Relative.format!(
+                    <%= if run.finished_at do %>
+                      <Common.wrapper_tooltip
+                        id={run.id <> "start-tip"}
+                        tooltip={DateTime.to_iso8601(run.finished_at)}
+                      >
+                        <%= Timex.Format.DateTime.Formatters.Relative.format!(
                           run.finished_at,
                           "{relative}"
                         ) %>
+                      </Common.wrapper_tooltip>
+                    <% end %>
                   </:value>
                 </.list_item>
                 <.list_item>
@@ -114,7 +123,7 @@ defmodule LightningWeb.RunLive.Show do
                 :let={step}
                 id={"step-list-#{run.id}"}
                 steps={@steps}
-                class="flex-1"
+                class="flex-1 items-center"
               >
                 <.link patch={"?step=#{step.id}"} id={"select-step-#{step.id}"}>
                   <.step_item
@@ -123,7 +132,6 @@ defmodule LightningWeb.RunLive.Show do
                       DateTime.compare(step.inserted_at, run.inserted_at) == :lt
                     }
                     selected={step.id == @selected_step_id}
-                    show_inspector_link={true}
                     run_id={run.id}
                     project_id={@project}
                   />

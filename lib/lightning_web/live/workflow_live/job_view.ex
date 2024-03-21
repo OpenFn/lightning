@@ -26,7 +26,7 @@ defmodule LightningWeb.WorkflowLive.JobView do
         </div>
         <!-- 3 column wrapper -->
         <div
-          class="grow flex h-5/6 gap-3 mx-4"
+          class="grow flex h-5/6 gap-0 m-0"
           phx-hook="collapsiblePanel"
           id="collapsibles"
         >
@@ -46,7 +46,7 @@ defmodule LightningWeb.WorkflowLive.JobView do
 
   defp column(assigns) do
     ~H"""
-    <div id={@id} class={["flex-1 px-4 pt-4 collapsible-panel", @class]}>
+    <div id={@id} class={["flex-1 px-2 pt-2 collapsible-panel", @class]}>
       <%= render_slot(@inner_block) %>
     </div>
     """
@@ -72,26 +72,29 @@ defmodule LightningWeb.WorkflowLive.JobView do
     ~H"""
     <.container id={"job-edit-view-#{@job.id}"}>
       <:top>
-        <div class="flex h-14 place-content-stretch">
-          <div class="basis-1/3 flex items-center gap-4 pl-4">
-            <.adaptor_block adaptor={@job.adaptor} />
-            <.credential_block credential={
-              fetch_credential(@form[:project_credential_id].value)
-            } />
-          </div>
-          <div class="basis-1/3 font-semibold flex items-center justify-center">
+        <div class="flex p-4 gap-6">
+          <div class="flex items-baseline font-semibold">
+            <span>
+              <.icon
+                name="hero-code-bracket-mini"
+                class="w-4 h-4 mr-2 text-indigo-500"
+              />
+            </span>
             <%= @job.name %>
           </div>
-          <div class="basis-1/3 flex justify-end">
-            <div class="flex w-14 items-center justify-center">
-              <.link
-                id={"close-job-edit-view-#{@job.id}"}
-                patch={@close_url}
-                phx-hook="ClosePanelViaEscape"
-              >
-                <Heroicons.x_mark class="w-6 h-6 text-gray-500 hover:text-gray-700 hover:cursor-pointer" />
-              </.link>
-            </div>
+          <.adaptor_block adaptor={@job.adaptor} />
+          <.credential_block credential={
+            fetch_credential(@form[:project_credential_id].value)
+          } />
+          <div class="flex flex-grow items-center justify-end">
+            <.link
+              id={"close-job-edit-view-#{@job.id}"}
+              patch={@close_url}
+              phx-hook="ClosePanelViaEscape"
+            >
+              <Heroicons.x_mark class="w-6 h-6 text-gray-500 hover:text-gray-700
+                hover:cursor-pointer" />
+            </.link>
           </div>
         </div>
       </:top>
@@ -99,14 +102,14 @@ defmodule LightningWeb.WorkflowLive.JobView do
         <.collapsible_panel
           id={slot[:id]}
           panel_title={slot[:panel_title]}
-          class={"#{slot[:class]} h-full border"}
+          class={"#{slot[:class]} h-full border border-l-0"}
         >
           <%= render_slot(slot) %>
         </.collapsible_panel>
       <% end %>
       <.collapsible_panel
         id="job-editor-panel"
-        class="border h-full"
+        class="h-full border border-l-0"
         panel_title="Editor"
       >
         <.live_component
@@ -120,7 +123,7 @@ defmodule LightningWeb.WorkflowLive.JobView do
       <.collapsible_panel
         id="output-logs"
         panel_title="Output & Logs"
-        class="border h-full"
+        class="h-full border border-l-0"
       >
         <%= if @follow_run_id do %>
           <%= live_render(
@@ -152,24 +155,27 @@ defmodule LightningWeb.WorkflowLive.JobView do
 
   defp credential_block(assigns) do
     ~H"""
-    <div
-      id="modal-header-credential-block"
-      class="flex items-center gap-2 whitespace-nowrap"
-    >
+    <div id="modal-header-credential-block" class="flex items-baseline">
       <%= if @credential do %>
-        <Heroicons.lock_closed class="w-6 h-6 text-gray-500" />
-
-        <div class="group cursor-default flex items-center ">
-          <span class="text-xs text-gray-500 font-semibold truncate w-48">
-            <%= @credential.name %>
-          </span>
-          <div class="absolute top-11 left-96 hidden group-hover:flex bg-black text-white text-xs rounded py-1 px-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-100 transform -translate-x-1/2">
-            <%= @credential.name %>
-          </div>
-        </div>
+        <Common.tooltip
+          id="credential-name-tooltip"
+          title={"Credential: " <> @credential.name}
+          class="mr-2"
+          icon_class="text-indigo-500 h-4 w-4"
+          icon="hero-lock-closed-mini"
+        />
+        <span class="text-xs text-gray-500 font-semibold">
+          <%= @credential.name %>
+        </span>
       <% else %>
-        <Heroicons.lock_open class="w-6 h-6 text-gray-500" />
-        <span class="text-xs text-gray-500 font-semibold grow">
+        <Common.tooltip
+          id="credential-name-tooltip"
+          title="This step doesn't use a credential."
+          class="mr-2"
+          icon_class="text-gray-500 h-4 w-4"
+          icon="hero-lock-open-mini"
+        />
+        <span class="text-xs text-gray-500 font-semibold">
           No Credential
         </span>
       <% end %>
@@ -189,22 +195,17 @@ defmodule LightningWeb.WorkflowLive.JobView do
       )
 
     ~H"""
-    <div class="grid grid-rows-2 grid-flow-col whitespace-nowrap">
-      <div class="row-span-2 flex items-center mr-2">
-        <Heroicons.cube class="w-6 h-6 text-gray-500" />
-      </div>
-
-      <div class="group cursor-default flex items-center ">
-        <span class="text-xs text-gray-500 font-semibold truncate w-48">
-          <%= @package_name %>
-        </span>
-        <div class="absolute top-11 left-16 ml-2 hidden group-hover:flex bg-black text-white text-xs rounded py-1 px-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-100">
-          <%= @package_name %>
-        </div>
-      </div>
-      <div class="text-xs text-gray-500 font-semibold font-mono">
-        <%= @version %>
-      </div>
+    <div id="modal-header-adaptor-block" class="flex items-baseline">
+      <Common.tooltip
+        id="adaptor-name-tooltip"
+        title={"Adaptor: " <> @package_name <> "@" <> @version}
+        class="mr-2"
+        icon_class="text-indigo-500 h-4 w-4"
+        icon="hero-cube-mini"
+      />
+      <code class="text-xs text-gray-500 font-semibold">
+        <%= @package_name %>@<%= @version %>
+      </code>
     </div>
     """
   end

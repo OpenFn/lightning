@@ -131,6 +131,7 @@ defmodule Lightning.Factories do
       email: sequence(:email, &"email-#{&1}@example.com"),
       password: "hello world!",
       first_name: "anna",
+      last_name: sequence(:name, &"last-name-#{&1}"),
       hashed_password: Bcrypt.hash_pwd_salt("hello world!")
     }
   end
@@ -138,6 +139,12 @@ defmodule Lightning.Factories do
   def user_totp_factory do
     %Lightning.Accounts.UserTOTP{
       secret: NimbleTOTP.secret()
+    }
+  end
+
+  def user_token_factory do
+    %Lightning.Accounts.UserToken{
+      token: fn -> Ecto.UUID.generate() end
     }
   end
 
@@ -149,6 +156,17 @@ defmodule Lightning.Factories do
 
   def usage_tracking_daily_report_configuration_factory do
     %Lightning.UsageTracking.DailyReportConfiguration{}
+  end
+
+  def usage_tracking_report_factory do
+    now = DateTime.utc_now()
+
+    %Lightning.UsageTracking.Report{
+      data: %{},
+      submitted: true,
+      submitted_at: now,
+      report_date: DateTime.to_date(now)
+    }
   end
 
   # ----------------------------------------------------------------------------

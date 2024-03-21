@@ -35,7 +35,12 @@ config :lightning, Lightning.Extensions,
   usage_limiter: Lightning.Extensions.UsageLimiter,
   run_queue: Lightning.Extensions.FifoRunQueue
 
+# TODO: don't use this value in production
 config :joken, default_signer: "secret"
+
+config :lightning, Lightning.Runtime.RuntimeManager,
+  start: false,
+  env: [{"NODE_OPTIONS", "--dns-result-order=ipv4first"}]
 
 # Configures the mechanism for erlang node clustering
 config :libcluster,
@@ -126,6 +131,10 @@ config :lightning, LightningWeb, allow_credential_transfer: false
 
 # Rather than default  since httpc doesnt have certificate checking
 config :tesla, adapter: Tesla.Adapter.Hackney
+
+config :lightning, :is_resettable_demo, false
+
+config :lightning, Lightning.Runtime.RuntimeManager, start: false
 
 # Import environment specific config. This must remain at the bottom
 # of this file so it overrides the configuration defined above.

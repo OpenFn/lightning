@@ -22,13 +22,23 @@ defmodule LightningWeb.Components.Settings do
 
     ~H"""
     <div class="h-12 mx-4">
-      <.link navigate={@to} class={@class}>
-        <%= if assigns[:inner_block] do %>
-          <%= render_slot(@inner_block) %>
-        <% else %>
-          <%= @text %>
-        <% end %>
-      </.link>
+      <%= if assigns[:href] do %>
+        <.link href={@href} target="_blank" class={@class}>
+          <%= if assigns[:inner_block] do %>
+            <%= render_slot(@inner_block) %>
+          <% else %>
+            <%= @text %>
+          <% end %>
+        </.link>
+      <% else %>
+        <.link navigate={@to} class={@class}>
+          <%= if assigns[:inner_block] do %>
+            <%= render_slot(@inner_block) %>
+          <% else %>
+            <%= @text %>
+          <% end %>
+        </.link>
+      <% end %>
     </div>
     """
   end
