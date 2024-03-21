@@ -28,6 +28,12 @@ if is_resettable_demo = System.get_env("IS_RESETTABLE_DEMO") do
          is_resettable_demo == "yes"
 end
 
+if default_retention_period = System.get_env("DEFAULT_RETENTION_PERIOD") do
+  config :lightning,
+         :default_retention_period,
+         String.to_integer(default_retention_period)
+end
+
 decoded_cert =
   System.get_env("GITHUB_CERT")
   |> case do
