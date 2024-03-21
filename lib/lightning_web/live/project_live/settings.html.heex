@@ -676,7 +676,8 @@
                   user={@current_user}
                   project_repo_connection={@project_repo_connection}
                   project={@project}
-                  edit_mode={false}
+                  write_mode={false}
+                  action={:edit}
                   can_install_github={@can_install_github}
                   can_initiate_github_sync={@can_initiate_github_sync}
                 />
@@ -687,9 +688,12 @@
                       id="github-sync-component"
                       module={LightningWeb.ProjectLive.GithubSyncComponent}
                       user={@current_user}
-                      project_repo_connection={%VersionControl.ProjectRepoConnection{}}
+                      project_repo_connection={
+                        %VersionControl.ProjectRepoConnection{}
+                      }
                       project={@project}
-                      edit_mode={true}
+                      write_mode={true}
+                      action={:new}
                       can_install_github={@can_install_github}
                       can_initiate_github_sync={@can_initiate_github_sync}
                     />
@@ -711,6 +715,12 @@
               <small class="block mt-1 text-xs text-gray-600">
                 Version Control is not configured for this Lightning instance. Contact the superuser for more information.
               </small>
+              <div class="mt-2">
+                <GithubComponents.connect_to_github_link
+                  id="connect-github-link"
+                  user={@current_user}
+                />
+              </div>
             <% end %>
           </div>
         </LightningWeb.Components.Common.panel_content>

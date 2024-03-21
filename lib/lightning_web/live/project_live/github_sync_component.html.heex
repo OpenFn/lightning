@@ -1,0 +1,183 @@
+<div>
+  <%= if @write_mode do %>
+    <.form
+      :let={f}
+      for={@changeset}
+      as={:connection}
+      phx-change="validate"
+      phx-submit="save"
+      phx-target={@myself}
+    >
+      <div class="grid grid-cols-1 gap-x-2 gap-y-3 sm:grid-cols-6 mb-3">
+        <div class="sm:col-span-5">
+          <.input
+            type="select"
+            field={f[:github_installation_id]}
+            label="Github Installation"
+            prompt="Select an installation"
+            options={(@installations.ok? && @installations.result) || []}
+            disabled={if(@installations.loading, do: true, else: false)}
+            required="true"
+          />
+          <div class="mt-2">
+            Can’t find the right installation or repository?
+            <.link
+              target="_blank"
+              class="text-indigo-600 hover:underline"
+              href={"https://github.com/apps/#{github_config()[:app_name]}"}
+            >
+              Create/update GitHub installations
+            </.link>
+          </div>
+        </div>
+        <div class="sm:col-span-1 flex flex-col justify-center items-start">
+          <.button
+            type="button"
+            class="gap-x-1.5"
+            color_class="bg-gray-50 text-gray-900 ring-1 ring-gray-300 hover:bg-gray-100"
+            disabled={if(@installations.loading, do: true, else: false)}
+            phx-click="refresh-installations"
+            phx-target={@myself}
+          >
+            <Heroicons.arrow_path class={"-ml-0.5 h-5 w-5 #{if(@installations.loading, do: "animate-spin")}"} />
+            Refresh
+          </.button>
+        </div>
+
+        <div class="sm:col-span-5">
+          <.input
+            type="select"
+            field={f[:repo]}
+            label="Repository"
+            prompt="Select a repository"
+            options={
+              (@repos.ok? && @repos.result[f[:github_installation_id].value]) ||
+                []
+            }
+            disabled={
+              to_string(f[:github_installation_id].value) == "" or !@repos.ok?
+            }
+            required="true"
+          />
+        </div>
+        <div class="sm:col-span-5">
+          <.input
+            type="select"
+            field={f[:branch]}
+            label="Branch"
+            prompt="Select a branch"
+            options={(@branches.ok? && @branches.result[f[:repo].value]) || []}
+            disabled={to_string(f[:repo].value) == "" or !@branches.ok?}
+            required="true"
+          />
+        </div>
+        <div class="sm:col-span-1 flex flex-col-reverse items-start">
+          <.button
+            type="button"
+            class="gap-x-1.5"
+            color_class="bg-gray-50 text-gray-900 ring-1 ring-gray-300 hover:bg-gray-100"
+            disabled={if(@branches.loading, do: true, else: false)}
+            phx-click="refresh-branches"
+            phx-target={@myself}
+          >
+            <Heroicons.arrow_path class={"-ml-0.5 h-5 w-5 #{if(@branches.loading, do: "animate-spin")}"} />
+          </.button>
+        </div>
+        <div class="sm:col-span-5 bg-amber-200 flex gap-3 rounded-md p-3 ">
+          <.input
+            type="checkbox"
+            field={f[:accept]}
+            required="true"
+            disabled={!@can_install_github}
+          />
+          <span>
+            I understand that <code>.github/workflows/pull.yml</code>
+            and <code>.github/workflows/deploy.yml</code>
+            will be commited into the selected branch and any existing versions of these files will be overwritten
+          </span>
+        </div>
+        <div class="sm:col-span-5 flex gap-4">
+          <.button
+            :if={@action == :edit}
+            type="button"
+            color_class="bg-red-600 hover:bg-red-700 text-white"
+            phx-click="toggle-write-mode"
+            phx-target={@myself}
+          >
+            Cancel
+          </.button>
+          <.button type="submit">
+            Connect Branch
+          </.button>
+        </div>
+      </div>
+    </.form>
+  <% else %>
+    <div class="">
+      <div class="flex flex-col gap-2 text-black">
+        <span>
+          Repository:
+          <.link
+            href={"https://www.github.com/" <> @project_repo_connection.repo}
+            target="_blank"
+            class="hover:underline text-primary-600"
+          >
+            <%= @project_repo_connection.repo %>
+          </.link>
+        </span>
+
+        <span>
+          Branch:
+          <span class="text-xs font-mono bg-gray-200 rounded-md p-1">
+            <%= @project_repo_connection.branch %>
+          </span>
+        </span>
+
+        <span>
+          GitHub Installation ID:
+          <span class="text-xs font-mono bg-gray-200 rounded-md p-1">
+            <%= @project_repo_connection.github_installation_id %>
+          </span>
+        </span>
+      </div>
+      <div :if={@can_install_github} class="mt-3 text-gray-600">
+        Need to change the repository or branch?
+        <.link
+          href="#"
+          class="hover:underline text-primary-600"
+          phx-click="toggle-write-mode"
+          phx-target={@myself}
+        >
+          Edit Integration.
+        </.link>
+      </div>
+    </div>
+  <% end %>
+  <div :if={@can_install_github} class="text-gray-600">
+    No longer need to sync this project?
+    <.link
+      href="#"
+      class="hover:underline text-red-600"
+      phx-click={show_modal("remove_connection_modal")}
+      phx-target={@myself}
+    >
+      Remove Integration.
+    </.link>
+    <.confirm_connection_removal_modal
+      id="remove_connection_modal"
+      myself={@myself}
+    />
+  </div>
+  <div>
+    Need to learn more about Github Sync?
+    See
+    <.link
+      target="_blank"
+      href="https://docs.openfn.org/documentation/deploy/portability#automated-version-control-with-github-and-lightning"
+      class="hover:underline text-primary-600"
+    >
+      portability docs
+    </.link>
+    for full documentation on associated GitHub actions and automated workflows.
+  </div>
+</div>

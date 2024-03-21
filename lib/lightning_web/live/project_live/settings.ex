@@ -10,16 +10,13 @@ defmodule LightningWeb.ProjectLive.Settings do
   alias Lightning.Policies.Permissions
   alias Lightning.Policies.ProjectUsers
   alias Lightning.Projects
-  alias Lightning.Projects.Project
   alias Lightning.Projects.ProjectUser
   alias Lightning.VersionControl
-  alias Lightning.VersionControl.GithubError
   alias Lightning.WebhookAuthMethods
   alias Lightning.Workflows.WebhookAuthMethod
   alias LightningWeb.Components.Form
-  alias LightningWeb.Components.NewInputs
+  alias LightningWeb.Components.GithubComponents
   alias LightningWeb.LiveHelpers
-  alias LightningWeb.ProjectLive.DeleteConnectionModal
 
   require Logger
 
@@ -137,16 +134,6 @@ defmodule LightningWeb.ProjectLive.Settings do
        selected_credential_type: nil,
        show_collaborators_modal: false
      )}
-  end
-
-  # we should only run this if repo setting is pending
-  defp collect_project_repo_connections(project_id) do
-    pid = self()
-
-    Task.start(fn ->
-      resp = VersionControl.fetch_installation_repos(project_id)
-      send(pid, {:repos_fetched, resp})
-    end)
   end
 
   defp can_edit_digest_alert(
@@ -349,80 +336,6 @@ defmodule LightningWeb.ProjectLive.Settings do
     end
   end
 
-  def handle_event("delete_repo_connection", _, socket) do
-    project_id = socket.assigns.project.id
-
-    {:ok, _} = VersionControl.remove_github_connection(project_id)
-
-    {:noreply,
-     socket
-     |> assign(show_github_setup: true, show_sync_button: false)
-     |> push_patch(to: ~p"/projects/#{project_id}/settings#vcs")}
-  end
-
-  def handle_event("save_repo", %{"repo" => repo, "branch" => branch}, socket) do
-    if socket.assigns.can_install_github do
-      {:noreply, connect_github_repo(socket, repo, branch)}
-    else
-      {:noreply,
-       put_flash(socket, :error, "You are not authorized to perform this action")}
-    end
-  end
-
-  def handle_event(
-        "initiate_sync",
-        params,
-        %{assigns: %{current_user: u}} = socket
-      ) do
-    if socket.assigns.can_initiate_github_sync do
-      case VersionControl.initiate_sync(params["id"], u.email) do
-        {:ok, :fired} ->
-          {:noreply, socket |> put_flash(:info, "Sync Initialized")}
-
-        _err ->
-          # we should log or instrument this situation
-          {:noreply, socket |> put_flash(:error, "Sync Error")}
-      end
-    else
-      {:noreply, socket |> put_flash(:error, "Viewers Cannot Initiate Sync")}
-    end
-  end
-
-  def handle_event("repo_selected", params, socket) do
-    pid = self()
-
-    Task.start(fn ->
-      {:ok, branches} =
-        VersionControl.fetch_repo_branches(
-          socket.assigns.project.id,
-          params["repo"]
-        )
-
-      send(pid, {:branches_fetched, branches})
-    end)
-
-    {:noreply,
-     socket
-     |> assign(
-       loading_branches: true,
-       project_repo_connection: %{
-         socket.assigns.project_repo_connection
-         | "repo" => params["repo"]
-       }
-     )}
-  end
-
-  def handle_event("branch_selected", params, socket) do
-    {:noreply,
-     socket
-     |> assign(
-       project_repo_connection: %{
-         socket.assigns.project_repo_connection
-         | "branch" => params["branch"]
-       }
-     )}
-  end
-
   @impl true
   def handle_info(:collaborators_updated, socket) do
     project_users =
@@ -607,56 +520,6 @@ defmodule LightningWeb.ProjectLive.Settings do
       Role based permissions: You cannot modify this project's <%= @section %>
     </small>
     """
-  end
-
-  defp has_pending_installation?(%{id: project_id}, %{
-         project_id: installation_project_id
-       }) do
-    project_id != installation_project_id
-  end
-
-  defp has_pending_installation?(_project, _installation) do
-    false
-  end
-
-  defp install_github_tooltip(project, can_install_github, pending_installation) do
-    case {can_install_github,
-          has_pending_installation?(project, pending_installation)} do
-      {false, _} ->
-        "You're not allowed to configure repository connections for this project."
-
-      {_, true} ->
-        """
-        You have a pending github installation in another project.
-        <a href="#{~p"/projects/#{pending_installation.project_id}/settings#vcs"}" class="underline text-blue-400">Click here</a> to complete it / remove it before proceeding
-        """
-
-      _other ->
-        nil
-    end
-  end
-
-  defp connect_github_repo(socket, repo, branch) do
-    case VersionControl.connect_github_repo(
-           socket.assigns.project.id,
-           repo,
-           branch
-         ) do
-      {:ok, %{github_installation_id: github_installation_id}} ->
-        socket
-        |> assign(
-          show_repo_setup: false,
-          show_sync_button: true,
-          project_repo_connection: %{
-            "branch" => branch,
-            "repo" => repo,
-            "github_installation_id" => github_installation_id
-          }
-        )
-
-      {:error, _error} ->
-        put_flash(socket, :error, "Oops! Error connecting to github")
-    end
   end
 
   defp confirm_user_removal_modal(assigns) do
