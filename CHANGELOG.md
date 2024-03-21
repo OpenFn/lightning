@@ -17,6 +17,14 @@ and this project adheres to
 
 ### Added
 
+### Changed
+
+### Fixed
+
+## [v2.2.0] - 2024-03-21
+
+### Added
+
 - Allow admins to set project retention periods
   [#1760](https://github.com/OpenFn/lightning/issues/1760)
 - Automatically wipe input/output data after their retention period
@@ -33,8 +41,6 @@ and this project adheres to
 - Give priority to manual runs (over webhook requests and cron) so that active
   users on the inspector don't have to wait ages for thier work during high load
   periods [#1918](https://github.com/OpenFn/lightning/issues/1918)
-
-### Fixed
 
 ## [v2.1.0] - 2024-03-20
 
