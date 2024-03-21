@@ -69,8 +69,7 @@ defmodule Lightning.SetupUtils do
       github_installation_id: "39991761",
       repo: "OpenFn/demo-openhie",
       branch: "main",
-      project_id: openhie_project.id,
-      user_id: super_user.id
+      project_id: openhie_project.id
     })
 
     %{
