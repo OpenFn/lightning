@@ -22,27 +22,41 @@ defmodule Lightning.VersionControl do
   """
   def create_github_connection(attrs) do
     changeset = ProjectRepoConnection.changeset(%ProjectRepoConnection{}, attrs)
-    user_id = Ecto.Changeset.get_field(changeset, :user_id)
 
-    pending_installation = user_id && get_pending_user_installation(user_id)
+    Repo.transact(fn ->
+      with {:ok, repo_connection} <- Repo.insert(changeset),
+           {:ok, _} <-
+             push_workflow_files(
+               repo_connection.github_installation_id,
+               repo_connection.repo,
+               repo_connection.branch
+             ) do
+        {:ok, repo_connection}
+      end
+    end)
+  end
 
-    if is_nil(pending_installation) do
-      Repo.insert(changeset)
-    else
-      changeset
-      |> Ecto.Changeset.add_error(:user_id, "user has pending installation")
-      |> Ecto.Changeset.apply_action(:insert)
-    end
+  def update_github_connection(repo_connection, attrs) do
+    changeset = ProjectRepoConnection.changeset(repo_connection, attrs)
+    # NOTE: We should probably remove the files in the previous connection
+    Repo.transact(fn ->
+      with {:ok, repo_connection} <- Repo.update(changeset),
+           {:ok, _} <-
+             push_workflow_files(
+               repo_connection.github_installation_id,
+               repo_connection.repo,
+               repo_connection.branch
+             ) do
+        {:ok, repo_connection}
+      end
+    end)
   end
 
   @doc """
   Deletes a github connection used when re installing
   """
-  def remove_github_connection(project_id) do
-    Repo.one(
-      from(prc in ProjectRepoConnection, where: prc.project_id == ^project_id)
-    )
-    |> Repo.delete()
+  def remove_github_connection(repo_connection) do
+    Repo.delete(repo_connection)
   end
 
   def get_repo_connection(project_id) do
@@ -132,7 +146,7 @@ defmodule Lightning.VersionControl do
 
   def fetch_installation_repos(installation_id) do
     with {:ok, client} <- GithubClient.build_client(installation_id) do
-      case GithubClient.get_installations(client) do
+      case GithubClient.get_installation_repos(client) do
         {:ok, %{status: 200, body: body}} ->
           {:ok, body}
 
