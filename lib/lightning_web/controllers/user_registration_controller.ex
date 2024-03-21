@@ -18,7 +18,7 @@ defmodule LightningWeb.UserRegistrationController do
 
     Lightning.SetupUtils.create_starter_project(
       project_name,
-      [%{user_id: user_id, role: :admin}]
+      [%{user_id: user_id, role: :owner}]
     )
   end
 

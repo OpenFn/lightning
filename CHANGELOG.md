@@ -26,6 +26,10 @@ and this project adheres to
 
 ### Changed
 
+- When automatically creating a project for a newly registered user (via the
+  `INIT_PROJECT_FOR_NEW_USER=true` environment variable) that user should be the
+  `owner` of the project.
+  [#1927](https://github.com/OpenFn/lightning/issues/1927)
 - Give priority to manual runs (over webhook requests and cron) so that active
   users on the inspector don't have to wait ages for thier work during high load
   periods [#1918](https://github.com/OpenFn/lightning/issues/1918)
