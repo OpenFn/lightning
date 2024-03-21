@@ -439,6 +439,12 @@ defmodule LightningWeb.RunLive.Index do
      )}
   end
 
+  def handle_event("invalid-rerun:" <> error_message, _params, socket) do
+    {:noreply,
+     socket
+     |> put_flash(:error, error_message)}
+  end
+
   defp find_workflow_name(workflows, workflow_id) do
     Enum.find_value(workflows, fn {name, id} ->
       if id == workflow_id do
@@ -578,5 +584,17 @@ defmodule LightningWeb.RunLive.Index do
     end
 
     socket
+  end
+
+  def validate_bulk_rerun(selected_work_orders, %{id: project_id}) do
+    with {:error, _reason, %{text: error_message}} <-
+           UsageLimiter.limit_action(
+             %Action{type: :new_run_batch, amount: length(selected_work_orders)},
+             %Context{
+               project_id: project_id
+             }
+           ) do
+      "invalid-rerun:#{error_message}"
+    end
   end
 end
