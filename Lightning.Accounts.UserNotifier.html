@@ -13,7 +13,7 @@
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-EPF2X7PV.js"></script>
-    <script src="dist/sidebar_items-A4DF93E9.js"></script>
+    <script src="dist/sidebar_items-D860CAF4.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -249,6 +249,16 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
+        <a href="#send_data_retention_change_email/2" translate="no">send_data_retention_change_email(user, updated_project)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Deliver an email to notify the user about a data retention setting change made in their project</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
         <a href="#send_deletion_notification_email/1" translate="no">send_deletion_notification_email(user)</a>
 
       </div>
@@ -279,7 +289,7 @@ Pages
     </a>
     <h1 class="signature" translate="no">build_digest_url(workflow, start_date, end_date)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts/user_notifier.ex#L206" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts/user_notifier.ex#L231" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -367,7 +377,7 @@ Pages
     </a>
     <h1 class="signature" translate="no">deliver_project_digest(digest_data, params)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts/user_notifier.ex#L242" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts/user_notifier.ex#L267" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -389,7 +399,7 @@ Pages
     </a>
     <h1 class="signature" translate="no">deliver_reset_password_instructions(user, url)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts/user_notifier.ex#L161" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts/user_notifier.ex#L186" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -411,7 +421,7 @@ Pages
     </a>
     <h1 class="signature" translate="no">deliver_update_email_instructions(email, url)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts/user_notifier.ex#L177" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts/user_notifier.ex#L202" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -433,7 +443,7 @@ Pages
     </a>
     <h1 class="signature" translate="no">deliver_update_email_warning(email, new_email)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts/user_notifier.ex#L193" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts/user_notifier.ex#L218" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -455,7 +465,7 @@ Pages
     </a>
     <h1 class="signature" translate="no">notify_project_deletion(user, project)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts/user_notifier.ex#L286" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts/user_notifier.ex#L311" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -477,7 +487,7 @@ Pages
     </a>
     <h1 class="signature" translate="no">send_credential_deletion_notification_email(user, credential)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts/user_notifier.ex#L139" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts/user_notifier.ex#L164" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -490,6 +500,37 @@ Pages
 
   </section>
 </section>
+<section class="detail" id="send_data_retention_change_email/2">
+
+  <div class="detail-header">
+    <a href="#send_data_retention_change_email/2" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">send_data_retention_change_email(user, updated_project)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts/user_notifier.ex#L127" class="icon-action" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> send_data_retention_change_email(
+  user :: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>(),
+  updated_project :: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>()
+) :: {:ok, <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>()} | {:error, <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>()}</pre>
+
+      </div>
+
+<p>Deliver an email to notify the user about a data retention setting change made in their project</p>
+  </section>
+</section>
 <section class="detail" id="send_deletion_notification_email/1">
 
   <div class="detail-header">
@@ -499,7 +540,7 @@ Pages
     </a>
     <h1 class="signature" translate="no">send_deletion_notification_email(user)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts/user_notifier.ex#L123" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts/user_notifier.ex#L148" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
