@@ -21,6 +21,8 @@ defmodule Lightning.Accounts do
 
   require Logger
 
+  defdelegate subscribe(), to: Events
+
   def has_activity_in_projects?(%User{id: id} = _user) do
     count =
       from(run in Lightning.Run,

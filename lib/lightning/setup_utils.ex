@@ -147,7 +147,7 @@ defmodule Lightning.SetupUtils do
       end
 
     {:ok, admin} =
-      Accounts.register_user(%{
+      Accounts.create_user(%{
         first_name: "Amy",
         last_name: "Admin",
         email: "demo@openfn.org",
@@ -155,7 +155,7 @@ defmodule Lightning.SetupUtils do
       })
 
     {:ok, editor} =
-      Accounts.register_user(%{
+      Accounts.create_user(%{
         first_name: "Esther",
         last_name: "Editor",
         email: "editor@openfn.org",
@@ -163,7 +163,7 @@ defmodule Lightning.SetupUtils do
       })
 
     {:ok, viewer} =
-      Accounts.register_user(%{
+      Accounts.create_user(%{
         first_name: "Vikram",
         last_name: "Viewer",
         email: "viewer@openfn.org",
