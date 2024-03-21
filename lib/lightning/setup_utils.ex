@@ -177,6 +177,8 @@ defmodule Lightning.SetupUtils do
     {:ok, project} =
       Projects.create_project(%{
         name: name,
+        history_retention_period:
+          Application.get_env(:lightning, :default_retention_period),
         project_users: project_users
       })
 

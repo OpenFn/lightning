@@ -17,6 +17,13 @@ and this project adheres to
 
 ### Added
 
+- Allow admins to set project retention periods
+  [#1760](https://github.com/OpenFn/lightning/issues/1760)
+- Automatically wipe input/output data after their retention period
+  [#1762](https://github.com/OpenFn/lightning/issues/1762)
+- Automatically delete work order history after their retention period
+  [#1761](https://github.com/OpenFn/lightning/issues/1761)
+
 ### Changed
 
 - When automatically creating a project for a newly registered user (via the
