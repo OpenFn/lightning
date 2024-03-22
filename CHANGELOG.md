@@ -21,6 +21,9 @@ and this project adheres to
 
 ### Fixed
 
+- Apply usage limit to bulk-reruns
+  [#1931](https://github.com/OpenFn/lightning/issues/1931)
+
 ## [v2.2.0] - 2024-03-21
 
 ### Added

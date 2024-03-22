@@ -34,6 +34,9 @@ defmodule Lightning.WorkOrders do
 
   alias Ecto.Multi
   alias Lightning.Accounts.User
+  alias Lightning.Extensions.UsageLimiting
+  alias Lightning.Extensions.UsageLimiting.Action
+  alias Lightning.Extensions.UsageLimiting.Context
   alias Lightning.Graph
   alias Lightning.Invocation.Dataclip
   alias Lightning.Invocation.Step
@@ -41,6 +44,7 @@ defmodule Lightning.WorkOrders do
   alias Lightning.Run
   alias Lightning.Runs
   alias Lightning.RunStep
+  alias Lightning.Services.UsageLimiter
   alias Lightning.Workflows.Job
   alias Lightning.Workflows.Trigger
   alias Lightning.Workflows.Workflow
@@ -53,6 +57,7 @@ defmodule Lightning.WorkOrders do
           {:workflow, Workflow.t()}
           | {:dataclip, Dataclip.t()}
           | {:created_by, User.t()}
+          | {:project_id, Ecto.UUID.t()}
           | {:without_run, boolean()}
 
   @doc """
@@ -355,7 +360,7 @@ defmodule Lightning.WorkOrders do
   @spec retry_many(
           [WorkOrder.t(), ...] | [RunStep.t(), ...],
           [work_order_option(), ...]
-        ) :: {:ok, count :: integer()}
+        ) :: {:ok, count :: integer()} | UsageLimiting.error()
   def retry_many([%WorkOrder{} | _rest] = workorders, opts) do
     attrs = Map.new(opts)
     orders_ids = Enum.map(workorders, & &1.id)
@@ -391,35 +396,54 @@ defmodule Lightning.WorkOrders do
 
     runs = Repo.all(first_runs_query)
 
-    results =
-      Enum.map(runs, fn run ->
-        starting_job =
-          if job = run.starting_job do
-            job
-          else
-            [edge] = run.starting_trigger.edges
-            edge.target_job
-          end
+    with project_id <- Keyword.fetch!(opts, :project_id),
+         :ok <-
+           UsageLimiter.limit_action(
+             %Action{type: :new_run, amount: length(runs)},
+             %Context{
+               project_id: project_id
+             }
+           ) do
+      results =
+        Enum.map(runs, fn run ->
+          starting_job =
+            if job = run.starting_job do
+              job
+            else
+              [edge] = run.starting_trigger.edges
+              edge.target_job
+            end
 
-        do_retry(
-          run.work_order,
-          run.dataclip,
-          starting_job,
-          [],
-          attrs[:created_by]
-        )
-      end)
+          do_retry(
+            run.work_order,
+            run.dataclip,
+            starting_job,
+            [],
+            attrs[:created_by]
+          )
+        end)
 
-    {:ok, Enum.count(results, fn result -> match?({:ok, _}, result) end)}
+      {:ok, Enum.count(results, fn result -> match?({:ok, _}, result) end)}
+    end
   end
 
   def retry_many([%RunStep{} | _rest] = run_steps, opts) do
-    results =
-      Enum.map(run_steps, fn run_step ->
-        retry(run_step.run_id, run_step.step_id, opts)
-      end)
+    with project_id <- Keyword.fetch!(opts, :project_id),
+         runs <- Enum.uniq_by(run_steps, & &1.run_id),
+         :ok <-
+           UsageLimiter.limit_action(
+             %Action{type: :new_run, amount: length(runs)},
+             %Context{
+               project_id: project_id
+             }
+           ) do
+      results =
+        Enum.map(run_steps, fn run_step ->
+          retry(run_step.run_id, run_step.step_id, opts)
+        end)
 
-    {:ok, Enum.count(results, fn result -> match?({:ok, _}, result) end)}
+      {:ok, Enum.count(results, fn result -> match?({:ok, _}, result) end)}
+    end
   end
 
   def retry_many([], _opts) do

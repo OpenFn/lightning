@@ -3,6 +3,9 @@ defmodule Lightning.WorkOrdersTest do
 
   import Lightning.Factories
 
+  alias Lightning.Extensions.MockUsageLimiter
+  alias Lightning.Extensions.UsageLimiting.Action
+  alias Lightning.Extensions.Message
   alias Lightning.WorkOrders
   alias Lightning.WorkOrders.Events
 
@@ -409,6 +412,10 @@ defmodule Lightning.WorkOrdersTest do
 
   describe "retry_many/3" do
     setup do
+      Mox.stub(MockUsageLimiter, :limit_action, fn _action, _ctx ->
+        :ok
+      end)
+
       [job_a, job_b, job_c] = jobs = build_list(3, :job)
       trigger = build(:trigger, type: :webhook)
 
@@ -514,7 +521,11 @@ defmodule Lightning.WorkOrdersTest do
                starting_job_id: job_a.id
              )
 
-      {:ok, 1} = WorkOrders.retry_many([workorder], job_a.id, created_by: user)
+      {:ok, 1} =
+        WorkOrders.retry_many([workorder], job_a.id,
+          created_by: user,
+          project_id: workflow.project_id
+        )
 
       retry_run =
         Repo.get_by(Lightning.Run,
@@ -584,7 +595,11 @@ defmodule Lightning.WorkOrdersTest do
                starting_job_id: job_b.id
              )
 
-      {:ok, 1} = WorkOrders.retry_many([workorder], job_b.id, created_by: user)
+      {:ok, 1} =
+        WorkOrders.retry_many([workorder], job_b.id,
+          created_by: user,
+          project_id: workflow.project_id
+        )
 
       retry_run =
         Repo.get_by(Lightning.Run,
@@ -670,7 +685,11 @@ defmodule Lightning.WorkOrdersTest do
         assert run.id in [run_1.id, run_2.id]
       end
 
-      {:ok, 1} = WorkOrders.retry_many([workorder], job_a.id, created_by: user)
+      {:ok, 1} =
+        WorkOrders.retry_many([workorder], job_a.id,
+          created_by: user,
+          project_id: workflow.project_id
+        )
 
       runs = Ecto.assoc(workorder, :runs) |> Repo.all()
 
@@ -821,7 +840,11 @@ defmodule Lightning.WorkOrdersTest do
       runs_ids = Enum.map(runs, & &1.id)
       assert Enum.sort(runs_ids) == Enum.sort([run_1.id, run_2.id])
 
-      {:ok, 1} = WorkOrders.retry_many([workorder], job_b.id, created_by: user)
+      {:ok, 1} =
+        WorkOrders.retry_many([workorder], job_b.id,
+          created_by: user,
+          project_id: workflow.project_id
+        )
 
       runs = Ecto.assoc(workorder, :runs) |> Repo.all()
 
@@ -893,7 +916,8 @@ defmodule Lightning.WorkOrdersTest do
       # we've reversed the order here
       {:ok, 2} =
         WorkOrders.retry_many([workorder_2, workorder_1], job_a.id,
-          created_by: user
+          created_by: user,
+          project_id: workflow.project_id
         )
 
       retry_run_1 =
@@ -910,6 +934,90 @@ defmodule Lightning.WorkOrdersTest do
 
       assert retry_run_1.inserted_at
              |> DateTime.before?(retry_run_2.inserted_at)
+    end
+
+    test(
+      "retrying multiple workorders returns error on limit exceeded",
+      %{
+        workflow: workflow,
+        trigger: trigger,
+        jobs: [job_a, job_b, job_c],
+        user: user
+      }
+    ) do
+      Mox.stub(MockUsageLimiter, :limit_action, fn %Action{
+                                                     type: :new_run,
+                                                     amount: n
+                                                   },
+                                                   _context ->
+        {:error, :too_many_runs,
+         %Message{
+           text:
+             "You have attempted to enqueue #{n} runs but you have only 1 remaining in your current billig period"
+         }}
+      end)
+
+      [workorder_1, workorder_2] =
+        insert_list(2, :workorder,
+          workflow: workflow,
+          trigger: trigger,
+          dataclip: build(:dataclip),
+          runs: [
+            %{
+              state: :failed,
+              dataclip: build(:dataclip),
+              starting_trigger: trigger,
+              steps: [
+                insert(:step,
+                  job: job_a,
+                  input_dataclip: build(:dataclip),
+                  output_dataclip: build(:dataclip)
+                ),
+                insert(:step,
+                  job: job_b,
+                  input_dataclip: build(:dataclip),
+                  output_dataclip: build(:dataclip)
+                ),
+                insert(:step,
+                  job: job_c,
+                  input_dataclip: build(:dataclip),
+                  output_dataclip: build(:dataclip)
+                )
+              ]
+            }
+          ]
+        )
+
+      refute Repo.get_by(Lightning.Run,
+               work_order_id: workorder_1.id,
+               starting_job_id: job_a.id
+             )
+
+      refute Repo.get_by(Lightning.Run,
+               work_order_id: workorder_2.id,
+               starting_job_id: job_a.id
+             )
+
+      # we've reversed the order here
+      assert {:error, :too_many_runs,
+              %{
+                text:
+                  "You have attempted to enqueue 2 runs but you have only 1 remaining in your current billig period"
+              }} =
+               WorkOrders.retry_many([workorder_2, workorder_1], job_a.id,
+                 created_by: user,
+                 project_id: workflow.project_id
+               )
+
+      refute Repo.get_by(Lightning.Run,
+               work_order_id: workorder_1.id,
+               starting_job_id: job_a.id
+             )
+
+      refute Repo.get_by(Lightning.Run,
+               work_order_id: workorder_2.id,
+               starting_job_id: job_a.id
+             )
     end
 
     test "retrying multiple workorders only retries workorders with the given job",
@@ -983,7 +1091,8 @@ defmodule Lightning.WorkOrdersTest do
 
       {:ok, 1} =
         WorkOrders.retry_many([workorder_2, workorder_1], job_b.id,
-          created_by: user
+          created_by: user,
+          project_id: workflow.project_id
         )
 
       refute Repo.get_by(Lightning.Run,
@@ -996,10 +1105,117 @@ defmodule Lightning.WorkOrdersTest do
                starting_job_id: job_b.id
              )
     end
+
+    test "retrying multiple workorders returns an error on limit exceeded for steps",
+         %{
+           workflow: workflow,
+           trigger: trigger,
+           jobs: [job_a | _jobs],
+           user: user
+         } do
+      Mox.stub(MockUsageLimiter, :limit_action, fn %Action{
+                                                     type: :new_run,
+                                                     amount: n
+                                                   },
+                                                   _context ->
+        {:error, :too_many_runs,
+         %Message{
+           text:
+             "You have attempted to enqueue #{n} runs but you have only 1 remaining in your current billig period"
+         }}
+      end)
+
+      workorder_1 =
+        insert(:workorder,
+          workflow: workflow,
+          trigger: trigger,
+          dataclip: build(:dataclip)
+        )
+
+      run_1 =
+        insert(:run,
+          work_order: workorder_1,
+          state: :failed,
+          dataclip: build(:dataclip),
+          starting_trigger: trigger
+        )
+
+      run_step_1_a =
+        insert(:run_step,
+          step:
+            build(:step,
+              job: job_a,
+              input_dataclip: build(:dataclip),
+              output_dataclip: build(:dataclip)
+            ),
+          run: run_1
+        )
+
+      workorder_2 =
+        insert(:workorder,
+          workflow: workflow,
+          trigger: trigger,
+          dataclip: build(:dataclip)
+        )
+
+      run_2 =
+        insert(:run,
+          work_order: workorder_2,
+          state: :failed,
+          dataclip: build(:dataclip),
+          starting_trigger: trigger
+        )
+
+      run_step_2_a =
+        insert(:run_step,
+          step:
+            build(:step,
+              job: job_a,
+              input_dataclip: build(:dataclip),
+              output_dataclip: build(:dataclip)
+            ),
+          run: run_2
+        )
+
+      refute Repo.get_by(Lightning.Run,
+               work_order_id: workorder_1.id,
+               starting_job_id: job_a.id
+             )
+
+      refute Repo.get_by(Lightning.Run,
+               work_order_id: workorder_2.id,
+               starting_job_id: job_a.id
+             )
+
+      # we've reversed the order here
+      assert {:error, :too_many_runs,
+              %{
+                text:
+                  "You have attempted to enqueue 2 runs but you have only 1 remaining in your current billig period"
+              }} =
+               WorkOrders.retry_many([run_step_2_a, run_step_1_a],
+                 created_by: user,
+                 project_id: workflow.project_id
+               )
+
+      refute Repo.get_by(Lightning.Run,
+               work_order_id: workorder_1.id,
+               starting_job_id: job_a.id
+             )
+
+      refute Repo.get_by(Lightning.Run,
+               work_order_id: workorder_2.id,
+               starting_job_id: job_a.id
+             )
+    end
   end
 
   describe "retry_many/2 for WorkOrders" do
     setup do
+      Mox.stub(MockUsageLimiter, :limit_action, fn _action, _ctx ->
+        :ok
+      end)
+
       [job_a, job_b, job_c] = jobs = build_list(3, :job)
       trigger = build(:trigger, type: :webhook)
 
@@ -1086,7 +1302,11 @@ defmodule Lightning.WorkOrdersTest do
         assert run.id in [run_1.id, run_2.id]
       end
 
-      {:ok, 1} = WorkOrders.retry_many([workorder], created_by: user)
+      {:ok, 1} =
+        WorkOrders.retry_many([workorder],
+          created_by: user,
+          project_id: workflow.project_id
+        )
 
       runs = Ecto.assoc(workorder, :runs) |> Repo.all()
 
@@ -1161,7 +1381,8 @@ defmodule Lightning.WorkOrdersTest do
       # we've reversed the order here
       {:ok, 2} =
         WorkOrders.retry_many([workorder_2, workorder_1],
-          created_by: user
+          created_by: user,
+          project_id: workflow.project_id
         )
 
       retry_run_1 =
@@ -1211,7 +1432,11 @@ defmodule Lightning.WorkOrdersTest do
         assert run.id in [run_1.id]
       end
 
-      {:ok, 1} = WorkOrders.retry_many([workorder], created_by: user)
+      {:ok, 1} =
+        WorkOrders.retry_many([workorder],
+          created_by: user,
+          project_id: workflow.project_id
+        )
 
       runs = Ecto.assoc(workorder, :runs) |> Repo.all()
 
@@ -1266,7 +1491,11 @@ defmodule Lightning.WorkOrdersTest do
         assert run.id in [run_1.id]
       end
 
-      {:ok, 1} = WorkOrders.retry_many([workorder], created_by: user)
+      {:ok, 1} =
+        WorkOrders.retry_many([workorder],
+          created_by: user,
+          project_id: workflow.project_id
+        )
 
       runs = Ecto.assoc(workorder, :runs) |> Repo.all()
 
@@ -1349,7 +1578,8 @@ defmodule Lightning.WorkOrdersTest do
 
       {:ok, 1} =
         WorkOrders.retry_many([workorder_2, workorder_1],
-          created_by: user
+          created_by: user,
+          project_id: workflow.project_id
         )
 
       assert Repo.get_by(Lightning.Run,
@@ -1367,6 +1597,10 @@ defmodule Lightning.WorkOrdersTest do
 
   describe "retry_many/2 for RunSteps" do
     setup do
+      Mox.stub(MockUsageLimiter, :limit_action, fn _action, _ctx ->
+        :ok
+      end)
+
       [job_a, job_b, job_c] = jobs = build_list(3, :job)
       trigger = build(:trigger, type: :webhook)
 
@@ -1438,7 +1672,11 @@ defmodule Lightning.WorkOrdersTest do
                starting_job_id: job_a.id
              )
 
-      {:ok, 1} = WorkOrders.retry_many([run_step_a], created_by: user)
+      {:ok, 1} =
+        WorkOrders.retry_many([run_step_a],
+          created_by: user,
+          project_id: workflow.project_id
+        )
 
       retry_run =
         Repo.get_by(Lightning.Run,
@@ -1520,7 +1758,11 @@ defmodule Lightning.WorkOrdersTest do
                starting_job_id: run_step_b.step.job.id
              )
 
-      {:ok, 1} = WorkOrders.retry_many([run_step_b], created_by: user)
+      {:ok, 1} =
+        WorkOrders.retry_many([run_step_b],
+          created_by: user,
+          project_id: workflow.project_id
+        )
 
       retry_run =
         Repo.get_by(Lightning.Run,
@@ -1612,7 +1854,8 @@ defmodule Lightning.WorkOrdersTest do
       # we've reversed the order here
       {:ok, 2} =
         WorkOrders.retry_many([run_step_2_a, run_step_1_a],
-          created_by: user
+          created_by: user,
+          project_id: workflow.project_id
         )
 
       retry_run_1 =
@@ -1704,7 +1947,8 @@ defmodule Lightning.WorkOrdersTest do
 
       {:ok, 1} =
         WorkOrders.retry_many([run_step_2_a, run_step_1_a],
-          created_by: user
+          created_by: user,
+          project_id: workflow.project_id
         )
 
       assert Repo.get_by(Lightning.Run,

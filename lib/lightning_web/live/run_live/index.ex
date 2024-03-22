@@ -364,6 +364,11 @@ defmodule LightningWeb.RunLive.Index do
         {:noreply,
          socket
          |> put_flash(:error, "Oops! an error occured during retries.")}
+
+      {:error, _reason, %{text: error_message}} ->
+        {:noreply,
+         socket
+         |> put_flash(:error, error_message)}
     end
   end
 
@@ -434,6 +439,12 @@ defmodule LightningWeb.RunLive.Index do
      )}
   end
 
+  def handle_event("invalid-rerun:" <> error_message, _params, socket) do
+    {:noreply,
+     socket
+     |> put_flash(:error, error_message)}
+  end
+
   defp find_workflow_name(workflows, workflow_id) do
     Enum.find_value(workflows, fn {name, id} ->
       if id == workflow_id do
@@ -444,7 +455,10 @@ defmodule LightningWeb.RunLive.Index do
 
   defp handle_bulk_rerun(socket, %{"type" => "selected", "job" => job_id}) do
     socket.assigns.selected_work_orders
-    |> WorkOrders.retry_many(job_id, created_by: socket.assigns.current_user)
+    |> WorkOrders.retry_many(job_id,
+      created_by: socket.assigns.current_user,
+      project_id: socket.assigns.project.id
+    )
   end
 
   defp handle_bulk_rerun(socket, %{"type" => "all", "job" => job_id}) do
@@ -454,12 +468,18 @@ defmodule LightningWeb.RunLive.Index do
     |> Invocation.search_workorders_query(filter)
     |> Invocation.exclude_wiped_dataclips()
     |> Lightning.Repo.all()
-    |> WorkOrders.retry_many(job_id, created_by: socket.assigns.current_user)
+    |> WorkOrders.retry_many(job_id,
+      created_by: socket.assigns.current_user,
+      project_id: socket.assigns.project.id
+    )
   end
 
   defp handle_bulk_rerun(socket, %{"type" => "selected"}) do
     socket.assigns.selected_work_orders
-    |> WorkOrders.retry_many(created_by: socket.assigns.current_user)
+    |> WorkOrders.retry_many(
+      created_by: socket.assigns.current_user,
+      project_id: socket.assigns.project.id
+    )
   end
 
   defp handle_bulk_rerun(socket, %{"type" => "all"}) do
@@ -469,7 +489,10 @@ defmodule LightningWeb.RunLive.Index do
     |> Invocation.search_workorders_query(filter)
     |> Invocation.exclude_wiped_dataclips()
     |> Lightning.Repo.all()
-    |> WorkOrders.retry_many(created_by: socket.assigns.current_user)
+    |> WorkOrders.retry_many(
+      created_by: socket.assigns.current_user,
+      project_id: socket.assigns.project.id
+    )
   end
 
   defp all_selected?(work_orders, entries) do
@@ -561,5 +584,17 @@ defmodule LightningWeb.RunLive.Index do
     end
 
     socket
+  end
+
+  def validate_bulk_rerun(selected_work_orders, %{id: project_id}) do
+    with {:error, _reason, %{text: error_message}} <-
+           UsageLimiter.limit_action(
+             %Action{type: :new_run, amount: length(selected_work_orders)},
+             %Context{
+               project_id: project_id
+             }
+           ) do
+      "invalid-rerun:#{error_message}"
+    end
   end
 end
