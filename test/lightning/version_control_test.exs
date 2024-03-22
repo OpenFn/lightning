@@ -271,22 +271,6 @@ defmodule Lightning.VersionControlTest do
   end
 
   describe "fetch_user_access_token/1" do
-    test "returns error for a refresh token that has expired" do
-      expired_token = %{
-        "access_token" => "access-token",
-        "refresh_token" => "refresh-token",
-        "expires_at" => DateTime.utc_now() |> DateTime.add(-20),
-        "refresh_token_expires_at" => DateTime.utc_now() |> DateTime.add(-20)
-      }
-
-      # reload so that we can get the token as they are from the db
-      user =
-        insert(:user, github_oauth_token: expired_token)
-        |> Lightning.Repo.reload!()
-
-      assert {:error, :expired} = VersionControl.fetch_user_access_token(user)
-    end
-
     test "returns ok for an access token that is still active" do
       active_token = %{
         "access_token" => "access-token",

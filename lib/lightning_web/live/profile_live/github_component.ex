@@ -98,7 +98,7 @@ defmodule LightningWeb.ProfileLive.GithubComponent do
   defp build_query_params(socket) do
     client_id =
       Application.get_env(:lightning, :github_app, [])
-      |> Keyword.get(:client_id, nil)
+      |> Keyword.fetch!(:client_id)
 
     redirect_url = Routes.oauth_url(socket, :new, "github")
 

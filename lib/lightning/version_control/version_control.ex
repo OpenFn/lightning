@@ -142,9 +142,9 @@ defmodule Lightning.VersionControl do
       code: code
     ]
 
-    client = GithubClient.build_oauth_client()
+    tesla_client = GithubClient.build_oauth_client()
 
-    case Tesla.post(client, "/access_token", %{}, query: query_params) do
+    case Tesla.post(tesla_client, "/access_token", %{}, query: query_params) do
       {:ok, %{body: %{"access_token" => _} = body}} ->
         {:ok, body}
 
@@ -217,14 +217,10 @@ defmodule Lightning.VersionControl do
   # token that expires
   def fetch_user_access_token(
         %User{
-          github_oauth_token: %{"refresh_token_expires_at" => _expiry} = token
+          github_oauth_token: %{"refresh_token_expires_at" => _expiry}
         } = user
       ) do
-    if oauth_token_valid?(token) do
-      maybe_refresh_access_token(user)
-    else
-      {:error, :expired}
-    end
+    maybe_refresh_access_token(user)
   end
 
   # token that doesn't expire
