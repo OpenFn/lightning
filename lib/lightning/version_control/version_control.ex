@@ -213,7 +213,7 @@ defmodule Lightning.VersionControl do
   If the access token has expired, it `refreshes` the token and updates the `User` column accordingly
   """
   @spec fetch_user_access_token(User.t()) ::
-          {:ok, String.t()} | {:error, :expired | map()}
+          {:ok, String.t()} | {:error, map()}
   # token that expires
   def fetch_user_access_token(
         %User{
