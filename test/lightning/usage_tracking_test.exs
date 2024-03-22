@@ -4,6 +4,8 @@ defmodule Lightning.UsageTrackingTest do
   alias Lightning.Repo
   alias Lightning.UsageTracking
   alias Lightning.UsageTracking.DailyReportConfiguration
+  alias Lightning.UsageTracking.Report
+  alias Lightning.UsageTracking.ReportData
   alias Lightning.UsageTracking.ReportWorker
 
   describe ".enable_daily_report/1 - no configuration exists" do
@@ -575,6 +577,243 @@ defmodule Lightning.UsageTrackingTest do
 
     test "returns nil if the config does not exist" do
       assert UsageTracking.find_enabled_daily_report_config() == nil
+    end
+  end
+
+  describe ".insert_report - cleartext uuids disabled" do
+    setup do
+      cleartext_uuids_enabled = false
+
+      date = ~D[2024-02-05]
+
+      report_config =
+        UsageTracking.enable_daily_report(DateTime.utc_now())
+
+      %{
+        instance: expected_instance_data,
+        report_date: expected_report_date
+      } =
+        report_config
+        |> ReportData.generate(cleartext_uuids_enabled, date)
+        |> Map.take([:instance, :report_date])
+
+      %{
+        cleartext_uuids_enabled: cleartext_uuids_enabled,
+        date: date,
+        expected_instance_data: expected_instance_data,
+        expected_report_date: expected_report_date,
+        report_config: report_config
+      }
+    end
+
+    test "inserts an unsubmitted report instance", %{
+      cleartext_uuids_enabled: cleartext_uuids_enabled,
+      date: date,
+      expected_instance_data: instance_data,
+      expected_report_date: expected_report_date,
+      report_config: report_config
+    } do
+      UsageTracking.insert_report(report_config, cleartext_uuids_enabled, date)
+
+      expected_instance_data =
+        instance_data
+        |> Jason.encode!()
+        |> Jason.decode!()
+
+      expected_date_string = Date.to_iso8601(expected_report_date)
+
+      report = Repo.one(Report)
+
+      assert %{
+               submitted: false,
+               submitted_at: nil,
+               report_date: ^expected_report_date
+             } = report
+
+      assert %{
+               "instance" => ^expected_instance_data,
+               "report_date" => ^expected_date_string
+             } = report.data
+    end
+
+    test "returns the report instance", %{
+      cleartext_uuids_enabled: cleartext_uuids_enabled,
+      date: date,
+      expected_instance_data: expected_instance_data,
+      expected_report_date: expected_report_date,
+      report_config: report_config
+    } do
+      {:ok, report} =
+        UsageTracking.insert_report(report_config, cleartext_uuids_enabled, date)
+
+      assert %{id: inserted_id} = Repo.one(Report)
+
+      assert %{
+               id: ^inserted_id,
+               submitted: false,
+               submitted_at: nil,
+               report_date: ^date
+             } = report
+
+      assert %{
+               instance: ^expected_instance_data,
+               report_date: ^expected_report_date
+             } = report.data
+    end
+  end
+
+  describe ".insert_report - cleartext uuids enabled" do
+    setup do
+      cleartext_uuids_enabled = false
+
+      date = ~D[2024-02-05]
+
+      report_config =
+        UsageTracking.enable_daily_report(DateTime.utc_now())
+
+      %{
+        instance: expected_instance_data,
+        report_date: expected_report_date
+      } =
+        report_config
+        |> ReportData.generate(cleartext_uuids_enabled, date)
+        |> Map.take([:instance, :report_date])
+
+      %{
+        cleartext_uuids_enabled: cleartext_uuids_enabled,
+        date: date,
+        expected_instance_data: expected_instance_data,
+        expected_report_date: expected_report_date,
+        report_config: report_config
+      }
+    end
+
+    test "inserts an unsubmitted report instance", %{
+      cleartext_uuids_enabled: cleartext_uuids_enabled,
+      date: date,
+      expected_instance_data: instance_data,
+      expected_report_date: expected_report_date,
+      report_config: report_config
+    } do
+      UsageTracking.insert_report(report_config, cleartext_uuids_enabled, date)
+
+      expected_instance_data =
+        instance_data
+        |> Jason.encode!()
+        |> Jason.decode!()
+
+      expected_date_string = Date.to_iso8601(expected_report_date)
+
+      report = Repo.one(Report)
+
+      assert %{
+               submitted: false,
+               submitted_at: nil,
+               report_date: ^expected_report_date
+             } = report
+
+      assert %{
+               "instance" => ^expected_instance_data,
+               "report_date" => ^expected_date_string
+             } = report.data
+    end
+
+    test "returns the report instance", %{
+      cleartext_uuids_enabled: cleartext_uuids_enabled,
+      date: date,
+      expected_instance_data: expected_instance_data,
+      expected_report_date: expected_report_date,
+      report_config: report_config
+    } do
+      {:ok, report} =
+        UsageTracking.insert_report(report_config, cleartext_uuids_enabled, date)
+
+      assert %{id: inserted_id} = Repo.one(Report)
+
+      assert %{
+               id: ^inserted_id,
+               submitted: false,
+               submitted_at: nil,
+               report_date: ^date
+             } = report
+
+      assert %{
+               instance: ^expected_instance_data,
+               report_date: ^expected_report_date
+             } = report.data
+    end
+  end
+
+  describe ".update_report_submission - successful" do
+    setup do
+      report =
+        insert(:usage_tracking_report, submitted: false, submitted_at: nil)
+
+      %{report: report}
+    end
+
+    test "updates submission fields if submission was successful", %{
+      report: report
+    } do
+      UsageTracking.update_report_submission!(:ok, report)
+
+      assert %{
+               submitted: true,
+               submitted_at: submitted_at
+             } = Repo.get!(Report, report.id)
+
+      assert DateTime.diff(DateTime.utc_now(), submitted_at, :second) < 2
+    end
+
+    test "returns the updated report", %{
+      report: report
+    } do
+      updated_report = UsageTracking.update_report_submission!(:ok, report)
+
+      assert %{
+               submitted: true,
+               submitted_at: submitted_at
+             } = updated_report
+
+      assert DateTime.diff(DateTime.utc_now(), submitted_at, :second) < 2
+    end
+  end
+
+  describe ".update_report_submission - unsuccessful" do
+    setup do
+      # Create an `artificial` report to validate logic - there is currently
+      # no use case that would result in code overwriting a report that has
+      # been successfully submitted,
+      report =
+        insert(
+          :usage_tracking_report,
+          submitted: true,
+          submitted_at: DateTime.utc_now()
+        )
+
+      %{report: report}
+    end
+
+    test "updates the submission fields to indicate a failed submission", %{
+      report: report
+    } do
+      UsageTracking.update_report_submission!(:error, report)
+
+      assert %{
+               submitted: false,
+               submitted_at: nil
+             } = Repo.get!(Report, report.id)
+    end
+
+    test "returns the updated report", %{
+      report: report
+    } do
+      updated_report = UsageTracking.update_report_submission!(:error, report)
+
+      assert %{
+               submitted: false,
+               submitted_at: nil
+             } = updated_report
     end
   end
 end

@@ -27,6 +27,8 @@ and this project adheres to
 
 - Apply usage limit to bulk-reruns
   [#1931](https://github.com/OpenFn/lightning/issues/1931)
+- Fix edge case that could result in duplicate usage tracking submissions.
+  [#1853](https://github.com/OpenFn/lightning/issues/1853)
 
 ## [v2.2.0] - 2024-03-21
 

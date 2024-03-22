@@ -7,6 +7,7 @@ defmodule Lightning.UsageTracking do
   alias Lightning.Repo
   alias Lightning.UsageTracking.DailyReportConfiguration
   alias Lightning.UsageTracking.Report
+  alias Lightning.UsageTracking.ReportData
   alias Lightning.UsageTracking.ReportWorker
 
   def enable_daily_report(enabled_at) do
@@ -158,5 +159,36 @@ defmodule Lightning.UsageTracking do
       %{tracking_enabled_at: nil} -> nil
       possible_config -> possible_config
     end
+  end
+
+  def insert_report(config, cleartext_uuids_enabled, date) do
+    data = ReportData.generate(config, cleartext_uuids_enabled, date)
+
+    %Report{}
+    |> Report.changeset(%{
+      data: data,
+      report_date: date,
+      submitted: false,
+      submitted_at: nil
+    })
+    |> Repo.insert()
+  end
+
+  def update_report_submission!(:ok = _state, report) do
+    report
+    |> Report.changeset(%{
+      submitted: true,
+      submitted_at: DateTime.utc_now()
+    })
+    |> Repo.update!()
+  end
+
+  def update_report_submission!(:error = _state, report) do
+    report
+    |> Report.changeset(%{
+      submitted: false,
+      submitted_at: nil
+    })
+    |> Repo.update!()
   end
 end

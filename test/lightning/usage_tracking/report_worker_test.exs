@@ -205,6 +205,31 @@ defmodule Lightning.UsageTracking.ReportWorkerTest do
     end
   end
 
+  describe "tracking is enabled - but report for given date exists" do
+    setup do
+      UsageTracking.enable_daily_report(DateTime.utc_now())
+
+      put_temporary_env(:lightning, :usage_tracking,
+        cleartext_uuids_enabled: false,
+        enabled: true,
+        host: @host
+      )
+
+      insert(:usage_tracking_report, report_date: @date, data: %{})
+
+      :ok
+    end
+
+    test "does not submit the tracking data" do
+      with_mock Client,
+        submit_metrics: &mock_submit_metrics_ok/2 do
+        perform_job(ReportWorker, %{date: @date})
+
+        assert_not_called(Client.submit_metrics(:_, :_))
+      end
+    end
+  end
+
   describe "tracking is enabled - but no config" do
     setup do
       UsageTracking.disable_daily_report()
