@@ -142,9 +142,9 @@ defmodule Lightning.VersionControl do
       code: code
     ]
 
-    tesla_client = GithubClient.build_oauth_client()
-
-    case Tesla.post(tesla_client, "/access_token", %{}, query: query_params) do
+    GithubClient.build_oauth_client()
+    |> Tesla.post("/access_token", %{}, query: query_params)
+    |> case do
       {:ok, %{body: %{"access_token" => _} = body}} ->
         {:ok, body}
 
