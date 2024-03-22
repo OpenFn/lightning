@@ -946,11 +946,11 @@ defmodule Lightning.WorkOrdersTest do
       }
     ) do
       Mox.stub(MockUsageLimiter, :limit_action, fn %Action{
-                                                     type: :new_run_batch,
+                                                     type: :new_run,
                                                      amount: n
                                                    },
                                                    _context ->
-        {:error, :too_many_batch_runs,
+        {:error, :too_many_runs,
          %Message{
            text:
              "You have attempted to enqueue #{n} runs but you have only 1 remaining in your current billig period"
@@ -999,7 +999,7 @@ defmodule Lightning.WorkOrdersTest do
              )
 
       # we've reversed the order here
-      assert {:error, :too_many_batch_runs,
+      assert {:error, :too_many_runs,
               %{
                 text:
                   "You have attempted to enqueue 2 runs but you have only 1 remaining in your current billig period"
@@ -1114,7 +1114,7 @@ defmodule Lightning.WorkOrdersTest do
            user: user
          } do
       Mox.stub(MockUsageLimiter, :limit_action, fn %Action{
-                                                     type: :new_run_batch,
+                                                     type: :new_run,
                                                      amount: n
                                                    },
                                                    _context ->

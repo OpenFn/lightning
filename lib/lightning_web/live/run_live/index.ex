@@ -589,7 +589,7 @@ defmodule LightningWeb.RunLive.Index do
   def validate_bulk_rerun(selected_work_orders, %{id: project_id}) do
     with {:error, _reason, %{text: error_message}} <-
            UsageLimiter.limit_action(
-             %Action{type: :new_run_batch, amount: length(selected_work_orders)},
+             %Action{type: :new_run, amount: length(selected_work_orders)},
              %Context{
                project_id: project_id
              }

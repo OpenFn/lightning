@@ -4,7 +4,6 @@ defmodule Lightning.Extensions.UsageLimiting do
   """
   @type error_reason ::
           :too_many_runs
-          | :too_many_batch_runs
           | :runs_hard_limit
           | :unknown_project
   @type message :: Lightning.Extensions.Message.t()
@@ -13,11 +12,11 @@ defmodule Lightning.Extensions.UsageLimiting do
   defmodule Action do
     @moduledoc false
     @type t :: %__MODULE__{
-            type: :new_run | :new_run_batch | :new_workflow,
+            type: :new_run | :new_workflow,
             amount: pos_integer()
           }
 
-    defstruct [:type, :amount]
+    defstruct type: nil, amount: 1
   end
 
   defmodule Context do

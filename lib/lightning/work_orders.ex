@@ -399,7 +399,7 @@ defmodule Lightning.WorkOrders do
     with project_id <- Keyword.fetch!(opts, :project_id),
          :ok <-
            UsageLimiter.limit_action(
-             %Action{type: :new_run_batch, amount: length(runs)},
+             %Action{type: :new_run, amount: length(runs)},
              %Context{
                project_id: project_id
              }
@@ -432,7 +432,7 @@ defmodule Lightning.WorkOrders do
          runs <- Enum.uniq_by(run_steps, & &1.run_id),
          :ok <-
            UsageLimiter.limit_action(
-             %Action{type: :new_run_batch, amount: length(runs)},
+             %Action{type: :new_run, amount: length(runs)},
              %Context{
                project_id: project_id
              }
