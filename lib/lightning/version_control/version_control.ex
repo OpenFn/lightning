@@ -271,6 +271,11 @@ defmodule Lightning.VersionControl do
     {:ok, access_token}
   end
 
+  def fetch_user_access_token(_user) do
+    {:error,
+     GithubError.invalid_oauth_token("user has not configured an oauth token")}
+  end
+
   defp maybe_refresh_access_token(%User{github_oauth_token: token} = user) do
     {:ok, access_token_expiry, _offset} =
       DateTime.from_iso8601(token["expires_at"])
