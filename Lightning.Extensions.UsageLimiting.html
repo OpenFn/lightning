@@ -13,7 +13,7 @@
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-EPF2X7PV.js"></script>
-    <script src="dist/sidebar_items-9BA56B1D.js"></script>
+    <script src="dist/sidebar_items-00BC1DA8.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -155,6 +155,14 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
+        <a href="#t:error/0" translate="no">error()</a>
+
+      </div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
         <a href="#t:error_reason/0" translate="no">error_reason()</a>
 
       </div>
@@ -204,6 +212,34 @@ Pages
       <span class="text">Types</span>
     </h1>
     <div class="types-list">
+<section class="detail" id="t:error/0">
+
+  <div class="detail-header">
+    <a href="#t:error/0" class="detail-link" title="Link to this type">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this type</span>
+    </a>
+    <h1 class="signature" translate="no">error()</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/extensions/usage_limiting.ex#L10" class="icon-action" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@type</span> error() :: {:error, <a href="#t:error_reason/0">error_reason</a>(), <a href="#t:message/0">message</a>()}</pre>
+
+      </div>
+
+
+  </section>
+</section>
 <section class="detail" id="t:error_reason/0">
 
   <div class="detail-header">
@@ -241,7 +277,7 @@ Pages
     </a>
     <h1 class="signature" translate="no">message()</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/extensions/usage_limiting.ex#L6" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/extensions/usage_limiting.ex#L9" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -281,7 +317,7 @@ Pages
     </a>
     <h1 class="signature" translate="no">check_limits(context)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/extensions/usage_limiting.ex#L27" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/extensions/usage_limiting.ex#L32" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -294,7 +330,7 @@ Pages
       <div class="specs">
 
           <pre translate="no"><span class="attribute">@callback</span> check_limits(context :: Lightning.Extensions.UsageLimiting.Context.t()) ::
-  :ok | {:error, <a href="#t:error_reason/0">error_reason</a>(), <a href="#t:message/0">message</a>()}</pre>
+  :ok | <a href="#t:error/0">error</a>()</pre>
 
       </div>
 
@@ -310,7 +346,7 @@ Pages
     </a>
     <h1 class="signature" translate="no">limit_action(action, context)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/extensions/usage_limiting.ex#L30" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/extensions/usage_limiting.ex#L35" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -325,7 +361,7 @@ Pages
           <pre translate="no"><span class="attribute">@callback</span> limit_action(
   action :: Lightning.Extensions.UsageLimiting.Action.t(),
   context :: Lightning.Extensions.UsageLimiting.Context.t()
-) :: :ok | {:error, <a href="#t:error_reason/0">error_reason</a>(), <a href="#t:message/0">message</a>()}</pre>
+) :: :ok | <a href="#t:error/0">error</a>()</pre>
 
       </div>
 
