@@ -68,12 +68,24 @@ github_app_id =
 github_app_name =
   System.get_env("GITHUB_APP_NAME") ||
     Application.get_env(:lightning, :github_app, [])
-    |> Keyword.get(:app_id, nil)
+    |> Keyword.get(:app_name, nil)
+
+github_app_client_id =
+  System.get_env("GITHUB_APP_CLIENT_ID") ||
+    Application.get_env(:lightning, :github_app, [])
+    |> Keyword.get(:client_id, nil)
+
+github_app_client_secret =
+  System.get_env("GITHUB_APP_CLIENT_SECRET") ||
+    Application.get_env(:lightning, :github_app, [])
+    |> Keyword.get(:client_secret, nil)
 
 config :lightning, :github_app,
   cert: decoded_cert,
   app_id: github_app_id,
-  app_name: github_app_name
+  app_name: github_app_name,
+  client_id: github_app_client_id,
+  client_secret: github_app_client_secret
 
 if start_rtm = System.get_env("RTM") do
   unless start_rtm in ["true", "false"] do

@@ -8,10 +8,14 @@ defmodule Lightning.VersionControl do
 
   import Ecto.Query, warn: false
 
+  alias Lightning.Accounts.User
   alias Lightning.Repo
+  alias Lightning.VersionControl.Events
   alias Lightning.VersionControl.GithubClient
   alias Lightning.VersionControl.GithubError
   alias Lightning.VersionControl.ProjectRepoConnection
+
+  defdelegate subscribe(user), to: Events
 
   @doc """
   Creates a connection between a project and a github repo
@@ -120,6 +124,193 @@ defmodule Lightning.VersionControl do
         repo_connection.repo,
         user_name
       )
+    end
+  end
+
+  @doc """
+  Fetches the oauth access token using the code received from the callback url
+  For more info: https://docs.github.com/en/apps/creating-github-apps/authenticating-with-a-github-app/generating-a-user-access-token-for-a-github-app
+  """
+  @spec exchange_code_for_oauth_token(code :: String.t()) ::
+          {:ok, map()} | {:error, map()}
+  def exchange_code_for_oauth_token(code) do
+    app_config = Application.fetch_env!(:lightning, :github_app)
+
+    query_params = [
+      client_id: app_config[:client_id],
+      client_secret: app_config[:client_secret],
+      code: code
+    ]
+
+    GithubClient.build_oauth_client()
+    |> Tesla.post("/access_token", %{}, query: query_params)
+    |> case do
+      {:ok, %{body: %{"access_token" => _} = body}} ->
+        {:ok, body}
+
+      {:ok, %{body: body}} ->
+        {:error, body}
+
+      other ->
+        other
+    end
+  end
+
+  @doc """
+  Fetches a new access token using the given refresh token
+  For more info: https://docs.github.com/en/apps/creating-github-apps/authenticating-with-a-github-app/refreshing-user-access-tokens
+  """
+  @spec refresh_oauth_token(refresh_token :: String.t()) ::
+          {:ok, map()} | {:error, map()}
+  def refresh_oauth_token(refresh_token) do
+    app_config = Application.fetch_env!(:lightning, :github_app)
+
+    query_params = [
+      client_id: app_config[:client_id],
+      client_secret: app_config[:client_secret],
+      grant_type: "refresh_token",
+      refresh_token: refresh_token
+    ]
+
+    client = GithubClient.build_oauth_client()
+
+    case Tesla.post(client, "/access_token", %{}, query: query_params) do
+      {:ok, %{body: %{"access_token" => _} = body}} ->
+        {:ok, body}
+
+      {:ok, %{body: body}} ->
+        {:error, body}
+
+      other ->
+        other
+    end
+  end
+
+  @doc """
+  Checks if the given token has expired.
+  Github supports access tokens that expire and those that don't.
+  If the `access token` expires, then a `refresh token` is also availed.
+  This function simply checks if the token has a `refresh_token`, if yes, it proceeds to check the expiry date
+  """
+  @spec oauth_token_valid?(token :: map()) :: boolean()
+  def oauth_token_valid?(token) do
+    case token do
+      %{"refresh_token_expires_at" => expiry} ->
+        {:ok, expiry, _offset} = DateTime.from_iso8601(expiry)
+        now = DateTime.utc_now()
+        DateTime.after?(expiry, now)
+
+      %{"access_token" => _access_token} ->
+        true
+
+      _other ->
+        false
+    end
+  end
+
+  @doc """
+  Fecthes the access token for the given `User`.
+  If the access token has expired, it `refreshes` the token and updates the `User` column accordingly
+  """
+  @spec fetch_user_access_token(User.t()) ::
+          {:ok, String.t()} | {:error, map()}
+  # token that expires
+  def fetch_user_access_token(
+        %User{
+          github_oauth_token: %{"refresh_token_expires_at" => _expiry}
+        } = user
+      ) do
+    maybe_refresh_access_token(user)
+  end
+
+  # token that doesn't expire
+  def fetch_user_access_token(%User{
+        github_oauth_token: %{"access_token" => access_token}
+      }) do
+    {:ok, access_token}
+  end
+
+  defp maybe_refresh_access_token(%User{github_oauth_token: token} = user) do
+    {:ok, access_token_expiry, _offset} =
+      DateTime.from_iso8601(token["expires_at"])
+
+    now = DateTime.utc_now()
+
+    if DateTime.after?(access_token_expiry, now) do
+      {:ok, token["access_token"]}
+    else
+      with {:ok, refreshed_token} <- refresh_oauth_token(token["refresh_token"]),
+           {:ok, _user} <- save_oauth_token(user, refreshed_token, notify: false) do
+        {:ok, refreshed_token["access_token"]}
+      end
+    end
+  end
+
+  @doc """
+  Deletes the authorization for the github app and updates the user details accordingly
+  """
+  @spec delete_github_ouath_grant(User.t()) :: {:ok, User.t()} | {:error, any()}
+  def delete_github_ouath_grant(%User{} = user) do
+    app_config = Application.fetch_env!(:lightning, :github_app)
+
+    with {:ok, access_token} <- fetch_user_access_token(user),
+         {:ok, %{status: 204}} <-
+           GithubClient.delete_app_grant(
+             basic_auth_client(app_config),
+             app_config[:client_id],
+             access_token
+           ) do
+      user |> Ecto.Changeset.change(%{github_oauth_token: nil}) |> Repo.update()
+    end
+  end
+
+  defp basic_auth_client(app_config) do
+    Tesla.client([
+      {Tesla.Middleware.BasicAuth,
+       [username: app_config[:client_id], password: app_config[:client_secret]]}
+    ])
+  end
+
+  @spec save_oauth_token(User.t(), map(), notify: boolean()) ::
+          {:ok, User.t()} | {:error, Ecto.Changeset.t()}
+  def save_oauth_token(%User{} = user, token, opts \\ [notify: true]) do
+    token =
+      token
+      |> maybe_add_access_token_expiry_date()
+      |> maybe_add_refresh_token_expiry_date()
+
+    user
+    |> User.github_token_changeset(%{github_oauth_token: token})
+    |> Repo.update()
+    |> tap(fn
+      {:ok, user} ->
+        if opts[:notify] do
+          Events.oauth_token_added(user)
+        end
+
+      _other ->
+        :ok
+    end)
+  end
+
+  defp maybe_add_access_token_expiry_date(token) do
+    if expires_in = token["expires_in"] do
+      Map.merge(token, %{
+        "expires_at" => DateTime.utc_now() |> DateTime.add(expires_in)
+      })
+    else
+      token
+    end
+  end
+
+  defp maybe_add_refresh_token_expiry_date(token) do
+    if expires_in = token["refresh_token_expires_in"] do
+      Map.merge(token, %{
+        "refresh_token_expires_at" =>
+          DateTime.utc_now() |> DateTime.add(expires_in)
+      })
+    else
+      token
     end
   end
 

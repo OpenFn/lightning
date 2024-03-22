@@ -32,6 +32,7 @@ defmodule Lightning.Accounts.User do
     field :disabled, :boolean, default: false
     field :mfa_enabled, :boolean, default: false
     field :scheduled_deletion, :utc_datetime
+    field :github_oauth_token, Lightning.Encrypted.Map, redact: true
 
     has_one :user_totp, Lightning.Accounts.UserTOTP
     has_many :credentials, Lightning.Credentials.Credential
@@ -260,6 +261,12 @@ defmodule Lightning.Accounts.User do
   def confirm_changeset(user) do
     now = DateTime.utc_now() |> DateTime.truncate(:second)
     change(user, confirmed_at: now)
+  end
+
+  def github_token_changeset(user, attrs) do
+    user
+    |> cast(attrs, [:github_oauth_token])
+    |> validate_required([:github_oauth_token])
   end
 
   @doc """

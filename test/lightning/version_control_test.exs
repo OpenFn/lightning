@@ -217,4 +217,169 @@ defmodule Lightning.VersionControlTest do
       assert updated_connection.repo == "some/repo"
     end
   end
+
+  describe "exchange_code_for_oauth_token/1" do
+    test "returns ok for a response body with access_token" do
+      expected_token = %{"access_token" => "1234567"}
+
+      Mox.expect(Lightning.Tesla.Mock, :call, fn
+        %{url: "https://github.com/login/oauth/access_token"}, _opts ->
+          {:ok, %Tesla.Env{body: expected_token}}
+      end)
+
+      assert {:ok, ^expected_token} =
+               VersionControl.exchange_code_for_oauth_token("some-code")
+    end
+
+    test "returns error for a response body without access_token" do
+      expected_token = %{"something" => "else"}
+
+      Mox.expect(Lightning.Tesla.Mock, :call, fn
+        %{url: "https://github.com/login/oauth/access_token"}, _opts ->
+          {:ok, %Tesla.Env{body: expected_token}}
+      end)
+
+      assert {:error, ^expected_token} =
+               VersionControl.exchange_code_for_oauth_token("some-code")
+    end
+  end
+
+  describe "refresh_oauth_token/1" do
+    test "returns ok for a response body with access_token" do
+      expected_token = %{"access_token" => "1234567"}
+
+      Mox.expect(Lightning.Tesla.Mock, :call, fn
+        %{url: "https://github.com/login/oauth/access_token"}, _opts ->
+          {:ok, %Tesla.Env{body: expected_token}}
+      end)
+
+      assert {:ok, ^expected_token} =
+               VersionControl.refresh_oauth_token("some-token")
+    end
+
+    test "returns error for a response body without access_token" do
+      expected_token = %{"something" => "else"}
+
+      Mox.expect(Lightning.Tesla.Mock, :call, fn
+        %{url: "https://github.com/login/oauth/access_token"}, _opts ->
+          {:ok, %Tesla.Env{body: expected_token}}
+      end)
+
+      assert {:error, ^expected_token} =
+               VersionControl.refresh_oauth_token("some-token")
+    end
+  end
+
+  describe "fetch_user_access_token/1" do
+    test "returns ok for an access token that is still active" do
+      active_token = %{
+        "access_token" => "access-token",
+        "refresh_token" => "refresh-token",
+        "expires_at" => DateTime.utc_now() |> DateTime.add(20),
+        "refresh_token_expires_at" => DateTime.utc_now() |> DateTime.add(20)
+      }
+
+      # reload so that we can get the token as they are from the db
+      user =
+        insert(:user, github_oauth_token: active_token)
+        |> Lightning.Repo.reload!()
+
+      expected_token = active_token["access_token"]
+
+      assert {:ok, ^expected_token} =
+               VersionControl.fetch_user_access_token(user)
+    end
+
+    test "returns ok for an access token that has no expiry" do
+      active_token = %{"access_token" => "access-token"}
+
+      user = insert(:user, github_oauth_token: active_token)
+
+      expected_token = active_token["access_token"]
+
+      assert {:ok, ^expected_token} =
+               VersionControl.fetch_user_access_token(user)
+    end
+
+    test "refreshes the access_token if it has expired and updates the user info" do
+      active_token = %{
+        "access_token" => "access-token",
+        "refresh_token" => "refresh-token",
+        "expires_at" => DateTime.utc_now() |> DateTime.add(-20),
+        "refresh_token_expires_at" => DateTime.utc_now() |> DateTime.add(100)
+      }
+
+      # reload so that we can get the token as they are from the db
+      user =
+        insert(:user, github_oauth_token: active_token)
+        |> Lightning.Repo.reload!()
+
+      assert user.github_oauth_token["access_token"] ==
+               active_token["access_token"]
+
+      expected_access_token = "updated-access-token"
+
+      Mox.expect(Lightning.Tesla.Mock, :call, fn
+        %{url: "https://github.com/login/oauth/access_token"}, _opts ->
+          {:ok, %Tesla.Env{body: %{"access_token" => expected_access_token}}}
+      end)
+
+      assert {:ok, ^expected_access_token} =
+               VersionControl.fetch_user_access_token(user)
+
+      updated_user = Lightning.Repo.reload!(user)
+
+      assert updated_user.github_oauth_token["access_token"] ==
+               expected_access_token
+    end
+  end
+
+  describe "save_oauth_token/2" do
+    test "adds expiry dates to the token if needed" do
+      user = insert(:user)
+
+      token = %{
+        "access_token" => "access-token",
+        "refresh_token" => "refresh-token",
+        "expires_in" => 3600,
+        "refresh_token_expires_in" => 7200
+      }
+
+      {:ok, updated_user} = VersionControl.save_oauth_token(user, token)
+
+      expected_access_token_expiry =
+        DateTime.utc_now()
+        |> DateTime.add(token["expires_in"])
+
+      expected_refresh_token_expiry =
+        DateTime.utc_now()
+        |> DateTime.add(token["refresh_token_expires_in"])
+
+      # https://hexdocs.pm/timex/Timex.html#compare/3
+      # comparing to second precision
+      assert Timex.compare(
+               updated_user.github_oauth_token["expires_at"],
+               expected_access_token_expiry,
+               :seconds
+             ) == 0
+
+      assert Timex.compare(
+               updated_user.github_oauth_token["refresh_token_expires_at"],
+               expected_refresh_token_expiry,
+               :seconds
+             ) == 0
+    end
+
+    test "does not add expiry dates if none is needed" do
+      user = insert(:user)
+
+      token = %{"access_token" => "access-token"}
+
+      {:ok, updated_user} = VersionControl.save_oauth_token(user, token)
+
+      assert updated_user.github_oauth_token == %{
+               "access_token" => "access-token"
+             }
+    end
+  end
 end

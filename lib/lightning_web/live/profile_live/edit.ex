@@ -3,11 +3,13 @@ defmodule LightningWeb.ProfileLive.Edit do
   LiveView for user profile page.
   """
   use LightningWeb, :live_view
+  alias Lightning.VersionControl
 
   on_mount {LightningWeb.Hooks, :assign_projects}
 
   @impl true
   def mount(_params, _session, socket) do
+    VersionControl.subscribe(socket.assigns.current_user)
     {:ok, socket |> assign(:active_menu_item, :profile)}
   end
 
@@ -18,6 +20,29 @@ defmodule LightningWeb.ProfileLive.Edit do
        socket,
        socket.assigns.live_action,
        params
+     )}
+  end
+
+  @impl true
+  def handle_info(
+        %Lightning.VersionControl.Events.OauthTokenAdded{},
+        socket
+      ) do
+    {:noreply,
+     socket
+     |> put_flash(:info, "Github account linked successfully")
+     |> push_navigate(to: ~p"/profile")}
+  end
+
+  def handle_info(
+        %Lightning.VersionControl.Events.OauthTokenFailed{},
+        socket
+      ) do
+    {:noreply,
+     socket
+     |> put_flash(
+       :error,
+       "Oops! Github account failed to link. Please try again"
      )}
   end
 

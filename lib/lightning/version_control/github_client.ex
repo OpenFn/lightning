@@ -70,6 +70,25 @@ defmodule Lightning.VersionControl.GithubClient do
     delete(client, "/repos/#{repo}/git/refs/#{ref}")
   end
 
+  def delete_app_grant(client, app_client_id, token) do
+    delete(client, "/applications/#{app_client_id}/grant",
+      body: %{access_token: token}
+    )
+  end
+
+  def build_oauth_client do
+    middleware = [
+      {Tesla.Middleware.BaseUrl, "https://github.com/login/oauth"},
+      Tesla.Middleware.JSON,
+      {Tesla.Middleware.Headers,
+       [
+         {"accept", "application/vnd.github+json"}
+       ]}
+    ]
+
+    Tesla.client(middleware)
+  end
+
   def build_client(installation_id) do
     %{cert: cert, app_id: app_id} =
       Application.get_env(:lightning, :github_app)

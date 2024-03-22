@@ -4,6 +4,11 @@ defmodule Lightning.AuthProviders.GoogleTest do
 
   alias Lightning.AuthProviders.Common
 
+  setup _ do
+    Mox.stub_with(Lightning.Tesla.Mock, Tesla.Adapter.Hackney)
+    :ok
+  end
+
   describe "get_wellknown/0" do
     setup do
       bypass = Bypass.open()
