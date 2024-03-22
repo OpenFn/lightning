@@ -20,4 +20,8 @@ defmodule Lightning.VersionControl.GithubError do
   def invalid_certificate(msg, meta \\ %{}) do
     new(:invalid_certificate, msg, meta)
   end
+
+  def invalid_oauth_token(msg, meta \\ %{}) do
+    new(:invalid_oauth_token, msg, meta)
+  end
 end
