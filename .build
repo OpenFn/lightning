@@ -117,6 +117,7 @@ Lightning.UsageTracking.WorkflowMetricsService.html
 Lightning.UsageTracking.html
 Lightning.Validators.html
 Lightning.Vault.html
+Lightning.VersionControl.Events.html
 Lightning.VersionControl.GithubClient.html
 Lightning.VersionControl.GithubError.html
 Lightning.VersionControl.GithubToken.html
@@ -182,6 +183,7 @@ LightningWeb.JobLive.CronSetupComponent.html
 LightningWeb.JobLive.JobBuilderComponents.html
 LightningWeb.LiveHelpers.html
 LightningWeb.ModalPortal.html
+LightningWeb.OauthController.html
 LightningWeb.OauthCredentialHelper.html
 LightningWeb.OidcController.html
 LightningWeb.PageView.html
@@ -269,8 +271,8 @@ dist/merriweather-latin-ext-300-normal-K6L27CZ5.woff2
 dist/merriweather-vietnamese-300-italic-EHHNZPUO.woff2
 dist/merriweather-vietnamese-300-normal-U376L4Z4.woff2
 dist/remixicon-NKANDIL5.woff2
-dist/search_data-C9A59194.js
-dist/sidebar_items-00BC1DA8.js
+dist/search_data-EC3A04C8.js
+dist/sidebar_items-84973A3C.js
 index.html
 provisioning.html
 readme.html
