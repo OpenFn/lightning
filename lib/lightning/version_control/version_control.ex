@@ -20,30 +20,16 @@ defmodule Lightning.VersionControl do
   @doc """
   Creates a connection between a project and a github repo
   """
-  def create_github_connection(attrs) do
+  def create_github_connection(attrs, user) do
     changeset = ProjectRepoConnection.changeset(%ProjectRepoConnection{}, attrs)
 
     Repo.transact(fn ->
       with {:ok, repo_connection} <- Repo.insert(changeset),
+           {:ok, user_token} <- fetch_user_access_token(user),
+           {:ok, tesla_client} <- GithubClient.build_bearer_client(user_token),
            {:ok, _} <-
              push_workflow_files(
-               repo_connection.github_installation_id,
-               repo_connection.repo,
-               repo_connection.branch
-             ) do
-        {:ok, repo_connection}
-      end
-    end)
-  end
-
-  def update_github_connection(repo_connection, attrs) do
-    changeset = ProjectRepoConnection.changeset(repo_connection, attrs)
-    # NOTE: We should probably remove the files in the previous connection
-    Repo.transact(fn ->
-      with {:ok, repo_connection} <- Repo.update(changeset),
-           {:ok, _} <-
-             push_workflow_files(
-               repo_connection.github_installation_id,
+               tesla_client,
                repo_connection.repo,
                repo_connection.branch
              ) do
@@ -55,62 +41,26 @@ defmodule Lightning.VersionControl do
   @doc """
   Deletes a github connection used when re installing
   """
-  def remove_github_connection(repo_connection) do
-    Repo.delete(repo_connection)
+  def remove_github_connection(repo_connection, user) do
+    repo_connection
+    |> Repo.delete()
+    |> tap(fn
+      {:ok, repo_connection} ->
+        maybe_delete_workflow_files(
+          user,
+          repo_connection.repo,
+          repo_connection.branch
+        )
+
+      _other ->
+        :ok
+    end)
   end
 
   def get_repo_connection(project_id) do
     Repo.one(
       from(prc in ProjectRepoConnection, where: prc.project_id == ^project_id)
     )
-  end
-
-  @spec get_pending_user_installation(Ecto.UUID.t()) ::
-          ProjectRepoConnection.t() | nil
-  def get_pending_user_installation(user_id) do
-    query =
-      from(prc in ProjectRepoConnection,
-        where: prc.user_id == ^user_id and is_nil(prc.github_installation_id)
-      )
-
-    Repo.one(query)
-  end
-
-  def add_github_installation_id(user_id, installation_id) do
-    pending_installation =
-      Repo.one!(
-        from(prc in ProjectRepoConnection,
-          where: prc.user_id == ^user_id and is_nil(prc.github_installation_id)
-        )
-      )
-
-    pending_installation
-    |> ProjectRepoConnection.changeset(%{github_installation_id: installation_id})
-    |> Repo.update()
-  end
-
-  def connect_github_repo(project_id, repo, branch) do
-    installation =
-      Repo.one!(
-        from(prc in ProjectRepoConnection,
-          where:
-            prc.project_id == ^project_id and
-              not is_nil(prc.github_installation_id)
-        )
-      )
-
-    case push_workflow_files(installation.github_installation_id, repo, branch) do
-      {:ok, _result} ->
-        installation
-        |> ProjectRepoConnection.changeset(%{repo: repo, branch: branch})
-        |> Repo.update()
-
-      {:error, %Tesla.Env{body: body}} ->
-        {:error, body}
-
-      {:error, other} ->
-        {:error, other}
-    end
   end
 
   def initiate_sync(project_id, user_name) do
@@ -125,15 +75,8 @@ defmodule Lightning.VersionControl do
   end
 
   def fetch_user_installations(user) do
-    with {:ok, access_token} <- fetch_user_access_token(user) do
-      client =
-        Tesla.client([
-          {Tesla.Middleware.Headers,
-           [
-             {"Authorization", "Bearer #{access_token}"}
-           ]}
-        ])
-
+    with {:ok, access_token} <- fetch_user_access_token(user),
+         {:ok, client} <- GithubClient.build_bearer_client(access_token) do
       case GithubClient.get_installations(client) do
         {:ok, %{status: 200, body: body}} ->
           {:ok, body}
@@ -145,7 +88,7 @@ defmodule Lightning.VersionControl do
   end
 
   def fetch_installation_repos(installation_id) do
-    with {:ok, client} <- GithubClient.build_client(installation_id) do
+    with {:ok, client} <- GithubClient.build_installation_client(installation_id) do
       case GithubClient.get_installation_repos(client) do
         {:ok, %{status: 200, body: body}} ->
           {:ok, body}
@@ -157,7 +100,7 @@ defmodule Lightning.VersionControl do
   end
 
   def fetch_repo_branches(installation_id, repo_name) do
-    with {:ok, client} <- GithubClient.build_client(installation_id) do
+    with {:ok, client} <- GithubClient.build_installation_client(installation_id) do
       case GithubClient.get_repo_branches(client, repo_name) do
         {:ok, %{status: 200, body: body}} ->
           {:ok, body}
@@ -183,9 +126,9 @@ defmodule Lightning.VersionControl do
       code: code
     ]
 
-    GithubClient.build_oauth_client()
-    |> Tesla.post("/access_token", %{}, query: query_params)
-    |> case do
+    {:ok, tesla_client} = GithubClient.build_oauth_client()
+
+    case Tesla.post(tesla_client, "/access_token", %{}, query: query_params) do
       {:ok, %{body: %{"access_token" => _} = body}} ->
         {:ok, body}
 
@@ -213,7 +156,7 @@ defmodule Lightning.VersionControl do
       refresh_token: refresh_token
     ]
 
-    client = GithubClient.build_oauth_client()
+    {:ok, client} = GithubClient.build_oauth_client()
 
     case Tesla.post(client, "/access_token", %{}, query: query_params) do
       {:ok, %{body: %{"access_token" => _} = body}} ->
@@ -298,23 +241,23 @@ defmodule Lightning.VersionControl do
   @spec delete_github_ouath_grant(User.t()) :: {:ok, User.t()} | {:error, any()}
   def delete_github_ouath_grant(%User{} = user) do
     app_config = Application.fetch_env!(:lightning, :github_app)
+    client_id = Keyword.fetch!(app_config, :client_id)
+    client_secret = Keyword.fetch!(app_config, :client_secret)
 
     with {:ok, access_token} <- fetch_user_access_token(user),
+         {:ok, client} <-
+           GithubClient.build_basic_auth_client(
+             client_id,
+             client_secret
+           ),
          {:ok, %{status: 204}} <-
            GithubClient.delete_app_grant(
-             basic_auth_client(app_config),
-             app_config[:client_id],
+             client,
+             client_id,
              access_token
            ) do
       user |> Ecto.Changeset.change(%{github_oauth_token: nil}) |> Repo.update()
     end
-  end
-
-  defp basic_auth_client(app_config) do
-    Tesla.client([
-      {Tesla.Middleware.BasicAuth,
-       [username: app_config[:client_id], password: app_config[:client_secret]]}
-    ])
   end
 
   @spec save_oauth_token(User.t(), map(), notify: boolean()) ::
@@ -369,30 +312,37 @@ defmodule Lightning.VersionControl do
   end
 
   @spec push_workflow_files(
-          installation_id :: String.t(),
+          client :: Tesla.Client.t(),
           repo :: String.t(),
           branch :: String.t()
         ) :: {:ok, Tesla.Env.t()} | {:error, Tesla.Env.t() | GithubError.t()}
-  defp push_workflow_files(installation_id, repo, branch) do
-    with {:ok, client} <- GithubClient.build_client(installation_id),
-         {:ok, %{status: 201, body: pull_blob}} <-
-           GithubClient.create_blob(client, repo, %{content: pull_yml()}),
+  defp push_workflow_files(client, repo, branch) do
+    with {:ok, %{status: 201, body: pull_blob}} <-
+           GithubClient.create_blob(client, repo, %{
+             content: pull_yml()
+           }),
          {:ok, %{status: 201, body: deploy_blob}} <-
-           GithubClient.create_blob(client, repo, %{content: deploy_yml()}),
+           GithubClient.create_blob(client, repo, %{
+             content: deploy_yml()
+           }),
          {:ok, %{status: 200, body: base_commit}} <-
-           GithubClient.get_commit(client, repo, "heads/#{branch}"),
+           GithubClient.get_commit(
+             client,
+             repo,
+             "heads/#{branch}"
+           ),
          {:ok, %{status: 201, body: created_tree}} <-
            GithubClient.create_tree(client, repo, %{
              base_tree: base_commit["commit"]["tree"]["sha"],
              tree: [
                %{
-                 path: ".github/workflows/pull.yml",
+                 path: pull_yml_target_path(),
                  mode: "100644",
                  type: "blob",
                  sha: pull_blob["sha"]
                },
                %{
-                 path: ".github/workflows/deploy.yml",
+                 path: deploy_yml_target_path(),
                  mode: "100644",
                  type: "blob",
                  sha: deploy_blob["sha"]
@@ -406,9 +356,12 @@ defmodule Lightning.VersionControl do
              parents: [base_commit["sha"]]
            }),
          {:ok, %{status: 200, body: updated_ref}} <-
-           GithubClient.update_ref(client, repo, "heads/#{branch}", %{
-             sha: created_commit["sha"]
-           }) do
+           GithubClient.update_ref(
+             client,
+             repo,
+             "heads/#{branch}",
+             %{sha: created_commit["sha"]}
+           ) do
       {:ok, updated_ref}
     else
       {:ok, %Tesla.Env{} = result} ->
@@ -429,5 +382,39 @@ defmodule Lightning.VersionControl do
     :code.priv_dir(:lightning)
     |> Path.join("github/deploy.yml")
     |> File.read!()
+  end
+
+  defp pull_yml_target_path do
+    ".github/workflows/pull.yml"
+  end
+
+  defp deploy_yml_target_path do
+    ".github/workflows/deploy.yml"
+  end
+
+  defp maybe_delete_workflow_files(user, repo, branch) do
+    with {:ok, access_token} <- fetch_user_access_token(user),
+         {:ok, client} <- GithubClient.build_bearer_client(access_token) do
+      pull_path = pull_yml_target_path()
+      deploy_path = deploy_yml_target_path()
+      maybe_delete_file(client, repo, branch, pull_path)
+      maybe_delete_file(client, repo, branch, deploy_path)
+    end
+  end
+
+  defp maybe_delete_file(client, repo, branch, file_path) do
+    with {:ok, %{status: 200, body: %{"sha" => sha}}} <-
+           GithubClient.get_repo_content(
+             client,
+             repo,
+             file_path,
+             "heads/#{branch}"
+           ) do
+      GithubClient.delete_repo_content(client, repo, file_path, %{
+        sha: sha,
+        message: "disconnect OpenFn",
+        branch: branch
+      })
+    end
   end
 end
