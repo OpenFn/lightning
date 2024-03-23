@@ -676,8 +676,7 @@
                   user={@current_user}
                   project_repo_connection={@project_repo_connection}
                   project={@project}
-                  write_mode={false}
-                  action={:edit}
+                  action={:show}
                   can_install_github={@can_install_github}
                   can_initiate_github_sync={@can_initiate_github_sync}
                 />
@@ -692,7 +691,6 @@
                         %VersionControl.ProjectRepoConnection{}
                       }
                       project={@project}
-                      write_mode={true}
                       action={:new}
                       can_install_github={@can_install_github}
                       can_initiate_github_sync={@can_initiate_github_sync}
@@ -705,6 +703,12 @@
                       To create a new GitHub version control connection you must first connect your OpenFn account to GitHub.
                       Please click the button below to get started.
                     </small>
+                    <div class="mt-2">
+                      <GithubComponents.connect_to_github_link
+                        id="connect-github-link"
+                        user={@current_user}
+                      />
+                    </div>
                   <% end %>
                 <% end %>
               <% end %>
@@ -715,12 +719,6 @@
               <small class="block mt-1 text-xs text-gray-600">
                 Version Control is not configured for this Lightning instance. Contact the superuser for more information.
               </small>
-              <div class="mt-2">
-                <GithubComponents.connect_to_github_link
-                  id="connect-github-link"
-                  user={@current_user}
-                />
-              </div>
             <% end %>
           </div>
         </LightningWeb.Components.Common.panel_content>

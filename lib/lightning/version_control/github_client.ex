@@ -14,7 +14,7 @@ defmodule Lightning.VersionControl.GithubClient do
   plug(Tesla.Middleware.JSON)
 
   def fire_repository_dispatch(installation_id, repo_name, user_email) do
-    with {:ok, client} <- build_client(installation_id),
+    with {:ok, client} <- build_installation_client(installation_id),
          {:ok, %Tesla.Env{status: 204}} <-
            post(client, "/repos/#{repo_name}/dispatches", %{
              event_type: "sync_project",
@@ -36,6 +36,14 @@ defmodule Lightning.VersionControl.GithubClient do
 
   def get_repo_branches(client, repo_name) do
     get(client, "/repos/#{repo_name}/branches")
+  end
+
+  def get_repo_content(client, repo, path, ref) do
+    get(client, "/repos/#{repo}/contents/#{path}", query: [ref: ref])
+  end
+
+  def delete_repo_content(client, repo, path, body) do
+    delete(client, "/repos/#{repo}/contents/#{path}", body: body)
   end
 
   def create_blob(client, repo, body) do
@@ -82,24 +90,37 @@ defmodule Lightning.VersionControl.GithubClient do
        ]}
     ]
 
-    Tesla.client(middleware)
+    {:ok, Tesla.client(middleware)}
   end
 
-  def build_client(installation_id) do
+  def build_bearer_client(token) do
+    middleware = [
+      {Tesla.Middleware.Headers,
+       [
+         {"Authorization", "Bearer #{token}"}
+       ]},
+      Tesla.Middleware.OpenTelemetry
+    ]
+
+    {:ok, Tesla.client(middleware)}
+  end
+
+  def build_basic_auth_client(username, password) do
+    middleware = [
+      {Tesla.Middleware.BasicAuth, [username: username, password: password]},
+      Tesla.Middleware.OpenTelemetry
+    ]
+
+    {:ok, Tesla.client(middleware)}
+  end
+
+  def build_installation_client(installation_id) do
     %{cert: cert, app_id: app_id} =
-      Application.get_env(:lightning, :github_app)
+      Application.fetch_env!(:lightning, :github_app)
       |> Map.new()
 
-    with {:ok, auth_token, _} <- GithubToken.build(cert, app_id) do
-      client =
-        Tesla.client([
-          {Tesla.Middleware.Headers,
-           [
-             {"Authorization", "Bearer #{auth_token}"}
-           ]},
-          Tesla.Middleware.OpenTelemetry
-        ])
-
+    with {:ok, auth_token, _} <- GithubToken.build(cert, app_id),
+         {:ok, client} <- build_bearer_client(auth_token) do
       case post(
              client,
              "/app/installations/#{installation_id}/access_tokens",
@@ -108,14 +129,7 @@ defmodule Lightning.VersionControl.GithubClient do
         {:ok, %{status: 201} = installation_token_resp} ->
           installation_token = installation_token_resp.body["token"]
 
-          {:ok,
-           Tesla.client([
-             {Tesla.Middleware.Headers,
-              [
-                {"Authorization", "Bearer " <> installation_token}
-              ]},
-             Tesla.Middleware.OpenTelemetry
-           ])}
+          build_bearer_client(installation_token)
 
         {:ok, %{status: 404, body: body}} ->
           Logger.error("Unexpected GitHub Response: #{inspect(body)}")

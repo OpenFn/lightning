@@ -13,7 +13,6 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
           project_repo_connection: repo_connection,
           can_install_github: _,
           can_initiate_github_sync: _,
-          write_mode: _,
           action: _
         } = assigns,
         socket
@@ -42,7 +41,7 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
 
   def handle_event("save", %{"connection" => params}, socket) do
     if socket.assigns.can_install_github do
-      {:noreply, apply_action(socket, socket.assigns.action, params)}
+      {:noreply, create_connection(socket, params)}
     else
       {:noreply,
        socket
@@ -56,7 +55,8 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
 
       {:ok, _} =
         VersionControl.remove_github_connection(
-          socket.assigns.project_repo_connection
+          socket.assigns.project_repo_connection,
+          socket.assigns.user
         )
 
       {:noreply,
@@ -68,13 +68,6 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
        socket
        |> put_flash(:error, "You are not authorized to perform this action")}
     end
-  end
-
-  def handle_event("toggle-write-mode", _params, socket) do
-    {:noreply,
-     socket
-     |> assign(write_mode: !socket.assigns.write_mode)
-     |> maybe_fetch_branches()}
   end
 
   def handle_event("refresh-installations", _params, socket) do
@@ -124,33 +117,16 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
     end)
   end
 
-  defp apply_action(socket, :new, params) do
-    project = socket.assigns.project
-    params = Map.merge(params, %{"project_id" => project.uuid})
+  defp create_connection(socket, params) do
+    params = Map.merge(params, %{"project_id" => socket.assigns.project.id})
 
-    case VersionControl.create_github_connection(params) do
+    case VersionControl.create_github_connection(params, socket.assigns.user) do
       {:ok, _connection} ->
         socket
         |> put_flash(:info, "Connection made successfully")
-        |> push_navigate(to: ~p"/projects/#{project}/settings#vcs")
-
-      {:error, %Ecto.Changeset{} = changeset} ->
-        assign(socket, changeset: changeset)
-
-      {:error, _other} ->
-        put_flash(socket, :error, "Oops! Could not connect to Github")
-    end
-  end
-
-  defp apply_action(socket, :edit, params) do
-    project = socket.assigns.project
-    repo_connection = socket.assigns.project_repo_connection
-
-    case VersionControl.update_github_connection(repo_connection, params) do
-      {:ok, _connection} ->
-        socket
-        |> put_flash(:info, "Connection updated successfully")
-        |> push_navigate(to: ~p"/projects/#{project}/settings#vcs")
+        |> push_navigate(
+          to: ~p"/projects/#{socket.assigns.project}/settings#vcs"
+        )
 
       {:error, %Ecto.Changeset{} = changeset} ->
         assign(socket, changeset: changeset)

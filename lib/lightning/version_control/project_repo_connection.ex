@@ -24,6 +24,7 @@ defmodule Lightning.VersionControl.ProjectRepoConnection do
     field :github_installation_id, :string
     field :repo, :string
     field :branch, :string
+    field :access_token, Lightning.Encrypted.Binary
     belongs_to :project, Project
 
     timestamps()
@@ -38,5 +39,23 @@ defmodule Lightning.VersionControl.ProjectRepoConnection do
     |> unique_constraint(:project_id,
       message: "project already has a repo connection"
     )
+  end
+
+  def create_changeset(project_repo_connection, attrs) do
+    changeset = changeset(project_repo_connection, attrs)
+
+    if changeset.valid? do
+      token = generate_access_token(32)
+      put_change(changeset, :access_token, token)
+    else
+      changeset
+    end
+  end
+
+  defp generate_access_token(length) do
+    length
+    |> :crypto.strong_rand_bytes()
+    |> Base.encode64()
+    |> binary_part(0, length)
   end
 end
