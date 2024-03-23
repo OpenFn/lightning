@@ -83,8 +83,7 @@ defmodule LightningWeb.ProfileLive.GithubComponent do
   end
 
   defp oauth_enabled? do
-    Application.get_env(:lightning, :github_app, [])
-    |> Keyword.get(:client_id)
+    VersionControl.github_enabled?()
   end
 
   defp token_valid?(token) do

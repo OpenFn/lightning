@@ -1,5 +1,5 @@
 <div>
-  <%= if @write_mode do %>
+  <div :if={@action == :new}>
     <.form
       :let={f}
       for={@changeset}
@@ -97,76 +97,55 @@
           </span>
         </div>
         <div class="sm:col-span-5 flex gap-4">
-          <.button
-            :if={@action == :edit}
-            type="button"
-            color_class="bg-red-600 hover:bg-red-700 text-white"
-            phx-click="toggle-write-mode"
-            phx-target={@myself}
-          >
-            Cancel
-          </.button>
           <.button type="submit">
             Connect Branch
           </.button>
         </div>
       </div>
     </.form>
-  <% else %>
-    <div class="">
-      <div class="flex flex-col gap-2 text-black">
-        <span>
-          Repository:
-          <.link
-            href={"https://www.github.com/" <> @project_repo_connection.repo}
-            target="_blank"
-            class="hover:underline text-primary-600"
-          >
-            <%= @project_repo_connection.repo %>
-          </.link>
-        </span>
-
-        <span>
-          Branch:
-          <span class="text-xs font-mono bg-gray-200 rounded-md p-1">
-            <%= @project_repo_connection.branch %>
-          </span>
-        </span>
-
-        <span>
-          GitHub Installation ID:
-          <span class="text-xs font-mono bg-gray-200 rounded-md p-1">
-            <%= @project_repo_connection.github_installation_id %>
-          </span>
-        </span>
-      </div>
-      <div :if={@can_install_github} class="mt-3 text-gray-600">
-        Need to change the repository or branch?
+  </div>
+  <div :if={@action == :show}>
+    <div class="flex flex-col gap-2 text-black">
+      <span>
+        Repository:
         <.link
-          href="#"
+          href={"https://www.github.com/" <> @project_repo_connection.repo}
+          target="_blank"
           class="hover:underline text-primary-600"
-          phx-click="toggle-write-mode"
-          phx-target={@myself}
         >
-          Edit Integration.
+          <%= @project_repo_connection.repo %>
         </.link>
-      </div>
+      </span>
+
+      <span>
+        Branch:
+        <span class="text-xs font-mono bg-gray-200 rounded-md p-1">
+          <%= @project_repo_connection.branch %>
+        </span>
+      </span>
+
+      <span>
+        GitHub Installation ID:
+        <span class="text-xs font-mono bg-gray-200 rounded-md p-1">
+          <%= @project_repo_connection.github_installation_id %>
+        </span>
+      </span>
     </div>
-  <% end %>
-  <div :if={@can_install_github and @action == :edit} class="text-gray-600">
-    No longer need to sync this project?
-    <.link
-      href="#"
-      class="hover:underline text-red-600"
-      phx-click={show_modal("remove_connection_modal")}
-      phx-target={@myself}
-    >
-      Remove Integration.
-    </.link>
-    <.confirm_connection_removal_modal
-      id="remove_connection_modal"
-      myself={@myself}
-    />
+    <div :if={@can_install_github} class="text-gray-600">
+      No longer need to sync this project?
+      <.link
+        href="#"
+        class="hover:underline text-red-600"
+        phx-click={show_modal("remove_connection_modal")}
+        phx-target={@myself}
+      >
+        Remove Integration.
+      </.link>
+      <.confirm_connection_removal_modal
+        id="remove_connection_modal"
+        myself={@myself}
+      />
+    </div>
   </div>
   <div>
     Need to learn more about Github Sync?
