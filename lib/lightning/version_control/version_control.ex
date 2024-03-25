@@ -25,17 +25,34 @@ defmodule Lightning.VersionControl do
 
     Repo.transact(fn ->
       with {:ok, repo_connection} <- Repo.insert(changeset),
-           {:ok, user_token} <- fetch_user_access_token(user),
-           {:ok, tesla_client} <- GithubClient.build_bearer_client(user_token),
            {:ok, _} <-
-             push_workflow_files(
-               tesla_client,
-               repo_connection.repo,
-               repo_connection.branch
-             ) do
+             configure_github_repo(repo_connection, user) do
         {:ok, repo_connection}
       end
     end)
+  end
+
+  @spec reconfigure_github_connection(ProjectRepoConnection.t(), User.t()) ::
+          {:ok, map()} | {:error, map()}
+  def reconfigure_github_connection(repo_connection, user) do
+    configure_github_repo(repo_connection, user)
+  end
+
+  @spec verify_github_connection(repo_connection :: ProjectRepoConnection.t()) ::
+          :ok | {:error, GithubError.t() | map()}
+  def verify_github_connection(repo_connection) do
+    with {:ok, client} <-
+           GithubClient.build_installation_client(
+             repo_connection.github_installation_id
+           ),
+         :ok <-
+           verify_file_exists(client, repo_connection, pull_yml_target_path()),
+         :ok <-
+           verify_file_exists(client, repo_connection, deploy_yml_target_path()),
+         :ok <- verify_file_exists(client, repo_connection, "project.yml"),
+         :ok <- verify_file_exists(client, repo_connection, "projectState.yml") do
+      :ok
+    end
   end
 
   @doc """
@@ -47,9 +64,8 @@ defmodule Lightning.VersionControl do
     |> tap(fn
       {:ok, repo_connection} ->
         maybe_delete_workflow_files(
-          user,
-          repo_connection.repo,
-          repo_connection.branch
+          repo_connection,
+          user
         )
 
       _other ->
@@ -57,10 +73,12 @@ defmodule Lightning.VersionControl do
     end)
   end
 
-  def get_repo_connection(project_id) do
-    Repo.one(
-      from(prc in ProjectRepoConnection, where: prc.project_id == ^project_id)
-    )
+  def get_repo_connection_for_project(project_id) do
+    Repo.get_by(ProjectRepoConnection, project_id: project_id)
+  end
+
+  def get_repo_connection_for_project!(project_id) do
+    Repo.get_by!(ProjectRepoConnection, project_id: project_id)
   end
 
   def initiate_sync(project_id, user_name) do
@@ -313,26 +331,25 @@ defmodule Lightning.VersionControl do
 
   @spec push_workflow_files(
           client :: Tesla.Client.t(),
-          repo :: String.t(),
-          branch :: String.t()
+          repo_connection :: ProjectRepoConnection.t()
         ) :: {:ok, Tesla.Env.t()} | {:error, Tesla.Env.t() | GithubError.t()}
-  defp push_workflow_files(client, repo, branch) do
+  defp push_workflow_files(client, repo_connection) do
     with {:ok, %{status: 201, body: pull_blob}} <-
-           GithubClient.create_blob(client, repo, %{
+           GithubClient.create_blob(client, repo_connection.repo, %{
              content: pull_yml()
            }),
          {:ok, %{status: 201, body: deploy_blob}} <-
-           GithubClient.create_blob(client, repo, %{
+           GithubClient.create_blob(client, repo_connection.repo, %{
              content: deploy_yml()
            }),
          {:ok, %{status: 200, body: base_commit}} <-
            GithubClient.get_commit(
              client,
-             repo,
-             "heads/#{branch}"
+             repo_connection.repo,
+             "heads/#{repo_connection.branch}"
            ),
          {:ok, %{status: 201, body: created_tree}} <-
-           GithubClient.create_tree(client, repo, %{
+           GithubClient.create_tree(client, repo_connection.repo, %{
              base_tree: base_commit["commit"]["tree"]["sha"],
              tree: [
                %{
@@ -350,7 +367,7 @@ defmodule Lightning.VersionControl do
              ]
            }),
          {:ok, %{status: 201, body: created_commit}} <-
-           GithubClient.create_commit(client, repo, %{
+           GithubClient.create_commit(client, repo_connection.repo, %{
              message: "configure OpenFn",
              tree: created_tree["sha"],
              parents: [base_commit["sha"]]
@@ -358,8 +375,8 @@ defmodule Lightning.VersionControl do
          {:ok, %{status: 200, body: updated_ref}} <-
            GithubClient.update_ref(
              client,
-             repo,
-             "heads/#{branch}",
+             repo_connection.repo,
+             "heads/#{repo_connection.branch}",
              %{sha: created_commit["sha"]}
            ) do
       {:ok, updated_ref}
@@ -392,29 +409,64 @@ defmodule Lightning.VersionControl do
     ".github/workflows/deploy.yml"
   end
 
-  defp maybe_delete_workflow_files(user, repo, branch) do
+  defp maybe_delete_workflow_files(repo_connection, user) do
     with {:ok, access_token} <- fetch_user_access_token(user),
          {:ok, client} <- GithubClient.build_bearer_client(access_token) do
       pull_path = pull_yml_target_path()
       deploy_path = deploy_yml_target_path()
-      maybe_delete_file(client, repo, branch, pull_path)
-      maybe_delete_file(client, repo, branch, deploy_path)
+      maybe_delete_file(client, repo_connection, pull_path)
+      maybe_delete_file(client, repo_connection, deploy_path)
     end
   end
 
-  defp maybe_delete_file(client, repo, branch, file_path) do
+  defp maybe_delete_file(client, repo_connection, file_path) do
     with {:ok, %{status: 200, body: %{"sha" => sha}}} <-
            GithubClient.get_repo_content(
              client,
-             repo,
+             repo_connection.repo,
              file_path,
-             "heads/#{branch}"
+             "heads/#{repo_connection.branch}"
            ) do
-      GithubClient.delete_repo_content(client, repo, file_path, %{
-        sha: sha,
-        message: "disconnect OpenFn",
-        branch: branch
-      })
+      GithubClient.delete_repo_content(
+        client,
+        repo_connection.repo,
+        file_path,
+        %{
+          sha: sha,
+          message: "disconnect OpenFn",
+          branch: repo_connection.branch
+        }
+      )
+    end
+  end
+
+  @spec configure_github_repo(ProjectRepoConnection.t(), User.t()) ::
+          {:ok, map()} | {:error, map()}
+  defp configure_github_repo(repo_connection, user) do
+    with {:ok, user_token} <- fetch_user_access_token(user),
+         {:ok, tesla_client} <- GithubClient.build_bearer_client(user_token) do
+      push_workflow_files(
+        tesla_client,
+        repo_connection
+      )
+    end
+  end
+
+  defp verify_file_exists(client, repo_connection, file_path) do
+    case GithubClient.get_repo_content(
+           client,
+           repo_connection.repo,
+           file_path,
+           "heads/#{repo_connection.branch}"
+         ) do
+      {:ok, %{status: 200}} ->
+        :ok
+
+      _other ->
+        {:error,
+         GithubError.file_not_found(
+           "#{file_path} does not exist in the given branch"
+         )}
     end
   end
 end

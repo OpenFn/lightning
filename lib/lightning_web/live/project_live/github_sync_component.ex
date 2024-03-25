@@ -26,7 +26,10 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
        fetch_user_installations_and_repos(user)
      end)
      # branches are grouped using the repo
-     |> assign_async(:branches, fn -> {:ok, %{branches: %{}}} end)}
+     |> assign_async(:branches, fn -> {:ok, %{branches: %{}}} end)
+     |> assign_async(:verify_connection, fn ->
+       verify_connection(repo_connection)
+     end)}
   end
 
   @impl true
@@ -194,6 +197,16 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
         []
     end
   end
+
+  defp verify_connection(%{__meta__: meta} = repo_connection)
+       when meta.state == :loaded do
+    case VersionControl.verify_github_connection(repo_connection) do
+      :ok -> {:ok, %{verify_connection: :ok}}
+      error -> error
+    end
+  end
+
+  defp verify_connection(_), do: {:ok, %{verify_connection: :ok}}
 
   defp github_config do
     Application.get_env(:lightning, :github_app, [])
