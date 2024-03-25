@@ -6,7 +6,6 @@ defmodule Lightning.UsageTrackingTest do
   alias Lightning.UsageTracking.DailyReportConfiguration
   alias Lightning.Projects.Project
   alias Lightning.UsageTracking.ReportWorker
-  alias Lightning.UsageTracking.WorkflowMetricsService
 
   describe ".enable_daily_report/1 - no configuration exists" do
     setup do
@@ -789,8 +788,8 @@ defmodule Lightning.UsageTrackingTest do
       workflow: workflow
     } do
       assert %{
-          hashed_uuid: hashed_uuid
-        } = WorkflowMetricsService.generate_metrics(workflow, enabled, date)
+          hashed_uuid: ^hashed_uuid
+        } = UsageTracking.generate_metrics(workflow, enabled, date)
     end
 
     test "does not include the cleartext uuid", %{
@@ -801,7 +800,7 @@ defmodule Lightning.UsageTrackingTest do
 
       assert %{
           cleartext_uuid: nil
-        } = WorkflowMetricsService.generate_metrics(workflow, enabled, date)
+        } = UsageTracking.generate_metrics(workflow, enabled, date)
     end
 
     test "includes the number of jobs",%{
@@ -812,7 +811,7 @@ defmodule Lightning.UsageTrackingTest do
     } do
       assert %{
           no_of_jobs: ^no_of_jobs
-        } = WorkflowMetricsService.generate_metrics(workflow, enabled, date)
+        } = UsageTracking.generate_metrics(workflow, enabled, date)
     end
 
     test "includes the number of finished runs", %{
@@ -823,10 +822,10 @@ defmodule Lightning.UsageTrackingTest do
     } do
       assert %{
           no_of_runs: ^no_of_runs
-        } = WorkflowMetricsService.generate_metrics(workflow, enabled, date)
+        } = UsageTracking.generate_metrics(workflow, enabled, date)
     end
 
-    test "includes the number of steps for the finished runs", %{
+    test "includes the number of finished steps", %{
       date: date,
       enabled: enabled,
       no_of_steps: no_of_steps,
@@ -834,7 +833,7 @@ defmodule Lightning.UsageTrackingTest do
     } do
       assert %{
           no_of_steps: ^no_of_steps
-        } = WorkflowMetricsService.generate_metrics(workflow, enabled, date)
+        } = UsageTracking.generate_metrics(workflow, enabled, date)
     end
 
     test "includes the number of active jobs for the finished steps", %{
@@ -845,7 +844,7 @@ defmodule Lightning.UsageTrackingTest do
     } do
       assert %{
           no_of_active_jobs: ^no_of_unique_jobs
-        } = WorkflowMetricsService.generate_metrics(workflow, enabled, date)
+        } = UsageTracking.generate_metrics(workflow, enabled, date)
     end
   end
 
@@ -862,7 +861,7 @@ defmodule Lightning.UsageTrackingTest do
     } do
       assert %{
           hashed_uuid: ^hashed_uuid
-        } = WorkflowMetricsService.generate_metrics(workflow, enabled, date)
+        } = UsageTracking.generate_metrics(workflow, enabled, date)
     end
 
     test "includes the cleartext uuid", %{
@@ -871,67 +870,53 @@ defmodule Lightning.UsageTrackingTest do
       workflow: workflow,
       workflow_uuid: workflow_uuid
     } do
-      assert
-        %{
+      assert %{
           cleartext_uuid: ^workflow_uuid
-        } = WorkflowMetricsService.generate_metrics(workflow, enabled, date)
-      )
+        } = UsageTracking.generate_metrics(workflow, enabled, date)
     end
 
-    test "includes the number of jobs", config do
-      %{
-        workflow: workflow,
-        enabled: enabled,
-        no_of_jobs: no_of_jobs
-      } = config
-
-      assert(
-        %{
+    test "includes the number of jobs", %{
+      date: date,
+      enabled: enabled,
+      no_of_jobs: no_of_jobs,
+      workflow: workflow
+    } do
+      assert %{
           no_of_jobs: ^no_of_jobs
-        } = WorkflowMetricsService.generate_metrics(workflow, enabled, @date)
-      )
+        } = UsageTracking.generate_metrics(workflow, enabled, date)
     end
 
-    test "includes the number of finished runs", config do
-      %{
-        workflow: workflow,
-        enabled: enabled,
-        no_of_runs: no_of_runs
-      } = config
-
-      assert(
-        %{
+    test "includes the number of finished runs", %{
+      date: date,
+      enabled: enabled,
+      no_of_runs: no_of_runs,
+      workflow: workflow
+    } do
+      assert %{
           no_of_runs: ^no_of_runs
-        } = WorkflowMetricsService.generate_metrics(workflow, enabled, @date)
-      )
+        } = UsageTracking.generate_metrics(workflow, enabled, date)
     end
 
-    test "includes the number of finished steps", config do
-      %{
-        workflow: workflow,
-        enabled: enabled,
-        no_of_steps: no_of_steps
-      } = config
-
-      assert(
-        %{
+    test "includes the number of finished steps", %{
+      date: date,
+      enabled: enabled,
+      no_of_steps: no_of_steps,
+      workflow: workflow
+    } do
+      assert %{
           no_of_steps: ^no_of_steps
-        } = WorkflowMetricsService.generate_metrics(workflow, enabled, @date)
-      )
+        } = UsageTracking.generate_metrics(workflow, enabled, date)
     end
 
-    test "includes the number of active jobs for the finished steps", config do
-      %{
-        workflow: workflow,
-        enabled: enabled,
-        no_of_unique_jobs: no_of_unique_jobs
-      } = config
-
-      assert(
-        %{
+    test "includes the number of active jobs for the finished steps", %{
+      date: date,
+      enabled: enabled,
+      no_of_unique_jobs: no_of_unique_jobs,
+      workflow: workflow
+    } do
+      assert %{
           no_of_active_jobs: ^no_of_unique_jobs
-        } = WorkflowMetricsService.generate_metrics(workflow, enabled, @date)
-      )
+        } = UsageTracking.generate_metrics(workflow, enabled, date)
     end
   end
 
@@ -1040,7 +1025,7 @@ defmodule Lightning.UsageTrackingTest do
     workflow_metrics = workflows_metrics |> find_instrumentation(workflow.id)
 
     expected_metrics =
-      WorkflowMetricsService.generate_metrics(workflow, cleartext_enabled, date)
+      UsageTracking.generate_metrics(workflow, cleartext_enabled, date)
 
     assert workflow_metrics == expected_metrics
   end
@@ -1198,12 +1183,13 @@ defmodule Lightning.UsageTrackingTest do
 
     workflow =
       build_workflow(
-        @workflow_id,
+        workflow_uuid,
         no_of_jobs: no_of_jobs,
         no_of_work_orders: no_of_work_orders,
         no_of_runs_per_work_order: no_of_runs_per_work_order,
         no_of_unique_jobs_in_steps: no_of_unique_jobs_in_steps,
-        no_of_steps_per_unique_job: no_of_steps_per_unique_job
+        no_of_steps_per_unique_job: no_of_steps_per_unique_job,
+        finished_at: finished_at
       )
 
     _other_workflow =
@@ -1213,7 +1199,8 @@ defmodule Lightning.UsageTrackingTest do
         no_of_work_orders: no_of_work_orders + 1,
         no_of_runs_per_work_order: no_of_runs_per_work_order + 1,
         no_of_unique_jobs_in_steps: no_of_unique_jobs_in_steps + 1,
-        no_of_steps_per_unique_job: no_of_steps_per_unique_job + 1
+        no_of_steps_per_unique_job: no_of_steps_per_unique_job + 1,
+        finished_at: finished_at
       )
 
     no_of_runs = no_of_work_orders * no_of_runs_per_work_order
@@ -1228,9 +1215,76 @@ defmodule Lightning.UsageTrackingTest do
       no_of_jobs: no_of_jobs,
       no_of_runs: no_of_runs,
       no_of_steps: no_of_steps,
-      no_of_unique_jobs: no_of_unique_jobs_in_steps
+      no_of_unique_jobs: no_of_unique_jobs_in_steps,
       workflow: workflow,
       workflow_uuid: workflow_uuid,
     }
   end
+
+  defp build_workflow(workflow_id, opts) do
+    no_of_jobs = opts |> Keyword.get(:no_of_jobs)
+    no_of_work_orders = opts |> Keyword.get(:no_of_work_orders)
+    no_of_runs_per_work_order = opts |> Keyword.get(:no_of_runs_per_work_order)
+    no_of_unique_jobs_in_steps = opts |> Keyword.get(:no_of_unique_jobs_in_steps)
+    no_of_steps_per_unique_job = opts |> Keyword.get(:no_of_steps_per_unique_job)
+    finished_at = opts |> Keyword.get(:finished_at)
+
+    workflow = insert(:workflow, id: workflow_id)
+
+    jobs =
+      no_of_jobs
+      |> insert_list(:job, workflow: workflow)
+      |> Enum.take(no_of_unique_jobs_in_steps)
+
+    work_orders = insert_list(no_of_work_orders, :workorder, workflow: workflow)
+
+    for work_order <- work_orders do
+      insert_runs_with_steps(
+        no_of_runs_per_work_order: no_of_runs_per_work_order,
+        no_of_steps_per_unique_job: no_of_steps_per_unique_job,
+        work_order: work_order,
+        jobs: jobs,
+        finished_at: finished_at
+      )
+    end
+
+    workflow |> Repo.preload([:jobs, runs: [steps: [:job]]])
+  end
+
+  defp insert_runs_with_steps(opts) do
+    no_of_runs_per_work_order = opts |> Keyword.get(:no_of_runs_per_work_order)
+    no_of_steps_per_unique_job = opts |> Keyword.get(:no_of_steps_per_unique_job)
+    work_order = opts |> Keyword.get(:work_order)
+    jobs = opts |> Keyword.get(:jobs)
+    finished_at = opts |> Keyword.get(:finished_at)
+
+    [starting_job | _] = jobs
+
+    insert_list(
+      no_of_runs_per_work_order,
+      :run,
+      work_order: work_order,
+      dataclip: &dataclip_builder/0,
+      finished_at: finished_at,
+      state: :success,
+      starting_job: starting_job,
+      steps: fn -> build_steps(jobs, no_of_steps_per_unique_job, finished_at) end
+    )
+  end
+
+  defp build_steps(jobs, no_of_steps_per_unique_job, finished_at) do
+    jobs
+    |> Enum.flat_map(fn job ->
+      build_list(
+        no_of_steps_per_unique_job,
+        :step,
+        input_dataclip: &dataclip_builder/0,
+        output_dataclip: &dataclip_builder/0,
+        job: job,
+        finished_at: finished_at
+      )
+    end)
+  end
+
+  defp dataclip_builder, do: build(:dataclip)
 end
