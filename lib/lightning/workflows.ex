@@ -58,9 +58,17 @@ defmodule Lightning.Workflows do
 
   """
   def create_workflow(attrs \\ %{}) do
-    %Workflow{}
-    |> Workflow.changeset(attrs)
-    |> Repo.insert()
+    changeset = %Workflow{} |> Workflow.changeset(attrs)
+
+    Ecto.Multi.new()
+    |> Carbonite.Multi.insert_transaction(%{meta: %{"type" => "created"}})
+    |> Ecto.Multi.insert(:workflow, changeset)
+    |> Repo.transaction()
+    |> case do
+      {:ok, %{workflow: workflow}} -> {:ok, workflow}
+      {:error, :workflow, changeset} -> {:error, changeset}
+      err -> err
+    end
   end
 
   @doc """
