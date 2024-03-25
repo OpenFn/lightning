@@ -854,11 +854,11 @@ defmodule Lightning.UsageTrackingTest do
       eligible_workflow_1: eligible_workflow_1,
       eligible_workflow_2: eligible_workflow_2,
       hashed_id:
-      "EECF8CFDD120E8DF8D9A12CA92AC3E815908223F95CFB11F19261A3C0EB34AEC",
+        "EECF8CFDD120E8DF8D9A12CA92AC3E815908223F95CFB11F19261A3C0EB34AEC",
       ineligible_workflow: ineligible_workflow,
       project:
-      Repo.get(Project, project_id)
-      |> Repo.preload([:users, workflows: [:runs, :jobs]]),
+        Repo.get(Project, project_id)
+        |> Repo.preload([:users, workflows: [:runs, :jobs]]),
       project_id: project_id
     }
   end
