@@ -109,7 +109,7 @@ defmodule LightningWeb.ProjectLive.Settings do
         project_user
       )
 
-    repo_connection = VersionControl.get_repo_connection(project.id)
+    repo_connection = VersionControl.get_repo_connection_for_project(project.id)
 
     {:ok,
      socket

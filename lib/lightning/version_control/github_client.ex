@@ -80,6 +80,14 @@ defmodule Lightning.VersionControl.GithubClient do
     )
   end
 
+  def get_repo_public_key(client, repo) do
+    get(client, "/repos/#{repo}/actions/secrets/public-key")
+  end
+
+  def create_repo_secret(client, repo, secret_name, body) do
+    put(client, "/repos/#{repo}/actions/secrets/#{secret_name}", body)
+  end
+
   def build_oauth_client do
     middleware = [
       {Tesla.Middleware.BaseUrl, "https://github.com/login/oauth"},
