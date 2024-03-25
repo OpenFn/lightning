@@ -10,10 +10,19 @@ defmodule Lightning.Repo.Migrations.InstallCarbonite do
     Carbonite.Migrations.up(1..7)
 
     # Install a trigger for a table:
-    #
-    Carbonite.Migrations.create_trigger("workflows")
 
+    Carbonite.Migrations.create_trigger("workflows")
     Carbonite.Migrations.put_trigger_config("workflows", :mode, :ignore)
+
+    Carbonite.Migrations.create_trigger("jobs")
+    Carbonite.Migrations.put_trigger_config("jobs", :mode, :ignore)
+
+    Carbonite.Migrations.create_trigger("workflow_edges")
+    Carbonite.Migrations.put_trigger_config("workflow_edges", :mode, :ignore)
+
+    Carbonite.Migrations.create_trigger("triggers")
+    Carbonite.Migrations.put_trigger_config("triggers", :mode, :ignore)
+
     #    Carbonite.Migrations.create_trigger("rabbits", table_prefix: "animals")
     #    Carbonite.Migrations.create_trigger("rabbits", carbonite_prefix: "carbonite_other")
 
@@ -34,6 +43,9 @@ defmodule Lightning.Repo.Migrations.InstallCarbonite do
     # Remove trigger from a table:
     #
     Carbonite.Migrations.drop_trigger("workflows")
+    Carbonite.Migrations.drop_trigger("jobs")
+    Carbonite.Migrations.drop_trigger("workflow_edges")
+    Carbonite.Migrations.drop_trigger("triggers")
     #    Carbonite.Migrations.drop_trigger("rabbits", table_prefix: "animals")
     #    Carbonite.Migrations.drop_trigger("rabbits", carbonite_prefix: "carbonite_other")
 
