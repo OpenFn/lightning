@@ -105,6 +105,66 @@
     </.form>
   </div>
   <div :if={@action == :show}>
+    <.async_result assign={@verify_connection}>
+      <:loading>
+        <button type="button" class="bg-blue-50" disabled>
+          <svg
+            class="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+          >
+            <circle
+              class="opacity-25"
+              cx="12"
+              cy="12"
+              r="10"
+              stroke="currentColor"
+              stroke-width="4"
+            >
+            </circle>
+            <path
+              class="opacity-75"
+              fill="currentColor"
+              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+            >
+            </path>
+          </svg>
+          Verifying connection...
+        </button>
+      </:loading>
+      <:failed :let={_failure}>
+        <div class="border-l-4 border-yellow-400 bg-yellow-50 p-4">
+          <div class="flex">
+            <div class="flex-shrink-0">
+              <svg
+                class="h-5 w-5 text-yellow-400"
+                viewBox="0 0 20 20"
+                fill="currentColor"
+                aria-hidden="true"
+              >
+                <path
+                  fill-rule="evenodd"
+                  d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z"
+                  clip-rule="evenodd"
+                />
+              </svg>
+            </div>
+            <div class="ml-3">
+              <p class="text-sm text-yellow-700">
+                Your github project is not properly connected with Lightning.
+                <a
+                  href="#"
+                  class="font-medium text-yellow-700 underline hover:text-yellow-600"
+                >
+                  Click here to reconnect
+                </a>
+              </p>
+            </div>
+          </div>
+        </div>
+      </:failed>
+    </.async_result>
     <div class="flex flex-col gap-2 text-black">
       <span>
         Repository:
