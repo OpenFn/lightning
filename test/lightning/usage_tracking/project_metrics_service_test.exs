@@ -326,8 +326,4 @@ defmodule Lightning.UsageTracking.ProjectMetricsServiceTest do
   end
 
   defp build_hash(uuid), do: Base.encode16(:crypto.hash(:sha256, uuid))
-
-  defp contains?(result, desired_project) do
-    result |> Enum.find(fn project -> project.id == desired_project.id end)
-  end
 end
