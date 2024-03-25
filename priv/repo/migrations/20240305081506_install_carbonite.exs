@@ -28,7 +28,6 @@ defmodule Lightning.Repo.Migrations.InstallCarbonite do
     #
     #    Carbonite.Migrations.create_outbox("rabbits")
     #    Carbonite.Migrations.create_outbox("rabbits", carbonite_prefix: "carbonite_other")
-
   end
 
   def down do

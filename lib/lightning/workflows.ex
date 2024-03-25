@@ -66,7 +66,7 @@ defmodule Lightning.Workflows do
     |> Repo.transaction()
     |> case do
       {:ok, %{workflow: workflow}} -> {:ok, workflow}
-      {:error, :workflow, changeset} -> {:error, changeset}
+      {:error, :workflow, changeset, _} -> {:error, changeset}
       err -> err
     end
   end
@@ -90,7 +90,7 @@ defmodule Lightning.Workflows do
     |> Repo.transaction()
     |> case do
       {:ok, %{workflow: workflow}} -> {:ok, workflow}
-      {:error, :workflow, changeset} -> {:error, changeset}
+      {:error, :workflow, changeset, _} -> {:error, changeset}
       err -> err
     end
   end
