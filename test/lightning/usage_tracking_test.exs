@@ -777,6 +777,257 @@ defmodule Lightning.UsageTrackingTest do
     end
   end
 
+  describe "generate_metrics/3 (workflow) - cleartext disabled" do
+    setup do
+      base_generate_metrics_workflow_setup() |> Map.merge(%{enabled: false})
+    end
+
+    test "includes the hashed workflow uuid", %{
+      date: date,
+      enabled: enabled,
+      hashed_uuid: hashed_uuid,
+      workflow: workflow
+    } do
+      assert %{
+          hashed_uuid: hashed_uuid
+        } = WorkflowMetricsService.generate_metrics(workflow, enabled, date)
+    end
+
+    test "does not include the cleartext uuid", %{
+      date: date,
+      enabled: enabled,
+      workflow: workflow
+    } do
+
+      assert %{
+          cleartext_uuid: nil
+        } = WorkflowMetricsService.generate_metrics(workflow, enabled, date)
+    end
+
+    test "includes the number of jobs",%{
+      date: date,
+      enabled: enabled,
+      no_of_jobs: no_of_jobs,
+      workflow: workflow
+    } do
+      assert %{
+          no_of_jobs: ^no_of_jobs
+        } = WorkflowMetricsService.generate_metrics(workflow, enabled, date)
+    end
+
+    test "includes the number of finished runs", %{
+      date: date,
+      enabled: enabled,
+      no_of_runs: no_of_runs,
+      workflow: workflow
+    } do
+      assert %{
+          no_of_runs: ^no_of_runs
+        } = WorkflowMetricsService.generate_metrics(workflow, enabled, date)
+    end
+
+    test "includes the number of steps for the finished runs", %{
+      date: date,
+      enabled: enabled,
+      no_of_steps: no_of_steps,
+      workflow: workflow
+    } do
+      assert %{
+          no_of_steps: ^no_of_steps
+        } = WorkflowMetricsService.generate_metrics(workflow, enabled, date)
+    end
+
+    test "includes the number of active jobs for the finished steps", %{
+      date: date,
+      enabled: enabled,
+      no_of_unique_jobs: no_of_unique_jobs,
+      workflow: workflow
+    } do
+      assert %{
+          no_of_active_jobs: ^no_of_unique_jobs
+        } = WorkflowMetricsService.generate_metrics(workflow, enabled, date)
+    end
+  end
+
+  describe "generate_metrics/3 (workflow) - cleartext enabled" do
+    setup do
+      base_generate_metrics_workflow_setup() |> Map.merge(%{enabled: true})
+    end
+
+    test "includes the hashed workflow uuid", %{
+      date: date,
+      enabled: enabled,
+      hashed_uuid: hashed_uuid,
+      workflow: workflow
+    } do
+      assert %{
+          hashed_uuid: ^hashed_uuid
+        } = WorkflowMetricsService.generate_metrics(workflow, enabled, date)
+    end
+
+    test "includes the cleartext uuid", %{
+      date: date,
+      enabled: enabled,
+      workflow: workflow,
+      workflow_uuid: workflow_uuid
+    } do
+      assert
+        %{
+          cleartext_uuid: ^workflow_uuid
+        } = WorkflowMetricsService.generate_metrics(workflow, enabled, date)
+      )
+    end
+
+    test "includes the number of jobs", config do
+      %{
+        workflow: workflow,
+        enabled: enabled,
+        no_of_jobs: no_of_jobs
+      } = config
+
+      assert(
+        %{
+          no_of_jobs: ^no_of_jobs
+        } = WorkflowMetricsService.generate_metrics(workflow, enabled, @date)
+      )
+    end
+
+    test "includes the number of finished runs", config do
+      %{
+        workflow: workflow,
+        enabled: enabled,
+        no_of_runs: no_of_runs
+      } = config
+
+      assert(
+        %{
+          no_of_runs: ^no_of_runs
+        } = WorkflowMetricsService.generate_metrics(workflow, enabled, @date)
+      )
+    end
+
+    test "includes the number of finished steps", config do
+      %{
+        workflow: workflow,
+        enabled: enabled,
+        no_of_steps: no_of_steps
+      } = config
+
+      assert(
+        %{
+          no_of_steps: ^no_of_steps
+        } = WorkflowMetricsService.generate_metrics(workflow, enabled, @date)
+      )
+    end
+
+    test "includes the number of active jobs for the finished steps", config do
+      %{
+        workflow: workflow,
+        enabled: enabled,
+        no_of_unique_jobs: no_of_unique_jobs
+      } = config
+
+      assert(
+        %{
+          no_of_active_jobs: ^no_of_unique_jobs
+        } = WorkflowMetricsService.generate_metrics(workflow, enabled, @date)
+      )
+    end
+  end
+
+  describe ".filter_eligible_workflows" do
+    test "returns workflows that existed on or before the date" do
+      date = ~D[2024-02-05]
+
+      eligible_workflow_1 =
+        insert(
+          :workflow,
+          name: "e-1",
+          inserted_at: ~U[2024-02-04 12:00:00Z],
+          deleted_at: nil
+        )
+
+      eligible_workflow_2 =
+        insert(
+          :workflow,
+          name: "e-2",
+          inserted_at: ~U[2024-02-05 23:59:59Z],
+          deleted_at: nil
+        )
+
+      eligible_workflow_3 =
+        insert(
+          :workflow,
+          name: "e-3",
+          inserted_at: ~U[2024-02-04 12:00:00Z],
+          deleted_at: ~U[2024-02-06 00:00:00Z]
+        )
+
+      eligible_workflow_4 =
+        insert(
+          :workflow,
+          name: "e-4",
+          inserted_at: ~U[2024-02-04 12:00:00Z],
+          deleted_at: ~U[2024-02-06 00:00:01Z]
+        )
+
+      ineligible_workflow_deleted_before_1 =
+        insert(
+          :workflow,
+          name: "ib-1",
+          inserted_at: ~U[2024-02-04 12:00:00Z],
+          deleted_at: ~U[2024-02-05 23:59:59Z]
+        )
+
+      ineligible_workflow_deleted_before_2 =
+        insert(
+          :workflow,
+          name: "ib-2",
+          inserted_at: ~U[2024-02-04 12:00:00Z],
+          deleted_at: ~U[2024-02-05 23:59:58Z]
+        )
+
+      ineligible_workflow_created_after_1 =
+        insert(
+          :workflow,
+          name: "ca-1",
+          inserted_at: ~U[2024-02-06 00:00:00Z],
+          deleted_at: nil
+        )
+
+      ineligible_workflow_created_after_2 =
+        insert(
+          :workflow,
+          name: "ca-2",
+          inserted_at: ~U[2024-02-06 00:00:01Z],
+          deleted_at: ~U[2024-02-06 00:00:02Z]
+        )
+
+      all_workflows = [
+        eligible_workflow_1,
+        ineligible_workflow_deleted_before_1,
+        ineligible_workflow_created_after_1,
+        eligible_workflow_2,
+        ineligible_workflow_deleted_before_2,
+        eligible_workflow_3,
+        ineligible_workflow_created_after_2,
+        eligible_workflow_4
+      ]
+
+      expected_workflows = [
+        eligible_workflow_1,
+        eligible_workflow_2,
+        eligible_workflow_3,
+        eligible_workflow_4
+      ]
+
+      workflows =
+        UsageTracking.find_eligible_workflows(all_workflows, date)
+
+      assert workflows == expected_workflows
+    end
+  end
+
   defp contains?(result, desired_project) do
     result |> Enum.find(fn project -> project.id == desired_project.id end)
   end
@@ -809,7 +1060,7 @@ defmodule Lightning.UsageTrackingTest do
 
   defp build_hash(uuid), do: Base.encode16(:crypto.hash(:sha256, uuid))
 
-  defp base_generate_metrics_setup() do
+  defp base_generate_metrics_setup do
     project_id = "3cfb674b-e878-470d-b7c0-cfa8f7e003ae"
 
     active_user_count = 2
@@ -931,5 +1182,55 @@ defmodule Lightning.UsageTrackingTest do
     )
 
     user
+  end
+
+  defp base_generate_metrics_workflow_setup do
+    date = ~D[2024-02-05]
+    finished_at = ~U[2024-02-05 12:11:10Z]
+    hashed_uuid = "EECF8CFDD120E8DF8D9A12CA92AC3E815908223F95CFB11F19261A3C0EB34AEC"
+    workflow_uuid = "3cfb674b-e878-470d-b7c0-cfa8f7e003ae"
+
+    no_of_jobs = 6
+    no_of_work_orders = 3
+    no_of_runs_per_work_order = 2
+    no_of_unique_jobs_in_steps = 2
+    no_of_steps_per_unique_job = 4
+
+    workflow =
+      build_workflow(
+        @workflow_id,
+        no_of_jobs: no_of_jobs,
+        no_of_work_orders: no_of_work_orders,
+        no_of_runs_per_work_order: no_of_runs_per_work_order,
+        no_of_unique_jobs_in_steps: no_of_unique_jobs_in_steps,
+        no_of_steps_per_unique_job: no_of_steps_per_unique_job
+      )
+
+    _other_workflow =
+      build_workflow(
+        Ecto.UUID.generate(),
+        no_of_jobs: no_of_jobs + 1,
+        no_of_work_orders: no_of_work_orders + 1,
+        no_of_runs_per_work_order: no_of_runs_per_work_order + 1,
+        no_of_unique_jobs_in_steps: no_of_unique_jobs_in_steps + 1,
+        no_of_steps_per_unique_job: no_of_steps_per_unique_job + 1
+      )
+
+    no_of_runs = no_of_work_orders * no_of_runs_per_work_order
+
+    no_of_steps =
+      no_of_runs * no_of_unique_jobs_in_steps * no_of_steps_per_unique_job
+
+    %{
+      date: date,
+      finished_at: finished_at,
+      hashed_uuid: hashed_uuid,
+      no_of_jobs: no_of_jobs,
+      no_of_runs: no_of_runs,
+      no_of_steps: no_of_steps,
+      no_of_unique_jobs: no_of_unique_jobs_in_steps
+      workflow: workflow,
+      workflow_uuid: workflow_uuid,
+    }
   end
 end

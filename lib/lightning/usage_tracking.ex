@@ -180,7 +180,7 @@ defmodule Lightning.UsageTracking do
     datetime
   end
 
-  def generate_metrics(project, cleartext_enabled, date) do
+  def generate_metrics(%Project{} = project, cleartext_enabled, date) do
     %Project{id: id, users: users} = project
 
     %{
@@ -208,9 +208,34 @@ defmodule Lightning.UsageTracking do
 
   defp instrument_workflows(project, cleartext_enabled, date) do
     project.workflows
-    |> WorkflowMetricsService.find_eligible_workflows(date)
+    |> find_eligible_workflows(date)
     |> Enum.map(fn workflow ->
       WorkflowMetricsService.generate_metrics(workflow, cleartext_enabled, date)
     end)
+  end
+
+  def find_eligible_workflows(workflows, date) do
+    workflows
+    |> Enum.filter(fn workflow -> eligible_workflow?(workflow, date) end)
+  end
+
+  defp eligible_workflow?(%{deleted_at: nil, inserted_at: inserted_at}, date) do
+    if Date.compare(inserted_at, date) == :gt do
+      false
+    else
+      true
+    end
+  end
+
+  defp eligible_workflow?(
+         %{deleted_at: deleted_at, inserted_at: inserted_at},
+         date
+       ) do
+    if Date.compare(inserted_at, date) == :gt ||
+         Date.compare(deleted_at, date) != :gt do
+      false
+    else
+      true
+    end
   end
 end
