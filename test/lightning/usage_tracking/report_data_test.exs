@@ -2,7 +2,6 @@ defmodule Lightning.UsageTracking.ReportDataTest do
   use Lightning.DataCase
 
   alias Lightning.UsageTracking
-  alias Lightning.UsageTracking.ProjectMetricsService
   alias Lightning.UsageTracking.ReportData
 
   describe ".generate/3 - cleartext uuids disabled" do
@@ -493,7 +492,7 @@ defmodule Lightning.UsageTracking.ReportDataTest do
     project_metrics = projects_metrics |> find_instrumentation(project.id)
 
     expected_metrics =
-      ProjectMetricsService.generate_metrics(project, cleartext_enabled, date)
+      UsageTracking.generate_metrics(project, cleartext_enabled, date)
 
     assert project_metrics == expected_metrics
   end
