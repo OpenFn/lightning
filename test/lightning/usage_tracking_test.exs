@@ -788,8 +788,8 @@ defmodule Lightning.UsageTrackingTest do
       workflow: workflow
     } do
       assert %{
-          hashed_uuid: ^hashed_uuid
-        } = UsageTracking.generate_metrics(workflow, enabled, date)
+               hashed_uuid: ^hashed_uuid
+             } = UsageTracking.generate_metrics(workflow, enabled, date)
     end
 
     test "does not include the cleartext uuid", %{
@@ -797,21 +797,20 @@ defmodule Lightning.UsageTrackingTest do
       enabled: enabled,
       workflow: workflow
     } do
-
       assert %{
-          cleartext_uuid: nil
-        } = UsageTracking.generate_metrics(workflow, enabled, date)
+               cleartext_uuid: nil
+             } = UsageTracking.generate_metrics(workflow, enabled, date)
     end
 
-    test "includes the number of jobs",%{
+    test "includes the number of jobs", %{
       date: date,
       enabled: enabled,
       no_of_jobs: no_of_jobs,
       workflow: workflow
     } do
       assert %{
-          no_of_jobs: ^no_of_jobs
-        } = UsageTracking.generate_metrics(workflow, enabled, date)
+               no_of_jobs: ^no_of_jobs
+             } = UsageTracking.generate_metrics(workflow, enabled, date)
     end
 
     test "includes the number of finished runs", %{
@@ -821,8 +820,8 @@ defmodule Lightning.UsageTrackingTest do
       workflow: workflow
     } do
       assert %{
-          no_of_runs: ^no_of_runs
-        } = UsageTracking.generate_metrics(workflow, enabled, date)
+               no_of_runs: ^no_of_runs
+             } = UsageTracking.generate_metrics(workflow, enabled, date)
     end
 
     test "includes the number of finished steps", %{
@@ -832,8 +831,8 @@ defmodule Lightning.UsageTrackingTest do
       workflow: workflow
     } do
       assert %{
-          no_of_steps: ^no_of_steps
-        } = UsageTracking.generate_metrics(workflow, enabled, date)
+               no_of_steps: ^no_of_steps
+             } = UsageTracking.generate_metrics(workflow, enabled, date)
     end
 
     test "includes the number of active jobs for the finished steps", %{
@@ -843,8 +842,8 @@ defmodule Lightning.UsageTrackingTest do
       workflow: workflow
     } do
       assert %{
-          no_of_active_jobs: ^no_of_unique_jobs
-        } = UsageTracking.generate_metrics(workflow, enabled, date)
+               no_of_active_jobs: ^no_of_unique_jobs
+             } = UsageTracking.generate_metrics(workflow, enabled, date)
     end
   end
 
@@ -860,8 +859,8 @@ defmodule Lightning.UsageTrackingTest do
       workflow: workflow
     } do
       assert %{
-          hashed_uuid: ^hashed_uuid
-        } = UsageTracking.generate_metrics(workflow, enabled, date)
+               hashed_uuid: ^hashed_uuid
+             } = UsageTracking.generate_metrics(workflow, enabled, date)
     end
 
     test "includes the cleartext uuid", %{
@@ -871,8 +870,8 @@ defmodule Lightning.UsageTrackingTest do
       workflow_uuid: workflow_uuid
     } do
       assert %{
-          cleartext_uuid: ^workflow_uuid
-        } = UsageTracking.generate_metrics(workflow, enabled, date)
+               cleartext_uuid: ^workflow_uuid
+             } = UsageTracking.generate_metrics(workflow, enabled, date)
     end
 
     test "includes the number of jobs", %{
@@ -882,8 +881,8 @@ defmodule Lightning.UsageTrackingTest do
       workflow: workflow
     } do
       assert %{
-          no_of_jobs: ^no_of_jobs
-        } = UsageTracking.generate_metrics(workflow, enabled, date)
+               no_of_jobs: ^no_of_jobs
+             } = UsageTracking.generate_metrics(workflow, enabled, date)
     end
 
     test "includes the number of finished runs", %{
@@ -893,8 +892,8 @@ defmodule Lightning.UsageTrackingTest do
       workflow: workflow
     } do
       assert %{
-          no_of_runs: ^no_of_runs
-        } = UsageTracking.generate_metrics(workflow, enabled, date)
+               no_of_runs: ^no_of_runs
+             } = UsageTracking.generate_metrics(workflow, enabled, date)
     end
 
     test "includes the number of finished steps", %{
@@ -904,8 +903,8 @@ defmodule Lightning.UsageTrackingTest do
       workflow: workflow
     } do
       assert %{
-          no_of_steps: ^no_of_steps
-        } = UsageTracking.generate_metrics(workflow, enabled, date)
+               no_of_steps: ^no_of_steps
+             } = UsageTracking.generate_metrics(workflow, enabled, date)
     end
 
     test "includes the number of active jobs for the finished steps", %{
@@ -915,8 +914,8 @@ defmodule Lightning.UsageTrackingTest do
       workflow: workflow
     } do
       assert %{
-          no_of_active_jobs: ^no_of_unique_jobs
-        } = UsageTracking.generate_metrics(workflow, enabled, date)
+               no_of_active_jobs: ^no_of_unique_jobs
+             } = UsageTracking.generate_metrics(workflow, enabled, date)
     end
   end
 
@@ -1172,7 +1171,10 @@ defmodule Lightning.UsageTrackingTest do
   defp base_generate_metrics_workflow_setup do
     date = ~D[2024-02-05]
     finished_at = ~U[2024-02-05 12:11:10Z]
-    hashed_uuid = "EECF8CFDD120E8DF8D9A12CA92AC3E815908223F95CFB11F19261A3C0EB34AEC"
+
+    hashed_uuid =
+      "EECF8CFDD120E8DF8D9A12CA92AC3E815908223F95CFB11F19261A3C0EB34AEC"
+
     workflow_uuid = "3cfb674b-e878-470d-b7c0-cfa8f7e003ae"
 
     no_of_jobs = 6
@@ -1217,7 +1219,7 @@ defmodule Lightning.UsageTrackingTest do
       no_of_steps: no_of_steps,
       no_of_unique_jobs: no_of_unique_jobs_in_steps,
       workflow: workflow,
-      workflow_uuid: workflow_uuid,
+      workflow_uuid: workflow_uuid
     }
   end
 
