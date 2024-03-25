@@ -1,5 +1,5 @@
 defmodule Lightning.Workflows.SnapshotsTest do
-  use Lightning.DataCase, async: true
+  use Lightning.DataCase, async: false
   alias Lightning.Workflows
 
   import Lightning.Factories
@@ -11,7 +11,7 @@ defmodule Lightning.Workflows.SnapshotsTest do
   # records to ensure they are being captured.
 
   setup do
-    Carbonite.override_mode(Lightning.Repo, to: :capture)
+    enable_transaction_capture()
     :ok
   end
 
@@ -22,36 +22,50 @@ defmodule Lightning.Workflows.SnapshotsTest do
 
     workflow_id = workflow.id
 
-    assert Carbonite.Query.current_transaction()
+    assert Carbonite.Query.current_transaction(carbonite_prefix: audit_schema())
            |> Repo.one!()
            |> Map.fetch!(:meta) == %{"type" => "created"}
 
     [create_changes] =
-      Carbonite.Query.changes(workflow) |> Repo.all()
+      Carbonite.Query.changes(workflow, carbonite_prefix: audit_schema())
+      |> Repo.all()
 
     assert %Carbonite.Change{
              op: :insert,
              table_name: "workflows",
              table_pk: [^workflow_id]
            } = create_changes
+  end
 
-    # assert carbonite_transaction.changes == []
-    #   |> IO.inspect()
-    #   |> Map.fetch!(:meta)
+  test "processing changes" do
+    {:ok, workflow} =
+      params_for(:workflow, project: insert(:project))
+      |> Workflows.create_workflow()
 
-    # meta |> IO.inspect()
+    workflow
+    |> Workflows.update_workflow(%{name: "new name", jobs: [params_for(:job)]})
 
-    # workflow |> Workflows.update_workflow(%{name: "new name"})
+    Carbonite.Query.transactions(carbonite_prefix: audit_schema())
+    |> Repo.all()
 
-    # Carbonite.Query.changes(workflow) |> Repo.all() |> IO.inspect()
+    # Carbonite.process(
+    #   Lightning.Repo,
+    #   "workflows",
+    #   [min_age: nil, carbonite_prefix: audit_schema()],
+    #   fn transactions, _memo ->
+    #     IO.inspect(transactions, label: "transactions")
+    #     :cont
+    #   end
+    # )
 
-    # meta =
-    #   Carbonite.Query.current_transaction()
-    #   |> Repo.one!()
-    #   |> IO.inspect()
-    #   |> Map.fetch!(:meta)
-
-    # assert meta == %{"type" => "updated"}
+    # Carbonite.process(
+    #   Lightning.Repo,
+    #   "workflows",
+    #   [min_age: nil],
+    #   fn _transactions, _memo ->
+    #     raise "should not be called"
+    #   end
+    # )
   end
 
   # defp current_transaction_changes() do

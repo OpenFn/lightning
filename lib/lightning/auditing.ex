@@ -17,4 +17,14 @@ defmodule Lightning.Auditing do
     )
     |> Repo.paginate(params)
   end
+
+  @schema Application.compile_env!(:lightning, :transaction_audit_schema)
+
+  @spec capture_transaction(Ecto.Multi.t(), map) :: Ecto.Multi.t()
+  def capture_transaction(multi, meta) do
+    multi
+    |> Carbonite.Multi.insert_transaction(%{meta: meta},
+      carbonite_prefix: @schema
+    )
+  end
 end

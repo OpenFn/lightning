@@ -136,6 +136,9 @@ config :lightning, :is_resettable_demo, false
 
 config :lightning, Lightning.Runtime.RuntimeManager, start: false
 
+# Schema to use for Carbonite
+config :lightning, transaction_audit_schema: "audit_transactions"
+
 # Import environment specific config. This must remain at the bottom
 # of this file so it overrides the configuration defined above.
 import_config "#{config_env()}.exs"

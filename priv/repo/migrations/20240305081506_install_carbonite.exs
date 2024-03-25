@@ -1,27 +1,24 @@
 defmodule Lightning.Repo.Migrations.InstallCarbonite do
   use Ecto.Migration
 
+  @carbonite_prefix Application.compile_env!(:lightning, :transaction_audit_schema)
   def up do
     # If you like to install Carbonite's tables into a different schema, add the
     # carbonite_prefix option.
     #
     #    Carbonite.Migrations.up(1, carbonite_prefix: "carbonite_other")
-
-    Carbonite.Migrations.up(1..7)
+    prefix =
+      Carbonite.Migrations.up(1..7, carbonite_prefix: @carbonite_prefix)
 
     # Install a trigger for a table:
 
-    Carbonite.Migrations.create_trigger("workflows")
-    Carbonite.Migrations.put_trigger_config("workflows", :mode, :ignore)
+    for table <- ["workflows", "jobs", "workflow_edges", "triggers"] do
+      Carbonite.Migrations.create_trigger(table, carbonite_prefix: @carbonite_prefix)
 
-    Carbonite.Migrations.create_trigger("jobs")
-    Carbonite.Migrations.put_trigger_config("jobs", :mode, :ignore)
-
-    Carbonite.Migrations.create_trigger("workflow_edges")
-    Carbonite.Migrations.put_trigger_config("workflow_edges", :mode, :ignore)
-
-    Carbonite.Migrations.create_trigger("triggers")
-    Carbonite.Migrations.put_trigger_config("triggers", :mode, :ignore)
+      Carbonite.Migrations.put_trigger_config(table, :mode, :ignore,
+        carbonite_prefix: @carbonite_prefix
+      )
+    end
 
     #    Carbonite.Migrations.create_trigger("rabbits", table_prefix: "animals")
     #    Carbonite.Migrations.create_trigger("rabbits", carbonite_prefix: "carbonite_other")
@@ -40,15 +37,10 @@ defmodule Lightning.Repo.Migrations.InstallCarbonite do
   end
 
   def down do
-    # Remove trigger from a table:
-    #
-    Carbonite.Migrations.drop_trigger("workflows")
-    Carbonite.Migrations.drop_trigger("jobs")
-    Carbonite.Migrations.drop_trigger("workflow_edges")
-    Carbonite.Migrations.drop_trigger("triggers")
-    #    Carbonite.Migrations.drop_trigger("rabbits", table_prefix: "animals")
-    #    Carbonite.Migrations.drop_trigger("rabbits", carbonite_prefix: "carbonite_other")
+    for table <- ["workflows", "jobs", "workflow_edges", "triggers"] do
+      Carbonite.Migrations.drop_trigger(table, carbonite_prefix: @carbonite_prefix)
+    end
 
-    Carbonite.Migrations.down(7..1)
+    Carbonite.Migrations.down(7..1, carbonite_prefix: @carbonite_prefix)
   end
 end

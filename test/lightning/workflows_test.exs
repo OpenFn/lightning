@@ -6,14 +6,26 @@ defmodule Lightning.WorkflowsTest do
   alias Lightning.Workflows
   alias Lightning.Workflows.Trigger
 
-  setup do
-    # Carbonite.override_mode(Lightning.Repo, to: :capture)
-    :ok
+  setup :enable_transaction_capture
+  # setup do
+  #   enable_transaction_capture()
+
+  #   :ok
+  # end
+  defp create_workflow() do
+    {:ok, workflow} =
+      params_for(:workflow, project: insert(:project))
+      |> Workflows.create_workflow()
+
+    workflow
   end
 
   describe "workflows" do
     test "list_workflows/0 returns all workflows" do
-      workflow = insert(:workflow)
+      workflow =
+        with_disabled_audit do
+          insert(:workflow)
+        end
 
       assert Workflows.list_workflows() |> Enum.map(fn w -> w.id end) == [
                workflow.id
@@ -21,7 +33,7 @@ defmodule Lightning.WorkflowsTest do
     end
 
     test "get_workflow!/1 returns the workflow with given id" do
-      workflow = insert(:workflow)
+      workflow = create_workflow()
 
       assert Workflows.get_workflow!(workflow.id) |> unload_relation(:project) ==
                workflow |> unload_relation(:project)
@@ -34,7 +46,7 @@ defmodule Lightning.WorkflowsTest do
     test "get_workflow/1 returns the workflow with given id" do
       assert Workflows.get_workflow(Ecto.UUID.generate()) == nil
 
-      workflow = insert(:workflow)
+      workflow = create_workflow()
 
       assert Workflows.get_workflow(workflow.id) |> unload_relation(:project) ==
                workflow |> unload_relation(:project)
@@ -217,12 +229,16 @@ defmodule Lightning.WorkflowsTest do
 
   describe "get_trigger_by_webhook/1" do
     test "returns a trigger when a matching custom_path is provided" do
-      trigger = insert(:trigger, custom_path: "some_path")
+      trigger =
+        with_disabled_audit do
+          insert(:trigger, custom_path: "some_path")
+        end
 
       assert trigger |> unload_relation(:workflow) ==
                Workflows.get_trigger_by_webhook("some_path")
     end
 
+    @tag :disable_audit
     test "returns a trigger when a matching id is provided" do
       trigger = insert(:trigger)
 
@@ -230,6 +246,7 @@ defmodule Lightning.WorkflowsTest do
                Workflows.get_trigger_by_webhook(trigger.id)
     end
 
+    @tag :disable_audit
     test "returns nil when no matching trigger is found" do
       insert(:trigger, custom_path: "some_path")
       assert Workflows.get_trigger_by_webhook("non_existent_path") == nil
@@ -237,6 +254,7 @@ defmodule Lightning.WorkflowsTest do
   end
 
   describe "get_edge_by_trigger/1" do
+    @tag :disable_audit
     test "returns an edge when associated trigger is provided" do
       workflow = insert(:workflow)
       trigger = insert(:trigger, workflow: workflow)
@@ -254,6 +272,7 @@ defmodule Lightning.WorkflowsTest do
                |> unload_relations([:target_job, :source_trigger])
     end
 
+    @tag :disable_audit
     test "returns nil when no associated edge is found" do
       trigger = insert(:trigger)
       assert Workflows.get_edge_by_trigger(trigger) == nil

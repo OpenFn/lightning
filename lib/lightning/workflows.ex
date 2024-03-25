@@ -61,7 +61,7 @@ defmodule Lightning.Workflows do
     changeset = %Workflow{} |> Workflow.changeset(attrs)
 
     Ecto.Multi.new()
-    |> Carbonite.Multi.insert_transaction(%{meta: %{"type" => "created"}})
+    |> Lightning.Auditing.capture_transaction(%{"type" => "created"})
     |> Ecto.Multi.insert(:workflow, changeset)
     |> Repo.transaction()
     |> case do
@@ -85,7 +85,7 @@ defmodule Lightning.Workflows do
   """
   def update_workflow(%Ecto.Changeset{} = changeset) do
     Ecto.Multi.new()
-    |> Carbonite.Multi.insert_transaction(%{meta: %{"type" => "updated"}})
+    |> Lightning.Auditing.capture_transaction(%{"type" => "updated"})
     |> Ecto.Multi.update(:workflow, changeset)
     |> Repo.transaction()
     |> case do
