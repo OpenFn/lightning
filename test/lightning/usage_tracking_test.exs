@@ -1594,7 +1594,8 @@ defmodule Lightning.UsageTrackingTest do
         user_3
       ]
 
-      result = UsageTracking.active_users(~D[2024-02-05], user_list) |> Repo.all()
+      result =
+        UsageTracking.active_users(~D[2024-02-05], user_list) |> Repo.all()
 
       assert(result |> contains?(user_1))
       assert(result |> contains?(user_3))
