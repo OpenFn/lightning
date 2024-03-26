@@ -610,9 +610,9 @@ defmodule Lightning.UsageTrackingTest do
     end
   end
 
-  describe ".generate_metrics/3 - cleartext disabled" do
+  describe ".generate_metrics/3 (project) - cleartext disabled" do
     setup do
-      base_generate_metrics_setup() |> Map.merge(%{enabled: false})
+      generate_metrics_project_setup() |> Map.merge(%{enabled: false})
     end
 
     test "includes the hashed project id", %{
@@ -689,9 +689,9 @@ defmodule Lightning.UsageTrackingTest do
     end
   end
 
-  describe ".generate_metrics/3 - cleartext enabled" do
+  describe ".generate_metrics/3 (project) - cleartext enabled" do
     setup do
-      base_generate_metrics_setup() |> Map.merge(%{enabled: true})
+      generate_metrics_project_setup() |> Map.merge(%{enabled: true})
     end
 
     test "includes the hashed project id", %{
@@ -772,7 +772,7 @@ defmodule Lightning.UsageTrackingTest do
 
   describe "generate_metrics/3 (workflow) - cleartext disabled" do
     setup do
-      base_generate_metrics_workflow_setup() |> Map.merge(%{enabled: false})
+      generate_metrics_workflow_setup() |> Map.merge(%{enabled: false})
     end
 
     test "includes the hashed workflow uuid", %{
@@ -843,7 +843,7 @@ defmodule Lightning.UsageTrackingTest do
 
   describe "generate_metrics/3 (workflow) - cleartext enabled" do
     setup do
-      base_generate_metrics_workflow_setup() |> Map.merge(%{enabled: true})
+      generate_metrics_workflow_setup() |> Map.merge(%{enabled: true})
     end
 
     test "includes the hashed workflow uuid", %{
@@ -1487,11 +1487,11 @@ defmodule Lightning.UsageTrackingTest do
 
       result = UsageTracking.active_users(~D[2024-02-05]) |> Repo.all()
 
-      assert(result |> contains?(user_1))
-      assert(result |> contains?(user_2))
-      refute(result |> contains?(user_3))
-      refute(result |> contains?(user_4))
-      refute(result |> contains?(user_5))
+      assert result |> contains?(user_1)
+      assert result |> contains?(user_2)
+      refute result |> contains?(user_3)
+      refute result |> contains?(user_4)
+      refute result |> contains?(user_5)
     end
 
     test "if user has more than one token, only includes user once" do
@@ -1527,9 +1527,9 @@ defmodule Lightning.UsageTrackingTest do
 
       result = UsageTracking.active_users(~D[2024-02-05]) |> Repo.all()
 
-      assert(result |> contains?(user_1))
-      assert(result |> contains?(user_2))
-      assert(length(result) == 2)
+      assert result |> contains?(user_1)
+      assert result |> contains?(user_2)
+      assert length(result) == 2
     end
   end
 
@@ -1588,15 +1588,15 @@ defmodule Lightning.UsageTrackingTest do
       result =
         UsageTracking.active_users(~D[2024-02-05], user_list) |> Repo.all()
 
-      assert(result |> contains?(user_1))
-      assert(result |> contains?(user_3))
-      refute(result |> contains?(user_2))
-      refute(result |> contains?(user_4))
+      assert result |> contains?(user_1)
+      assert result |> contains?(user_3)
+      refute result |> contains?(user_2)
+      refute result |> contains?(user_4)
     end
   end
 
   describe ".generate/3 - cleartext uuids disabled" do
-    setup [:base_generate_setup, :setup_cleartext_uuids_disabled]
+    setup [:generate_setup, :setup_cleartext_uuids_disabled]
 
     test "sets the time that the report was generated at", %{
       cleartext_enabled: enabled,
@@ -1786,7 +1786,7 @@ defmodule Lightning.UsageTrackingTest do
   end
 
   describe ".generate/3 - cleartext uuids enabled" do
-    setup [:base_generate_setup, :setup_cleartext_uuids_enabled]
+    setup [:generate_setup, :setup_cleartext_uuids_enabled]
 
     test "sets the time that the report was generated at", %{
       cleartext_enabled: enabled,
@@ -1990,7 +1990,7 @@ defmodule Lightning.UsageTrackingTest do
 
   defp build_hash(uuid), do: Base.encode16(:crypto.hash(:sha256, uuid))
 
-  defp base_generate_metrics_setup do
+  defp generate_metrics_project_setup do
     project_id = "3cfb674b-e878-470d-b7c0-cfa8f7e003ae"
 
     active_user_count = 2
@@ -2114,7 +2114,7 @@ defmodule Lightning.UsageTrackingTest do
     user
   end
 
-  defp base_generate_metrics_workflow_setup do
+  defp generate_metrics_workflow_setup do
     date = ~D[2024-02-05]
     finished_at = ~U[2024-02-05 12:11:10Z]
 
@@ -2236,7 +2236,7 @@ defmodule Lightning.UsageTrackingTest do
 
   defp dataclip_builder, do: build(:dataclip)
 
-  defp base_generate_setup(context) do
+  defp generate_setup(context) do
     Map.merge(
       context,
       %{
