@@ -21,19 +21,19 @@ defmodule Lightning.VersionControl do
   Creates a connection between a project and a github repo
   """
   def create_github_connection(attrs, user) do
-    changeset = ProjectRepoConnection.changeset(%ProjectRepoConnection{}, attrs)
+    changeset =
+      ProjectRepoConnection.create_changeset(%ProjectRepoConnection{}, attrs)
 
     Repo.transact(fn ->
       with {:ok, repo_connection} <- Repo.insert(changeset),
-           {:ok, _} <-
-             configure_github_repo(repo_connection, user) do
+           :ok <- configure_github_repo(repo_connection, user) do
         {:ok, repo_connection}
       end
     end)
   end
 
   @spec reconfigure_github_connection(ProjectRepoConnection.t(), User.t()) ::
-          {:ok, map()} | {:error, map()}
+          :ok | {:error, map()}
   def reconfigure_github_connection(repo_connection, user) do
     configure_github_repo(repo_connection, user)
   end
@@ -50,13 +50,19 @@ defmodule Lightning.VersionControl do
          :ok <-
            verify_file_exists(client, repo_connection, deploy_yml_target_path()),
          :ok <- verify_file_exists(client, repo_connection, "project.yml"),
-         :ok <- verify_file_exists(client, repo_connection, "projectState.yml") do
+         :ok <- verify_file_exists(client, repo_connection, ".state.json"),
+         :ok <-
+           verify_repo_secret_exists(
+             client,
+             repo_connection,
+             deploy_secret_name()
+           ) do
       :ok
     end
   end
 
   @doc """
-  Deletes a github connection used when re installing
+  Deletes a github connection
   """
   def remove_github_connection(repo_connection, user) do
     repo_connection
@@ -77,18 +83,33 @@ defmodule Lightning.VersionControl do
     Repo.get_by(ProjectRepoConnection, project_id: project_id)
   end
 
-  def get_repo_connection_for_project!(project_id) do
-    Repo.get_by!(ProjectRepoConnection, project_id: project_id)
-  end
+  @spec inititiate_sync(
+          repo_connection :: ProjectRepoConnection.t(),
+          user_email :: String.t()
+        ) :: :ok | {:error, map()}
+  def inititiate_sync(repo_connection, user_email) do
+    with {:ok, client} <-
+           GithubClient.build_installation_client(
+             repo_connection.github_installation_id
+           ),
+         {:ok, %Tesla.Env{status: 204}} <-
+           GithubClient.create_repo_dispatch_event(
+             client,
+             repo_connection.repo,
+             %{
+               event_type: "sync_project",
+               client_payload: %{
+                 message: "#{user_email} initiated a sync from Lightning"
+               }
+             }
+           ) do
+      :ok
+    else
+      {:ok, %Tesla.Env{} = result} ->
+        {:error, result}
 
-  def initiate_sync(project_id, user_name) do
-    with %ProjectRepoConnection{} = repo_connection <-
-           Repo.get_by(ProjectRepoConnection, project_id: project_id) do
-      GithubClient.fire_repository_dispatch(
-        repo_connection.github_installation_id,
-        repo_connection.repo,
-        user_name
-      )
+      other ->
+        other
     end
   end
 
@@ -409,6 +430,10 @@ defmodule Lightning.VersionControl do
     ".github/workflows/deploy.yml"
   end
 
+  defp deploy_secret_name do
+    "OPENFN_API_KEY"
+  end
+
   defp maybe_delete_workflow_files(repo_connection, user) do
     with {:ok, access_token} <- fetch_user_access_token(user),
          {:ok, client} <- GithubClient.build_bearer_client(access_token) do
@@ -440,15 +465,49 @@ defmodule Lightning.VersionControl do
     end
   end
 
+  defp configure_deploy_secret(client, repo_connection) do
+    with {:ok, %{status: 200, body: resp_body}} <-
+           GithubClient.get_repo_public_key(client, repo_connection.repo) do
+      public_key = Base.decode64!(resp_body["key"])
+
+      encrypted_secret =
+        :enacl.box_seal(repo_connection.access_token, public_key)
+
+      case GithubClient.create_repo_secret(
+             client,
+             repo_connection.repo,
+             deploy_secret_name(),
+             %{
+               encrypted_value: Base.encode64(encrypted_secret),
+               key_id: resp_body["key_id"]
+             }
+           ) do
+        {:ok, %{status: status} = resp} when status in [201, 204] ->
+          {:ok, resp}
+
+        {:ok, %Tesla.Env{} = result} ->
+          {:error, result}
+
+        other ->
+          other
+      end
+    else
+      {:ok, %Tesla.Env{} = result} ->
+        {:error, result}
+
+      other ->
+        other
+    end
+  end
+
   @spec configure_github_repo(ProjectRepoConnection.t(), User.t()) ::
-          {:ok, map()} | {:error, map()}
+          :ok | {:error, map()}
   defp configure_github_repo(repo_connection, user) do
     with {:ok, user_token} <- fetch_user_access_token(user),
-         {:ok, tesla_client} <- GithubClient.build_bearer_client(user_token) do
-      push_workflow_files(
-        tesla_client,
-        repo_connection
-      )
+         {:ok, tesla_client} <- GithubClient.build_bearer_client(user_token),
+         {:ok, _} <- push_workflow_files(tesla_client, repo_connection),
+         {:ok, _} <- configure_deploy_secret(tesla_client, repo_connection) do
+      inititiate_sync(repo_connection, user.email)
     end
   end
 
@@ -466,6 +525,19 @@ defmodule Lightning.VersionControl do
         {:error,
          GithubError.file_not_found(
            "#{file_path} does not exist in the given branch"
+         )}
+    end
+  end
+
+  defp verify_repo_secret_exists(client, repo_connection, secret_name) do
+    case GithubClient.get_repo_secret(client, repo_connection.repo, secret_name) do
+      {:ok, %{status: 200}} ->
+        :ok
+
+      _other ->
+        {:error,
+         GithubError.repo_secret_not_found(
+           "#{secret_name} has not been set in the repo"
          )}
     end
   end

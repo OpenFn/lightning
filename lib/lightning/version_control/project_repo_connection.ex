@@ -57,5 +57,6 @@ defmodule Lightning.VersionControl.ProjectRepoConnection do
     |> :crypto.strong_rand_bytes()
     |> Base.encode64()
     |> binary_part(0, length)
+    |> String.replace_prefix("", "prc_")
   end
 end
