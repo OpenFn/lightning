@@ -10,11 +10,6 @@ defmodule Lightning.Repo do
     {:ok, Keyword.put(config, :url, System.get_env("DATABASE_URL"))}
   end
 
-  defp env_to_int(env, default) do
-    System.get_env(env, default)
-    |> String.to_integer()
-  end
-
   @doc """
   A small wrapper around `Repo.transaction/2`.
 
