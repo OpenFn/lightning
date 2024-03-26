@@ -26,6 +26,10 @@ defmodule LightningWeb.ProjectLive.Settings do
   def mount(_params, _session, socket) do
     %{project: project, current_user: current_user} = socket.assigns
 
+    if connected?(socket) do
+      VersionControl.subscribe(current_user)
+    end
+
     project_users =
       Projects.get_project_users!(project.id)
 
@@ -347,50 +351,37 @@ defmodule LightningWeb.ProjectLive.Settings do
      |> put_flash(:info, "Collaborators updated successfully!")}
   end
 
-  def handle_info({:branches_fetched, branches_result}, socket) do
-    case branches_result do
-      {:error, error} ->
-        {:noreply, socket |> put_flash(:error, error_message(error))}
-
-      branches ->
-        {:noreply, socket |> assign(loading_branches: false, branches: branches)}
-    end
-  end
-
   def handle_info({:forward, mod, opts}, socket) do
     send_update(mod, opts)
     {:noreply, socket}
   end
 
-  def handle_info({:repos_fetched, result}, socket) do
-    case result do
-      {:error, error} ->
-        {:noreply, socket |> put_flash(:error, error_message(error))}
+  def handle_info(
+        %Lightning.VersionControl.Events.OauthTokenAdded{},
+        socket
+      ) do
+    {:noreply,
+     socket
+     |> put_flash(:info, "Github account linked successfully")
+     |> push_navigate(to: ~p"/projects/#{socket.assigns.project}/settings#vcs")}
+  end
 
-      {:ok, [_ | _] = repos} ->
-        {:noreply, socket |> assign(repos: repos)}
-
-      # while it's possible to trigger this state when testing
-      # GitHub makes it pretty impossible to arrive here
-      _ ->
-        {:noreply, socket}
-    end
+  def handle_info(
+        %Lightning.VersionControl.Events.OauthTokenFailed{},
+        socket
+      ) do
+    {:noreply,
+     socket
+     |> put_flash(
+       :error,
+       "Oops! Github account failed to link. Please try again"
+     )}
   end
 
   # catch all callback. Needed for tests because of Swoosh emails in tests
   def handle_info(msg, socket) do
     Logger.debug("Received unknown message: #{inspect(msg)}")
     {:noreply, socket}
-  end
-
-  defp error_message(error) do
-    case error do
-      %{code: :installation_not_found} ->
-        "Sorry, it seems that the GitHub App ID has not been properly configured for this instance of Lightning. Please contact the instance administrator"
-
-      %{code: :invalid_certificate} ->
-        "Sorry, it seems that the GitHub cert has not been properly configured for this instance of Lightning. Please contact the instance administrator"
-    end
   end
 
   defp dispatch_flash(change_result, socket) do

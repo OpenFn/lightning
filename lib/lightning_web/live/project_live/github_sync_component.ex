@@ -10,28 +10,19 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
   @impl true
   def update(
         %{
-          user: user,
+          user: _,
           project: _,
-          project_repo_connection: repo_connection,
+          project_repo_connection: _,
           can_install_github: _,
           can_initiate_github_sync: _,
-          action: _
+          action: action
         } = assigns,
         socket
       ) do
     {:ok,
      socket
      |> assign(assigns)
-     |> assign(changeset: ProjectRepoConnection.changeset(repo_connection, %{}))
-     |> assign_async([:installations, :repos], fn ->
-       # repos are grouped using the installation_id
-       fetch_user_installations_and_repos(user)
-     end)
-     # branches are grouped using the repo
-     |> assign_async(:branches, fn -> {:ok, %{branches: %{}}} end)
-     |> assign_async(:verify_connection, fn ->
-       verify_connection(repo_connection)
-     end)}
+     |> apply_action(action, assigns)}
   end
 
   @impl true
@@ -85,6 +76,16 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
     end
   end
 
+  def handle_event("initiate-sync", _params, socket) do
+    if socket.assigns.can_initiate_github_sync do
+      {:noreply, initiate_github_sync(socket)}
+    else
+      {:noreply,
+       socket
+       |> put_flash(:error, "You are not authorized to perform this action")}
+    end
+  end
+
   def handle_event("refresh-installations", _params, socket) do
     changeset = validate_changes(socket.assigns.project_repo_connection, %{})
     user = socket.assigns.user
@@ -106,6 +107,34 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
      |> assign(changeset: changeset)
      |> assign_async(:branches, fn -> {:ok, %{branches: %{}}} end)
      |> maybe_fetch_branches()}
+  end
+
+  defp apply_action(socket, :new, %{
+         project_repo_connection: repo_connection,
+         user: user
+       }) do
+    socket
+    |> assign(changeset: ProjectRepoConnection.changeset(repo_connection, %{}))
+    |> assign_async([:installations, :repos], fn ->
+      # repos are grouped using the installation_id
+      fetch_user_installations_and_repos(user)
+    end)
+    # branches are grouped using the repo
+    |> assign_async(:branches, fn -> {:ok, %{branches: %{}}} end)
+  end
+
+  defp apply_action(socket, :show, %{
+         project_repo_connection: repo_connection,
+         user: user
+       }) do
+    socket
+    |> assign_async([:installations, :repos], fn ->
+      # repos are grouped using the installation_id
+      fetch_user_installations_and_repos(user)
+    end)
+    |> assign_async(:verify_connection, fn ->
+      verify_connection(repo_connection)
+    end)
   end
 
   defp validate_changes(repo_connection, params) do
@@ -155,15 +184,15 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
     repo_connection = assigns.project_repo_connection
 
     case VersionControl.reconfigure_github_connection(
-           assigns.project_repo_connection,
+           repo_connection,
            assigns.user
          ) do
-      {:ok, _} ->
+      :ok ->
         socket
         |> put_flash(:info, "Connection made successfully!")
-        |> assign_async(:verify_connection, fn ->
-          verify_connection(repo_connection)
-        end)
+        |> push_navigate(
+          to: ~p"/projects/#{socket.assigns.project}/settings#vcs"
+        )
 
       {:error, _} ->
         put_flash(
@@ -174,8 +203,28 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
     end
   end
 
+  defp initiate_github_sync(%{assigns: assigns} = socket) do
+    repo_connection = assigns.project_repo_connection
+
+    case VersionControl.inititiate_sync(repo_connection, assigns.user.email) do
+      :ok ->
+        socket
+        |> put_flash(:info, "Github sync initiated successfully!")
+        |> push_navigate(
+          to: ~p"/projects/#{socket.assigns.project}/settings#vcs"
+        )
+
+      {:error, _} ->
+        put_flash(
+          socket,
+          :error,
+          "Oops! An error occured while connecting to Github. Please try again later"
+        )
+    end
+  end
+
   defp can_access_github_installation?(repo_connection, async_installations) do
-    repo_connection.__meta__.state == :loaded and async_installations.ok? and
+    async_installations.ok? and
       Enum.any?(async_installations.result, fn {_name, id} ->
         id == repo_connection.github_installation_id
       end)
@@ -240,15 +289,12 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
     end
   end
 
-  defp verify_connection(%{__meta__: meta} = repo_connection)
-       when meta.state == :loaded do
+  defp verify_connection(repo_connection) do
     case VersionControl.verify_github_connection(repo_connection) do
       :ok -> {:ok, %{verify_connection: :ok}}
       error -> error
     end
   end
-
-  defp verify_connection(_), do: {:ok, %{verify_connection: :ok}}
 
   defp github_config do
     Application.get_env(:lightning, :github_app, [])
@@ -309,6 +355,7 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
                   Your github project is not properly connected with Lightning.
                   <%= if @can_reconnect do %>
                     <a
+                      id="reconnect-project-button"
                       href="#"
                       class="font-medium text-yellow-700 underline hover:text-yellow-600"
                       phx-click="reconnect"

@@ -13,17 +13,8 @@ defmodule Lightning.VersionControl.GithubClient do
   plug(Tesla.Middleware.BaseUrl, "https://api.github.com")
   plug(Tesla.Middleware.JSON)
 
-  def fire_repository_dispatch(installation_id, repo_name, user_email) do
-    with {:ok, client} <- build_installation_client(installation_id),
-         {:ok, %Tesla.Env{status: 204}} <-
-           post(client, "/repos/#{repo_name}/dispatches", %{
-             event_type: "sync_project",
-             client_payload: %{
-               message: "#{user_email} initiated a sync from Lightning"
-             }
-           }) do
-      {:ok, :fired}
-    end
+  def create_repo_dispatch_event(client, repo_name, body) do
+    post(client, "/repos/#{repo_name}/dispatches", body)
   end
 
   def get_installations(client) do
@@ -82,6 +73,10 @@ defmodule Lightning.VersionControl.GithubClient do
 
   def get_repo_public_key(client, repo) do
     get(client, "/repos/#{repo}/actions/secrets/public-key")
+  end
+
+  def get_repo_secret(client, repo, secret_name) do
+    get(client, "/repos/#{repo}/actions/secrets/#{secret_name}")
   end
 
   def create_repo_secret(client, repo, secret_name, body) do

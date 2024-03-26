@@ -14,7 +14,6 @@ defmodule Lightning.Factories do
   def project_repo_connection_factory do
     %Lightning.VersionControl.ProjectRepoConnection{
       project: build(:project),
-      user: build(:user),
       repo: "some/repo",
       branch: "branch",
       github_installation_id: "some-id"
