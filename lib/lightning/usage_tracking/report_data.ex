@@ -6,7 +6,6 @@ defmodule Lightning.UsageTracking.ReportData do
   """
   alias Lightning.UsageTracking
   alias Lightning.UsageTracking.DailyReportConfiguration
-  alias Lightning.UsageTracking.UserService
 
   @lightning_version Lightning.MixProject.project()[:version]
 
@@ -26,8 +25,8 @@ defmodule Lightning.UsageTracking.ReportData do
     instance_id
     |> instrument_identity(cleartext_enabled)
     |> Map.merge(%{
-      no_of_active_users: UserService.no_of_active_users(date),
-      no_of_users: UserService.no_of_users(date),
+      no_of_active_users: UsageTracking.no_of_active_users(date),
+      no_of_users: UsageTracking.no_of_users(date),
       operating_system: operating_system_name(),
       version: @lightning_version
     })

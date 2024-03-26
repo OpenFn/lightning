@@ -9,7 +9,7 @@ defmodule Lightning.UsageTracking do
   alias Lightning.UsageTracking.DailyReportConfiguration
   alias Lightning.UsageTracking.Report
   alias Lightning.UsageTracking.ReportWorker
-  alias Lightning.UsageTracking.UserService
+  alias Lightning.UsageTracking.UserQueries
   alias Lightning.Workflows.Workflow
 
   def enable_daily_report(enabled_at) do
@@ -184,8 +184,8 @@ defmodule Lightning.UsageTracking do
     %Project{id: id, users: users} = project
 
     %{
-      no_of_active_users: UserService.no_of_active_users(date, users),
-      no_of_users: UserService.no_of_users(date, users),
+      no_of_active_users: no_of_active_users(date, users),
+      no_of_users: no_of_users(date, users),
       workflows: instrument_workflows(project, cleartext_enabled, date)
     }
     |> Map.merge(instrument_identity(id, cleartext_enabled))
@@ -280,5 +280,21 @@ defmodule Lightning.UsageTracking do
       %{finished_at: finished_at} ->
         finished_at |> DateTime.to_date() == date
     end)
+  end
+
+  def no_of_users(date) do
+    UserQueries.existing_users(date) |> Repo.aggregate(:count)
+  end
+
+  def no_of_users(date, user_list) do
+    UserQueries.existing_users(date, user_list) |> Repo.aggregate(:count)
+  end
+
+  def no_of_active_users(date) do
+    UserQueries.active_users(date) |> Repo.aggregate(:count)
+  end
+
+  def no_of_active_users(date, user_list) do
+    UserQueries.active_users(date, user_list) |> Repo.aggregate(:count)
   end
 end
