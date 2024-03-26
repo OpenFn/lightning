@@ -1027,7 +1027,8 @@ defmodule Lightning.UsageTrackingTest do
 
       run_list = finished_on_other_date ++ finished_on_report_date ++ unfinished
 
-      assert UsageTracking.finished_runs(run_list, date) == finished_on_report_date
+      assert UsageTracking.finished_runs(run_list, date) ==
+               finished_on_report_date
     end
 
     defp insert_finished_runs(finished_at) do
@@ -1094,7 +1095,7 @@ defmodule Lightning.UsageTrackingTest do
           step.id
         end
 
-      assert(actual_ids == expected_ids)
+      assert actual_ids == expected_ids
     end
 
     defp insert_steps(run, finished_at, other_finished_at) do
@@ -1184,6 +1185,7 @@ defmodule Lightning.UsageTrackingTest do
       ).step
     end
   end
+
   defp contains?(result, desired_project) do
     result |> Enum.find(fn project -> project.id == desired_project.id end)
   end
