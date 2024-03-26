@@ -93,11 +93,11 @@ defmodule Lightning.UsageTrackingTest do
       existing_tracking_enabled_at: existing_tracking_enabled_at,
       existing_start_reporting_after: existing_start_reporting_after
     } do
-      %DailyReportConfiguration{
+      insert(
+        :usage_tracking_daily_report_configuration,
         tracking_enabled_at: existing_tracking_enabled_at,
         start_reporting_after: existing_start_reporting_after
-      }
-      |> Repo.insert!()
+      )
 
       report_config = UsageTracking.enable_daily_report(tracking_enabled_at)
 
@@ -125,7 +125,7 @@ defmodule Lightning.UsageTrackingTest do
       tracking_enabled_at: tracking_enabled_at,
       start_reporting_after: start_reporting_after
     } do
-      %DailyReportConfiguration{} |> Repo.insert!()
+      insert(:usage_tracking_daily_report_configuration)
 
       UsageTracking.enable_daily_report(tracking_enabled_at)
 
@@ -141,7 +141,7 @@ defmodule Lightning.UsageTrackingTest do
       tracking_enabled_at: tracking_enabled_at,
       start_reporting_after: start_reporting_after
     } do
-      %DailyReportConfiguration{} |> Repo.insert!()
+      insert(:usage_tracking_daily_report_configuration)
 
       report_config = UsageTracking.enable_daily_report(tracking_enabled_at)
 
@@ -169,11 +169,11 @@ defmodule Lightning.UsageTrackingTest do
       existing_tracking_enabled_at: existing_tracking_enabled_at,
       existing_start_reporting_after: existing_start_reporting_after
     } do
-      %DailyReportConfiguration{
+      insert(
+        :usage_tracking_daily_report_configuration,
         tracking_enabled_at: existing_tracking_enabled_at,
         start_reporting_after: existing_start_reporting_after
-      }
-      |> Repo.insert!()
+      )
 
       UsageTracking.disable_daily_report()
 
@@ -187,11 +187,11 @@ defmodule Lightning.UsageTrackingTest do
       existing_tracking_enabled_at: existing_tracking_enabled_at,
       existing_start_reporting_after: existing_start_reporting_after
     } do
-      %DailyReportConfiguration{
+      insert(
+        :usage_tracking_daily_report_configuration,
         tracking_enabled_at: existing_tracking_enabled_at,
         start_reporting_after: existing_start_reporting_after
-      }
-      |> Repo.insert!()
+      )
 
       report_config = UsageTracking.disable_daily_report()
 
@@ -208,11 +208,11 @@ defmodule Lightning.UsageTrackingTest do
 
   describe ".start_reporting_after/1 - enabled configuration exists" do
     setup do
-      %DailyReportConfiguration{
+      insert(
+        :usage_tracking_daily_report_configuration,
         tracking_enabled_at: DateTime.utc_now(),
         start_reporting_after: ~D[2024-03-01]
-      }
-      |> Repo.insert!()
+      )
 
       %{date: ~D[2024-03-05]}
     end
@@ -249,18 +249,19 @@ defmodule Lightning.UsageTrackingTest do
     setup do
       existing_date = ~D[2024-03-01]
 
-      %DailyReportConfiguration{
+      insert(
+        :usage_tracking_daily_report_configuration,
         tracking_enabled_at: nil,
         start_reporting_after: existing_date
-      }
-      |> Repo.insert!()
+      )
 
       %{date: ~D[2024-03-05], existing_date: existing_date}
     end
 
-    test "does not update the record", config do
-      %{date: date, existing_date: existing_date} = config
-
+    test "does not update the record", %{
+      date: date,
+      existing_date: existing_date
+    } do
       UsageTracking.start_reporting_after(date)
 
       assert %{
@@ -671,25 +672,20 @@ defmodule Lightning.UsageTrackingTest do
         UsageTracking.generate_metrics(project, enabled, date)
 
       workflows
-      |> assert_workflow_metrics(
-        workflow: eligible_workflow_1,
+      |> assert_metrics(
+        target: eligible_workflow_1,
         cleartext_enabled: enabled,
         date: date
       )
 
       workflows
-      |> assert_workflow_metrics(
-        workflow: eligible_workflow_2,
+      |> assert_metrics(
+        target: eligible_workflow_2,
         cleartext_enabled: enabled,
         date: date
       )
 
-      workflows
-      |> refute_workflow_metrics(
-        workflow: ineligible_workflow,
-        cleartext_enabled: enabled,
-        date: date
-      )
+      workflows |> refute_metrics(target: ineligible_workflow)
     end
   end
 
@@ -757,25 +753,20 @@ defmodule Lightning.UsageTrackingTest do
         UsageTracking.generate_metrics(project, enabled, date)
 
       workflows
-      |> assert_workflow_metrics(
-        workflow: eligible_workflow_1,
+      |> assert_metrics(
+        target: eligible_workflow_1,
         cleartext_enabled: enabled,
         date: date
       )
 
       workflows
-      |> assert_workflow_metrics(
-        workflow: eligible_workflow_2,
+      |> assert_metrics(
+        target: eligible_workflow_2,
         cleartext_enabled: enabled,
         date: date
       )
 
-      workflows
-      |> refute_workflow_metrics(
-        workflow: ineligible_workflow,
-        cleartext_enabled: enabled,
-        date: date
-      )
+      workflows |> refute_metrics(target: ineligible_workflow)
     end
   end
 
@@ -1605,11 +1596,7 @@ defmodule Lightning.UsageTrackingTest do
   end
 
   describe ".generate/3 - cleartext uuids disabled" do
-    setup [
-      :setup_daily_report_config,
-      :setup_cleartext_uuids_disabled,
-      :setup_date
-    ]
+    setup [:base_generate_setup, :setup_cleartext_uuids_disabled]
 
     test "sets the time that the report was generated at", %{
       cleartext_enabled: enabled,
@@ -1762,23 +1749,21 @@ defmodule Lightning.UsageTrackingTest do
       %{projects: projects} =
         UsageTracking.generate(report_config, enabled, date)
 
-      # assert projects |> count() == 2
-
       projects
-      |> assert_project_metrics(
-        project: project_1,
+      |> assert_metrics(
+        target: project_1,
         cleartext_enabled: enabled,
         date: date
       )
 
       projects
-      |> assert_project_metrics(
-        project: project_3,
+      |> assert_metrics(
+        target: project_3,
         cleartext_enabled: enabled,
         date: date
       )
 
-      projects |> assert_no_project_metrics(project_2)
+      projects |> refute_metrics(target: project_2)
     end
 
     test "indicates the version of the report data structure in use", %{
@@ -1801,11 +1786,7 @@ defmodule Lightning.UsageTrackingTest do
   end
 
   describe ".generate/3 - cleartext uuids enabled" do
-    setup [
-      :setup_daily_report_config,
-      :setup_cleartext_uuids_enabled,
-      :setup_date
-    ]
+    setup [:base_generate_setup, :setup_cleartext_uuids_enabled]
 
     test "sets the time that the report was generated at", %{
       cleartext_enabled: enabled,
@@ -1960,23 +1941,21 @@ defmodule Lightning.UsageTrackingTest do
       %{projects: projects} =
         UsageTracking.generate(report_config, enabled, date)
 
-      # assert projects |> count() == 2
-
       projects
-      |> assert_project_metrics(
-        project: project_1,
+      |> assert_metrics(
+        target: project_1,
         cleartext_enabled: enabled,
         date: date
       )
 
       projects
-      |> assert_project_metrics(
-        project: project_3,
+      |> assert_metrics(
+        target: project_3,
         cleartext_enabled: enabled,
         date: date
       )
 
-      projects |> assert_no_project_metrics(project_2)
+      projects |> refute_metrics(target: project_2)
     end
 
     test "indicates the version of the report data structure in use", %{
@@ -2000,25 +1979,6 @@ defmodule Lightning.UsageTrackingTest do
 
   defp contains?(collection, desired_item) do
     collection |> Enum.find(fn item -> item.id == desired_item.id end)
-  end
-
-  defp assert_workflow_metrics(workflows_metrics, opts) do
-    workflow = opts |> Keyword.get(:workflow)
-    cleartext_enabled = opts |> Keyword.get(:cleartext_enabled)
-    date = opts |> Keyword.get(:date)
-
-    workflow_metrics = workflows_metrics |> find_instrumentation(workflow.id)
-
-    expected_metrics =
-      UsageTracking.generate_metrics(workflow, cleartext_enabled, date)
-
-    assert workflow_metrics == expected_metrics
-  end
-
-  defp refute_workflow_metrics(workflows_metrics, opts) do
-    workflow = opts |> Keyword.get(:workflow)
-
-    refute workflows_metrics |> find_instrumentation(workflow.id)
   end
 
   defp find_instrumentation(instrumented_collection, identity) do
@@ -2276,10 +2236,13 @@ defmodule Lightning.UsageTrackingTest do
 
   defp dataclip_builder, do: build(:dataclip)
 
-  defp setup_daily_report_config(context) do
+  defp base_generate_setup(context) do
     Map.merge(
       context,
-      %{config: UsageTracking.enable_daily_report(DateTime.utc_now())}
+      %{
+        config: UsageTracking.enable_daily_report(DateTime.utc_now()),
+        date: ~D[2024-02-25]
+      }
     )
   end
 
@@ -2290,8 +2253,6 @@ defmodule Lightning.UsageTrackingTest do
   defp setup_cleartext_uuids_enabled(context) do
     Map.merge(context, %{cleartext_enabled: true})
   end
-
-  defp setup_date(context), do: Map.merge(context, %{date: ~D[2024-02-25]})
 
   defp build_project(count, date) do
     {:ok, inserted_at, _offset} = DateTime.from_iso8601("#{date}T10:11:12Z")
@@ -2357,20 +2318,22 @@ defmodule Lightning.UsageTrackingTest do
     )
   end
 
-  defp assert_project_metrics(projects_metrics, opts) do
-    project = opts |> Keyword.get(:project)
+  defp assert_metrics(all_metrics, opts) do
+    target = opts |> Keyword.get(:target)
     cleartext_enabled = opts |> Keyword.get(:cleartext_enabled)
     date = opts |> Keyword.get(:date)
 
-    project_metrics = projects_metrics |> find_instrumentation(project.id)
+    target_metrics = all_metrics |> find_instrumentation(target.id)
 
     expected_metrics =
-      UsageTracking.generate_metrics(project, cleartext_enabled, date)
+      UsageTracking.generate_metrics(target, cleartext_enabled, date)
 
-    assert project_metrics == expected_metrics
+    assert target_metrics == expected_metrics
   end
 
-  defp assert_no_project_metrics(projects_metrics, project) do
-    refute projects_metrics |> find_instrumentation(project.id)
+  defp refute_metrics(all_metrics, opts) do
+    target = opts |> Keyword.get(:target)
+
+    refute all_metrics |> find_instrumentation(target.id)
   end
 end
