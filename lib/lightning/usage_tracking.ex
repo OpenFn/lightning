@@ -4,12 +4,13 @@ defmodule Lightning.UsageTracking do
   """
   import Ecto.Query
 
+  alias Lightning.Accounts.User
+  alias Lightning.Accounts.UserToken
   alias Lightning.Projects.Project
   alias Lightning.Repo
   alias Lightning.UsageTracking.DailyReportConfiguration
   alias Lightning.UsageTracking.Report
   alias Lightning.UsageTracking.ReportWorker
-  alias Lightning.UsageTracking.UserQueries
   alias Lightning.Workflows.Workflow
 
   def enable_daily_report(enabled_at) do
@@ -283,18 +284,53 @@ defmodule Lightning.UsageTracking do
   end
 
   def no_of_users(date) do
-    UserQueries.existing_users(date) |> Repo.aggregate(:count)
+    existing_users(date) |> Repo.aggregate(:count)
   end
 
   def no_of_users(date, user_list) do
-    UserQueries.existing_users(date, user_list) |> Repo.aggregate(:count)
+    existing_users(date, user_list) |> Repo.aggregate(:count)
   end
 
   def no_of_active_users(date) do
-    UserQueries.active_users(date) |> Repo.aggregate(:count)
+    active_users(date) |> Repo.aggregate(:count)
   end
 
   def no_of_active_users(date, user_list) do
-    UserQueries.active_users(date, user_list) |> Repo.aggregate(:count)
+    active_users(date, user_list) |> Repo.aggregate(:count)
+  end
+
+  def existing_users(date) do
+    report_time = report_date_as_time(date)
+
+    from u in User, where: u.inserted_at <= ^report_time
+  end
+
+  def existing_users(date, user_list) do
+    list_ids = user_list |> Enum.map(& &1.id)
+
+    from eu in existing_users(date), where: eu.id in ^list_ids
+  end
+
+  def active_users(date) do
+    report_time = report_date_as_time(date)
+
+    {:ok, threshold_time, _offset} =
+      date
+      |> Date.add(-90)
+      |> then(&"#{&1}T23:59:59Z")
+      |> DateTime.from_iso8601()
+
+    from eu in existing_users(date),
+      distinct: eu.id,
+      join: ut in UserToken,
+      on: ut.user_id == eu.id,
+      where: ut.context == "session",
+      where: ut.inserted_at > ^threshold_time and ut.inserted_at <= ^report_time
+  end
+
+  def active_users(date, user_list) do
+    list_ids = user_list |> Enum.map(& &1.id)
+
+    from au in active_users(date), where: au.id in ^list_ids
   end
 end
