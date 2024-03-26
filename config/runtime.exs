@@ -306,7 +306,6 @@ if config_env() == :prod do
     # TODO: determine why we see this certs verification warn for the repo conn
     # ssl_opts: [log_level: :error],
     url: database_url,
-    pool_size: String.to_integer(System.get_env("POOL_SIZE") || "10"),
     socket_options: maybe_ipv6
 
   # The secret key base is used to sign/encrypt cookies and other secrets.
