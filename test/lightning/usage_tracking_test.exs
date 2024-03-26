@@ -2,10 +2,13 @@ defmodule Lightning.UsageTrackingTest do
   use Lightning.DataCase
 
   alias Lightning.Repo
+  alias Lightning.Run
   alias Lightning.UsageTracking
   alias Lightning.UsageTracking.DailyReportConfiguration
   alias Lightning.Projects.Project
   alias Lightning.UsageTracking.ReportWorker
+
+  require Run
 
   describe ".enable_daily_report/1 - no configuration exists" do
     setup do
@@ -1009,6 +1012,49 @@ defmodule Lightning.UsageTrackingTest do
         UsageTracking.find_eligible_workflows(all_workflows, date)
 
       assert workflows == expected_workflows
+    end
+  end
+
+  describe ".finished_runs/2" do
+    test "returns the subset of runs finished on the given date" do
+      date = ~D[2024-02-05]
+      finished_at = ~U[2024-02-05 12:11:10Z]
+      other_finished_at = ~U[2024-02-04 12:11:10Z]
+
+      finished_on_report_date = insert_finished_runs(finished_at)
+      finished_on_other_date = insert_finished_runs(other_finished_at)
+      unfinished = insert_unfinished_runs()
+
+      run_list = finished_on_other_date ++ finished_on_report_date ++ unfinished
+
+      assert UsageTracking.finished_runs(run_list, date) == finished_on_report_date
+    end
+
+    defp insert_finished_runs(finished_at) do
+      Run.final_states()
+      |> Enum.map(fn state ->
+        insert(
+          :run,
+          state: state,
+          finished_at: finished_at,
+          work_order: build(:workorder),
+          dataclip: build(:dataclip),
+          starting_job: build(:job)
+        )
+      end)
+    end
+
+    defp insert_unfinished_runs do
+      [:available, :claimed, :started]
+      |> Enum.map(fn state ->
+        insert(
+          :run,
+          state: state,
+          work_order: build(:workorder),
+          dataclip: build(:dataclip),
+          starting_job: build(:job)
+        )
+      end)
     end
   end
 
