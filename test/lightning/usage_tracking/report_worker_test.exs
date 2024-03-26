@@ -26,7 +26,7 @@ defmodule Lightning.UsageTracking.ReportWorkerTest do
       )
 
       expected_report_data =
-        UsageTracking.generate(report_config, cleartext_uuids_enabled, @date)
+        UsageTracking.generate_report_data(report_config, cleartext_uuids_enabled, @date)
 
       %{expected_report_data: expected_report_data}
     end
@@ -122,7 +122,7 @@ defmodule Lightning.UsageTracking.ReportWorkerTest do
       )
 
       expected_report_data =
-        UsageTracking.generate(report_config, cleartext_uuids_enabled, @date)
+        UsageTracking.generate_report_data(report_config, cleartext_uuids_enabled, @date)
 
       %{expected_report_data: expected_report_data}
     end

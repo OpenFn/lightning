@@ -146,9 +146,9 @@ defmodule Lightning.UsageTracking do
   end
 
   defp update_configuration([earliest_report_date | _other] = dates) do
-    start_reporting_after = Date.add(earliest_report_date, -1)
-
-    start_reporting_after(start_reporting_after)
+    earliest_report_date
+    |> Date.add(-1)
+    |> start_reporting_after()
 
     dates
   end
@@ -187,8 +187,8 @@ defmodule Lightning.UsageTracking do
     %Project{id: id, users: users} = project
 
     %{
-      no_of_active_users: no_of_active_users(date, users),
-      no_of_users: no_of_users(date, users),
+      no_of_active_users: active_users(date, users) |> Repo.aggregate(:count),
+      no_of_users: existing_users(date, users) |> Repo.aggregate(:count),
       workflows: instrument_workflows(project, cleartext_enabled, date)
     }
     |> Map.merge(instrument_identity(id, cleartext_enabled))
@@ -237,23 +237,15 @@ defmodule Lightning.UsageTracking do
   end
 
   defp eligible_workflow?(%{deleted_at: nil, inserted_at: inserted_at}, date) do
-    if Date.compare(inserted_at, date) == :gt do
-      false
-    else
-      true
-    end
+    Date.compare(inserted_at, date) != :gt
   end
 
   defp eligible_workflow?(
          %{deleted_at: deleted_at, inserted_at: inserted_at},
          date
        ) do
-    if Date.compare(inserted_at, date) == :gt ||
-         Date.compare(deleted_at, date) != :gt do
-      false
-    else
-      true
-    end
+    Date.compare(inserted_at, date) != :gt &&
+      Date.compare(deleted_at, date) == :gt
   end
 
   def finished_runs(all_runs, date) do
@@ -283,22 +275,6 @@ defmodule Lightning.UsageTracking do
       %{finished_at: finished_at} ->
         finished_at |> DateTime.to_date() == date
     end)
-  end
-
-  def no_of_users(date) do
-    existing_users(date) |> Repo.aggregate(:count)
-  end
-
-  def no_of_users(date, user_list) do
-    existing_users(date, user_list) |> Repo.aggregate(:count)
-  end
-
-  def no_of_active_users(date) do
-    active_users(date) |> Repo.aggregate(:count)
-  end
-
-  def no_of_active_users(date, user_list) do
-    active_users(date, user_list) |> Repo.aggregate(:count)
   end
 
   def existing_users(date) do
@@ -336,7 +312,7 @@ defmodule Lightning.UsageTracking do
     from au in active_users(date), where: au.id in ^list_ids
   end
 
-  def generate(configuration, cleartext_enabled, date) do
+  def generate_report_data(configuration, cleartext_enabled, date) do
     %{
       generated_at: DateTime.utc_now(),
       instance: instrument_instance(configuration, cleartext_enabled, date),
@@ -352,8 +328,8 @@ defmodule Lightning.UsageTracking do
     instance_id
     |> instrument_identity(cleartext_enabled)
     |> Map.merge(%{
-      no_of_active_users: no_of_active_users(date),
-      no_of_users: no_of_users(date),
+      no_of_active_users: active_users(date) |> Repo.aggregate(:count),
+      no_of_users: existing_users(date) |> Repo.aggregate(:count),
       operating_system: operating_system_name(),
       version: @lightning_version
     })

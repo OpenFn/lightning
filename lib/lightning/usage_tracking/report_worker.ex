@@ -26,7 +26,8 @@ defmodule Lightning.UsageTracking.ReportWorker do
 
       host = env[:host]
 
-      data = UsageTracking.generate(config, cleartext_uuids_enabled, date)
+      data =
+        UsageTracking.generate_report_data(config, cleartext_uuids_enabled, date)
 
       Client.submit_metrics(data, host) |> create_report(data, date)
     end

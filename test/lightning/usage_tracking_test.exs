@@ -1177,196 +1177,6 @@ defmodule Lightning.UsageTrackingTest do
     end
   end
 
-  describe "no_of_users/1" do
-    test "count includes all users created on/before date" do
-      _eligible_user_1 =
-        insert(:user, inserted_at: ~U[2024-02-05 23:59:59Z])
-
-      _eligible_user_2 =
-        insert(:user, inserted_at: ~U[2024-02-04 01:00:00Z])
-
-      _ineligible_user_after_date =
-        insert(
-          :user,
-          disabled: false,
-          inserted_at: ~U[2024-02-06 00:00:01Z]
-        )
-
-      assert UsageTracking.no_of_users(~D[2024-02-05]) == 2
-    end
-  end
-
-  describe ".no_of_users/2" do
-    test "returns subset of user list that exists before report date" do
-      eligible_user_1 =
-        insert(:user, inserted_at: ~U[2024-02-05 23:59:59Z])
-
-      _eligible_user_2 =
-        insert(:user, inserted_at: ~U[2024-02-04 01:00:00Z])
-
-      eligible_user_3 =
-        insert(:user, inserted_at: ~U[2024-02-04 01:00:00Z])
-
-      ineligible_user_after_date =
-        insert(:user, inserted_at: ~U[2024-02-06 00:00:01Z])
-
-      user_list = [
-        eligible_user_1,
-        ineligible_user_after_date,
-        eligible_user_3
-      ]
-
-      assert UsageTracking.no_of_users(~D[2024-02-05], user_list) == 2
-    end
-  end
-
-  describe ".no_of_active_users/1" do
-    test "returns a count of all active, enabled users" do
-      date = ~D[2024-02-05]
-
-      within_threshold_date = Date.add(date, -89)
-
-      {:ok, within_threshold_time, _offset} =
-        DateTime.from_iso8601("#{within_threshold_date}T10:00:00Z")
-
-      outside_threshold_date = Date.add(date, -90)
-
-      {:ok, outside_threshold_time, _offset} =
-        DateTime.from_iso8601("#{outside_threshold_date}T10:00:00Z")
-
-      enabled_user_1 =
-        insert(
-          :user,
-          disabled: false,
-          inserted_at: ~U[2024-02-04 01:00:00Z]
-        )
-
-      _active_token_user_1 =
-        insert(
-          :user_token,
-          context: "session",
-          inserted_at: within_threshold_time,
-          user: enabled_user_1
-        )
-
-      enabled_user_2 =
-        insert(
-          :user,
-          disabled: false,
-          inserted_at: ~U[2024-02-04 01:00:00Z]
-        )
-
-      _active_token_user_2 =
-        insert(
-          :user_token,
-          context: "session",
-          inserted_at: within_threshold_time,
-          user: enabled_user_2
-        )
-
-      enabled_user_3 =
-        insert(
-          :user,
-          disabled: false,
-          inserted_at: ~U[2024-02-04 01:00:00Z]
-        )
-
-      _inactive_token =
-        insert(
-          :user_token,
-          context: "session",
-          inserted_at: outside_threshold_time,
-          user: enabled_user_3
-        )
-
-      assert UsageTracking.no_of_active_users(date) == 2
-    end
-  end
-
-  describe ".no_of_active_users/2" do
-    test "returns active subset of user list" do
-      date = ~D[2024-02-05]
-
-      within_threshold_date = Date.add(date, -89)
-
-      {:ok, within_threshold_time, _offset} =
-        DateTime.from_iso8601("#{within_threshold_date}T10:00:00Z")
-
-      outside_threshold_date = Date.add(date, -90)
-
-      {:ok, outside_threshold_time, _offset} =
-        DateTime.from_iso8601("#{outside_threshold_date}T10:00:00Z")
-
-      enabled_user_1 =
-        insert(
-          :user,
-          disabled: false,
-          inserted_at: ~U[2024-02-04 01:00:00Z]
-        )
-
-      _active_token_user_1 =
-        insert(
-          :user_token,
-          context: "session",
-          inserted_at: within_threshold_time,
-          user: enabled_user_1
-        )
-
-      enabled_user_2 =
-        insert(
-          :user,
-          disabled: false,
-          inserted_at: ~U[2024-02-04 01:00:00Z]
-        )
-
-      _active_token_user_2 =
-        insert(
-          :user_token,
-          context: "session",
-          inserted_at: within_threshold_time,
-          user: enabled_user_2
-        )
-
-      enabled_user_3 =
-        insert(
-          :user,
-          disabled: false,
-          inserted_at: ~U[2024-02-04 01:00:00Z]
-        )
-
-      _active_token_user_3 =
-        insert(
-          :user_token,
-          context: "session",
-          inserted_at: within_threshold_time,
-          user: enabled_user_3
-        )
-
-      enabled_user_4 =
-        insert(
-          :user,
-          disabled: false,
-          inserted_at: ~U[2024-02-04 01:00:00Z]
-        )
-
-      _inactive_token =
-        insert(
-          :user_token,
-          context: "session",
-          inserted_at: outside_threshold_time,
-          user: enabled_user_4
-        )
-
-      user_list = [
-        enabled_user_1,
-        enabled_user_4,
-        enabled_user_3
-      ]
-
-      assert UsageTracking.no_of_active_users(date, user_list) == 2
-    end
-  end
-
   describe "existing_users/1" do
     test "includes users created on or before the date" do
       eligible_user_1 =
@@ -1595,8 +1405,8 @@ defmodule Lightning.UsageTrackingTest do
     end
   end
 
-  describe ".generate/3 - cleartext uuids disabled" do
-    setup [:generate_setup, :setup_cleartext_uuids_disabled]
+  describe ".generate_report_data/3 - cleartext uuids disabled" do
+    setup [:generate_report_data_setup, :setup_cleartext_uuids_disabled]
 
     test "sets the time that the report was generated at", %{
       cleartext_enabled: enabled,
@@ -1604,7 +1414,7 @@ defmodule Lightning.UsageTrackingTest do
       date: date
     } do
       %{generated_at: generated_at} =
-        UsageTracking.generate(report_config, enabled, date)
+        UsageTracking.generate_report_data(report_config, enabled, date)
 
       assert DateTime.diff(DateTime.utc_now(), generated_at, :second) < 1
     end
@@ -1617,7 +1427,7 @@ defmodule Lightning.UsageTrackingTest do
       %{instance_id: instance_id} = report_config
 
       %{instance: %{hashed_uuid: hashed_uuid}} =
-        UsageTracking.generate(report_config, enabled, date)
+        UsageTracking.generate_report_data(report_config, enabled, date)
 
       assert hashed_uuid == build_hash(instance_id)
     end
@@ -1629,7 +1439,7 @@ defmodule Lightning.UsageTrackingTest do
     } do
       assert %{
                instance: %{cleartext_uuid: nil}
-             } = UsageTracking.generate(report_config, enabled, date)
+             } = UsageTracking.generate_report_data(report_config, enabled, date)
     end
 
     test "indicates the version of lightning present on the instance", %{
@@ -1639,7 +1449,7 @@ defmodule Lightning.UsageTrackingTest do
     } do
       # Temporarily water-down the test to address constraints imposed by CI.
       %{instance: %{version: version}} =
-        UsageTracking.generate(report_config, enabled, date)
+        UsageTracking.generate_report_data(report_config, enabled, date)
 
       assert String.match?(version, ~r/\A\d+\.\d+\.\d+\z/)
     end
@@ -1652,24 +1462,24 @@ defmodule Lightning.UsageTrackingTest do
       _user_1 =
         insert(
           :user,
-          inserted_at: ~U[2024-02-04 01:00:00Z]
+          inserted_at: ~U[2024-02-25 23:59:59Z]
         )
 
       _user_2 =
         insert(
           :user,
-          inserted_at: ~U[2024-02-04 01:00:00Z]
+          inserted_at: ~U[2024-02-25 23:59:59Z]
         )
 
       _user_3 =
         insert(
           :user,
-          inserted_at: ~U[2024-02-04 01:00:00Z]
+          inserted_at: ~U[2024-02-26 00:00:00Z]
         )
 
       assert %{
-               instance: %{no_of_users: 3}
-             } = UsageTracking.generate(report_config, enabled, date)
+               instance: %{no_of_users: 2}
+             } = UsageTracking.generate_report_data(report_config, enabled, date)
     end
 
     test "includes the total number of active users", %{
@@ -1717,7 +1527,7 @@ defmodule Lightning.UsageTrackingTest do
 
       assert %{
                instance: %{no_of_active_users: 1}
-             } = UsageTracking.generate(report_config, enabled, date)
+             } = UsageTracking.generate_report_data(report_config, enabled, date)
     end
 
     test "includes the operating system details", %{
@@ -1732,7 +1542,7 @@ defmodule Lightning.UsageTrackingTest do
       assert String.match?(os_name, ~r/.{5,}/)
 
       assert %{instance: %{operating_system: ^os_name}} =
-               UsageTracking.generate(report_config, enabled, date)
+               UsageTracking.generate_report_data(report_config, enabled, date)
     end
 
     test "includes project details for projects created before date", %{
@@ -1747,7 +1557,7 @@ defmodule Lightning.UsageTrackingTest do
       project_3 = build_project(3, date)
 
       %{projects: projects} =
-        UsageTracking.generate(report_config, enabled, date)
+        UsageTracking.generate_report_data(report_config, enabled, date)
 
       projects
       |> assert_metrics(
@@ -1772,7 +1582,7 @@ defmodule Lightning.UsageTrackingTest do
       date: date
     } do
       assert %{version: "2"} =
-               UsageTracking.generate(report_config, enabled, date)
+               UsageTracking.generate_report_data(report_config, enabled, date)
     end
 
     test "indicates the applicable report date", %{
@@ -1781,12 +1591,12 @@ defmodule Lightning.UsageTrackingTest do
       date: date
     } do
       assert %{report_date: ^date} =
-               UsageTracking.generate(report_config, enabled, date)
+               UsageTracking.generate_report_data(report_config, enabled, date)
     end
   end
 
-  describe ".generate/3 - cleartext uuids enabled" do
-    setup [:generate_setup, :setup_cleartext_uuids_enabled]
+  describe ".generate_report_data/3 - cleartext uuids enabled" do
+    setup [:generate_report_data_setup, :setup_cleartext_uuids_enabled]
 
     test "sets the time that the report was generated at", %{
       cleartext_enabled: enabled,
@@ -1794,7 +1604,7 @@ defmodule Lightning.UsageTrackingTest do
       date: date
     } do
       %{generated_at: generated_at} =
-        UsageTracking.generate(report_config, enabled, date)
+        UsageTracking.generate_report_data(report_config, enabled, date)
 
       assert DateTime.diff(DateTime.utc_now(), generated_at, :second) < 1
     end
@@ -1807,7 +1617,7 @@ defmodule Lightning.UsageTrackingTest do
       %{instance_id: instance_id} = report_config
 
       %{instance: %{hashed_uuid: hashed_uuid}} =
-        UsageTracking.generate(report_config, enabled, date)
+        UsageTracking.generate_report_data(report_config, enabled, date)
 
       assert hashed_uuid == build_hash(instance_id)
     end
@@ -1821,7 +1631,7 @@ defmodule Lightning.UsageTrackingTest do
 
       assert %{
                instance: %{cleartext_uuid: ^instance_id}
-             } = UsageTracking.generate(report_config, enabled, date)
+             } = UsageTracking.generate_report_data(report_config, enabled, date)
     end
 
     test "indicates the version of lightning present on the instance", %{
@@ -1831,7 +1641,7 @@ defmodule Lightning.UsageTrackingTest do
     } do
       # Temporarily water-down the test to address constraints imposed by CI.
       %{instance: %{version: version}} =
-        UsageTracking.generate(report_config, enabled, date)
+        UsageTracking.generate_report_data(report_config, enabled, date)
 
       assert String.match?(version, ~r/\A\d+\.\d+\.\d+\z/)
     end
@@ -1844,24 +1654,24 @@ defmodule Lightning.UsageTrackingTest do
       _user_1 =
         insert(
           :user,
-          inserted_at: ~U[2024-02-04 01:00:00Z]
+          inserted_at: ~U[2024-02-25 23:59:59Z]
         )
 
       _user_2 =
         insert(
           :user,
-          inserted_at: ~U[2024-02-04 01:00:00Z]
+          inserted_at: ~U[2024-02-25 23:59:59Z]
         )
 
       _user_3 =
         insert(
           :user,
-          inserted_at: ~U[2024-02-04 01:00:00Z]
+          inserted_at: ~U[2024-02-26 00:00:00Z]
         )
 
       assert %{
-               instance: %{no_of_users: 3}
-             } = UsageTracking.generate(report_config, enabled, date)
+               instance: %{no_of_users: 2}
+             } = UsageTracking.generate_report_data(report_config, enabled, date)
     end
 
     test "includes the total number of active users", %{
@@ -1909,7 +1719,7 @@ defmodule Lightning.UsageTrackingTest do
 
       assert %{
                instance: %{no_of_active_users: 1}
-             } = UsageTracking.generate(report_config, enabled, date)
+             } = UsageTracking.generate_report_data(report_config, enabled, date)
     end
 
     test "includes the operating system details", %{
@@ -1924,7 +1734,7 @@ defmodule Lightning.UsageTrackingTest do
       assert String.match?(os_name, ~r/.{5,}/)
 
       assert %{instance: %{operating_system: ^os_name}} =
-               UsageTracking.generate(report_config, enabled, date)
+               UsageTracking.generate_report_data(report_config, enabled, date)
     end
 
     test "includes project details for projects created before date", %{
@@ -1939,7 +1749,7 @@ defmodule Lightning.UsageTrackingTest do
       project_3 = build_project(3, date)
 
       %{projects: projects} =
-        UsageTracking.generate(report_config, enabled, date)
+        UsageTracking.generate_report_data(report_config, enabled, date)
 
       projects
       |> assert_metrics(
@@ -1964,7 +1774,7 @@ defmodule Lightning.UsageTrackingTest do
       date: date
     } do
       assert %{version: "2"} =
-               UsageTracking.generate(report_config, enabled, date)
+               UsageTracking.generate_report_data(report_config, enabled, date)
     end
 
     test "indicates the applicable report date", %{
@@ -1973,7 +1783,7 @@ defmodule Lightning.UsageTrackingTest do
       date: date
     } do
       assert %{report_date: ^date} =
-               UsageTracking.generate(report_config, enabled, date)
+               UsageTracking.generate_report_data(report_config, enabled, date)
     end
   end
 
@@ -2081,7 +1891,12 @@ defmodule Lightning.UsageTrackingTest do
         end
       )
 
-    [user | active_users]
+    day_after = report_time |> DateTime.add(1, :day)
+
+    excluded_user =
+      build(:project_user, user: build(:user, inserted_at: day_after))
+
+    [excluded_user | [user | active_users]]
   end
 
   defp insert_active_user(active_user_threshold_time, report_time) do
@@ -2236,7 +2051,7 @@ defmodule Lightning.UsageTrackingTest do
 
   defp dataclip_builder, do: build(:dataclip)
 
-  defp generate_setup(context) do
+  defp generate_report_data_setup(context) do
     Map.merge(
       context,
       %{
