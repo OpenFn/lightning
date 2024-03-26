@@ -1058,6 +1058,90 @@ defmodule Lightning.UsageTrackingTest do
     end
   end
 
+  describe ".finished_steps/2" do
+    test "returns all run steps that finished on report date" do
+      date = ~D[2024-02-05]
+      finished_at = ~U[2024-02-05 12:11:10Z]
+      other_finished_at = ~U[2024-02-04 12:11:10Z]
+
+      run_1 =
+        insert(
+          :run,
+          work_order: build(:workorder),
+          dataclip: build(:dataclip),
+          starting_job: build(:job)
+        )
+
+      run_2 =
+        insert(
+          :run,
+          work_order: build(:workorder),
+          dataclip: build(:dataclip),
+          starting_job: build(:job)
+        )
+
+      finished_1 = insert_steps(run_1, finished_at, other_finished_at)
+      finished_2 = insert_steps(run_2, finished_at, other_finished_at)
+
+      run_1 = run_1 |> Repo.preload(:steps)
+      run_2 = run_2 |> Repo.preload(:steps)
+
+      runs = [run_1, run_2]
+      expected_ids = for step <- finished_1 ++ finished_2, do: step.id
+
+      actual_ids =
+        for step <- UsageTracking.finished_steps(runs, date) do
+          step.id
+        end
+
+      assert(actual_ids == expected_ids)
+    end
+
+    defp insert_steps(run, finished_at, other_finished_at) do
+      insert_step = fn ->
+        insert(
+          :step,
+          finished_at: finished_at,
+          job: fn -> build(:job) end
+        )
+      end
+
+      finished =
+        insert_list(
+          2,
+          :run_step,
+          run: run,
+          step: insert_step
+        )
+
+      _finished_other =
+        insert(
+          :run_step,
+          run: run,
+          step:
+            insert(
+              :step,
+              finished_at: other_finished_at,
+              job: build(:job)
+            )
+        )
+
+      _unfinished =
+        insert(
+          :run_step,
+          run: run,
+          step:
+            insert(
+              :step,
+              finished_at: nil,
+              job: build(:job)
+            )
+        )
+
+      for run_step <- finished, do: run_step.step
+    end
+  end
+
   defp contains?(result, desired_project) do
     result |> Enum.find(fn project -> project.id == desired_project.id end)
   end

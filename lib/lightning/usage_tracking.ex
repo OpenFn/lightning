@@ -194,7 +194,7 @@ defmodule Lightning.UsageTracking do
 
   def generate_metrics(%Workflow{} = workflow, cleartext_enabled, date) do
     runs = finished_runs(workflow.runs, date)
-    steps = RunService.finished_steps(workflow.runs, date)
+    steps = finished_steps(workflow.runs, date)
     active_jobs = RunService.unique_jobs(steps, date)
 
     %{
@@ -256,6 +256,12 @@ defmodule Lightning.UsageTracking do
 
   def finished_runs(all_runs, date) do
     all_runs
+    |> finished_on(date)
+  end
+
+  def finished_steps(runs, date) do
+    runs
+    |> Enum.flat_map(& &1.steps)
     |> finished_on(date)
   end
 

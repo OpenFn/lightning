@@ -4,12 +4,6 @@ defmodule Lightning.UsageTracking.RunService do
 
 
   """
-  def finished_steps(runs, date) do
-    runs
-    |> Enum.flat_map(& &1.steps)
-    |> finished_on(date)
-  end
-
   def unique_jobs(steps, date) do
     steps
     |> finished_on(date)
