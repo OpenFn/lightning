@@ -667,35 +667,36 @@
           <div class="hidden sm:block" aria-hidden="true">
             <div class="py-2"></div>
           </div>
-          <div class="bg-white p-4 rounded-md">
-            <%= if  @github_enabled do %>
-              <%= if @project_repo_connection do %>
-                <.live_component
-                  id="github-sync-component"
-                  module={LightningWeb.ProjectLive.GithubSyncComponent}
-                  user={@current_user}
-                  project_repo_connection={@project_repo_connection}
-                  project={@project}
-                  action={:show}
-                  can_install_github={@can_install_github}
-                  can_initiate_github_sync={@can_initiate_github_sync}
-                />
-              <% else %>
-                <%= if @can_install_github do %>
-                  <%= if user_has_valid_oauth_token(@current_user) do %>
-                    <.live_component
-                      id="github-sync-component"
-                      module={LightningWeb.ProjectLive.GithubSyncComponent}
-                      user={@current_user}
-                      project_repo_connection={
-                        %VersionControl.ProjectRepoConnection{}
-                      }
-                      project={@project}
-                      action={:new}
-                      can_install_github={@can_install_github}
-                      can_initiate_github_sync={@can_initiate_github_sync}
-                    />
-                  <% else %>
+
+          <%= if  @github_enabled do %>
+            <%= if @project_repo_connection do %>
+              <.live_component
+                id="github-sync-component"
+                module={LightningWeb.ProjectLive.GithubSyncComponent}
+                user={@current_user}
+                project_repo_connection={@project_repo_connection}
+                project={@project}
+                action={:show}
+                can_install_github={@can_install_github}
+                can_initiate_github_sync={@can_initiate_github_sync}
+              />
+            <% else %>
+              <%= if @can_install_github do %>
+                <%= if user_has_valid_oauth_token(@current_user) do %>
+                  <.live_component
+                    id="github-sync-component"
+                    module={LightningWeb.ProjectLive.GithubSyncComponent}
+                    user={@current_user}
+                    project_repo_connection={
+                      %VersionControl.ProjectRepoConnection{}
+                    }
+                    project={@project}
+                    action={:new}
+                    can_install_github={@can_install_github}
+                    can_initiate_github_sync={@can_initiate_github_sync}
+                  />
+                <% else %>
+                  <div class="bg-white p-4 rounded-md">
                     <h6 class="font-medium text-black">
                       Connect your OpenFn account to GitHub
                     </h6>
@@ -709,18 +710,20 @@
                         user={@current_user}
                       />
                     </div>
-                  <% end %>
+                  </div>
                 <% end %>
               <% end %>
-            <% else %>
+            <% end %>
+          <% else %>
+            <div class="bg-white p-4 rounded-md">
               <h6 class="font-medium text-black">
                 Sync to GitHub
               </h6>
               <small class="block mt-1 text-xs text-gray-600">
                 Version Control is not configured for this Lightning instance. Contact the superuser for more information.
               </small>
-            <% end %>
-          </div>
+            </div>
+          <% end %>
         </LightningWeb.Components.Common.panel_content>
         <LightningWeb.Components.Common.panel_content for_hash="data-storage">
           <div>
