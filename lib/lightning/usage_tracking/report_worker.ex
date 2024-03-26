@@ -7,11 +7,8 @@ defmodule Lightning.UsageTracking.ReportWorker do
     queue: :background,
     max_attempts: 1
 
-  alias Lightning.Repo
   alias Lightning.UsageTracking
   alias Lightning.UsageTracking.Client
-  alias Lightning.UsageTracking.Report
-  alias Lightning.UsageTracking.ReportData
 
   require Logger
   @impl Oban.Worker
@@ -25,27 +22,17 @@ defmodule Lightning.UsageTracking.ReportWorker do
     if env[:enabled] && config do
       cleartext_uuids_enabled = env[:cleartext_uuids_enabled]
 
-      host = env[:host]
+      case UsageTracking.insert_report(config, cleartext_uuids_enabled, date) do
+        {:ok, report} ->
+          report.data
+          |> Client.submit_metrics(env[:host])
+          |> UsageTracking.update_report_submission!(report)
 
-      data = ReportData.generate(config, cleartext_uuids_enabled, date)
-
-      Client.submit_metrics(data, host) |> create_report(data, date)
+        _error ->
+          nil
+      end
     end
 
     :ok
-  end
-
-  defp create_report(:ok, data, date) do
-    %Report{
-      data: data,
-      report_date: date,
-      submitted: true,
-      submitted_at: DateTime.utc_now()
-    }
-    |> Repo.insert()
-  end
-
-  defp create_report(:error, data, date) do
-    %Report{data: data, report_date: date} |> Repo.insert()
   end
 end
