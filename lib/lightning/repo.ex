@@ -7,16 +7,7 @@ defmodule Lightning.Repo do
 
   @impl true
   def init(_type, config) do
-    {:ok,
-     config
-     |> Keyword.put(:url, System.get_env("DATABASE_URL"))
-     |> Keyword.put(:pool_size, env_to_int("DATABASE_POOL_SIZE", "10"))
-     |> Keyword.put(:timeout, env_to_int("DATABASE_TIMEOUT", "20000"))
-     |> Keyword.put(:queue_target, env_to_int("DATABASE_QUEUE_TARGET", "10000"))
-     |> Keyword.put(
-       :queue_interval,
-       env_to_int("DATABASE_QUEUE_INTERVAL", "1000")
-     )}
+    {:ok, Keyword.put(config, :url, System.get_env("DATABASE_URL"))}
   end
 
   defp env_to_int(env, default) do
