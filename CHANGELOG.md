@@ -29,6 +29,8 @@ and this project adheres to
   [#1931](https://github.com/OpenFn/lightning/issues/1931)
 - Fix edge case that could result in duplicate usage tracking submissions.
   [#1853](https://github.com/OpenFn/lightning/issues/1853)
+- Fix query timeout issue on history retention deletion
+  [#1937](https://github.com/OpenFn/lightning/issues/1937)
 
 ## [v2.2.0] - 2024-03-21
 
