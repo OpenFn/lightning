@@ -9,7 +9,6 @@ defmodule Lightning.UsageTracking do
   alias Lightning.UsageTracking.DailyReportConfiguration
   alias Lightning.UsageTracking.Report
   alias Lightning.UsageTracking.ReportWorker
-  alias Lightning.UsageTracking.RunService
   alias Lightning.UsageTracking.UserService
   alias Lightning.Workflows.Workflow
 
@@ -195,7 +194,7 @@ defmodule Lightning.UsageTracking do
   def generate_metrics(%Workflow{} = workflow, cleartext_enabled, date) do
     runs = finished_runs(workflow.runs, date)
     steps = finished_steps(workflow.runs, date)
-    active_jobs = RunService.unique_jobs(steps, date)
+    active_jobs = unique_jobs(steps, date)
 
     %{
       no_of_active_jobs: Enum.count(active_jobs),
@@ -263,6 +262,13 @@ defmodule Lightning.UsageTracking do
     runs
     |> Enum.flat_map(& &1.steps)
     |> finished_on(date)
+  end
+
+  def unique_jobs(steps, date) do
+    steps
+    |> finished_on(date)
+    |> Enum.map(& &1.job)
+    |> Enum.uniq_by(& &1.id)
   end
 
   defp finished_on(collection, date) do
