@@ -4,6 +4,8 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
   use LightningWeb, :live_component
   alias Lightning.VersionControl
   alias Lightning.VersionControl.ProjectRepoConnection
+  alias Phoenix.LiveView.AsyncResult
+  alias Phoenix.LiveView.JS
 
   @impl true
   def update(
@@ -66,6 +68,16 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
        socket
        |> put_flash(:info, "Connection removed successfully")
        |> push_navigate(to: ~p"/projects/#{project}/settings#vcs")}
+    else
+      {:noreply,
+       socket
+       |> put_flash(:error, "You are not authorized to perform this action")}
+    end
+  end
+
+  def handle_event("reconnect", _params, socket) do
+    if socket.assigns.can_install_github do
+      {:noreply, reconnect_github(socket)}
     else
       {:noreply,
        socket
@@ -139,6 +151,36 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
     end
   end
 
+  defp reconnect_github(%{assigns: assigns} = socket) do
+    repo_connection = assigns.project_repo_connection
+
+    case VersionControl.reconfigure_github_connection(
+           assigns.project_repo_connection,
+           assigns.user
+         ) do
+      {:ok, _} ->
+        socket
+        |> put_flash(:info, "Connection made successfully!")
+        |> assign_async(:verify_connection, fn ->
+          verify_connection(repo_connection)
+        end)
+
+      {:error, _} ->
+        put_flash(
+          socket,
+          :error,
+          "Oops! Looks like you don't have access to this installation in Github"
+        )
+    end
+  end
+
+  defp can_access_github_installation?(repo_connection, async_installations) do
+    repo_connection.__meta__.state == :loaded and async_installations.ok? and
+      Enum.any?(async_installations.result, fn {_name, id} ->
+        id == repo_connection.github_installation_id
+      end)
+  end
+
   defp maybe_fetch_branches(
          %{assigns: %{changeset: changeset, branches: branches}} = socket
        ) do
@@ -210,6 +252,108 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
 
   defp github_config do
     Application.get_env(:lightning, :github_app, [])
+  end
+
+  attr :id, :string, required: true
+  attr :verify_connection, AsyncResult, required: true
+  attr :myself, :any, required: true
+  attr :can_reconnect, :boolean, required: true
+
+  defp verify_connection_banner(assigns) do
+    ~H"""
+    <div class="mb-2">
+      <.async_result assign={@verify_connection}>
+        <:loading>
+          <div class="rounded-md bg-blue-50 p-4">
+            <div class="flex">
+              <div class="flex-shrink-0">
+                <svg
+                  class="animate-spin h-5 w-5 text-blue-400"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                >
+                  <circle
+                    class="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    stroke-width="4"
+                  >
+                  </circle>
+                  <path
+                    class="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                  >
+                  </path>
+                </svg>
+              </div>
+              <div class="ml-3">
+                <p class="text-sm text-blue-700">
+                  Verifying connection...
+                </p>
+              </div>
+            </div>
+          </div>
+        </:loading>
+        <:failed :let={_failure}>
+          <div class="border-l-4 border-yellow-400 bg-yellow-50 p-4">
+            <div class="flex">
+              <div class="flex-shrink-0">
+                <Heroicons.exclamation_triangle class="h-5 w-5 text-yellow-400" />
+              </div>
+              <div class="ml-3">
+                <p class="text-sm text-yellow-700">
+                  Your github project is not properly connected with Lightning.
+                  <%= if @can_reconnect do %>
+                    <a
+                      href="#"
+                      class="font-medium text-yellow-700 underline hover:text-yellow-600"
+                      phx-click="reconnect"
+                      phx-target={@myself}
+                      phx-disable-with="Connecting..."
+                    >
+                      Click here to reconnect
+                    </a>
+                  <% else %>
+                    Reach out to the admin who made this installation to reconnect
+                  <% end %>
+                </p>
+              </div>
+            </div>
+          </div>
+        </:failed>
+        <div class="rounded-md bg-green-50 p-4">
+          <div class="flex">
+            <div class="flex-shrink-0">
+              <Heroicons.check_circle class="h-5 w-5 text-green-400" />
+            </div>
+            <div class="ml-3">
+              <p class="text-sm font-medium text-green-800">
+                Your project is all setup
+              </p>
+            </div>
+            <div class="ml-auto pl-3">
+              <div class="-mx-1.5 -my-1.5">
+                <button
+                  type="button"
+                  class="inline-flex rounded-md bg-green-50 p-1.5 text-green-500 hover:bg-green-100 focus:outline-none focus:ring-2 focus:ring-green-600 focus:ring-offset-2 focus:ring-offset-green-50"
+                >
+                  <span class="sr-only">Dismiss</span>
+                  <Heroicons.x_mark
+                    class="h-5 w-5"
+                    phx-click={JS.toggle(to: "##{@id}")}
+                  />
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </.async_result>
+    </div>
+    """
   end
 
   defp confirm_connection_removal_modal(assigns) do
