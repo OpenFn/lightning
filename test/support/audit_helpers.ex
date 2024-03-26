@@ -1,7 +1,8 @@
 defmodule Lightning.AuditHelpers do
   @moduledoc false
 
-  @audit_schema Application.compile_env!(:lightning, :transaction_audit_schema)
+  @audit_schema Application.compile_env(:lightning, :transaction_auditing)
+                |> Keyword.get(:schema)
 
   @doc """
   Disable transaction capture for the duration of the block.
@@ -36,10 +37,6 @@ defmodule Lightning.AuditHelpers do
 
   def enable_transaction_capture(context) when is_map(context) do
     if context |> Map.get(:disable_audit) do
-      IO.inspect("disabling transaction capture for context",
-        label: "AuditHelpers"
-      )
-
       disable_transaction_capture()
       context
     else

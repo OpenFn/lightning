@@ -7,11 +7,7 @@ defmodule Lightning.WorkflowsTest do
   alias Lightning.Workflows.Trigger
 
   setup :enable_transaction_capture
-  # setup do
-  #   enable_transaction_capture()
 
-  #   :ok
-  # end
   defp create_workflow() do
     {:ok, workflow} =
       params_for(:workflow, project: insert(:project))
@@ -71,7 +67,7 @@ defmodule Lightning.WorkflowsTest do
     end
 
     test "update_workflow/2 with valid data updates the workflow" do
-      workflow = insert(:workflow)
+      workflow = create_workflow()
       update_attrs = %{name: "some-updated-name"}
 
       assert {:ok, workflow} = Workflows.update_workflow(workflow, update_attrs)
@@ -80,11 +76,12 @@ defmodule Lightning.WorkflowsTest do
     end
 
     test "change_workflow/1 returns a workflow changeset" do
-      workflow = insert(:workflow)
+      workflow = create_workflow()
       assert %Ecto.Changeset{} = Workflows.change_workflow(workflow)
     end
   end
 
+  @tag :disable_audit
   describe "finders" do
     test "get_webhook_trigger/1 returns the trigger for a path" do
       %{triggers: [trigger]} =
@@ -100,6 +97,7 @@ defmodule Lightning.WorkflowsTest do
       assert Workflows.get_webhook_trigger("foo").id == trigger.id
     end
 
+    @tag :disable_audit
     test "get_jobs_for_cron_execution/0 returns jobs to run for a given time" do
       t1 = insert(:trigger, %{type: :cron, cron_expression: "5 0 * 8 *"})
       job_0 = insert(:job, %{workflow: t1.workflow})
@@ -345,6 +343,7 @@ defmodule Lightning.WorkflowsTest do
       %{project: project, w1: w1, w2: w2}
     end
 
+    @tag :disable_audit
     test "get_workflows_for/1", %{project: project, w1: w1, w2: w2} do
       results = Workflows.get_workflows_for(project)
 
@@ -366,6 +365,7 @@ defmodule Lightning.WorkflowsTest do
       end
     end
 
+    @tag :disable_audit
     test "to_project_spec/1", %{project: project, w1: w1, w2: w2} do
       workflows = Workflows.get_workflows_for(project)
 
@@ -387,6 +387,7 @@ defmodule Lightning.WorkflowsTest do
              |> length() == 2
     end
 
+    @tag :disable_audit
     test "mark_for_deletion/2", %{project: project, w1: w1, w2: w2} do
       workflows = Workflows.get_workflows_for(project)
 

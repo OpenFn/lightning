@@ -1,7 +1,12 @@
 defmodule Lightning.Repo.Migrations.InstallCarbonite do
   use Ecto.Migration
 
-  @carbonite_prefix Application.compile_env!(:lightning, :transaction_audit_schema)
+  @carbonite_prefix Application.compile_env(:lightning, :transaction_auditing, [])
+                    |> Keyword.get(:schema)
+  @mode Application.compile_env(:lightning, :transaction_auditing, [])
+        |> Keyword.get(:enabled)
+        |> if(do: :capture, else: :ignore)
+
   def up do
     # If you like to install Carbonite's tables into a different schema, add the
     # carbonite_prefix option.
@@ -15,13 +20,10 @@ defmodule Lightning.Repo.Migrations.InstallCarbonite do
     for table <- ["workflows", "jobs", "workflow_edges", "triggers"] do
       Carbonite.Migrations.create_trigger(table, carbonite_prefix: @carbonite_prefix)
 
-      Carbonite.Migrations.put_trigger_config(table, :mode, :ignore,
+      Carbonite.Migrations.put_trigger_config(table, :mode, @mode,
         carbonite_prefix: @carbonite_prefix
       )
     end
-
-    #    Carbonite.Migrations.create_trigger("rabbits", table_prefix: "animals")
-    #    Carbonite.Migrations.create_trigger("rabbits", carbonite_prefix: "carbonite_other")
 
     # Configure trigger options:
     #

@@ -60,15 +60,9 @@ defmodule Lightning.Workflows do
   def create_workflow(attrs \\ %{}) do
     changeset = %Workflow{} |> Workflow.changeset(attrs)
 
-    Ecto.Multi.new()
-    |> Lightning.Auditing.capture_transaction(%{"type" => "created"})
-    |> Ecto.Multi.insert(:workflow, changeset)
-    |> Repo.transaction()
-    |> case do
-      {:ok, %{workflow: workflow}} -> {:ok, workflow}
-      {:error, :workflow, changeset, _} -> {:error, changeset}
-      err -> err
-    end
+    Lightning.Auditing.capture_transaction(%{type: "created"}, fn ->
+      Repo.insert(changeset)
+    end)
   end
 
   @doc """
