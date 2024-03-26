@@ -13,6 +13,8 @@ defmodule Lightning.UsageTracking do
   alias Lightning.UsageTracking.ReportWorker
   alias Lightning.Workflows.Workflow
 
+  @lightning_version Lightning.MixProject.project()[:version]
+
   def enable_daily_report(enabled_at) do
     start_reporting_after = DateTime.to_date(enabled_at)
 
@@ -332,5 +334,42 @@ defmodule Lightning.UsageTracking do
     list_ids = user_list |> Enum.map(& &1.id)
 
     from au in active_users(date), where: au.id in ^list_ids
+  end
+
+  def generate(configuration, cleartext_enabled, date) do
+    %{
+      generated_at: DateTime.utc_now(),
+      instance: instrument_instance(configuration, cleartext_enabled, date),
+      projects: instrument_projects(cleartext_enabled, date),
+      report_date: date,
+      version: "2"
+    }
+  end
+
+  defp instrument_instance(configuration, cleartext_enabled, date) do
+    %DailyReportConfiguration{instance_id: instance_id} = configuration
+
+    instance_id
+    |> instrument_identity(cleartext_enabled)
+    |> Map.merge(%{
+      no_of_active_users: no_of_active_users(date),
+      no_of_users: no_of_users(date),
+      operating_system: operating_system_name(),
+      version: @lightning_version
+    })
+  end
+
+  defp operating_system_name do
+    {_os_family, os_name} = :os.type()
+
+    os_name |> Atom.to_string()
+  end
+
+  defp instrument_projects(cleartext_enabled, date) do
+    date
+    |> find_eligible_projects()
+    |> Enum.map(fn project ->
+      generate_metrics(project, cleartext_enabled, date)
+    end)
   end
 end

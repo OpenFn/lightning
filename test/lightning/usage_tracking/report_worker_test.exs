@@ -7,7 +7,6 @@ defmodule Lightning.UsageTracking.ReportWorkerTest do
   alias Lightning.UsageTracking.Client
   alias Lightning.UsageTracking
   alias Lightning.UsageTracking.Report
-  alias Lightning.UsageTracking.ReportData
   alias Lightning.UsageTracking.ReportWorker
 
   @date ~D[2024-02-25]
@@ -27,7 +26,7 @@ defmodule Lightning.UsageTracking.ReportWorkerTest do
       )
 
       expected_report_data =
-        ReportData.generate(report_config, cleartext_uuids_enabled, @date)
+        UsageTracking.generate(report_config, cleartext_uuids_enabled, @date)
 
       %{expected_report_data: expected_report_data}
     end
@@ -123,7 +122,7 @@ defmodule Lightning.UsageTracking.ReportWorkerTest do
       )
 
       expected_report_data =
-        ReportData.generate(report_config, cleartext_uuids_enabled, @date)
+        UsageTracking.generate(report_config, cleartext_uuids_enabled, @date)
 
       %{expected_report_data: expected_report_data}
     end

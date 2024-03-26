@@ -11,7 +11,6 @@ defmodule Lightning.UsageTracking.ReportWorker do
   alias Lightning.UsageTracking
   alias Lightning.UsageTracking.Client
   alias Lightning.UsageTracking.Report
-  alias Lightning.UsageTracking.ReportData
 
   require Logger
   @impl Oban.Worker
@@ -27,7 +26,7 @@ defmodule Lightning.UsageTracking.ReportWorker do
 
       host = env[:host]
 
-      data = ReportData.generate(config, cleartext_uuids_enabled, date)
+      data = UsageTracking.generate(config, cleartext_uuids_enabled, date)
 
       Client.submit_metrics(data, host) |> create_report(data, date)
     end
