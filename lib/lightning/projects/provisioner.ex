@@ -15,6 +15,7 @@ defmodule Lightning.Projects.Provisioner do
   alias Lightning.Projects.Project
   alias Lightning.Projects.ProjectUser
   alias Lightning.Repo
+  alias Lightning.VersionControl.ProjectRepoConnection
   alias Lightning.Workflows.Edge
   alias Lightning.Workflows.Job
   alias Lightning.Workflows.Trigger
@@ -23,17 +24,21 @@ defmodule Lightning.Projects.Provisioner do
   @doc """
   Import a project.
   """
-  @spec import_document(Project.t() | nil, User.t(), map()) ::
+  @spec import_document(
+          Project.t() | nil,
+          User.t() | ProjectRepoConnection.t(),
+          map()
+        ) ::
           {:error, Ecto.Changeset.t(Project.t())}
           | {:ok, Project.t()}
   def import_document(nil, %User{} = user, data),
     do: import_document(%Project{}, user, data)
 
-  def import_document(project, %User{} = user, data) do
+  def import_document(project, user_or_repo_connection, data) do
     project
     |> maybe_reload_project()
     |> parse_document(data)
-    |> maybe_add_project_user(user)
+    |> maybe_add_project_user(user_or_repo_connection)
     |> Repo.insert_or_update()
     |> case do
       {:ok, %{id: id}} ->
@@ -51,9 +56,10 @@ defmodule Lightning.Projects.Provisioner do
     |> cast_assoc(:workflows, with: &workflow_changeset/2)
   end
 
-  defp maybe_add_project_user(changeset, user) do
-    if needs_initial_project_user?(changeset) do
-      changeset |> add_owner(user)
+  defp maybe_add_project_user(changeset, user_or_repo_connection) do
+    if is_struct(user_or_repo_connection, User) and
+         needs_initial_project_user?(changeset) do
+      changeset |> add_owner(user_or_repo_connection)
     else
       changeset
     end
