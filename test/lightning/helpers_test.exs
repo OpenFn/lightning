@@ -58,12 +58,13 @@ defmodule Lightning.HelpersTest do
 
   describe "version_data" do
     setup do
-      put_temporary_env(:lightning, :image_info, 
+      put_temporary_env(:lightning, :image_info,
         branch: "foo-bar",
         commit: "abc123",
         image_tag: "vx.y.z"
-      ) 
+      )
     end
+
     test "returns data that can be used to represent the instance version" do
       expected = %{
         branch: "foo-bar",

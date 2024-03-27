@@ -75,7 +75,7 @@ defmodule Lightning.Helpers do
   def json_safe(any), do: any
 
   def version_data do
-    %{branch: branch, commit: commit, image_tag: image} = 
+    %{branch: branch, commit: commit, image_tag: image} =
       :lightning
       |> Application.get_env(:image_info)
       |> Enum.into(%{})
