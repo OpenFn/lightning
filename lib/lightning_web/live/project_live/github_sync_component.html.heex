@@ -1,4 +1,4 @@
-<div>
+<div id={@id}>
   <div :if={@action == :new} class="bg-white p-4 rounded-md">
     <.form
       id="project-repo-connection-form"
@@ -150,6 +150,7 @@
 
         <div>
           <.button
+            id="initiate-sync-button"
             disabled={!@can_initiate_github_sync}
             type="button"
             tooltip={

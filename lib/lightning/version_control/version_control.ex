@@ -50,14 +50,12 @@ defmodule Lightning.VersionControl do
          :ok <-
            verify_file_exists(client, repo_connection, deploy_yml_target_path()),
          :ok <- verify_file_exists(client, repo_connection, "project.yml"),
-         :ok <- verify_file_exists(client, repo_connection, ".state.json"),
-         :ok <-
-           verify_repo_secret_exists(
-             client,
-             repo_connection,
-             deploy_secret_name()
-           ) do
-      :ok
+         :ok <- verify_file_exists(client, repo_connection, ".state.json") do
+      verify_repo_secret_exists(
+        client,
+        repo_connection,
+        deploy_secret_name()
+      )
     end
   end
 
@@ -104,12 +102,6 @@ defmodule Lightning.VersionControl do
              }
            ) do
       :ok
-    else
-      {:ok, %Tesla.Env{} = result} ->
-        {:error, result}
-
-      other ->
-        other
     end
   end
 
@@ -117,10 +109,10 @@ defmodule Lightning.VersionControl do
     with {:ok, access_token} <- fetch_user_access_token(user),
          {:ok, client} <- GithubClient.build_bearer_client(access_token) do
       case GithubClient.get_installations(client) do
-        {:ok, %{status: 200, body: body}} ->
+        {:ok, %{body: body}} ->
           {:ok, body}
 
-        {:ok, %{body: body}} ->
+        {:error, %{body: body}} ->
           {:error, body}
       end
     end
@@ -129,10 +121,10 @@ defmodule Lightning.VersionControl do
   def fetch_installation_repos(installation_id) do
     with {:ok, client} <- GithubClient.build_installation_client(installation_id) do
       case GithubClient.get_installation_repos(client) do
-        {:ok, %{status: 200, body: body}} ->
+        {:ok, %{body: body}} ->
           {:ok, body}
 
-        {:ok, %{body: body}} ->
+        {:error, %{body: body}} ->
           {:error, body}
       end
     end
@@ -141,10 +133,10 @@ defmodule Lightning.VersionControl do
   def fetch_repo_branches(installation_id, repo_name) do
     with {:ok, client} <- GithubClient.build_installation_client(installation_id) do
       case GithubClient.get_repo_branches(client, repo_name) do
-        {:ok, %{status: 200, body: body}} ->
+        {:ok, %{body: body}} ->
           {:ok, body}
 
-        {:ok, %{body: body}} ->
+        {:error, %{body: body}} ->
           {:error, body}
       end
     end
@@ -401,12 +393,6 @@ defmodule Lightning.VersionControl do
              %{sha: created_commit["sha"]}
            ) do
       {:ok, updated_ref}
-    else
-      {:ok, %Tesla.Env{} = result} ->
-        {:error, result}
-
-      other ->
-        other
     end
   end
 
@@ -473,30 +459,15 @@ defmodule Lightning.VersionControl do
       encrypted_secret =
         :enacl.box_seal(repo_connection.access_token, public_key)
 
-      case GithubClient.create_repo_secret(
-             client,
-             repo_connection.repo,
-             deploy_secret_name(),
-             %{
-               encrypted_value: Base.encode64(encrypted_secret),
-               key_id: resp_body["key_id"]
-             }
-           ) do
-        {:ok, %{status: status} = resp} when status in [201, 204] ->
-          {:ok, resp}
-
-        {:ok, %Tesla.Env{} = result} ->
-          {:error, result}
-
-        other ->
-          other
-      end
-    else
-      {:ok, %Tesla.Env{} = result} ->
-        {:error, result}
-
-      other ->
-        other
+      GithubClient.create_repo_secret(
+        client,
+        repo_connection.repo,
+        deploy_secret_name(),
+        %{
+          encrypted_value: Base.encode64(encrypted_secret),
+          key_id: resp_body["key_id"]
+        }
+      )
     end
   end
 

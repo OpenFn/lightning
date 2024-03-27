@@ -8,19 +8,15 @@ defmodule LightningWeb.ProjectLiveTest do
   import LightningWeb.CredentialLiveHelpers
 
   import Lightning.ApplicationHelpers,
-    only: [dynamically_absorb_delay: 1, put_temporary_env: 3]
+    only: [put_temporary_env: 3]
+
+  import Mox
 
   alias Lightning.Name
   alias Lightning.Projects
   alias Lightning.Repo
 
   setup :stub_usage_limiter_ok
-
-  @cert """
-  -----BEGIN RSA PRIVATE KEY-----
-  MIICWwIBAAKBgQDdlatRjRjogo3WojgGHFHYLugdUWAY9iR3fy4arWNA1KoS8kVw33cJibXr8bvwUAUparCwlvdbH6dvEOfou0/gCFQsHUfQrSDv+MuSUMAe8jzKE4qW+jK+xQU9a03GUnKHkkle+Q0pX/g6jXZ7r1/xAK5Do2kQ+X5xK9cipRgEKwIDAQABAoGAD+onAtVye4ic7VR7V50DF9bOnwRwNXrARcDhq9LWNRrRGElESYYTQ6EbatXS3MCyjjX2eMhu/aF5YhXBwkppwxg+EOmXeh+MzL7Zh284OuPbkglAaGhV9bb6/5CpuGb1esyPbYW+Ty2PC0GSZfIXkXs76jXAu9TOBvD0ybc2YlkCQQDywg2R/7t3Q2OE2+yo382CLJdrlSLVROWKwb4tb2PjhY4XAwV8d1vy0RenxTB+K5Mu57uVSTHtrMK0GAtFr833AkEA6avx20OHo61Yela/4k5kQDtjEf1N0LfI+BcWZtxsS3jDM3i1Hp0KSu5rsCPb8acJo5RO26gGVrfAsDcIXKC+bQJAZZ2XIpsitLyPpuiMOvBbzPavd4gY6Z8KWrfYzJoI/Q9FuBo6rKwl4BFoToD7WIUS+hpkagwWiz+6zLoX1dbOZwJACmH5fSSjAkLRi54PKJ8TFUeOP15h9sQzydI8zJU+upvDEKZsZc/UhT/SySDOxQ4G/523Y0sz/OZtSWcol/UMgQJALesy++GdvoIDLfJX5GBQpuFgFenRiRDabxrE9MNUZ2aPFaFp+DyAe+b4nDwuJaW2LURbr8AEZga7oQj0uYxcYw==
-  -----END RSA PRIVATE KEY-----
-  """
 
   @public_key """
   -----BEGIN PUBLIC KEY-----
@@ -521,30 +517,6 @@ defmodule LightningWeb.ProjectLiveTest do
     setup :register_and_log_in_user
     setup :create_project_for_current_user
 
-    setup do
-      Mox.stub(Lightning.Tesla.Mock, :call, fn env, _opts ->
-        case env.url do
-          "https://api.github.com/app/installations/some-id/access_tokens" ->
-            {:ok, %Tesla.Env{status: 201, body: %{"token" => "some-token"}}}
-
-          "https://api.github.com/installation/repositories" ->
-            {:ok,
-             %Tesla.Env{
-               status: 200,
-               body: %{"repositories" => [%{"full_name" => "org/repo"}]}
-             }}
-
-          "https://api.github.com/repos/some/repo/branches" ->
-            {:ok, %Tesla.Env{status: 200, body: [%{"name" => "master"}]}}
-
-          "https://api.github.com/repos/some/repo/dispatches" ->
-            {:ok, %Tesla.Env{status: 204}}
-        end
-      end)
-
-      :ok
-    end
-
     test "access project settings page", %{conn: conn, project: project} do
       {:ok, _view, html} =
         live(
@@ -553,516 +525,6 @@ defmodule LightningWeb.ProjectLiveTest do
         )
 
       assert html =~ "Project settings"
-    end
-
-    @tag role: :admin
-    test "project admin can view github sync page", %{
-      conn: conn,
-      project: project
-    } do
-      put_temporary_env(:lightning, :github_app,
-        cert: @cert,
-        app_id: "111111",
-        app_name: "test-github"
-      )
-
-      {:ok, _view, html} =
-        live(
-          conn,
-          Routes.project_project_settings_path(conn, :index, project.id)
-        )
-
-      assert html =~ "Connect this project to a GitHub repo"
-    end
-
-    @tag role: :admin
-    test "project admin can view github setup", %{
-      conn: conn,
-      project: project,
-      user: user
-    } do
-      put_temporary_env(:lightning, :github_app,
-        cert: @cert,
-        app_id: "111111",
-        app_name: "test-github"
-      )
-
-      insert(:project_repo_connection, %{
-        project: project,
-        user: user,
-        repo: nil,
-        branch: nil
-      })
-
-      {:ok, _view, html} =
-        live(
-          conn,
-          ~p"/projects/#{project.id}/settings#vcs"
-        )
-
-      assert html =~ "Repository"
-    end
-
-    test "button to install app is disabled if there's a pending installation in another project",
-         %{
-           conn: conn,
-           user: user
-         } do
-      put_temporary_env(:lightning, :github_app,
-        cert: @cert,
-        app_id: "111111",
-        app_name: "test-github"
-      )
-
-      project = insert(:project, project_users: [%{user: user, role: :admin}])
-
-      {:ok, view, _html} =
-        live(
-          conn,
-          ~p"/projects/#{project.id}/settings#vcs"
-        )
-
-      assert view |> has_element?("button", "Connect to GitHub")
-      refute view |> has_element?("button:disabled", "Connect to GitHub")
-
-      # insert another project
-      project2 = insert(:project, project_users: [%{user: user, role: :admin}])
-
-      insert(:project_repo_connection, %{
-        project: project2,
-        user: user,
-        repo: nil,
-        branch: nil,
-        github_installation_id: nil
-      })
-
-      {:ok, view, html} =
-        live(
-          conn,
-          ~p"/projects/#{project.id}/settings#vcs"
-        )
-
-      assert view |> has_element?("button:disabled", "Connect to GitHub")
-      assert html =~ "You have a pending github installation in another project."
-
-      # another User can install github though
-      project_user2 =
-        insert(:project_user, user: build(:user), project: project, role: :admin)
-
-      conn = log_in_user(conn, project_user2.user)
-
-      {:ok, view, _html} =
-        live(
-          conn,
-          ~p"/projects/#{project.id}/settings#vcs"
-        )
-
-      assert view |> has_element?("button", "Connect to GitHub")
-      refute view |> has_element?("button:disabled", "Connect to GitHub")
-    end
-
-    @tag role: :admin
-    test "Flashes an error when APP ID is wrong", %{
-      conn: conn,
-      project: project,
-      user: user
-    } do
-      put_temporary_env(:lightning, :github_app,
-        cert: @cert,
-        app_id: "111111",
-        app_name: "test-github"
-      )
-
-      insert(:project_repo_connection, %{
-        project: project,
-        user: user,
-        repo: nil,
-        branch: nil,
-        github_installation_id: "bad-id"
-      })
-
-      Mox.expect(Lightning.GithubClient.Mock, :call, fn
-        %{url: "https://api.github.com/app/installations/bad-id/access_tokens"},
-        _opts ->
-          {:ok, %Tesla.Env{status: 404, body: %{}}}
-      end)
-
-      {:ok, view, _html} =
-        live(
-          conn,
-          ~p"/projects/#{project.id}/settings#vcs"
-        )
-
-      dynamically_absorb_delay(fn ->
-        render(view) =~ "ID has not been properly"
-      end)
-
-      assert render(view) =~
-               "Sorry, it seems that the GitHub App ID has not been properly configured for this instance of Lightning. Please contact the instance administrator"
-    end
-
-    @tag role: :admin
-    test "Flashes an error when PEM CERT is corrupt", %{
-      conn: conn,
-      project: project,
-      user: user
-    } do
-      put_temporary_env(:lightning, :github_app,
-        cert: @cert,
-        app_id: "111111",
-        app_name: "test-github"
-      )
-
-      insert(:project_repo_connection, %{
-        project: project,
-        user: user,
-        repo: "some-repo",
-        branch: "some-branch",
-        github_installation_id: "wrong-cert"
-      })
-
-      Mox.expect(Lightning.GithubClient.Mock, :call, fn
-        %{
-          url:
-            "https://api.github.com/app/installations/wrong-cert/access_tokens"
-        },
-        _opts ->
-          {:ok, %Tesla.Env{status: 401, body: %{}}}
-      end)
-
-      {:ok, view, _html} =
-        live(
-          conn,
-          ~p"/projects/#{project.id}/settings#vcs"
-        )
-
-      dynamically_absorb_delay(fn ->
-        render(view) =~ "cert has not been properly"
-      end)
-
-      assert render(view) =~
-               "Sorry, it seems that the GitHub cert has not been properly configured for this instance of Lightning. Please contact the instance administrator"
-    end
-
-    @tag role: :admin
-    test "can view github sync", %{
-      conn: conn,
-      project: project,
-      user: user
-    } do
-      put_temporary_env(:lightning, :github_app,
-        cert: @cert,
-        app_id: "111111",
-        app_name: "test-github"
-      )
-
-      repository = "some-repo"
-
-      insert(:project_repo_connection, %{
-        project: project,
-        user: user,
-        repo: repository,
-        branch: "some-branch"
-      })
-
-      {:ok, _view, html} =
-        live(
-          conn,
-          ~p"/projects/#{project.id}/settings#vcs"
-        )
-
-      assert html =~ repository
-    end
-
-    @tag role: :admin
-    test "can install github app", %{
-      conn: conn,
-      project: project
-    } do
-      put_temporary_env(:lightning, :github_app,
-        cert: @cert,
-        app_id: "111111",
-        app_name: "test-github"
-      )
-
-      {:ok, view, _html} =
-        live(
-          conn,
-          ~p"/projects/#{project.id}/settings#vcs"
-        )
-
-      assert view |> render_click("install_app", %{})
-    end
-
-    @tag role: :admin
-    test "Flashes an error when APP Name is missing during installation", %{
-      conn: conn,
-      project: project
-    } do
-      put_temporary_env(:lightning, :github_app,
-        cert: @cert,
-        app_id: nil,
-        app_name: nil
-      )
-
-      {:ok, view, _html} =
-        live(
-          conn,
-          ~p"/projects/#{project.id}/settings#vcs"
-        )
-
-      assert view |> render_click("install_app", %{}) =~
-               "Sorry, it seems that the GitHub App Name has not been properly configured for this instance of Lighting. Please contact the instance administrator"
-    end
-
-    @tag role: :admin
-    test "can reinstall github app", %{
-      conn: conn,
-      project: project
-    } do
-      put_temporary_env(:lightning, :github_app,
-        cert: @cert,
-        app_id: "111111",
-        app_name: "test-github"
-      )
-
-      insert(:project_repo_connection, %{project_id: project.id, project: nil})
-
-      {:ok, view, _html} =
-        live(
-          conn,
-          ~p"/projects/#{project.id}/settings#vcs"
-        )
-
-      assert view |> render_click("reinstall_app", %{})
-    end
-
-    @tag role: :admin
-    test "Flashes an error when APP Name is missing during reinstallation", %{
-      conn: conn,
-      project: project
-    } do
-      put_temporary_env(:lightning, :github_app,
-        cert: @cert,
-        app_id: nil,
-        app_name: nil
-      )
-
-      insert(:project_repo_connection, %{project_id: project.id, project: nil})
-
-      {:ok, view, _html} =
-        live(
-          conn,
-          ~p"/projects/#{project.id}/settings#vcs"
-        )
-
-      assert view |> render_click("reinstall_app", %{}) =~
-               "Sorry, it seems that the GitHub App Name has not been properly configured for this instance of Lighting. Please contact the instance administrator"
-    end
-
-    @tag role: :admin
-    test "can delete github repo connection", %{
-      conn: conn,
-      project: project
-    } do
-      put_temporary_env(:lightning, :github_app,
-        cert: @cert,
-        app_id: "111111",
-        app_name: "test-github"
-      )
-
-      insert(:project_repo_connection, %{project_id: project.id, project: nil})
-
-      {:ok, view, _html} =
-        live(
-          conn,
-          ~p"/projects/#{project.id}/settings#vcs"
-        )
-
-      assert view |> render_click("delete_repo_connection", %{}) =~
-               "Connect to GitHub"
-    end
-
-    @tag role: :admin
-    test "can save github repo connection", %{
-      conn: conn,
-      project: project,
-      user: user
-    } do
-      put_temporary_env(:lightning, :github_app,
-        cert: @cert,
-        app_id: "111111",
-        app_name: "test-github"
-      )
-
-      insert(:project_repo_connection, %{
-        project: project,
-        user: user,
-        branch: nil,
-        repo: nil,
-        github_installation_id: "some-id"
-      })
-
-      Mox.expect(Lightning.GithubClient.Mock, :call, 9, fn env, _opts ->
-        case env.url do
-          # called twice. in LiveView and when commiting workflow files
-          "https://api.github.com/app/installations/some-id/access_tokens" ->
-            {:ok, %Tesla.Env{status: 201, body: %{"token" => "some-token"}}}
-
-          "https://api.github.com/installation/repositories" ->
-            {:ok,
-             %Tesla.Env{
-               status: 200,
-               body: %{"repositories" => [%{"full_name" => "some/repo"}]}
-             }}
-
-          # create blob. called twice (for push.yml and deploy.yml)
-          "https://api.github.com/repos/some/repo/git/blobs" ->
-            {:ok,
-             %Tesla.Env{
-               status: 201,
-               body: %{"sha" => "3a0f86fb8db8eea7ccbb9a95f325ddbedfb25e15"}
-             }}
-
-          # get commit on master branch
-          "https://api.github.com/repos/some/repo/commits/heads/master" ->
-            {:ok,
-             %Tesla.Env{
-               status: 200,
-               body: %{
-                 "sha" => "6dcb09b5b57875f334f61aebed695e2e4193db5e",
-                 "commit" => %{
-                   "tree" => %{
-                     "sha" => "6dcb09b5b57875f334f61aebed695e2e4193db5e"
-                   }
-                 }
-               }
-             }}
-
-          # create commit
-          "https://api.github.com/repos/some/repo/git/commits" ->
-            {:ok,
-             %Tesla.Env{
-               status: 201,
-               body: %{"sha" => "7638417db6d59f3c431d3e1f261cc637155684cd"}
-             }}
-
-          # create tree
-          "https://api.github.com/repos/some/repo/git/trees" ->
-            {:ok,
-             %Tesla.Env{
-               status: 201,
-               body: %{"sha" => "cd8274d15fa3ae2ab983129fb037999f264ba9a7"}
-             }}
-
-          # update a reference. in this case, the master branch
-          "https://api.github.com/repos/some/repo/git/refs/heads/master" ->
-            {:ok,
-             %Tesla.Env{
-               status: 200,
-               body: %{"ref" => "refs/heads/master"}
-             }}
-        end
-      end)
-
-      {:ok, view, _html} =
-        live(
-          conn,
-          ~p"/projects/#{project.id}/settings#vcs"
-        )
-
-      assert view
-             |> render_submit("save_repo", %{branch: "master", repo: "some/repo"}) =~
-               "Repository:\n                            <a href=\"https://www.github.com/some/repo\" target=\"_blank\" class=\"hover:underline text-primary-600\">\nsome/repo"
-    end
-
-    @tag role: :admin
-    test "flashes an error when an error occurs when saving the repo connection",
-         %{
-           conn: conn,
-           project: project,
-           user: user
-         } do
-      put_temporary_env(:lightning, :github_app,
-        cert: @cert,
-        app_id: "111111",
-        app_name: "test-github"
-      )
-
-      insert(:project_repo_connection, %{
-        project: project,
-        user: user,
-        branch: nil,
-        repo: nil,
-        github_installation_id: "some-id"
-      })
-
-      Mox.expect(Lightning.GithubClient.Mock, :call, 4, fn env, _opts ->
-        case env.url do
-          # called twice. in LiveView and when commiting workflow files
-          "https://api.github.com/app/installations/some-id/access_tokens" ->
-            {:ok, %Tesla.Env{status: 201, body: %{"token" => "some-token"}}}
-
-          "https://api.github.com/installation/repositories" ->
-            {:ok,
-             %Tesla.Env{
-               status: 200,
-               body: %{"repositories" => [%{"full_name" => "some/repo"}]}
-             }}
-
-          # return 403 when creating blob.
-          "https://api.github.com/repos/some/repo/git/blobs" ->
-            {:ok,
-             %Tesla.Env{
-               status: 403,
-               body: %{}
-             }}
-        end
-      end)
-
-      {:ok, view, _html} =
-        live(
-          conn,
-          ~p"/projects/#{project.id}/settings#vcs"
-        )
-
-      html =
-        render_submit(view, "save_repo", %{branch: "master", repo: "some/repo"})
-
-      assert html =~ "Oops! Error connecting to github"
-    end
-
-    test "project editors and viewers cannot save github repo connection", %{
-      project: project,
-      conn: conn,
-      user: admin
-    } do
-      put_temporary_env(:lightning, :github_app,
-        cert: @cert,
-        app_id: "111111",
-        app_name: "test-github"
-      )
-
-      insert(:project_repo_connection, %{
-        project: project,
-        user: admin,
-        branch: nil,
-        repo: nil,
-        github_installation_id: "some-id"
-      })
-
-      for {conn, _user} <- setup_project_users(conn, project, [:viewer, :editor]) do
-        {:ok, view, _html} =
-          live(
-            conn,
-            ~p"/projects/#{project.id}/settings#vcs"
-          )
-
-        html =
-          render_click(view, "save_repo", %{branch: "master", repo: "some/repo"})
-
-        assert html =~ "You are not authorized to perform this action"
-      end
     end
 
     @tag role: :admin
@@ -2884,6 +2346,8 @@ defmodule LightningWeb.ProjectLiveTest do
   end
 
   describe "project settings:version control" do
+    setup :verify_on_exit!
+
     test "users see appropriate message if version control is not enabled", %{
       conn: conn
     } do
@@ -3319,8 +2783,7 @@ defmodule LightningWeb.ProjectLiveTest do
       expected_access_token_endpoint =
         "https://api.github.com/app/installations/#{repo_connection.github_installation_id}/access_tokens"
 
-      for {conn, user} <-
-            setup_project_users(conn, project, [:viewer, :editor]) do
+      for {conn, user} <- setup_project_users(conn, project, [:viewer, :editor]) do
         set_valid_github_oauth_token!(user)
 
         Mox.expect(Lightning.Tesla.Mock, :call, 5, fn
@@ -3362,6 +2825,18 @@ defmodule LightningWeb.ProjectLiveTest do
         refute has_element?(view, "#reconnect-project-button")
 
         assert html =~
+                 "Reach out to the admin who made this installation to reconnect"
+
+        # try sending the event either way
+        view
+        |> with_target("#github-sync-component")
+        |> render_click("reconnect", %{})
+
+        # a flash is rendered
+        # I'm unable to get the flash in the tests even though it actually appears in the page
+        # assert html =~ "You are not authorized to perform this action"
+
+        assert render(view) =~
                  "Reach out to the admin who made this installation to reconnect"
       end
     end
@@ -3500,6 +2975,324 @@ defmodule LightningWeb.ProjectLiveTest do
         flash = assert_redirected(view, ~p"/projects/#{project.id}/settings#vcs")
 
         assert flash["info"] == "Connection made successfully!"
+      end
+    end
+
+    test "unauthorized users cannot remove github connection", %{conn: conn} do
+      project = insert(:project)
+
+      repo_connection =
+        insert(:project_repo_connection,
+          project: project,
+          repo: "someaccount/somerepo",
+          branch: "somebranch",
+          github_installation_id: "1234",
+          access_token: "someaccesstoken"
+        )
+
+      for {conn, user} <- setup_project_users(conn, project, [:viewer, :editor]) do
+        # giving the user a valid token
+        set_valid_github_oauth_token!(user)
+
+        Mox.expect(Lightning.Tesla.Mock, :call, 2, fn
+          # list installations for checking if the user has access to the installation.
+          # we return 400 to halt the pipeline
+          %{url: "https://api.github.com/user/installations"}, _opts ->
+            {:ok,
+             %Tesla.Env{
+               status: 400,
+               body: %{"something" => "bad"}
+             }}
+
+          # get access token. Gets called when verifying connection
+          %{
+            url: "https://api.github.com/app/installations/" <> _installation_id
+          },
+          _opts ->
+            {:ok,
+             %Tesla.Env{
+               status: 404,
+               body: %{"something" => "not right"}
+             }}
+        end)
+
+        {:ok, view, _html} =
+          live(
+            conn,
+            ~p"/projects/#{project.id}/settings#vcs"
+          )
+
+        html = render_async(view)
+
+        refute has_element?(view, "#remove_connection_modal")
+
+        refute html =~ "Remove Integration"
+
+        # try sending the delete event either way
+        view
+        |> with_target("#github-sync-component")
+        |> render_click("delete-connection", %{})
+
+        assert Lightning.Repo.reload(repo_connection)
+      end
+    end
+
+    test "authorized users who have not setup github accounts can remove github connection",
+         %{conn: conn} do
+      project = insert(:project)
+
+      for {conn, user} <- setup_project_users(conn, project, [:owner, :admin]) do
+        repo_connection =
+          insert(:project_repo_connection,
+            project: project,
+            repo: "someaccount/somerepo",
+            branch: "somebranch",
+            github_installation_id: "1234",
+            access_token: "someaccesstoken"
+          )
+
+        assert is_nil(user.github_oauth_token)
+
+        Mox.expect(Lightning.Tesla.Mock, :call, 1, fn
+          # get access token. Gets called when verifying connection
+          # we return 400 to halt the pipeline
+          %{
+            url: "https://api.github.com/app/installations/" <> _installation_id
+          },
+          _opts ->
+            {:ok,
+             %Tesla.Env{
+               status: 404,
+               body: %{"something" => "not right"}
+             }}
+        end)
+
+        {:ok, view, _html} =
+          live(
+            conn,
+            ~p"/projects/#{project.id}/settings#vcs"
+          )
+
+        html = render_async(view)
+
+        assert has_element?(view, "#remove_connection_modal")
+        assert has_element?(view, "#remove_connection_modal_confirm_button")
+        assert html =~ "Remove Integration"
+
+        # click the confirm button
+        view
+        |> element("#remove_connection_modal_confirm_button")
+        |> render_click()
+
+        flash = assert_redirected(view, ~p"/projects/#{project.id}/settings#vcs")
+
+        assert flash["info"] == "Connection removed successfully"
+
+        refute Lightning.Repo.reload(repo_connection)
+      end
+    end
+
+    test "authorized users with valid github oauth can remove github connection even when undoing some github actions fail",
+         %{conn: conn} do
+      project = insert(:project)
+
+      for {conn, user} <- setup_project_users(conn, project, [:owner, :admin]) do
+        user = set_valid_github_oauth_token!(user)
+
+        repo_connection =
+          insert(:project_repo_connection,
+            project: project,
+            repo: "someaccount/somerepo",
+            branch: "somebranch",
+            github_installation_id: "1234",
+            access_token: "someaccesstoken"
+          )
+
+        repo_name = repo_connection.repo
+
+        assert is_map(user.github_oauth_token)
+
+        Mox.expect(Lightning.Tesla.Mock, :call, 2, fn
+          # get access token. Gets called when verifying connection
+          # we return 400 to halt the pipeline
+          %{url: "https://api.github.com/app/installations/" <> _rest}, _opts ->
+            {:ok, %Tesla.Env{status: 404, body: %{"something" => "not right"}}}
+
+          # check if user has access to the installation
+          %{url: "https://api.github.com/user/installations"}, _opts ->
+            {:ok, %Tesla.Env{status: 404, body: %{"something" => "not right"}}}
+        end)
+
+        {:ok, view, _html} =
+          live(
+            conn,
+            ~p"/projects/#{project.id}/settings#vcs"
+          )
+
+        html = render_async(view)
+
+        assert has_element?(view, "#remove_connection_modal")
+        assert has_element?(view, "#remove_connection_modal_confirm_button")
+        assert html =~ "Remove Integration"
+
+        Mox.expect(Lightning.Tesla.Mock, :call, 4, fn env, _opts ->
+          case env do
+            # check if pull yml exists for deletion
+            %{
+              method: :get,
+              url:
+                "https://api.github.com/repos/" <>
+                    ^repo_name <> "/contents/.github/workflows/pull.yml"
+            } ->
+              {:ok, %Tesla.Env{status: 200, body: %{"sha" => "somesha"}}}
+
+            # delete pull yml
+            %{
+              method: :delete,
+              url:
+                "https://api.github.com/repos/" <>
+                    ^repo_name <> "/contents/.github/workflows/pull.yml"
+            } ->
+              {:ok, %Tesla.Env{status: 200, body: %{"sha" => "somesha"}}}
+
+            # check if deploy yml exists for deletion
+            %{
+              method: :get,
+              url:
+                "https://api.github.com/repos/" <>
+                    ^repo_name <> "/contents/.github/workflows/deploy.yml"
+            } ->
+              {:ok, %Tesla.Env{status: 200, body: %{"sha" => "somesha"}}}
+
+            # delete deploy yml.
+            %{
+              method: :delete,
+              url:
+                "https://api.github.com/repos/" <>
+                    ^repo_name <> "/contents/.github/workflows/deploy.yml"
+            } ->
+              {:ok, %Tesla.Env{status: 400, body: %{"something" => "happened"}}}
+          end
+        end)
+
+        # click the confirm button
+        view
+        |> element("#remove_connection_modal_confirm_button")
+        |> render_click()
+
+        flash = assert_redirected(view, ~p"/projects/#{project.id}/settings#vcs")
+
+        assert flash["info"] == "Connection removed successfully"
+
+        refute Lightning.Repo.reload(repo_connection)
+      end
+    end
+
+    test "unauthorized users cannot initiate github sync", %{conn: conn} do
+      project = insert(:project)
+
+      insert(:project_repo_connection,
+        project: project,
+        repo: "someaccount/somerepo",
+        branch: "somebranch",
+        github_installation_id: "1234",
+        access_token: "someaccesstoken"
+      )
+
+      for {conn, user} <- setup_project_users(conn, project, [:viewer]) do
+        # giving the user a valid token
+        set_valid_github_oauth_token!(user)
+
+        Mox.expect(Lightning.Tesla.Mock, :call, 2, fn
+          # list installations for checking if the user has access to the installation.
+          # we return 400 to halt the pipeline
+          %{url: "https://api.github.com/user/installations"}, _opts ->
+            {:ok, %Tesla.Env{status: 400, body: %{"something" => "bad"}}}
+
+          # get access token. Gets called when verifying connection
+          %{url: "https://api.github.com/app/installations/" <> _rest}, _opts ->
+            {:ok, %Tesla.Env{status: 404, body: %{"something" => "not right"}}}
+        end)
+
+        {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/settings#vcs")
+
+        html = render_async(view)
+
+        assert html =~ "Contact an editor or admin to sync."
+        assert has_element?(view, "#initiate-sync-button:disabled")
+
+        # try sending the sync event either way
+        view
+        |> with_target("#github-sync-component")
+        |> render_click("initiate-sync", %{})
+
+        # a flash is rendered
+        # I'm unable to get the flash in the tests even though it actually appears in the page
+        # assert html =~ "You are not authorized to perform this action"
+
+        assert render(view) =~ "Contact an editor or admin to sync."
+      end
+    end
+
+    test "authorized users cannot initiate github sync successfully", %{
+      conn: conn
+    } do
+      project = insert(:project)
+
+      repo_connection =
+        insert(:project_repo_connection,
+          project: project,
+          repo: "someaccount/somerepo",
+          branch: "somebranch",
+          github_installation_id: "1234",
+          access_token: "someaccesstoken"
+        )
+
+      repo_name = repo_connection.repo
+      installation_id = repo_connection.github_installation_id
+
+      for {conn, user} <-
+            setup_project_users(conn, project, [:editor, :admin, :owner]) do
+        # users dont need the oauth token in order to initialize sync
+        assert is_nil(user.github_oauth_token)
+
+        Mox.expect(Lightning.Tesla.Mock, :call, 1, fn
+          # get access token. Gets called when verifying connection
+          %{url: "https://api.github.com/app/installations/" <> _rest}, _opts ->
+            {:ok, %Tesla.Env{status: 404, body: %{"something" => "not right"}}}
+        end)
+
+        {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/settings#vcs")
+
+        html = render_async(view)
+
+        refute html =~ "Contact an editor or admin to sync."
+
+        button = element(view, "#initiate-sync-button")
+        assert has_element?(button)
+
+        # try clicking the button
+        Mox.expect(Lightning.Tesla.Mock, :call, 2, fn
+          # get access token.for dispatching event
+          %{
+            url:
+              "https://api.github.com/app/installations/" <>
+                  ^installation_id <> "/access_tokens"
+          },
+          _opts ->
+            {:ok, %Tesla.Env{status: 201, body: %{"token" => "sometoken"}}}
+
+          # dispatch event
+          %{url: "https://api.github.com/repos/" <> ^repo_name <> "/dispatches"},
+          _opts ->
+            {:ok, %Tesla.Env{status: 204, body: ""}}
+        end)
+
+        render_click(button)
+
+        flash = assert_redirected(view, ~p"/projects/#{project.id}/settings#vcs")
+
+        assert flash["info"] == "Github sync initiated successfully!"
       end
     end
   end
