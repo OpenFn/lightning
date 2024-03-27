@@ -22,12 +22,16 @@ defmodule Lightning.Workflows.SnapshotsTest do
 
     workflow_id = workflow.id
 
-    assert Carbonite.Query.current_transaction(carbonite_prefix: audit_schema())
+    assert Carbonite.Query.current_transaction(
+             carbonite_prefix: Lightning.Config.audit_schema()
+           )
            |> Repo.one!()
            |> Map.fetch!(:meta) == %{"type" => "created"}
 
     [create_changes] =
-      Carbonite.Query.changes(workflow, carbonite_prefix: audit_schema())
+      Carbonite.Query.changes(workflow,
+        carbonite_prefix: Lightning.Config.audit_schema()
+      )
       |> Repo.all()
 
     assert %Carbonite.Change{
@@ -45,33 +49,9 @@ defmodule Lightning.Workflows.SnapshotsTest do
     workflow
     |> Workflows.update_workflow(%{name: "new name", jobs: [params_for(:job)]})
 
-    Carbonite.Query.transactions(carbonite_prefix: audit_schema())
+    Carbonite.Query.transactions(
+      carbonite_prefix: Lightning.Config.audit_schema()
+    )
     |> Repo.all()
-
-    # Carbonite.process(
-    #   Lightning.Repo,
-    #   "workflows",
-    #   [min_age: nil, carbonite_prefix: audit_schema()],
-    #   fn transactions, _memo ->
-    #     IO.inspect(transactions, label: "transactions")
-    #     :cont
-    #   end
-    # )
-
-    # Carbonite.process(
-    #   Lightning.Repo,
-    #   "workflows",
-    #   [min_age: nil],
-    #   fn _transactions, _memo ->
-    #     raise "should not be called"
-    #   end
-    # )
   end
-
-  # defp current_transaction_changes() do
-  #     Carbonite.Query.current_transaction()
-  #     |> Ecto.Query.preload(:changes)
-  #     |> Repo.one!()
-
-  # end
 end

@@ -18,26 +18,11 @@ defmodule Lightning.Auditing do
     |> Repo.paginate(params)
   end
 
-  @schema Application.compile_env(:lightning, :transaction_auditing, [])
-          |> then(fn opts ->
-            if opts[:enabled] || false do
-              opts[:schema] ||
-                raise """
-                  You must configure the transaction auditing schema in your config.exs file.
-                  Add the following to your config.exs file:
-
-                  config :lightning, :transaction_auditing, schema: "audit_transactions"
-                """
-            else
-              opts[:schema]
-            end
-          end)
-
   @spec capture_transaction(Ecto.Multi.t(), map) :: Ecto.Multi.t()
   def capture_transaction(multi = %Ecto.Multi{}, meta) do
     multi
     |> Carbonite.Multi.insert_transaction(%{meta: meta},
-      carbonite_prefix: @schema
+      carbonite_prefix: Lightning.Config.audit_schema()
     )
   end
 
@@ -45,10 +30,11 @@ defmodule Lightning.Auditing do
   def capture_transaction(meta, func) when is_function(func) do
     Repo.transact(fn ->
       Carbonite.insert_transaction(Lightning.Repo, %{meta: meta},
-        carbonite_prefix: @schema
+        carbonite_prefix: Lightning.Config.audit_schema()
       )
       |> case do
         {:ok, _} -> func.()
+        {:error, _} -> {:error, "Failed to capture transaction."}
       end
     end)
   end

@@ -1,9 +1,6 @@
 defmodule Lightning.AuditHelpers do
   @moduledoc false
 
-  @audit_schema Application.compile_env(:lightning, :transaction_auditing)
-                |> Keyword.get(:schema)
-
   @doc """
   Disable transaction capture for the duration of the block.
   """
@@ -31,7 +28,7 @@ defmodule Lightning.AuditHelpers do
   """
   def insert_empty_audit() do
     Carbonite.insert_transaction(Lightning.Repo, %{},
-      carbonite_prefix: @audit_schema
+      carbonite_prefix: Lightning.Config.audit_schema()
     )
   end
 
@@ -56,11 +53,7 @@ defmodule Lightning.AuditHelpers do
   defp override_mode(mode) do
     Carbonite.override_mode(Lightning.Repo,
       to: mode,
-      carbonite_prefix: @audit_schema
+      carbonite_prefix: Lightning.Config.audit_schema()
     )
-  end
-
-  def audit_schema() do
-    @audit_schema
   end
 end

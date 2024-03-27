@@ -9,6 +9,7 @@ defmodule Lightning.Config do
     @callback worker_token_signer() :: Joken.Signer.t()
     @callback worker_secret() :: binary() | nil
     @callback grace_period() :: integer()
+    @callback audit_schema() :: :ok
 
     def run_token_signer do
       pem =
@@ -34,6 +35,25 @@ defmodule Lightning.Config do
     def grace_period do
       (Application.get_env(:lightning, :max_run_duration_seconds) * 0.2)
       |> trunc()
+    end
+
+    @schema Application.compile_env(:lightning, :transaction_auditing, [])
+            |> then(fn opts ->
+              if opts[:enabled] || false do
+                opts[:schema] ||
+                  raise """
+                    You must configure the transaction auditing schema in your config.exs file.
+                    Add the following to your config.exs file:
+
+                    config :lightning, :transaction_auditing, schema: "audit_transactions"
+                  """
+              else
+                opts[:schema]
+              end
+            end)
+
+    def audit_schema do
+      @schema
     end
   end
 
@@ -64,6 +84,11 @@ defmodule Lightning.Config do
   @impl true
   def grace_period do
     impl().grace_period()
+  end
+
+  @impl true
+  def audit_schema do
+    impl().audit_schema()
   end
 
   defp impl do

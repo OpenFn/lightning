@@ -6,6 +6,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
   import Lightning.WorkflowsFixtures
   import Lightning.JobsFixtures
   import Lightning.Factories
+  import Lightning.AuditHelpers
   import Ecto.Query
 
   alias LightningWeb.CredentialLiveHelpers
@@ -13,6 +14,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
   setup :register_and_log_in_user
   setup :create_project_for_current_user
+  setup :enable_transaction_capture
 
   describe "New credential from project context " do
     setup %{project: project} do
@@ -20,6 +22,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       %{job: job}
     end
 
+    @tag :disable_audit
     test "open credential modal from the job inspector (edit_workflow)", %{
       conn: conn,
       project: project,
@@ -37,6 +40,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       refute has_element?(view, "#project_list")
     end
 
+    @tag :disable_audit
     test "create new credential from job inspector and update the job form", %{
       conn: conn,
       project: project,
@@ -112,6 +116,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
     end
 
     @tag role: :editor
+    @tag :disable_audit
     test "creating a new workflow", %{conn: conn, project: project} do
       {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/w/new")
 
