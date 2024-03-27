@@ -232,10 +232,19 @@ defmodule Lightning.VersionControl do
   # token that expires
   def fetch_user_access_token(
         %User{
-          github_oauth_token: %{"refresh_token_expires_at" => _expiry}
+          github_oauth_token: %{"refresh_token_expires_at" => expiry}
         } = user
       ) do
-    maybe_refresh_access_token(user)
+    {:ok, token_expiry, _offset} =
+      DateTime.from_iso8601(expiry)
+
+    now = DateTime.utc_now()
+
+    if DateTime.after?(token_expiry, now) do
+      maybe_refresh_access_token(user)
+    else
+      {:error, GithubError.invalid_oauth_token("user refresh token has expired")}
+    end
   end
 
   # token that doesn't expire
