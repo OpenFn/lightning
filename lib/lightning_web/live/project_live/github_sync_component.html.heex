@@ -1,8 +1,8 @@
 <div id={@id}>
   <div :if={@action == :new} class="bg-white p-4 rounded-md">
     <.form
-      id="project-repo-connection-form"
       :let={f}
+      id="project-repo-connection-form"
       for={@changeset}
       as={:connection}
       phx-change="validate"
@@ -65,7 +65,7 @@
         </div>
         <div class="sm:col-span-5">
           <.input
-          id="select-branches-input"
+            id="select-branches-input"
             type="select"
             field={f[:branch]}
             label="Branch"

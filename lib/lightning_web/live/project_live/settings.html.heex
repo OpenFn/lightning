@@ -681,38 +681,39 @@
                 can_initiate_github_sync={@can_initiate_github_sync}
               />
             <% else %>
-              <%= if @can_install_github do %>
-                <%= if user_has_valid_oauth_token(@current_user) do %>
-                  <.live_component
-                    id="github-sync-component"
-                    module={LightningWeb.ProjectLive.GithubSyncComponent}
-                    user={@current_user}
-                    project_repo_connection={
-                      %VersionControl.ProjectRepoConnection{}
-                    }
-                    project={@project}
-                    action={:new}
-                    can_install_github={@can_install_github}
-                    can_initiate_github_sync={@can_initiate_github_sync}
-                  />
-                <% else %>
-                  <div class="bg-white p-4 rounded-md">
-                    <h6 class="font-medium text-black">
-                      Connect your OpenFn account to GitHub
-                    </h6>
-                    <small class="block mt-1 text-xs text-gray-600">
-                      To create a new GitHub version control connection you must first connect your OpenFn account to GitHub.
-                      Please click the button below to get started.
-                    </small>
-                    <div class="mt-2">
-                      <GithubComponents.connect_to_github_link
-                        id="connect-github-link"
-                        user={@current_user}
-                      />
-                    </div>
+              <div :if={@can_install_github}>
+                <.live_component
+                  :if={user_has_valid_oauth_token(@current_user)}
+                  id="github-sync-component"
+                  module={LightningWeb.ProjectLive.GithubSyncComponent}
+                  user={@current_user}
+                  project_repo_connection={
+                    %VersionControl.ProjectRepoConnection{}
+                  }
+                  project={@project}
+                  action={:new}
+                  can_install_github={@can_install_github}
+                  can_initiate_github_sync={@can_initiate_github_sync}
+                />
+                <div
+                  :if={!user_has_valid_oauth_token(@current_user)}
+                  class="bg-white p-4 rounded-md"
+                >
+                  <h6 class="font-medium text-black">
+                    Connect your OpenFn account to GitHub
+                  </h6>
+                  <small class="block mt-1 text-xs text-gray-600">
+                    To create a new GitHub version control connection you must first connect your OpenFn account to GitHub.
+                    Please click the button below to get started.
+                  </small>
+                  <div class="mt-2">
+                    <GithubComponents.connect_to_github_link
+                      id="connect-github-link"
+                      user={@current_user}
+                    />
                   </div>
-                <% end %>
-              <% end %>
+                </div>
+              </div>
             <% end %>
           <% else %>
             <div class="bg-white p-4 rounded-md">
