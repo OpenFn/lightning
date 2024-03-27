@@ -16,7 +16,8 @@ defmodule Lightning.Factories do
       project: build(:project),
       repo: "some/repo",
       branch: "branch",
-      github_installation_id: "some-id"
+      github_installation_id: "some-id",
+      access_token: sequence(:token, &"prc_sometoken#{&1}")
     }
   end
 
