@@ -1559,6 +1559,8 @@ defmodule Lightning.UsageTrackingTest do
       %{projects: projects} =
         UsageTracking.generate_report_data(report_config, enabled, date)
 
+      IO.inspect(projects)
+
       projects
       |> assert_metrics(
         target: project_1,
