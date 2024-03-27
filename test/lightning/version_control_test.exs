@@ -46,6 +46,8 @@ defmodule Lightning.VersionControlTest do
                  user
                )
 
+      assert String.starts_with?(repo_connection.access_token, "prc_")
+
       assert Repo.aggregate(ProjectRepoConnection, :count) == 1
 
       assert repo_connection.project_id == project.id
