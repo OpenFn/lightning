@@ -81,6 +81,10 @@ defmodule Lightning.VersionControl do
     Repo.get_by(ProjectRepoConnection, project_id: project_id)
   end
 
+  def get_repo_connection_for_token(token) do
+    Repo.get_by(ProjectRepoConnection, access_token: token)
+  end
+
   @spec inititiate_sync(
           repo_connection :: ProjectRepoConnection.t(),
           user_email :: String.t()
