@@ -4,6 +4,7 @@ defmodule Lightning.UsageTracking do
   """
   import Ecto.Query
 
+  alias Lightning.Helpers
   alias Lightning.Repo
   alias Lightning.UsageTracking.DailyReportConfiguration
   alias Lightning.UsageTracking.Report
@@ -193,6 +194,9 @@ defmodule Lightning.UsageTracking do
   end
 
   def lightning_version do
-    ""
+    IO.inspect(Helpers.version_data())
+    %{image: image, commit: _commit, spec_version: vsn} = Helpers.version_data()
+
+    "#{vsn}:#{image}:sanitised"
   end
 end

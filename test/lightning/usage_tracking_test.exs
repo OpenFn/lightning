@@ -1,9 +1,13 @@
 defmodule Lightning.UsageTrackingTest do
-  use Lightning.DataCase
+  use Lightning.DataCase, async: false
+
+  import Lightning.ApplicationHelpers, only: [put_temporary_env: 3]
+  import Mock
 
   alias Lightning.Repo
   alias Lightning.UsageTracking
   alias Lightning.UsageTracking.DailyReportConfiguration
+  alias Lightning.UsageTracking.GithubClient
   alias Lightning.UsageTracking.Report
   alias Lightning.UsageTracking.ReportData
   alias Lightning.UsageTracking.ReportWorker
@@ -821,10 +825,27 @@ defmodule Lightning.UsageTrackingTest do
     setup_with_mocks([
       {GithubClient, [], [open_fn_commit?: fn "abc123" -> true end]}
     ]) do
-      %{commit: "abc123"}
+      commit = "abc123"
+      spec_version = "v#{Application.spec(:lightning, :vsn)}"
+
+      put_temporary_env(:lightning, :image_info,
+        branch: "does-not-matter",
+        commit: commit
+      )
+
+      %{
+        commit: commit,
+        spec_version: spec_version
+      }
     end
 
-    test "indicates when the image is `edge`" do
+    test "indicates when the image is `edge`", %{
+      commit: commit,
+      spec_version: spec_version
+    } do
+      put_temporary_env(:lightning, :image_info, image: "edge")
+
+      assert UsageTracking.lightning_version() == "#{spec_version}:edge:#{commit}"
     end
 
     test "indicates when the image matches the spec version" do
@@ -836,9 +857,23 @@ defmodule Lightning.UsageTrackingTest do
 
   describe ".lightning_version - commit is not an openfn commit" do
     setup_with_mocks([
-      {GithubClient, [], [open_fn_commit?: fn "abc123" -> true end]}
+      {GithubClient, [], [open_fn_commit?: fn "abc123" -> false end]}
     ]) do
-      %{commit: "abc123"}
+      commit = "abc123"
+      spec_version = "v#{Application.spec(:lightning, :vsn)}"
+
+      put_temporary_env(:lightning, :image_info,
+        branch: "",
+        commit: commit
+      )
+
+      %{spec_version: spec_version}
+    end
+
+    test "indicates when the image is `edge`", %{spec_version: spec_version} do
+      put_temporary_env(:lightning, :image_info, image: "edge")
+
+      assert UsageTracking.lightning_version() == "#{spec_version}:edge:sanitised"
     end
   end
 end
