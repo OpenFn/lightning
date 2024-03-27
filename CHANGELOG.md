@@ -17,6 +17,9 @@ and this project adheres to
 
 ### Added
 
+- Enable users to connect projects to their Github repos and branches that they
+  have access to [#1895](https://github.com/OpenFn/lightning/issues/1895)
+
 ### Changed
 
 - Change all System.get_env calls in runtime.exs to use dotenvy
