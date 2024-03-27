@@ -191,4 +191,8 @@ defmodule Lightning.UsageTracking do
     })
     |> Repo.update!()
   end
+
+  def lightning_version do
+    ""
+  end
 end

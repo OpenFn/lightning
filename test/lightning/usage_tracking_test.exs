@@ -816,4 +816,29 @@ defmodule Lightning.UsageTrackingTest do
              } = updated_report
     end
   end
+
+  describe ".lightning_version - commit is an openfn commit" do
+    setup_with_mocks([
+      {GithubClient, [], [open_fn_commit?: fn "abc123" -> true end]}
+    ]) do
+      %{commit: "abc123"}
+    end
+
+    test "indicates when the image is `edge`" do
+    end
+
+    test "indicates when the image matches the spec version" do
+    end
+
+    test "indicates when the image is neither version nor `edge`" do
+    end
+  end
+
+  describe ".lightning_version - commit is not an openfn commit" do
+    setup_with_mocks([
+      {GithubClient, [], [open_fn_commit?: fn "abc123" -> true end]}
+    ]) do
+      %{commit: "abc123"}
+    end
+  end
 end
