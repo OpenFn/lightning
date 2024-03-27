@@ -299,6 +299,26 @@ defmodule LightningWeb.API.ProvisioningControllerTest do
       assert response.status == 403
     end
 
+    test "is forbidden for an invalid PRC access_token", %{conn: conn} do
+      project = insert(:project)
+      wrong_project = insert(:project)
+
+      wrong_repo_connection =
+        insert(:project_repo_connection, project: wrong_project)
+
+      %{body: body} = valid_payload(project.id)
+
+      conn =
+        Plug.Conn.put_req_header(
+          conn,
+          "authorization",
+          "Bearer #{wrong_repo_connection.access_token}"
+        )
+
+      response = post(conn, ~p"/api/provision", body)
+      assert response.status == 403
+    end
+
     test "fails with a 422 on validation errors", %{conn: conn, user: user} do
       project =
         insert(:project,
@@ -447,6 +467,26 @@ defmodule LightningWeb.API.ProvisioningControllerTest do
         )
 
       %{body: body} = valid_payload(project.id)
+
+      assert post(conn, ~p"/api/provision", body) |> json_response(201)
+    end
+
+    test "allows a valid PRC token to update an existing project", %{
+      conn: conn
+    } do
+      project = insert(:project)
+
+      repo_connection =
+        insert(:project_repo_connection, project: project)
+
+      %{body: body} = valid_payload(project.id)
+
+      conn =
+        Plug.Conn.put_req_header(
+          conn,
+          "authorization",
+          "Bearer #{repo_connection.access_token}"
+        )
 
       assert post(conn, ~p"/api/provision", body) |> json_response(201)
     end
