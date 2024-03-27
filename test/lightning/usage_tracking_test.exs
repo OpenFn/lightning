@@ -2080,13 +2080,14 @@ defmodule Lightning.UsageTrackingTest do
         project_users: build_project_users(count)
       )
 
-    workflows = insert_list(
-      1,
-      :workflow,
-      name: "wf-#{count}",
-      project: project,
-      inserted_at: inserted_at
-    )
+    workflows =
+      insert_list(
+        1,
+        :workflow,
+        name: "wf-#{count}",
+        project: project,
+        inserted_at: inserted_at
+      )
 
     for workflow <- workflows do
       [job | _] = insert_list(count, :job, workflow: workflow)
