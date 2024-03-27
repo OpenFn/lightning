@@ -2,14 +2,12 @@ defmodule LightningWeb.Components.Common do
   @moduledoc false
   use LightningWeb, :component
 
+  alias Lightning.Helpers
   alias Phoenix.LiveView.JS
 
   def version_chip(assigns) do
-    image_info = Application.get_env(:lightning, :image_info)
-    image = image_info[:image_tag]
-    branch = image_info[:branch]
-    commit = image_info[:commit]
-    vsn = "v#{Application.spec(:lightning, :vsn)}"
+    %{image: image, branch: branch, commit: commit, spec_version: vsn} =
+      Helpers.version_data()
 
     {display, message, type} =
       cond do
