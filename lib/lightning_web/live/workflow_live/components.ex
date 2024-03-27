@@ -505,9 +505,11 @@ defmodule LightningWeb.WorkflowLive.Components do
   defp error_to_string(errors) when is_list(errors), do: Enum.join(errors, ", ")
 
   slot :inner_block, required: true
+  slot :tabs, required: false
   attr :class, :string, default: ""
   attr :id, :string, required: true
-  attr :panel_title, :string, required: true
+  attr :panel_title, :string, required: false
+  attr :header_type, :atom, default: :simple
 
   def collapsible_panel(assigns) do
     ~H"""
@@ -525,7 +527,12 @@ defmodule LightningWeb.WorkflowLive.Components do
             id={"#{@id}-panel-header-title"}
             class="text-center font-semibold text-secondary-700 panel-header-title text-xs"
           >
-            <%= @panel_title %>
+            <%= case @header_type do %>
+              <% :simple -> %>
+                <%= @panel_title %>
+              <% :tabbed -> %>
+                <%= render_slot(@tabs) %>
+            <% end %>
           </div>
           <div class="close-button">
             <a
