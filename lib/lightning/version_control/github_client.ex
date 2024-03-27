@@ -14,73 +14,85 @@ defmodule Lightning.VersionControl.GithubClient do
   plug(Tesla.Middleware.JSON)
 
   def create_repo_dispatch_event(client, repo_name, body) do
-    post(client, "/repos/#{repo_name}/dispatches", body)
+    client |> post("/repos/#{repo_name}/dispatches", body) |> handle_resp([204])
   end
 
   def get_installations(client) do
-    get(client, "/user/installations")
+    client |> get("/user/installations") |> handle_resp([200])
   end
 
   def get_installation_repos(client) do
-    get(client, "/installation/repositories")
+    client |> get("/installation/repositories") |> handle_resp([200])
   end
 
   def get_repo_branches(client, repo_name) do
-    get(client, "/repos/#{repo_name}/branches")
+    client |> get("/repos/#{repo_name}/branches") |> handle_resp([200])
   end
 
   def get_repo_content(client, repo, path, ref) do
-    get(client, "/repos/#{repo}/contents/#{path}", query: [ref: ref])
+    client
+    |> get("/repos/#{repo}/contents/#{path}", query: [ref: ref])
+    |> handle_resp([200])
   end
 
   def delete_repo_content(client, repo, path, body) do
-    delete(client, "/repos/#{repo}/contents/#{path}", body: body)
+    client
+    |> delete("/repos/#{repo}/contents/#{path}", body: body)
+    |> handle_resp([200])
   end
 
   def create_blob(client, repo, body) do
-    post(client, "/repos/#{repo}/git/blobs", body)
+    client |> post("/repos/#{repo}/git/blobs", body) |> handle_resp([201])
   end
 
   def create_tree(client, repo, body) do
-    post(client, "/repos/#{repo}/git/trees", body)
+    client |> post("/repos/#{repo}/git/trees", body) |> handle_resp([201])
   end
 
   def get_commit(client, repo, ref) do
-    get(client, "/repos/#{repo}/commits/#{ref}")
+    client |> get("/repos/#{repo}/commits/#{ref}") |> handle_resp([200])
   end
 
   def create_commit(client, repo, body) do
-    post(client, "/repos/#{repo}/git/commits", body)
+    client |> post("/repos/#{repo}/git/commits", body) |> handle_resp([201])
   end
 
   def create_ref(client, repo, body) do
-    post(client, "/repos/#{repo}/git/refs", body)
+    client |> post("/repos/#{repo}/git/refs", body) |> handle_resp([201])
   end
 
   def update_ref(client, repo, ref, body) do
-    post(client, "/repos/#{repo}/git/refs/#{ref}", body)
+    client |> post("/repos/#{repo}/git/refs/#{ref}", body) |> handle_resp([200])
   end
 
   def delete_ref(client, repo, ref) do
-    delete(client, "/repos/#{repo}/git/refs/#{ref}")
+    client |> delete("/repos/#{repo}/git/refs/#{ref}") |> handle_resp([204])
   end
 
   def delete_app_grant(client, app_client_id, token) do
-    delete(client, "/applications/#{app_client_id}/grant",
+    client
+    |> delete("/applications/#{app_client_id}/grant",
       body: %{access_token: token}
     )
+    |> handle_resp([204])
   end
 
   def get_repo_public_key(client, repo) do
-    get(client, "/repos/#{repo}/actions/secrets/public-key")
+    client
+    |> get("/repos/#{repo}/actions/secrets/public-key")
+    |> handle_resp([200])
   end
 
   def get_repo_secret(client, repo, secret_name) do
-    get(client, "/repos/#{repo}/actions/secrets/#{secret_name}")
+    client
+    |> get("/repos/#{repo}/actions/secrets/#{secret_name}")
+    |> handle_resp([200])
   end
 
   def create_repo_secret(client, repo, secret_name, body) do
-    put(client, "/repos/#{repo}/actions/secrets/#{secret_name}", body)
+    client
+    |> put("/repos/#{repo}/actions/secrets/#{secret_name}", body)
+    |> handle_resp([201, 204])
   end
 
   def build_oauth_client do
@@ -159,6 +171,16 @@ defmodule Lightning.VersionControl.GithubClient do
           Sentry.capture_exception(error)
 
           {:error, error}
+      end
+    end
+  end
+
+  defp handle_resp(result, success_statuses) do
+    with {:ok, %Tesla.Env{status: status} = resp} <- result do
+      if status in success_statuses do
+        {:ok, resp}
+      else
+        {:error, resp}
       end
     end
   end
