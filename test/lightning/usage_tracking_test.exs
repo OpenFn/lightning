@@ -855,25 +855,30 @@ defmodule Lightning.UsageTrackingTest do
     end
   end
 
-  describe ".lightning_version - commit is not an openfn commit" do
+  describe ".lightning_version/0 - commit is not an openfn commit" do
     setup_with_mocks([
       {GithubClient, [], [open_fn_commit?: fn "abc123" -> false end]}
     ]) do
       commit = "abc123"
       spec_version = "v#{Application.spec(:lightning, :vsn)}"
 
-      put_temporary_env(:lightning, :image_info,
-        branch: "",
-        commit: commit
-      )
-
-      %{spec_version: spec_version}
+      %{
+        commit: commit,
+        spec_version: spec_version
+      }
     end
 
-    test "indicates when the image is `edge`", %{spec_version: spec_version} do
-      put_temporary_env(:lightning, :image_info, image: "edge")
+    test "indicates when the image is `edge`", %{
+      commit: commit,
+      spec_version: version
+    } do
+      set_env(branch: "ignored", commit: commit, image_tag: "edge")
 
-      assert UsageTracking.lightning_version() == "#{spec_version}:edge:sanitised"
+      assert UsageTracking.lightning_version() == "#{version}:edge:sanitised"
     end
+  end
+
+  defp set_env(values) do
+    put_temporary_env(:lightning, :image_info, values)
   end
 end
