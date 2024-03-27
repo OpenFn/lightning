@@ -1,6 +1,6 @@
 defmodule Lightning.UsageTracking.ResponseProcessor do
   @moduledoc """
-  Utility module to abstract deaing with some of the Tesla plumbing
+  Utility module to abstract dealing with some of the Tesla plumbing
 
   """
   def successful?(%Tesla.Env{status: status}) do
@@ -8,4 +8,7 @@ defmodule Lightning.UsageTracking.ResponseProcessor do
   end
 
   def successful?(_response), do: false
+
+  def successful_200?(%Tesla.Env{status: 200}), do: true
+  def successful_200?(_response), do: false
 end

@@ -4,11 +4,10 @@ defmodule Lightning.UsageTracking.ReportData do
 
 
   """
+  alias Lightning.UsageTracking
   alias Lightning.UsageTracking.DailyReportConfiguration
   alias Lightning.UsageTracking.ProjectMetricsService
   alias Lightning.UsageTracking.UserService
-
-  @lightning_version Lightning.MixProject.project()[:version]
 
   def generate(configuration, cleartext_enabled, date) do
     %{
@@ -29,7 +28,7 @@ defmodule Lightning.UsageTracking.ReportData do
       no_of_active_users: UserService.no_of_active_users(date),
       no_of_users: UserService.no_of_users(date),
       operating_system: operating_system_name(),
-      version: @lightning_version
+      version: UsageTracking.lightning_version()
     })
   end
 

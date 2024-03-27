@@ -1,16 +1,24 @@
 defmodule Lightning.UsageTracking.ReportDataTest do
-  use Lightning.DataCase
+  use Lightning.DataCase, async: false
+
+  import Lightning.ApplicationHelpers, only: [put_temporary_env: 3]
+  import Mock
 
   alias Lightning.UsageTracking
+  alias Lightning.UsageTracking.GithubClient
   alias Lightning.UsageTracking.ProjectMetricsService
   alias Lightning.UsageTracking.ReportData
 
   describe ".generate/3 - cleartext uuids disabled" do
-    setup [
-      :setup_daily_report_config,
-      :setup_cleartext_uuids_disabled,
-      :setup_date
-    ]
+    setup_with_mocks [
+      {GithubClient, [], [open_fn_commit?: fn _ -> true end]}
+    ] do
+      %{}
+      |> setup_data_for_version_generation()
+      |> setup_daily_report_config()
+      |> setup_cleartext_uuids_disabled()
+      |> setup_date()
+    end
 
     test "sets the time that the report was generated at", %{
       cleartext_enabled: enabled,
@@ -48,14 +56,17 @@ defmodule Lightning.UsageTracking.ReportDataTest do
 
     test "indicates the version of lightning present on the instance", %{
       cleartext_enabled: enabled,
+      commit: commit,
       config: report_config,
       date: date
     } do
-      # Temporarily water-down the test to address constraints imposed by CI.
-      %{instance: %{version: version}} =
-        ReportData.generate(report_config, enabled, date)
+      expected = "v#{Application.spec(:lightning, :vsn)}:edge:#{commit}"
 
-      assert String.match?(version, ~r/\A\d+\.\d+\.\d+\z/)
+      assert %{
+               instance: %{
+                 version: ^expected
+               }
+             } = ReportData.generate(report_config, enabled, date)
     end
 
     test "includes the total number of users", %{
@@ -200,11 +211,15 @@ defmodule Lightning.UsageTracking.ReportDataTest do
   end
 
   describe ".generate/3 - cleartext uuids enabled" do
-    setup [
-      :setup_daily_report_config,
-      :setup_cleartext_uuids_enabled,
-      :setup_date
-    ]
+    setup_with_mocks [
+      {GithubClient, [], [open_fn_commit?: fn _ -> true end]}
+    ] do
+      %{}
+      |> setup_data_for_version_generation()
+      |> setup_daily_report_config()
+      |> setup_cleartext_uuids_enabled()
+      |> setup_date()
+    end
 
     test "sets the time that the report was generated at", %{
       cleartext_enabled: enabled,
@@ -244,14 +259,17 @@ defmodule Lightning.UsageTracking.ReportDataTest do
 
     test "indicates the version of lightning present on the instance", %{
       cleartext_enabled: enabled,
+      commit: commit,
       config: report_config,
       date: date
     } do
-      # Temporarily water-down the test to address constraints imposed by CI.
-      %{instance: %{version: version}} =
-        ReportData.generate(report_config, enabled, date)
+      expected = "v#{Application.spec(:lightning, :vsn)}:edge:#{commit}"
 
-      assert String.match?(version, ~r/\A\d+\.\d+\.\d+\z/)
+      assert %{
+               instance: %{
+                 version: ^expected
+               }
+             } = ReportData.generate(report_config, enabled, date)
     end
 
     test "includes the total number of users", %{
@@ -393,6 +411,21 @@ defmodule Lightning.UsageTracking.ReportDataTest do
       assert %{report_date: ^date} =
                ReportData.generate(report_config, enabled, date)
     end
+  end
+
+  defp setup_data_for_version_generation(context) do
+    commit = "abc123"
+
+    put_temporary_env(:lightning, :image_info,
+      branch: "foo-bar",
+      commit: commit,
+      image_tag: "edge"
+    )
+
+    context
+    |> Map.merge(%{
+      commit: commit
+    })
   end
 
   defp setup_daily_report_config(context) do

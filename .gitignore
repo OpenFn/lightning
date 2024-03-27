@@ -60,3 +60,5 @@ priv/openfn
 .env
 .env.dev
 .dev.env
+.dev.override.env
+.test.override.env
