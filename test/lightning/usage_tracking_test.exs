@@ -1133,7 +1133,7 @@ defmodule Lightning.UsageTrackingTest do
     end
 
     defp sorted_ids(collection) do
-      collection |> Enum.map(& &1.id) |> Enum.sort
+      collection |> Enum.map(& &1.id) |> Enum.sort()
     end
   end
 
