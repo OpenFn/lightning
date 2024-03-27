@@ -2554,6 +2554,258 @@ defmodule LightningWeb.ProjectLiveTest do
       options = Floki.find(floki_fragment, "#select-installations-input option")
       assert Enum.count(options) == 1
       options |> hd() |> Floki.raw_html() =~ "Select an installation"
+
+      # let us try refreshing the installation
+      expected_installation = %{
+        "id" => 1234,
+        "account" => %{
+          "type" => "User",
+          "login" => "username"
+        }
+      }
+
+      expected_access_token_endpoint =
+        "https://api.github.com/app/installations/#{expected_installation["id"]}/access_tokens"
+
+      Mox.expect(Lightning.Tesla.Mock, :call, 3, fn
+        # list installations
+        %{url: "https://api.github.com/user/installations"}, _opts ->
+          {:ok,
+           %Tesla.Env{
+             status: 200,
+             body: %{"installations" => [expected_installation]}
+           }}
+
+        # get installation access token. This is called when fetching repos
+        %{url: ^expected_access_token_endpoint}, _opts ->
+          {:ok,
+           %Tesla.Env{
+             status: 201,
+             body: %{"token" => "some-token"}
+           }}
+
+        # list repos
+        %{url: "https://api.github.com/installation/repositories"}, _opts ->
+          {:ok, %Tesla.Env{status: 200, body: %{"repositories" => []}}}
+      end)
+
+      view |> element("#refresh-installation-button") |> render_click()
+
+      html = view |> element("#select-installations-input") |> render_async()
+
+      # we now have 2 options listed
+      floki_fragment = Floki.parse_fragment!(html)
+
+      [installations_input] =
+        Floki.find(floki_fragment, "#select-installations-input")
+
+      options = Floki.children(installations_input)
+      assert Enum.count(options) == 2
+      [default_option, installation_option] = options
+      Floki.raw_html(default_option) =~ "Select an installation"
+
+      Floki.raw_html(installation_option) =~
+        "#{expected_installation["account"]["type"]}: #{expected_installation["account"]["login"]}"
+    end
+
+    test "branches list can be refreshed successfully", %{
+      conn: conn
+    } do
+      expected_installation = %{
+        "id" => "1234",
+        "account" => %{
+          "type" => "User",
+          "login" => "username"
+        }
+      }
+
+      expected_access_token_endpoint =
+        "https://api.github.com/app/installations/#{expected_installation["id"]}/access_tokens"
+
+      expected_repo = %{
+        "full_name" => "someaccount/somerepo"
+      }
+
+      expected_branch_endpoint =
+        "https://api.github.com/repos/#{expected_repo["full_name"]}/branches"
+
+      expected_branch = %{"name" => "somebranch"}
+
+      Mox.expect(Lightning.Tesla.Mock, :call, 5, fn
+        # list installations
+        %{url: "https://api.github.com/user/installations"}, _opts ->
+          {:ok,
+           %Tesla.Env{
+             status: 200,
+             body: %{"installations" => [expected_installation]}
+           }}
+
+        # get installation access token. This is called when fetching repos and branches
+        %{url: ^expected_access_token_endpoint}, _opts ->
+          {:ok,
+           %Tesla.Env{
+             status: 201,
+             body: %{"token" => "some-token"}
+           }}
+
+        # list repos
+        %{url: "https://api.github.com/installation/repositories"}, _opts ->
+          {:ok,
+           %Tesla.Env{status: 200, body: %{"repositories" => [expected_repo]}}}
+
+        # list branches
+        %{url: ^expected_branch_endpoint}, _opts ->
+          {:ok, %Tesla.Env{status: 200, body: [expected_branch]}}
+      end)
+
+      project = insert(:project)
+
+      {conn, user} = setup_project_user(conn, project, :admin)
+      set_valid_github_oauth_token!(user)
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/settings#vcs"
+        )
+
+      render_async(view)
+
+      # lets select the installation
+      view
+      |> form("#project-repo-connection-form",
+        connection: %{github_installation_id: expected_installation["id"]}
+      )
+      |> render_change()
+
+      selected_installation =
+        view
+        |> element("#select-installations-input")
+        |> render_async()
+        |> find_selected_option("#select-installations-input option")
+
+      assert selected_installation =~ expected_installation["id"]
+
+      # lets select the repo
+      view
+      |> form("#project-repo-connection-form",
+        connection: %{
+          github_installation_id: expected_installation["id"],
+          repo: expected_repo["full_name"]
+        }
+      )
+      |> render_change()
+
+      selected_repo =
+        view
+        |> element("#select-repos-input")
+        |> render_async()
+        |> find_selected_option("#select-repos-input option")
+
+      assert selected_repo =~ expected_repo["full_name"]
+
+      # lets select the branch
+      view
+      |> form("#project-repo-connection-form",
+        connection: %{
+          github_installation_id: expected_installation["id"],
+          repo: expected_repo["full_name"],
+          branch: expected_branch["name"]
+        }
+      )
+      |> render_change()
+
+      selected_branch =
+        view
+        |> element("#select-branches-input")
+        |> render_async()
+        |> find_selected_option("#select-branches-input option")
+
+      assert selected_branch =~ expected_branch["name"]
+
+      # deselecting the installation deselects the repo and branch
+      view
+      |> form("#project-repo-connection-form",
+        connection: %{github_installation_id: ""}
+      )
+      |> render_change()
+
+      html = render_async(view)
+
+      refute find_selected_option(html, "#select-repos-input option")
+
+      refute find_selected_option(html, "#select-branches-input option")
+
+      # let us list the branches again by following the ritual again
+      view
+      |> form("#project-repo-connection-form",
+        connection: %{github_installation_id: expected_installation["id"]}
+      )
+      |> render_change()
+
+      Mox.expect(Lightning.Tesla.Mock, :call, 2, fn
+        # get installation access token.
+        %{url: ^expected_access_token_endpoint}, _opts ->
+          {:ok,
+           %Tesla.Env{
+             status: 201,
+             body: %{"token" => "some-token"}
+           }}
+
+        # list branches
+        %{url: ^expected_branch_endpoint}, _opts ->
+          {:ok, %Tesla.Env{status: 200, body: [expected_branch]}}
+      end)
+
+      view
+      |> form("#project-repo-connection-form",
+        connection: %{
+          github_installation_id: expected_installation["id"],
+          repo: expected_repo["full_name"]
+        }
+      )
+      |> render_change()
+
+      # we should now have 2 options listed for the branches
+      # The default and the expected
+      options =
+        view
+        |> element("#select-branches-input")
+        |> render_async()
+        |> Floki.parse_fragment!()
+        |> Floki.find("#select-branches-input option")
+
+      assert Enum.count(options) == 2
+
+      # now let us refresh the branches
+      new_branch = %{"name" => "newbranch"}
+
+      Mox.expect(Lightning.Tesla.Mock, :call, 2, fn
+        # get installation access token.
+        %{url: ^expected_access_token_endpoint}, _opts ->
+          {:ok,
+           %Tesla.Env{
+             status: 201,
+             body: %{"token" => "some-token"}
+           }}
+
+        # list branches
+        %{url: ^expected_branch_endpoint}, _opts ->
+          {:ok, %Tesla.Env{status: 200, body: [expected_branch, new_branch]}}
+      end)
+
+      view |> element("#refresh-branches-button") |> render_click()
+
+      # we should now have 3 options listed for the branches
+      # The default, the expected and the new branch
+      options =
+        view
+        |> element("#select-branches-input")
+        |> render_async()
+        |> Floki.parse_fragment!()
+        |> Floki.find("#select-branches-input option")
+
+      assert Enum.count(options) == 3
     end
 
     test "authorized users can save repo connection successfully",
@@ -3295,6 +3547,14 @@ defmodule LightningWeb.ProjectLiveTest do
         assert flash["info"] == "Github sync initiated successfully!"
       end
     end
+  end
+
+  defp find_selected_option(html, selector) do
+    html
+    |> Floki.parse_fragment!()
+    |> Floki.find(selector)
+    |> Enum.map(&Floki.raw_html/1)
+    |> Enum.find(fn el -> el =~ "selected=\"selected\"" end)
   end
 
   defp find_user_index_in_list(view, user) do
