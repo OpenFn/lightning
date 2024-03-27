@@ -172,8 +172,7 @@ defmodule Lightning.UsageTracking do
     query =
       from p in Project,
         where: p.inserted_at <= ^report_time,
-        # preload: [:users, [workflows: [:jobs, runs: [steps: [:job]]]]]
-        preload: [:users, [workflows: [:jobs, runs: [:steps]]]]
+        preload: [:users, [workflows: [:jobs, runs: [steps: [:job]]]]]
 
     query |> Repo.all()
   end

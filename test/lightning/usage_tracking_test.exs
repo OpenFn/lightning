@@ -1,11 +1,11 @@
 defmodule Lightning.UsageTrackingTest do
   use Lightning.DataCase
 
+  alias Lightning.Projects.Project
   alias Lightning.Repo
   alias Lightning.Run
   alias Lightning.UsageTracking
   alias Lightning.UsageTracking.DailyReportConfiguration
-  alias Lightning.Projects.Project
   alias Lightning.UsageTracking.ReportWorker
 
   require Run
@@ -1559,8 +1559,6 @@ defmodule Lightning.UsageTrackingTest do
       %{projects: projects} =
         UsageTracking.generate_report_data(report_config, enabled, date)
 
-      IO.inspect(projects)
-
       projects
       |> assert_metrics(
         target: project_1,
@@ -2082,7 +2080,13 @@ defmodule Lightning.UsageTrackingTest do
         project_users: build_project_users(count)
       )
 
-    workflows = insert_list(1, :workflow, name: "wf-#{count}", project: project)
+    workflows = insert_list(
+      1,
+      :workflow,
+      name: "wf-#{count}",
+      project: project,
+      inserted_at: inserted_at
+    )
 
     for workflow <- workflows do
       [job | _] = insert_list(count, :job, workflow: workflow)
