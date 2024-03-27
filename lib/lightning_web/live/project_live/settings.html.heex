@@ -688,7 +688,9 @@
                   module={LightningWeb.ProjectLive.GithubSyncComponent}
                   user={@current_user}
                   project_repo_connection={
-                    %VersionControl.ProjectRepoConnection{}
+                    %VersionControl.ProjectRepoConnection{
+                      project_id: @project.id
+                    }
                   }
                   project={@project}
                   action={:new}

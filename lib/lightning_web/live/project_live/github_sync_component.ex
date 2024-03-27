@@ -105,7 +105,7 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
     {:noreply,
      socket
      |> assign(changeset: changeset)
-     |> assign_async(:branches, fn -> {:ok, %{branches: %{}}} end)
+     |> assign_async(:branches, fn -> {:ok, %{branches: %{}}} end, reset: true)
      |> maybe_fetch_branches()}
   end
 
@@ -142,10 +142,12 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
     |> ProjectRepoConnection.changeset(params)
     |> then(fn changeset ->
       installation =
-        Ecto.Changeset.get_change(changeset, :github_installation_id)
+        Ecto.Changeset.get_field(changeset, :github_installation_id)
 
       if is_nil(installation) do
-        changeset |> Ecto.Changeset.change(%{repo: nil, branch: nil})
+        changeset
+        |> Ecto.Changeset.put_change(:repo, nil)
+        |> Ecto.Changeset.put_change(:branch, nil)
       else
         changeset
       end
@@ -206,7 +208,7 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
   defp initiate_github_sync(%{assigns: assigns} = socket) do
     repo_connection = assigns.project_repo_connection
 
-    case VersionControl.inititiate_sync(repo_connection, assigns.user.email) do
+    case VersionControl.initiate_sync(repo_connection, assigns.user.email) do
       :ok ->
         socket
         |> put_flash(:info, "Github sync initiated successfully!")
@@ -237,15 +239,27 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
     repo = Ecto.Changeset.get_field(changeset, :repo)
     branches = (branches.ok? && branches.result) || %{}
 
-    if installation && repo && is_nil(branches[repo]) do
-      # replaces the existing assign. I wish there was a clean way
-      # to merge the result instead
-      assign_async(socket, :branches, fn ->
-        branches = fetch_branches(installation, repo)
-        {:ok, %{branches: Map.new([{repo, branches}])}}
-      end)
-    else
-      socket
+    cond do
+      installation && repo && is_nil(branches[repo]) ->
+        # replaces the existing assign. I wish there was a clean way
+        # to merge the result instead
+        assign_async(
+          socket,
+          :branches,
+          fn ->
+            branches = fetch_branches(installation, repo)
+            {:ok, %{branches: Map.new([{repo, branches}])}}
+          end,
+          reset: true
+        )
+
+      is_nil(installation) or is_nil(repo) ->
+        assign_async(socket, :branches, fn -> {:ok, %{branches: %{}}} end,
+          reset: true
+        )
+
+      true ->
+        socket
     end
   end
 
