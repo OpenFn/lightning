@@ -57,7 +57,10 @@ jobs:
           keys:
             - v1-deps-<< parameters.elixir_version >>-{{ checksum "mix.lock" }}
             - v1-deps-<< parameters.elixir_version >>-
-
+      - run:
+          name: 'Install libsodium'
+          command: |
+            apt-get update && apt-get install -y libsodium-dev
       - run: mix local.hex --force
       - run: mix local.rebar --force
       - run: cd assets && npm install
