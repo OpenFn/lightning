@@ -85,11 +85,11 @@ defmodule Lightning.VersionControl do
     Repo.get_by(ProjectRepoConnection, access_token: token)
   end
 
-  @spec inititiate_sync(
+  @spec initiate_sync(
           repo_connection :: ProjectRepoConnection.t(),
           user_email :: String.t()
         ) :: :ok | {:error, map()}
-  def inititiate_sync(repo_connection, user_email) do
+  def initiate_sync(repo_connection, user_email) do
     with {:ok, client} <-
            GithubClient.build_installation_client(
              repo_connection.github_installation_id
@@ -491,7 +491,7 @@ defmodule Lightning.VersionControl do
          {:ok, tesla_client} <- GithubClient.build_bearer_client(user_token),
          {:ok, _} <- push_workflow_files(tesla_client, repo_connection),
          {:ok, _} <- configure_deploy_secret(tesla_client, repo_connection) do
-      inititiate_sync(repo_connection, user.email)
+      initiate_sync(repo_connection, user.email)
     end
   end
 
