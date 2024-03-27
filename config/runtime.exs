@@ -291,17 +291,9 @@ database_url = System.get_env("DATABASE_URL")
 config :lightning, Lightning.Repo,
   url: database_url,
   pool_size: env!("DATABASE_POOL_SIZE", :integer, 10),
-  timeout: env!("DATABASE_TIMEOUT", :integer, 15_000)
-
-if System.get_env("DATABASE_QUEUE_TARGET") do
-  config :lightning, Lightning.Repo,
-    queue_target: env!("DATABASE_QUEUE_TARGET", :integer, 10_000)
-end
-
-if System.get_env("DATABASE_QUEUE_INTERVAL") do
-  config :lightning, Lightning.Repo,
-    queue_interval: env!("DATABASE_QUEUE_INTERVAL", :integer, 1000)
-end
+  timeout: env!("DATABASE_TIMEOUT", :integer, 15_000),
+  queue_target: env!("DATABASE_QUEUE_TARGET", :integer, 50),
+  queue_interval: env!("DATABASE_QUEUE_INTERVAL", :integer, 1000)
 
 if config_env() == :prod do
   unless database_url do
