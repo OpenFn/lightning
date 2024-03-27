@@ -16,7 +16,7 @@ defmodule LightningWeb.API.JobController do
            ProjectUsers
            |> Permissions.can(
              :access_project,
-             conn.assigns.current_user,
+             conn.assigns.current_resource,
              project
            ) do
       page =
@@ -31,7 +31,7 @@ defmodule LightningWeb.API.JobController do
     pagination_attrs = Map.take(params, ["page_size", "page"])
 
     page =
-      Workflows.Query.jobs_for(conn.assigns.current_user)
+      Workflows.Query.jobs_for(conn.assigns.current_resource)
       |> Lightning.Repo.paginate(pagination_attrs)
 
     render(conn, "index.json", page: page, conn: conn)

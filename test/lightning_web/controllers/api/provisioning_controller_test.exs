@@ -227,6 +227,43 @@ defmodule LightningWeb.API.ProvisioningControllerTest do
 
       assert response == %{"error" => "Forbidden"}
     end
+
+    test "returns a 200 if a valid repo conenction token is provided" do
+      project = insert(:project)
+
+      repo_connection = insert(:project_repo_connection, project: project)
+
+      conn =
+        Plug.Conn.put_req_header(
+          build_conn(),
+          "authorization",
+          "Bearer #{repo_connection.access_token}"
+        )
+
+      response = get(conn, ~p"/api/provision/#{project.id}")
+      assert response.status == 200
+    end
+
+    test "returns a 403 if an invalid repo conenction token is provided" do
+      project_1 = insert(:project)
+      project_2 = insert(:project)
+
+      wrong_repo_connection =
+        insert(:project_repo_connection, project: project_2)
+
+      conn =
+        Plug.Conn.put_req_header(
+          build_conn(),
+          "authorization",
+          "Bearer #{wrong_repo_connection.access_token}"
+        )
+
+      conn = get(conn, ~p"/api/provision/#{project_1.id}")
+
+      response = json_response(conn, 403)
+
+      assert response == %{"error" => "Forbidden"}
+    end
   end
 
   describe "post (with an API token)" do

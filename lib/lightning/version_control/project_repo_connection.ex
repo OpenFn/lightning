@@ -4,6 +4,7 @@ defmodule Lightning.VersionControl.ProjectRepoConnection do
   """
 
   use Ecto.Schema
+  use Joken.Config
 
   import Ecto.Changeset
 
@@ -24,7 +25,7 @@ defmodule Lightning.VersionControl.ProjectRepoConnection do
     field :github_installation_id, :string
     field :repo, :string
     field :branch, :string
-    field :access_token, Lightning.Encrypted.Binary
+    field :access_token, :binary
     belongs_to :project, Project
 
     timestamps()
@@ -45,18 +46,19 @@ defmodule Lightning.VersionControl.ProjectRepoConnection do
     changeset = changeset(project_repo_connection, attrs)
 
     if changeset.valid? do
-      token = generate_access_token(32)
+      project_id = get_field(changeset, :project_id)
+
+      token = "prc_" <> generate_access_token(project_id)
+
       put_change(changeset, :access_token, token)
     else
       changeset
     end
   end
 
-  defp generate_access_token(length) do
-    length
-    |> :crypto.strong_rand_bytes()
-    |> Base.encode64()
-    |> binary_part(0, length)
-    |> String.replace_prefix("", "prc_")
+  defp generate_access_token(project_id) do
+    Joken.generate_and_sign!(default_claims(skip: [:exp]), %{
+      "project_id" => project_id
+    })
   end
 end
