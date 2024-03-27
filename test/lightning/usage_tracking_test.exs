@@ -1074,17 +1074,16 @@ defmodule Lightning.UsageTrackingTest do
 
       finished_1 = insert_steps(run_1, finished_at, other_finished_at)
       finished_2 = insert_steps(run_2, finished_at, other_finished_at)
+      expected_ids = sorted_ids(finished_1 ++ finished_2)
 
       run_1 = run_1 |> Repo.preload(:steps)
       run_2 = run_2 |> Repo.preload(:steps)
-
       runs = [run_1, run_2]
-      expected_ids = for step <- finished_1 ++ finished_2, do: step.id
 
       actual_ids =
-        for step <- UsageTracking.finished_steps(runs, date) do
-          step.id
-        end
+        runs
+        |> UsageTracking.finished_steps(date)
+        |> sorted_ids()
 
       assert actual_ids == expected_ids
     end
@@ -1131,6 +1130,10 @@ defmodule Lightning.UsageTrackingTest do
         )
 
       for run_step <- finished, do: run_step.step
+    end
+
+    defp sorted_ids(collection) do
+      collection |> Enum.map(& &1.id) |> Enum.sort
     end
   end
 
