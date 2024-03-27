@@ -679,7 +679,7 @@ defmodule Lightning.Projects do
     |> Multi.delete_all(:runs, runs_query)
     |> Multi.delete_all(:workorders, workorders_query)
     |> Multi.delete_all(:dataclips, dataclips_query)
-    |> Repo.transaction()
+    |> Repo.transaction(timeout: 100_000)
     |> case do
       {:ok, result} ->
         {:ok, result}
