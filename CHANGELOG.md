@@ -17,6 +17,14 @@ and this project adheres to
 
 ### Added
 
+### Changed
+
+### Fixed
+
+## [v2.2.1] - 2024-03-27
+
+### Added
+
 - Enable users to connect to their Github accounts in preparation for
   streamlined GitHub project sync setup
   [#1894](https://github.com/OpenFn/lightning/issues/1894)
