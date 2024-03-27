@@ -370,14 +370,17 @@ defmodule Lightning.WorkflowLive.Helpers do
         name: "Second Job"
       )
 
-    workflow =
-      build(:workflow, project: project)
-      |> with_job(job_1)
-      |> with_trigger(trigger)
-      |> with_edge({trigger, job_1}, %{condition_type: :always})
-      |> with_job(job_2)
-      |> with_edge({job_1, job_2}, %{condition_type: :on_job_success})
-      |> insert()
+    {:ok, workflow} =
+      Lightning.Auditing.capture_transaction(%{}, fn ->
+        {:ok,
+         build(:workflow, project: project)
+         |> with_job(job_1)
+         |> with_trigger(trigger)
+         |> with_edge({trigger, job_1}, %{condition_type: :always})
+         |> with_job(job_2)
+         |> with_edge({job_1, job_2}, %{condition_type: :on_job_success})
+         |> insert()}
+      end)
 
     %{workflow: workflow |> Lightning.Repo.preload([:jobs, :triggers, :edges])}
   end

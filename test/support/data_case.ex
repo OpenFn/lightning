@@ -28,6 +28,7 @@ defmodule Lightning.DataCase do
       import Lightning.ModelHelpers
 
       import Lightning.DataCase
+      import Lightning.AuditHelpers
 
       use Oban.Testing, repo: Lightning.Repo
     end
@@ -37,12 +38,19 @@ defmodule Lightning.DataCase do
     # Default to Hackney adapter so that Bypass dependent tests continue working
     Mox.stub_with(Lightning.Tesla.Mock, Tesla.Adapter.Hackney)
 
-    pid =
-      Ecto.Adapters.SQL.Sandbox.start_owner!(Lightning.Repo,
-        shared: not tags[:async]
-      )
+    # pid =
+    #   Ecto.Adapters.SQL.Sandbox.start_owner!(Lightning.Repo,
+    #     shared: not tags[:async]
+    #   )
 
-    on_exit(fn -> Ecto.Adapters.SQL.Sandbox.stop_owner(pid) end)
+    # on_exit(fn -> Ecto.Adapters.SQL.Sandbox.stop_owner(pid) end)
+
+    :ok = Ecto.Adapters.SQL.Sandbox.checkout(Lightning.Repo)
+
+    unless tags[:async] do
+      Ecto.Adapters.SQL.Sandbox.mode(Lightning.Repo, {:shared, self()})
+    end
+
     :ok
   end
 end

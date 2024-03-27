@@ -58,9 +58,11 @@ defmodule Lightning.Workflows do
 
   """
   def create_workflow(attrs \\ %{}) do
-    %Workflow{}
-    |> Workflow.changeset(attrs)
-    |> Repo.insert()
+    changeset = %Workflow{} |> Workflow.changeset(attrs)
+
+    Lightning.Auditing.capture_transaction(%{type: "created"}, fn ->
+      Repo.insert(changeset)
+    end)
   end
 
   @doc """
@@ -76,7 +78,15 @@ defmodule Lightning.Workflows do
 
   """
   def update_workflow(%Ecto.Changeset{} = changeset) do
-    Repo.update(changeset)
+    Ecto.Multi.new()
+    |> Lightning.Auditing.capture_transaction(%{"type" => "updated"})
+    |> Ecto.Multi.update(:workflow, changeset)
+    |> Repo.transaction()
+    |> case do
+      {:ok, %{workflow: workflow}} -> {:ok, workflow}
+      {:error, :workflow, changeset, _} -> {:error, changeset}
+      err -> err
+    end
   end
 
   @doc """
@@ -95,7 +105,7 @@ defmodule Lightning.Workflows do
     workflow
     |> maybe_preload([:jobs, :triggers, :edges], attrs)
     |> Workflow.changeset(attrs)
-    |> Repo.update()
+    |> update_workflow()
   end
 
   # Helper to preload associations only if they are present in the attributes

@@ -6,9 +6,22 @@ defmodule Lightning.WorkflowsTest do
   alias Lightning.Workflows
   alias Lightning.Workflows.Trigger
 
+  setup :enable_transaction_capture
+
+  defp create_workflow() do
+    {:ok, workflow} =
+      params_for(:workflow, project: insert(:project))
+      |> Workflows.create_workflow()
+
+    workflow
+  end
+
   describe "workflows" do
     test "list_workflows/0 returns all workflows" do
-      workflow = insert(:workflow)
+      workflow =
+        with_disabled_audit do
+          insert(:workflow)
+        end
 
       assert Workflows.list_workflows() |> Enum.map(fn w -> w.id end) == [
                workflow.id
@@ -16,7 +29,7 @@ defmodule Lightning.WorkflowsTest do
     end
 
     test "get_workflow!/1 returns the workflow with given id" do
-      workflow = insert(:workflow)
+      workflow = create_workflow()
 
       assert Workflows.get_workflow!(workflow.id) |> unload_relation(:project) ==
                workflow |> unload_relation(:project)
@@ -29,7 +42,7 @@ defmodule Lightning.WorkflowsTest do
     test "get_workflow/1 returns the workflow with given id" do
       assert Workflows.get_workflow(Ecto.UUID.generate()) == nil
 
-      workflow = insert(:workflow)
+      workflow = create_workflow()
 
       assert Workflows.get_workflow(workflow.id) |> unload_relation(:project) ==
                workflow |> unload_relation(:project)
@@ -54,7 +67,7 @@ defmodule Lightning.WorkflowsTest do
     end
 
     test "update_workflow/2 with valid data updates the workflow" do
-      workflow = insert(:workflow)
+      workflow = create_workflow()
       update_attrs = %{name: "some-updated-name"}
 
       assert {:ok, workflow} = Workflows.update_workflow(workflow, update_attrs)
@@ -63,11 +76,12 @@ defmodule Lightning.WorkflowsTest do
     end
 
     test "change_workflow/1 returns a workflow changeset" do
-      workflow = insert(:workflow)
+      workflow = create_workflow()
       assert %Ecto.Changeset{} = Workflows.change_workflow(workflow)
     end
   end
 
+  @tag :disable_audit
   describe "finders" do
     test "get_webhook_trigger/1 returns the trigger for a path" do
       %{triggers: [trigger]} =
@@ -83,6 +97,7 @@ defmodule Lightning.WorkflowsTest do
       assert Workflows.get_webhook_trigger("foo").id == trigger.id
     end
 
+    @tag :disable_audit
     test "get_jobs_for_cron_execution/0 returns jobs to run for a given time" do
       t1 = insert(:trigger, %{type: :cron, cron_expression: "5 0 * 8 *"})
       job_0 = insert(:job, %{workflow: t1.workflow})
@@ -212,12 +227,16 @@ defmodule Lightning.WorkflowsTest do
 
   describe "get_trigger_by_webhook/1" do
     test "returns a trigger when a matching custom_path is provided" do
-      trigger = insert(:trigger, custom_path: "some_path")
+      trigger =
+        with_disabled_audit do
+          insert(:trigger, custom_path: "some_path")
+        end
 
       assert trigger |> unload_relation(:workflow) ==
                Workflows.get_trigger_by_webhook("some_path")
     end
 
+    @tag :disable_audit
     test "returns a trigger when a matching id is provided" do
       trigger = insert(:trigger)
 
@@ -225,6 +244,7 @@ defmodule Lightning.WorkflowsTest do
                Workflows.get_trigger_by_webhook(trigger.id)
     end
 
+    @tag :disable_audit
     test "returns nil when no matching trigger is found" do
       insert(:trigger, custom_path: "some_path")
       assert Workflows.get_trigger_by_webhook("non_existent_path") == nil
@@ -232,6 +252,7 @@ defmodule Lightning.WorkflowsTest do
   end
 
   describe "get_edge_by_trigger/1" do
+    @tag :disable_audit
     test "returns an edge when associated trigger is provided" do
       workflow = insert(:workflow)
       trigger = insert(:trigger, workflow: workflow)
@@ -249,6 +270,7 @@ defmodule Lightning.WorkflowsTest do
                |> unload_relations([:target_job, :source_trigger])
     end
 
+    @tag :disable_audit
     test "returns nil when no associated edge is found" do
       trigger = insert(:trigger)
       assert Workflows.get_edge_by_trigger(trigger) == nil
@@ -321,6 +343,7 @@ defmodule Lightning.WorkflowsTest do
       %{project: project, w1: w1, w2: w2}
     end
 
+    @tag :disable_audit
     test "get_workflows_for/1", %{project: project, w1: w1, w2: w2} do
       results = Workflows.get_workflows_for(project)
 
@@ -342,6 +365,7 @@ defmodule Lightning.WorkflowsTest do
       end
     end
 
+    @tag :disable_audit
     test "to_project_spec/1", %{project: project, w1: w1, w2: w2} do
       workflows = Workflows.get_workflows_for(project)
 
@@ -363,6 +387,7 @@ defmodule Lightning.WorkflowsTest do
              |> length() == 2
     end
 
+    @tag :disable_audit
     test "mark_for_deletion/2", %{project: project, w1: w1, w2: w2} do
       workflows = Workflows.get_workflows_for(project)
 

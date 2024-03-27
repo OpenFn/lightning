@@ -148,3 +148,7 @@ config :lightning, :github_app,
   FaFp+DyAe+b4nDwuJaW2LURbr8AEZga7oQj0uYxcYw==
   -----END RSA PRIVATE KEY-----
   """
+
+config :lightning,
+       :transaction_auditing,
+       enabled: false
