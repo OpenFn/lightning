@@ -91,7 +91,7 @@ LABEL branch=${BRANCH}
 LABEL commit=${COMMIT}
 
 RUN apt-get update -y && apt-get install -y libstdc++6 openssl libncurses5 \
-  locales curl gpg
+  locales curl gpg libsodium-dev
 
 RUN apt-get clean && rm -f /var/lib/apt/lists/*_**
 
