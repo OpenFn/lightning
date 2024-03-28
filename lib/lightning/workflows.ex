@@ -10,6 +10,7 @@ defmodule Lightning.Workflows do
   alias Lightning.Workflows.Edge
   alias Lightning.Workflows.Job
   alias Lightning.Workflows.Query
+  alias Lightning.Workflows.Snapshots
   alias Lightning.Workflows.Trigger
   alias Lightning.Workflows.Trigger
   alias Lightning.Workflows.Workflow
@@ -58,9 +59,23 @@ defmodule Lightning.Workflows do
 
   """
   def create_workflow(attrs \\ %{}) do
-    %Workflow{}
-    |> Workflow.changeset(attrs)
-    |> Repo.insert()
+    Ecto.Multi.new()
+    |> Ecto.Multi.insert(:workflow, Workflow.changeset(%Workflow{}, attrs))
+    |> Ecto.Multi.insert(
+      :snapshot,
+      fn %{workflow: workflow} ->
+        Snapshots.build(workflow)
+      end,
+      returning: false
+    )
+    |> Repo.transaction()
+    |> case do
+      {:ok, %{workflow: workflow, snapshot: _snapshot}} ->
+        {:ok, workflow}
+
+      {:error, :workflow, changeset, _} ->
+        {:error, changeset}
+    end
   end
 
   @doc """

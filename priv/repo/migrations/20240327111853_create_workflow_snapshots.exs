@@ -13,7 +13,7 @@ defmodule Lightning.Repo.Migrations.CreateWorkflowSnapshots do
       add :triggers, :map
       add :edges, :map
 
-      timestamps(type: :utc_datetime_usec)
+      timestamps(type: :utc_datetime_usec, updated_at: false)
     end
   end
 end
