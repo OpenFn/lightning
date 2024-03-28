@@ -26,17 +26,19 @@ defmodule Lightning.VersionControl.ProjectRepoConnection do
     field :repo, :string
     field :branch, :string
     field :access_token, :binary
+    field :config_path, :string
     belongs_to :project, Project
 
     timestamps()
   end
 
-  @fields ~w(github_installation_id repo branch project_id)a
+  @required_fields ~w(github_installation_id repo branch project_id)a
+  @other_fields ~w(config_path)a
 
   def changeset(project_repo_connection, attrs) do
     project_repo_connection
-    |> cast(attrs, @fields)
-    |> validate_required(@fields)
+    |> cast(attrs, @required_fields ++ @other_fields)
+    |> validate_required(@required_fields)
     |> unique_constraint(:project_id,
       message: "project already has a repo connection"
     )
