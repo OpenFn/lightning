@@ -76,6 +76,53 @@ defmodule Lightning.Workflows.SnapshotsTest do
     end
   end
 
+  describe "get_all_for/1" do
+    test "by workflow" do
+      workflow = insert(:simple_workflow)
+
+      {:ok, snapshot} = Workflows.Snapshots.create(workflow)
+
+      assert [snapshot] == Workflows.Snapshots.get_all_for(workflow)
+    end
+  end
+
+  describe "latest_for/1" do
+    test "by workflow" do
+      workflow = insert(:simple_workflow)
+
+      {:ok, _} = Workflows.Snapshots.create(workflow)
+      {:ok, snapshot} = Workflows.Snapshots.create(workflow)
+
+      assert snapshot == Workflows.Snapshots.get_latest_for(workflow)
+    end
+  end
+
+  describe "get_or_create_latest_for" do
+    test "without a workflow" do
+      workflow = build(:simple_workflow, id: Ecto.UUID.generate())
+
+      {:error, :no_workflow} =
+        Workflows.Snapshots.get_or_create_latest_for(workflow)
+    end
+
+    test "without an existing snapshot" do
+      workflow = insert(:simple_workflow)
+
+      assert {:ok, snapshot} =
+               Workflows.Snapshots.get_or_create_latest_for(workflow)
+
+      assert snapshot == Workflows.Snapshots.get_latest_for(workflow)
+    end
+
+    test "with an existing snapshot" do
+      workflow = insert(:simple_workflow)
+
+      {:ok, existing} = Workflows.Snapshots.get_or_create_latest_for(workflow)
+      {:ok, latest} = Workflows.Snapshots.get_or_create_latest_for(workflow)
+      assert existing == latest
+    end
+  end
+
   defp assert_edge_equal(snapshot, original) do
     assert only_fields(snapshot) ==
              Map.take(original, [
