@@ -45,7 +45,7 @@ defmodule Lightning.Workflows.Trigger do
       join_through: "trigger_webhook_auth_methods",
       on_replace: :delete
 
-    timestamps()
+    timestamps(type: :utc_datetime)
   end
 
   def new(attrs) do
