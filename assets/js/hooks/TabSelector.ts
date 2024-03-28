@@ -46,7 +46,16 @@ export default {
 
     window.addEventListener('hashchange', this._onHashChange);
 
-    this.hashChanged(this.getHash() || this.defaultHash);
+    const observer = new MutationObserver((mutationsList, observer) => {
+      for (const mutation of mutationsList) {
+        if (mutation.type === 'childList') {
+          this.hashChanged(this.getHash() || this.defaultHash);
+        }
+      }
+    });
+
+    const config = { childList: true, subtree: true };
+    observer.observe(document.body, config);
   },
   hashChanged(nextHash: string) {
     let activePanel: HTMLElement | null = null;

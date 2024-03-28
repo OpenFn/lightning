@@ -122,9 +122,39 @@ defmodule LightningWeb.WorkflowLive.JobView do
       </.collapsible_panel>
       <.collapsible_panel
         id="output-logs"
-        panel_title="Output & Logs"
         class="h-full border border-l-0"
+        header_type={:tabbed}
       >
+        <:tabs>
+          <Common.tab_bar
+            id="1"
+            orientation="horizontal"
+            default_hash="log"
+            in_inspector={true}
+          >
+            <Common.tab_item in_inspector={true} orientation="horizontal" hash="run">
+              <span class="inline-block align-middle">Run</span>
+            </Common.tab_item>
+            <Common.tab_item in_inspector={true} orientation="horizontal" hash="log">
+              <span class="inline-block align-middle">Log</span>
+            </Common.tab_item>
+            <Common.tab_item
+              in_inspector={true}
+              orientation="horizontal"
+              hash="input"
+            >
+              <span class="inline-block align-middle">Input</span>
+            </Common.tab_item>
+            <Common.tab_item
+              in_inspector={true}
+              orientation="horizontal"
+              hash="output"
+            >
+              <span class="inline-block align-middle">Output</span>
+            </Common.tab_item>
+          </Common.tab_bar>
+        </:tabs>
+
         <%= if @follow_run_id do %>
           <%= live_render(
             @socket,
