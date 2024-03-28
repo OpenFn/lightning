@@ -9,7 +9,10 @@ defmodule LightningWeb.ProfileLive.Edit do
 
   @impl true
   def mount(_params, _session, socket) do
-    VersionControl.subscribe(socket.assigns.current_user)
+    if connected?(socket) do
+      VersionControl.subscribe(socket.assigns.current_user)
+    end
+
     {:ok, socket |> assign(:active_menu_item, :profile)}
   end
 

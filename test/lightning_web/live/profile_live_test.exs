@@ -437,7 +437,7 @@ defmodule LightningWeb.ProfileLiveTest do
       {:ok, view, _html} = live(conn, ~p"/profile")
       connect_button = element(view, "#connect-github-link")
       assert has_element?(connect_button)
-      assert render(connect_button) =~ "Reconnect your GitHub account"
+      assert render(connect_button) =~ "Reconnect your Github Account"
       assert render(connect_button) =~ "Your token has expired"
       refute has_element?(view, "#disconnect-github-button")
     end
@@ -459,7 +459,7 @@ defmodule LightningWeb.ProfileLiveTest do
       url_to_hit =
         "https://api.github.com/applications/#{app_config[:client_id]}/grant"
 
-      Mox.expect(Lightning.GithubClient.Mock, :call, fn
+      Mox.expect(Lightning.Tesla.Mock, :call, fn
         %{url: ^url_to_hit}, _opts ->
           {:ok, %Tesla.Env{status: 204}}
       end)
@@ -489,6 +489,7 @@ defmodule LightningWeb.ProfileLiveTest do
            conn: conn,
            user: user
          } do
+      Mox.verify_on_exit!()
       # expired access token
       expected_token = %{
         "access_token" => "access-token",
@@ -507,16 +508,14 @@ defmodule LightningWeb.ProfileLiveTest do
       url_to_delete =
         "https://api.github.com/applications/#{app_config[:client_id]}/grant"
 
-      Mox.expect(Lightning.GithubClient.Mock, :call, fn
-        %{url: ^url_to_delete}, _opts ->
-          {:ok, %Tesla.Env{status: 204}}
-      end)
-
       url_to_refresh_token = "https://github.com/login/oauth/access_token"
 
-      Mox.expect(Lightning.Tesla.Mock, :call, fn
+      Mox.expect(Lightning.Tesla.Mock, :call, 2, fn
         %{url: ^url_to_refresh_token}, _opts ->
           {:ok, %Tesla.Env{body: %{"access_token" => "updated-access-token"}}}
+
+        %{url: ^url_to_delete}, _opts ->
+          {:ok, %Tesla.Env{status: 204}}
       end)
 
       {:ok, view, _html} = live(conn, ~p"/profile")

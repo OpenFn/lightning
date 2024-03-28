@@ -8,6 +8,7 @@ defmodule LightningWeb.UserAuth do
   import Plug.Conn
 
   alias Lightning.Accounts
+  alias Lightning.Accounts.User
   alias Lightning.Accounts.UserToken
   alias LightningWeb.Router.Helpers, as: Routes
 
@@ -172,10 +173,12 @@ defmodule LightningWeb.UserAuth do
 
   def authenticate_bearer(conn, _opts) do
     with {:ok, bearer_token} <- get_bearer(conn),
-         user when not is_nil(user) <-
-           Accounts.get_user_by_api_token(bearer_token) do
-      update_last_used(bearer_token)
-      assign(conn, :current_user, user)
+         %_{} = resource <- get_current_resource(bearer_token) do
+      if is_struct(resource, User) do
+        update_last_used(bearer_token)
+      end
+
+      assign(conn, :current_resource, resource)
     else
       _ -> conn
     end
@@ -187,6 +190,16 @@ defmodule LightningWeb.UserAuth do
     |> case do
       ["Bearer " <> bearer_token] -> {:ok, bearer_token}
       _ -> {:error, "Bearer Token not found"}
+    end
+  end
+
+  defp get_current_resource(token) do
+    case token do
+      "prc_" <> _rest ->
+        Lightning.VersionControl.get_repo_connection_for_token(token)
+
+      _user_token ->
+        Accounts.get_user_by_api_token(token)
     end
   end
 
@@ -238,6 +251,23 @@ defmodule LightningWeb.UserAuth do
 
       true ->
         conn
+    end
+  end
+
+  @doc """
+  Used for API routes that require the resource to be authenticated.
+  A resource can be a `User` or a `ProjectRepoConnection`
+
+  """
+  def require_authenticated_api_resource(conn, _opts) do
+    if is_nil(conn.assigns[:current_resource]) do
+      conn
+      |> put_status(:unauthorized)
+      |> put_view(LightningWeb.ErrorView)
+      |> render(:"401")
+      |> halt()
+    else
+      conn
     end
   end
 

@@ -205,6 +205,21 @@ available. You'll need asdf plugins for
 [Elixir](https://github.com/asdf-vm/asdf-elixir) and
 [k6](https://github.com/grimoh/asdf-k6).
 
+We use [libsodium](https://doc.libsodium.org/) for encoding values as required
+by the [Github API](https://docs.github.com/en/rest/guides/encrypting-secrets-for-the-rest-api).
+You'll need to install `libsodium` in order for the application to compile.
+
+For Mac Users:
+```sh
+brew install libsodium
+```
+For Debian Users:
+```sh
+sudo apt-get install libsodium-dev
+```
+
+You can find more on [how to install libsodium here](https://doc.libsodium.org/installation)
+
 ```sh
 asdf install  # Install language versions
 mix local.hex
@@ -212,6 +227,7 @@ mix deps.get
 mix local.rebar --force
 mix ecto.create # Create a development database in Postgres
 mix ecto.migrate
+[[ $(uname -m) == 'arm64' ]] && CPATH=/opt/homebrew/include LIBRARY_PATH=/opt/homebrew/lib CFLAGS="-arch arm64" CXXFLAGS="-arch arm64" LDFLAGS="-arch arm64" mix deps.compile enacl # Force compile enacl if on M1
 [[ $(uname -m) == 'arm64' ]] && mix compile.rambo # Force compile rambo if on M1
 mix lightning.install_runtime
 mix lightning.install_schemas

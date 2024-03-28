@@ -51,7 +51,7 @@ defmodule LightningWeb.Router do
     pipe_through [
       :api,
       :authenticate_bearer,
-      :require_authenticated_user
+      :require_authenticated_api_resource
     ]
 
     get "/provision/yaml", API.ProvisioningController, :show_yaml

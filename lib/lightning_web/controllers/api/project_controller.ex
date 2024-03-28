@@ -11,7 +11,7 @@ defmodule LightningWeb.API.ProjectController do
     pagination_attrs = Map.take(params, ["page_size", "page"])
 
     page =
-      Projects.projects_for_user_query(conn.assigns.current_user)
+      Projects.projects_for_user_query(conn.assigns.current_resource)
       |> Lightning.Repo.paginate(pagination_attrs)
 
     render(conn, "index.json", page: page, conn: conn)
@@ -23,7 +23,7 @@ defmodule LightningWeb.API.ProjectController do
            ProjectUsers
            |> Permissions.can(
              :access_project,
-             conn.assigns.current_user,
+             conn.assigns.current_resource,
              project
            ) do
       render(conn, "show.json", project: project, conn: conn)

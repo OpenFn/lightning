@@ -14,10 +14,10 @@ defmodule Lightning.Factories do
   def project_repo_connection_factory do
     %Lightning.VersionControl.ProjectRepoConnection{
       project: build(:project),
-      user: build(:user),
       repo: "some/repo",
       branch: "branch",
-      github_installation_id: "some-id"
+      github_installation_id: "some-id",
+      access_token: sequence(:token, &"prc_sometoken#{&1}")
     }
   end
 
