@@ -1,5 +1,8 @@
 defmodule Lightning.Workflows.Snapshots do
   alias Lightning.Workflows.Workflow
+  alias Lightning.Repo
+
+  import Ecto.Query
 
   defmodule Snapshot do
     use Ecto.Schema
@@ -94,7 +97,7 @@ defmodule Lightning.Workflows.Snapshots do
   @spec build(Workflow.t()) :: Ecto.Changeset.t()
   def build(workflow = %Workflow{}) do
     workflow
-    |> Lightning.Repo.preload([:jobs, :edges, :triggers])
+    |> Repo.preload([:jobs, :edges, :triggers])
     |> Map.from_struct()
     |> Enum.into(%{}, fn {field, value} ->
       case field do
@@ -118,6 +121,62 @@ defmodule Lightning.Workflows.Snapshots do
           {:ok, Snapshot.t()} | {:error, Ecto.Changeset.t()}
   def create(workflow = %Workflow{}) do
     build(workflow)
-    |> Lightning.Repo.insert()
+    |> Repo.insert()
+  end
+
+  @spec get_all_for(Workflow.t()) :: [Snapshot.t()]
+  def get_all_for(workflow = %Workflow{}) do
+    from(s in Snapshot, where: s.workflow_id == ^workflow.id)
+    |> Repo.all()
+  end
+
+  @doc """
+  Get the latest snapshot for a workflow, based on the inserted_at field.
+  """
+  @spec get_latest_for(Workflow.t()) :: Snapshot.t() | nil
+  def get_latest_for(workflow = %Workflow{}) do
+    get_latest_query(workflow)
+    |> Repo.one()
+  end
+
+  defp get_latest_query(workflow) do
+    from(s in Snapshot,
+      where: s.workflow_id == ^workflow.id,
+      order_by: [desc: s.inserted_at],
+      limit: 1
+    )
+  end
+
+  @doc """
+  Get the latest snapshot for a workflow, or create one if it doesn't exist.
+  """
+  @spec get_or_create_latest_for(Workflow.t()) ::
+          {:ok, Snapshot.t()} | {:error, Ecto.Changeset.t()}
+  def get_or_create_latest_for(workflow) do
+    Ecto.Multi.new()
+    |> Ecto.Multi.one(:existing, get_latest_query(workflow))
+    |> Ecto.Multi.run(:snapshot, fn _repo, %{existing: snapshot} ->
+      case snapshot do
+        nil ->
+          from(w in Workflow,
+            where: w.id == ^workflow.id,
+            preload: [:jobs, :triggers, :edges],
+            lock: "FOR SHARE"
+          )
+          |> Repo.one()
+          |> then(fn
+            nil -> {:error, :no_workflow}
+            workflow -> create(workflow)
+          end)
+
+        _ ->
+          {:ok, snapshot}
+      end
+    end)
+    |> Repo.transaction()
+    |> case do
+      {:ok, %{snapshot: snapshot}} -> {:ok, snapshot}
+      {:error, _, error, _} -> {:error, error}
+    end
   end
 end

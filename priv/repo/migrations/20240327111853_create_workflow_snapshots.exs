@@ -15,5 +15,7 @@ defmodule Lightning.Repo.Migrations.CreateWorkflowSnapshots do
 
       timestamps(type: :utc_datetime_usec, updated_at: false)
     end
+
+    create index(:workflow_snapshots, ["inserted_at DESC"], include: [:workflow_id])
   end
 end

@@ -61,21 +61,9 @@ defmodule Lightning.Workflows do
   def create_workflow(attrs \\ %{}) do
     Ecto.Multi.new()
     |> Ecto.Multi.insert(:workflow, Workflow.changeset(%Workflow{}, attrs))
-    |> Ecto.Multi.insert(
-      :snapshot,
-      fn %{workflow: workflow} ->
-        Snapshots.build(workflow)
-      end,
-      returning: false
-    )
+    |> insert_snapshot()
     |> Repo.transaction()
-    |> case do
-      {:ok, %{workflow: workflow, snapshot: _snapshot}} ->
-        {:ok, workflow}
-
-      {:error, :workflow, changeset, _} ->
-        {:error, changeset}
-    end
+    |> pluck_from_multi_result(:workflow)
   end
 
   @doc """
@@ -91,7 +79,11 @@ defmodule Lightning.Workflows do
 
   """
   def update_workflow(%Ecto.Changeset{} = changeset) do
-    Repo.update(changeset)
+    Ecto.Multi.new()
+    |> Ecto.Multi.update(:workflow, changeset)
+    |> insert_snapshot()
+    |> Repo.transaction()
+    |> pluck_from_multi_result(:workflow)
   end
 
   @doc """
@@ -110,7 +102,26 @@ defmodule Lightning.Workflows do
     workflow
     |> maybe_preload([:jobs, :triggers, :edges], attrs)
     |> Workflow.changeset(attrs)
-    |> Repo.update()
+    |> update_workflow()
+  end
+
+  defp insert_snapshot(multi) do
+    multi
+    |> Ecto.Multi.insert(
+      :snapshot,
+      &(Map.get(&1, :workflow) |> Snapshots.build()),
+      returning: false
+    )
+  end
+
+  defp pluck_from_multi_result(res, key) do
+    case res do
+      {:ok, %{^key => workflow}} ->
+        {:ok, workflow}
+
+      {:error, ^key, changeset, _} ->
+        {:error, changeset}
+    end
   end
 
   # Helper to preload associations only if they are present in the attributes
