@@ -46,15 +46,23 @@ defmodule Lightning.VersionControl do
              repo_connection.github_installation_id
            ),
          :ok <-
-           verify_file_exists(client, repo_connection, pull_yml_target_path()),
+           verify_file_exists(
+             client,
+             repo_connection,
+             pull_yml_target_path(repo_connection)
+           ),
          :ok <-
-           verify_file_exists(client, repo_connection, deploy_yml_target_path()),
+           verify_file_exists(
+             client,
+             repo_connection,
+             deploy_yml_target_path(repo_connection)
+           ),
          :ok <- verify_file_exists(client, repo_connection, "project.yaml"),
          :ok <- verify_file_exists(client, repo_connection, ".state.json") do
       verify_repo_secret_exists(
         client,
         repo_connection,
-        deploy_secret_name()
+        api_secret_name(repo_connection)
       )
     end
   end
@@ -362,12 +370,14 @@ defmodule Lightning.VersionControl do
   defp push_workflow_files(client, repo_connection) do
     with {:ok, %{status: 201, body: pull_blob}} <-
            GithubClient.create_blob(client, repo_connection.repo, %{
-             content: pull_yml()
+             content: pull_yml(repo_connection)
            }),
          {:ok, %{status: 201, body: deploy_blob}} <-
            GithubClient.create_blob(client, repo_connection.repo, %{
-             content: deploy_yml()
+             content: deploy_yml(repo_connection)
            }),
+         {:ok, config_blob_or_nil} <-
+           maybe_create_config_blob(client, repo_connection),
          {:ok, %{status: 200, body: base_commit}} <-
            GithubClient.get_commit(
              client,
@@ -377,20 +387,22 @@ defmodule Lightning.VersionControl do
          {:ok, %{status: 201, body: created_tree}} <-
            GithubClient.create_tree(client, repo_connection.repo, %{
              base_tree: base_commit["commit"]["tree"]["sha"],
-             tree: [
-               %{
-                 path: pull_yml_target_path(),
-                 mode: "100644",
-                 type: "blob",
-                 sha: pull_blob["sha"]
-               },
-               %{
-                 path: deploy_yml_target_path(),
-                 mode: "100644",
-                 type: "blob",
-                 sha: deploy_blob["sha"]
-               }
-             ]
+             tree:
+               [
+                 %{
+                   path: pull_yml_target_path(repo_connection),
+                   mode: "100644",
+                   type: "blob",
+                   sha: pull_blob["sha"]
+                 },
+                 %{
+                   path: deploy_yml_target_path(repo_connection),
+                   mode: "100644",
+                   type: "blob",
+                   sha: deploy_blob["sha"]
+                 }
+               ] ++
+                 maybe_include_config_tree(repo_connection, config_blob_or_nil)
            }),
          {:ok, %{status: 201, body: created_commit}} <-
            GithubClient.create_commit(client, repo_connection.repo, %{
@@ -409,35 +421,89 @@ defmodule Lightning.VersionControl do
     end
   end
 
-  defp pull_yml do
+  defp maybe_create_config_blob(tesla_client, repo_connection) do
+    if repo_connection.config_path do
+      GithubClient.create_blob(tesla_client, repo_connection.repo, %{
+        content: config_json(repo_connection)
+      })
+    else
+      {:ok, nil}
+    end
+  end
+
+  defp maybe_include_config_tree(repo_connection, config_blob_or_nil) do
+    if is_map(config_blob_or_nil) do
+      [
+        %{
+          path: config_target_path(repo_connection),
+          mode: "100644",
+          type: "blob",
+          sha: config_blob_or_nil["sha"]
+        }
+      ]
+    else
+      []
+    end
+  end
+
+  defp pull_yml(repo_connection) do
     :code.priv_dir(:lightning)
     |> Path.join("github/pull.yml")
-    |> File.read!()
+    |> EEx.eval_file(
+      assigns: [
+        project_id: repo_connection.project_id,
+        config_path: repo_connection.config_path,
+        api_secret_name: api_secret_name(repo_connection)
+      ]
+    )
   end
 
-  defp deploy_yml do
+  defp deploy_yml(repo_connection) do
     :code.priv_dir(:lightning)
     |> Path.join("github/deploy.yml")
-    |> File.read!()
+    |> EEx.eval_file(
+      assigns: [
+        project_id: repo_connection.project_id,
+        config_path: repo_connection.config_path,
+        api_secret_name: api_secret_name(repo_connection)
+      ]
+    )
   end
 
-  defp pull_yml_target_path do
-    ".github/workflows/pull.yml"
+  defp config_json(repo_connection) do
+    Jason.encode!(%{
+      endpoint: LightningWeb.Endpoint.url(),
+      statePath: "#{repo_connection.project_id}-state.json",
+      specPath: "#{repo_connection.project_id}-spec.yaml"
+    })
   end
 
-  defp deploy_yml_target_path do
-    ".github/workflows/deploy.yml"
+  defp pull_yml_target_path(repo_connection) do
+    ".github/workflows/#{repo_connection.project_id}-pull.yml"
   end
 
-  defp deploy_secret_name do
-    "OPENFN_API_KEY"
+  defp deploy_yml_target_path(repo_connection) do
+    ".github/workflows/#{repo_connection.project_id}-deploy.yml"
+  end
+
+  defp config_target_path(repo_connection) do
+    path =
+      repo_connection.config_path || "#{repo_connection.project_id}-config.json"
+
+    # get rid of ./ because we always operate from root
+    Path.relative_to(path, ".")
+  end
+
+  defp api_secret_name(repo_connection) do
+    sanitized_id = String.replace(repo_connection.project_id, "-", "_")
+    "OPENFN_#{sanitized_id}_API_KEY"
   end
 
   defp maybe_delete_workflow_files(repo_connection, user) do
     with {:ok, access_token} <- fetch_user_access_token(user),
          {:ok, client} <- GithubClient.build_bearer_client(access_token) do
-      pull_path = pull_yml_target_path()
-      deploy_path = deploy_yml_target_path()
+      pull_path = pull_yml_target_path(repo_connection)
+      deploy_path = deploy_yml_target_path(repo_connection)
       maybe_delete_file(client, repo_connection, pull_path)
       maybe_delete_file(client, repo_connection, deploy_path)
     end
@@ -464,7 +530,7 @@ defmodule Lightning.VersionControl do
     end
   end
 
-  defp configure_deploy_secret(client, repo_connection) do
+  defp configure_api_secret(client, repo_connection) do
     with {:ok, %{status: 200, body: resp_body}} <-
            GithubClient.get_repo_public_key(client, repo_connection.repo) do
       public_key = Base.decode64!(resp_body["key"])
@@ -475,7 +541,7 @@ defmodule Lightning.VersionControl do
       GithubClient.create_repo_secret(
         client,
         repo_connection.repo,
-        deploy_secret_name(),
+        api_secret_name(repo_connection),
         %{
           encrypted_value: Base.encode64(encrypted_secret),
           key_id: resp_body["key_id"]
@@ -490,7 +556,7 @@ defmodule Lightning.VersionControl do
     with {:ok, user_token} <- fetch_user_access_token(user),
          {:ok, tesla_client} <- GithubClient.build_bearer_client(user_token),
          {:ok, _} <- push_workflow_files(tesla_client, repo_connection),
-         {:ok, _} <- configure_deploy_secret(tesla_client, repo_connection) do
+         {:ok, _} <- configure_api_secret(tesla_client, repo_connection) do
       initiate_sync(repo_connection, user.email)
     end
   end

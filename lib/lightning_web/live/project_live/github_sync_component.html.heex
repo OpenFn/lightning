@@ -89,6 +89,14 @@
             <Heroicons.arrow_path class={"-ml-0.5 h-5 w-5 #{if(@branches.loading, do: "animate-spin")}"} />
           </.button>
         </div>
+        <div class="sm:col-span-5">
+          <.input
+            type="text"
+            field={f[:config_path]}
+            label="Path to config"
+            placeholder="./config.json"
+          />
+        </div>
         <div class="sm:col-span-5 bg-amber-200 flex gap-3 rounded-md p-3 ">
           <.input
             type="checkbox"
@@ -150,7 +158,14 @@
           </span>
         </span>
 
-        <div class="mt-2">
+        <span>
+          Path to config:
+          <span class="text-xs font-mono bg-gray-200 rounded-md p-1">
+            <%= @project_repo_connection.config_path %>
+          </span>
+        </span>
+
+        <div>
           <.button
             id="initiate-sync-button"
             disabled={!@can_initiate_github_sync}
