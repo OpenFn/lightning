@@ -9,7 +9,9 @@ jobs:
     steps:
       - name: openfn pull and commit
         uses: OpenFn/cli-pull-action@v0.7.0
-        with: 
-          secret_input: ${{ secrets.OPENFN_API_KEY }}
-          project_id_input: ${{ secrets.OPENFN_PROJECT_ID }}
-          commit_message_input: "user ${{ github.event.client_payload.message }}"
+        with:
+          secret_input: ${{ secrets.<%= @api_secret_name %> }}
+          project_id_input: '<%= @project_id %>'
+          config_path_input: '<%= @config_path %>'
+          commit_message_input:
+            'user ${{ github.event.client_payload.message }}'

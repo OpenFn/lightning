@@ -1,6 +1,6 @@
 on:
   push:
-    branches: 
+    branches:
       - main
 
 jobs:
@@ -10,5 +10,6 @@ jobs:
     steps:
       - name: openfn deploy
         uses: OpenFn/cli-deploy-action@v0.1.11
-        with: 
-          secret_input: ${{ secrets.OPENFN_API_KEY }}
+        with:
+          secret_input: ${{ secrets.<%= @api_secret_name %> }}
+          config_path_input: '<%= @config_path %>'
