@@ -23,6 +23,9 @@ and this project adheres to
 
 ### Changed
 
+- Improve the UI/UX of the run panel on the inspector
+  [#1909](https://github.com/OpenFn/lightning/issues/1909)
+
 ### Fixed
 
 - Apply usage limit to bulk-reruns
