@@ -117,10 +117,11 @@ defmodule LightningWeb.WorkflowLive.Edit do
               </:collapsible_panel>
               <:footer>
                 <div class="flex flex-row gap-x-2">
-                  <.save_is_blocked_error :if={
-                    editor_is_empty(@workflow_form, @selected_job)
-                  }>
-                    The step can't be blank
+                  <% {is_empty, error_message} =
+                    editor_is_empty(@workflow_form, @selected_job) %>
+
+                  <.save_is_blocked_error :if={is_empty}>
+                    <%= error_message %>
                   </.save_is_blocked_error>
 
                   <.icon
@@ -1153,11 +1154,17 @@ defmodule LightningWeb.WorkflowLive.Edit do
   defp editor_is_empty(form, job) do
     %Phoenix.HTML.FormField{field: field_name, form: parent_form} = form[:jobs]
 
-    parent_form.impl.to_form(parent_form.source, parent_form, field_name, [])
-    |> Enum.find(fn f -> Ecto.Changeset.get_field(f.source, :id) == job.id end)
-    |> Map.get(:source)
-    |> Map.get(:errors)
-    |> Keyword.has_key?(:body)
+    errors =
+      parent_form.impl.to_form(parent_form.source, parent_form, field_name, [])
+      |> Enum.find(fn f -> Ecto.Changeset.get_field(f.source, :id) == job.id end)
+      |> Map.get(:source)
+      |> Map.get(:errors)
+
+    error_message = LightningWeb.CoreComponents.translate_errors(errors, :body)
+
+    is_empty? = Keyword.has_key?(errors, :body)
+
+    {is_empty?, error_message}
   end
 
   defp has_child_edges?(workflow_changeset, job_id) do
