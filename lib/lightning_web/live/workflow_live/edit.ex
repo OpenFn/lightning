@@ -514,7 +514,12 @@ defmodule LightningWeb.WorkflowLive.Edit do
           do: ~w(ring-red-300),
           else: ~w(ring-gray-300)
 
-    assigns = assign(assigns, is_empty: is_empty, button_classes: button_classes)
+    assigns =
+      assign(assigns,
+        is_empty: is_empty,
+        button_classes: button_classes,
+        error_message: error_message
+      )
 
     ~H"""
     <.link patch={"#{@base_url}?s=#{@job.id}&m=expand"} class={@button_classes}>
@@ -522,7 +527,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
     </.link>
 
     <.save_is_blocked_error :if={@is_empty}>
-      <%= error_message %>
+      <%= @error_message %>
     </.save_is_blocked_error>
     """
   end
