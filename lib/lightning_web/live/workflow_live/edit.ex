@@ -502,7 +502,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
   end
 
   defp expand_job_editor(assigns) do
-    is_empty = editor_is_empty(assigns.form, assigns.job)
+    {is_empty, _} = editor_is_empty(assigns.form, assigns.job)
 
     button_base_classes =
       ~w(
