@@ -3230,6 +3230,126 @@ defmodule LightningWeb.ProjectLiveTest do
       end
     end
 
+    test "reconnect button does not show if everything checks out",
+         %{conn: conn} do
+      project = insert(:project)
+
+      repo_connection =
+        insert(:project_repo_connection,
+          project: project,
+          repo: "someaccount/somerepo",
+          branch: "somebranch",
+          github_installation_id: "1234",
+          access_token: "someaccesstoken"
+        )
+
+      repo_name = repo_connection.repo
+
+      expected_installation = %{
+        "id" => repo_connection.github_installation_id,
+        "account" => %{
+          "type" => "User",
+          "login" => "username"
+        }
+      }
+
+      expected_access_token_endpoint =
+        "https://api.github.com/app/installations/#{repo_connection.github_installation_id}/access_tokens"
+
+      for {conn, user} <-
+            setup_project_users(conn, project, [:viewer, :editor, :admin, :owner]) do
+        set_valid_github_oauth_token!(user)
+
+        Mox.expect(Lightning.Tesla.Mock, :call, 9, fn
+          # list installations for checking if the user has access to the intallation.
+          %{url: "https://api.github.com/user/installations"}, _opts ->
+            {:ok,
+             %Tesla.Env{
+               status: 200,
+               body: %{"installations" => [expected_installation]}
+             }}
+
+          # get installation access token. This is called twice.
+          # When fetching repos and when verifying connection
+          %{url: ^expected_access_token_endpoint}, _opts ->
+            {:ok,
+             %Tesla.Env{
+               status: 201,
+               body: %{"token" => "some-token"}
+             }}
+
+          # list repos. This goes hand in hand installations
+          %{url: "https://api.github.com/installation/repositories"}, _opts ->
+            {:ok, %Tesla.Env{status: 200, body: %{"repositories" => []}}}
+
+          # check if pull yml exists
+          %{
+            method: :get,
+            url:
+              "https://api.github.com/repos/" <>
+                  ^repo_name <> "/contents/.github/workflows/pull.yml"
+          },
+          _opts ->
+            {:ok, %Tesla.Env{status: 200, body: %{"sha" => "somesha"}}}
+
+          # check if deploy yml exists
+          %{
+            method: :get,
+            url:
+              "https://api.github.com/repos/" <>
+                  ^repo_name <> "/contents/.github/workflows/deploy.yml"
+          },
+          _opts ->
+            {:ok, %Tesla.Env{status: 200, body: %{"sha" => "somesha"}}}
+
+          # check if project yml exists
+          %{
+            method: :get,
+            url:
+              "https://api.github.com/repos/" <>
+                  ^repo_name <> "/contents/project.yml"
+          },
+          _opts ->
+            {:ok, %Tesla.Env{status: 200, body: %{"sha" => "somesha"}}}
+
+          # check if project state exists
+          %{
+            method: :get,
+            url:
+              "https://api.github.com/repos/" <>
+                  ^repo_name <> "/contents/.state.json"
+          },
+          _opts ->
+            {:ok, %Tesla.Env{status: 200, body: %{"sha" => "somesha"}}}
+
+          # check if api key secret exists
+          %{
+            method: :get,
+            url:
+              "https://api.github.com/repos/" <>
+                  ^repo_name <> "/actions/secrets/OPENFN_API_KEY"
+          },
+          _opts ->
+            {:ok, %Tesla.Env{status: 200, body: %{}}}
+        end)
+
+        {:ok, view, _html} =
+          live(
+            conn,
+            ~p"/projects/#{project.id}/settings#vcs"
+          )
+
+        html = render_async(view)
+
+        refute has_element?(view, "#reconnect-project-button")
+
+        refute html =~
+                 "Reach out to the admin who made this installation to reconnect"
+
+        assert html =~ "Your project is all setup"
+      end
+    end
+
     test "unauthorized users cannot remove github connection", %{conn: conn} do
       project = insert(:project)
 

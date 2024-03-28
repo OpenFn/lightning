@@ -228,7 +228,7 @@ defmodule LightningWeb.API.ProvisioningControllerTest do
       assert response == %{"error" => "Forbidden"}
     end
 
-    test "returns a 200 if a valid repo conenction token is provided" do
+    test "returns a 200 if a valid repo conenction token is provided for the project state" do
       project = insert(:project)
 
       repo_connection = insert(:project_repo_connection, project: project)
@@ -241,6 +241,22 @@ defmodule LightningWeb.API.ProvisioningControllerTest do
         )
 
       response = get(conn, ~p"/api/provision/#{project.id}")
+      assert response.status == 200
+    end
+
+    test "returns a 200 if a valid repo conenction token is provided for the project yaml" do
+      project = insert(:project)
+
+      repo_connection = insert(:project_repo_connection, project: project)
+
+      conn =
+        Plug.Conn.put_req_header(
+          build_conn(),
+          "authorization",
+          "Bearer #{repo_connection.access_token}"
+        )
+
+      response = get(conn, ~p"/api/provision/yaml?#{%{id: project.id}}")
       assert response.status == 200
     end
 
