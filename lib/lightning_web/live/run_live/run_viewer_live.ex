@@ -28,101 +28,99 @@ defmodule LightningWeb.RunLive.RunViewerLive do
 
         <div class="flex @5xl/viewer:gap-6 h-full @5xl/viewer:flex-row flex-col">
           <div class="grow flex flex-col gap-4 min-h-0">
-            <div class="min-h-0 grow flex overflow-auto">
-              <Common.panel_content for_hash="run">
-                <.detail_list id={"run-detail-#{run.id}"}>
-                  <.list_item>
-                    <:label class="whitespace-nowrap">Work Order</:label>
-                    <:value>
-                      <.link
-                        navigate={
-                          ~p"/projects/#{@project}/history?#{%{filters: %{workorder_id: run.work_order_id}}}"
-                        }
-                        class="hover:underline hover:text-primary-900"
+            <Common.panel_content for_hash="run">
+              <.detail_list id={"run-detail-#{run.id}"}>
+                <.list_item>
+                  <:label class="whitespace-nowrap">Work Order</:label>
+                  <:value>
+                    <.link
+                      navigate={
+                        ~p"/projects/#{@project}/history?#{%{filters: %{workorder_id: run.work_order_id}}}"
+                      }
+                      class="hover:underline hover:text-primary-900"
+                    >
+                      <span class="whitespace-nowrap text-ellipsis">
+                        <%= display_short_uuid(run.work_order_id) %>
+                      </span>
+                      <.icon name="hero-arrow-up-right" class="h-2 w-2 float-right" />
+                    </.link>
+                  </:value>
+                </.list_item>
+                <.list_item>
+                  <:label>Run</:label>
+                  <:value>
+                    <.link
+                      navigate={
+                        ~p"/projects/#{@project}/runs/#{run}?step=#{@selected_step_id || ""}"
+                      }
+                      class="hover:underline hover:text-primary-900 whitespace-nowrap text-ellipsis"
+                    >
+                      <span class="whitespace-nowrap text-ellipsis">
+                        <%= display_short_uuid(run.id) %>
+                      </span>
+                      <.icon name="hero-arrow-up-right" class="h-2 w-2 float-right" />
+                    </.link>
+                  </:value>
+                </.list_item>
+                <.list_item>
+                  <:label>Started</:label>
+                  <:value>
+                    <%= if run.started_at do %>
+                      <Common.wrapper_tooltip
+                        id={run.id <> "start-tip"}
+                        tooltip={DateTime.to_iso8601(run.started_at)}
                       >
-                        <span class="whitespace-nowrap text-ellipsis">
-                          <%= display_short_uuid(run.work_order_id) %>
-                        </span>
-                        <.icon
-                          name="hero-arrow-up-right"
-                          class="h-2 w-2 float-right"
-                        />
-                      </.link>
-                    </:value>
-                  </.list_item>
-                  <.list_item>
-                    <:label>Run</:label>
-                    <:value>
-                      <.link
-                        navigate={
-                          ~p"/projects/#{@project}/runs/#{run}?step=#{@selected_step_id || ""}"
-                        }
-                        class="hover:underline hover:text-primary-900 whitespace-nowrap text-ellipsis"
-                      >
-                        <span class="whitespace-nowrap text-ellipsis">
-                          <%= display_short_uuid(run.id) %>
-                        </span>
-                        <.icon
-                          name="hero-arrow-up-right"
-                          class="h-2 w-2 float-right"
-                        />
-                      </.link>
-                    </:value>
-                  </.list_item>
-                  <.list_item>
-                    <:label>Started</:label>
-                    <:value>
-                      <%= if run.started_at do %>
-                        <Common.wrapper_tooltip
-                          id={run.id <> "start-tip"}
-                          tooltip={DateTime.to_iso8601(run.started_at)}
-                        >
-                          <%= Timex.Format.DateTime.Formatters.Relative.format!(
-                            run.started_at,
-                            "{relative}"
-                          ) %>
-                        </Common.wrapper_tooltip>
-                      <% end %>
-                    </:value>
-                  </.list_item>
-                  <.list_item>
-                    <:label>Duration</:label>
-                    <:value>
-                      <.elapsed_indicator run={run} />
-                    </:value>
-                  </.list_item>
-                  <.list_item>
-                    <:label>Status</:label>
-                    <:value><.state_pill state={run.state} /></:value>
-                  </.list_item>
-                </.detail_list>
-                <.step_list
-                  :let={step}
-                  id={"run-tab-step-list-#{run.id}"}
-                  steps={@steps}
-                  class="flex-1 items-center"
-                >
-                  <.step_item
-                    step={step}
-                    run_id={run.id}
-                    job_id={@job_id}
-                    is_clone={
-                      DateTime.compare(step.inserted_at, run.inserted_at) == :lt
-                    }
-                    phx-click="select_step"
-                    phx-value-id={step.id}
-                    selected={step.id == @selected_step_id}
-                    class="cursor-pointer"
-                    project_id={@project}
-                  />
-                </.step_list>
-              </Common.panel_content>
-              <Common.panel_content for_hash="log">
+                        <%= Timex.Format.DateTime.Formatters.Relative.format!(
+                          run.started_at,
+                          "{relative}"
+                        ) %>
+                      </Common.wrapper_tooltip>
+                    <% end %>
+                  </:value>
+                </.list_item>
+                <.list_item>
+                  <:label>Duration</:label>
+                  <:value>
+                    <.elapsed_indicator run={run} />
+                  </:value>
+                </.list_item>
+                <.list_item>
+                  <:label>Status</:label>
+                  <:value><.state_pill state={run.state} /></:value>
+                </.list_item>
+              </.detail_list>
+              <div class="divide-y divide-gray-200 pb-2">
+                <div></div>
+                <div></div>
+              </div>
+              <.step_list
+                :let={step}
+                id={"run-tab-step-list-#{run.id}"}
+                steps={@steps}
+                class="flex-1 items-center"
+              >
+                <.step_item
+                  step={step}
+                  run_id={run.id}
+                  job_id={@job_id}
+                  is_clone={
+                    DateTime.compare(step.inserted_at, run.inserted_at) == :lt
+                  }
+                  phx-click="select_step"
+                  phx-value-id={step.id}
+                  selected={step.id == @selected_step_id}
+                  class="cursor-pointer"
+                  project_id={@project}
+                />
+              </.step_list>
+            </Common.panel_content>
+            <div class="grow flex overflow-auto">
+              <Common.panel_content for_hash="log" class="grow flex overflow-auto">
                 <.step_list
                   :let={step}
                   id={"log-tab-step-list-#{run.id}"}
                   steps={@steps}
-                  class="flex-1 items-center mb-5"
+                  class="flex-1 items-center h-1/4 mb-2 overflow-auto"
                 >
                   <.step_item
                     step={step}
@@ -138,15 +136,14 @@ defmodule LightningWeb.RunLive.RunViewerLive do
                     project_id={@project}
                   />
                 </.step_list>
-                <div class="grow overflow-auto rounded-md shadow-sm bg-slate-700 border-slate-300">
-                  <Viewers.log_viewer
-                    id={"run-log-#{run.id}"}
-                    highlight_id={@selected_step_id}
-                    run_state={run.state}
-                    stream={@streams.log_lines}
-                    stream_empty?={@log_lines_stream_empty?}
-                  />
-                </div>
+                <Viewers.log_viewer
+                  id={"run-log-#{run.id}"}
+                  highlight_id={@selected_step_id}
+                  run_state={run.state}
+                  stream={@streams.log_lines}
+                  stream_empty?={@log_lines_stream_empty?}
+                  class="grow flex overflow-auto"
+                />
               </Common.panel_content>
               <Common.panel_content for_hash="input" class="grow overflow-auto">
                 <%= if @run.ok? && @run.result.state in Lightning.Run.final_states() && is_nil(@selected_step_id) do %>

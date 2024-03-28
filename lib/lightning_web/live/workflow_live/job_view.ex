@@ -126,17 +126,30 @@ defmodule LightningWeb.WorkflowLive.JobView do
         header_type={:tabbed}
       >
         <:tabs>
-          <Common.tab_bar id="1" orientation="horizontal" default_hash="log">
-            <Common.tab_item orientation="horizontal" hash="run">
+          <Common.tab_bar
+            id="1"
+            orientation="horizontal"
+            default_hash="log"
+            in_inspector={true}
+          >
+            <Common.tab_item in_inspector={true} orientation="horizontal" hash="run">
               <span class="inline-block align-middle">Run</span>
             </Common.tab_item>
-            <Common.tab_item orientation="horizontal" hash="log">
+            <Common.tab_item in_inspector={true} orientation="horizontal" hash="log">
               <span class="inline-block align-middle">Log</span>
             </Common.tab_item>
-            <Common.tab_item orientation="horizontal" hash="input">
+            <Common.tab_item
+              in_inspector={true}
+              orientation="horizontal"
+              hash="input"
+            >
               <span class="inline-block align-middle">Input</span>
             </Common.tab_item>
-            <Common.tab_item orientation="horizontal" hash="output">
+            <Common.tab_item
+              in_inspector={true}
+              orientation="horizontal"
+              hash="output"
+            >
               <span class="inline-block align-middle">Output</span>
             </Common.tab_item>
           </Common.tab_bar>
