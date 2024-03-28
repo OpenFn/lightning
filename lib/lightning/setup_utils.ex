@@ -11,7 +11,6 @@ defmodule Lightning.SetupUtils do
   alias Lightning.Projects
   alias Lightning.Repo
   alias Lightning.Runs
-  alias Lightning.VersionControl
   alias Lightning.Workflows
   alias Lightning.WorkOrders
 
