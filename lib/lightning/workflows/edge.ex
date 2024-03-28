@@ -47,7 +47,7 @@ defmodule Lightning.Workflows.Edge do
 
     field :delete, :boolean, virtual: true
 
-    timestamps()
+    timestamps(type: :utc_datetime)
   end
 
   def new(attrs) do

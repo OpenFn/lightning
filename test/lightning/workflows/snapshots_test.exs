@@ -13,8 +13,25 @@ defmodule Lightning.Workflows.SnapshotsTest do
       {:ok, snapshot} ->
         assert snapshot.name == workflow.name
         assert snapshot.jobs |> length() == 7
+
+        for original_job <- workflow.jobs do
+          assert snapshot_job =
+                   snapshot.jobs |> Enum.find(&(&1.id == original_job.id)),
+                 "job not found in snapshot: #{inspect(original_job)}"
+
+          assert_job_equal(snapshot_job, original_job)
+        end
+
         assert snapshot.triggers |> length() == 1
-        assert snapshot.edges |> length() == 7
+        assert snapshot.edges |> length() == workflow.edges |> length()
+
+        for original_edge <- workflow.edges do
+          assert snapshot_edge =
+                   snapshot.edges |> Enum.find(&(&1.id == original_edge.id)),
+                 "edge not found in snapshot: #{inspect(original_edge)}"
+
+          assert_edge_equal(snapshot_edge, original_edge)
+        end
 
       {:error, changeset} ->
         IO.inspect(changeset)
@@ -55,19 +72,43 @@ defmodule Lightning.Workflows.SnapshotsTest do
                snapshot.edges |> Enum.find(&(&1.id == original_edge.id)),
              "edge not found in snapshot: #{inspect(original_edge)}"
 
-      assert snapshot_edge |> Map.from_struct() ==
-               Map.take(snapshot_edge, [
-                 :id,
-                 :source_trigger_id,
-                 :source_job_id,
-                 :target_job_id,
-                 :condition_type,
-                 :condition_expression,
-                 :condition_label,
-                 :enabled,
-                 :inserted_at,
-                 :updated_at
-               ])
+      assert_edge_equal(snapshot_edge, original_edge)
     end
+  end
+
+  defp assert_edge_equal(snapshot, original) do
+    assert only_fields(snapshot) ==
+             Map.take(original, [
+               :id,
+               :source_trigger_id,
+               :source_job_id,
+               :target_job_id,
+               :condition_type,
+               :condition_expression,
+               :condition_label,
+               :enabled,
+               :inserted_at,
+               :updated_at
+             ])
+  end
+
+  defp assert_job_equal(snapshot, original) do
+    assert only_fields(snapshot) ==
+             Map.take(original, [
+               :id,
+               :name,
+               :body,
+               :adaptor,
+               :project_credential_id,
+               :inserted_at,
+               :updated_at
+             ])
+  end
+
+  defp only_fields(model) do
+    model.__struct__.__schema__(:fields)
+    |> Enum.into(%{}, fn field ->
+      {field, model |> Map.get(field)}
+    end)
   end
 end
