@@ -273,18 +273,18 @@ defmodule Lightning.Factories do
         {%Lightning.Workflows.Job{} = source_job, target_job},
         extra
       ) do
-    %{
-      workflow
-      | edges:
-          merge_assoc(
-            workflow.edges,
-            Enum.into(extra, %{
-              id: Ecto.UUID.generate(),
-              source_job_id: source_job.id,
-              target_job_id: target_job.id
-            })
-          )
-    }
+    edge_params =
+      params_for(
+        :edge,
+        %{
+          id: Ecto.UUID.generate(),
+          source_job_id: source_job.id,
+          target_job_id: target_job.id
+        }
+        |> Map.merge(extra |> Enum.into(%{}))
+      )
+
+    %{workflow | edges: merge_assoc(workflow.edges, edge_params)}
   end
 
   def with_edge(
@@ -380,12 +380,24 @@ defmodule Lightning.Factories do
       end)
     end)
     |> with_edge({trigger, jobs |> Enum.at(0)}, condition_type: :always)
-    |> with_edge({jobs |> Enum.at(0), jobs |> Enum.at(1)})
-    |> with_edge({jobs |> Enum.at(1), jobs |> Enum.at(2)})
-    |> with_edge({jobs |> Enum.at(2), jobs |> Enum.at(3)})
-    |> with_edge({jobs |> Enum.at(0), jobs |> Enum.at(4)})
-    |> with_edge({jobs |> Enum.at(4), jobs |> Enum.at(5)})
-    |> with_edge({jobs |> Enum.at(5), jobs |> Enum.at(6)})
+    |> with_edge({jobs |> Enum.at(0), jobs |> Enum.at(1)},
+      condition_type: :on_job_success
+    )
+    |> with_edge({jobs |> Enum.at(1), jobs |> Enum.at(2)},
+      condition_type: :always
+    )
+    |> with_edge({jobs |> Enum.at(2), jobs |> Enum.at(3)},
+      condition_type: :always
+    )
+    |> with_edge({jobs |> Enum.at(0), jobs |> Enum.at(4)},
+      condition_type: :on_job_failure
+    )
+    |> with_edge({jobs |> Enum.at(4), jobs |> Enum.at(5)},
+      condition_type: :always
+    )
+    |> with_edge({jobs |> Enum.at(5), jobs |> Enum.at(6)},
+      condition_type: :always
+    )
   end
 
   def work_order_for(trigger_or_job, attrs) do
