@@ -137,14 +137,13 @@ see what we're working on now and what's coming next.
 1. Install the latest version of
    [Docker](https://docs.docker.com/engine/install/)
 2. Clone [this repo](https://github.com/OpenFn/Lightning) using git
-3. Copy the `.env.example` file to `.env`
-4. Run `docker compose run --rm web mix ecto.migrate`
+3. Setup PostgreSQL database with: `docker compose build && docker compose run --rm web mix ecto.migrate`
+4. Run Lightning and PostgresSQL with: `docker compose up`
 
 By default the application will be running at
 [localhost:4000](http://localhost:4000/).
 
-You can then rebuild and run with `docker compose build` and
-`docker compose up`. See ["Problems with Docker"](#problems-with-docker) for
+See ["Problems with Docker"](#problems-with-docker) for
 additional troubleshooting help. Note that you can also create your own
 `docker-compose.yml` file, configuring a postgres database and using a
 [pre-built image](https://hub.docker.com/repository/docker/openfn/lightning)
