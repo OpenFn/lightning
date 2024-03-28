@@ -55,7 +55,7 @@ defmodule Lightning.Workflows.Snapshots do
         field :updated_at, :utc_datetime
       end
 
-      timestamps(type: :utc_datetime_usec)
+      timestamps(type: :utc_datetime_usec, updated_at: false)
     end
 
     def new(workflow) do
@@ -91,11 +91,10 @@ defmodule Lightning.Workflows.Snapshots do
 
   @associations_to_include [:jobs, :triggers, :edges]
 
-  @spec create(Workflow.t()) ::
-          {:ok, Snapshot.t()} | {:error, Ecto.Changeset.t()}
-  def create(workflow = %Workflow{}) do
+  @spec build(Workflow.t()) :: Ecto.Changeset.t()
+  def build(workflow = %Workflow{}) do
     workflow
-    |> Lightning.Repo.preload(:jobs)
+    |> Lightning.Repo.preload([:jobs, :edges, :triggers])
     |> Map.from_struct()
     |> Enum.into(%{}, fn {field, value} ->
       case field do
@@ -113,6 +112,12 @@ defmodule Lightning.Workflows.Snapshots do
       end
     end)
     |> Snapshot.new()
+  end
+
+  @spec create(Workflow.t()) ::
+          {:ok, Snapshot.t()} | {:error, Ecto.Changeset.t()}
+  def create(workflow = %Workflow{}) do
+    build(workflow)
     |> Lightning.Repo.insert()
   end
 end
