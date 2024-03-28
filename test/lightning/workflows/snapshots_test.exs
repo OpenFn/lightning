@@ -49,5 +49,25 @@ defmodule Lightning.Workflows.SnapshotsTest do
     assert snapshot_trigger.id == original_trigger.id
     assert snapshot_trigger.inserted_at == original_trigger.inserted_at
     assert snapshot_trigger.updated_at == original_trigger.updated_at
+
+    for original_edge <- workflow.edges do
+      assert snapshot_edge =
+               snapshot.edges |> Enum.find(&(&1.id == original_edge.id)),
+             "edge not found in snapshot: #{inspect(original_edge)}"
+
+      assert snapshot_edge |> Map.from_struct() ==
+               Map.take(snapshot_edge, [
+                 :id,
+                 :source_trigger_id,
+                 :source_job_id,
+                 :target_job_id,
+                 :condition_type,
+                 :condition_expression,
+                 :condition_label,
+                 :enabled,
+                 :inserted_at,
+                 :updated_at
+               ])
+    end
   end
 end
