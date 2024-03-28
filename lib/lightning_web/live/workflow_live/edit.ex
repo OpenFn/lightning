@@ -502,7 +502,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
   end
 
   defp expand_job_editor(assigns) do
-    {is_empty, _} = editor_is_empty(assigns.form, assigns.job)
+    {is_empty, error_message} = editor_is_empty(assigns.form, assigns.job)
 
     button_base_classes =
       ~w(
@@ -522,7 +522,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
     </.link>
 
     <.save_is_blocked_error :if={@is_empty}>
-      The step can't be blank
+      <%= error_message %>
     </.save_is_blocked_error>
     """
   end
