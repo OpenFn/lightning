@@ -823,15 +823,19 @@ defmodule Lightning.UsageTrackingTest do
 
   describe ".lightning_version - commit is an openfn commit" do
     setup_with_mocks([
-      {GithubClient, [], [open_fn_commit?: fn "abc123" -> true end]}
+      {
+        GithubClient,
+        [],
+        [
+          open_fn_commit?: fn
+            "abc123" -> true
+            other_sha  -> flunk("Commit sha #{other_sha} passed to GithubClient")
+          end
+        ]
+      }
     ]) do
       commit = "abc123"
       spec_version = "v#{Application.spec(:lightning, :vsn)}"
-
-      put_temporary_env(:lightning, :image_info,
-        branch: "does-not-matter",
-        commit: commit
-      )
 
       %{
         commit: commit,
@@ -843,7 +847,7 @@ defmodule Lightning.UsageTrackingTest do
       commit: commit,
       spec_version: spec_version
     } do
-      put_temporary_env(:lightning, :image_info, image: "edge")
+      set_env(branch: "ignored", commit: commit, image_tag: "edge")
 
       assert UsageTracking.lightning_version() == "#{spec_version}:edge:#{commit}"
     end
@@ -857,7 +861,16 @@ defmodule Lightning.UsageTrackingTest do
 
   describe ".lightning_version/0 - commit is not an openfn commit" do
     setup_with_mocks([
-      {GithubClient, [], [open_fn_commit?: fn "abc123" -> false end]}
+      {
+        GithubClient,
+        [],
+        [
+          open_fn_commit?: fn
+            "abc123" -> false
+            other_sha  -> flunk("Commit sha #{other_sha} passed to GithubClient")
+          end
+        ]
+      }
     ]) do
       commit = "abc123"
       spec_version = "v#{Application.spec(:lightning, :vsn)}"

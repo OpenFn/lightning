@@ -7,6 +7,7 @@ defmodule Lightning.UsageTracking do
   alias Lightning.Helpers
   alias Lightning.Repo
   alias Lightning.UsageTracking.DailyReportConfiguration
+  alias Lightning.UsageTracking.GithubClient
   alias Lightning.UsageTracking.Report
   alias Lightning.UsageTracking.ReportData
   alias Lightning.UsageTracking.ReportWorker
@@ -194,9 +195,16 @@ defmodule Lightning.UsageTracking do
   end
 
   def lightning_version do
-    IO.inspect(Helpers.version_data())
-    %{image: image, commit: _commit, spec_version: vsn} = Helpers.version_data()
+    %{image: image, commit: commit, spec_version: vsn} = Helpers.version_data()
 
-    "#{vsn}:#{image}:sanitised"
+    commit_for_submission =
+      commit
+      |> GithubClient.open_fn_commit?()
+      |> then(fn
+        true -> commit
+        _ -> "sanitised"
+      end)
+
+    "#{vsn}:#{image}:#{commit_for_submission}"
   end
 end
