@@ -19,6 +19,9 @@ and this project adheres to
 
 ### Changed
 
+- Translate job error messages using errors.po file
+  [#1935](https://github.com/OpenFn/lightning/issues/1935)
+
 ### Fixed
 
 ## [v2.2.1] - 2024-03-27
