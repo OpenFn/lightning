@@ -92,6 +92,7 @@ defmodule LightningWeb.Pagination do
   attr :async_page, Phoenix.LiveView.AsyncResult, default: nil
   attr :page, :map, required: true
   attr :url, :any, required: true
+  attr :help_text, :string, default: nil
 
   def pagination_bar(assigns) do
     ~H"""
@@ -101,7 +102,13 @@ defmodule LightningWeb.Pagination do
           <p class="text-sm text-secondary-700"></p>
         <% else %>
           <%= if @page.total_entries == 0 do %>
-            <p class="text-sm text-secondary-700">No results found</p>
+            <p class="text-sm text-secondary-700">
+              No results found
+              <Common.tooltip
+                id="no-results-tooltip"
+                title={@help_text}
+              />
+            </p>
           <% else %>
             <p class="text-sm text-secondary-700">
               Showing

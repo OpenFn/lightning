@@ -911,6 +911,27 @@ defmodule Lightning.InvocationTest do
                ).entries
     end
 
+    test "search on logs does NOT return 'stem' matches... only exact matches",
+         %{project: project} do
+      assert [] =
+               Invocation.search_workorders(
+                 project,
+                 SearchParams.new(%{
+                   "search_term" => "played",
+                   "search_fields" => ["log"]
+                 })
+               ).entries
+
+      assert [] =
+               Invocation.search_workorders(
+                 project,
+                 SearchParams.new(%{
+                   "search_term" => "playings",
+                   "search_fields" => ["log"]
+                 })
+               ).entries
+    end
+
     test "search on logs can find partial string matches at the start of words",
          %{project: project} do
       assert [_found] =
@@ -950,7 +971,7 @@ defmodule Lightning.InvocationTest do
                ).entries
     end
 
-    test "search on dataclips can find partial string matches anywhere in the keys",
+    test "search on dataclips can find partial string matches at the start of keys",
          %{
            project: project
          } do
@@ -967,12 +988,12 @@ defmodule Lightning.InvocationTest do
                Invocation.search_workorders(
                  project,
                  SearchParams.new(%{
-                   "search_term" => "f_bir",
+                   "search_term" => "bir",
                    "search_fields" => ["body"]
                  })
                ).entries
 
-      assert [_found] =
+      assert [] =
                Invocation.search_workorders(
                  project,
                  SearchParams.new(%{
@@ -982,7 +1003,7 @@ defmodule Lightning.InvocationTest do
                ).entries
     end
 
-    test "search on dataclips can find partial string matches anywhere in the values",
+    test "search on dataclips can find partial string matches at the start of values",
          %{
            project: project
          } do
@@ -995,7 +1016,7 @@ defmodule Lightning.InvocationTest do
                  })
                ).entries
 
-      assert [_found] =
+      assert [] =
                Invocation.search_workorders(
                  project,
                  SearchParams.new(%{
@@ -1008,7 +1029,7 @@ defmodule Lightning.InvocationTest do
                Invocation.search_workorders(
                  project,
                  SearchParams.new(%{
-                   "search_term" => "92-0",
+                   "search_term" => "199",
                    "search_fields" => ["body"]
                  })
                ).entries
