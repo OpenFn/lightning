@@ -104,10 +104,7 @@ defmodule LightningWeb.Pagination do
           <%= if @page.total_entries == 0 do %>
             <p class="text-sm text-secondary-700">
               No results found
-              <Common.tooltip
-                id="no-results-tooltip"
-                title={@help_text}
-              />
+              <Common.tooltip id="no-results-tooltip" title={@help_text} />
             </p>
           <% else %>
             <p class="text-sm text-secondary-700">
