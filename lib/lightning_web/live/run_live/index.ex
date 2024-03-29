@@ -41,7 +41,8 @@ defmodule LightningWeb.RunLive.Index do
     cancelled: :boolean,
     killed: :boolean,
     exception: :boolean,
-    lost: :boolean
+    lost: :boolean,
+    rejected: :boolean
   }
 
   @empty_page %{
@@ -89,7 +90,6 @@ defmodule LightningWeb.RunLive.Index do
       )
 
     statuses = [
-      %{id: :rejected, label: "Rejected"},
       %{id: :pending, label: "Enqueued"},
       %{id: :running, label: "Running"},
       %{id: :success, label: "Success"},
@@ -98,7 +98,8 @@ defmodule LightningWeb.RunLive.Index do
       %{id: :cancelled, label: "Cancelled"},
       %{id: :killed, label: "Killed"},
       %{id: :exception, label: "Exception"},
-      %{id: :lost, label: "Lost"}
+      %{id: :lost, label: "Lost"},
+      %{id: :rejected, label: "Rejected"}
     ]
 
     search_fields = [
