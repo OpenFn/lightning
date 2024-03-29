@@ -114,84 +114,90 @@ defmodule LightningWeb.RunLive.RunViewerLive do
                 />
               </.step_list>
             </Common.panel_content>
-            <div class="grow flex overflow-auto">
-              <Common.panel_content for_hash="log" class="grow flex overflow-auto">
-                <.step_list
-                  :let={step}
-                  id={"log-tab-step-list-#{run.id}"}
-                  steps={@steps}
-                  class="flex-1 items-center h-1/4 mb-2 overflow-auto"
-                >
-                  <.step_item
-                    step={step}
-                    run_id={run.id}
-                    job_id={@job_id}
-                    is_clone={
-                      DateTime.compare(step.inserted_at, run.inserted_at) == :lt
-                    }
-                    phx-click="select_step"
-                    phx-value-id={step.id}
-                    selected={step.id == @selected_step_id}
-                    class="cursor-pointer"
-                    project_id={@project}
+            <Common.panel_content for_hash="log" class="h-full mb-2">
+              <div class="flex flex-col h-full">
+                <div class="max-h-[25%] 0 mb-2 overflow-auto">
+                  <.step_list
+                    :let={step}
+                    id={"log-tab-step-list-#{run.id}"}
+                    steps={@steps}
+                    class=""
+                  >
+                    <.step_item
+                      step={step}
+                      run_id={run.id}
+                      job_id={@job_id}
+                      is_clone={
+                        DateTime.compare(step.inserted_at, run.inserted_at) == :lt
+                      }
+                      phx-click="select_step"
+                      phx-value-id={step.id}
+                      selected={step.id == @selected_step_id}
+                      class="cursor-pointer"
+                      project_id={@project}
+                    />
+                  </.step_list>
+                </div>
+
+                <div class="grow inset-0 overflow-auto rounded-md">
+                  <Viewers.log_viewer
+                    id={"run-log-#{run.id}"}
+                    highlight_id={@selected_step_id}
+                    run_state={run.state}
+                    stream={@streams.log_lines}
+                    stream_empty?={@log_lines_stream_empty?}
                   />
-                </.step_list>
-                <Viewers.log_viewer
-                  id={"run-log-#{run.id}"}
-                  highlight_id={@selected_step_id}
-                  run_state={run.state}
-                  stream={@streams.log_lines}
-                  stream_empty?={@log_lines_stream_empty?}
-                  class="grow flex overflow-auto"
+                </div>
+              </div>
+            </Common.panel_content>
+
+            <Common.panel_content for_hash="input" class="grow overflow-auto">
+              <%= if @run.ok? && @run.result.state in Lightning.Run.final_states() && is_nil(@selected_step_id) do %>
+                <div class="border-2 border-gray-200 border-dashed rounded-lg px-8 pt-6 pb-8 mb-4 flex flex-col">
+                  <p class="text-sm text-center">
+                    No input/output available. This step was never started.
+                  </p>
+                </div>
+              <% else %>
+                <Viewers.step_dataclip_viewer
+                  id={"step-input-#{@selected_step_id}"}
+                  class="overflow-auto h-full"
+                  run_state={@run.result.state}
+                  stream={@streams.input_dataclip}
+                  stream_empty?={@input_dataclip_stream_empty?}
+                  step={@selected_step}
+                  dataclip={@input_dataclip}
+                  input_or_output={:input}
+                  project_id={@project.id}
+                  admin_contacts={@admin_contacts}
+                  can_edit_data_retention={@can_edit_data_retention}
                 />
-              </Common.panel_content>
-              <Common.panel_content for_hash="input" class="grow overflow-auto">
-                <%= if @run.ok? && @run.result.state in Lightning.Run.final_states() && is_nil(@selected_step_id) do %>
-                  <div class="border-2 border-gray-200 border-dashed rounded-lg px-8 pt-6 pb-8 mb-4 flex flex-col">
-                    <p class="text-sm text-center">
-                      No input/output available. This step was never started.
-                    </p>
-                  </div>
-                <% else %>
-                  <Viewers.step_dataclip_viewer
-                    id={"step-input-#{@selected_step_id}"}
-                    class="overflow-auto h-full"
-                    run_state={@run.result.state}
-                    stream={@streams.input_dataclip}
-                    stream_empty?={@input_dataclip_stream_empty?}
-                    step={@selected_step}
-                    dataclip={@input_dataclip}
-                    input_or_output={:input}
-                    project_id={@project.id}
-                    admin_contacts={@admin_contacts}
-                    can_edit_data_retention={@can_edit_data_retention}
-                  />
-                <% end %>
-              </Common.panel_content>
-              <Common.panel_content for_hash="output" class="grow overflow-auto">
-                <%= if @run.ok? && @run.result.state in Lightning.Run.final_states() && is_nil(@selected_step_id) do %>
-                  <div class="border-2 border-gray-200 border-dashed rounded-lg px-8 pt-6 pb-8 mb-4 flex flex-col">
-                    <p class="text-sm text-center">
-                      No input/output available. This step was never started.
-                    </p>
-                  </div>
-                <% else %>
-                  <Viewers.step_dataclip_viewer
-                    id={"step-output-#{@selected_step_id}"}
-                    class="overflow-auto h-full"
-                    stream={@streams.output_dataclip}
-                    stream_empty?={@output_dataclip_stream_empty?}
-                    run_state={@run.result.state}
-                    step={@selected_step}
-                    dataclip={@output_dataclip}
-                    input_or_output={:output}
-                    project_id={@project.id}
-                    admin_contacts={@admin_contacts}
-                    can_edit_data_retention={@can_edit_data_retention}
-                  />
-                <% end %>
-              </Common.panel_content>
-            </div>
+              <% end %>
+            </Common.panel_content>
+            <Common.panel_content for_hash="output" class="grow overflow-auto">
+              <%= if @run.ok? && @run.result.state in Lightning.Run.final_states() && is_nil(@selected_step_id) do %>
+                <div class="border-2 border-gray-200 border-dashed rounded-lg px-8 pt-6 pb-8 mb-4 flex flex-col">
+                  <p class="text-sm text-center">
+                    No input/output available. This step was never started.
+                  </p>
+                </div>
+              <% else %>
+                <Viewers.step_dataclip_viewer
+                  id={"step-output-#{@selected_step_id}"}
+                  class="overflow-auto h-full"
+                  stream={@streams.output_dataclip}
+                  stream_empty?={@output_dataclip_stream_empty?}
+                  run_state={@run.result.state}
+                  step={@selected_step}
+                  dataclip={@output_dataclip}
+                  input_or_output={:output}
+                  project_id={@project.id}
+                  admin_contacts={@admin_contacts}
+                  can_edit_data_retention={@can_edit_data_retention}
+                />
+              <% end %>
+            </Common.panel_content>
+            <%!-- </div> --%>
           </div>
         </div>
       </.async_result>
