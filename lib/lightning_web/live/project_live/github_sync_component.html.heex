@@ -102,7 +102,7 @@
             will be commited into the selected branch and any existing versions of these files will be overwritten
           </span>
         </div>
-        <div class="sm:col-span-5 flex gap-4">
+        <div class="sm:col-span-5 flex gap-4 mt-2 -mb-3">
           <.button type="submit" disabled={!@changeset.valid?}>
             Connect Branch
           </.button>
@@ -150,7 +150,7 @@
           </span>
         </span>
 
-        <div>
+        <div class="mt-2">
           <.button
             id="initiate-sync-button"
             disabled={!@can_initiate_github_sync}
