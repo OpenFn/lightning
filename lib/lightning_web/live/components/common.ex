@@ -442,7 +442,7 @@ defmodule LightningWeb.Components.Common do
         lv-keep-class
         phx-click={switch_tabs(@hash)}
         href={"##{@hash}"}
-        {if @in_inspector, do: ["phx-hook": "MaybeToogleCollapse"]}
+        {if @in_inspector, do: ["phx-hook": "MaybeToogleCollapse"], else: []}
       >
         <%= render_slot(@inner_block) %>
       </a>

@@ -116,7 +116,7 @@ defmodule LightningWeb.RunLive.RunViewerLive do
             </Common.panel_content>
             <Common.panel_content for_hash="log" class="h-full mb-2">
               <div class="flex flex-col h-full">
-                <div class="max-h-[25%] 0 mb-2 overflow-auto">
+                <div class="min-h-0 max-h-[25%] 0 mb-2 overflow-auto">
                   <.step_list
                     :let={step}
                     id={"log-tab-step-list-#{run.id}"}
@@ -139,7 +139,7 @@ defmodule LightningWeb.RunLive.RunViewerLive do
                   </.step_list>
                 </div>
 
-                <div class="flex-1 grow inset-0 overflow-auto rounded-md">
+                <div class="flex min-h-0 h-full grow bg-slate-700 overflow-auto rounded-md">
                   <Viewers.log_viewer
                     id={"run-log-#{run.id}"}
                     highlight_id={@selected_step_id}
@@ -163,7 +163,7 @@ defmodule LightningWeb.RunLive.RunViewerLive do
                   <div class="max-h-[25%] 0 mb-2 overflow-auto">
                     <.step_list
                       :let={step}
-                      id={"log-tab-step-list-#{run.id}"}
+                      id={"input-tab-step-list-#{run.id}"}
                       steps={@steps}
                       class=""
                     >
@@ -213,7 +213,7 @@ defmodule LightningWeb.RunLive.RunViewerLive do
                   <div class="max-h-[25%] 0 mb-2 overflow-auto">
                     <.step_list
                       :let={step}
-                      id={"log-tab-step-list-#{run.id}"}
+                      id={"output-tab-step-list-#{run.id}"}
                       steps={@steps}
                       class=""
                     >
@@ -251,7 +251,6 @@ defmodule LightningWeb.RunLive.RunViewerLive do
                 </div>
               <% end %>
             </Common.panel_content>
-            <%!-- </div> --%>
           </div>
         </div>
       </.async_result>

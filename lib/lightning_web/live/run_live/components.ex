@@ -189,7 +189,7 @@ defmodule LightningWeb.RunLive.Components do
               class="pl-1"
               navigate={
                 ~p"/projects/#{@project_id}/w/#{@step.job.workflow_id}"
-                  <> "?a=#{@run_id}&m=expand&s=#{@step.job_id}"
+                  <> "?a=#{@run_id}&m=expand&s=#{@step.job_id}#log"
               }
             >
               <.icon
