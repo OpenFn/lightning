@@ -521,7 +521,7 @@ defmodule LightningWeb.WorkflowLive.Components do
       <div class="flex-0 m-0">
         <div
           id={"#{@id}-panel-header"}
-          class={"flex justify-between items-center panel-header #{if @header_type == :tabbed, do: "p-0", else: "p-2"} px-4"}
+          class={"flex justify-between items-center #{if @header_type == :tabbed, do: "p-0", else: "p-2"} #{if @header_type == :tabbed, do: "panel-header-tabs", else: "panel-header"} px-4"}
         >
           <div
             id={"#{@id}-panel-header-title"}
@@ -534,6 +534,7 @@ defmodule LightningWeb.WorkflowLive.Components do
                 <%= render_slot(@tabs) %>
             <% end %>
           </div>
+          <%!-- #{if @header_type == :tabbed, do: "panel-header-tabs"} --%>
           <div class="close-button">
             <a
               id={"#{@id}-panel-collapse-icon"}

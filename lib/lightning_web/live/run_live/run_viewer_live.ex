@@ -139,7 +139,7 @@ defmodule LightningWeb.RunLive.RunViewerLive do
                   </.step_list>
                 </div>
 
-                <div class="grow inset-0 overflow-auto rounded-md">
+                <div class="flex-1 grow inset-0 overflow-auto rounded-md">
                   <Viewers.log_viewer
                     id={"run-log-#{run.id}"}
                     highlight_id={@selected_step_id}
@@ -159,19 +159,46 @@ defmodule LightningWeb.RunLive.RunViewerLive do
                   </p>
                 </div>
               <% else %>
-                <Viewers.step_dataclip_viewer
-                  id={"step-input-#{@selected_step_id}"}
-                  class="overflow-auto h-full"
-                  run_state={@run.result.state}
-                  stream={@streams.input_dataclip}
-                  stream_empty?={@input_dataclip_stream_empty?}
-                  step={@selected_step}
-                  dataclip={@input_dataclip}
-                  input_or_output={:input}
-                  project_id={@project.id}
-                  admin_contacts={@admin_contacts}
-                  can_edit_data_retention={@can_edit_data_retention}
-                />
+                <div class="flex flex-col h-full">
+                  <div class="max-h-[25%] 0 mb-2 overflow-auto">
+                    <.step_list
+                      :let={step}
+                      id={"log-tab-step-list-#{run.id}"}
+                      steps={@steps}
+                      class=""
+                    >
+                      <.step_item
+                        step={step}
+                        run_id={run.id}
+                        job_id={@job_id}
+                        is_clone={
+                          DateTime.compare(step.inserted_at, run.inserted_at) == :lt
+                        }
+                        phx-click="select_step"
+                        phx-value-id={step.id}
+                        selected={step.id == @selected_step_id}
+                        class="cursor-pointer"
+                        project_id={@project}
+                      />
+                    </.step_list>
+                  </div>
+
+                  <div class="flex-1 grow inset-0 overflow-auto rounded-md">
+                    <Viewers.step_dataclip_viewer
+                      id={"step-input-#{@selected_step_id}"}
+                      class="overflow-auto h-full"
+                      run_state={@run.result.state}
+                      stream={@streams.input_dataclip}
+                      stream_empty?={@input_dataclip_stream_empty?}
+                      step={@selected_step}
+                      dataclip={@input_dataclip}
+                      input_or_output={:input}
+                      project_id={@project.id}
+                      admin_contacts={@admin_contacts}
+                      can_edit_data_retention={@can_edit_data_retention}
+                    />
+                  </div>
+                </div>
               <% end %>
             </Common.panel_content>
             <Common.panel_content for_hash="output" class="grow overflow-auto">
@@ -182,19 +209,46 @@ defmodule LightningWeb.RunLive.RunViewerLive do
                   </p>
                 </div>
               <% else %>
-                <Viewers.step_dataclip_viewer
-                  id={"step-output-#{@selected_step_id}"}
-                  class="overflow-auto h-full"
-                  stream={@streams.output_dataclip}
-                  stream_empty?={@output_dataclip_stream_empty?}
-                  run_state={@run.result.state}
-                  step={@selected_step}
-                  dataclip={@output_dataclip}
-                  input_or_output={:output}
-                  project_id={@project.id}
-                  admin_contacts={@admin_contacts}
-                  can_edit_data_retention={@can_edit_data_retention}
-                />
+                <div class="flex flex-col h-full">
+                  <div class="max-h-[25%] 0 mb-2 overflow-auto">
+                    <.step_list
+                      :let={step}
+                      id={"log-tab-step-list-#{run.id}"}
+                      steps={@steps}
+                      class=""
+                    >
+                      <.step_item
+                        step={step}
+                        run_id={run.id}
+                        job_id={@job_id}
+                        is_clone={
+                          DateTime.compare(step.inserted_at, run.inserted_at) == :lt
+                        }
+                        phx-click="select_step"
+                        phx-value-id={step.id}
+                        selected={step.id == @selected_step_id}
+                        class="cursor-pointer"
+                        project_id={@project}
+                      />
+                    </.step_list>
+                  </div>
+
+                  <div class="flex-1 grow inset-0 overflow-auto rounded-md">
+                    <Viewers.step_dataclip_viewer
+                      id={"step-output-#{@selected_step_id}"}
+                      class="overflow-auto h-full"
+                      stream={@streams.output_dataclip}
+                      stream_empty?={@output_dataclip_stream_empty?}
+                      run_state={@run.result.state}
+                      step={@selected_step}
+                      dataclip={@output_dataclip}
+                      input_or_output={:output}
+                      project_id={@project.id}
+                      admin_contacts={@admin_contacts}
+                      can_edit_data_retention={@can_edit_data_retention}
+                    />
+                  </div>
+                </div>
               <% end %>
             </Common.panel_content>
             <%!-- </div> --%>
