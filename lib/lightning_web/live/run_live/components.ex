@@ -148,7 +148,7 @@ defmodule LightningWeb.RunLive.Components do
     ~H"""
     <div
       class={[
-        "relative flex space-x-3 border-r-4 items-center",
+        "relative flex space-x-3 border-r-4 items-baseline",
         if(@selected,
           do: "border-primary-500",
           else: "border-transparent hover:border-gray-300"

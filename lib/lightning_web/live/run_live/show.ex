@@ -167,7 +167,7 @@ defmodule LightningWeb.RunLive.Show do
                 >
                   <.icon
                     name="hero-arrow-up-on-square"
-                    class="h-5 w-5 inline-block mr-1 align-middle"
+                    class="h-5 w-5 inline-block mr-1 align-middle rotate-180"
                   />
                   <span class="inline-block align-middle">
                     Output

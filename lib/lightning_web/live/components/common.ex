@@ -354,7 +354,7 @@ defmodule LightningWeb.Components.Common do
       id={"tab-bar-#{@id}"}
       class={@class}
       data-active-classes="border-b-2 border-primary-500 text-primary-600"
-      data-inactive-classes="border-b-2 border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-600 hover:border-gray-300"
+      data-inactive-classes="border-b-2 border-transparent text-gray-500 hover:border-b-gray-300 hover:text-gray-600 hover:border-b-gray-300"
       data-disabled-classes="border-b-2 border-transparent text-gray-500 hover:cursor-not-allowed"
       data-default-hash={@default_hash}
       phx-hook="TabSelector"
@@ -393,7 +393,7 @@ defmodule LightningWeb.Components.Common do
       assigns
       |> assign(
         base_classes:
-          ~w[border-b-2 border-transparent] ++
+          ~w[border-t-2 border-t-transparent border-b-2 border-transparent -mb-px leading-tight] ++
             if(assigns.in_inspector,
               do: ~w[text-xs font-semibold text-secondary-700],
               else: ~w[text-sm text-gray-500 font-medium]
@@ -414,9 +414,9 @@ defmodule LightningWeb.Components.Common do
           end,
         disabled_classes: ~w[hover:cursor-not-allowed],
         enabled_classes: ~w[
-          hover:border-gray-300
-          hover:border-gray-300
-          hover:text-gray-600
+          hover:border-b-gray-300
+          hover:border-b-gray-300
+          hover:text-b-gray-600
         ]
       )
 
