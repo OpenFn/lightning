@@ -142,9 +142,6 @@ defmodule LightningWeb.RunLive.Components do
   attr :rest, :global
 
   def step_item(assigns) do
-    # TODO - add dataclip and workorder
-    # <> "?i=DATACLIP_ID&m=expand&wo=WORKORDER_ID"
-
     ~H"""
     <div
       class={[
@@ -189,7 +186,7 @@ defmodule LightningWeb.RunLive.Components do
               class="pl-1"
               navigate={
                 ~p"/projects/#{@project_id}/w/#{@step.job.workflow_id}"
-                  <> "?a=#{@run_id}&m=expand&s=#{@step.job_id}"
+                  <> "?a=#{@run_id}&m=expand&s=#{@step.job_id}#log"
               }
             >
               <.icon
