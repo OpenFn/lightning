@@ -91,6 +91,18 @@ defmodule LightningWeb.WebhooksControllerTest do
              }
     end
 
+    test "returns a 200 when a valid GET is sent", %{conn: conn} do
+      %{triggers: [%{id: trigger_id}]} =
+        insert(:simple_workflow) |> Lightning.Repo.preload(:triggers)
+
+      conn = get(conn, "/i/#{trigger_id}")
+
+      assert json_response(conn, 200) == %{
+               "message" =>
+                 "OpenFn webhook trigger found. Make a POST request to execute this workflow."
+             }
+    end
+
     test "creates a pending workorder with a valid trigger", %{conn: conn} do
       %{triggers: [%{id: trigger_id}]} =
         insert(:simple_workflow) |> Lightning.Repo.preload(:triggers)
@@ -113,7 +125,33 @@ defmodule LightningWeb.WebhooksControllerTest do
       assert Runs.get_dataclip_body(run) == ~s({"foo": "bar"})
 
       assert Runs.get_dataclip_request(run) ==
-               ~s({"headers": {"content-type": "multipart/mixed; boundary=plug_conn_test"}})
+               ~s({\"path\": [\"i\", \"#{trigger_id}\"], \"method\": \"POST\", \"headers\": {\"content-type\": \"multipart/mixed; boundary=plug_conn_test\"}, \"query_params\": {}})
+    end
+
+    test "creates a pending workorder with a valid trigger and an additional path",
+         %{conn: conn} do
+      %{triggers: [%{id: trigger_id}]} =
+        insert(:simple_workflow) |> Lightning.Repo.preload(:triggers)
+
+      message = %{"foo" => "bar"}
+      conn = post(conn, "/i/#{trigger_id}/Patient", message)
+
+      assert %{"work_order_id" => work_order_id} =
+               json_response(conn, 200)
+
+      assert %{trigger: %{id: ^trigger_id}, runs: [run], state: :pending} =
+               WorkOrders.get(work_order_id,
+                 include: [:runs, :dataclip, :trigger]
+               )
+
+      assert %{starting_trigger_id: ^trigger_id} = run
+
+      assert Repo.all(Lightning.Invocation.Dataclip) |> Enum.count() == 1
+
+      assert Runs.get_dataclip_body(run) == ~s({"foo": "bar"})
+
+      assert Runs.get_dataclip_request(run) ==
+               ~s({\"path\": [\"i\", \"#{trigger_id}\", \"Patient\"], \"method\": \"POST\", \"headers\": {\"content-type\": \"multipart/mixed; boundary=plug_conn_test\"}, \"query_params\": {}})
     end
   end
 
