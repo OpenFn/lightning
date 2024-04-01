@@ -32,6 +32,7 @@ defmodule Lightning.Repo.Migrations.GenerateDataclipSearchVectors do
         SELECT id
         FROM dataclips
         WHERE search_vector IS NULL
+        AND body IS NOT NULL
         LIMIT $1
       )
       """,
