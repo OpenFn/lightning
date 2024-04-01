@@ -479,11 +479,18 @@ defmodule Lightning.Invocation do
   end
 
   defp build_search_fields_where(search_fields, search_term) do
+    ts_query = for_tsquery_partial_match(search_term)
+
     Enum.reduce(search_fields, dynamic(false), fn
       :body, dynamic ->
         dynamic(
           [input_dataclip: dataclip],
-          ^dynamic or like(type(dataclip.body, :string), ^"%#{search_term}%")
+          ^dynamic or
+            fragment(
+              "? @@ to_tsquery('english_nostop', ?)",
+              dataclip.search_vector,
+              ^ts_query
+            )
         )
 
       :id, dynamic ->
@@ -495,8 +502,6 @@ defmodule Lightning.Invocation do
         )
 
       :log, dynamic ->
-        ts_query = for_tsquery_partial_match(search_term)
-
         dynamic(
           [log_lines: log_line],
           ^dynamic or

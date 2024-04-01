@@ -189,7 +189,17 @@ div[id^='tippy-'] {
 
 .collapsible-panel.collapsed .panel-header {
   flex-direction: column-reverse !important;
-  gap: 1rem;
+  gap: 2rem;
+  height: 100%;
+  justify-content: flex-end;
+  white-space: nowrap;
+  width: 42px !important;
+}
+
+.collapsible-panel.collapsed .panel-header-tabs {
+  flex-direction: column-reverse !important;
+  padding-top: 8px;
+  gap: 4.8rem;
   height: 100%;
   justify-content: flex-end;
   white-space: nowrap;

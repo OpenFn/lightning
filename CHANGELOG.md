@@ -21,8 +21,15 @@ and this project adheres to
 
 - Translate job error messages using errors.po file
   [#1935](https://github.com/OpenFn/lightning/issues/1935)
+- Changed dataclip search from string `LIKE` to tsvector on keys and values.
+  While this will limit partial string matching to the beginning of words (not
+  the middle or end) it will make searching way more performant
+  [#1939](https://github.com/OpenFn/lightning/issues/1939)
 
 ### Fixed
+
+- Regular database timeouts when searching across dataclip bodies
+  [#1794](https://github.com/OpenFn/lightning/issues/1794)
 
 ## [v2.2.1] - 2024-03-27
 
@@ -33,6 +40,9 @@ and this project adheres to
   [#1894](https://github.com/OpenFn/lightning/issues/1894)
 
 ### Changed
+
+- Improve the UI/UX of the run panel on the inspector
+  [#1909](https://github.com/OpenFn/lightning/issues/1909)
 
 ### Fixed
 

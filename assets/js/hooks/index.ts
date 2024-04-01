@@ -30,6 +30,18 @@ export const ShowActionsOnRowHover = {
   },
 } as PhoenixHook;
 
+export const MaybeToogleCollapse = {
+  mounted() {
+    this.el.addEventListener('click', e => {
+      const panel = document.getElementById('output-logs');
+      if (panel && panel.classList.contains('collapsed')) {
+        panel.classList.remove('collapsed');
+        document.dispatchEvent(new Event('update-layout'));
+      }
+    });
+  },
+} as PhoenixHook;
+
 export const Flash = {
   mounted() {
     let hide = () =>
