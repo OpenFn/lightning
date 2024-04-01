@@ -17,6 +17,11 @@ and this project adheres to
 
 ### Added
 
+- Support for additional paths on a webhook URL such as `/i/<uuid>/Patient`
+  [#1954](https://github.com/OpenFn/lightning/issues/1954)
+- Support for a GET endpoint to "check" webhook URL availability
+  [#1063](https://github.com/OpenFn/lightning/issues/1063)
+
 ### Changed
 
 - Changed dataclip search from string `LIKE` to tsvector on keys and values.
