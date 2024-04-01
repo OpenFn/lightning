@@ -71,15 +71,26 @@ defmodule Lightning.Workflows.Job do
       :workflow_id
     ])
     |> validate()
-    |> unique_constraint(:name, name: "jobs_name_workflow_id_index")
+    |> update_change(:name, &String.trim/1)
+    |> unique_constraint(:name,
+      name: "jobs_name_workflow_id_index",
+      message: "job name has already been taken"
+    )
   end
 
   def validate(changeset) do
     changeset
-    |> validate_required([:name, :body, :adaptor])
+    |> validate_required(:name, message: "job name can't be blank")
+    |> validate_required(:body, message: "job body can't be blank")
+    |> validate_required(:adaptor, message: "job adaptor can't be blank")
     |> assoc_constraint(:workflow)
-    |> validate_length(:name, max: 100)
-    |> validate_format(:name, ~r/^[a-zA-Z0-9_\- ]*$/)
+    |> validate_length(:name,
+      max: 100,
+      message: "job name should be at most %{count} character(s)"
+    )
+    |> validate_format(:name, ~r/^[a-zA-Z0-9_\- ]*$/,
+      message: "job name has invalid format"
+    )
   end
 
   @doc """

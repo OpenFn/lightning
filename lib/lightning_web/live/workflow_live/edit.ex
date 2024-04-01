@@ -117,10 +117,11 @@ defmodule LightningWeb.WorkflowLive.Edit do
               </:collapsible_panel>
               <:footer>
                 <div class="flex flex-row gap-x-2">
-                  <.save_is_blocked_error :if={
-                    editor_is_empty(@workflow_form, @selected_job)
-                  }>
-                    The step can't be blank
+                  <% {is_empty, error_message} =
+                    editor_is_empty(@workflow_form, @selected_job) %>
+
+                  <.save_is_blocked_error :if={is_empty}>
+                    <%= error_message %>
                   </.save_is_blocked_error>
 
                   <.icon
@@ -501,7 +502,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
   end
 
   defp expand_job_editor(assigns) do
-    is_empty = editor_is_empty(assigns.form, assigns.job)
+    {is_empty, error_message} = editor_is_empty(assigns.form, assigns.job)
 
     button_base_classes =
       ~w(
@@ -513,7 +514,12 @@ defmodule LightningWeb.WorkflowLive.Edit do
           do: ~w(ring-red-300),
           else: ~w(ring-gray-300)
 
-    assigns = assign(assigns, is_empty: is_empty, button_classes: button_classes)
+    assigns =
+      assign(assigns,
+        is_empty: is_empty,
+        button_classes: button_classes,
+        error_message: error_message
+      )
 
     ~H"""
     <.link patch={"#{@base_url}?s=#{@job.id}&m=expand"} class={@button_classes}>
@@ -521,7 +527,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
     </.link>
 
     <.save_is_blocked_error :if={@is_empty}>
-      The step can't be blank
+      <%= @error_message %>
     </.save_is_blocked_error>
     """
   end
@@ -1153,11 +1159,17 @@ defmodule LightningWeb.WorkflowLive.Edit do
   defp editor_is_empty(form, job) do
     %Phoenix.HTML.FormField{field: field_name, form: parent_form} = form[:jobs]
 
-    parent_form.impl.to_form(parent_form.source, parent_form, field_name, [])
-    |> Enum.find(fn f -> Ecto.Changeset.get_field(f.source, :id) == job.id end)
-    |> Map.get(:source)
-    |> Map.get(:errors)
-    |> Keyword.has_key?(:body)
+    errors =
+      parent_form.impl.to_form(parent_form.source, parent_form, field_name, [])
+      |> Enum.find(fn f -> Ecto.Changeset.get_field(f.source, :id) == job.id end)
+      |> Map.get(:source)
+      |> Map.get(:errors)
+
+    error_message = LightningWeb.CoreComponents.translate_errors(errors, :body)
+
+    is_empty? = Keyword.has_key?(errors, :body)
+
+    {is_empty?, error_message}
   end
 
   defp has_child_edges?(workflow_changeset, job_id) do

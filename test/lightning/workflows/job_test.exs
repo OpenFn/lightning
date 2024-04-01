@@ -38,7 +38,7 @@ defmodule Lightning.Workflows.JobTest do
         refute changeset.valid?
 
         assert changeset.errors[:name] ==
-                 {"has already been taken",
+                 {"job name has already been taken",
                   [
                     constraint: :unique,
                     constraint_name: "jobs_name_workflow_id_index"
@@ -49,20 +49,20 @@ defmodule Lightning.Workflows.JobTest do
     test "name can't be longer than 100 chars" do
       name = random_job_name(101)
       errors = Job.changeset(%Job{}, %{name: name}) |> errors_on()
-      assert errors[:name] == ["should be at most 100 character(s)"]
+      assert errors[:name] == ["job name should be at most 100 character(s)"]
     end
 
     test "name can't contain non url-safe chars" do
       ["My project @ OpenFn", "Can't have a / slash"]
       |> Enum.each(fn name ->
         errors = Job.changeset(%Job{}, %{name: name}) |> errors_on()
-        assert errors[:name] == ["has invalid format"]
+        assert errors[:name] == ["job name has invalid format"]
       end)
     end
 
     test "must have an adaptor" do
       errors = Job.changeset(%Job{}, %{adaptor: nil}) |> errors_on()
-      assert errors[:adaptor] == ["can't be blank"]
+      assert errors[:adaptor] == ["job adaptor can't be blank"]
     end
   end
 end

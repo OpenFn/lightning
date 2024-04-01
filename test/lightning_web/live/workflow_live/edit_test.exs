@@ -86,8 +86,8 @@ defmodule LightningWeb.WorkflowLive.EditTest do
               op: "add",
               path: "/jobs/0/errors",
               value: %{
-                "body" => ["This field can't be blank."],
-                "name" => ["This field can't be blank."]
+                "body" => ["Code editor cannot be empty."],
+                "name" => ["Job name can't be blank."]
               }
             },
             %{op: "add", path: "/jobs/0/body", value: ""},
@@ -101,8 +101,8 @@ defmodule LightningWeb.WorkflowLive.EditTest do
               path: "/errors/jobs",
               value: [
                 %{
-                  "body" => ["This field can't be blank."],
-                  "name" => ["This field can't be blank."]
+                  "body" => ["Code editor cannot be empty."],
+                  "name" => ["Job name can't be blank."]
                 }
               ]
             }
@@ -242,12 +242,12 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       view |> change_editor_text("some body")
 
       refute view |> render() =~
-               "The step can&#39;t be blank"
+               "Code editor cannot be empty."
 
       view |> change_editor_text("")
 
       assert view |> render() =~
-               "The step can&#39;t be blank"
+               "Code editor cannot be empty."
     end
 
     test "allows editing job name", %{

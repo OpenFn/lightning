@@ -19,6 +19,8 @@ and this project adheres to
 
 ### Changed
 
+- Translate job error messages using errors.po file
+  [#1935](https://github.com/OpenFn/lightning/issues/1935)
 - Changed dataclip search from string `LIKE` to tsvector on keys and values.
   While this will limit partial string matching to the beginning of words (not
   the middle or end) it will make searching way more performant

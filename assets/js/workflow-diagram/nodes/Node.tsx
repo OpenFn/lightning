@@ -30,7 +30,7 @@ type LabelProps = React.PropsWithChildren<{
 
 function errorsMessage(errors: ErrorObject): string {
   const messages = Object.entries(errors).map(([key, errorArray]) => {
-    return `${key} ${errorArray.join(', ')}`;
+    return `${errorArray.join(', ')}`;
   });
 
   return messages.join(', ');

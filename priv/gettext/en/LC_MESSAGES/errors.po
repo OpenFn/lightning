@@ -4,6 +4,26 @@ msgstr "This field can't be blank."
 msgid "has already been taken"
 msgstr "This email address already exists."
 
+msgid "job name has already been taken"
+msgstr "Job name should be distinct."
+
+msgid "job name has invalid format"
+msgstr "Job name can't include special characters."
+
+msgid "job name can't be blank"
+msgstr "Job name can't be blank."
+
+msgid "job body can't be blank"
+msgstr "Code editor cannot be empty."
+
+msgid "job adaptor can't be blank"
+msgstr "Job adaptor can't be blank."
+
+msgid "job name should be at most %{count} character(s)"
+msgid_plural "job name should be at most %{count} character(s)"
+msgstr[0] "Job name shouldn't be longer than %{count} characters."
+msgstr[1] "Job name shouldn't be longer than %{count} characters."
+
 msgid "should be at least %{count} character(s)"
 msgid_plural "should be at least %{count} character(s)"
 msgstr[0] "Password minimum length is %{count} characters."

@@ -314,10 +314,10 @@ defmodule LightningWeb.API.ProvisioningControllerTest do
                      "jobs" => [
                        %{
                          "id" => ["This field can't be blank."],
-                         "body" => ["This field can't be blank."]
+                         "body" => ["Code editor cannot be empty."]
                        },
                        %{
-                         "name" => ["This field can't be blank."],
+                         "name" => ["Job name can't be blank."],
                          "id" => ["This field can't be blank."]
                        }
                      ],
