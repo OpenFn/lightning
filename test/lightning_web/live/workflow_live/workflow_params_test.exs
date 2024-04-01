@@ -90,10 +90,10 @@ defmodule LightningWeb.WorkflowNewLive.WorkflowParamsTest do
                  ],
                  "jobs" => [
                    %{
-                     "body" => ["The step can't be blank."],
+                     "body" => ["Code editor cannot be empty."],
                      "name" => ["Job name can't be blank."]
                    },
-                   %{"body" => ["The step can't be blank."]}
+                   %{"body" => ["Code editor cannot be empty."]}
                  ],
                  "name" => ["This field can't be blank."]
                },
@@ -102,7 +102,7 @@ defmodule LightningWeb.WorkflowNewLive.WorkflowParamsTest do
                    "adaptor" => "@openfn/language-common@latest",
                    "body" => "",
                    "errors" => %{
-                     "body" => ["The step can't be blank."],
+                     "body" => ["Code editor cannot be empty."],
                      "name" => ["Job name can't be blank."]
                    },
                    "id" => ^job_1_id,
@@ -112,7 +112,7 @@ defmodule LightningWeb.WorkflowNewLive.WorkflowParamsTest do
                  %{
                    "adaptor" => "@openfn/language-common@latest",
                    "body" => "",
-                   "errors" => %{"body" => ["The step can't be blank."]},
+                   "errors" => %{"body" => ["Code editor cannot be empty."]},
                    "id" => ^job_2_id,
                    "name" => "job-2",
                    "project_credential_id" => nil
@@ -180,12 +180,12 @@ defmodule LightningWeb.WorkflowNewLive.WorkflowParamsTest do
                ],
                "errors" => %{
                  "jobs" => [
-                   %{"body" => ["The step can't be blank."]},
+                   %{"body" => ["Code editor cannot be empty."]},
                    %{
-                     "body" => ["The step can't be blank."],
+                     "body" => ["Code editor cannot be empty."],
                      "name" => ["Job name can't be blank."]
                    },
-                   %{"body" => ["The step can't be blank."]}
+                   %{"body" => ["Code editor cannot be empty."]}
                  ],
                  "name" => ["This field can't be blank."]
                },
@@ -193,7 +193,7 @@ defmodule LightningWeb.WorkflowNewLive.WorkflowParamsTest do
                  %{
                    "adaptor" => "@openfn/language-common@latest",
                    "body" => "",
-                   "errors" => %{"body" => ["The step can't be blank."]},
+                   "errors" => %{"body" => ["Code editor cannot be empty."]},
                    "id" => ^job_3_id,
                    "name" => "job-3",
                    "project_credential_id" => nil
@@ -202,7 +202,7 @@ defmodule LightningWeb.WorkflowNewLive.WorkflowParamsTest do
                    "adaptor" => "@openfn/language-common@latest",
                    "body" => "",
                    "errors" => %{
-                     "body" => ["The step can't be blank."],
+                     "body" => ["Code editor cannot be empty."],
                      "name" => ["Job name can't be blank."]
                    },
                    "id" => ^job_1_id,
@@ -212,7 +212,7 @@ defmodule LightningWeb.WorkflowNewLive.WorkflowParamsTest do
                  %{
                    "adaptor" => "@openfn/language-common@latest",
                    "body" => "",
-                   "errors" => %{"body" => ["The step can't be blank."]},
+                   "errors" => %{"body" => ["Code editor cannot be empty."]},
                    "id" => ^job_2_id,
                    "name" => "job-2",
                    "project_credential_id" => nil
@@ -243,10 +243,10 @@ defmodule LightningWeb.WorkflowNewLive.WorkflowParamsTest do
                  "jobs" => [
                    %{},
                    %{
-                     "body" => ["The step can't be blank."],
+                     "body" => ["Code editor cannot be empty."],
                      "name" => ["Job name can't be blank."]
                    },
-                   %{"body" => ["The step can't be blank."]}
+                   %{"body" => ["Code editor cannot be empty."]}
                  ],
                  "name" => ["This field can't be blank."]
                },
@@ -255,7 +255,7 @@ defmodule LightningWeb.WorkflowNewLive.WorkflowParamsTest do
                    "adaptor" => "@openfn/language-common@latest",
                    "body" => "",
                    "errors" => %{
-                     "body" => ["The step can't be blank."],
+                     "body" => ["Code editor cannot be empty."],
                      "name" => ["Job name can't be blank."]
                    },
                    "id" => ^job_1_id,
@@ -265,7 +265,7 @@ defmodule LightningWeb.WorkflowNewLive.WorkflowParamsTest do
                  %{
                    "adaptor" => "@openfn/language-common@latest",
                    "body" => "",
-                   "errors" => %{"body" => ["The step can't be blank."]},
+                   "errors" => %{"body" => ["Code editor cannot be empty."]},
                    "id" => ^job_2_id,
                    "name" => "job-2",
                    "project_credential_id" => nil

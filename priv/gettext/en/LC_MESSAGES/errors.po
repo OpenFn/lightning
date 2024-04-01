@@ -14,7 +14,7 @@ msgid "job name can't be blank"
 msgstr "Job name can't be blank."
 
 msgid "job body can't be blank"
-msgstr "The step can't be blank."
+msgstr "Code editor cannot be empty."
 
 msgid "job adaptor can't be blank"
 msgstr "Job adaptor can't be blank."

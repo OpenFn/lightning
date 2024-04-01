@@ -71,6 +71,7 @@ defmodule Lightning.Workflows.Job do
       :workflow_id
     ])
     |> validate()
+    |> update_change(:name, &String.trim/1)
     |> unique_constraint(:name,
       name: "jobs_name_workflow_id_index",
       message: "job name has already been taken"
