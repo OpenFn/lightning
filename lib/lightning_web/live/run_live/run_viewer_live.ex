@@ -25,7 +25,6 @@ defmodule LightningWeb.RunLive.RunViewerLive do
         <:failed :let={_reason}>
           There was an error loading the Run.
         </:failed>
-
         <div class="flex @5xl/viewer:gap-6 h-full @5xl/viewer:flex-row flex-col">
           <div class="grow flex flex-col gap-4 min-h-0">
             <Common.panel_content for_hash="run">
@@ -115,8 +114,8 @@ defmodule LightningWeb.RunLive.RunViewerLive do
               </.step_list>
             </Common.panel_content>
             <Common.panel_content for_hash="log" class="h-full mb-2">
-              <div class="flex flex-col h-full">
-                <div class="min-h-0 max-h-[25%] 0 mb-2 overflow-auto">
+              <div class="flex flex-col h-full @5xl/viewer:flex-row">
+                <div class="min-h-0 max-h-[30%] 0 mb-2 overflow-auto flex-none flex @5xl/viewer:flex-row flex-col">
                   <.step_list
                     :let={step}
                     id={"log-tab-step-list-#{run.id}"}
@@ -159,8 +158,8 @@ defmodule LightningWeb.RunLive.RunViewerLive do
                   </p>
                 </div>
               <% else %>
-                <div class="flex flex-col h-full">
-                  <div class="max-h-[25%] 0 mb-2 overflow-auto">
+                <div class="flex flex-col h-full @5xl/viewer:flex-row">
+                  <div class="min-h-0 max-h-[30%] 0 mb-2 overflow-auto flex-none flex @5xl/viewer:flex-row flex-col">
                     <.step_list
                       :let={step}
                       id={"input-tab-step-list-#{run.id}"}
@@ -209,13 +208,12 @@ defmodule LightningWeb.RunLive.RunViewerLive do
                   </p>
                 </div>
               <% else %>
-                <div class="flex flex-col h-full">
-                  <div class="max-h-[25%] 0 mb-2 overflow-auto">
+                <div class="flex flex-col h-full @5xl/viewer:flex-row">
+                  <div class="min-h-0 max-h-[30%] 0 mb-2 overflow-auto flex-none flex @5xl/viewer:flex-row flex-col">
                     <.step_list
                       :let={step}
                       id={"output-tab-step-list-#{run.id}"}
                       steps={@steps}
-                      class=""
                     >
                       <.step_item
                         step={step}

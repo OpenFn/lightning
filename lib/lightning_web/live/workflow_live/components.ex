@@ -534,7 +534,6 @@ defmodule LightningWeb.WorkflowLive.Components do
                 <%= render_slot(@tabs) %>
             <% end %>
           </div>
-          <%!-- #{if @header_type == :tabbed, do: "panel-header-tabs"} --%>
           <div class="close-button">
             <a
               id={"#{@id}-panel-collapse-icon"}

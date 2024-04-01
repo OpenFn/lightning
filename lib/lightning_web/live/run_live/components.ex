@@ -142,13 +142,10 @@ defmodule LightningWeb.RunLive.Components do
   attr :rest, :global
 
   def step_item(assigns) do
-    # TODO - add dataclip and workorder
-    # <> "?i=DATACLIP_ID&m=expand&wo=WORKORDER_ID"
-
     ~H"""
     <div
       class={[
-        "relative flex space-x-3 border-r-4 items-baseline",
+        "relative flex space-x-3 border-r-4 items-center",
         if(@selected,
           do: "border-primary-500",
           else: "border-transparent hover:border-gray-300"
