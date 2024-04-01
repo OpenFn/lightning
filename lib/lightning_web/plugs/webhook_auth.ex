@@ -58,7 +58,7 @@ defmodule LightningWeb.Plugs.WebhookAuth do
   """
   def call(conn, _opts) do
     case conn.path_info do
-      ["i", webhook] ->
+      ["i" | [webhook | _additional_path]] ->
         trigger =
           Workflows.get_webhook_trigger(webhook,
             include: [:workflow, :edges]
