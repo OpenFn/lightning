@@ -214,6 +214,7 @@ defmodule LightningWeb.RunLive.RunViewerLive do
                       :let={step}
                       id={"output-tab-step-list-#{run.id}"}
                       steps={@steps}
+                      class=""
                     >
                       <.step_item
                         step={step}
