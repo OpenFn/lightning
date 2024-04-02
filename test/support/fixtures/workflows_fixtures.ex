@@ -24,7 +24,7 @@ defmodule Lightning.WorkflowsFixtures do
           )
           |> to_string()
       })
-      |> Lightning.Workflows.create_workflow()
+      |> Lightning.Workflows.save_workflow()
 
     workflow
   end

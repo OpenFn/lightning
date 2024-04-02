@@ -40,7 +40,8 @@ defmodule Lightning.Workflows.SnapshotsTest do
 
     {:ok, workflow} =
       workflow
-      |> Workflows.update_workflow(%{name: "new name", jobs: [params_for(:job)]})
+      |> Workflows.change_workflow(%{name: "new name", jobs: [params_for(:job)]})
+      |> Workflows.save_workflow()
 
     {:ok, snapshot} = Workflows.Snapshot.create(workflow)
 

@@ -34,7 +34,8 @@ defmodule Lightning.Workflows.Snapshot do
       field :name, :string
       field :body, :string
       field :adaptor, :string
-      belongs_to :project_credential, ProjectCredential
+      belongs_to :project_credential, ProjectCredential, define_field: false
+      field :project_credential_id, :binary_id
       has_one :credential, through: [:project_credential, :credential]
 
       field :inserted_at, :utc_datetime_usec

@@ -35,14 +35,14 @@ defmodule Lightning.WorkflowsTest do
                workflow |> unload_relation(:project)
     end
 
-    test "create_workflow/1 with valid data creates a workflow" do
+    test "save_workflow/1 with valid data creates a workflow" do
       project = insert(:project)
       valid_attrs = %{name: "some-name", project_id: project.id}
 
-      assert {:ok, workflow} = Workflows.create_workflow(valid_attrs)
+      assert {:ok, workflow} = Workflows.save_workflow(valid_attrs)
 
       assert {:error, %Ecto.Changeset{} = changeset} =
-               Workflows.create_workflow(valid_attrs)
+               Workflows.save_workflow(valid_attrs)
 
       assert %{
                name: [
@@ -53,13 +53,114 @@ defmodule Lightning.WorkflowsTest do
       assert workflow.name == "some-name"
     end
 
-    test "update_workflow/2 with valid data updates the workflow" do
+    test "save_workflow/1 with valid data updates the workflow" do
       workflow = insert(:workflow)
       update_attrs = %{name: "some-updated-name"}
 
-      assert {:ok, workflow} = Workflows.update_workflow(workflow, update_attrs)
+      assert {:ok, workflow} =
+               Workflows.change_workflow(workflow, update_attrs)
+               |> Workflows.save_workflow()
 
       assert workflow.name == "some-updated-name"
+    end
+
+    test "save_workflow/1 using attrs" do
+      project = insert(:project)
+      valid_attrs = %{name: "some-name", project_id: project.id}
+
+      assert {:ok, workflow} = Lightning.Workflows.save_workflow(valid_attrs)
+
+      assert workflow.name == "some-name"
+
+      job_id = Ecto.UUID.generate()
+      trigger_id = Ecto.UUID.generate()
+
+      valid_attrs = %{
+        name: "some-other-name",
+        project_id: project.id,
+        jobs: [%{id: job_id, name: "some-job", body: "fn(state)"}],
+        triggers: [%{id: trigger_id, type: :webhook}],
+        edges: [
+          %{
+            source_trigger_id: trigger_id,
+            condition_type: :always,
+            target_job_id: job_id
+          }
+        ]
+      }
+
+      assert {:ok, workflow} = Lightning.Workflows.save_workflow(valid_attrs)
+
+      edge = workflow.edges |> List.first()
+      assert edge.source_trigger_id == trigger_id
+      assert edge.target_job_id == job_id
+
+      assert workflow.name == "some-other-name"
+    end
+
+    test "using save_workflow/2" do
+      project = insert(:project)
+
+      job_id = Ecto.UUID.generate()
+      trigger_id = Ecto.UUID.generate()
+
+      valid_attrs = %{
+        name: "some-name",
+        project_id: project.id,
+        jobs: [%{id: job_id, name: "some-job", body: "fn(state)"}],
+        triggers: [%{id: trigger_id, type: :webhook}],
+        edges: [
+          %{
+            source_trigger_id: trigger_id,
+            target_job_id: job_id,
+            condition_type: :always
+          }
+        ]
+      }
+
+      {:ok, workflow} = Workflows.save_workflow(valid_attrs)
+
+      edge = workflow.edges |> List.first()
+
+      # Updating a job and resubmitting the same edge should not create a new edge
+      valid_attrs = %{
+        jobs: [%{id: job_id, name: "some-job-renamed"}],
+        edges: [
+          %{
+            id: edge.id,
+            source_trigger_id: trigger_id,
+            target_job_id: job_id,
+            condition_type: :always
+          }
+        ]
+      }
+
+      assert {:ok, workflow} =
+               Workflows.change_workflow(workflow, valid_attrs)
+               |> Workflows.save_workflow()
+
+      assert Repo.get_by(Workflows.Job,
+               id: job_id,
+               name: "some-job-renamed"
+             )
+
+      assert workflow.name == "some-name"
+      assert workflow.edges |> List.first() == edge
+
+      valid_attrs = %{
+        jobs: [%{id: job_id, name: "some-job"}],
+        triggers: [%{id: trigger_id, type: :webhook}],
+        edges: []
+      }
+
+      assert {:ok, workflow} =
+               Workflows.change_workflow(workflow, valid_attrs)
+               |> Workflows.save_workflow()
+
+      assert workflow.name == "some-name"
+      assert workflow.edges |> Enum.empty?()
+
+      refute Repo.get(Workflows.Edge, edge.id)
     end
 
     test "change_workflow/1 returns a workflow changeset" do
@@ -110,103 +211,6 @@ defmodule Lightning.WorkflowsTest do
       [e | _] = Workflows.get_edges_for_cron_execution(DateTime.utc_now())
 
       assert e.id == e2.id
-    end
-
-    test "using create_workflow/1" do
-      project = insert(:project)
-      valid_attrs = %{name: "some-name", project_id: project.id}
-
-      assert {:ok, workflow} = Lightning.Workflows.create_workflow(valid_attrs)
-
-      assert workflow.name == "some-name"
-
-      job_id = Ecto.UUID.generate()
-      trigger_id = Ecto.UUID.generate()
-
-      valid_attrs = %{
-        name: "some-other-name",
-        project_id: project.id,
-        jobs: [%{id: job_id, name: "some-job", body: "fn(state)"}],
-        triggers: [%{id: trigger_id, type: :webhook}],
-        edges: [
-          %{
-            source_trigger_id: trigger_id,
-            condition_type: :always,
-            target_job_id: job_id
-          }
-        ]
-      }
-
-      assert {:ok, workflow} = Lightning.Workflows.create_workflow(valid_attrs)
-
-      edge = workflow.edges |> List.first()
-      assert edge.source_trigger_id == trigger_id
-      assert edge.target_job_id == job_id
-
-      assert workflow.name == "some-other-name"
-    end
-
-    test "using update_workflow/2" do
-      project = insert(:project)
-
-      job_id = Ecto.UUID.generate()
-      trigger_id = Ecto.UUID.generate()
-
-      valid_attrs = %{
-        name: "some-name",
-        project_id: project.id,
-        jobs: [%{id: job_id, name: "some-job", body: "fn(state)"}],
-        triggers: [%{id: trigger_id, type: :webhook}],
-        edges: [
-          %{
-            source_trigger_id: trigger_id,
-            target_job_id: job_id,
-            condition_type: :always
-          }
-        ]
-      }
-
-      {:ok, workflow} = Lightning.Workflows.create_workflow(valid_attrs)
-
-      edge = workflow.edges |> List.first()
-
-      # Updating a job and resubmitting the same edge should not create a new edge
-      valid_attrs = %{
-        jobs: [%{id: job_id, name: "some-job-renamed"}],
-        edges: [
-          %{
-            id: edge.id,
-            source_trigger_id: trigger_id,
-            target_job_id: job_id,
-            condition_type: :always
-          }
-        ]
-      }
-
-      assert {:ok, workflow} =
-               Lightning.Workflows.update_workflow(workflow, valid_attrs)
-
-      assert Repo.get_by(Lightning.Workflows.Job,
-               id: job_id,
-               name: "some-job-renamed"
-             )
-
-      assert workflow.name == "some-name"
-      assert workflow.edges |> List.first() == edge
-
-      valid_attrs = %{
-        jobs: [%{id: job_id, name: "some-job"}],
-        triggers: [%{id: trigger_id, type: :webhook}],
-        edges: []
-      }
-
-      assert {:ok, workflow} =
-               Lightning.Workflows.update_workflow(workflow, valid_attrs)
-
-      assert workflow.name == "some-name"
-      assert workflow.edges |> Enum.empty?()
-
-      refute Repo.get(Lightning.Workflows.Edge, edge.id)
     end
   end
 

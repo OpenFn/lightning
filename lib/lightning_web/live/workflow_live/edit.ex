@@ -834,7 +834,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
       %{assigns: %{changeset: changeset}} =
         socket = socket |> apply_params(next_params)
 
-      Lightning.Repo.insert_or_update(changeset)
+      Workflows.save_workflow(changeset)
       |> case do
         {:ok, workflow} ->
           {:noreply,
@@ -920,7 +920,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
                project_id: project_id
              }),
            {:ok, workflow} <-
-             Workflows.update_workflow(%{changeset | action: :update}),
+             Workflows.save_workflow(%{changeset | action: :update}),
            {:ok, run} <-
              WorkOrders.retry(run_id, step_id, created_by: current_user) do
         Runs.subscribe(run)

@@ -5,6 +5,8 @@ defmodule Lightning.Workflows do
 
   import Ecto.Query
 
+  alias Ecto.Multi
+
   alias Lightning.Projects.Project
   alias Lightning.Repo
   alias Lightning.Workflows.Edge
@@ -14,6 +16,8 @@ defmodule Lightning.Workflows do
   alias Lightning.Workflows.Trigger
   alias Lightning.Workflows.Trigger
   alias Lightning.Workflows.Workflow
+
+  require Logger
 
   @doc """
   Returns the list of workflows.
@@ -46,82 +50,44 @@ defmodule Lightning.Workflows do
 
   def get_workflow(id), do: Repo.get(Workflow, id)
 
-  @doc """
-  Creates a workflow.
-
-  ## Examples
-
-      iex> create_workflow(%{field: value})
-      {:ok, %Workflow{}}
-
-      iex> create_workflow(%{field: bad_value})
-      {:error, %Ecto.Changeset{}}
-
-  """
-  def create_workflow(attrs \\ %{}) do
-    Ecto.Multi.new()
-    |> Ecto.Multi.insert(:workflow, Workflow.changeset(%Workflow{}, attrs))
+  @spec save_workflow(Ecto.Changeset.t(Workflow.t()) | map()) ::
+          {:ok, Workflow.t()} | {:error, Ecto.Changeset.t(Workflow.t())}
+  def save_workflow(%Ecto.Changeset{data: %Workflow{}} = changeset) do
+    Multi.new()
+    |> Multi.insert_or_update(:workflow, changeset)
     |> insert_snapshot()
     |> Repo.transaction()
-    |> pluck_from_multi_result(:workflow)
+    |> case do
+      {:ok, %{workflow: workflow}} ->
+        {:ok, workflow}
+
+      {:error, :workflow, changeset, _} ->
+        {:error, changeset}
+
+      {:error, :snapshot, changeset, %{workflow: workflow}} ->
+        Logger.warning(fn ->
+          """
+          Failed to save snapshot for workflow: #{workflow.id}
+          #{inspect(changeset.errors)}
+          """
+        end)
+
+        {:error, false}
+    end
   end
 
-  @doc """
-  Updates a workflow.
-
-  ## Examples
-
-      iex> update_workflow(changeset)
-      {:ok, %Workflow{}}
-
-      iex> update_workflow(changeset)
-      {:error, %Ecto.Changeset{}}
-
-  """
-  def update_workflow(%Ecto.Changeset{} = changeset) do
-    Ecto.Multi.new()
-    |> Ecto.Multi.update(:workflow, changeset)
-    |> insert_snapshot()
-    |> Repo.transaction()
-    |> pluck_from_multi_result(:workflow)
-  end
-
-  @doc """
-  Updates a workflow.
-
-  ## Examples
-
-      iex> update_workflow(workflow, %{field: new_value})
-      {:ok, %Workflow{}}
-
-      iex> update_workflow(workflow, %{field: bad_value})
-      {:error, %Ecto.Changeset{}}
-
-  """
-  def update_workflow(%Workflow{} = workflow, attrs) do
-    workflow
-    |> maybe_preload([:jobs, :triggers, :edges], attrs)
-    |> Workflow.changeset(attrs)
-    |> update_workflow()
+  def save_workflow(%{} = attrs) do
+    Workflow.changeset(%Workflow{}, attrs)
+    |> save_workflow()
   end
 
   defp insert_snapshot(multi) do
     multi
-    |> Ecto.Multi.insert(
+    |> Multi.insert(
       :snapshot,
       &(Map.get(&1, :workflow) |> Snapshot.build()),
       returning: false
     )
-  end
-
-  defp pluck_from_multi_result(res, key) do
-    case res do
-      {:ok, %{^key => workflow}} ->
-        {:ok, workflow}
-
-      {:error, ^key, changeset, _} ->
-        {:error, changeset}
-    end
   end
 
   # Helper to preload associations only if they are present in the attributes
@@ -144,7 +110,9 @@ defmodule Lightning.Workflows do
 
   """
   def change_workflow(%Workflow{} = workflow, attrs \\ %{}) do
-    Workflow.changeset(workflow, attrs)
+    workflow
+    |> maybe_preload([:jobs, :triggers, :edges], attrs)
+    |> Workflow.changeset(attrs)
   end
 
   @doc """

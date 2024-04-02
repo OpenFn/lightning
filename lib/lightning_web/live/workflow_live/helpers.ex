@@ -40,7 +40,7 @@ defmodule LightningWeb.WorkflowLive.Helpers do
           {:error, message}
 
         :ok ->
-          with {:ok, workflow} <- save_workflow(workflow_changeset),
+          with {:ok, workflow} <- Workflows.save_workflow(workflow_changeset),
                {:ok, manual} <- build_manual_workorder(params, workflow, opts),
                {:ok, workorder} <- WorkOrders.create_for(manual) do
             {:ok, %{workorder: workorder, workflow: workflow}}
@@ -58,9 +58,5 @@ defmodule LightningWeb.WorkflowLive.Helpers do
     params
     |> WorkOrders.Manual.new(opts)
     |> Ecto.Changeset.apply_action(:validate)
-  end
-
-  defp save_workflow(changeset) do
-    Repo.insert_or_update(changeset)
   end
 end

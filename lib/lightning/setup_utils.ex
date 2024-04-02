@@ -174,7 +174,7 @@ defmodule Lightning.SetupUtils do
       })
 
     {:ok, workflow} =
-      Workflows.create_workflow(%{
+      Workflows.save_workflow(%{
         name: "Sample Workflow",
         project_id: project.id
       })
@@ -436,7 +436,7 @@ defmodule Lightning.SetupUtils do
       })
 
     {:ok, openhie_workflow} =
-      Workflows.create_workflow(%{
+      Workflows.save_workflow(%{
         name: "OpenHIE Workflow",
         project_id: openhie_project.id
       })
@@ -655,7 +655,7 @@ defmodule Lightning.SetupUtils do
       })
 
     {:ok, dhis2_workflow} =
-      Workflows.create_workflow(%{
+      Workflows.save_workflow(%{
         name: "DHIS2 to Sheets",
         project_id: project.id
       })
