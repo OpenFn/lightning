@@ -21,6 +21,9 @@ and this project adheres to
 
 ### Fixed
 
+- Fix scrolling behaviour on inspector for small screens
+  [#1962](https://github.com/OpenFn/lightning/issues/1962)
+
 ## [v2.3.0] - 2024-04-02
 
 ### Added
