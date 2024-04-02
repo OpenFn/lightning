@@ -21,6 +21,9 @@ and this project adheres to
 
 ### Fixed
 
+- Fix project picker for users with many projects
+  [#1952](https://github.com/OpenFn/lightning/issues/1952)
+
 ## [v2.3.0] - 2024-04-02
 
 ### Added
