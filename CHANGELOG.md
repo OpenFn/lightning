@@ -21,6 +21,8 @@ and this project adheres to
   [#1954](https://github.com/OpenFn/lightning/issues/1954)
 - Support for a GET endpoint to "check" webhook URL availability
   [#1063](https://github.com/OpenFn/lightning/issues/1063)
+- Allow external apps to control the run enqueue db transaction
+  [#1958](https://github.com/OpenFn/lightning/issues/1958)
 
 ### Changed
 

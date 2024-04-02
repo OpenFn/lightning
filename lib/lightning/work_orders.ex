@@ -92,14 +92,16 @@ defmodule Lightning.WorkOrders do
 
       build_for(trigger, attrs)
     end)
-    |> transact_and_return_work_order()
+    |> Runs.enqueue()
+    |> emit_and_return_work_order()
   end
 
   def create_for(%Job{} = job, opts) do
     Multi.new()
     |> Multi.put(:workflow, opts[:workflow])
     |> Multi.insert(:workorder, build_for(job, opts |> Map.new()))
-    |> transact_and_return_work_order()
+    |> Runs.enqueue()
+    |> emit_and_return_work_order()
   end
 
   def create_for(%Manual{} = manual) do
@@ -114,21 +116,20 @@ defmodule Lightning.WorkOrders do
       })
     end)
     |> Multi.put(:workflow, manual.workflow)
-    |> transact_and_return_work_order()
+    |> Runs.enqueue()
+    |> emit_and_return_work_order()
   end
 
-  defp transact_and_return_work_order(multi) do
-    multi
-    |> Repo.transaction()
-    |> case do
-      {:ok, %{workorder: workorder, workflow: workflow}} ->
-        Enum.each(workorder.runs, &Events.run_created(workflow.project_id, &1))
-        Events.work_order_created(workflow.project_id, workorder)
-        {:ok, workorder}
+  defp emit_and_return_work_order(
+         {:ok, %{workorder: workorder, workflow: workflow}}
+       ) do
+    Enum.each(workorder.runs, &Events.run_created(workflow.project_id, &1))
+    Events.work_order_created(workflow.project_id, workorder)
+    {:ok, workorder}
+  end
 
-      {:error, _op, changeset, _changes} ->
-        {:error, changeset}
-    end
+  defp emit_and_return_work_order({:error, _op, changeset, _changes}) do
+    {:error, changeset}
   end
 
   defp get_or_insert_dataclip(multi, %Manual{} = manual) do
