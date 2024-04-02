@@ -10,7 +10,7 @@ defmodule Lightning.Workflows do
   alias Lightning.Workflows.Edge
   alias Lightning.Workflows.Job
   alias Lightning.Workflows.Query
-  alias Lightning.Workflows.Snapshots
+  alias Lightning.Workflows.Snapshot
   alias Lightning.Workflows.Trigger
   alias Lightning.Workflows.Trigger
   alias Lightning.Workflows.Workflow
@@ -109,7 +109,7 @@ defmodule Lightning.Workflows do
     multi
     |> Ecto.Multi.insert(
       :snapshot,
-      &(Map.get(&1, :workflow) |> Snapshots.build()),
+      &(Map.get(&1, :workflow) |> Snapshot.build()),
       returning: false
     )
   end

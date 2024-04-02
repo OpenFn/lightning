@@ -8,7 +8,7 @@ defmodule Lightning.Workflows.SnapshotsTest do
   test "from a workflow" do
     workflow = insert(:complex_workflow)
 
-    Workflows.Snapshots.create(workflow)
+    Workflows.Snapshot.create(workflow)
     |> case do
       {:ok, snapshot} ->
         assert snapshot.name == workflow.name
@@ -42,7 +42,7 @@ defmodule Lightning.Workflows.SnapshotsTest do
       workflow
       |> Workflows.update_workflow(%{name: "new name", jobs: [params_for(:job)]})
 
-    {:ok, snapshot} = Workflows.Snapshots.create(workflow)
+    {:ok, snapshot} = Workflows.Snapshot.create(workflow)
 
     assert snapshot.name == workflow.name
     assert snapshot.jobs |> length() == 1
@@ -80,9 +80,9 @@ defmodule Lightning.Workflows.SnapshotsTest do
     test "by workflow" do
       workflow = insert(:simple_workflow)
 
-      {:ok, snapshot} = Workflows.Snapshots.create(workflow)
+      {:ok, snapshot} = Workflows.Snapshot.create(workflow)
 
-      assert [snapshot] == Workflows.Snapshots.get_all_for(workflow)
+      assert [snapshot] == Workflows.Snapshot.get_all_for(workflow)
     end
   end
 
@@ -90,10 +90,10 @@ defmodule Lightning.Workflows.SnapshotsTest do
     test "by workflow" do
       workflow = insert(:simple_workflow)
 
-      {:ok, _} = Workflows.Snapshots.create(workflow)
-      {:ok, snapshot} = Workflows.Snapshots.create(workflow)
+      {:ok, _} = Workflows.Snapshot.create(workflow)
+      {:ok, snapshot} = Workflows.Snapshot.create(workflow)
 
-      assert snapshot == Workflows.Snapshots.get_latest_for(workflow)
+      assert snapshot == Workflows.Snapshot.get_latest_for(workflow)
     end
   end
 
@@ -102,23 +102,23 @@ defmodule Lightning.Workflows.SnapshotsTest do
       workflow = build(:simple_workflow, id: Ecto.UUID.generate())
 
       {:error, :no_workflow} =
-        Workflows.Snapshots.get_or_create_latest_for(workflow)
+        Workflows.Snapshot.get_or_create_latest_for(workflow)
     end
 
     test "without an existing snapshot" do
       workflow = insert(:simple_workflow)
 
       assert {:ok, snapshot} =
-               Workflows.Snapshots.get_or_create_latest_for(workflow)
+               Workflows.Snapshot.get_or_create_latest_for(workflow)
 
-      assert snapshot == Workflows.Snapshots.get_latest_for(workflow)
+      assert snapshot == Workflows.Snapshot.get_latest_for(workflow)
     end
 
     test "with an existing snapshot" do
       workflow = insert(:simple_workflow)
 
-      {:ok, existing} = Workflows.Snapshots.get_or_create_latest_for(workflow)
-      {:ok, latest} = Workflows.Snapshots.get_or_create_latest_for(workflow)
+      {:ok, existing} = Workflows.Snapshot.get_or_create_latest_for(workflow)
+      {:ok, latest} = Workflows.Snapshot.get_or_create_latest_for(workflow)
       assert existing == latest
     end
   end
