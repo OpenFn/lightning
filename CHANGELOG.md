@@ -22,6 +22,8 @@ and this project adheres to
 - Run the usage tracking submission job more frequently to reduce the risk of
   Oban unavailability at a particular time.
   [#1778](https://github.com/OpenFn/lightning/issues/1778)
+- Remove code supporting V1 usage tracking submissions.
+  [#1853](https://github.com/OpenFn/lightning/issues/1853)
 
 ### Fixed
 
