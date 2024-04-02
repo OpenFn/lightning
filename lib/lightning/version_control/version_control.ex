@@ -49,7 +49,7 @@ defmodule Lightning.VersionControl do
            verify_file_exists(client, repo_connection, pull_yml_target_path()),
          :ok <-
            verify_file_exists(client, repo_connection, deploy_yml_target_path()),
-         :ok <- verify_file_exists(client, repo_connection, "project.yml"),
+         :ok <- verify_file_exists(client, repo_connection, "project.yaml"),
          :ok <- verify_file_exists(client, repo_connection, ".state.json") do
       verify_repo_secret_exists(
         client,
