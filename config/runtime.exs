@@ -185,7 +185,7 @@ usage_tracking_daily_batch_size =
 
 usage_tracking_cron = [
   {
-    "30 1 * * *",
+    "30 1,9,17 * * *",
     Lightning.UsageTracking.DayWorker,
     args: %{"batch_size" => usage_tracking_daily_batch_size}
   }
