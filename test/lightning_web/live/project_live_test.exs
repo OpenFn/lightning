@@ -453,7 +453,7 @@ defmodule LightningWeb.ProjectLiveTest do
 
       {:ok, view, _html} = live(conn, ~p"/projects/#{project_1}/w")
 
-      refute view
+      assert view
              |> element(
                ~s{a[href="#{~p"/projects/#{project_1.id}/w"}"]},
                ~r/project-1/
