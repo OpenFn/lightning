@@ -17,14 +17,18 @@ and this project adheres to
 
 ### Added
 
+### Changed
+
+### Fixed
+
+## [v2.3.0] - 2024-04-02
+
+### Added
+
 - Support for additional paths on a webhook URL such as `/i/<uuid>/Patient`
   [#1954](https://github.com/OpenFn/lightning/issues/1954)
 - Support for a GET endpoint to "check" webhook URL availability
   [#1063](https://github.com/OpenFn/lightning/issues/1063)
-
-### Changed
-
-### Fixed
 
 ## [v2.2.2] - 2024-04-01
 
