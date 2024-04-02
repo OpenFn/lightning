@@ -171,6 +171,7 @@ defmodule LightningWeb.Router do
     pipe_through :api
 
     post "/*path", WebhooksController, :create
+    get "/*path", WebhooksController, :check
   end
 
   scope "/" do

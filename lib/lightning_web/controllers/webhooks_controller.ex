@@ -12,6 +12,15 @@ defmodule LightningWeb.WebhooksController do
   require OpenTelemetry.Tracer
 
   @spec create(Plug.Conn.t(), %{path: binary()}) :: Plug.Conn.t()
+  def check(conn, _params) do
+    put_status(conn, :ok)
+    |> json(%{
+      message:
+        "OpenFn webhook trigger found. Make a POST request to execute this workflow."
+    })
+  end
+
+  @spec create(Plug.Conn.t(), %{path: binary()}) :: Plug.Conn.t()
   def create(conn, _params) do
     with %Workflows.Trigger{enabled: true, workflow: %{project_id: project_id}} =
            trigger <- conn.assigns.trigger,
@@ -77,6 +86,11 @@ defmodule LightningWeb.WebhooksController do
   end
 
   defp build_request(%Plug.Conn{} = conn) do
-    %{headers: conn.req_headers |> Enum.into(%{})}
+    %{
+      method: conn.method,
+      path: conn.path_info,
+      query_params: conn.query_params,
+      headers: conn.req_headers |> Enum.into(%{})
+    }
   end
 end
