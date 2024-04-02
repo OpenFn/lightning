@@ -10,6 +10,12 @@ defmodule Lightning.Credentials.OauthClient do
   alias Lightning.Credentials.Credential
   alias Lightning.Projects.ProjectOauthClient
 
+  @type t :: %__MODULE__{
+          __meta__: Ecto.Schema.Metadata.t(),
+          id: Ecto.UUID.t() | nil,
+          name: String.t()
+        }
+
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id
   schema "oauth_clients" do

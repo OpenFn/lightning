@@ -6,6 +6,9 @@ defmodule Lightning.Projects.ProjectOauthClient do
 
   import Ecto.Changeset
 
+  alias Lightning.Credentials.OauthClient
+  alias Lightning.Projects.Project
+
   @type t :: %__MODULE__{
           __meta__: Ecto.Schema.Metadata.t(),
           id: Ecto.UUID.t() | nil,
