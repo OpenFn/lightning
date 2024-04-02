@@ -153,6 +153,32 @@ defmodule LightningWeb.WebhooksControllerTest do
       assert Runs.get_dataclip_request(run) ==
                ~s({\"path\": [\"i\", \"#{trigger_id}\", \"Patient\"], \"method\": \"POST\", \"headers\": {\"content-type\": \"multipart/mixed; boundary=plug_conn_test\"}, \"query_params\": {}})
     end
+
+    test "creates a pending workorder with a valid trigger and some query params",
+         %{conn: conn} do
+      %{triggers: [%{id: trigger_id}]} =
+        insert(:simple_workflow) |> Lightning.Repo.preload(:triggers)
+
+      message = %{"foo" => "bar"}
+      conn = post(conn, "/i/#{trigger_id}?extra=stuff&moar=things", message)
+
+      assert %{"work_order_id" => work_order_id} =
+               json_response(conn, 200)
+
+      assert %{trigger: %{id: ^trigger_id}, runs: [run], state: :pending} =
+               WorkOrders.get(work_order_id,
+                 include: [:runs, :dataclip, :trigger]
+               )
+
+      assert %{starting_trigger_id: ^trigger_id} = run
+
+      assert Repo.all(Lightning.Invocation.Dataclip) |> Enum.count() == 1
+
+      assert Runs.get_dataclip_body(run) == ~s({"foo": "bar"})
+
+      assert Runs.get_dataclip_request(run) ==
+               ~s({\"path\": [\"i\", \"#{trigger_id}\"], \"method\": \"POST\", \"headers\": {\"content-type\": \"multipart/mixed; boundary=plug_conn_test\"}, \"query_params\": {\"moar\": \"things\", \"extra\": \"stuff\"}})
+    end
   end
 
   describe "a disabled message" do
