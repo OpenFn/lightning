@@ -3307,7 +3307,7 @@ defmodule LightningWeb.ProjectLiveTest do
             method: :get,
             url:
               "https://api.github.com/repos/" <>
-                  ^repo_name <> "/contents/project.yml"
+                  ^repo_name <> "/contents/project.yaml"
           },
           _opts ->
             {:ok, %Tesla.Env{status: 200, body: %{"sha" => "somesha"}}}
