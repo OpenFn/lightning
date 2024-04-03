@@ -23,7 +23,8 @@ defmodule Lightning.UsageTracking.ReportTest do
         data: data,
         report_date: date,
         submitted: true,
-        submitted_at: submitted_at
+        submitted_at: submitted_at,
+        submission_status: :pending
       }
 
       changes = Report.changeset(%Report{}, params)
@@ -34,7 +35,8 @@ defmodule Lightning.UsageTracking.ReportTest do
                  data: ^data,
                  report_date: ^date,
                  submitted: true,
-                 submitted_at: ^submitted_at
+                 submitted_at: ^submitted_at,
+                 submission_status: :pending
                }
              } = changes
     end
@@ -46,7 +48,8 @@ defmodule Lightning.UsageTracking.ReportTest do
       params = %{
         report_date: date,
         submitted: true,
-        submitted_at: submitted_at
+        submitted_at: submitted_at,
+        submission_status: :pending
       }
 
       %{valid?: false, errors: errors} = Report.changeset(%Report{}, params)
@@ -61,7 +64,8 @@ defmodule Lightning.UsageTracking.ReportTest do
       params = %{
         data: data,
         submitted: true,
-        submitted_at: submitted_at
+        submitted_at: submitted_at,
+        submission_status: :pending
       }
 
       %{valid?: false, errors: errors} = Report.changeset(%Report{}, params)
@@ -77,7 +81,8 @@ defmodule Lightning.UsageTracking.ReportTest do
       params = %{
         data: data,
         report_date: date,
-        submitted_at: submitted_at
+        submitted_at: submitted_at,
+        submission_status: :pending
       }
 
       %{valid?: false, errors: errors} = Report.changeset(%Report{}, params)
@@ -92,13 +97,29 @@ defmodule Lightning.UsageTracking.ReportTest do
       params = %{
         data: data,
         report_date: date,
-        submitted: true
+        submitted: true,
+        submission_status: :pending
       }
 
       %{valid?: true} = Report.changeset(%Report{}, params)
     end
 
-    test "persistence fails i report already exists with date", %{
+    test "(for now) changeset is valid without submission status", %{
+      data: data,
+      date: date,
+      submitted_at: submitted_at
+    } do
+      params = %{
+        data: data,
+        report_date: date,
+        submitted: true,
+        submitted_at: submitted_at
+      }
+
+      %{valid?: true} = Report.changeset(%Report{}, params)
+    end
+
+    test "persistence fails if report already exists with date", %{
       data: data,
       date: date,
       submitted_at: submitted_at
@@ -109,7 +130,8 @@ defmodule Lightning.UsageTracking.ReportTest do
         data: data,
         report_date: date,
         submitted: true,
-        submitted_at: submitted_at
+        submitted_at: submitted_at,
+        submission_status: :pending
       }
 
       result =

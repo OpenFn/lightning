@@ -21,6 +21,8 @@ and this project adheres to
 
 - Change all System.get_env calls in runtime.exs to use dotenvy
   [#1968](https://github.com/OpenFn/lightning/issues/1968)
+- Track usage tracking submission status in new field
+  [#1789](https://github.com/OpenFn/lightning/issues/1789)
 
 ### Fixed
 

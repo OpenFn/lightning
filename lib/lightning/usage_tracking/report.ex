@@ -19,8 +19,16 @@ defmodule Lightning.UsageTracking.Report do
   end
 
   def changeset(report, params) do
+    cast_params = [
+      :data,
+      :report_date,
+      :submission_status,
+      :submitted,
+      :submitted_at
+    ]
+
     report
-    |> cast(params, [:data, :report_date, :submitted, :submitted_at])
+    |> cast(params, cast_params)
     |> validate_required([:data, :report_date, :submitted])
     |> unique_constraint(:report_date)
   end
