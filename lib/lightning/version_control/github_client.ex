@@ -17,12 +17,25 @@ defmodule Lightning.VersionControl.GithubClient do
     client |> post("/repos/#{repo_name}/dispatches", body) |> handle_resp([204])
   end
 
+  def create_workflow_dispatch_event(client, repo_name, workflow_id, body) do
+    client
+    |> post(
+      "repos/#{repo_name}/actions/workflows/#{workflow_id}/dispatches",
+      body
+    )
+    |> handle_resp([204])
+  end
+
   def get_installations(client) do
     client |> get("/user/installations") |> handle_resp([200])
   end
 
   def get_installation_repos(client) do
     client |> get("/installation/repositories") |> handle_resp([200])
+  end
+
+  def get_repo(client, repo_name) do
+    client |> get("/repos/#{repo_name}") |> handle_resp([200])
   end
 
   def get_repo_branches(client, repo_name) do

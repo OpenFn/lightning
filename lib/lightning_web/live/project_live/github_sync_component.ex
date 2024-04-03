@@ -66,9 +66,9 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
     end
   end
 
-  def handle_event("reconnect", _params, socket) do
+  def handle_event("reconnect", %{"connection" => params}, socket) do
     if socket.assigns.can_install_github do
-      {:noreply, reconnect_github(socket)}
+      {:noreply, reconnect_github(socket, params)}
     else
       {:noreply,
        socket
@@ -128,6 +128,7 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
          user: user
        }) do
     socket
+    |> assign(changeset: ProjectRepoConnection.changeset(repo_connection, %{}))
     |> assign_async([:installations, :repos], fn ->
       # repos are grouped using the installation_id
       fetch_user_installations_and_repos(user)
@@ -182,11 +183,12 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
     end
   end
 
-  defp reconnect_github(%{assigns: assigns} = socket) do
+  defp reconnect_github(%{assigns: assigns} = socket, params) do
     repo_connection = assigns.project_repo_connection
 
     case VersionControl.reconfigure_github_connection(
            repo_connection,
+           params,
            assigns.user
          ) do
       :ok ->
@@ -195,6 +197,9 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
         |> push_navigate(
           to: ~p"/projects/#{socket.assigns.project}/settings#vcs"
         )
+
+      {:error, %Ecto.Changeset{} = changeset} ->
+        assign(socket, changeset: changeset)
 
       {:error, _} ->
         put_flash(
@@ -227,8 +232,8 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
 
   defp can_access_github_installation?(repo_connection, async_installations) do
     async_installations.ok? and
-      Enum.any?(async_installations.result, fn {_name, id} ->
-        id == repo_connection.github_installation_id
+      Enum.any?(async_installations.result, fn installation ->
+        installation["id"] == repo_connection.github_installation_id
       end)
   end
 
@@ -268,13 +273,16 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
            VersionControl.fetch_user_installations(user) do
       installations =
         Enum.map(installations, fn %{"account" => account, "id" => id} ->
-          {"#{account["type"]}: #{account["login"]}", to_string(id)}
+          %{
+            "account" => "#{account["type"]}: #{account["login"]}",
+            "id" => to_string(id)
+          }
         end)
 
       repos =
         installations
-        |> Task.async_stream(fn {_account, id} ->
-          {to_string(id), fetch_repos(id)}
+        |> Task.async_stream(fn installation ->
+          {installation["id"], fetch_repos(installation["id"])}
         end)
         |> Stream.filter(&match?({:ok, _}, &1))
         |> Map.new(fn {:ok, val} -> val end)
@@ -286,7 +294,9 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
   defp fetch_repos(installation_id) do
     case VersionControl.fetch_installation_repos(installation_id) do
       {:ok, body} ->
-        Enum.map(body["repositories"], fn g_repo -> g_repo["full_name"] end)
+        Enum.map(body["repositories"], fn g_repo ->
+          Map.take(g_repo, ["full_name", "default_branch"])
+        end)
 
       _other ->
         []
@@ -296,10 +306,47 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
   defp fetch_branches(installation_id, repo_name) do
     case VersionControl.fetch_repo_branches(installation_id, repo_name) do
       {:ok, body} ->
-        Enum.map(body, fn branch -> branch["name"] end)
+        Enum.map(body, fn branch -> Map.take(branch, ["name"]) end)
 
       _other ->
         []
+    end
+  end
+
+  defp installations_select_options(async_installations) do
+    installations = (async_installations.ok? && async_installations.result) || []
+
+    Enum.map(installations, fn installation ->
+      {installation["account"], installation["id"]}
+    end)
+  end
+
+  defp repos_select_options(async_repos, installation_id) do
+    repos =
+      (async_repos.ok? && async_repos.result[installation_id]) ||
+        []
+
+    Enum.map(repos, fn repo -> repo["full_name"] end)
+  end
+
+  defp branches_select_options(async_branches, repo_name) do
+    branches = (async_branches.ok? && async_branches.result[repo_name]) || []
+    Enum.map(branches, fn branch -> branch["name"] end)
+  end
+
+  defp get_default_branch(async_repos, selected_repo) do
+    if async_repos.ok? do
+      async_repos.result
+      |> Map.values()
+      |> List.flatten()
+      |> Enum.find(fn repo -> repo["full_name"] == selected_repo end)
+      |> case do
+        %{"default_branch" => branch} ->
+          branch
+
+        nil ->
+          nil
+      end
     end
   end
 
@@ -318,6 +365,7 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
   attr :verify_connection, AsyncResult, required: true
   attr :myself, :any, required: true
   attr :can_reconnect, :boolean, required: true
+  attr :changeset, Ecto.Changeset, required: true
 
   defp verify_connection_banner(assigns) do
     ~H"""
@@ -369,15 +417,17 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
                   Your github project is not properly connected with Lightning.
                   <%= if @can_reconnect do %>
                     <a
-                      id="reconnect-project-button"
                       href="#"
                       class="font-medium text-yellow-700 underline hover:text-yellow-600"
-                      phx-click="reconnect"
-                      phx-target={@myself}
-                      phx-disable-with="Connecting..."
+                      phx-click={show_modal("reconnect_sync_direction_modal")}
                     >
                       Click here to reconnect
                     </a>
+                    <.reconnect_sync_direction_modal
+                      id="reconnect_sync_direction_modal"
+                      changeset={@changeset}
+                      myself={@myself}
+                    />
                   <% else %>
                     Reach out to the admin who made this installation to reconnect
                   <% end %>
@@ -460,6 +510,108 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
         </button>
       </div>
     </.modal>
+    """
+  end
+
+  defp reconnect_sync_direction_modal(assigns) do
+    ~H"""
+    <.modal id={@id}>
+      <:title>
+        <div class="flex justify-between">
+          <span class="font-bold">
+            Choose Sync Direction
+          </span>
+          <button
+            phx-click={hide_modal(@id)}
+            type="button"
+            class="rounded-md bg-white text-gray-400 hover:text-gray-500 focus:outline-none"
+            aria-label={gettext("close")}
+          >
+            <span class="sr-only">Close</span>
+            <Heroicons.x_mark solid class="h-5 w-5 stroke-current" />
+          </button>
+        </div>
+      </:title>
+      <.form
+        :let={f}
+        as={:connection}
+        for={@changeset}
+        phx-submit="reconnect"
+        phx-target={@myself}
+      >
+        <div class="px-6">
+          <.sync_order_radio form={f} />
+        </div>
+        <div class="flex flex-row-reverse gap-4 mx-6 mt-2">
+          <.button
+            id="reconnect-project-button"
+            type="submit"
+            phx-disable-with="Connecting..."
+          >
+            Reconnect
+          </.button>
+        </div>
+      </.form>
+    </.modal>
+    """
+  end
+
+  attr :form, :map, required: true
+
+  defp sync_order_radio(assigns) do
+    ~H"""
+    <div>
+      <.label>Sync Order</.label>
+      <p class="text-sm text-gray-500">
+        How would you prefer the first sync to occur?
+      </p>
+      <fieldset class="mt-4">
+        <legend class="sr-only">Sync Order</legend>
+        <div class="space-y-5">
+          <div class="relative flex items-start">
+            <div class="flex h-6 items-center">
+              <.input
+                type="radio"
+                field={@form[:sync_direction]}
+                id="deploy_first_sync_option"
+                aria-describedby="deploy_first_sync_option_description"
+                value="deploy"
+                checked={@form[:sync_direction].value == :deploy}
+                required="true"
+              />
+            </div>
+            <div class="ml-3 text-sm leading-6">
+              <label for="deploy_first_sync_option" class="font-medium text-gray-900">
+                Deploy from GitHub immediately upon setup
+              </label>
+              <p id="deploy_first_sync_option_description" class="text-gray-500">
+                use this option if you have a project on GitHub already and you want to overwrite what’s here in OpenFn
+              </p>
+            </div>
+          </div>
+          <div class="relative flex items-start">
+            <div class="flex h-6 items-center">
+              <.input
+                type="radio"
+                field={@form[:sync_direction]}
+                id="pull_first_sync_option"
+                aria-describedby="pull_first_sync_option_description"
+                value="pull"
+                checked={@form[:sync_direction].value == :pull}
+              />
+            </div>
+            <div class="ml-3 text-sm leading-6">
+              <label for="pull_first_sync_option" class="font-medium text-gray-900">
+                Sync to GitHub immediately upon setup
+              </label>
+              <p id="pull_first_sync_option_description" class="text-gray-500">
+                use this option if you have a project here on OpenFn that you’d like to connect to a GitHub repo
+              </p>
+            </div>
+          </div>
+        </div>
+      </fieldset>
+    </div>
     """
   end
 end
