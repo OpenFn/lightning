@@ -19,6 +19,12 @@ and this project adheres to
 
 ### Changed
 
+### Fixed
+
+## [v2.3.1] - 2024-04-03
+
+### Changed
+
 - Run the usage tracking submission job more frequently to reduce the risk of
   Oban unavailability at a particular time.
   [#1778](https://github.com/OpenFn/lightning/issues/1778)
