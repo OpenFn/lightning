@@ -19,6 +19,9 @@ and this project adheres to
 
 ### Changed
 
+- Track usage tracking submission status in new field
+  [#1789](https://github.com/OpenFn/lightning/issues/1789)
+
 ### Fixed
 
 ## [v2.3.1] - 2024-04-03

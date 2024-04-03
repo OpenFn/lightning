@@ -169,7 +169,8 @@ defmodule Lightning.UsageTracking do
       data: data,
       report_date: date,
       submitted: false,
-      submitted_at: nil
+      submitted_at: nil,
+      submission_status: :pending
     })
     |> Repo.insert()
   end
@@ -178,7 +179,8 @@ defmodule Lightning.UsageTracking do
     report
     |> Report.changeset(%{
       submitted: true,
-      submitted_at: DateTime.utc_now()
+      submitted_at: DateTime.utc_now(),
+      submission_status: :success
     })
     |> Repo.update!()
   end
@@ -187,7 +189,8 @@ defmodule Lightning.UsageTracking do
     report
     |> Report.changeset(%{
       submitted: false,
-      submitted_at: nil
+      submitted_at: nil,
+      submission_status: :failure
     })
     |> Repo.update!()
   end

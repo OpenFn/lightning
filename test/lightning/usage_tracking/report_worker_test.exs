@@ -69,7 +69,8 @@ defmodule Lightning.UsageTracking.ReportWorkerTest do
         %Report{
           submitted: true,
           report_date: ^report_date,
-          data: %{"instance" => ^expected_instance_data}
+          data: %{"instance" => ^expected_instance_data},
+          submission_status: :success
         } = report
       )
 
@@ -96,7 +97,8 @@ defmodule Lightning.UsageTracking.ReportWorkerTest do
           submitted: false,
           report_date: ^report_date,
           data: %{"instance" => ^expected_instance_data},
-          submitted_at: nil
+          submitted_at: nil,
+          submission_status: :failure
         } = report
       )
     end
@@ -165,7 +167,8 @@ defmodule Lightning.UsageTracking.ReportWorkerTest do
         %Report{
           submitted: true,
           report_date: ^report_date,
-          data: %{"instance" => ^expected_instance_data}
+          data: %{"instance" => ^expected_instance_data},
+          submission_status: :success
         } = report
       )
 
@@ -192,7 +195,8 @@ defmodule Lightning.UsageTracking.ReportWorkerTest do
           submitted: false,
           report_date: ^report_date,
           data: %{"instance" => ^expected_instance_data},
-          submitted_at: nil
+          submitted_at: nil,
+          submission_status: :failure
         } = report
       )
     end
