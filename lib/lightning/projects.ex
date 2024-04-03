@@ -449,7 +449,8 @@ defmodule Lightning.Projects do
   def projects_for_user_query(%User{id: user_id}) do
     from(p in Project,
       join: pu in assoc(p, :project_users),
-      where: pu.user_id == ^user_id and is_nil(p.scheduled_deletion)
+      where: pu.user_id == ^user_id and is_nil(p.scheduled_deletion),
+      order_by: p.name
     )
   end
 
