@@ -27,7 +27,7 @@ defmodule LightningWeb.RunLive.RunViewerLive do
         </:failed>
         <div class="flex @5xl/viewer:gap-6 h-full @5xl/viewer:flex-row flex-col">
           <div class="grow flex flex-col gap-4 min-h-0">
-            <Common.panel_content for_hash="run">
+            <Common.panel_content for_hash="run" class="overflow-auto">
               <.detail_list id={"run-detail-#{run.id}"}>
                 <.list_item>
                   <:label class="whitespace-nowrap">Work Order</:label>
@@ -87,16 +87,15 @@ defmodule LightningWeb.RunLive.RunViewerLive do
                   <:label>Status</:label>
                   <:value><.state_pill state={run.state} /></:value>
                 </.list_item>
+                <.list_item>
+                  <:label>Steps:</:label>
+                </.list_item>
               </.detail_list>
-              <div class="divide-y divide-gray-200 pb-2">
-                <div></div>
-                <div></div>
-              </div>
               <.step_list
                 :let={step}
                 id={"run-tab-step-list-#{run.id}"}
                 steps={@steps}
-                class="flex-1 items-center"
+                class="flex-1 items-center ml-2"
               >
                 <.step_item
                   step={step}
@@ -115,7 +114,7 @@ defmodule LightningWeb.RunLive.RunViewerLive do
             </Common.panel_content>
             <Common.panel_content for_hash="log" class="h-full mb-2">
               <div class="flex flex-col h-full @5xl/viewer:flex-row">
-                <div class="min-h-0 max-h-[30%] 0 mb-2 overflow-auto flex-none flex @5xl/viewer:flex-row flex-col">
+                <div class="min-h-0 max-h-[30%] 0 mb-2 overflow-auto flex-none flex @5xl/viewer:flex-row flex-col @5xl/viewer:max-h-[100%]">
                   <.step_list
                     :let={step}
                     id={"log-tab-step-list-#{run.id}"}
@@ -159,7 +158,7 @@ defmodule LightningWeb.RunLive.RunViewerLive do
                 </div>
               <% else %>
                 <div class="flex flex-col h-full @5xl/viewer:flex-row">
-                  <div class="min-h-0 max-h-[30%] 0 mb-2 overflow-auto flex-none flex @5xl/viewer:flex-row flex-col">
+                  <div class="min-h-0 max-h-[30%] 0 mb-2 overflow-auto flex-none flex @5xl/viewer:flex-row flex-col @5xl/viewer:max-h-[100%]">
                     <.step_list
                       :let={step}
                       id={"input-tab-step-list-#{run.id}"}
@@ -209,7 +208,7 @@ defmodule LightningWeb.RunLive.RunViewerLive do
                 </div>
               <% else %>
                 <div class="flex flex-col h-full @5xl/viewer:flex-row">
-                  <div class="min-h-0 max-h-[30%] 0 mb-2 overflow-auto flex-none flex @5xl/viewer:flex-row flex-col">
+                  <div class="min-h-0 max-h-[30%] 0 mb-2 overflow-auto flex-none flex @5xl/viewer:flex-row flex-col @5xl/viewer:max-h-[100%]">
                     <.step_list
                       :let={step}
                       id={"output-tab-step-list-#{run.id}"}
