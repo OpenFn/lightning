@@ -17,7 +17,7 @@
             field={f[:github_installation_id]}
             label="Github Installation"
             prompt="Select an installation"
-            options={(@installations.ok? && @installations.result) || []}
+            options={installations_select_options(@installations)}
             disabled={if(@installations.loading, do: true, else: false)}
             required="true"
           />
@@ -55,8 +55,7 @@
             label="Repository"
             prompt="Select a repository"
             options={
-              (@repos.ok? && @repos.result[f[:github_installation_id].value]) ||
-                []
+              repos_select_options(@repos, f[:github_installation_id].value)
             }
             disabled={
               to_string(f[:github_installation_id].value) == "" or !@repos.ok?
@@ -71,7 +70,7 @@
             field={f[:branch]}
             label="Branch"
             prompt="Select a branch"
-            options={(@branches.ok? && @branches.result[f[:repo].value]) || []}
+            options={branches_select_options(@branches, f[:repo].value)}
             disabled={to_string(f[:repo].value) == "" or !@branches.ok?}
             required="true"
           />
@@ -95,7 +94,11 @@
             field={f[:config_path]}
             label="Path to config"
             placeholder="./config.json"
+            class="placeholder:italic placeholder:text-slate-400"
           />
+        </div>
+        <div class="sm:col-span-5">
+          <.sync_order_radio form={f} />
         </div>
         <div class="sm:col-span-5 bg-amber-200 flex gap-3 rounded-md p-3 ">
           <.input
@@ -105,9 +108,13 @@
             disabled={!@can_install_github}
           />
           <span>
-            I understand that <code>.github/workflows/pull.yml</code>
-            and <code>.github/workflows/deploy.yml</code>
-            will be commited into the selected branch and any existing versions of these files will be overwritten
+            I understand that <code>.github/workflows/openfn-pull.yml</code>
+            will be commited into the
+            <code>
+              default branch(<%= get_default_branch(@repos, f[:repo].value) ||
+                "..." %>)
+            </code>
+            of the selected repository and any existing version of this file will be overwritten
           </span>
         </div>
         <div class="sm:col-span-5 flex gap-4 mt-2 -mb-3">
@@ -123,6 +130,7 @@
       id="verify-connection-banner"
       verify_connection={@verify_connection}
       myself={@myself}
+      changeset={@changeset}
       can_reconnect={
         @can_install_github &&
           can_access_github_installation?(
@@ -161,14 +169,14 @@
         <span>
           Path to config:
           <span class="text-xs font-mono bg-gray-200 rounded-md p-1">
-            <%= @project_repo_connection.config_path %>
+            <%= ProjectRepoConnection.config_path(@project_repo_connection) %>
           </span>
         </span>
 
-        <div>
+        <div class="pt-2">
           <.button
             id="initiate-sync-button"
-            disabled={!@can_initiate_github_sync}
+            disabled={!@can_initiate_github_sync || !@verify_connection.ok?}
             type="button"
             tooltip={
               !@can_initiate_github_sync &&

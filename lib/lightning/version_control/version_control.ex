@@ -32,10 +32,16 @@ defmodule Lightning.VersionControl do
     end)
   end
 
-  @spec reconfigure_github_connection(ProjectRepoConnection.t(), User.t()) ::
+  @spec reconfigure_github_connection(ProjectRepoConnection.t(), map(), User.t()) ::
           :ok | {:error, map()}
-  def reconfigure_github_connection(repo_connection, user) do
-    configure_github_repo(repo_connection, user)
+  def reconfigure_github_connection(repo_connection, params, user) do
+    changeset =
+      ProjectRepoConnection.validate_sync_direction(repo_connection, params)
+
+    with {:ok, updated_repo_connection} <-
+           Ecto.Changeset.apply_action(changeset, :update) do
+      configure_github_repo(updated_repo_connection, user)
+    end
   end
 
   @spec verify_github_connection(repo_connection :: ProjectRepoConnection.t()) ::
@@ -45,20 +51,37 @@ defmodule Lightning.VersionControl do
            GithubClient.build_installation_client(
              repo_connection.github_installation_id
            ),
+         {:ok, %{status: 200, body: %{"default_branch" => default_branch}}} <-
+           GithubClient.get_repo(client, repo_connection.repo),
          :ok <-
            verify_file_exists(
              client,
-             repo_connection,
-             pull_yml_target_path(repo_connection)
+             repo_connection.repo,
+             default_branch,
+             pull_yml_target_path()
            ),
          :ok <-
            verify_file_exists(
              client,
-             repo_connection,
+             repo_connection.repo,
+             repo_connection.branch,
              deploy_yml_target_path(repo_connection)
            ),
-         :ok <- verify_file_exists(client, repo_connection, "project.yaml"),
-         :ok <- verify_file_exists(client, repo_connection, ".state.json") do
+         {:ok, config} <- get_config_file(client, repo_connection),
+         :ok <-
+           verify_file_exists(
+             client,
+             repo_connection.repo,
+             repo_connection.branch,
+             project_spec_target_path(repo_connection, config)
+           ),
+         :ok <-
+           verify_file_exists(
+             client,
+             repo_connection.repo,
+             repo_connection.branch,
+             project_state_target_path(repo_connection, config)
+           ) do
       verify_repo_secret_exists(
         client,
         repo_connection,
@@ -102,19 +125,28 @@ defmodule Lightning.VersionControl do
            GithubClient.build_installation_client(
              repo_connection.github_installation_id
            ),
+         {:ok, %{status: 200, body: %{"default_branch" => default_branch}}} <-
+           GithubClient.get_repo(client, repo_connection.repo),
          {:ok, %Tesla.Env{status: 204}} <-
-           GithubClient.create_repo_dispatch_event(
+           GithubClient.create_workflow_dispatch_event(
              client,
              repo_connection.repo,
+             pull_yml_target_path() |> Path.basename(),
              %{
-               event_type: "sync_project",
-               client_payload: %{
-                 message: "#{user_email} initiated a sync from Lightning"
+               ref: default_branch,
+               inputs: %{
+                 projectId: repo_connection.project_id,
+                 apiSecretName: api_secret_name(repo_connection),
+                 pathToConfig: config_target_path(repo_connection),
+                 branch: repo_connection.branch,
+                 commitMessage:
+                   "user #{user_email} initiated a sync from Lightning"
                }
              }
            ) do
       :ok
     end
+    |> dbg()
   end
 
   def fetch_user_installations(user) do
@@ -363,16 +395,12 @@ defmodule Lightning.VersionControl do
     end)
   end
 
-  @spec push_workflow_files(
+  @spec push_files_to_selected_branch(
           client :: Tesla.Client.t(),
           repo_connection :: ProjectRepoConnection.t()
         ) :: {:ok, Tesla.Env.t()} | {:error, Tesla.Env.t() | GithubError.t()}
-  defp push_workflow_files(client, repo_connection) do
-    with {:ok, %{status: 201, body: pull_blob}} <-
-           GithubClient.create_blob(client, repo_connection.repo, %{
-             content: pull_yml(repo_connection)
-           }),
-         {:ok, %{status: 201, body: deploy_blob}} <-
+  defp push_files_to_selected_branch(client, repo_connection) do
+    with {:ok, %{status: 201, body: deploy_blob}} <-
            GithubClient.create_blob(client, repo_connection.repo, %{
              content: deploy_yml(repo_connection)
            }),
@@ -390,12 +418,6 @@ defmodule Lightning.VersionControl do
              tree:
                [
                  %{
-                   path: pull_yml_target_path(repo_connection),
-                   mode: "100644",
-                   type: "blob",
-                   sha: pull_blob["sha"]
-                 },
-                 %{
                    path: deploy_yml_target_path(repo_connection),
                    mode: "100644",
                    type: "blob",
@@ -406,7 +428,8 @@ defmodule Lightning.VersionControl do
            }),
          {:ok, %{status: 201, body: created_commit}} <-
            GithubClient.create_commit(client, repo_connection.repo, %{
-             message: "configure OpenFn",
+             message:
+               "#{if(repo_connection.sync_direction == :pull, do: "[skip actions]")} Configure OpenFn",
              tree: created_tree["sha"],
              parents: [base_commit["sha"]]
            }),
@@ -421,8 +444,54 @@ defmodule Lightning.VersionControl do
     end
   end
 
+  @spec push_pull_yml_to_default_branch(
+          client :: Tesla.Client.t(),
+          repo_connection :: ProjectRepoConnection.t()
+        ) :: {:ok, Tesla.Env.t()} | {:error, Tesla.Env.t() | GithubError.t()}
+  defp push_pull_yml_to_default_branch(client, repo_connection) do
+    with {:ok, %{status: 200, body: %{"default_branch" => default_branch}}} <-
+           GithubClient.get_repo(client, repo_connection.repo),
+         {:ok, %{status: 201, body: pull_blob}} <-
+           GithubClient.create_blob(client, repo_connection.repo, %{
+             content: pull_yml()
+           }),
+         {:ok, %{status: 200, body: base_commit}} <-
+           GithubClient.get_commit(
+             client,
+             repo_connection.repo,
+             "heads/#{default_branch}"
+           ),
+         {:ok, %{status: 201, body: created_tree}} <-
+           GithubClient.create_tree(client, repo_connection.repo, %{
+             base_tree: base_commit["commit"]["tree"]["sha"],
+             tree: [
+               %{
+                 path: pull_yml_target_path(),
+                 mode: "100644",
+                 type: "blob",
+                 sha: pull_blob["sha"]
+               }
+             ]
+           }),
+         {:ok, %{status: 201, body: created_commit}} <-
+           GithubClient.create_commit(client, repo_connection.repo, %{
+             message: "[skip actions] Configure OpenFn: pull workflow",
+             tree: created_tree["sha"],
+             parents: [base_commit["sha"]]
+           }),
+         {:ok, %{status: 200, body: updated_ref}} <-
+           GithubClient.update_ref(
+             client,
+             repo_connection.repo,
+             "heads/#{default_branch}",
+             %{sha: created_commit["sha"]}
+           ) do
+      {:ok, updated_ref}
+    end
+  end
+
   defp maybe_create_config_blob(tesla_client, repo_connection) do
-    if repo_connection.config_path do
+    if is_nil(repo_connection.config_path) do
       GithubClient.create_blob(tesla_client, repo_connection.repo, %{
         content: config_json(repo_connection)
       })
@@ -432,13 +501,13 @@ defmodule Lightning.VersionControl do
   end
 
   defp maybe_include_config_tree(repo_connection, config_blob_or_nil) do
-    if is_map(config_blob_or_nil) do
+    if is_struct(config_blob_or_nil, Tesla.Env) do
       [
         %{
           path: config_target_path(repo_connection),
           mode: "100644",
           type: "blob",
-          sha: config_blob_or_nil["sha"]
+          sha: config_blob_or_nil.body["sha"]
         }
       ]
     else
@@ -446,16 +515,10 @@ defmodule Lightning.VersionControl do
     end
   end
 
-  defp pull_yml(repo_connection) do
+  defp pull_yml do
     :code.priv_dir(:lightning)
     |> Path.join("github/pull.yml")
-    |> EEx.eval_file(
-      assigns: [
-        project_id: repo_connection.project_id,
-        config_path: repo_connection.config_path,
-        api_secret_name: api_secret_name(repo_connection)
-      ]
-    )
+    |> File.read!()
   end
 
   defp deploy_yml(repo_connection) do
@@ -464,31 +527,48 @@ defmodule Lightning.VersionControl do
     |> EEx.eval_file(
       assigns: [
         project_id: repo_connection.project_id,
-        config_path: repo_connection.config_path,
-        api_secret_name: api_secret_name(repo_connection)
+        config_path: config_target_path(repo_connection),
+        api_secret_name: api_secret_name(repo_connection),
+        branch: repo_connection.branch
       ]
     )
   end
 
   defp config_json(repo_connection) do
-    Jason.encode!(%{
-      endpoint: LightningWeb.Endpoint.url(),
-      statePath: "#{repo_connection.project_id}-state.json",
-      specPath: "#{repo_connection.project_id}-spec.yaml"
-    })
+    Jason.encode!(
+      %{
+        endpoint: LightningWeb.Endpoint.url(),
+        statePath: "openfn-#{repo_connection.project_id}-state.json",
+        specPath: "openfn-#{repo_connection.project_id}-spec.yaml"
+      },
+      pretty: true
+    )
   end
 
-  defp pull_yml_target_path(repo_connection) do
-    ".github/workflows/#{repo_connection.project_id}-pull.yml"
+  defp pull_yml_target_path do
+    ".github/workflows/openfn-pull.yml"
   end
 
   defp deploy_yml_target_path(repo_connection) do
-    ".github/workflows/#{repo_connection.project_id}-deploy.yml"
+    ".github/workflows/openfn-#{repo_connection.project_id}-deploy.yml"
   end
 
   defp config_target_path(repo_connection) do
-    path =
-      repo_connection.config_path || "#{repo_connection.project_id}-config.json"
+    path = ProjectRepoConnection.config_path(repo_connection)
+
+    # get rid of ./ because we always operate from root
+    Path.relative_to(path, ".")
+  end
+
+  defp project_spec_target_path(repo_connection, config) do
+    path = config["specPath"] || "#{repo_connection.project_id}-spec.yaml"
+
+    # get rid of ./ because we always operate from root
+    Path.relative_to(path, ".")
+  end
+
+  defp project_state_target_path(repo_connection, config) do
+    path = config["statePath"] || "#{repo_connection.project_id}-state.json"
 
     # get rid of ./ because we always operate from root
     Path.relative_to(path, ".")
@@ -502,9 +582,7 @@ defmodule Lightning.VersionControl do
   defp maybe_delete_workflow_files(repo_connection, user) do
     with {:ok, access_token} <- fetch_user_access_token(user),
          {:ok, client} <- GithubClient.build_bearer_client(access_token) do
-      pull_path = pull_yml_target_path(repo_connection)
       deploy_path = deploy_yml_target_path(repo_connection)
-      maybe_delete_file(client, repo_connection, pull_path)
       maybe_delete_file(client, repo_connection, deploy_path)
     end
   end
@@ -523,7 +601,7 @@ defmodule Lightning.VersionControl do
         file_path,
         %{
           sha: sha,
-          message: "disconnect OpenFn",
+          message: "[skip actions] Disconnect OpenFn: delete #{file_path}",
           branch: repo_connection.branch
         }
       )
@@ -555,18 +633,25 @@ defmodule Lightning.VersionControl do
   defp configure_github_repo(repo_connection, user) do
     with {:ok, user_token} <- fetch_user_access_token(user),
          {:ok, tesla_client} <- GithubClient.build_bearer_client(user_token),
-         {:ok, _} <- push_workflow_files(tesla_client, repo_connection),
+         {:ok, _} <-
+           push_pull_yml_to_default_branch(tesla_client, repo_connection),
+         {:ok, _} <-
+           push_files_to_selected_branch(tesla_client, repo_connection),
          {:ok, _} <- configure_api_secret(tesla_client, repo_connection) do
-      initiate_sync(repo_connection, user.email)
+      if repo_connection.sync_direction == :pull do
+        initiate_sync(repo_connection, user.email)
+      else
+        :ok
+      end
     end
   end
 
-  defp verify_file_exists(client, repo_connection, file_path) do
+  defp verify_file_exists(client, repo, branch, file_path) do
     case GithubClient.get_repo_content(
            client,
-           repo_connection.repo,
+           repo,
            file_path,
-           "heads/#{repo_connection.branch}"
+           "heads/#{branch}"
          ) do
       {:ok, %{status: 200}} ->
         :ok
@@ -589,6 +674,18 @@ defmodule Lightning.VersionControl do
          GithubError.repo_secret_not_found(
            "#{secret_name} has not been set in the repo"
          )}
+    end
+  end
+
+  defp get_config_file(client, repo_connection) do
+    with {:ok, %{status: 200, body: %{"content" => content}}} <-
+           GithubClient.get_repo_content(
+             client,
+             repo_connection.repo,
+             config_target_path(repo_connection),
+             "heads/#{repo_connection.branch}"
+           ) do
+      content |> Base.decode64!(ignore: :whitespace) |> Jason.decode()
     end
   end
 end
