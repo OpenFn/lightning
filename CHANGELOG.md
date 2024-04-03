@@ -19,10 +19,18 @@ and this project adheres to
 
 ### Changed
 
+- Run the usage tracking submission job more frequently to reduce the risk of
+  Oban unavailability at a particular time.
+  [#1778](https://github.com/OpenFn/lightning/issues/1778)
+- Remove code supporting V1 usage tracking submissions.
+  [#1853](https://github.com/OpenFn/lightning/issues/1853)
+
 ### Fixed
 
 - Fix scrolling behaviour on inspector for small screens
   [#1962](https://github.com/OpenFn/lightning/issues/1962)
+- Fix project picker for users with many projects
+  [#1952](https://github.com/OpenFn/lightning/issues/1952)
 
 ## [v2.3.0] - 2024-04-02
 
