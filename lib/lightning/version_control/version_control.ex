@@ -146,7 +146,6 @@ defmodule Lightning.VersionControl do
            ) do
       :ok
     end
-    |> dbg()
   end
 
   def fetch_user_installations(user) do
