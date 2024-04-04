@@ -41,14 +41,13 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
     else
       {:noreply,
        socket
-       |> put_flash(:error, "You are not authorized to perform this action")}
+       |> put_flash(:error, "You are not authorized to perform this action")
+       |> push_navigate(to: ~p"/projects/#{socket.assigns.project}/settings#vcs")}
     end
   end
 
   def handle_event("delete-connection", _params, socket) do
     if socket.assigns.can_install_github do
-      project = socket.assigns.project
-
       {:ok, _} =
         VersionControl.remove_github_connection(
           socket.assigns.project_repo_connection,
@@ -58,11 +57,12 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
       {:noreply,
        socket
        |> put_flash(:info, "Connection removed successfully")
-       |> push_navigate(to: ~p"/projects/#{project}/settings#vcs")}
+       |> push_navigate(to: ~p"/projects/#{socket.assigns.project}/settings#vcs")}
     else
       {:noreply,
        socket
-       |> put_flash(:error, "You are not authorized to perform this action")}
+       |> put_flash(:error, "You are not authorized to perform this action")
+       |> push_navigate(to: ~p"/projects/#{socket.assigns.project}/settings#vcs")}
     end
   end
 
@@ -72,7 +72,8 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
     else
       {:noreply,
        socket
-       |> put_flash(:error, "You are not authorized to perform this action")}
+       |> put_flash(:error, "You are not authorized to perform this action")
+       |> push_navigate(to: ~p"/projects/#{socket.assigns.project}/settings#vcs")}
     end
   end
 
@@ -80,9 +81,12 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
     if socket.assigns.can_initiate_github_sync do
       {:noreply, initiate_github_sync(socket)}
     else
+      project = socket.assigns.project
+
       {:noreply,
        socket
-       |> put_flash(:error, "You are not authorized to perform this action")}
+       |> put_flash(:error, "You are not authorized to perform this action")
+       |> push_navigate(to: ~p"/projects/#{project}/settings#vcs")}
     end
   end
 
@@ -179,7 +183,11 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
         assign(socket, changeset: changeset)
 
       {:error, _other} ->
-        put_flash(socket, :error, "Oops! Could not connect to Github")
+        socket
+        |> put_flash(:error, "Oops! Could not connect to Github")
+        |> push_navigate(
+          to: ~p"/projects/#{socket.assigns.project}/settings#vcs"
+        )
     end
   end
 
@@ -202,10 +210,13 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
         assign(socket, changeset: changeset)
 
       {:error, _} ->
-        put_flash(
-          socket,
+        socket
+        |> put_flash(
           :error,
           "Oops! Looks like you don't have access to this installation in Github"
+        )
+        |> push_navigate(
+          to: ~p"/projects/#{socket.assigns.project}/settings#vcs"
         )
     end
   end
@@ -222,10 +233,13 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
         )
 
       {:error, _} ->
-        put_flash(
-          socket,
+        socket
+        |> put_flash(
           :error,
           "Oops! An error occured while connecting to Github. Please try again later"
+        )
+        |> push_navigate(
+          to: ~p"/projects/#{socket.assigns.project}/settings#vcs"
         )
     end
   end
