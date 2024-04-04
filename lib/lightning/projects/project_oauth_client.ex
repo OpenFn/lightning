@@ -18,7 +18,7 @@ defmodule Lightning.Projects.ProjectOauthClient do
 
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id
-  schema "project_credentials" do
+  schema "project_oauth_clients" do
     belongs_to :oauth_client, OauthClient
     belongs_to :project, Project
 
