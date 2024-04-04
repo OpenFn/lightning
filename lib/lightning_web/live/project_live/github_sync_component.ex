@@ -557,6 +557,7 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
       </:title>
       <.form
         :let={f}
+        id="reconnect-project-form"
         as={:connection}
         for={@changeset}
         phx-submit="reconnect"

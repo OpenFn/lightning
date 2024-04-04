@@ -90,7 +90,7 @@ defmodule Lightning.VersionControl do
     |> Repo.delete()
     |> tap(fn
       {:ok, repo_connection} ->
-        maybe_delete_workflow_files(
+        undo_repo_actions(
           repo_connection,
           user
         )
@@ -556,11 +556,26 @@ defmodule Lightning.VersionControl do
     "OPENFN_#{sanitized_id}_API_KEY"
   end
 
-  defp maybe_delete_workflow_files(repo_connection, user) do
+  defp undo_repo_actions(repo_connection, user) do
     with {:ok, access_token} <- fetch_user_access_token(user),
          {:ok, client} <- GithubClient.build_bearer_client(access_token) do
-      deploy_path = deploy_yml_target_path(repo_connection)
-      maybe_delete_file(client, repo_connection, deploy_path)
+      maybe_delete_file(
+        client,
+        repo_connection,
+        deploy_yml_target_path(repo_connection)
+      )
+
+      maybe_delete_file(
+        client,
+        repo_connection,
+        config_target_path(repo_connection)
+      )
+
+      GithubClient.delete_repo_secret(
+        client,
+        repo_connection.repo,
+        api_secret_name(repo_connection)
+      )
     end
   end
 
