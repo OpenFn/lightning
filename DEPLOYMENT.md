@@ -102,7 +102,7 @@ Note that for secure deployments, it's recommended to use a combination of
   the initial "Lightning Demo" state. Note that this will destroy _most_ of what
   you have in your database!
 
-### Google
+### Google Oauth2
 
 Using your Google Cloud account, provision a new OAuth 2.0 Client with the 'Web
 application' type.
@@ -115,3 +115,20 @@ following environment variables:
 
 - `GOOGLE_CLIENT_ID` - Which is `client_id` from the client details.
 - `GOOGLE_CLIENT_SECRET` - `client_secret` from the client details.
+
+### Salesforce Oauth2
+
+Using your Salesforce developer account, create a new Oauth 2.0 connected
+application.
+
+Set the callback url to: `https://<ENDPOINT DOMAIN>/authenticate/callback`.
+Replacing `ENDPOINT DOMAIN` with the host name of your instance.
+
+Grant permissions as desired.
+
+Once the client has been created set the following environment variables:
+
+- `SALESFORCE_CLIENT_ID` - Which is `Consumer Key` from the "Manage Consumer
+  Details" screen.
+- `SALESFORCE_CLIENT_SECRET` - Which is `Consumer Secret` from the "Manage
+  Consumer Details" screen.
