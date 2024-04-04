@@ -6,17 +6,7 @@ defmodule Lightning.VersionControlTest do
 
   import Lightning.Factories
 
-  @public_key """
-  -----BEGIN PUBLIC KEY-----
-  MIIBITANBgkqhkiG9w0BAQEFAAOCAQ4AMIIBCQKCAQB1ZtDWukVcNcnMLXUsi8Mw
-  6WK5pri2sXuNZpT8lMf2fXcEmsJdvEhP3DASDykLyusJp9fV17BzM8JmzC9zNMIc
-  OdLhwsl8rKoVrwYjFXXRvPn+5QzpwT/JprymE54lbFJ/lMefkfkJcaSl5khyHNpl
-  rGH5g7+zGiMfs+kXItjhW41xEsy552kff3Wq/33R2sdizIDDJjEC/6J942jLpMJe
-  HgYaZXZRKsc9b6CSjZS/nVh0OA/bE4deNrSDesyytcMmN3/+l9XYbQqJOgVs/sWl
-  TNPEVQabXsPxzIwVGcH+iDRhV31nqe6YoQ/gvNTRnESnC1KRrTB7eCwZP0kHLshX
-  AgMBAAE=
-  -----END PUBLIC KEY-----
-  """
+  import Lightning.GithubHelpers
 
   describe "create_github_connection/2" do
     test "user with valid oauth token creates connection successfully" do
@@ -27,18 +17,69 @@ defmodule Lightning.VersionControlTest do
 
       assert Repo.aggregate(ProjectRepoConnection, :count) == 0
 
-      params = %{
-        "project_id" => project.id,
-        "repo" => "some/repo",
-        "branch" => "somebranch",
-        "github_installation_id" => "1234"
+      expected_installation = %{
+        "id" => "1234",
+        "account" => %{
+          "type" => "User",
+          "login" => "username"
+        }
       }
 
-      github_connection_expectations(
-        params["github_installation_id"],
-        params["repo"],
-        params["branch"]
+      expected_repo = %{
+        "full_name" => "someaccount/somerepo",
+        "default_branch" => "main"
+      }
+
+      expected_branch = %{"name" => "somebranch"}
+
+      # push pull.yml
+      expect_get_repo(expected_repo["full_name"], 200, expected_repo)
+      expect_create_blob(expected_repo["full_name"])
+
+      expect_get_commit(
+        expected_repo["full_name"],
+        expected_repo["default_branch"]
       )
+
+      expect_create_tree(expected_repo["full_name"])
+      expect_create_commit(expected_repo["full_name"])
+
+      expect_update_ref(
+        expected_repo["full_name"],
+        expected_repo["default_branch"]
+      )
+
+      # push deploy.yml + config.json
+      # deploy.yml blob
+      expect_create_blob(expected_repo["full_name"])
+      # config.json blob
+      expect_create_blob(expected_repo["full_name"])
+      expect_get_commit(expected_repo["full_name"], expected_branch["name"])
+      expect_create_tree(expected_repo["full_name"])
+      expect_create_commit(expected_repo["full_name"])
+      expect_update_ref(expected_repo["full_name"], expected_branch["name"])
+
+      # write secret
+      expect_get_public_key(expected_repo["full_name"])
+      secret_name = "OPENFN_#{String.replace(project.id, "-", "_")}_API_KEY"
+      expect_create_repo_secret(expected_repo["full_name"], secret_name)
+
+      # initialize sync
+      expect_create_installation_token(expected_installation["id"])
+      expect_get_repo(expected_repo["full_name"], 200, expected_repo)
+
+      expect_create_workflow_dispatch(
+        expected_repo["full_name"],
+        "openfn-pull.yml"
+      )
+
+      params = %{
+        "project_id" => project.id,
+        "repo" => expected_repo["full_name"],
+        "branch" => expected_branch["name"],
+        "github_installation_id" => expected_installation["id"],
+        "sync_direction" => "pull"
+      }
 
       assert {:ok, repo_connection} =
                VersionControl.create_github_connection(
@@ -96,49 +137,36 @@ defmodule Lightning.VersionControlTest do
           access_token: "someaccesstoken"
         )
 
-      repo_name = repo_connection.repo
-
       assert is_map(user.github_oauth_token)
 
-      Mox.expect(Lightning.Tesla.Mock, :call, 4, fn env, _opts ->
-        case env do
-          # check if pull yml exists for deletion
-          %{
-            method: :get,
-            url:
-              "https://api.github.com/repos/" <>
-                  ^repo_name <> "/contents/.github/workflows/pull.yml"
-          } ->
-            {:ok, %Tesla.Env{status: 200, body: %{"sha" => "somesha"}}}
+      # check if deploy yml exists for deletion
+      expected_deploy_yml_path =
+        ".github/workflows/openfn-#{project.id}-deploy.yml"
 
-          # delete pull yml
-          %{
-            method: :delete,
-            url:
-              "https://api.github.com/repos/" <>
-                  ^repo_name <> "/contents/.github/workflows/pull.yml"
-          } ->
-            {:ok, %Tesla.Env{status: 200, body: %{"sha" => "somesha"}}}
+      expect_get_repo_content(repo_connection.repo, expected_deploy_yml_path)
 
-          # check if deploy yml exists for deletion
-          %{
-            method: :get,
-            url:
-              "https://api.github.com/repos/" <>
-                  ^repo_name <> "/contents/.github/workflows/deploy.yml"
-          } ->
-            {:ok, %Tesla.Env{status: 200, body: %{"sha" => "somesha"}}}
+      # deletes successfully
+      expect_delete_repo_content(
+        repo_connection.repo,
+        expected_deploy_yml_path
+      )
 
-          # delete deploy yml.
-          %{
-            method: :delete,
-            url:
-              "https://api.github.com/repos/" <>
-                  ^repo_name <> "/contents/.github/workflows/deploy.yml"
-          } ->
-            {:ok, %Tesla.Env{status: 400, body: %{"something" => "happened"}}}
-        end
-      end)
+      # check if deploy yml exists for deletion
+      expected_config_json_path = "openfn-#{project.id}-config.json"
+      expect_get_repo_content(repo_connection.repo, expected_config_json_path)
+      # fails to delete
+      expect_delete_repo_content(
+        repo_connection.repo,
+        expected_config_json_path,
+        400,
+        %{"something" => "happened"}
+      )
+
+      # delete secret
+      expect_delete_repo_secret(
+        repo_connection.repo,
+        "OPENFN_#{String.replace(project.id, "-", "_")}_API_KEY"
+      )
 
       assert Repo.aggregate(ProjectRepoConnection, :count) == 1
 
@@ -352,101 +380,5 @@ defmodule Lightning.VersionControlTest do
     }
 
     insert(:user, github_oauth_token: active_token) |> Lightning.Repo.reload()
-  end
-
-  defp github_connection_expectations(
-         installation_id,
-         expected_repo_name,
-         expected_branch_name
-       ) do
-    installation_id = to_string(installation_id)
-
-    Mox.expect(Lightning.Tesla.Mock, :call, 10, fn env, _opts ->
-      case env.url do
-        # create blob. called twice (for push.yml and deploy.yml)
-        "https://api.github.com/repos/" <> ^expected_repo_name <> "/git/blobs" ->
-          {:ok,
-           %Tesla.Env{
-             status: 201,
-             body: %{"sha" => "3a0f86fb8db8eea7ccbb9a95f325ddbedfb25e15"}
-           }}
-
-        # get commit on selected branch
-        "https://api.github.com/repos/" <>
-            ^expected_repo_name <>
-            "/commits/heads/" <>
-            ^expected_branch_name ->
-          {:ok,
-           %Tesla.Env{
-             status: 200,
-             body: %{
-               "sha" => "6dcb09b5b57875f334f61aebed695e2e4193db5e",
-               "commit" => %{
-                 "tree" => %{
-                   "sha" => "6dcb09b5b57875f334f61aebed695e2e4193db5e"
-                 }
-               }
-             }
-           }}
-
-        # create commit
-        "https://api.github.com/repos/" <> ^expected_repo_name <> "/git/commits" ->
-          {:ok,
-           %Tesla.Env{
-             status: 201,
-             body: %{"sha" => "7638417db6d59f3c431d3e1f261cc637155684cd"}
-           }}
-
-        # create tree
-        "https://api.github.com/repos/" <> ^expected_repo_name <> "/git/trees" ->
-          {:ok,
-           %Tesla.Env{
-             status: 201,
-             body: %{"sha" => "cd8274d15fa3ae2ab983129fb037999f264ba9a7"}
-           }}
-
-        # update a reference on the selected branch
-        "https://api.github.com/repos/" <>
-            ^expected_repo_name <>
-            "/git/refs/heads/" <>
-            ^expected_branch_name ->
-          {:ok,
-           %Tesla.Env{
-             status: 200,
-             body: %{"ref" => "refs/heads/master"}
-           }}
-
-        # get repo public key
-        "https://api.github.com/repos/" <>
-            ^expected_repo_name <> "/actions/secrets/public-key" ->
-          {:ok,
-           %Tesla.Env{
-             status: 200,
-             body: %{
-               "key" => Base.encode64(@public_key),
-               "key_id" => "012345678912345678"
-             }
-           }}
-
-        # create the OPENFN_API_KEY repo secret
-        "https://api.github.com/repos/" <>
-            ^expected_repo_name <> "/actions/secrets/OPENFN_API_KEY" ->
-          {:ok, %Tesla.Env{status: 201, body: ""}}
-
-        # token for sync
-        "https://api.github.com/app/installations/" <>
-            ^installation_id <> "/access_tokens" ->
-          {:ok,
-           %Tesla.Env{
-             status: 201,
-             body: %{"token" => "some-token"}
-           }}
-
-        # initialize sync
-        "https://api.github.com/repos/" <>
-            ^expected_repo_name <> "/dispatches" ->
-          {:ok, %Tesla.Env{status: 204, body: ""}}
-      end
-    end)
   end
 end

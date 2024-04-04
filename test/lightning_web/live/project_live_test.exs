@@ -10,6 +10,8 @@ defmodule LightningWeb.ProjectLiveTest do
   import Lightning.ApplicationHelpers,
     only: [put_temporary_env: 3]
 
+  import Lightning.GithubHelpers
+
   import Mox
 
   alias Lightning.Name
@@ -17,18 +19,6 @@ defmodule LightningWeb.ProjectLiveTest do
   alias Lightning.Repo
 
   setup :stub_usage_limiter_ok
-
-  @public_key """
-  -----BEGIN PUBLIC KEY-----
-  MIIBITANBgkqhkiG9w0BAQEFAAOCAQ4AMIIBCQKCAQB1ZtDWukVcNcnMLXUsi8Mw
-  6WK5pri2sXuNZpT8lMf2fXcEmsJdvEhP3DASDykLyusJp9fV17BzM8JmzC9zNMIc
-  OdLhwsl8rKoVrwYjFXXRvPn+5QzpwT/JprymE54lbFJ/lMefkfkJcaSl5khyHNpl
-  rGH5g7+zGiMfs+kXItjhW41xEsy552kff3Wq/33R2sdizIDDJjEC/6J942jLpMJe
-  HgYaZXZRKsc9b6CSjZS/nVh0OA/bE4deNrSDesyytcMmN3/+l9XYbQqJOgVs/sWl
-  TNPEVQabXsPxzIwVGcH+iDRhV31nqe6YoQ/gvNTRnESnC1KRrTB7eCwZP0kHLshX
-  AgMBAAE=
-  -----END PUBLIC KEY-----
-  """
 
   @create_attrs %{
     raw_name: "some name"
@@ -2529,16 +2519,12 @@ defmodule LightningWeb.ProjectLiveTest do
     test "github installations get listed properly when an error occurs", %{
       conn: conn
     } do
-      Mox.expect(Lightning.Tesla.Mock, :call, 1, fn
-        %{url: "https://api.github.com/user/installations"}, _opts ->
-          {:ok,
-           %Tesla.Env{status: 400, body: %{"error" => "something terrible"}}}
-      end)
-
       project = insert(:project)
 
       {conn, user} = setup_project_user(conn, project, :admin)
       set_valid_github_oauth_token!(user)
+
+      expect_get_user_installations(400, %{"error" => "something terrible"})
 
       {:ok, view, _html} =
         live(
@@ -2564,30 +2550,12 @@ defmodule LightningWeb.ProjectLiveTest do
         }
       }
 
-      expected_access_token_endpoint =
-        "https://api.github.com/app/installations/#{expected_installation["id"]}/access_tokens"
+      expect_get_user_installations(200, %{
+        "installations" => [expected_installation]
+      })
 
-      Mox.expect(Lightning.Tesla.Mock, :call, 3, fn
-        # list installations
-        %{url: "https://api.github.com/user/installations"}, _opts ->
-          {:ok,
-           %Tesla.Env{
-             status: 200,
-             body: %{"installations" => [expected_installation]}
-           }}
-
-        # get installation access token. This is called when fetching repos
-        %{url: ^expected_access_token_endpoint}, _opts ->
-          {:ok,
-           %Tesla.Env{
-             status: 201,
-             body: %{"token" => "some-token"}
-           }}
-
-        # list repos
-        %{url: "https://api.github.com/installation/repositories"}, _opts ->
-          {:ok, %Tesla.Env{status: 200, body: %{"repositories" => []}}}
-      end)
+      expect_create_installation_token(expected_installation["id"])
+      expect_get_installation_repos(200)
 
       view |> element("#refresh-installation-button") |> render_click()
 
@@ -2619,49 +2587,24 @@ defmodule LightningWeb.ProjectLiveTest do
         }
       }
 
-      expected_access_token_endpoint =
-        "https://api.github.com/app/installations/#{expected_installation["id"]}/access_tokens"
-
       expected_repo = %{
-        "full_name" => "someaccount/somerepo"
+        "full_name" => "someaccount/somerepo",
+        "default_branch" => "main"
       }
 
-      expected_branch_endpoint =
-        "https://api.github.com/repos/#{expected_repo["full_name"]}/branches"
-
       expected_branch = %{"name" => "somebranch"}
-
-      Mox.expect(Lightning.Tesla.Mock, :call, 5, fn
-        # list installations
-        %{url: "https://api.github.com/user/installations"}, _opts ->
-          {:ok,
-           %Tesla.Env{
-             status: 200,
-             body: %{"installations" => [expected_installation]}
-           }}
-
-        # get installation access token. This is called when fetching repos and branches
-        %{url: ^expected_access_token_endpoint}, _opts ->
-          {:ok,
-           %Tesla.Env{
-             status: 201,
-             body: %{"token" => "some-token"}
-           }}
-
-        # list repos
-        %{url: "https://api.github.com/installation/repositories"}, _opts ->
-          {:ok,
-           %Tesla.Env{status: 200, body: %{"repositories" => [expected_repo]}}}
-
-        # list branches
-        %{url: ^expected_branch_endpoint}, _opts ->
-          {:ok, %Tesla.Env{status: 200, body: [expected_branch]}}
-      end)
 
       project = insert(:project)
 
       {conn, user} = setup_project_user(conn, project, :admin)
       set_valid_github_oauth_token!(user)
+
+      expect_get_user_installations(200, %{
+        "installations" => [expected_installation]
+      })
+
+      expect_create_installation_token(expected_installation["id"])
+      expect_get_installation_repos(200, %{"repositories" => [expected_repo]})
 
       {:ok, view, _html} =
         live(
@@ -2687,6 +2630,10 @@ defmodule LightningWeb.ProjectLiveTest do
       assert selected_installation =~ expected_installation["id"]
 
       # lets select the repo
+      expect_create_installation_token(expected_installation["id"])
+
+      expect_get_repo_branches(expected_repo["full_name"], 200, [expected_branch])
+
       view
       |> form("#project-repo-connection-form",
         connection: %{
@@ -2743,19 +2690,9 @@ defmodule LightningWeb.ProjectLiveTest do
       )
       |> render_change()
 
-      Mox.expect(Lightning.Tesla.Mock, :call, 2, fn
-        # get installation access token.
-        %{url: ^expected_access_token_endpoint}, _opts ->
-          {:ok,
-           %Tesla.Env{
-             status: 201,
-             body: %{"token" => "some-token"}
-           }}
+      expect_create_installation_token(expected_installation["id"])
 
-        # list branches
-        %{url: ^expected_branch_endpoint}, _opts ->
-          {:ok, %Tesla.Env{status: 200, body: [expected_branch]}}
-      end)
+      expect_get_repo_branches(expected_repo["full_name"], 200, [expected_branch])
 
       view
       |> form("#project-repo-connection-form",
@@ -2780,19 +2717,12 @@ defmodule LightningWeb.ProjectLiveTest do
       # now let us refresh the branches
       new_branch = %{"name" => "newbranch"}
 
-      Mox.expect(Lightning.Tesla.Mock, :call, 2, fn
-        # get installation access token.
-        %{url: ^expected_access_token_endpoint}, _opts ->
-          {:ok,
-           %Tesla.Env{
-             status: 201,
-             body: %{"token" => "some-token"}
-           }}
+      expect_create_installation_token(expected_installation["id"])
 
-        # list branches
-        %{url: ^expected_branch_endpoint}, _opts ->
-          {:ok, %Tesla.Env{status: 200, body: [expected_branch, new_branch]}}
-      end)
+      expect_get_repo_branches(expected_repo["full_name"], 200, [
+        expected_branch,
+        new_branch
+      ])
 
       view |> element("#refresh-branches-button") |> render_click()
 
@@ -2808,7 +2738,7 @@ defmodule LightningWeb.ProjectLiveTest do
       assert Enum.count(options) == 3
     end
 
-    test "authorized users can save repo connection successfully",
+    test "authorized users can save repo connection successfully without setting config path and initiate sync to github immediately",
          %{
            conn: conn
          } do
@@ -2820,15 +2750,10 @@ defmodule LightningWeb.ProjectLiveTest do
         }
       }
 
-      expected_access_token_endpoint =
-        "https://api.github.com/app/installations/#{expected_installation["id"]}/access_tokens"
-
       expected_repo = %{
-        "full_name" => "someaccount/somerepo"
+        "full_name" => "someaccount/somerepo",
+        "default_branch" => "main"
       }
-
-      expected_branch_endpoint =
-        "https://api.github.com/repos/#{expected_repo["full_name"]}/branches"
 
       expected_branch = %{"name" => "somebranch"}
 
@@ -2837,28 +2762,12 @@ defmodule LightningWeb.ProjectLiveTest do
       {conn, user} = setup_project_user(conn, project, :admin)
       set_valid_github_oauth_token!(user)
 
-      Mox.expect(Lightning.Tesla.Mock, :call, 3, fn
-        # list installations
-        %{url: "https://api.github.com/user/installations"}, _opts ->
-          {:ok,
-           %Tesla.Env{
-             status: 200,
-             body: %{"installations" => [expected_installation]}
-           }}
+      expect_get_user_installations(200, %{
+        "installations" => [expected_installation]
+      })
 
-        # get installation access token. This is called when fetching repos
-        %{url: ^expected_access_token_endpoint}, _opts ->
-          {:ok,
-           %Tesla.Env{
-             status: 201,
-             body: %{"token" => "some-token"}
-           }}
-
-        # list repos
-        %{url: "https://api.github.com/installation/repositories"}, _opts ->
-          {:ok,
-           %Tesla.Env{status: 200, body: %{"repositories" => [expected_repo]}}}
-      end)
+      expect_create_installation_token(expected_installation["id"])
+      expect_get_installation_repos(200, %{"repositories" => [expected_repo]})
 
       {:ok, view, _html} =
         live(
@@ -2914,19 +2823,9 @@ defmodule LightningWeb.ProjectLiveTest do
       options |> hd() |> Floki.raw_html() =~ "Select a branch"
 
       # lets select the repo
-      Mox.expect(Lightning.Tesla.Mock, :call, 2, fn
-        # get installation access token. This is called when fetching branches
-        %{url: ^expected_access_token_endpoint}, _opts ->
-          {:ok,
-           %Tesla.Env{
-             status: 201,
-             body: %{"token" => "some-token"}
-           }}
+      expect_create_installation_token(expected_installation["id"])
 
-        # list branches
-        %{url: ^expected_branch_endpoint}, _opts ->
-          {:ok, %Tesla.Env{status: 200, body: [expected_branch]}}
-      end)
+      expect_get_repo_branches(expected_repo["full_name"], 200, [expected_branch])
 
       view
       |> form("#project-repo-connection-form",
@@ -2959,15 +2858,166 @@ defmodule LightningWeb.ProjectLiveTest do
 
       # let us submit with the branch
 
-      github_connection_expectations(
-        expected_installation["id"],
+      # push pull.yml
+      expect_get_repo(expected_repo["full_name"], 200, expected_repo)
+      expect_create_blob(expected_repo["full_name"])
+
+      expect_get_commit(
         expected_repo["full_name"],
-        expected_branch["name"]
+        expected_repo["default_branch"]
+      )
+
+      expect_create_tree(expected_repo["full_name"])
+      expect_create_commit(expected_repo["full_name"])
+
+      expect_update_ref(
+        expected_repo["full_name"],
+        expected_repo["default_branch"]
+      )
+
+      # push deploy.yml + config.json
+      # deploy.yml blob
+      expect_create_blob(expected_repo["full_name"])
+      # config.json blob
+      expect_create_blob(expected_repo["full_name"])
+      expect_get_commit(expected_repo["full_name"], expected_branch["name"])
+      expect_create_tree(expected_repo["full_name"])
+      expect_create_commit(expected_repo["full_name"])
+      expect_update_ref(expected_repo["full_name"], expected_branch["name"])
+
+      # write secret
+      expect_get_public_key(expected_repo["full_name"])
+      secret_name = "OPENFN_#{String.replace(project.id, "-", "_")}_API_KEY"
+      expect_create_repo_secret(expected_repo["full_name"], secret_name)
+
+      # initialize sync
+      expect_create_installation_token(expected_installation["id"])
+      expect_get_repo(expected_repo["full_name"], 200, expected_repo)
+
+      expect_create_workflow_dispatch(
+        expected_repo["full_name"],
+        "openfn-pull.yml"
       )
 
       view
       |> form("#project-repo-connection-form")
-      |> render_submit(connection: %{branch: expected_branch["name"]})
+      |> render_submit(
+        connection: %{branch: expected_branch["name"], sync_direction: "pull"}
+      )
+
+      flash = assert_redirected(view, ~p"/projects/#{project.id}/settings#vcs")
+      assert flash["info"] == "Connection made successfully"
+    end
+
+    test "users can save repo connection successfully by setting config path and choosing deploy to lightning immediately",
+         %{
+           conn: conn
+         } do
+      expected_installation = %{
+        "id" => 1234,
+        "account" => %{
+          "type" => "User",
+          "login" => "username"
+        }
+      }
+
+      expected_repo = %{
+        "full_name" => "someaccount/somerepo",
+        "default_branch" => "main"
+      }
+
+      expected_branch = %{"name" => "somebranch"}
+
+      project = insert(:project)
+
+      {conn, user} = setup_project_user(conn, project, :admin)
+      set_valid_github_oauth_token!(user)
+
+      expect_get_user_installations(200, %{
+        "installations" => [expected_installation]
+      })
+
+      expect_create_installation_token(expected_installation["id"])
+      expect_get_installation_repos(200, %{"repositories" => [expected_repo]})
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/settings#vcs"
+        )
+
+      render_async(view)
+
+      # lets select the installation
+      view
+      |> form("#project-repo-connection-form",
+        connection: %{github_installation_id: expected_installation["id"]}
+      )
+      |> render_change()
+
+      # we should now have the repos listed
+      render_async(view)
+
+      # lets select the repo
+      expect_create_installation_token(expected_installation["id"])
+
+      expect_get_repo_branches(expected_repo["full_name"], 200, [expected_branch])
+
+      view
+      |> form("#project-repo-connection-form",
+        connection: %{
+          github_installation_id: expected_installation["id"],
+          repo: expected_repo["full_name"]
+        }
+      )
+      |> render_change()
+
+      # we should now have the branches listed
+      render_async(view)
+
+      # let us submit
+
+      # push pull.yml
+      expect_get_repo(expected_repo["full_name"], 200, expected_repo)
+      expect_create_blob(expected_repo["full_name"])
+
+      expect_get_commit(
+        expected_repo["full_name"],
+        expected_repo["default_branch"]
+      )
+
+      expect_create_tree(expected_repo["full_name"])
+      expect_create_commit(expected_repo["full_name"])
+
+      expect_update_ref(
+        expected_repo["full_name"],
+        expected_repo["default_branch"]
+      )
+
+      # push deploy.yml
+      # only 1 blob is created for the deploy.yml
+      expect_create_blob(expected_repo["full_name"])
+      expect_get_commit(expected_repo["full_name"], expected_branch["name"])
+      expect_create_tree(expected_repo["full_name"])
+      expect_create_commit(expected_repo["full_name"])
+      expect_update_ref(expected_repo["full_name"], expected_branch["name"])
+
+      # write secret
+      expect_get_public_key(expected_repo["full_name"])
+      secret_name = "OPENFN_#{String.replace(project.id, "-", "_")}_API_KEY"
+      expect_create_repo_secret(expected_repo["full_name"], secret_name)
+
+      # sync is not initialized
+
+      view
+      |> form("#project-repo-connection-form")
+      |> render_submit(
+        connection: %{
+          branch: expected_branch["name"],
+          sync_direction: "deploy",
+          config_path: "./config.json"
+        }
+      )
 
       flash = assert_redirected(view, ~p"/projects/#{project.id}/settings#vcs")
       assert flash["info"] == "Connection made successfully"
@@ -2984,17 +3034,14 @@ defmodule LightningWeb.ProjectLiveTest do
           github_installation_id: "1234"
         )
 
-      expected_access_token_endpoint =
-        "https://api.github.com/app/installations/#{repo_connection.github_installation_id}/access_tokens"
-
       for {conn, _user} <-
             setup_project_users(conn, project, [:viewer, :editor, :admin, :owner]) do
         # we are returning 404 for the access token so that we halt the pipeline for verifying the connection
-        Mox.expect(Lightning.Tesla.Mock, :call, 1, fn
-          %{url: ^expected_access_token_endpoint}, _opts ->
-            {:ok,
-             %Tesla.Env{status: 404, body: %{"error" => "something terrible"}}}
-        end)
+        expect_create_installation_token(
+          repo_connection.github_installation_id,
+          404,
+          %{"error" => "something terrible"}
+        )
 
         {:ok, view, _html} =
           live(
@@ -3038,6 +3085,8 @@ defmodule LightningWeb.ProjectLiveTest do
       for {conn, user} <- setup_project_users(conn, project, [:viewer, :editor]) do
         set_valid_github_oauth_token!(user)
 
+        # NOTE: This hasn't been migrated to the expect_github_action/3 function
+        # because of flaky order of expections.
         Mox.expect(Lightning.Tesla.Mock, :call, 5, fn
           # list installations for checking if the user has access to the intallation.
           %{url: "https://api.github.com/user/installations"}, _opts ->
@@ -3072,24 +3121,19 @@ defmodule LightningWeb.ProjectLiveTest do
             ~p"/projects/#{project.id}/settings#vcs"
           )
 
-        html = render_async(view)
+        render_async(view)
 
         refute has_element?(view, "#reconnect-project-button")
-
-        assert html =~
-                 "Reach out to the admin who made this installation to reconnect"
 
         # try sending the event either way
         view
         |> with_target("#github-sync-component")
-        |> render_click("reconnect", %{})
+        |> render_click("reconnect", %{
+          "connection" => %{"sync_direction" => "deploy"}
+        })
 
-        # a flash is rendered
-        # I'm unable to get the flash in the tests even though it actually appears in the page
-        # assert html =~ "You are not authorized to perform this action"
-
-        assert render(view) =~
-                 "Reach out to the admin who made this installation to reconnect"
+        flash = assert_redirected(view, ~p"/projects/#{project.id}/settings#vcs")
+        assert flash["error"] == "You are not authorized to perform this action"
       end
     end
 
@@ -3106,31 +3150,19 @@ defmodule LightningWeb.ProjectLiveTest do
           access_token: "someaccesstoken"
         )
 
-      expected_access_token_endpoint =
-        "https://api.github.com/app/installations/#{repo_connection.github_installation_id}/access_tokens"
-
       for {conn, user} <-
             setup_project_users(conn, project, [:admin, :owner]) do
         set_valid_github_oauth_token!(user)
 
-        Mox.expect(Lightning.Tesla.Mock, :call, 2, fn
-          # list installations for checking if the user has access to the intallation.
-          # in this we return an empty list to simulate user not having access to the installation
-          %{url: "https://api.github.com/user/installations"}, _opts ->
-            {:ok,
-             %Tesla.Env{
-               status: 200,
-               body: %{"installations" => []}
-             }}
-
-          # get installation access token. This is called when verifying connection
-          %{url: ^expected_access_token_endpoint}, _opts ->
-            {:ok,
-             %Tesla.Env{
-               status: 404,
-               body: %{"error" => "something bad"}
-             }}
-        end)
+        # list installations for checking if the user has access to the intallation.
+        # in this case we return an empty list to simulate user not having access to the installation
+        expect_get_user_installations(200, %{"installations" => []})
+        # get installation access token. This is called when verifying connection
+        expect_create_installation_token(
+          repo_connection.github_installation_id,
+          404,
+          %{"error" => "something bad"}
+        )
 
         {:ok, view, _html} =
           live(
@@ -3138,12 +3170,9 @@ defmodule LightningWeb.ProjectLiveTest do
             ~p"/projects/#{project.id}/settings#vcs"
           )
 
-        html = render_async(view)
+        render_async(view)
 
         refute has_element?(view, "#reconnect-project-button")
-
-        assert html =~
-                 "Reach out to the admin who made this installation to reconnect"
       end
     end
 
@@ -3168,6 +3197,11 @@ defmodule LightningWeb.ProjectLiveTest do
         }
       }
 
+      expected_repo = %{
+        "full_name" => repo_connection.repo,
+        "default_branch" => "main"
+      }
+
       expected_access_token_endpoint =
         "https://api.github.com/app/installations/#{repo_connection.github_installation_id}/access_tokens"
 
@@ -3209,20 +3243,55 @@ defmodule LightningWeb.ProjectLiveTest do
             ~p"/projects/#{project.id}/settings#vcs"
           )
 
-        html = render_async(view)
+        render_async(view)
 
         assert has_element?(view, "#reconnect-project-button")
 
-        refute html =~
-                 "Reach out to the admin who made this installation to reconnect"
+        # let's reconnect
+        # push pull.yml
+        expect_get_repo(repo_connection.repo, 200, expected_repo)
+        expect_create_blob(repo_connection.repo)
 
-        github_connection_expectations(
-          repo_connection.github_installation_id,
+        expect_get_commit(
           repo_connection.repo,
-          repo_connection.branch
+          expected_repo["default_branch"]
         )
 
-        view |> element("#reconnect-project-button") |> render_click()
+        expect_create_tree(repo_connection.repo)
+        expect_create_commit(repo_connection.repo)
+
+        expect_update_ref(
+          repo_connection.repo,
+          expected_repo["default_branch"]
+        )
+
+        # push deploy.yml + config.json
+        # deploy.yml blob
+        expect_create_blob(repo_connection.repo)
+        # config.json blob
+        expect_create_blob(repo_connection.repo)
+        expect_get_commit(repo_connection.repo, repo_connection.branch)
+        expect_create_tree(repo_connection.repo)
+        expect_create_commit(repo_connection.repo)
+        expect_update_ref(repo_connection.repo, repo_connection.branch)
+
+        # write secret
+        expect_get_public_key(repo_connection.repo)
+        secret_name = "OPENFN_#{String.replace(project.id, "-", "_")}_API_KEY"
+        expect_create_repo_secret(repo_connection.repo, secret_name)
+
+        # initialize sync
+        expect_create_installation_token(repo_connection.github_installation_id)
+        expect_get_repo(repo_connection.repo, 200, expected_repo)
+
+        expect_create_workflow_dispatch(
+          repo_connection.repo,
+          "openfn-pull.yml"
+        )
+
+        view
+        |> form("#reconnect-project-form")
+        |> render_submit(connection: %{"sync_direction" => "pull"})
 
         flash = assert_redirected(view, ~p"/projects/#{project.id}/settings#vcs")
 
@@ -3243,35 +3312,52 @@ defmodule LightningWeb.ProjectLiveTest do
           access_token: "someaccesstoken"
         )
 
-      repo_name = repo_connection.repo
-
-      expected_installation = %{
-        "id" => repo_connection.github_installation_id,
-        "account" => %{
-          "type" => "User",
-          "login" => "username"
-        }
-      }
-
-      expected_access_token_endpoint =
-        "https://api.github.com/app/installations/#{repo_connection.github_installation_id}/access_tokens"
-
       for {conn, user} <-
             setup_project_users(conn, project, [:viewer, :editor, :admin, :owner]) do
         set_valid_github_oauth_token!(user)
 
+        repo_name = repo_connection.repo
+        branch_name = repo_connection.branch
+        installation_id = repo_connection.github_installation_id
+
+        expected_default_branch = "main"
+
+        expected_deploy_yml_path =
+          ".github/workflows/openfn-#{repo_connection.project_id}-deploy.yml"
+
+        expected_config_json_path =
+          "openfn-#{repo_connection.project_id}-config.json"
+
+        expected_secret_name =
+          "OPENFN_#{String.replace(repo_connection.project_id, "-", "_")}_API_KEY"
+
         Mox.expect(Lightning.Tesla.Mock, :call, 9, fn
-          # list installations for checking if the user has access to the intallation.
+          # list installations for checking if the user has access to the installation.
           %{url: "https://api.github.com/user/installations"}, _opts ->
             {:ok,
              %Tesla.Env{
                status: 200,
-               body: %{"installations" => [expected_installation]}
+               body: %{
+                 "installations" => [
+                   %{
+                     "id" => installation_id,
+                     "account" => %{
+                       "type" => "User",
+                       "login" => "username"
+                     }
+                   }
+                 ]
+               }
              }}
 
           # get installation access token. This is called twice.
           # When fetching repos and when verifying connection
-          %{url: ^expected_access_token_endpoint}, _opts ->
+          %{
+            url:
+              "https://api.github.com/app/installations/" <>
+                  ^installation_id <> "/access_tokens"
+          },
+          _opts ->
             {:ok,
              %Tesla.Env{
                status: 201,
@@ -3282,42 +3368,43 @@ defmodule LightningWeb.ProjectLiveTest do
           %{url: "https://api.github.com/installation/repositories"}, _opts ->
             {:ok, %Tesla.Env{status: 200, body: %{"repositories" => []}}}
 
-          # check if pull yml exists
+          # get repo content
+          %{url: "https://api.github.com/repos/" <> ^repo_name}, _opts ->
+            {:ok,
+             %Tesla.Env{
+               status: 200,
+               body: %{"default_branch" => expected_default_branch}
+             }}
+
+          # check if pull yml exists in the default branch
           %{
             method: :get,
+            query: [{:ref, "heads/" <> ^expected_default_branch}],
             url:
               "https://api.github.com/repos/" <>
-                  ^repo_name <> "/contents/.github/workflows/pull.yml"
+                  ^repo_name <> "/contents/.github/workflows/openfn-pull.yml"
           },
           _opts ->
             {:ok, %Tesla.Env{status: 200, body: %{"sha" => "somesha"}}}
 
-          # check if deploy yml exists
+          # check if deploy yml exists in the target branch
           %{
             method: :get,
+            query: [{:ref, "heads/" <> ^branch_name}],
             url:
               "https://api.github.com/repos/" <>
-                  ^repo_name <> "/contents/.github/workflows/deploy.yml"
+                  ^repo_name <> "/contents/" <> ^expected_deploy_yml_path
           },
           _opts ->
             {:ok, %Tesla.Env{status: 200, body: %{"sha" => "somesha"}}}
 
-          # check if project yml exists
+          # check if config.json exists in the target branch
           %{
             method: :get,
+            query: [{:ref, "heads/" <> ^branch_name}],
             url:
               "https://api.github.com/repos/" <>
-                  ^repo_name <> "/contents/project.yaml"
-          },
-          _opts ->
-            {:ok, %Tesla.Env{status: 200, body: %{"sha" => "somesha"}}}
-
-          # check if project state exists
-          %{
-            method: :get,
-            url:
-              "https://api.github.com/repos/" <>
-                  ^repo_name <> "/contents/.state.json"
+                  ^repo_name <> "/contents/" <> ^expected_config_json_path
           },
           _opts ->
             {:ok, %Tesla.Env{status: 200, body: %{"sha" => "somesha"}}}
@@ -3327,7 +3414,7 @@ defmodule LightningWeb.ProjectLiveTest do
             method: :get,
             url:
               "https://api.github.com/repos/" <>
-                  ^repo_name <> "/actions/secrets/OPENFN_API_KEY"
+                  ^repo_name <> "/actions/secrets/" <> ^expected_secret_name
           },
           _opts ->
             {:ok, %Tesla.Env{status: 200, body: %{}}}
@@ -3342,9 +3429,6 @@ defmodule LightningWeb.ProjectLiveTest do
         html = render_async(view)
 
         refute has_element?(view, "#reconnect-project-button")
-
-        refute html =~
-                 "Reach out to the admin who made this installation to reconnect"
 
         assert html =~ "Your project is all setup"
       end
@@ -3404,6 +3488,9 @@ defmodule LightningWeb.ProjectLiveTest do
         view
         |> with_target("#github-sync-component")
         |> render_click("delete-connection", %{})
+
+        flash = assert_redirected(view, ~p"/projects/#{project.id}/settings#vcs")
+        assert flash["error"] == "You are not authorized to perform this action"
 
         assert Lightning.Repo.reload(repo_connection)
       end
@@ -3480,8 +3567,6 @@ defmodule LightningWeb.ProjectLiveTest do
             access_token: "someaccesstoken"
           )
 
-        repo_name = repo_connection.repo
-
         assert is_map(user.github_oauth_token)
 
         Mox.expect(Lightning.Tesla.Mock, :call, 2, fn
@@ -3507,45 +3592,34 @@ defmodule LightningWeb.ProjectLiveTest do
         assert has_element?(view, "#remove_connection_modal_confirm_button")
         assert html =~ "Remove Integration"
 
-        Mox.expect(Lightning.Tesla.Mock, :call, 4, fn env, _opts ->
-          case env do
-            # check if pull yml exists for deletion
-            %{
-              method: :get,
-              url:
-                "https://api.github.com/repos/" <>
-                    ^repo_name <> "/contents/.github/workflows/pull.yml"
-            } ->
-              {:ok, %Tesla.Env{status: 200, body: %{"sha" => "somesha"}}}
+        # check if deploy yml exists for deletion
+        expected_deploy_yml_path =
+          ".github/workflows/openfn-#{project.id}-deploy.yml"
 
-            # delete pull yml
-            %{
-              method: :delete,
-              url:
-                "https://api.github.com/repos/" <>
-                    ^repo_name <> "/contents/.github/workflows/pull.yml"
-            } ->
-              {:ok, %Tesla.Env{status: 200, body: %{"sha" => "somesha"}}}
+        expect_get_repo_content(repo_connection.repo, expected_deploy_yml_path)
 
-            # check if deploy yml exists for deletion
-            %{
-              method: :get,
-              url:
-                "https://api.github.com/repos/" <>
-                    ^repo_name <> "/contents/.github/workflows/deploy.yml"
-            } ->
-              {:ok, %Tesla.Env{status: 200, body: %{"sha" => "somesha"}}}
+        # deletes successfully
+        expect_delete_repo_content(
+          repo_connection.repo,
+          expected_deploy_yml_path
+        )
 
-            # delete deploy yml.
-            %{
-              method: :delete,
-              url:
-                "https://api.github.com/repos/" <>
-                    ^repo_name <> "/contents/.github/workflows/deploy.yml"
-            } ->
-              {:ok, %Tesla.Env{status: 400, body: %{"something" => "happened"}}}
-          end
-        end)
+        # check if deploy yml exists for deletion
+        expected_config_json_path = "openfn-#{project.id}-config.json"
+        expect_get_repo_content(repo_connection.repo, expected_config_json_path)
+        # fails to delete
+        expect_delete_repo_content(
+          repo_connection.repo,
+          expected_config_json_path,
+          400,
+          %{"something" => "happened"}
+        )
+
+        # delete secret
+        expect_delete_repo_secret(
+          repo_connection.repo,
+          "OPENFN_#{String.replace(project.id, "-", "_")}_API_KEY"
+        )
 
         # click the confirm button
         view
@@ -3598,15 +3672,12 @@ defmodule LightningWeb.ProjectLiveTest do
         |> with_target("#github-sync-component")
         |> render_click("initiate-sync", %{})
 
-        # a flash is rendered
-        # I'm unable to get the flash in the tests even though it actually appears in the page
-        # assert html =~ "You are not authorized to perform this action"
-
-        assert render(view) =~ "Contact an editor or admin to sync."
+        flash = assert_redirected(view, ~p"/projects/#{project.id}/settings#vcs")
+        assert flash["error"] == "You are not authorized to perform this action"
       end
     end
 
-    test "authorized users cannot initiate github sync successfully", %{
+    test "authorized users can initiate github sync successfully", %{
       conn: conn
     } do
       project = insert(:project)
@@ -3620,18 +3691,92 @@ defmodule LightningWeb.ProjectLiveTest do
           access_token: "someaccesstoken"
         )
 
-      repo_name = repo_connection.repo
-      installation_id = repo_connection.github_installation_id
-
       for {conn, user} <-
             setup_project_users(conn, project, [:editor, :admin, :owner]) do
         # users dont need the oauth token in order to initialize sync
         assert is_nil(user.github_oauth_token)
 
-        Mox.expect(Lightning.Tesla.Mock, :call, 1, fn
-          # get access token. Gets called when verifying connection
-          %{url: "https://api.github.com/app/installations/" <> _rest}, _opts ->
-            {:ok, %Tesla.Env{status: 404, body: %{"something" => "not right"}}}
+        # ensure project is all setup
+        repo_name = repo_connection.repo
+        branch_name = repo_connection.branch
+        installation_id = repo_connection.github_installation_id
+
+        expected_default_branch = "main"
+
+        expected_deploy_yml_path =
+          ".github/workflows/openfn-#{repo_connection.project_id}-deploy.yml"
+
+        expected_config_json_path =
+          "openfn-#{repo_connection.project_id}-config.json"
+
+        expected_secret_name =
+          "OPENFN_#{String.replace(repo_connection.project_id, "-", "_")}_API_KEY"
+
+        Mox.expect(Lightning.Tesla.Mock, :call, 6, fn
+          # get installation access token.
+          # called when verifying connection
+          %{
+            url:
+              "https://api.github.com/app/installations/" <>
+                  ^installation_id <> "/access_tokens"
+          },
+          _opts ->
+            {:ok,
+             %Tesla.Env{
+               status: 201,
+               body: %{"token" => "some-token"}
+             }}
+
+          # get repo content
+          %{url: "https://api.github.com/repos/" <> ^repo_name}, _opts ->
+            {:ok,
+             %Tesla.Env{
+               status: 200,
+               body: %{"default_branch" => expected_default_branch}
+             }}
+
+          # check if pull yml exists in the default branch
+          %{
+            method: :get,
+            query: [{:ref, "heads/" <> ^expected_default_branch}],
+            url:
+              "https://api.github.com/repos/" <>
+                  ^repo_name <> "/contents/.github/workflows/openfn-pull.yml"
+          },
+          _opts ->
+            {:ok, %Tesla.Env{status: 200, body: %{"sha" => "somesha"}}}
+
+          # check if deploy yml exists in the target branch
+          %{
+            method: :get,
+            query: [{:ref, "heads/" <> ^branch_name}],
+            url:
+              "https://api.github.com/repos/" <>
+                  ^repo_name <> "/contents/" <> ^expected_deploy_yml_path
+          },
+          _opts ->
+            {:ok, %Tesla.Env{status: 200, body: %{"sha" => "somesha"}}}
+
+          # check if config.json exists in the target branch
+          %{
+            method: :get,
+            query: [{:ref, "heads/" <> ^branch_name}],
+            url:
+              "https://api.github.com/repos/" <>
+                  ^repo_name <> "/contents/" <> ^expected_config_json_path
+          },
+          _opts ->
+            {:ok, %Tesla.Env{status: 200, body: %{"sha" => "somesha"}}}
+
+          # check if api key secret exists
+          %{
+            method: :get,
+            url:
+              "https://api.github.com/repos/" <>
+                  ^repo_name <> "/actions/secrets/" <> ^expected_secret_name
+          },
+          _opts ->
+            {:ok, %Tesla.Env{status: 200, body: %{}}}
         end)
 
         {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/settings#vcs")
@@ -3644,21 +3789,9 @@ defmodule LightningWeb.ProjectLiveTest do
         assert has_element?(button)
 
         # try clicking the button
-        Mox.expect(Lightning.Tesla.Mock, :call, 2, fn
-          # get access token.for dispatching event
-          %{
-            url:
-              "https://api.github.com/app/installations/" <>
-                  ^installation_id <> "/access_tokens"
-          },
-          _opts ->
-            {:ok, %Tesla.Env{status: 201, body: %{"token" => "sometoken"}}}
-
-          # dispatch event
-          %{url: "https://api.github.com/repos/" <> ^repo_name <> "/dispatches"},
-          _opts ->
-            {:ok, %Tesla.Env{status: 204, body: ""}}
-        end)
+        expect_create_installation_token(repo_connection.github_installation_id)
+        expect_get_repo(repo_connection.repo)
+        expect_create_workflow_dispatch(repo_connection.repo, "openfn-pull.yml")
 
         render_click(button)
 
@@ -3685,114 +3818,5 @@ defmodule LightningWeb.ProjectLiveTest do
         "#{user.first_name} #{user.last_name}"
     end)
     |> to_string()
-  end
-
-  defp set_valid_github_oauth_token!(user) do
-    active_token = %{
-      "access_token" => "access-token",
-      "refresh_token" => "refresh-token",
-      "expires_at" => DateTime.utc_now() |> DateTime.add(500),
-      "refresh_token_expires_at" => DateTime.utc_now() |> DateTime.add(500)
-    }
-
-    user
-    |> Ecto.Changeset.change(%{github_oauth_token: active_token})
-    |> Repo.update!()
-  end
-
-  defp github_connection_expectations(
-         installation_id,
-         expected_repo_name,
-         expected_branch_name
-       ) do
-    installation_id = to_string(installation_id)
-
-    Mox.expect(Lightning.Tesla.Mock, :call, 10, fn env, _opts ->
-      case env.url do
-        # create blob. called twice (for push.yml and deploy.yml)
-        "https://api.github.com/repos/" <> ^expected_repo_name <> "/git/blobs" ->
-          {:ok,
-           %Tesla.Env{
-             status: 201,
-             body: %{"sha" => "3a0f86fb8db8eea7ccbb9a95f325ddbedfb25e15"}
-           }}
-
-        # get commit on selected branch
-        "https://api.github.com/repos/" <>
-            ^expected_repo_name <>
-            "/commits/heads/" <>
-            ^expected_branch_name ->
-          {:ok,
-           %Tesla.Env{
-             status: 200,
-             body: %{
-               "sha" => "6dcb09b5b57875f334f61aebed695e2e4193db5e",
-               "commit" => %{
-                 "tree" => %{
-                   "sha" => "6dcb09b5b57875f334f61aebed695e2e4193db5e"
-                 }
-               }
-             }
-           }}
-
-        # create commit
-        "https://api.github.com/repos/" <> ^expected_repo_name <> "/git/commits" ->
-          {:ok,
-           %Tesla.Env{
-             status: 201,
-             body: %{"sha" => "7638417db6d59f3c431d3e1f261cc637155684cd"}
-           }}
-
-        # create tree
-        "https://api.github.com/repos/" <> ^expected_repo_name <> "/git/trees" ->
-          {:ok,
-           %Tesla.Env{
-             status: 201,
-             body: %{"sha" => "cd8274d15fa3ae2ab983129fb037999f264ba9a7"}
-           }}
-
-        # update a reference on the selected branch
-        "https://api.github.com/repos/" <>
-            ^expected_repo_name <>
-            "/git/refs/heads/" <>
-            ^expected_branch_name ->
-          {:ok,
-           %Tesla.Env{
-             status: 200,
-             body: %{"ref" => "refs/heads/master"}
-           }}
-
-        # get repo public key
-        "https://api.github.com/repos/" <>
-            ^expected_repo_name <> "/actions/secrets/public-key" ->
-          {:ok,
-           %Tesla.Env{
-             status: 200,
-             body: %{
-               "key" => Base.encode64(@public_key),
-               "key_id" => "012345678912345678"
-             }
-           }}
-
-        # create the OPENFN_API_KEY repo secret
-        "https://api.github.com/repos/" <>
-            ^expected_repo_name <> "/actions/secrets/OPENFN_API_KEY" ->
-          {:ok, %Tesla.Env{status: 201, body: ""}}
-
-        # token for sync
-        "https://api.github.com/app/installations/" <>
-            ^installation_id <> "/access_tokens" ->
-          {:ok,
-           %Tesla.Env{
-             status: 201,
-             body: %{"token" => "some-token"}
-           }}
-
-        # initialize sync
-        "https://api.github.com/repos/" <>
-            ^expected_repo_name <> "/dispatches" ->
-          {:ok, %Tesla.Env{status: 204, body: ""}}
-      end
-    end)
   end
 end
