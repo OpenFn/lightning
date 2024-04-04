@@ -201,16 +201,26 @@ default being <code class="inline">hashed_only</code>.</li><li><code class="inli
 completed (successful) <code class="inline">ObanJobs</code> in the queue (not to be confused with runs
 and/or history)</li><li><code class="inline">IS_RESETTABLE_DEMO</code> - If set to <code class="inline">yes</code> it allows this instance to be reset to
 the initial &quot;Lightning Demo&quot; state. Note that this will destroy <em>most</em> of what
-you have in your database!</li></ul><h3 id="google" class="section-heading">
-  <a href="#google" class="hover-link">
+you have in your database!</li></ul><h3 id="google-oauth2" class="section-heading">
+  <a href="#google-oauth2" class="hover-link">
     <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  <span class="text">Google</span>
+  <span class="text">Google Oauth2</span>
 </h3>
 <p>Using your Google Cloud account, provision a new OAuth 2.0 Client with the 'Web
 application' type.</p><p>Set the callback url to: <code class="inline">https://&lt;ENDPOINT DOMAIN&gt;/authenticate/callback</code>.
 Replacing <code class="inline">ENDPOINT DOMAIN</code> with the host name of your instance.</p><p>Once the client has been created, get/download the OAuth client JSON and set the
-following environment variables:</p><ul><li><code class="inline">GOOGLE_CLIENT_ID</code> - Which is <code class="inline">client_id</code> from the client details.</li><li><code class="inline">GOOGLE_CLIENT_SECRET</code> - <code class="inline">client_secret</code> from the client details.</li></ul>
+following environment variables:</p><ul><li><code class="inline">GOOGLE_CLIENT_ID</code> - Which is <code class="inline">client_id</code> from the client details.</li><li><code class="inline">GOOGLE_CLIENT_SECRET</code> - <code class="inline">client_secret</code> from the client details.</li></ul><h3 id="salesforce-oauth2" class="section-heading">
+  <a href="#salesforce-oauth2" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
+  </a>
+  <span class="text">Salesforce Oauth2</span>
+</h3>
+<p>Using your Salesforce developer account, create a new Oauth 2.0 connected
+application.</p><p>Set the callback url to: <code class="inline">https://&lt;ENDPOINT DOMAIN&gt;/authenticate/callback</code>.
+Replacing <code class="inline">ENDPOINT DOMAIN</code> with the host name of your instance.</p><p>Grant permissions as desired.</p><p>Once the client has been created set the following environment variables:</p><ul><li><code class="inline">SALESFORCE_CLIENT_ID</code> - Which is <code class="inline">Consumer Key</code> from the &quot;Manage Consumer
+Details&quot; screen.</li><li><code class="inline">SALESFORCE_CLIENT_SECRET</code> - Which is <code class="inline">Consumer Secret</code> from the &quot;Manage
+Consumer Details&quot; screen.</li></ul>
 <div class="bottom-actions">
   <div class="bottom-actions-item">
 
