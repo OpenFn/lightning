@@ -219,7 +219,7 @@
             <div class="leading-loose">
               <h6 class="font-medium text-black">Project credentials</h6>
               <small class="block text-xs text-gray-600">
-                View and edit credentials that are currently accessible for use in this project.
+                Manage Oauth 2.0 Clients and Credentials accessible to this project.
               </small>
               <.permissions_message
                 :if={!@can_create_project_credential}
@@ -227,16 +227,76 @@
               />
             </div>
             <div class="sm:block" aria-hidden="true">
-              <.button
+              <div class="inline-flex rounded-md shadow-sm">
+                <.button
+                  type="button"
+                  phx-click={show_dropdown("create-credential-or-oauth-client")}
+                  class="relative inline-flex items-center"
+                  aria-expanded="true"
+                  aria-haspopup="true"
+                  id="option-menu-button"
+                >
+                  Add new &nbsp;
+                  <svg
+                    class="h-5 w-5"
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                    aria-hidden="true"
+                  >
+                    <path
+                      fill-rule="evenodd"
+                      d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z"
+                      clip-rule="evenodd"
+                    />
+                  </svg>
+                </.button>
+                <div class="relative -ml-px block">
+                  <div
+                    class="hidden absolute right-0 z-10 -mr-1 mt-12 w-56 origin-top-right rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none"
+                    role="menu"
+                    aria-orientation="vertical"
+                    aria-labelledby="option-menu-button"
+                    tabindex="-1"
+                    phx-click-away={
+                      hide_dropdown("create-credential-or-oauth-client")
+                    }
+                    id="create-credential-or-oauth-client"
+                  >
+                    <div class="py-1" role="none">
+                      <a
+                        href="#"
+                        class="text-gray-700 block px-4 py-2 text-sm hover:bg-gray-100"
+                        role="menuitem"
+                        tabindex="-1"
+                        id="option-menu-item-0"
+                        phx-click={show_modal("new-oauth-client-modal")}
+                      >
+                        Oauth client
+                      </a>
+                      <a
+                        href="#"
+                        class="text-gray-700 block px-4 py-2 text-sm hover:bg-gray-100"
+                        role="menuitem"
+                        tabindex="-1"
+                        id="option-menu-item-1"
+                        phx-click={show_modal("new-credential-modal")}
+                      >
+                        Credential
+                      </a>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <%!-- <.button
                 id="new-credential-button"
                 phx-click={show_modal("new-credential-modal")}
                 {if !@can_create_project_credential, do: [disabled: "disabled"], else: []}
               >
                 New credential
-              </.button>
+              </.button> --%>
               <.live_component
                 id="new-credential-modal"
-                module={LightningWeb.CredentialLive.FormComponent}
+                module={LightningWeb.CredentialLive.CredentialFormComponent}
                 action={:new}
                 credential_type={@selected_credential_type}
                 credential={
@@ -251,11 +311,88 @@
                 }
                 projects={[]}
                 project={@project}
-                show_project_credentials={false}
+                can_create_project_credential={@can_create_project_credential}
+                return_to={~p"/projects/#{@project.id}/settings#credentials"}
+              />
+              <.live_component
+                id="new-oauth-client-modal"
+                module={LightningWeb.CredentialLive.OauthClientFormComponent}
+                action={:new}
+                credential_type={@selected_credential_type}
+                credential={
+                  %Lightning.Credentials.Credential{
+                    user_id: @current_user.id,
+                    project_credentials: [
+                      %Lightning.Projects.ProjectCredential{
+                        project_id: @project.id
+                      }
+                    ]
+                  }
+                }
+                projects={[]}
+                project={@project}
                 can_create_project_credential={@can_create_project_credential}
                 return_to={~p"/projects/#{@project.id}/settings#credentials"}
               />
             </div>
+          </div>
+          <div class="hidden sm:block" aria-hidden="true">
+            <div class="py-4"></div>
+          </div>
+          <div class="leading-loose">
+            <h6 class="font-normal text-black">Oauth Clients</h6>
+          </div>
+          <div class="hidden sm:block" aria-hidden="true">
+            <div class="py-2"></div>
+          </div>
+          <.table id="oauth-clients">
+            <.tr>
+              <.th>Name</.th>
+              <.th>Client ID</.th>
+              <.th>Base URL</.th>
+              <.th>Actions</.th>
+            </.tr>
+
+            <%= for client <- @oauth_clients do %>
+              <.tr id={"oauth-client-#{client.id}"}>
+                <.td><%= client.name %></.td>
+                <.td><%= client.client_id %></.td>
+                <.td><%= client.base_url %></.td>
+                <.td>
+                  <%!-- <%= if client.user_id == @current_user.id do %> --%>
+                  <span>
+                    <.link phx-click={
+                      show_modal("edit-oauth-client-#{client.id}-modal")
+                    }>
+                      Edit
+                    </.link>
+                  </span>
+                  <%!-- <.live_component
+                      id={"edit-oauth-client-#{client.id}-modal"}
+                      module={LightningWeb.CredentialLive.FormComponent}
+                      action={:edit}
+                      credential_type={nil}
+                      credential={credential}
+                      projects={[]}
+                      project={@project}
+                      show_project_credentials={false}
+                      can_create_project_credential={
+                        @can_create_project_credential
+                      }
+                      return_to={
+                        ~p"/projects/#{@project.id}/settings#credentials"
+                      }
+                    /> --%>
+                  <%!-- <% end %> --%>
+                </.td>
+              </.tr>
+            <% end %>
+          </.table>
+          <div class="hidden sm:block" aria-hidden="true">
+            <div class="py-4"></div>
+          </div>
+          <div class="leading-loose">
+            <h6 class="font-normal text-black">Credentials</h6>
           </div>
           <div class="hidden sm:block" aria-hidden="true">
             <div class="py-2"></div>
@@ -263,8 +400,8 @@
           <.table id="credentials">
             <.tr>
               <.th>Name</.th>
+              <.th>Project with access</.th>
               <.th>Type</.th>
-              <.th>Owner</.th>
               <.th>Production</.th>
               <.th>Actions</.th>
             </.tr>
@@ -272,8 +409,10 @@
             <%= for credential <- @credentials do %>
               <.tr id={"credential-#{credential.id}"}>
                 <.td><%= credential.name %></.td>
+                <.td>
+                  <%= credential.project_names %>
+                </.td>
                 <.td><%= credential.schema %></.td>
-                <.td><%= credential.user.email %></.td>
                 <.td>
                   <%= if credential.production do %>
                     <div class="flex">
@@ -293,16 +432,18 @@
                     </span>
                     <.live_component
                       id={"edit-credential-#{credential.id}-modal"}
-                      module={LightningWeb.CredentialLive.FormComponent}
+                      module={
+                        LightningWeb.CredentialLive.CredentialFormComponent
+                      }
                       action={:edit}
                       credential_type={nil}
                       credential={credential}
-                      projects={[]}
+                      projects={credential.projects}
                       project={@project}
-                      show_project_credentials={false}
                       can_create_project_credential={
                         @can_create_project_credential
                       }
+                      current_user={@current_user}
                       return_to={
                         ~p"/projects/#{@project.id}/settings#credentials"
                       }
