@@ -163,6 +163,34 @@ defmodule Lightning.WorkflowsTest do
       refute Repo.get(Workflows.Edge, edge.id)
     end
 
+    test "saving with locks" do
+      # project = insert(:project)
+      valid_attrs = params_with_assocs(:workflow, jobs: [params_for(:job)])
+
+      assert {:ok, workflow} = Workflows.save_workflow(valid_attrs)
+
+      assert workflow.lock_version == 1
+
+      assert {:ok, workflow} =
+               Workflows.change_workflow(workflow, %{})
+               |> Workflows.save_workflow()
+
+      assert workflow.lock_version == 1,
+             "lock_version should not change when no changes are made"
+
+      assert {:ok, updated_workflow} =
+               Workflows.change_workflow(workflow, %{jobs: [params_for(:job)]})
+               |> Workflows.save_workflow()
+
+      assert updated_workflow.lock_version == 2
+
+      # Throws an error because the lock_version is outdated
+      assert_raise Ecto.StaleEntryError, fn ->
+        Workflows.change_workflow(workflow, %{jobs: [params_for(:job)]})
+        |> Workflows.save_workflow()
+      end
+    end
+
     test "change_workflow/1 returns a workflow changeset" do
       workflow = insert(:workflow)
       assert %Ecto.Changeset{} = Workflows.change_workflow(workflow)

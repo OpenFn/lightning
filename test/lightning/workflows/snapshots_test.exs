@@ -43,7 +43,19 @@ defmodule Lightning.Workflows.SnapshotsTest do
       |> Workflows.change_workflow(%{name: "new name", jobs: [params_for(:job)]})
       |> Workflows.save_workflow()
 
-    {:ok, snapshot} = Workflows.Snapshot.create(workflow)
+    {:error, changeset} = Workflows.Snapshot.create(workflow)
+
+    assert {
+             :lock_version,
+             {"exists for this workflow",
+              [
+                constraint: :unique,
+                constraint_name:
+                  "workflow_snapshots_workflow_id_lock_version_index"
+              ]}
+           } in changeset.errors
+
+    snapshot = Workflows.Snapshot.get_current_for(workflow)
 
     assert snapshot.name == workflow.name
     assert snapshot.jobs |> length() == 1
@@ -87,14 +99,22 @@ defmodule Lightning.Workflows.SnapshotsTest do
     end
   end
 
-  describe "latest_for/1" do
+  describe "get_current_for/1" do
     test "by workflow" do
-      workflow = insert(:simple_workflow)
+      initial_workflow = insert(:simple_workflow)
 
-      {:ok, _} = Workflows.Snapshot.create(workflow)
-      {:ok, snapshot} = Workflows.Snapshot.create(workflow)
+      {:ok, _} = Workflows.Snapshot.create(initial_workflow)
 
-      assert snapshot == Workflows.Snapshot.get_latest_for(workflow)
+      updated_workflow =
+        initial_workflow
+        |> Workflows.change_workflow(%{name: "new name"})
+        |> Repo.update!()
+
+      {:ok, snapshot} = Workflows.Snapshot.create(updated_workflow)
+
+      # Ensure that the snapshot is the latest one, despite initial_workflow
+      # having a `lock_version` of 0.
+      assert snapshot == Workflows.Snapshot.get_current_for(initial_workflow)
     end
   end
 
@@ -112,7 +132,7 @@ defmodule Lightning.Workflows.SnapshotsTest do
       assert {:ok, snapshot} =
                Workflows.Snapshot.get_or_create_latest_for(workflow)
 
-      assert snapshot == Workflows.Snapshot.get_latest_for(workflow)
+      assert snapshot == Workflows.Snapshot.get_current_for(workflow)
     end
 
     test "with an existing snapshot" do

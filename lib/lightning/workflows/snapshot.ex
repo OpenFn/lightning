@@ -28,6 +28,7 @@ defmodule Lightning.Workflows.Snapshot do
   schema "workflow_snapshots" do
     belongs_to :workflow, Workflow
     field :name, :string
+    field :lock_version, :integer
 
     embeds_many :jobs, Job, primary_key: false do
       field :id, :binary_id, primary_key: true
@@ -75,7 +76,12 @@ defmodule Lightning.Workflows.Snapshot do
   end
 
   def new(workflow) do
-    cast(%__MODULE__{}, workflow, [:name, :workflow_id])
+    cast(%__MODULE__{}, workflow, [:name, :lock_version, :workflow_id])
+    |> validate_required([:name, :lock_version, :workflow_id])
+    |> unique_constraint([:workflow_id, :lock_version],
+      error_key: :lock_version,
+      message: "exists for this workflow"
+    )
     |> cast_embed(:jobs, with: &job_changeset/2)
     |> cast_embed(:triggers, with: &trigger_changeset/2)
     |> cast_embed(:edges, with: &edge_changeset/2)
@@ -116,7 +122,7 @@ defmodule Lightning.Workflows.Snapshot do
         field when field in @associations_to_include ->
           {field, Enum.map(value, &Map.from_struct/1)}
 
-        :name ->
+        field when field in [:name, :lock_version] ->
           {field, value}
 
         :id ->
@@ -138,24 +144,33 @@ defmodule Lightning.Workflows.Snapshot do
 
   @spec get_all_for(Workflow.t()) :: [t()]
   def get_all_for(%Workflow{} = workflow) do
-    from(s in __MODULE__, where: s.workflow_id == ^workflow.id)
+    from(s in __MODULE__,
+      where: s.workflow_id == ^workflow.id,
+      order_by: [desc: s.inserted_at]
+    )
     |> Repo.all()
   end
 
   @doc """
-  Get the latest snapshot for a workflow, based on the inserted_at field.
+  Get the latest snapshot for a workflow, based on the lock_version.
+
+  It returns the latest snapshot regardless of the lock_version of the
+  workflow passed in. This is intentional to ensure that
+  `get_or_create_latest_for/1` doesn't attempt to create a new snapshot if the
+  workflow has been updated elsewhere.
   """
-  @spec get_latest_for(Workflow.t()) :: t() | nil
-  def get_latest_for(%Workflow{} = workflow) do
-    get_latest_query(workflow)
+  @spec get_current_for(Workflow.t()) :: t() | nil
+  def get_current_for(%Workflow{} = workflow) do
+    get_current_query(workflow)
     |> Repo.one()
   end
 
-  defp get_latest_query(workflow) do
+  defp get_current_query(workflow) do
     from(s in __MODULE__,
-      where: s.workflow_id == ^workflow.id,
-      order_by: [desc: s.inserted_at],
-      limit: 1
+      join: w in assoc(s, :workflow),
+      where:
+        s.workflow_id == ^workflow.id and
+          s.lock_version == w.lock_version
     )
   end
 
@@ -166,8 +181,8 @@ defmodule Lightning.Workflows.Snapshot do
           {:ok, t()} | {:error, Ecto.Changeset.t()}
   def get_or_create_latest_for(workflow) do
     Ecto.Multi.new()
-    |> Ecto.Multi.one(:existing, get_latest_query(workflow))
-    |> Ecto.Multi.run(:snapshot, fn _repo, %{existing: snapshot} ->
+    |> Ecto.Multi.one(:existing, get_current_query(workflow))
+    |> Ecto.Multi.run(:snapshot, fn repo, %{existing: snapshot} ->
       if snapshot do
         {:ok, snapshot}
       else
@@ -176,7 +191,7 @@ defmodule Lightning.Workflows.Snapshot do
           preload: [:jobs, :triggers, :edges],
           lock: "FOR SHARE"
         )
-        |> Repo.one()
+        |> repo.one()
         |> then(fn
           nil -> {:error, :no_workflow}
           workflow -> create(workflow)

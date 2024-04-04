@@ -55,7 +55,14 @@ defmodule Lightning.Workflows do
   def save_workflow(%Ecto.Changeset{data: %Workflow{}} = changeset) do
     Multi.new()
     |> Multi.insert_or_update(:workflow, changeset)
-    |> insert_snapshot()
+    |> then(fn multi ->
+      if changeset.changes == %{} do
+        multi
+      else
+        multi
+        |> insert_snapshot()
+      end
+    end)
     |> Repo.transaction()
     |> case do
       {:ok, %{workflow: workflow}} ->
@@ -64,11 +71,11 @@ defmodule Lightning.Workflows do
       {:error, :workflow, changeset, _} ->
         {:error, changeset}
 
-      {:error, :snapshot, changeset, %{workflow: workflow}} ->
+      {:error, :snapshot, snapshot_changeset, %{workflow: workflow}} ->
         Logger.warning(fn ->
           """
           Failed to save snapshot for workflow: #{workflow.id}
-          #{inspect(changeset.errors)}
+          #{inspect(snapshot_changeset.errors)}
           """
         end)
 

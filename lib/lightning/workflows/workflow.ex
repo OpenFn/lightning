@@ -38,6 +38,7 @@ defmodule Lightning.Workflows.Workflow do
     has_many :runs, through: [:work_orders, :runs]
     belongs_to :project, Project
 
+    field :lock_version, :integer, default: 0
     field :deleted_at, :utc_datetime
 
     field :delete, :boolean, virtual: true
@@ -49,6 +50,7 @@ defmodule Lightning.Workflows.Workflow do
   def changeset(workflow, attrs) do
     workflow
     |> cast(attrs, [:name, :project_id])
+    |> optimistic_lock(:lock_version)
     |> cast_assoc(:edges, with: &Edge.changeset/2)
     |> cast_assoc(:jobs, with: &Job.changeset/2)
     |> cast_assoc(:triggers, with: &Trigger.changeset/2)
