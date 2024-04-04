@@ -118,7 +118,11 @@
           </span>
         </div>
         <div class="sm:col-span-5 flex gap-4 mt-2 -mb-3">
-          <.button type="submit" disabled={!@changeset.valid?}>
+          <.button
+            type="submit"
+            phx-disable-with="Connecting..."
+            disabled={!@changeset.valid?}
+          >
             Connect Branch
           </.button>
         </div>

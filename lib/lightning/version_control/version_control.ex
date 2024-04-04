@@ -67,20 +67,12 @@ defmodule Lightning.VersionControl do
              repo_connection.branch,
              deploy_yml_target_path(repo_connection)
            ),
-         {:ok, config} <- get_config_file(client, repo_connection),
          :ok <-
            verify_file_exists(
              client,
              repo_connection.repo,
              repo_connection.branch,
-             project_spec_target_path(repo_connection, config)
-           ),
-         :ok <-
-           verify_file_exists(
-             client,
-             repo_connection.repo,
-             repo_connection.branch,
-             project_state_target_path(repo_connection, config)
+             config_target_path(repo_connection)
            ) do
       verify_repo_secret_exists(
         client,
@@ -559,20 +551,6 @@ defmodule Lightning.VersionControl do
     Path.relative_to(path, ".")
   end
 
-  defp project_spec_target_path(repo_connection, config) do
-    path = config["specPath"] || "#{repo_connection.project_id}-spec.yaml"
-
-    # get rid of ./ because we always operate from root
-    Path.relative_to(path, ".")
-  end
-
-  defp project_state_target_path(repo_connection, config) do
-    path = config["statePath"] || "#{repo_connection.project_id}-state.json"
-
-    # get rid of ./ because we always operate from root
-    Path.relative_to(path, ".")
-  end
-
   defp api_secret_name(repo_connection) do
     sanitized_id = String.replace(repo_connection.project_id, "-", "_")
     "OPENFN_#{sanitized_id}_API_KEY"
@@ -658,7 +636,7 @@ defmodule Lightning.VersionControl do
       _other ->
         {:error,
          GithubError.file_not_found(
-           "#{file_path} does not exist in the given branch"
+           "#{file_path} does not exist in the #{branch} branch"
          )}
     end
   end
@@ -673,18 +651,6 @@ defmodule Lightning.VersionControl do
          GithubError.repo_secret_not_found(
            "#{secret_name} has not been set in the repo"
          )}
-    end
-  end
-
-  defp get_config_file(client, repo_connection) do
-    with {:ok, %{status: 200, body: %{"content" => content}}} <-
-           GithubClient.get_repo_content(
-             client,
-             repo_connection.repo,
-             config_target_path(repo_connection),
-             "heads/#{repo_connection.branch}"
-           ) do
-      content |> Base.decode64!(ignore: :whitespace) |> Jason.decode()
     end
   end
 end
