@@ -121,6 +121,8 @@ configurtaion is:
   being generated retroactively (defaults to 10).
 - `USAGE_TRACKING_ENABLED` - enables the submission of anonymised usage data to
   OpenFn (defaults to `true`).
+- `USAGE_TRACKING_RESUBMISSION_BATCH_SIZE` - the number of failed reports that
+  will be submitted on each resubmission run (defaults to 10).
 - `USAGE_TRACKING_UUIDS` - indicates whether submissions should include
   cleartext uuids or not. Options are `cleartext` or `hashed_only`, with the
   default being `hashed_only`.

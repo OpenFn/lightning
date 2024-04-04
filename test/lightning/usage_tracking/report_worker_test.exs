@@ -2,10 +2,10 @@ defmodule Lightning.UsageTracking.ReportWorkerTest do
   use Lightning.DataCase, async: true
 
   import Mock
+  import Tesla.Mock
   import Lightning.ApplicationHelpers, only: [put_temporary_env: 3]
 
   alias Lightning.UsageTracking
-  alias Lightning.UsageTracking.Client
   alias Lightning.UsageTracking.GithubClient
   alias Lightning.UsageTracking.Report
   alias Lightning.UsageTracking.ReportData
@@ -29,88 +29,53 @@ defmodule Lightning.UsageTracking.ReportWorkerTest do
         host: @host
       )
 
-      expected_report_data =
+      %{instance: instance_metrics} =
         ReportData.generate(report_config, cleartext_uuids_enabled, @date)
 
-      %{expected_report_data: expected_report_data}
+      # We can't match against all data as some of that contains dynamic
+      # elements such as the time. The instance element provides us with
+      # data to validate that the report was correctly configured
+
+      %{
+        expected_instance_metrics: stringify_keys(instance_metrics)
+      }
     end
 
-    test "submits the metrics to the ImpactTracker", config do
-      %{expected_report_data: expected_report_data} = config
+    test "persists a report instance", %{
+      expected_instance_metrics: expected_metrics
+    } do
+      mock(fn _env -> %Tesla.Env{status: 200, body: %{status: "great"}} end)
 
-      %{instance: expected_instance_data} = expected_report_data
+      expected_date = @date
 
-      with_mock Client,
-        submit_metrics: &mock_submit_metrics_ok/2 do
-        perform_job(ReportWorker, %{date: @date})
+      perform_job(ReportWorker, %{date: @date})
 
-        assert_called(
-          Client.submit_metrics(
-            %{instance: expected_instance_data},
-            @host
-          )
-        )
-      end
+      assert report = Report |> Repo.one!()
+
+      assert %{
+               data: %{"instance" => ^expected_metrics},
+               report_date: ^expected_date
+             } = report
     end
 
-    test "persists a report indicating successful submission", config do
-      %{expected_report_data: expected_report_data} = config
+    test "submits the report data", %{
+      expected_instance_metrics: expected_metrics
+    } do
+      mock(fn env ->
+        if correct_host?(env, @host) && metrics_match?(env, expected_metrics) do
+          %Tesla.Env{status: 200, body: %{status: "great"}}
+        else
+          flunk("Unrecognised call")
+        end
+      end)
 
-      %{"instance" => expected_instance_data} =
-        expected_report_data |> stringify_keys()
-
-      report_date = @date
-
-      with_mock Client,
-        submit_metrics: &mock_submit_metrics_ok/2 do
-        perform_job(ReportWorker, %{date: @date})
-      end
-
-      report = Report |> Repo.one()
-
-      assert(
-        %Report{
-          submitted: true,
-          report_date: ^report_date,
-          data: %{"instance" => ^expected_instance_data},
-          submission_status: :success
-        } = report
-      )
-
-      assert DateTime.diff(DateTime.utc_now(), report.submitted_at, :second) < 2
-    end
-
-    test "persists a report indicating unsuccessful submission", config do
-      %{expected_report_data: expected_report_data} = config
-
-      %{"instance" => expected_instance_data} =
-        expected_report_data |> stringify_keys()
-
-      report_date = @date
-
-      with_mock Client,
-        submit_metrics: &mock_submit_metrics_error/2 do
-        perform_job(ReportWorker, %{date: @date})
-      end
-
-      report = Report |> Repo.one()
-
-      assert(
-        %Report{
-          submitted: false,
-          report_date: ^report_date,
-          data: %{"instance" => ^expected_instance_data},
-          submitted_at: nil,
-          submission_status: :failure
-        } = report
-      )
+      perform_job(ReportWorker, %{date: @date})
     end
 
     test "indicates that the job executed successfully" do
-      with_mock Client,
-        submit_metrics: &mock_submit_metrics_ok/2 do
-        assert perform_job(ReportWorker, %{date: @date}) == :ok
-      end
+      mock(fn _env -> %Tesla.Env{status: 200, body: %{status: "great"}} end)
+
+      assert perform_job(ReportWorker, %{date: @date}) == :ok
     end
   end
 
@@ -129,92 +94,57 @@ defmodule Lightning.UsageTracking.ReportWorkerTest do
         host: @host
       )
 
-      expected_report_data =
+      %{instance: instance_metrics} =
         ReportData.generate(report_config, cleartext_uuids_enabled, @date)
 
-      %{expected_report_data: expected_report_data}
+      # We can't match against all data as some of that contains dynamic
+      # elements such as the time. The instance element provides us with
+      # data to validate that the report was correctly configured
+
+      %{
+        expected_instance_metrics: stringify_keys(instance_metrics)
+      }
     end
 
-    test "submits the metrics to the ImpactTracker", config do
-      %{expected_report_data: expected_report_data} = config
+    test "persists a report instance", %{
+      expected_instance_metrics: expected_metrics
+    } do
+      mock(fn _env -> %Tesla.Env{status: 200, body: %{status: "great"}} end)
 
-      %{instance: expected_instance_data} = expected_report_data
+      expected_date = @date
 
-      with_mock Client,
-        submit_metrics: &mock_submit_metrics_ok/2 do
-        perform_job(ReportWorker, %{date: @date})
+      perform_job(ReportWorker, %{date: @date})
 
-        assert_called(
-          Client.submit_metrics(
-            %{instance: expected_instance_data},
-            @host
-          )
-        )
-      end
+      assert report = Report |> Repo.one!()
+
+      assert %{
+               data: %{"instance" => ^expected_metrics},
+               report_date: ^expected_date
+             } = report
     end
 
-    test "persists a report indicating successful submission", config do
-      %{expected_report_data: expected_report_data} = config
+    test "submits the report data", %{
+      expected_instance_metrics: expected_metrics
+    } do
+      mock(fn env ->
+        if correct_host?(env, @host) && metrics_match?(env, expected_metrics) do
+          %Tesla.Env{status: 200, body: %{status: "great"}}
+        else
+          flunk("Unrecognised call")
+        end
+      end)
 
-      %{"instance" => expected_instance_data} =
-        expected_report_data |> stringify_keys()
-
-      report_date = @date
-
-      with_mock Client,
-        submit_metrics: &mock_submit_metrics_ok/2 do
-        perform_job(ReportWorker, %{date: @date})
-      end
-
-      report = Report |> Repo.one()
-
-      assert(
-        %Report{
-          submitted: true,
-          report_date: ^report_date,
-          data: %{"instance" => ^expected_instance_data},
-          submission_status: :success
-        } = report
-      )
-
-      assert DateTime.diff(DateTime.utc_now(), report.submitted_at, :second) < 2
-    end
-
-    test "persists a report indicating unsuccessful submission", config do
-      %{expected_report_data: expected_report_data} = config
-
-      %{"instance" => expected_instance_data} =
-        expected_report_data |> stringify_keys()
-
-      report_date = @date
-
-      with_mock Client,
-        submit_metrics: &mock_submit_metrics_error/2 do
-        perform_job(ReportWorker, %{date: @date})
-      end
-
-      report = Report |> Repo.one()
-
-      assert(
-        %Report{
-          submitted: false,
-          report_date: ^report_date,
-          data: %{"instance" => ^expected_instance_data},
-          submitted_at: nil,
-          submission_status: :failure
-        } = report
-      )
+      perform_job(ReportWorker, %{date: @date})
     end
 
     test "indicates that the job executed successfully" do
-      with_mock Client,
-        submit_metrics: &mock_submit_metrics_ok/2 do
-        assert perform_job(ReportWorker, %{date: @date}) == :ok
-      end
+      mock(fn _env -> %Tesla.Env{status: 200, body: %{status: "great"}} end)
+
+      assert perform_job(ReportWorker, %{date: @date}) == :ok
     end
   end
 
-  describe "tracking is enabled - but report for given date exists" do
+  describe "tracking is enabled - report for given date exists" do
     setup_with_mocks([
       {GithubClient, [], [open_fn_commit?: fn _ -> true end]}
     ]) do
@@ -232,12 +162,15 @@ defmodule Lightning.UsageTracking.ReportWorkerTest do
     end
 
     test "does not submit the tracking data" do
-      with_mock Client,
-        submit_metrics: &mock_submit_metrics_ok/2 do
-        perform_job(ReportWorker, %{date: @date})
+      mock(fn _env -> flunk("Not expecting call to Impact Tracker") end)
 
-        assert_not_called(Client.submit_metrics(:_, :_))
-      end
+      perform_job(ReportWorker, %{date: @date})
+    end
+
+    test "indicates that the job executed successfully" do
+      mock(fn _env -> %Tesla.Env{status: 200, body: %{status: "great"}} end)
+
+      assert perform_job(ReportWorker, %{date: @date}) == :ok
     end
   end
 
@@ -246,27 +179,30 @@ defmodule Lightning.UsageTracking.ReportWorkerTest do
       UsageTracking.disable_daily_report()
 
       put_temporary_env(:lightning, :usage_tracking,
+        cleartext_uuids_enabled: false,
         enabled: true,
         host: @host
       )
     end
 
     test "does not submit metrics to the ImpactTracker" do
-      with_mock Client,
-        submit_metrics: &mock_submit_metrics_ok/2 do
-        perform_job(ReportWorker, %{date: @date})
+      mock(fn _env -> flunk("Not expecting call to Impact Tracker") end)
 
-        assert_not_called(Client.submit_metrics(:_, :_))
-      end
+      assert perform_job(ReportWorker, %{date: @date})
     end
 
     test "does not persist a report submission" do
-      with_mock Client,
-        submit_metrics: &mock_submit_metrics_ok/2 do
-        perform_job(ReportWorker, %{date: @date})
-      end
+      mock(fn _env -> %Tesla.Env{status: 200, body: %{status: "great"}} end)
+
+      perform_job(ReportWorker, %{date: @date})
 
       refute Repo.one(Report)
+    end
+
+    test "indicates that the job executed successfully" do
+      mock(fn _env -> %Tesla.Env{status: 200, body: %{status: "great"}} end)
+
+      assert perform_job(ReportWorker, %{date: @date}) == :ok
     end
   end
 
@@ -281,26 +217,25 @@ defmodule Lightning.UsageTracking.ReportWorkerTest do
     end
 
     test "does not submit metrics to the ImpactTracker" do
-      with_mock Client,
-        submit_metrics: &mock_submit_metrics_ok/2 do
-        perform_job(ReportWorker, %{date: @date})
+      mock(fn _env -> flunk("Not expecting call to Impact Tracker") end)
 
-        assert_not_called(Client.submit_metrics(:_, :_))
-      end
+      assert perform_job(ReportWorker, %{date: @date})
     end
 
     test "does not persist a report submission" do
-      with_mock Client,
-        submit_metrics: &mock_submit_metrics_ok/2 do
-        perform_job(ReportWorker, %{date: @date})
-      end
+      mock(fn _env -> %Tesla.Env{status: 200, body: %{status: "great"}} end)
+
+      perform_job(ReportWorker, %{date: @date})
 
       refute Repo.one(Report)
     end
-  end
 
-  defp mock_submit_metrics_ok(_metrics, _host), do: :ok
-  defp mock_submit_metrics_error(_metrics, _host), do: :error
+    test "indicates that the job executed successfully" do
+      mock(fn _env -> %Tesla.Env{status: 200, body: %{status: "great"}} end)
+
+      assert perform_job(ReportWorker, %{date: @date}) == :ok
+    end
+  end
 
   defp stringify_keys(map) do
     map
@@ -318,5 +253,15 @@ defmodule Lightning.UsageTracking.ReportWorkerTest do
   defp stringify_key(acc, key, val) do
     acc
     |> Map.merge(%{to_string(key) => val})
+  end
+
+  defp metrics_match?(tesla_env, expected_instance_metrics) do
+    submitted_instance_metrics = Jason.decode!(tesla_env.body)["instance"]
+
+    submitted_instance_metrics == expected_instance_metrics
+  end
+
+  defp correct_host?(tesla_env, host) do
+    String.contains?(tesla_env.url, host)
   end
 end

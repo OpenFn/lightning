@@ -219,6 +219,9 @@ base_cron = [
   {"1 2 * * *", Lightning.Projects, args: %{"type" => "data_retention"}}
 ]
 
+usage_tracking_resubmission_batch_size =
+  env!("USAGE_TRACKING_RESUBMISSION_BATCH_SIZE", :integer, 10)
+
 usage_tracking_cron = [
   {
     "30 1,9,17 * * *",
@@ -226,6 +229,11 @@ usage_tracking_cron = [
     args: %{
       "batch_size" => env!("USAGE_TRACKING_DAILY_BATCH_SIZE", :integer, 10)
     }
+  },
+  {
+    "* * * * *",
+    Lightning.UsageTracking.ResubmissionCandidatesWorker,
+    args: %{"batch_size" => usage_tracking_resubmission_batch_size}
   }
 ]
 

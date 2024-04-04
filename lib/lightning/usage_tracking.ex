@@ -6,6 +6,7 @@ defmodule Lightning.UsageTracking do
 
   alias Lightning.Helpers
   alias Lightning.Repo
+  alias Lightning.UsageTracking.Client
   alias Lightning.UsageTracking.DailyReportConfiguration
   alias Lightning.UsageTracking.GithubClient
   alias Lightning.UsageTracking.Report
@@ -213,4 +214,10 @@ defmodule Lightning.UsageTracking do
 
   defp image_for_submission("edge" = _image, _spec_version), do: "edge"
   defp image_for_submission(_image, _spec_version), do: "other"
+
+  def submit_report(report, host) do
+    report.data
+    |> Client.submit_metrics(host)
+    |> update_report_submission!(report)
+  end
 end
