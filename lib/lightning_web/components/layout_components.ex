@@ -53,7 +53,6 @@ defmodule LightningWeb.LayoutComponents do
                 class={[
                   "text-gray-900 relative cursor-default select-none py-2 pl-3 pr-9 hover:bg-indigo-600 group hover:text-white"
                 ]}
-                id="listbox-option-0"
                 role="option"
               >
                 <span class={[

@@ -108,6 +108,12 @@ defmodule Lightning.VersionControl.GithubClient do
     |> handle_resp([201, 204])
   end
 
+  def delete_repo_secret(client, repo, secret_name) do
+    client
+    |> delete("/repos/#{repo}/actions/secrets/#{secret_name}")
+    |> handle_resp([204])
+  end
+
   def build_oauth_client do
     middleware = [
       {Tesla.Middleware.BaseUrl, "https://github.com/login/oauth"},
