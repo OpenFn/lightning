@@ -406,32 +406,41 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
             </div>
           </div>
         </:loading>
-        <:failed :let={_failure}>
-          <div class="border-l-4 border-yellow-400 bg-yellow-50 p-4">
+        <:failed :let={failure}>
+          <div class="bg-yellow-50 p-4">
             <div class="flex">
               <div class="flex-shrink-0">
                 <Heroicons.exclamation_triangle class="h-5 w-5 text-yellow-400" />
               </div>
               <div class="ml-3">
-                <p class="text-sm text-yellow-700">
+                <h3 class="text-sm font-medium text-yellow-800">
                   Your github project is not properly connected with Lightning.
-                  <%= if @can_reconnect do %>
-                    <a
-                      href="#"
-                      class="font-medium text-yellow-700 underline hover:text-yellow-600"
-                      phx-click={show_modal("reconnect_sync_direction_modal")}
-                    >
-                      Click here to reconnect
-                    </a>
-                    <.reconnect_sync_direction_modal
-                      id="reconnect_sync_direction_modal"
-                      changeset={@changeset}
-                      myself={@myself}
-                    />
-                  <% else %>
-                    Reach out to the admin who made this installation to reconnect
+                </h3>
+                <div class="mt-2 text-sm text-yellow-700">
+                  <%= case failure do %>
+                    <% {:error, %Lightning.VersionControl.GithubError{message: message}} -> %>
+                      <p><code><%= message %></code></p>
+                    <% _other -> %>
+                      <p>There was a problem connecting to github</p>
                   <% end %>
-                </p>
+                </div>
+                <div class="mt-4">
+                  <div class="-mx-2 -my-1.5 flex">
+                    <%= if @can_reconnect do %>
+                      <button
+                        class="rounded-md bg-yellow-50 px-2 py-1.5 text-sm font-medium text-yellow-800 hover:bg-yellow-100 focus:outline-none focus:ring-2 focus:ring-yellow-600 focus:ring-offset-2 focus:ring-offset-yellow-50"
+                        phx-click={show_modal("reconnect_sync_direction_modal")}
+                      >
+                        Click here to reconnect
+                      </button>
+                      <.reconnect_sync_direction_modal
+                        id="reconnect_sync_direction_modal"
+                        changeset={@changeset}
+                        myself={@myself}
+                      />
+                    <% end %>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
