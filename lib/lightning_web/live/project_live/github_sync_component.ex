@@ -584,12 +584,16 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
   defp sync_order_radio(assigns) do
     ~H"""
     <div>
-      <.label>Sync Order</.label>
+      <.label>
+        Direction of <em>First</em> Sync
+      </.label>
       <p class="text-sm text-gray-500">
-        How would you prefer the first sync to occur?
+        To connect (or re-connect) this project to a GitHub repository, you must choose the
+        <b>direction of the <em>first</em> sync.</b>
+        After this initial setup, each push to your target branch on GitHub will trigger a deployment to OpenFn and each click of the "Initiate Sync to Branch" button on OpenFn will tell GitHub to commit a copy of your project to the target branch.
       </p>
       <fieldset class="mt-4">
-        <legend class="sr-only">Sync Order</legend>
+        <legend class="sr-only">Direction of <em>Initial</em> Sync</legend>
         <div class="space-y-5">
           <div class="relative flex items-start">
             <div class="flex h-6 items-center">
@@ -604,11 +608,12 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
               />
             </div>
             <div class="ml-3 text-sm leading-6">
-              <label for="deploy_first_sync_option" class="font-medium text-gray-900">
+              <label for="deploy_first_sync_option" class="text-gray-900">
+                <span class="font-medium">GitHub --> OpenFn:</span>
                 Deploy from GitHub immediately upon setup
               </label>
               <p id="deploy_first_sync_option_description" class="text-gray-500">
-                use this option if you have a project on GitHub already and you want to overwrite what’s here in OpenFn
+                Use this option if you have a project.yaml already configured on GitHub and you want to overwrite what's here in OpenFn.
               </p>
             </div>
           </div>
@@ -624,11 +629,15 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
               />
             </div>
             <div class="ml-3 text-sm leading-6">
-              <label for="pull_first_sync_option" class="font-medium text-gray-900">
+              <label for="pull_first_sync_option" class="text-gray-900">
+                <span class="font-medium">OpenFn --> GitHub:</span>
                 Sync to GitHub immediately upon setup
               </label>
+
               <p id="pull_first_sync_option_description" class="text-gray-500">
-                use this option if you have a project here on OpenFn that you’d like to connect to a GitHub repo
+                Use this option if you have a project here on OpenFn that you'd like to commit to a GitHub repo. (If you don't have a
+                <code>project.yaml</code>
+                file already tracking your work somewhere in GitHub, this is probably the option you should chose.)
               </p>
             </div>
           </div>
