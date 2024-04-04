@@ -1,4 +1,4 @@
-defmodule LightningWeb.CredentialLive.FormComponent do
+defmodule LightningWeb.CredentialLive.CredentialFormComponent do
   @moduledoc """
   Form Component for working with a single Credential
   """
@@ -21,7 +21,6 @@ defmodule LightningWeb.CredentialLive.FormComponent do
     :projects,
     :on_save,
     :button,
-    :show_project_credentials,
     :can_create_project_credential,
     :return_to
   ]
@@ -93,7 +92,6 @@ defmodule LightningWeb.CredentialLive.FormComponent do
      |> assign(all_projects: all_projects)
      |> assign(schema: schema)
      |> assign(selected_project: nil)
-     |> assign_new(:show_project_credentials, fn -> true end)
      |> update_available_projects()}
   end
 
@@ -441,7 +439,7 @@ defmodule LightningWeb.CredentialLive.FormComponent do
                 <%= fieldset %>
               </div>
 
-              <div :if={@show_project_credentials} class="space-y-4">
+              <div class="space-y-4">
                 <div class="hidden sm:block" aria-hidden="true">
                   <div class="border-t border-secondary-200 mb-6"></div>
                 </div>
