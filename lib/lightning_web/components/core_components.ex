@@ -11,6 +11,27 @@ defmodule LightningWeb.CoreComponents do
 
   alias Phoenix.LiveView.JS
 
+  def plausible_script(assigns) do
+    config = Application.get_env(:lightning, :plausible, [])
+
+    assigns =
+      if config[:src] do
+        assigns
+        |> assign(
+          enabled: true,
+          src: config[:src],
+          data_domain: config[:data_domain]
+        )
+      else
+        assigns |> assign(enabled: false)
+      end
+
+    ~H"""
+    <script :if={@enabled} defer src={@src} data-domain={@data_domain}>
+    </script>
+    """
+  end
+
   @doc ~S"""
   Renders a table with generic styling.
 

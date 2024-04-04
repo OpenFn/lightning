@@ -1,3 +1,4 @@
+alias Lightning.Config.Utils
 import Config
 import Dotenvy
 
@@ -7,8 +8,15 @@ import Dotenvy
 # and secrets from environment variables or elsewhere. Do not define
 # any compile-time configuration in here, as it won't be applied.
 
-# Use Vapor to load configuration from environment variables, files, etc.
-# Then merge the resulting configuration into the Application config.
+# We use dotenvy to load environment variables from .env files.
+# The order of precedence (last winning) is, `.env`, `<config_env>.env`,
+# `<config_env>.override.env`, and then system environment variables.
+
+# See the dotenvy cheatsheet for more information:
+# https://hexdocs.pm/dotenvy/cheatsheet.html
+
+# NOTE: Any calls to `System.get_env()` will return the value from the
+# environment, which does not include the values from the `.env` files.
 
 source!([
   ".env",
@@ -18,30 +26,36 @@ source!([
 ])
 
 # Start the phoenix server if environment is set and running in a release
-if System.get_env("PHX_SERVER") && System.get_env("RELEASE_NAME") do
+if env!("PHX_SERVER", :boolean, false) && env!("RELEASE_NAME", :boolean, false) do
   config :lightning, LightningWeb.Endpoint, server: true
 end
 
-if is_resettable_demo = System.get_env("IS_RESETTABLE_DEMO") do
-  config :lightning,
-         :is_resettable_demo,
-         is_resettable_demo == "yes"
-end
+config :lightning,
+       :is_resettable_demo,
+       env!(
+         "IS_RESETTABLE_DEMO",
+         :boolean,
+         Application.fetch_env!(:lightning, :is_resettable_demo)
+       )
 
-if default_retention_period = System.get_env("DEFAULT_RETENTION_PERIOD") do
-  config :lightning,
-         :default_retention_period,
-         String.to_integer(default_retention_period)
-end
+config :lightning,
+       :default_retention_period,
+       env!(
+         "DEFAULT_RETENTION_PERIOD",
+         :integer,
+         Application.fetch_env!(:lightning, :default_retention_period)
+       )
 
 decoded_cert =
-  System.get_env("GITHUB_CERT")
-  |> case do
-    nil ->
-      nil
+  env!(
+    "GITHUB_CERT",
+    fn encoded ->
+      encoded
+      |> Base.decode64()
+      |> case do
+        {:ok, decoded} ->
+          decoded
 
-    str ->
-      case Base.decode64(str) do
         :error ->
           raise """
           Could not decode GITHUB_CERT.
@@ -52,33 +66,38 @@ decoded_cert =
 
               cat private-key.pem | base64 -w 0
           """
-
-        {:ok, decoded} ->
-          decoded
       end
-  end ||
-    Application.get_env(:lightning, :github_app, [])
-    |> Keyword.get(:cert, nil)
+    end,
+    Utils.get_env([:lightning, :github_app, :cert])
+  )
 
 github_app_id =
-  System.get_env("GITHUB_APP_ID") ||
-    Application.get_env(:lightning, :github_app, [])
-    |> Keyword.get(:app_id, nil)
+  env!(
+    "GITHUB_APP_ID",
+    :string,
+    Utils.get_env([:lightning, :github_app, :app_id])
+  )
 
 github_app_name =
-  System.get_env("GITHUB_APP_NAME") ||
-    Application.get_env(:lightning, :github_app, [])
-    |> Keyword.get(:app_name, nil)
+  env!(
+    "GITHUB_APP_NAME",
+    :string,
+    Utils.get_env([:lightning, :github_app, :app_name])
+  )
 
 github_app_client_id =
-  System.get_env("GITHUB_APP_CLIENT_ID") ||
-    Application.get_env(:lightning, :github_app, [])
-    |> Keyword.get(:client_id, nil)
+  env!(
+    "GITHUB_APP_CLIENT_ID",
+    :string,
+    Utils.get_env([:lightning, :github_app, :client_id])
+  )
 
 github_app_client_secret =
-  System.get_env("GITHUB_APP_CLIENT_SECRET") ||
-    Application.get_env(:lightning, :github_app, [])
-    |> Keyword.get(:client_secret, nil)
+  env!(
+    "GITHUB_APP_CLIENT_SECRET",
+    :string,
+    Utils.get_env([:lightning, :github_app, :client_secret])
+  )
 
 config :lightning, :github_app,
   cert: decoded_cert,
@@ -87,16 +106,13 @@ config :lightning, :github_app,
   client_id: github_app_client_id,
   client_secret: github_app_client_secret
 
-if start_rtm = System.get_env("RTM") do
-  unless start_rtm in ["true", "false"] do
-    raise """
-    Expected `RTM` value to either be "true" or "false".
-    """
-  end
-
-  config :lightning, Lightning.Runtime.RuntimeManager,
-    start: start_rtm |> String.to_existing_atom()
-end
+config :lightning, Lightning.Runtime.RuntimeManager,
+  start:
+    env!(
+      "RTM",
+      :boolean,
+      Utils.get_env([:lightning, Lightning.Runtime.RuntimeManager, :start])
+    )
 
 config :lightning, :workers,
   private_key:
@@ -110,7 +126,7 @@ config :lightning, :workers,
           :error -> raise "Could not decode PEM"
         end
       end,
-      Application.get_env(:lightning, :workers, []) |> Keyword.get(:private_key)
+      Utils.get_env([:lightning, :workers, :private_key])
     )
     |> tap(fn v ->
       unless v do
@@ -121,8 +137,7 @@ config :lightning, :workers,
     env!(
       "WORKER_SECRET",
       :string!,
-      Application.get_env(:lightning, :workers, [])
-      |> Keyword.get(:worker_secret)
+      Utils.get_env([:lightning, :workers, :worker_secret])
     )
     |> tap(fn v ->
       unless v do
@@ -130,9 +145,9 @@ config :lightning, :workers,
       end
     end)
 
-image_tag = System.get_env("IMAGE_TAG")
-branch = System.get_env("BRANCH")
-commit = System.get_env("COMMIT")
+image_tag = env!("IMAGE_TAG", :string, nil)
+branch = env!("BRANCH", :string, nil)
+commit = env!("COMMIT", :string, nil)
 
 config :lightning, :image_info,
   image_tag: image_tag,
@@ -140,30 +155,36 @@ config :lightning, :image_info,
   commit: commit
 
 config :lightning, :email_addresses,
-  admin: System.get_env("EMAIL_ADMIN", "support@openfn.org")
+  admin: env!("EMAIL_ADMIN", :string, "support@openfn.org")
 
 config :lightning, :adaptor_service,
-  adaptors_path: System.get_env("ADAPTORS_PATH", "./priv/openfn")
+  adaptors_path: env!("ADAPTORS_PATH", :string, "./priv/openfn")
 
 config :lightning, :oauth_clients,
   google: [
-    client_id: System.get_env("GOOGLE_CLIENT_ID"),
-    client_secret: System.get_env("GOOGLE_CLIENT_SECRET")
+    client_id: env!("GOOGLE_CLIENT_ID", :string, nil),
+    client_secret: env!("GOOGLE_CLIENT_SECRET", :string, nil)
   ],
   salesforce: [
-    client_id: System.get_env("SALESFORCE_CLIENT_ID"),
-    client_secret: System.get_env("SALESFORCE_CLIENT_SECRET")
+    client_id: env!("SALESFORCE_CLIENT_ID", :string, nil),
+    client_secret: env!("SALESFORCE_CLIENT_SECRET", :string, nil)
   ]
 
 config :lightning,
   schemas_path:
-    System.get_env("SCHEMAS_PATH") ||
-      Application.get_env(:lightning, :schemas_path) || "./priv"
+    env!(
+      "SCHAMAS_PATH",
+      :string,
+      Utils.get_env([:lightning, :schemas_path], "./priv")
+    )
 
 config :lightning,
        :purge_deleted_after_days,
-       System.get_env("PURGE_DELETED_AFTER_DAYS", "7")
-       |> String.to_integer()
+       env!(
+         "PURGE_DELETED_AFTER_DAYS",
+         :integer,
+         Utils.get_env([:lightning, :purge_deleted_after_days], 7)
+       )
 
 base_cron = [
   {"* * * * *", Lightning.Workflows.Scheduler},
@@ -178,16 +199,13 @@ base_cron = [
   {"1 2 * * *", Lightning.Projects, args: %{"type" => "data_retention"}}
 ]
 
-usage_tracking_daily_batch_size =
-  "USAGE_TRACKING_DAILY_BATCH_SIZE"
-  |> System.get_env("10")
-  |> String.to_integer()
-
 usage_tracking_cron = [
   {
     "30 1,9,17 * * *",
     Lightning.UsageTracking.DayWorker,
-    args: %{"batch_size" => usage_tracking_daily_batch_size}
+    args: %{
+      "batch_size" => env!("USAGE_TRACKING_DAILY_BATCH_SIZE", :integer, 10)
+    }
   }
 ]
 
@@ -220,73 +238,72 @@ config :lightning, Oban,
 
 # https://plausible.io/ is an open-source, privacy-friendly alternative to
 # Google Analytics. Provide an src and data-domain for your script below.
-if System.get_env("PLAUSIBLE_SRC"),
-  do:
-    config(
-      :lightning,
-      :plausible,
-      src: System.get_env("PLAUSIBLE_SRC"),
-      "data-domain": System.get_env("PLAUSIBLE_DATA_DOMAIN")
-    )
+config :lightning, :plausible,
+  src: env!("PLAUSIBLE_SRC", :string, nil),
+  data_domain: env!("PLAUSIBLE_DATA_DOMAIN", :string, nil)
 
 config :lightning,
        :max_run_duration_seconds,
-       System.get_env("WORKER_MAX_RUN_DURATION_SECONDS", "60")
-       |> String.to_integer()
+       env!("WORKER_MAX_RUN_DURATION_SECONDS", :integer, 60)
 
 config :lightning,
        :max_dataclip_size_bytes,
-       System.get_env("MAX_DATACLIP_SIZE_MB", "10")
-       |> String.to_integer()
-       |> Kernel.*(1_000_000)
+       env!("MAX_DATACLIP_SIZE_MB", :integer, 10) * 1_000_000
 
 config :lightning,
        :queue_result_retention_period,
-       System.get_env("QUEUE_RESULT_RETENTION_PERIOD_SECONDS", "60")
-       |> String.to_integer()
+       env!("QUEUE_RESULT_RETENTION_PERIOD_SECONDS", :integer, 60)
 
 config :lightning,
        :init_project_for_new_user,
-       System.get_env("INIT_PROJECT_FOR_NEW_USER", "false")
-       |> String.to_existing_atom()
+       env!("INIT_PROJECT_FOR_NEW_USER", :boolean, false)
 
 # To actually send emails you need to configure the mailer to use a real
 # adapter. You may configure the swoosh api client of your choice. We
 # automatically configure Mailgun if an API key has been provided. See
 # https://hexdocs.pm/swoosh/Swoosh.html#module-installation for more details.
-if System.get_env("MAILGUN_API_KEY") do
+if api_key = env!("MAILGUN_API_KEY", :string, nil) do
   config :lightning, Lightning.Mailer,
     adapter: Swoosh.Adapters.Mailgun,
-    api_key: System.get_env("MAILGUN_API_KEY"),
-    domain: System.get_env("MAILGUN_DOMAIN")
+    api_key: api_key,
+    domain: env!("MAILGUN_DOMAIN", :string)
 end
 
-url_port = String.to_integer(System.get_env("URL_PORT", "443"))
-url_scheme = System.get_env("URL_SCHEME", "https")
+url_port = env!("URL_PORT", :integer, 443)
+url_scheme = env!("URL_SCHEME", :string, "https")
 
 # Use the `PRIMARY_ENCRYPTION_KEY` env variable if available, else fall back
 # to defaults.
 # Defaults are set for `dev` and `test` modes.
 config :lightning, Lightning.Vault,
   primary_encryption_key:
-    System.get_env("PRIMARY_ENCRYPTION_KEY") ||
-      Application.get_env(:lightning, Lightning.Vault, [])
-      |> Keyword.get(:primary_encryption_key, nil)
+    env!(
+      "PRIMARY_ENCRYPTION_KEY",
+      :string,
+      Utils.get_env([:lightning, Lightning.Vault, :primary_encryption_key], nil)
+    )
 
-if log_level = System.get_env("LOG_LEVEL") do
-  allowed_log_levels =
-    ~w[emergency alert critical error warning warn notice info debug]
+config :logger,
+       :level,
+       env!(
+         "LOG_LEVEL",
+         fn log_level ->
+           allowed_log_levels =
+             ~w[emergency alert critical error warning warn notice info debug]
 
-  if log_level in allowed_log_levels do
-    config :logger, level: log_level |> String.to_atom()
-  else
-    raise """
-    Invalid LOG_LEVEL, must be on of #{allowed_log_levels |> Enum.join(", ")}
-    """
-  end
-end
+           if log_level in allowed_log_levels do
+             config :logger, level: log_level |> String.to_atom()
+           else
+             raise Dotenvy.Error,
+               message: """
+               Invalid LOG_LEVEL, must be on of #{allowed_log_levels |> Enum.join(", ")}
+               """
+           end
+         end,
+         Utils.get_env([:logger, :level], :info)
+       )
 
-database_url = System.get_env("DATABASE_URL")
+database_url = env!("DATABASE_URL", :string, nil)
 
 config :lightning, Lightning.Repo,
   url: database_url,
@@ -303,11 +320,11 @@ if config_env() == :prod do
     """
   end
 
-  maybe_ipv6 = if System.get_env("ECTO_IPV6"), do: [:inet6], else: []
-  enforce_repo_ssl = System.get_env("DISABLE_DB_SSL") != "true"
+  maybe_ipv6 = if env!("ECTO_IPV6", :boolean, false), do: [:inet6], else: []
+  disable_db_ssl = env!("DISABLE_DB_SSL", :boolean, false)
 
   config :lightning, Lightning.Repo,
-    ssl: enforce_repo_ssl,
+    ssl: not disable_db_ssl,
     # TODO: determine why we see this certs verification warn for the repo conn
     # ssl_opts: [log_level: :error],
     url: database_url,
@@ -319,26 +336,38 @@ if config_env() == :prod do
   # to check this value into version control, so we use an environment
   # variable instead.
   secret_key_base =
-    System.get_env("SECRET_KEY_BASE") ||
+    env!("SECRET_KEY_BASE", :string, nil) ||
       raise """
       environment variable SECRET_KEY_BASE is missing.
       You can generate one by calling: mix phx.gen.secret
       """
 
-  host = System.get_env("URL_HOST") || "example.com"
-  port = String.to_integer(System.get_env("PORT", "4000"))
+  host = env!("URL_HOST", :string, "example.com")
+  port = env!("PORT", :integer, 4000)
 
   listen_address =
-    System.get_env("LISTEN_ADDRESS", "127.0.0.1")
-    |> String.split(".")
-    |> Enum.map(&String.to_integer/1)
-    |> List.to_tuple()
+    env!(
+      "LISTEN_ADDRESS",
+      fn address ->
+        address
+        |> String.split(".")
+        |> Enum.map(&String.to_integer/1)
+        |> List.to_tuple()
+      end,
+      {127, 0, 0, 1}
+    )
 
   origins =
-    case System.get_env("ORIGINS") do
-      nil -> true
-      str -> String.split(str, ",")
-    end
+    env!(
+      "ORIGINS",
+      fn str ->
+        case str do
+          nil -> true
+          _ -> String.split(str, ",")
+        end
+      end,
+      nil
+    )
 
   config :lightning, LightningWeb.Endpoint,
     url: [host: host, port: url_port, scheme: url_scheme],
@@ -383,8 +412,7 @@ if config_env() == :test do
     pool_size: Enum.max([schedulers + 8, schedulers * 2])
 
   config :ex_unit,
-    assert_receive_timeout:
-      System.get_env("ASSERT_RECEIVE_TIMEOUT", "600") |> String.to_integer()
+    assert_receive_timeout: env!("ASSERT_RECEIVE_TIMEOUT", :integer, 600)
 end
 
 release =
@@ -402,46 +430,52 @@ config :sentry,
   },
   # If you've booted up with a SENTRY_DSN environment variable, use Sentry!
   included_environments:
-    if(System.get_env("SENTRY_DSN"), do: [config_env()], else: []),
+    if(env!("SENTRY_DSN", :boolean, false), do: [config_env()], else: []),
   release: release,
   enable_source_code_context: true,
   root_source_code_path: File.cwd!()
 
 config :lightning, Lightning.PromEx,
-  disabled: System.get_env("PROMEX_ENABLED") != "true",
+  disabled: not env!("PROMEX_ENABLED", &Utils.ensure_boolean/1, false),
   manual_metrics_start_delay: :no_delay,
   drop_metrics_groups: [],
   grafana: [
-    host: System.get_env("PROMEX_GRAFANA_HOST") || "",
-    username: System.get_env("PROMEX_GRAFANA_USER") || "",
-    password: System.get_env("PROMEX_GRAFANA_PASSWORD") || "",
+    host: env!("PROMEX_GRAFANA_HOST", :string, ""),
+    username: env!("PROMEX_GRAFANA_USER", :string, ""),
+    password: env!("PROMEX_GRAFANA_PASSWORD", :string, ""),
     upload_dashboards_on_start:
-      System.get_env("PROMEX_UPLOAD_GRAFANA_DASHBOARDS_ON_START") == "true"
+      env!(
+        "PROMEX_UPLOAD_GRAFANA_DASHBOARDS_ON_START",
+        &Utils.ensure_boolean/1,
+        false
+      )
   ],
   metrics_server: :disabled,
-  datasource_id: System.get_env("PROMEX_DATASOURCE_ID") || "",
+  datasource_id: env!("PROMEX_DATASOURCE_ID", :string, ""),
   metrics_endpoint_authorization_required:
-    System.get_env("PROMEX_METRICS_ENDPOINT_AUTHORIZATION_REQUIRED") != "no",
+    env!(
+      "PROMEX_METRICS_ENDPOINT_AUTHORIZATION_REQUIRED",
+      &Utils.ensure_boolean/1,
+      true
+    ),
   metrics_endpoint_token:
-    System.get_env("PROMEX_METRICS_ENDPOINT_TOKEN") ||
-      :crypto.strong_rand_bytes(100),
-  metrics_endpoint_scheme: System.get_env("PROMEX_ENDPOINT_SCHEME") || "https"
+    env!(
+      "PROMEX_METRICS_ENDPOINT_TOKEN",
+      :string,
+      :crypto.strong_rand_bytes(100)
+    ),
+  metrics_endpoint_scheme: env!("PROMEX_ENDPOINT_SCHEME", :string, "https")
 
 config :lightning, :metrics,
   stalled_run_threshold_seconds:
-    String.to_integer(
-      System.get_env("METRICS_STALLED_RUN_THRESHOLD_SECONDS", "3600")
-    ),
+    env!("METRICS_STALLED_RUN_THRESHOLD_SECONDS", :integer, 3600),
   run_performance_age_seconds:
-    String.to_integer(
-      System.get_env("METRICS_RUN_PERFORMANCE_AGE_SECONDS", "300")
-    ),
+    env!("METRICS_RUN_PERFORMANCE_AGE_SECONDS", :integer, 300),
   run_queue_metrics_period_seconds:
-    String.to_integer(
-      System.get_env("METRICS_RUN_QUEUE_METRICS_PERIOD_SECONDS", "5")
-    )
+    env!("METRICS_RUN_QUEUE_METRICS_PERIOD_SECONDS", :integer, 5)
 
 config :lightning, :usage_tracking,
-  cleartext_uuids_enabled: System.get_env("USAGE_TRACKING_UUIDS") == "cleartext",
-  enabled: System.get_env("USAGE_TRACKING_ENABLED") != "false",
-  host: System.get_env("USAGE_TRACKER_HOST", "https://impact.openfn.org")
+  cleartext_uuids_enabled:
+    env!("USAGE_TRACKING_UUIDS", :string, nil) == "cleartext",
+  enabled: env!("USAGE_TRACKING_ENABLED", &Utils.ensure_boolean/1, true),
+  host: env!("USAGE_TRACKER_HOST", :string, "https://impact.openfn.org")
