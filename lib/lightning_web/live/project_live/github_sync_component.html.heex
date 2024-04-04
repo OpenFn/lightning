@@ -103,25 +103,51 @@
       <div class="mt-4">
         <.sync_order_radio form={f} />
       </div>
-      <div class="mt-4 bg-amber-200 flex gap-3 rounded-md p-3 ">
-        <.input
-          type="checkbox"
-          field={f[:accept]}
-          required="true"
-          disabled={!@can_install_github}
-        />
-        <span>
-          I understand that <code>.github/workflows/openfn-pull.yml</code>
-          will be commited into the default branch(<%= get_default_branch(
-            @repos,
-            f[:repo].value
-          ) ||
-            "..." %>) of the selected repository,
-          <code>.github/workflows/openfn-<%= @project.id %>-deploy.yml</code>
-          will be committed to my target branch, and any existing
-          version of these files will be overwritten by these commits.
-        </span>
-      </div>
+      <%= if f[:branch].value do %>
+        <div class="mt-4 bg-amber-200 flex gap-3 rounded-md p-3 ">
+          <.input
+            type="checkbox"
+            field={f[:accept]}
+            required="true"
+            disabled={!@can_install_github}
+          />
+          <span>
+            I understand that the following files will be committed to <b><%= f[
+              :repo
+            ].value %></b>:
+            <ul class="my-2">
+              <li>
+                <.icon name="hero-document-plus" class="h-4 w-4" />
+                <code>
+                  .github/workflows/openfn-pull.yml -> <%= get_default_branch(
+                    @repos,
+                    f[:repo].value
+                  ) %>
+                </code>
+              </li>
+              <li>
+                <.icon name="hero-document-plus" class="h-4 w-4" />
+                <code>
+                  .github/workflows/openfn-<%= @project.id %>-deploy.yml -> <%= f[
+                    :branch
+                  ].value %>
+                </code>
+              </li>
+              <%= unless f[:config_path].value != "" do %>
+                <li>
+                  <.icon name="hero-document-plus" class="h-4 w-4" />
+                  <code>
+                    ./openfn-<%= @project.id %>-config.json -> <%= f[
+                      :branch
+                    ].value %>
+                  </code>
+                </li>
+              <% end %>
+            </ul>
+            Existing versions of these files on these branches will be overwritten. (I'll be able to find them in my git history if needed.)
+          </span>
+        </div>
+      <% end %>
       <div class="flex gap-4 mt-2">
         <.button
           type="submit"
