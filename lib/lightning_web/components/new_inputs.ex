@@ -127,6 +127,8 @@ defmodule LightningWeb.Components.NewInputs do
     default: false,
     doc: "the multiple flag for select inputs"
 
+  attr :button_placement, :string, default: nil
+
   attr :rest, :global,
     include:
       ~w(accept autocomplete capture cols disabled form list max maxlength min minlength
@@ -183,21 +185,29 @@ defmodule LightningWeb.Components.NewInputs do
     ~H"""
     <div phx-feedback-for={@name}>
       <.label :if={@label} class="mb-2" for={@id}><%= @label %></.label>
-      <select
-        id={@id}
-        name={@name}
-        class={[
-          "block w-full rounded-lg border border-secondary-300 bg-white",
-          "sm:text-sm shadow-sm",
-          "focus:border-primary-300 focus:ring focus:ring-primary-200 focus:ring-opacity-50",
-          "disabled:cursor-not-allowed"
-        ]}
-        multiple={@multiple}
-        {@rest}
-      >
-        <option :if={@prompt} value=""><%= @prompt %></option>
-        <%= Phoenix.HTML.Form.options_for_select(@options, @value) %>
-      </select>
+      <div class="flex w-full">
+        <div class="relative items-center">
+          <select
+            id={@id}
+            name={@name}
+            class={[
+              "block w-full rounded-lg border border-secondary-300 bg-white",
+              "sm:text-sm shadow-sm",
+              "focus:border-primary-300 focus:ring focus:ring-primary-200 focus:ring-opacity-50",
+              "disabled:cursor-not-allowed #{@button_placement == "right" && "rounded-r-none"}",
+              "#{@button_placement == "left" && "rounded-l-none"}"
+            ]}
+            multiple={@multiple}
+            {@rest}
+          >
+            <option :if={@prompt} value=""><%= @prompt %></option>
+            <%= Phoenix.HTML.Form.options_for_select(@options, @value) %>
+          </select>
+        </div>
+        <div class="relative ronded-l-none">
+          <%= render_slot(@inner_block) %>
+        </div>
+      </div>
       <.error :for={msg <- @errors}><%= msg %></.error>
     </div>
     """
