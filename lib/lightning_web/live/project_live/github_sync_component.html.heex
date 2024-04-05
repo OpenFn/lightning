@@ -103,25 +103,18 @@
       <div class="mt-4">
         <.sync_order_radio form={f} />
       </div>
-      <div class="mt-4 bg-amber-200 flex gap-3 rounded-md p-3 ">
-        <.input
-          type="checkbox"
-          field={f[:accept]}
-          required="true"
-          disabled={!@can_install_github}
+      <%= if f[:branch].value do %>
+        <.accept_checkbox
+          project={@project}
+          form={f}
+          default_branch={
+            get_default_branch(
+              @repos,
+              f[:repo].value
+            )
+          }
         />
-        <span>
-          I understand that <code>.github/workflows/openfn-pull.yml</code>
-          will be commited into the default branch(<%= get_default_branch(
-            @repos,
-            f[:repo].value
-          ) ||
-            "..." %>) of the selected repository,
-          <code>.github/workflows/openfn-<%= @project.id %>-deploy.yml</code>
-          will be committed to my target branch, and any existing
-          version of these files will be overwritten by these commits.
-        </span>
-      </div>
+      <% end %>
       <div class="flex gap-4 mt-2">
         <.button
           type="submit"
@@ -139,6 +132,8 @@
       verify_connection={@verify_connection}
       myself={@myself}
       changeset={@changeset}
+      repos={@repos}
+      project={@project}
       can_reconnect={
         @can_install_github &&
           can_access_github_installation?(
