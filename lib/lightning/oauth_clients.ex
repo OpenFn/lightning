@@ -11,6 +11,10 @@ defmodule Lightning.OauthClients do
   alias Lightning.Projects.Project
   alias Lightning.Repo
 
+  def change_client(%OauthClient{} = client, attrs \\ %{}) do
+    OauthClient.changeset(client, attrs)
+  end
+
   @doc """
   Returns the list of oauth clients.
 
@@ -26,7 +30,7 @@ defmodule Lightning.OauthClients do
 
   def list_clients(%Project{} = project) do
     Ecto.assoc(project, :oauth_clients)
-    |> preload([:user, :project_oauth_clients])
+    |> preload([:user, :project_oauth_clients, :projects])
     |> Repo.all()
   end
 
