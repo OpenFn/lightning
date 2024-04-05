@@ -118,6 +118,21 @@ defmodule LightningWeb.Components.NewInputs do
 
   attr :errors, :list, default: []
   attr :checked, :boolean, doc: "the checked flag for checkbox inputs"
+
+  attr :checked_value, :any,
+    default: "true",
+    doc: "the value to be sent when the checkbox is checked. Defaults to 'true'"
+
+  attr :unchecked_value, :any,
+    default: "false",
+    doc:
+      "the value to be sent when the checkbox is unchecked, Defaults to 'false'"
+
+  attr :hidden_input, :boolean,
+    default: true,
+    doc:
+      "controls if this function will generate a hidden input to submit the unchecked value or not. Defaults to 'true'"
+
   attr :prompt, :string, default: nil, doc: "the prompt for select inputs"
 
   attr :options, :list,
@@ -161,17 +176,22 @@ defmodule LightningWeb.Components.NewInputs do
     ~H"""
     <div phx-feedback-for={@name}>
       <label class="flex items-center gap-2 text-sm leading-6 text-slate-600">
-        <input type="hidden" name={@name} value="false" />
+        <input
+          :if={@hidden_input}
+          type="hidden"
+          name={@name}
+          value={@unchecked_value}
+        />
         <input
           type="checkbox"
           id={@id}
           name={@name}
-          value="true"
+          value={@checked_value}
           checked={@checked}
           class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-600
             checked:disabled:bg-indigo-300 checked:disabled:border-indigo-300
             checked:bg-indigo-600 checked:border-indigo-600 focus:outline-none
-            transition duration-200 cursor-pointer text-indigo-600"
+            transition duration-200 cursor-pointer"
           {@rest}
         />
         <%= @label %>

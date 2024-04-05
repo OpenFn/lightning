@@ -36,7 +36,7 @@ defmodule Lightning.VersionControl do
           :ok | {:error, map()}
   def reconfigure_github_connection(repo_connection, params, user) do
     changeset =
-      ProjectRepoConnection.validate_sync_direction(repo_connection, params)
+      ProjectRepoConnection.reconfigure_changeset(repo_connection, params)
 
     with {:ok, updated_repo_connection} <-
            Ecto.Changeset.apply_action(changeset, :update) do

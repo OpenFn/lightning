@@ -27,13 +27,14 @@ defmodule Lightning.VersionControl.ProjectRepoConnection do
     field :branch, :string
     field :access_token, :binary
     field :config_path, :string
+    field :accept, :boolean, virtual: true
     field :sync_direction, Ecto.Enum, values: [:deploy, :pull], virtual: true
     belongs_to :project, Project
 
     timestamps()
   end
 
-  @required_fields ~w(github_installation_id repo branch project_id sync_direction)a
+  @required_fields ~w(github_installation_id repo branch project_id)a
   @other_fields ~w(config_path)a
 
   def changeset(project_repo_connection, attrs) do
@@ -45,14 +46,28 @@ defmodule Lightning.VersionControl.ProjectRepoConnection do
     )
   end
 
-  def validate_sync_direction(project_repo_connection, attrs) do
+  def configure_changeset(project_repo_connection, attrs) do
     project_repo_connection
-    |> cast(attrs, [:sync_direction])
-    |> validate_required([:sync_direction])
+    |> changeset(attrs)
+    |> cast(attrs, [:sync_direction, :accept])
+    |> validate_required([:sync_direction, :accept])
+    |> validate_change(:accept, fn :accept, accept ->
+      if accept do
+        []
+      else
+        [accept: "please tick the box"]
+      end
+    end)
+  end
+
+  def reconfigure_changeset(project_repo_connection, attrs) do
+    project_repo_connection
+    |> cast(attrs, [:sync_direction, :accept])
+    |> validate_required([:sync_direction, :accept])
   end
 
   def create_changeset(project_repo_connection, attrs) do
-    changeset = changeset(project_repo_connection, attrs)
+    changeset = configure_changeset(project_repo_connection, attrs)
 
     if changeset.valid? do
       project_id = get_field(changeset, :project_id)

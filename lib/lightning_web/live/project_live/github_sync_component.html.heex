@@ -104,49 +104,16 @@
         <.sync_order_radio form={f} />
       </div>
       <%= if f[:branch].value do %>
-        <div class="mt-4 bg-amber-200 flex gap-3 rounded-md p-3 ">
-          <.input
-            type="checkbox"
-            field={f[:accept]}
-            required="true"
-            disabled={!@can_install_github}
-          />
-          <span>
-            I understand that the following files will be committed to <b><%= f[
-              :repo
-            ].value %></b>:
-            <ul class="my-2">
-              <li>
-                <.icon name="hero-document-plus" class="h-4 w-4" />
-                <code>
-                  .github/workflows/openfn-pull.yml -> <%= get_default_branch(
-                    @repos,
-                    f[:repo].value
-                  ) %>
-                </code>
-              </li>
-              <li>
-                <.icon name="hero-document-plus" class="h-4 w-4" />
-                <code>
-                  .github/workflows/openfn-<%= @project.id %>-deploy.yml -> <%= f[
-                    :branch
-                  ].value %>
-                </code>
-              </li>
-              <%= unless f[:config_path].value != "" do %>
-                <li>
-                  <.icon name="hero-document-plus" class="h-4 w-4" />
-                  <code>
-                    ./openfn-<%= @project.id %>-config.json -> <%= f[
-                      :branch
-                    ].value %>
-                  </code>
-                </li>
-              <% end %>
-            </ul>
-            Existing versions of these files on these branches will be overwritten. (I'll be able to find them in my git history if needed.)
-          </span>
-        </div>
+        <.accept_checkbox
+          project={@project}
+          form={f}
+          default_branch={
+            get_default_branch(
+              @repos,
+              f[:repo].value
+            )
+          }
+        />
       <% end %>
       <div class="flex gap-4 mt-2">
         <.button
@@ -165,6 +132,8 @@
       verify_connection={@verify_connection}
       myself={@myself}
       changeset={@changeset}
+      repos={@repos}
+      project={@project}
       can_reconnect={
         @can_install_github &&
           can_access_github_installation?(
