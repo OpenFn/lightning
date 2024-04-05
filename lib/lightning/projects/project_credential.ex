@@ -26,8 +26,8 @@ defmodule Lightning.Projects.ProjectCredential do
     timestamps()
   end
 
-  def changeset(comment, %{"delete" => "true"}) do
-    %{change(comment, delete: true) | action: :delete}
+  def changeset(project_credential, %{"delete" => "true"}) do
+    %{change(project_credential, delete: true) | action: :delete}
   end
 
   @doc false

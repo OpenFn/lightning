@@ -21,8 +21,13 @@ defmodule Lightning.Projects.ProjectOauthClient do
   schema "project_oauth_clients" do
     belongs_to :oauth_client, OauthClient
     belongs_to :project, Project
+    field :delete, :boolean, virtual: true, default: false
 
     timestamps()
+  end
+
+  def changeset(project_oauth_client, %{"delete" => "true"}) do
+    %{change(project_oauth_client, delete: true) | action: :delete}
   end
 
   @doc false
