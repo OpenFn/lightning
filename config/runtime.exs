@@ -34,7 +34,7 @@ config :lightning,
        :is_resettable_demo,
        env!(
          "IS_RESETTABLE_DEMO",
-         :boolean,
+         &Utils.ensure_boolean/1,
          Application.fetch_env!(:lightning, :is_resettable_demo)
        )
 
@@ -110,7 +110,7 @@ config :lightning, Lightning.Runtime.RuntimeManager,
   start:
     env!(
       "RTM",
-      :boolean,
+      &Utils.ensure_boolean/1,
       Utils.get_env([:lightning, Lightning.Runtime.RuntimeManager, :start])
     )
 
@@ -173,7 +173,7 @@ config :lightning, :oauth_clients,
 config :lightning,
   schemas_path:
     env!(
-      "SCHAMAS_PATH",
+      "SCHEMAS_PATH",
       :string,
       Utils.get_env([:lightning, :schemas_path], "./priv")
     )
@@ -256,7 +256,7 @@ config :lightning,
 
 config :lightning,
        :init_project_for_new_user,
-       env!("INIT_PROJECT_FOR_NEW_USER", :boolean, false)
+       env!("INIT_PROJECT_FOR_NEW_USER", &Utils.ensure_boolean/1, false)
 
 # To actually send emails you need to configure the mailer to use a real
 # adapter. You may configure the swoosh api client of your choice. We
@@ -320,8 +320,10 @@ if config_env() == :prod do
     """
   end
 
-  maybe_ipv6 = if env!("ECTO_IPV6", :boolean, false), do: [:inet6], else: []
-  disable_db_ssl = env!("DISABLE_DB_SSL", :boolean, false)
+  maybe_ipv6 =
+    if env!("ECTO_IPV6", &Utils.ensure_boolean/1, false), do: [:inet6], else: []
+
+  disable_db_ssl = env!("DISABLE_DB_SSL", &Utils.ensure_boolean/1, false)
 
   config :lightning, Lightning.Repo,
     ssl: not disable_db_ssl,
