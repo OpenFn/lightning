@@ -283,25 +283,28 @@ config :lightning, Lightning.Vault,
       Utils.get_env([:lightning, Lightning.Vault, :primary_encryption_key], nil)
     )
 
-config :logger,
-       :level,
-       env!(
-         "LOG_LEVEL",
-         fn log_level ->
-           allowed_log_levels =
-             ~w[emergency alert critical error warning warn notice info debug]
+log_level =
+  env!(
+    "LOG_LEVEL",
+    fn log_level ->
+      allowed_log_levels =
+        ~w[emergency alert critical error warning warn notice info debug]
 
-           if log_level in allowed_log_levels do
-             config :logger, level: log_level |> String.to_atom()
-           else
-             raise Dotenvy.Error,
-               message: """
-               Invalid LOG_LEVEL, must be on of #{allowed_log_levels |> Enum.join(", ")}
-               """
-           end
-         end,
-         Utils.get_env([:logger, :level], :info)
-       )
+      if log_level in allowed_log_levels do
+        log_level |> String.to_atom()
+      else
+        raise Dotenvy.Error,
+          message: """
+          Invalid LOG_LEVEL, must be on of #{allowed_log_levels |> Enum.join(", ")}
+          """
+      end
+    end,
+    Utils.get_env([:logger, :level])
+  )
+
+if log_level do
+  config :logger, :level, log_level
+end
 
 database_url = env!("DATABASE_URL", :string, nil)
 
