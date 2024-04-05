@@ -2,10 +2,10 @@ defmodule LightningWeb.CredentialLive.Index do
   @moduledoc """
   LiveView for listing and managing credentials
   """
-  alias Lightning.OauthClients
   use LightningWeb, :live_view
 
   alias Lightning.Credentials
+  alias Lightning.OauthClients
 
   on_mount {LightningWeb.Hooks, :assign_projects}
 
