@@ -2902,7 +2902,11 @@ defmodule LightningWeb.ProjectLiveTest do
       view
       |> form("#project-repo-connection-form")
       |> render_submit(
-        connection: %{branch: expected_branch["name"], sync_direction: "pull"}
+        connection: %{
+          branch: expected_branch["name"],
+          sync_direction: "pull",
+          accept: true
+        }
       )
 
       flash = assert_redirected(view, ~p"/projects/#{project.id}/settings#vcs")
@@ -3015,7 +3019,8 @@ defmodule LightningWeb.ProjectLiveTest do
         connection: %{
           branch: expected_branch["name"],
           sync_direction: "deploy",
-          config_path: "./config.json"
+          config_path: "./config.json",
+          accept: true
         }
       )
 
@@ -3291,7 +3296,9 @@ defmodule LightningWeb.ProjectLiveTest do
 
         view
         |> form("#reconnect-project-form")
-        |> render_submit(connection: %{"sync_direction" => "pull"})
+        |> render_submit(
+          connection: %{"sync_direction" => "pull", "accept" => "true"}
+        )
 
         flash = assert_redirected(view, ~p"/projects/#{project.id}/settings#vcs")
 
