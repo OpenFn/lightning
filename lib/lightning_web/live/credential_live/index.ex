@@ -2,6 +2,7 @@ defmodule LightningWeb.CredentialLive.Index do
   @moduledoc """
   LiveView for listing and managing credentials
   """
+  alias Lightning.OauthClients
   use LightningWeb, :live_view
 
   alias Lightning.Credentials
@@ -15,6 +16,7 @@ defmodule LightningWeb.CredentialLive.Index do
        socket,
        current_user: socket.assigns.current_user,
        credentials: list_credentials(socket.assigns.current_user.id),
+       oauth_clients: list_clients(socket.assigns.current_user.id),
        active_menu_item: :credentials,
        selected_credential_type: nil,
        page_title: "Credentials"
@@ -77,6 +79,17 @@ defmodule LightningWeb.CredentialLive.Index do
 
   defp list_credentials(user_id) do
     Credentials.list_credentials_for_user(user_id)
+    |> Enum.map(fn c ->
+      project_names =
+        Map.get(c, :projects, [])
+        |> Enum.map_join(", ", fn p -> p.name end)
+
+      Map.put(c, :project_names, project_names)
+    end)
+  end
+
+  defp list_clients(user_id) do
+    OauthClients.list_clients_for_user(user_id)
     |> Enum.map(fn c ->
       project_names =
         Map.get(c, :projects, [])
