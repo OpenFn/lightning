@@ -78,7 +78,8 @@ defmodule Lightning.VersionControlTest do
         "repo" => expected_repo["full_name"],
         "branch" => expected_branch["name"],
         "github_installation_id" => expected_installation["id"],
-        "sync_direction" => "pull"
+        "sync_direction" => "pull",
+        "accept" => "true"
       }
 
       assert {:ok, repo_connection} =

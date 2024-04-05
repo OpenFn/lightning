@@ -118,7 +118,9 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
          user: user
        }) do
     socket
-    |> assign(changeset: ProjectRepoConnection.changeset(repo_connection, %{}))
+    |> assign(
+      changeset: ProjectRepoConnection.configure_changeset(repo_connection, %{})
+    )
     |> assign_async([:installations, :repos], fn ->
       # repos are grouped using the installation_id
       fetch_user_installations_and_repos(user)
@@ -132,7 +134,9 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
          user: user
        }) do
     socket
-    |> assign(changeset: ProjectRepoConnection.changeset(repo_connection, %{}))
+    |> assign(
+      changeset: ProjectRepoConnection.configure_changeset(repo_connection, %{})
+    )
     |> assign_async([:installations, :repos], fn ->
       # repos are grouped using the installation_id
       fetch_user_installations_and_repos(user)
@@ -144,7 +148,7 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
 
   defp validate_changes(repo_connection, params) do
     repo_connection
-    |> ProjectRepoConnection.changeset(params)
+    |> ProjectRepoConnection.configure_changeset(params)
     |> then(fn changeset ->
       installation =
         Ecto.Changeset.get_field(changeset, :github_installation_id)
@@ -377,9 +381,11 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
 
   attr :id, :string, required: true
   attr :verify_connection, AsyncResult, required: true
+  attr :repos, AsyncResult, required: true
   attr :myself, :any, required: true
   attr :can_reconnect, :boolean, required: true
   attr :changeset, Ecto.Changeset, required: true
+  attr :project, :map, required: true
 
   defp verify_connection_banner(assigns) do
     ~H"""
@@ -443,14 +449,16 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
                     <%= if @can_reconnect do %>
                       <button
                         class="rounded-md bg-yellow-50 px-2 py-1.5 text-sm font-medium text-yellow-800 hover:bg-yellow-100 focus:outline-none focus:ring-2 focus:ring-yellow-600 focus:ring-offset-2 focus:ring-offset-yellow-50"
-                        phx-click={show_modal("reconnect_sync_direction_modal")}
+                        phx-click={show_modal("reconnect_modal")}
                       >
                         Click here to reconnect
                       </button>
-                      <.reconnect_sync_direction_modal
-                        id="reconnect_sync_direction_modal"
+                      <.reconnect_modal
+                        id="reconnect_modal"
                         changeset={@changeset}
                         myself={@myself}
+                        project={@project}
+                        repos={@repos}
                       />
                     <% end %>
                   </div>
@@ -536,13 +544,19 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
     """
   end
 
-  defp reconnect_sync_direction_modal(assigns) do
+  attr :id, :string, required: true
+  attr :repos, AsyncResult, required: true
+  attr :myself, :any, required: true
+  attr :changeset, Ecto.Changeset, required: true
+  attr :project, :map, required: true
+
+  defp reconnect_modal(assigns) do
     ~H"""
     <.modal id={@id}>
       <:title>
         <div class="flex justify-between">
           <span class="font-bold">
-            Choose Sync Direction
+            Reconnect to Github
           </span>
           <button
             phx-click={hide_modal(@id)}
@@ -565,6 +579,18 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
       >
         <div class="px-6">
           <.sync_order_radio form={f} />
+        </div>
+        <div class="px-6">
+          <.accept_checkbox
+            project={@project}
+            form={f}
+            default_branch={
+              get_default_branch(
+                @repos,
+                f[:repo].value
+              )
+            }
+          />
         </div>
         <div class="flex flex-row-reverse gap-4 mx-6 mt-2">
           <.button
@@ -644,6 +670,55 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
           </div>
         </div>
       </fieldset>
+    </div>
+    """
+  end
+
+  attr :form, :map, required: true
+  attr :project, :map, required: true
+  attr :default_branch, :string
+
+  defp accept_checkbox(assigns) do
+    ~H"""
+    <div class="mt-4 bg-amber-200 flex gap-3 rounded-md p-3 ">
+      <.input
+        type="checkbox"
+        field={@form[:accept]}
+        required="true"
+        hidden_input={false}
+      />
+      <span>
+        I understand that the following files will be committed to <b><%= @form[
+          :repo
+        ].value %></b>:
+        <ul class="my-2">
+          <li>
+            <.icon name="hero-document-plus" class="h-4 w-4" />
+            <code>
+              .github/workflows/openfn-pull.yml -> <%= @default_branch %>
+            </code>
+          </li>
+          <li>
+            <.icon name="hero-document-plus" class="h-4 w-4" />
+            <code>
+              .github/workflows/openfn-<%= @project.id %>-deploy.yml -> <%= @form[
+                :branch
+              ].value %>
+            </code>
+          </li>
+          <%= if to_string(@form[:config_path].value) == "" do %>
+            <li>
+              <.icon name="hero-document-plus" class="h-4 w-4" />
+              <code>
+                ./openfn-<%= @project.id %>-config.json -> <%= @form[
+                  :branch
+                ].value %>
+              </code>
+            </li>
+          <% end %>
+        </ul>
+        Existing versions of these files on these branches will be overwritten. (I'll be able to find them in my git history if needed.)
+      </span>
     </div>
     """
   end
