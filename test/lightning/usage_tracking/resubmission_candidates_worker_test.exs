@@ -1,8 +1,8 @@
-demodule Lightning.UsageTracking.ResubmissionCandidatesWorkerTest do
-  use Lightning.Data, async: false
+defmodule Lightning.UsageTracking.ResubmissionCandidatesWorkerTest do
+  use Lightning.DataCase, async: false
 
-  use Lightning.UsageTracking.ResubmissionCandidatesWorker
-  use Lightning.UsageTracking.ResubmissionWorker
+  alias Lightning.UsageTracking.ResubmissionCandidatesWorker
+  alias Lightning.UsageTracking.ResubmissionWorker
 
   @batch_size 5
 
@@ -10,33 +10,10 @@ demodule Lightning.UsageTracking.ResubmissionCandidatesWorkerTest do
     setup do
       now = DateTime.utc_now()
 
-      failure_report_1 =
-        insert(
-          :usage_tracking_report,
-          submission_status: :failure,
-          inserted_at: DateTime.add(now, -3, :second)
-        )
-
-      failure_report_2 =
-        insert(
-          :usage_tracking_report,
-          submission_status: :failure,
-          inserted_at: DateTime.add(now, -2, :second)
-        )
-
-      failure_report_3 =
-        insert(
-          :usage_tracking_report,
-          submission_status: :failure,
-          inserted_at: DateTime.add(now, -1, :second)
-        )
-
-      success_report =
-        insert(
-          :usage_tracking_report,
-          submission_status: :success,
-          inserted_at: DateTime.add(now, -4, :second)
-        )
+      failure_report_1 = now |> insert_report(:failure, -3)
+      failure_report_2 = now |> insert_report(:failure, -2)
+      failure_report_3 = now |> insert_report(:failure, -1)
+      success_report = now |> insert_report(:success, -4)
 
       %{
         failure_report_1: failure_report_1,
@@ -46,13 +23,22 @@ demodule Lightning.UsageTracking.ResubmissionCandidatesWorkerTest do
       }
     end
 
+    test "indicates that the job completed successfully" do
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        assert perform_job(
+          ResubmissionCandidatesWorker,
+          %{batch_size: @batch_size}
+        ) == :ok
+      end)
+    end
+
     test "enqueues jobs to resubmit reports", %{
       failure_report_1: failure_report_1,
       failure_report_2: failure_report_2,
       failure_report_3: failure_report_3,
       success_report: success_report
     } do
-      Oban.Testing.with_test_mode(:manual, fn ->
+      Oban.Testing.with_testing_mode(:manual, fn ->
         perform_job(ResubmissionCandidatesWorker, %{batch_size: @batch_size})
       end)
 
@@ -62,6 +48,17 @@ demodule Lightning.UsageTracking.ResubmissionCandidatesWorkerTest do
 
       refute_in_queue(success_report)
     end
+  end
+
+  defp insert_report(now, status, time_offset) do
+    today = now |> DateTime.to_date()
+
+    insert(
+      :usage_tracking_report,
+      submission_status: status,
+      inserted_at: now |> DateTime.add(time_offset, :second),
+      report_date: today |> Date.add(time_offset)
+    )
   end
 
   defp assert_in_queue(report) do
