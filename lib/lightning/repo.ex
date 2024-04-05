@@ -5,11 +5,6 @@ defmodule Lightning.Repo do
 
   use Scrivener, page_size: 10
 
-  @impl true
-  def init(_type, config) do
-    {:ok, Keyword.put(config, :url, System.get_env("DATABASE_URL"))}
-  end
-
   @doc """
   A small wrapper around `Repo.transaction/2`.
 

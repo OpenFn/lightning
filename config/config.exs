@@ -133,6 +133,7 @@ config :lightning, LightningWeb, allow_credential_transfer: false
 config :tesla, adapter: Tesla.Adapter.Hackney
 
 config :lightning, :is_resettable_demo, false
+config :lightning, :default_retention_period, nil
 
 config :lightning, Lightning.Runtime.RuntimeManager, start: false
 
