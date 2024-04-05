@@ -23,6 +23,7 @@ defmodule Lightning.Credentials.OauthClient do
     field :client_id, :string
     field :client_secret, :string
     field :base_url, :string
+    field :global, :boolean, default: false
 
     belongs_to :user, User
 
@@ -41,9 +42,15 @@ defmodule Lightning.Credentials.OauthClient do
       :client_id,
       :client_secret,
       :base_url,
+      :global,
       :user_id
     ])
     |> validate_required([:name, :client_id, :client_secret, :base_url])
+    |> validate_format(
+      :base_url,
+      ~r/^(https?:\/\/)?([\da-z\.-]+)\.([a-z\.]{2,6})([\/\w \.-]*)*\/?$/,
+      message: "must be a valid URL"
+    )
     |> cast_assoc(:project_oauth_clients)
     |> assoc_constraint(:user)
   end
