@@ -610,7 +610,7 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
 
   defp sync_order_radio(assigns) do
     ~H"""
-    <div>
+    <div class="mb-4">
       <.label>
         Direction of <em>First</em> Sync
       </.label>
