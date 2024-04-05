@@ -197,7 +197,8 @@ Oban unavailability at a particular time.
 </h3>
 <ul><li>Support for additional paths on a webhook URL such as <code class="inline">/i/&lt;uuid&gt;/Patient</code>
 <a href="https://github.com/OpenFn/lightning/issues/1954">#1954</a></li><li>Support for a GET endpoint to &quot;check&quot; webhook URL availability
-<a href="https://github.com/OpenFn/lightning/issues/1063">#1063</a></li></ul><h2 id="v2-2-2-2024-04-01" class="section-heading">
+<a href="https://github.com/OpenFn/lightning/issues/1063">#1063</a></li><li>Allow external apps to control the run enqueue db transaction
+<a href="https://github.com/OpenFn/lightning/issues/1958">#1958</a></li></ul><h2 id="v2-2-2-2024-04-01" class="section-heading">
   <a href="#v2-2-2-2024-04-01" class="hover-link">
     <i class="ri-link-m" aria-hidden="true"></i>
   </a>
@@ -1083,7 +1084,7 @@ work orders up to <code class="inline">v0.10.0</code>, though the granularity of
 will be less than <code class="inline">v0.10.0</code> and the final states are not guaranteed to be
 accurate for workflows with multiple branches and leaf nodes with varying exit
 reasons.</p><p>The migration scripts can be run with a single function call in SetupUtils from
-a connect <code class="inline">iex</code> session:</p><pre><code class="makeup elixir" translate="no"><span class="nc">Lightning.SetupUtils</span><span class="o">.</span><span class="n">approximate_state_for_attempts_and_workorders</span><span class="p" data-group-id="9462559556-1">(</span><span class="p" data-group-id="9462559556-1">)</span></code></pre><p>Note that (like lots of <em>other</em> functionality in <code class="inline">SetupUtils</code>, calling this
+a connect <code class="inline">iex</code> session:</p><pre><code class="makeup elixir" translate="no"><span class="nc">Lightning.SetupUtils</span><span class="o">.</span><span class="n">approximate_state_for_attempts_and_workorders</span><span class="p" data-group-id="6595606590-1">(</span><span class="p" data-group-id="6595606590-1">)</span></code></pre><p>Note that (like lots of <em>other</em> functionality in <code class="inline">SetupUtils</code>, calling this
 function is a destructive action and you should only do it if you've backed up
 your data and you know what you're doing.)</p><p>As always, we recommend backing up your data before migrating. (And thanks for
 bearing with us as we move towards our first stable Lightning release.)</p><h3 id="added-19" class="section-heading">
