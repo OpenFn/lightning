@@ -46,6 +46,7 @@ defmodule Lightning.WorkOrders do
   alias Lightning.RunStep
   alias Lightning.Services.UsageLimiter
   alias Lightning.Workflows.Job
+  alias Lightning.Workflows.Snapshot
   alias Lightning.Workflows.Trigger
   alias Lightning.Workflows.Workflow
   alias Lightning.WorkOrder
@@ -75,13 +76,14 @@ defmodule Lightning.WorkOrders do
     Multi.new()
     |> Multi.put(:workflow, opts[:workflow])
     |> get_or_insert_dataclip(opts[:dataclip])
-    |> Multi.insert(:workorder, fn %{dataclip: dataclip} ->
-      without_run? = Keyword.get(opts, :without_run, false)
+    |> get_or_create_snapshot()
+    |> Multi.insert(:workorder, fn %{dataclip: dataclip, snapshot: snapshot} ->
+      {without_run?, opts} = Keyword.pop(opts, :without_run, false)
 
       attrs =
         opts
         |> Map.new()
-        |> Map.put(:dataclip, dataclip)
+        |> Map.merge(%{dataclip: dataclip, snapshot: snapshot})
         |> then(fn attrs ->
           if without_run? do
             attrs |> Map.put(:state, :rejected)
@@ -99,6 +101,7 @@ defmodule Lightning.WorkOrders do
   def create_for(%Job{} = job, opts) do
     Multi.new()
     |> Multi.put(:workflow, opts[:workflow])
+    |> get_or_create_snapshot()
     |> Multi.insert(:workorder, build_for(job, opts |> Map.new()))
     |> Runs.enqueue()
     |> emit_and_return_work_order()
@@ -107,15 +110,17 @@ defmodule Lightning.WorkOrders do
   def create_for(%Manual{} = manual) do
     Multi.new()
     |> get_or_insert_dataclip(manual)
-    |> Multi.insert(:workorder, fn %{dataclip: dataclip} ->
+    |> Multi.put(:workflow, manual.workflow)
+    |> get_or_create_snapshot()
+    |> Multi.insert(:workorder, fn %{dataclip: dataclip, snapshot: snapshot} ->
       build_for(manual.job, %{
         workflow: manual.workflow,
         dataclip: dataclip,
         created_by: manual.created_by,
-        priority: :immediate
+        priority: :immediate,
+        snapshot: snapshot
       })
     end)
-    |> Multi.put(:workflow, manual.workflow)
     |> Runs.enqueue()
     |> emit_and_return_work_order()
   end
@@ -130,6 +135,13 @@ defmodule Lightning.WorkOrders do
 
   defp emit_and_return_work_order({:error, _op, changeset, _changes}) do
     {:error, changeset}
+  end
+
+  defp get_or_create_snapshot(multi) do
+    multi
+    |> Multi.run(:snapshot, fn _repo, %{workflow: workflow} ->
+      Snapshot.get_or_create_latest_for(workflow)
+    end)
   end
 
   defp get_or_insert_dataclip(multi, %Manual{} = manual) do
@@ -166,27 +178,32 @@ defmodule Lightning.WorkOrders do
   @spec build_for(Trigger.t() | Job.t(), map()) ::
           Ecto.Changeset.t(WorkOrder.t())
   def build_for(%Trigger{} = trigger, attrs) do
-    state = Map.get(attrs, :state)
-
-    if state do
-      %WorkOrder{state: state}
-    else
-      %WorkOrder{}
-    end
+    %WorkOrder{}
     |> change()
+    |> then(fn changeset ->
+      if state = attrs[:state] do
+        changeset |> put_change(:state, state)
+      else
+        changeset
+      end
+    end)
+    |> put_assoc(:snapshot, attrs[:snapshot])
     |> put_assoc(:workflow, attrs[:workflow])
     |> put_assoc(:trigger, trigger)
     |> put_assoc(:dataclip, attrs[:dataclip])
     |> then(fn changeset ->
-      if state == :rejected do
-        changeset |> put_assoc(:runs, [])
-      else
-        changeset
-        |> put_assoc(:runs, [
-          Run.for(trigger, %{dataclip: attrs[:dataclip]})
-        ])
+      changeset
+      |> fetch_change(:state)
+      |> case do
+        {:ok, :rejected} ->
+          changeset |> put_assoc(:runs, [])
+
+        _any ->
+          changeset
+          |> put_assoc(:runs, [Run.for(trigger, %{dataclip: attrs[:dataclip]})])
       end
     end)
+    |> validate_required_assoc(:snapshot)
     |> validate_required_assoc(:workflow)
     |> validate_required_assoc(:trigger)
     |> validate_required_assoc(:dataclip)
@@ -197,6 +214,7 @@ defmodule Lightning.WorkOrders do
   def build_for(%Job{} = job, attrs) do
     %WorkOrder{}
     |> change()
+    |> put_assoc(:snapshot, attrs[:snapshot])
     |> put_assoc(:workflow, attrs[:workflow])
     |> put_assoc(:dataclip, attrs[:dataclip])
     |> put_assoc(:runs, [
@@ -206,6 +224,7 @@ defmodule Lightning.WorkOrders do
         priority: attrs[:priority]
       })
     ])
+    |> validate_required_assoc(:snapshot)
     |> validate_required_assoc(:workflow)
     |> validate_required_assoc(:dataclip)
     |> assoc_constraint(:trigger)

@@ -23,17 +23,21 @@ defmodule Lightning.WorkOrdersTest do
         |> with_edge({trigger, job})
         |> insert()
 
+      {:ok, snapshot} = Lightning.Workflows.Snapshot.create(workflow)
+
       %{
         workflow: workflow,
         trigger: trigger |> Repo.reload!(),
-        job: job |> Repo.reload!()
+        job: job |> Repo.reload!(),
+        snapshot: snapshot
       }
     end
 
     @tag trigger_type: :webhook
     test "creating a webhook triggered workorder", %{
       workflow: workflow,
-      trigger: trigger
+      trigger: trigger,
+      snapshot: snapshot
     } do
       project_id = workflow.project_id
       Lightning.WorkOrders.subscribe(project_id)
@@ -42,6 +46,7 @@ defmodule Lightning.WorkOrdersTest do
       {:ok, workorder} =
         WorkOrders.create_for(trigger, dataclip: dataclip, workflow: workflow)
 
+      assert workorder.snapshot_id == snapshot.id
       assert workorder.workflow_id == workflow.id
       assert workorder.trigger_id == trigger.id
       assert workorder.dataclip_id == dataclip.id

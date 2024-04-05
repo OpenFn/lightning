@@ -56,7 +56,11 @@ defmodule Lightning.Factories do
   end
 
   def edge_factory do
-    %Lightning.Workflows.Edge{workflow: build(:workflow)}
+    %Lightning.Workflows.Edge{
+      id: fn -> Ecto.UUID.generate() end,
+      workflow: build(:workflow),
+      condition_type: :always
+    }
   end
 
   def dataclip_factory do

@@ -9,6 +9,7 @@ defmodule Lightning.WorkOrder do
 
   alias Lightning.Invocation.Dataclip
   alias Lightning.Run
+  alias Lightning.Workflows.Snapshot
   alias Lightning.Workflows.Trigger
   alias Lightning.Workflows.Workflow
 
@@ -17,30 +18,29 @@ defmodule Lightning.WorkOrder do
   @type t :: %__MODULE__{
           __meta__: Ecto.Schema.Metadata.t(),
           id: Ecto.UUID.t() | nil,
-          trigger: Trigger.t() | Ecto.Association.NotLoaded.t(),
           dataclip: Dataclip.t() | Ecto.Association.NotLoaded.t(),
+          snapshot: Workflow.Snapshot.t() | Ecto.Association.NotLoaded.t(),
+          trigger: Trigger.t() | Ecto.Association.NotLoaded.t(),
           workflow: Workflow.t() | Ecto.Association.NotLoaded.t()
         }
+
+  @state_values Enum.concat(
+                  [:rejected, :pending, :running],
+                  Run.final_states()
+                )
 
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id
   schema "work_orders" do
     field :state, Ecto.Enum,
-      values:
-        Enum.concat(
-          [
-            :rejected,
-            :pending,
-            :running
-          ],
-          Run.final_states()
-        ),
+      values: @state_values,
       default: :pending
 
     field :last_activity, :utc_datetime_usec,
       autogenerate: {DateTime, :utc_now, []}
 
     belongs_to :workflow, Workflow
+    belongs_to :snapshot, Snapshot
 
     belongs_to :trigger, Trigger
     belongs_to :dataclip, Dataclip
