@@ -262,7 +262,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
         <%= if @selected_job do %>
           <.live_component
             id="new-credential-modal"
-            module={LightningWeb.CredentialLive.FormComponent}
+            module={LightningWeb.CredentialLive.CredentialFormComponent}
             action={:new}
             credential_type={@selected_credential_type}
             credential={
