@@ -6,19 +6,18 @@ defmodule LightningWeb.CredentialLive.OauthClientFormComponent do
 
   import Ecto.Changeset, only: [fetch_field!: 2, put_assoc: 3]
 
-  alias Lightning.Credentials
+  alias Lightning.OauthClients
   alias LightningWeb.Components.NewInputs
   alias Phoenix.LiveView.JS
 
   @valid_assigns [
     :id,
     :action,
-    :credential,
+    :oauth_client,
     :current_user,
     :projects,
     :on_save,
     :button,
-    :show_project_credentials,
     :can_create_project_credential,
     :return_to
   ]
@@ -29,19 +28,8 @@ defmodule LightningWeb.CredentialLive.OauthClientFormComponent do
   end
 
   @impl true
-  def update(%{body: body}, socket) do
-    {:ok,
-     update(socket, :changeset, fn changeset, %{credential: credential} ->
-       params = changeset.params |> Map.put("body", body)
-       Credentials.change_credential(credential, params)
-     end)
-     |> assign(scopes_changed: false)}
-  end
-
   def update(%{projects: projects} = assigns, socket) do
-    users = list_users()
-
-    changeset = Credentials.change_credential(assigns.credential)
+    changeset = OauthClients.change_client(assigns.oauth_client)
     all_projects = Enum.map(projects, &{&1.name, &1.id})
 
     initial_assigns =
@@ -50,20 +38,18 @@ defmodule LightningWeb.CredentialLive.OauthClientFormComponent do
     {:ok,
      socket
      |> assign(initial_assigns)
-     |> assign(users: users)
      |> assign(changeset: changeset)
      |> assign(all_projects: all_projects)
      |> assign(selected_project: nil)
-     |> assign_new(:show_project_credentials, fn -> true end)
      |> update_available_projects()}
   end
 
   @impl true
-  def handle_event("validate", %{"credential" => credential_params}, socket) do
+  def handle_event("validate", %{"oauth_client" => oauth_client_params}, socket) do
     changeset =
-      Credentials.change_credential(
-        socket.assigns.credential,
-        credential_params |> Map.put("schema", socket.assigns.schema)
+      OauthClients.change_client(
+        socket.assigns.oauth_client,
+        oauth_client_params
       )
       |> Map.put(:action, :validate)
 
@@ -79,27 +65,32 @@ defmodule LightningWeb.CredentialLive.OauthClientFormComponent do
   end
 
   def handle_event("add_new_project", %{"projectid" => project_id}, socket) do
-    project_credentials =
-      fetch_field!(socket.assigns.changeset, :project_credentials)
+    project_oauth_clients =
+      fetch_field!(socket.assigns.changeset, :project_oauth_clients)
 
-    project_credentials =
-      if Enum.find(project_credentials, fn pu -> pu.project_id == project_id end) do
-        Enum.map(project_credentials, fn pu ->
-          if pu.project_id == project_id do
-            Ecto.Changeset.change(pu, %{delete: false})
+    project_oauth_clients =
+      project_oauth_clients
+      |> Enum.find(fn poc ->
+        poc.project_id == project_id
+      end)
+      |> if do
+        project_oauth_clients
+        |> Enum.map(fn poc ->
+          if poc.project_id == project_id do
+            Ecto.Changeset.change(poc, %{delete: false})
           else
-            pu
+            poc
           end
         end)
       else
-        Enum.concat(project_credentials, [
-          %Lightning.Projects.ProjectCredential{project_id: project_id}
+        Enum.concat(project_oauth_clients, [
+          %Lightning.Projects.ProjectOauthClient{project_id: project_id}
         ])
       end
 
     changeset =
       socket.assigns.changeset
-      |> put_assoc(:project_credentials, project_credentials)
+      |> put_assoc(:project_oauth_clients, project_oauth_clients)
       |> Map.put(:action, :validate)
 
     available_projects =
@@ -115,25 +106,26 @@ defmodule LightningWeb.CredentialLive.OauthClientFormComponent do
   end
 
   def handle_event("delete_project", %{"projectid" => project_id}, socket) do
-    project_credentials =
-      fetch_field!(socket.assigns.changeset, :project_credentials)
+    project_oauth_clients =
+      fetch_field!(socket.assigns.changeset, :project_oauth_clients)
 
-    project_credentials =
-      Enum.reduce(project_credentials, [], fn pc, project_credentials ->
-        if pc.project_id == project_id do
-          if is_nil(pc.id) do
-            project_credentials
+    project_oauth_clients =
+      Enum.reduce(project_oauth_clients, [], fn poc, project_oauth_clients ->
+        if poc.project_id == project_id do
+          if is_nil(poc.id) do
+            project_oauth_clients
           else
-            project_credentials ++ [Ecto.Changeset.change(pc, %{delete: true})]
+            project_oauth_clients ++
+              [Ecto.Changeset.change(poc, %{delete: true})]
           end
         else
-          project_credentials ++ [pc]
+          project_oauth_clients ++ [poc]
         end
       end)
 
     changeset =
       socket.assigns.changeset
-      |> put_assoc(:project_credentials, project_credentials)
+      |> put_assoc(:project_oauth_clients, project_oauth_clients)
       |> Map.put(:action, :validate)
 
     available_projects =
@@ -144,12 +136,12 @@ defmodule LightningWeb.CredentialLive.OauthClientFormComponent do
      |> assign(changeset: changeset, available_projects: available_projects)}
   end
 
-  def handle_event("save", %{"credential" => credential_params}, socket) do
+  def handle_event("save", %{"oauth_client" => oauth_client_params}, socket) do
     if socket.assigns.can_create_project_credential do
-      save_credential(
+      save_oauth_client(
         socket,
         socket.assigns.action,
-        credential_params
+        oauth_client_params
       )
     else
       {:noreply,
@@ -188,7 +180,7 @@ defmodule LightningWeb.CredentialLive.OauthClientFormComponent do
         <.form
           :let={f}
           for={@changeset}
-          id={"credential-form-#{@credential.id || "new"}"}
+          id={"oauth-client-form-#{@oauth_client.id || "new"}"}
           phx-target={@myself}
           phx-change="validate"
           phx-submit="save"
@@ -204,7 +196,7 @@ defmodule LightningWeb.CredentialLive.OauthClientFormComponent do
               <div>
                 <NewInputs.input
                   type="text"
-                  field={f[:name]}
+                  field={f[:base_url]}
                   label="Server/Instance URL"
                 />
               </div>
@@ -212,13 +204,17 @@ defmodule LightningWeb.CredentialLive.OauthClientFormComponent do
 
             <div class="space-y-4">
               <div>
-                <NewInputs.input type="text" field={f[:name]} label="Client ID" />
+                <NewInputs.input type="text" field={f[:client_id]} label="Client ID" />
               </div>
             </div>
 
             <div class="space-y-4">
               <div>
-                <NewInputs.input type="text" field={f[:name]} label="Client Secret" />
+                <NewInputs.input
+                  type="text"
+                  field={f[:client_secret]}
+                  label="Client Secret"
+                />
               </div>
             </div>
 
@@ -234,7 +230,7 @@ defmodule LightningWeb.CredentialLive.OauthClientFormComponent do
                   Control which projects have access to this credentials
                 </p>
                 <div class="mt-4">
-                  <.project_credentials
+                  <.project_oauth_clients
                     form={f}
                     projects={@all_projects}
                     selected={@selected_project}
@@ -248,10 +244,15 @@ defmodule LightningWeb.CredentialLive.OauthClientFormComponent do
             <div class="sm:flex sm:flex-row-reverse">
               <button
                 type="submit"
-                disabled={!@changeset.valid? or @scopes_changed}
+                disabled={!@changeset.valid?}
                 class="inline-flex w-full justify-center rounded-md disabled:bg-primary-300 bg-primary-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary-500 sm:ml-3 sm:w-auto"
               >
-                Save
+                <%= case @action do %>
+                  <% :edit -> %>
+                    Edit Oauth Client
+                  <% :new -> %>
+                    Add Oauth Client
+                <% end %>
               </button>
               <button
                 type="button"
@@ -273,10 +274,10 @@ defmodule LightningWeb.CredentialLive.OauthClientFormComponent do
   attr :phx_target, :any, default: nil
   attr :form, :map, required: true
 
-  defp project_credentials(assigns) do
+  defp project_oauth_clients(assigns) do
     ~H"""
     <div class="col-span-3">
-      <%= Phoenix.HTML.Form.label(@form, :project_credentials, "Project Access",
+      <%= Phoenix.HTML.Form.label(@form, :project_oauth_clients, "Project Access",
         class: "block text-sm font-medium text-secondary-700"
       ) %>
 
@@ -306,17 +307,27 @@ defmodule LightningWeb.CredentialLive.OauthClientFormComponent do
         </div>
       </div>
 
-      <.inputs_for :let={project_credential} field={@form[:project_credentials]}>
-        <%= if project_credential[:delete].value != true do %>
+      <div class="rounded-md bg-yellow-200 p-4 mb-4">
+        <h3 class="text-sm font-medium text-yellow-800">
+          <LightningWeb.Components.Form.check_box
+            form={@form}
+            field={:global}
+            label="Make client global (allow any user in this instance to use this client)"
+          />
+        </h3>
+      </div>
+
+      <.inputs_for :let={project_oauth_client} field={@form[:project_oauth_clients]}>
+        <%= if project_oauth_client[:delete].value != true do %>
           <div class="flex w-full gap-2 items-center pb-2">
             <div class="grow">
-              <%= project_name(@projects, project_credential[:project_id].value) %>
-              <.old_error field={project_credential[:project_id]} />
+              <%= project_name(@projects, project_oauth_client[:project_id].value) %>
+              <.old_error field={project_oauth_client[:project_id]} />
             </div>
             <div class="grow-0 items-right">
               <.button
                 phx-target={@phx_target}
-                phx-value-projectid={project_credential[:project_id].value}
+                phx-value-projectid={project_oauth_client[:project_id].value}
                 phx-click="delete_project"
               >
                 Remove
@@ -324,11 +335,11 @@ defmodule LightningWeb.CredentialLive.OauthClientFormComponent do
             </div>
           </div>
         <% end %>
-        <.input type="hidden" field={project_credential[:project_id]} />
+        <.input type="hidden" field={project_oauth_client[:project_id]} />
         <.input
           type="hidden"
-          field={project_credential[:delete]}
-          value={to_string(project_credential[:delete].value)}
+          field={project_oauth_client[:delete]}
+          value={to_string(project_oauth_client[:delete].value)}
         />
       </.inputs_for>
     </div>
@@ -349,16 +360,6 @@ defmodule LightningWeb.CredentialLive.OauthClientFormComponent do
     )
   end
 
-  defp list_users do
-    Lightning.Accounts.list_users()
-    |> Enum.map(fn user ->
-      [
-        key: "#{user.first_name} #{user.last_name} (#{user.email})",
-        value: user.id
-      ]
-    end)
-  end
-
   defp modal_title(assigns) do
     ~H"""
     <%= if @action in [:edit] do %>
@@ -375,44 +376,14 @@ defmodule LightningWeb.CredentialLive.OauthClientFormComponent do
     end)
   end
 
-  defp save_credential(
-         socket,
-         :edit,
-         credential_params
-       ) do
-    %{credential: form_credential} = socket.assigns
+  defp save_oauth_client(socket, :edit, oauth_client_params) do
+    %{oauth_client: form_oauth_client} = socket.assigns
 
-    with {:uptodate, true} <-
-           {:uptodate, credential_projects_up_to_date?(form_credential)},
-         {:same_user, true} <-
-           {:same_user,
-            socket.assigns.current_user.id == socket.assigns.credential.user_id},
-         {:ok, _credential} <-
-           Credentials.update_credential(form_credential, credential_params) do
-      {:noreply,
-       socket
-       |> put_flash(:info, "Credential updated successfully")
-       |> push_redirect(to: socket.assigns.return_to)}
-    else
-      {:uptodate, false} ->
-        credential = Credentials.get_credential_for_update!(form_credential.id)
-
+    case OauthClients.update_client(form_oauth_client, oauth_client_params) do
+      {:ok, _oauth_client} ->
         {:noreply,
          socket
-         |> assign(credential: credential)
-         |> put_flash(
-           :error,
-           "Credential was updated by another session. Please try again."
-         )
-         |> push_redirect(to: socket.assigns.return_to)}
-
-      {:same_user, false} ->
-        {:noreply,
-         socket
-         |> put_flash(
-           :error,
-           "Invalid credentials. Please log in again."
-         )
+         |> put_flash(:info, "Oauth client updated successfully")
          |> push_redirect(to: socket.assigns.return_to)}
 
       {:error, %Ecto.Changeset{} = changeset} ->
@@ -420,34 +391,31 @@ defmodule LightningWeb.CredentialLive.OauthClientFormComponent do
     end
   end
 
-  defp save_credential(
-         %{assigns: %{changeset: changeset, schema: schema_name}} =
-           socket,
-         :new,
-         credential_params
-       ) do
-    user_id = Ecto.Changeset.fetch_field!(changeset, :user_id)
+  defp save_oauth_client(socket, :new, oauth_client_params) do
+    user_id = Ecto.Changeset.fetch_field!(socket.assigns.changeset, :user_id)
 
-    project_credentials =
-      Ecto.Changeset.fetch_field!(changeset, :project_credentials)
+    project_oauth_clients =
+      Ecto.Changeset.fetch_field!(
+        socket.assigns.changeset,
+        :project_oauth_clients
+      )
       |> Enum.map(fn %{project_id: project_id} ->
         %{"project_id" => project_id}
       end)
 
-    credential_params
+    oauth_client_params
     |> Map.put("user_id", user_id)
-    |> Map.put("schema", schema_name)
-    |> Map.put("project_credentials", project_credentials)
-    |> Credentials.create_credential()
+    |> Map.put("project_oauth_clients", project_oauth_clients)
+    |> OauthClients.create_client()
     |> case do
-      {:ok, credential} ->
+      {:ok, oauth_client} ->
         if socket.assigns[:on_save] do
-          socket.assigns[:on_save].(credential)
+          socket.assigns[:on_save].(oauth_client)
           {:noreply, push_event(socket, "close_modal", %{})}
         else
           {:noreply,
            socket
-           |> put_flash(:info, "Credential created successfully")
+           |> put_flash(:info, "Oauth client created successfully")
            |> push_redirect(to: socket.assigns.return_to)}
         end
 
@@ -458,18 +426,11 @@ defmodule LightningWeb.CredentialLive.OauthClientFormComponent do
 
   defp filter_available_projects(changeset, all_projects) do
     existing_ids =
-      fetch_field!(changeset, :project_credentials)
-      |> Enum.reject(fn pu -> pu.delete end)
-      |> Enum.map(fn pu -> pu.credential_id end)
+      fetch_field!(changeset, :project_oauth_clients)
+      |> Enum.reject(fn poc -> poc.delete end)
+      |> Enum.map(fn poc -> poc.oauth_client_id end)
 
     all_projects
-    |> Enum.reject(fn {_, credential_id} -> credential_id in existing_ids end)
-  end
-
-  defp credential_projects_up_to_date?(form_credential) do
-    db_credential = Credentials.get_credential_for_update!(form_credential.id)
-
-    Map.get(db_credential, :project_credentials) ==
-      Map.get(form_credential, :project_credentials)
+    |> Enum.reject(fn {_, oauth_client_id} -> oauth_client_id in existing_ids end)
   end
 end
