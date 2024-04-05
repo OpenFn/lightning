@@ -287,13 +287,6 @@
                   </div>
                 </div>
               </div>
-              <%!-- <.button
-                id="new-credential-button"
-                phx-click={show_modal("new-credential-modal")}
-                {if !@can_create_project_credential, do: [disabled: "disabled"], else: []}
-              >
-                New credential
-              </.button> --%>
               <.live_component
                 id="new-credential-modal"
                 module={LightningWeb.CredentialLive.CredentialFormComponent}
@@ -309,7 +302,7 @@
                     ]
                   }
                 }
-                projects={[]}
+                projects={@projects}
                 project={@project}
                 can_create_project_credential={@can_create_project_credential}
                 return_to={~p"/projects/#{@project.id}/settings#credentials"}
@@ -318,18 +311,17 @@
                 id="new-oauth-client-modal"
                 module={LightningWeb.CredentialLive.OauthClientFormComponent}
                 action={:new}
-                credential_type={@selected_credential_type}
-                credential={
-                  %Lightning.Credentials.Credential{
+                oauth_client={
+                  %Lightning.Credentials.OauthClient{
                     user_id: @current_user.id,
-                    project_credentials: [
-                      %Lightning.Projects.ProjectCredential{
+                    project_oauth_clients: [
+                      %Lightning.Projects.ProjectOauthClient{
                         project_id: @project.id
                       }
                     ]
                   }
                 }
-                projects={[]}
+                projects={@projects}
                 project={@project}
                 can_create_project_credential={@can_create_project_credential}
                 return_to={~p"/projects/#{@project.id}/settings#credentials"}
@@ -348,6 +340,7 @@
           <.table id="oauth-clients">
             <.tr>
               <.th>Name</.th>
+              <.th>Project With Access</.th>
               <.th>Client ID</.th>
               <.th>Base URL</.th>
               <.th>Actions</.th>
@@ -356,34 +349,35 @@
             <%= for client <- @oauth_clients do %>
               <.tr id={"oauth-client-#{client.id}"}>
                 <.td><%= client.name %></.td>
+                <.td><%= client.project_names %></.td>
                 <.td><%= client.client_id %></.td>
                 <.td><%= client.base_url %></.td>
                 <.td>
-                  <%!-- <%= if client.user_id == @current_user.id do %> --%>
-                  <span>
-                    <.link phx-click={
-                      show_modal("edit-oauth-client-#{client.id}-modal")
-                    }>
-                      Edit
-                    </.link>
-                  </span>
-                  <%!-- <.live_component
+                  <%= if client.user_id == @current_user.id do %>
+                    <span>
+                      <.link phx-click={
+                        show_modal("edit-oauth-client-#{client.id}-modal")
+                      }>
+                        Edit
+                      </.link>
+                    </span>
+                    <.live_component
                       id={"edit-oauth-client-#{client.id}-modal"}
-                      module={LightningWeb.CredentialLive.FormComponent}
+                      module={
+                        LightningWeb.CredentialLive.OauthClientFormComponent
+                      }
                       action={:edit}
-                      credential_type={nil}
-                      credential={credential}
-                      projects={[]}
+                      oauth_client={client}
+                      projects={@projects}
                       project={@project}
-                      show_project_credentials={false}
                       can_create_project_credential={
                         @can_create_project_credential
                       }
                       return_to={
                         ~p"/projects/#{@project.id}/settings#credentials"
                       }
-                    /> --%>
-                  <%!-- <% end %> --%>
+                    />
+                  <% end %>
                 </.td>
               </.tr>
             <% end %>
@@ -438,7 +432,7 @@
                       action={:edit}
                       credential_type={nil}
                       credential={credential}
-                      projects={credential.projects}
+                      projects={@projects}
                       project={@project}
                       can_create_project_credential={
                         @can_create_project_credential

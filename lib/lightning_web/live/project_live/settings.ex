@@ -3,7 +3,6 @@ defmodule LightningWeb.ProjectLive.Settings do
   Index Liveview for project settings
   """
 
-  alias Lightning.Credentials.OauthClient
   alias Lightning.OauthClients
   use LightningWeb, :live_view
 
@@ -42,6 +41,8 @@ defmodule LightningWeb.ProjectLive.Settings do
     credentials = list_credentials(project)
     oauth_clients = list_clients(project)
     auth_methods = WebhookAuthMethods.list_for_project(project)
+
+    projects = Projects.get_projects_for_user(current_user)
 
     can_delete_project =
       ProjectUsers
@@ -154,7 +155,8 @@ defmodule LightningWeb.ProjectLive.Settings do
            socket.assigns.current_user.id
          ),
        selected_credential_type: nil,
-       show_collaborators_modal: false
+       show_collaborators_modal: false,
+       projects: projects
      )}
   end
 
@@ -170,17 +172,17 @@ defmodule LightningWeb.ProjectLive.Settings do
   end
 
   defp list_clients(project) do
-    OauthClients.list_clients(project) ++
-      [
-        %OauthClient{
-          id: Ecto.UUID.generate(),
-          name: "My OAuth",
-          client_id: "ibcduijhaiodkjo",
-          client_secret: "wgbfiewhbiwejdow",
-          base_url: "https://login.salesforce.com",
-          user_id: Ecto.UUID.generate()
-        }
-      ]
+    OauthClients.list_clients(project)
+    |> Enum.map(fn c ->
+      project_names =
+        if c.global,
+          do: "GLOBAL",
+          else:
+            Map.get(c, :projects, [])
+            |> Enum.map_join(", ", fn p -> p.name end)
+
+      Map.put(c, :project_names, project_names)
+    end)
   end
 
   defp repo_settings(%Project{id: project_id}) do
