@@ -13,7 +13,7 @@
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-EPF2X7PV.js"></script>
-    <script src="dist/sidebar_items-9A05BAC0.js"></script>
+    <script src="dist/sidebar_items-E1A3CD1D.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -1717,7 +1717,7 @@ depending on the adapter to obtain statistics for the given query.</p><p>See <a 
     </a>
     <h1 class="signature" translate="no">transact(fun, opts \\ [])</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/repo.ex#L33" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/repo.ex#L28" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -1738,13 +1738,13 @@ depending on the adapter to obtain statistics for the given query.</p><p>See <a 
 
 <p>A small wrapper around <code class="inline">Repo.transaction/2</code>.</p><p>Commits the transaction if the lambda returns <code class="inline">:ok</code> or <code class="inline">{:ok, result}</code>,
 rolling it back if the lambda returns <code class="inline">:error</code> or <code class="inline">{:error, reason}</code>. In both
-cases, the function returns the result of the lambda.</p><p>Example:</p><pre><code class="makeup elixir" translate="no"><span class="nc">Repo</span><span class="o">.</span><span class="n">transact</span><span class="p" data-group-id="3335783984-1">(</span><span class="k" data-group-id="3335783984-2">fn</span><span class="w"> </span><span class="o">-&gt;</span><span class="w">
-  </span><span class="k">with</span><span class="w"> </span><span class="p" data-group-id="3335783984-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="n">user</span><span class="p" data-group-id="3335783984-3">}</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="nc">Accounts</span><span class="o">.</span><span class="n">create_user</span><span class="p" data-group-id="3335783984-4">(</span><span class="n">params</span><span class="p" data-group-id="3335783984-4">)</span><span class="p">,</span><span class="w">
-      </span><span class="p" data-group-id="3335783984-5">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="c">_log</span><span class="p" data-group-id="3335783984-5">}</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="nc">Logs</span><span class="o">.</span><span class="n">log_action</span><span class="p" data-group-id="3335783984-6">(</span><span class="ss">:user_registered</span><span class="p">,</span><span class="w"> </span><span class="n">user</span><span class="p" data-group-id="3335783984-6">)</span><span class="p">,</span><span class="w">
-      </span><span class="p" data-group-id="3335783984-7">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="c">_job</span><span class="p" data-group-id="3335783984-7">}</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="nc">Mailer</span><span class="o">.</span><span class="n">enqueue_email_confirmation</span><span class="p" data-group-id="3335783984-8">(</span><span class="n">user</span><span class="p" data-group-id="3335783984-8">)</span><span class="w"> </span><span class="k" data-group-id="3335783984-9">do</span><span class="w">
-    </span><span class="p" data-group-id="3335783984-10">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="n">user</span><span class="p" data-group-id="3335783984-10">}</span><span class="w">
-  </span><span class="k" data-group-id="3335783984-9">end</span><span class="w">
-</span><span class="k" data-group-id="3335783984-2">end</span><span class="p" data-group-id="3335783984-1">)</span></code></pre><p>From blog post found <a href="https://tomkonidas.com/repo-transact/">here</a></p>
+cases, the function returns the result of the lambda.</p><p>Example:</p><pre><code class="makeup elixir" translate="no"><span class="nc">Repo</span><span class="o">.</span><span class="n">transact</span><span class="p" data-group-id="9825530652-1">(</span><span class="k" data-group-id="9825530652-2">fn</span><span class="w"> </span><span class="o">-&gt;</span><span class="w">
+  </span><span class="k">with</span><span class="w"> </span><span class="p" data-group-id="9825530652-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="n">user</span><span class="p" data-group-id="9825530652-3">}</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="nc">Accounts</span><span class="o">.</span><span class="n">create_user</span><span class="p" data-group-id="9825530652-4">(</span><span class="n">params</span><span class="p" data-group-id="9825530652-4">)</span><span class="p">,</span><span class="w">
+      </span><span class="p" data-group-id="9825530652-5">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="c">_log</span><span class="p" data-group-id="9825530652-5">}</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="nc">Logs</span><span class="o">.</span><span class="n">log_action</span><span class="p" data-group-id="9825530652-6">(</span><span class="ss">:user_registered</span><span class="p">,</span><span class="w"> </span><span class="n">user</span><span class="p" data-group-id="9825530652-6">)</span><span class="p">,</span><span class="w">
+      </span><span class="p" data-group-id="9825530652-7">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="c">_job</span><span class="p" data-group-id="9825530652-7">}</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="nc">Mailer</span><span class="o">.</span><span class="n">enqueue_email_confirmation</span><span class="p" data-group-id="9825530652-8">(</span><span class="n">user</span><span class="p" data-group-id="9825530652-8">)</span><span class="w"> </span><span class="k" data-group-id="9825530652-9">do</span><span class="w">
+    </span><span class="p" data-group-id="9825530652-10">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="n">user</span><span class="p" data-group-id="9825530652-10">}</span><span class="w">
+  </span><span class="k" data-group-id="9825530652-9">end</span><span class="w">
+</span><span class="k" data-group-id="9825530652-2">end</span><span class="p" data-group-id="9825530652-1">)</span></code></pre><p>From blog post found <a href="https://tomkonidas.com/repo-transact/">here</a></p>
   </section>
 </section>
 <section class="detail" id="transaction/2">

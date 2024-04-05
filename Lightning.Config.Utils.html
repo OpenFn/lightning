@@ -7,7 +7,7 @@
     <meta name="generator" content="ExDoc v0.30.9">
     <meta name="project" content="Lightning v2.3.1">
 
-    <title>LightningWeb.ProjectLive.FormComponent — Lightning v2.3.1</title>
+    <title>Lightning.Config.Utils — Lightning v2.3.1</title>
     <link rel="stylesheet" href="dist/html-elixir-XFYN5IVA.css" />
 
 
@@ -125,21 +125,19 @@ Pages
 </button>
 
 
-    <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/project_live/form_component.ex#L1" title="View Source" class="icon-action" rel="help">
+    <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L40" title="View Source" class="icon-action" rel="help">
       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
       <span class="sr-only">View Source</span>
     </a>
 
-  <span translate="no">LightningWeb.ProjectLive.FormComponent</span> 
+  <span translate="no">Lightning.Config.Utils</span> 
   <small class="app-vsn" translate="no">(Lightning v2.3.1)</small>
 
 </h1>
 
 
   <section id="moduledoc">
-<p>Form Component for working with a single Job</p><p>A Job's <code class="inline">adaptor</code> field is a combination of the module name and the version.
-It's formatted as an NPM style string.</p><p>The form allows the user to select a module by name and then it's version,
-while the version dropdown itself references <code class="inline">adaptor</code> directly.</p><p>Meaning the <code class="inline">adaptor_name</code> dropdown and assigns value is not persisted.</p>
+<p>Utility functions for working with the application environment.</p>
   </section>
 
 
@@ -157,11 +155,19 @@ while the version dropdown itself references <code class="inline">adaptor</code>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#render/1" translate="no">render(assigns)</a>
+        <a href="#ensure_boolean/1" translate="no">ensure_boolean(value)</a>
 
       </div>
 
-        <div class="summary-synopsis"><p>Callback implementation for <a href="https://hexdocs.pm/phoenix_live_view/0.20.5/Phoenix.LiveComponent.html#c:render/1"><code class="inline">Phoenix.LiveComponent.render/1</code></a>.</p></div>
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#get_env/2" translate="no">get_env(arg1, default \\ nil)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Retrieve a value nested in the application environment.</p></div>
 
     </div>
 
@@ -178,16 +184,16 @@ while the version dropdown itself references <code class="inline">adaptor</code>
       <span class="text">Functions</span>
     </h1>
     <div class="functions-list">
-<section class="detail" id="render/1">
+<section class="detail" id="ensure_boolean/1">
 
   <div class="detail-header">
-    <a href="#render/1" class="detail-link" title="Link to this function">
+    <a href="#ensure_boolean/1" class="detail-link" title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">render(assigns)</h1>
+    <h1 class="signature" translate="no">ensure_boolean(value)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/project_live/form_component.ex#L1" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L60" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -197,7 +203,43 @@ while the version dropdown itself references <code class="inline">adaptor</code>
 
   <section class="docstring">
 
-<p>Callback implementation for <a href="https://hexdocs.pm/phoenix_live_view/0.20.5/Phoenix.LiveComponent.html#c:render/1"><code class="inline">Phoenix.LiveComponent.render/1</code></a>.</p>
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> ensure_boolean(<a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">binary</a>()) :: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">boolean</a>()</pre>
+
+      </div>
+
+
+  </section>
+</section>
+<section class="detail" id="get_env/2">
+
+    <span id="get_env/1"></span>
+
+  <div class="detail-header">
+    <a href="#get_env/2" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">get_env(arg1, default \\ nil)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L49" class="icon-action" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> get_env([<a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">atom</a>()], <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">any</a>()) :: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">any</a>()</pre>
+
+      </div>
+
+<p>Retrieve a value nested in the application environment.</p>
   </section>
 </section>
 

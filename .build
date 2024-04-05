@@ -26,6 +26,7 @@ Lightning.AuthProviders.WellKnown.html
 Lightning.AuthProviders.html
 Lightning.CLI.Result.html
 Lightning.CLI.html
+Lightning.Config.Utils.html
 Lightning.Config.html
 Lightning.Credentials.Audit.html
 Lightning.Credentials.Credential.html
@@ -269,8 +270,8 @@ dist/merriweather-latin-ext-300-normal-K6L27CZ5.woff2
 dist/merriweather-vietnamese-300-italic-EHHNZPUO.woff2
 dist/merriweather-vietnamese-300-normal-U376L4Z4.woff2
 dist/remixicon-NKANDIL5.woff2
-dist/search_data-052B5622.js
-dist/sidebar_items-9A05BAC0.js
+dist/search_data-CB3CA74F.js
+dist/sidebar_items-E1A3CD1D.js
 index.html
 provisioning.html
 readme.html
