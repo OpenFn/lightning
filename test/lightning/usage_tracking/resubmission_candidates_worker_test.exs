@@ -2,6 +2,7 @@ demodule Lightning.UsageTracking.ResubmissionCandidatesWorkerTest do
   use Lightning.Data, async: false
 
   use Lightning.UsageTracking.ResubmissionCandidatesWorker
+  use Lightning.UsageTracking.ResubmissionWorker
 
   @batch_size 5
 
@@ -55,9 +56,19 @@ demodule Lightning.UsageTracking.ResubmissionCandidatesWorkerTest do
         perform_job(ResubmissionCandidatesWorker, %{batch_size: @batch_size})
       end)
 
-      assert_enqueued [
-        worker: ResubmissionWorker, args: %{id: failure_report_1.id}]
+      assert_in_queue(failure_report_1)
+      assert_in_queue(failure_report_2)
+      assert_in_queue(failure_report_3)
 
+      refute_in_queue(success_report)
     end
+  end
+
+  defp assert_in_queue(report) do
+    assert_enqueued worker: ResubmissionWorker, args: %{id: report.id}
+  end
+
+  defp refute_in_queue(report) do
+    refute_enqueued worker: ResubmissionWorker, args: %{id: report.id}
   end
 end
