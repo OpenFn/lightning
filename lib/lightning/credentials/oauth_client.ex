@@ -48,7 +48,7 @@ defmodule Lightning.Credentials.OauthClient do
     |> validate_required([:name, :client_id, :client_secret, :base_url])
     |> validate_format(
       :base_url,
-      ~r/^(https?:\/\/)?([\da-z\.-]+)\.([a-z\.]{2,6})([\/\w \.-]*)*\/?$/,
+      ~r/^(https?:\/\/)?([\da-z\.-]+)\.([a-z\.]{2,6})([\/\w \.-]*)*\/?$/i,
       message: "must be a valid URL"
     )
     |> cast_assoc(:project_oauth_clients)
