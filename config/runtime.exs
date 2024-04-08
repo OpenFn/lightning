@@ -183,11 +183,19 @@ usage_tracking_daily_batch_size =
   |> System.get_env("10")
   |> String.to_integer()
 
+usage_tracking_resubmission_batch_size =
+  env!("USAGE_TRACKING_RESUBMISSION_BATCH_SIZE", :integer, 10)
+
 usage_tracking_cron = [
   {
     "30 1,9,17 * * *",
     Lightning.UsageTracking.DayWorker,
     args: %{"batch_size" => usage_tracking_daily_batch_size}
+  },
+  {
+    "* * * * *",
+    Lightning.UsageTracking.ResubmissionCandidatesWorker,
+    args: %{"batch_size" => usage_tracking_resubmission_batch_size}
   }
 ]
 
