@@ -188,7 +188,7 @@ defmodule LightningWeb.CredentialLive.OauthClientFormComponent do
           <div class="space-y-6 bg-white px-4 py-5 sm:p-6">
             <div class="space-y-4">
               <div>
-                <NewInputs.input type="text" field={f[:name]} label="Name" />
+                <NewInputs.input type="text" field={f[:name]} label="Name *" />
               </div>
             </div>
 
@@ -197,14 +197,18 @@ defmodule LightningWeb.CredentialLive.OauthClientFormComponent do
                 <NewInputs.input
                   type="text"
                   field={f[:base_url]}
-                  label="Server/Instance URL"
+                  label="Server/Instance URL *"
                 />
               </div>
             </div>
 
             <div class="space-y-4">
               <div>
-                <NewInputs.input type="text" field={f[:client_id]} label="Client ID" />
+                <NewInputs.input
+                  type="text"
+                  field={f[:client_id]}
+                  label="Client ID *"
+                />
               </div>
             </div>
 
@@ -317,31 +321,36 @@ defmodule LightningWeb.CredentialLive.OauthClientFormComponent do
         </h3>
       </div>
 
-      <.inputs_for :let={project_oauth_client} field={@form[:project_oauth_clients]}>
-        <%= if project_oauth_client[:delete].value != true do %>
-          <div class="flex w-full gap-2 items-center pb-2">
-            <div class="grow">
-              <%= project_name(@projects, project_oauth_client[:project_id].value) %>
-              <.old_error field={project_oauth_client[:project_id]} />
+      <div class="overflow-auto max-h-32">
+        <.inputs_for
+          :let={project_oauth_client}
+          field={@form[:project_oauth_clients]}
+        >
+          <%= if project_oauth_client[:delete].value != true do %>
+            <div class="flex w-full gap-2 items-center pb-2">
+              <div class="grow">
+                <%= project_name(@projects, project_oauth_client[:project_id].value) %>
+                <.old_error field={project_oauth_client[:project_id]} />
+              </div>
+              <div class="grow-0 items-right">
+                <.button
+                  phx-target={@phx_target}
+                  phx-value-projectid={project_oauth_client[:project_id].value}
+                  phx-click="delete_project"
+                >
+                  Remove
+                </.button>
+              </div>
             </div>
-            <div class="grow-0 items-right">
-              <.button
-                phx-target={@phx_target}
-                phx-value-projectid={project_oauth_client[:project_id].value}
-                phx-click="delete_project"
-              >
-                Remove
-              </.button>
-            </div>
-          </div>
-        <% end %>
-        <.input type="hidden" field={project_oauth_client[:project_id]} />
-        <.input
-          type="hidden"
-          field={project_oauth_client[:delete]}
-          value={to_string(project_oauth_client[:delete].value)}
-        />
-      </.inputs_for>
+          <% end %>
+          <.input type="hidden" field={project_oauth_client[:project_id]} />
+          <.input
+            type="hidden"
+            field={project_oauth_client[:delete]}
+            value={to_string(project_oauth_client[:delete].value)}
+          />
+        </.inputs_for>
+      </div>
     </div>
     """
   end
