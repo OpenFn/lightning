@@ -5,18 +5,24 @@ defmodule Lightning.UsageTracking.ResubmissionWorkerTest do
   import Lightning.ApplicationHelpers, only: [put_temporary_env: 3]
 
   alias Lightning.UsageTracking
+  alias Lightning.UsageTracking.Report
   alias Lightning.UsageTracking.ResubmissionWorker
+
+  setup do
+    host = "https://unobtainium.test"
+
+    report = insert(:usage_tracking_report, submission_status: :failure)
+
+    put_temporary_env(:lightning, :usage_tracking, enabled: true, host: host)
+
+    %{report: report, host: host}
+  end
 
   describe "perform/1 - record exists - submission is successful" do
     setup_with_mocks([
       {UsageTracking, [], [submit_report: fn (_report, _host) -> true end]}
-    ]) do
-      report = insert(:usage_tracking_report, submission_status: :failure)
-
-      %{
-        host: Application.get_env(:lightning, :usage_tracking)[:host],
-        report: report
-      }
+    ], context) do
+      context
     end
 
     test "resubmits the report", %{host: host, report: report} do
@@ -33,13 +39,8 @@ defmodule Lightning.UsageTracking.ResubmissionWorkerTest do
   describe "perform/1 - record exists - resubmission is unsuccessful" do
     setup_with_mocks([
       {UsageTracking, [], [submit_report: fn (_report, _host) -> false end]}
-    ]) do
-      report = insert(:usage_tracking_report, submission_status: :failure)
-
-      %{
-        host: Application.get_env(:lightning, :usage_tracking)[:host],
-        report: report
-      }
+    ], context) do
+      context
     end
 
     test "resubmits the report", %{host: host, report: report} do
@@ -56,10 +57,14 @@ defmodule Lightning.UsageTracking.ResubmissionWorkerTest do
   describe "perform/1 - failed record can not be found" do
     setup_with_mocks([
       {UsageTracking, [], [submit_report: fn (_report, _host) -> true end]}
-    ]) do
-      report = insert(:usage_tracking_report, submission_status: :success)
+    ], context) do
+      %{report: report} = context
 
-      %{report: report}
+      report
+      |> Report.changeset(%{submission_status: :success})
+      |> Repo.update()
+
+      context
     end
 
     test "does not submit the report", %{report: report} do
@@ -76,16 +81,15 @@ defmodule Lightning.UsageTracking.ResubmissionWorkerTest do
   describe "perform/1 - usage tracking is not enabled" do
     setup_with_mocks([
       {UsageTracking, [], [submit_report: fn (_report, _host) -> true end]}
-    ]) do
-      host = Application.get_env(:lightning, :usage_tracking)[:host]
-      report = insert(:usage_tracking_report, submission_status: :failure)
+    ], context) do
+      %{host: host} = context
 
       put_temporary_env(:lightning, :usage_tracking,
         enabled: false,
         host: host
       )
 
-      %{report: report}
+      context
     end
 
     test "does not submit the report", %{report: report} do
