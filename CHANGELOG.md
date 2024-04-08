@@ -17,6 +17,9 @@ and this project adheres to
 
 ### Added
 
+- Allow description below the page title
+  [#1975](https://github.com/OpenFn/lightning/issues/1975)
+
 ### Changed
 
 - Change all System.get_env calls in runtime.exs to use dotenvy

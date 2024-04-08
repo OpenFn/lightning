@@ -158,12 +158,27 @@ defmodule LightningWeb.LayoutComponents do
   attr :socket, Phoenix.LiveView.Socket
   slot :title
   slot :period
+  slot :description
   slot :inner_block
 
   def header(assigns) do
+    title_height =
+      if Enum.any?(assigns[:description]) do
+        "mt-4 h-10"
+      else
+        "h-20"
+      end
+
+    # description has the same title class except for height and font
+    assigns =
+      assign(assigns,
+        title_class: "max-w-7xl mx-auto sm:px-6 lg:px-8",
+        title_height: "py-6 flex items-center " <> title_height
+      )
+
     ~H"""
     <div class="flex-none bg-white shadow-sm">
-      <div class="max-w-7xl mx-auto h-20 sm:px-6 lg:px-8 flex items-center">
+      <div class={[@title_class, @title_height]}>
         <h1 class="text-3xl font-bold text-secondary-900 flex items-center">
           <%= if assigns[:title], do: render_slot(@title) %>
         </h1>
@@ -212,6 +227,11 @@ defmodule LightningWeb.LayoutComponents do
           </.dropdown>
         <% end %>
       </div>
+      <%= if Enum.any?(assigns[:description]) do %>
+        <div class={[@title_class, "h-6 text-sm"]}>
+          <%= render_slot(@description) %>
+        </div>
+      <% end %>
     </div>
     """
   end
