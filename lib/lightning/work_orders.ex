@@ -175,6 +175,21 @@ defmodule Lightning.WorkOrders do
     get_or_insert_dataclip(multi, Dataclip.new(params))
   end
 
+  defp try_put_snapshot(changeset, attrs) do
+    if snapshot = attrs |> Map.get(:snapshot) do
+      changeset |> put_assoc(:snapshot, snapshot)
+    else
+      Snapshot.get_or_create_latest_for(attrs[:workflow])
+      |> case do
+        {:ok, snapshot} ->
+          changeset |> put_assoc(:snapshot, snapshot)
+
+        {:error, _changeset} ->
+          changeset
+      end
+    end
+  end
+
   @spec build_for(Trigger.t() | Job.t(), map()) ::
           Ecto.Changeset.t(WorkOrder.t())
   def build_for(%Trigger{} = trigger, attrs) do
@@ -187,7 +202,7 @@ defmodule Lightning.WorkOrders do
         changeset
       end
     end)
-    |> put_assoc(:snapshot, attrs[:snapshot])
+    |> try_put_snapshot(attrs)
     |> put_assoc(:workflow, attrs[:workflow])
     |> put_assoc(:trigger, trigger)
     |> put_assoc(:dataclip, attrs[:dataclip])
@@ -214,7 +229,7 @@ defmodule Lightning.WorkOrders do
   def build_for(%Job{} = job, attrs) do
     %WorkOrder{}
     |> change()
-    |> put_assoc(:snapshot, attrs[:snapshot])
+    |> try_put_snapshot(attrs)
     |> put_assoc(:workflow, attrs[:workflow])
     |> put_assoc(:dataclip, attrs[:dataclip])
     |> put_assoc(:runs, [
