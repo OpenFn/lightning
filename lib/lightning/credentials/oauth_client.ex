@@ -45,7 +45,7 @@ defmodule Lightning.Credentials.OauthClient do
       :global,
       :user_id
     ])
-    |> validate_required([:name, :client_id, :client_secret, :base_url])
+    |> validate_required([:name, :client_id, :base_url])
     |> validate_format(
       :base_url,
       ~r/^(https?:\/\/)?([\da-z\.-]+)\.([a-z\.]{2,6})([\/\w \.-]*)*\/?$/i,
