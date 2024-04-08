@@ -1,13 +1,18 @@
 defmodule Lightning.UsageTracking.ResubmissionCandidatesWorkerTest do
   use Lightning.DataCase, async: false
 
+  import Mock
+
+  alias Lightning.UsageTracking.Client
   alias Lightning.UsageTracking.ResubmissionCandidatesWorker
   alias Lightning.UsageTracking.ResubmissionWorker
 
   @batch_size 5
 
   describe "perform/1 - impact tracker is reachable" do
-    setup do
+    setup_with_mocks([
+      {Client, [], [reachable?: fn(_) -> true end]}
+    ]) do
       now = DateTime.utc_now()
 
       failure_report_1 = now |> insert_report(:failure, -3)
@@ -21,6 +26,16 @@ defmodule Lightning.UsageTracking.ResubmissionCandidatesWorkerTest do
         failure_report_3: failure_report_3,
         success_report: success_report
       }
+    end
+
+    test "makes a call to the configured ImapctTracker instance" do
+      expected_host = Application.get_env(:lightning, :usage_tracking)[:host]
+
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        perform_job(ResubmissionCandidatesWorker, %{batch_size: @batch_size})
+      end)
+
+      assert_called(Client.reachable?(expected_host))
     end
 
     test "indicates that the job completed successfully" do
@@ -47,6 +62,70 @@ defmodule Lightning.UsageTracking.ResubmissionCandidatesWorkerTest do
       assert_in_queue(failure_report_3)
 
       refute_in_queue(success_report)
+    end
+
+    test "enforces the batch size to only resubmit the n earliest reports", %{
+      failure_report_1: failure_report_1,
+      failure_report_2: failure_report_2,
+      failure_report_3: failure_report_3,
+      success_report: success_report
+    } do
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        perform_job(ResubmissionCandidatesWorker, %{batch_size: 2})
+      end)
+
+      assert_in_queue(failure_report_1)
+      assert_in_queue(failure_report_2)
+      refute_in_queue(failure_report_3)
+
+      refute_in_queue(success_report)
+    end
+  end
+
+  describe "perform/1 - impact tracker is not reachable" do
+    setup_with_mocks([
+      {Client, [], [reachable?: fn(_) -> false end]}
+    ]) do
+      now = DateTime.utc_now()
+
+      failure_report_1 = now |> insert_report(:failure, -3)
+      failure_report_2 = now |> insert_report(:failure, -2)
+      failure_report_3 = now |> insert_report(:failure, -1)
+      success_report = now |> insert_report(:success, -4)
+
+      %{
+        failure_report_1: failure_report_1,
+        failure_report_2: failure_report_2,
+        failure_report_3: failure_report_3,
+        success_report: success_report
+      }
+    end
+
+    test "makes a call to the configured ImapctTracker instance" do
+      expected_host = Application.get_env(:lightning, :usage_tracking)[:host]
+
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        perform_job(ResubmissionCandidatesWorker, %{batch_size: @batch_size})
+      end)
+
+      assert_called(Client.reachable?(expected_host))
+    end
+
+    test "indicates that the job completed successfully" do
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        assert perform_job(
+          ResubmissionCandidatesWorker,
+          %{batch_size: @batch_size}
+        ) == :ok
+      end)
+    end
+
+    test "does not enqueue any jobs to resubmit reports" do
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        perform_job(ResubmissionCandidatesWorker, %{batch_size: @batch_size})
+      end)
+
+      assert all_enqueued() == []
     end
   end
 

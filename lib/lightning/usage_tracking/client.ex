@@ -19,6 +19,9 @@ defmodule Lightning.UsageTracking.Client do
     end)
   end
 
+  def reachable?(_host) do
+  end
+
   defp build_client(host) do
     Tesla.client([{Tesla.Middleware.BaseUrl, host}, Tesla.Middleware.JSON])
   end
