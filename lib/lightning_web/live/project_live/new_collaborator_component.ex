@@ -5,8 +5,8 @@ defmodule LightningWeb.ProjectLive.NewCollaboratorComponent do
 
   alias Lightning.Extensions.UsageLimiting
   alias Lightning.Projects
-  alias LightningWeb.ProjectLive.Collaborators
   alias Lightning.Services.UsageLimiter
+  alias LightningWeb.ProjectLive.Collaborators
   alias Phoenix.LiveView.JS
 
   @impl true
