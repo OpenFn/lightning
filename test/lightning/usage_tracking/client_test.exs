@@ -54,4 +54,22 @@ defmodule Lightning.UsageTracking.ClientTest do
       assert Client.submit_metrics(metrics, @host) == :error
     end
   end
+
+  describe ".reachable?/1" do
+    setup do
+      %{url: "#{@host}/"}
+    end
+
+    test "indicates if host is reachable", %{url: url} do
+      mock(fn %{method: :head, url: ^url} -> %Tesla.Env{status: 200} end)
+
+      assert Client.reachable?(@host) == true
+    end
+
+    test "indicates if the host is not reachable", %{url: url} do
+      mock(fn %{method: :head, url: ^url} -> %Tesla.Env{status: 500} end)
+
+      assert Client.reachable?(@host) == false
+    end
+  end
 end
