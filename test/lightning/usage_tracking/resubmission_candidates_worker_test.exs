@@ -11,7 +11,7 @@ defmodule Lightning.UsageTracking.ResubmissionCandidatesWorkerTest do
 
   describe "perform/1 - impact tracker is reachable" do
     setup_with_mocks([
-      {Client, [], [reachable?: fn(_) -> true end]}
+      {Client, [], [reachable?: fn(_host) -> true end]}
     ]) do
       now = DateTime.utc_now()
 
@@ -84,7 +84,7 @@ defmodule Lightning.UsageTracking.ResubmissionCandidatesWorkerTest do
 
   describe "perform/1 - impact tracker is not reachable" do
     setup_with_mocks([
-      {Client, [], [reachable?: fn(_) -> false end]}
+      {Client, [], [reachable?: fn(_host) -> false end]}
     ]) do
       now = DateTime.utc_now()
 

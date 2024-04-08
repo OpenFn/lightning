@@ -5,6 +5,7 @@ defmodule Lightning.UsageTracking do
   import Ecto.Query
 
   alias Lightning.Repo
+  alias Lightning.UsageTracking.Client
   alias Lightning.UsageTracking.DailyReportConfiguration
   alias Lightning.UsageTracking.Report
   alias Lightning.UsageTracking.ReportData
@@ -193,5 +194,11 @@ defmodule Lightning.UsageTracking do
       submission_status: :failure
     })
     |> Repo.update!()
+  end
+
+  def submit_report(report, host) do
+    report.data
+    |> Client.submit_metrics(host)
+    |> update_report_submission!(report)
   end
 end
