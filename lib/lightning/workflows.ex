@@ -68,7 +68,7 @@ defmodule Lightning.Workflows do
       {:ok, %{workflow: workflow}} ->
         {:ok, workflow}
 
-      {:error, :workflow, changeset, _} ->
+      {:error, :workflow, changeset, _changes} ->
         {:error, changeset}
 
       {:error, :snapshot, snapshot_changeset, %{workflow: workflow}} ->
@@ -291,7 +291,7 @@ defmodule Lightning.Workflows do
          true <- Crontab.DateChecker.matches_date?(cron, datetime) do
       edge
     else
-      _ -> false
+      _other -> false
     end
   end
 

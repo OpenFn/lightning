@@ -1,5 +1,5 @@
 defmodule Lightning.UsageTracking.UserQueriesTest do
-  use Lightning.DataCase
+  use Lightning.DataCase, async: true
 
   @date ~D[2024-02-05]
 

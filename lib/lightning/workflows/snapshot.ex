@@ -189,7 +189,7 @@ defmodule Lightning.Workflows.Snapshot do
         from(w in Workflow,
           where: w.id == ^workflow.id,
           preload: [:jobs, :triggers, :edges],
-          lock: "FOR SHARE"
+          lock: "FOR UPDATE"
         )
         |> repo.one()
         |> then(fn

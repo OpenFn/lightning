@@ -1,5 +1,5 @@
 defmodule LightningWeb.RunChannelTest do
-  use LightningWeb.ChannelCase
+  use LightningWeb.ChannelCase, async: true
 
   alias Lightning.Invocation.Dataclip
   alias Lightning.Invocation.Step

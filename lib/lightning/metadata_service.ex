@@ -34,11 +34,11 @@ defmodule Lightning.MetadataService do
           {:ok, %{optional(binary) => binary}} | {:error, Error.t()}
   def fetch(adaptor, credential) do
     Lightning.TaskWorker.start_task(@cli_task_worker, fn ->
-      :telemetry.span(
+      LightningWeb.Telemetry.with_span(
         [:lightning, :fetch_metadata],
         %{adaptor: adaptor},
         fn ->
-          {do_fetch(adaptor, credential), %{adaptor: adaptor}}
+          do_fetch(adaptor, credential)
         end
       )
     end)

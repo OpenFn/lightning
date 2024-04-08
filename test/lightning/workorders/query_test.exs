@@ -1,5 +1,5 @@
 defmodule Lightning.WorkOrders.QueryTest do
-  use Lightning.DataCase
+  use Lightning.DataCase, async: true
 
   alias Lightning.WorkOrders.Query
 

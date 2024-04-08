@@ -1,5 +1,5 @@
 defmodule LightningWeb.WorkOrderLiveTest do
-  use LightningWeb.ConnCase, async: false
+  use LightningWeb.ConnCase, async: true
 
   import Phoenix.LiveViewTest
   import Lightning.Factories
@@ -23,20 +23,26 @@ defmodule LightningWeb.WorkOrderLiveTest do
     workflow = insert(:simple_workflow, project: project)
 
     work_order =
-      insert(:workorder, workflow: workflow, dataclip: dataclip)
-      |> with_run(
-        starting_job: job,
+      work_order_for(job,
+        workflow: workflow,
         dataclip: dataclip,
-        steps: [
-          %{
-            job: job,
-            started_at: build(:timestamp),
-            finished_at: nil,
-            exit_reason: nil,
-            input_dataclip: dataclip
-          }
+        runs: [
+          build(:run, %{
+            starting_job: job,
+            dataclip: dataclip,
+            steps: [
+              %{
+                job: job,
+                started_at: build(:timestamp),
+                finished_at: nil,
+                exit_reason: nil,
+                input_dataclip: dataclip
+              }
+            ]
+          })
         ]
       )
+      |> insert()
 
     {work_order, dataclip}
   end
@@ -211,27 +217,30 @@ defmodule LightningWeb.WorkOrderLiveTest do
       wiped_dataclip = insert(:dataclip, body: nil, wiped_at: DateTime.utc_now())
 
       work_order =
-        insert(:workorder,
+        work_order_for(trigger,
           workflow: workflow,
-          trigger: trigger,
           dataclip: wiped_dataclip,
-          state: :failed
-        )
-        |> with_run(
           state: :failed,
-          dataclip: wiped_dataclip,
-          starting_trigger: trigger,
-          finished_at: build(:timestamp),
-          steps: [
-            build(:step,
-              finished_at: DateTime.utc_now(),
-              job: job,
-              exit_reason: "success",
-              input_dataclip: nil,
-              output_dataclip: nil
+          runs: [
+            build(:run,
+              state: :failed,
+              dataclip: wiped_dataclip,
+              starting_trigger: trigger,
+              finished_at: build(:timestamp),
+              steps: [
+                build(:step,
+                  finished_at: DateTime.utc_now(),
+                  job: job,
+                  exit_reason: "success",
+                  input_dataclip: nil,
+                  output_dataclip: nil
+                )
+              ]
             )
           ]
         )
+        |> insert()
+        |> Repo.preload(runs: :steps)
 
       html =
         render_component(LightningWeb.RunLive.WorkOrderComponent,
@@ -344,27 +353,30 @@ defmodule LightningWeb.WorkOrderLiveTest do
       wiped_dataclip = insert(:dataclip, body: nil, wiped_at: DateTime.utc_now())
 
       work_order =
-        insert(:workorder,
+        work_order_for(trigger,
           workflow: workflow,
-          trigger: trigger,
           dataclip: wiped_dataclip,
-          state: :failed
-        )
-        |> with_run(
           state: :failed,
-          dataclip: wiped_dataclip,
-          starting_trigger: trigger,
-          finished_at: build(:timestamp),
-          steps: [
-            build(:step,
-              finished_at: DateTime.utc_now(),
-              job: job,
-              exit_reason: "success",
-              input_dataclip: nil,
-              output_dataclip: nil
+          runs: [
+            build(:run,
+              state: :failed,
+              dataclip: wiped_dataclip,
+              starting_trigger: trigger,
+              finished_at: build(:timestamp),
+              steps: [
+                build(:step,
+                  finished_at: DateTime.utc_now(),
+                  job: job,
+                  exit_reason: "success",
+                  input_dataclip: nil,
+                  output_dataclip: nil
+                )
+              ]
             )
           ]
         )
+        |> insert()
+        |> Repo.preload(runs: :steps)
 
       html =
         render_component(LightningWeb.RunLive.WorkOrderComponent,
@@ -1501,9 +1513,8 @@ defmodule LightningWeb.WorkOrderLiveTest do
       dataclip = insert(:dataclip)
 
       work_order =
-        insert(:workorder,
+        work_order_for(trigger,
           workflow: workflow,
-          trigger: trigger,
           dataclip: dataclip,
           runs: [
             build(:run,
@@ -1520,6 +1531,7 @@ defmodule LightningWeb.WorkOrderLiveTest do
             )
           ]
         )
+        |> insert()
 
       {:ok, view, _html} =
         live_async(conn, Routes.project_run_index_path(conn, :index, project.id))

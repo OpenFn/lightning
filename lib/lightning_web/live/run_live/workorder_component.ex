@@ -5,7 +5,6 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
   use LightningWeb, :live_component
 
   import LightningWeb.RunLive.Components
-  import LightningWeb.RunLive.Components
 
   @impl true
   def update(
@@ -36,7 +35,18 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
     last_step = get_last_step(work_order)
     last_step_finished_at = format_finished_at(last_step)
     work_order_inserted_at = Calendar.strftime(work_order.inserted_at, "%c %Z")
-    workflow_name = work_order.workflow.name || "Untitled"
+
+    workflow_name =
+      cond do
+        work_order.snapshot ->
+          work_order.snapshot.name
+
+        work_order.workflow ->
+          work_order.workflow.name
+
+        true ->
+          "Untitled"
+      end
 
     socket
     |> assign(

@@ -1,5 +1,5 @@
 defmodule Lightning.UsageTracking.ResponseProcessorTest do
-  use ExUnit.Case
+  use ExUnit.Case, async: true
 
   alias Lightning.UsageTracking.ResponseProcessor
 

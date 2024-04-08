@@ -19,7 +19,7 @@ defmodule Lightning.WorkOrder do
           __meta__: Ecto.Schema.Metadata.t(),
           id: Ecto.UUID.t() | nil,
           dataclip: Dataclip.t() | Ecto.Association.NotLoaded.t(),
-          snapshot: Workflow.Snapshot.t() | Ecto.Association.NotLoaded.t(),
+          snapshot: Snapshot.t() | Ecto.Association.NotLoaded.t(),
           trigger: Trigger.t() | Ecto.Association.NotLoaded.t(),
           workflow: Workflow.t() | Ecto.Association.NotLoaded.t()
         }

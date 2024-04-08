@@ -232,13 +232,18 @@ defmodule Lightning.WorkOrders do
     |> try_put_snapshot(attrs)
     |> put_assoc(:workflow, attrs[:workflow])
     |> put_assoc(:dataclip, attrs[:dataclip])
-    |> put_assoc(:runs, [
-      Run.for(job, %{
-        dataclip: attrs[:dataclip],
-        created_by: attrs[:created_by],
-        priority: attrs[:priority]
-      })
-    ])
+    |> then(fn changeset ->
+      runs =
+        attrs[:runs] ||
+          Run.for(job, %{
+            dataclip: attrs[:dataclip],
+            created_by: attrs[:created_by],
+            priority: attrs[:priority]
+          })
+          |> List.wrap()
+
+      put_assoc(changeset, :runs, runs)
+    end)
     |> validate_required_assoc(:snapshot)
     |> validate_required_assoc(:workflow)
     |> validate_required_assoc(:dataclip)
