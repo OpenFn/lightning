@@ -44,6 +44,10 @@ config :lightning, Lightning.Vault,
 
 config :lightning, Lightning.Runtime.RuntimeManager, start: true
 
+config :lightning,
+  prc_signing_secret:
+    "39h9Qr6+v2wgzjlh4xQoJ90aDe+LY7qIvA5v7QLsTwIwGDfs8el9Z0oFk2Ege33E"
+
 config :lightning, :workers,
   private_key: """
   -----BEGIN PRIVATE KEY-----

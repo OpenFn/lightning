@@ -34,6 +34,11 @@ defmodule Lightning.VersionControl.ProjectRepoConnection do
     timestamps()
   end
 
+  @impl Joken.Config
+  def token_config do
+    default_claims(skip: [:exp])
+  end
+
   @required_fields ~w(github_installation_id repo branch project_id)a
   @other_fields ~w(config_path)a
 
@@ -72,18 +77,22 @@ defmodule Lightning.VersionControl.ProjectRepoConnection do
     if changeset.valid? do
       project_id = get_field(changeset, :project_id)
 
-      token = "prc_" <> generate_access_token(project_id)
-
-      put_change(changeset, :access_token, token)
+      put_change(changeset, :access_token, generate_access_token(project_id))
     else
       changeset
     end
   end
 
   defp generate_access_token(project_id) do
-    Joken.generate_and_sign!(default_claims(skip: [:exp]), %{
-      "project_id" => project_id
-    })
+    {:ok, token, _claims} =
+      generate_and_sign(
+        %{
+          "project_id" => project_id
+        },
+        Lightning.Config.prc_token_signer()
+      )
+
+    token
   end
 
   def config_path(repo_connection) do

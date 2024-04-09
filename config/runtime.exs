@@ -106,6 +106,16 @@ config :lightning, :github_app,
   client_id: github_app_client_id,
   client_secret: github_app_client_secret
 
+prc_signing_secret =
+  env!(
+    "PRC_SIGNING_SECRET",
+    :string,
+    Utils.get_env([:lightning, :prc_signing_secret])
+  )
+
+config :lightning,
+  prc_signing_secret: prc_signing_secret
+
 config :lightning, Lightning.Runtime.RuntimeManager,
   start:
     env!(

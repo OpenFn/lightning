@@ -173,8 +173,8 @@ defmodule LightningWeb.UserAuth do
 
   def authenticate_bearer(conn, _opts) do
     with {:ok, bearer_token} <- get_bearer(conn),
-         %_{} = resource <- get_current_resource(bearer_token) do
-      if is_struct(resource, User) do
+         %{__struct__: type} = resource <- get_current_resource(bearer_token) do
+      if type == User do
         update_last_used(bearer_token)
       end
 
@@ -194,13 +194,8 @@ defmodule LightningWeb.UserAuth do
   end
 
   defp get_current_resource(token) do
-    case token do
-      "prc_" <> _rest ->
-        Lightning.VersionControl.get_repo_connection_for_token(token)
-
-      _user_token ->
-        Accounts.get_user_by_api_token(token)
-    end
+    Accounts.get_user_by_api_token(token) ||
+      Lightning.VersionControl.get_repo_connection_for_token(token)
   end
 
   @doc """

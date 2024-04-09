@@ -7,7 +7,9 @@ defmodule Lightning.Config do
 
     @callback run_token_signer() :: Joken.Signer.t()
     @callback worker_token_signer() :: Joken.Signer.t()
+    @callback prc_token_signer() :: Joken.Signer.t()
     @callback worker_secret() :: binary() | nil
+    @callback prc_secret() :: binary() | nil
     @callback grace_period() :: integer()
 
     def run_token_signer do
@@ -25,6 +27,14 @@ defmodule Lightning.Config do
     def worker_secret do
       Application.get_env(:lightning, :workers, [])
       |> Keyword.get(:worker_secret)
+    end
+
+    def prc_token_signer do
+      Joken.Signer.create("HS256", prc_secret())
+    end
+
+    def prc_secret do
+      Application.get_env(:lightning, :prc_signing_secret)
     end
 
     @doc """
@@ -105,6 +115,16 @@ defmodule Lightning.Config do
   @impl true
   def grace_period do
     impl().grace_period()
+  end
+
+  @impl true
+  def prc_token_signer do
+    impl().prc_token_signer()
+  end
+
+  @impl true
+  def prc_secret do
+    impl().prc_secret()
   end
 
   defp impl do

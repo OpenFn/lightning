@@ -10,12 +10,16 @@ defmodule LightningWeb.Components.GithubComponents do
       "text-center py-2 px-4 shadow-sm text-sm font-medium rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 bg-primary-600 hover:bg-primary-700 text-white"
 
   attr :user, Lightning.Accounts.User, required: true
+  attr :github_query_params, :map
 
   def connect_to_github_link(assigns) do
+    assigns =
+      assign_new(assigns, :github_query_params, fn -> build_query_params() end)
+
     ~H"""
     <.link
       id={@id}
-      href={"https://github.com/login/oauth/authorize?" <> build_query_params()}
+      href={"https://github.com/login/oauth/authorize?" <> Plug.Conn.Query.encode(@github_query_params)}
       target="_blank"
       class={@class}
       {if @user.github_oauth_token, do: ["phx-hook": "Tooltip", "aria-label": "Your token has expired"], else: []}
@@ -31,8 +35,6 @@ defmodule LightningWeb.Components.GithubComponents do
 
     redirect_url = url(LightningWeb.Endpoint, ~p"/oauth/github/callback")
 
-    params = %{client_id: client_id, redirect_uri: redirect_url}
-
-    Plug.Conn.Query.encode(params)
+    %{client_id: client_id, redirect_uri: redirect_url}
   end
 end
