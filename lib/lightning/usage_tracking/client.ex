@@ -9,14 +9,9 @@ defmodule Lightning.UsageTracking.Client do
   alias Lightning.UsageTracking.ResponseProcessor
 
   def submit_metrics(metrics, host) do
-    build_client(host)
-    |> post("/api/metrics", metrics)
-    |> elem(1)
-    |> ResponseProcessor.successful?()
-    |> then(fn
-      true -> :ok
-      false -> :error
-    end)
+    {_ok, env} = host |> build_client() |> post("/api/metrics", metrics)
+
+    if ResponseProcessor.successful?(env), do: :ok, else: :error
   end
 
   defp build_client(host) do

@@ -201,12 +201,7 @@ defmodule Lightning.UsageTracking do
   end
 
   defp commit_for_submission(commit) do
-    commit
-    |> GithubClient.open_fn_commit?()
-    |> then(fn
-      true -> commit
-      _not_true -> "sanitised"
-    end)
+    if GithubClient.open_fn_commit?(commit), do: commit, else: "sanitised"
   end
 
   defp image_for_submission(version, version) do
