@@ -8,6 +8,7 @@ defmodule Lightning.UsageTracking.ReportWorker do
     max_attempts: 1
 
   alias Lightning.UsageTracking
+  alias Lightning.UsageTracking.Client
 
   require Logger
   @impl Oban.Worker
@@ -23,8 +24,9 @@ defmodule Lightning.UsageTracking.ReportWorker do
 
       case UsageTracking.insert_report(config, cleartext_uuids_enabled, date) do
         {:ok, report} ->
-          report
-          |> UsageTracking.submit_report(env[:host])
+          report.data
+          |> Client.submit_metrics(env[:host])
+          |> UsageTracking.update_report_submission!(report)
 
         _error ->
           nil
