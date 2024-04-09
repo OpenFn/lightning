@@ -49,9 +49,9 @@ defmodule Lightning.UsageTracking.ReportWorkerTest do
       assert report = Report |> Repo.one!()
 
       assert %{
-        data: %{"instance" => ^expected_metrics},
-        report_date: ^expected_date
-      } = report
+               data: %{"instance" => ^expected_metrics},
+               report_date: ^expected_date
+             } = report
     end
 
     test "submits the report data", %{
@@ -63,7 +63,7 @@ defmodule Lightning.UsageTracking.ReportWorkerTest do
         else
           flunk("Unrecognised call")
         end
-      end) 
+      end)
 
       perform_job(ReportWorker, %{date: @date})
     end
@@ -112,9 +112,9 @@ defmodule Lightning.UsageTracking.ReportWorkerTest do
       assert report = Report |> Repo.one!()
 
       assert %{
-        data: %{"instance" => ^expected_metrics},
-        report_date: ^expected_date
-      } = report
+               data: %{"instance" => ^expected_metrics},
+               report_date: ^expected_date
+             } = report
     end
 
     test "submits the report data", %{
@@ -126,7 +126,7 @@ defmodule Lightning.UsageTracking.ReportWorkerTest do
         else
           flunk("Unrecognised call")
         end
-      end) 
+      end)
 
       perform_job(ReportWorker, %{date: @date})
     end
