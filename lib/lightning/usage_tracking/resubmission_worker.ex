@@ -3,11 +3,11 @@ defmodule Lightning.UsageTracking.ResubmissionWorker do
   Worker to resubmit report that has failed submission.
 
   """
-  import Ecto.Query
-
   use Oban.Worker,
     queue: :background,
     max_attempts: 1
+
+  import Ecto.Query
 
   alias Lightning.Repo
   alias Lightning.UsageTracking
