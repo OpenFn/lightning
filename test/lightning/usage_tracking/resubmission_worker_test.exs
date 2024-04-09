@@ -19,9 +19,12 @@ defmodule Lightning.UsageTracking.ResubmissionWorkerTest do
   end
 
   describe "perform/1 - record exists - submission is successful" do
-    setup_with_mocks([
-      {UsageTracking, [], [submit_report: fn (_report, _host) -> true end]}
-    ], context) do
+    setup_with_mocks(
+      [
+        {UsageTracking, [], [submit_report: fn _report, _host -> true end]}
+      ],
+      context
+    ) do
       context
     end
 
@@ -33,13 +36,16 @@ defmodule Lightning.UsageTracking.ResubmissionWorkerTest do
 
     test "returns :ok", %{report: report} do
       assert perform_job(ResubmissionWorker, %{id: report.id}) == :ok
-    end 
+    end
   end
 
   describe "perform/1 - record exists - resubmission is unsuccessful" do
-    setup_with_mocks([
-      {UsageTracking, [], [submit_report: fn (_report, _host) -> false end]}
-    ], context) do
+    setup_with_mocks(
+      [
+        {UsageTracking, [], [submit_report: fn _report, _host -> false end]}
+      ],
+      context
+    ) do
       context
     end
 
@@ -51,13 +57,16 @@ defmodule Lightning.UsageTracking.ResubmissionWorkerTest do
 
     test "returns :ok", %{report: report} do
       assert perform_job(ResubmissionWorker, %{id: report.id}) == :ok
-    end 
+    end
   end
 
   describe "perform/1 - failed record can not be found" do
-    setup_with_mocks([
-      {UsageTracking, [], [submit_report: fn (_report, _host) -> true end]}
-    ], context) do
+    setup_with_mocks(
+      [
+        {UsageTracking, [], [submit_report: fn _report, _host -> true end]}
+      ],
+      context
+    ) do
       %{report: report} = context
 
       report
@@ -75,13 +84,16 @@ defmodule Lightning.UsageTracking.ResubmissionWorkerTest do
 
     test "returns :ok", %{report: report} do
       assert perform_job(ResubmissionWorker, %{id: report.id}) == :ok
-    end 
+    end
   end
 
   describe "perform/1 - usage tracking is not enabled" do
-    setup_with_mocks([
-      {UsageTracking, [], [submit_report: fn (_report, _host) -> true end]}
-    ], context) do
+    setup_with_mocks(
+      [
+        {UsageTracking, [], [submit_report: fn _report, _host -> true end]}
+      ],
+      context
+    ) do
       %{host: host} = context
 
       put_temporary_env(:lightning, :usage_tracking,
@@ -100,6 +112,6 @@ defmodule Lightning.UsageTracking.ResubmissionWorkerTest do
 
     test "returns :ok", %{report: report} do
       assert perform_job(ResubmissionWorker, %{id: report.id}) == :ok
-    end 
+    end
   end
 end

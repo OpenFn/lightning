@@ -20,10 +20,11 @@ defmodule Lightning.UsageTracking.ResubmissionCandidatesWorker do
     host = Application.get_env(:lightning, :usage_tracking)[:host]
 
     if Client.reachable?(host) do
-      query = from r in Report,
-      where: r.submission_status == :failure,
-      order_by: [asc: :inserted_at],
-      limit: ^batch_size
+      query =
+        from r in Report,
+          where: r.submission_status == :failure,
+          order_by: [asc: :inserted_at],
+          limit: ^batch_size
 
       query
       |> Repo.all()

@@ -850,8 +850,7 @@ defmodule Lightning.UsageTrackingTest do
       report: report
     } do
       with_mock Client,
-        submit_metrics: fn (_metrics, _host) -> :ok end do
-
+        submit_metrics: fn _metrics, _host -> :ok end do
         UsageTracking.submit_report(report, host)
 
         assert_called(Client.submit_metrics(report.data, host))
@@ -863,7 +862,7 @@ defmodule Lightning.UsageTrackingTest do
       report: report
     } do
       with_mock Client,
-        submit_metrics: fn (_metrics, _host) -> :ok end do
+        submit_metrics: fn _metrics, _host -> :ok end do
         UsageTracking.submit_report(report, host)
       end
 
@@ -881,7 +880,7 @@ defmodule Lightning.UsageTrackingTest do
       report: report
     } do
       with_mock Client,
-        submit_metrics: fn (_metrics, _host) -> :error end do
+        submit_metrics: fn _metrics, _host -> :error end do
         UsageTracking.submit_report(report, host)
       end
 
@@ -896,10 +895,11 @@ defmodule Lightning.UsageTrackingTest do
       host: host,
       report: report
     } do
-      updated_report = with_mock Client,
-        submit_metrics: fn (_metrics, _host) -> :ok end do
-        UsageTracking.submit_report(report, host)
-      end
+      updated_report =
+        with_mock Client,
+          submit_metrics: fn _metrics, _host -> :ok end do
+          UsageTracking.submit_report(report, host)
+        end
 
       assert %{
                submitted: true,

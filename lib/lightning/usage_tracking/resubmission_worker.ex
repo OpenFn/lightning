@@ -24,10 +24,11 @@ defmodule Lightning.UsageTracking.ResubmissionWorker do
 
   defp resubmit_report(id, host, true = _enabled) do
     Repo.transaction(fn ->
-      query = from r in Report,
-        where: r.id == ^id,
-        where: r.submission_status == :failure,
-        lock: "FOR UPDATE SKIP LOCKED"
+      query =
+        from r in Report,
+          where: r.id == ^id,
+          where: r.submission_status == :failure,
+          lock: "FOR UPDATE SKIP LOCKED"
 
       if report = Repo.one(query) do
         UsageTracking.submit_report(report, host)
