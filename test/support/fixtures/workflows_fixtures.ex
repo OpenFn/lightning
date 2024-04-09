@@ -29,17 +29,6 @@ defmodule Lightning.WorkflowsFixtures do
     workflow
   end
 
-  def build_workflow(attrs \\ []) do
-    Ecto.Changeset.cast(
-      %Lightning.Workflows.Workflow{},
-      %{
-        "project_id" => attrs[:project_id] || project_fixture().id,
-        "id" => Ecto.UUID.generate()
-      },
-      [:project_id, :id]
-    )
-  end
-
   def complex_workflow_with_runs(opts \\ []) do
     workflow_name = Keyword.get(opts, :name, "Workflow1")
 

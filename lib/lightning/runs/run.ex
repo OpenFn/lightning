@@ -13,9 +13,10 @@ defmodule Lightning.Run do
   alias Lightning.Invocation.LogLine
   alias Lightning.Invocation.Step
   alias Lightning.RunStep
-  alias Lightning.Workflows.Job
-  alias Lightning.Workflows.Trigger
   alias Lightning.WorkOrder
+  alias Lightning.Workflows.Job
+  alias Lightning.Workflows.Snapshot
+  alias Lightning.Workflows.Trigger
 
   @final_states [
     :success,
@@ -53,6 +54,7 @@ defmodule Lightning.Run do
     belongs_to :dataclip, Lightning.Invocation.Dataclip
 
     has_one :workflow, through: [:work_order, :workflow]
+    belongs_to :snapshot, Snapshot
 
     has_many :log_lines, LogLine
 
@@ -90,19 +92,23 @@ defmodule Lightning.Run do
     |> change()
     |> put_assoc(:starting_trigger, trigger)
     |> put_assoc(:dataclip, attrs[:dataclip])
+    |> put_assoc(:snapshot, attrs[:snapshot])
     |> validate_required_assoc(:dataclip)
+    |> validate_required_assoc(:snapshot)
     |> validate_required_assoc(:starting_trigger)
   end
 
   def for(%Job{} = job, attrs) do
     %__MODULE__{priority: attrs[:priority]}
     |> change()
-    |> put_assoc(:starting_job, job)
     |> put_assoc(:created_by, attrs[:created_by])
     |> put_assoc(:dataclip, attrs[:dataclip])
-    |> validate_required_assoc(:dataclip)
-    |> validate_required_assoc(:starting_job)
+    |> put_assoc(:snapshot, attrs[:snapshot])
+    |> put_assoc(:starting_job, job)
     |> validate_required_assoc(:created_by)
+    |> validate_required_assoc(:dataclip)
+    |> validate_required_assoc(:snapshot)
+    |> validate_required_assoc(:starting_job)
   end
 
   def new(attrs \\ %{}) do
@@ -177,6 +183,7 @@ defmodule Lightning.Run do
   defp validate(changeset) do
     changeset
     |> assoc_constraint(:work_order)
+    |> assoc_constraint(:snapshot)
     |> check_constraint(:job, name: "validate_job_or_trigger")
   end
 end

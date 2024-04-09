@@ -76,7 +76,7 @@ defmodule Lightning.WorkOrders do
     Multi.new()
     |> Multi.put(:workflow, opts[:workflow])
     |> get_or_insert_dataclip(opts[:dataclip])
-    |> get_or_create_snapshot()
+    |> get_or_create_snapshot(opts[:workflow])
     |> Multi.insert(:workorder, fn %{dataclip: dataclip, snapshot: snapshot} ->
       {without_run?, opts} = Keyword.pop(opts, :without_run, false)
 
@@ -137,9 +137,10 @@ defmodule Lightning.WorkOrders do
     {:error, changeset}
   end
 
-  defp get_or_create_snapshot(multi) do
+  defp get_or_create_snapshot(multi, workflow \\ nil) do
     multi
-    |> Multi.run(:snapshot, fn _repo, %{workflow: workflow} ->
+    |> Multi.run(:snapshot, fn _repo, changes ->
+      workflow = workflow || changes[:workflow]
       Snapshot.get_or_create_latest_for(workflow)
     end)
   end
@@ -214,8 +215,12 @@ defmodule Lightning.WorkOrders do
           changeset |> put_assoc(:runs, [])
 
         _any ->
+          snapshot = changeset |> get_change(:snapshot)
+
           changeset
-          |> put_assoc(:runs, [Run.for(trigger, %{dataclip: attrs[:dataclip]})])
+          |> put_assoc(:runs, [
+            Run.for(trigger, %{dataclip: attrs[:dataclip], snapshot: snapshot})
+          ])
       end
     end)
     |> validate_required_assoc(:snapshot)
@@ -233,12 +238,15 @@ defmodule Lightning.WorkOrders do
     |> put_assoc(:workflow, attrs[:workflow])
     |> put_assoc(:dataclip, attrs[:dataclip])
     |> then(fn changeset ->
+      snapshot = changeset |> get_change(:snapshot)
+
       runs =
         attrs[:runs] ||
           Run.for(job, %{
             dataclip: attrs[:dataclip],
             created_by: attrs[:created_by],
-            priority: attrs[:priority]
+            priority: attrs[:priority],
+            snapshot: snapshot
           })
           |> List.wrap()
 
@@ -327,38 +335,41 @@ defmodule Lightning.WorkOrders do
          creating_user
        ) do
     Multi.new()
+    |> get_or_create_snapshot(%Workflow{id: workorder.workflow_id})
     |> Multi.insert(
       :run,
-      Run.new(%{priority: :immediate})
-      |> put_assoc(:work_order, workorder)
-      |> put_assoc(:dataclip, dataclip)
-      |> put_assoc(:starting_job, starting_job)
-      |> put_assoc(:steps, steps)
-      |> put_assoc(:created_by, creating_user)
-      |> validate_required_assoc(:dataclip)
-      |> validate_required_assoc(:work_order)
-      |> validate_required_assoc(:created_by)
+      fn %{snapshot: snapshot} ->
+        Run.new(%{priority: :immediate})
+        |> put_assoc(:snapshot, snapshot)
+        |> put_assoc(:work_order, workorder)
+        |> put_assoc(:dataclip, dataclip)
+        |> put_assoc(:starting_job, starting_job)
+        |> put_assoc(:steps, steps)
+        |> put_assoc(:created_by, creating_user)
+        |> validate_required_assoc(:snapshot)
+        |> validate_required_assoc(:dataclip)
+        |> validate_required_assoc(:work_order)
+        |> validate_required_assoc(:created_by)
+      end
     )
-    |> Multi.update_all(
-      :workorder,
-      fn %{run: run} ->
-        update_workorder_query(run)
-      end,
-      [],
-      returning: true
-    )
-    |> Multi.one(:workflow, fn %{workorder: {_n, [%{workflow_id: workflow_id}]}} ->
-      from(w in Workflow, where: w.id == ^workflow_id)
+    |> Multi.merge(fn %{run: run} ->
+      Multi.new()
+      |> Multi.update_all(:workorder, update_workorder_query(run), [],
+        returning: true
+      )
     end)
     |> Runs.enqueue()
-    |> then(fn result ->
-      with {:ok, %{run: run, workorder: {_n, [workorder]}, workflow: workflow}} <-
-             result do
-        Events.run_created(workflow.project_id, run)
+    |> case do
+      {:ok, %{run: run}} ->
+        %{workflow: workflow} = Repo.preload(starting_job, [:workflow])
         Events.work_order_updated(workflow.project_id, workorder)
+        Events.run_created(workflow.project_id, run)
+
         {:ok, run}
-      end
-    end)
+
+      {:error, _name, changeset, _changes} ->
+        {:error, changeset}
+    end
   end
 
   defp do_retry(_workorder, _wiped_dataclip, _starting_job, _steps, _user) do
@@ -380,12 +391,12 @@ defmodule Lightning.WorkOrders do
     orders_ids = Enum.map(workorders, & &1.id)
 
     last_runs_query =
-      from(att in Run,
-        where: att.work_order_id in ^orders_ids,
-        group_by: att.work_order_id,
+      from(r in Run,
+        where: r.work_order_id in ^orders_ids,
+        group_by: [r.work_order_id],
         select: %{
-          work_order_id: att.work_order_id,
-          last_inserted_at: max(att.inserted_at)
+          work_order_id: r.work_order_id,
+          last_inserted_at: max(r.inserted_at)
         }
       )
 

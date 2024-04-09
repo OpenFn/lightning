@@ -1,4 +1,4 @@
-defmodule Lightning.Invocation.WorkOrderTest do
+defmodule Lightning.WorkOrderTest do
   use Lightning.DataCase, async: true
 
   alias Lightning.WorkOrder
@@ -8,6 +8,7 @@ defmodule Lightning.Invocation.WorkOrderTest do
       errors = WorkOrder.changeset(%WorkOrder{}, %{}) |> errors_on()
 
       assert errors[:workflow_id] == ["can't be blank"]
+      assert errors[:last_activity] == ["can't be blank"]
     end
   end
 end

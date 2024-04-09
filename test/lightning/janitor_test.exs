@@ -1,14 +1,10 @@
 defmodule Lightning.JanitorTest do
-  use ExUnit.Case, async: false
+  use Lightning.DataCase, async: true
   alias Lightning.Janitor
   alias Lightning.Invocation
   import Lightning.Factories
   alias Lightning.Repo
   alias Lightning.Run
-
-  setup do
-    :ok = Ecto.Adapters.SQL.Sandbox.checkout(Lightning.Repo)
-  end
 
   describe "find_and_update_lost/0" do
     @tag :capture_log
