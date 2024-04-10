@@ -378,6 +378,14 @@ defmodule Lightning.RunsTest do
           :http_request ->
             insert(:http_request_dataclip)
 
+          :kafka ->
+            insert(
+              :dataclip,
+              body: %{"foo" => "bar"},
+              request: %{"ts" => 1_720_607_114_132, "topic" => "baz_topic"},
+              type: :kafka
+            )
+
           :step_result ->
             insert(:dataclip,
               body: %{"i'm" => ["a", "dataclip"]},
@@ -401,6 +409,21 @@ defmodule Lightning.RunsTest do
     test "returns headers and body for http_request", %{run: run} do
       assert Runs.get_input(run) ==
                ~s({"data": {"foo": "bar"}, "request": {"headers": {"content-type": "application/json"}}})
+    end
+
+    @tag dataclip_type: :kafka
+    test "returns headers and body for kafka datclip", %{run: run} do
+      input =
+        run
+        |> Runs.get_input()
+        |> Jason.decode!()
+
+      expected = %{
+        "data" => %{"foo" => "bar"},
+        "request" => %{"ts" => 1_720_607_114_132, "topic" => "baz_topic"}
+      }
+
+      assert input == expected
     end
   end
 

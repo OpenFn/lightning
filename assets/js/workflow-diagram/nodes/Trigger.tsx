@@ -1,7 +1,7 @@
 import React, { memo } from 'react';
 import { Position } from 'reactflow';
 import { ClockIcon, GlobeAltIcon } from '@heroicons/react/24/outline';
-import { lockClosedIcon } from '../components/trigger-icons';
+import { kafkaIcon, lockClosedIcon } from '../components/trigger-icons';
 import cronstrue from 'cronstrue';
 
 import PlusButton from '../components/PlusButton';
@@ -54,6 +54,13 @@ function getTriggerMeta(trigger: Lightning.TriggerNode): TriggerMeta {
         sublabel: `On each request received`,
         tooltip: 'Click to copy webhook URL',
         primaryIcon: <GlobeAltIcon />,
+        secondaryIcon: trigger.has_auth_method ? lockClosedIcon : null,
+      };
+    case 'kafka':
+      return {
+        label: 'Kafka trigger',
+        sublabel: `On each message consumed from the cluster`,
+        primaryIcon: kafkaIcon,
         secondaryIcon: trigger.has_auth_method ? lockClosedIcon : null,
       };
     case 'cron':

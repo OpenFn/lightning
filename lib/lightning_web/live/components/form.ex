@@ -85,6 +85,14 @@ defmodule LightningWeb.Components.Form do
     """
   end
 
+  attr :id, :any, required: false
+  attr :form, :map, required: true
+  attr :field, :any, required: false
+  attr :disabled, :boolean, default: false
+  attr :label, :string, default: nil
+  attr :value, :string, required: false
+  attr :rest, :global, include: ~w(autocomplete required)
+
   def password_field(assigns) do
     label_classes = ~w[
       block
@@ -117,7 +125,8 @@ defmodule LightningWeb.Components.Form do
       |> assign(
         label_classes: label_classes,
         error_classes: error_classes,
-        input_classes: input_classes
+        input_classes: input_classes,
+        opts: assigns.rest |> assigns_to_attributes()
       )
       |> assign_new(:label, fn -> nil end)
       |> assign_new(:hint, fn -> nil end)
@@ -133,10 +142,10 @@ defmodule LightningWeb.Components.Form do
     <%= if assigns[:inner_block], do: render_slot(@inner_block) %>
 
     <LightningWeb.CoreComponents.old_error field={@form[@id]} />
-    <%= Phoenix.HTML.Form.password_input(@form, @id,
-      class: @input_classes,
-      required: @required,
-      value: @value
+    <%= Phoenix.HTML.Form.password_input(
+      @form,
+      @id,
+      @opts ++ [class: @input_classes, required: @required, value: @value]
     ) %>
     """
   end
@@ -212,7 +221,7 @@ defmodule LightningWeb.Components.Form do
   attr :required, :boolean, default: false
   attr :disabled, :boolean, default: false
   slot :inner_block, required: false
-  attr :rest, :global
+  attr :rest, :global, include: ~w(autocomplete)
 
   def text_field(assigns) do
     label_classes = ~w[

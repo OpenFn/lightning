@@ -81,8 +81,3 @@ defmodule Lightning.Encrypted.Map do
   @moduledoc false
   use Cloak.Ecto.Map, vault: Lightning.Vault
 end
-
-defmodule Lightning.Encrypted.Binary do
-  @moduledoc false
-  use Cloak.Ecto.Binary, vault: Lightning.Vault
-end

@@ -7,6 +7,7 @@ defmodule Lightning.Workflows do
 
   alias Ecto.Multi
 
+  alias Lightning.KafkaTriggers
   alias Lightning.Projects.Project
   alias Lightning.Repo
   alias Lightning.Workflows.Edge
@@ -15,7 +16,7 @@ defmodule Lightning.Workflows do
   alias Lightning.Workflows.Query
   alias Lightning.Workflows.Snapshot
   alias Lightning.Workflows.Trigger
-  alias Lightning.Workflows.Trigger
+  alias Lightning.Workflows.Triggers
   alias Lightning.Workflows.Workflow
 
   defdelegate subscribe(project_id), to: Events
@@ -67,6 +68,8 @@ defmodule Lightning.Workflows do
     |> Repo.transaction()
     |> case do
       {:ok, %{workflow: workflow}} ->
+        publish_kafka_trigger_events(changeset)
+
         Events.workflow_updated(workflow)
 
         {:ok, workflow}
@@ -89,6 +92,14 @@ defmodule Lightning.Workflows do
   def save_workflow(%{} = attrs) do
     Workflow.changeset(%Workflow{}, attrs)
     |> save_workflow()
+  end
+
+  defp publish_kafka_trigger_events(changeset) do
+    changeset
+    |> KafkaTriggers.get_kafka_triggers_being_updated()
+    |> Enum.each(fn trigger_id ->
+      Triggers.Events.kafka_trigger_updated(trigger_id)
+    end)
   end
 
   @doc """

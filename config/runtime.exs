@@ -228,7 +228,8 @@ base_cron = [
    args: %{"type" => "weekly_project_digest"}},
   {"0 10 1 * *", Lightning.DigestEmailWorker,
    args: %{"type" => "monthly_project_digest"}},
-  {"1 2 * * *", Lightning.Projects, args: %{"type" => "data_retention"}}
+  {"1 2 * * *", Lightning.Projects, args: %{"type" => "data_retention"}},
+  {"*/10 * * * *", Lightning.KafkaTriggers.DuplicateTrackingCleanupWorker}
 ]
 
 cleanup_cron =
@@ -508,5 +509,10 @@ config :lightning, :usage_tracking,
   resubmission_batch_size:
     env!("USAGE_TRACKING_RESUBMISSION_BATCH_SIZE", :integer, 10),
   daily_batch_size: env!("USAGE_TRACKING_DAILY_BATCH_SIZE", :integer, 10)
+
+config :lightning, :kafka_triggers,
+  enabled: env!("KAFKA_TRIGGERS_ENABLED", &Utils.ensure_boolean/1, false),
+  duplicate_tracking_retention_seconds:
+    env!("KAFKA_DUPLICATE_TRACKING_RETENTION_SECONDS", :integer, 3600)
 
 # ==============================================================================

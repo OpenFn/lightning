@@ -14,6 +14,7 @@ defmodule LightningWeb.Components.Icon do
     case type do
       :step_result -> "bg-purple-500 text-purple-900"
       :http_request -> "bg-green-500 text-green-900"
+      :kafka -> "bg-green-500 text-green-900"
       :global -> "bg-blue-500 text-blue-900"
       :saved_input -> "bg-yellow-500 text-yellow-900"
       _ -> nil
@@ -27,6 +28,7 @@ defmodule LightningWeb.Components.Icon do
       :global -> "hero-globe-alt"
       :step_result -> "hero-document-text"
       :http_request -> "hero-document-arrow-down"
+      :kafka -> "hero-document-arrow-down"
       nil -> nil
     end
   end

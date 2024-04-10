@@ -49,7 +49,8 @@ defmodule Lightning.Workflows.Snapshot do
       field :custom_path, :string
       field :cron_expression, :string
       field :enabled, :boolean
-      field :type, Ecto.Enum, values: [:webhook, :cron]
+      field :kafka_configuration, :map
+      field :type, Ecto.Enum, values: [:webhook, :cron, :kafka]
       field :has_auth_method, :boolean, virtual: true
 
       many_to_many :webhook_auth_methods, WebhookAuthMethod,

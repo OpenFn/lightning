@@ -181,10 +181,20 @@ defmodule LightningWeb.WorkflowLive.Components do
         field={@form[:type]}
         label="Trigger type"
         class=""
-        options={[
-          "Cron Schedule (UTC)": "cron",
-          "Webhook Event": "webhook"
-        ]}
+        options={
+          if Application.get_env(:lightning, :kafka_triggers)[:enabled] do
+            [
+              "Cron Schedule (UTC)": "cron",
+              "Kafka Consumer": "kafka",
+              "Webhook Event": "webhook"
+            ]
+          else
+            [
+              "Cron Schedule (UTC)": "cron",
+              "Webhook Event": "webhook"
+            ]
+          end
+        }
         disabled={@disabled}
       />
       <%= case @type do %>
@@ -197,6 +207,16 @@ defmodule LightningWeb.WorkflowLive.Components do
             form={@form}
             on_change={@on_change}
             module={LightningWeb.JobLive.CronSetupComponent}
+            disabled={@disabled}
+          />
+        <% :kafka -> %>
+          <div class="hidden sm:block" aria-hidden="true">
+            <div class="py-2"></div>
+          </div>
+          <.live_component
+            id="kafka-setup-component"
+            form={@form}
+            module={LightningWeb.JobLive.KafkaSetupComponent}
             disabled={@disabled}
           />
         <% :webhook -> %>

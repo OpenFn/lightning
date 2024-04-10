@@ -542,6 +542,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
                   "" -> "New Trigger"
                   "webhook" -> "Webhook Trigger"
                   "cron" -> "Cron Trigger"
+                  # TODO Not tested
+                  "kafka" -> "Kafka Trigger"
                 end)
               }
             >
