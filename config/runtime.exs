@@ -511,3 +511,15 @@ config :lightning, :usage_tracking,
     env!("USAGE_TRACKING_UUIDS", :string, nil) == "cleartext",
   enabled: env!("USAGE_TRACKING_ENABLED", &Utils.ensure_boolean/1, true),
   host: env!("USAGE_TRACKER_HOST", :string, "https://impact.openfn.org")
+
+config :kafka_ex,
+  brokers: [{"localhost", 9092}],
+  sasl: %{
+    mechanism: :plain,
+    username: "user",
+    password: "notsoverysecret",
+  },
+  consumer_group: "example_group",
+  kafka_version: "3.6.2",
+  sync_timeout: 3000,
+  use_ssl: false
