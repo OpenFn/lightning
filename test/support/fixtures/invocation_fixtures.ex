@@ -23,29 +23,6 @@ defmodule Lightning.InvocationFixtures do
   end
 
   @doc """
-  Generate an work_order.
-  """
-  def work_order_fixture(attrs \\ []) when is_list(attrs) do
-    attrs =
-      attrs
-      |> Keyword.put_new_lazy(:project_id, fn ->
-        Lightning.ProjectsFixtures.project_fixture().id
-      end)
-
-    {:ok, work_order} =
-      attrs
-      |> Keyword.put_new_lazy(:workflow_id, fn ->
-        Lightning.WorkflowsFixtures.workflow_fixture(
-          project_id: Keyword.get(attrs, :project_id)
-        ).id
-      end)
-      |> Enum.into(%{})
-      |> Lightning.WorkOrderService.create_work_order()
-
-    work_order
-  end
-
-  @doc """
   Generate a step.
   """
   def step_fixture(attrs \\ []) when is_list(attrs) do

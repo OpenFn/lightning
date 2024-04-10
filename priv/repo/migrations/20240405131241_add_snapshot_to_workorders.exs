@@ -6,6 +6,10 @@ defmodule Lightning.Repo.Migrations.AddSnapshotToWorkorders do
       add :snapshot_id,
           references(:workflow_snapshots, on_delete: :delete_all, type: :binary_id),
           null: true
+
+      modify :trigger_id, :binary_id,
+        null: true,
+        from: {references(:triggers, type: :binary_id, on_delete: :nilify_all), null: false}
     end
 
     alter table(:runs) do

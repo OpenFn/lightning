@@ -18,6 +18,7 @@ defmodule Lightning.WorkOrder do
   @type t :: %__MODULE__{
           __meta__: Ecto.Schema.Metadata.t(),
           id: Ecto.UUID.t() | nil,
+          state: atom(),
           dataclip: Dataclip.t() | Ecto.Association.NotLoaded.t(),
           snapshot: Snapshot.t() | Ecto.Association.NotLoaded.t(),
           trigger: Trigger.t() | Ecto.Association.NotLoaded.t(),
@@ -51,14 +52,9 @@ defmodule Lightning.WorkOrder do
     timestamps(type: :utc_datetime_usec)
   end
 
-  def new do
-    change(%__MODULE__{}, %{id: Ecto.UUID.generate()})
-    |> validate()
-  end
-
   @doc false
-  def changeset(run, attrs) do
-    run
+  def changeset(workorder, attrs) do
+    workorder
     |> cast(attrs, [:state, :last_activity, :workflow_id])
     |> validate_required([:state, :last_activity, :workflow_id])
     |> validate()
@@ -67,5 +63,6 @@ defmodule Lightning.WorkOrder do
   def validate(changeset) do
     changeset
     |> assoc_constraint(:workflow)
+    |> assoc_constraint(:snapshot)
   end
 end
