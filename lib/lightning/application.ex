@@ -103,7 +103,15 @@ defmodule Lightning.Application do
       adaptor_service_childspec,
       {Lightning.TaskWorker, name: :cli_task_worker},
       {Lightning.Runtime.RuntimeManager,
-       worker_secret: Lightning.Config.worker_secret()}
+       worker_secret: Lightning.Config.worker_secret()},
+      %{
+        id: KafkaEx.ConsumerGroup,
+        start: {
+          KafkaEx.ConsumerGroup,
+          :start_link,
+          [ExampleGenConsumer, "example_group", ["test"], []]
+        }
+      }
       # Start a worker by calling: Lightning.Worker.start_link(arg)
       # {Lightning.Worker, arg}
     ]
