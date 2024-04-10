@@ -510,3 +510,15 @@ config :lightning, :usage_tracking,
   daily_batch_size: env!("USAGE_TRACKING_DAILY_BATCH_SIZE", :integer, 10)
 
 # ==============================================================================
+
+config :kafka_ex,
+  brokers: [{"localhost", 9092}],
+  sasl: %{
+    mechanism: :plain,
+    username: "user",
+    password: "notsoverysecret",
+  },
+  consumer_group: "example_group",
+  kafka_version: "3.6.2",
+  sync_timeout: 3000,
+  use_ssl: false
