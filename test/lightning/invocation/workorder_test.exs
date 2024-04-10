@@ -23,7 +23,7 @@ defmodule Lightning.WorkOrderTest do
       |> Repo.insert!()
     end
 
-    test "ensures trigger is on the snapshot" do
+    test "ensures trigger is from the snapshot" do
       workflow = insert(:simple_workflow)
 
       {:ok, snapshot} = Lightning.Workflows.Snapshot.create(workflow)
@@ -41,6 +41,7 @@ defmodule Lightning.WorkOrderTest do
 
       assert work_order.snapshot_id == snapshot.id
 
+      # By deleting the trigger, we should still have the id on the work order
       Repo.delete!(trigger)
       work_order = Repo.reload(work_order)
 

@@ -120,9 +120,9 @@ defmodule Lightning.Run do
   @doc false
   def changeset(run, attrs) do
     run
-    |> cast(attrs, [:work_order_id, :priority])
+    |> cast(attrs, [:work_order_id, :snapshot_id, :priority])
     |> cast_assoc(:steps, required: false)
-    |> validate_required([:work_order_id])
+    |> validate_required([:work_order_id, :snapshot_id])
     |> assoc_constraint(:work_order)
     |> validate()
   end
