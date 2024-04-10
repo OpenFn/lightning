@@ -12,12 +12,12 @@ defmodule Lightning.UsageTracking.GithubClient do
   def open_fn_commit?("" = _commit_sha), do: false
 
   def open_fn_commit?(commit_sha) do
-    {_ok, env} =
+    response =
       @host
       |> build_client()
       |> head("OpenFn/lightning/commit/#{commit_sha}")
 
-    ResponseProcessor.successful_200?(env)
+    ResponseProcessor.successful_200?(response)
   end
 
   def build_client(host) do
