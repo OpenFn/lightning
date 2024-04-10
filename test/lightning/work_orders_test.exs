@@ -34,11 +34,9 @@ defmodule Lightning.WorkOrdersTest do
     end
 
     @tag trigger_type: :webhook
-    test "creating a webhook triggered workorder", %{
-      workflow: workflow,
-      trigger: trigger,
-      snapshot: snapshot
-    } do
+    test "with a webhook trigger", context do
+      %{workflow: workflow, trigger: trigger, snapshot: snapshot} = context
+
       project_id = workflow.project_id
       Lightning.WorkOrders.subscribe(project_id)
       dataclip = insert(:dataclip)
@@ -68,10 +66,9 @@ defmodule Lightning.WorkOrdersTest do
       }
     end
 
-    test "creating a webhook triggered workorder without runs", %{
-      workflow: workflow,
-      trigger: trigger
-    } do
+    test "with a webhook trigger (without runs)", context do
+      %{workflow: workflow, trigger: trigger, snapshot: snapshot} = context
+
       project_id = workflow.project_id
       Lightning.WorkOrders.subscribe(project_id)
       dataclip = insert(:dataclip)
@@ -84,6 +81,7 @@ defmodule Lightning.WorkOrdersTest do
         )
 
       assert workorder.workflow_id == workflow.id
+      assert workorder.snapshot_id == snapshot.id
       assert workorder.trigger_id == trigger.id
       assert workorder.dataclip_id == dataclip.id
       assert workorder.dataclip.type == :http_request
@@ -99,10 +97,9 @@ defmodule Lightning.WorkOrdersTest do
     end
 
     @tag trigger_type: :cron
-    test "creating a cron triggered workorder", %{
-      workflow: workflow,
-      trigger: trigger
-    } do
+    test "with a cron trigger", context do
+      %{workflow: workflow, trigger: trigger, snapshot: snapshot} = context
+
       Lightning.WorkOrders.subscribe(workflow.project_id)
 
       dataclip = insert(:dataclip)
@@ -111,6 +108,7 @@ defmodule Lightning.WorkOrdersTest do
         WorkOrders.create_for(trigger, dataclip: dataclip, workflow: workflow)
 
       assert workorder.workflow_id == workflow.id
+      assert workorder.snapshot_id == snapshot.id
       assert workorder.trigger_id == trigger.id
       assert workorder.dataclip_id == dataclip.id
       assert workorder.dataclip.type == :http_request
@@ -118,6 +116,7 @@ defmodule Lightning.WorkOrdersTest do
       [run] = workorder.runs
 
       assert run.starting_trigger.id == trigger.id
+      assert run.snapshot_id == snapshot.id
 
       workorder_id = workorder.id
 
@@ -126,7 +125,8 @@ defmodule Lightning.WorkOrdersTest do
       }
     end
 
-    test "creates a manual workorder", %{workflow: workflow, job: job} do
+    test "with a manual workorder", context do
+      %{workflow: workflow, job: job, snapshot: snapshot} = context
       user = insert(:user)
       project_id = workflow.project_id
       Lightning.WorkOrders.subscribe(project_id)
@@ -147,7 +147,10 @@ defmodule Lightning.WorkOrdersTest do
                )
                |> Ecto.Changeset.apply_action(:validate)
 
-      assert {:ok, %{runs: [run]} = workorder} = WorkOrders.create_for(manual)
+      assert {:ok, %{id: workorder_id, runs: [run]} = workorder} =
+               WorkOrders.create_for(manual)
+
+      assert workorder.snapshot_id == snapshot.id
       assert workorder.dataclip.type == :saved_input
 
       assert workorder.dataclip.body == %{
@@ -156,12 +159,11 @@ defmodule Lightning.WorkOrdersTest do
 
       assert run.priority == :immediate
       assert run.created_by.id == user.id
+      assert run.snapshot_id == snapshot.id
 
       assert_received %Events.RunCreated{
         project_id: ^project_id
       }
-
-      workorder_id = workorder.id
 
       assert_received %Events.WorkOrderCreated{
         work_order: %{id: ^workorder_id}
@@ -225,6 +227,12 @@ defmodule Lightning.WorkOrdersTest do
 
       Events.subscribe(project_id)
 
+      # This isn't the best place to test for this specific case.
+      Lightning.Workflows.change_workflow(workflow, %{name: "new name"})
+      |> Lightning.Workflows.save_workflow()
+
+      snapshot2 = Lightning.Workflows.Snapshot.get_current_for(workflow)
+
       {:ok, %{id: new_run_id} = retry_run} =
         WorkOrders.retry(run, step, created_by: user)
 
@@ -247,6 +255,10 @@ defmodule Lightning.WorkOrdersTest do
       assert retry_run.starting_job.id == job.id
       assert retry_run.created_by.id == user.id
       assert retry_run.work_order_id == run.work_order_id
+
+      assert retry_run.snapshot_id == snapshot2.id,
+             "Retrying automatically picks the newest snapshot for a workflow"
+
       assert retry_run.state == :available
 
       assert retry_run |> Repo.preload(:steps) |> Map.get(:steps) == [],
@@ -1172,17 +1184,21 @@ defmodule Lightning.WorkOrdersTest do
            user: user,
            workflow: workflow
          } do
-      Mox.stub(MockUsageLimiter, :limit_action, fn %Action{
-                                                     type: :new_run,
-                                                     amount: n
-                                                   },
-                                                   _context ->
-        {:error, :too_many_runs,
-         %Message{
-           text:
-             "You have attempted to enqueue #{n} runs but you have only 1 remaining in your current billig period"
-         }}
-      end)
+      Mox.stub(
+        MockUsageLimiter,
+        :limit_action,
+        fn %Action{
+             type: :new_run,
+             amount: n
+           },
+           _context ->
+          {:error, :too_many_runs,
+           %Message{
+             text:
+               "You have attempted to enqueue #{n} runs but you have only 1 remaining in your current billig period"
+           }}
+        end
+      )
 
       workorder_1 =
         insert(:workorder,
@@ -1392,6 +1408,7 @@ defmodule Lightning.WorkOrdersTest do
       assert retry_run.starting_job_id == job_a.id
       assert retry_run.created_by_id == user.id
       assert retry_run.work_order_id == workorder.id
+      assert retry_run.snapshot_id == snapshot.id
       assert retry_run.state == :available
 
       assert retry_run |> Repo.preload(:steps) |> Map.get(:steps) == [],
@@ -1528,6 +1545,7 @@ defmodule Lightning.WorkOrdersTest do
 
       assert retry_run.created_by_id == user.id
       assert retry_run.work_order_id == workorder.id
+      assert retry_run.snapshot_id == snapshot.id
       assert retry_run.state == :available
 
       assert retry_run |> Repo.preload(:steps) |> Map.get(:steps) == []
@@ -1587,6 +1605,7 @@ defmodule Lightning.WorkOrdersTest do
       assert retry_run.starting_job_id == run_1.starting_job_id
       assert retry_run.created_by_id == user.id
       assert retry_run.work_order_id == workorder.id
+      assert retry_run.snapshot_id == snapshot.id
       assert retry_run.state == :available
 
       assert retry_run |> Repo.preload(:steps) |> Map.get(:steps) == []

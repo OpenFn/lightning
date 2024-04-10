@@ -297,6 +297,7 @@ defmodule Lightning.WorkOrders do
       )
       |> Repo.one()
 
+    # TODO: #snapshots what if a node doesn't exist in the current snapshot?
     steps =
       run.work_order.workflow.edges
       |> Enum.reduce(Graph.new(), fn edge, graph ->
