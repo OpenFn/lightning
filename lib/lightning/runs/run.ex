@@ -13,10 +13,10 @@ defmodule Lightning.Run do
   alias Lightning.Invocation.LogLine
   alias Lightning.Invocation.Step
   alias Lightning.RunStep
-  alias Lightning.WorkOrder
   alias Lightning.Workflows.Job
   alias Lightning.Workflows.Snapshot
   alias Lightning.Workflows.Trigger
+  alias Lightning.WorkOrder
 
   @final_states [
     :success,
