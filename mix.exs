@@ -137,7 +137,9 @@ defmodule Lightning.MixProject do
       {:dotenvy, "~> 0.8.0"},
       # MFA
       {:nimble_totp, "~> 1.0"},
-      {:eqrcode, "~> 0.1"}
+      {:eqrcode, "~> 0.1"},
+      # Github API Secret Encoding
+      {:enacl, github: "aeternity/enacl", branch: "master"}
     ]
   end
 

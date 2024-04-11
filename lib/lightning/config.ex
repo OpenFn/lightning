@@ -7,6 +7,7 @@ defmodule Lightning.Config do
 
     @callback run_token_signer() :: Joken.Signer.t()
     @callback worker_token_signer() :: Joken.Signer.t()
+    @callback repo_connection_token_signer() :: Joken.Signer.t()
     @callback worker_secret() :: binary() | nil
     @callback grace_period() :: integer()
 
@@ -25,6 +26,13 @@ defmodule Lightning.Config do
     def worker_secret do
       Application.get_env(:lightning, :workers, [])
       |> Keyword.get(:worker_secret)
+    end
+
+    def repo_connection_token_signer do
+      Joken.Signer.create(
+        "HS256",
+        Application.fetch_env!(:lightning, :repo_connection_signing_secret)
+      )
     end
 
     @doc """
@@ -105,6 +113,11 @@ defmodule Lightning.Config do
   @impl true
   def grace_period do
     impl().grace_period()
+  end
+
+  @impl true
+  def repo_connection_token_signer do
+    impl().repo_connection_token_signer()
   end
 
   defp impl do

@@ -11,7 +11,6 @@ defmodule Lightning.SetupUtils do
   alias Lightning.Projects
   alias Lightning.Repo
   alias Lightning.Runs
-  alias Lightning.VersionControl
   alias Lightning.Workflows
   alias Lightning.WorkOrders
 
@@ -64,14 +63,6 @@ defmodule Lightning.SetupUtils do
         %{user_id: editor.id, role: :editor},
         %{user_id: viewer.id, role: :viewer}
       ])
-
-    Repo.insert!(%VersionControl.ProjectRepoConnection{
-      github_installation_id: "39991761",
-      repo: "OpenFn/demo-openhie",
-      branch: "main",
-      project_id: openhie_project.id,
-      user_id: super_user.id
-    })
 
     %{
       project: dhis2_project,

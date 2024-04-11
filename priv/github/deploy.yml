@@ -1,7 +1,7 @@
 on:
   push:
-    branches: 
-      - main
+    branches:
+      - <%= @branch %>
 
 jobs:
   deploy-to-lightning:
@@ -9,6 +9,7 @@ jobs:
     name: A job to deploy to Lightning
     steps:
       - name: openfn deploy
-        uses: OpenFn/cli-deploy-action@v0.1.11
-        with: 
-          secret_input: ${{ secrets.OPENFN_API_KEY }}
+        uses: openfn/cli-deploy-action@v1.0.0
+        with:
+          secret_input: ${{ secrets.<%= @api_secret_name %> }}
+          config_path_input: '<%= @config_path %>'

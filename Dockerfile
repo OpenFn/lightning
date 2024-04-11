@@ -25,7 +25,7 @@ ARG NODE_VERSION
 
 # install build and dev dependencies
 RUN apt-get update -y && apt-get install -y \
-  build-essential curl git inotify-tools
+    build-essential curl git inotify-tools libsodium-dev
 
 COPY bin/install_node bin/install_node
 RUN bin/install_node ${NODE_VERSION}
@@ -91,7 +91,7 @@ LABEL branch=${BRANCH}
 LABEL commit=${COMMIT}
 
 RUN apt-get update -y && apt-get install -y libstdc++6 openssl libncurses5 \
-  locales curl gpg
+  locales curl gpg libsodium-dev
 
 RUN apt-get clean && rm -f /var/lib/apt/lists/*_**
 
