@@ -508,3 +508,13 @@ config :lightning, :usage_tracking,
   resubmission_batch_size:
     env!("USAGE_TRACKING_RESUBMISSION_BATCH_SIZE", :integer, 10),
   daily_batch_size: env!("USAGE_TRACKING_DAILY_BATCH_SIZE", :integer, 10)
+
+# ==============================================================================
+
+config :brod,
+  clients: [
+    kafka_client: [
+      sasl: {:plain, "user", "bitnami"},
+      endpoints: [localhost: 9094]
+    ]
+  ]
