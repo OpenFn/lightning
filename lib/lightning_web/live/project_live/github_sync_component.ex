@@ -271,7 +271,7 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
           :branches,
           fn ->
             branches = fetch_branches(installation, repo)
-            {:ok, %{branches: Map.new([{repo, branches}])}}
+            {:ok, %{branches: %{repo => branches}}}
           end,
           reset: true
         )

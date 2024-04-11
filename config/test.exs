@@ -41,10 +41,6 @@ config :lightning, LightningWeb.Endpoint,
 config :lightning, Lightning.Runtime.RuntimeManager,
   ws_url: "ws://localhost:4002/worker"
 
-config :lightning,
-  prc_signing_secret:
-    "39h9Qr6+v2wgzjlh4xQoJ90aDe+LY7qIvA5v7QLsTwIwGDfs8el9Z0oFk2Ege33E"
-
 config :lightning, :workers,
   private_key: """
   -----BEGIN PRIVATE KEY-----
@@ -95,7 +91,9 @@ config :lightning, Lightning.FailureAlerter,
 
 config :lightning,
   schemas_path: "test/fixtures/schemas",
-  adaptor_icons_path: "test/fixtures/adaptors/icons"
+  adaptor_icons_path: "test/fixtures/adaptors/icons",
+  repo_connection_signing_secret:
+    "39h9Qr6+v2wgzjlh4xQoJ90aDe+LY7qIvA5v7QLsTwIwGDfs8el9Z0oFk2Ege33E"
 
 # Print only warnings and errors during test
 config :logger, level: :warning

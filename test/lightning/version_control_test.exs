@@ -13,7 +13,7 @@ defmodule Lightning.VersionControlTest do
       Mox.verify_on_exit!()
 
       project = insert(:project)
-      user = user_with_valid_github_ouath()
+      user = user_with_valid_github_oauth()
 
       assert Repo.aggregate(ProjectRepoConnection, :count) == 0
 
@@ -88,6 +88,23 @@ defmodule Lightning.VersionControlTest do
                  user
                )
 
+      {:ok, verified_token} =
+        ProjectRepoConnection.AccessToken.verify_and_validate(
+          repo_connection.access_token,
+          Lightning.Config.repo_connection_token_signer()
+        )
+
+      assert verified_token["project_id"] == project.id
+      assert verified_token["iss"] == "Lightning"
+      refute Map.has_key?(verified_token, "aud")
+
+      assert verified_token["iat"] == verified_token["nbf"]
+
+      assert DateTime.diff(
+               DateTime.from_unix!(verified_token["nbf"]),
+               DateTime.utc_now(:second)
+             ) in -1..1
+
       assert Repo.aggregate(ProjectRepoConnection, :count) == 1
 
       assert repo_connection.project_id == project.id
@@ -125,7 +142,7 @@ defmodule Lightning.VersionControlTest do
     test "user with a valid oauth token can successfully remove a connection" do
       Mox.verify_on_exit!()
       project = insert(:project)
-      user = user_with_valid_github_ouath()
+      user = user_with_valid_github_oauth()
 
       repo_connection =
         insert(:project_repo_connection,
@@ -370,7 +387,7 @@ defmodule Lightning.VersionControlTest do
     end
   end
 
-  defp user_with_valid_github_ouath do
+  defp user_with_valid_github_oauth do
     active_token = %{
       "access_token" => "access-token",
       "refresh_token" => "refresh-token",

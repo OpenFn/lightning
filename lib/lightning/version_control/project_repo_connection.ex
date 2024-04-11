@@ -4,7 +4,6 @@ defmodule Lightning.VersionControl.ProjectRepoConnection do
   """
 
   use Ecto.Schema
-  use Joken.Config
 
   import Ecto.Changeset
 
@@ -34,9 +33,15 @@ defmodule Lightning.VersionControl.ProjectRepoConnection do
     timestamps()
   end
 
-  @impl Joken.Config
-  def token_config do
-    default_claims(skip: [:exp])
+  defmodule AccessToken do
+    @moduledoc false
+
+    use Joken.Config
+
+    @impl true
+    def token_config do
+      default_claims(skip: [:exp, :aud], iss: "Lightning")
+    end
   end
 
   @required_fields ~w(github_installation_id repo branch project_id)a
@@ -85,11 +90,9 @@ defmodule Lightning.VersionControl.ProjectRepoConnection do
 
   defp generate_access_token(project_id) do
     {:ok, token, _claims} =
-      generate_and_sign(
-        %{
-          "project_id" => project_id
-        },
-        Lightning.Config.prc_token_signer()
+      AccessToken.generate_and_sign(
+        %{"project_id" => project_id},
+        Lightning.Config.repo_connection_token_signer()
       )
 
     token

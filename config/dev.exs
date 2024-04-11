@@ -37,16 +37,14 @@ config :lightning, LightningWeb.Endpoint,
 
 config :lightning,
   schemas_path: "priv/schemas",
-  adaptor_icons_path: "priv/static/images/adaptors"
+  adaptor_icons_path: "priv/static/images/adaptors",
+  repo_connection_signing_secret:
+    "39h9Qr6+v2wgzjlh4xQoJ90aDe+LY7qIvA5v7QLsTwIwGDfs8el9Z0oFk2Ege33E"
 
 config :lightning, Lightning.Vault,
   primary_encryption_key: "M1zzWU6Ego6jV/FUS7e/sj7yF9kRIutgR8uLQ9czrVc="
 
 config :lightning, Lightning.Runtime.RuntimeManager, start: true
-
-config :lightning,
-  prc_signing_secret:
-    "39h9Qr6+v2wgzjlh4xQoJ90aDe+LY7qIvA5v7QLsTwIwGDfs8el9Z0oFk2Ege33E"
 
 config :lightning, :workers,
   private_key: """
