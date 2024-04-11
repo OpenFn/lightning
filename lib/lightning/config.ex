@@ -116,7 +116,7 @@ defmodule Lightning.Config do
   end
 
   @impl true
-  def repo_connection_token_signer() do
+  def repo_connection_token_signer do
     impl().repo_connection_token_signer()
   end
 
