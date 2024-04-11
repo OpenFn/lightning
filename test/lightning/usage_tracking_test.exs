@@ -1,9 +1,13 @@
 defmodule Lightning.UsageTrackingTest do
-  use Lightning.DataCase
+  use Lightning.DataCase, async: false
+
+  import Lightning.ApplicationHelpers, only: [put_temporary_env: 3]
+  import Mock
 
   alias Lightning.Repo
   alias Lightning.UsageTracking
   alias Lightning.UsageTracking.DailyReportConfiguration
+  alias Lightning.UsageTracking.GithubClient
   alias Lightning.UsageTracking.Report
   alias Lightning.UsageTracking.ReportData
   alias Lightning.UsageTracking.ReportWorker
@@ -581,7 +585,9 @@ defmodule Lightning.UsageTrackingTest do
   end
 
   describe ".insert_report - cleartext uuids disabled" do
-    setup do
+    setup_with_mocks([
+      {GithubClient, [], [open_fn_commit?: fn _ -> true end]}
+    ]) do
       cleartext_uuids_enabled = false
 
       date = ~D[2024-02-05]
@@ -665,7 +671,9 @@ defmodule Lightning.UsageTrackingTest do
   end
 
   describe ".insert_report - cleartext uuids enabled" do
-    setup do
+    setup_with_mocks([
+      {GithubClient, [], [open_fn_commit?: fn _ -> true end]}
+    ]) do
       cleartext_uuids_enabled = false
 
       date = ~D[2024-02-05]
@@ -826,5 +834,114 @@ defmodule Lightning.UsageTrackingTest do
                submission_status: :failure
              } = updated_report
     end
+  end
+
+  describe ".lightning_version - commit is an openfn commit" do
+    setup_with_mocks([
+      {
+        GithubClient,
+        [],
+        [
+          open_fn_commit?: fn
+            "abc123" -> true
+            other_sha -> flunk("Commit sha #{other_sha} passed to GithubClient")
+          end
+        ]
+      }
+    ]) do
+      commit = "abc123"
+      spec_version = "v#{Application.spec(:lightning, :vsn)}"
+
+      %{
+        commit: commit,
+        spec_version: spec_version
+      }
+    end
+
+    test "indicates when the image is `edge`", %{
+      commit: commit,
+      spec_version: spec_version
+    } do
+      set_env(branch: "ignored", commit: commit, image_tag: "edge")
+
+      assert UsageTracking.lightning_version() ==
+               "#{spec_version}:edge:#{commit}"
+    end
+
+    test "indicates when the image matches the spec version", %{
+      commit: commit,
+      spec_version: spec_version
+    } do
+      set_env(branch: "ignored", commit: commit, image_tag: spec_version)
+
+      assert UsageTracking.lightning_version() ==
+               "#{spec_version}:match:#{commit}"
+    end
+
+    test "indicates when the image is neither version nor `edge`", %{
+      commit: commit,
+      spec_version: spec_version
+    } do
+      set_env(branch: "ignored", commit: commit, image_tag: "unique")
+
+      assert UsageTracking.lightning_version() ==
+               "#{spec_version}:other:#{commit}"
+    end
+  end
+
+  describe ".lightning_version/0 - commit is not an openfn commit" do
+    setup_with_mocks([
+      {
+        GithubClient,
+        [],
+        [
+          open_fn_commit?: fn
+            "abc123" -> false
+            other_sha -> flunk("Commit sha #{other_sha} passed to GithubClient")
+          end
+        ]
+      }
+    ]) do
+      commit = "abc123"
+      spec_version = "v#{Application.spec(:lightning, :vsn)}"
+
+      %{
+        commit: commit,
+        spec_version: spec_version
+      }
+    end
+
+    test "indicates when the image is `edge`", %{
+      commit: commit,
+      spec_version: version
+    } do
+      set_env(branch: "ignored", commit: commit, image_tag: "edge")
+
+      assert UsageTracking.lightning_version() == "#{version}:edge:sanitised"
+    end
+
+    test "indicates when the image matches the spec version", %{
+      commit: commit,
+      spec_version: spec_version
+    } do
+      set_env(branch: "ignored", commit: commit, image_tag: spec_version)
+
+      assert UsageTracking.lightning_version() ==
+               "#{spec_version}:match:sanitised"
+    end
+
+    test "indicates when the image is neither version nor `edge`", %{
+      commit: commit,
+      spec_version: spec_version
+    } do
+      set_env(branch: "ignored", commit: commit, image_tag: "unique")
+
+      assert UsageTracking.lightning_version() ==
+               "#{spec_version}:other:sanitised"
+    end
+  end
+
+  defp set_env(values) do
+    put_temporary_env(:lightning, :image_info, values)
   end
 end

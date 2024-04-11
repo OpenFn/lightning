@@ -4,8 +4,10 @@ defmodule Lightning.UsageTracking do
   """
   import Ecto.Query
 
+  alias Lightning.Helpers
   alias Lightning.Repo
   alias Lightning.UsageTracking.DailyReportConfiguration
+  alias Lightning.UsageTracking.GithubClient
   alias Lightning.UsageTracking.Report
   alias Lightning.UsageTracking.ReportData
   alias Lightning.UsageTracking.ReportWorker
@@ -194,4 +196,21 @@ defmodule Lightning.UsageTracking do
     })
     |> Repo.update!()
   end
+
+  def lightning_version do
+    %{image: image, commit: commit, spec_version: vsn} = Helpers.version_data()
+
+    "#{vsn}:#{image_for_submission(image, vsn)}:#{commit_for_submission(commit)}"
+  end
+
+  defp commit_for_submission(commit) do
+    if GithubClient.open_fn_commit?(commit), do: commit, else: "sanitised"
+  end
+
+  defp image_for_submission(version, version) do
+    "match"
+  end
+
+  defp image_for_submission("edge" = _image, _spec_version), do: "edge"
+  defp image_for_submission(_image, _spec_version), do: "other"
 end

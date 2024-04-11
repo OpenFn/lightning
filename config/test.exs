@@ -6,12 +6,10 @@ config :bcrypt_elixir, :log_rounds, 1
 # mock adapter for tesla
 config :tesla, adapter: Lightning.Tesla.Mock
 
-config :tesla, Lightning.VersionControl.GithubClient,
-  adapter: Lightning.GithubClient.Mock
-
 config :tesla, Mix.Tasks.Lightning.InstallAdaptorIcons, adapter: Tesla.Mock
 
 config :tesla, Lightning.UsageTracking.Client, adapter: Tesla.Mock
+config :tesla, Lightning.UsageTracking.GithubClient, adapter: Tesla.Mock
 
 # Configure your database
 #
@@ -94,7 +92,9 @@ config :lightning, Lightning.FailureAlerter,
 
 config :lightning,
   schemas_path: "test/fixtures/schemas",
-  adaptor_icons_path: "test/fixtures/adaptors/icons"
+  adaptor_icons_path: "test/fixtures/adaptors/icons",
+  repo_connection_signing_secret:
+    "39h9Qr6+v2wgzjlh4xQoJ90aDe+LY7qIvA5v7QLsTwIwGDfs8el9Z0oFk2Ege33E"
 
 # Print only warnings and errors during test
 config :logger, level: :warning

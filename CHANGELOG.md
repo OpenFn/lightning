@@ -17,14 +17,26 @@ and this project adheres to
 
 ### Added
 
+- Allow description below the page title
+  [#1975](https://github.com/OpenFn/lightning/issues/1975)
+- Enable users to connect projects to their Github repos and branches that they
+  have access to [#1895](https://github.com/OpenFn/lightning/issues/1895)
+- Enable users to connect multiple projects to a single Github repo
+  [#1811](https://github.com/OpenFn/lightning/issues/1811)
+
 ### Changed
 
 - Change all System.get_env calls in runtime.exs to use dotenvy
   [#1968](https://github.com/OpenFn/lightning/issues/1968)
 - Track usage tracking submission status in new field
   [#1789](https://github.com/OpenFn/lightning/issues/1789)
+- Send richer version info as part of usage tracking submission.
+  [#1819](https://github.com/OpenFn/lightning/issues/1819)
 
 ### Fixed
+
+- Fix sync to branch only targetting main branch
+  [#1892](https://github.com/OpenFn/lightning/issues/1892)
 
 ## [v2.3.1] - 2024-04-03
 

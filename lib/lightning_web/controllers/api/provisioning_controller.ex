@@ -19,13 +19,13 @@ defmodule LightningWeb.API.ProvisioningController do
            Permissions.can(
              Provisioning,
              :provision_project,
-             conn.assigns.current_user,
+             conn.assigns.current_resource,
              project
            ),
          {:ok, project} <-
            Provisioner.import_document(
              project,
-             conn.assigns.current_user,
+             conn.assigns.current_resource,
              params
            ) do
       conn
@@ -46,7 +46,7 @@ defmodule LightningWeb.API.ProvisioningController do
            Permissions.can(
              Provisioning,
              :describe_project,
-             conn.assigns.current_user,
+             conn.assigns.current_resource,
              project
            ) do
       conn
@@ -66,7 +66,7 @@ defmodule LightningWeb.API.ProvisioningController do
            Permissions.can(
              Provisioning,
              :describe_project,
-             conn.assigns.current_user,
+             conn.assigns.current_resource,
              project
            ) do
       {:ok, yaml} = Projects.export_project(:yaml, id)

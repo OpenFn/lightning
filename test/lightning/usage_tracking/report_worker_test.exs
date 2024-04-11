@@ -4,8 +4,9 @@ defmodule Lightning.UsageTracking.ReportWorkerTest do
   import Mock
   import Lightning.ApplicationHelpers, only: [put_temporary_env: 3]
 
-  alias Lightning.UsageTracking.Client
   alias Lightning.UsageTracking
+  alias Lightning.UsageTracking.Client
+  alias Lightning.UsageTracking.GithubClient
   alias Lightning.UsageTracking.Report
   alias Lightning.UsageTracking.ReportData
   alias Lightning.UsageTracking.ReportWorker
@@ -14,7 +15,9 @@ defmodule Lightning.UsageTracking.ReportWorkerTest do
   @host "https://foo.bar"
 
   describe "tracking is enabled - cleartext uuids are disabled" do
-    setup do
+    setup_with_mocks([
+      {GithubClient, [], [open_fn_commit?: fn _ -> true end]}
+    ]) do
       cleartext_uuids_enabled = false
 
       report_config =
@@ -112,7 +115,9 @@ defmodule Lightning.UsageTracking.ReportWorkerTest do
   end
 
   describe "tracking is enabled - cleartext uuids are enabled" do
-    setup do
+    setup_with_mocks([
+      {GithubClient, [], [open_fn_commit?: fn _ -> true end]}
+    ]) do
       cleartext_uuids_enabled = true
 
       report_config =
@@ -210,7 +215,9 @@ defmodule Lightning.UsageTracking.ReportWorkerTest do
   end
 
   describe "tracking is enabled - but report for given date exists" do
-    setup do
+    setup_with_mocks([
+      {GithubClient, [], [open_fn_commit?: fn _ -> true end]}
+    ]) do
       UsageTracking.enable_daily_report(DateTime.utc_now())
 
       put_temporary_env(:lightning, :usage_tracking,

@@ -8,7 +8,7 @@ defmodule LightningWeb.LayoutComponents do
   def menu_items(assigns) do
     ~H"""
     <%= if assigns[:projects] do %>
-      <div class="relative my-4 mx-2">
+      <div class="relative my-4 mx-2 px-2">
         <button
           type="button"
           class="relative w-full cursor-default rounded-md bg-white py-1.5 pl-3
@@ -37,7 +37,6 @@ defmodule LightningWeb.LayoutComponents do
             </svg>
           </span>
         </button>
-
         <ul
           id="project-picklist"
           class="hidden absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-md bg-white py-1 text-base shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none sm:text-sm"
@@ -53,7 +52,6 @@ defmodule LightningWeb.LayoutComponents do
                 class={[
                   "text-gray-900 relative cursor-default select-none py-2 pl-3 pr-9 hover:bg-indigo-600 group hover:text-white"
                 ]}
-                id="listbox-option-0"
                 role="option"
               >
                 <span class={[
@@ -158,12 +156,27 @@ defmodule LightningWeb.LayoutComponents do
   attr :socket, Phoenix.LiveView.Socket
   slot :title
   slot :period
+  slot :description
   slot :inner_block
 
   def header(assigns) do
+    title_height =
+      if Enum.any?(assigns[:description]) do
+        "mt-4 h-10"
+      else
+        "h-20"
+      end
+
+    # description has the same title class except for height and font
+    assigns =
+      assign(assigns,
+        title_class: "max-w-7xl mx-auto sm:px-6 lg:px-8",
+        title_height: "py-6 flex items-center " <> title_height
+      )
+
     ~H"""
     <div class="flex-none bg-white shadow-sm">
-      <div class="max-w-7xl mx-auto h-20 sm:px-6 lg:px-8 flex items-center">
+      <div class={[@title_class, @title_height]}>
         <h1 class="text-3xl font-bold text-secondary-900 flex items-center">
           <%= if assigns[:title], do: render_slot(@title) %>
         </h1>
@@ -212,6 +225,11 @@ defmodule LightningWeb.LayoutComponents do
           </.dropdown>
         <% end %>
       </div>
+      <%= if Enum.any?(assigns[:description]) do %>
+        <div class={[@title_class, "h-6 text-sm"]}>
+          <%= render_slot(@description) %>
+        </div>
+      <% end %>
     </div>
     """
   end

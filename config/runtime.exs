@@ -106,6 +106,27 @@ config :lightning, :github_app,
   client_id: github_app_client_id,
   client_secret: github_app_client_secret
 
+config :lightning,
+  repo_connection_signing_secret:
+    env!(
+      "REPO_CONNECTION_SIGNING_SECRET",
+      :string,
+      Utils.get_env([:lightning, :repo_connection_signing_secret])
+    )
+    |> tap(fn v ->
+      if is_nil(v) and
+           Enum.all?(
+             Application.get_env(:lightning, :github_app)
+             |> Keyword.values()
+           ) do
+        raise """
+        REPO_CONNECTION_SIGNING_SECRET not set
+
+        Please provide a secret, or use `mix lightning.gen_encryption_key` to generate one.
+        """
+      end
+    end)
+
 config :lightning, Lightning.Runtime.RuntimeManager,
   start:
     env!(

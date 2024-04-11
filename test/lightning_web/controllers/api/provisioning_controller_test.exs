@@ -227,6 +227,59 @@ defmodule LightningWeb.API.ProvisioningControllerTest do
 
       assert response == %{"error" => "Forbidden"}
     end
+
+    test "returns a 200 if a valid repo conenction token is provided for the project state" do
+      project = insert(:project)
+
+      repo_connection = insert(:project_repo_connection, project: project)
+
+      conn =
+        Plug.Conn.put_req_header(
+          build_conn(),
+          "authorization",
+          "Bearer #{repo_connection.access_token}"
+        )
+
+      response = get(conn, ~p"/api/provision/#{project.id}")
+      assert response.status == 200
+    end
+
+    test "returns a 200 if a valid repo conenction token is provided for the project yaml" do
+      project = insert(:project)
+
+      repo_connection = insert(:project_repo_connection, project: project)
+
+      conn =
+        Plug.Conn.put_req_header(
+          build_conn(),
+          "authorization",
+          "Bearer #{repo_connection.access_token}"
+        )
+
+      response = get(conn, ~p"/api/provision/yaml?#{%{id: project.id}}")
+      assert response.status == 200
+    end
+
+    test "returns a 403 if an invalid repo conenction token is provided" do
+      project_1 = insert(:project)
+      project_2 = insert(:project)
+
+      wrong_repo_connection =
+        insert(:project_repo_connection, project: project_2)
+
+      conn =
+        Plug.Conn.put_req_header(
+          build_conn(),
+          "authorization",
+          "Bearer #{wrong_repo_connection.access_token}"
+        )
+
+      conn = get(conn, ~p"/api/provision/#{project_1.id}")
+
+      response = json_response(conn, 403)
+
+      assert response == %{"error" => "Forbidden"}
+    end
   end
 
   describe "post (with an API token)" do
@@ -257,6 +310,26 @@ defmodule LightningWeb.API.ProvisioningControllerTest do
         "id" => project.id,
         "workflows" => [%{"name" => "default"}]
       }
+
+      response = post(conn, ~p"/api/provision", body)
+      assert response.status == 403
+    end
+
+    test "is forbidden for an invalid PRC access_token", %{conn: conn} do
+      project = insert(:project)
+      wrong_project = insert(:project)
+
+      wrong_repo_connection =
+        insert(:project_repo_connection, project: wrong_project)
+
+      %{body: body} = valid_payload(project.id)
+
+      conn =
+        Plug.Conn.put_req_header(
+          conn,
+          "authorization",
+          "Bearer #{wrong_repo_connection.access_token}"
+        )
 
       response = post(conn, ~p"/api/provision", body)
       assert response.status == 403
@@ -410,6 +483,26 @@ defmodule LightningWeb.API.ProvisioningControllerTest do
         )
 
       %{body: body} = valid_payload(project.id)
+
+      assert post(conn, ~p"/api/provision", body) |> json_response(201)
+    end
+
+    test "allows a valid PRC token to update an existing project", %{
+      conn: conn
+    } do
+      project = insert(:project)
+
+      repo_connection =
+        insert(:project_repo_connection, project: project)
+
+      %{body: body} = valid_payload(project.id)
+
+      conn =
+        Plug.Conn.put_req_header(
+          conn,
+          "authorization",
+          "Bearer #{repo_connection.access_token}"
+        )
 
       assert post(conn, ~p"/api/provision", body) |> json_response(201)
     end

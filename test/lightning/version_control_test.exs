@@ -5,216 +5,220 @@ defmodule Lightning.VersionControlTest do
   alias Lightning.Repo
 
   import Lightning.Factories
-  import Lightning.ApplicationHelpers, only: [put_temporary_env: 3]
 
-  @cert """
-  -----BEGIN RSA PRIVATE KEY-----
-  MIICWwIBAAKBgQDdlatRjRjogo3WojgGHFHYLugdUWAY9iR3fy4arWNA1KoS8kVw33cJibXr8bvwUAUparCwlvdbH6dvEOfou0/gCFQsHUfQrSDv+MuSUMAe8jzKE4qW+jK+xQU9a03GUnKHkkle+Q0pX/g6jXZ7r1/xAK5Do2kQ+X5xK9cipRgEKwIDAQABAoGAD+onAtVye4ic7VR7V50DF9bOnwRwNXrARcDhq9LWNRrRGElESYYTQ6EbatXS3MCyjjX2eMhu/aF5YhXBwkppwxg+EOmXeh+MzL7Zh284OuPbkglAaGhV9bb6/5CpuGb1esyPbYW+Ty2PC0GSZfIXkXs76jXAu9TOBvD0ybc2YlkCQQDywg2R/7t3Q2OE2+yo382CLJdrlSLVROWKwb4tb2PjhY4XAwV8d1vy0RenxTB+K5Mu57uVSTHtrMK0GAtFr833AkEA6avx20OHo61Yela/4k5kQDtjEf1N0LfI+BcWZtxsS3jDM3i1Hp0KSu5rsCPb8acJo5RO26gGVrfAsDcIXKC+bQJAZZ2XIpsitLyPpuiMOvBbzPavd4gY6Z8KWrfYzJoI/Q9FuBo6rKwl4BFoToD7WIUS+hpkagwWiz+6zLoX1dbOZwJACmH5fSSjAkLRi54PKJ8TFUeOP15h9sQzydI8zJU+upvDEKZsZc/UhT/SySDOxQ4G/523Y0sz/OZtSWcol/UMgQJALesy++GdvoIDLfJX5GBQpuFgFenRiRDabxrE9MNUZ2aPFaFp+DyAe+b4nDwuJaW2LURbr8AEZga7oQj0uYxcYw==
-  -----END RSA PRIVATE KEY-----
-  """
+  import Lightning.GithubHelpers
 
-  describe "Version Control" do
-    test "deletes a project repo connection" do
-      project_repo_connection = insert(:project_repo_connection)
-      assert Repo.aggregate(ProjectRepoConnection, :count, :id) == 1
+  describe "create_github_connection/2" do
+    test "user with valid oauth token creates connection successfully" do
+      Mox.verify_on_exit!()
 
-      assert {:ok, _} =
-               VersionControl.remove_github_connection(
-                 project_repo_connection.project_id
-               )
-
-      assert Repo.aggregate(ProjectRepoConnection, :count, :id) == 0
-    end
-
-    test "fetches a project repo using a project id" do
-      project_repo_connection = insert(:project_repo_connection)
-
-      assert %ProjectRepoConnection{} =
-               VersionControl.get_repo_connection(
-                 project_repo_connection.project_id
-               )
-    end
-
-    test "creates a project github repo connection record when project and user id are present" do
       project = insert(:project)
-      user = insert(:user)
+      user = user_with_valid_github_oauth()
 
-      attrs = %{
-        project_id: project.id,
-        user_id: user.id
+      assert Repo.aggregate(ProjectRepoConnection, :count) == 0
+
+      expected_installation = %{
+        "id" => "1234",
+        "account" => %{
+          "type" => "User",
+          "login" => "username"
+        }
+      }
+
+      expected_repo = %{
+        "full_name" => "someaccount/somerepo",
+        "default_branch" => "main"
+      }
+
+      expected_branch = %{"name" => "somebranch"}
+
+      # push pull.yml
+      expect_get_repo(expected_repo["full_name"], 200, expected_repo)
+      expect_create_blob(expected_repo["full_name"])
+
+      expect_get_commit(
+        expected_repo["full_name"],
+        expected_repo["default_branch"]
+      )
+
+      expect_create_tree(expected_repo["full_name"])
+      expect_create_commit(expected_repo["full_name"])
+
+      expect_update_ref(
+        expected_repo["full_name"],
+        expected_repo["default_branch"]
+      )
+
+      # push deploy.yml + config.json
+      # deploy.yml blob
+      expect_create_blob(expected_repo["full_name"])
+      # config.json blob
+      expect_create_blob(expected_repo["full_name"])
+      expect_get_commit(expected_repo["full_name"], expected_branch["name"])
+      expect_create_tree(expected_repo["full_name"])
+      expect_create_commit(expected_repo["full_name"])
+      expect_update_ref(expected_repo["full_name"], expected_branch["name"])
+
+      # write secret
+      expect_get_public_key(expected_repo["full_name"])
+      secret_name = "OPENFN_#{String.replace(project.id, "-", "_")}_API_KEY"
+      expect_create_repo_secret(expected_repo["full_name"], secret_name)
+
+      # initialize sync
+      expect_create_installation_token(expected_installation["id"])
+      expect_get_repo(expected_repo["full_name"], 200, expected_repo)
+
+      expect_create_workflow_dispatch(
+        expected_repo["full_name"],
+        "openfn-pull.yml"
+      )
+
+      params = %{
+        "project_id" => project.id,
+        "repo" => expected_repo["full_name"],
+        "branch" => expected_branch["name"],
+        "github_installation_id" => expected_installation["id"],
+        "sync_direction" => "pull",
+        "accept" => "true"
       }
 
       assert {:ok, repo_connection} =
-               VersionControl.create_github_connection(attrs)
+               VersionControl.create_github_connection(
+                 params,
+                 user
+               )
+
+      {:ok, verified_token} =
+        ProjectRepoConnection.AccessToken.verify_and_validate(
+          repo_connection.access_token,
+          Lightning.Config.repo_connection_token_signer()
+        )
+
+      assert verified_token["project_id"] == project.id
+      assert verified_token["iss"] == "Lightning"
+      refute Map.has_key?(verified_token, "aud")
+
+      assert verified_token["iat"] == verified_token["nbf"]
+
+      assert DateTime.diff(
+               DateTime.from_unix!(verified_token["nbf"]),
+               DateTime.utc_now(:second)
+             ) in -1..1
+
+      assert Repo.aggregate(ProjectRepoConnection, :count) == 1
 
       assert repo_connection.project_id == project.id
+      assert repo_connection.branch == params["branch"]
+      assert repo_connection.repo == params["repo"]
+
+      assert repo_connection.github_installation_id ==
+               params["github_installation_id"]
     end
 
-    test "create_github_connection/1 errors out when the user has an existing pending connection" do
-      project1 = insert(:project)
-      project2 = insert(:project)
-      user = insert(:user)
-
-      # insert existing installation
-      insert(:project_repo_connection, %{
-        project: project1,
-        user: user,
-        repo: nil,
-        branch: nil,
-        github_installation_id: nil
-      })
-
-      attrs = %{
-        project_id: project2.id,
-        user_id: user.id
-      }
-
-      assert {:error, changeset} =
-               VersionControl.create_github_connection(attrs)
-
-      assert changeset.errors == [
-               {:user_id, {"user has pending installation", []}}
-             ]
-    end
-
-    test "add_github_installation_id/2 updates the installation_id for the correct project for the given user" do
-      project1 = insert(:project)
-      project2 = insert(:project)
-      user = insert(:user)
-
-      {:ok, _connection1} =
-        VersionControl.create_github_connection(%{
-          project_id: project1.id,
-          user_id: user.id,
-          github_installation_id: "some-id"
-        })
-
-      {:ok, connection2} =
-        VersionControl.create_github_connection(%{
-          project_id: project2.id,
-          user_id: user.id
-        })
-
-      {:ok, updated_connection} =
-        VersionControl.add_github_installation_id(
-          user.id,
-          "some_installation"
-        )
-
-      assert updated_connection.id == connection2.id
-    end
-
-    test "add_github_installation_id/2 raises when you there's no pending installation" do
-      project1 = insert(:project)
-      user = insert(:user)
-
-      {:ok, _connection1} =
-        VersionControl.create_github_connection(%{
-          project_id: project1.id,
-          user_id: user.id,
-          github_installation_id: "some-id"
-        })
-
-      assert_raise Ecto.NoResultsError, fn ->
-        VersionControl.add_github_installation_id(
-          user.id,
-          "some_installation"
-        )
-      end
-    end
-  end
-
-  describe "connect_github_repo/3" do
-    setup do
-      put_temporary_env(:lightning, :github_app,
-        cert: @cert,
-        app_id: "111111",
-        app_name: "test-github"
-      )
-
-      Mox.expect(Lightning.GithubClient.Mock, :call, 7, fn env, _opts ->
-        case env.url do
-          "https://api.github.com/app/installations/some-id/access_tokens" ->
-            {:ok, %Tesla.Env{status: 201, body: %{"token" => "some-token"}}}
-
-          # create blob
-          "https://api.github.com/repos/some/repo/git/blobs" ->
-            {:ok,
-             %Tesla.Env{
-               status: 201,
-               body: %{"sha" => "3a0f86fb8db8eea7ccbb9a95f325ddbedfb25e15"}
-             }}
-
-          # get commit on master branch
-          "https://api.github.com/repos/some/repo/commits/heads/master" ->
-            {:ok,
-             %Tesla.Env{
-               status: 200,
-               body: %{
-                 "sha" => "6dcb09b5b57875f334f61aebed695e2e4193db5e",
-                 "commit" => %{
-                   "tree" => %{
-                     "sha" => "6dcb09b5b57875f334f61aebed695e2e4193db5e"
-                   }
-                 }
-               }
-             }}
-
-          # create commit
-          "https://api.github.com/repos/some/repo/git/commits" ->
-            {:ok,
-             %Tesla.Env{
-               status: 201,
-               body: %{"sha" => "7638417db6d59f3c431d3e1f261cc637155684cd"}
-             }}
-
-          # create tree
-          "https://api.github.com/repos/some/repo/git/trees" ->
-            {:ok,
-             %Tesla.Env{
-               status: 201,
-               body: %{"sha" => "cd8274d15fa3ae2ab983129fb037999f264ba9a7"}
-             }}
-
-          # update a reference. in this case, the master branch
-          "https://api.github.com/repos/some/repo/git/refs/heads/master" ->
-            {:ok,
-             %Tesla.Env{
-               status: 200,
-               body: %{"ref" => "refs/heads/master"}
-             }}
-        end
-      end)
-
-      :ok
-    end
-
-    test "given a project_id, branch and repo it should update a connection" do
+    test "user without an oauth token cannot create a repo connection" do
       project = insert(:project)
       user = insert(:user)
 
       assert Repo.aggregate(ProjectRepoConnection, :count) == 0
 
-      insert(:project_repo_connection, %{
-        project: project,
-        user: user,
-        github_installation_id: "some-id",
-        branch: nil,
-        repo: nil
-      })
+      params = %{
+        "project_id" => project.id,
+        "repo" => "some/repo",
+        "branch" => "somebranch",
+        "github_installation_id" => "1234"
+      }
+
+      assert {:error, _error} =
+               VersionControl.create_github_connection(
+                 params,
+                 user
+               )
+
+      assert Repo.aggregate(ProjectRepoConnection, :count) == 0
+    end
+  end
+
+  describe "remove_github_connection/2" do
+    test "user with a valid oauth token can successfully remove a connection" do
+      Mox.verify_on_exit!()
+      project = insert(:project)
+      user = user_with_valid_github_oauth()
+
+      repo_connection =
+        insert(:project_repo_connection,
+          project: project,
+          repo: "someaccount/somerepo",
+          branch: "somebranch",
+          github_installation_id: "1234",
+          access_token: "someaccesstoken"
+        )
+
+      assert is_map(user.github_oauth_token)
+
+      # check if deploy yml exists for deletion
+      expected_deploy_yml_path =
+        ".github/workflows/openfn-#{project.id}-deploy.yml"
+
+      expect_get_repo_content(repo_connection.repo, expected_deploy_yml_path)
+
+      # deletes successfully
+      expect_delete_repo_content(
+        repo_connection.repo,
+        expected_deploy_yml_path
+      )
+
+      # check if deploy yml exists for deletion
+      expected_config_json_path = "openfn-#{project.id}-config.json"
+      expect_get_repo_content(repo_connection.repo, expected_config_json_path)
+      # fails to delete
+      expect_delete_repo_content(
+        repo_connection.repo,
+        expected_config_json_path,
+        400,
+        %{"something" => "happened"}
+      )
+
+      # delete secret
+      expect_delete_repo_secret(
+        repo_connection.repo,
+        "OPENFN_#{String.replace(project.id, "-", "_")}_API_KEY"
+      )
 
       assert Repo.aggregate(ProjectRepoConnection, :count) == 1
 
-      assert {:ok, updated_connection} =
-               VersionControl.connect_github_repo(
-                 project.id,
-                 "some/repo",
-                 "master"
+      assert {:ok, _connection} =
+               VersionControl.remove_github_connection(
+                 repo_connection,
+                 user
                )
 
-      assert updated_connection.project_id == project.id
-      assert updated_connection.branch == "master"
-      assert updated_connection.repo == "some/repo"
+      assert Repo.aggregate(ProjectRepoConnection, :count) == 0
+    end
+
+    test "user without an oauth token can successfully remove a connection" do
+      project = insert(:project)
+      user = insert(:user)
+
+      repo_connection =
+        insert(:project_repo_connection,
+          project: project,
+          repo: "someaccount/somerepo",
+          branch: "somebranch",
+          github_installation_id: "1234",
+          access_token: "someaccesstoken"
+        )
+
+      assert is_nil(user.github_oauth_token)
+
+      assert Repo.aggregate(ProjectRepoConnection, :count) == 1
+
+      assert {:ok, _connection} =
+               VersionControl.remove_github_connection(
+                 repo_connection,
+                 user
+               )
+
+      assert Repo.aggregate(ProjectRepoConnection, :count) == 0
     end
   end
 
@@ -381,5 +385,16 @@ defmodule Lightning.VersionControlTest do
                "access_token" => "access-token"
              }
     end
+  end
+
+  defp user_with_valid_github_oauth do
+    active_token = %{
+      "access_token" => "access-token",
+      "refresh_token" => "refresh-token",
+      "expires_at" => DateTime.utc_now() |> DateTime.add(500),
+      "refresh_token_expires_at" => DateTime.utc_now() |> DateTime.add(500)
+    }
+
+    insert(:user, github_oauth_token: active_token) |> Lightning.Repo.reload()
   end
 end
