@@ -3,13 +3,15 @@ defmodule Lightning.Jobs do
   The Jobs context.
   """
 
-  import Ecto.Query, warn: false
+  import Ecto.Query
 
+  alias Ecto.Multi
   alias Lightning.Projects.Project
   alias Lightning.Repo
   alias Lightning.Workflows.Edge
   alias Lightning.Workflows.Job
   alias Lightning.Workflows.Query
+  alias Lightning.Workflows.Snapshot
   alias Lightning.Workflows.Workflow
 
   @doc """
@@ -134,9 +136,34 @@ defmodule Lightning.Jobs do
 
   """
   def create_job(attrs \\ %{}) do
-    %Job{}
-    |> Job.changeset(attrs)
-    |> Repo.insert()
+    changeset =
+      Job.changeset(%Job{}, attrs)
+
+    Multi.new()
+    |> Multi.insert(:job, changeset)
+    |> Multi.run(:workflow, fn repo, %{job: job} ->
+      workflow =
+        job
+        |> Ecto.assoc(:workflow)
+        |> repo.one!()
+        |> Workflow.touch()
+        |> repo.update!()
+
+      {:ok, workflow}
+    end)
+    |> Multi.insert(
+      :snapshot,
+      &(Map.get(&1, :workflow) |> Snapshot.build()),
+      returning: false
+    )
+    |> Repo.transaction()
+    |> case do
+      {:ok, %{job: job}} ->
+        {:ok, job}
+
+      {:error, _name, changeset, _changes} ->
+        {:error, changeset}
+    end
   end
 
   @doc """

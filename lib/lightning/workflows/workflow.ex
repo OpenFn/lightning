@@ -43,7 +43,7 @@ defmodule Lightning.Workflows.Workflow do
 
     field :delete, :boolean, virtual: true
 
-    timestamps()
+    timestamps(type: :utc_datetime)
   end
 
   @doc false
@@ -69,5 +69,18 @@ defmodule Lightning.Workflows.Workflow do
   def request_deletion_changeset(workflow, attrs) do
     workflow
     |> cast(attrs, [:deleted_at])
+  end
+
+  @doc """
+  Forces an update to the workflows `updated_at` timestamp and the
+  `lock_version`. This is useful when updating a child record like jobs or
+  triggers and a snapshot needs to made; but the Workflow itself didn't change.
+  """
+  @spec touch(t()) :: Ecto.Changeset.t(t())
+  def touch(workflow) do
+    workflow
+    |> change()
+    |> force_change(:updated_at, DateTime.utc_now(:second))
+    |> optimistic_lock(:lock_version)
   end
 end
