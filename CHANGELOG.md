@@ -17,6 +17,8 @@ and this project adheres to
 
 ### Added
 
+- Allow description below the page title
+  [#1975](https://github.com/OpenFn/lightning/issues/1975)
 - Enable users to connect projects to their Github repos and branches that they
   have access to [#1895](https://github.com/OpenFn/lightning/issues/1895)
 - Enable users to connect multiple projects to a single Github repo
