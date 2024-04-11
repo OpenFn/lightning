@@ -633,7 +633,8 @@ defmodule Lightning.UsageTrackingTest do
       assert %{
                submitted: false,
                submitted_at: nil,
-               report_date: ^expected_report_date
+               report_date: ^expected_report_date,
+               submission_status: :pending
              } = report
 
       assert %{
@@ -658,7 +659,8 @@ defmodule Lightning.UsageTrackingTest do
                id: ^inserted_id,
                submitted: false,
                submitted_at: nil,
-               report_date: ^date
+               report_date: ^date,
+               submission_status: :pending
              } = report
 
       assert %{
@@ -717,7 +719,8 @@ defmodule Lightning.UsageTrackingTest do
       assert %{
                submitted: false,
                submitted_at: nil,
-               report_date: ^expected_report_date
+               report_date: ^expected_report_date,
+               submission_status: :pending
              } = report
 
       assert %{
@@ -742,7 +745,8 @@ defmodule Lightning.UsageTrackingTest do
                id: ^inserted_id,
                submitted: false,
                submitted_at: nil,
-               report_date: ^date
+               report_date: ^date,
+               submission_status: :pending
              } = report
 
       assert %{
@@ -755,7 +759,12 @@ defmodule Lightning.UsageTrackingTest do
   describe ".update_report_submission - successful" do
     setup do
       report =
-        insert(:usage_tracking_report, submitted: false, submitted_at: nil)
+        insert(
+          :usage_tracking_report,
+          submitted: false,
+          submitted_at: nil,
+          submission_status: :pending
+        )
 
       %{report: report}
     end
@@ -767,7 +776,8 @@ defmodule Lightning.UsageTrackingTest do
 
       assert %{
                submitted: true,
-               submitted_at: submitted_at
+               submitted_at: submitted_at,
+               submission_status: :success
              } = Repo.get!(Report, report.id)
 
       assert DateTime.diff(DateTime.utc_now(), submitted_at, :second) < 2
@@ -780,7 +790,8 @@ defmodule Lightning.UsageTrackingTest do
 
       assert %{
                submitted: true,
-               submitted_at: submitted_at
+               submitted_at: submitted_at,
+               submission_status: :success
              } = updated_report
 
       assert DateTime.diff(DateTime.utc_now(), submitted_at, :second) < 2
@@ -789,14 +800,12 @@ defmodule Lightning.UsageTrackingTest do
 
   describe ".update_report_submission - unsuccessful" do
     setup do
-      # Create an `artificial` report to validate logic - there is currently
-      # no use case that would result in code overwriting a report that has
-      # been successfully submitted,
       report =
         insert(
           :usage_tracking_report,
-          submitted: true,
-          submitted_at: DateTime.utc_now()
+          submitted: false,
+          submitted_at: DateTime.utc_now(),
+          submission_status: :pending
         )
 
       %{report: report}
@@ -809,7 +818,8 @@ defmodule Lightning.UsageTrackingTest do
 
       assert %{
                submitted: false,
-               submitted_at: nil
+               submitted_at: nil,
+               submission_status: :failure
              } = Repo.get!(Report, report.id)
     end
 
@@ -820,7 +830,8 @@ defmodule Lightning.UsageTrackingTest do
 
       assert %{
                submitted: false,
-               submitted_at: nil
+               submitted_at: nil,
+               submission_status: :failure
              } = updated_report
     end
   end
