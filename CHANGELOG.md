@@ -19,6 +19,10 @@ and this project adheres to
 
 - Allow description below the page title
   [#1975](https://github.com/OpenFn/lightning/issues/1975)
+- Enable users to connect projects to their Github repos and branches that they
+  have access to [#1895](https://github.com/OpenFn/lightning/issues/1895)
+- Enable users to connect multiple projects to a single Github repo
+  [#1811](https://github.com/OpenFn/lightning/issues/1811)
 
 ### Changed
 
@@ -26,6 +30,9 @@ and this project adheres to
   [#1968](https://github.com/OpenFn/lightning/issues/1968)
 
 ### Fixed
+
+- Fix sync to branch only targetting main branch
+  [#1892](https://github.com/OpenFn/lightning/issues/1892)
 
 ## [v2.3.1] - 2024-04-03
 

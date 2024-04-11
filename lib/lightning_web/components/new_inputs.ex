@@ -118,6 +118,21 @@ defmodule LightningWeb.Components.NewInputs do
 
   attr :errors, :list, default: []
   attr :checked, :boolean, doc: "the checked flag for checkbox inputs"
+
+  attr :checked_value, :any,
+    default: "true",
+    doc: "the value to be sent when the checkbox is checked. Defaults to 'true'"
+
+  attr :unchecked_value, :any,
+    default: "false",
+    doc:
+      "the value to be sent when the checkbox is unchecked, Defaults to 'false'"
+
+  attr :hidden_input, :boolean,
+    default: true,
+    doc:
+      "controls if this function will generate a hidden input to submit the unchecked value or not. Defaults to 'true'"
+
   attr :prompt, :string, default: nil, doc: "the prompt for select inputs"
 
   attr :options, :list,
@@ -126,6 +141,8 @@ defmodule LightningWeb.Components.NewInputs do
   attr :multiple, :boolean,
     default: false,
     doc: "the multiple flag for select inputs"
+
+  attr :button_placement, :string, default: nil
 
   attr :rest, :global,
     include:
@@ -159,17 +176,22 @@ defmodule LightningWeb.Components.NewInputs do
     ~H"""
     <div phx-feedback-for={@name}>
       <label class="flex items-center gap-2 text-sm leading-6 text-slate-600">
-        <input type="hidden" name={@name} value="false" />
+        <input
+          :if={@hidden_input}
+          type="hidden"
+          name={@name}
+          value={@unchecked_value}
+        />
         <input
           type="checkbox"
           id={@id}
           name={@name}
-          value="true"
+          value={@checked_value}
           checked={@checked}
           class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-600
             checked:disabled:bg-indigo-300 checked:disabled:border-indigo-300
             checked:bg-indigo-600 checked:border-indigo-600 focus:outline-none
-            transition duration-200 cursor-pointer text-indigo-600"
+            transition duration-200 cursor-pointer"
           {@rest}
         />
         <%= @label %>
@@ -183,21 +205,29 @@ defmodule LightningWeb.Components.NewInputs do
     ~H"""
     <div phx-feedback-for={@name}>
       <.label :if={@label} class="mb-2" for={@id}><%= @label %></.label>
-      <select
-        id={@id}
-        name={@name}
-        class={[
-          "block w-full rounded-lg border border-secondary-300 bg-white",
-          "sm:text-sm shadow-sm",
-          "focus:border-primary-300 focus:ring focus:ring-primary-200 focus:ring-opacity-50",
-          "disabled:cursor-not-allowed"
-        ]}
-        multiple={@multiple}
-        {@rest}
-      >
-        <option :if={@prompt} value=""><%= @prompt %></option>
-        <%= Phoenix.HTML.Form.options_for_select(@options, @value) %>
-      </select>
+      <div class="flex w-full">
+        <div class="relative items-center">
+          <select
+            id={@id}
+            name={@name}
+            class={[
+              "block w-full rounded-lg border border-secondary-300 bg-white",
+              "sm:text-sm shadow-sm",
+              "focus:border-primary-300 focus:ring focus:ring-primary-200 focus:ring-opacity-50",
+              "disabled:cursor-not-allowed #{@button_placement == "right" && "rounded-r-none"}",
+              "#{@button_placement == "left" && "rounded-l-none"}"
+            ]}
+            multiple={@multiple}
+            {@rest}
+          >
+            <option :if={@prompt} value=""><%= @prompt %></option>
+            <%= Phoenix.HTML.Form.options_for_select(@options, @value) %>
+          </select>
+        </div>
+        <div class="relative ronded-l-none">
+          <%= render_slot(@inner_block) %>
+        </div>
+      </div>
       <.error :for={msg <- @errors}><%= msg %></.error>
     </div>
     """

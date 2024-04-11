@@ -137,14 +137,15 @@ see what we're working on now and what's coming next.
 1. Install the latest version of
    [Docker](https://docs.docker.com/engine/install/)
 2. Clone [this repo](https://github.com/OpenFn/Lightning) using git
-3. Setup PostgreSQL database with: `docker compose build && docker compose run --rm web mix ecto.migrate`
+3. Setup PostgreSQL database with:
+   `docker compose build && docker compose run --rm web mix ecto.migrate`
 4. Run Lightning and PostgresSQL with: `docker compose up`
 
 By default the application will be running at
 [localhost:4000](http://localhost:4000/).
 
-See ["Problems with Docker"](#problems-with-docker) for
-additional troubleshooting help. Note that you can also create your own
+See ["Problems with Docker"](#problems-with-docker) for additional
+troubleshooting help. Note that you can also create your own
 `docker-compose.yml` file, configuring a postgres database and using a
 [pre-built image](https://hub.docker.com/repository/docker/openfn/lightning)
 from Dockerhub.
@@ -204,6 +205,26 @@ available. You'll need asdf plugins for
 [Elixir](https://github.com/asdf-vm/asdf-elixir) and
 [k6](https://github.com/grimoh/asdf-k6).
 
+We use [libsodium](https://doc.libsodium.org/) for encoding values as required
+by the
+[Github API](https://docs.github.com/en/rest/guides/encrypting-secrets-for-the-rest-api).
+You'll need to install `libsodium` in order for the application to compile.
+
+For Mac Users:
+
+```sh
+brew install libsodium
+```
+
+For Debian Users:
+
+```sh
+sudo apt-get install libsodium-dev
+```
+
+You can find more on
+[how to install libsodium here](https://doc.libsodium.org/installation)
+
 ```sh
 asdf install  # Install language versions
 mix local.hex
@@ -211,6 +232,7 @@ mix deps.get
 mix local.rebar --force
 mix ecto.create # Create a development database in Postgres
 mix ecto.migrate
+[[ $(uname -m) == 'arm64' ]] && CPATH=/opt/homebrew/include LIBRARY_PATH=/opt/homebrew/lib mix deps.compile enacl # Force compile enacl if on M1
 [[ $(uname -m) == 'arm64' ]] && mix compile.rambo # Force compile rambo if on M1
 mix lightning.install_runtime
 mix lightning.install_schemas
@@ -260,21 +282,17 @@ pitfalls and make sure we keep everything clean and consistent.
 
 In addition to our test suite, you can run the following commands:
 
-- `mix format --check-formatted`  
-  Code formatting checker, run again without the `--check-formatted` flag to
-  have your code automatically changed.
-- `mix dialyzer`  
-  Static analysis for type mismatches and other common warnings. See
-  [dialyxir](https://github.com/jeremyjh/dialyxir).
-- `mix credo --strict --all`  
-  Static analysis for consistency, and coding standards. See
-  [Credo](https://github.com/rrrene/credo).
-- `mix sobelow`  
-  Check for commonly known security exploits. See
+- `mix format --check-formatted` Code formatting checker, run again without the
+  `--check-formatted` flag to have your code automatically changed.
+- `mix dialyzer` Static analysis for type mismatches and other common warnings.
+  See [dialyxir](https://github.com/jeremyjh/dialyxir).
+- `mix credo --strict --all` Static analysis for consistency, and coding
+  standards. See [Credo](https://github.com/rrrene/credo).
+- `mix sobelow` Check for commonly known security exploits. See
   [Sobelow](https://sobelow.io/).
-- `MIX_ENV=test mix coveralls`  
-  Test coverage reporter. This command also runs the test suite, and can be used
-  in place of `mix test` when checking everything before pushing your code. See
+- `MIX_ENV=test mix coveralls` Test coverage reporter. This command also runs
+  the test suite, and can be used in place of `mix test` when checking
+  everything before pushing your code. See
   [excoveralls](https://github.com/parroty/excoveralls).
 
 > For convenience there is a `verify` mix task that runs all of the above and

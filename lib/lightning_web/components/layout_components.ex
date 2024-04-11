@@ -8,7 +8,7 @@ defmodule LightningWeb.LayoutComponents do
   def menu_items(assigns) do
     ~H"""
     <%= if assigns[:projects] do %>
-      <div class="relative my-4 mx-2">
+      <div class="relative my-4 mx-2 px-2">
         <button
           type="button"
           class="relative w-full cursor-default rounded-md bg-white py-1.5 pl-3
@@ -37,7 +37,6 @@ defmodule LightningWeb.LayoutComponents do
             </svg>
           </span>
         </button>
-
         <ul
           id="project-picklist"
           class="hidden absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-md bg-white py-1 text-base shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none sm:text-sm"
@@ -53,7 +52,6 @@ defmodule LightningWeb.LayoutComponents do
                 class={[
                   "text-gray-900 relative cursor-default select-none py-2 pl-3 pr-9 hover:bg-indigo-600 group hover:text-white"
                 ]}
-                id="listbox-option-0"
                 role="option"
               >
                 <span class={[
