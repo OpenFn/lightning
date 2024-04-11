@@ -73,4 +73,18 @@ defmodule Lightning.Helpers do
   def json_safe(a) when is_atom(a) and not is_boolean(a), do: Atom.to_string(a)
 
   def json_safe(any), do: any
+
+  def version_data do
+    %{branch: branch, commit: commit, image_tag: image} =
+      :lightning
+      |> Application.get_env(:image_info)
+      |> Enum.into(%{})
+
+    %{
+      branch: branch,
+      commit: commit,
+      image: image,
+      spec_version: "v#{Application.spec(:lightning, :vsn)}"
+    }
+  end
 end

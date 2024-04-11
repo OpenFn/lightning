@@ -9,6 +9,7 @@ config :tesla, adapter: Lightning.Tesla.Mock
 config :tesla, Mix.Tasks.Lightning.InstallAdaptorIcons, adapter: Tesla.Mock
 
 config :tesla, Lightning.UsageTracking.Client, adapter: Tesla.Mock
+config :tesla, Lightning.UsageTracking.GithubClient, adapter: Tesla.Mock
 
 # Configure your database
 #

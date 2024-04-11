@@ -1,7 +1,8 @@
 defmodule Lightning.HelpersTest do
-  use ExUnit.Case, async: true
+  use ExUnit.Case, async: false
 
-  import Lightning.Helpers, only: [coerce_json_field: 2]
+  import Lightning.ApplicationHelpers, only: [put_temporary_env: 3]
+  import Lightning.Helpers, only: [coerce_json_field: 2, version_data: 0]
 
   test "coerce_json_field/2 will transform a json string inside a map by it's key" do
     input = %{
@@ -53,5 +54,41 @@ defmodule Lightning.HelpersTest do
              name: "Sadio Mane",
              goals: 123
            }
+  end
+
+  describe "version_data" do
+    test "returns data that can be used to represent the instance version" do
+      put_temporary_env(:lightning, :image_info,
+        branch: "foo-bar",
+        commit: "abc123",
+        image_tag: "vx.y.z"
+      )
+
+      expected = %{
+        branch: "foo-bar",
+        commit: "abc123",
+        image: "vx.y.z",
+        spec_version: "v#{Application.spec(:lightning, :vsn)}"
+      }
+
+      assert version_data() == expected
+    end
+
+    test "correctly deals with nil values" do
+      put_temporary_env(:lightning, :image_info,
+        branch: nil,
+        commit: nil,
+        image_tag: nil
+      )
+
+      expected = %{
+        branch: nil,
+        commit: nil,
+        image: nil,
+        spec_version: "v#{Application.spec(:lightning, :vsn)}"
+      }
+
+      assert version_data() == expected
+    end
   end
 end
