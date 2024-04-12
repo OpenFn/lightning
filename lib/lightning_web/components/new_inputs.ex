@@ -172,7 +172,10 @@ defmodule LightningWeb.Components.NewInputs do
             transition duration-200 cursor-pointer text-indigo-600"
           {@rest}
         />
-        <%= @label %>
+        <%= @label %><span
+          :if={Map.get(@rest, :required, false)}
+          class="text-red-500"
+        >*</span>
       </label>
       <.error :for={msg <- @errors}><%= msg %></.error>
     </div>
@@ -182,7 +185,10 @@ defmodule LightningWeb.Components.NewInputs do
   def input(%{type: "select"} = assigns) do
     ~H"""
     <div phx-feedback-for={@name}>
-      <.label :if={@label} class="mb-2" for={@id}><%= @label %></.label>
+      <.label :if={@label} class="mb-2" for={@id}>
+        <%= @label %>
+        <span :if={Map.get(@rest, :required, false)} class="text-red-500">*</span>
+      </.label>
       <select
         id={@id}
         name={@name}
@@ -206,7 +212,12 @@ defmodule LightningWeb.Components.NewInputs do
   def input(%{type: "textarea"} = assigns) do
     ~H"""
     <div phx-feedback-for={@name} class={@class}>
-      <.label for={@id}><%= @label %></.label>
+      <.label for={@id}>
+        <%= @label %><span
+          :if={Map.get(@rest, :required, false)}
+          class="text-red-500"
+        >*</span>
+      </.label>
       <textarea
         id={@id}
         name={@name}
@@ -231,7 +242,12 @@ defmodule LightningWeb.Components.NewInputs do
   def input(%{type: "password"} = assigns) do
     ~H"""
     <div phx-feedback-for={@name}>
-      <.label for={@id}><%= @label %></.label>
+      <.label for={@id}>
+        <%= @label %><span
+          :if={Map.get(@rest, :required, false)}
+          class="text-red-500"
+        >*</span>
+      </.label>
       <div class="relative mt-2 rounded-lg shadow-sm">
         <input
           type={@type}
@@ -308,7 +324,12 @@ defmodule LightningWeb.Components.NewInputs do
   def input(assigns) do
     ~H"""
     <div phx-feedback-for={@name}>
-      <.label :if={@label} for={@id} class="mb-2"><%= @label %></.label>
+      <.label :if={@label} for={@id} class="mb-2">
+        <%= @label %><span
+          :if={Map.get(@rest, :required, false)}
+          class="text-red-500"
+        >*</span>
+      </.label>
       <input
         type={@type}
         name={@name}

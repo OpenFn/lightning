@@ -323,7 +323,7 @@
                 }
                 projects={@projects}
                 project={@project}
-                can_create_project_credential={@can_create_project_credential}
+                allow_global={@current_user.role === :superuser}
                 return_to={~p"/projects/#{@project.id}/settings#credentials"}
               />
             </div>
@@ -370,9 +370,7 @@
                       oauth_client={client}
                       projects={@projects}
                       project={@project}
-                      can_create_project_credential={
-                        @can_create_project_credential
-                      }
+                      allow_global={@current_user.role === :superuser}
                       return_to={
                         ~p"/projects/#{@project.id}/settings#credentials"
                       }

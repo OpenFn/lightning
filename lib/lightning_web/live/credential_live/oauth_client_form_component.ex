@@ -14,7 +14,7 @@ defmodule LightningWeb.CredentialLive.OauthClientFormComponent do
     :id,
     :action,
     :oauth_client,
-    :current_user,
+    :allow_global,
     :projects,
     :on_save,
     :button,
@@ -137,7 +137,7 @@ defmodule LightningWeb.CredentialLive.OauthClientFormComponent do
   end
 
   def handle_event("save", %{"oauth_client" => oauth_client_params}, socket) do
-    if socket.assigns.can_create_project_credential do
+    if socket.assigns.can_create_oauth_client do
       save_oauth_client(
         socket,
         socket.assigns.action,
@@ -188,7 +188,12 @@ defmodule LightningWeb.CredentialLive.OauthClientFormComponent do
           <div class="space-y-6 bg-white px-4 py-5 sm:p-6">
             <div class="space-y-4">
               <div>
-                <NewInputs.input type="text" field={f[:name]} label="Name *" />
+                <NewInputs.input
+                  type="text"
+                  field={f[:name]}
+                  label="Name"
+                  required="true"
+                />
               </div>
             </div>
 
@@ -197,7 +202,8 @@ defmodule LightningWeb.CredentialLive.OauthClientFormComponent do
                 <NewInputs.input
                   type="text"
                   field={f[:base_url]}
-                  label="Server/Instance URL *"
+                  label="Server/Instance URL"
+                  required="true"
                 />
               </div>
             </div>
@@ -207,7 +213,8 @@ defmodule LightningWeb.CredentialLive.OauthClientFormComponent do
                 <NewInputs.input
                   type="text"
                   field={f[:client_id]}
-                  label="Client ID *"
+                  label="Client ID"
+                  required="true"
                 />
               </div>
             </div>
@@ -238,6 +245,7 @@ defmodule LightningWeb.CredentialLive.OauthClientFormComponent do
                     form={f}
                     projects={@all_projects}
                     selected={@selected_project}
+                    allow_global={@allow_global}
                     phx_target={@myself}
                   />
                 </div>
@@ -275,6 +283,7 @@ defmodule LightningWeb.CredentialLive.OauthClientFormComponent do
 
   attr :projects, :list, required: true
   attr :selected, :map, required: true
+  attr :allow_global, :boolean, default: false
   attr :phx_target, :any, default: nil
   attr :form, :map, required: true
 
@@ -311,7 +320,7 @@ defmodule LightningWeb.CredentialLive.OauthClientFormComponent do
         </div>
       </div>
 
-      <div class="rounded-md bg-yellow-200 p-4 mb-4">
+      <div :if={@allow_global} class="rounded-md bg-yellow-200 p-4 mb-4">
         <h3 class="text-sm font-medium text-yellow-800">
           <LightningWeb.Components.Form.check_box
             form={@form}

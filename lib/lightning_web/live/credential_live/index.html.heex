@@ -72,7 +72,7 @@
       }
       projects={@projects}
       project={nil}
-      can_create_project_credential={true}
+      allow_global={@current_user.role === :superuser}
       return_to={~p"/credentials"}
     />
     <.live_component
@@ -137,7 +137,7 @@
                 oauth_client={client}
                 projects={@projects}
                 project={nil}
-                can_create_project_credential={true}
+                allow_global={@current_user.role === :superuser}
                 return_to={~p"/credentials"}
               />
             <% end %>
