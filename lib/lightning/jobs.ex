@@ -8,10 +8,10 @@ defmodule Lightning.Jobs do
   alias Ecto.Multi
   alias Lightning.Projects.Project
   alias Lightning.Repo
+  alias Lightning.Workflows
   alias Lightning.Workflows.Edge
   alias Lightning.Workflows.Job
   alias Lightning.Workflows.Query
-  alias Lightning.Workflows.Snapshot
   alias Lightning.Workflows.Workflow
 
   @doc """
@@ -141,21 +141,7 @@ defmodule Lightning.Jobs do
 
     Multi.new()
     |> Multi.insert(:job, changeset)
-    |> Multi.run(:workflow, fn repo, %{job: job} ->
-      workflow =
-        job
-        |> Ecto.assoc(:workflow)
-        |> repo.one!()
-        |> Workflow.touch()
-        |> repo.update!()
-
-      {:ok, workflow}
-    end)
-    |> Multi.insert(
-      :snapshot,
-      &(Map.get(&1, :workflow) |> Snapshot.build()),
-      returning: false
-    )
+    |> Workflows.capture_snapshot()
     |> Repo.transaction()
     |> case do
       {:ok, %{job: job}} ->

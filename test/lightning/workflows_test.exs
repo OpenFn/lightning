@@ -287,6 +287,47 @@ defmodule Lightning.WorkflowsTest do
     end
   end
 
+  describe "create_edge/1" do
+    test "creates a new edge, and captures a snapshot" do
+      workflow = insert(:workflow)
+
+      {:ok, edge} =
+        params_for(:edge, workflow: workflow)
+        |> Workflows.create_edge()
+
+      updated_workflow = Ecto.assoc(edge, :workflow) |> Repo.one!()
+
+      assert updated_workflow.lock_version > workflow.lock_version
+
+      snapshot = Workflows.Snapshot.get_current_for(workflow)
+
+      snapshotted_edge = snapshot.edges |> Enum.find(&(&1.id == edge.id))
+
+      assert snapshotted_edge.id == edge.id
+      assert snapshotted_edge.updated_at == edge.updated_at
+
+      fields = [
+        :id,
+        :enabled,
+        :inserted_at,
+        :updated_at,
+        :condition_type,
+        :condition_label,
+        :source_job_id,
+        :source_trigger_id,
+        :target_job_id
+      ]
+
+      [snapshotted_edge, edge]
+      |> Enum.map(fn model ->
+        Map.take(model, fields)
+      end)
+      |> then(fn [lhs, rhs] ->
+        assert lhs == rhs
+      end)
+    end
+  end
+
   describe "workflows and project spaces" do
     setup do
       project = insert(:project)

@@ -59,8 +59,7 @@ defmodule Lightning.Workflows do
       if changeset.changes == %{} do
         multi
       else
-        multi
-        |> insert_snapshot()
+        multi |> capture_snapshot()
       end
     end)
     |> Repo.transaction()
@@ -86,6 +85,58 @@ defmodule Lightning.Workflows do
   def save_workflow(%{} = attrs) do
     Workflow.changeset(%Workflow{}, attrs)
     |> save_workflow()
+  end
+
+  @doc """
+  Creates a snapshot from a multi.
+
+  When the multi already has a `:workflow` change, it is assumed to be changed
+  or inserted and will attempt to build and insert a new snapshot.
+
+  When there isn't a `:workflow` change, it tries to find a dependant model
+  like a Job, Trigger or Edge and uses the workflow associated with that
+  model.
+
+  In this case we assume that the workflow wasn't actually updated,
+  `Workflow.touch()` is called to bump the `updated_at` and the `lock_version`
+  of the workflow before a snapshot is captured.
+  """
+  def capture_snapshot(%Multi{} = multi) do
+    multi
+    |> Multi.merge(fn changes ->
+      if changes[:workflow] do
+        Multi.new()
+      else
+        dependent_change = find_dependent_change(multi)
+
+        Multi.new()
+        |> Multi.run(:workflow, fn repo, _changes ->
+          workflow =
+            changes[dependent_change]
+            |> Ecto.assoc(:workflow)
+            |> repo.one!()
+            |> Workflow.touch()
+            |> repo.update!()
+
+          {:ok, workflow}
+        end)
+      end
+    end)
+    |> insert_snapshot()
+  end
+
+  defp find_dependent_change(multi) do
+    multi
+    |> Multi.to_list()
+    |> Enum.find_value(fn {key, {_action, changeset_or_struct, _}} ->
+      case changeset_or_struct do
+        %{data: %{__struct__: model}} when model in [Job, Edge, Trigger] ->
+          key
+
+        _other ->
+          false
+      end
+    end)
   end
 
   defp insert_snapshot(multi) do
@@ -185,9 +236,17 @@ defmodule Lightning.Workflows do
   Creates an edge
   """
   def create_edge(attrs) do
-    attrs
-    |> Edge.new()
-    |> Repo.insert()
+    Multi.new()
+    |> Multi.insert(:edge, Edge.new(attrs))
+    |> capture_snapshot()
+    |> Repo.transaction()
+    |> case do
+      {:ok, %{edge: edge}} ->
+        {:ok, edge}
+
+      {:error, _run, changeset, _changes} ->
+        {:error, changeset}
+    end
   end
 
   @doc """
