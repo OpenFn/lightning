@@ -287,7 +287,9 @@ defmodule Lightning.WorkOrders do
          steps,
          creating_user
        ) do
-    changeset =
+    Multi.new()
+    |> Multi.insert(
+      :run,
       Run.new(%{priority: :immediate})
       |> put_assoc(:work_order, workorder)
       |> put_assoc(:dataclip, dataclip)
@@ -297,17 +299,25 @@ defmodule Lightning.WorkOrders do
       |> validate_required_assoc(:dataclip)
       |> validate_required_assoc(:work_order)
       |> validate_required_assoc(:created_by)
-
-    Repo.transact(fn ->
-      with {:ok, run} <- Runs.enqueue(changeset),
-           {:ok, _workorder} <- update_state(run) do
-        {:ok, run}
-      end
+    )
+    |> Multi.update_all(
+      :workorder,
+      fn %{run: run} ->
+        update_workorder_query(run)
+      end,
+      [],
+      returning: true
+    )
+    |> Multi.one(:workflow, fn %{workorder: {_n, [%{workflow_id: workflow_id}]}} ->
+      from(w in Workflow, where: w.id == ^workflow_id)
     end)
-    |> tap(fn result ->
-      with {:ok, run} <- result do
-        %{workflow: workflow} = Repo.preload(starting_job, [:workflow])
+    |> Runs.enqueue()
+    |> then(fn result ->
+      with {:ok, %{run: run, workorder: {_n, [workorder]}, workflow: workflow}} <-
+             result do
         Events.run_created(workflow.project_id, run)
+        Events.work_order_updated(workflow.project_id, workorder)
+        {:ok, run}
       end
     end)
   end
@@ -459,18 +469,10 @@ defmodule Lightning.WorkOrders do
 
   See `Lightning.WorkOrders.Query.state_for/1` for more details.
   """
-  @spec update_state(Run.t()) ::
-          {:ok, WorkOrder.t()}
+  @spec update_state(Run.t()) :: {:ok, WorkOrder.t()}
   def update_state(%Run{} = run) do
-    state_query = Query.state_for(run)
-
-    from(wo in WorkOrder,
-      where: wo.id == ^run.work_order_id,
-      join: s in subquery(state_query),
-      on: true,
-      select: wo,
-      update: [set: [state: s.state, last_activity: ^DateTime.utc_now()]]
-    )
+    run
+    |> update_workorder_query()
     |> Repo.update_all([], returning: true)
     |> then(fn {_, [wo]} ->
       updated_wo = Repo.preload(wo, :workflow)
@@ -498,4 +500,16 @@ defmodule Lightning.WorkOrders do
   end
 
   defdelegate subscribe(project_id), to: Events
+
+  defp update_workorder_query(run) do
+    state_query = Query.state_for(run)
+
+    from(wo in WorkOrder,
+      where: wo.id == ^run.work_order_id,
+      join: s in subquery(state_query),
+      on: true,
+      select: wo,
+      update: [set: [state: s.state, last_activity: ^DateTime.utc_now()]]
+    )
+  end
 end
