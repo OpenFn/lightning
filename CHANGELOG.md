@@ -17,6 +17,14 @@ and this project adheres to
 
 ### Added
 
+### Changed
+
+### Fixed
+
+## [v2.4.0] - 2024-04-12
+
+### Added
+
 - Allow description below the page title
   [#1975](https://github.com/OpenFn/lightning/issues/1975)
 - Enable users to connect projects to their Github repos and branches that they
