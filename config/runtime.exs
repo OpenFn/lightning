@@ -115,10 +115,13 @@ config :lightning,
     )
     |> tap(fn v ->
       if is_nil(v) and
-           Enum.all?(
-             Application.get_env(:lightning, :github_app)
-             |> Keyword.values()
-           ) do
+           Enum.all?([
+             decoded_cert,
+             github_app_id,
+             github_app_name,
+             github_app_client_id,
+             github_app_client_secret
+           ]) do
         raise """
         REPO_CONNECTION_SIGNING_SECRET not set
 
