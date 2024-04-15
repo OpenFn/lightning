@@ -57,6 +57,35 @@ Note that for secure deployments, it's recommended to use a combination of
   JSON plug and may (in future) limit the size of dataclips that can be stored
   as run_results via the websocket connection from a worker.
 
+### Github
+
+Lightning enables connection to github via Github Apps. The following github
+permissions are needed for the github app:
+
+| **Resource** | **Access**     |
+| ------------ | -------------- |
+| Actions      | Read and Write |
+| Contents     | Read and Write |
+| Metadata     | Read only      |
+| Secrets      | Read and Write |
+| Workflows    | Read and Write |
+
+These envrionment variables will need to be set in order to configure the github
+app:
+
+- `GITHUB_APP_ID` - the github app ID.
+- `GITHUB_APP_NAME` - the github app name
+- `GITHUB_APP_CLIENT_ID` - the github app Client ID
+- `GITHUB_APP_CLIENT_SECRET` - the github app Client Secret
+- `GITHUB_CERT` - the github app private key
+
+You can access these from your github app settings menu. Also needed for the
+configurtaion is:
+
+- `REPO_CONNECTION_SIGNING_SECRET` - secret used to sign access tokens. This
+  access token is used to authenticate requests made from the github actions.
+  You can generate this using `mix lightning.gen_encryption_key`
+
 ### Other config
 
 - `ADAPTORS_PATH` - where you store your locally installed adaptors

@@ -99,12 +99,15 @@ github_app_client_secret =
     Utils.get_env([:lightning, :github_app, :client_secret])
   )
 
-config :lightning, :github_app,
+github_config = [
   cert: decoded_cert,
   app_id: github_app_id,
   app_name: github_app_name,
   client_id: github_app_client_id,
   client_secret: github_app_client_secret
+]
+
+config :lightning, :github_app, github_config
 
 config :lightning,
   repo_connection_signing_secret:
@@ -114,11 +117,7 @@ config :lightning,
       Utils.get_env([:lightning, :repo_connection_signing_secret])
     )
     |> tap(fn v ->
-      if is_nil(v) and
-           Enum.all?(
-             Application.get_env(:lightning, :github_app)
-             |> Keyword.values()
-           ) do
+      if is_nil(v) and Enum.all?(github_config |> Keyword.values()) do
         raise """
         REPO_CONNECTION_SIGNING_SECRET not set
 
