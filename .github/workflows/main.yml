@@ -3,7 +3,6 @@ on:
   push:
     branches:
       - main
-      - fix-docs-failing
 permissions:
   contents: write
 jobs:
