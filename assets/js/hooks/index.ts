@@ -8,6 +8,14 @@ import { initiateSaveAndRun } from '../common';
 
 export { LogLineHighlight, ElapsedIndicator, TabSelector };
 
+export const ClearInput = {
+  mounted() {
+    this.handleEvent('clear_input', () => {
+      this.el.value = '';
+    });
+  },
+} as PhoenixHook;
+
 export const ModalHook = {
   mounted() {
     this.handleEvent('close_modal', () => {
