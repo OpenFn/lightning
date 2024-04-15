@@ -3,6 +3,7 @@ on:
   push:
     branches:
       - main
+      - fix-docs-failing
 permissions:
   contents: write
 jobs:
@@ -14,6 +15,7 @@ jobs:
         with:
           otp-version: 26
           elixir-version: '1.16.2'
+      - run: apt-get install libsodium-dev
       - run: mix deps.get
       - run: mix docs
 
