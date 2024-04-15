@@ -18,7 +18,7 @@ defmodule LightningWeb.CredentialLive.OauthClientFormComponent do
     :projects,
     :on_save,
     :button,
-    :can_create_project_credential,
+    :can_create_oauth_client,
     :return_to
   ]
 
@@ -304,7 +304,7 @@ defmodule LightningWeb.CredentialLive.OauthClientFormComponent do
             prompt=""
             phx-change="select_item"
             phx-target={@phx_target}
-            id={"project_list_for_#{@form[:id].value}"}
+            id={"project_oauth_clients_list_for_#{@form[:id].value}"}
           />
         </div>
         <div class="grow-0 items-right">

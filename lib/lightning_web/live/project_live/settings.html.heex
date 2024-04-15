@@ -324,6 +324,7 @@
                 projects={@projects}
                 project={@project}
                 allow_global={@current_user.role === :superuser}
+                can_create_oauth_client={@can_create_project_credential}
                 return_to={~p"/projects/#{@project.id}/settings#credentials"}
               />
             </div>
@@ -371,6 +372,7 @@
                       projects={@projects}
                       project={@project}
                       allow_global={@current_user.role === :superuser}
+                      can_create_oauth_client={@can_create_project_credential}
                       return_to={
                         ~p"/projects/#{@project.id}/settings#credentials"
                       }

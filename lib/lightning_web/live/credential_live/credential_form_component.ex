@@ -2,12 +2,14 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
   @moduledoc """
   Form Component for working with a single Credential
   """
+  alias Lightning.OauthClients
   use LightningWeb, :live_component
 
   import Ecto.Changeset, only: [fetch_field!: 2, put_assoc: 3]
 
   alias Lightning.Credentials
   alias LightningWeb.Components.NewInputs
+  alias LightningWeb.CredentialLive.GenericOauthComponent
   alias LightningWeb.CredentialLive.JsonSchemaBodyComponent
   alias LightningWeb.CredentialLive.OauthComponent
   alias LightningWeb.CredentialLive.RawBodyComponent
@@ -68,6 +70,11 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
     changeset = Credentials.change_credential(assigns.credential)
     all_projects = Enum.map(projects, &{&1.name, &1.id})
 
+    oauth_clients =
+      if assigns.project,
+        do: OauthClients.list_clients(assigns.project),
+        else: OauthClients.list_clients_for_user(assigns.current_user)
+
     initial_assigns =
       Map.filter(assigns, &match?({k, _} when k in @valid_assigns, &1))
 
@@ -90,6 +97,7 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
      |> assign(changeset: changeset)
      |> assign(update_body: update_body)
      |> assign(all_projects: all_projects)
+     |> assign(oauth_clients: oauth_clients)
      |> assign(schema: schema)
      |> assign(selected_project: nil)
      |> update_available_projects()}
@@ -384,6 +392,7 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
             sandbox_value={@sandbox_value}
             api_version={@api_version}
             update_body={@update_body}
+            oauth_clients={@oauth_clients}
             scopes_changed={@scopes_changed}
           >
             <div class="space-y-6 bg-white px-4 py-5 sm:p-6">
@@ -502,6 +511,7 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
   attr :api_version, :string, default: ""
   attr :update_body, :any, required: false
   attr :scopes_changed, :boolean, required: false
+  attr :oauth_clients, :list, required: false
   slot :inner_block
 
   defp form_component(%{type: "googlesheets"} = assigns) do
@@ -534,6 +544,14 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
     >
       <%= render_slot(@inner_block, l) %>
     </OauthComponent.fieldset>
+    """
+  end
+
+  defp form_component(%{type: "generic_oauth"} = assigns) do
+    ~H"""
+    <GenericOauthComponent.fieldset :let={l} form={@form} clients={@oauth_clients}>
+      <%= render_slot(@inner_block, l) %>
+    </GenericOauthComponent.fieldset>
     """
   end
 
@@ -575,7 +593,7 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
             prompt=""
             phx-change="select_item"
             phx-target={@phx_target}
-            id={"project_list_for_#{@form[:id].value}"}
+            id={"project_credentials_list_for_#{@form[:id].value}"}
           />
         </div>
         <div class="grow-0 items-right">
@@ -677,6 +695,7 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
 
     schemas_options
     |> Enum.concat([{"Raw JSON", "raw", nil}])
+    |> Enum.concat([{"Generic Oauth", "generic_oauth", nil}])
     |> handle_oauth_item(
       {"GoogleSheets", "googlesheets",
        Routes.static_path(socket, "/images/oauth-2.png")},
