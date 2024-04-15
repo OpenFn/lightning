@@ -13,6 +13,24 @@ defmodule LightningWeb.WorkflowLive.Helpers do
   alias Lightning.WorkOrder
   alias Lightning.WorkOrders
 
+  @spec save_workflow(Ecto.Changeset.t()) ::
+          {:ok, Workflows.Workflow.t()}
+          | {:error, Ecto.Changeset.t() | UsageLimiting.message()}
+  def save_workflow(changeset) do
+    case UsageLimiter.limit_action(
+           %Action{type: :activate_workflow, changeset: changeset},
+           %Context{
+             project_id: Ecto.Changeset.get_field(changeset, :project_id)
+           }
+         ) do
+      :ok ->
+        Repo.insert_or_update(changeset)
+
+      {:error, _reason, message} ->
+        {:error, message}
+    end
+  end
+
   @spec save_and_run(
           Ecto.Changeset.t(Workflows.Workflow.t()),
           map(),
@@ -58,9 +76,5 @@ defmodule LightningWeb.WorkflowLive.Helpers do
     params
     |> WorkOrders.Manual.new(opts)
     |> Ecto.Changeset.apply_action(:validate)
-  end
-
-  defp save_workflow(changeset) do
-    Repo.insert_or_update(changeset)
   end
 end
