@@ -256,7 +256,7 @@ defmodule LightningWeb.CredentialLiveTest do
       assert index_live |> has_element?("#credential-form-new_body")
 
       index_live
-      |> element("#project_list_for_")
+      |> element("#project_credentials_list_for_")
       |> render_change(%{"selected_project" => %{"id" => project.id}})
 
       index_live
@@ -539,7 +539,7 @@ defmodule LightningWeb.CredentialLiveTest do
       {:ok, view, _html} = live(conn, ~p"/credentials")
 
       view
-      |> element("#project_list_for_#{credential.id}")
+      |> element("#project_credentials_list_for_#{credential.id}")
       |> render_change(selected_project: %{"id" => project.id})
 
       view
@@ -636,7 +636,7 @@ defmodule LightningWeb.CredentialLiveTest do
 
       # Try adding an existing project credential
       view
-      |> element("#project_list_for_#{credential.id}")
+      |> element("#project_credentials_list_for_#{credential.id}")
       |> render_change(selected_project: %{"id" => project.id})
 
       html =
@@ -660,7 +660,7 @@ defmodule LightningWeb.CredentialLiveTest do
 
       # now let's add it back
       view
-      |> element("#project_list_for_#{credential.id}")
+      |> element("#project_credentials_list_for_#{credential.id}")
       |> render_change(selected_project: %{"id" => project.id})
 
       view
