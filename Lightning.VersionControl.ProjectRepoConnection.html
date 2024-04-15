@@ -5,15 +5,15 @@
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="generator" content="ExDoc v0.30.9">
-    <meta name="project" content="Lightning v2.3.1">
+    <meta name="project" content="Lightning v2.4.0">
 
-    <title>Lightning.VersionControl.ProjectRepoConnection — Lightning v2.3.1</title>
+    <title>Lightning.VersionControl.ProjectRepoConnection — Lightning v2.4.0</title>
     <link rel="stylesheet" href="dist/html-elixir-XFYN5IVA.css" />
 
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-EPF2X7PV.js"></script>
-    <script src="dist/sidebar_items-E1A3CD1D.js"></script>
+    <script src="dist/sidebar_items-D418926F.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -72,7 +72,7 @@
 Lightning
       </a>
       <div class="sidebar-projectVersion" translate="no">
-        v2.3.1
+        v2.4.0
       </div>
     </div>
     <ul id="sidebar-listNav" class="sidebar-listNav" role="tablist">
@@ -131,7 +131,7 @@ Pages
     </a>
 
   <span translate="no">Lightning.VersionControl.ProjectRepoConnection</span> 
-  <small class="app-vsn" translate="no">(Lightning v2.3.1)</small>
+  <small class="app-vsn" translate="no">(Lightning v2.4.0)</small>
 
 </h1>
 
@@ -175,6 +175,38 @@ Pages
 
     </div>
 
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#config_path/1" translate="no">config_path(repo_connection)</a>
+
+      </div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#configure_changeset/2" translate="no">configure_changeset(project_repo_connection, attrs)</a>
+
+      </div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#create_changeset/2" translate="no">create_changeset(project_repo_connection, attrs)</a>
+
+      </div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#reconfigure_changeset/2" translate="no">reconfigure_changeset(project_repo_connection, attrs)</a>
+
+      </div>
+
+    </div>
+
 </div>
 
   </section>
@@ -197,7 +229,7 @@ Pages
     </a>
     <h1 class="signature" translate="no">t()</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/version_control/project_repo_connection.ex#L13" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/version_control/project_repo_connection.ex#L12" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -211,16 +243,18 @@ Pages
 
           <pre translate="no"><span class="attribute">@type</span> t() :: %Lightning.VersionControl.ProjectRepoConnection{
   __meta__: <a href="https://hexdocs.pm/ecto/3.10.3/Ecto.Schema.Metadata.html#t:t/0">Ecto.Schema.Metadata.t</a>(),
+  accept: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
+  access_token: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
   branch: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>() | nil,
+  config_path: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
   github_installation_id: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>() | nil,
   id: <a href="https://hexdocs.pm/ecto/3.10.3/Ecto.UUID.html#t:t/0">Ecto.UUID.t</a>() | nil,
   inserted_at: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
   project: nil | <a href="Lightning.Projects.Project.html#t:t/0">Lightning.Projects.Project.t</a>() | Ecto.Association.NotLoaded,
   project_id: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
   repo: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>() | nil,
-  updated_at: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
-  user: nil | <a href="Lightning.Accounts.User.html#t:t/0">Lightning.Accounts.User.t</a>() | Ecto.Association.NotLoaded,
-  user_id: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>()
+  sync_direction: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
+  updated_at: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>()
 }</pre>
 
       </div>
@@ -249,7 +283,95 @@ Pages
     </a>
     <h1 class="signature" translate="no">changeset(project_repo_connection, attrs)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/version_control/project_repo_connection.ex#L37" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/version_control/project_repo_connection.ex#L50" class="icon-action" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+
+  </section>
+</section>
+<section class="detail" id="config_path/1">
+
+  <div class="detail-header">
+    <a href="#config_path/1" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">config_path(repo_connection)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/version_control/project_repo_connection.ex#L101" class="icon-action" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+
+  </section>
+</section>
+<section class="detail" id="configure_changeset/2">
+
+  <div class="detail-header">
+    <a href="#configure_changeset/2" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">configure_changeset(project_repo_connection, attrs)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/version_control/project_repo_connection.ex#L59" class="icon-action" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+
+  </section>
+</section>
+<section class="detail" id="create_changeset/2">
+
+  <div class="detail-header">
+    <a href="#create_changeset/2" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">create_changeset(project_repo_connection, attrs)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/version_control/project_repo_connection.ex#L79" class="icon-action" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+
+  </section>
+</section>
+<section class="detail" id="reconfigure_changeset/2">
+
+  <div class="detail-header">
+    <a href="#reconfigure_changeset/2" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">reconfigure_changeset(project_repo_connection, attrs)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/version_control/project_repo_connection.ex#L73" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>

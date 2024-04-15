@@ -7,7 +7,7 @@
     <meta name="generator" content="ExDoc v0.30.9">
     <meta name="project" content="Lightning v2.4.0">
 
-    <title>Lightning.AuthProviders.Store — Lightning v2.4.0</title>
+    <title>Lightning.UsageTracking.GithubClient — Lightning v2.4.0</title>
     <link rel="stylesheet" href="dist/html-elixir-XFYN5IVA.css" />
 
 
@@ -125,21 +125,19 @@ Pages
 </button>
 
 
-    <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers/store.ex#L1" title="View Source" class="icon-action" rel="help">
+    <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/usage_tracking/github_client.ex#L1" title="View Source" class="icon-action" rel="help">
       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
       <span class="sr-only">View Source</span>
     </a>
 
-  <span translate="no">Lightning.AuthProviders.Store</span> 
+  <span translate="no">Lightning.UsageTracking.GithubClient</span> 
   <small class="app-vsn" translate="no">(Lightning v2.4.0)</small>
 
 </h1>
 
 
   <section id="moduledoc">
-<p>Store module for caching Handlers.</p><p>Since Handlers often have to fetch their <code class="inline">.well-known</code> files when being
-initialized we cache these in order to avoid repeatedly making HTTP requests
-to a providers API.</p>
+<p>A github client to make unauthenticated HTTP requests to Github.</p>
   </section>
 
 
@@ -150,20 +148,6 @@ to a providers API.</p>
       </a>
       <span class="text">Summary</span>
     </h1>
-<div class="summary-types summary">
-  <h2>
-    <a href="#types">Types</a>
-  </h2>
-
-    <div class="summary-row">
-      <div class="summary-signature">
-        <a href="#t:finder/0" translate="no">finder()</a>
-
-      </div>
-
-    </div>
-
-</div>
 <div class="summary-functions summary">
   <h2>
     <a href="#functions">Functions</a>
@@ -171,7 +155,7 @@ to a providers API.</p>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#get_handler/2" translate="no">get_handler(name, finder \\ &amp;default/1)</a>
+        <a href="#build_client/1" translate="no">build_client(host)</a>
 
       </div>
 
@@ -179,23 +163,7 @@ to a providers API.</p>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#get_handlers/0" translate="no">get_handlers()</a>
-
-      </div>
-
-    </div>
-
-    <div class="summary-row">
-      <div class="summary-signature">
-        <a href="#put_handler/2" translate="no">put_handler(name, handler)</a>
-
-      </div>
-
-    </div>
-
-    <div class="summary-row">
-      <div class="summary-signature">
-        <a href="#remove_handler/1" translate="no">remove_handler(name)</a>
+        <a href="#open_fn_commit?/1" translate="no">open_fn_commit?(commit_sha)</a>
 
       </div>
 
@@ -205,48 +173,6 @@ to a providers API.</p>
 
   </section>
 
-
-  <section id="types" class="details-list">
-    <h1 class="section-heading">
-      <a class="hover-link" href="#types">
-        <i class="ri-link-m" aria-hidden="true"></i>
-      </a>
-      <span class="text">Types</span>
-    </h1>
-    <div class="types-list">
-<section class="detail" id="t:finder/0">
-
-  <div class="detail-header">
-    <a href="#t:finder/0" class="detail-link" title="Link to this type">
-      <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this type</span>
-    </a>
-    <h1 class="signature" translate="no">finder()</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers/store.ex#L11" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
-
-
-  </div>
-
-  <section class="docstring">
-
-      <div class="specs">
-
-          <pre translate="no"><span class="attribute">@type</span> finder() ::
-  (name :: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>() -&gt;
-     {:ok, <a href="Lightning.AuthProviders.Handler.html#t:t/0">Lightning.AuthProviders.Handler.t</a>()} | {:error, <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>()})</pre>
-
-      </div>
-
-
-  </section>
-</section>
-
-    </div>
-  </section>
 
   <section id="functions" class="details-list">
     <h1 class="section-heading">
@@ -256,18 +182,16 @@ to a providers API.</p>
       <span class="text">Functions</span>
     </h1>
     <div class="functions-list">
-<section class="detail" id="get_handler/2">
-
-    <span id="get_handler/1"></span>
+<section class="detail" id="build_client/1">
 
   <div class="detail-header">
-    <a href="#get_handler/2" class="detail-link" title="Link to this function">
+    <a href="#build_client/1" class="detail-link" title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">get_handler(name, finder \\ &amp;default/1)</h1>
+    <h1 class="signature" translate="no">build_client(host)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers/store.ex#L23" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/usage_tracking/github_client.ex#L23" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -276,27 +200,20 @@ to a providers API.</p>
   </div>
 
   <section class="docstring">
-
-      <div class="specs">
-
-          <pre translate="no"><span class="attribute">@spec</span> get_handler(key :: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>(), default :: <a href="#t:finder/0">finder</a>()) ::
-  {:ok, <a href="Lightning.AuthProviders.Handler.html#t:t/0">Lightning.AuthProviders.Handler.t</a>()} | {:error, :not_found}</pre>
-
-      </div>
 
 
   </section>
 </section>
-<section class="detail" id="get_handlers/0">
+<section class="detail" id="open_fn_commit?/1">
 
   <div class="detail-header">
-    <a href="#get_handlers/0" class="detail-link" title="Link to this function">
+    <a href="#open_fn_commit?/1" class="detail-link" title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">get_handlers()</h1>
+    <h1 class="signature" translate="no">open_fn_commit?(commit_sha)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers/store.ex#L14" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/usage_tracking/github_client.ex#L11" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -305,71 +222,6 @@ to a providers API.</p>
   </div>
 
   <section class="docstring">
-
-      <div class="specs">
-
-          <pre translate="no"><span class="attribute">@spec</span> get_handlers() :: {:ok, [<a href="Lightning.AuthProviders.Handler.html#t:t/0">Lightning.AuthProviders.Handler.t</a>()]}</pre>
-
-      </div>
-
-
-  </section>
-</section>
-<section class="detail" id="put_handler/2">
-
-  <div class="detail-header">
-    <a href="#put_handler/2" class="detail-link" title="Link to this function">
-      <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
-    </a>
-    <h1 class="signature" translate="no">put_handler(name, handler)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers/store.ex#L47" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
-
-
-  </div>
-
-  <section class="docstring">
-
-      <div class="specs">
-
-          <pre translate="no"><span class="attribute">@spec</span> put_handler(
-  name :: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>(),
-  handler :: <a href="Lightning.AuthProviders.Handler.html#t:t/0">Lightning.AuthProviders.Handler.t</a>()
-) :: {:ok, <a href="Lightning.AuthProviders.Handler.html#t:t/0">Lightning.AuthProviders.Handler.t</a>()}</pre>
-
-      </div>
-
-
-  </section>
-</section>
-<section class="detail" id="remove_handler/1">
-
-  <div class="detail-header">
-    <a href="#remove_handler/1" class="detail-link" title="Link to this function">
-      <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
-    </a>
-    <h1 class="signature" translate="no">remove_handler(name)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers/store.ex#L54" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
-
-
-  </div>
-
-  <section class="docstring">
-
-      <div class="specs">
-
-          <pre translate="no"><span class="attribute">@spec</span> remove_handler(name :: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>()) :: {:ok, true}</pre>
-
-      </div>
 
 
   </section>

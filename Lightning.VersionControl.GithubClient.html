@@ -5,15 +5,15 @@
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="generator" content="ExDoc v0.30.9">
-    <meta name="project" content="Lightning v2.3.1">
+    <meta name="project" content="Lightning v2.4.0">
 
-    <title>Lightning.VersionControl.GithubClient — Lightning v2.3.1</title>
+    <title>Lightning.VersionControl.GithubClient — Lightning v2.4.0</title>
     <link rel="stylesheet" href="dist/html-elixir-XFYN5IVA.css" />
 
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-EPF2X7PV.js"></script>
-    <script src="dist/sidebar_items-E1A3CD1D.js"></script>
+    <script src="dist/sidebar_items-D418926F.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -72,7 +72,7 @@
 Lightning
       </a>
       <div class="sidebar-projectVersion" translate="no">
-        v2.3.1
+        v2.4.0
       </div>
     </div>
     <ul id="sidebar-listNav" class="sidebar-listNav" role="tablist">
@@ -131,7 +131,7 @@ Pages
     </a>
 
   <span translate="no">Lightning.VersionControl.GithubClient</span> 
-  <small class="app-vsn" translate="no">(Lightning v2.3.1)</small>
+  <small class="app-vsn" translate="no">(Lightning v2.4.0)</small>
 
 </h1>
 
@@ -172,7 +172,23 @@ to github from Lightning</p>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#build_client/1" translate="no">build_client(installation_id)</a>
+        <a href="#build_basic_auth_client/2" translate="no">build_basic_auth_client(username, password)</a>
+
+      </div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#build_bearer_client/1" translate="no">build_bearer_client(token)</a>
+
+      </div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#build_installation_client/1" translate="no">build_installation_client(installation_id)</a>
 
       </div>
 
@@ -212,7 +228,31 @@ to github from Lightning</p>
 
     <div class="summary-row">
       <div class="summary-signature">
+        <a href="#create_repo_dispatch_event/3" translate="no">create_repo_dispatch_event(client, repo_name, body)</a>
+
+      </div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#create_repo_secret/4" translate="no">create_repo_secret(client, repo, secret_name, body)</a>
+
+      </div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
         <a href="#create_tree/3" translate="no">create_tree(client, repo, body)</a>
+
+      </div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#create_workflow_dispatch_event/4" translate="no">create_workflow_dispatch_event(client, repo_name, workflow_id, body)</a>
 
       </div>
 
@@ -256,7 +296,15 @@ to github from Lightning</p>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#fire_repository_dispatch/3" translate="no">fire_repository_dispatch(installation_id, repo_name, user_email)</a>
+        <a href="#delete_repo_content/4" translate="no">delete_repo_content(client, repo, path, body)</a>
+
+      </div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#delete_repo_secret/3" translate="no">delete_repo_secret(client, repo, secret_name)</a>
 
       </div>
 
@@ -292,7 +340,55 @@ to github from Lightning</p>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#get_repo_branches/2" translate="no">get_repo_branches(installation_id, repo_name)</a>
+        <a href="#get_installation_repos/1" translate="no">get_installation_repos(client)</a>
+
+      </div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#get_installations/1" translate="no">get_installations(client)</a>
+
+      </div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#get_repo/2" translate="no">get_repo(client, repo_name)</a>
+
+      </div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#get_repo_branches/2" translate="no">get_repo_branches(client, repo_name)</a>
+
+      </div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#get_repo_content/4" translate="no">get_repo_content(client, repo, path, ref)</a>
+
+      </div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#get_repo_public_key/2" translate="no">get_repo_public_key(client, repo)</a>
+
+      </div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#get_repo_secret/3" translate="no">get_repo_secret(client, repo, secret_name)</a>
 
       </div>
 
@@ -315,14 +411,6 @@ to github from Lightning</p>
       </div>
 
         <div class="summary-synopsis"><p>Perform a HEAD request.</p></div>
-
-    </div>
-
-    <div class="summary-row">
-      <div class="summary-signature">
-        <a href="#installation_repos/1" translate="no">installation_repos(installation_id)</a>
-
-      </div>
 
     </div>
 
@@ -513,16 +601,60 @@ to github from Lightning</p>
       <span class="text">Functions</span>
     </h1>
     <div class="functions-list">
-<section class="detail" id="build_client/1">
+<section class="detail" id="build_basic_auth_client/2">
 
   <div class="detail-header">
-    <a href="#build_client/1" class="detail-link" title="Link to this function">
+    <a href="#build_basic_auth_client/2" class="detail-link" title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">build_client(installation_id)</h1>
+    <h1 class="signature" translate="no">build_basic_auth_client(username, password)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/version_control/github_client.ex#L92" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/version_control/github_client.ex#L142" class="icon-action" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+
+  </section>
+</section>
+<section class="detail" id="build_bearer_client/1">
+
+  <div class="detail-header">
+    <a href="#build_bearer_client/1" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">build_bearer_client(token)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/version_control/github_client.ex#L130" class="icon-action" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+
+  </section>
+</section>
+<section class="detail" id="build_installation_client/1">
+
+  <div class="detail-header">
+    <a href="#build_installation_client/1" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">build_installation_client(installation_id)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/version_control/github_client.ex#L151" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -544,7 +676,7 @@ to github from Lightning</p>
     </a>
     <h1 class="signature" translate="no">build_oauth_client()</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/version_control/github_client.ex#L79" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/version_control/github_client.ex#L117" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -566,7 +698,7 @@ to github from Lightning</p>
     </a>
     <h1 class="signature" translate="no">create_blob(client, repo, body)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/version_control/github_client.ex#L45" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/version_control/github_client.ex#L57" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -588,7 +720,7 @@ to github from Lightning</p>
     </a>
     <h1 class="signature" translate="no">create_commit(client, repo, body)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/version_control/github_client.ex#L57" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/version_control/github_client.ex#L69" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -610,7 +742,51 @@ to github from Lightning</p>
     </a>
     <h1 class="signature" translate="no">create_ref(client, repo, body)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/version_control/github_client.ex#L61" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/version_control/github_client.ex#L73" class="icon-action" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+
+  </section>
+</section>
+<section class="detail" id="create_repo_dispatch_event/3">
+
+  <div class="detail-header">
+    <a href="#create_repo_dispatch_event/3" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">create_repo_dispatch_event(client, repo_name, body)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/version_control/github_client.ex#L16" class="icon-action" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+
+  </section>
+</section>
+<section class="detail" id="create_repo_secret/4">
+
+  <div class="detail-header">
+    <a href="#create_repo_secret/4" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">create_repo_secret(client, repo, secret_name, body)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/version_control/github_client.ex#L105" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -632,7 +808,29 @@ to github from Lightning</p>
     </a>
     <h1 class="signature" translate="no">create_tree(client, repo, body)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/version_control/github_client.ex#L49" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/version_control/github_client.ex#L61" class="icon-action" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+
+  </section>
+</section>
+<section class="detail" id="create_workflow_dispatch_event/4">
+
+  <div class="detail-header">
+    <a href="#create_workflow_dispatch_event/4" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">create_workflow_dispatch_event(client, repo_name, workflow_id, body)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/version_control/github_client.ex#L20" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -670,11 +868,11 @@ to github from Lightning</p>
 
       </div>
 
-<p>Perform a DELETE request.</p><p>See <a href="#request/1"><code class="inline">request/1</code></a> or <a href="#request/2"><code class="inline">request/2</code></a> for options definition.</p><pre><code class="makeup elixir" translate="no"><span class="n">delete</span><span class="p" data-group-id="0254446441-1">(</span><span class="s">&quot;/users&quot;</span><span class="p" data-group-id="0254446441-1">)</span><span class="w">
-</span><span class="n">delete</span><span class="p" data-group-id="0254446441-2">(</span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">query</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="0254446441-3">[</span><span class="ss">scope</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;admin&quot;</span><span class="p" data-group-id="0254446441-3">]</span><span class="p" data-group-id="0254446441-2">)</span><span class="w">
-</span><span class="n">delete</span><span class="p" data-group-id="0254446441-4">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p" data-group-id="0254446441-4">)</span><span class="w">
-</span><span class="n">delete</span><span class="p" data-group-id="0254446441-5">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">query</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="0254446441-6">[</span><span class="ss">scope</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;admin&quot;</span><span class="p" data-group-id="0254446441-6">]</span><span class="p" data-group-id="0254446441-5">)</span><span class="w">
-</span><span class="n">delete</span><span class="p" data-group-id="0254446441-7">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">body</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="0254446441-8">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="0254446441-8">}</span><span class="p" data-group-id="0254446441-7">)</span></code></pre>
+<p>Perform a DELETE request.</p><p>See <a href="#request/1"><code class="inline">request/1</code></a> or <a href="#request/2"><code class="inline">request/2</code></a> for options definition.</p><pre><code class="makeup elixir" translate="no"><span class="n">delete</span><span class="p" data-group-id="6526461557-1">(</span><span class="s">&quot;/users&quot;</span><span class="p" data-group-id="6526461557-1">)</span><span class="w">
+</span><span class="n">delete</span><span class="p" data-group-id="6526461557-2">(</span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">query</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="6526461557-3">[</span><span class="ss">scope</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;admin&quot;</span><span class="p" data-group-id="6526461557-3">]</span><span class="p" data-group-id="6526461557-2">)</span><span class="w">
+</span><span class="n">delete</span><span class="p" data-group-id="6526461557-4">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p" data-group-id="6526461557-4">)</span><span class="w">
+</span><span class="n">delete</span><span class="p" data-group-id="6526461557-5">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">query</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="6526461557-6">[</span><span class="ss">scope</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;admin&quot;</span><span class="p" data-group-id="6526461557-6">]</span><span class="p" data-group-id="6526461557-5">)</span><span class="w">
+</span><span class="n">delete</span><span class="p" data-group-id="6526461557-7">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">body</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="6526461557-8">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="6526461557-8">}</span><span class="p" data-group-id="6526461557-7">)</span></code></pre>
   </section>
 </section>
 <section class="detail" id="delete!/3">
@@ -703,11 +901,11 @@ to github from Lightning</p>
 
       </div>
 
-<p>Perform a DELETE request.</p><p>See <a href="#request!/1"><code class="inline">request!/1</code></a> or <a href="#request!/2"><code class="inline">request!/2</code></a> for options definition.</p><pre><code class="makeup elixir" translate="no"><span class="n">delete!</span><span class="p" data-group-id="3868865556-1">(</span><span class="s">&quot;/users&quot;</span><span class="p" data-group-id="3868865556-1">)</span><span class="w">
-</span><span class="n">delete!</span><span class="p" data-group-id="3868865556-2">(</span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">query</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="3868865556-3">[</span><span class="ss">scope</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;admin&quot;</span><span class="p" data-group-id="3868865556-3">]</span><span class="p" data-group-id="3868865556-2">)</span><span class="w">
-</span><span class="n">delete!</span><span class="p" data-group-id="3868865556-4">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p" data-group-id="3868865556-4">)</span><span class="w">
-</span><span class="n">delete!</span><span class="p" data-group-id="3868865556-5">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">query</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="3868865556-6">[</span><span class="ss">scope</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;admin&quot;</span><span class="p" data-group-id="3868865556-6">]</span><span class="p" data-group-id="3868865556-5">)</span><span class="w">
-</span><span class="n">delete!</span><span class="p" data-group-id="3868865556-7">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">body</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="3868865556-8">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="3868865556-8">}</span><span class="p" data-group-id="3868865556-7">)</span></code></pre>
+<p>Perform a DELETE request.</p><p>See <a href="#request!/1"><code class="inline">request!/1</code></a> or <a href="#request!/2"><code class="inline">request!/2</code></a> for options definition.</p><pre><code class="makeup elixir" translate="no"><span class="n">delete!</span><span class="p" data-group-id="4002081424-1">(</span><span class="s">&quot;/users&quot;</span><span class="p" data-group-id="4002081424-1">)</span><span class="w">
+</span><span class="n">delete!</span><span class="p" data-group-id="4002081424-2">(</span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">query</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="4002081424-3">[</span><span class="ss">scope</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;admin&quot;</span><span class="p" data-group-id="4002081424-3">]</span><span class="p" data-group-id="4002081424-2">)</span><span class="w">
+</span><span class="n">delete!</span><span class="p" data-group-id="4002081424-4">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p" data-group-id="4002081424-4">)</span><span class="w">
+</span><span class="n">delete!</span><span class="p" data-group-id="4002081424-5">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">query</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="4002081424-6">[</span><span class="ss">scope</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;admin&quot;</span><span class="p" data-group-id="4002081424-6">]</span><span class="p" data-group-id="4002081424-5">)</span><span class="w">
+</span><span class="n">delete!</span><span class="p" data-group-id="4002081424-7">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">body</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="4002081424-8">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="4002081424-8">}</span><span class="p" data-group-id="4002081424-7">)</span></code></pre>
   </section>
 </section>
 <section class="detail" id="delete_app_grant/3">
@@ -719,7 +917,7 @@ to github from Lightning</p>
     </a>
     <h1 class="signature" translate="no">delete_app_grant(client, app_client_id, token)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/version_control/github_client.ex#L73" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/version_control/github_client.ex#L85" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -741,7 +939,7 @@ to github from Lightning</p>
     </a>
     <h1 class="signature" translate="no">delete_ref(client, repo, ref)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/version_control/github_client.ex#L69" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/version_control/github_client.ex#L81" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -754,16 +952,38 @@ to github from Lightning</p>
 
   </section>
 </section>
-<section class="detail" id="fire_repository_dispatch/3">
+<section class="detail" id="delete_repo_content/4">
 
   <div class="detail-header">
-    <a href="#fire_repository_dispatch/3" class="detail-link" title="Link to this function">
+    <a href="#delete_repo_content/4" class="detail-link" title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">fire_repository_dispatch(installation_id, repo_name, user_email)</h1>
+    <h1 class="signature" translate="no">delete_repo_content(client, repo, path, body)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/version_control/github_client.ex#L32" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/version_control/github_client.ex#L51" class="icon-action" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+
+  </section>
+</section>
+<section class="detail" id="delete_repo_secret/3">
+
+  <div class="detail-header">
+    <a href="#delete_repo_secret/3" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">delete_repo_secret(client, repo, secret_name)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/version_control/github_client.ex#L111" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -801,11 +1021,11 @@ to github from Lightning</p>
 
       </div>
 
-<p>Perform a GET request.</p><p>See <a href="#request/1"><code class="inline">request/1</code></a> or <a href="#request/2"><code class="inline">request/2</code></a> for options definition.</p><pre><code class="makeup elixir" translate="no"><span class="n">get</span><span class="p" data-group-id="5724408747-1">(</span><span class="s">&quot;/users&quot;</span><span class="p" data-group-id="5724408747-1">)</span><span class="w">
-</span><span class="n">get</span><span class="p" data-group-id="5724408747-2">(</span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">query</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="5724408747-3">[</span><span class="ss">scope</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;admin&quot;</span><span class="p" data-group-id="5724408747-3">]</span><span class="p" data-group-id="5724408747-2">)</span><span class="w">
-</span><span class="n">get</span><span class="p" data-group-id="5724408747-4">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p" data-group-id="5724408747-4">)</span><span class="w">
-</span><span class="n">get</span><span class="p" data-group-id="5724408747-5">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">query</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="5724408747-6">[</span><span class="ss">scope</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;admin&quot;</span><span class="p" data-group-id="5724408747-6">]</span><span class="p" data-group-id="5724408747-5">)</span><span class="w">
-</span><span class="n">get</span><span class="p" data-group-id="5724408747-7">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">body</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="5724408747-8">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="5724408747-8">}</span><span class="p" data-group-id="5724408747-7">)</span></code></pre>
+<p>Perform a GET request.</p><p>See <a href="#request/1"><code class="inline">request/1</code></a> or <a href="#request/2"><code class="inline">request/2</code></a> for options definition.</p><pre><code class="makeup elixir" translate="no"><span class="n">get</span><span class="p" data-group-id="3283375432-1">(</span><span class="s">&quot;/users&quot;</span><span class="p" data-group-id="3283375432-1">)</span><span class="w">
+</span><span class="n">get</span><span class="p" data-group-id="3283375432-2">(</span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">query</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="3283375432-3">[</span><span class="ss">scope</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;admin&quot;</span><span class="p" data-group-id="3283375432-3">]</span><span class="p" data-group-id="3283375432-2">)</span><span class="w">
+</span><span class="n">get</span><span class="p" data-group-id="3283375432-4">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p" data-group-id="3283375432-4">)</span><span class="w">
+</span><span class="n">get</span><span class="p" data-group-id="3283375432-5">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">query</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="3283375432-6">[</span><span class="ss">scope</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;admin&quot;</span><span class="p" data-group-id="3283375432-6">]</span><span class="p" data-group-id="3283375432-5">)</span><span class="w">
+</span><span class="n">get</span><span class="p" data-group-id="3283375432-7">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">body</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="3283375432-8">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="3283375432-8">}</span><span class="p" data-group-id="3283375432-7">)</span></code></pre>
   </section>
 </section>
 <section class="detail" id="get!/3">
@@ -834,11 +1054,11 @@ to github from Lightning</p>
 
       </div>
 
-<p>Perform a GET request.</p><p>See <a href="#request!/1"><code class="inline">request!/1</code></a> or <a href="#request!/2"><code class="inline">request!/2</code></a> for options definition.</p><pre><code class="makeup elixir" translate="no"><span class="n">get!</span><span class="p" data-group-id="0664802053-1">(</span><span class="s">&quot;/users&quot;</span><span class="p" data-group-id="0664802053-1">)</span><span class="w">
-</span><span class="n">get!</span><span class="p" data-group-id="0664802053-2">(</span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">query</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="0664802053-3">[</span><span class="ss">scope</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;admin&quot;</span><span class="p" data-group-id="0664802053-3">]</span><span class="p" data-group-id="0664802053-2">)</span><span class="w">
-</span><span class="n">get!</span><span class="p" data-group-id="0664802053-4">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p" data-group-id="0664802053-4">)</span><span class="w">
-</span><span class="n">get!</span><span class="p" data-group-id="0664802053-5">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">query</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="0664802053-6">[</span><span class="ss">scope</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;admin&quot;</span><span class="p" data-group-id="0664802053-6">]</span><span class="p" data-group-id="0664802053-5">)</span><span class="w">
-</span><span class="n">get!</span><span class="p" data-group-id="0664802053-7">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">body</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="0664802053-8">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="0664802053-8">}</span><span class="p" data-group-id="0664802053-7">)</span></code></pre>
+<p>Perform a GET request.</p><p>See <a href="#request!/1"><code class="inline">request!/1</code></a> or <a href="#request!/2"><code class="inline">request!/2</code></a> for options definition.</p><pre><code class="makeup elixir" translate="no"><span class="n">get!</span><span class="p" data-group-id="3456610167-1">(</span><span class="s">&quot;/users&quot;</span><span class="p" data-group-id="3456610167-1">)</span><span class="w">
+</span><span class="n">get!</span><span class="p" data-group-id="3456610167-2">(</span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">query</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="3456610167-3">[</span><span class="ss">scope</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;admin&quot;</span><span class="p" data-group-id="3456610167-3">]</span><span class="p" data-group-id="3456610167-2">)</span><span class="w">
+</span><span class="n">get!</span><span class="p" data-group-id="3456610167-4">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p" data-group-id="3456610167-4">)</span><span class="w">
+</span><span class="n">get!</span><span class="p" data-group-id="3456610167-5">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">query</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="3456610167-6">[</span><span class="ss">scope</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;admin&quot;</span><span class="p" data-group-id="3456610167-6">]</span><span class="p" data-group-id="3456610167-5">)</span><span class="w">
+</span><span class="n">get!</span><span class="p" data-group-id="3456610167-7">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">body</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="3456610167-8">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="3456610167-8">}</span><span class="p" data-group-id="3456610167-7">)</span></code></pre>
   </section>
 </section>
 <section class="detail" id="get_commit/3">
@@ -850,7 +1070,73 @@ to github from Lightning</p>
     </a>
     <h1 class="signature" translate="no">get_commit(client, repo, ref)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/version_control/github_client.ex#L53" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/version_control/github_client.ex#L65" class="icon-action" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+
+  </section>
+</section>
+<section class="detail" id="get_installation_repos/1">
+
+  <div class="detail-header">
+    <a href="#get_installation_repos/1" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">get_installation_repos(client)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/version_control/github_client.ex#L33" class="icon-action" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+
+  </section>
+</section>
+<section class="detail" id="get_installations/1">
+
+  <div class="detail-header">
+    <a href="#get_installations/1" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">get_installations(client)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/version_control/github_client.ex#L29" class="icon-action" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+
+  </section>
+</section>
+<section class="detail" id="get_repo/2">
+
+  <div class="detail-header">
+    <a href="#get_repo/2" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">get_repo(client, repo_name)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/version_control/github_client.ex#L37" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -870,9 +1156,75 @@ to github from Lightning</p>
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">get_repo_branches(installation_id, repo_name)</h1>
+    <h1 class="signature" translate="no">get_repo_branches(client, repo_name)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/version_control/github_client.ex#L24" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/version_control/github_client.ex#L41" class="icon-action" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+
+  </section>
+</section>
+<section class="detail" id="get_repo_content/4">
+
+  <div class="detail-header">
+    <a href="#get_repo_content/4" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">get_repo_content(client, repo, path, ref)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/version_control/github_client.ex#L45" class="icon-action" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+
+  </section>
+</section>
+<section class="detail" id="get_repo_public_key/2">
+
+  <div class="detail-header">
+    <a href="#get_repo_public_key/2" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">get_repo_public_key(client, repo)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/version_control/github_client.ex#L93" class="icon-action" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+
+  </section>
+</section>
+<section class="detail" id="get_repo_secret/3">
+
+  <div class="detail-header">
+    <a href="#get_repo_secret/3" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">get_repo_secret(client, repo, secret_name)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/version_control/github_client.ex#L99" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -910,11 +1262,11 @@ to github from Lightning</p>
 
       </div>
 
-<p>Perform a HEAD request.</p><p>See <a href="#request/1"><code class="inline">request/1</code></a> or <a href="#request/2"><code class="inline">request/2</code></a> for options definition.</p><pre><code class="makeup elixir" translate="no"><span class="n">head</span><span class="p" data-group-id="7446186561-1">(</span><span class="s">&quot;/users&quot;</span><span class="p" data-group-id="7446186561-1">)</span><span class="w">
-</span><span class="n">head</span><span class="p" data-group-id="7446186561-2">(</span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">query</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="7446186561-3">[</span><span class="ss">scope</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;admin&quot;</span><span class="p" data-group-id="7446186561-3">]</span><span class="p" data-group-id="7446186561-2">)</span><span class="w">
-</span><span class="n">head</span><span class="p" data-group-id="7446186561-4">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p" data-group-id="7446186561-4">)</span><span class="w">
-</span><span class="n">head</span><span class="p" data-group-id="7446186561-5">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">query</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="7446186561-6">[</span><span class="ss">scope</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;admin&quot;</span><span class="p" data-group-id="7446186561-6">]</span><span class="p" data-group-id="7446186561-5">)</span><span class="w">
-</span><span class="n">head</span><span class="p" data-group-id="7446186561-7">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">body</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="7446186561-8">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="7446186561-8">}</span><span class="p" data-group-id="7446186561-7">)</span></code></pre>
+<p>Perform a HEAD request.</p><p>See <a href="#request/1"><code class="inline">request/1</code></a> or <a href="#request/2"><code class="inline">request/2</code></a> for options definition.</p><pre><code class="makeup elixir" translate="no"><span class="n">head</span><span class="p" data-group-id="7095526986-1">(</span><span class="s">&quot;/users&quot;</span><span class="p" data-group-id="7095526986-1">)</span><span class="w">
+</span><span class="n">head</span><span class="p" data-group-id="7095526986-2">(</span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">query</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="7095526986-3">[</span><span class="ss">scope</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;admin&quot;</span><span class="p" data-group-id="7095526986-3">]</span><span class="p" data-group-id="7095526986-2">)</span><span class="w">
+</span><span class="n">head</span><span class="p" data-group-id="7095526986-4">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p" data-group-id="7095526986-4">)</span><span class="w">
+</span><span class="n">head</span><span class="p" data-group-id="7095526986-5">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">query</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="7095526986-6">[</span><span class="ss">scope</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;admin&quot;</span><span class="p" data-group-id="7095526986-6">]</span><span class="p" data-group-id="7095526986-5">)</span><span class="w">
+</span><span class="n">head</span><span class="p" data-group-id="7095526986-7">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">body</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="7095526986-8">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="7095526986-8">}</span><span class="p" data-group-id="7095526986-7">)</span></code></pre>
   </section>
 </section>
 <section class="detail" id="head!/3">
@@ -943,33 +1295,11 @@ to github from Lightning</p>
 
       </div>
 
-<p>Perform a HEAD request.</p><p>See <a href="#request!/1"><code class="inline">request!/1</code></a> or <a href="#request!/2"><code class="inline">request!/2</code></a> for options definition.</p><pre><code class="makeup elixir" translate="no"><span class="n">head!</span><span class="p" data-group-id="6485206472-1">(</span><span class="s">&quot;/users&quot;</span><span class="p" data-group-id="6485206472-1">)</span><span class="w">
-</span><span class="n">head!</span><span class="p" data-group-id="6485206472-2">(</span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">query</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="6485206472-3">[</span><span class="ss">scope</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;admin&quot;</span><span class="p" data-group-id="6485206472-3">]</span><span class="p" data-group-id="6485206472-2">)</span><span class="w">
-</span><span class="n">head!</span><span class="p" data-group-id="6485206472-4">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p" data-group-id="6485206472-4">)</span><span class="w">
-</span><span class="n">head!</span><span class="p" data-group-id="6485206472-5">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">query</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="6485206472-6">[</span><span class="ss">scope</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;admin&quot;</span><span class="p" data-group-id="6485206472-6">]</span><span class="p" data-group-id="6485206472-5">)</span><span class="w">
-</span><span class="n">head!</span><span class="p" data-group-id="6485206472-7">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">body</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="6485206472-8">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="6485206472-8">}</span><span class="p" data-group-id="6485206472-7">)</span></code></pre>
-  </section>
-</section>
-<section class="detail" id="installation_repos/1">
-
-  <div class="detail-header">
-    <a href="#installation_repos/1" class="detail-link" title="Link to this function">
-      <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
-    </a>
-    <h1 class="signature" translate="no">installation_repos(installation_id)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/version_control/github_client.ex#L16" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
-
-
-  </div>
-
-  <section class="docstring">
-
-
+<p>Perform a HEAD request.</p><p>See <a href="#request!/1"><code class="inline">request!/1</code></a> or <a href="#request!/2"><code class="inline">request!/2</code></a> for options definition.</p><pre><code class="makeup elixir" translate="no"><span class="n">head!</span><span class="p" data-group-id="3496072246-1">(</span><span class="s">&quot;/users&quot;</span><span class="p" data-group-id="3496072246-1">)</span><span class="w">
+</span><span class="n">head!</span><span class="p" data-group-id="3496072246-2">(</span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">query</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="3496072246-3">[</span><span class="ss">scope</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;admin&quot;</span><span class="p" data-group-id="3496072246-3">]</span><span class="p" data-group-id="3496072246-2">)</span><span class="w">
+</span><span class="n">head!</span><span class="p" data-group-id="3496072246-4">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p" data-group-id="3496072246-4">)</span><span class="w">
+</span><span class="n">head!</span><span class="p" data-group-id="3496072246-5">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">query</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="3496072246-6">[</span><span class="ss">scope</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;admin&quot;</span><span class="p" data-group-id="3496072246-6">]</span><span class="p" data-group-id="3496072246-5">)</span><span class="w">
+</span><span class="n">head!</span><span class="p" data-group-id="3496072246-7">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">body</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="3496072246-8">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="3496072246-8">}</span><span class="p" data-group-id="3496072246-7">)</span></code></pre>
   </section>
 </section>
 <section class="detail" id="options/3">
@@ -997,11 +1327,11 @@ to github from Lightning</p>
 
       </div>
 
-<p>Perform a OPTIONS request.</p><p>See <a href="#request/1"><code class="inline">request/1</code></a> or <a href="#request/2"><code class="inline">request/2</code></a> for options definition.</p><pre><code class="makeup elixir" translate="no"><span class="n">options</span><span class="p" data-group-id="4866436408-1">(</span><span class="s">&quot;/users&quot;</span><span class="p" data-group-id="4866436408-1">)</span><span class="w">
-</span><span class="n">options</span><span class="p" data-group-id="4866436408-2">(</span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">query</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="4866436408-3">[</span><span class="ss">scope</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;admin&quot;</span><span class="p" data-group-id="4866436408-3">]</span><span class="p" data-group-id="4866436408-2">)</span><span class="w">
-</span><span class="n">options</span><span class="p" data-group-id="4866436408-4">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p" data-group-id="4866436408-4">)</span><span class="w">
-</span><span class="n">options</span><span class="p" data-group-id="4866436408-5">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">query</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="4866436408-6">[</span><span class="ss">scope</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;admin&quot;</span><span class="p" data-group-id="4866436408-6">]</span><span class="p" data-group-id="4866436408-5">)</span><span class="w">
-</span><span class="n">options</span><span class="p" data-group-id="4866436408-7">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">body</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="4866436408-8">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="4866436408-8">}</span><span class="p" data-group-id="4866436408-7">)</span></code></pre>
+<p>Perform a OPTIONS request.</p><p>See <a href="#request/1"><code class="inline">request/1</code></a> or <a href="#request/2"><code class="inline">request/2</code></a> for options definition.</p><pre><code class="makeup elixir" translate="no"><span class="n">options</span><span class="p" data-group-id="8022050833-1">(</span><span class="s">&quot;/users&quot;</span><span class="p" data-group-id="8022050833-1">)</span><span class="w">
+</span><span class="n">options</span><span class="p" data-group-id="8022050833-2">(</span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">query</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="8022050833-3">[</span><span class="ss">scope</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;admin&quot;</span><span class="p" data-group-id="8022050833-3">]</span><span class="p" data-group-id="8022050833-2">)</span><span class="w">
+</span><span class="n">options</span><span class="p" data-group-id="8022050833-4">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p" data-group-id="8022050833-4">)</span><span class="w">
+</span><span class="n">options</span><span class="p" data-group-id="8022050833-5">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">query</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="8022050833-6">[</span><span class="ss">scope</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;admin&quot;</span><span class="p" data-group-id="8022050833-6">]</span><span class="p" data-group-id="8022050833-5">)</span><span class="w">
+</span><span class="n">options</span><span class="p" data-group-id="8022050833-7">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">body</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="8022050833-8">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="8022050833-8">}</span><span class="p" data-group-id="8022050833-7">)</span></code></pre>
   </section>
 </section>
 <section class="detail" id="options!/3">
@@ -1030,11 +1360,11 @@ to github from Lightning</p>
 
       </div>
 
-<p>Perform a OPTIONS request.</p><p>See <a href="#request!/1"><code class="inline">request!/1</code></a> or <a href="#request!/2"><code class="inline">request!/2</code></a> for options definition.</p><pre><code class="makeup elixir" translate="no"><span class="n">options!</span><span class="p" data-group-id="2057241620-1">(</span><span class="s">&quot;/users&quot;</span><span class="p" data-group-id="2057241620-1">)</span><span class="w">
-</span><span class="n">options!</span><span class="p" data-group-id="2057241620-2">(</span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">query</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="2057241620-3">[</span><span class="ss">scope</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;admin&quot;</span><span class="p" data-group-id="2057241620-3">]</span><span class="p" data-group-id="2057241620-2">)</span><span class="w">
-</span><span class="n">options!</span><span class="p" data-group-id="2057241620-4">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p" data-group-id="2057241620-4">)</span><span class="w">
-</span><span class="n">options!</span><span class="p" data-group-id="2057241620-5">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">query</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="2057241620-6">[</span><span class="ss">scope</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;admin&quot;</span><span class="p" data-group-id="2057241620-6">]</span><span class="p" data-group-id="2057241620-5">)</span><span class="w">
-</span><span class="n">options!</span><span class="p" data-group-id="2057241620-7">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">body</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="2057241620-8">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="2057241620-8">}</span><span class="p" data-group-id="2057241620-7">)</span></code></pre>
+<p>Perform a OPTIONS request.</p><p>See <a href="#request!/1"><code class="inline">request!/1</code></a> or <a href="#request!/2"><code class="inline">request!/2</code></a> for options definition.</p><pre><code class="makeup elixir" translate="no"><span class="n">options!</span><span class="p" data-group-id="5789393443-1">(</span><span class="s">&quot;/users&quot;</span><span class="p" data-group-id="5789393443-1">)</span><span class="w">
+</span><span class="n">options!</span><span class="p" data-group-id="5789393443-2">(</span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">query</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="5789393443-3">[</span><span class="ss">scope</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;admin&quot;</span><span class="p" data-group-id="5789393443-3">]</span><span class="p" data-group-id="5789393443-2">)</span><span class="w">
+</span><span class="n">options!</span><span class="p" data-group-id="5789393443-4">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p" data-group-id="5789393443-4">)</span><span class="w">
+</span><span class="n">options!</span><span class="p" data-group-id="5789393443-5">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">query</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="5789393443-6">[</span><span class="ss">scope</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;admin&quot;</span><span class="p" data-group-id="5789393443-6">]</span><span class="p" data-group-id="5789393443-5">)</span><span class="w">
+</span><span class="n">options!</span><span class="p" data-group-id="5789393443-7">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">body</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="5789393443-8">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="5789393443-8">}</span><span class="p" data-group-id="5789393443-7">)</span></code></pre>
   </section>
 </section>
 <section class="detail" id="patch/4">
@@ -1063,10 +1393,10 @@ to github from Lightning</p>
 
       </div>
 
-<p>Perform a PATCH request.</p><p>See <a href="#request/1"><code class="inline">request/1</code></a> or <a href="#request/2"><code class="inline">request/2</code></a> for options definition.</p><pre><code class="makeup elixir" translate="no"><span class="n">patch</span><span class="p" data-group-id="5220803356-1">(</span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="5220803356-2">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="5220803356-2">}</span><span class="p" data-group-id="5220803356-1">)</span><span class="w">
-</span><span class="n">patch</span><span class="p" data-group-id="5220803356-3">(</span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="5220803356-4">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="5220803356-4">}</span><span class="p">,</span><span class="w"> </span><span class="ss">query</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="5220803356-5">[</span><span class="ss">scope</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;admin&quot;</span><span class="p" data-group-id="5220803356-5">]</span><span class="p" data-group-id="5220803356-3">)</span><span class="w">
-</span><span class="n">patch</span><span class="p" data-group-id="5220803356-6">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="5220803356-7">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="5220803356-7">}</span><span class="p" data-group-id="5220803356-6">)</span><span class="w">
-</span><span class="n">patch</span><span class="p" data-group-id="5220803356-8">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="5220803356-9">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="5220803356-9">}</span><span class="p">,</span><span class="w"> </span><span class="ss">query</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="5220803356-10">[</span><span class="ss">scope</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;admin&quot;</span><span class="p" data-group-id="5220803356-10">]</span><span class="p" data-group-id="5220803356-8">)</span></code></pre>
+<p>Perform a PATCH request.</p><p>See <a href="#request/1"><code class="inline">request/1</code></a> or <a href="#request/2"><code class="inline">request/2</code></a> for options definition.</p><pre><code class="makeup elixir" translate="no"><span class="n">patch</span><span class="p" data-group-id="1452636163-1">(</span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="1452636163-2">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="1452636163-2">}</span><span class="p" data-group-id="1452636163-1">)</span><span class="w">
+</span><span class="n">patch</span><span class="p" data-group-id="1452636163-3">(</span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="1452636163-4">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="1452636163-4">}</span><span class="p">,</span><span class="w"> </span><span class="ss">query</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="1452636163-5">[</span><span class="ss">scope</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;admin&quot;</span><span class="p" data-group-id="1452636163-5">]</span><span class="p" data-group-id="1452636163-3">)</span><span class="w">
+</span><span class="n">patch</span><span class="p" data-group-id="1452636163-6">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="1452636163-7">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="1452636163-7">}</span><span class="p" data-group-id="1452636163-6">)</span><span class="w">
+</span><span class="n">patch</span><span class="p" data-group-id="1452636163-8">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="1452636163-9">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="1452636163-9">}</span><span class="p">,</span><span class="w"> </span><span class="ss">query</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="1452636163-10">[</span><span class="ss">scope</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;admin&quot;</span><span class="p" data-group-id="1452636163-10">]</span><span class="p" data-group-id="1452636163-8">)</span></code></pre>
   </section>
 </section>
 <section class="detail" id="patch!/4">
@@ -1095,10 +1425,10 @@ to github from Lightning</p>
 
       </div>
 
-<p>Perform a PATCH request.</p><p>See <a href="#request!/1"><code class="inline">request!/1</code></a> or <a href="#request!/2"><code class="inline">request!/2</code></a> for options definition.</p><pre><code class="makeup elixir" translate="no"><span class="n">patch!</span><span class="p" data-group-id="0459480938-1">(</span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="0459480938-2">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="0459480938-2">}</span><span class="p" data-group-id="0459480938-1">)</span><span class="w">
-</span><span class="n">patch!</span><span class="p" data-group-id="0459480938-3">(</span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="0459480938-4">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="0459480938-4">}</span><span class="p">,</span><span class="w"> </span><span class="ss">query</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="0459480938-5">[</span><span class="ss">scope</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;admin&quot;</span><span class="p" data-group-id="0459480938-5">]</span><span class="p" data-group-id="0459480938-3">)</span><span class="w">
-</span><span class="n">patch!</span><span class="p" data-group-id="0459480938-6">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="0459480938-7">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="0459480938-7">}</span><span class="p" data-group-id="0459480938-6">)</span><span class="w">
-</span><span class="n">patch!</span><span class="p" data-group-id="0459480938-8">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="0459480938-9">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="0459480938-9">}</span><span class="p">,</span><span class="w"> </span><span class="ss">query</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="0459480938-10">[</span><span class="ss">scope</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;admin&quot;</span><span class="p" data-group-id="0459480938-10">]</span><span class="p" data-group-id="0459480938-8">)</span></code></pre>
+<p>Perform a PATCH request.</p><p>See <a href="#request!/1"><code class="inline">request!/1</code></a> or <a href="#request!/2"><code class="inline">request!/2</code></a> for options definition.</p><pre><code class="makeup elixir" translate="no"><span class="n">patch!</span><span class="p" data-group-id="0928489568-1">(</span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="0928489568-2">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="0928489568-2">}</span><span class="p" data-group-id="0928489568-1">)</span><span class="w">
+</span><span class="n">patch!</span><span class="p" data-group-id="0928489568-3">(</span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="0928489568-4">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="0928489568-4">}</span><span class="p">,</span><span class="w"> </span><span class="ss">query</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="0928489568-5">[</span><span class="ss">scope</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;admin&quot;</span><span class="p" data-group-id="0928489568-5">]</span><span class="p" data-group-id="0928489568-3">)</span><span class="w">
+</span><span class="n">patch!</span><span class="p" data-group-id="0928489568-6">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="0928489568-7">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="0928489568-7">}</span><span class="p" data-group-id="0928489568-6">)</span><span class="w">
+</span><span class="n">patch!</span><span class="p" data-group-id="0928489568-8">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="0928489568-9">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="0928489568-9">}</span><span class="p">,</span><span class="w"> </span><span class="ss">query</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="0928489568-10">[</span><span class="ss">scope</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;admin&quot;</span><span class="p" data-group-id="0928489568-10">]</span><span class="p" data-group-id="0928489568-8">)</span></code></pre>
   </section>
 </section>
 <section class="detail" id="post/4">
@@ -1127,10 +1457,10 @@ to github from Lightning</p>
 
       </div>
 
-<p>Perform a POST request.</p><p>See <a href="#request/1"><code class="inline">request/1</code></a> or <a href="#request/2"><code class="inline">request/2</code></a> for options definition.</p><pre><code class="makeup elixir" translate="no"><span class="n">post</span><span class="p" data-group-id="7986217886-1">(</span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="7986217886-2">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="7986217886-2">}</span><span class="p" data-group-id="7986217886-1">)</span><span class="w">
-</span><span class="n">post</span><span class="p" data-group-id="7986217886-3">(</span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="7986217886-4">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="7986217886-4">}</span><span class="p">,</span><span class="w"> </span><span class="ss">query</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="7986217886-5">[</span><span class="ss">scope</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;admin&quot;</span><span class="p" data-group-id="7986217886-5">]</span><span class="p" data-group-id="7986217886-3">)</span><span class="w">
-</span><span class="n">post</span><span class="p" data-group-id="7986217886-6">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="7986217886-7">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="7986217886-7">}</span><span class="p" data-group-id="7986217886-6">)</span><span class="w">
-</span><span class="n">post</span><span class="p" data-group-id="7986217886-8">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="7986217886-9">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="7986217886-9">}</span><span class="p">,</span><span class="w"> </span><span class="ss">query</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="7986217886-10">[</span><span class="ss">scope</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;admin&quot;</span><span class="p" data-group-id="7986217886-10">]</span><span class="p" data-group-id="7986217886-8">)</span></code></pre>
+<p>Perform a POST request.</p><p>See <a href="#request/1"><code class="inline">request/1</code></a> or <a href="#request/2"><code class="inline">request/2</code></a> for options definition.</p><pre><code class="makeup elixir" translate="no"><span class="n">post</span><span class="p" data-group-id="6346612103-1">(</span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="6346612103-2">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="6346612103-2">}</span><span class="p" data-group-id="6346612103-1">)</span><span class="w">
+</span><span class="n">post</span><span class="p" data-group-id="6346612103-3">(</span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="6346612103-4">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="6346612103-4">}</span><span class="p">,</span><span class="w"> </span><span class="ss">query</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="6346612103-5">[</span><span class="ss">scope</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;admin&quot;</span><span class="p" data-group-id="6346612103-5">]</span><span class="p" data-group-id="6346612103-3">)</span><span class="w">
+</span><span class="n">post</span><span class="p" data-group-id="6346612103-6">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="6346612103-7">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="6346612103-7">}</span><span class="p" data-group-id="6346612103-6">)</span><span class="w">
+</span><span class="n">post</span><span class="p" data-group-id="6346612103-8">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="6346612103-9">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="6346612103-9">}</span><span class="p">,</span><span class="w"> </span><span class="ss">query</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="6346612103-10">[</span><span class="ss">scope</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;admin&quot;</span><span class="p" data-group-id="6346612103-10">]</span><span class="p" data-group-id="6346612103-8">)</span></code></pre>
   </section>
 </section>
 <section class="detail" id="post!/4">
@@ -1159,10 +1489,10 @@ to github from Lightning</p>
 
       </div>
 
-<p>Perform a POST request.</p><p>See <a href="#request!/1"><code class="inline">request!/1</code></a> or <a href="#request!/2"><code class="inline">request!/2</code></a> for options definition.</p><pre><code class="makeup elixir" translate="no"><span class="n">post!</span><span class="p" data-group-id="6041843804-1">(</span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="6041843804-2">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="6041843804-2">}</span><span class="p" data-group-id="6041843804-1">)</span><span class="w">
-</span><span class="n">post!</span><span class="p" data-group-id="6041843804-3">(</span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="6041843804-4">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="6041843804-4">}</span><span class="p">,</span><span class="w"> </span><span class="ss">query</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="6041843804-5">[</span><span class="ss">scope</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;admin&quot;</span><span class="p" data-group-id="6041843804-5">]</span><span class="p" data-group-id="6041843804-3">)</span><span class="w">
-</span><span class="n">post!</span><span class="p" data-group-id="6041843804-6">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="6041843804-7">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="6041843804-7">}</span><span class="p" data-group-id="6041843804-6">)</span><span class="w">
-</span><span class="n">post!</span><span class="p" data-group-id="6041843804-8">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="6041843804-9">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="6041843804-9">}</span><span class="p">,</span><span class="w"> </span><span class="ss">query</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="6041843804-10">[</span><span class="ss">scope</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;admin&quot;</span><span class="p" data-group-id="6041843804-10">]</span><span class="p" data-group-id="6041843804-8">)</span></code></pre>
+<p>Perform a POST request.</p><p>See <a href="#request!/1"><code class="inline">request!/1</code></a> or <a href="#request!/2"><code class="inline">request!/2</code></a> for options definition.</p><pre><code class="makeup elixir" translate="no"><span class="n">post!</span><span class="p" data-group-id="6820631416-1">(</span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="6820631416-2">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="6820631416-2">}</span><span class="p" data-group-id="6820631416-1">)</span><span class="w">
+</span><span class="n">post!</span><span class="p" data-group-id="6820631416-3">(</span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="6820631416-4">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="6820631416-4">}</span><span class="p">,</span><span class="w"> </span><span class="ss">query</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="6820631416-5">[</span><span class="ss">scope</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;admin&quot;</span><span class="p" data-group-id="6820631416-5">]</span><span class="p" data-group-id="6820631416-3">)</span><span class="w">
+</span><span class="n">post!</span><span class="p" data-group-id="6820631416-6">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="6820631416-7">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="6820631416-7">}</span><span class="p" data-group-id="6820631416-6">)</span><span class="w">
+</span><span class="n">post!</span><span class="p" data-group-id="6820631416-8">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="6820631416-9">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="6820631416-9">}</span><span class="p">,</span><span class="w"> </span><span class="ss">query</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="6820631416-10">[</span><span class="ss">scope</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;admin&quot;</span><span class="p" data-group-id="6820631416-10">]</span><span class="p" data-group-id="6820631416-8">)</span></code></pre>
   </section>
 </section>
 <section class="detail" id="put/4">
@@ -1191,10 +1521,10 @@ to github from Lightning</p>
 
       </div>
 
-<p>Perform a PUT request.</p><p>See <a href="#request/1"><code class="inline">request/1</code></a> or <a href="#request/2"><code class="inline">request/2</code></a> for options definition.</p><pre><code class="makeup elixir" translate="no"><span class="n">put</span><span class="p" data-group-id="0303426562-1">(</span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="0303426562-2">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="0303426562-2">}</span><span class="p" data-group-id="0303426562-1">)</span><span class="w">
-</span><span class="n">put</span><span class="p" data-group-id="0303426562-3">(</span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="0303426562-4">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="0303426562-4">}</span><span class="p">,</span><span class="w"> </span><span class="ss">query</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="0303426562-5">[</span><span class="ss">scope</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;admin&quot;</span><span class="p" data-group-id="0303426562-5">]</span><span class="p" data-group-id="0303426562-3">)</span><span class="w">
-</span><span class="n">put</span><span class="p" data-group-id="0303426562-6">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="0303426562-7">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="0303426562-7">}</span><span class="p" data-group-id="0303426562-6">)</span><span class="w">
-</span><span class="n">put</span><span class="p" data-group-id="0303426562-8">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="0303426562-9">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="0303426562-9">}</span><span class="p">,</span><span class="w"> </span><span class="ss">query</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="0303426562-10">[</span><span class="ss">scope</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;admin&quot;</span><span class="p" data-group-id="0303426562-10">]</span><span class="p" data-group-id="0303426562-8">)</span></code></pre>
+<p>Perform a PUT request.</p><p>See <a href="#request/1"><code class="inline">request/1</code></a> or <a href="#request/2"><code class="inline">request/2</code></a> for options definition.</p><pre><code class="makeup elixir" translate="no"><span class="n">put</span><span class="p" data-group-id="5551639085-1">(</span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="5551639085-2">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="5551639085-2">}</span><span class="p" data-group-id="5551639085-1">)</span><span class="w">
+</span><span class="n">put</span><span class="p" data-group-id="5551639085-3">(</span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="5551639085-4">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="5551639085-4">}</span><span class="p">,</span><span class="w"> </span><span class="ss">query</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="5551639085-5">[</span><span class="ss">scope</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;admin&quot;</span><span class="p" data-group-id="5551639085-5">]</span><span class="p" data-group-id="5551639085-3">)</span><span class="w">
+</span><span class="n">put</span><span class="p" data-group-id="5551639085-6">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="5551639085-7">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="5551639085-7">}</span><span class="p" data-group-id="5551639085-6">)</span><span class="w">
+</span><span class="n">put</span><span class="p" data-group-id="5551639085-8">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="5551639085-9">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="5551639085-9">}</span><span class="p">,</span><span class="w"> </span><span class="ss">query</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="5551639085-10">[</span><span class="ss">scope</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;admin&quot;</span><span class="p" data-group-id="5551639085-10">]</span><span class="p" data-group-id="5551639085-8">)</span></code></pre>
   </section>
 </section>
 <section class="detail" id="put!/4">
@@ -1223,10 +1553,10 @@ to github from Lightning</p>
 
       </div>
 
-<p>Perform a PUT request.</p><p>See <a href="#request!/1"><code class="inline">request!/1</code></a> or <a href="#request!/2"><code class="inline">request!/2</code></a> for options definition.</p><pre><code class="makeup elixir" translate="no"><span class="n">put!</span><span class="p" data-group-id="1796981727-1">(</span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="1796981727-2">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="1796981727-2">}</span><span class="p" data-group-id="1796981727-1">)</span><span class="w">
-</span><span class="n">put!</span><span class="p" data-group-id="1796981727-3">(</span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="1796981727-4">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="1796981727-4">}</span><span class="p">,</span><span class="w"> </span><span class="ss">query</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="1796981727-5">[</span><span class="ss">scope</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;admin&quot;</span><span class="p" data-group-id="1796981727-5">]</span><span class="p" data-group-id="1796981727-3">)</span><span class="w">
-</span><span class="n">put!</span><span class="p" data-group-id="1796981727-6">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="1796981727-7">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="1796981727-7">}</span><span class="p" data-group-id="1796981727-6">)</span><span class="w">
-</span><span class="n">put!</span><span class="p" data-group-id="1796981727-8">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="1796981727-9">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="1796981727-9">}</span><span class="p">,</span><span class="w"> </span><span class="ss">query</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="1796981727-10">[</span><span class="ss">scope</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;admin&quot;</span><span class="p" data-group-id="1796981727-10">]</span><span class="p" data-group-id="1796981727-8">)</span></code></pre>
+<p>Perform a PUT request.</p><p>See <a href="#request!/1"><code class="inline">request!/1</code></a> or <a href="#request!/2"><code class="inline">request!/2</code></a> for options definition.</p><pre><code class="makeup elixir" translate="no"><span class="n">put!</span><span class="p" data-group-id="7384786349-1">(</span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="7384786349-2">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="7384786349-2">}</span><span class="p" data-group-id="7384786349-1">)</span><span class="w">
+</span><span class="n">put!</span><span class="p" data-group-id="7384786349-3">(</span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="7384786349-4">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="7384786349-4">}</span><span class="p">,</span><span class="w"> </span><span class="ss">query</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="7384786349-5">[</span><span class="ss">scope</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;admin&quot;</span><span class="p" data-group-id="7384786349-5">]</span><span class="p" data-group-id="7384786349-3">)</span><span class="w">
+</span><span class="n">put!</span><span class="p" data-group-id="7384786349-6">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="7384786349-7">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="7384786349-7">}</span><span class="p" data-group-id="7384786349-6">)</span><span class="w">
+</span><span class="n">put!</span><span class="p" data-group-id="7384786349-8">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="7384786349-9">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="7384786349-9">}</span><span class="p">,</span><span class="w"> </span><span class="ss">query</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="7384786349-10">[</span><span class="ss">scope</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;admin&quot;</span><span class="p" data-group-id="7384786349-10">]</span><span class="p" data-group-id="7384786349-8">)</span></code></pre>
   </section>
 </section>
 <section class="detail" id="request/2">
@@ -1268,11 +1598,11 @@ to github from Lightning</p>
   </a>
   <span class="text">Examples</span>
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="nc">ExampleApi</span><span class="o">.</span><span class="n">request</span><span class="p" data-group-id="3958921519-1">(</span><span class="ss">method</span><span class="p">:</span><span class="w"> </span><span class="ss">:get</span><span class="p">,</span><span class="w"> </span><span class="ss">url</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;/users/path&quot;</span><span class="p" data-group-id="3958921519-1">)</span><span class="w">
+<pre><code class="makeup elixir" translate="no"><span class="nc">ExampleApi</span><span class="o">.</span><span class="n">request</span><span class="p" data-group-id="4795165510-1">(</span><span class="ss">method</span><span class="p">:</span><span class="w"> </span><span class="ss">:get</span><span class="p">,</span><span class="w"> </span><span class="ss">url</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;/users/path&quot;</span><span class="p" data-group-id="4795165510-1">)</span><span class="w">
 
 </span><span class="c1"># use shortcut methods</span><span class="w">
-</span><span class="nc">ExampleApi</span><span class="o">.</span><span class="n">get</span><span class="p" data-group-id="3958921519-2">(</span><span class="s">&quot;/users/1&quot;</span><span class="p" data-group-id="3958921519-2">)</span><span class="w">
-</span><span class="nc">ExampleApi</span><span class="o">.</span><span class="n">post</span><span class="p" data-group-id="3958921519-3">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="3958921519-4">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="3958921519-4">}</span><span class="p" data-group-id="3958921519-3">)</span></code></pre>
+</span><span class="nc">ExampleApi</span><span class="o">.</span><span class="n">get</span><span class="p" data-group-id="4795165510-2">(</span><span class="s">&quot;/users/1&quot;</span><span class="p" data-group-id="4795165510-2">)</span><span class="w">
+</span><span class="nc">ExampleApi</span><span class="o">.</span><span class="n">post</span><span class="p" data-group-id="4795165510-3">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="4795165510-4">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="4795165510-4">}</span><span class="p" data-group-id="4795165510-3">)</span></code></pre>
   </section>
 </section>
 <section class="detail" id="request!/2">
@@ -1330,11 +1660,11 @@ to github from Lightning</p>
 
       </div>
 
-<p>Perform a TRACE request.</p><p>See <a href="#request/1"><code class="inline">request/1</code></a> or <a href="#request/2"><code class="inline">request/2</code></a> for options definition.</p><pre><code class="makeup elixir" translate="no"><span class="n">trace</span><span class="p" data-group-id="8195098147-1">(</span><span class="s">&quot;/users&quot;</span><span class="p" data-group-id="8195098147-1">)</span><span class="w">
-</span><span class="n">trace</span><span class="p" data-group-id="8195098147-2">(</span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">query</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="8195098147-3">[</span><span class="ss">scope</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;admin&quot;</span><span class="p" data-group-id="8195098147-3">]</span><span class="p" data-group-id="8195098147-2">)</span><span class="w">
-</span><span class="n">trace</span><span class="p" data-group-id="8195098147-4">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p" data-group-id="8195098147-4">)</span><span class="w">
-</span><span class="n">trace</span><span class="p" data-group-id="8195098147-5">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">query</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="8195098147-6">[</span><span class="ss">scope</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;admin&quot;</span><span class="p" data-group-id="8195098147-6">]</span><span class="p" data-group-id="8195098147-5">)</span><span class="w">
-</span><span class="n">trace</span><span class="p" data-group-id="8195098147-7">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">body</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="8195098147-8">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="8195098147-8">}</span><span class="p" data-group-id="8195098147-7">)</span></code></pre>
+<p>Perform a TRACE request.</p><p>See <a href="#request/1"><code class="inline">request/1</code></a> or <a href="#request/2"><code class="inline">request/2</code></a> for options definition.</p><pre><code class="makeup elixir" translate="no"><span class="n">trace</span><span class="p" data-group-id="5067834685-1">(</span><span class="s">&quot;/users&quot;</span><span class="p" data-group-id="5067834685-1">)</span><span class="w">
+</span><span class="n">trace</span><span class="p" data-group-id="5067834685-2">(</span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">query</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="5067834685-3">[</span><span class="ss">scope</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;admin&quot;</span><span class="p" data-group-id="5067834685-3">]</span><span class="p" data-group-id="5067834685-2">)</span><span class="w">
+</span><span class="n">trace</span><span class="p" data-group-id="5067834685-4">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p" data-group-id="5067834685-4">)</span><span class="w">
+</span><span class="n">trace</span><span class="p" data-group-id="5067834685-5">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">query</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="5067834685-6">[</span><span class="ss">scope</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;admin&quot;</span><span class="p" data-group-id="5067834685-6">]</span><span class="p" data-group-id="5067834685-5">)</span><span class="w">
+</span><span class="n">trace</span><span class="p" data-group-id="5067834685-7">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">body</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="5067834685-8">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="5067834685-8">}</span><span class="p" data-group-id="5067834685-7">)</span></code></pre>
   </section>
 </section>
 <section class="detail" id="trace!/3">
@@ -1363,11 +1693,11 @@ to github from Lightning</p>
 
       </div>
 
-<p>Perform a TRACE request.</p><p>See <a href="#request!/1"><code class="inline">request!/1</code></a> or <a href="#request!/2"><code class="inline">request!/2</code></a> for options definition.</p><pre><code class="makeup elixir" translate="no"><span class="n">trace!</span><span class="p" data-group-id="6892131085-1">(</span><span class="s">&quot;/users&quot;</span><span class="p" data-group-id="6892131085-1">)</span><span class="w">
-</span><span class="n">trace!</span><span class="p" data-group-id="6892131085-2">(</span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">query</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="6892131085-3">[</span><span class="ss">scope</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;admin&quot;</span><span class="p" data-group-id="6892131085-3">]</span><span class="p" data-group-id="6892131085-2">)</span><span class="w">
-</span><span class="n">trace!</span><span class="p" data-group-id="6892131085-4">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p" data-group-id="6892131085-4">)</span><span class="w">
-</span><span class="n">trace!</span><span class="p" data-group-id="6892131085-5">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">query</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="6892131085-6">[</span><span class="ss">scope</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;admin&quot;</span><span class="p" data-group-id="6892131085-6">]</span><span class="p" data-group-id="6892131085-5">)</span><span class="w">
-</span><span class="n">trace!</span><span class="p" data-group-id="6892131085-7">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">body</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="6892131085-8">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="6892131085-8">}</span><span class="p" data-group-id="6892131085-7">)</span></code></pre>
+<p>Perform a TRACE request.</p><p>See <a href="#request!/1"><code class="inline">request!/1</code></a> or <a href="#request!/2"><code class="inline">request!/2</code></a> for options definition.</p><pre><code class="makeup elixir" translate="no"><span class="n">trace!</span><span class="p" data-group-id="8056700860-1">(</span><span class="s">&quot;/users&quot;</span><span class="p" data-group-id="8056700860-1">)</span><span class="w">
+</span><span class="n">trace!</span><span class="p" data-group-id="8056700860-2">(</span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">query</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="8056700860-3">[</span><span class="ss">scope</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;admin&quot;</span><span class="p" data-group-id="8056700860-3">]</span><span class="p" data-group-id="8056700860-2">)</span><span class="w">
+</span><span class="n">trace!</span><span class="p" data-group-id="8056700860-4">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p" data-group-id="8056700860-4">)</span><span class="w">
+</span><span class="n">trace!</span><span class="p" data-group-id="8056700860-5">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">query</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="8056700860-6">[</span><span class="ss">scope</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;admin&quot;</span><span class="p" data-group-id="8056700860-6">]</span><span class="p" data-group-id="8056700860-5">)</span><span class="w">
+</span><span class="n">trace!</span><span class="p" data-group-id="8056700860-7">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">body</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="8056700860-8">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="8056700860-8">}</span><span class="p" data-group-id="8056700860-7">)</span></code></pre>
   </section>
 </section>
 <section class="detail" id="update_ref/4">
@@ -1379,7 +1709,7 @@ to github from Lightning</p>
     </a>
     <h1 class="signature" translate="no">update_ref(client, repo, ref, body)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/version_control/github_client.ex#L65" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/version_control/github_client.ex#L77" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>

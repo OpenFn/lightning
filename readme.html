@@ -5,15 +5,15 @@
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="generator" content="ExDoc v0.30.9">
-    <meta name="project" content="Lightning v2.3.1">
+    <meta name="project" content="Lightning v2.4.0">
 
-    <title>Lightning — Lightning v2.3.1</title>
+    <title>Lightning — Lightning v2.4.0</title>
     <link rel="stylesheet" href="dist/html-elixir-XFYN5IVA.css" />
 
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-EPF2X7PV.js"></script>
-    <script src="dist/sidebar_items-E1A3CD1D.js"></script>
+    <script src="dist/sidebar_items-D418926F.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -72,7 +72,7 @@
 Lightning
       </a>
       <div class="sidebar-projectVersion" translate="no">
-        v2.3.1
+        v2.4.0
       </div>
     </div>
     <ul id="sidebar-listNav" class="sidebar-listNav" role="tablist">
@@ -226,9 +226,10 @@ we recommend
   <span class="text"><strong>Run</strong> via Docker</span>
 </h3>
 <ol><li>Install the latest version of
-<a href="https://docs.docker.com/engine/install/">Docker</a></li><li>Clone <a href="https://github.com/OpenFn/Lightning">this repo</a> using git</li><li>Setup PostgreSQL database with: <code class="inline">docker compose build &amp;&amp; docker compose run --rm web mix ecto.migrate</code></li><li>Run Lightning and PostgresSQL with: <code class="inline">docker compose up</code></li></ol><p>By default the application will be running at
-<a href="http://localhost:4000/">localhost:4000</a>.</p><p>See <a href="#problems-with-docker">&quot;Problems with Docker&quot;</a> for
-additional troubleshooting help. Note that you can also create your own
+<a href="https://docs.docker.com/engine/install/">Docker</a></li><li>Clone <a href="https://github.com/OpenFn/Lightning">this repo</a> using git</li><li>Setup PostgreSQL database with:
+<code class="inline">docker compose build &amp;&amp; docker compose run --rm web mix ecto.migrate</code></li><li>Run Lightning and PostgresSQL with: <code class="inline">docker compose up</code></li></ol><p>By default the application will be running at
+<a href="http://localhost:4000/">localhost:4000</a>.</p><p>See <a href="#problems-with-docker">&quot;Problems with Docker&quot;</a> for additional
+troubleshooting help. Note that you can also create your own
 <code class="inline">docker-compose.yml</code> file, configuring a postgres database and using a
 <a href="https://hub.docker.com/repository/docker/openfn/lightning">pre-built image</a>
 from Dockerhub.</p><h3 id="deploy-on-external-infrastructure" class="section-heading">
@@ -270,12 +271,19 @@ available. You'll need asdf plugins for
 <a href="https://github.com/asdf-vm/asdf-erlang">Erlang</a>,
 <a href="https://github.com/asdf-vm/asdf-nodejs">NodeJs</a>
 <a href="https://github.com/asdf-vm/asdf-elixir">Elixir</a> and
-<a href="https://github.com/grimoh/asdf-k6">k6</a>.</p><pre><code class="makeup sh" translate="no"><span class="">asdf install  # Install language versions
+<a href="https://github.com/grimoh/asdf-k6">k6</a>.</p><p>We use <a href="https://doc.libsodium.org/">libsodium</a> for encoding values as required
+by the
+<a href="https://docs.github.com/en/rest/guides/encrypting-secrets-for-the-rest-api">Github API</a>.
+You'll need to install <code class="inline">libsodium</code> in order for the application to compile.</p><p>For Mac Users:</p><pre><code class="makeup sh" translate="no"><span class="">brew install libsodium
+</span></code></pre><p>For Debian Users:</p><pre><code class="makeup sh" translate="no"><span class="">sudo apt-get install libsodium-dev
+</span></code></pre><p>You can find more on
+<a href="https://doc.libsodium.org/installation">how to install libsodium here</a></p><pre><code class="makeup sh" translate="no"><span class="">asdf install  # Install language versions
 </span><span class="">mix local.hex
 </span><span class="">mix deps.get
 </span><span class="">mix local.rebar --force
 </span><span class="">mix ecto.create # Create a development database in Postgres
 </span><span class="">mix ecto.migrate
+</span><span class="">[[ $(uname -m) == &#39;arm64&#39; ]] &amp;&amp; CPATH=/opt/homebrew/include LIBRARY_PATH=/opt/homebrew/lib mix deps.compile enacl # Force compile enacl if on M1
 </span><span class="">[[ $(uname -m) == &#39;arm64&#39; ]] &amp;&amp; mix compile.rambo # Force compile rambo if on M1
 </span><span class="">mix lightning.install_runtime
 </span><span class="">mix lightning.install_schemas
@@ -295,12 +303,13 @@ changes.</p><h2 id="security-and-standards" class="section-heading">
   <span class="text">Security and Standards</span>
 </h2>
 <p>We use a host of common Elixir static analysis tools to help us avoid common
-pitfalls and make sure we keep everything clean and consistent.</p><p>In addition to our test suite, you can run the following commands:</p><ul><li><code class="inline">mix format --check-formatted</code><br/>Code formatting checker, run again without the <code class="inline">--check-formatted</code> flag to
-have your code automatically changed.</li><li><a href="https://hexdocs.pm/dialyxir/1.4.2/Mix.Tasks.Dialyzer.html"><code class="inline">mix dialyzer</code></a><br/>Static analysis for type mismatches and other common warnings. See
-<a href="https://github.com/jeremyjh/dialyxir">dialyxir</a>.</li><li><code class="inline">mix credo --strict --all</code><br/>Static analysis for consistency, and coding standards. See
-<a href="https://github.com/rrrene/credo">Credo</a>.</li><li><a href="https://hexdocs.pm/sobelow/0.13.0/Mix.Tasks.Sobelow.html"><code class="inline">mix sobelow</code></a><br/>Check for commonly known security exploits. See
-<a href="https://sobelow.io/">Sobelow</a>.</li><li><code class="inline">MIX_ENV=test mix coveralls</code><br/>Test coverage reporter. This command also runs the test suite, and can be used
-in place of <a href="https://hexdocs.pm/mix/Mix.Tasks.Test.html"><code class="inline">mix test</code></a> when checking everything before pushing your code. See
+pitfalls and make sure we keep everything clean and consistent.</p><p>In addition to our test suite, you can run the following commands:</p><ul><li><code class="inline">mix format --check-formatted</code> Code formatting checker, run again without the
+<code class="inline">--check-formatted</code> flag to have your code automatically changed.</li><li><a href="https://hexdocs.pm/dialyxir/1.4.2/Mix.Tasks.Dialyzer.html"><code class="inline">mix dialyzer</code></a> Static analysis for type mismatches and other common warnings.
+See <a href="https://github.com/jeremyjh/dialyxir">dialyxir</a>.</li><li><code class="inline">mix credo --strict --all</code> Static analysis for consistency, and coding
+standards. See <a href="https://github.com/rrrene/credo">Credo</a>.</li><li><a href="https://hexdocs.pm/sobelow/0.13.0/Mix.Tasks.Sobelow.html"><code class="inline">mix sobelow</code></a> Check for commonly known security exploits. See
+<a href="https://sobelow.io/">Sobelow</a>.</li><li><code class="inline">MIX_ENV=test mix coveralls</code> Test coverage reporter. This command also runs
+the test suite, and can be used in place of <a href="https://hexdocs.pm/mix/Mix.Tasks.Test.html"><code class="inline">mix test</code></a> when checking
+everything before pushing your code. See
 <a href="https://github.com/parroty/excoveralls">excoveralls</a>.</li></ul><blockquote><p>For convenience there is a <code class="inline">verify</code> mix task that runs all of the above and
 defaults the <code class="inline">MIX_ENV</code> to <code class="inline">test</code>.</p></blockquote><p>For more guidance on security best practices for workflow automation
 implementations, check out OpenFn Docs:
@@ -399,7 +408,7 @@ while using <code class="inline">xargs</code>.</p><h3 id="problems-with-debian" 
   <span class="text">Problems with Debian</span>
 </h3>
 <p>If you're getting this error on debian</p><pre><code class="makeup elixir" translate="no"><span class="o">==</span><span class="o">&gt;</span><span class="w"> </span><span class="n">earmark_parser</span><span class="w">
-</span><span class="nc">Compiling</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="n">file</span><span class="w"> </span><span class="p" data-group-id="8648141985-1">(</span><span class="o">.</span><span class="n">yrl</span><span class="p" data-group-id="8648141985-1">)</span><span class="w">
+</span><span class="nc">Compiling</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="n">file</span><span class="w"> </span><span class="p" data-group-id="5575511769-1">(</span><span class="o">.</span><span class="n">yrl</span><span class="p" data-group-id="5575511769-1">)</span><span class="w">
 </span><span class="o">/</span><span class="n">usr</span><span class="o">/</span><span class="n">lib</span><span class="o">/</span><span class="n">erlang</span><span class="o">/</span><span class="n">lib</span><span class="o">/</span><span class="n">parsetools</span><span class="o">-</span><span class="mf">2.3</span><span class="o">.</span><span class="mi">1</span><span class="o">/</span><span class="n">include</span><span class="o">/</span><span class="n">yeccpre</span><span class="o">.</span><span class="ss">hrl</span><span class="p">:</span><span class="w"> </span><span class="n">no</span><span class="w"> </span><span class="n">such</span><span class="w"> </span><span class="n">file</span><span class="w"> </span><span class="ow">or</span><span class="w"> </span><span class="n">directory</span><span class="w">
 </span><span class="n">could</span><span class="w"> </span><span class="ow">not</span><span class="w"> </span><span class="n">compile</span><span class="w"> </span><span class="n">dependency</span><span class="w"> </span><span class="ss">:earmark_parser</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;mix compile&quot;</span><span class="w"> </span><span class="n">failed</span><span class="o">.</span><span class="w"> </span><span class="nc">You</span><span class="w"> </span><span class="n">can</span><span class="w"> </span><span class="n">recompile</span><span class="w"> </span><span class="n">this</span><span class="w"> </span><span class="n">dependency</span><span class="w"> </span><span class="k">with</span><span class="w"> </span><span class="s">&quot;mix deps.compile earmark_parser&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">update</span><span class="w"> </span><span class="n">it</span><span class="w"> </span><span class="k">with</span><span class="w"> </span><span class="s">&quot;mix deps.update earmark_parser&quot;</span><span class="w"> </span><span class="ow">or</span><span class="w"> </span><span class="n">clean</span><span class="w"> </span><span class="n">it</span><span class="w"> </span><span class="k">with</span><span class="w"> </span><span class="s">&quot;mix deps.clean earmark_parser&quot;</span></code></pre><p>You need to install erlang development environment <code class="inline">sudo apt install erlang-dev</code>
 <a href="https://github.com/elixir-lang/ex_doc/issues/1441">refer to this issue</a></p><h3 id="problems-with-docker" class="section-heading">
@@ -437,8 +446,8 @@ this:</p><pre><code class="makeup sh" translate="no"><span class=""># To remove 
 
     </span><span class="n">lib</span><span class="o">/</span><span class="n">mix</span><span class="o">/</span><span class="n">tasks</span><span class="o">/</span><span class="n">compile</span><span class="o">.</span><span class="n">rambo</span><span class="o">.</span><span class="n">ex</span><span class="p">:</span><span class="mi">89</span><span class="p">:</span><span class="w"> </span><span class="nc">Mix.Tasks.Compile.Rambo</span><span class="o">.</span><span class="n">compile!</span><span class="o">/</span><span class="mi">0</span><span class="w">
     </span><span class="n">lib</span><span class="o">/</span><span class="n">mix</span><span class="o">/</span><span class="n">tasks</span><span class="o">/</span><span class="n">compile</span><span class="o">.</span><span class="n">rambo</span><span class="o">.</span><span class="n">ex</span><span class="p">:</span><span class="mi">51</span><span class="p">:</span><span class="w"> </span><span class="nc">Mix.Tasks.Compile.Rambo</span><span class="o">.</span><span class="n">run</span><span class="o">/</span><span class="mi">1</span><span class="w">
-    </span><span class="p" data-group-id="1737384309-1">(</span><span class="n">mix</span><span class="w"> </span><span class="mf">1.14</span><span class="o">.</span><span class="mi">2</span><span class="p" data-group-id="1737384309-1">)</span><span class="w"> </span><span class="n">lib</span><span class="o">/</span><span class="n">mix</span><span class="o">/</span><span class="n">task</span><span class="o">.</span><span class="n">ex</span><span class="p">:</span><span class="mi">421</span><span class="p">:</span><span class="w"> </span><span class="n">anonymous</span><span class="w"> </span><span class="k" data-group-id="1737384309-2">fn</span><span class="o">/</span><span class="mi">3</span><span class="w"> </span><span class="ow">in</span><span class="w"> </span><span class="nc">Mix.Task</span><span class="o">.</span><span class="n">run_task</span><span class="o">/</span><span class="mi">4</span><span class="w">
-    </span><span class="p" data-group-id="1737384309-3">(</span><span class="n">mix</span><span class="w"> </span><span class="mf">1.14</span><span class="o">.</span><span class="mi">2</span><span class="p" data-group-id="1737384309-3">)</span><span class="w"> </span><span class="n">lib</span><span class="o">/</span><span class="n">mix</span><span class="o">/</span><span class="n">cli</span><span class="o">.</span><span class="n">ex</span><span class="p">:</span><span class="mi">84</span><span class="p">:</span><span class="w"> </span><span class="nc">Mix.CLI</span><span class="o">.</span><span class="n">run_task</span><span class="o">/</span><span class="mi">2</span></code></pre><p>You can resolve this error by installing the Rust compiler using Homebrew. Run
+    </span><span class="p" data-group-id="8142824003-1">(</span><span class="n">mix</span><span class="w"> </span><span class="mf">1.14</span><span class="o">.</span><span class="mi">2</span><span class="p" data-group-id="8142824003-1">)</span><span class="w"> </span><span class="n">lib</span><span class="o">/</span><span class="n">mix</span><span class="o">/</span><span class="n">task</span><span class="o">.</span><span class="n">ex</span><span class="p">:</span><span class="mi">421</span><span class="p">:</span><span class="w"> </span><span class="n">anonymous</span><span class="w"> </span><span class="k" data-group-id="8142824003-2">fn</span><span class="o">/</span><span class="mi">3</span><span class="w"> </span><span class="ow">in</span><span class="w"> </span><span class="nc">Mix.Task</span><span class="o">.</span><span class="n">run_task</span><span class="o">/</span><span class="mi">4</span><span class="w">
+    </span><span class="p" data-group-id="8142824003-3">(</span><span class="n">mix</span><span class="w"> </span><span class="mf">1.14</span><span class="o">.</span><span class="mi">2</span><span class="p" data-group-id="8142824003-3">)</span><span class="w"> </span><span class="n">lib</span><span class="o">/</span><span class="n">mix</span><span class="o">/</span><span class="n">cli</span><span class="o">.</span><span class="n">ex</span><span class="p">:</span><span class="mi">84</span><span class="p">:</span><span class="w"> </span><span class="nc">Mix.CLI</span><span class="o">.</span><span class="n">run_task</span><span class="o">/</span><span class="mi">2</span></code></pre><p>You can resolve this error by installing the Rust compiler using Homebrew. Run
 the following command in your terminal: <code class="inline">brew install rust</code></p><p>If you have already compiled Rambo explicitly via <code class="inline">mix compile.rambo</code>, and you
 are still seeing the following error:</p><pre><code class="makeup elixir" translate="no"><span class="ss">sh</span><span class="p">:</span><span class="w"> </span><span class="o">/</span><span class="n">path_to_directory</span><span class="o">/</span><span class="nc">Lightning</span><span class="o">/</span><span class="c">_build</span><span class="o">/</span><span class="n">dev</span><span class="o">/</span><span class="n">lib</span><span class="o">/</span><span class="n">rambo</span><span class="o">/</span><span class="n">priv</span><span class="o">/</span><span class="ss">rambo</span><span class="p">:</span><span class="w"> </span><span class="nc">No</span><span class="w"> </span><span class="n">such</span><span class="w"> </span><span class="n">file</span><span class="w"> </span><span class="ow">or</span><span class="w"> </span><span class="n">directory</span><span class="w">
 </span><span class="ss">sh</span><span class="p">:</span><span class="w"> </span><span class="n">line</span><span class="w"> </span><span class="mi">0</span><span class="p">:</span><span class="w"> </span><span class="ss">exec</span><span class="p">:</span><span class="w"> </span><span class="o">/</span><span class="n">path_to_directory</span><span class="o">/</span><span class="nc">Lightning</span><span class="o">/</span><span class="c">_build</span><span class="o">/</span><span class="n">dev</span><span class="o">/</span><span class="n">lib</span><span class="o">/</span><span class="n">rambo</span><span class="o">/</span><span class="n">priv</span><span class="o">/</span><span class="ss">rambo</span><span class="p">:</span><span class="w"> </span><span class="n">cannot</span><span class="w"> </span><span class="ss">execute</span><span class="p">:</span><span class="w"> </span><span class="nc">No</span><span class="w"> </span><span class="n">such</span><span class="w"> </span><span class="n">file</span><span class="w"> </span><span class="ow">or</span><span class="w"> </span><span class="n">directory</span></code></pre><p>You can try renaming <code class="inline">deps/rambo/priv/rambo-mac</code> to <code class="inline">deps/rambo/priv/rambo</code>.</p><p>If neither of the approaches above work, please raise an issue.</p><h2 id="support" class="section-heading">

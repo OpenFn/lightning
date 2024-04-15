@@ -5,15 +5,15 @@
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="generator" content="ExDoc v0.30.9">
-    <meta name="project" content="Lightning v2.3.1">
+    <meta name="project" content="Lightning v2.4.0">
 
-    <title>Deployment — Lightning v2.3.1</title>
+    <title>Deployment — Lightning v2.4.0</title>
     <link rel="stylesheet" href="dist/html-elixir-XFYN5IVA.css" />
 
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-EPF2X7PV.js"></script>
-    <script src="dist/sidebar_items-E1A3CD1D.js"></script>
+    <script src="dist/sidebar_items-D418926F.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -72,7 +72,7 @@
 Lightning
       </a>
       <div class="sidebar-projectVersion" translate="no">
-        v2.3.1
+        v2.4.0
       </div>
     </div>
     <ul id="sidebar-listNav" class="sidebar-listNav" role="tablist">
@@ -175,7 +175,18 @@ using kubernetes)</li><li><code class="inline">WORKER_CAPACITY</code> - the numb
 concurrently.</li><li><code class="inline">MAX_DATACLIP_SIZE_MB</code> - the maximum size (in MB) of a dataclip created via
 the webhook trigger URL for a job. This limits the max request size via the
 JSON plug and may (in future) limit the size of dataclips that can be stored
-as run_results via the websocket connection from a worker.</li></ul><h3 id="other-config" class="section-heading">
+as run_results via the websocket connection from a worker.</li></ul><h3 id="github" class="section-heading">
+  <a href="#github" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
+  </a>
+  <span class="text">Github</span>
+</h3>
+<p>Lightning enables connection to github via Github Apps. The following github
+permissions are needed for the github app:</p><table><thead><tr><th style="text-align: left;"><strong>Resource</strong></th><th style="text-align: left;"><strong>Access</strong></th></tr></thead><tbody><tr><td style="text-align: left;">Actions</td><td style="text-align: left;">Read and Write</td></tr><tr><td style="text-align: left;">Contents</td><td style="text-align: left;">Read and Write</td></tr><tr><td style="text-align: left;">Metadata</td><td style="text-align: left;">Read only</td></tr><tr><td style="text-align: left;">Secrets</td><td style="text-align: left;">Read and Write</td></tr><tr><td style="text-align: left;">Workflows</td><td style="text-align: left;">Read and Write</td></tr></tbody></table><p>These envrionment variables will need to be set in order to configure the github
+app:</p><ul><li><code class="inline">GITHUB_APP_ID</code> - the github app ID.</li><li><code class="inline">GITHUB_APP_NAME</code> - the github app name</li><li><code class="inline">GITHUB_APP_CLIENT_ID</code> - the github app Client ID</li><li><code class="inline">GITHUB_APP_CLIENT_SECRET</code> - the github app Client Secret</li><li><code class="inline">GITHUB_CERT</code> - the github app private key</li></ul><p>You can access these from your github app settings menu. Also needed for the
+configurtaion is:</p><ul><li><code class="inline">REPO_CONNECTION_SIGNING_SECRET</code> - secret used to sign access tokens. This
+access token is used to authenticate requests made from the github actions.
+You can generate this using <code class="inline">mix lightning.gen_encryption_key</code></li></ul><h3 id="other-config" class="section-heading">
   <a href="#other-config" class="hover-link">
     <i class="ri-link-m" aria-hidden="true"></i>
   </a>

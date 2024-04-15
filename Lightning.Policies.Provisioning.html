@@ -5,15 +5,15 @@
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="generator" content="ExDoc v0.30.9">
-    <meta name="project" content="Lightning v2.3.1">
+    <meta name="project" content="Lightning v2.4.0">
 
-    <title>Lightning.Policies.Provisioning — Lightning v2.3.1</title>
+    <title>Lightning.Policies.Provisioning — Lightning v2.4.0</title>
     <link rel="stylesheet" href="dist/html-elixir-XFYN5IVA.css" />
 
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-EPF2X7PV.js"></script>
-    <script src="dist/sidebar_items-E1A3CD1D.js"></script>
+    <script src="dist/sidebar_items-D418926F.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -72,7 +72,7 @@
 Lightning
       </a>
       <div class="sidebar-projectVersion" translate="no">
-        v2.3.1
+        v2.4.0
       </div>
     </div>
     <ul id="sidebar-listNav" class="sidebar-listNav" role="tablist">
@@ -131,7 +131,7 @@ Pages
     </a>
 
   <span translate="no">Lightning.Policies.Provisioning</span> 
-  <small class="app-vsn" translate="no">(Lightning v2.3.1)</small>
+  <small class="app-vsn" translate="no">(Lightning v2.4.0)</small>
 
 </h1>
 
@@ -173,7 +173,7 @@ Pages
 
       </div>
 
-        <div class="summary-synopsis"><p>authorize/3 takes an action, a user, and a project. It checks the user's role
+        <div class="summary-synopsis"><p>authorize/3 takes an action, a user or a project repo connection, and a project. It checks the user's role
 for this project and returns <code class="inline">true</code> if the user can perform the action and
 false if they cannot.</p></div>
 
@@ -201,7 +201,7 @@ false if they cannot.</p></div>
     </a>
     <h1 class="signature" translate="no">actions()</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/policies/provisioning.ex#L11" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/policies/provisioning.ex#L12" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -213,7 +213,7 @@ false if they cannot.</p></div>
 
       <div class="specs">
 
-          <pre translate="no"><span class="attribute">@type</span> actions() :: :provision_project</pre>
+          <pre translate="no"><span class="attribute">@type</span> actions() :: :provision_project | :describe_project</pre>
 
       </div>
 
@@ -241,7 +241,7 @@ false if they cannot.</p></div>
     </a>
     <h1 class="signature" translate="no">authorize(arg1, user, project)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/policies/provisioning.ex#L28" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/policies/provisioning.ex#L29" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -261,7 +261,7 @@ false if they cannot.</p></div>
 
       </div>
 
-<p>authorize/3 takes an action, a user, and a project. It checks the user's role
+<p>authorize/3 takes an action, a user or a project repo connection, and a project. It checks the user's role
 for this project and returns <code class="inline">true</code> if the user can perform the action and
 false if they cannot.</p><p>Note that permissions are grouped by action.</p><p>We deny by default, so if a user's role is not added to the allow roles list
 for a particular action they are denied.</p><p>Only a superuser can provision a new project.</p><p>Owners and admins can update existing projects.</p>

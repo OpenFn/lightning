@@ -5,15 +5,15 @@
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="generator" content="ExDoc v0.30.9">
-    <meta name="project" content="Lightning v2.3.1">
+    <meta name="project" content="Lightning v2.4.0">
 
-    <title>LightningWeb.UserAuth — Lightning v2.3.1</title>
+    <title>LightningWeb.UserAuth — Lightning v2.4.0</title>
     <link rel="stylesheet" href="dist/html-elixir-XFYN5IVA.css" />
 
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-EPF2X7PV.js"></script>
-    <script src="dist/sidebar_items-E1A3CD1D.js"></script>
+    <script src="dist/sidebar_items-D418926F.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -72,7 +72,7 @@
 Lightning
       </a>
       <div class="sidebar-projectVersion" translate="no">
-        v2.3.1
+        v2.4.0
       </div>
     </div>
     <ul id="sidebar-listNav" class="sidebar-listNav" role="tablist">
@@ -131,7 +131,7 @@ Pages
     </a>
 
   <span translate="no">LightningWeb.UserAuth</span> 
-  <small class="app-vsn" translate="no">(Lightning v2.3.1)</small>
+  <small class="app-vsn" translate="no">(Lightning v2.4.0)</small>
 
 </h1>
 
@@ -252,6 +252,17 @@ and remember me token.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
+        <a href="#require_authenticated_api_resource/2" translate="no">require_authenticated_api_resource(conn, opts)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Used for API routes that require the resource to be authenticated.
+A resource can be a <code class="inline">User</code> or a <code class="inline">ProjectRepoConnection</code></p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
         <a href="#require_authenticated_user/2" translate="no">require_authenticated_user(conn, opts)</a>
 
       </div>
@@ -318,7 +329,7 @@ and remember me token.</p></div>
     </a>
     <h1 class="signature" translate="no">authenticate_bearer(conn, opts)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/user_auth.ex#L173" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/user_auth.ex#L174" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -340,7 +351,7 @@ and remember me token.</p></div>
     </a>
     <h1 class="signature" translate="no">fetch_current_user(conn, opts)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/user_auth.ex#L120" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/user_auth.ex#L121" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -363,7 +374,7 @@ and remember me token.</p>
     </a>
     <h1 class="signature" translate="no">log_in_user(conn, user)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/user_auth.ex#L26" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/user_auth.ex#L27" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -385,7 +396,7 @@ and remember me token.</p>
     </a>
     <h1 class="signature" translate="no">log_out_user(conn)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/user_auth.ex#L100" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/user_auth.ex#L101" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -407,7 +418,7 @@ and remember me token.</p>
     </a>
     <h1 class="signature" translate="no">mark_totp_pending(conn)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/user_auth.ex#L328" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/user_auth.ex#L353" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -429,7 +440,7 @@ and remember me token.</p>
     </a>
     <h1 class="signature" translate="no">new_session(conn, token)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/user_auth.ex#L43" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/user_auth.ex#L44" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -456,7 +467,7 @@ if you are not using LiveView.</p>
     </a>
     <h1 class="signature" translate="no">on_mount(atom, params, session, socket)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/user_auth.ex#L293" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/user_auth.ex#L318" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -478,7 +489,7 @@ if you are not using LiveView.</p>
     </a>
     <h1 class="signature" translate="no">reauth_sudo_mode(conn, opts)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/user_auth.ex#L143" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/user_auth.ex#L144" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -500,7 +511,7 @@ if you are not using LiveView.</p>
     </a>
     <h1 class="signature" translate="no">redirect_if_user_is_authenticated(conn, opts)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/user_auth.ex#L196" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/user_auth.ex#L204" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -524,7 +535,7 @@ if you are not using LiveView.</p>
     </a>
     <h1 class="signature" translate="no">redirect_with_return_to(conn, params \\ %{})</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/user_auth.ex#L53" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/user_auth.ex#L54" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -537,6 +548,29 @@ if you are not using LiveView.</p>
 <p>Returns to or redirects to the dashboard and potentially set remember_me token.</p>
   </section>
 </section>
+<section class="detail" id="require_authenticated_api_resource/2">
+
+  <div class="detail-header">
+    <a href="#require_authenticated_api_resource/2" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">require_authenticated_api_resource(conn, opts)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/user_auth.ex#L257" class="icon-action" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+<p>Used for API routes that require the resource to be authenticated.
+A resource can be a <code class="inline">User</code> or a <code class="inline">ProjectRepoConnection</code></p>
+  </section>
+</section>
 <section class="detail" id="require_authenticated_user/2">
 
   <div class="detail-header">
@@ -546,7 +580,7 @@ if you are not using LiveView.</p>
     </a>
     <h1 class="signature" translate="no">require_authenticated_user(conn, opts)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/user_auth.ex#L212" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/user_auth.ex#L220" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -569,7 +603,7 @@ they use the application at all, here would be a good place.</p>
     </a>
     <h1 class="signature" translate="no">require_sudo_user(conn, opts)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/user_auth.ex#L247" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/user_auth.ex#L272" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -591,7 +625,7 @@ they use the application at all, here would be a good place.</p>
     </a>
     <h1 class="signature" translate="no">require_superuser(conn, opts)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/user_auth.ex#L265" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/user_auth.ex#L290" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -613,7 +647,7 @@ they use the application at all, here would be a good place.</p>
     </a>
     <h1 class="signature" translate="no">totp_pending?(conn)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/user_auth.ex#L332" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/user_auth.ex#L357" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -635,7 +669,7 @@ they use the application at all, here would be a good place.</p>
     </a>
     <h1 class="signature" translate="no">totp_validated(conn)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/user_auth.ex#L336" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/user_auth.ex#L361" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
