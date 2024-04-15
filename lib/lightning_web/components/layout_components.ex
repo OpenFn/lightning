@@ -5,7 +5,39 @@ defmodule LightningWeb.LayoutComponents do
   import PetalComponents.Dropdown
   import PetalComponents.Avatar
 
+  @menu_items Application.compile_env(:lightning, :menu_items, [])
+
   def menu_items(assigns) do
+    custom_menu_items =
+      @menu_items
+      |> Enum.filter(fn {assign_set, _items} ->
+        not is_nil(assigns[assign_set])
+      end)
+      |> Enum.flat_map(fn {_assign_set, items} -> items end)
+
+    if Enum.empty?(custom_menu_items) do
+      default_menu_items(assigns)
+    else
+      assigns = assign(assigns, custom_menu_items: custom_menu_items)
+
+      ~H"""
+      <div class="mt-4">
+        <%= for {to, icon, text, menu_item} <- @custom_menu_items do %>
+          <Settings.menu_item to={to} active={@active_menu_item == menu_item}>
+            <%= Phoenix.LiveView.TagEngine.component(
+              icon,
+              [class: "h-5 w-5 inline-block"],
+              {__ENV__.module, __ENV__.function, __ENV__.file, __ENV__.line}
+            ) %>
+            <span class="inline-block align-middle"><%= text %></span>
+          </Settings.menu_item>
+        <% end %>
+      </div>
+      """
+    end
+  end
+
+  def default_menu_items(assigns) do
     ~H"""
     <%= if assigns[:projects] do %>
       <div class="relative my-4 mx-2 px-2">
