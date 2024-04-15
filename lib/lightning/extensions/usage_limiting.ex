@@ -12,11 +12,11 @@ defmodule Lightning.Extensions.UsageLimiting do
   defmodule Action do
     @moduledoc false
     @type t :: %__MODULE__{
-            type: :new_run | :new_workflow | :new_user,
+            type: :new_run | :activate_workflow | :new_user,
             amount: pos_integer()
           }
 
-    defstruct type: nil, amount: 1
+    defstruct type: nil, amount: 1, changeset: nil
   end
 
   defmodule Context do

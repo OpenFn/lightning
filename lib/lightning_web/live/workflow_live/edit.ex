@@ -834,8 +834,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
       %{assigns: %{changeset: changeset}} =
         socket = socket |> apply_params(next_params)
 
-      Lightning.Repo.insert_or_update(changeset)
-      |> case do
+      case Helpers.save_workflow(changeset) do
         {:ok, workflow} ->
           {:noreply,
            socket
@@ -844,7 +843,10 @@ defmodule LightningWeb.WorkflowLive.Edit do
            |> push_patches_applied(initial_params)
            |> on_new_navigate_to_edit(project, workflow)}
 
-        {:error, changeset} ->
+        {:error, %{text: message}} ->
+          {:noreply, put_flash(socket, :error, message)}
+
+        {:error, %Ecto.Changeset{} = changeset} ->
           {:noreply,
            socket
            |> assign_changeset(changeset)
@@ -920,7 +922,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
                project_id: project_id
              }),
            {:ok, workflow} <-
-             Workflows.update_workflow(%{changeset | action: :update}),
+             Helpers.save_workflow(%{changeset | action: :update}),
            {:ok, run} <-
              WorkOrders.retry(run_id, step_id, created_by: current_user) do
         Runs.subscribe(run)

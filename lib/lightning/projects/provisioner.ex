@@ -12,9 +12,12 @@ defmodule Lightning.Projects.Provisioner do
   import Ecto.Query
 
   alias Lightning.Accounts.User
+  alias Lightning.Extensions.UsageLimiting.Action
+  alias Lightning.Extensions.UsageLimiting.Context
   alias Lightning.Projects.Project
   alias Lightning.Projects.ProjectUser
   alias Lightning.Repo
+  alias Lightning.Services.UsageLimiter
   alias Lightning.VersionControl.ProjectRepoConnection
   alias Lightning.Workflows.Edge
   alias Lightning.Workflows.Job
@@ -120,6 +123,20 @@ defmodule Lightning.Projects.Provisioner do
     |> cast_assoc(:triggers, with: &trigger_changeset/2)
     |> cast_assoc(:edges, with: &edge_changeset/2)
     |> Workflow.validate()
+    |> then(fn changeset ->
+      case UsageLimiter.limit_action(
+             %Action{type: :activate_workflow, changeset: changeset},
+             %Context{
+               project_id: get_field(changeset, :project_id)
+             }
+           ) do
+        :ok ->
+          changeset
+
+        {:error, _reason, %{text: message}} ->
+          add_error(changeset, :id, message)
+      end
+    end)
   end
 
   defp job_changeset(job, attrs) do
