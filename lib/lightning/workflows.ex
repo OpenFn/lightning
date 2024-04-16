@@ -193,6 +193,15 @@ defmodule Lightning.Workflows do
 
       Repo.update_all(workflow_triggers_query, set: [enabled: false])
     end)
+    |> tap(fn
+      {:ok, _result} ->
+        workflow
+        |> Repo.preload([:triggers], force: true)
+        |> Events.workflow_updated()
+
+      _error ->
+        :ok
+    end)
   end
 
   @doc """
