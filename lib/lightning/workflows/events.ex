@@ -17,5 +17,5 @@ defmodule Lightning.Workflows.Events do
     Lightning.subscribe(topic(project_id))
   end
 
-  defp topic(project_id), do: "project:#{project_id}"
+  defp topic(project_id), do: "workflow_events:#{project_id}"
 end
