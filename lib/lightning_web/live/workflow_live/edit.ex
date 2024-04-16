@@ -932,6 +932,9 @@ defmodule LightningWeb.WorkflowLive.Edit do
         {:error, _reason, %{text: error_text}} ->
           {:noreply, put_flash(socket, :error, error_text)}
 
+        {:error, %{text: message}} ->
+          {:noreply, put_flash(socket, :error, message)}
+
         {:error, changeset} ->
           {
             :noreply,
@@ -1004,9 +1007,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
          |> put_flash(:error, "You are not authorized to perform this action.")}
 
       {:error, %{text: message}} ->
-        {:noreply,
-         socket
-         |> put_flash(:error, message)}
+        {:noreply, put_flash(socket, :error, message)}
     end
   end
 
