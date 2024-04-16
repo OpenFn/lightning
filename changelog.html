@@ -184,7 +184,9 @@ have access to <a href="https://github.com/OpenFn/lightning/issues/1895">#1895</
 <ul><li>Change all System.get_env calls in runtime.exs to use dotenvy
 <a href="https://github.com/OpenFn/lightning/issues/1968">#1968</a></li><li>Track usage tracking submission status in new field
 <a href="https://github.com/OpenFn/lightning/issues/1789">#1789</a></li><li>Send richer version info as part of usage tracking submission.
-<a href="https://github.com/OpenFn/lightning/issues/1819">#1819</a></li></ul><h3 id="fixed-1" class="section-heading">
+<a href="https://github.com/OpenFn/lightning/issues/1819">#1819</a></li><li>Update <code class="inline">submission_status</code> for any Usagetracking.Report that does not have
+it set.
+<a href="https://github.com/OpenFn/lightning/issues/1789">#1789</a></li></ul><h3 id="fixed-1" class="section-heading">
   <a href="#fixed-1" class="hover-link">
     <i class="ri-link-m" aria-hidden="true"></i>
   </a>
@@ -1115,7 +1117,7 @@ work orders up to <code class="inline">v0.10.0</code>, though the granularity of
 will be less than <code class="inline">v0.10.0</code> and the final states are not guaranteed to be
 accurate for workflows with multiple branches and leaf nodes with varying exit
 reasons.</p><p>The migration scripts can be run with a single function call in SetupUtils from
-a connect <code class="inline">iex</code> session:</p><pre><code class="makeup elixir" translate="no"><span class="nc">Lightning.SetupUtils</span><span class="o">.</span><span class="n">approximate_state_for_attempts_and_workorders</span><span class="p" data-group-id="8606054760-1">(</span><span class="p" data-group-id="8606054760-1">)</span></code></pre><p>Note that (like lots of <em>other</em> functionality in <code class="inline">SetupUtils</code>, calling this
+a connect <code class="inline">iex</code> session:</p><pre><code class="makeup elixir" translate="no"><span class="nc">Lightning.SetupUtils</span><span class="o">.</span><span class="n">approximate_state_for_attempts_and_workorders</span><span class="p" data-group-id="3024443979-1">(</span><span class="p" data-group-id="3024443979-1">)</span></code></pre><p>Note that (like lots of <em>other</em> functionality in <code class="inline">SetupUtils</code>, calling this
 function is a destructive action and you should only do it if you've backed up
 your data and you know what you're doing.)</p><p>As always, we recommend backing up your data before migrating. (And thanks for
 bearing with us as we move towards our first stable Lightning release.)</p><h3 id="added-20" class="section-heading">
