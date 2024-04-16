@@ -41,17 +41,17 @@ defmodule LightningWeb.RunChannel do
       {:error, :not_found} ->
         {:error, %{reason: "not_found"}}
 
-      _ ->
+      _any ->
         {:error, %{reason: "unauthorized"}}
     end
   end
 
-  def join("run:" <> _, _payload, _socket) do
+  def join("run:" <> _id, _payload, _socket) do
     {:error, %{reason: "unauthorized"}}
   end
 
   @impl true
-  def handle_in("fetch:plan", _, socket) do
+  def handle_in("fetch:plan", _payload, socket) do
     %{retention_policy: retention_policy, run: run} = socket.assigns
 
     options = %RunOptions{
@@ -61,7 +61,7 @@ defmodule LightningWeb.RunChannel do
     {:reply, {:ok, RunWithOptions.render(run, options)}, socket}
   end
 
-  def handle_in("run:start", _, socket) do
+  def handle_in("run:start", _payload, socket) do
     socket.assigns.run
     |> Runs.start_run()
     |> case do
@@ -125,7 +125,7 @@ defmodule LightningWeb.RunChannel do
     end
   end
 
-  def handle_in("fetch:credential", _, socket) do
+  def handle_in("fetch:credential", _payload, socket) do
     {:reply, {:error, %{errors: %{id: ["This field can't be blank."]}}}, socket}
   end
 
@@ -139,7 +139,7 @@ defmodule LightningWeb.RunChannel do
   store HTTP requests in the database as dataclips and how we send the body
   of those HTTP requests to the worker to use as initial state.
   """
-  def handle_in("fetch:dataclip", _, socket) do
+  def handle_in("fetch:dataclip", _payload, socket) do
     body = Runs.get_input(socket.assigns.run)
 
     if socket.assigns.retention_policy == :erase_all do
@@ -205,7 +205,7 @@ defmodule LightningWeb.RunChannel do
 
   defp get_run(id) do
     Runs.get(id,
-      include: [workflow: [:triggers, :edges, jobs: [:credential]]]
+      include: [:snapshot, workflow: [:triggers, :edges, jobs: [:credential]]]
     )
   end
 
