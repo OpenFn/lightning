@@ -44,7 +44,8 @@ defmodule Lightning.Projects.Provisioner do
     |> maybe_add_project_user(user_or_repo_connection)
     |> Repo.insert_or_update()
     |> case do
-      {:ok, %{id: id}} ->
+      {:ok, %{id: id, workflows: workflows}} ->
+        Enum.each(workflows, &Lightning.Workflows.Events.workflow_updated/1)
         {:ok, load_project(id)}
 
       {:error, changeset} ->
