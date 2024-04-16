@@ -19,6 +19,9 @@ and this project adheres to
 
 ### Changed
 
+- Update `submission_status` for any Usagetracking.Report that does not have it
+  set. [#1789](https://github.com/OpenFn/lightning/issues/1789)
+
 ### Fixed
 
 ## [v2.4.0] - 2024-04-12
@@ -40,9 +43,6 @@ and this project adheres to
   [#1789](https://github.com/OpenFn/lightning/issues/1789)
 - Send richer version info as part of usage tracking submission.
   [#1819](https://github.com/OpenFn/lightning/issues/1819)
-- Update `submission_status` for any Usagetracking.Report that does not have
-  it set.
-  [#1789](https://github.com/OpenFn/lightning/issues/1789)
 
 ### Fixed
 
