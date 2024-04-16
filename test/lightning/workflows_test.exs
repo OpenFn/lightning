@@ -164,7 +164,6 @@ defmodule Lightning.WorkflowsTest do
     end
 
     test "saving with locks" do
-      # project = insert(:project)
       valid_attrs = params_with_assocs(:workflow, jobs: [params_for(:job)])
 
       assert {:ok, workflow} = Workflows.save_workflow(valid_attrs)

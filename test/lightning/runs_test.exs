@@ -324,7 +324,7 @@ defmodule Lightning.RunsTest do
     end
   end
 
-  describe "get_input" do
+  describe "get_input/1" do
     setup context do
       %{triggers: [trigger]} = workflow = insert(:simple_workflow)
 
@@ -356,6 +356,36 @@ defmodule Lightning.RunsTest do
     test "returns headers and body for http_request", %{run: run} do
       assert Runs.get_input(run) ==
                ~s({"data": {"foo": "bar"}, "request": {"headers": {"content-type": "application/json"}}})
+    end
+  end
+
+  describe "get_run/2" do
+    setup context do
+      %{triggers: [trigger]} = workflow = insert(:simple_workflow)
+
+      dataclip =
+        case context.dataclip_type do
+          :http_request ->
+            insert(:http_request_dataclip)
+
+          :step_result ->
+            insert(:dataclip,
+              body: %{"i'm" => ["a", "dataclip"]},
+              type: :step_result
+            )
+        end
+
+      %{runs: [run]} =
+        work_order_for(trigger, workflow: workflow, dataclip: dataclip)
+        |> insert()
+
+      %{run: run}
+    end
+
+    @tag dataclip_type: :http_request
+    test "retrieves a run with a snapshot", %{run: run} do
+      assert %{snapshot: %Lightning.Workflows.Snapshot{}} =
+               Runs.get(run.id, include: [:snapshot])
     end
   end
 

@@ -14,7 +14,7 @@ defmodule Lightning.Workflows.Workflow do
   alias Lightning.Projects.Project
   alias Lightning.Workflows.Edge
   alias Lightning.Workflows.Job
-  alias Lightning.Workflows.Trigger
+  alias Lightning.Workflows.Snapshot
   alias Lightning.Workflows.Trigger
 
   @type t :: %__MODULE__{
@@ -37,6 +37,8 @@ defmodule Lightning.Workflows.Workflow do
     has_many :work_orders, Lightning.WorkOrder
     has_many :runs, through: [:work_orders, :runs]
     belongs_to :project, Project
+
+    has_many :snapshots, Snapshot
 
     field :lock_version, :integer, default: 0
     field :deleted_at, :utc_datetime
