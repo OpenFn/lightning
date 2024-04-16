@@ -113,6 +113,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
     @tag role: :editor
     test "creating a new workflow", %{conn: conn, project: project} do
+      Mox.verify_on_exit!()
       {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/w/new")
 
       assert view |> push_patches_to_view(initial_workflow_patchset(project))
@@ -162,7 +163,36 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       assert view |> has_pending_changes()
 
-      view |> click_save()
+      # Try saving with the limitter
+      error_msg = "Oopsie Doopsie! An error occured"
+
+      Mox.expect(
+        Lightning.Extensions.MockUsageLimiter,
+        :limit_action,
+        1,
+        fn %{type: :activate_workflow}, _context ->
+          {:error, :too_many_workflows, %{text: error_msg}}
+        end
+      )
+
+      html = click_save(view)
+
+      assert html =~ error_msg
+
+      # let return ok with the limitter
+      Mox.expect(
+        Lightning.Extensions.MockUsageLimiter,
+        :limit_action,
+        1,
+        fn %{type: :activate_workflow}, _context ->
+          :ok
+        end
+      )
+
+      # subscribe to workflow events
+      Lightning.Workflows.subscribe(project.id)
+
+      click_save(view)
 
       assert %{id: workflow_id} =
                Lightning.Repo.one(
@@ -176,6 +206,11 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       #
       %{"info" => "Workflow saved"} =
         assert_redirected(view, ~p"/projects/#{project.id}/w/#{workflow_id}")
+
+      # workflow updated event is emitted
+      assert_received %Lightning.Workflows.Events.WorkflowUpdated{
+        workflow: %{id: ^workflow_id}
+      }
     end
 
     @tag role: :viewer

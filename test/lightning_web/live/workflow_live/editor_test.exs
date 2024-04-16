@@ -446,6 +446,8 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
            conn: conn,
            user: user
          } do
+      Mox.verify_on_exit!()
+
       project =
         insert(:project, project_users: [%{user_id: user.id, role: :admin}])
 
@@ -473,12 +475,55 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
                project_id: project.id
              )
 
-      # submit the manual run form
+      # submit the manual run form with an error from the limitter
+      error_msg = "Oopsie Doopsie! An error occured"
+
+      Mox.expect(
+        Lightning.Extensions.MockUsageLimiter,
+        :limit_action,
+        2,
+        fn
+          %{type: :new_run}, _context ->
+            :ok
+
+          %{type: :activate_workflow}, _context ->
+            {:error, :too_many_workflows, %{text: error_msg}}
+        end
+      )
+
+      html =
+        view
+        |> form("#manual_run_form", %{
+          manual: %{body: Jason.encode!(%{})}
+        })
+        |> render_submit()
+
+      assert html =~ error_msg
+
+      # submit the manual run form with an ok from the limitter
+      Mox.expect(
+        Lightning.Extensions.MockUsageLimiter,
+        :limit_action,
+        2,
+        fn
+          %{type: :new_run}, _context ->
+            :ok
+
+          %{type: :activate_workflow}, _context ->
+            :ok
+        end
+      )
+
+      # subscribe to workflow events
+      Lightning.Workflows.subscribe(project.id)
+
       view
       |> form("#manual_run_form", %{
         manual: %{body: Jason.encode!(%{})}
       })
       |> render_submit()
+
+      assert_patch(view)
 
       # workflow has been created
       assert workflow =
@@ -494,6 +539,13 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
              end)
 
       assert length(workflow.work_orders) == 1
+
+      # workflow updated event is emitted
+      workflow_id = workflow.id
+
+      assert_received %Lightning.Workflows.Events.WorkflowUpdated{
+        workflow: %{id: ^workflow_id}
+      }
     end
 
     test "retry a work order saves the workflow first", %{
@@ -501,6 +553,8 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       project: project,
       workflow: %{jobs: [job_1 | _]} = workflow
     } do
+      Mox.verify_on_exit!()
+
       dataclip = insert(:dataclip, type: :http_request)
 
       %{runs: [run]} =
@@ -538,9 +592,48 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       view
       |> change_editor_text("fn(state => state)")
 
+      # Try retrying with an error from the limitter
+      error_msg = "Oopsie Doopsie! An error occured"
+
+      Mox.expect(
+        Lightning.Extensions.MockUsageLimiter,
+        :limit_action,
+        2,
+        fn
+          %{type: :new_run}, _context ->
+            :ok
+
+          %{type: :activate_workflow}, _context ->
+            {:error, :too_many_workflows, %{text: error_msg}}
+        end
+      )
+
+      html =
+        view
+        |> element("#save-and-run", "Retry from here")
+        |> render_click()
+
+      assert html =~ error_msg
+
+      # Retry with an ok from the limitter
+      Mox.expect(
+        Lightning.Extensions.MockUsageLimiter,
+        :limit_action,
+        2,
+        fn
+          %{type: :new_run}, _context ->
+            :ok
+
+          %{type: :activate_workflow}, _context ->
+            :ok
+        end
+      )
+
       view
       |> element("#save-and-run", "Retry from here")
       |> render_click()
+
+      assert_patch(view)
 
       workflow =
         Lightning.Repo.reload(workflow) |> Lightning.Repo.preload([:jobs])
