@@ -24,7 +24,7 @@ defmodule LightningWeb.WorkflowLive.Helpers do
            }
          ) do
       :ok ->
-        Repo.insert_or_update(changeset)
+        Workflows.upsert_workflow(changeset)
 
       {:error, _reason, message} ->
         {:error, message}

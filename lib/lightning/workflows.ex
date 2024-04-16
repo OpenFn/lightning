@@ -8,11 +8,14 @@ defmodule Lightning.Workflows do
   alias Lightning.Projects.Project
   alias Lightning.Repo
   alias Lightning.Workflows.Edge
+  alias Lightning.Workflows.Events
   alias Lightning.Workflows.Job
   alias Lightning.Workflows.Query
   alias Lightning.Workflows.Trigger
   alias Lightning.Workflows.Trigger
   alias Lightning.Workflows.Workflow
+
+  defdelegate subscribe(project_id), to: Events
 
   @doc """
   Returns the list of workflows.
@@ -77,6 +80,18 @@ defmodule Lightning.Workflows do
   """
   def update_workflow(%Ecto.Changeset{} = changeset) do
     Repo.update(changeset)
+  end
+
+  def upsert_workflow(%Ecto.Changeset{} = changeset) do
+    changeset
+    |> Repo.insert_or_update()
+    |> tap(fn
+      {:ok, workflow} ->
+        Events.workflow_updated(workflow)
+
+      _error ->
+        :ok
+    end)
   end
 
   @doc """
