@@ -33,8 +33,7 @@ defmodule Lightning.Workflows.SnapshotsTest do
           assert_edge_equal(snapshot_edge, original_edge)
         end
 
-      {:error, changeset} ->
-        IO.inspect(changeset)
+      {:error, _changeset} ->
         flunk("expected snapshot to be created")
     end
 

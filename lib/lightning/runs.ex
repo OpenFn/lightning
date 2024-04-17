@@ -14,6 +14,7 @@ defmodule Lightning.Runs do
   alias Lightning.Runs.Events
   alias Lightning.Runs.Handlers
   alias Lightning.Services.RunQueue
+  alias Lightning.Workflows
 
   require Logger
 
@@ -64,16 +65,31 @@ defmodule Lightning.Runs do
   @spec get_for_worker(Ecto.UUID.t()) :: Run.t() | nil
   def get_for_worker(id) do
     Multi.new()
-    |> Multi.one(:run, get_query(id, preloads: [snapshot: [jobs: :credential]]))
-    |> Multi.merge(fn %{run: run} ->
-      with %{snapshot_id: nil} <- run do
-        # find the workflow, if it has a snapshot - update the run
-        # if it doesn't have a snapshot, capture one and then update the run.
-        # run to point to the snapshot
-        Multi.new()
-      else
-        _any ->
+    |> Multi.one(
+      :__pre_check_run__,
+      get_query(id, include: [snapshot: [jobs: :credential]])
+    )
+    |> Multi.merge(fn %{__pre_check_run__: run} ->
+      case run do
+        %{snapshot_id: nil} ->
+          # TODO: remove this after the next minor release, all runs created after
+          # this point will have a snapshot associated.
+
           Multi.new()
+          |> Multi.one(:workflow, Ecto.assoc(run, :workflow))
+          |> Multi.run(:snapshot, fn _repo, %{workflow: workflow} ->
+            Workflows.Snapshot.get_or_create_latest_for(workflow)
+          end)
+          |> Multi.update(:run_with_snapshot, fn %{snapshot: snapshot} ->
+            Ecto.Changeset.change(run, snapshot_id: snapshot.id)
+          end)
+          |> Multi.one(
+            :run,
+            get_query(id, include: [snapshot: [jobs: :credential]])
+          )
+
+        run ->
+          Multi.new() |> Multi.put(:run, run)
       end
     end)
     |> Repo.transaction()
@@ -215,9 +231,9 @@ defmodule Lightning.Runs do
 
     Ecto.Multi.new()
     |> Ecto.Multi.update_all(:runs, update_query, updates)
-    |> Ecto.Multi.run(:post, fn _, %{runs: {_, runs}} ->
+    |> Ecto.Multi.run(:post, fn _repo, %{runs: {_, runs}} ->
       Enum.each(runs, fn run ->
-        {:ok, _} = Lightning.WorkOrders.update_state(run)
+        {:ok, _run} = Lightning.WorkOrders.update_state(run)
       end)
 
       {:ok, nil}
@@ -232,7 +248,7 @@ defmodule Lightning.Runs do
 
   def append_run_log(run, params, scrubber \\ nil) do
     LogLine.new(run, params, scrubber)
-    |> Ecto.Changeset.validate_change(:step_id, fn _, step_id ->
+    |> Ecto.Changeset.validate_change(:step_id, fn _field, step_id ->
       if is_nil(step_id) do
         []
       else

@@ -359,7 +359,7 @@ defmodule Lightning.RunsTest do
     end
   end
 
-  describe "get_run/2" do
+  describe "get/2" do
     setup context do
       %{triggers: [trigger]} = workflow = insert(:simple_workflow)
 
@@ -386,6 +386,77 @@ defmodule Lightning.RunsTest do
     test "retrieves a run with a snapshot", %{run: run} do
       assert %{snapshot: %Lightning.Workflows.Snapshot{}} =
                Runs.get(run.id, include: [:snapshot])
+    end
+  end
+
+  describe "get_for_worker/1" do
+    setup do
+      trigger =
+        build(:trigger,
+          type: :webhook,
+          enabled: true
+        )
+
+      job =
+        build(:job,
+          body: ~s[fn(state => { return {...state, extra: "data"} })],
+          project_credential: build(:project_credential)
+        )
+
+      %{triggers: [trigger]} =
+        workflow =
+        build(:workflow)
+        |> with_trigger(trigger)
+        |> with_job(job)
+        |> with_edge({trigger, job}, condition_type: :always)
+        |> insert()
+
+      dataclip = insert(:dataclip)
+
+      %{trigger: trigger, workflow: workflow, dataclip: dataclip}
+    end
+
+    test "retrieves a run with a snapshot and credential", %{
+      trigger: trigger,
+      workflow: workflow,
+      dataclip: dataclip
+    } do
+      %{runs: [run]} =
+        work_order_for(trigger, workflow: workflow, dataclip: dataclip)
+        |> insert()
+
+      run = Runs.get_for_worker(run.id)
+      refute is_struct(run.snapshot, Ecto.Association.NotLoaded)
+
+      assert run.snapshot.jobs
+             |> List.first()
+             |> Map.get(:credential)
+    end
+
+    test "builds a snapshot for runs that don't have one", %{
+      workflow: workflow,
+      dataclip: dataclip,
+      trigger: trigger
+    } do
+      # While snapshots are being introduced, we need to ensure that
+      # runs have a snapshot associated with them.
+      # Here we intentionally create a run _without_ a snapshot.
+      run =
+        insert(:run,
+          work_order:
+            build(:workorder,
+              workflow: workflow,
+              dataclip: dataclip,
+              trigger: trigger
+            ),
+          starting_trigger: trigger,
+          dataclip: dataclip
+        )
+
+      run = Runs.get_for_worker(run.id)
+
+      assert run.snapshot_id
+      refute is_struct(run.snapshot, Ecto.Association.NotLoaded)
     end
   end
 
