@@ -124,8 +124,7 @@ defmodule Lightning.Projects.ProvisionerTest do
       Mox.expect(
         Lightning.Extensions.MockUsageLimiter,
         :limit_action,
-        2,
-        fn _action, _context -> :ok end
+        fn %{type: :activate_workflow}, _context -> :ok end
       )
 
       %{body: body} = valid_document(project.id)
@@ -154,8 +153,7 @@ defmodule Lightning.Projects.ProvisionerTest do
       Mox.expect(
         Lightning.Extensions.MockUsageLimiter,
         :limit_action,
-        3,
-        fn _action, _context -> :ok end
+        fn %{type: :activate_workflow}, _context -> :ok end
       )
 
       %{body: body} = valid_document(project.id)
@@ -204,8 +202,8 @@ defmodule Lightning.Projects.ProvisionerTest do
       Mox.expect(
         Lightning.Extensions.MockUsageLimiter,
         :limit_action,
-        4,
-        fn _action, _context -> :ok end
+        2,
+        fn %{type: :activate_workflow}, _context -> :ok end
       )
 
       %{body: body, workflow_id: workflow_id} = valid_document(project.id)
@@ -277,8 +275,7 @@ defmodule Lightning.Projects.ProvisionerTest do
       Mox.expect(
         Lightning.Extensions.MockUsageLimiter,
         :limit_action,
-        3,
-        fn _action, _context -> :ok end
+        fn %{type: :activate_workflow}, _context -> :ok end
       )
 
       %{
@@ -330,8 +327,7 @@ defmodule Lightning.Projects.ProvisionerTest do
       Mox.expect(
         Lightning.Extensions.MockUsageLimiter,
         :limit_action,
-        3,
-        fn _action, _context -> :ok end
+        fn %{type: :activate_workflow}, _context -> :ok end
       )
 
       %{
@@ -363,13 +359,6 @@ defmodule Lightning.Projects.ProvisionerTest do
       project: project,
       user: user
     } do
-      Mox.expect(
-        Lightning.Extensions.MockUsageLimiter,
-        :limit_action,
-        1,
-        fn _action, _context -> :ok end
-      )
-
       body = %{
         "id" => project.id,
         "name" => "test-project",

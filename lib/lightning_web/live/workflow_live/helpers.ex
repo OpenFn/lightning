@@ -10,6 +10,7 @@ defmodule LightningWeb.WorkflowLive.Helpers do
   alias Lightning.Services.UsageLimiter
 
   alias Lightning.Workflows
+  alias Lightning.Workflows.WorkflowUsageLimiter
   alias Lightning.WorkOrder
   alias Lightning.WorkOrders
 
@@ -17,12 +18,7 @@ defmodule LightningWeb.WorkflowLive.Helpers do
           {:ok, Workflows.Workflow.t()}
           | {:error, Ecto.Changeset.t() | UsageLimiting.message()}
   def save_workflow(changeset) do
-    case UsageLimiter.limit_action(
-           %Action{type: :activate_workflow, changeset: changeset},
-           %Context{
-             project_id: Ecto.Changeset.get_field(changeset, :project_id)
-           }
-         ) do
+    case WorkflowUsageLimiter.limit_workflow_activation(changeset) do
       :ok ->
         Workflows.save_workflow(changeset)
 
