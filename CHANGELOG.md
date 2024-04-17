@@ -50,6 +50,8 @@ and this project adheres to
 
 - Fix sync to branch only targetting main branch
   [#1892](https://github.com/OpenFn/lightning/issues/1892)
+- Fix enqueue run without the workflow info
+  [#1981](https://github.com/OpenFn/lightning/issues/1981)
 
 ## [v2.3.1] - 2024-04-03
 

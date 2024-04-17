@@ -5,6 +5,8 @@ defmodule Lightning.RunsTest do
   import Mock
   import Ecto.Query
 
+  alias Ecto.Multi
+
   alias Lightning.WorkOrders
   alias Lightning.Run
   alias Lightning.Runs
@@ -29,7 +31,8 @@ defmodule Lightning.RunsTest do
           dataclip: dataclip
         )
 
-      assert {:ok, queued_run} = Runs.enqueue(run)
+      assert {:ok, %{run: queued_run}} =
+               Multi.new() |> Multi.insert(:run, run) |> Runs.enqueue()
 
       assert queued_run.id == run.id
       assert queued_run.state == :available
@@ -106,14 +109,18 @@ defmodule Lightning.RunsTest do
 
       runs =
         Map.new(1..4, fn i ->
-          build(:run,
-            work_order: work_order,
-            starting_trigger: trigger,
-            dataclip: dataclip,
-            priority: :immediate
-          )
+          run =
+            build(:run,
+              work_order: work_order,
+              starting_trigger: trigger,
+              dataclip: dataclip,
+              priority: :immediate
+            )
+
+          Multi.new()
+          |> Multi.insert(:run, run)
           |> Runs.enqueue()
-          |> then(fn {:ok, run} -> {i, run} end)
+          |> then(fn {:ok, %{run: run}} -> {i, run} end)
         end)
 
       assert {:ok, [claimed_1, claimed_2]} = Runs.claim(2)

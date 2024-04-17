@@ -14,8 +14,6 @@ defmodule Lightning.Extensions.FifoRunQueue do
   @impl true
   def enqueue(%Multi{} = multi), do: Repo.transaction(multi)
 
-  def enqueue(run), do: Repo.insert(run)
-
   @impl true
   def claim(demand) do
     fifo_runs_query =
