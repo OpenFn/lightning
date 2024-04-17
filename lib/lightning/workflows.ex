@@ -5,6 +5,8 @@ defmodule Lightning.Workflows do
 
   import Ecto.Query
 
+  alias Ecto.Multi
+
   alias Lightning.Projects.Project
   alias Lightning.Repo
   alias Lightning.Workflows.Edge
@@ -66,49 +68,26 @@ defmodule Lightning.Workflows do
     |> Repo.insert()
   end
 
-  @doc """
-  Updates a workflow.
-
-  ## Examples
-
-      iex> update_workflow(changeset)
-      {:ok, %Workflow{}}
-
-      iex> update_workflow(changeset)
-      {:error, %Ecto.Changeset{}}
-
-  """
-  def update_workflow(%Ecto.Changeset{} = changeset) do
-    Repo.update(changeset)
-  end
-
-  def upsert_workflow(%Ecto.Changeset{} = changeset) do
-    changeset
-    |> Repo.insert_or_update()
-    |> tap(fn result ->
-      with {:ok, workflow} <- result do
+  @spec save_workflow(Ecto.Changeset.t(Workflow.t()) | map()) ::
+          {:ok, Workflow.t()} | {:error, Ecto.Changeset.t(Workflow.t())}
+  def save_workflow(%Ecto.Changeset{data: %Workflow{}} = changeset) do
+    Multi.new()
+    |> Multi.insert_or_update(:workflow, changeset)
+    |> Repo.transaction()
+    |> case do
+      {:ok, %{workflow: workflow}} ->
         Events.workflow_updated(workflow)
-      end
-    end)
+
+        {:ok, workflow}
+
+      {:error, :workflow, changeset, _changes} ->
+        {:error, changeset}
+    end
   end
 
-  @doc """
-  Updates a workflow.
-
-  ## Examples
-
-      iex> update_workflow(workflow, %{field: new_value})
-      {:ok, %Workflow{}}
-
-      iex> update_workflow(workflow, %{field: bad_value})
-      {:error, %Ecto.Changeset{}}
-
-  """
-  def update_workflow(%Workflow{} = workflow, attrs) do
-    workflow
-    |> maybe_preload([:jobs, :triggers, :edges], attrs)
-    |> Workflow.changeset(attrs)
-    |> Repo.update()
+  def save_workflow(%{} = attrs) do
+    Workflow.changeset(%Workflow{}, attrs)
+    |> save_workflow()
   end
 
   # Helper to preload associations only if they are present in the attributes
@@ -131,7 +110,9 @@ defmodule Lightning.Workflows do
 
   """
   def change_workflow(%Workflow{} = workflow, attrs \\ %{}) do
-    Workflow.changeset(workflow, attrs)
+    workflow
+    |> maybe_preload([:jobs, :triggers, :edges], attrs)
+    |> Workflow.changeset(attrs)
   end
 
   @doc """

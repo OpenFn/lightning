@@ -53,11 +53,11 @@ defmodule Lightning.WorkflowsTest do
       assert workflow.name == "some-name"
     end
 
-    test "update_workflow/2 with valid data updates the workflow" do
+    test "save_workflow/2 with valid data updates the workflow" do
       workflow = insert(:workflow)
       update_attrs = %{name: "some-updated-name"}
 
-      assert {:ok, workflow} = Workflows.update_workflow(workflow, update_attrs)
+      assert {:ok, workflow} = Workflows.save_workflow(workflow, update_attrs)
 
       assert workflow.name == "some-updated-name"
     end
@@ -146,7 +146,7 @@ defmodule Lightning.WorkflowsTest do
       assert workflow.name == "some-other-name"
     end
 
-    test "using update_workflow/2" do
+    test "using save_workflow/2" do
       project = insert(:project)
 
       job_id = Ecto.UUID.generate()
@@ -184,7 +184,7 @@ defmodule Lightning.WorkflowsTest do
       }
 
       assert {:ok, workflow} =
-               Lightning.Workflows.update_workflow(workflow, valid_attrs)
+               Lightning.Workflows.save_workflow(workflow, valid_attrs)
 
       assert Repo.get_by(Lightning.Workflows.Job,
                id: job_id,
@@ -201,7 +201,7 @@ defmodule Lightning.WorkflowsTest do
       }
 
       assert {:ok, workflow} =
-               Lightning.Workflows.update_workflow(workflow, valid_attrs)
+               Lightning.Workflows.save_workflow(workflow, valid_attrs)
 
       assert workflow.name == "some-name"
       assert workflow.edges |> Enum.empty?()
