@@ -3,8 +3,8 @@ defmodule Lightning.Workflows.WorkflowUsageLimiter do
   alias Lightning.Extensions.UsageLimiting
   alias Lightning.Extensions.UsageLimiting.Action
   alias Lightning.Extensions.UsageLimiting.Context
-  alias Lightning.Workflows.Workflow
   alias Lightning.Services.UsageLimiter
+  alias Lightning.Workflows.Workflow
 
   @spec limit_workflow_activation(Ecto.Changeset.t(Workflow.t())) ::
           :ok | UsageLimiting.error()
