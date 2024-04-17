@@ -85,12 +85,10 @@ defmodule Lightning.Workflows do
   def upsert_workflow(%Ecto.Changeset{} = changeset) do
     changeset
     |> Repo.insert_or_update()
-    |> tap(fn
-      {:ok, workflow} ->
+    |> tap(fn result ->
+      with {:ok, workflow} <- result do
         Events.workflow_updated(workflow)
-
-      _error ->
-        :ok
+      end
     end)
   end
 
@@ -193,14 +191,12 @@ defmodule Lightning.Workflows do
 
       Repo.update_all(workflow_triggers_query, set: [enabled: false])
     end)
-    |> tap(fn
-      {:ok, _result} ->
+    |> tap(fn result ->
+      with {:ok, _} <- result do
         workflow
         |> Repo.preload([:triggers], force: true)
         |> Events.workflow_updated()
-
-      _error ->
-        :ok
+      end
     end)
   end
 
