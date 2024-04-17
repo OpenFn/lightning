@@ -13,7 +13,7 @@
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-EPF2X7PV.js"></script>
-    <script src="dist/sidebar_items-D418926F.js"></script>
+    <script src="dist/sidebar_items-DCC89686.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -164,7 +164,15 @@ Polling metrics are used to publish metrics that are calculated by polling data 
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#run_queue_metrics/1" translate="no">run_queue_metrics(run_age_seconds)</a>
+        <a href="#count_finalised_runs/1" translate="no">count_finalised_runs(threshold_time)</a>
+
+      </div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#run_queue_metrics/2" translate="no">run_queue_metrics(run_age_seconds, consideration_window_seconds)</a>
 
       </div>
 
@@ -200,7 +208,7 @@ Polling metrics are used to publish metrics that are calculated by polling data 
     </a>
     <h1 class="signature" translate="no">calculate_average_claim_duration(reference_time, run_age_seconds)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs/prom_ex_plugin.ex#L165" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs/prom_ex_plugin.ex#L180" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -213,16 +221,38 @@ Polling metrics are used to publish metrics that are calculated by polling data 
 
   </section>
 </section>
-<section class="detail" id="run_queue_metrics/1">
+<section class="detail" id="count_finalised_runs/1">
 
   <div class="detail-header">
-    <a href="#run_queue_metrics/1" class="detail-link" title="Link to this function">
+    <a href="#count_finalised_runs/1" class="detail-link" title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">run_queue_metrics(run_age_seconds)</h1>
+    <h1 class="signature" translate="no">count_finalised_runs(threshold_time)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs/prom_ex_plugin.ex#L145" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs/prom_ex_plugin.ex#L240" class="icon-action" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+
+  </section>
+</section>
+<section class="detail" id="run_queue_metrics/2">
+
+  <div class="detail-header">
+    <a href="#run_queue_metrics/2" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">run_queue_metrics(run_age_seconds, consideration_window_seconds)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs/prom_ex_plugin.ex#L155" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -244,7 +274,7 @@ Polling metrics are used to publish metrics that are calculated by polling data 
     </a>
     <h1 class="signature" translate="no">stalled_run_count(threshold_seconds)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs/prom_ex_plugin.ex#L89" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs/prom_ex_plugin.ex#L92" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
