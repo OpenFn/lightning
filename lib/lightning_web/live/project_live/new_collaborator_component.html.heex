@@ -38,6 +38,18 @@
       phx-submit="add_collaborators"
     >
       <div class="px-6 space-y-5">
+        <div :if={@error} class="bg-red-50 p-4">
+          <div class="flex">
+            <div class="flex-shrink-0">
+              <Heroicons.exclamation_triangle class="h-5 w-5 text-red-400" />
+            </div>
+            <div class="ml-3">
+              <p class="text-sm text-red-700">
+                <%= @error %>
+              </p>
+            </div>
+          </div>
+        </div>
         <.inputs_for
           :let={cf}
           field={f[:collaborators]}
@@ -105,7 +117,7 @@
             id="save_collaborators_button"
             type="submit"
             phx-disable-with="Adding..."
-            disabled={!@changeset.valid?}
+            disabled={!@changeset.valid? || !is_nil(@error)}
           >
             Save Collaborator<%= if(Enum.count(f[:collaborators].value) > 1,
               do: "s"

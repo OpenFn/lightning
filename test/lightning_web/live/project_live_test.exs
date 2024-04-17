@@ -2176,6 +2176,115 @@ defmodule LightningWeb.ProjectLiveTest do
       end
     end
 
+    test "error message is displayed if the allowed limits are exceeded", %{
+      conn: conn
+    } do
+      %{id: project_id} = project = insert(:project)
+
+      {conn, _user} = setup_project_user(conn, project, :admin)
+
+      # users to add
+      [admin, editor, viewer] = insert_list(3, :user)
+
+      {:ok, view, html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/settings#collaboration"
+        )
+
+      # user is not shown in the page
+      for new_user <- [admin, editor, viewer] do
+        refute html =~ new_user.last_name
+      end
+
+      # we only want to allow 3 users. We already 1, the one logged in
+      expected_error_msg = "You can only have 3 collaborators in this project"
+
+      # Open Modal
+      html =
+        view
+        |> element("#show_collaborators_modal_button")
+        |> render_click()
+
+      refute html =~ expected_error_msg,
+             "no error message is displayed when the modal is opened"
+
+      # lets click to add 1 more row
+      Mox.expect(
+        Lightning.Extensions.MockUsageLimiter,
+        :limit_action,
+        fn %{type: :new_user, amount: 2}, %{project_id: ^project_id} ->
+          :ok
+        end
+      )
+
+      html =
+        view
+        |> form("#add_collaborators_modal_form")
+        |> render_change(project: %{"collaborators_sort" => [0, "new"]})
+
+      refute html =~ expected_error_msg,
+             "no error message is displayed when only 2 rows are present"
+
+      # lets click to add 1 more row. So we now have 3 rows
+      Mox.expect(
+        Lightning.Extensions.MockUsageLimiter,
+        :limit_action,
+        fn %{type: :new_user, amount: 3}, %{project_id: ^project_id} ->
+          {:error, :too_many_users, %{text: expected_error_msg}}
+        end
+      )
+
+      html =
+        view
+        |> form("#add_collaborators_modal_form")
+        |> render_change(project: %{"collaborators_sort" => [0, 1, "new"]})
+
+      assert html =~ expected_error_msg,
+             "error message is displayed when we more than 2 rows are present"
+
+      # lets click to remove the first row
+      Mox.expect(
+        Lightning.Extensions.MockUsageLimiter,
+        :limit_action,
+        fn %{type: :new_user, amount: 2}, %{project_id: ^project_id} ->
+          :ok
+        end
+      )
+
+      html =
+        view
+        |> form("#add_collaborators_modal_form")
+        |> render_change(project: %{"collaborators_drop" => [0]})
+
+      refute html =~ expected_error_msg,
+             "no error message is displayed when only 2 rows are present"
+
+      # lets submit the form with the 3 users anyway
+      Mox.expect(
+        Lightning.Extensions.MockUsageLimiter,
+        :limit_action,
+        fn %{type: :new_user, amount: 3}, %{project_id: ^project_id} ->
+          {:error, :too_many_users, %{text: expected_error_msg}}
+        end
+      )
+
+      html =
+        view
+        |> form("#add_collaborators_modal_form")
+        |> render_submit(
+          project: %{
+            "collaborators" => %{
+              "0" => %{"email" => admin.email, "role" => "admin"},
+              "1" => %{"email" => editor.email, "role" => "editor"},
+              "2" => %{"email" => viewer.email, "role" => "viewer"}
+            }
+          }
+        )
+
+      assert html =~ expected_error_msg
+    end
+
     test "only authorized users can remove a collaborator", %{
       conn: conn
     } do
