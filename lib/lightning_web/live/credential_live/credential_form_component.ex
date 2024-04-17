@@ -355,6 +355,42 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
     """
   end
 
+  def render(%{page: :second, schema: "generic_oauth"} = assigns) do
+    ~H"""
+    <div class="mt-10 sm:mt-0">
+      <.modal id={@id} width="xl:min-w-1/3 min-w-1/2 max-w-full">
+        <:title>
+          <div class="flex justify-between">
+            <span class="font-bold"><.modal_title action={@action} /></span>
+            <button
+              phx-click="close_modal"
+              phx-target={@myself}
+              type="button"
+              class="rounded-md bg-white text-gray-400 hover:text-gray-500 focus:outline-none"
+              aria-label={gettext("close")}
+            >
+              <span class="sr-only">Close</span>
+              <Heroicons.x_mark solid class="h-5 w-5 stroke-current" />
+            </button>
+          </div>
+        </:title>
+        <.live_component
+          module={GenericOauthComponent}
+          id={"generic-oauth-component-#{@credential.id}"}
+          action={@action}
+          oauth_clients={@oauth_clients}
+          changeset={@changeset}
+          credential={@credential}
+          projects={@all_projects}
+          users={@users}
+          allow_credential_transfer={@allow_credential_transfer}
+          return_to={@return_to}
+        />
+      </.modal>
+    </div>
+    """
+  end
+
   def render(%{page: :second} = assigns) do
     ~H"""
     <div class="mt-10 sm:mt-0">
@@ -547,14 +583,6 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
     """
   end
 
-  defp form_component(%{type: "generic_oauth"} = assigns) do
-    ~H"""
-    <GenericOauthComponent.fieldset :let={l} form={@form} clients={@oauth_clients}>
-      <%= render_slot(@inner_block, l) %>
-    </GenericOauthComponent.fieldset>
-    """
-  end
-
   defp form_component(%{type: "raw"} = assigns) do
     ~H"""
     <RawBodyComponent.fieldset :let={l} form={@form}>
@@ -618,6 +646,7 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
             </div>
             <div class="grow-0 items-right">
               <.button
+                id={"delete-project-credential-#{@form[:id].value}-button"}
                 phx-target={@phx_target}
                 phx-value-projectid={project_credential[:project_id].value}
                 phx-click="delete_project"

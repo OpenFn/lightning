@@ -201,8 +201,8 @@ defmodule LightningWeb.CredentialLive.OauthClientFormComponent do
               <div>
                 <NewInputs.input
                   type="text"
-                  field={f[:base_url]}
-                  label="Server/Instance URL"
+                  field={f[:authorization_endpoint]}
+                  label="Authorization URL"
                   required="true"
                 />
               </div>
@@ -212,6 +212,28 @@ defmodule LightningWeb.CredentialLive.OauthClientFormComponent do
               <div>
                 <NewInputs.input
                   type="text"
+                  field={f[:token_endpoint]}
+                  label="Token URL"
+                  required="true"
+                />
+              </div>
+            </div>
+
+            <div class="space-y-4">
+              <div>
+                <NewInputs.input
+                  type="text"
+                  field={f[:userinfo_endpoint]}
+                  label="User Info URL"
+                  required="true"
+                />
+              </div>
+            </div>
+
+            <div class="space-y-4">
+              <div>
+                <NewInputs.input
+                  type="password"
                   field={f[:client_id]}
                   label="Client ID"
                   required="true"
@@ -222,9 +244,10 @@ defmodule LightningWeb.CredentialLive.OauthClientFormComponent do
             <div class="space-y-4">
               <div>
                 <NewInputs.input
-                  type="text"
+                  type="password"
                   field={f[:client_secret]}
                   label="Client Secret"
+                  required="true"
                 />
               </div>
             </div>
@@ -343,6 +366,7 @@ defmodule LightningWeb.CredentialLive.OauthClientFormComponent do
               </div>
               <div class="grow-0 items-right">
                 <.button
+                  id={"delete-project-oauth-client-#{@form[:id].value}-button"}
                   phx-target={@phx_target}
                   phx-value-projectid={project_oauth_client[:project_id].value}
                   phx-click="delete_project"

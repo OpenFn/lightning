@@ -175,7 +175,7 @@ defmodule LightningWeb.Components.NewInputs do
         <%= @label %><span
           :if={Map.get(@rest, :required, false)}
           class="text-red-500"
-        >*</span>
+        > *</span>
       </label>
       <.error :for={msg <- @errors}><%= msg %></.error>
     </div>
@@ -187,7 +187,7 @@ defmodule LightningWeb.Components.NewInputs do
     <div phx-feedback-for={@name}>
       <.label :if={@label} class="mb-2" for={@id}>
         <%= @label %>
-        <span :if={Map.get(@rest, :required, false)} class="text-red-500">*</span>
+        <span :if={Map.get(@rest, :required, false)} class="text-red-500"> *</span>
       </.label>
       <select
         id={@id}
@@ -216,7 +216,7 @@ defmodule LightningWeb.Components.NewInputs do
         <%= @label %><span
           :if={Map.get(@rest, :required, false)}
           class="text-red-500"
-        >*</span>
+        > *</span>
       </.label>
       <textarea
         id={@id}
@@ -246,7 +246,7 @@ defmodule LightningWeb.Components.NewInputs do
         <%= @label %><span
           :if={Map.get(@rest, :required, false)}
           class="text-red-500"
-        >*</span>
+        > *</span>
       </.label>
       <div class="relative mt-2 rounded-lg shadow-sm">
         <input
@@ -328,7 +328,7 @@ defmodule LightningWeb.Components.NewInputs do
         <%= @label %><span
           :if={Map.get(@rest, :required, false)}
           class="text-red-500"
-        >*</span>
+        > *</span>
       </.label>
       <input
         type={@type}

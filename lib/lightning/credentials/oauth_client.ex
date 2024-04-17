@@ -22,11 +22,12 @@ defmodule Lightning.Credentials.OauthClient do
     field :name, :string
     field :client_id, :string
     field :client_secret, :string
-    field :base_url, :string
+    field :authorization_endpoint, :string
+    field :token_endpoint, :string
+    field :userinfo_endpoint, :string
     field :global, :boolean, default: false
 
     belongs_to :user, User
-
     has_many :credentials, Credential
     has_many :project_oauth_clients, ProjectOauthClient
     has_many :projects, through: [:project_oauth_clients, :project]
@@ -41,17 +42,33 @@ defmodule Lightning.Credentials.OauthClient do
       :name,
       :client_id,
       :client_secret,
-      :base_url,
+      :authorization_endpoint,
+      :token_endpoint,
+      :userinfo_endpoint,
       :global,
       :user_id
     ])
-    |> validate_required([:name, :client_id, :base_url])
-    |> validate_format(
-      :base_url,
-      ~r/^(https?:\/\/)?([\da-z\.-]+)\.([a-z\.]{2,6})([\/\w \.-]*)*\/?$/i,
-      message: "must be a valid URL"
-    )
+    |> validate_required([
+      :name,
+      :client_id,
+      :client_secret,
+      :authorization_endpoint,
+      :token_endpoint,
+      :userinfo_endpoint
+    ])
+    |> validate_url_format(:authorization_endpoint)
+    |> validate_url_format(:token_endpoint)
+    |> validate_url_format(:userinfo_endpoint)
     |> cast_assoc(:project_oauth_clients)
     |> assoc_constraint(:user)
+  end
+
+  defp validate_url_format(changeset, field) do
+    changeset
+    |> validate_format(
+      field,
+      ~r/^(https?:\/\/)?([\da-z\.-]+)\.([a-z\.]{2,6})([\/\w \.-]*)*\/?$/i,
+      message: "must be a valid URL for #{field}"
+    )
   end
 end

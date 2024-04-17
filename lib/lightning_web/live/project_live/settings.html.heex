@@ -343,7 +343,7 @@
               <.th>Name</.th>
               <.th>Project With Access</.th>
               <.th>Client ID</.th>
-              <.th>Base URL</.th>
+              <.th>Authorization URL</.th>
               <.th>Actions</.th>
             </.tr>
 
@@ -351,8 +351,10 @@
               <.tr id={"oauth-client-#{client.id}"}>
                 <.td><%= client.name %></.td>
                 <.td><%= client.project_names %></.td>
-                <.td><%= client.client_id %></.td>
-                <.td><%= client.base_url %></.td>
+                <.td class="max-w-xs truncate">
+                  <%= client.client_id %>
+                </.td>
+                <.td><%= client.authorization_endpoint %></.td>
                 <.td>
                   <%= if client.user_id == @current_user.id do %>
                     <span>
