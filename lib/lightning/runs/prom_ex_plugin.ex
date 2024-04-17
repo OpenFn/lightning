@@ -12,8 +12,11 @@ defmodule Lightning.Runs.PromExPlugin do
   alias Lightning.Repo
   alias Lightning.Run
 
+  require Run
+
   @available_count_event [:lightning, :run, :queue, :available]
   @average_claim_event [:lightning, :run, :queue, :claim]
+  @finalised_count_event [:lightning, :run, :queue, :finalised]
   @stalled_event [:lightning, :run, :queue, :stalled]
 
   @impl true
@@ -116,7 +119,7 @@ defmodule Lightning.Runs.PromExPlugin do
     Polling.build(
       :lightning_run_queue_metrics,
       period_in_seconds * 1000,
-      {__MODULE__, :run_queue_metrics, [run_age_seconds]},
+      {__MODULE__, :run_queue_metrics, [run_age_seconds, period_in_seconds]},
       [
         last_value(
           [
@@ -137,17 +140,29 @@ defmodule Lightning.Runs.PromExPlugin do
           event_name: @available_count_event,
           description: "The number of available runs in the queue",
           measurement: :count
+        ),
+        last_value(
+          [:lightning, :run, :queue, :finalised, :count],
+          event_name: @finalised_count_event,
+          description:
+            "The number of runs finalised during the consideration window",
+          measurement: :count
         )
       ]
     )
   end
 
-  def run_queue_metrics(run_age_seconds) do
-    if pid = Process.whereis(Repo) do
-      check_repo_state(pid)
+  def run_queue_metrics(run_age_seconds, consideration_window_seconds) do
+    if repo_pid = Process.whereis(Repo) do
+      check_repo_state(repo_pid)
 
       trigger_run_claim_duration(run_age_seconds)
       trigger_available_runs_count()
+
+      trigger_finalised_runs_count(
+        DateTime.utc_now()
+        |> DateTime.add(-consideration_window_seconds)
+      )
     end
   end
 
@@ -210,5 +225,26 @@ defmodule Lightning.Runs.PromExPlugin do
       %{count: Repo.aggregate(query, :count)},
       %{}
     )
+  end
+
+  defp trigger_finalised_runs_count(threshold_time) do
+    count = count_finalised_runs(threshold_time)
+
+    :telemetry.execute(
+      @finalised_count_event,
+      %{count: count},
+      %{}
+    )
+  end
+
+  def count_finalised_runs(threshold_time) do
+    final_states = Run.final_states()
+
+    query =
+      from r in Run,
+        where: r.state in ^final_states,
+        where: r.finished_at > ^threshold_time
+
+    query |> Repo.aggregate(:count)
   end
 end
