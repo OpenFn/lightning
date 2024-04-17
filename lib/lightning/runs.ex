@@ -2,6 +2,8 @@ defmodule Lightning.Runs do
   @moduledoc """
   Gathers operations to create, update and delete Runs.
   """
+  @behaviour Lightning.Extensions.RunQueue
+
   import Ecto.Query
 
   alias Lightning.Invocation.LogLine
@@ -16,6 +18,7 @@ defmodule Lightning.Runs do
   @doc """
   Enqueue a run to be processed.
   """
+  @impl Lightning.Extensions.RunQueue
   def enqueue(run) do
     RunQueue.enqueue(run)
   end
@@ -26,6 +29,7 @@ defmodule Lightning.Runs do
   # The `demand` parameter is used to request more than a since run,
   # all implementation should default to 1.
   # """
+  @impl Lightning.Extensions.RunQueue
   def claim(demand \\ 1) do
     RunQueue.claim(demand)
   end
@@ -33,6 +37,7 @@ defmodule Lightning.Runs do
   # @doc """
   # Removes a run from the queue.
   # """
+  @impl Lightning.Extensions.RunQueue
   def dequeue(run) do
     RunQueue.dequeue(run)
   end
