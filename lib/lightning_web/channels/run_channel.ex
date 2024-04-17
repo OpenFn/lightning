@@ -24,7 +24,7 @@ defmodule LightningWeb.RunChannel do
       ) do
     with {:ok, _} <- Workers.verify_worker_token(worker_token),
          {:ok, claims} <- Workers.verify_run_token(token, %{id: id}),
-         run when is_map(run) <- get_run(id) || {:error, :not_found},
+         run when is_map(run) <- Runs.get_for_worker(id) || {:error, :not_found},
          project_id when is_binary(project_id) <-
            Runs.get_project_id_for_run(run) do
       {:ok,
@@ -201,12 +201,6 @@ defmodule LightningWeb.RunChannel do
       {:ok, log_line} ->
         {:reply, {:ok, %{log_line_id: log_line.id}}, socket}
     end
-  end
-
-  defp get_run(id) do
-    Runs.get(id,
-      include: [:snapshot, workflow: [:triggers, :edges, jobs: [:credential]]]
-    )
   end
 
   defp include_output_dataclips?(retention_policy) do

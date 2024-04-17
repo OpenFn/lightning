@@ -6,6 +6,8 @@ defmodule Lightning.Runs do
 
   import Ecto.Query
 
+  alias Ecto.Multi
+
   alias Lightning.Invocation.LogLine
   alias Lightning.Repo
   alias Lightning.Run
@@ -52,13 +54,38 @@ defmodule Lightning.Runs do
   @spec get(Ecto.UUID.t(), [{:include, term()}]) ::
           Run.t() | nil
   def get(id, opts \\ []) do
+    get_query(id, opts)
+    |> Repo.one()
+  end
+
+  @doc """
+  Get a run by id, preloading the snapshot and its credential.
+  """
+  @spec get_for_worker(Ecto.UUID.t()) :: Run.t() | nil
+  def get_for_worker(id) do
+    Multi.new()
+    |> Multi.one(:run, get_query(id, preloads: [snapshot: [jobs: :credential]]))
+    |> Multi.merge(fn %{run: run} ->
+      with %{snapshot_id: nil} <- run do
+        # find the workflow, if it has a snapshot - update the run
+        # if it doesn't have a snapshot, capture one and then update the run.
+        # run to point to the snapshot
+        Multi.new()
+      else
+        _any ->
+          Multi.new()
+      end
+    end)
+    |> Repo.transaction()
+    |> case do
+      {:ok, %{run: run}} -> run
+    end
+  end
+
+  defp get_query(id, opts) do
     preloads = opts |> Keyword.get(:include, [])
 
-    from(a in Run,
-      where: a.id == ^id,
-      preload: ^preloads
-    )
-    |> Repo.one()
+    from(r in Run, where: r.id == ^id, preload: ^preloads)
   end
 
   @doc """

@@ -105,6 +105,10 @@ defmodule Lightning.Workflows do
     multi
     |> Multi.merge(fn changes ->
       if changes[:workflow] do
+        # TODO: can we tell if `optimistic_lock` was used?
+        # if we can, then we can use `touch` here as well, filling in a few
+        # gaps where we want to capture a snapshot because the workflow
+        # doesn't have one yet.
         Multi.new()
       else
         dependent_change = find_dependent_change(multi)
