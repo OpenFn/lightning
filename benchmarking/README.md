@@ -1,6 +1,6 @@
 # Benchmarking
 
-## Run your own benchmarking tests
+## Run benchmarking tests against the demo webhook
 
 Execute the following steps to run a benchmark on Lightning:
 
@@ -68,9 +68,9 @@ Execute the following steps to run a benchmark on Lightning:
 See [results output](https://k6.io/docs/get-started/results-output/) for other
 available output formats.
 
-## Sample benchmarks
+### Sample benchmarks
 
-### System specs on a 2020 MacBook Pro
+#### System specs on a 2020 MacBook Pro
 
 ```
 Model Name: MacBook Pro
@@ -81,7 +81,7 @@ Total Number of Cores: 8 (4 performance and 4 efficiency)
 Memory: 16 GB
 ```
 
-### Results with 50kb payloads
+#### Results with 50kb payloads
 
 ```
 k6 run -e PAYLOAD_SIZE=10 benchmarking/script.js                         Node 18.17.1 k6 0.43.1 07:40:29
@@ -125,4 +125,17 @@ k6 run -e PAYLOAD_SIZE=10 benchmarking/script.js                         Node 18
 
 running (2m20.1s), 00/50 VUs, 5765 complete and 0 interrupted iterations
 webhookRequests ✓ [======================================] 00/50 VUs  2m20s  01.12 iters/s
+```
+
+## Run load tests for a hypothetical cold chain system
+
+`benchmarking/sample_cold_chain_monitoring_script.js` contains a k6 script that
+can be used to simulate data from a hypothetical cold chain system. It requires a
+custom job to be created (an example of which can be found at the top of the
+script file).
+
+The test can be excuted as follows (`WEBHOOK_URL` is not optional):
+
+```bash
+   WEBHOOK_URL=... k6 run benchmarking/sample_cold_chain_monitoring_script.js
 ```
