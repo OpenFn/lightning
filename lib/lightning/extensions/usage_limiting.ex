@@ -16,7 +16,7 @@ defmodule Lightning.Extensions.UsageLimiting do
             amount: pos_integer()
           }
 
-    defstruct type: nil, amount: 1, changeset: nil
+    defstruct type: nil, amount: 1
   end
 
   defmodule Context do

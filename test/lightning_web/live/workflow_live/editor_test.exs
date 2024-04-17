@@ -475,43 +475,11 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
                project_id: project.id
              )
 
-      # submit the manual run form with an error from the limitter
-      error_msg = "Oopsie Doopsie! An error occured"
-
+      # submit the manual run form
       Mox.expect(
         Lightning.Extensions.MockUsageLimiter,
         :limit_action,
-        2,
-        fn
-          %{type: :new_run}, _context ->
-            :ok
-
-          %{type: :activate_workflow}, _context ->
-            {:error, :too_many_workflows, %{text: error_msg}}
-        end
-      )
-
-      html =
-        view
-        |> form("#manual_run_form", %{
-          manual: %{body: Jason.encode!(%{})}
-        })
-        |> render_submit()
-
-      assert html =~ error_msg
-
-      # submit the manual run form with an ok from the limitter
-      Mox.expect(
-        Lightning.Extensions.MockUsageLimiter,
-        :limit_action,
-        2,
-        fn
-          %{type: :new_run}, _context ->
-            :ok
-
-          %{type: :activate_workflow}, _context ->
-            :ok
-        end
+        fn %{type: :new_run}, _context -> :ok end
       )
 
       # subscribe to workflow events
@@ -551,11 +519,16 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
     test "retry a work order saves the workflow first", %{
       conn: conn,
       project: project,
-      workflow: %{jobs: [job_1 | _]} = workflow
+      workflow: %{jobs: [job_1 | _], triggers: [trigger]} = workflow
     } do
       Mox.verify_on_exit!()
 
       dataclip = insert(:dataclip, type: :http_request)
+
+      # disable the trigger
+      trigger
+      |> Ecto.Changeset.change(%{enabled: false})
+      |> Lightning.Repo.update!()
 
       %{runs: [run]} =
         insert(:workorder,
@@ -591,6 +564,11 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
 
       view
       |> change_editor_text("fn(state => state)")
+
+      view
+      |> render_click("validate", %{
+        "workflow" => %{"triggers" => %{"0" => %{"enabled" => true}}}
+      })
 
       # Try retrying with an error from the limitter
       error_msg = "Oopsie Doopsie! An error occured"
