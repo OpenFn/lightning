@@ -1076,17 +1076,21 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
           body: %{"foo" => unique_val}
         )
 
+      {:ok, snapshot} =
+        Lightning.Workflows.Snapshot.get_or_create_latest_for(workflow)
+
       %{runs: [run]} =
         insert(:workorder,
           workflow: workflow,
           dataclip: input_dataclip,
           state: :running,
+          snapshot: snapshot,
           runs: [
             build(:run,
               dataclip: input_dataclip,
+              snapshot: snapshot,
               starting_job: job_1,
-              state: :started,
-              steps: []
+              state: :started
             )
           ]
         )
@@ -1103,12 +1107,11 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       refute html =~ "data for this step has not been retained"
 
       # let's subscribe to events to make sure we're in sync with liveview
-      Lightning.Runs.subscribe(run)
+      # Lightning.Runs.subscribe(run)
 
       # start step without dataclip
       {:ok, %{id: step_id}} =
-        Lightning.Runs.start_step(%{
-          "run_id" => run.id,
+        Lightning.Runs.start_step(run, %{
           "job_id" => job_1.id,
           "step_id" => Ecto.UUID.generate()
         })

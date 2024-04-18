@@ -153,9 +153,8 @@ defmodule LightningWeb.RunChannel do
     Map.get(payload, "job_id", :missing_job_id)
     |> case do
       job_id when is_binary(job_id) ->
-        %{"run_id" => socket.assigns.run.id}
-        |> Enum.into(payload)
-        |> Runs.start_step()
+        socket.assigns.run
+        |> Runs.start_step(payload)
         |> case do
           {:error, changeset} ->
             {:reply, {:error, LightningWeb.ChangesetJSON.error(changeset)},

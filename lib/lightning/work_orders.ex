@@ -31,6 +31,7 @@ defmodule Lightning.WorkOrders do
   import Ecto.Changeset
   import Ecto.Query
   import Lightning.Validators
+  import Lightning.ChangesetUtils
 
   alias Ecto.Multi
   alias Lightning.Accounts.User
@@ -191,22 +192,20 @@ defmodule Lightning.WorkOrders do
     end
   end
 
+  def build(attrs) do
+    %WorkOrder{}
+    |> change()
+    |> put_if_provided(:state, attrs)
+    |> try_put_snapshot(attrs)
+    |> put_assoc(:workflow, attrs[:workflow])
+    |> put_assoc(:dataclip, attrs[:dataclip])
+  end
+
   @spec build_for(Trigger.t() | Job.t(), map()) ::
           Ecto.Changeset.t(WorkOrder.t())
   def build_for(%Trigger{} = trigger, attrs) do
-    %WorkOrder{}
-    |> change()
-    |> then(fn changeset ->
-      if state = attrs[:state] do
-        changeset |> put_change(:state, state)
-      else
-        changeset
-      end
-    end)
-    |> try_put_snapshot(attrs)
-    |> put_assoc(:workflow, attrs[:workflow])
+    build(attrs)
     |> put_assoc(:trigger, trigger)
-    |> put_assoc(:dataclip, attrs[:dataclip])
     |> then(fn changeset ->
       changeset
       |> fetch_change(:state)
@@ -232,11 +231,7 @@ defmodule Lightning.WorkOrders do
   end
 
   def build_for(%Job{} = job, attrs) do
-    %WorkOrder{}
-    |> change()
-    |> try_put_snapshot(attrs)
-    |> put_assoc(:workflow, attrs[:workflow])
-    |> put_assoc(:dataclip, attrs[:dataclip])
+    build(attrs)
     |> then(fn changeset ->
       snapshot = changeset |> get_change(:snapshot)
 

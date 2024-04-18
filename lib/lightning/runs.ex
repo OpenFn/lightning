@@ -277,10 +277,10 @@ defmodule Lightning.Runs do
 
   The Step is created and marked as started at the current time.
   """
-  @spec start_step(map()) ::
+  @spec start_step(Run.t(), map()) ::
           {:ok, Lightning.Invocation.Step.t()} | {:error, Ecto.Changeset.t()}
-  def start_step(params) do
-    Handlers.StartStep.call(params)
+  def start_step(run, params) do
+    Handlers.StartStep.call(run, params)
   end
 
   @spec complete_step(map(), Lightning.Projects.Project.retention_policy_type()) ::

@@ -922,8 +922,7 @@ defmodule Lightning.SetupUtils do
                 Map.get(previous, :output_dataclip_id, input_dataclip.id)
               )
 
-            Runs.start_step(%{
-              run_id: run.id,
+            Runs.start_step(run, %{
               step_id: step_id,
               job_id: step.job_id,
               input_dataclip_id: input_dataclip_id,

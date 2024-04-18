@@ -634,23 +634,27 @@ defmodule LightningWeb.WorkOrderLiveTest do
 
       dataclip = insert(:dataclip)
 
+      {:ok, snapshot} =
+        Lightning.Workflows.Snapshot.get_or_create_latest_for(workflow)
+
       work_order =
         insert(:workorder,
           workflow: workflow,
           trigger: trigger,
-          dataclip: dataclip
+          dataclip: dataclip,
+          snapshot: snapshot
         )
 
       run =
         insert(:run,
           work_order: work_order,
           dataclip: dataclip,
-          starting_trigger: trigger
+          starting_trigger: trigger,
+          snapshot: snapshot
         )
 
       {:ok, _step} =
-        Runs.start_step(%{
-          "run_id" => run.id,
+        Runs.start_step(run, %{
           "job_id" => job.id,
           "input_dataclip_id" => dataclip.id,
           "step_id" => Ecto.UUID.generate()
@@ -672,38 +676,7 @@ defmodule LightningWeb.WorkOrderLiveTest do
                "Loading work orders ..."
     end
 
-    test "Search form is displayed", %{
-      conn: conn,
-      project: project
-    } do
-      workflow = insert(:workflow, project: project)
-      trigger = insert(:trigger, type: :webhook, workflow: workflow)
-      job = insert(:job, workflow: workflow)
-
-      dataclip = insert(:dataclip)
-
-      work_order =
-        insert(:workorder,
-          workflow: workflow,
-          trigger: trigger,
-          dataclip: dataclip
-        )
-
-      run =
-        insert(:run,
-          work_order: work_order,
-          dataclip: dataclip,
-          starting_trigger: trigger
-        )
-
-      {:ok, _step} =
-        Runs.start_step(%{
-          "run_id" => run.id,
-          "job_id" => job.id,
-          "input_dataclip_id" => dataclip.id,
-          "step_id" => Ecto.UUID.generate()
-        })
-
+    test "Search form is displayed", %{conn: conn, project: project} do
       {:ok, view, html} =
         live_async(conn, Routes.project_run_index_path(conn, :index, project.id))
 
@@ -768,11 +741,15 @@ defmodule LightningWeb.WorkOrderLiveTest do
 
       dataclip = insert(:dataclip)
 
+      {:ok, snapshot} =
+        Lightning.Workflows.Snapshot.get_or_create_latest_for(workflow)
+
       work_order =
         insert(:workorder,
           workflow: workflow,
           trigger: trigger,
           dataclip: dataclip,
+          snapshot: snapshot,
           last_activity: DateTime.utc_now(),
           state: :failed
         )
@@ -781,12 +758,12 @@ defmodule LightningWeb.WorkOrderLiveTest do
         insert(:run,
           work_order: work_order,
           dataclip: dataclip,
-          starting_trigger: trigger
+          starting_trigger: trigger,
+          snapshot: snapshot
         )
 
       {:ok, _step} =
-        Runs.start_step(%{
-          "run_id" => run.id,
+        Runs.start_step(run, %{
           "job_id" => job.id,
           "input_dataclip_id" => dataclip.id,
           "step_id" => Ecto.UUID.generate()
@@ -959,26 +936,38 @@ defmodule LightningWeb.WorkOrderLiveTest do
           body: %{"username" => "eliaswalyba"}
         )
 
-      work_order_one =
-        insert(:workorder,
-          workflow: workflow_one,
-          trigger: trigger_one,
-          dataclip: dataclip,
-          last_activity: DateTime.utc_now()
-        )
+      # work_order_one =
+      #   insert(:workorder,
+      #     workflow: workflow_one,
+      #     trigger: trigger_one,
+      #     dataclip: dataclip,
+      #     last_activity: DateTime.utc_now()
+      #   )
 
-      run_one =
-        insert(:run,
-          work_order: work_order_one,
+      # run_one =
+      #   insert(:run,
+      #     work_order: work_order_one,
+      #     dataclip: dataclip,
+      #     starting_trigger: trigger_one
+      #   )
+
+      %{runs: [run_one]} =
+        work_order_for(trigger_one,
+          workflow: workflow_one,
           dataclip: dataclip,
-          starting_trigger: trigger_one
+          runs: [
+            build(:run,
+              dataclip: dataclip,
+              starting_trigger: trigger_one
+            )
+          ]
         )
+        |> insert()
 
       expected_d1 = Timex.now() |> Timex.shift(days: -12)
 
       {:ok, _step} =
-        Runs.start_step(%{
-          "run_id" => run_one.id,
+        Runs.start_step(run_one, %{
           "job_id" => job_one.id,
           "input_dataclip_id" => dataclip.id,
           "started_at" => expected_d1,
@@ -993,11 +982,15 @@ defmodule LightningWeb.WorkOrderLiveTest do
       dataclip =
         insert(:dataclip, type: :http_request, body: %{"username" => "qassim"})
 
+      {:ok, snapshot} =
+        Lightning.Workflows.Snapshot.get_or_create_latest_for(workflow_two)
+
       work_order_two =
         insert(:workorder,
           workflow: workflow_two,
           trigger: trigger_two,
           dataclip: dataclip,
+          snapshot: snapshot,
           last_activity: DateTime.utc_now(),
           state: :failed
         )
@@ -1006,14 +999,14 @@ defmodule LightningWeb.WorkOrderLiveTest do
         insert(:run,
           work_order: work_order_two,
           dataclip: dataclip,
-          starting_trigger: trigger_two
+          starting_trigger: trigger_two,
+          snapshot: snapshot
         )
 
       expected_d2 = Timex.now() |> Timex.shift(days: -10)
 
       {:ok, _step} =
-        Runs.start_step(%{
-          "run_id" => run_two.id,
+        Runs.start_step(run_two, %{
           "job_id" => job_two.id,
           "input_dataclip_id" => dataclip.id,
           "started_at" => expected_d2,
@@ -1515,21 +1508,7 @@ defmodule LightningWeb.WorkOrderLiveTest do
       work_order =
         work_order_for(trigger,
           workflow: workflow,
-          dataclip: dataclip,
-          runs: [
-            build(:run,
-              dataclip: dataclip,
-              starting_trigger: trigger,
-              steps: [
-                build(:step,
-                  job: job,
-                  exit_reason: "success",
-                  started_at: build(:timestamp),
-                  finished_at: build(:timestamp)
-                )
-              ]
-            )
-          ]
+          dataclip: dataclip
         )
         |> insert()
 
