@@ -16,15 +16,24 @@ and this project adheres to
 ## [Unreleased]
 
 ### Added
+
+### Changed
+
+### Fixed
+
+## [v2.4.1-pre] 2024-04-18
+
+### Added
+
 - Add custom metric to track the number of finalised runs.
   [#1790](https://github.com/OpenFn/lightning/issues/1790)
 
 ### Changed
 
+- Set better defaults for the GitHub connection creation screen
+  [#1994](https://github.com/OpenFn/lightning/issues/1994)
 - Update `submission_status` for any Usagetracking.Report that does not have it
   set. [#1789](https://github.com/OpenFn/lightning/issues/1789)
-
-### Fixed
 
 ## [v2.4.0] - 2024-04-12
 
