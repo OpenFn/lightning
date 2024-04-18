@@ -640,7 +640,7 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
               </label>
 
               <p id="pull_first_sync_option_description" class="text-gray-500">
-                This default option will commit a copy of your current OpenFn project to a GitHub repo.
+                This option will commit a copy of your current OpenFn project to a GitHub repo.
               </p>
             </div>
           </div>
