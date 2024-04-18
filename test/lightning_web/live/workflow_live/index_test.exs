@@ -34,6 +34,27 @@ defmodule LightningWeb.WorkflowLive.IndexTest do
       assert html =~ "Some banner text"
     end
 
+    test "renders error tooltip when limit has been reached", %{
+      conn: conn,
+      project: %{id: project_id}
+    } do
+      Mox.verify_on_exit!()
+      error_message = "some funny error message"
+
+      Mox.expect(
+        Lightning.Extensions.MockUsageLimiter,
+        :limit_action,
+        2,
+        fn %{type: :activate_workflow}, %{project_id: ^project_id} ->
+          {:error, :too_many_workflows, %{text: error_message}}
+        end
+      )
+
+      {:ok, _view, html} = live(conn, ~p"/projects/#{project_id}/w")
+
+      assert html =~ error_message
+    end
+
     test "only users with MFA enabled can access workflows for a project with MFA requirement",
          %{
            conn: conn
