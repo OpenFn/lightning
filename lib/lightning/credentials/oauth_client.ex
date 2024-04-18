@@ -53,8 +53,7 @@ defmodule Lightning.Credentials.OauthClient do
       :client_id,
       :client_secret,
       :authorization_endpoint,
-      :token_endpoint,
-      :userinfo_endpoint
+      :token_endpoint
     ])
     |> validate_url_format(:authorization_endpoint)
     |> validate_url_format(:token_endpoint)
