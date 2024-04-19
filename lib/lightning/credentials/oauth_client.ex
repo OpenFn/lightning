@@ -26,6 +26,8 @@ defmodule Lightning.Credentials.OauthClient do
     field :token_endpoint, :string
     field :userinfo_endpoint, :string
     field :global, :boolean, default: false
+    field :mandatory_scopes, :string
+    field :optional_scopes, :string
 
     belongs_to :user, User
     has_many :credentials, Credential
@@ -46,7 +48,9 @@ defmodule Lightning.Credentials.OauthClient do
       :token_endpoint,
       :userinfo_endpoint,
       :global,
-      :user_id
+      :user_id,
+      :mandatory_scopes,
+      :optional_scopes
     ])
     |> validate_required([
       :name,
