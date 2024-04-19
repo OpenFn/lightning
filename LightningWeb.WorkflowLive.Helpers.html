@@ -13,7 +13,7 @@
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-EPF2X7PV.js"></script>
-    <script src="dist/sidebar_items-B94233DA.js"></script>
+    <script src="dist/sidebar_items-689BD7F2.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -161,6 +161,14 @@ Pages
 
     </div>
 
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#save_workflow/1" translate="no">save_workflow(changeset)</a>
+
+      </div>
+
+    </div>
+
 </div>
 
   </section>
@@ -183,7 +191,7 @@ Pages
     </a>
     <h1 class="signature" translate="no">save_and_run(workflow_changeset, params, opts)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/workflow_live/helpers.ex#L32" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/workflow_live/helpers.ex#L46" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -211,6 +219,36 @@ Pages
   | {:error, <a href="https://hexdocs.pm/ecto/3.10.3/Ecto.Changeset.html#t:t/1">Ecto.Changeset.t</a>(<a href="Lightning.Workflows.Workflow.html#t:t/0">Lightning.Workflows.Workflow.t</a>())}
   | {:error, <a href="https://hexdocs.pm/ecto/3.10.3/Ecto.Changeset.html#t:t/1">Ecto.Changeset.t</a>(<a href="Lightning.WorkOrders.Manual.html#t:t/0">Lightning.WorkOrders.Manual.t</a>())}
   | {:error, <a href="Lightning.Extensions.UsageLimiting.html#t:message/0">Lightning.Extensions.UsageLimiting.message</a>()}</pre>
+
+      </div>
+
+
+  </section>
+</section>
+<section class="detail" id="save_workflow/1">
+
+  <div class="detail-header">
+    <a href="#save_workflow/1" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">save_workflow(changeset)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/workflow_live/helpers.ex#L20" class="icon-action" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> save_workflow(<a href="https://hexdocs.pm/ecto/3.10.3/Ecto.Changeset.html#t:t/0">Ecto.Changeset.t</a>()) ::
+  {:ok, <a href="Lightning.Workflows.Workflow.html#t:t/0">Lightning.Workflows.Workflow.t</a>()}
+  | {:error, <a href="https://hexdocs.pm/ecto/3.10.3/Ecto.Changeset.html#t:t/0">Ecto.Changeset.t</a>() | <a href="Lightning.Extensions.UsageLimiting.html#t:message/0">Lightning.Extensions.UsageLimiting.message</a>()}</pre>
 
       </div>
 
