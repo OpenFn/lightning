@@ -33,18 +33,20 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
       Application.fetch_env!(:lightning, LightningWeb)
       |> Keyword.get(:allow_credential_transfer)
 
+    updated_socket =
+      socket
+      |> assign(scopes: [])
+      |> assign(scopes_changed: false)
+      |> assign(schema: false)
+      |> assign(available_projects: [])
+      |> assign(oauth_clients: [])
+      |> assign(allow_credential_transfer: allow_credential_transfer)
+
     {:ok, schemas_path} = Application.fetch_env(:lightning, :schemas_path)
 
-    type_options = get_type_options(socket, schemas_path)
+    type_options = get_type_options(updated_socket, schemas_path)
 
-    {:ok,
-     socket
-     |> assign(scopes: [])
-     |> assign(type_options: type_options)
-     |> assign(scopes_changed: false)
-     |> assign(schema: false)
-     |> assign(available_projects: [])
-     |> assign(allow_credential_transfer: allow_credential_transfer)}
+    {:ok, assign(updated_socket, type_options: type_options)}
   end
 
   @impl true
@@ -308,7 +310,7 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
           >
             <div class="grid grid-cols-2 md:grid-cols-4 sm:grid-cols-3 gap-4 overflow-auto max-h-99">
               <div
-                :for={{name, key, logo} <- @type_options}
+                :for={{name, key, logo, _id} <- @type_options}
                 class="flex items-center p-2"
               >
                 <%= Phoenix.HTML.Form.radio_button(f, :selected, key,
@@ -716,38 +718,47 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
       Path.wildcard("#{schemas_path}/*.json")
       |> Enum.map(fn p ->
         name = p |> Path.basename() |> String.replace(".json", "")
-        {name |> Phoenix.HTML.Form.humanize(), name, nil}
+        {name |> Phoenix.HTML.Form.humanize(), name, nil, nil}
       end)
 
-    oauth_clients =
+    oauth_clients_from_env =
       Application.get_env(:lightning, :oauth_clients)
 
+    oauth_clients =
+      socket.assigns.oauth_clients
+      |> Enum.map(fn client ->
+        {client.name,
+         client.name |> String.downcase() |> String.replace(" ", "_"), nil,
+         client.id}
+      end)
+
     schemas_options
-    |> Enum.concat([{"Raw JSON", "raw", nil}])
-    |> Enum.concat([{"Generic Oauth", "generic_oauth", nil}])
+    |> Enum.concat([{"Raw JSON", "raw", nil, nil}])
+    |> Enum.concat(oauth_clients)
     |> handle_oauth_item(
       {"GoogleSheets", "googlesheets",
-       Routes.static_path(socket, "/images/oauth-2.png")},
-      get_in(oauth_clients, [:google, :client_id])
+       Routes.static_path(socket, "/images/oauth-2.png"), nil},
+      get_in(oauth_clients_from_env, [:google, :client_id])
     )
     |> handle_oauth_item(
       {
         "Salesforce",
         "salesforce_oauth",
-        Routes.static_path(socket, "/images/oauth-2.png")
+        Routes.static_path(socket, "/images/oauth-2.png"),
+        nil
       },
-      get_in(oauth_clients, [:salesforce, :client_id])
+      get_in(oauth_clients_from_env, [:salesforce, :client_id])
     )
     |> Enum.sort_by(& &1, :asc)
   end
 
-  defp handle_oauth_item(list, {_label, id, _image} = item, client_id) do
+  defp handle_oauth_item(list, {_label, id, _image, _} = item, client_id) do
     if is_nil(client_id) || Enum.member?(list, item) do
       # Replace
-      Enum.reject(list, fn {_first, second, _third} -> second == id end)
+      Enum.reject(list, fn {_first, second, _third, _} -> second == id end)
     else
       Enum.map(list, fn
-        {_old_label, old_id, _old_image} when old_id == id -> item
+        {_old_label, old_id, _old_image, _} when old_id == id -> item
         old_item -> old_item
       end)
       |> append_if_missing(item)
