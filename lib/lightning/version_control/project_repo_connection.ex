@@ -97,7 +97,7 @@ defmodule Lightning.VersionControl.ProjectRepoConnection do
 
   defp validate_sync_direction(changeset) do
     validate_change(changeset, :sync_direction, fn _field, value ->
-      path = get_change(changeset, :config_path)
+      path = get_field(changeset, :config_path)
 
       if value == :deploy and is_nil(path) do
         [config_path: "you must specify a path to an existing config file"]
