@@ -95,7 +95,7 @@
         <.input
           type="text"
           field={f[:config_path]}
-          label="Path to config (optional)"
+          label={"Path to config #{if f[:sync_direction].value == :deploy, do: "(required)", else: "(optional)"}"}
           placeholder={"./openfn-#{@project.id}-config.json"}
           class="placeholder:italic placeholder:text-slate-400"
         />

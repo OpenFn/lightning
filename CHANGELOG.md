@@ -17,18 +17,26 @@ and this project adheres to
 
 ### Added
 
-- Add custom metric to track the number of finalised runs.
-  [#1790](https://github.com/OpenFn/lightning/issues/1790)
-
 ### Changed
-
-- Update `submission_status` for any Usagetracking.Report that does not have it
-  set. [#1789](https://github.com/OpenFn/lightning/issues/1789)
 
 ### Fixed
 
 - Fix github cli deploy action failing to auto-commit
   [#1995](https://github.com/OpenFn/lightning/issues/1995)
+
+## [v2.4.1-pre] 2024-04-18
+
+### Added
+
+- Add custom metric to track the number of finalised runs.
+  [#1790](https://github.com/OpenFn/lightning/issues/1790)
+
+### Changed
+
+- Set better defaults for the GitHub connection creation screen
+  [#1994](https://github.com/OpenFn/lightning/issues/1994)
+- Update `submission_status` for any Usagetracking.Report that does not have it
+  set. [#1789](https://github.com/OpenFn/lightning/issues/1789)
 
 ## [v2.4.0] - 2024-04-12
 

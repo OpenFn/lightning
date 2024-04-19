@@ -27,7 +27,12 @@ defmodule Lightning.VersionControl.ProjectRepoConnection do
     field :access_token, :binary
     field :config_path, :string
     field :accept, :boolean, virtual: true
-    field :sync_direction, Ecto.Enum, values: [:deploy, :pull], virtual: true
+
+    field :sync_direction, Ecto.Enum,
+      values: [:deploy, :pull],
+      virtual: true,
+      default: :pull
+
     belongs_to :project, Project
 
     timestamps()
@@ -68,12 +73,14 @@ defmodule Lightning.VersionControl.ProjectRepoConnection do
         [accept: "please tick the box"]
       end
     end)
+    |> validate_sync_direction()
   end
 
   def reconfigure_changeset(project_repo_connection, attrs) do
     project_repo_connection
     |> cast(attrs, [:sync_direction, :accept])
     |> validate_required([:sync_direction, :accept])
+    |> validate_sync_direction()
   end
 
   def create_changeset(project_repo_connection, attrs) do
@@ -86,6 +93,18 @@ defmodule Lightning.VersionControl.ProjectRepoConnection do
     else
       changeset
     end
+  end
+
+  defp validate_sync_direction(changeset) do
+    validate_change(changeset, :sync_direction, fn _field, value ->
+      path = get_field(changeset, :config_path)
+
+      if value == :deploy and is_nil(path) do
+        [config_path: "you must specify a path to an existing config file"]
+      else
+        []
+      end
+    end)
   end
 
   defp generate_access_token(project_id) do

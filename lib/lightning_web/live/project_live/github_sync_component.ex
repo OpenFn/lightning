@@ -612,12 +612,12 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
     ~H"""
     <div class="mb-4">
       <.label>
-        Direction of <em>First</em> Sync
+        Initial Setup Action
       </.label>
       <p class="text-sm text-gray-500">
-        To connect (or re-connect) this project to a GitHub repository, you must choose the
-        <b>direction of the <em>first</em> sync.</b>
-        After this initial setup, each push to your target branch on GitHub will trigger a deployment to OpenFn and each click of the "Initiate Sync to Branch" button on OpenFn will tell GitHub to commit a copy of your project to the target branch.
+        Do you want to initialize this 2-way sync by committing your current
+        OpenFn project to GitHub or do you want to overwrite your current OpenFn
+        project, importing a previously created project from a GitHub repo?
       </p>
       <fieldset class="mt-4">
         <legend class="sr-only">Direction of <em>Initial</em> Sync</legend>
@@ -627,20 +627,20 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
               <.input
                 type="radio"
                 field={@form[:sync_direction]}
-                id="deploy_first_sync_option"
-                aria-describedby="deploy_first_sync_option_description"
-                value="deploy"
-                checked={@form[:sync_direction].value == :deploy}
-                required="true"
+                id="pull_first_sync_option"
+                aria-describedby="pull_first_sync_option_description"
+                value="pull"
+                checked={@form[:sync_direction].value != :deploy}
               />
             </div>
             <div class="ml-3 text-sm leading-6">
-              <label for="deploy_first_sync_option" class="text-gray-900">
-                <span class="font-medium">GitHub --> OpenFn:</span>
-                Deploy from GitHub immediately upon setup
+              <label for="pull_first_sync_option" class="text-gray-900">
+                <span class="font-medium">OpenFn --> GitHub:</span>
+                Export to GitHub (default, non-destructive)
               </label>
-              <p id="deploy_first_sync_option_description" class="text-gray-500">
-                Use this option if you have a project.yaml already configured on GitHub and you want to overwrite what's here in OpenFn.
+
+              <p id="pull_first_sync_option_description" class="text-gray-500">
+                This option will commit a copy of your current OpenFn project to a GitHub repo.
               </p>
             </div>
           </div>
@@ -649,22 +649,22 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
               <.input
                 type="radio"
                 field={@form[:sync_direction]}
-                id="pull_first_sync_option"
-                aria-describedby="pull_first_sync_option_description"
-                value="pull"
-                checked={@form[:sync_direction].value == :pull}
+                id="deploy_first_sync_option"
+                aria-describedby="deploy_first_sync_option_description"
+                value="deploy"
+                checked={@form[:sync_direction].value == :deploy}
               />
             </div>
             <div class="ml-3 text-sm leading-6">
-              <label for="pull_first_sync_option" class="text-gray-900">
-                <span class="font-medium">OpenFn --> GitHub:</span>
-                Sync to GitHub immediately upon setup
+              <label for="deploy_first_sync_option" class="text-gray-900">
+                <span class="font-medium">GitHub --> OpenFn:</span>
+                Import from GitHub (overwrite this project)
               </label>
-
-              <p id="pull_first_sync_option_description" class="text-gray-500">
-                Use this option if you have a project here on OpenFn that you'd like to commit to a GitHub repo. (If you don't have a
-                <code>project.yaml</code>
-                file already tracking your work somewhere in GitHub, this is probably the option you should chose.)
+              <p id="deploy_first_sync_option_description" class="text-gray-500">
+                If you already have <code>config.json</code>
+                and <code>project.yaml</code>
+                files tracked on GitHub and you want to <b>overwrite</b>
+                this project on OpenFn, you can choose this advanced option.
               </p>
             </div>
           </div>
@@ -680,7 +680,10 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
 
   defp accept_checkbox(assigns) do
     ~H"""
-    <div class="mt-4 bg-amber-200 flex gap-3 rounded-md p-3 ">
+    <div class={[
+      "mt-4 bg-amber-200 flex gap-3 rounded-md p-3",
+      @form[:sync_direction].value == :deploy && "bg-red-200"
+    ]}>
       <.input
         type="checkbox"
         field={@form[:accept]}
@@ -688,7 +691,11 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
         hidden_input={false}
       />
       <span>
-        I understand that the following files will be committed to <b><%= @form[
+        I understand that
+        <%= if @form[:sync_direction].value == :deploy do %>
+          my current OpenFn project <b>will be destroyed</b> and
+        <% end %>
+        the following files will be committed to <b><%= @form[
           :repo
         ].value %></b>:
         <ul class="my-2">
