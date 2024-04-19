@@ -5,6 +5,7 @@ defmodule Lightning.OauthClients do
 
   import Ecto.Query, warn: false
 
+  alias Lightning.Projects.ProjectOauthClient
   alias Ecto.Multi
   alias Lightning.Credentials.Audit
   alias Lightning.Credentials.OauthClient
@@ -238,10 +239,21 @@ defmodule Lightning.OauthClients do
   """
   def delete_client(%OauthClient{} = client) do
     Multi.new()
+    |> Multi.run(:remove_projects, fn _repo, _changes ->
+      case remove_project_oauth_clients(client.id) do
+        {:error, reason} -> {:error, reason}
+        {count, _} -> {:ok, count}
+      end
+    end)
     |> Multi.delete(:client, client)
     |> Multi.insert(:audit, fn _ ->
       Audit.event("deleted", client.id, client.user_id)
     end)
     |> Repo.transaction()
+  end
+
+  defp remove_project_oauth_clients(client_id) do
+    from(poc in ProjectOauthClient, where: [oauth_client_id: ^client_id])
+    |> Repo.delete_all()
   end
 end
