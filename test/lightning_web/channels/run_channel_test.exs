@@ -10,10 +10,22 @@ defmodule LightningWeb.RunChannelTest do
   import Lightning.Factories
   import Lightning.BypassHelpers
 
-  setup _ do
+  setup do
     Mox.stub_with(
       Lightning.Extensions.MockUsageLimiter,
       Lightning.Extensions.UsageLimiter
+    )
+
+    Mox.stub(Lightning.Extensions.MockUsageLimiter, :check_limits, fn _context ->
+      :ok
+    end)
+
+    Mox.stub(
+      Lightning.Extensions.MockUsageLimiter,
+      :limit_action,
+      fn _action, _context ->
+        :ok
+      end
     )
 
     :ok

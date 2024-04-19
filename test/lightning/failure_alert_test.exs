@@ -9,6 +9,22 @@ defmodule Lightning.FailureAlertTest do
   alias Lightning.Workers
   alias Lightning.FailureAlerter
 
+  setup do
+    Mox.stub(Lightning.Extensions.MockUsageLimiter, :check_limits, fn _context ->
+      :ok
+    end)
+
+    Mox.stub(
+      Lightning.Extensions.MockUsageLimiter,
+      :limit_action,
+      fn _action, _context ->
+        :ok
+      end
+    )
+
+    :ok
+  end
+
   describe "FailureAlert" do
     setup do
       period =

@@ -1,7 +1,10 @@
 defmodule Lightning.FailureAlerter do
   @moduledoc false
 
+  alias Lightning.Extensions.UsageLimiting.Action
+  alias Lightning.Extensions.UsageLimiting.Context
   alias Lightning.Run
+  alias Lightning.Services.UsageLimiter
 
   def alert_on_failure(nil), do: nil
 
@@ -11,21 +14,23 @@ defmodule Lightning.FailureAlerter do
   def alert_on_failure(%Run{} = run) do
     workflow = run.work_order.workflow
 
-    Lightning.Accounts.get_users_to_alert_for_project(%{
-      id: workflow.project_id
-    })
-    |> Enum.each(fn user ->
-      %{
-        "workflow_id" => workflow.id,
-        "workflow_name" => workflow.name,
-        "work_order_id" => run.work_order_id,
-        "run_id" => run.id,
-        "project_id" => workflow.project_id,
-        "run_logs" => run.log_lines,
-        "recipient" => user
-      }
-      |> Lightning.FailureAlerter.alert()
-    end)
+    if :ok == limit_failure_alert(workflow.project_id) do
+      Lightning.Accounts.get_users_to_alert_for_project(%{
+        id: workflow.project_id
+      })
+      |> Enum.each(fn user ->
+        %{
+          "workflow_id" => workflow.id,
+          "workflow_name" => workflow.name,
+          "work_order_id" => run.work_order_id,
+          "run_id" => run.id,
+          "project_id" => workflow.project_id,
+          "run_logs" => run.log_lines,
+          "recipient" => user
+        }
+        |> Lightning.FailureAlerter.alert()
+      end)
+    end
   end
 
   def alert(%{
@@ -88,5 +93,11 @@ defmodule Lightning.FailureAlerter do
         nil
         # {:cancel, "Failure notification rate limit is reached"} or Logger
     end
+  end
+
+  defp limit_failure_alert(project_id) do
+    UsageLimiter.limit_action(%Action{type: :alert_failure}, %Context{
+      project_id: project_id
+    })
   end
 end
