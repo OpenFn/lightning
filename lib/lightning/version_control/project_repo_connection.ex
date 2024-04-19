@@ -59,7 +59,6 @@ defmodule Lightning.VersionControl.ProjectRepoConnection do
     |> unique_constraint(:project_id,
       message: "project already has a repo connection"
     )
-    |> validate_sync_direction()
   end
 
   def configure_changeset(project_repo_connection, attrs) do
