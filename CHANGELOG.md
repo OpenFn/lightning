@@ -21,6 +21,10 @@ and this project adheres to
 
 ### Fixed
 
+## [v2.4.1] 2024-04-19
+
+### Fixed
+
 - Fix github cli deploy action failing to auto-commit
   [#1995](https://github.com/OpenFn/lightning/issues/1995)
 
