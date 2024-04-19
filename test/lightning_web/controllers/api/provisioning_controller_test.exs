@@ -543,7 +543,7 @@ defmodule LightningWeb.API.ProvisioningControllerTest do
       assert post(conn, ~p"/api/provision", body) |> json_response(201)
     end
 
-    test "an existing project with workflows marked for deletion can be deleted successfully",
+    test "returns 201 for an existing project with workflows marked for deletion",
          %{
            conn: conn
          } do
