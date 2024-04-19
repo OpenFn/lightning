@@ -288,7 +288,7 @@ defmodule LightningWeb.Components.NewInputs do
           />
         </div>
       </div>
-      <div class="error-space h-6">
+      <div :if={Enum.any?(@errors)} class="error-space h-6">
         <.error :for={msg <- @errors}><%= msg %></.error>
       </div>
     </div>

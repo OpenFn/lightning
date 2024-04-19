@@ -364,6 +364,14 @@
                         Edit
                       </.link>
                     </span>
+                    |
+                    <span>
+                      <.link phx-click={
+                        show_modal("delete_oauth_client_#{client.id}_modal")
+                      }>
+                        Delete
+                      </.link>
+                    </span>
                     <.live_component
                       id={"edit-oauth-client-#{client.id}-modal"}
                       module={
@@ -378,6 +386,11 @@
                       return_to={
                         ~p"/projects/#{@project.id}/settings#credentials"
                       }
+                    />
+                    <.delete_oauth_client_modal
+                      :if={client.user_id == @current_user.id}
+                      id={"delete_oauth_client_#{client.id}_modal"}
+                      client={client}
                     />
                   <% end %>
                 </.td>
@@ -426,6 +439,14 @@
                         Edit
                       </.link>
                     </span>
+                    |
+                    <span>
+                      <.link phx-click={
+                        show_modal("delete_credential_#{credential.id}_modal")
+                      }>
+                        Delete
+                      </.link>
+                    </span>
                     <.live_component
                       id={"edit-credential-#{credential.id}-modal"}
                       module={
@@ -443,6 +464,11 @@
                       return_to={
                         ~p"/projects/#{@project.id}/settings#credentials"
                       }
+                    />
+                    <.delete_credential_modal
+                      :if={credential.user_id == @current_user.id}
+                      id={"delete_credential_#{credential.id}_modal"}
+                      credential={credential}
                     />
                   <% end %>
                 </.td>

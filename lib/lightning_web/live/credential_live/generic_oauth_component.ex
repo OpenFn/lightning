@@ -16,7 +16,7 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
 
     {:ok,
      socket
-     |> assign_new(:scopes, fn -> [] end)
+     |> assign_new(:scopes, fn -> ["offline_access"] end)
      |> assign_new(:selected_client, fn -> nil end)
      |> assign_new(:selected_project, fn -> nil end)
      |> assign_new(:authorize_url, fn -> nil end)
@@ -55,12 +55,16 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
             )
           end)
         else
-          start_async(socket, :userinfo, fn ->
-            fetch_userinfo(
-              credential.body["access_token"],
-              selected_client.userinfo_endpoint
-            )
-          end)
+          if selected_client.userinfo_endpoint do
+            start_async(socket, :userinfo, fn ->
+              fetch_userinfo(
+                credential.body["access_token"],
+                selected_client.userinfo_endpoint
+              )
+            end)
+          else
+            socket
+          end
         end
         |> assign(:selected_client, selected_client)
         |> assign(:scopes, scopes)
@@ -84,14 +88,18 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
   end
 
   def update(%{code: code} = _assigns, socket) do
-    client = socket.assigns.selected_client
+    if !Map.get(socket.assigns, :code, false) do
+      client = socket.assigns.selected_client
 
-    {:ok,
-     socket
-     |> assign(code: code)
-     |> start_async(:token, fn ->
-       fetch_token(client, code)
-     end)}
+      {:ok,
+       socket
+       |> assign(code: code)
+       |> start_async(:token, fn ->
+         fetch_token(client, code)
+       end)}
+    else
+      {:ok, socket}
+    end
   end
 
   defp fetch_token(client, code) do
@@ -101,18 +109,20 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
       token_endpoint: token_endpoint
     } = client
 
-    headers = [{"Content-Type", "application/x-www-form-urlencoded"}]
+    # headers = [{"Content-Type", "application/x-www-form-urlencoded"}]
 
+    # URI.encode_query(
     body =
-      Jason.encode!(%{
+      %{
         client_id: client_id,
         client_secret: client_secret,
         code: code,
         grant_type: "authorization_code",
         redirect_uri: LightningWeb.RouteHelpers.oidc_callback_url()
-      })
+      }
 
-    case Tesla.post(token_endpoint, body, headers) do
+    case Tesla.client([Tesla.Middleware.FormUrlencoded])
+         |> Tesla.post(token_endpoint, body) do
       {:ok, %Tesla.Env{status: 200, body: response_body}} ->
         Jason.decode(response_body)
 
@@ -139,19 +149,16 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
   end
 
   def refresh_token(client_id, client_secret, refresh_token, token_endpoint) do
-    headers = [
-      {"Content-Type", "application/x-www-form-urlencoded"}
-    ]
-
     body =
-      Jason.encode!(%{
+      %{
         client_id: client_id,
         client_secret: client_secret,
         refresh_token: refresh_token,
         grant_type: "refresh_token"
-      })
+      }
 
-    case Tesla.post(token_endpoint, body, headers) do
+    case Tesla.client([Tesla.Middleware.FormUrlencoded])
+         |> Tesla.post(token_endpoint, body) do
       {:ok, %Tesla.Env{status: 200, body: response_body}} ->
         Jason.decode(response_body)
 
@@ -168,16 +175,26 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
     params = Map.put(socket.assigns.changeset.params, "body", token)
     changeset = Credentials.change_credential(socket.assigns.credential, params)
 
-    {:noreply,
-     socket
-     |> assign(:changeset, changeset)
-     |> assign(authorize_url: nil)
-     |> start_async(:userinfo, fn ->
-       fetch_userinfo(
-         token["access_token"],
-         socket.assigns.selected_client.userinfo_endpoint
-       )
-     end)}
+    assigns = Map.delete(socket.assigns, :code)
+    socket = Map.update!(socket, :assigns, fn _existing -> assigns end)
+
+    updated_socket =
+      socket
+      |> assign(:changeset, changeset)
+      |> assign(authorize_url: nil)
+
+    if socket.assigns.selected_client.userinfo_endpoint do
+      {:noreply,
+       updated_socket
+       |> start_async(:userinfo, fn ->
+         fetch_userinfo(
+           token["access_token"],
+           socket.assigns.selected_client.userinfo_endpoint
+         )
+       end)}
+    else
+      {:noreply, updated_socket}
+    end
   end
 
   def handle_async(:userinfo, {:ok, {:ok, userinfo}}, socket) do
@@ -198,8 +215,7 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
       )
       |> Map.put(:action, :validate)
 
-    {:noreply,
-     socket |> assign(changeset: changeset)}
+    {:noreply, socket |> assign(changeset: changeset) |> hande_client_change()}
   end
 
   def handle_event(
@@ -208,28 +224,6 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
         socket
       ) do
     save_credential(socket, socket.assigns.action, credential_params)
-  end
-
-  def handle_event("oauth_client_change", params, socket) do
-    client = get_client_from_params(params)
-
-    updated_socket =
-      if client do
-        state = build_state(socket.id, __MODULE__, socket.assigns.id)
-
-        authorize_url =
-          generate_authorize_url(
-            client.authorization_endpoint,
-            client.client_id,
-            state: state
-          )
-
-        assign(socket, authorize_url: authorize_url)
-      else
-        socket
-      end
-
-    {:noreply, assign(updated_socket, selected_client: client)}
   end
 
   def handle_event("add_scope", params, socket) do
@@ -253,7 +247,7 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
 
           authorize_url =
             generate_authorize_url(
-              "https://accounts.google.com/o/oauth2/v2/auth",
+              socket.assigns.selected_client.authorization_endpoint,
               socket.assigns.selected_client.client_id,
               state: state,
               scope: stringified_scopes
@@ -288,7 +282,7 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
 
           authorize_url =
             generate_authorize_url(
-              "https://accounts.google.com/o/oauth2/v2/auth",
+              socket.assigns.selected_client.authorization_endpoint,
               socket.assigns.selected_client.client_id,
               state: state,
               scope: stringified_scopes
@@ -413,15 +407,6 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
 
     body = Map.put(body, "api_version", Map.get(params, "api_version", nil))
 
-    # IO.inspect(user_id, label: "USER_ID")
-    # IO.inspect(credential_params, label: "CREDENTIAL_PARAMS")
-
-    # project_credentials =
-    #   Ecto.Changeset.fetch_field!(socket.assigns.changeset, :project_credentials)
-    #   |> Enum.map(fn %{project_id: project_id} ->
-    #     %{"project_id" => project_id}
-    #   end)
-
     params
     |> Map.put("user_id", user_id)
     |> Map.put("schema", "generic_oauth")
@@ -449,6 +434,27 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
 
       {:error, %Ecto.Changeset{} = changeset} ->
         {:noreply, assign(socket, :changeset, changeset)}
+    end
+  end
+
+  defp hande_client_change(socket) do
+    client =
+      Ecto.Changeset.get_change(socket.assigns.changeset, :oauth_client_id)
+      |> get_oauth_client()
+
+    if client do
+      state = build_state(socket.id, __MODULE__, socket.assigns.id)
+
+      authorize_url =
+        generate_authorize_url(
+          client.authorization_endpoint,
+          client.client_id,
+          state: state
+        )
+
+      assign(socket, authorize_url: authorize_url, selected_client: client)
+    else
+      socket
     end
   end
 
@@ -490,16 +496,9 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
     "#{base_url}?#{encoded_params}"
   end
 
-  defp get_client_from_params(%{
-         "credential" => %{"oauth_client_id" => client_id}
-       })
-       when client_id != "",
-       do: OauthClients.get_client!(client_id)
+  defp get_oauth_client(nil), do: nil
 
-  defp get_client_from_params(_), do: nil
-
-  defp scopes_from_params(%{"key" => ",", "value" => value} = _params),
-    do: [String.trim_trailing(value, ",")]
+  defp get_oauth_client(client_id), do: OauthClients.get_client!(client_id)
 
   defp scopes_from_params(%{"key" => _any_other_key} = _params), do: []
 
@@ -508,36 +507,13 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
 
   defp scopes_from_params(_any_other_params), do: []
 
+  # TODO: When there is no client, do not render the generic oauth credential type
+
   attr :form, :map, required: true
   attr :clients, :list, required: true
   slot :inner_block
 
   @impl true
-  def render(%{clients: []} = assigns) do
-    ~H"""
-    <div class="relative block w-full rounded-lg border-2 border-dashed border-gray-300 p-12 text-center focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
-      <svg
-        class="mx-auto h-12 w-12 text-gray-400"
-        stroke="currentColor"
-        fill="none"
-        viewBox="0 0 48 48"
-        aria-hidden="true"
-      >
-        <path
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="2"
-          d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z"
-        />
-      </svg>
-      <span class="mt-2 block text-sm font-medium text-gray-900">
-        No OAuth Client found.
-        <br />Please create one before configuring a Generic OAuth2 credential.
-      </span>
-    </div>
-    """
-  end
-
   def render(assigns) do
     ~H"""
     <div>
@@ -570,13 +546,11 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
               label="Select a client"
               prompt=""
               required="true"
-              phx-change="oauth_client_change"
-              phx-target={@myself}
               options={Enum.map(@oauth_clients, &{&1.name, &1.id})}
             />
           </div>
           <div class="text-xs italic py-2">
-            <span class="font-medium underline">Instance URL</span>:
+            <span class="font-medium underline">Authorization URL</span>:
             <span :if={@selected_client}>
               <%= @selected_client.authorization_endpoint %>
             </span>

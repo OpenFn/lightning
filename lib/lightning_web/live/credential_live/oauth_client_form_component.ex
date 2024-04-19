@@ -185,7 +185,7 @@ defmodule LightningWeb.CredentialLive.OauthClientFormComponent do
           phx-change="validate"
           phx-submit="save"
         >
-          <div class="space-y-6 bg-white px-4 py-5 sm:p-6">
+          <div class="space-y-6 bg-white px-4 px-6 sm:px-6">
             <div class="space-y-4">
               <div>
                 <NewInputs.input
@@ -224,8 +224,7 @@ defmodule LightningWeb.CredentialLive.OauthClientFormComponent do
                 <NewInputs.input
                   type="text"
                   field={f[:userinfo_endpoint]}
-                  label="User Info URL"
-                  required="true"
+                  label="UserInfo URL"
                 />
               </div>
             </div>
