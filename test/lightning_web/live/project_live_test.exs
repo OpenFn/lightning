@@ -2176,6 +2176,35 @@ defmodule LightningWeb.ProjectLiveTest do
       end
     end
 
+    test "add collaborators button is disabled if limit is reached", %{
+      conn: conn
+    } do
+      %{id: project_id} = project = insert(:project)
+
+      {conn, _user} = setup_project_user(conn, project, :admin)
+
+      error_msg = "some meaningful error message"
+
+      Mox.expect(
+        Lightning.Extensions.MockUsageLimiter,
+        :limit_action,
+        4,
+        fn %{type: :new_user, amount: 1}, %{project_id: ^project_id} ->
+          {:error, :too_many_users, %{text: error_msg}}
+        end
+      )
+
+      {:ok, view, html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/settings#collaboration"
+        )
+
+      assert html =~ error_msg
+
+      assert has_element?(view, "#show_collaborators_modal_button:disabled")
+    end
+
     test "error message is displayed if the allowed limits are exceeded", %{
       conn: conn
     } do
@@ -2185,6 +2214,15 @@ defmodule LightningWeb.ProjectLiveTest do
 
       # users to add
       [admin, editor, viewer] = insert_list(3, :user)
+
+      # return ok for enabling the add collaboratos button
+      Mox.stub(
+        Lightning.Extensions.MockUsageLimiter,
+        :limit_action,
+        fn %{type: :new_user, amount: 1}, %{project_id: ^project_id} ->
+          :ok
+        end
+      )
 
       {:ok, view, html} =
         live(

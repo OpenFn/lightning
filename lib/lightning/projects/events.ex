@@ -7,6 +7,11 @@ defmodule Lightning.Projects.Events do
     defstruct project: nil
   end
 
+  defmodule ProjectUpdated do
+    @moduledoc false
+    defstruct project: nil
+  end
+
   defmodule ProjectDeleted do
     @moduledoc false
     defstruct project: nil
@@ -16,6 +21,13 @@ defmodule Lightning.Projects.Events do
     Lightning.broadcast(
       topic(),
       %ProjectCreated{project: project}
+    )
+  end
+
+  def project_updated(project) do
+    Lightning.broadcast(
+      topic(),
+      %ProjectUpdated{project: project}
     )
   end
 

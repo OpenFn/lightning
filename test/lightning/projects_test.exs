@@ -126,11 +126,16 @@ defmodule Lightning.ProjectsTest do
     test "update_project/2 with valid data updates the project" do
       project = project_fixture()
       update_attrs = %{name: "some-updated-name"}
+      Projects.Events.subscribe()
 
-      assert {:ok, %Project{} = project} =
+      assert {:ok, %Project{id: project_id} = project} =
                Projects.update_project(project, update_attrs)
 
       assert project.name == "some-updated-name"
+
+      assert_received %Projects.Events.ProjectUpdated{
+        project: %{id: ^project_id}
+      }
     end
 
     test "update_project/2 updates the MFA requirement" do

@@ -11,6 +11,7 @@ defmodule LightningWeb.ProjectLive.Settings do
   alias Lightning.Policies.ProjectUsers
   alias Lightning.Projects
   alias Lightning.Projects.ProjectUser
+  alias Lightning.Projects.ProjectUsersLimiter
   alias Lightning.VersionControl
   alias Lightning.WebhookAuthMethods
   alias Lightning.Workflows.WebhookAuthMethod
@@ -586,5 +587,15 @@ defmodule LightningWeb.ProjectLive.Settings do
 
   defp user_has_valid_oauth_token(user) do
     VersionControl.oauth_token_valid?(user.github_oauth_token)
+  end
+
+  defp get_collaborator_limit_error(project) do
+    case ProjectUsersLimiter.limit_adding_project_users(project.id, 1) do
+      :ok ->
+        nil
+
+      {:error, _reason, %{text: error}} ->
+        error
+    end
   end
 end
