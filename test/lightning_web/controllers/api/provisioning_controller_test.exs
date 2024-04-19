@@ -157,6 +157,42 @@ defmodule LightningWeb.API.ProvisioningControllerTest do
              } = response["data"]
     end
 
+    test "returns a project without deleted workflows", %{
+      conn: conn,
+      user: user
+    } do
+      %{id: project_id, name: project_name} =
+        project =
+        insert(:project,
+          project_users: [%{user_id: user.id}]
+        )
+
+      _deleted_workflow =
+        insert(:workflow,
+          project: project,
+          name: "Deleted workflow",
+          deleted_at: DateTime.utc_now()
+        )
+
+      existing_workflow =
+        insert(:workflow,
+          project: project,
+          name: "Existing workflow",
+          deleted_at: nil
+        )
+
+      conn = get(conn, ~p"/api/provision/#{project_id}")
+      response = json_response(conn, 200)
+
+      assert %{
+               "id" => ^project_id,
+               "name" => ^project_name,
+               "workflows" => [workflow_resp]
+             } = response["data"]
+
+      assert workflow_resp["id"] == existing_workflow.id
+    end
+
     test "returns a project if user has owner access", %{
       conn: conn,
       user: user
@@ -491,6 +527,34 @@ defmodule LightningWeb.API.ProvisioningControllerTest do
       conn: conn
     } do
       project = insert(:project)
+
+      repo_connection =
+        insert(:project_repo_connection, project: project)
+
+      %{body: body} = valid_payload(project.id)
+
+      conn =
+        Plug.Conn.put_req_header(
+          conn,
+          "authorization",
+          "Bearer #{repo_connection.access_token}"
+        )
+
+      assert post(conn, ~p"/api/provision", body) |> json_response(201)
+    end
+
+    test "an existing project with workflows marked for deletion can be deleted successfully",
+         %{
+           conn: conn
+         } do
+      project = insert(:project)
+
+      _deleted_workflow =
+        insert(:workflow,
+          project: project,
+          name: "Deleted workflow",
+          deleted_at: DateTime.utc_now()
+        )
 
       repo_connection =
         insert(:project_repo_connection, project: project)
