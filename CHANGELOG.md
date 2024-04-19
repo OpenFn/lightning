@@ -16,6 +16,7 @@ and this project adheres to
 ## [Unreleased]
 
 ### Added
+
 - Add custom metric to track the number of finalised runs.
   [#1790](https://github.com/OpenFn/lightning/issues/1790)
 
@@ -25,6 +26,9 @@ and this project adheres to
   set. [#1789](https://github.com/OpenFn/lightning/issues/1789)
 
 ### Fixed
+
+- Fix github cli deploy action failing to auto-commit
+  [#1995](https://github.com/OpenFn/lightning/issues/1995)
 
 ## [v2.4.0] - 2024-04-12
 
