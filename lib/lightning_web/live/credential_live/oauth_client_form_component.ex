@@ -24,7 +24,9 @@ defmodule LightningWeb.CredentialLive.OauthClientFormComponent do
 
   @impl true
   def mount(socket) do
-    {:ok, socket |> assign(available_projects: [])}
+    {:ok,
+     socket
+     |> assign(available_projects: [])}
   end
 
   @impl true
@@ -35,6 +37,28 @@ defmodule LightningWeb.CredentialLive.OauthClientFormComponent do
     initial_assigns =
       Map.filter(assigns, &match?({k, _} when k in @valid_assigns, &1))
 
+    socket =
+      if assigns.oauth_client.mandatory_scopes do
+        assign(
+          socket,
+          :mandatory_scopes,
+          String.split(assigns.oauth_client.mandatory_scopes, ",")
+        )
+      else
+        assign(socket, :mandatory_scopes, [])
+      end
+
+    socket =
+      if assigns.oauth_client.optional_scopes do
+        assign(
+          socket,
+          :optional_scopes,
+          String.split(assigns.oauth_client.optional_scopes, ",")
+        )
+      else
+        assign(socket, :optional_scopes, [])
+      end
+
     {:ok,
      socket
      |> assign(initial_assigns)
@@ -43,6 +67,11 @@ defmodule LightningWeb.CredentialLive.OauthClientFormComponent do
      |> assign(selected_project: nil)
      |> update_available_projects()}
   end
+
+  defp scopes_from_params(%{"key" => ",", "value" => value} = _params),
+    do: value |> String.trim_trailing(",") |> String.split(",")
+
+  defp scopes_from_params(_any_other_params), do: []
 
   @impl true
   def handle_event("validate", %{"oauth_client" => oauth_client_params}, socket) do
@@ -54,6 +83,90 @@ defmodule LightningWeb.CredentialLive.OauthClientFormComponent do
       |> Map.put(:action, :validate)
 
     {:noreply, socket |> assign(changeset: changeset)}
+  end
+
+  def handle_event(
+        "remove_mandatory_scope",
+        %{"scope" => scope_to_remove},
+        socket
+      ) do
+    new_scopes =
+      Enum.reject(socket.assigns.mandatory_scopes, fn scope ->
+        scope == scope_to_remove
+      end)
+
+    changeset =
+      socket.assigns.changeset
+      |> Ecto.Changeset.change(%{
+        mandatory_scopes: new_scopes |> Enum.join(",")
+      })
+
+    {:noreply,
+     assign(socket, mandatory_scopes: new_scopes) |> assign(changeset: changeset)}
+  end
+
+  def handle_event(
+        "remove_optional_scope",
+        %{"scope" => scope_to_remove},
+        socket
+      ) do
+    new_scopes =
+      Enum.reject(socket.assigns.optional_scopes, fn scope ->
+        scope == scope_to_remove
+      end)
+
+    changeset =
+      socket.assigns.changeset
+      |> Ecto.Changeset.change(%{
+        optional_scopes: new_scopes |> Enum.join(",")
+      })
+
+    {:noreply,
+     assign(socket, optional_scopes: new_scopes) |> assign(changeset: changeset)}
+  end
+
+  def handle_event("add_mandatory_scope", params, socket) do
+    new_scopes = scopes_from_params(params)
+
+    if new_scopes != [] do
+      new_scopes = Enum.reverse(new_scopes ++ socket.assigns.mandatory_scopes)
+
+      changeset =
+        socket.assigns.changeset
+        |> Ecto.Changeset.change(%{
+          mandatory_scopes: new_scopes |> Enum.join(",")
+        })
+
+      {:noreply,
+       socket
+       |> assign(:mandatory_scopes, new_scopes)
+       |> push_event("clear_input", %{})
+       |> assign(:changeset, changeset)}
+    else
+      {:noreply, socket}
+    end
+  end
+
+  def handle_event("add_optional_scope", params, socket) do
+    new_scopes = scopes_from_params(params)
+
+    if new_scopes != [] do
+      new_scopes = Enum.reverse(new_scopes ++ socket.assigns.optional_scopes)
+
+      changeset =
+        socket.assigns.changeset
+        |> Ecto.Changeset.change(%{
+          optional_scopes: new_scopes |> Enum.join(",")
+        })
+
+      {:noreply,
+       socket
+       |> assign(:optional_scopes, new_scopes)
+       |> push_event("clear_input", %{})
+       |> assign(:changeset, changeset)}
+    else
+      {:noreply, socket}
+    end
   end
 
   def handle_event(
@@ -251,6 +364,36 @@ defmodule LightningWeb.CredentialLive.OauthClientFormComponent do
               </div>
             </div>
 
+            <fieldset>
+              <legend class="contents text-base font-medium text-gray-900">
+                Manage Scopes
+              </legend>
+              <p class="text-sm text-gray-500">
+                Type the names of the scopes and separate them using comma
+              </p>
+              <.scopes_input
+                id="mandatory-scopes-new"
+                form={:mandatory_scopes}
+                label="Mandatory Scopes"
+                name="mandatory_scopes"
+                on_keyup="add_mandatory_scope"
+                on_delete="remove_mandatory_scope"
+                scopes={@mandatory_scopes}
+                phx_target={@myself}
+              />
+
+              <.scopes_input
+                id="optional-scopes-new"
+                form={:optional_scopes}
+                label="Optional Scopes"
+                name="optional_scopes"
+                on_keyup="add_optional_scope"
+                on_delete="remove_optional_scope"
+                scopes={@optional_scopes}
+                phx_target={@myself}
+              />
+            </fieldset>
+
             <div class="space-y-4">
               <div class="hidden sm:block" aria-hidden="true">
                 <div class="border-t border-secondary-200 mb-6"></div>
@@ -401,6 +544,59 @@ defmodule LightningWeb.CredentialLive.OauthClientFormComponent do
     )
   end
 
+  attr :id, :string, required: true
+  attr :scopes, :list, required: true
+  attr :name, :string, required: true
+  attr :label, :string, required: true
+  attr :form, :any, required: true
+  attr :on_keyup, :string, required: true
+  attr :on_delete, :string, required: true
+  attr :phx_target, :any, required: true
+
+  defp scopes_input(assigns) do
+    ~H"""
+    <div id={"generic-oauth-scopes-#{@id}"} class="space-y-2 mt-5">
+      <NewInputs.label><%= @label %></NewInputs.label>
+      <div class="flex flex-wrap items-center border border-gray-300 rounded-lg px-2">
+        <div class="flex flex-wrap gap-2">
+          <span
+            :for={scope <- @scopes}
+            class="inline-flex items-center rounded-md bg-blue-50 px-2 py-1 text-xs font-medium text-gray-600 ring-1 ring-inset ring-gray-500/10"
+          >
+            <%= scope %>
+            <button
+              type="button"
+              phx-click={@on_delete}
+              phx-value-scope={scope}
+              phx-target={@phx_target}
+              class="group relative -mr-1 h-3.5 w-3.5 rounded-sm hover:bg-gray-500/20"
+            >
+              <span class="sr-only">Remove</span>
+              <svg
+                viewBox="0 0 14 14"
+                class="h-3.5 w-3.5 stroke-gray-600/50 group-hover:stroke-gray-600/75"
+              >
+                <path d="M4 4l6 6m0-6l-6 6" />
+              </svg>
+              <span class="absolute -inset-1"></span>
+            </button>
+          </span>
+        </div>
+        <input
+          id={"scopes-input-#{@id}"}
+          form={@form}
+          type="text"
+          class="flex-1 border-none focus:ring-0"
+          name={@name}
+          phx-window-keyup={@on_keyup}
+          phx-target={@phx_target}
+          phx-hook="ClearInput"
+        />
+      </div>
+    </div>
+    """
+  end
+
   defp modal_title(assigns) do
     ~H"""
     <%= if @action in [:edit] do %>
@@ -435,6 +631,12 @@ defmodule LightningWeb.CredentialLive.OauthClientFormComponent do
   defp save_oauth_client(socket, :new, oauth_client_params) do
     user_id = Ecto.Changeset.fetch_field!(socket.assigns.changeset, :user_id)
 
+    mandatory_scopes =
+      Ecto.Changeset.fetch_field!(socket.assigns.changeset, :mandatory_scopes)
+
+    optional_scopes =
+      Ecto.Changeset.fetch_field!(socket.assigns.changeset, :optional_scopes)
+
     project_oauth_clients =
       Ecto.Changeset.fetch_field!(
         socket.assigns.changeset,
@@ -446,6 +648,8 @@ defmodule LightningWeb.CredentialLive.OauthClientFormComponent do
 
     oauth_client_params
     |> Map.put("user_id", user_id)
+    |> Map.put("optional_scopes", optional_scopes)
+    |> Map.put("mandatory_scopes", mandatory_scopes)
     |> Map.put("project_oauth_clients", project_oauth_clients)
     |> OauthClients.create_client()
     |> case do
