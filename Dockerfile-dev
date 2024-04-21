@@ -58,6 +58,7 @@ RUN mix deps.compile
 COPY priv priv
 COPY lib lib
 RUN mix lightning.install_runtime
+RUN mix lightning.install_schemas
 RUN mix lightning.install_adaptor_icons
 
 COPY bin bin
