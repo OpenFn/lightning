@@ -21,6 +21,9 @@ and this project adheres to
 
 ### Fixed
 
+- Fix missing credential types when running Lightning using Docker
+  [#2010](https://github.com/OpenFn/lightning/issues/2010)
+
 ## [v2.4.1] 2024-04-19
 
 ### Fixed
