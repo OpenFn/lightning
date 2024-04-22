@@ -5,7 +5,6 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
   import LightningWeb.OauthCredentialHelper
 
   alias Lightning.Credentials
-  alias Lightning.OauthClients
   alias LightningWeb.Components.NewInputs
   alias Phoenix.LiveView.JS
   alias Tesla
@@ -16,7 +15,6 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
 
     {:ok,
      socket
-     |> assign_new(:scopes, fn -> ["offline_access"] end)
      |> assign_new(:selected_client, fn -> nil end)
      |> assign_new(:selected_project, fn -> nil end)
      |> assign_new(:authorize_url, fn -> nil end)
@@ -28,7 +26,7 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
         %{
           id: id,
           action: action,
-          oauth_clients: oauth_clients,
+          selected_client: selected_client,
           changeset: changeset,
           credential: credential,
           projects: projects,
@@ -38,51 +36,78 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
         } = _assigns,
         socket
       ) do
-    updated_socket =
-      if action === :edit do
-        selected_client =
-          OauthClients.get_client!(credential.oauth_client_id)
+    # updated_socket =
+    #   if action === :edit do
+    #     selected_client =
+    #       OauthClients.get_client!(credential.oauth_client_id)
 
-        scopes = Map.get(credential.body, "scope", "") |> String.split(" ")
+    #     scopes = Map.get(credential.body, "scope", "") |> String.split(" ")
 
-        if !still_fresh(credential.body) do
-          start_async(socket, :token, fn ->
-            refresh_token(
-              selected_client.client_id,
-              selected_client.client_secret,
-              credential.body["refresh_token"],
-              selected_client.token_endpoint
-            )
-          end)
-        else
-          if selected_client.userinfo_endpoint do
-            start_async(socket, :userinfo, fn ->
-              fetch_userinfo(
-                credential.body["access_token"],
-                selected_client.userinfo_endpoint
-              )
-            end)
-          else
-            socket
-          end
-        end
-        |> assign(:selected_client, selected_client)
-        |> assign(:scopes, scopes)
-      else
-        socket
-      end
+    #     if !still_fresh(credential.body) do
+    #       start_async(socket, :token, fn ->
+    #         refresh_token(
+    #           selected_client.client_id,
+    #           selected_client.client_secret,
+    #           credential.body["refresh_token"],
+    #           selected_client.token_endpoint
+    #         )
+    #       end)
+    #     else
+    #       if selected_client.userinfo_endpoint do
+    #         start_async(socket, :userinfo, fn ->
+    #           fetch_userinfo(
+    #             credential.body["access_token"],
+    #             selected_client.userinfo_endpoint
+    #           )
+    #         end)
+    #       else
+    #         socket
+    #       end
+    #     end
+    #     |> assign(:selected_client, selected_client)
+    #     |> assign(:scopes, scopes)
+    #   else
+    #     socket
+    #   end
+
+    mandatory_scopes =
+      selected_client.mandatory_scopes
+      |> to_string
+      |> String.split(",")
+      |> Enum.reject(fn value -> value === "" end)
+
+    optional_scopes =
+      selected_client.optional_scopes
+      |> to_string
+      |> String.split(",")
+      |> Enum.reject(fn value -> value === "" end)
+
+    state = build_state(socket.id, __MODULE__, id)
+    stringified_scopes = Enum.join(mandatory_scopes, " ")
+
+    authorize_url =
+      generate_authorize_url(
+        selected_client.authorization_endpoint,
+        selected_client.client_id,
+        state: state,
+        scope: stringified_scopes
+      )
 
     {:ok,
-     updated_socket
+     socket
      |> assign(
        id: id,
        action: action,
-       oauth_clients: oauth_clients,
+       selected_client: selected_client,
        changeset: changeset,
        credential: credential,
        projects: projects,
        users: users,
        allow_credential_transfer: allow_credential_transfer,
+       mandatory_scopes: mandatory_scopes,
+       selected_scopes: mandatory_scopes,
+       scopes: mandatory_scopes ++ optional_scopes,
+       authorize_url: authorize_url,
        return_to: return_to
      )}
   end
@@ -109,9 +134,6 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
       token_endpoint: token_endpoint
     } = client
 
-    # headers = [{"Content-Type", "application/x-www-form-urlencoded"}]
-
-    # URI.encode_query(
     body =
       %{
         client_id: client_id,
@@ -211,11 +233,50 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
     changeset =
       Credentials.change_credential(
         socket.assigns.credential,
-        Map.put(credential_params, "schema", "generic_oauth")
+        Map.put(credential_params, "schema", "oauth")
       )
       |> Map.put(:action, :validate)
 
-    {:noreply, socket |> assign(changeset: changeset) |> hande_client_change()}
+    {:noreply, socket |> assign(changeset: changeset)}
+  end
+
+  @impl true
+  def handle_event("authorize_click", _, socket) do
+    {:noreply, socket |> assign(oauth_progress: :started)}
+  end
+
+  def handle_event("check_scope", %{"_target" => [scope]}, socket) do
+    selected_scopes =
+      if Enum.member?(socket.assigns.selected_scopes, scope) do
+        Enum.reject(socket.assigns.selected_scopes, fn value ->
+          value == scope
+        end)
+      else
+        [scope | socket.assigns.selected_scopes]
+      end
+
+    IO.inspect(selected_scopes, label: "selected_scopes")
+
+    # saved_scopes = get_scopes(socket.assigns.credential)
+    # diff_scopes = Enum.sort(selected_scopes) == Enum.sort(saved_scopes)
+
+    state = build_state(socket.id, __MODULE__, socket.assigns.id)
+    stringified_scopes = Enum.join(selected_scopes, " ")
+
+    authorize_url =
+      generate_authorize_url(
+        socket.assigns.selected_client.authorization_endpoint,
+        socket.assigns.selected_client.client_id,
+        state: state,
+        scope: stringified_scopes
+      )
+
+    {:noreply,
+     socket
+     |> assign(selected_scopes: selected_scopes)
+     |> assign(:authorize_url, authorize_url)}
+
+    #  |> assign(scopes_changed: !diff_scopes)}
   end
 
   def handle_event(
@@ -224,77 +285,6 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
         socket
       ) do
     save_credential(socket, socket.assigns.action, credential_params)
-  end
-
-  def handle_event("add_scope", params, socket) do
-    new_scopes = scopes_from_params(params)
-
-    if new_scopes != [] do
-      new_scopes = Enum.reverse(new_scopes ++ socket.assigns.scopes)
-
-      # Always update scopes and handle state regardless of client presence
-
-      updated_socket =
-        socket
-        |> assign(:scopes, new_scopes)
-        |> push_event("clear_input", %{})
-
-      # Only generate authorize_url if client is not nil
-      updated_socket =
-        if socket.assigns.selected_client != nil do
-          state = build_state(socket.id, __MODULE__, socket.assigns.id)
-          stringified_scopes = Enum.join(new_scopes, " ")
-
-          authorize_url =
-            generate_authorize_url(
-              socket.assigns.selected_client.authorization_endpoint,
-              socket.assigns.selected_client.client_id,
-              state: state,
-              scope: stringified_scopes
-            )
-
-          assign(updated_socket, :authorize_url, authorize_url)
-        else
-          updated_socket
-        end
-
-      {:noreply, updated_socket}
-    else
-      {:noreply, socket}
-    end
-  end
-
-  def handle_event("remove_scope", %{"scope" => scope_to_remove}, socket) do
-    new_scopes =
-      Enum.reject(socket.assigns.scopes, fn scope ->
-        scope == scope_to_remove
-      end)
-
-    updated_socket =
-      cond do
-        socket.assigns.action === :edit and
-            not scopes_changed?(socket, new_scopes) ->
-          assign(socket, :authorize_url, nil)
-
-        socket.assigns.selected_client != nil ->
-          state = build_state(socket.id, __MODULE__, socket.assigns.id)
-          stringified_scopes = Enum.join(new_scopes, " ")
-
-          authorize_url =
-            generate_authorize_url(
-              socket.assigns.selected_client.authorization_endpoint,
-              socket.assigns.selected_client.client_id,
-              state: state,
-              scope: stringified_scopes
-            )
-
-          assign(socket, :authorize_url, authorize_url)
-
-        true ->
-          socket
-      end
-
-    {:noreply, assign(updated_socket, scopes: new_scopes)}
   end
 
   def handle_event(
@@ -409,7 +399,7 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
 
     params
     |> Map.put("user_id", user_id)
-    |> Map.put("schema", "generic_oauth")
+    |> Map.put("schema", "oauth")
     |> Map.put("body", body)
     |> Credentials.create_credential()
     |> case do
@@ -437,35 +427,14 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
     end
   end
 
-  defp hande_client_change(socket) do
-    client =
-      Ecto.Changeset.get_change(socket.assigns.changeset, :oauth_client_id)
-      |> get_oauth_client()
+  # defp scopes_changed?(socket, new_scopes) do
+  #   existing_scopes =
+  #     socket.assigns.credential.body
+  #     |> Map.get("scope", "")
+  #     |> String.split(" ")
 
-    if client do
-      state = build_state(socket.id, __MODULE__, socket.assigns.id)
-
-      authorize_url =
-        generate_authorize_url(
-          client.authorization_endpoint,
-          client.client_id,
-          state: state
-        )
-
-      assign(socket, authorize_url: authorize_url, selected_client: client)
-    else
-      socket
-    end
-  end
-
-  defp scopes_changed?(socket, new_scopes) do
-    existing_scopes =
-      socket.assigns.credential.body
-      |> Map.get("scope", "")
-      |> String.split(" ")
-
-    Enum.sort(new_scopes) != Enum.sort(existing_scopes)
-  end
+  #   Enum.sort(new_scopes) != Enum.sort(existing_scopes)
+  # end
 
   defp filter_available_projects(changeset, all_projects) do
     existing_ids =
@@ -495,19 +464,6 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
     encoded_params = URI.encode_query(merged_params)
     "#{base_url}?#{encoded_params}"
   end
-
-  defp get_oauth_client(nil), do: nil
-
-  defp get_oauth_client(client_id), do: OauthClients.get_client!(client_id)
-
-  defp scopes_from_params(%{"key" => _any_other_key} = _params), do: []
-
-  defp scopes_from_params(%{"value" => value} = _params),
-    do: value |> String.trim_trailing(",") |> String.split(",")
-
-  defp scopes_from_params(_any_other_params), do: []
-
-  # TODO: When there is no client, do not render the generic oauth credential type
 
   attr :form, :map, required: true
   attr :clients, :list, required: true
@@ -539,27 +495,27 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
               <LightningWeb.Components.Form.check_box form={f} field={:production} />
             </div>
           </div>
-          <div class="space-y-4 mt-5">
-            <NewInputs.input
-              type="select"
-              field={f[:oauth_client_id]}
-              label="Select a client"
-              prompt=""
-              required="true"
-              options={Enum.map(@oauth_clients, &{&1.name, &1.id})}
-            />
-          </div>
-          <div class="text-xs italic py-2">
-            <span class="font-medium underline">Authorization URL</span>:
-            <span :if={@selected_client}>
-              <%= @selected_client.authorization_endpoint %>
-            </span>
-          </div>
 
-          <.scopes_input id="new" scopes={@scopes} phx_target={@myself} />
+          <.scopes_picklist
+            id={"scope_selection_#{@credential.id || "new"}"}
+            target={@myself}
+            on_change="check_scope"
+            scopes={@scopes}
+            selected_scopes={@selected_scopes}
+            mandatory_scopes={@mandatory_scopes}
+            provider={@selected_client.name}
+          />
 
           <div class="space-y-4 mt-5">
             <NewInputs.input type="text" field={f[:api_version]} label="API Version" />
+          </div>
+
+          <div class="space-y-4 my-10">
+            <.authorize_button
+              authorize_url={@authorize_url}
+              provider={@selected_client.name}
+              myself={@myself}
+            />
           </div>
 
           <div class="space-y-4">
@@ -611,19 +567,9 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
             </div>
             <div class="flex-1 w-1/2">
               <div class="sm:flex sm:flex-row-reverse">
-                <.link
-                  :if={@authorize_url}
-                  href={@authorize_url}
-                  id="authorize-button"
-                  target="_blank"
-                  class="inline-flex justify-center rounded-md disabled:bg-primary-300 bg-primary-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary-500 sm:ml-3"
-                >
-                  Authorize
-                </.link>
                 <button
-                  :if={!@authorize_url}
                   type="submit"
-                  disabled={!@changeset.valid?}
+                  disabled={!@changeset.valid? or @authorize_url}
                   class="inline-flex justify-center rounded-md disabled:bg-primary-300 bg-primary-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary-500 sm:ml-3"
                 >
                   Save
@@ -650,50 +596,64 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
     end)
   end
 
-  attr :id, :string, required: true
-  attr :scopes, :list, required: true
-  attr :phx_target, :any, required: true
-
-  defp scopes_input(assigns) do
+  defp authorize_button(assigns) do
     ~H"""
-    <div id={"generic-oauth-scopes-#{@id}"} class="space-y-2 mt-5">
-      <NewInputs.label>Scopes</NewInputs.label>
-      <span>Separate multiple scopes with a comma</span>
-      <div class="flex flex-wrap items-center border border-gray-300 rounded-lg px-2">
-        <div class="flex flex-wrap gap-2">
-          <span
-            :for={scope <- @scopes}
-            class="inline-flex items-center rounded-md bg-blue-50 px-2 py-1 text-xs font-medium text-gray-600 ring-1 ring-inset ring-gray-500/10"
-          >
-            <%= scope %>
-            <button
-              type="button"
-              phx-click="remove_scope"
-              phx-value-scope={scope}
-              phx-target={@phx_target}
-              class="group relative -mr-1 h-3.5 w-3.5 rounded-sm hover:bg-gray-500/20"
-            >
-              <span class="sr-only">Remove</span>
-              <svg
-                viewBox="0 0 14 14"
-                class="h-3.5 w-3.5 stroke-gray-600/50 group-hover:stroke-gray-600/75"
-              >
-                <path d="M4 4l6 6m0-6l-6 6" />
-              </svg>
-              <span class="absolute -inset-1"></span>
-            </button>
-          </span>
+    <.link
+      href={@authorize_url}
+      id="authorize-button"
+      target="_blank"
+      class="rounded-md bg-indigo-600 px-3.5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
+    >
+      <span class="text-normal">Sign in with <%= @provider %></span>
+    </.link>
+    """
+  end
+
+  attr :id, :string, required: true
+  attr :on_change, :any, required: true
+  attr :target, :any, required: true
+  attr :selected_scopes, :any, required: true
+  attr :mandatory_scopes, :any, required: true
+  attr :scopes, :any, required: true
+  attr :provider, :string, required: true
+  attr :doc_url, :any, default: nil
+
+  def scopes_picklist(assigns) do
+    ~H"""
+    <div id={@id} class="mt-5">
+      <h3 class="leading-6 text-slate-800 pb-2 mb-2">
+        <div class="flex flex-row text-sm font-semibold">
+          Select permissions
+          <LightningWeb.Components.Common.tooltip
+            id={"#{@id}-tooltip"}
+            title="Select permissions associated to your OAuth2 Token"
+          />
         </div>
-        <input
-          id={"scopes-input-#{@id}"}
-          form={:scopes}
-          type="text"
-          class="flex-1 border-none focus:ring-0"
-          name="scope"
-          phx-window-keyup="add_scope"
-          phx-target={@phx_target}
-          phx-hook="ClearInput"
-        />
+        <div class="flex flex-row text-xs mt-1">
+          Learn more about <%= @provider %> permissions
+          <a
+            target="_blank"
+            href={@doc_url}
+            class="whitespace-nowrap font-medium text-blue-700 hover:text-blue-600"
+          >
+            &nbsp;here
+          </a>
+        </div>
+      </h3>
+      <div class="grid grid-cols-4 gap-1">
+        <%= for scope <- @scopes do %>
+          <.input
+            id={"#{@id}_#{scope}"}
+            type="checkbox"
+            name={scope}
+            value={scope}
+            checked={scope in @selected_scopes}
+            disabled={scope in @mandatory_scopes}
+            phx-change={@on_change}
+            phx-target={@target}
+            label={scope}
+          />
+        <% end %>
       </div>
     </div>
     """

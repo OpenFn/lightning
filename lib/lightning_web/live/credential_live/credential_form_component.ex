@@ -2,7 +2,6 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
   @moduledoc """
   Form Component for working with a single Credential
   """
-  alias Lightning.OauthClients
   use LightningWeb, :live_component
 
   import Ecto.Changeset, only: [fetch_field!: 2, put_assoc: 3]
@@ -24,6 +23,7 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
     :on_save,
     :button,
     :can_create_project_credential,
+    :oauth_clients,
     :return_to
   ]
 
@@ -72,11 +72,6 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
     changeset = Credentials.change_credential(assigns.credential)
     all_projects = Enum.map(projects, &{&1.name, &1.id})
 
-    oauth_clients =
-      if assigns.project,
-        do: OauthClients.list_clients(assigns.project),
-        else: OauthClients.list_clients_for_user(assigns.current_user)
-
     initial_assigns =
       Map.filter(assigns, &match?({k, _} when k in @valid_assigns, &1))
 
@@ -87,6 +82,14 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
     page = if assigns.action === :new, do: :first, else: :second
 
     schema = assigns.credential.schema || false
+
+    type_options =
+      socket.assigns.type_options ++
+        Enum.map(assigns.oauth_clients, fn client ->
+          {client.name, client.id, nil, "oauth"}
+        end)
+
+    type_options = Enum.sort_by(type_options, & &1, :asc)
 
     {:ok,
      socket
@@ -99,9 +102,9 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
      |> assign(changeset: changeset)
      |> assign(update_body: update_body)
      |> assign(all_projects: all_projects)
-     |> assign(oauth_clients: oauth_clients)
      |> assign(schema: schema)
      |> assign(selected_project: nil)
+     |> assign(type_options: type_options)
      |> update_available_projects()}
   end
 
@@ -164,13 +167,21 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
         %{"selected" => type} = _params,
         socket
       ) do
+    client =
+      Enum.find(socket.assigns.oauth_clients, nil, fn client ->
+        client.id == type
+      end)
+
+    schema = if client, do: "oauth", else: type
+
     changeset =
-      Credentials.change_credential(socket.assigns.credential, %{schema: type})
+      Credentials.change_credential(socket.assigns.credential, %{schema: schema})
 
     {:noreply,
      socket
      |> assign(changeset: changeset)
-     |> assign(schema: type)}
+     |> assign(schema: schema)
+     |> assign(selected_oauth_client: client)}
   end
 
   def handle_event(
@@ -357,7 +368,7 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
     """
   end
 
-  def render(%{page: :second, schema: "generic_oauth"} = assigns) do
+  def render(%{page: :second, schema: "oauth"} = assigns) do
     ~H"""
     <div class="mt-10 sm:mt-0">
       <.modal id={@id} width="xl:min-w-1/3 min-w-1/2 max-w-full">
@@ -380,7 +391,7 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
           module={GenericOauthComponent}
           id={"generic-oauth-component-#{@credential.id}"}
           action={@action}
-          oauth_clients={@oauth_clients}
+          selected_client={@selected_oauth_client}
           changeset={@changeset}
           credential={@credential}
           projects={@all_projects}
@@ -724,17 +735,8 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
     oauth_clients_from_env =
       Application.get_env(:lightning, :oauth_clients)
 
-    oauth_clients =
-      socket.assigns.oauth_clients
-      |> Enum.map(fn client ->
-        {client.name,
-         client.name |> String.downcase() |> String.replace(" ", "_"), nil,
-         client.id}
-      end)
-
     schemas_options
     |> Enum.concat([{"Raw JSON", "raw", nil, nil}])
-    |> Enum.concat(oauth_clients)
     |> handle_oauth_item(
       {"GoogleSheets", "googlesheets",
        Routes.static_path(socket, "/images/oauth-2.png"), nil},

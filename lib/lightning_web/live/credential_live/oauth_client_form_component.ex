@@ -392,12 +392,17 @@ defmodule LightningWeb.CredentialLive.OauthClientFormComponent do
                 scopes={@optional_scopes}
                 phx_target={@myself}
               />
+
+              <div class="mt-5">
+                <NewInputs.input
+                  type="text"
+                  field={f[:scopes_doc_url]}
+                  label="Scopes Documentation URL"
+                />
+              </div>
             </fieldset>
 
             <div class="space-y-4">
-              <div class="hidden sm:block" aria-hidden="true">
-                <div class="border-t border-secondary-200 mb-6"></div>
-              </div>
               <fieldset>
                 <legend class="contents text-base font-medium text-gray-900">
                   Project Access
@@ -615,6 +620,17 @@ defmodule LightningWeb.CredentialLive.OauthClientFormComponent do
 
   defp save_oauth_client(socket, :edit, oauth_client_params) do
     %{oauth_client: form_oauth_client} = socket.assigns
+
+    mandatory_scopes =
+      Ecto.Changeset.fetch_field!(socket.assigns.changeset, :mandatory_scopes)
+
+    optional_scopes =
+      Ecto.Changeset.fetch_field!(socket.assigns.changeset, :optional_scopes)
+
+    oauth_client_params =
+      oauth_client_params
+      |> Map.put("optional_scopes", optional_scopes)
+      |> Map.put("mandatory_scopes", mandatory_scopes)
 
     case OauthClients.update_client(form_oauth_client, oauth_client_params) do
       {:ok, _oauth_client} ->
