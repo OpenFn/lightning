@@ -70,7 +70,7 @@ defmodule Lightning.MixProject do
       {:bodyguard, "~> 2.2"},
       {:bypass, "~> 2.1"},
       {:cachex, "~> 3.4"},
-      {:cloak_ecto, "~> 1.2.0"},
+      {:cloak_ecto, "~> 1.3.0"},
       {:credo, "~> 1.7.3", only: [:test, :dev]},
       {:crontab, "~> 1.1"},
       {:dialyxir, "~> 1.4.2", only: [:test, :dev], runtime: false},
