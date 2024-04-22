@@ -196,6 +196,35 @@ defmodule Lightning.FailureAlertTest do
       refute_email_sent(subject: "\"workflow-a\" failed.")
     end
 
+    test "does not send failure emails if the usage limiter returns an error", %{
+      runs: [run_1 | _rest],
+      project: %{id: project_id}
+    } do
+      Mox.expect(
+        Lightning.Extensions.MockUsageLimiter,
+        :limit_action,
+        fn %{type: :alert_failure}, %{project_id: ^project_id} ->
+          :ok
+        end
+      )
+
+      FailureAlerter.alert_on_failure(run_1)
+
+      assert_email_sent(subject: "\"workflow-a\" failed.")
+
+      Mox.expect(
+        Lightning.Extensions.MockUsageLimiter,
+        :limit_action,
+        fn %{type: :alert_failure}, %{project_id: ^project_id} ->
+          {:error, :not_enabled, %{text: "Failure alerts not enabled"}}
+        end
+      )
+
+      FailureAlerter.alert_on_failure(run_1)
+
+      refute_email_sent(subject: "\"workflow-a\" failed.")
+    end
+
     test "does not increment the rate-limiter counter when an email is not delivered.",
          %{runs: [run, _, _], workorders: [workorder, _, _]} do
       [time_scale: time_scale, rate_limit: rate_limit] =
