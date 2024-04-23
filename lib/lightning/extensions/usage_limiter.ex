@@ -9,4 +9,7 @@ defmodule Lightning.Extensions.UsageLimiter do
 
   @impl true
   def limit_action(_action, _context), do: :ok
+
+  @impl true
+  def get_run_options(_context), do: []
 end

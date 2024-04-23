@@ -34,4 +34,7 @@ defmodule Lightning.Extensions.UsageLimiting do
 
   @callback limit_action(action :: Action.t(), context :: Context.t()) ::
               :ok | error()
+
+  @callback get_run_options(context :: Context.t()) ::
+              LightningWeb.RunWithOptions.run_options()
 end
