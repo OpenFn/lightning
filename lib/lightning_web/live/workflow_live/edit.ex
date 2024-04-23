@@ -726,7 +726,15 @@ defmodule LightningWeb.WorkflowLive.Edit do
                [:credential, steps: Invocation.Query.any_step()]}
           ])
 
-        socket |> assign_workflow(workflow) |> assign(page_title: workflow.name)
+        if workflow do
+          socket
+          |> assign_workflow(workflow)
+          |> assign(page_title: workflow.name)
+        else
+          socket
+          |> put_flash(:error, "Workflow not found")
+          |> push_redirect(to: ~p"/projects/#{socket.assigns.projectd}/w")
+        end
     end
   end
 

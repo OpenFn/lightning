@@ -174,7 +174,7 @@ defmodule Lightning.SetupUtils do
       })
 
     {:ok, workflow} =
-      Workflows.create_workflow(%{
+      Workflows.save_workflow(%{
         name: "Sample Workflow",
         project_id: project.id
       })
@@ -436,7 +436,7 @@ defmodule Lightning.SetupUtils do
       })
 
     {:ok, openhie_workflow} =
-      Workflows.create_workflow(%{
+      Workflows.save_workflow(%{
         name: "OpenHIE Workflow",
         project_id: openhie_project.id
       })
@@ -655,7 +655,7 @@ defmodule Lightning.SetupUtils do
       })
 
     {:ok, dhis2_workflow} =
-      Workflows.create_workflow(%{
+      Workflows.save_workflow(%{
         name: "DHIS2 to Sheets",
         project_id: project.id
       })
@@ -922,8 +922,7 @@ defmodule Lightning.SetupUtils do
                 Map.get(previous, :output_dataclip_id, input_dataclip.id)
               )
 
-            Runs.start_step(%{
-              run_id: run.id,
+            Runs.start_step(run, %{
               step_id: step_id,
               job_id: step.job_id,
               input_dataclip_id: input_dataclip_id,

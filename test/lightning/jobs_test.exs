@@ -195,16 +195,31 @@ defmodule Lightning.JobsTest do
     end
 
     test "with valid data creates a job" do
+      workflow = insert(:simple_workflow)
+
       valid_attrs = %{
         body: "some body",
         name: "some name",
         adaptor: "@openfn/language-common",
-        workflow_id: insert(:workflow).id
+        workflow_id: workflow.id
       }
 
       assert {:ok, %Job{} = job} = Jobs.create_job(valid_attrs)
       assert job.body == "some body"
       assert job.name == "some name"
+
+      updated_workflow = Ecto.assoc(job, :workflow) |> Repo.one!()
+
+      assert updated_workflow.lock_version > workflow.lock_version
+
+      snapshot = Workflows.Snapshot.get_current_for(workflow)
+
+      snapshotted_job = snapshot.jobs |> Enum.find(&(&1.id == job.id))
+
+      assert snapshotted_job.id == job.id
+      assert snapshotted_job.name == job.name
+      assert snapshotted_job.adaptor == job.adaptor
+      assert snapshotted_job.body == job.body
     end
 
     test "with an upstream job returns a job with the upstream job's workflow_id" do

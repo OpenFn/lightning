@@ -295,24 +295,6 @@ defmodule Lightning.Invocation do
     do: from(s in Step, where: s.id == ^id, preload: :job) |> Repo.one!()
 
   @doc """
-  Creates a step.
-
-  ## Examples
-
-      iex> create_step(%{field: value})
-      {:ok, %Step{}}
-
-      iex> create_step(%{field: bad_value})
-      {:error, %Ecto.Changeset{}}
-
-  """
-  def create_step(attrs \\ %{}) do
-    %Step{}
-    |> Step.changeset(attrs)
-    |> Repo.insert()
-  end
-
-  @doc """
   Returns an `%Ecto.Changeset{}` for tracking step changes.
 
   ## Examples
@@ -410,9 +392,10 @@ defmodule Lightning.Invocation do
       where: workflow.project_id == ^project_id,
       select: workorder,
       preload: [
+        :snapshot,
+        :dataclip,
         workflow: workflow,
-        runs: [steps: [:job, :input_dataclip]],
-        dataclip: []
+        runs: [steps: [:job, :input_dataclip]]
       ],
       order_by: [desc_nulls_first: workorder.last_activity],
       distinct: true

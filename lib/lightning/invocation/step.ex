@@ -28,6 +28,7 @@ defmodule Lightning.Invocation.Step do
   alias Lightning.Run
   alias Lightning.RunStep
   alias Lightning.Workflows.Job
+  alias Lightning.Workflows.Snapshot
 
   @type t :: %__MODULE__{
           __meta__: Ecto.Schema.Metadata.t(),
@@ -46,6 +47,7 @@ defmodule Lightning.Invocation.Step do
     field :finished_at, :utc_datetime_usec
     field :started_at, :utc_datetime_usec
     belongs_to :job, Job
+    belongs_to :snapshot, Snapshot
     belongs_to :credential, Credential
 
     belongs_to :input_dataclip, Dataclip
@@ -94,7 +96,7 @@ defmodule Lightning.Invocation.Step do
       :output_dataclip_id
     ])
     |> cast_assoc(:output_dataclip, with: &Dataclip.changeset/2, required: false)
-    |> validate_required([:job_id, :input_dataclip_id])
+    |> validate_required([:job_id, :input_dataclip_id, :snapshot_id])
     |> validate()
   end
 
@@ -103,5 +105,6 @@ defmodule Lightning.Invocation.Step do
     |> assoc_constraint(:input_dataclip)
     |> assoc_constraint(:output_dataclip)
     |> assoc_constraint(:job)
+    |> assoc_constraint(:snapshot)
   end
 end

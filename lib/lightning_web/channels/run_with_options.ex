@@ -3,9 +3,10 @@ defmodule LightningWeb.RunWithOptions do
 
   alias Lightning.AdaptorRegistry
   alias Lightning.Run
-  alias Lightning.Workflows.Edge
-  alias Lightning.Workflows.Job
-  alias Lightning.Workflows.Trigger
+  alias Lightning.Workflows.Snapshot.Edge
+  alias Lightning.Workflows.Snapshot.Job
+  # alias Lightning.Workflows.Snapshot
+  alias Lightning.Workflows.Snapshot.Trigger
   alias LightningWeb.RunOptions
 
   @spec render(Run.t(), RunOptions.t()) :: map()
@@ -16,9 +17,9 @@ defmodule LightningWeb.RunWithOptions do
   def render(%Run{} = run) do
     %{
       "id" => run.id,
-      "triggers" => run.workflow.triggers |> Enum.map(&render/1),
-      "jobs" => run.workflow.jobs |> Enum.map(&render/1),
-      "edges" => run.workflow.edges |> Enum.map(&render/1),
+      "triggers" => run.snapshot.triggers |> Enum.map(&render/1),
+      "jobs" => run.snapshot.jobs |> Enum.map(&render/1),
+      "edges" => run.snapshot.edges |> Enum.map(&render/1),
       "starting_node_id" => run.starting_trigger_id || run.starting_job_id,
       "dataclip_id" => run.dataclip_id
     }
