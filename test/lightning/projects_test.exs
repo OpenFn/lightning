@@ -127,7 +127,7 @@ defmodule Lightning.ProjectsTest do
       project = project_fixture()
       update_attrs = %{name: "some-updated-name"}
 
-      assert {:ok, %Project{id: project_id} = project} =
+      assert {:ok, %Project{} = project} =
                Projects.update_project(project, update_attrs)
 
       assert project.name == "some-updated-name"
