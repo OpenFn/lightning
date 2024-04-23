@@ -1,5 +1,5 @@
 defmodule Lightning.ProjectsTest do
-  use Lightning.DataCase, async: false
+  use Lightning.DataCase, async: true
 
   alias Lightning.Invocation.Dataclip
   alias Lightning.Projects.ProjectUser
@@ -537,10 +537,7 @@ defmodule Lightning.ProjectsTest do
     end
 
     test "schedule_project_deletion/1 schedules a project for deletion to now when purge_deleted_after_days is nil" do
-      prev_purge_deleted_after_days =
-        Application.get_env(:lightning, :purge_deleted_after_days)
-
-      Application.put_env(:lightning, :purge_deleted_after_days, nil)
+      Mox.stub(Lightning.MockConfig, :purge_deleted_after_days, fn -> nil end)
 
       %{project: project} = full_project_fixture()
 
@@ -548,16 +545,10 @@ defmodule Lightning.ProjectsTest do
         Projects.schedule_project_deletion(project)
 
       assert Timex.diff(scheduled_deletion, DateTime.utc_now(), :seconds) <= 10
-
-      Application.put_env(
-        :lightning,
-        :purge_deleted_after_days,
-        prev_purge_deleted_after_days
-      )
     end
 
     test "schedule_project_deletion/1 schedules a project for deletion to purge_deleted_after_days days from now" do
-      days = Application.get_env(:lightning, :purge_deleted_after_days)
+      days = Lightning.Config.purge_deleted_after_days()
 
       %{project: project} = full_project_fixture()
 

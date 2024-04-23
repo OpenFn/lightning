@@ -28,5 +28,4 @@ defmodule Lightning.Stub do
   end
 end
 
-Mox.defmock(Lightning.Config.Mock, for: Lightning.Config.API)
 Mox.defmock(Lightning.Mock, for: Lightning.API)

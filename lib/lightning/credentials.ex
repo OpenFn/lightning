@@ -416,7 +416,7 @@ defmodule Lightning.Credentials do
   end
 
   defp scheduled_deletion_date do
-    days = Application.get_env(:lightning, :purge_deleted_after_days, 0)
+    days = Lightning.Config.purge_deleted_after_days() || 0
     DateTime.utc_now() |> Timex.shift(days: days)
   end
 

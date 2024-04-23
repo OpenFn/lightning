@@ -11,6 +11,8 @@ defmodule Lightning.Accounts.UserNotifierTest do
 
   describe "Notification emails" do
     test "notify_project_deletion/2" do
+      Mox.expect(Lightning.MockConfig, :purge_deleted_after_days, fn -> 7 end)
+
       admin_email =
         Application.get_env(:lightning, :email_addresses) |> Keyword.get(:admin)
 

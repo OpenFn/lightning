@@ -9,7 +9,6 @@ Mimic.copy(:hackney)
 Mimic.copy(File)
 Mimic.copy(IO)
 Mimic.copy(Lightning.FailureEmail)
-Mimic.copy(Lightning.WorkOrderService)
 Mimic.copy(Mix.Tasks.Lightning.InstallSchemas)
 
 # Other ExUnit configuration can be found in `config/runtime.exs`,
@@ -30,6 +29,9 @@ Mox.defmock(Lightning.Extensions.MockRateLimiter,
 Mox.defmock(Lightning.Extensions.MockUsageLimiter,
   for: Lightning.Extensions.UsageLimiting
 )
+
+Mox.defmock(Lightning.MockConfig, for: Lightning.Config)
+Application.put_env(:lightning, Lightning.Config, Lightning.MockConfig)
 
 Application.put_env(:lightning, Lightning.Extensions,
   rate_limiter: Lightning.Extensions.MockRateLimiter,

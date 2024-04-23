@@ -1329,16 +1329,12 @@ defmodule Lightning.AccountsTest do
 
   describe "scheduling a user for deletion" do
     setup do
-      prev = Application.get_env(:lightning, :purge_deleted_after_days)
-      Application.put_env(:lightning, :purge_deleted_after_days, 2)
-
-      on_exit(fn ->
-        Application.put_env(:lightning, :purge_deleted_after_days, prev)
-      end)
+      Mox.stub(Lightning.MockConfig, :purge_deleted_after_days, fn -> 2 end)
+      :ok
     end
 
     test "schedule_user_deletion/2 sets a date in the future according to the :purge_deleted_after_days env" do
-      days = Application.get_env(:lightning, :purge_deleted_after_days)
+      days = Lightning.Config.purge_deleted_after_days()
 
       user = user_fixture()
       assert user.scheduled_deletion == nil

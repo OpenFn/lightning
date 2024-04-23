@@ -135,7 +135,7 @@ defmodule Lightning.CredentialsTest do
     end
 
     test "schedule_credential_deletion/1 schedules a deletion date according to the :purge_deleted_after_days env" do
-      days = Application.get_env(:lightning, :purge_deleted_after_days)
+      days = Lightning.Config.purge_deleted_after_days()
 
       user = insert(:user)
       project = build(:project) |> with_project_user(user, :owner) |> insert()

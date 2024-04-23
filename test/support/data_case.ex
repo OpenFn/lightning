@@ -34,6 +34,8 @@ defmodule Lightning.DataCase do
   end
 
   setup tags do
+    Mox.stub_with(Lightning.MockConfig, Lightning.Config.API)
+
     # Default to Hackney adapter so that Bypass dependent tests continue working
     Mox.stub_with(Lightning.Tesla.Mock, Tesla.Adapter.Hackney)
 

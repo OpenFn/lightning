@@ -108,7 +108,7 @@ defmodule Lightning.Accounts.UserNotifier do
   end
 
   defp permanent_deletion_grace do
-    grace_period = Application.get_env(:lightning, :purge_deleted_after_days)
+    grace_period = Lightning.Config.purge_deleted_after_days()
 
     if grace_period <= 0 do
       "a few minutes"
@@ -300,7 +300,7 @@ defmodule Lightning.Accounts.UserNotifier do
   end
 
   defp human_readable_grace_period do
-    grace_period = Application.get_env(:lightning, :purge_deleted_after_days)
+    grace_period = Lightning.Config.purge_deleted_after_days()
     if grace_period > 0, do: "#{grace_period} day(s) from today", else: "today"
   end
 
