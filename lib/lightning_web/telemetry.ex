@@ -104,4 +104,45 @@ defmodule LightningWeb.Telemetry do
       # {LightningWeb, :count_users, []}
     ]
   end
+
+  @doc """
+  Convenience function that wraps `:telemetry.span/3`.
+
+  Given a function with an arity of zero, it passes the `metadata` argument
+  out with the result of the function.
+
+  If you need to control the `metadata`, pass in a function with an arity of
+  one. It will be called with the metadata provided and expects the result and
+  the updated metadata to be returned in a tuple.
+
+  Example:
+
+      with_span([:my, span], %{project_id: 123}, fn -> get_project(456) end)
+
+  Or when you want to extend the metadata:
+
+      with_span([:my, :span], %{user_id: 123}, fn _metadata ->
+        project = get_project(456)
+        {project, %{project_id: project.id}}
+      end)
+  """
+  @spec with_span(
+          :telemetry.event_prefix(),
+          :telemetry.event_metadata(),
+          (:telemetry.event_metadata() -> {any, :telemetry.event_metadata()})
+          | (-> any)
+        ) :: any
+  def with_span(prefix, metadata, func) when is_function(func) do
+    :telemetry.span(
+      prefix,
+      metadata,
+      fn ->
+        if is_function(func, 1) do
+          func.(metadata)
+        else
+          {func.(), metadata}
+        end
+      end
+    )
+  end
 end
