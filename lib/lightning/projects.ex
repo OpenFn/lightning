@@ -213,8 +213,6 @@ defmodule Lightning.Projects do
           send_data_retention_change_email(updated_project)
         end
 
-        Events.project_updated(project)
-
         {:ok, updated_project}
 
       error ->
