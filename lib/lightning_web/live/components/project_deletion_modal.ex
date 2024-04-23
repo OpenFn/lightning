@@ -87,7 +87,7 @@ defmodule LightningWeb.Components.ProjectDeletionModal do
   end
 
   defp human_readable_grace_period do
-    grace_period = Application.get_env(:lightning, :purge_deleted_after_days)
+    grace_period = Lightning.Config.purge_deleted_after_days()
     if grace_period > 0, do: "#{grace_period} day(s) from today", else: "today"
   end
 

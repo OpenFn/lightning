@@ -560,7 +560,7 @@ defmodule Lightning.Projects do
   """
   def schedule_project_deletion(project) do
     date =
-      case Application.get_env(:lightning, :purge_deleted_after_days) do
+      case Lightning.Config.purge_deleted_after_days() do
         nil -> DateTime.utc_now()
         integer -> DateTime.utc_now() |> Timex.shift(days: integer)
       end
