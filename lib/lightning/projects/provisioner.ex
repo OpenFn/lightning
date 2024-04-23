@@ -37,14 +37,14 @@ defmodule Lightning.Projects.Provisioner do
 
   def import_document(project, user_or_repo_connection, data) do
     project
-    |> maybe_reload_project()
+    |> preload_dependencies()
     |> parse_document(data)
     |> maybe_add_project_user(user_or_repo_connection)
     |> Repo.insert_or_update()
     |> case do
-      {:ok, %{id: id, workflows: workflows}} ->
+      {:ok, %{workflows: workflows} = project} ->
         Enum.each(workflows, &Lightning.Workflows.Events.workflow_updated/1)
-        {:ok, load_project(id)}
+        {:ok, preload_dependencies(project)}
 
       {:error, changeset} ->
         {:error, changeset}
@@ -81,27 +81,37 @@ defmodule Lightning.Projects.Provisioner do
     ])
   end
 
-  @doc """
-  Load a project by ID, including all workflows and their associated jobs,
-  triggers and edges.
+  # @doc """
+  # Load a project by ID, including all workflows and their associated jobs,
+  # triggers and edges.
 
-  Returns `nil` if the project does not exist.
-  """
-  @spec load_project(Ecto.UUID.t()) :: Project.t() | nil
-  def load_project(id) do
-    from(p in Project,
-      where: p.id == ^id,
-      preload: [:project_users, workflows: [:jobs, :triggers, :edges]]
+  # Returns `nil` if the project does not exist.
+  # """
+  # @spec load_project(Ecto.UUID.t()) :: Project.t() | nil
+  # def load_project(id) do
+  #   from(p in Project,
+  #     where: p.id == ^id,
+  #     left_join: w in assoc(p, :workflows),
+  #     where: is_nil(w.deleted_at),
+  #     preload: [
+  #       :project_users,
+  #       workflows: {w, [:jobs, :triggers, :edges]}
+  #     ]
+  #   )
+  #   |> Repo.one()
+  # end
+
+  def preload_dependencies(project) do
+    w = from(w in Workflow, where: is_nil(w.deleted_at))
+
+    Repo.preload(
+      project,
+      [
+        :project_users,
+        workflows: {w, [:jobs, :triggers, :edges]}
+      ],
+      force: true
     )
-    |> Repo.one()
-  end
-
-  defp maybe_reload_project(project) do
-    if project.id do
-      load_project(project.id)
-    else
-      project
-    end
   end
 
   defp project_changeset(project, attrs) do

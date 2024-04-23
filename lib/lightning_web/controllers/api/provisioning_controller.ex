@@ -41,14 +41,15 @@ defmodule LightningWeb.API.ProvisioningController do
   """
   def show(conn, params) do
     with project = %Project{} <-
-           Provisioner.load_project(params["id"]) || {:error, :not_found},
+           Projects.get_project(params["id"]) || {:error, :not_found},
          :ok <-
            Permissions.can(
              Provisioning,
              :describe_project,
              conn.assigns.current_resource,
              project
-           ) do
+           ),
+         project <- Provisioner.preload_dependencies(project) do
       conn
       |> put_status(:ok)
       |> render("create.json", project: project)
@@ -61,7 +62,7 @@ defmodule LightningWeb.API.ProvisioningController do
   """
   def show_yaml(conn, %{"id" => id}) do
     with %Projects.Project{} = project <-
-           Lightning.Projects.get_project(id) || {:error, :not_found},
+           Projects.get_project(id) || {:error, :not_found},
          :ok <-
            Permissions.can(
              Provisioning,
