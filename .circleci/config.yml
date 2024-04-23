@@ -60,7 +60,7 @@ jobs:
       - restore_cache:
           keys:
             - v1-deps-{{ arch }}-{{ checksum ".elixir_otp_version" }}-{{ checksum "mix.lock" }}
-            - v1-deps-<< parameters.elixir_version >>-
+            - v1-deps-{{ arch }}-{{ checksum ".elixir_otp_version" }}
       - run:
           name: "Install libsodium"
           command: |
