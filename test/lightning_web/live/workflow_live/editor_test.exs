@@ -230,6 +230,10 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
                  d.project_id == ^p.id
              )
              |> Lightning.Repo.exists?()
+
+      # Wait out all the async renders on RunViewerLive, avoiding Postgrex client
+      # disconnection warnings.
+      live_children(view) |> Enum.each(&render_async/1)
     end
 
     @tag role: :editor
@@ -322,7 +326,6 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       |> render_submit()
 
       assert [run_viewer] = live_children(view)
-
       render_async(run_viewer)
 
       assert run_viewer
@@ -388,6 +391,10 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       refute view
              |> element("save-and-run", ~c"Create New Work Order")
              |> has_element?()
+
+      # Wait out all the async renders on RunViewerLive, avoiding Postgrex client
+      # disconnection warnings.
+      live_children(view) |> Enum.each(&render_async/1)
     end
 
     test "creating a work order from a newly created job should save the workflow first",
@@ -427,6 +434,11 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
         manual: %{body: Jason.encode!(%{})}
       })
       |> render_submit()
+
+      assert_patch(view)
+      # Wait out all the async renders on RunViewerLive, avoiding Postgrex client
+      # disconnection warnings.
+      live_children(view) |> Enum.each(&render_async/1)
 
       workflow =
         Lightning.Repo.get!(Workflow, workflow.id)
@@ -492,6 +504,11 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       |> render_submit()
 
       assert_patch(view)
+      # render_async(view)
+
+      # Wait out all the async renders on RunViewerLive, avoiding Postgrex client
+      # disconnection warnings.
+      live_children(view) |> Enum.each(&render_async/1)
 
       # workflow has been created
       assert workflow =
@@ -619,6 +636,10 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       job_1 = workflow.jobs |> Enum.find(fn job -> job.id === job_1.id end)
       assert job_1.body !== "fn(state => { return {...state, extra: \"data\"} })"
       assert job_1.body === "fn(state => state)"
+
+      # Wait out all the async renders on RunViewerLive, avoiding Postgrex client
+      # disconnection warnings.
+      live_children(view) |> Enum.each(&render_async/1)
     end
 
     test "selects the input dataclip for the step if a run is followed",
@@ -719,6 +740,12 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
         )
 
       assert render(element) =~ "selected"
+
+      # Wait out all the async renders on RunViewerLive, avoiding Postgrex client
+      # disconnection warnings.
+      [run_viewer_live] = live_children(view)
+      render_async(run_viewer_live)
+      render_async(run_viewer_live)
     end
 
     test "selects the input dataclip for the run if no step has been added yet",
@@ -787,6 +814,10 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
         )
 
       assert render(element) =~ "selected"
+
+      # Wait out all the async renders on RunViewerLive, avoiding Postgrex client
+      # disconnection warnings.
+      live_children(view) |> Enum.each(&render_async/1)
     end
 
     test "shows the body of selected dataclip correctly after retrying a workorder from a non-first step",
@@ -843,6 +874,10 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
           ~p"/projects/#{project}/w/#{workflow}?#{[s: job_2.id, a: run.id, m: "expand"]}"
         )
 
+      # Wait out all the async renders on RunViewerLive, avoiding Postgrex client
+      # disconnection warnings.
+      live_children(view) |> Enum.each(&render_async/1)
+
       # retry workorder
       view
       |> element("#save-and-run", "Retry from here")
@@ -865,6 +900,12 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       form = element(view, "#manual-job-#{job_2.id} form")
       assert render(form) =~ output_dataclip.body["uuid"]
       refute render(form) =~ "Input data for this step has not been retained"
+
+      # Wait out all the async renders on RunViewerLive, avoiding Postgrex client
+      # disconnection warnings.
+      [run_viewer_live] = live_children(view)
+      render_async(run_viewer_live)
+      render_async(run_viewer_live)
     end
 
     test "does not show the dataclip select input if the step dataclip is not available",
@@ -929,6 +970,10 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       refute render(form) =~ "data for this step has not been retained"
 
       assert has_element?(view, "textarea#manual_run_form_body")
+
+      # Wait out all the async renders on RunViewerLive, avoiding Postgrex client
+      # disconnection warnings.
+      live_children(view) |> Enum.each(&render_async/1)
     end
 
     test "shows the wiped dataclip viewer if the step dataclip was wiped",
@@ -995,6 +1040,10 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
 
       # the wiped message is nolonger displayed
       refute render(form) =~ "data for this step has not been retained"
+
+      # Wait out all the async renders on RunViewerLive, avoiding Postgrex client
+      # disconnection warnings.
+      live_children(view) |> Enum.each(&render_async/1)
     end
 
     test "users can retry a workorder from a followed run",
@@ -1071,6 +1120,10 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
         Lightning.Repo.preload(workorder, [:runs], force: true).runs
 
       assert Enum.count(all_runs) == 2
+
+      # Wait out all the async renders on RunViewerLive, avoiding Postgrex client
+      # disconnection warnings.
+      live_children(view) |> Enum.each(&render_async/1)
     end
 
     test "followed run with wiped dataclip renders the page correctly",
@@ -1130,6 +1183,10 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
 
       assert has_element?(view, "button:disabled", "Create New Work Order"),
              "create new workorder button is disabled"
+
+      # Wait out all the async renders on RunViewerLive, avoiding Postgrex client
+      # disconnection warnings.
+      live_children(view) |> Enum.each(&render_async/1)
     end
 
     test "selected dataclip viewer is updated correctly if dataclip is wiped",
@@ -1147,17 +1204,21 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
           body: %{"foo" => unique_val}
         )
 
+      {:ok, snapshot} =
+        Lightning.Workflows.Snapshot.get_or_create_latest_for(workflow)
+
       %{runs: [run]} =
         insert(:workorder,
           workflow: workflow,
           dataclip: input_dataclip,
           state: :running,
+          snapshot: snapshot,
           runs: [
             build(:run,
               dataclip: input_dataclip,
+              snapshot: snapshot,
               starting_job: job_1,
-              state: :started,
-              steps: []
+              state: :started
             )
           ]
         )
@@ -1174,12 +1235,11 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       refute html =~ "data for this step has not been retained"
 
       # let's subscribe to events to make sure we're in sync with liveview
-      Lightning.Runs.subscribe(run)
+      # Lightning.Runs.subscribe(run)
 
       # start step without dataclip
       {:ok, %{id: step_id}} =
-        Lightning.Runs.start_step(%{
-          "run_id" => run.id,
+        Lightning.Runs.start_step(run, %{
           "job_id" => job_1.id,
           "step_id" => Ecto.UUID.generate()
         })
