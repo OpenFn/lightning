@@ -81,26 +81,12 @@ defmodule Lightning.Projects.Provisioner do
     ])
   end
 
-  # @doc """
-  # Load a project by ID, including all workflows and their associated jobs,
-  # triggers and edges.
+  @doc """
+  Preload all dependencies for a project.
 
-  # Returns `nil` if the project does not exist.
-  # """
-  # @spec load_project(Ecto.UUID.t()) :: Project.t() | nil
-  # def load_project(id) do
-  #   from(p in Project,
-  #     where: p.id == ^id,
-  #     left_join: w in assoc(p, :workflows),
-  #     where: is_nil(w.deleted_at),
-  #     preload: [
-  #       :project_users,
-  #       workflows: {w, [:jobs, :triggers, :edges]}
-  #     ]
-  #   )
-  #   |> Repo.one()
-  # end
-
+  Exclude deleted workflows.
+  """
+  @spec preload_dependencies(Project.t()) :: Project.t()
   def preload_dependencies(project) do
     w = from(w in Workflow, where: is_nil(w.deleted_at))
 
