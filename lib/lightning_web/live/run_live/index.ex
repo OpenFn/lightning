@@ -157,33 +157,28 @@ defmodule LightningWeb.RunLive.Index do
        async_page: AsyncResult.loading()
      )
      |> start_async(:load_workorders, fn ->
-       monitored_search(project, params)
+       perform_search(project, params)
      end)}
   end
 
   # returns the search result
-  defp monitored_search(project, page_params) do
-    span_metadata = %{
-      project_id: project.id,
-      provided_filters: Map.get(page_params, "filters", %{})
-    }
-
-    :telemetry.span(
+  defp perform_search(project, page_params) do
+    LightningWeb.Telemetry.with_span(
       [:lightning, :ui, :projects, :history],
-      span_metadata,
+      %{
+        project_id: project.id,
+        provided_filters: Map.get(page_params, "filters", %{})
+      },
       fn ->
         search_params =
           Map.get(page_params, "filters", init_filters())
           |> SearchParams.new()
 
-        search_result =
-          Invocation.search_workorders(
-            project,
-            search_params,
-            page_params
-          )
-
-        {search_result, span_metadata}
+        Invocation.search_workorders(
+          project,
+          search_params,
+          page_params
+        )
       end
     )
   end
@@ -247,6 +242,7 @@ defmodule LightningWeb.RunLive.Index do
           work_order: [
             :workflow,
             :dataclip,
+            :snapshot,
             runs: [steps: [:job, :input_dataclip]]
           ]
         ],
