@@ -84,6 +84,35 @@ defmodule LightningWeb.CredentialLiveTest do
       assert html =~ credential.name
     end
 
+    test "renders even when validation error occurs", %{
+      conn: conn,
+      credential: credential
+    } do
+      invalid_credential =
+        insert(:credential,
+          user: credential.user,
+          name: "Funky Cold Medina",
+          schema: "mailgun",
+          body: %{
+            "apiKey" => "shhh",
+            # This is not a valid 'hostname' according to JSONSchema
+            "domain" =>
+              "https://sandbox50742e2c879546e6be688cf6bcfc1cbb.mailgun.org"
+          }
+        )
+
+      {:ok, _index_live, html} = live(conn, ~p"/credentials")
+
+      assert html =~ "Credentials"
+      assert html =~ "Projects with Access"
+      assert html =~ "Type"
+
+      assert html =~ "Edit"
+      assert html =~ "Production"
+      assert html =~ "mailgun"
+      assert html =~ invalid_credential.name
+    end
+
     # https://github.com/OpenFn/Lightning/issues/273 - allow users to delete
 
     test "can schedule for deletion a credential that is not associated to any activity",
