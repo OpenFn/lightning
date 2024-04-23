@@ -1,5 +1,5 @@
 defmodule Lightning.UsageTracking.ReportWorkerTest do
-  use Lightning.DataCase
+  use Lightning.DataCase, async: true
 
   import Mock
   import Lightning.ApplicationHelpers, only: [put_temporary_env: 3]

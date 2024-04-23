@@ -1,5 +1,5 @@
 defmodule Lightning.Workflows.EdgeTest do
-  use Lightning.DataCase
+  use Lightning.DataCase, async: true
 
   alias Lightning.Workflows.Edge
 

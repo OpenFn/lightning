@@ -1,5 +1,5 @@
 defmodule Lightning.UsageTracking.ProjectMetricsServiceTest do
-  use Lightning.DataCase
+  use Lightning.DataCase, async: true
 
   alias Lightning.Projects.Project
   alias Lightning.UsageTracking.ProjectMetricsService

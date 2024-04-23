@@ -1,5 +1,5 @@
 defmodule Lightning.UsageTracking.RunServiceTest do
-  use Lightning.DataCase
+  use Lightning.DataCase, async: true
 
   alias Lightning.Run
   alias Lightning.UsageTracking.RunService
@@ -76,12 +76,9 @@ defmodule Lightning.UsageTracking.RunServiceTest do
       run_2 = run_2 |> Repo.preload(:steps)
 
       runs = [run_1, run_2]
-      expected_ids = for step <- finished_1 ++ finished_2, do: step.id
 
-      actual_ids =
-        for step <- RunService.finished_steps(runs, @date) do
-          step.id
-        end
+      expected_ids = (finished_1 ++ finished_2) |> MapSet.new(& &1.id)
+      actual_ids = RunService.finished_steps(runs, @date) |> MapSet.new(& &1.id)
 
       assert(actual_ids == expected_ids)
     end
