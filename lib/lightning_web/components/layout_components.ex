@@ -1,6 +1,7 @@
 defmodule LightningWeb.LayoutComponents do
   @moduledoc false
   use LightningWeb, :html
+  use LightningWeb, :verified_routes
 
   import PetalComponents.Dropdown
   import PetalComponents.Avatar
@@ -10,7 +11,8 @@ defmodule LightningWeb.LayoutComponents do
       Application.get_env(:lightning, :menu_items, [])[:project_menu] || []
 
     replace_menu_items =
-      Application.get_env(:lightning, :menu_items, [])[:replace_menu] || []
+      Application.get_env(:lightning, :menu_items, [])[:replace_projects_menu] ||
+        []
 
     assigns =
       assign(assigns,
@@ -104,7 +106,7 @@ defmodule LightningWeb.LayoutComponents do
       </Settings.menu_item>
 
       <Settings.menu_item
-        to={Routes.project_run_index_path(@socket, :index, @project.id)}
+        to={~p"/projects/#{@project.id}/history"}
         active={@active_menu_item == :runs}
       >
         <Icon.runs class="h-5 w-5 inline-block mr-2" />
@@ -112,7 +114,7 @@ defmodule LightningWeb.LayoutComponents do
       </Settings.menu_item>
 
       <Settings.menu_item
-        to={Routes.project_project_settings_path(@socket, :index, @project.id)}
+        to={"/projects/#{@project.id}/settings"}
         active={@active_menu_item == :settings}
       >
         <Icon.settings class="h-5 w-5 inline-block mr-2" />
