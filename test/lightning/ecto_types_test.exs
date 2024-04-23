@@ -1,5 +1,5 @@
 defmodule Lightning.EctoTypesTest do
-  use ExUnit.Case
+  use ExUnit.Case, async: true
 
   alias Lightning.LogMessage
   alias Lightning.UnixDateTime

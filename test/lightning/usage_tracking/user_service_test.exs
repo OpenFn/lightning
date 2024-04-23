@@ -1,5 +1,5 @@
 defmodule Lightning.UsageTracking.UserServiceTest do
-  use Lightning.DataCase
+  use Lightning.DataCase, async: true
 
   alias Lightning.UsageTracking.UserService
 
