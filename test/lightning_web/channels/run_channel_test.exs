@@ -1,11 +1,12 @@
 defmodule LightningWeb.RunChannelTest do
-  use LightningWeb.ChannelCase
+  use LightningWeb.ChannelCase, async: true
 
   alias Lightning.Invocation.Dataclip
   alias Lightning.Invocation.Step
   alias Lightning.Workers
 
   import Ecto.Query
+  import Lightning.TestUtils
   import Lightning.Factories
   import Lightning.BypassHelpers
 
@@ -102,32 +103,6 @@ defmodule LightningWeb.RunChannelTest do
   end
 
   describe "fetching run data" do
-    defp set_google_credential(_context) do
-      expires_at =
-        DateTime.utc_now()
-        |> DateTime.add(-299, :second)
-        |> DateTime.to_unix()
-
-      credential_body = %{
-        "access_token" => "ya29.a0AWY7CknfkidjXaoDTuNi",
-        "expires_at" => expires_at,
-        "refresh_token" => "1//03dATMQTmE5NSCgYIARAAGAMSNwF",
-        "scope" => "https://www.googleapis.com/auth/spreadsheets"
-      }
-
-      user = insert(:user)
-
-      credential =
-        insert(:credential,
-          name: "Test Googlesheets Credential",
-          user: user,
-          body: credential_body,
-          schema: "googlesheets"
-        )
-
-      {:ok, credential: credential, user: user}
-    end
-
     setup :set_google_credential
     setup :create_socket_and_run
 
@@ -191,8 +166,14 @@ defmodule LightningWeb.RunChannelTest do
     } do
       project = insert(:project, retention_policy: :erase_all)
 
+      workflow_context =
+        create_workflow(%{project: project, credential: credential})
+
       %{run: run, workflow: workflow} =
-        create_run(%{project: project, credential: credential})
+        create_run(
+          %{project: project, credential: credential}
+          |> Map.merge(workflow_context)
+        )
 
       %{socket: socket} = create_socket(%{run: run})
 
@@ -279,36 +260,29 @@ defmodule LightningWeb.RunChannelTest do
       assert_reply ref, :ok, {:binary, "null"}
     end
 
+    @tag project_retention_policy: :erase_all
     test "fetch:dataclip wipes dataclip body for projects with erase_all retention policy",
-         %{
-           credential: credential
-         } do
-      # erase_all
-      project = insert(:project, retention_policy: :erase_all)
-
-      %{run: run, dataclip: dataclip} =
-        create_run(%{project: project, credential: credential})
-
-      %{socket: socket} = create_socket(%{run: run})
+         context do
+      %{dataclip: dataclip, socket: socket} = context
 
       ref = push(socket, "fetch:dataclip", %{})
 
       assert_reply ref, :ok, {:binary, _payload}
 
-      # dataclip body is cleared
-      dataclip_query = from(Dataclip, select: [:wiped_at, :body, :request])
-      updated_dataclip = Lightning.Repo.get(dataclip_query, dataclip.id)
+      updated_dataclip = get_dataclip_with_body(dataclip.id)
 
+      # dataclip body is cleared
       assert updated_dataclip.wiped_at ==
                DateTime.utc_now() |> DateTime.truncate(:second)
 
       refute updated_dataclip.body
+    end
 
+    @tag project_retention_policy: :retain_all
+    test "fetch:dataclip wipes dataclip body for projects with retain_all retention policy",
+         context do
       # retain_all
-      project = insert(:project, retention_policy: :retain_all)
-
-      %{run: run, dataclip: dataclip} =
-        create_run(%{project: project, credential: credential})
+      %{run: run, dataclip: dataclip} = create_run(context)
 
       %{socket: socket} = create_socket(%{run: run})
 
@@ -317,6 +291,7 @@ defmodule LightningWeb.RunChannelTest do
       assert_reply ref, :ok, {:binary, _payload}
 
       # dataclip body is not cleared
+      dataclip_query = from(Dataclip, select: [:wiped_at, :body, :request])
       updated_dataclip = Lightning.Repo.get(dataclip_query, dataclip.id)
       refute updated_dataclip.wiped_at
       assert updated_dataclip.body
@@ -434,11 +409,10 @@ defmodule LightningWeb.RunChannelTest do
   end
 
   describe "marking steps as started and finished" do
-    setup do
+    setup context do
       user = insert(:user)
 
-      project =
-        insert(:project, project_users: [%{user_id: user.id}])
+      %{project: project} = create_project(%{user: user} |> Map.merge(context))
 
       credential =
         insert(:credential,
@@ -496,7 +470,8 @@ defmodule LightningWeb.RunChannelTest do
         user: user,
         workflow: workflow,
         credential: credential,
-        project: project
+        project: project,
+        trigger: trigger
       }
     end
 
@@ -531,16 +506,16 @@ defmodule LightningWeb.RunChannelTest do
                Repo.get!(Step, step_id)
     end
 
-    test "step:start for a project with erase_all retention policy", %{
-      credential: %{id: credential_id} = credential
-    } do
+    @tag project_retention_policy: :erase_all
+    test "step:start for a project with erase_all retention policy",
+         %{
+           credential: %{id: credential_id},
+           project: project,
+           workflow: workflow
+         } = context do
+      %{socket: socket, run: %{dataclip_id: dataclip_id}} = context
       # input dataclip is saved if provided by the worker
-      project = insert(:project, retention_policy: :erase_all)
-
-      %{run: %{dataclip_id: dataclip_id} = run, workflow: workflow} =
-        create_run(%{project: project, credential: credential})
-
-      %{socket: socket} = create_socket(%{run: run})
+      assert project.retention_policy == :erase_all
 
       step_id = Ecto.UUID.generate()
       [%{id: job_id}] = workflow.jobs
@@ -555,8 +530,6 @@ defmodule LightningWeb.RunChannelTest do
 
       assert_reply ref, :ok, %{step_id: ^step_id}
 
-      assert project.retention_policy == :erase_all
-
       assert %{
                credential_id: ^credential_id,
                job_id: ^job_id,
@@ -565,13 +538,8 @@ defmodule LightningWeb.RunChannelTest do
                Repo.get!(Step, step_id),
              "dataclip is saved if provided"
 
-      # NO INPUT DATACLIP, NO PROBLEM
-      project = insert(:project, retention_policy: :erase_all)
-
-      %{run: run, workflow: workflow} =
-        create_run(%{project: project, credential: credential})
-
-      %{socket: socket} = create_socket(%{run: run})
+      %{run: run} = create_run(context)
+      %{socket: socket} = create_socket(%{context | run: run})
 
       step_id = Ecto.UUID.generate()
       [%{id: job_id}] = workflow.jobs
@@ -585,14 +553,11 @@ defmodule LightningWeb.RunChannelTest do
 
       assert_reply ref, :ok, %{step_id: ^step_id}
 
-      assert project.retention_policy == :erase_all
-
       assert %{
                credential_id: ^credential_id,
                job_id: ^job_id,
                input_dataclip_id: nil
-             } =
-               Repo.get!(Step, step_id)
+             } = Repo.get!(Step, step_id)
     end
 
     test "step:complete succeeds with normal reason", %{
@@ -635,15 +600,12 @@ defmodule LightningWeb.RunChannelTest do
       assert %{exit_reason: "fail"} = Repo.get(Step, step.id)
     end
 
-    test "step:complete does not save the dataclip/wipes it if project retention policy is set to erase_all",
-         %{
-           socket: socket,
-           run: run,
-           workflow: workflow,
-           project: project,
-           credential: credential
-         } do
-      dataclip_query = from(d in Dataclip, select: %{d | body: d.body})
+    @tag project_retention_policy: :retain_all
+    test "step:complete saves the dataclip if project retention policy is set to retain_all",
+         context do
+      %{socket: socket, run: run, workflow: workflow, project: project} = context
+
+      assert project.retention_policy == :retain_all
       [job] = workflow.jobs
       %{id: step_id} = insert(:step, runs: [run], job: job)
       dataclip_id = Ecto.UUID.generate()
@@ -659,19 +621,19 @@ defmodule LightningWeb.RunChannelTest do
       assert_reply ref, :ok, %{step_id: ^step_id}
 
       # dataclip is saved
-      assert project.retention_policy == :retain_all
       assert %{output_dataclip_id: ^dataclip_id} = Repo.get(Step, step_id)
-      assert dataclip = Repo.get(dataclip_query, dataclip_id)
+      assert dataclip = get_dataclip_with_body(dataclip_id)
       assert dataclip.body, "body is not wiped"
       assert is_nil(dataclip.wiped_at)
+    end
 
-      # project with erase_all
-      project = insert(:project, retention_policy: :erase_all)
+    @tag project_retention_policy: :erase_all
+    test "step:complete saves the dataclip but wipes it if project retention policy is set to erase_all",
+         context do
+      %{socket: socket, run: run, workflow: workflow, project: project} = context
 
-      %{run: run, workflow: workflow} =
-        create_run(%{project: project, credential: credential})
-
-      %{socket: socket} = create_socket(%{run: run})
+      # dataclip is saved but wiped
+      assert project.retention_policy == :erase_all
 
       [job] = workflow.jobs
       %{id: step_id} = insert(:step, runs: [run], job: job)
@@ -687,26 +649,19 @@ defmodule LightningWeb.RunChannelTest do
 
       assert_reply ref, :ok, %{step_id: ^step_id}
 
-      # dataclip is saved but wiped
-      assert project.retention_policy == :erase_all
       assert %{output_dataclip_id: ^dataclip_id} = Repo.get(Step, step_id)
-      assert dataclip = Repo.get(dataclip_query, dataclip_id)
+      assert dataclip = get_dataclip_with_body(dataclip_id)
       assert is_nil(dataclip.body), "body is wiped"
       assert is_struct(dataclip.wiped_at, DateTime)
 
-      # another project with erase_all
-      project = insert(:project, retention_policy: :erase_all)
-
-      %{run: run, workflow: workflow} =
-        create_run(%{project: project, credential: credential})
-
+      %{run: run} = create_run(context)
       %{socket: socket} = create_socket(%{run: run})
 
       [job] = workflow.jobs
       %{id: step_id} = insert(:step, runs: [run], job: job)
       dataclip_id = Ecto.UUID.generate()
 
-      # do not inclide output_dataclip_id
+      # do not include output_dataclip_id
       ref =
         push(socket, "step:complete", %{
           "step_id" => step_id,
@@ -716,10 +671,8 @@ defmodule LightningWeb.RunChannelTest do
 
       assert_reply ref, :ok, %{step_id: ^step_id}
 
-      # dataclip NOT saved AT ALL
-      assert project.retention_policy == :erase_all
       assert %{output_dataclip_id: nil} = Repo.get(Step, step_id)
-      refute Repo.get(dataclip_query, dataclip_id)
+      refute get_dataclip_with_body(dataclip_id)
     end
   end
 
@@ -770,7 +723,6 @@ defmodule LightningWeb.RunChannelTest do
       run: run,
       workflow: workflow
     } do
-      # { id, job_id, input_dataclip_id }
       step_id = Ecto.UUID.generate()
       [job] = workflow.jobs
 
@@ -822,25 +774,6 @@ defmodule LightningWeb.RunChannelTest do
       assert_reply ref, :error, errors
 
       assert errors == %{message: ["This field can't be blank."]}
-    end
-
-    test "run:log message can't be [nil]", %{
-      socket: socket,
-      run: run,
-      workflow: workflow
-    } do
-      # { id, job_id, input_dataclip_id }
-      step_id = Ecto.UUID.generate()
-      [job] = workflow.jobs
-
-      ref =
-        push(socket, "step:start", %{
-          "step_id" => step_id,
-          "job_id" => job.id,
-          "input_dataclip_id" => run.dataclip_id
-        })
-
-      assert_reply ref, :ok, _
 
       ref =
         push(socket, "run:log", %{
@@ -859,7 +792,6 @@ defmodule LightningWeb.RunChannelTest do
       run: run,
       workflow: workflow
     } do
-      # { id, job_id, input_dataclip_id }
       step_id = Ecto.UUID.generate()
       [job] = workflow.jobs
 
@@ -1072,20 +1004,30 @@ defmodule LightningWeb.RunChannelTest do
     end
   end
 
-  defp create_socket_and_run(%{credential: credential, user: user}) do
-    project = insert(:project, project_users: [%{user: user}])
-
-    run_result = create_run(%{project: project, credential: credential})
-
-    socket_result = create_socket(run_result)
-
-    Map.merge(run_result, socket_result)
+  defp create_socket_and_run(context) do
+    [&create_project/1, &create_workflow/1, &create_run/1, &create_socket/1]
+    |> Enum.reduce(context, fn f, context ->
+      Map.merge(context, f.(context))
+    end)
   end
 
-  defp create_run(%{project: project, credential: credential}) do
-    dataclip =
-      insert(:http_request_dataclip, project: project)
+  defp create_project(%{user: user} = context) do
+    %{
+      project:
+        insert(:project,
+          project_users: [%{user: user}],
+          retention_policy: fn ->
+            context[:project_retention_policy] ||
+              %Lightning.Projects.Project{}.retention_policy
+          end
+        )
+    }
+  end
 
+  defp create_workflow(context) do
+    assert_context_keys(context, [:project, :credential])
+
+    %{credential: credential, project: project} = context
     trigger = build(:trigger, type: :webhook, enabled: true)
 
     job =
@@ -1104,6 +1046,22 @@ defmodule LightningWeb.RunChannelTest do
         condition_expression: "state.a == 33"
       })
       |> insert()
+
+    %{workflow: workflow, job: job, trigger: trigger}
+  end
+
+  defp create_run(context) do
+    assert_context_keys(context, [:project, :credential, :workflow, :trigger])
+
+    %{
+      project: project,
+      credential: credential,
+      workflow: workflow,
+      trigger: trigger
+    } = context
+
+    dataclip =
+      insert(:http_request_dataclip, project: project)
 
     work_order =
       insert(:workorder,
@@ -1151,5 +1109,36 @@ defmodule LightningWeb.RunChannelTest do
   defp stringify_keys(map) do
     Enum.map(map, fn {k, v} -> {Atom.to_string(k), v} end)
     |> Enum.into(%{})
+  end
+
+  defp set_google_credential(_context) do
+    expires_at =
+      DateTime.utc_now()
+      |> DateTime.add(-299, :second)
+      |> DateTime.to_unix()
+
+    credential_body = %{
+      "access_token" => "ya29.a0AWY7CknfkidjXaoDTuNi",
+      "expires_at" => expires_at,
+      "refresh_token" => "1//03dATMQTmE5NSCgYIARAAGAMSNwF",
+      "scope" => "https://www.googleapis.com/auth/spreadsheets"
+    }
+
+    user = insert(:user)
+
+    credential =
+      insert(:credential,
+        name: "Test Googlesheets Credential",
+        user: user,
+        body: credential_body,
+        schema: "googlesheets"
+      )
+
+    {:ok, credential: credential, user: user}
+  end
+
+  defp get_dataclip_with_body(dataclip_id) do
+    from(d in Dataclip, select: %{d | body: d.body})
+    |> Repo.get(dataclip_id)
   end
 end

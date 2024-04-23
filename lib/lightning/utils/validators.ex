@@ -24,8 +24,8 @@ defmodule Lightning.Validators do
     fields
     |> Enum.map(&get_field(changeset, &1))
     |> Enum.reject(&is_nil/1)
-    |> case do
-      f when length(f) > 1 ->
+    |> then(fn f ->
+      if length(f) > 1 do
         error_field =
           fields
           |> Enum.map(&[&1, fetch_field(changeset, &1)])
@@ -33,10 +33,10 @@ defmodule Lightning.Validators do
           |> List.first()
 
         add_error(changeset, error_field, message)
-
-      _ ->
+      else
         changeset
-    end
+      end
+    end)
   end
 
   @doc """
@@ -52,7 +52,7 @@ defmodule Lightning.Validators do
       [] ->
         add_error(changeset, fields |> List.first(), message)
 
-      _ ->
+      _any ->
         changeset
     end
   end
@@ -75,7 +75,7 @@ defmodule Lightning.Validators do
       nil ->
         add_error(changeset, assoc, message)
 
-      _ ->
+      _any ->
         changeset
     end
   end

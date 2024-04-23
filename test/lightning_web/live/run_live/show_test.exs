@@ -81,8 +81,7 @@ defmodule LightningWeb.RunLive.ShowTest do
              "has no steps"
 
       {:ok, step} =
-        Lightning.Runs.start_step(%{
-          run_id: run_id,
+        Lightning.Runs.start_step(run, %{
           step_id: Ecto.UUID.generate(),
           job_id: job_a.id,
           input_dataclip_id: workorder.dataclip_id
@@ -126,8 +125,7 @@ defmodule LightningWeb.RunLive.ShowTest do
       assert view |> step_output(step) =~ ~r/{  \"y\": 2}/
 
       {:ok, step_2} =
-        Lightning.Runs.start_step(%{
-          run_id: run_id,
+        Lightning.Runs.start_step(run, %{
           step_id: Ecto.UUID.generate(),
           job_id: job_b.id,
           input_dataclip_id: output_dataclip_id

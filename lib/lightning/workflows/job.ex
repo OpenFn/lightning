@@ -54,7 +54,7 @@ defmodule Lightning.Workflows.Job do
   end
 
   def new(attrs \\ %{}) do
-    change(%__MODULE__{}, attrs)
+    change(%__MODULE__{}, Map.merge(%{id: Ecto.UUID.generate()}, attrs))
   end
 
   @doc false

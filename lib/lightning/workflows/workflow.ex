@@ -14,7 +14,7 @@ defmodule Lightning.Workflows.Workflow do
   alias Lightning.Projects.Project
   alias Lightning.Workflows.Edge
   alias Lightning.Workflows.Job
-  alias Lightning.Workflows.Trigger
+  alias Lightning.Workflows.Snapshot
   alias Lightning.Workflows.Trigger
 
   @type t :: %__MODULE__{
@@ -38,17 +38,21 @@ defmodule Lightning.Workflows.Workflow do
     has_many :runs, through: [:work_orders, :runs]
     belongs_to :project, Project
 
+    has_many :snapshots, Snapshot
+
+    field :lock_version, :integer, default: 0
     field :deleted_at, :utc_datetime
 
     field :delete, :boolean, virtual: true
 
-    timestamps()
+    timestamps(type: :utc_datetime)
   end
 
   @doc false
   def changeset(workflow, attrs) do
     workflow
     |> cast(attrs, [:name, :project_id])
+    |> optimistic_lock(:lock_version)
     |> cast_assoc(:edges, with: &Edge.changeset/2)
     |> cast_assoc(:jobs, with: &Job.changeset/2)
     |> cast_assoc(:triggers, with: &Trigger.changeset/2)
@@ -80,5 +84,18 @@ defmodule Lightning.Workflows.Workflow do
         get_change(trigger_changeset, :enabled) == true
       end
     end)
+  end
+
+  @doc """
+  Forces an update to the workflows `updated_at` timestamp and the
+  `lock_version`. This is useful when updating a child record like jobs or
+  triggers and a snapshot needs to made; but the Workflow itself didn't change.
+  """
+  @spec touch(t()) :: Ecto.Changeset.t(t())
+  def touch(workflow) do
+    workflow
+    |> change()
+    |> force_change(:updated_at, DateTime.utc_now(:second))
+    |> optimistic_lock(:lock_version)
   end
 end

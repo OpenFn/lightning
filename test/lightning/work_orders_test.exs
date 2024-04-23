@@ -23,18 +23,20 @@ defmodule Lightning.WorkOrdersTest do
         |> with_edge({trigger, job})
         |> insert()
 
+      {:ok, snapshot} = Lightning.Workflows.Snapshot.create(workflow)
+
       %{
         workflow: workflow,
         trigger: trigger |> Repo.reload!(),
-        job: job |> Repo.reload!()
+        job: job |> Repo.reload!(),
+        snapshot: snapshot
       }
     end
 
     @tag trigger_type: :webhook
-    test "creating a webhook triggered workorder", %{
-      workflow: workflow,
-      trigger: trigger
-    } do
+    test "with a webhook trigger", context do
+      %{workflow: workflow, trigger: trigger, snapshot: snapshot} = context
+
       project_id = workflow.project_id
       Lightning.WorkOrders.subscribe(project_id)
       dataclip = insert(:dataclip)
@@ -42,6 +44,7 @@ defmodule Lightning.WorkOrdersTest do
       {:ok, workorder} =
         WorkOrders.create_for(trigger, dataclip: dataclip, workflow: workflow)
 
+      assert workorder.snapshot_id == snapshot.id
       assert workorder.workflow_id == workflow.id
       assert workorder.trigger_id == trigger.id
       assert workorder.dataclip_id == dataclip.id
@@ -63,10 +66,9 @@ defmodule Lightning.WorkOrdersTest do
       }
     end
 
-    test "creating a webhook triggered workorder without runs", %{
-      workflow: workflow,
-      trigger: trigger
-    } do
+    test "with a webhook trigger (without runs)", context do
+      %{workflow: workflow, trigger: trigger, snapshot: snapshot} = context
+
       project_id = workflow.project_id
       Lightning.WorkOrders.subscribe(project_id)
       dataclip = insert(:dataclip)
@@ -79,6 +81,7 @@ defmodule Lightning.WorkOrdersTest do
         )
 
       assert workorder.workflow_id == workflow.id
+      assert workorder.snapshot_id == snapshot.id
       assert workorder.trigger_id == trigger.id
       assert workorder.dataclip_id == dataclip.id
       assert workorder.dataclip.type == :http_request
@@ -94,10 +97,9 @@ defmodule Lightning.WorkOrdersTest do
     end
 
     @tag trigger_type: :cron
-    test "creating a cron triggered workorder", %{
-      workflow: workflow,
-      trigger: trigger
-    } do
+    test "with a cron trigger", context do
+      %{workflow: workflow, trigger: trigger, snapshot: snapshot} = context
+
       Lightning.WorkOrders.subscribe(workflow.project_id)
 
       dataclip = insert(:dataclip)
@@ -106,6 +108,7 @@ defmodule Lightning.WorkOrdersTest do
         WorkOrders.create_for(trigger, dataclip: dataclip, workflow: workflow)
 
       assert workorder.workflow_id == workflow.id
+      assert workorder.snapshot_id == snapshot.id
       assert workorder.trigger_id == trigger.id
       assert workorder.dataclip_id == dataclip.id
       assert workorder.dataclip.type == :http_request
@@ -113,6 +116,7 @@ defmodule Lightning.WorkOrdersTest do
       [run] = workorder.runs
 
       assert run.starting_trigger.id == trigger.id
+      assert run.snapshot_id == snapshot.id
 
       workorder_id = workorder.id
 
@@ -121,7 +125,8 @@ defmodule Lightning.WorkOrdersTest do
       }
     end
 
-    test "creates a manual workorder", %{workflow: workflow, job: job} do
+    test "with a manual workorder", context do
+      %{workflow: workflow, job: job, snapshot: snapshot} = context
       user = insert(:user)
       project_id = workflow.project_id
       Lightning.WorkOrders.subscribe(project_id)
@@ -142,7 +147,10 @@ defmodule Lightning.WorkOrdersTest do
                )
                |> Ecto.Changeset.apply_action(:validate)
 
-      assert {:ok, %{runs: [run]} = workorder} = WorkOrders.create_for(manual)
+      assert {:ok, %{id: workorder_id, runs: [run]} = workorder} =
+               WorkOrders.create_for(manual)
+
+      assert workorder.snapshot_id == snapshot.id
       assert workorder.dataclip.type == :saved_input
 
       assert workorder.dataclip.body == %{
@@ -151,12 +159,11 @@ defmodule Lightning.WorkOrdersTest do
 
       assert run.priority == :immediate
       assert run.created_by.id == user.id
+      assert run.snapshot_id == snapshot.id
 
       assert_received %Events.RunCreated{
         project_id: ^project_id
       }
-
-      workorder_id = workorder.id
 
       assert_received %Events.WorkOrderCreated{
         work_order: %{id: ^workorder_id}
@@ -180,8 +187,11 @@ defmodule Lightning.WorkOrdersTest do
         |> with_edge({job_b, job_c})
         |> insert()
 
+      {:ok, snapshot} = Lightning.Workflows.Snapshot.create(workflow)
+
       %{
         workflow: workflow,
+        snapshot: snapshot,
         trigger: trigger |> Repo.reload!(),
         jobs: jobs |> Repo.reload!()
       }
@@ -189,6 +199,7 @@ defmodule Lightning.WorkOrdersTest do
 
     test "retrying a run from the start", %{
       workflow: %{project_id: project_id} = workflow,
+      snapshot: snapshot,
       trigger: trigger,
       jobs: [job | _rest]
     } do
@@ -198,12 +209,14 @@ defmodule Lightning.WorkOrdersTest do
       %{id: wo_id, runs: [%{id: run_id} = run]} =
         insert(:workorder,
           workflow: workflow,
+          snapshot: snapshot,
           trigger: trigger,
           dataclip: dataclip,
           runs: [
             %{
               state: :failed,
               dataclip: dataclip,
+              snapshot: snapshot,
               starting_trigger: trigger,
               steps: [
                 step = insert(:step, job: job, input_dataclip: dataclip)
@@ -213,6 +226,12 @@ defmodule Lightning.WorkOrdersTest do
         )
 
       Events.subscribe(project_id)
+
+      # This isn't the best place to test for this specific case.
+      Lightning.Workflows.change_workflow(workflow, %{name: "new name"})
+      |> Lightning.Workflows.save_workflow()
+
+      snapshot2 = Lightning.Workflows.Snapshot.get_current_for(workflow)
 
       {:ok, %{id: new_run_id} = retry_run} =
         WorkOrders.retry(run, step, created_by: user)
@@ -236,6 +255,10 @@ defmodule Lightning.WorkOrdersTest do
       assert retry_run.starting_job.id == job.id
       assert retry_run.created_by.id == user.id
       assert retry_run.work_order_id == run.work_order_id
+
+      assert retry_run.snapshot_id == snapshot2.id,
+             "Retrying automatically picks the newest snapshot for a workflow"
+
       assert retry_run.state == :available
 
       assert retry_run |> Repo.preload(:steps) |> Map.get(:steps) == [],
@@ -244,6 +267,7 @@ defmodule Lightning.WorkOrdersTest do
 
     test "retrying a run from a step that isn't the first", %{
       workflow: workflow,
+      snapshot: snapshot,
       trigger: trigger,
       jobs: [job_a, job_b, job_c]
     } do
@@ -255,12 +279,14 @@ defmodule Lightning.WorkOrdersTest do
       %{runs: [run]} =
         insert(:workorder,
           workflow: workflow,
+          snapshot: snapshot,
           trigger: trigger,
           dataclip: dataclip,
           runs: [
             %{
               state: :failed,
               dataclip: dataclip,
+              snapshot: snapshot,
               starting_trigger: trigger,
               steps: [
                 first_step =
@@ -293,6 +319,7 @@ defmodule Lightning.WorkOrdersTest do
 
     test "retrying a run from a step with a wiped dataclip", %{
       workflow: workflow,
+      snapshot: snapshot,
       trigger: trigger,
       jobs: [job | _rest]
     } do
@@ -302,12 +329,14 @@ defmodule Lightning.WorkOrdersTest do
       %{runs: [run]} =
         insert(:workorder,
           workflow: workflow,
+          snapshot: snapshot,
           trigger: trigger,
           dataclip: dataclip,
           runs: [
             %{
               state: :failed,
               dataclip: dataclip,
+              snapshot: snapshot,
               starting_trigger: trigger,
               steps: [
                 step = insert(:step, job: job, input_dataclip: dataclip)
@@ -326,6 +355,7 @@ defmodule Lightning.WorkOrdersTest do
 
     test "retrying a run from a step with a dropped dataclip", %{
       workflow: workflow,
+      snapshot: snapshot,
       trigger: trigger,
       jobs: [job_a, job_b, job_c]
     } do
@@ -336,12 +366,14 @@ defmodule Lightning.WorkOrdersTest do
       %{runs: [run]} =
         insert(:workorder,
           workflow: workflow,
+          snapshot: snapshot,
           trigger: trigger,
           dataclip: dataclip,
           runs: [
             %{
               state: :failed,
               dataclip: dataclip,
+              snapshot: snapshot,
               starting_trigger: trigger,
               steps: [
                 insert(:step,
@@ -367,6 +399,7 @@ defmodule Lightning.WorkOrdersTest do
     end
 
     test "updates workorder state", %{
+      snapshot: snapshot,
       workflow: workflow,
       trigger: trigger,
       jobs: [job | _rest]
@@ -380,12 +413,14 @@ defmodule Lightning.WorkOrdersTest do
           workflow: workflow,
           trigger: trigger,
           dataclip: dataclip,
+          snapshot: snapshot,
           state: :failed,
           runs: [
             %{
               state: :failed,
               dataclip: dataclip,
               starting_trigger: trigger,
+              snapshot: snapshot,
               steps: [
                 step = insert(:step, job: job, input_dataclip: dataclip)
               ]
@@ -430,8 +465,11 @@ defmodule Lightning.WorkOrdersTest do
         |> with_edge({job_b, job_c})
         |> insert()
 
+      {:ok, snapshot} = Lightning.Workflows.Snapshot.create(workflow)
+
       %{
         workflow: workflow,
+        snapshot: snapshot,
         trigger: Repo.reload!(trigger),
         jobs: Repo.reload!(jobs),
         user: insert(:user)
@@ -440,6 +478,7 @@ defmodule Lightning.WorkOrdersTest do
 
     test "retrying one WorkOrder with a single run without steps from start job skips the retry",
          %{
+           snapshot: snapshot,
            workflow: workflow,
            trigger: trigger,
            jobs: [job_a, _job_b, _job_c],
@@ -452,11 +491,13 @@ defmodule Lightning.WorkOrdersTest do
           workflow: workflow,
           trigger: trigger,
           dataclip: input_dataclip,
+          snapshot: snapshot,
           runs: [
             %{
               state: :failed,
               dataclip: input_dataclip,
               starting_trigger: trigger,
+              snapshot: snapshot,
               steps: []
             }
           ]
@@ -476,6 +517,7 @@ defmodule Lightning.WorkOrdersTest do
     end
 
     test "retrying one WorkOrder with a single run from start job", %{
+      snapshot: snapshot,
       workflow: workflow,
       trigger: trigger,
       jobs: [job_a, job_b, job_c],
@@ -489,11 +531,13 @@ defmodule Lightning.WorkOrdersTest do
           workflow: workflow,
           trigger: trigger,
           dataclip: input_dataclip,
+          snapshot: snapshot,
           runs: [
             %{
               state: :failed,
               dataclip: input_dataclip,
               starting_trigger: trigger,
+              snapshot: snapshot,
               steps: [
                 step_a =
                   insert(:step,
@@ -548,10 +592,11 @@ defmodule Lightning.WorkOrdersTest do
     end
 
     test "retrying one WorkOrder with a single run from mid way job", %{
-      workflow: workflow,
-      trigger: trigger,
       jobs: [job_a, job_b, job_c],
-      user: user
+      snapshot: snapshot,
+      trigger: trigger,
+      user: user,
+      workflow: workflow
     } do
       input_dataclip = insert(:dataclip)
       output_dataclip = insert(:dataclip)
@@ -562,10 +607,12 @@ defmodule Lightning.WorkOrdersTest do
           workflow: workflow,
           trigger: trigger,
           dataclip: input_dataclip,
+          snapshot: snapshot,
           runs: [
             %{
               state: :failed,
               dataclip: input_dataclip,
+              snapshot: snapshot,
               starting_trigger: trigger,
               steps: [
                 step_a =
@@ -622,19 +669,21 @@ defmodule Lightning.WorkOrdersTest do
     end
 
     test "retrying one WorkOrder with a multiple runs from start job", %{
-      workflow: workflow,
-      trigger: trigger,
       jobs: [job_a, job_b, job_c],
-      user: user
+      snapshot: snapshot,
+      trigger: trigger,
+      user: user,
+      workflow: workflow
     } do
       input_dataclip = insert(:dataclip)
       output_dataclip = insert(:dataclip)
 
       workorder =
         insert(:workorder,
-          workflow: workflow,
+          dataclip: input_dataclip,
+          snapshot: snapshot,
           trigger: trigger,
-          dataclip: input_dataclip
+          workflow: workflow
         )
 
       run_1 =
@@ -642,6 +691,7 @@ defmodule Lightning.WorkOrdersTest do
           work_order: workorder,
           state: :failed,
           dataclip: input_dataclip,
+          snapshot: snapshot,
           starting_trigger: trigger,
           steps: [
             step_1_a =
@@ -658,6 +708,7 @@ defmodule Lightning.WorkOrdersTest do
           work_order: workorder,
           state: :failed,
           dataclip: build(:dataclip),
+          snapshot: snapshot,
           starting_job: job_a,
           steps: [
             step_2_a =
@@ -712,19 +763,21 @@ defmodule Lightning.WorkOrdersTest do
 
     test "retrying one WorkOrder with a multiple runs whose latest run has no steps from start job skips the retry",
          %{
-           workflow: workflow,
-           trigger: trigger,
            jobs: [job_a, job_b, _job_c],
-           user: user
+           snapshot: snapshot,
+           trigger: trigger,
+           user: user,
+           workflow: workflow
          } do
       input_dataclip = insert(:dataclip)
       output_dataclip = insert(:dataclip)
 
       workorder =
         insert(:workorder,
-          workflow: workflow,
+          dataclip: input_dataclip,
+          snapshot: snapshot,
           trigger: trigger,
-          dataclip: input_dataclip
+          workflow: workflow
         )
 
       run_1 =
@@ -732,6 +785,7 @@ defmodule Lightning.WorkOrdersTest do
           work_order: workorder,
           state: :failed,
           dataclip: input_dataclip,
+          snapshot: snapshot,
           starting_trigger: trigger,
           steps: [
             insert(:step,
@@ -752,6 +806,7 @@ defmodule Lightning.WorkOrdersTest do
           work_order: workorder,
           state: :failed,
           dataclip: step_1_b.input_dataclip,
+          snapshot: snapshot,
           starting_job: step_1_b.job,
           steps: []
         )
@@ -773,6 +828,7 @@ defmodule Lightning.WorkOrdersTest do
     end
 
     test "retrying one WorkOrder with a multiple runs from mid way job", %{
+      snapshot: snapshot,
       workflow: workflow,
       trigger: trigger,
       jobs: [job_a, job_b, job_c],
@@ -783,9 +839,10 @@ defmodule Lightning.WorkOrdersTest do
 
       workorder =
         insert(:workorder,
-          workflow: workflow,
+          dataclip: input_dataclip,
+          snapshot: snapshot,
           trigger: trigger,
-          dataclip: input_dataclip
+          workflow: workflow
         )
 
       run_1 =
@@ -794,6 +851,7 @@ defmodule Lightning.WorkOrdersTest do
           state: :failed,
           dataclip: input_dataclip,
           starting_trigger: trigger,
+          snapshot: snapshot,
           steps: [
             insert(:step,
               job: job_a,
@@ -815,6 +873,7 @@ defmodule Lightning.WorkOrdersTest do
           state: :failed,
           dataclip: build(:dataclip),
           starting_job: job_a,
+          snapshot: snapshot,
           steps: [
             step_2_a =
               insert(:step,
@@ -867,21 +926,24 @@ defmodule Lightning.WorkOrdersTest do
 
     test "retrying multiple workorders preserves the order in which the workorders were created",
          %{
-           workflow: workflow,
-           trigger: trigger,
            jobs: [job_a, job_b, job_c],
-           user: user
+           snapshot: snapshot,
+           trigger: trigger,
+           user: user,
+           workflow: workflow
          } do
       [workorder_1, workorder_2] =
         insert_list(2, :workorder,
           workflow: workflow,
           trigger: trigger,
           dataclip: build(:dataclip),
+          snapshot: snapshot,
           runs: [
             %{
               state: :failed,
               dataclip: build(:dataclip),
               starting_trigger: trigger,
+              snapshot: snapshot,
               steps: [
                 insert(:step,
                   job: job_a,
@@ -939,34 +1001,37 @@ defmodule Lightning.WorkOrdersTest do
     test(
       "retrying multiple workorders returns error on limit exceeded",
       %{
-        workflow: workflow,
-        trigger: trigger,
         jobs: [job_a, job_b, job_c],
-        user: user
+        snapshot: snapshot,
+        trigger: trigger,
+        user: user,
+        workflow: workflow
       }
     ) do
-      Mox.stub(MockUsageLimiter, :limit_action, fn %Action{
-                                                     type: :new_run,
-                                                     amount: n
-                                                   },
-                                                   _context ->
-        {:error, :too_many_runs,
-         %Message{
-           text:
-             "You have attempted to enqueue #{n} runs but you have only 1 remaining in your current billig period"
-         }}
-      end)
+      Mox.stub(
+        MockUsageLimiter,
+        :limit_action,
+        fn %Action{type: :new_run, amount: n}, _context ->
+          {:error, :too_many_runs,
+           %Message{
+             text:
+               "You have attempted to enqueue #{n} runs but you have only 1 remaining in your current billig period"
+           }}
+        end
+      )
 
       [workorder_1, workorder_2] =
         insert_list(2, :workorder,
           workflow: workflow,
           trigger: trigger,
           dataclip: build(:dataclip),
+          snapshot: snapshot,
           runs: [
             %{
               state: :failed,
               dataclip: build(:dataclip),
               starting_trigger: trigger,
+              snapshot: snapshot,
               steps: [
                 insert(:step,
                   job: job_a,
@@ -1022,21 +1087,24 @@ defmodule Lightning.WorkOrdersTest do
 
     test "retrying multiple workorders only retries workorders with the given job",
          %{
-           workflow: workflow,
-           trigger: trigger,
            jobs: [job_a, job_b, job_c],
-           user: user
+           snapshot: snapshot,
+           trigger: trigger,
+           user: user,
+           workflow: workflow
          } do
       workorder_1 =
         insert(:workorder,
           workflow: workflow,
           trigger: trigger,
           dataclip: build(:dataclip),
+          snapshot: snapshot,
           runs: [
             %{
               state: :failed,
               dataclip: build(:dataclip),
               starting_trigger: trigger,
+              snapshot: snapshot,
               steps: [
                 insert(:step,
                   job: job_a,
@@ -1053,11 +1121,13 @@ defmodule Lightning.WorkOrdersTest do
           workflow: workflow,
           trigger: trigger,
           dataclip: build(:dataclip),
+          snapshot: snapshot,
           runs: [
             %{
               state: :failed,
               dataclip: build(:dataclip),
               starting_trigger: trigger,
+              snapshot: snapshot,
               steps: [
                 insert(:step,
                   job: job_a,
@@ -1108,36 +1178,43 @@ defmodule Lightning.WorkOrdersTest do
 
     test "retrying multiple workorders returns an error on limit exceeded for steps",
          %{
-           workflow: workflow,
-           trigger: trigger,
            jobs: [job_a | _jobs],
-           user: user
+           snapshot: snapshot,
+           trigger: trigger,
+           user: user,
+           workflow: workflow
          } do
-      Mox.stub(MockUsageLimiter, :limit_action, fn %Action{
-                                                     type: :new_run,
-                                                     amount: n
-                                                   },
-                                                   _context ->
-        {:error, :too_many_runs,
-         %Message{
-           text:
-             "You have attempted to enqueue #{n} runs but you have only 1 remaining in your current billig period"
-         }}
-      end)
+      Mox.stub(
+        MockUsageLimiter,
+        :limit_action,
+        fn %Action{
+             type: :new_run,
+             amount: n
+           },
+           _context ->
+          {:error, :too_many_runs,
+           %Message{
+             text:
+               "You have attempted to enqueue #{n} runs but you have only 1 remaining in your current billig period"
+           }}
+        end
+      )
 
       workorder_1 =
         insert(:workorder,
-          workflow: workflow,
+          snapshot: snapshot,
+          dataclip: build(:dataclip),
           trigger: trigger,
-          dataclip: build(:dataclip)
+          workflow: workflow
         )
 
       run_1 =
         insert(:run,
-          work_order: workorder_1,
-          state: :failed,
           dataclip: build(:dataclip),
-          starting_trigger: trigger
+          snapshot: snapshot,
+          starting_trigger: trigger,
+          state: :failed,
+          work_order: workorder_1
         )
 
       run_step_1_a =
@@ -1153,17 +1230,19 @@ defmodule Lightning.WorkOrdersTest do
 
       workorder_2 =
         insert(:workorder,
-          workflow: workflow,
+          dataclip: build(:dataclip),
+          snapshot: snapshot,
           trigger: trigger,
-          dataclip: build(:dataclip)
+          workflow: workflow
         )
 
       run_2 =
         insert(:run,
-          work_order: workorder_2,
-          state: :failed,
           dataclip: build(:dataclip),
-          starting_trigger: trigger
+          snapshot: snapshot,
+          starting_trigger: trigger,
+          state: :failed,
+          work_order: workorder_2
         )
 
       run_step_2_a =
@@ -1232,6 +1311,7 @@ defmodule Lightning.WorkOrdersTest do
 
       %{
         workflow: workflow,
+        snapshot: Lightning.Workflows.Snapshot.build(workflow) |> Repo.insert!(),
         trigger: Repo.reload!(trigger),
         jobs: Repo.reload!(jobs),
         user: insert(:user)
@@ -1240,6 +1320,7 @@ defmodule Lightning.WorkOrdersTest do
 
     test "retrying a single WorkOrder with multiple runs", %{
       workflow: workflow,
+      snapshot: snapshot,
       trigger: trigger,
       jobs: [job_a, job_b, job_c],
       user: user
@@ -1250,6 +1331,7 @@ defmodule Lightning.WorkOrdersTest do
       workorder =
         insert(:workorder,
           workflow: workflow,
+          snapshot: snapshot,
           trigger: trigger,
           dataclip: input_dataclip
         )
@@ -1259,6 +1341,7 @@ defmodule Lightning.WorkOrdersTest do
           work_order: workorder,
           state: :failed,
           dataclip: input_dataclip,
+          snapshot: snapshot,
           starting_trigger: trigger,
           steps: [
             step_1_a =
@@ -1275,6 +1358,7 @@ defmodule Lightning.WorkOrdersTest do
           work_order: workorder,
           state: :failed,
           dataclip: build(:dataclip),
+          snapshot: snapshot,
           starting_job: job_a,
           steps: [
             step_2_a =
@@ -1324,6 +1408,7 @@ defmodule Lightning.WorkOrdersTest do
       assert retry_run.starting_job_id == job_a.id
       assert retry_run.created_by_id == user.id
       assert retry_run.work_order_id == workorder.id
+      assert retry_run.snapshot_id == snapshot.id
       assert retry_run.state == :available
 
       assert retry_run |> Repo.preload(:steps) |> Map.get(:steps) == [],
@@ -1332,21 +1417,24 @@ defmodule Lightning.WorkOrdersTest do
 
     test "retrying multiple workorders preserves the order in which the workorders were created",
          %{
-           workflow: workflow,
-           trigger: trigger,
            jobs: [job_a, job_b, job_c],
-           user: user
+           snapshot: snapshot,
+           trigger: trigger,
+           user: user,
+           workflow: workflow
          } do
       [workorder_1, workorder_2] =
         insert_list(2, :workorder,
           workflow: workflow,
           trigger: trigger,
           dataclip: build(:dataclip),
+          snapshot: snapshot,
           runs: [
             %{
               state: :failed,
               dataclip: build(:dataclip),
               starting_trigger: trigger,
+              snapshot: snapshot,
               steps: [
                 insert(:step,
                   job: job_a,
@@ -1403,27 +1491,30 @@ defmodule Lightning.WorkOrdersTest do
 
     test "retrying a WorkOrder with a run having starting_trigger without steps",
          %{
-           workflow: workflow,
-           trigger: trigger,
            jobs: [job_a, _job_b, _job_c],
-           user: user
+           snapshot: snapshot,
+           trigger: trigger,
+           user: user,
+           workflow: workflow
          } do
       input_dataclip = insert(:dataclip)
 
       workorder =
         insert(:workorder,
-          workflow: workflow,
+          dataclip: input_dataclip,
+          snapshot: snapshot,
           trigger: trigger,
-          dataclip: input_dataclip
+          workflow: workflow
         )
 
       run_1 =
         insert(:run,
-          work_order: workorder,
-          state: :failed,
           dataclip: input_dataclip,
+          snapshot: snapshot,
           starting_trigger: trigger,
-          steps: []
+          state: :failed,
+          steps: [],
+          work_order: workorder
         )
 
       runs = Ecto.assoc(workorder, :runs) |> Repo.all()
@@ -1454,6 +1545,7 @@ defmodule Lightning.WorkOrdersTest do
 
       assert retry_run.created_by_id == user.id
       assert retry_run.work_order_id == workorder.id
+      assert retry_run.snapshot_id == snapshot.id
       assert retry_run.state == :available
 
       assert retry_run |> Repo.preload(:steps) |> Map.get(:steps) == []
@@ -1461,28 +1553,31 @@ defmodule Lightning.WorkOrdersTest do
 
     test "retrying a WorkOrder with a run having starting_job without steps",
          %{
-           workflow: workflow,
-           trigger: trigger,
            jobs: [_job_a, job_b, _job_c],
-           user: user
+           snapshot: snapshot,
+           trigger: trigger,
+           user: user,
+           workflow: workflow
          } do
       input_dataclip = insert(:dataclip)
 
       workorder =
         insert(:workorder,
-          workflow: workflow,
+          dataclip: input_dataclip,
+          snapshot: snapshot,
           trigger: trigger,
-          dataclip: input_dataclip
+          workflow: workflow
         )
 
       run_1 =
         insert(:run,
-          work_order: workorder,
-          state: :failed,
           dataclip: input_dataclip,
-          starting_trigger: nil,
+          snapshot: snapshot,
           starting_job: job_b,
-          steps: []
+          starting_trigger: nil,
+          state: :failed,
+          steps: [],
+          work_order: workorder
         )
 
       runs = Ecto.assoc(workorder, :runs) |> Repo.all()
@@ -1510,6 +1605,7 @@ defmodule Lightning.WorkOrdersTest do
       assert retry_run.starting_job_id == run_1.starting_job_id
       assert retry_run.created_by_id == user.id
       assert retry_run.work_order_id == workorder.id
+      assert retry_run.snapshot_id == snapshot.id
       assert retry_run.state == :available
 
       assert retry_run |> Repo.preload(:steps) |> Map.get(:steps) == []
@@ -1519,6 +1615,7 @@ defmodule Lightning.WorkOrdersTest do
          %{
            workflow: workflow,
            trigger: trigger,
+           snapshot: snapshot,
            jobs: [job_a | _rest],
            user: user
          } do
@@ -1532,6 +1629,7 @@ defmodule Lightning.WorkOrdersTest do
               state: :failed,
               dataclip: build(:dataclip),
               starting_trigger: trigger,
+              snapshot: snapshot,
               steps: [
                 insert(:step,
                   job: job_a,
@@ -1555,6 +1653,7 @@ defmodule Lightning.WorkOrdersTest do
               state: :failed,
               dataclip: wiped_dataclip,
               starting_trigger: trigger,
+              snapshot: snapshot,
               steps: [
                 insert(:step,
                   job: job_a,
@@ -1615,8 +1714,11 @@ defmodule Lightning.WorkOrdersTest do
         |> with_edge({job_b, job_c})
         |> insert()
 
+      {:ok, snapshot} = Lightning.Workflows.Snapshot.create(workflow)
+
       %{
         workflow: workflow,
+        snapshot: snapshot,
         trigger: Repo.reload!(trigger),
         jobs: Repo.reload!(jobs),
         user: insert(:user)
@@ -1625,6 +1727,7 @@ defmodule Lightning.WorkOrdersTest do
 
     test "retrying a single RunStep of the first job", %{
       workflow: workflow,
+      snapshot: snapshot,
       trigger: trigger,
       jobs: [job_a, job_b | _rest],
       user: user
@@ -1635,6 +1738,7 @@ defmodule Lightning.WorkOrdersTest do
       workorder =
         insert(:workorder,
           workflow: workflow,
+          snapshot: snapshot,
           trigger: trigger,
           dataclip: input_dataclip
         )
@@ -1642,6 +1746,7 @@ defmodule Lightning.WorkOrdersTest do
       run =
         insert(:run,
           work_order: workorder,
+          snapshot: snapshot,
           state: :failed,
           dataclip: input_dataclip,
           starting_trigger: trigger
@@ -1698,6 +1803,7 @@ defmodule Lightning.WorkOrdersTest do
 
     test "retrying a single RunStep of a mid way job", %{
       workflow: workflow,
+      snapshot: snapshot,
       trigger: trigger,
       jobs: [job_a, job_b, job_c],
       user: user
@@ -1708,6 +1814,7 @@ defmodule Lightning.WorkOrdersTest do
       workorder =
         insert(:workorder,
           workflow: workflow,
+          snapshot: snapshot,
           trigger: trigger,
           dataclip: input_dataclip
         )
@@ -1715,6 +1822,7 @@ defmodule Lightning.WorkOrdersTest do
       run =
         insert(:run,
           work_order: workorder,
+          snapshot: snapshot,
           state: :failed,
           dataclip: input_dataclip,
           starting_trigger: trigger
@@ -1784,14 +1892,16 @@ defmodule Lightning.WorkOrdersTest do
 
     test "retrying multiple RunSteps preservers the order of the given list to enqueue the runs",
          %{
-           workflow: workflow,
-           trigger: trigger,
            jobs: [job_a | _rest],
-           user: user
+           snapshot: snapshot,
+           trigger: trigger,
+           user: user,
+           workflow: workflow
          } do
       workorder_1 =
         insert(:workorder,
           workflow: workflow,
+          snapshot: snapshot,
           trigger: trigger,
           dataclip: build(:dataclip)
         )
@@ -1799,6 +1909,7 @@ defmodule Lightning.WorkOrdersTest do
       run_1 =
         insert(:run,
           work_order: workorder_1,
+          snapshot: snapshot,
           state: :failed,
           dataclip: build(:dataclip),
           starting_trigger: trigger
@@ -1818,6 +1929,7 @@ defmodule Lightning.WorkOrdersTest do
       workorder_2 =
         insert(:workorder,
           workflow: workflow,
+          snapshot: snapshot,
           trigger: trigger,
           dataclip: build(:dataclip)
         )
@@ -1825,6 +1937,7 @@ defmodule Lightning.WorkOrdersTest do
       run_2 =
         insert(:run,
           work_order: workorder_2,
+          snapshot: snapshot,
           state: :failed,
           dataclip: build(:dataclip),
           starting_trigger: trigger
@@ -1874,16 +1987,17 @@ defmodule Lightning.WorkOrdersTest do
              |> DateTime.before?(retry_run_1.inserted_at)
     end
 
-    test "retrying multiple RunSteps with wiped and non wiped dataclips",
-         %{
-           workflow: workflow,
-           trigger: trigger,
-           jobs: [job_a | _rest],
-           user: user
-         } do
+    test "retrying multiple RunSteps with wiped and non wiped dataclips", %{
+      workflow: workflow,
+      snapshot: snapshot,
+      trigger: trigger,
+      jobs: [job_a | _rest],
+      user: user
+    } do
       workorder_1 =
         insert(:workorder,
           workflow: workflow,
+          snapshot: snapshot,
           trigger: trigger,
           dataclip: build(:dataclip)
         )
@@ -1893,6 +2007,7 @@ defmodule Lightning.WorkOrdersTest do
           work_order: workorder_1,
           state: :failed,
           dataclip: build(:dataclip),
+          snapshot: snapshot,
           starting_trigger: trigger
         )
 
@@ -1912,6 +2027,7 @@ defmodule Lightning.WorkOrdersTest do
       workorder_2 =
         insert(:workorder,
           workflow: workflow,
+          snapshot: snapshot,
           trigger: trigger,
           dataclip: wiped_dataclip
         )
@@ -1919,6 +2035,7 @@ defmodule Lightning.WorkOrdersTest do
       run_2 =
         insert(:run,
           work_order: workorder_2,
+          snapshot: snapshot,
           state: :failed,
           dataclip: wiped_dataclip,
           starting_trigger: trigger

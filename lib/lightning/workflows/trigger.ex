@@ -45,7 +45,7 @@ defmodule Lightning.Workflows.Trigger do
       join_through: "trigger_webhook_auth_methods",
       on_replace: :delete
 
-    timestamps()
+    timestamps(type: :utc_datetime)
   end
 
   def new(attrs) do
@@ -81,7 +81,7 @@ defmodule Lightning.Workflows.Trigger do
 
   defp validate_cron(changeset, _options \\ []) do
     changeset
-    |> validate_change(:cron_expression, fn _, cron_expression ->
+    |> validate_change(:cron_expression, fn _field, cron_expression ->
       Crontab.CronExpression.Parser.parse(cron_expression)
       |> case do
         {:error, error_message} ->

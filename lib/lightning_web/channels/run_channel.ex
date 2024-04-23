@@ -24,7 +24,7 @@ defmodule LightningWeb.RunChannel do
       ) do
     with {:ok, _} <- Workers.verify_worker_token(worker_token),
          {:ok, claims} <- Workers.verify_run_token(token, %{id: id}),
-         run when is_map(run) <- get_run(id) || {:error, :not_found},
+         run when is_map(run) <- Runs.get_for_worker(id) || {:error, :not_found},
          project_id when is_binary(project_id) <-
            Runs.get_project_id_for_run(run) do
       {:ok,
@@ -41,17 +41,17 @@ defmodule LightningWeb.RunChannel do
       {:error, :not_found} ->
         {:error, %{reason: "not_found"}}
 
-      _ ->
+      _any ->
         {:error, %{reason: "unauthorized"}}
     end
   end
 
-  def join("run:" <> _, _payload, _socket) do
+  def join("run:" <> _id, _payload, _socket) do
     {:error, %{reason: "unauthorized"}}
   end
 
   @impl true
-  def handle_in("fetch:plan", _, socket) do
+  def handle_in("fetch:plan", _payload, socket) do
     %{retention_policy: retention_policy, run: run} = socket.assigns
 
     options = %RunOptions{
@@ -61,7 +61,7 @@ defmodule LightningWeb.RunChannel do
     {:reply, {:ok, RunWithOptions.render(run, options)}, socket}
   end
 
-  def handle_in("run:start", _, socket) do
+  def handle_in("run:start", _payload, socket) do
     socket.assigns.run
     |> Runs.start_run()
     |> case do
@@ -125,7 +125,7 @@ defmodule LightningWeb.RunChannel do
     end
   end
 
-  def handle_in("fetch:credential", _, socket) do
+  def handle_in("fetch:credential", _payload, socket) do
     {:reply, {:error, %{errors: %{id: ["This field can't be blank."]}}}, socket}
   end
 
@@ -139,7 +139,7 @@ defmodule LightningWeb.RunChannel do
   store HTTP requests in the database as dataclips and how we send the body
   of those HTTP requests to the worker to use as initial state.
   """
-  def handle_in("fetch:dataclip", _, socket) do
+  def handle_in("fetch:dataclip", _payload, socket) do
     body = Runs.get_input(socket.assigns.run)
 
     if socket.assigns.retention_policy == :erase_all do
@@ -153,9 +153,8 @@ defmodule LightningWeb.RunChannel do
     Map.get(payload, "job_id", :missing_job_id)
     |> case do
       job_id when is_binary(job_id) ->
-        %{"run_id" => socket.assigns.run.id}
-        |> Enum.into(payload)
-        |> Runs.start_step()
+        socket.assigns.run
+        |> Runs.start_step(payload)
         |> case do
           {:error, changeset} ->
             {:reply, {:error, LightningWeb.ChangesetJSON.error(changeset)},
@@ -201,12 +200,6 @@ defmodule LightningWeb.RunChannel do
       {:ok, log_line} ->
         {:reply, {:ok, %{log_line_id: log_line.id}}, socket}
     end
-  end
-
-  defp get_run(id) do
-    Runs.get(id,
-      include: [workflow: [:triggers, :edges, jobs: [:credential]]]
-    )
   end
 
   defp include_output_dataclips?(retention_policy) do
