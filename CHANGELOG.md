@@ -19,6 +19,8 @@ and this project adheres to
 
 - Allow menu items customization
   [#1988](https://github.com/OpenFn/lightning/issues/1988)
+- Workflow Snapshot support
+  [#1822](https://github.com/OpenFn/lightning/issues/1822)
 
 ### Changed
 
