@@ -181,10 +181,10 @@ defmodule Lightning.Projects do
       {:error, %Ecto.Changeset{}}
 
   """
-  def create_project(attrs \\ %{}) do
+  def create_project(repo \\ Lightning.Repo, attrs \\ %{}) do
     %Project{}
     |> Project.changeset(attrs)
-    |> Repo.insert()
+    |> repo.insert()
     |> tap(fn result ->
       with {:ok, project} <- result do
         Events.project_created(project)

@@ -33,7 +33,8 @@ config :lightning, LightningWeb.Endpoint,
 config :lightning, Lightning.Extensions,
   rate_limiter: Lightning.Extensions.RateLimiter,
   usage_limiter: Lightning.Extensions.UsageLimiter,
-  run_queue: Lightning.Extensions.FifoRunQueue
+  run_queue: Lightning.Extensions.FifoRunQueue,
+  new_project: Lightning.Extensions.NewProject
 
 # TODO: don't use this value in production
 config :joken, default_signer: "secret"

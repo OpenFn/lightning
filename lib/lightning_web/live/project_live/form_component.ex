@@ -17,7 +17,9 @@ defmodule LightningWeb.ProjectLive.FormComponent do
 
   alias Lightning.Accounts.UserNotifier
   alias Lightning.Projects
+  alias Lightning.Projects.ProjectUser
   alias Lightning.Repo
+  alias Lightning.Services
 
   @impl true
   def update(
@@ -31,7 +33,7 @@ defmodule LightningWeb.ProjectLive.FormComponent do
 
     p_users_without_access =
       Enum.map(users_without_access, fn user ->
-        %Lightning.Projects.ProjectUser{user_id: user.id, user: user, role: nil}
+        %ProjectUser{user_id: user.id, user: user, role: nil}
       end)
 
     all_project_users = project.project_users ++ p_users_without_access
@@ -124,7 +126,7 @@ defmodule LightningWeb.ProjectLive.FormComponent do
   end
 
   defp save_project(socket, :new, project_params) do
-    case Projects.create_project(project_params) do
+    case Services.NewProject.create_project(project_params) do
       {:ok, project} ->
         users_to_notify =
           filter_users_to_notify(
