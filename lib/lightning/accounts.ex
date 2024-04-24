@@ -346,6 +346,7 @@ defmodule Lightning.Accounts do
   end
 
   @spec register_user(
+          Ecto.Repo.t(),
           :invalid
           | %{optional(:__struct__) => none, optional(atom | binary) => any}
         ) :: any
@@ -361,13 +362,13 @@ defmodule Lightning.Accounts do
       {:error, %Ecto.Changeset{}}
 
   """
-  def register_user(attrs) do
+  def register_user(repo \\ Lightning.Repo, attrs) do
     User.user_registration_changeset(attrs)
     |> Ecto.Changeset.apply_action(:insert)
     |> case do
       {:ok, data} ->
         struct(User, data)
-        |> Repo.insert()
+        |> repo.insert()
         |> tap(fn result ->
           with {:ok, user} <- result, do: Events.user_registered(user)
         end)

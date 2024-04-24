@@ -2,6 +2,7 @@ defmodule LightningWeb.UserRegistrationController do
   use LightningWeb, :controller
 
   alias Lightning.Accounts
+  alias Lightning.Services.SharedDomainDispatcher
   alias LightningWeb.UserAuth
 
   def new(conn, _params) do
@@ -23,7 +24,7 @@ defmodule LightningWeb.UserRegistrationController do
   end
 
   def create(conn, %{"user" => user_params}) do
-    case Accounts.register_user(user_params) do
+    case SharedDomainDispatcher.register_user(user_params) do
       {:ok, user} ->
         {:ok, _} =
           Accounts.deliver_user_confirmation_instructions(

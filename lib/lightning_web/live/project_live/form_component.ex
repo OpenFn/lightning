@@ -19,7 +19,7 @@ defmodule LightningWeb.ProjectLive.FormComponent do
   alias Lightning.Projects
   alias Lightning.Projects.ProjectUser
   alias Lightning.Repo
-  alias Lightning.Services
+  alias Lightning.Services.SharedDomainDispatcher
 
   @impl true
   def update(
@@ -126,7 +126,7 @@ defmodule LightningWeb.ProjectLive.FormComponent do
   end
 
   defp save_project(socket, :new, project_params) do
-    case Services.NewProject.create_project(project_params) do
+    case SharedDomainDispatcher.create_project(project_params) do
       {:ok, project} ->
         users_to_notify =
           filter_users_to_notify(

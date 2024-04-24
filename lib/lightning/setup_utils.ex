@@ -10,7 +10,7 @@ defmodule Lightning.SetupUtils do
   alias Lightning.Jobs
   alias Lightning.Repo
   alias Lightning.Runs
-  alias Lightning.Services
+  alias Lightning.Services.SharedDomainDispatcher
   alias Lightning.Workflows
   alias Lightning.WorkOrders
 
@@ -166,7 +166,7 @@ defmodule Lightning.SetupUtils do
 
   def create_starter_project(name, project_users) do
     {:ok, project} =
-      Services.NewProject.create_project(%{
+      SharedDomainDispatcher.create_project(%{
         name: name,
         history_retention_period:
           Application.get_env(:lightning, :default_retention_period),
@@ -282,7 +282,7 @@ defmodule Lightning.SetupUtils do
 
   def create_openhie_project(project_users) do
     {:ok, openhie_project} =
-      Services.NewProject.create_project(%{
+      SharedDomainDispatcher.create_project(%{
         name: "openhie-project",
         id: "4adf2644-ed4e-4f97-a24c-ab35b3cb1efa",
         project_users: project_users
@@ -502,7 +502,7 @@ defmodule Lightning.SetupUtils do
 
   def create_dhis2_project(project_users) do
     {:ok, project} =
-      Services.NewProject.create_project(%{
+      SharedDomainDispatcher.create_project(%{
         name: "dhis2-project",
         project_users: project_users
       })

@@ -36,5 +36,6 @@ Application.put_env(:lightning, Lightning.Config, Lightning.MockConfig)
 Application.put_env(:lightning, Lightning.Extensions,
   rate_limiter: Lightning.Extensions.MockRateLimiter,
   usage_limiter: Lightning.Extensions.MockUsageLimiter,
-  run_queue: Lightning.Extensions.FifoRunQueue
+  run_queue: Lightning.Extensions.FifoRunQueue,
+  shared_domain: Lightning.Extensions.SharedDomainHandler
 )

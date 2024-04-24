@@ -34,7 +34,7 @@ config :lightning, Lightning.Extensions,
   rate_limiter: Lightning.Extensions.RateLimiter,
   usage_limiter: Lightning.Extensions.UsageLimiter,
   run_queue: Lightning.Extensions.FifoRunQueue,
-  new_project: Lightning.Extensions.NewProject
+  shared_domain: Lightning.Extensions.SharedDomainHandler
 
 # TODO: don't use this value in production
 config :joken, default_signer: "secret"

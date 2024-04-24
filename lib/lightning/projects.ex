@@ -181,7 +181,7 @@ defmodule Lightning.Projects do
       {:error, %Ecto.Changeset{}}
 
   """
-  def create_project(repo \\ Lightning.Repo, attrs \\ %{}) do
+  def create_project(repo \\ Lightning.Repo, attrs) do
     %Project{}
     |> Project.changeset(attrs)
     |> repo.insert()
