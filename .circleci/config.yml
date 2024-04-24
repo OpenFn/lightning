@@ -59,7 +59,7 @@ jobs:
 
       - restore_cache:
           keys:
-            - deps-{{ arch }}-{{ checksum ".elixir_otp_version" }}-{{ checksum "mix.lock" }}
+            - v1-deps-{{ arch }}-{{ checksum ".elixir_otp_version" }}-{{ checksum "mix.lock" }}
             - v1-deps-<< parameters.elixir_version >>-
       - run:
           name: "Install libsodium"
@@ -72,7 +72,7 @@ jobs:
       - run: MIX_ENV=test mix lightning.install_runtime
 
       - save_cache:
-          key: deps-{{ arch }}-{{ checksum ".elixir_otp_version" }}-{{ checksum "mix.lock" }}
+          key: v1-deps-{{ arch }}-{{ checksum ".elixir_otp_version" }}-{{ checksum "mix.lock" }}
           paths:
             - _build
             - deps
@@ -81,12 +81,12 @@ jobs:
       - restore_cache:
           name: "Restore PLT cache"
           keys:
-            - plt-{{ arch }}-{{ checksum ".elixir_otp_version" }}-{{ checksum "mix.lock" }}
-            - plt-{{ arch }}-{{ checksum ".elixir_otp_version" }}
+            - v1-plt-{{ arch }}-{{ checksum ".elixir_otp_version" }}-{{ checksum "mix.lock" }}
+            - v1-plt-{{ arch }}-{{ checksum ".elixir_otp_version" }}
 
       - run: MIX_ENV=test mix dialyzer --plt
       - save_cache:
-          key: plt-{{ arch }}-{{ checksum ".elixir_otp_version" }}-{{ checksum "mix.lock" }}
+          key: v1-plt-{{ arch }}-{{ checksum ".elixir_otp_version" }}-{{ checksum "mix.lock" }}
           paths:
             - priv/plts
 
