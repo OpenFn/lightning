@@ -1,7 +1,6 @@
 defmodule LightningWeb.LayoutComponents do
   @moduledoc false
   use LightningWeb, :html
-  use LightningWeb, :verified_routes
 
   import PetalComponents.Dropdown
   import PetalComponents.Avatar
