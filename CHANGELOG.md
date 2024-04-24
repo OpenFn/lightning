@@ -21,6 +21,8 @@ and this project adheres to
   [#1988](https://github.com/OpenFn/lightning/issues/1988)
 - Workflow Snapshot support
   [#1822](https://github.com/OpenFn/lightning/issues/1822)
+- Fix sample workflow from init_project_for_new_user
+  [#2016](https://github.com/OpenFn/lightning/issues/2016)
 
 ### Changed
 
