@@ -105,6 +105,8 @@ end
 
 :timer.sleep(5000)
 
+IO.puts("Adding the boz consumer group")
+
 Supervisor.start_child(sup, %{
   id: "boz_child",
   start: {
@@ -120,5 +122,12 @@ Supervisor.start_child(sup, %{
     ]
   }
 })
+
+:timer.sleep(30000)
+
+IO.puts("Bad boz! No more messages for you")
+
+:ok = Supervisor.terminate_child(sup, "boz_child")
+:ok = Supervisor.delete_child(sup, "boz_child")
 
 :timer.sleep(600000)
