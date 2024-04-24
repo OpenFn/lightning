@@ -5,15 +5,15 @@
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="generator" content="ExDoc v0.30.9">
-    <meta name="project" content="Lightning v2.4.1">
+    <meta name="project" content="Lightning v2.4.2">
 
-    <title>Lightning.Projects.Provisioner — Lightning v2.4.1</title>
+    <title>Lightning.Projects.Provisioner — Lightning v2.4.2</title>
     <link rel="stylesheet" href="dist/html-elixir-XFYN5IVA.css" />
 
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-EPF2X7PV.js"></script>
-    <script src="dist/sidebar_items-689BD7F2.js"></script>
+    <script src="dist/sidebar_items-5CB34892.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -72,7 +72,7 @@
 Lightning
       </a>
       <div class="sidebar-projectVersion" translate="no">
-        v2.4.1
+        v2.4.2
       </div>
     </div>
     <ul id="sidebar-listNav" class="sidebar-listNav" role="tablist">
@@ -131,7 +131,7 @@ Pages
     </a>
 
   <span translate="no">Lightning.Projects.Provisioner</span> 
-  <small class="app-vsn" translate="no">(Lightning v2.4.1)</small>
+  <small class="app-vsn" translate="no">(Lightning v2.4.2)</small>
 
 </h1>
 
@@ -168,20 +168,19 @@ ahead of time in the case of new records.</p>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#load_project/1" translate="no">load_project(id)</a>
+        <a href="#parse_document/2" translate="no">parse_document(project, data)</a>
 
       </div>
-
-        <div class="summary-synopsis"><p>Load a project by ID, including all workflows and their associated jobs,
-triggers and edges.</p></div>
 
     </div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#parse_document/2" translate="no">parse_document(project, data)</a>
+        <a href="#preload_dependencies/1" translate="no">preload_dependencies(project)</a>
 
       </div>
+
+        <div class="summary-synopsis"><p>Preload all dependencies for a project.</p></div>
 
     </div>
 
@@ -243,35 +242,6 @@ triggers and edges.</p></div>
 <p>Import a project.</p>
   </section>
 </section>
-<section class="detail" id="load_project/1">
-
-  <div class="detail-header">
-    <a href="#load_project/1" class="detail-link" title="Link to this function">
-      <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
-    </a>
-    <h1 class="signature" translate="no">load_project(id)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/provisioner.ex#L91" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
-
-
-  </div>
-
-  <section class="docstring">
-
-      <div class="specs">
-
-          <pre translate="no"><span class="attribute">@spec</span> load_project(<a href="https://hexdocs.pm/ecto/3.10.3/Ecto.UUID.html#t:t/0">Ecto.UUID.t</a>()) :: <a href="Lightning.Projects.Project.html#t:t/0">Lightning.Projects.Project.t</a>() | nil</pre>
-
-      </div>
-
-<p>Load a project by ID, including all workflows and their associated jobs,
-triggers and edges.</p><p>Returns <code class="inline">nil</code> if the project does not exist.</p>
-  </section>
-</section>
 <section class="detail" id="parse_document/2">
 
   <div class="detail-header">
@@ -301,6 +271,35 @@ triggers and edges.</p><p>Returns <code class="inline">nil</code> if the project
 
   </section>
 </section>
+<section class="detail" id="preload_dependencies/1">
+
+  <div class="detail-header">
+    <a href="#preload_dependencies/1" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">preload_dependencies(project)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/provisioner.ex#L90" class="icon-action" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> preload_dependencies(<a href="Lightning.Projects.Project.html#t:t/0">Lightning.Projects.Project.t</a>()) ::
+  <a href="Lightning.Projects.Project.html#t:t/0">Lightning.Projects.Project.t</a>()</pre>
+
+      </div>
+
+<p>Preload all dependencies for a project.</p><p>Exclude deleted workflows.</p>
+  </section>
+</section>
 <section class="detail" id="validate_extraneous_params/1">
 
   <div class="detail-header">
@@ -310,7 +309,7 @@ triggers and edges.</p><p>Returns <code class="inline">nil</code> if the project
     </a>
     <h1 class="signature" translate="no">validate_extraneous_params(changeset)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/provisioner.ex#L219" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/provisioner.ex#L215" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
