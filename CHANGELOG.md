@@ -24,6 +24,8 @@ and this project adheres to
 
 ### Changed
 
+- Bumped @openfn/ws-worker to 1.1.6
+
 ### Fixed
 
 ## [v2.4.2] 2024-04-24
