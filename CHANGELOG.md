@@ -21,8 +21,14 @@ and this project adheres to
 
 ### Fixed
 
+## [v2.4.2] 2024-04-24
+
+### Fixed
+
 - Fix missing credential types when running Lightning using Docker
   [#2010](https://github.com/OpenFn/lightning/issues/2010)
+- Fix provisioning API includes deleted workflows in project state
+  [#2001](https://github.com/OpenFn/lightning/issues/2001)
 
 ## [v2.4.1] 2024-04-19
 
@@ -30,8 +36,6 @@ and this project adheres to
 
 - Fix github cli deploy action failing to auto-commit
   [#1995](https://github.com/OpenFn/lightning/issues/1995)
-- Fix proviosning API includes deleted workflows in project state
-  [#2001](https://github.com/OpenFn/lightning/issues/2001)
 
 ## [v2.4.1-pre] 2024-04-18
 
