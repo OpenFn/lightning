@@ -20,7 +20,8 @@ defmodule KafkaPipeline do
             [
               hosts: hosts,
               group_id: group_id,
-              topics: topics
+              topics: topics,
+              offset_reset_policy: :earliest
             ]
           },
         concurrency: 1
