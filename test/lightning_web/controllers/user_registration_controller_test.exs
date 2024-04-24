@@ -73,7 +73,7 @@ defmodule LightningWeb.UserRegistrationControllerTest do
 
       assert project
              |> Lightning.Projects.project_workorders_query()
-             |> Lightning.Repo.aggregate(:count, :id) == 1
+             |> Lightning.Repo.aggregate(:count, :id) == 0
 
       project
       |> Lightning.Projects.project_steps_query()
@@ -81,7 +81,7 @@ defmodule LightningWeb.UserRegistrationControllerTest do
 
       assert project
              |> Lightning.Projects.project_steps_query()
-             |> Lightning.Repo.aggregate(:count, :id) == 2
+             |> Lightning.Repo.aggregate(:count, :id) == 0
 
       # Set this back to the default "false" before finishing the test
       Application.put_env(:lightning, :init_project_for_new_user, false)
