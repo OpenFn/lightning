@@ -6,6 +6,19 @@ defmodule LightningWeb.LayoutComponents do
   import PetalComponents.Avatar
 
   def menu_items(assigns) do
+    project_menu_items =
+      Application.get_env(:lightning, :menu_items, [])[:project_menu] || []
+
+    replace_menu_items =
+      Application.get_env(:lightning, :menu_items, [])[:replace_projects_menu] ||
+        []
+
+    assigns =
+      assign(assigns,
+        project_menu_items: project_menu_items,
+        replace_menu_items: replace_menu_items
+      )
+
     ~H"""
     <%= if assigns[:projects] do %>
       <div class="relative my-4 mx-2 px-2">
@@ -82,7 +95,7 @@ defmodule LightningWeb.LayoutComponents do
       </div>
     <% end %>
 
-    <%= if assigns[:project] do %>
+    <%= if assigns[:project]  do %>
       <Settings.menu_item
         to={~p"/projects/#{@project.id}/w"}
         active={@active_menu_item == :overview}
@@ -92,7 +105,7 @@ defmodule LightningWeb.LayoutComponents do
       </Settings.menu_item>
 
       <Settings.menu_item
-        to={Routes.project_run_index_path(@socket, :index, @project.id)}
+        to={~p"/projects/#{@project.id}/history"}
         active={@active_menu_item == :runs}
       >
         <Icon.runs class="h-5 w-5 inline-block mr-2" />
@@ -100,12 +113,22 @@ defmodule LightningWeb.LayoutComponents do
       </Settings.menu_item>
 
       <Settings.menu_item
-        to={Routes.project_project_settings_path(@socket, :index, @project.id)}
+        to={"/projects/#{@project.id}/settings"}
         active={@active_menu_item == :settings}
       >
         <Icon.settings class="h-5 w-5 inline-block mr-2" />
         <span class="inline-block align-middle">Settings</span>
       </Settings.menu_item>
+      <%= for {to, icon, text, menu_item} <- @project_menu_items do %>
+        <Settings.menu_item to={to} active={@active_menu_item == menu_item}>
+          <%= Phoenix.LiveView.TagEngine.component(
+            icon,
+            [class: "h-5 w-5 inline-block mr-1"],
+            {__ENV__.module, __ENV__.function, __ENV__.file, __ENV__.line}
+          ) %>
+          <span class="inline-block align-middle"><%= text %></span>
+        </Settings.menu_item>
+      <% end %>
       <!-- # Commented out until new dataclips/globals list is fully functional. -->
     <!-- <Settings.menu_item
       to={Routes.project_dataclip_index_path(@socket, :index, @project.id)}
@@ -115,21 +138,34 @@ defmodule LightningWeb.LayoutComponents do
       <span class="inline-block align-middle">Dataclips</span>
     </Settings.menu_item> -->
     <% else %>
-      <Settings.menu_item to={~p"/profile"} active={@active_menu_item == :profile}>
-        <Heroicons.user_circle class="h-5 w-5 inline-block mr-2" /> User Profile
-      </Settings.menu_item>
-      <Settings.menu_item
-        to={~p"/credentials"}
-        active={@active_menu_item == :credentials}
-      >
-        <Heroicons.key class="h-5 w-5 inline-block mr-2" /> Credentials
-      </Settings.menu_item>
-      <Settings.menu_item
-        to={~p"/profile/tokens"}
-        active={@active_menu_item == :tokens}
-      >
-        <Heroicons.command_line class="h-5 w-5 inline-block mr-2" /> API Tokens
-      </Settings.menu_item>
+      <%= if Enum.any?(@replace_menu_items) do %>
+        <%= for {to, icon, text, menu_item} <- @replace_menu_items do %>
+          <Settings.menu_item to={to} active={@active_menu_item == menu_item}>
+            <%= Phoenix.LiveView.TagEngine.component(
+              icon,
+              [class: "h-5 w-5 inline-block mr-1"],
+              {__ENV__.module, __ENV__.function, __ENV__.file, __ENV__.line}
+            ) %>
+            <span class="inline-block align-middle"><%= text %></span>
+          </Settings.menu_item>
+        <% end %>
+      <% else %>
+        <Settings.menu_item to={~p"/profile"} active={@active_menu_item == :profile}>
+          <Heroicons.user_circle class="h-5 w-5 inline-block mr-2" /> User Profile
+        </Settings.menu_item>
+        <Settings.menu_item
+          to={~p"/credentials"}
+          active={@active_menu_item == :credentials}
+        >
+          <Heroicons.key class="h-5 w-5 inline-block mr-2" /> Credentials
+        </Settings.menu_item>
+        <Settings.menu_item
+          to={~p"/profile/tokens"}
+          active={@active_menu_item == :tokens}
+        >
+          <Heroicons.command_line class="h-5 w-5 inline-block mr-2" /> API Tokens
+        </Settings.menu_item>
+      <% end %>
     <% end %>
     """
   end

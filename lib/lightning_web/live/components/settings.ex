@@ -21,7 +21,7 @@ defmodule LightningWeb.Components.Settings do
       )
 
     ~H"""
-    <div class="h-12 mx-4">
+    <div class="h-12 mx-2">
       <%= if assigns[:href] do %>
         <.link href={@href} target="_blank" class={@class}>
           <%= if assigns[:inner_block] do %>

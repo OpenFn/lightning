@@ -17,6 +17,9 @@ and this project adheres to
 
 ### Added
 
+- Allow menu items customization
+  [#1988](https://github.com/OpenFn/lightning/issues/1988)
+
 ### Changed
 
 ### Fixed
