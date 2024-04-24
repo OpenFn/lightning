@@ -201,6 +201,29 @@ config = %{
 {:ok, pid} = :brod.start_link_group_subscriber_v2(config)
 ```
 
+## Testing using the supervisor testing script
+
+`kafka_testing.exs` is a script that will run for 5 or 6 minutes and subscribe
+to multiple topics (4) on a local kakfa container
+(docker-compose-kafka-testing-2.yml).
+
+It uses a combination of starting pipelines as well as one pipeline that is
+added after the supervisor has been started.
+
+Before running the script, you will need to populate each of the test topics
+(`foo_topic`, `bar_topic`, `baz_topic` and `boz_topic`). This can be done by
+runnig the below (I would suggest running each command in a separate terminal
+tab or session):
+
+```
+docker exec -it lightning_kafka-01_1 kafka-console-producer.sh --producer.config /opt/bitnami/kafka/config/producer.properties --bootstrap-server kafka-01:9092 --topic foo_topic
+docker exec -it lightning_kafka-01_1 kafka-console-producer.sh --producer.config /opt/bitnami/kafka/config/producer.properties --bootstrap-server kafka-01:9092 --topic bar_topic
+docker exec -it lightning_kafka-01_1 kafka-console-producer.sh --producer.config /opt/bitnami/kafka/config/producer.properties --bootstrap-server kafka-01:9092 --topic baz_topic
+docker exec -it lightning_kafka-01_1 kafka-console-producer.sh --producer.config /opt/bitnami/kafka/config/producer.properties --bootstrap-server kafka-01:9092 --topic boz_topic
+```
+
+Once it is running, it should output evidence of messages being received.
+
 ## History
 
 Caveat: This was my first time trying to do anything with Kafka, so if
