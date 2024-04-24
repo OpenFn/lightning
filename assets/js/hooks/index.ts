@@ -8,6 +8,24 @@ import { initiateSaveAndRun } from '../common';
 
 export { LogLineHighlight, ElapsedIndicator, TabSelector };
 
+export const EditMandatoryScope = {
+  mounted() {
+    this.el.addEventListener('dblclick', e => {
+      const scopeValue = this.el.id;
+      this.pushEventTo(this.el, 'edit-mandatory-scope', { scope: scopeValue });
+    });
+  },
+};
+
+export const EditOptionalScope = {
+  mounted() {
+    this.el.addEventListener('dblclick', e => {
+      const scopeValue = this.el.id;
+      this.pushEventTo(this.el, 'edit-optional-scope', { scope: scopeValue });
+    });
+  },
+};
+
 export const ClearInput = {
   mounted() {
     this.handleEvent('clear_input', () => {

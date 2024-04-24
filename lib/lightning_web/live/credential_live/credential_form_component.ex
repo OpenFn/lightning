@@ -84,10 +84,13 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
     schema = assigns.credential.schema || false
 
     type_options =
-      socket.assigns.type_options ++
-        Enum.map(assigns.oauth_clients, fn client ->
-          {client.name, client.id, nil, "oauth"}
-        end)
+      if assigns.action === :new,
+        do:
+          socket.assigns.type_options ++
+            Enum.map(assigns.oauth_clients, fn client ->
+              {client.name, client.id, nil, "oauth"}
+            end),
+        else: []
 
     type_options = Enum.sort_by(type_options, & &1, :asc)
 
@@ -102,6 +105,7 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
      |> assign(changeset: changeset)
      |> assign(update_body: update_body)
      |> assign(all_projects: all_projects)
+     |> assign(selected_oauth_client: assigns.credential.oauth_client)
      |> assign(schema: schema)
      |> assign(selected_project: nil)
      |> assign(type_options: type_options)
@@ -371,7 +375,7 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
   def render(%{page: :second, schema: "oauth"} = assigns) do
     ~H"""
     <div class="mt-10 sm:mt-0">
-      <.modal id={@id} width="xl:min-w-1/3 min-w-1/2 max-w-full">
+      <.modal id={@id} width="xl:min-w-1/3 min-w-1/2 w-[300px]">
         <:title>
           <div class="flex justify-between">
             <span class="font-bold"><.modal_title action={@action} /></span>

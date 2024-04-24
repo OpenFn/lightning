@@ -391,6 +391,11 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
     """
   end
 
+  @spec helpblock(%{
+          :provider => <<_::48, _::_*32>>,
+          :type => :no_refresh_token | :refresh_failed | :userinfo_failed,
+          optional(any()) => any()
+        }) :: Phoenix.LiveView.Rendered.t()
   def helpblock(
         %{provider: "Google", type: :userinfo_failed} =
           assigns

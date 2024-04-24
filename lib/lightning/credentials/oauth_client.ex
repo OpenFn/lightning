@@ -40,8 +40,6 @@ defmodule Lightning.Credentials.OauthClient do
 
   @doc false
   def changeset(oauth_client, attrs) do
-    IO.inspect(attrs, label: "ATTRS")
-
     oauth_client
     |> cast(attrs, [
       :name,

@@ -339,64 +339,68 @@
           <div class="hidden sm:block" aria-hidden="true">
             <div class="py-2"></div>
           </div>
-          <.table id="oauth-clients">
-            <.tr>
-              <.th>Name</.th>
-              <.th>Project With Access</.th>
-              <.th>Client ID</.th>
-              <.th>Authorization URL</.th>
-              <.th>Actions</.th>
-            </.tr>
-
-            <%= for client <- @oauth_clients do %>
-              <.tr id={"oauth-client-#{client.id}"}>
-                <.td><%= client.name %></.td>
-                <.td><%= client.project_names %></.td>
-                <.td class="max-w-xs truncate">
-                  <%= client.client_id %>
-                </.td>
-                <.td><%= client.authorization_endpoint %></.td>
-                <.td>
-                  <%= if client.user_id == @current_user.id do %>
-                    <span>
-                      <.link phx-click={
-                        show_modal("edit-oauth-client-#{client.id}-modal")
-                      }>
-                        Edit
-                      </.link>
-                    </span>
-                    |
-                    <span>
-                      <.link phx-click={
-                        show_modal("delete_oauth_client_#{client.id}_modal")
-                      }>
-                        Delete
-                      </.link>
-                    </span>
-                    <.live_component
-                      id={"edit-oauth-client-#{client.id}-modal"}
-                      module={
-                        LightningWeb.CredentialLive.OauthClientFormComponent
-                      }
-                      action={:edit}
-                      oauth_client={client}
-                      projects={@projects}
-                      project={@project}
-                      allow_global={@current_user.role === :superuser}
-                      can_create_oauth_client={@can_create_project_credential}
-                      return_to={
-                        ~p"/projects/#{@project.id}/settings#credentials"
-                      }
-                    />
-                    <.delete_oauth_client_modal
-                      :if={client.user_id == @current_user.id}
-                      id={"delete_oauth_client_#{client.id}_modal"}
-                      client={client}
-                    />
-                  <% end %>
-                </.td>
+          <.table id="oauth-clients" class="flex w-full">
+            <tbody class="w-full">
+              <.tr class="flex">
+                <.th class="w-2/12">Name</.th>
+                <.th class="w-3/12">Project With Access</.th>
+                <.th class="w-2/12">Client ID</.th>
+                <.th class="w-3/12">Authorization URL</.th>
+                <.th class="w-2/12">Actions</.th>
               </.tr>
-            <% end %>
+
+              <%= for client <- @oauth_clients do %>
+                <.tr id={"oauth-client-#{client.id}"} class="flex">
+                  <.td class="w-2/12 break-words"><%= client.name %></.td>
+                  <.td class="w-3/12 break-words">
+                    <%= client.project_names %>
+                  </.td>
+                  <.td class="w-2/12 truncate"><%= client.client_id %></.td>
+                  <.td class="w-3/12 truncate">
+                    <%= client.authorization_endpoint %>
+                  </.td>
+                  <.td class="w-2/12">
+                    <%= if client.user_id == @current_user.id do %>
+                      <span>
+                        <.link phx-click={
+                          show_modal("edit-oauth-client-#{client.id}-modal")
+                        }>
+                          Edit
+                        </.link>
+                      </span>
+                      |
+                      <span>
+                        <.link phx-click={
+                          show_modal("delete_oauth_client_#{client.id}_modal")
+                        }>
+                          Delete
+                        </.link>
+                      </span>
+                      <.live_component
+                        id={"edit-oauth-client-#{client.id}-modal"}
+                        module={
+                          LightningWeb.CredentialLive.OauthClientFormComponent
+                        }
+                        action={:edit}
+                        oauth_client={client}
+                        projects={@projects}
+                        project={@project}
+                        allow_global={@current_user.role === :superuser}
+                        can_create_oauth_client={@can_create_project_credential}
+                        return_to={
+                          ~p"/projects/#{@project.id}/settings#credentials"
+                        }
+                      />
+                      <.delete_oauth_client_modal
+                        :if={client.user_id == @current_user.id}
+                        id={"delete_oauth_client_#{client.id}_modal"}
+                        client={client}
+                      />
+                    <% end %>
+                  </.td>
+                </.tr>
+              <% end %>
+            </tbody>
           </.table>
           <div class="hidden sm:block" aria-hidden="true">
             <div class="py-4"></div>
@@ -456,6 +460,7 @@
                       action={:edit}
                       credential_type={nil}
                       credential={credential}
+                      selected_oauth_client={credential.oauth_client}
                       projects={@projects}
                       project={@project}
                       can_create_project_credential={

@@ -75,7 +75,7 @@ defmodule Lightning.Credentials do
 
   def list_credentials(%Project{} = project) do
     Ecto.assoc(project, :credentials)
-    |> preload([:user, :project_credentials, :projects])
+    |> preload([:user, :project_credentials, :projects, :oauth_client])
     |> Repo.all()
   end
 
