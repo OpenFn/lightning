@@ -7,13 +7,13 @@
     <meta name="generator" content="ExDoc v0.30.9">
     <meta name="project" content="Lightning v2.4.2">
 
-    <title>Lightning.WorkOrderService — Lightning v2.4.2</title>
+    <title>Lightning.ChangesetUtils — Lightning v2.4.2</title>
     <link rel="stylesheet" href="dist/html-elixir-XFYN5IVA.css" />
 
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-EPF2X7PV.js"></script>
-    <script src="dist/sidebar_items-5CB34892.js"></script>
+    <script src="dist/sidebar_items-09D3427A.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -125,19 +125,19 @@ Pages
 </button>
 
 
-    <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/work_order_service.ex#L1" title="View Source" class="icon-action" rel="help">
+    <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/utils/changeset_utils.ex#L1" title="View Source" class="icon-action" rel="help">
       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
       <span class="sr-only">View Source</span>
     </a>
 
-  <span translate="no">Lightning.WorkOrderService</span> 
+  <span translate="no">Lightning.ChangesetUtils</span> 
   <small class="app-vsn" translate="no">(Lightning v2.4.2)</small>
 
 </h1>
 
 
   <section id="moduledoc">
-<p>The WorkOrderService.</p>
+<p>Extra functions for Ecto.Changeset.</p>
   </section>
 
 
@@ -155,27 +155,21 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#build/2" translate="no">build(workflow, reason)</a>
+        <a href="#put_if_provided/3" translate="no">put_if_provided(changeset, field, params)</a>
 
       </div>
+
+        <div class="summary-synopsis"><p>Puts a new change in the changeset if the params have the field.</p></div>
 
     </div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#create_work_order/1" translate="no">create_work_order(attrs \\ %{})</a>
+        <a href="#put_new_change/3" translate="no">put_new_change(changeset, field, value)</a>
 
       </div>
 
-        <div class="summary-synopsis"><p>Creates a work_order.</p></div>
-
-    </div>
-
-    <div class="summary-row">
-      <div class="summary-signature">
-        <a href="#subscribe/1" translate="no">subscribe(project_id)</a>
-
-      </div>
+        <div class="summary-synopsis"><p>Puts a new change in the changeset if the field is not already set.</p></div>
 
     </div>
 
@@ -192,16 +186,16 @@ Pages
       <span class="text">Functions</span>
     </h1>
     <div class="functions-list">
-<section class="detail" id="build/2">
+<section class="detail" id="put_if_provided/3">
 
   <div class="detail-header">
-    <a href="#build/2" class="detail-link" title="Link to this function">
+    <a href="#put_if_provided/3" class="detail-link" title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">build(workflow, reason)</h1>
+    <h1 class="signature" translate="no">put_if_provided(changeset, field, params)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/work_order_service.ex#L31" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/utils/changeset_utils.ex#L29" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -211,21 +205,26 @@ Pages
 
   <section class="docstring">
 
+      <div class="specs">
 
+          <pre translate="no"><span class="attribute">@spec</span> put_if_provided(<a href="https://hexdocs.pm/ecto/3.10.3/Ecto.Changeset.html#t:t/0">Ecto.Changeset.t</a>(), <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">atom</a>(), <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>()) :: <a href="https://hexdocs.pm/ecto/3.10.3/Ecto.Changeset.html#t:t/0">Ecto.Changeset.t</a>()</pre>
+
+      </div>
+
+<p>Puts a new change in the changeset if the params have the field.</p><p>Useful when params don't have a given key and you don't want to set the
+field to <code class="inline">nil</code>.</p>
   </section>
 </section>
-<section class="detail" id="create_work_order/1">
-
-    <span id="create_work_order/0"></span>
+<section class="detail" id="put_new_change/3">
 
   <div class="detail-header">
-    <a href="#create_work_order/1" class="detail-link" title="Link to this function">
+    <a href="#put_new_change/3" class="detail-link" title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">create_work_order(attrs \\ %{})</h1>
+    <h1 class="signature" translate="no">put_new_change(changeset, field, value)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/work_order_service.ex#L25" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/utils/changeset_utils.ex#L14" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -235,39 +234,13 @@ Pages
 
   <section class="docstring">
 
-<p>Creates a work_order.</p><h2 id="create_work_order/1-examples" class="section-heading">
-  <a href="#create_work_order/1-examples" class="hover-link">
-    <i class="ri-link-m" aria-hidden="true"></i>
-  </a>
-  <span class="text">Examples</span>
-</h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">create_work_order</span><span class="p" data-group-id="0400414972-1">(</span><span class="p" data-group-id="0400414972-2">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">value</span><span class="p" data-group-id="0400414972-2">}</span><span class="p" data-group-id="0400414972-1">)</span><span class="w">
-</span><span class="p" data-group-id="0400414972-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="0400414972-4">%</span><span class="nc" data-group-id="0400414972-4">WorkOrder</span><span class="p" data-group-id="0400414972-4">{</span><span class="p" data-group-id="0400414972-4">}</span><span class="p" data-group-id="0400414972-3">}</span><span class="w">
+      <div class="specs">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">create_work_order</span><span class="p" data-group-id="0400414972-5">(</span><span class="p" data-group-id="0400414972-6">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">bad_value</span><span class="p" data-group-id="0400414972-6">}</span><span class="p" data-group-id="0400414972-5">)</span><span class="w">
-</span><span class="p" data-group-id="0400414972-7">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="0400414972-8">%</span><span class="nc" data-group-id="0400414972-8">Ecto.Changeset</span><span class="p" data-group-id="0400414972-8">{</span><span class="p" data-group-id="0400414972-8">}</span><span class="p" data-group-id="0400414972-7">}</span></code></pre>
-  </section>
-</section>
-<section class="detail" id="subscribe/1">
+          <pre translate="no"><span class="attribute">@spec</span> put_new_change(<a href="https://hexdocs.pm/ecto/3.10.3/Ecto.Changeset.html#t:t/0">Ecto.Changeset.t</a>(), <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">atom</a>(), <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">any</a>()) :: <a href="https://hexdocs.pm/ecto/3.10.3/Ecto.Changeset.html#t:t/0">Ecto.Changeset.t</a>()</pre>
 
-  <div class="detail-header">
-    <a href="#subscribe/1" class="detail-link" title="Link to this function">
-      <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
-    </a>
-    <h1 class="signature" translate="no">subscribe(project_id)</h1>
+      </div>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/work_order_service.ex#L37" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
-
-
-  </div>
-
-  <section class="docstring">
-
-
+<p>Puts a new change in the changeset if the field is not already set.</p><p>NOTE: This function considers a field with a <code class="inline">nil</code> value as not set.</p>
   </section>
 </section>
 

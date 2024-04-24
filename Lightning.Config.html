@@ -13,7 +13,7 @@
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-EPF2X7PV.js"></script>
-    <script src="dist/sidebar_items-5CB34892.js"></script>
+    <script src="dist/sidebar_items-09D3427A.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -21,7 +21,7 @@
 
 
   </head>
-  <body data-type="modules" class="page-module">
+  <body data-type="modules" class="page-behaviour">
     <script>
 
       try {
@@ -130,7 +130,7 @@ Pages
       <span class="sr-only">View Source</span>
     </a>
 
-  <span translate="no">Lightning.Config</span> 
+  <span translate="no">Lightning.Config</span> <small>behaviour</small>
   <small class="app-vsn" translate="no">(Lightning v2.4.2)</small>
 
 </h1>
@@ -148,10 +148,88 @@ Pages
       </a>
       <span class="text">Summary</span>
     </h1>
+<div class="summary-callbacks summary">
+  <h2>
+    <a href="#callbacks">Callbacks</a>
+  </h2>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#c:grace_period/0" translate="no">grace_period()</a>
+
+      </div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#c:purge_deleted_after_days/0" translate="no">purge_deleted_after_days()</a>
+
+      </div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#c:repo_connection_token_signer/0" translate="no">repo_connection_token_signer()</a>
+
+      </div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#c:run_token_signer/0" translate="no">run_token_signer()</a>
+
+      </div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#c:worker_secret/0" translate="no">worker_secret()</a>
+
+      </div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#c:worker_token_signer/0" translate="no">worker_token_signer()</a>
+
+      </div>
+
+    </div>
+
+</div>
 <div class="summary-functions summary">
   <h2>
     <a href="#functions">Functions</a>
   </h2>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#grace_period/0" translate="no">grace_period()</a>
+
+      </div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#purge_deleted_after_days/0" translate="no">purge_deleted_after_days()</a>
+
+      </div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#repo_connection_token_signer/0" translate="no">repo_connection_token_signer()</a>
+
+      </div>
+
+    </div>
 
     <div class="summary-row">
       <div class="summary-signature">
@@ -160,6 +238,14 @@ Pages
       </div>
 
         <div class="summary-synopsis"><p>Returns the Token signer used to sign and verify run tokens.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#worker_secret/0" translate="no">worker_secret()</a>
+
+      </div>
 
     </div>
 
@@ -178,6 +264,186 @@ Pages
   </section>
 
 
+  <section id="callbacks" class="details-list">
+    <h1 class="section-heading">
+      <a class="hover-link" href="#callbacks">
+        <i class="ri-link-m" aria-hidden="true"></i>
+      </a>
+      <span class="text">Callbacks</span>
+    </h1>
+    <div class="callbacks-list">
+<section class="detail" id="c:grace_period/0">
+
+  <div class="detail-header">
+    <a href="#c:grace_period/0" class="detail-link" title="Link to this callback">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this callback</span>
+    </a>
+    <h1 class="signature" translate="no">grace_period()</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L98" class="icon-action" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@callback</span> grace_period() :: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">integer</a>()</pre>
+
+      </div>
+
+
+  </section>
+</section>
+<section class="detail" id="c:purge_deleted_after_days/0">
+
+  <div class="detail-header">
+    <a href="#c:purge_deleted_after_days/0" class="detail-link" title="Link to this callback">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this callback</span>
+    </a>
+    <h1 class="signature" translate="no">purge_deleted_after_days()</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L99" class="icon-action" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@callback</span> purge_deleted_after_days() :: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">integer</a>()</pre>
+
+      </div>
+
+
+  </section>
+</section>
+<section class="detail" id="c:repo_connection_token_signer/0">
+
+  <div class="detail-header">
+    <a href="#c:repo_connection_token_signer/0" class="detail-link" title="Link to this callback">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this callback</span>
+    </a>
+    <h1 class="signature" translate="no">repo_connection_token_signer()</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L96" class="icon-action" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@callback</span> repo_connection_token_signer() :: <a href="https://hexdocs.pm/joken/2.6.0/Joken.Signer.html#t:t/0">Joken.Signer.t</a>()</pre>
+
+      </div>
+
+
+  </section>
+</section>
+<section class="detail" id="c:run_token_signer/0">
+
+  <div class="detail-header">
+    <a href="#c:run_token_signer/0" class="detail-link" title="Link to this callback">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this callback</span>
+    </a>
+    <h1 class="signature" translate="no">run_token_signer()</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L94" class="icon-action" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@callback</span> run_token_signer() :: <a href="https://hexdocs.pm/joken/2.6.0/Joken.Signer.html#t:t/0">Joken.Signer.t</a>()</pre>
+
+      </div>
+
+
+  </section>
+</section>
+<section class="detail" id="c:worker_secret/0">
+
+  <div class="detail-header">
+    <a href="#c:worker_secret/0" class="detail-link" title="Link to this callback">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this callback</span>
+    </a>
+    <h1 class="signature" translate="no">worker_secret()</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L97" class="icon-action" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@callback</span> worker_secret() :: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">binary</a>() | nil</pre>
+
+      </div>
+
+
+  </section>
+</section>
+<section class="detail" id="c:worker_token_signer/0">
+
+  <div class="detail-header">
+    <a href="#c:worker_token_signer/0" class="detail-link" title="Link to this callback">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this callback</span>
+    </a>
+    <h1 class="signature" translate="no">worker_token_signer()</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L95" class="icon-action" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@callback</span> worker_token_signer() :: <a href="https://hexdocs.pm/joken/2.6.0/Joken.Signer.html#t:t/0">Joken.Signer.t</a>()</pre>
+
+      </div>
+
+
+  </section>
+</section>
+
+    </div>
+  </section>
+
   <section id="functions" class="details-list">
     <h1 class="section-heading">
       <a class="hover-link" href="#functions">
@@ -186,6 +452,72 @@ Pages
       <span class="text">Functions</span>
     </h1>
     <div class="functions-list">
+<section class="detail" id="grace_period/0">
+
+  <div class="detail-header">
+    <a href="#grace_period/0" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">grace_period()</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L119" class="icon-action" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+
+  </section>
+</section>
+<section class="detail" id="purge_deleted_after_days/0">
+
+  <div class="detail-header">
+    <a href="#purge_deleted_after_days/0" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">purge_deleted_after_days()</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L127" class="icon-action" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+
+  </section>
+</section>
+<section class="detail" id="repo_connection_token_signer/0">
+
+  <div class="detail-header">
+    <a href="#repo_connection_token_signer/0" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">repo_connection_token_signer()</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L123" class="icon-action" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+
+  </section>
+</section>
 <section class="detail" id="run_token_signer/0">
 
   <div class="detail-header">
@@ -195,7 +527,7 @@ Pages
     </a>
     <h1 class="signature" translate="no">run_token_signer()</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L96" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L104" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -208,6 +540,28 @@ Pages
 <p>Returns the Token signer used to sign and verify run tokens.</p>
   </section>
 </section>
+<section class="detail" id="worker_secret/0">
+
+  <div class="detail-header">
+    <a href="#worker_secret/0" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">worker_secret()</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L115" class="icon-action" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+
+  </section>
+</section>
 <section class="detail" id="worker_token_signer/0">
 
   <div class="detail-header">
@@ -217,7 +571,7 @@ Pages
     </a>
     <h1 class="signature" translate="no">worker_token_signer()</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L104" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L111" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
