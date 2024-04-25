@@ -3,6 +3,10 @@ on:
     branches:
       - <%= @branch %>
 
+concurrency:
+  group: openfn-deployment
+  cancel-in-progress: true
+
 jobs:
   deploy-to-lightning:
     runs-on: ubuntu-latest
