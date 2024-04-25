@@ -9,23 +9,32 @@ defmodule Lightning.VersionControl do
   import Ecto.Query, warn: false
 
   alias Lightning.Accounts.User
+  alias Lightning.Extensions.UsageLimiting
   alias Lightning.Repo
   alias Lightning.VersionControl.Events
   alias Lightning.VersionControl.GithubClient
   alias Lightning.VersionControl.GithubError
   alias Lightning.VersionControl.ProjectRepoConnection
+  alias Lightning.VersionControl.VersionControlUsageLimiter
 
   defdelegate subscribe(user), to: Events
 
   @doc """
   Creates a connection between a project and a github repo
   """
+  @spec create_github_connection(map(), User.t()) ::
+          {:ok, ProjectRepoConnection.t()}
+          | {:error, Ecto.Changeset.t() | UsageLimiting.message()}
   def create_github_connection(attrs, user) do
     changeset =
       ProjectRepoConnection.create_changeset(%ProjectRepoConnection{}, attrs)
 
     Repo.transact(fn ->
       with {:ok, repo_connection} <- Repo.insert(changeset),
+           :ok <-
+             VersionControlUsageLimiter.limit_github_sync(
+               repo_connection.project_id
+             ),
            :ok <- configure_github_repo(repo_connection, user) do
         {:ok, repo_connection}
       end
@@ -33,12 +42,16 @@ defmodule Lightning.VersionControl do
   end
 
   @spec reconfigure_github_connection(ProjectRepoConnection.t(), map(), User.t()) ::
-          :ok | {:error, map()}
+          :ok | {:error, UsageLimiting.message() | map()}
   def reconfigure_github_connection(repo_connection, params, user) do
     changeset =
       ProjectRepoConnection.reconfigure_changeset(repo_connection, params)
 
-    with {:ok, updated_repo_connection} <-
+    with :ok <-
+           VersionControlUsageLimiter.limit_github_sync(
+             repo_connection.project_id
+           ),
+         {:ok, updated_repo_connection} <-
            Ecto.Changeset.apply_action(changeset, :update) do
       configure_github_repo(updated_repo_connection, user)
     end
@@ -111,9 +124,13 @@ defmodule Lightning.VersionControl do
   @spec initiate_sync(
           repo_connection :: ProjectRepoConnection.t(),
           user_email :: String.t()
-        ) :: :ok | {:error, map()}
+        ) :: :ok | {:error, UsageLimiting.message() | map()}
   def initiate_sync(repo_connection, user_email) do
-    with {:ok, client} <-
+    with :ok <-
+           VersionControlUsageLimiter.limit_github_sync(
+             repo_connection.project_id
+           ),
+         {:ok, client} <-
            GithubClient.build_installation_client(
              repo_connection.github_installation_id
            ),

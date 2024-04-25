@@ -11,6 +11,7 @@ defmodule LightningWeb.Components.GithubComponents do
 
   attr :user, Lightning.Accounts.User, required: true
   attr :github_query_params, :map
+  attr :disabled, :boolean, default: false
 
   def connect_to_github_link(assigns) do
     assigns =
@@ -21,7 +22,7 @@ defmodule LightningWeb.Components.GithubComponents do
       id={@id}
       href={"https://github.com/login/oauth/authorize?" <> Plug.Conn.Query.encode(@github_query_params)}
       target="_blank"
-      class={@class}
+      class={[@class, "#{if @disabled, do: "bg-primary-300 cursor-not-allowed"}"]}
       {if @user.github_oauth_token, do: ["phx-hook": "Tooltip", "aria-label": "Your token has expired"], else: []}
     >
       <%= if @user.github_oauth_token, do: "Reconnect", else: "Connect" %> your Github Account

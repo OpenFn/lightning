@@ -186,6 +186,13 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
       {:error, %Ecto.Changeset{} = changeset} ->
         assign(socket, changeset: changeset)
 
+      {:error, %{text: error_msg}} ->
+        socket
+        |> put_flash(:error, error_msg)
+        |> push_navigate(
+          to: ~p"/projects/#{socket.assigns.project}/settings#vcs"
+        )
+
       {:error, _other} ->
         socket
         |> put_flash(:error, "Oops! Could not connect to Github")
@@ -206,6 +213,13 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
       :ok ->
         socket
         |> put_flash(:info, "Connection made successfully!")
+        |> push_navigate(
+          to: ~p"/projects/#{socket.assigns.project}/settings#vcs"
+        )
+
+      {:error, %{text: error_msg}} ->
+        socket
+        |> put_flash(:error, error_msg)
         |> push_navigate(
           to: ~p"/projects/#{socket.assigns.project}/settings#vcs"
         )
@@ -232,6 +246,13 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
       :ok ->
         socket
         |> put_flash(:info, "Github sync initiated successfully!")
+        |> push_navigate(
+          to: ~p"/projects/#{socket.assigns.project}/settings#vcs"
+        )
+
+      {:error, %{text: error_msg}} ->
+        socket
+        |> put_flash(:error, error_msg)
         |> push_navigate(
           to: ~p"/projects/#{socket.assigns.project}/settings#vcs"
         )
