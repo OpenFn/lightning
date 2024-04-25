@@ -42,7 +42,7 @@ docker network create kafka-network
 Start the cluster:
 
 ```
-docker-compose.kafka-testing-cluster.yml
+docker-compose -f kafka_testing/docker-compose.kafka-testing-cluster.yml up -d
 ```
 
 The cluster does not auto-provision topics as I found that it does not seem
@@ -84,7 +84,7 @@ The above example is connecting to the Kafka node that exposes port 9094,
 but ports 9095 or 9096 can alse be used. If time allows, I will script
 a way to automate the population of topics.
 
-You can then run `kafka-testing.exs`.
+You can then run `kafka_testing/kafka_testing.exs`.
 
 ### Cluster troubleshooting
 
@@ -148,9 +148,9 @@ Note: `kafka-testing.exs` has been modified to support testing against a
 Kafka cluster rather than a single instance.  If you wish to run it 
 against a single instance, modify it per the instructions inside the script.
 
-`kafka_testing.exs` is a script that will run for 5 or 6 minutes and subscribe
+`kafka_testing/kafka_testing.exs` is a script that will run for 5 or 6 minutes and subscribe
 to multiple topics (4) on a local kakfa container
-(docker-compose-kafka-testing-2.yml).
+(kafka_testing/docker-compose-kafka-testing-2.yml).
 
 It uses a combination of starting pipelines as well as one pipeline that is
 added after the supervisor has been started.
@@ -168,14 +168,15 @@ docker exec -it lightning_kafka-01_1 kafka-console-producer.sh --producer.config
 ```
 
 Once it is running, it should output evidence of messages being received.
+
 ## Test containers
 
 There are two docker-compose files available for test purposes. 
 
-- `docker-compose.kafka-testing.yml` - this starts up a single Kafka node
+- `kafka_testing/docker-compose.kafka-testing.yml` - this starts up a single Kafka node
   running Zookeeper and uses SASL authentication in addition to a
   non-authenticated broekr.
-- `docker-compose-kafka-testing-2.yml` - this starts up a single Kafka node
+- `kafka_testing/docker-compose-kafka-testing-2.yml` - this starts up a single Kafka node
   running KRaft and does not use authentication.
 
 In the subsections below, I will refer to the above as the Zookeeper and KRaft
@@ -186,7 +187,7 @@ instances respectively.
 To start the Zookeeper container, run:
 
 ```
-docker-compose -f docker-compose.kafka-testing.yml up -d
+docker-compose -f kafka_testing/docker-compose.kafka-testing.yml up -d
 ```
 
 A non-authenticated listener listens on port 9092, while a listener requiring
@@ -281,7 +282,7 @@ config = %{
 To start the Kraft container, run:
 
 ```
-docker-compose -f docker-compose.kafka-testing-2.yml up -d
+docker-compose -f kafka_testing/docker-compose.kafka-testing-2.yml up -d
 ```
 
 There is only an unauthenticated listener, on port 9092.
