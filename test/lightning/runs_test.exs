@@ -16,7 +16,9 @@ defmodule Lightning.RunsTest do
   describe "enqueue/1" do
     test "enqueues a run" do
       dataclip = insert(:dataclip)
-      %{triggers: [trigger]} = workflow = insert(:simple_workflow)
+
+      %{id: workflow_id, triggers: [trigger]} =
+        workflow = insert(:simple_workflow)
 
       work_order =
         insert(:workorder,
@@ -32,7 +34,7 @@ defmodule Lightning.RunsTest do
           dataclip: dataclip
         )
 
-      assert {:ok, %{run: queued_run}} =
+      assert {:ok, %{run: queued_run, workflow: %{id: ^workflow_id}}} =
                Multi.new() |> Multi.insert(:run, run) |> Runs.enqueue()
 
       assert queued_run.id == run.id
