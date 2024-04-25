@@ -2168,10 +2168,7 @@ defmodule LightningWeb.ProjectLiveTest do
         )
         |> render_submit()
 
-        assert_patch(
-          view,
-          ~p"/projects/#{project}/settings#collaboratoration"
-        )
+        assert_patch(view, ~p"/projects/#{project}/settings")
 
         assert render(view) =~ "Collaborators updated successfully!"
       end
@@ -2394,6 +2391,8 @@ defmodule LightningWeb.ProjectLiveTest do
 
         refute html =~ "You are not authorized to perform this action"
         assert html =~ "Collaborator removed successfully!"
+
+        assert_patch(view, ~p"/projects/#{project}/settings")
 
         # project user is removed
         refute Repo.get(Lightning.Projects.ProjectUser, project_user.id)

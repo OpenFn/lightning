@@ -116,6 +116,7 @@ defmodule LightningWeb.ProjectLive.Settings do
        active_menu_item: :settings,
        webhook_auth_methods: auth_methods,
        credentials: credentials,
+       project_users: [],
        current_user: socket.assigns.current_user,
        project_changeset: Projects.change_project(socket.assigns.project),
        can_delete_project: can_delete_project,
@@ -330,9 +331,7 @@ defmodule LightningWeb.ProjectLive.Settings do
       {:noreply,
        socket
        |> put_flash(:info, "Collaborator removed successfully!")
-       |> push_patch(
-         to: ~p"/projects/#{assigns.project}/settings#collaboratoration"
-       )}
+       |> push_patch(to: ~p"/projects/#{assigns.project}/settings#collaboration")}
     else
       {:noreply,
        socket

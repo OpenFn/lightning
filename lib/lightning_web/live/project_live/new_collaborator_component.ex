@@ -40,7 +40,7 @@ defmodule LightningWeb.ProjectLive.NewCollaboratorComponent do
        socket
        |> put_flash(:info, "Collaborators updated successfully!")
        |> push_patch(
-         to: ~p"/projects/#{socket.assigns.project}/settings#collaboratoration"
+         to: ~p"/projects/#{socket.assigns.project}/settings#collaboration"
        )}
     end
   end
