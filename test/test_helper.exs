@@ -1,4 +1,4 @@
-Code.put_compiler_option(:warnings_as_errors, false)
+Code.put_compiler_option(:warnings_as_errors, true)
 # Report which tests are synchronous
 # Rexbug.start("ExUnit.Server.add_sync_module/_")
 Mox.defmock(Lightning.Tesla.Mock, for: Tesla.Adapter)

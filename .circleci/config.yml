@@ -47,6 +47,8 @@ jobs:
     docker:
       - image: elixir:<< parameters.elixir_version >>
       - image: cimg/postgres:15.3
+    environment:
+      ERL_FLAGS: +S 4:4
 
     steps:
       - checkout
@@ -55,7 +57,11 @@ jobs:
 
       - run:
           name: "Save Elixir and Erlang version for PLT caching"
-          command: echo "$ELIXIR_VERSION $OTP_VERSION" > .elixir_otp_version
+          command: echo "$ELIXIR_VERSION $OTP_VERSION" | tee .elixir_otp_version
+
+      - run:
+          name: "Introspect schedulers"
+          command: elixir -v
 
       - restore_cache:
           keys:
