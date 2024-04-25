@@ -138,8 +138,6 @@ config = %{
 
 {:ok, pid} = :brod.start_link_group_subscriber_v2(config)
 ```
-```
-```
 
 ### KRaft container
 

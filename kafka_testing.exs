@@ -58,7 +58,7 @@ defmodule PipelineSupervisor do
           [
             [ 
               name: :foo_pipeline,
-              hosts: [localhost: 9092],
+              hosts: [localhost: 9096, localhost: 9095, localhost: 9094],
               group_id: "foo_group",
               topics: ["foo_topic"]
             ]
@@ -73,7 +73,7 @@ defmodule PipelineSupervisor do
           [
             [ 
               name: :bar_pipeline,
-              hosts: [localhost: 9092],
+              hosts: [localhost: 9096, localhost: 9095, localhost: 9094],
               group_id: "bar_group",
               topics: ["bar_topic"]
             ]
@@ -88,7 +88,7 @@ defmodule PipelineSupervisor do
           [
             [ 
               name: :baz_pipeline,
-              hosts: [localhost: 9092],
+              hosts: [localhost: 9096, localhost: 9095, localhost: 9094],
               group_id: "baz_group",
               topics: ["baz_topic"]
             ]
@@ -115,7 +115,7 @@ Supervisor.start_child(sup, %{
     [
       [ 
         name: :boz_pipeline,
-        hosts: [localhost: 9092],
+        hosts: [localhost: 9096, localhost: 9095, localhost: 9094],
         group_id: "boz_group",
         topics: ["boz_topic"]
       ]
