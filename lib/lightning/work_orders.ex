@@ -362,8 +362,7 @@ defmodule Lightning.WorkOrders do
     )
     |> Runs.enqueue()
     |> case do
-      {:ok, %{run: run}} ->
-        %{workflow: workflow} = Repo.preload(starting_job, [:workflow])
+      {:ok, %{run: run, workflow: workflow}} ->
         Events.work_order_updated(workflow.project_id, workorder)
         Events.run_created(workflow.project_id, run)
 

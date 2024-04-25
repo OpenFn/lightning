@@ -30,6 +30,9 @@ and this project adheres to
 
 ### Fixed
 
+- Assure workflow is always passed to Run.enqueue
+  [#2032](https://github.com/OpenFn/lightning/issues/2032)
+
 ## [v2.4.2] 2024-04-24
 
 ### Fixed
