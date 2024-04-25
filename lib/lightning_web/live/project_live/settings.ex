@@ -331,7 +331,9 @@ defmodule LightningWeb.ProjectLive.Settings do
       {:noreply,
        socket
        |> put_flash(:info, "Collaborator removed successfully!")
-       |> push_patch(to: ~p"/projects/#{assigns.project}/settings#collaboration")}
+       |> push_navigate(
+         to: ~p"/projects/#{assigns.project}/settings#collaboration"
+       )}
     else
       {:noreply,
        socket

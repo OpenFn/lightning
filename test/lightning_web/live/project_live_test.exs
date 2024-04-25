@@ -2168,9 +2168,13 @@ defmodule LightningWeb.ProjectLiveTest do
         )
         |> render_submit()
 
-        assert_patch(view, ~p"/projects/#{project}/settings")
+        flash =
+          assert_redirected(
+            view,
+            ~p"/projects/#{project}/settings#collaboration"
+          )
 
-        assert render(view) =~ "Collaborators updated successfully!"
+        assert flash["info"] =~ "Collaborators updated successfully!"
       end
     end
 
@@ -2384,15 +2388,17 @@ defmodule LightningWeb.ProjectLiveTest do
         assert has_element?(view, "#remove_#{project_user.id}_modal")
 
         # try clicking the confirm button
-        html =
-          view
-          |> element("#remove_#{project_user.id}_modal_confirm_button")
-          |> render_click()
+        view
+        |> element("#remove_#{project_user.id}_modal_confirm_button")
+        |> render_click()
 
-        refute html =~ "You are not authorized to perform this action"
-        assert html =~ "Collaborator removed successfully!"
+        flash =
+          assert_redirected(
+            view,
+            ~p"/projects/#{project}/settings#collaboration"
+          )
 
-        assert_patch(view, ~p"/projects/#{project}/settings")
+        assert flash["info"] == "Collaborator removed successfully!"
 
         # project user is removed
         refute Repo.get(Lightning.Projects.ProjectUser, project_user.id)
