@@ -2,6 +2,15 @@ Mix.install([
   {:broadway_kafka, "~> 0.4.2"}
 ])
 
+hosts = [
+  localhost: 9096,
+  localhost: 9095,
+  localhost: 9094
+]
+
+# For single container testing, use the following:
+# hosts = [localhost: 9092]
+
 defmodule KafkaPipeline do
   use Broadway
 
@@ -58,7 +67,7 @@ defmodule PipelineSupervisor do
           [
             [ 
               name: :foo_pipeline,
-              hosts: [localhost: 9096, localhost: 9095, localhost: 9094],
+              hosts: hosts,
               group_id: "foo_group",
               topics: ["foo_topic"]
             ]
@@ -73,7 +82,7 @@ defmodule PipelineSupervisor do
           [
             [ 
               name: :bar_pipeline,
-              hosts: [localhost: 9096, localhost: 9095, localhost: 9094],
+              hosts: hosts,
               group_id: "bar_group",
               topics: ["bar_topic"]
             ]
@@ -88,7 +97,7 @@ defmodule PipelineSupervisor do
           [
             [ 
               name: :baz_pipeline,
-              hosts: [localhost: 9096, localhost: 9095, localhost: 9094],
+              hosts: hosts,
               group_id: "baz_group",
               topics: ["baz_topic"]
             ]
@@ -115,7 +124,7 @@ Supervisor.start_child(sup, %{
     [
       [ 
         name: :boz_pipeline,
-        hosts: [localhost: 9096, localhost: 9095, localhost: 9094],
+        hosts: hosts,
         group_id: "boz_group",
         topics: ["boz_topic"]
       ]

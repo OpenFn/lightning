@@ -31,6 +31,143 @@ The Kafka container has a number of CLI
 [tools](https://docs.confluent.io/kafka/operations-tools/kafka-tools.html)
 that can be useful for testing.
 
+## Testing using the Kafka cluster(recommended)
+
+Create a network so that the cluster can communicate amongst themselves:
+
+```
+docker network create kafka-network
+```
+
+Start the cluster:
+
+```
+docker-compose.kafka-testing-cluster.yml
+```
+
+The cluster does not auto-provision topics as I found that it does not seem
+to play nicely with the cluster (it is probably possible to configure this away).
+
+Before testing, you will need to create the topics on the cluster. This can be
+done from any of the three Kafka nodes, by running the following commands from
+within the container:
+
+```
+kafka-topics.sh --bootstrap-server localhost:9092 --create --topic foo_topic --partitions=3 --replication-factor=3
+kafka-topics.sh --bootstrap-server localhost:9092 --create --topic bar_topic --partitions=3 --replication-factor=3
+kafka-topics.sh --bootstrap-server localhost:9092 --create --topic baz_topic --partitions=3 --replication-factor=3
+kafka-topics.sh --bootstrap-server localhost:9092 --create --topic boz_topic --partitions=3 --replication-factor=3
+```
+
+If the command produces an error containing the text
+'The target replication factor of 3 cannot be reached because only 2 broker(s) are registered',
+that is an indication that the cluster is not properly configured (see the
+cluster troubleshooting section below).
+
+To validate that everything is working correctly, run the following from a
+**different** Kafka node:
+
+```
+kafka-topics.sh --bootstrap-server localhost:9092 --list
+```
+
+This should list all the topics that you just created.
+
+Now, you can produce message for the topic - this can be done via
+`kafka_console-producer.sh` as detailed elsewhere or you could use kcat:
+
+```
+echo "High-4 Baz" | kcat -P -b 127.0.0.1:9094 -t baz_topic
+```
+
+The above example is connecting to the Kafka node that exposes port 9094,
+but ports 9095 or 9096 can alse be used. If time allows, I will script
+a way to automate the population of topics.
+
+You can then run `kafka-testing.exs`.
+
+### Cluster troubleshooting
+
+Most of the issues I have had so far have been due to configuration issues.
+Hopefully, the current container configuration should 'just work'.
+
+If you are not seeing topics show up on other nodes in the cluster, you
+can check if the basic netowrk plumbing is working by seeing if you
+can connect to other nodes and list their topics. 
+
+For example, if kafka-05 is not reflecting the topics but you can see that
+the topic exists on kafka-04, you can run the below from kafka-05:
+
+```
+kafka-topics.sh --bootstrap-server kafka-04:9092 --list
+```
+
+If that returns the expected list of topics, you know that the basic network
+topology is working. If the netwrok is not working it should complain about an
+unknown host and you should also see an error if you have specified the
+incorrect port (e.g. you think kafka-04 is listening to port 9092, but it has
+been configured for 9091).
+
+If you make a syntax error when populating `KAFKA_CFG_LISTENERS`, that can
+result in the node not being able to communicate - check the syntax carefully.
+
+Another configuration setting to check is `KAFKA_CFG_CONTROLLER_QUORUM_VOTERS`.
+This should include all the nodes in the cluster and it should be the same for
+all nodes. You may need to check this if you get the
+'only ... broker(s) are registered' error or you see that not all the nodes
+are getting the topics.
+
+If you are having issues producing to one topic, but the other topics seem to
+be ok, you can view the topic in detail:
+
+```
+kafka-topics.sh --bootstrap-server localhost:9092 --describe --topic foo_topic
+```
+
+The output should be similar to the below:
+
+```
+Topic: foo_topic	TopicId: lCC4UrNqRB2pXzjuHOvXxA	PartitionCount: 3	ReplicationFactor: 3	Configs: segment.bytes=1073741824
+	Topic: foo_topic	Partition: 0	Leader: 3	Replicas: 3,1,2	Isr: 3,1,2
+	Topic: foo_topic	Partition: 1	Leader: 1	Replicas: 1,2,3	Isr: 1,2,3
+	Topic: foo_topic	Partition: 2	Leader: 2	Replicas: 2,3,1	Isr: 2,3,1
+```
+
+While testing I had a problematic topic where the `Leader` was listed as `None`. I had to
+delete the topic using: 
+
+```
+kafka-topics.sh --bootstrap-server localhost:9092 --delete --topic foo_topic
+```
+
+And then I had to recreate it using `--create`.
+
+## Testing using the supervisor testing script and a single node
+
+Note: `kafka-testing.exs` has been modified to support testing against a
+Kafka cluster rather than a single instance.  If you wish to run it 
+against a single instance, modify it per the instructions inside the script.
+
+`kafka_testing.exs` is a script that will run for 5 or 6 minutes and subscribe
+to multiple topics (4) on a local kakfa container
+(docker-compose-kafka-testing-2.yml).
+
+It uses a combination of starting pipelines as well as one pipeline that is
+added after the supervisor has been started.
+
+Before running the script, you will need to populate each of the test topics
+(`foo_topic`, `bar_topic`, `baz_topic` and `boz_topic`). This can be done by
+runnig the below (I would suggest running each command in a separate terminal
+tab or session):
+
+```
+docker exec -it lightning_kafka-01_1 kafka-console-producer.sh --producer.config /opt/bitnami/kafka/config/producer.properties --bootstrap-server kafka-01:9092 --topic foo_topic
+docker exec -it lightning_kafka-01_1 kafka-console-producer.sh --producer.config /opt/bitnami/kafka/config/producer.properties --bootstrap-server kafka-01:9092 --topic bar_topic
+docker exec -it lightning_kafka-01_1 kafka-console-producer.sh --producer.config /opt/bitnami/kafka/config/producer.properties --bootstrap-server kafka-01:9092 --topic baz_topic
+docker exec -it lightning_kafka-01_1 kafka-console-producer.sh --producer.config /opt/bitnami/kafka/config/producer.properties --bootstrap-server kafka-01:9092 --topic boz_topic
+```
+
+Once it is running, it should output evidence of messages being received.
 ## Test containers
 
 There are two docker-compose files available for test purposes. 
@@ -199,28 +336,6 @@ config = %{
 {:ok, pid} = :brod.start_link_group_subscriber_v2(config)
 ```
 
-## Testing using the supervisor testing script
-
-`kafka_testing.exs` is a script that will run for 5 or 6 minutes and subscribe
-to multiple topics (4) on a local kakfa container
-(docker-compose-kafka-testing-2.yml).
-
-It uses a combination of starting pipelines as well as one pipeline that is
-added after the supervisor has been started.
-
-Before running the script, you will need to populate each of the test topics
-(`foo_topic`, `bar_topic`, `baz_topic` and `boz_topic`). This can be done by
-runnig the below (I would suggest running each command in a separate terminal
-tab or session):
-
-```
-docker exec -it lightning_kafka-01_1 kafka-console-producer.sh --producer.config /opt/bitnami/kafka/config/producer.properties --bootstrap-server kafka-01:9092 --topic foo_topic
-docker exec -it lightning_kafka-01_1 kafka-console-producer.sh --producer.config /opt/bitnami/kafka/config/producer.properties --bootstrap-server kafka-01:9092 --topic bar_topic
-docker exec -it lightning_kafka-01_1 kafka-console-producer.sh --producer.config /opt/bitnami/kafka/config/producer.properties --bootstrap-server kafka-01:9092 --topic baz_topic
-docker exec -it lightning_kafka-01_1 kafka-console-producer.sh --producer.config /opt/bitnami/kafka/config/producer.properties --bootstrap-server kafka-01:9092 --topic boz_topic
-```
-
-Once it is running, it should output evidence of messages being received.
 
 ## History
 
