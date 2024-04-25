@@ -2168,11 +2168,12 @@ defmodule LightningWeb.ProjectLiveTest do
         )
         |> render_submit()
 
-        updated_html = render(view)
-        # users are shown in the page
-        for new_user <- [admin, editor, viewer] do
-          assert updated_html =~ new_user.last_name
-        end
+        assert_patch(
+          view,
+          ~p"/projects/#{project}/settings#collaboratoration"
+        )
+
+        assert render(view) =~ "Collaborators updated successfully!"
       end
     end
 

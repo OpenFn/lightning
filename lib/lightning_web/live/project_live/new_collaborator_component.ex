@@ -36,8 +36,12 @@ defmodule LightningWeb.ProjectLive.NewCollaboratorComponent do
     with :ok <- limit_adding_users(socket, params),
          {:ok, project_users} <- prepare_for_insertion(socket, params),
          {:ok, _project} <- add_project_users(socket, project_users) do
-      send(self(), :collaborators_updated)
-      {:noreply, socket}
+      {:noreply,
+       socket
+       |> put_flash(:info, "Collaborators updated successfully!")
+       |> push_patch(
+         to: ~p"/projects/#{socket.assigns.project}/settings#collaboratoration"
+       )}
     end
   end
 
