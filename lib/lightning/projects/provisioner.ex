@@ -31,7 +31,9 @@ defmodule Lightning.Projects.Provisioner do
           User.t() | ProjectRepoConnection.t(),
           map()
         ) ::
-          {:error, Ecto.Changeset.t(Project.t())}
+          {:error,
+           Ecto.Changeset.t(Project.t())
+           | Lightning.Extensions.UsageLimiting.message()}
           | {:ok, Project.t()}
   def import_document(nil, %User{} = user, data) do
     import_document(%Project{}, user, data)

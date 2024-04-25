@@ -8,6 +8,15 @@ defmodule Lightning.VersionControlTest do
 
   import Lightning.GithubHelpers
 
+  setup do
+    Mox.stub_with(
+      Lightning.Extensions.MockUsageLimiter,
+      Lightning.Extensions.UsageLimiter
+    )
+
+    :ok
+  end
+
   describe "create_github_connection/2" do
     test "user with valid oauth token creates connection successfully" do
       Mox.verify_on_exit!()

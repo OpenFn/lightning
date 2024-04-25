@@ -6,9 +6,9 @@ defmodule Lightning.VersionControl.VersionControlUsageLimiter do
   alias Lightning.Extensions.UsageLimiting.Context
   alias Lightning.Services.UsageLimiter
 
-  @spec limit_github_sync(project_id :: Ecto.UUID.t()) ::
+  @spec limit_github_sync(project_id :: Ecto.UUID.t() | nil) ::
           :ok | {:error, UsageLimiting.message()}
-  def limit_github_sync(project_id) do
+  def limit_github_sync(project_id) when is_binary(project_id) do
     case UsageLimiter.limit_action(%Action{type: :github_sync}, %Context{
            project_id: project_id
          }) do
@@ -19,4 +19,6 @@ defmodule Lightning.VersionControl.VersionControlUsageLimiter do
         {:error, error}
     end
   end
+
+  def limit_github_sync(nil), do: :ok
 end
