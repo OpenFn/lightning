@@ -47,6 +47,8 @@ jobs:
     docker:
       - image: elixir:<< parameters.elixir_version >>
       - image: cimg/postgres:15.3
+    environment:
+      ERL_FLAGS: +S 4:4
 
     steps:
       - checkout
