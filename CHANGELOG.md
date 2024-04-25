@@ -21,8 +21,8 @@ and this project adheres to
   [#1988](https://github.com/OpenFn/lightning/issues/1988)
 - Workflow Snapshot support
   [#1822](https://github.com/OpenFn/lightning/issues/1822)
-- Fix sample workflow from init_project_for_new_user
-  [#2016](https://github.com/OpenFn/lightning/issues/2016)
+- Adds SharedDomain extension
+  [#2029](https://github.com/OpenFn/lightning/issues/2029)
 
 ### Changed
 
@@ -34,6 +34,8 @@ and this project adheres to
   [#2032](https://github.com/OpenFn/lightning/issues/2032)
 - Fix regression on History page where snapshots were not preloaded correctly
   [#2026](https://github.com/OpenFn/lightning/issues/2026)
+- Fix sample workflow from init_project_for_new_user
+  [#2016](https://github.com/OpenFn/lightning/issues/2016)
 
 ## [v2.4.2] 2024-04-24
 
