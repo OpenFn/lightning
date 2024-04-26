@@ -768,9 +768,7 @@ defmodule LightningWeb.CredentialLive.FormComponent do
        ) do
     %{credential: form_credential} = socket.assigns
 
-    with {:uptodate, true} <-
-           {:uptodate, credential_projects_up_to_date?(form_credential)},
-         {:same_user, true} <-
+    with {:same_user, true} <-
            {:same_user,
             socket.assigns.current_user.id == socket.assigns.credential.user_id},
          {:ok, _credential} <-
@@ -780,18 +778,6 @@ defmodule LightningWeb.CredentialLive.FormComponent do
        |> put_flash(:info, "Credential updated successfully")
        |> push_redirect(to: socket.assigns.return_to)}
     else
-      {:uptodate, false} ->
-        credential = Credentials.get_credential_for_update!(form_credential.id)
-
-        {:noreply,
-         socket
-         |> assign(credential: credential)
-         |> put_flash(
-           :error,
-           "Credential was updated by another session. Please try again."
-         )
-         |> push_redirect(to: socket.assigns.return_to)}
-
       {:same_user, false} ->
         {:noreply,
          socket
@@ -850,12 +836,5 @@ defmodule LightningWeb.CredentialLive.FormComponent do
 
     all_projects
     |> Enum.reject(fn {_, credential_id} -> credential_id in existing_ids end)
-  end
-
-  defp credential_projects_up_to_date?(form_credential) do
-    db_credential = Credentials.get_credential_for_update!(form_credential.id)
-
-    Map.get(db_credential, :project_credentials) ==
-      Map.get(form_credential, :project_credentials)
   end
 end
