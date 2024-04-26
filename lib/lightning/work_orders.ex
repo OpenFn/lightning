@@ -348,16 +348,21 @@ defmodule Lightning.WorkOrders do
         |> validate_required_assoc(:created_by)
       end
     )
-    |> Multi.merge(fn %{run: run} ->
-      Multi.new()
-      |> Multi.update_all(:workorder, update_workorder_query(run), [],
-        returning: true
-      )
-    end)
+    |> Multi.update_all(
+      :workorder,
+      fn %{run: run} ->
+        update_workorder_query(run)
+      end,
+      [],
+      returning: true
+    )
+    |> Multi.one(
+      :workflow,
+      from(w in Workflow, where: w.id == ^workorder.workflow_id)
+    )
     |> Runs.enqueue()
     |> case do
-      {:ok, %{run: run}} ->
-        %{workflow: workflow} = Repo.preload(starting_job, [:workflow])
+      {:ok, %{run: run, workflow: workflow}} ->
         Events.work_order_updated(workflow.project_id, workorder)
         Events.run_created(workflow.project_id, run)
 

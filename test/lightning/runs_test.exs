@@ -16,6 +16,7 @@ defmodule Lightning.RunsTest do
   describe "enqueue/1" do
     test "enqueues a run" do
       dataclip = insert(:dataclip)
+
       %{triggers: [trigger]} = workflow = insert(:simple_workflow)
 
       work_order =
