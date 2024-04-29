@@ -119,6 +119,29 @@ defmodule Lightning.Factories do
     }
   end
 
+  def oauth_client_factory do
+    %Lightning.Credentials.OauthClient{
+      name: sequence(:oauth_client_name, &"oauth-client#{&1}"),
+      client_id: sequence(:client_id, &"client-id-#{&1}"),
+      client_secret: sequence(:client_secret, &"client-secret-#{&1}"),
+      authorization_endpoint: "http://example.com/oauth2/authorize",
+      token_endpoint: "http://example.com/oauth2/token",
+      userinfo_endpoint: "http://example.com/oauth2/userinfo",
+      global: true,
+      mandatory_scopes: "scope_1,scope_2",
+      optional_scopes: "scope_3,scope_4",
+      scopes_doc_url: "http://example.com/scopes/doc",
+      user: build(:user)
+    }
+  end
+
+  def project_oauth_client_factory do
+    %Lightning.Projects.ProjectOauthClient{
+      project: build(:project),
+      oauth_client: build(:oauth_client)
+    }
+  end
+
   def workorder_factory do
     %Lightning.WorkOrder{
       id: fn -> Ecto.UUID.generate() end,

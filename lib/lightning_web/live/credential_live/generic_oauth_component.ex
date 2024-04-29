@@ -593,8 +593,7 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
             values={@projects}
             value={@selected}
             prompt=""
-            phx-change="select_project"
-            phx-target={@phx_target}
+            phx-change="select_item"
             id={"project_credentials_list_for_#{@form[:id].value}"}
           />
         </div>
@@ -602,7 +601,6 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
           <.button
             id={"add-new-project-button-to-#{@form[:id].value}"}
             disabled={@selected == ""}
-            phx-target={@phx_target}
             phx-value-projectid={@selected}
             phx-click="add_new_project"
           >
@@ -621,7 +619,6 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
             <div class="grow-0 items-right">
               <.button
                 id={"delete-project-credential-#{@form[:id].value}-button"}
-                phx-target={@phx_target}
                 phx-value-projectid={project_credential[:project_id].value}
                 phx-click="delete_project"
               >

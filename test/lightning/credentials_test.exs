@@ -1,22 +1,23 @@
 defmodule Lightning.CredentialsTest do
-  alias Lightning.CredentialsFixtures
   use Lightning.DataCase, async: true
 
-  alias Lightning.Repo
   alias Lightning.Credentials
-  alias Lightning.Credentials.{Credential, Audit}
+  alias Lightning.Credentials.{Audit, Credential}
+  alias Lightning.CredentialsFixtures
+  alias Lightning.Repo
+
   import Lightning.BypassHelpers
   import Lightning.Factories
-  import Swoosh.TestAssertions
+  import Ecto.Query
 
   import Lightning.{
-    JobsFixtures,
-    CredentialsFixtures,
     AccountsFixtures,
+    CredentialsFixtures,
+    JobsFixtures,
     ProjectsFixtures
   }
 
-  import Ecto.Query
+  import Swoosh.TestAssertions
 
   describe "Model interactions" do
     @invalid_attrs %{body: nil, name: nil}

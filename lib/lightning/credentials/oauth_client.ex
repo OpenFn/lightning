@@ -69,15 +69,6 @@ defmodule Lightning.Credentials.OauthClient do
     |> assoc_constraint(:user)
   end
 
-  # defp validate_url_format(changeset, field) do
-  #   changeset
-  #   |> validate_format(
-  #     field,
-  #     ~r/^(https?:\/\/)?([\da-z\.-]+)\.([a-z\.]{2,6})([\/\w \.-]*)*\/?$/i,
-  #     message: "must be a valid URL for #{field}"
-  #   )
-  # end
-
   defp validate_url(changeset, field) do
     validate_change(changeset, field, fn _, value ->
       case valid_url?(value) do

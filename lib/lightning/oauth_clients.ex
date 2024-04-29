@@ -1,6 +1,8 @@
 defmodule Lightning.OauthClients do
   @moduledoc """
-  The OauthClients context.
+  Manages operations for OAuth clients within the Lightning application, providing
+  functions to create, retrieve, update, and delete OAuth clients, as well as managing
+  their associations with projects and handling audit trails for changes.
   """
 
   import Ecto.Query, warn: false
@@ -12,10 +14,43 @@ defmodule Lightning.OauthClients do
   alias Lightning.Projects.ProjectOauthClient
   alias Lightning.Repo
 
+  @doc """
+  Prepares a changeset for creating or updating an OAuth client.
+
+  ## Parameters
+
+    - client: The OAuth client struct.
+    - attrs: Attributes to update in the client.
+
+  ## Returns
+
+    - An Ecto.Changeset struct for the OAuth client.
+
+  ## Examples
+
+      iex> change_client(%OauthClient{}, %{name: "New Client"})
+      %Ecto.Changeset{...}
+  """
   def change_client(%OauthClient{} = client, attrs \\ %{}) do
     OauthClient.changeset(client, attrs)
   end
 
+  @doc """
+  Retrieves all OAuth clients associated with a given project.
+
+  ## Parameters
+
+    - project: The project struct to retrieve clients for.
+
+  ## Returns
+
+    - A list of OAuth clients associated with the project.
+
+  ## Examples
+
+      iex> list_clients(%Project{id: 1})
+      [%OauthClient{}, %OauthClient{}]
+  """
   def list_clients(%Project{} = project) do
     Ecto.assoc(project, :oauth_clients)
     |> preload([:user, :project_oauth_clients, :projects])
@@ -23,13 +58,20 @@ defmodule Lightning.OauthClients do
   end
 
   @doc """
-  Returns the list of oauth clients for a given user.
+  Retrieves all OAuth clients for a given user, including global clients.
+
+  ## Parameters
+
+    - user_id: The ID of the user.
+
+  ## Returns
+
+    - A list of OAuth clients associated with the user.
 
   ## Examples
 
       iex> list_clients_for_user(123)
-      [%OauthClient{user_id: 123}, %OauthClient{user_id: 123},...]
-
+      [%OauthClient{user_id: 123}, %OauthClient{user_id: 123}]
   """
   def list_clients_for_user(user_id) do
     from(c in OauthClient,
@@ -40,9 +82,19 @@ defmodule Lightning.OauthClients do
   end
 
   @doc """
-  Gets a single oauth client.
+  Retrieves a single OAuth client by its ID, raising an error if not found.
 
-  Raises `Ecto.NoResultsError` if the oauth client does not exist.
+  ## Parameters
+
+    - id: The ID of the OAuth client to retrieve.
+
+  ## Returns
+
+    - The OAuth client struct.
+
+  ## Raises
+
+    - Ecto.NoResultsError if the OAuth client does not exist.
 
   ## Examples
 
@@ -51,21 +103,28 @@ defmodule Lightning.OauthClients do
 
       iex> get_client!(456)
       ** (Ecto.NoResultsError)
-
   """
   def get_client!(id), do: Repo.get!(OauthClient, id)
 
   @doc """
-  Creates an OauthClient.
+  Creates a new OAuth client with the specified attributes.
+
+  ## Parameters
+
+    - attrs: Attributes for the new OAuth client.
+
+  ## Returns
+
+    - `{:ok, oauth_client}` if the client is created successfully.
+    - `{:error, changeset}` if there is an error during creation.
 
   ## Examples
 
-      iex> create_client(%{field: value})
+      iex> create_client(%{name: "New Client"})
       {:ok, %OauthClient{}}
 
-      iex> create_client(%{field: bad_value})
+      iex> create_client(%{name: nil})
       {:error, %Ecto.Changeset{}}
-
   """
   def create_client(attrs \\ %{}) do
     changeset = OauthClient.changeset(%OauthClient{}, attrs)
@@ -84,16 +143,22 @@ defmodule Lightning.OauthClients do
   end
 
   @doc """
-  Updates a client.
+  Updates an existing OAuth client with the specified attributes.
+
+  ## Parameters
+  - client: The existing OauthClient to update.
+  - attrs: A map of attributes to update.
+
+  ## Returns
+  - A tuple {:ok, oauth_client} if update is successful.
+  - A tuple {:error, changeset} if update fails.
 
   ## Examples
-
       iex> update_client(client, %{field: new_value})
       {:ok, %OauthClient{}}
 
       iex> update_client(client, %{field: bad_value})
       {:error, %Ecto.Changeset{}}
-
   """
   def update_client(%OauthClient{} = client, attrs) do
     changeset = OauthClient.changeset(client, attrs)
@@ -198,16 +263,21 @@ defmodule Lightning.OauthClients do
   end
 
   @doc """
-  Deletes a client.
+  Deletes an OAuth client and all associated data.
+
+  ## Parameters
+  - client: The OauthClient to delete.
+
+  ## Returns
+  - A tuple {:ok, oauth_client} if deletion is successful.
+  - A tuple {:error, changeset} if deletion fails.
 
   ## Examples
-
       iex> delete_client(client)
       {:ok, %OauthClient{}}
 
       iex> delete_client(client)
       {:error, %Ecto.Changeset{}}
-
   """
   def delete_client(%OauthClient{} = client) do
     Multi.new()
