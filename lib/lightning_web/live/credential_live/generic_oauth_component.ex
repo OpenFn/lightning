@@ -1,11 +1,11 @@
 defmodule LightningWeb.CredentialLive.GenericOauthComponent do
-  alias Lightning.AuthProviders.OauthHTTPClient
   use LightningWeb, :live_component
 
   import Ecto.Changeset, only: [fetch_field!: 2, put_assoc: 3]
   import LightningWeb.OauthCredentialHelper
   import LightningWeb.Components.Oauth
 
+  alias Lightning.AuthProviders.OauthHTTPClient
   alias Lightning.Credentials
   alias LightningWeb.Components.NewInputs
   alias Phoenix.LiveView.JS
@@ -109,7 +109,9 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
   end
 
   def update(%{code: code} = _assigns, socket) do
-    if !Map.get(socket.assigns, :code, false) do
+    if Map.get(socket.assigns, :code, false) do
+      {:ok, socket}
+    else
       client = socket.assigns.selected_client
 
       {:ok,
@@ -119,8 +121,6 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
        |> start_async(:token, fn ->
          OauthHTTPClient.fetch_token(client, code)
        end)}
-    else
-      {:ok, socket}
     end
   end
 

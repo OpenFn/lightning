@@ -5,11 +5,11 @@ defmodule Lightning.OauthClients do
 
   import Ecto.Query, warn: false
 
-  alias Lightning.Projects.ProjectOauthClient
   alias Ecto.Multi
   alias Lightning.Credentials.Audit
   alias Lightning.Credentials.OauthClient
   alias Lightning.Projects.Project
+  alias Lightning.Projects.ProjectOauthClient
   alias Lightning.Repo
 
   def change_client(%OauthClient{} = client, attrs \\ %{}) do

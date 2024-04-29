@@ -45,11 +45,13 @@ defmodule LightningWeb.CredentialLive.OauthClientFormComponent do
     scopes = Map.get(oauth_client, scope_type) |> to_string()
     scopes_list = String.split(scopes, ",", trim: true)
 
-    socket
-    |> assign(scope_type, scopes_list)
-    |> (fn s ->
-          if scopes != "", do: push_event(s, "clear_input", %{}), else: s
-        end).()
+    updated_socket = assign(socket, scope_type, scopes_list)
+
+    if scopes != "" do
+      push_event(updated_socket, "clear_input", %{})
+    else
+      updated_socket
+    end
   end
 
   defp assign_initial_values(socket, changeset, all_projects) do

@@ -3,11 +3,11 @@ defmodule LightningWeb.ProjectLive.Settings do
   Index Liveview for project settings
   """
 
-  alias Lightning.Credentials.Credential
   use LightningWeb, :live_view
 
   alias Lightning.Accounts.User
   alias Lightning.Credentials
+  alias Lightning.Credentials.Credential
   alias Lightning.OauthClients
   alias Lightning.Policies.Permissions
   alias Lightning.Policies.ProjectUsers
