@@ -9,6 +9,9 @@ config :tesla, adapter: Lightning.Tesla.Mock
 config :tesla, Lightning.VersionControl.GithubClient,
   adapter: Lightning.GithubClient.Mock
 
+config :tesla, Lightning.AuthProviders.OauthHTTPClient,
+  adapter: Lightning.AuthProviders.OauthHTTPClient.Mock
+
 config :tesla, Mix.Tasks.Lightning.InstallAdaptorIcons, adapter: Tesla.Mock
 
 config :tesla, Lightning.UsageTracking.Client, adapter: Tesla.Mock

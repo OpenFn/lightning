@@ -339,7 +339,23 @@
           <div class="hidden sm:block" aria-hidden="true">
             <div class="py-2"></div>
           </div>
-          <.table id="oauth-clients" class="flex w-full">
+          <button
+            :if={@oauth_clients === []}
+            type="button"
+            id="open-create-oauth-client-modal-big-buttton"
+            phx-click={show_modal("new-oauth-client-modal")}
+            class="relative block w-full rounded-lg border-2 border-dashed border-gray-300 p-10 text-center hover:border-gray-400 focus:outline-none"
+          >
+            <Heroicons.plus_circle class="mx-auto w-12 h-12 text-secondary-400" />
+            <span class="mt-2 block text-sm font-semibold text-secondary-600">
+              Create a new OAuth Client
+            </span>
+          </button>
+          <.table
+            :if={@oauth_clients !== []}
+            id="oauth-clients"
+            class="flex w-full"
+          >
             <tbody class="w-full">
               <.tr class="flex">
                 <.th class="w-2/12">Name</.th>
@@ -411,7 +427,19 @@
           <div class="hidden sm:block" aria-hidden="true">
             <div class="py-2"></div>
           </div>
-          <.table id="credentials">
+          <button
+            :if={@credentials === []}
+            type="button"
+            id="open-create-credential-modal-big-buttton"
+            phx-click={show_modal("new-credential-modal")}
+            class="relative block w-full rounded-lg border-2 border-dashed border-gray-300 p-10 text-center hover:border-gray-400 focus:outline-none"
+          >
+            <Heroicons.plus_circle class="mx-auto w-12 h-12 text-secondary-400" />
+            <span class="mt-2 block text-sm font-semibold text-secondary-600">
+              Create a new Credential
+            </span>
+          </button>
+          <.table :if={@credentials !== []} id="credentials">
             <.tr>
               <.th>Name</.th>
               <.th>Project with access</.th>

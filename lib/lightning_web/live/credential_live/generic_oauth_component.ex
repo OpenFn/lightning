@@ -1,17 +1,20 @@
 defmodule LightningWeb.CredentialLive.GenericOauthComponent do
+  alias Lightning.AuthProviders.OauthHTTPClient
   use LightningWeb, :live_component
 
   import Ecto.Changeset, only: [fetch_field!: 2, put_assoc: 3]
   import LightningWeb.OauthCredentialHelper
+  import LightningWeb.Components.Oauth
 
   alias Lightning.Credentials
   alias LightningWeb.Components.NewInputs
   alias Phoenix.LiveView.JS
-  alias Tesla
+
+  require Logger
 
   @oauth_states %{
     success: [:userinfo_received, :token_received],
-    failure: [:token_failed, :userinfo_failed, :refresh_failed]
+    failure: [:token_failed, :userinfo_failed, :code_failed, :refresh_failed]
   }
 
   @impl true
@@ -22,32 +25,22 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
      socket
      |> assign_new(:selected_client, fn -> nil end)
      |> assign_new(:selected_project, fn -> nil end)
+     |> assign_new(:userinfo, fn -> nil end)
      |> assign_new(:authorize_url, fn -> nil end)
-     |> assign_new(:oauth_progress, fn -> :not_started end)
      |> assign_new(:scopes_changed, fn -> false end)
-     |> assign_new(:userinfo, fn -> nil end)}
+     |> assign_new(:oauth_progress, fn -> :not_started end)}
   end
 
   @impl true
-  def update(%{selected_client: nil, action: action} = assigns, socket) do
-    selected_scopes = assigns.credential.body["scope"] |> String.split(",")
-    api_version = assigns.credential.body["api_version"]
+  def update(%{selected_client: nil, action: _action} = assigns, socket) do
+    selected_scopes = String.split(assigns.credential.body["scope"], ",")
 
     {:ok,
-     socket
-     |> assign(
-       id: assigns.id,
-       action: action,
-       selected_client: assigns.selected_client,
-       changeset: assigns.changeset,
-       credential: assigns.credential,
-       projects: assigns.projects,
-       users: assigns.users,
+     build_assigns(socket, assigns,
        selected_scopes: selected_scopes,
        mandatory_scopes: [],
        optional_scopes: [],
        scopes: selected_scopes,
-       api_version: api_version,
        allow_credential_transfer: assigns.allow_credential_transfer,
        return_to: assigns.return_to
      )}
@@ -57,112 +50,45 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
         %{selected_client: selected_client, action: :edit} = assigns,
         socket
       ) do
-    assigns.credential.body
-    |> IO.inspect(label: "Save Credential Params")
-
-    selected_scopes = assigns.credential.body["scope"] |> String.split(" ")
-
-    mandatory_scopes =
-      selected_client.mandatory_scopes
-      |> to_string
-      |> String.split(",")
-      |> Enum.reject(fn value -> value === "" end)
-
-    optional_scopes =
-      selected_client.optional_scopes
-      |> to_string
-      |> String.split(",")
-      |> Enum.reject(fn value -> value === "" end)
+    selected_scopes = process_scopes(assigns.credential.body["scope"], " ")
+    mandatory_scopes = process_scopes(selected_client.mandatory_scopes, ",")
+    optional_scopes = process_scopes(selected_client.optional_scopes, ",")
 
     scopes = Enum.uniq(mandatory_scopes ++ optional_scopes ++ selected_scopes)
-
     state = build_state(socket.id, __MODULE__, assigns.id)
     stringified_scopes = Enum.join(selected_scopes, " ")
 
     authorize_url =
-      generate_authorize_url(
+      OauthHTTPClient.generate_authorize_url(
         selected_client.authorization_endpoint,
         selected_client.client_id,
         state: state,
         scope: stringified_scopes
       )
 
-    socket =
-      if !still_fresh(assigns.credential.body) do
-        start_async(socket, :token, fn ->
-          refresh_token(
-            selected_client.client_id,
-            selected_client.client_secret,
-            assigns.credential.body["refresh_token"],
-            selected_client.token_endpoint
-          )
-        end)
-      else
-        if selected_client.userinfo_endpoint do
-          start_async(socket, :userinfo, fn ->
-            fetch_userinfo(
-              assigns.credential.body["access_token"],
-              selected_client.userinfo_endpoint
-            )
-          end)
-        end
-      end
-
-    api_version = assigns.credential.body["api_version"]
-
-    changeset =
-      Ecto.Changeset.put_change(
-        assigns.changeset,
-        :body,
-        assigns.credential.body
-      )
-      |> Map.put(
-        :action,
-        :validate
-      )
+    socket = maybe_refresh_token(socket, assigns, selected_client)
 
     {:ok,
-     socket
-     |> assign(
-       id: assigns.id,
-       action: assigns.action,
-       selected_client: selected_client,
-       changeset: changeset,
-       credential: assigns.credential,
-       projects: assigns.projects,
-       users: assigns.users,
+     build_assigns(socket, assigns,
        mandatory_scopes: mandatory_scopes,
        optional_scopes: optional_scopes,
        selected_scopes: selected_scopes,
        scopes: scopes,
-       api_version: api_version,
        authorize_url: authorize_url,
        allow_credential_transfer: assigns.allow_credential_transfer,
        return_to: assigns.return_to
      )}
   end
 
-  def update(
-        %{action: :new, selected_client: selected_client} = assigns,
-        socket
-      ) do
-    mandatory_scopes =
-      selected_client.mandatory_scopes
-      |> to_string
-      |> String.split(",")
-      |> Enum.reject(fn value -> value === "" end)
-
-    optional_scopes =
-      selected_client.optional_scopes
-      |> to_string
-      |> String.split(",")
-      |> Enum.reject(fn value -> value === "" end)
+  def update(%{action: :new, selected_client: selected_client} = assigns, socket) do
+    mandatory_scopes = process_scopes(selected_client.mandatory_scopes, ",")
+    optional_scopes = process_scopes(selected_client.optional_scopes, ",")
 
     state = build_state(socket.id, __MODULE__, assigns.id)
     stringified_scopes = Enum.join(mandatory_scopes, " ")
 
     authorize_url =
-      generate_authorize_url(
+      OauthHTTPClient.generate_authorize_url(
         selected_client.authorization_endpoint,
         selected_client.client_id,
         state: state,
@@ -170,15 +96,7 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
       )
 
     {:ok,
-     socket
-     |> assign(
-       id: assigns.id,
-       action: assigns.action,
-       selected_client: assigns.selected_client,
-       changeset: assigns.changeset,
-       credential: assigns.credential,
-       projects: assigns.projects,
-       users: assigns.users,
+     build_assigns(socket, assigns,
        api_version: nil,
        mandatory_scopes: mandatory_scopes,
        optional_scopes: optional_scopes,
@@ -198,78 +116,20 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
        socket
        |> assign(code: code)
        |> assign(:oauth_progress, :code_received)
-       |> assign(:scopes_changed, false)
        |> start_async(:token, fn ->
-         fetch_token(client, code)
+         OauthHTTPClient.fetch_token(client, code)
        end)}
     else
       {:ok, socket}
     end
   end
 
-  defp fetch_token(client, code) do
-    %{
-      client_id: client_id,
-      client_secret: client_secret,
-      token_endpoint: token_endpoint
-    } = client
+  def update(%{error: error} = _assigns, socket) do
+    Logger.info(
+      "Failed fetching authentication code using #{socket.assigns.selected_client.name}. Received error message: #{inspect(error)}"
+    )
 
-    body =
-      %{
-        client_id: client_id,
-        client_secret: client_secret,
-        code: code,
-        grant_type: "authorization_code",
-        redirect_uri: LightningWeb.RouteHelpers.oidc_callback_url()
-      }
-
-    case Tesla.client([Tesla.Middleware.FormUrlencoded])
-         |> Tesla.post(token_endpoint, body) do
-      {:ok, %Tesla.Env{status: 200, body: response_body}} ->
-        Jason.decode(response_body)
-
-      {:error, reason} ->
-        {:error, reason}
-    end
-  end
-
-  def fetch_userinfo(token, userinfo_endpoint) do
-    headers = [
-      {"Authorization", "Bearer #{token}"}
-    ]
-
-    case Tesla.get(userinfo_endpoint, headers: headers) do
-      {:ok, %Tesla.Env{status: 200, body: user_info}} ->
-        Jason.decode(user_info)
-
-      {:ok, %Tesla.Env{status: status, body: body}} when status in 400..599 ->
-        {:error, "Failed to fetch user info: #{body}"}
-
-      {:error, reason} ->
-        {:error, "HTTP request failed: #{inspect(reason)}"}
-    end
-  end
-
-  def refresh_token(client_id, client_secret, refresh_token, token_endpoint) do
-    body =
-      %{
-        client_id: client_id,
-        client_secret: client_secret,
-        refresh_token: refresh_token,
-        grant_type: "refresh_token"
-      }
-
-    case Tesla.client([Tesla.Middleware.FormUrlencoded])
-         |> Tesla.post(token_endpoint, body) do
-      {:ok, %Tesla.Env{status: 200, body: response_body}} ->
-        Jason.decode(response_body)
-
-      {:ok, %Tesla.Env{status: _status, body: response_body}} ->
-        {:error, "Failed to refresh token: #{response_body}"}
-
-      {:error, reason} ->
-        {:error, "HTTP request failed: #{inspect(reason)}"}
-    end
+    {:ok, assign(socket, :oauth_progress, :code_failed)}
   end
 
   @impl true
@@ -288,6 +148,7 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
     updated_socket =
       socket
       |> assign(:oauth_progress, :token_received)
+      |> assign(:scopes_changed, false)
       |> assign(:changeset, changeset)
       |> assign(:credential, credential)
 
@@ -295,7 +156,7 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
       {:noreply,
        updated_socket
        |> start_async(:userinfo, fn ->
-         fetch_userinfo(
+         OauthHTTPClient.fetch_userinfo(
            token["access_token"],
            socket.assigns.selected_client.userinfo_endpoint
          )
@@ -312,13 +173,28 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
      |> assign(:oauth_progress, :userinfo_received)}
   end
 
-  @impl true
+  def handle_async(:token, {:ok, {:error, error}}, socket) do
+    Logger.info(
+      "Failed fetching token using #{socket.assigns.selected_client.name}. Received error message: #{inspect(error)}"
+    )
 
+    {:noreply, assign(socket, :oauth_progress, :token_failed)}
+  end
+
+  def handle_async(:userinfo, {:ok, {:error, error}}, socket) do
+    Logger.info(
+      "Failed fetching userinfo using #{socket.assigns.selected_client.name}. Received error message: #{inspect(error)}"
+    )
+
+    {:noreply, assign(socket, :oauth_progress, :token_failed)}
+  end
+
+  @impl true
   def handle_event(
         "validate",
         %{
-          "_target" => ["credential", "api_version"],
-          "credential" => %{"api_version" => api_version}
+          "_target" => ["credential", "apiVersion"],
+          "credential" => %{"apiVersion" => api_version}
         },
         socket
       ) do
@@ -359,7 +235,7 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
     stringified_scopes = Enum.join(selected_scopes, " ")
 
     authorize_url =
-      generate_authorize_url(
+      OauthHTTPClient.generate_authorize_url(
         socket.assigns.selected_client.authorization_endpoint,
         socket.assigns.selected_client.client_id,
         state: state,
@@ -466,38 +342,69 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
      |> assign(changeset: changeset, available_projects: available_projects)}
   end
 
+  defp maybe_refresh_token(socket, assigns, selected_client) do
+    case OauthHTTPClient.still_fresh(assigns.credential.body) do
+      true ->
+        if selected_client.userinfo_endpoint do
+          Logger.info("Fetching user info.")
+
+          start_async(socket, :userinfo, fn ->
+            OauthHTTPClient.fetch_userinfo(
+              assigns.credential.body["access_token"],
+              selected_client.userinfo_endpoint
+            )
+          end)
+        else
+          socket
+        end
+
+      false ->
+        Logger.info("Refreshing token.")
+
+        start_async(socket, :token, fn ->
+          OauthHTTPClient.refresh_token(
+            selected_client.client_id,
+            selected_client.client_secret,
+            assigns.credential.body["refresh_token"],
+            selected_client.token_endpoint
+          )
+        end)
+
+      {:error, reason} ->
+        Logger.error("Error checking token freshness: #{reason}")
+        socket
+    end
+  end
+
+  defp process_scopes(scopes_string, delimiter) do
+    scopes_string
+    |> to_string()
+    |> String.split(delimiter)
+    |> Enum.reject(&(&1 == ""))
+  end
+
+  defp build_assigns(socket, assigns, additional_assigns) do
+    assign(socket,
+      id: assigns.id,
+      action: assigns.action,
+      selected_client: assigns.selected_client,
+      changeset: assigns.changeset,
+      credential: assigns.credential,
+      projects: assigns.projects,
+      users: assigns.users,
+      api_version: assigns.credential.body["apiVersion"]
+    )
+    |> assign(additional_assigns)
+  end
+
   defp get_scopes(%{body: %{"scope" => scope}}), do: String.split(scope)
   defp get_scopes(_), do: []
-
-  def still_fresh(token_body, threshold \\ 5, time_unit \\ :minute)
-
-  def still_fresh(%{"expires_at" => nil} = _token_body, _threshold, _time_unit),
-    do: false
-
-  def still_fresh(%{"expires_in" => nil} = _token_body, _threshold, _time_unit),
-    do: false
-
-  def still_fresh(%{"expires_at" => expires_at}, threshold, time_unit) do
-    current_time = DateTime.utc_now()
-    expiration_time = DateTime.from_unix!(expires_at)
-    time_remaining = DateTime.diff(expiration_time, current_time, time_unit)
-    time_remaining >= threshold
-  end
-
-  def still_fresh(%{"expires_in" => expires_at}, threshold, time_unit) do
-    current_time = DateTime.utc_now()
-    expiration_time = DateTime.from_unix!(expires_at)
-    time_remaining = DateTime.diff(expiration_time, current_time, time_unit)
-    time_remaining >= threshold
-  end
 
   defp save_credential(socket, :new, params) do
     user_id = Ecto.Changeset.fetch_field!(socket.assigns.changeset, :user_id)
     body = Ecto.Changeset.fetch_field!(socket.assigns.changeset, :body)
 
-    IO.inspect(body, label: "ON CREATE")
-
-    body = Map.put(body, "api_version", socket.assigns.api_version)
+    body = Map.put(body, "apiVersion", socket.assigns.api_version)
 
     params
     |> Map.put("user_id", user_id)
@@ -520,15 +427,11 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
   defp save_credential(socket, :edit, params) do
     body =
       Ecto.Changeset.fetch_field!(socket.assigns.changeset, :body)
-      |> Map.put("api_version", socket.assigns.api_version)
-
-    IO.inspect(body, label: "ON UPDATE")
+      |> Map.put("apiVersion", socket.assigns.api_version)
 
     params =
       Map.put(params, "body", body)
       |> Map.put("oauth_client_id", socket.assigns.selected_client.id)
-
-    IO.inspect(params, label: "Save Credential Params")
 
     case Credentials.update_credential(socket.assigns.credential, params) do
       {:ok, _credential} ->
@@ -542,15 +445,6 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
     end
   end
 
-  # defp scopes_changed?(socket, new_scopes) do
-  #   existing_scopes =
-  #     socket.assigns.credential.body
-  #     |> Map.get("scope", "")
-  #     |> String.split(" ")
-
-  #   Enum.sort(new_scopes) != Enum.sort(existing_scopes)
-  # end
-
   defp filter_available_projects(changeset, all_projects) do
     existing_ids =
       fetch_field!(changeset, :project_credentials)
@@ -559,25 +453,6 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
 
     all_projects
     |> Enum.reject(fn {_, credential_id} -> credential_id in existing_ids end)
-  end
-
-  defp generate_authorize_url(base_url, client_id, params) do
-    default_params = [
-      access_type: "offline",
-      client_id: client_id,
-      prompt: "consent",
-      redirect_uri: LightningWeb.RouteHelpers.oidc_callback_url(),
-      response_type: "code",
-      scope: "",
-      state: ""
-    ]
-
-    # Merge params into default_params, with params taking precedence in case of conflicts
-    merged_params = Keyword.merge(default_params, params)
-
-    # Encode the parameters into a query string
-    encoded_params = URI.encode_query(merged_params)
-    "#{base_url}?#{encoded_params}"
   end
 
   attr :form, :map, required: true
@@ -677,14 +552,16 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
               :if={@display_userinfo}
               myself={@myself}
               userinfo={@userinfo}
+              socket={@socket}
               authorize_url={@authorize_url}
             />
-            <%!-- <.error_block
+            <.error_block
+              :if={@display_error}
               type={@oauth_progress}
               myself={@myself}
-              provider={@provider}
+              provider={@selected_client.name}
               authorize_url={@authorize_url}
-            /> --%>
+            />
           </div>
 
           <div class="space-y-4">
@@ -721,7 +598,7 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
               <div class="sm:flex sm:flex-row-reverse">
                 <button
                   type="submit"
-                  disabled={!@changeset.valid?}
+                  disabled={!@changeset.valid? || @scopes_changed}
                   class="inline-flex justify-center rounded-md disabled:bg-primary-300 bg-primary-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary-500 sm:ml-3"
                 >
                   Save
@@ -746,286 +623,6 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
     Enum.find_value(projects, fn {name, project_id} ->
       if project_id == id, do: name
     end)
-  end
-
-  defp authorize_button(assigns) do
-    ~H"""
-    <.link
-      href={@authorize_url}
-      id="authorize-button"
-      phx-click="authorize_click"
-      phx-target={@myself}
-      target="_blank"
-      class="rounded-md bg-indigo-600 px-3.5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
-    >
-      <span class="text-normal">Sign in with <%= @provider %></span>
-    </.link>
-    """
-  end
-
-  def userinfo(assigns) do
-    ~H"""
-    <div class="flex flex-wrap items-center justify-between sm:flex-nowrap mt-5">
-      <div class="flex items-center">
-        <img
-          src={@userinfo["picture"]}
-          class="h-14 w-14 rounded-full"
-          alt={@userinfo["name"]}
-        />
-        <div class="ml-4">
-          <h3 class="text-base font-semibold leading-6 text-gray-900">
-            <%= @userinfo["name"] %>
-          </h3>
-          <p class="text-sm text-gray-500">
-            <a href="#"><%= @userinfo["email"] %></a>
-          </p>
-          <div class="text-sm mt-1">
-            Not working?
-            <.link
-              href={@authorize_url}
-              target="_blank"
-              phx-target={@myself}
-              phx-click="authorize_click"
-              class="hover:underline text-primary-900"
-            >
-              Reauthorize.
-            </.link>
-          </div>
-        </div>
-      </div>
-    </div>
-    """
-  end
-
-  def error_block(%{type: :token_failed} = assigns) do
-    ~H"""
-    <div class="rounded-md bg-yellow-50 border border-yellow-200 p-4">
-      <div class="flex">
-        <div class="flex-shrink-0">
-          <svg
-            class="h-5 w-5 text-yellow-400"
-            viewBox="0 0 20 20"
-            fill="currentColor"
-            aria-hidden="true"
-          >
-            <path
-              fill-rule="evenodd"
-              d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z"
-              clip-rule="evenodd"
-            />
-          </svg>
-        </div>
-        <div class="ml-3">
-          <h3 class="text-sm font-medium text-yellow-800">Something went wrong.</h3>
-          <div class="mt-2 text-sm text-yellow-700">
-            <p class="text-sm mt-2">
-              Failed retrieving the token from the provider. Please try again
-              <.link
-                href={@authorize_url}
-                target="_blank"
-                phx-target={@myself}
-                phx-click="authorize_click"
-                class="hover:underline text-primary-900"
-              >
-                here
-                <Heroicons.arrow_top_right_on_square class="h-4 w-4 text-indigo-600 inline-block" />.
-              </.link>
-            </p>
-          </div>
-        </div>
-      </div>
-    </div>
-    """
-  end
-
-  def error_block(%{type: :refresh_failed} = assigns) do
-    ~H"""
-    <div class="rounded-md bg-yellow-50 border border-yellow-200 p-4">
-      <div class="flex">
-        <div class="flex-shrink-0">
-          <svg
-            class="h-5 w-5 text-yellow-400"
-            viewBox="0 0 20 20"
-            fill="currentColor"
-            aria-hidden="true"
-          >
-            <path
-              fill-rule="evenodd"
-              d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z"
-              clip-rule="evenodd"
-            />
-          </svg>
-        </div>
-        <div class="ml-3">
-          <h3 class="text-sm font-medium text-yellow-800">Something went wrong.</h3>
-          <div class="mt-2 text-sm text-yellow-700">
-            <p class="text-sm mt-2">
-              Failed renewing your access token. Please try again
-              <.link
-                href={@authorize_url}
-                target="_blank"
-                phx-target={@myself}
-                phx-click="authorize_click"
-                class="hover:underline text-primary-900"
-              >
-                here
-                <Heroicons.arrow_top_right_on_square class="h-4 w-4 text-indigo-600 inline-block" />.
-              </.link>
-            </p>
-            <p class="text-sm mt-2"></p>
-            <.helpblock provider={@provider} type={@type} />
-          </div>
-        </div>
-      </div>
-    </div>
-    """
-  end
-
-  def error_block(%{type: :userinfo_failed} = assigns) do
-    ~H"""
-    <div class="rounded-md bg-yellow-50 border border-yellow-200 p-4">
-      <div class="flex">
-        <div class="flex-shrink-0">
-          <svg
-            class="h-5 w-5 text-yellow-400"
-            viewBox="0 0 20 20"
-            fill="currentColor"
-            aria-hidden="true"
-          >
-            <path
-              fill-rule="evenodd"
-              d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z"
-              clip-rule="evenodd"
-            />
-          </svg>
-        </div>
-        <div class="ml-3">
-          <h3 class="text-sm font-medium text-yellow-800">Something went wrong.</h3>
-          <div class="mt-2 text-sm text-yellow-700">
-            <p class="text-sm mt-2">
-              Failed retrieving your information. Please
-              <a
-                href="#"
-                phx-click="try_userinfo_again"
-                phx-target={@myself}
-                class="hover:underline text-primary-900"
-              >
-                try again.
-              </a>
-            </p>
-            <.helpblock provider={@provider} type={@type} />
-          </div>
-        </div>
-      </div>
-    </div>
-    """
-  end
-
-  def error_block(%{type: :no_refresh_token} = assigns) do
-    ~H"""
-    <div class="rounded-md bg-yellow-50 border border-yellow-200 p-4">
-      <div class="flex">
-        <div class="flex-shrink-0">
-          <svg
-            class="h-5 w-5 text-yellow-400"
-            viewBox="0 0 20 20"
-            fill="currentColor"
-            aria-hidden="true"
-          >
-            <path
-              fill-rule="evenodd"
-              d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z"
-              clip-rule="evenodd"
-            />
-          </svg>
-        </div>
-        <div class="ml-3">
-          <h3 class="text-sm font-medium text-yellow-800">Something went wrong.</h3>
-          <div class="mt-2 text-sm text-yellow-700">
-            <p class="text-sm mt-2">
-              The token is missing it's
-              <code class="bg-gray-200 rounded-md p-1">refresh_token</code>
-              value. Please reauthorize <.link
-                href={@authorize_url}
-                target="_blank"
-                phx-target={@myself}
-                phx-click="authorize_click"
-                class="hover:underline text-primary-900"
-              >
-            here
-            <Heroicons.arrow_top_right_on_square class="h-4 w-4 text-indigo-600 inline-block" />.
-          </.link>.
-            </p>
-            <.helpblock provider={@provider} type={@type} />
-          </div>
-        </div>
-      </div>
-    </div>
-    """
-  end
-
-  def helpblock(
-        %{type: :userinfo_failed} =
-          assigns
-      ) do
-    ~H"""
-    <p class="text-sm mt-2">
-      If the issue persists, please follow the "Remove third-party account access"
-      instructions on the
-      <a
-        class="text-indigo-600 underline"
-        href="https://support.google.com/accounts/answer/3466521"
-        target="_blank"
-      >
-        Manage third-party apps & services with access to your account
-      </a>
-      <Heroicons.arrow_top_right_on_square class="h-4 w-4 text-indigo-600 inline-block" />
-      page.
-    </p>
-    """
-  end
-
-  def reauthorize_banner(assigns) do
-    ~H"""
-    <div
-      id="re-authorize-banner"
-      class="rounded-md bg-blue-50 border border-blue-100 p-2 mt-5"
-    >
-      <div class="flex">
-        <div class="flex-shrink-0">
-          <svg
-            class="h-5 w-5 text-blue-400"
-            viewBox="0 0 20 20"
-            fill="currentColor"
-            aria-hidden="true"
-          >
-            <path
-              fill-rule="evenodd"
-              d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a.75.75 0 000 1.5h.253a.25.25 0 01.244.304l-.459 2.066A1.75 1.75 0 0010.747 15H11a.75.75 0 000-1.5h-.253a.25.25 0 01-.244-.304l.459-2.066A1.75 1.75 0 009.253 9H9z"
-              clip-rule="evenodd"
-            />
-          </svg>
-        </div>
-        <div class="ml-3 flex-1 md:flex md:justify-between">
-          <p class="text-sm text-slate-700">
-            Please re-authenticate to save your credential with the updated scopes
-          </p>
-          <p class="mt-3 text-sm md:ml-6 md:mt-0">
-            <.link
-              href={@authorize_url}
-              id="re-authorize-button"
-              target="_blank"
-              class="whitespace-nowrap font-medium text-blue-700 hover:text-blue-600"
-              phx-click="authorize_click"
-              phx-target={@myself}
-            >
-              Re-authenticate <span aria-hidden="true"> &rarr;</span>
-            </.link>
-          </p>
-        </div>
-      </div>
-    </div>
-    """
   end
 
   defp display_loader?(oauth_progress) do
@@ -1067,56 +664,6 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
 
   defp display_error?(oauth_progress, display_reauthorize_banner) do
     oauth_progress in @oauth_states.failure && !display_reauthorize_banner
-  end
-
-  attr :id, :string, required: true
-  attr :on_change, :any, required: true
-  attr :target, :any, required: true
-  attr :selected_scopes, :any, required: true
-  attr :mandatory_scopes, :any, required: true
-  attr :scopes, :any, required: true
-  attr :provider, :string, required: true
-  attr :doc_url, :any, default: nil
-
-  def scopes_picklist(assigns) do
-    ~H"""
-    <div id={@id} class="mt-5">
-      <h3 class="leading-6 text-slate-800 pb-2 mb-2">
-        <div class="flex flex-row text-sm font-semibold">
-          Select permissions
-          <LightningWeb.Components.Common.tooltip
-            id={"#{@id}-tooltip"}
-            title="Select permissions associated to your OAuth2 Token"
-          />
-        </div>
-        <div :if={@doc_url} class="flex flex-row text-xs mt-1">
-          Learn more about <%= @provider %> permissions
-          <a
-            target="_blank"
-            href={@doc_url |> IO.inspect(label: "Doc URL")}
-            class="whitespace-nowrap font-medium text-blue-700 hover:text-blue-600"
-          >
-            &nbsp;here
-          </a>
-        </div>
-      </h3>
-      <div class="flex flex-wrap gap-1">
-        <%= for scope <- @scopes do %>
-          <.input
-            id={"#{@id}_#{scope}"}
-            type="checkbox"
-            name={scope}
-            value={scope}
-            checked={scope in @selected_scopes}
-            disabled={scope in @mandatory_scopes}
-            phx-change={@on_change}
-            phx-target={@target}
-            label={scope}
-          /> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-        <% end %>
-      </div>
-    </div>
-    """
   end
 
   attr :projects, :list, required: true
