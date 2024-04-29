@@ -21,13 +21,14 @@ defmodule Lightning.Workflows.Trigger do
           id: Ecto.UUID.t() | nil
         }
 
-  @trigger_types [:webhook, :cron]
+  @trigger_types [:webhook, :cron, :kafka]
 
   @type trigger_type :: :webhook | :cron
   schema "triggers" do
     field :comment, :string
     field :custom_path, :string
     field :cron_expression, :string
+    field :kafka_configuration, :map
     field :enabled, :boolean, default: true
     belongs_to :workflow, Workflow
 
