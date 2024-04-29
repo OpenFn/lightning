@@ -511,11 +511,3 @@ config :lightning, :usage_tracking,
     env!("USAGE_TRACKING_UUIDS", :string, nil) == "cleartext",
   enabled: env!("USAGE_TRACKING_ENABLED", &Utils.ensure_boolean/1, true),
   host: env!("USAGE_TRACKER_HOST", :string, "https://impact.openfn.org")
-
-config :brod,
-  clients: [
-    kafka_client: [
-      sasl: {:plain, "user", "bitnami"},
-      endpoints: [localhost: 9094]
-    ]
-  ]

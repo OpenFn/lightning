@@ -22,6 +22,9 @@ defmodule KafkaPipeline do
 
     Broadway.start_link(__MODULE__,
       name: name,
+      context: %{
+        name: name
+      },
       producer: [
         module:
           {
@@ -44,20 +47,26 @@ defmodule KafkaPipeline do
     )
   end
 
-  def handle_message(_processor, message, _context) do
-    IO.inspect(message) 
+  def handle_message(_processor, message, context) do
+    %{name: name} = context
+    %Broadway.Message{data: data, metadata: %{ts: ts}} = message
+
+    IO.puts(">>>> #{name} received #{data} produced at #{ts}")
+    # IO.inspect(message) 
+    # Need to return the message
+    message
   end
 end
 
 defmodule PipelineSupervisor do
   use Supervisor
 
-  def start_link(opts) do
-    Supervisor.start_link(__MODULE__, :ok, opts)
+  def start_link(opts, hosts) do
+    Supervisor.start_link(__MODULE__, hosts, opts)
   end
 
   @impl true
-  def init(:ok) do
+  def init(hosts) do
     children = [
       %{
         id: "foo_child",
@@ -110,7 +119,7 @@ defmodule PipelineSupervisor do
   end
 end
 
-{:ok, sup} = PipelineSupervisor.start_link([])
+{:ok, sup} = PipelineSupervisor.start_link([], hosts)
 
 :timer.sleep(5000)
 
