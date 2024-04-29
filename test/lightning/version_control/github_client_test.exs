@@ -99,7 +99,7 @@ defmodule Lightning.VersionControl.GithubClientTest do
       assert exp in Range.new(expected_expiry - 1, expected_expiry + 1),
              "Expiry is not within 1 second of expected expiry"
 
-      assert nbf >= Joken.current_time()
+      assert nbf >= current_time
 
       assert Joken.verify_and_validate(
                VersionControl.GithubToken.token_config()
