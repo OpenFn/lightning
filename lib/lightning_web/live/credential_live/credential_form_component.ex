@@ -208,42 +208,6 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
     {:noreply, socket |> assign(selected_project: project_id)}
   end
 
-  def handle_event("add_new_project", %{"projectid" => project_id}, socket) do
-    project_credentials =
-      fetch_field!(socket.assigns.changeset, :project_credentials)
-
-    project_credentials =
-      if Enum.find(project_credentials, fn pu -> pu.project_id == project_id end) do
-        Enum.map(project_credentials, fn pu ->
-          if pu.project_id == project_id do
-            Ecto.Changeset.change(pu, %{delete: false})
-          else
-            pu
-          end
-        end)
-      else
-        Enum.concat(project_credentials, [
-          %Lightning.Projects.ProjectCredential{project_id: project_id}
-        ])
-      end
-
-    changeset =
-      socket.assigns.changeset
-      |> put_assoc(:project_credentials, project_credentials)
-      |> Map.put(:action, :validate)
-
-    available_projects =
-      filter_available_projects(changeset, socket.assigns.all_projects)
-
-    {:noreply,
-     socket
-     |> assign(
-       changeset: changeset,
-       available_projects: available_projects,
-       selected_project: nil
-     )}
-  end
-
   def handle_event("delete_project", %{"projectid" => project_id}, socket) do
     project_credentials =
       fetch_field!(socket.assigns.changeset, :project_credentials)

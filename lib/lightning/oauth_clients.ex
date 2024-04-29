@@ -16,19 +16,6 @@ defmodule Lightning.OauthClients do
     OauthClient.changeset(client, attrs)
   end
 
-  @doc """
-  Returns the list of oauth clients.
-
-  ## Examples
-
-      iex> list_clients()
-      [%OauthClient{}, ...]
-
-  """
-  def list_clients do
-    Repo.all(OauthClient)
-  end
-
   def list_clients(%Project{} = project) do
     Ecto.assoc(project, :oauth_clients)
     |> preload([:user, :project_oauth_clients, :projects])
@@ -67,21 +54,6 @@ defmodule Lightning.OauthClients do
 
   """
   def get_client!(id), do: Repo.get!(OauthClient, id)
-
-  def get_client_by_project_oauth_client(project_oauth_client_id) do
-    query =
-      from c in OauthClient,
-        join: pc in assoc(c, :project_oauth_clients),
-        on: pc.id == ^project_oauth_client_id
-
-    Repo.one(query)
-  end
-
-  def get_client_for_update!(id) do
-    OauthClient
-    |> Repo.get!(id)
-    |> Repo.preload([:project_oauth_clients, :projects])
-  end
 
   @doc """
   Creates an OauthClient.
