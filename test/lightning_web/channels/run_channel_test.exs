@@ -239,8 +239,14 @@ defmodule LightningWeb.RunChannelTest do
     } do
       project = insert(:project, retention_policy: :erase_all)
 
+      workflow_context =
+        create_workflow(%{project: project, credential: credential})
+
       %{run: run} =
-        create_run(%{project: project, credential: credential})
+        create_run(
+          %{project: project, credential: credential}
+          |> Map.merge(workflow_context)
+        )
 
       %{socket: socket} = create_socket(%{run: run})
       project_id = project.id
