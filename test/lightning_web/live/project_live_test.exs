@@ -2210,12 +2210,15 @@ defmodule LightningWeb.ProjectLiveTest do
 
       error_msg = "some meaningful error message"
 
-      Mox.expect(
+      Mox.stub(
         Lightning.Extensions.MockUsageLimiter,
         :limit_action,
-        4,
-        fn %{type: :new_user, amount: 1}, %{project_id: ^project_id} ->
-          {:error, :too_many_users, %{text: error_msg}}
+        fn
+          %{type: :new_user, amount: 1}, %{project_id: ^project_id} ->
+            {:error, :too_many_users, %{text: error_msg}}
+
+          _other_action, _context ->
+            :ok
         end
       )
 
@@ -2241,12 +2244,9 @@ defmodule LightningWeb.ProjectLiveTest do
       [admin, editor, viewer] = insert_list(3, :user)
 
       # return ok for enabling the add collaboratos button
-      Mox.stub(
+      Mox.stub_with(
         Lightning.Extensions.MockUsageLimiter,
-        :limit_action,
-        fn %{type: :new_user, amount: 1}, %{project_id: ^project_id} ->
-          :ok
-        end
+        Lightning.Extensions.UsageLimiter
       )
 
       {:ok, view, html} =
@@ -3235,12 +3235,10 @@ defmodule LightningWeb.ProjectLiveTest do
       expect_create_installation_token(expected_installation["id"])
       expect_get_installation_repos(200, %{"repositories" => [expected_repo]})
 
-      Lightning.Extensions.MockUsageLimiter
-      |> Mox.stub(:check_limits, fn %{project_id: ^project_id} -> :ok end)
-      |> Mox.stub(:limit_action, fn %{type: :github_sync},
-                                    %{project_id: ^project_id} ->
-        :ok
-      end)
+      Mox.stub_with(
+        Lightning.Extensions.MockUsageLimiter,
+        Lightning.Extensions.UsageLimiter
+      )
 
       {:ok, view, _html} =
         live(
@@ -3635,12 +3633,10 @@ defmodule LightningWeb.ProjectLiveTest do
             {:error, "something unexpected happened"}
         end)
 
-        Lightning.Extensions.MockUsageLimiter
-        |> Mox.stub(:check_limits, fn %{project_id: ^project_id} -> :ok end)
-        |> Mox.stub(:limit_action, fn %{type: :github_sync},
-                                      %{project_id: ^project_id} ->
-          :ok
-        end)
+        Mox.stub_with(
+          Lightning.Extensions.MockUsageLimiter,
+          Lightning.Extensions.UsageLimiter
+        )
 
         {:ok, view, _html} =
           live(
@@ -4208,12 +4204,10 @@ defmodule LightningWeb.ProjectLiveTest do
         expected_secret_name =
           "OPENFN_#{String.replace(repo_connection.project_id, "-", "_")}_API_KEY"
 
-        Lightning.Extensions.MockUsageLimiter
-        |> Mox.stub(:check_limits, fn %{project_id: ^project_id} -> :ok end)
-        |> Mox.stub(:limit_action, fn %{type: :github_sync},
-                                      %{project_id: ^project_id} ->
-          :ok
-        end)
+        Mox.stub_with(
+          Lightning.Extensions.MockUsageLimiter,
+          Lightning.Extensions.UsageLimiter
+        )
 
         Mox.expect(Lightning.Tesla.Mock, :call, 6, fn
           # get installation access token.
@@ -4322,15 +4316,18 @@ defmodule LightningWeb.ProjectLiveTest do
 
         Lightning.Extensions.MockUsageLimiter
         |> Mox.stub(:check_limits, fn %{project_id: ^project_id} -> :ok end)
-        |> Mox.expect(:limit_action, 2, fn %{type: :github_sync},
-                                           %{project_id: ^project_id} ->
-          {:error, :disabled,
-           %{
-             function: fn assigns ->
-               ~H"<p>I am an error message that says: <%= @error %></p>"
-             end,
-             attrs: %{error: error_msg}
-           }}
+        |> Mox.stub(:limit_action, fn
+          %{type: :github_sync}, %{project_id: ^project_id} ->
+            {:error, :disabled,
+             %{
+               function: fn assigns ->
+                 ~H"<p>I am an error message that says: <%= @error %></p>"
+               end,
+               attrs: %{error: error_msg}
+             }}
+
+          _other_action, _context ->
+            :ok
         end)
 
         {:ok, _view, html} =
