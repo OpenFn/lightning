@@ -10,7 +10,7 @@ defmodule Lightning.OauthClientsTest do
       project = insert(:project)
 
       _client1 =
-        insert_list(2, :oauth_client,
+        insert(:oauth_client,
           project_oauth_clients: [
             %{project_id: project.id}
           ]

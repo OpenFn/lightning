@@ -1,7 +1,11 @@
 defmodule Lightning.Credentials.OauthClient do
   @moduledoc """
-  The OAuthClient model.
+  Defines the Ecto schema for an OAuth client. This schema is responsible for representing
+  OAuth client data in the database, including details such as client ID, client secret,
+  and endpoints necessary for OAuth operations. It also links to associated users and
+  projects through relational fields.
   """
+
   use Ecto.Schema
 
   import Ecto.Changeset
@@ -38,7 +42,19 @@ defmodule Lightning.Credentials.OauthClient do
     timestamps(type: :utc_datetime)
   end
 
-  @doc false
+  @doc """
+  Builds a changeset for an OAuth client based on the provided attributes.
+
+  ## Parameters
+  - oauth_client: The existing `%OauthClient{}` struct (or a new struct for creation).
+  - attrs: A map of attributes to set on the OAuth client.
+
+  ## Returns
+  - An `%Ecto.Changeset{}` that can be used to create or update an OAuth client.
+
+  This function validates the presence of essential fields, ensures that URLs are valid,
+  and handles associations with projects through nested changesets.
+  """
   def changeset(oauth_client, attrs) do
     oauth_client
     |> cast(attrs, [
