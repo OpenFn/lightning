@@ -493,7 +493,16 @@
                   id="show_collaborators_modal_button"
                   type="button"
                   phx-click="toggle_collaborators_modal"
-                  disabled={!@can_add_project_user}
+                  disabled={
+                    !@can_add_project_user ||
+                      is_binary(get_collaborator_limit_error(@project))
+                  }
+                  tooltip={
+                    if(@can_add_project_user,
+                      do: get_collaborator_limit_error(@project),
+                      else: "You are not authorized to perform this action"
+                    )
+                  }
                 >
                   Add Collaborator(s)
                 </.button>

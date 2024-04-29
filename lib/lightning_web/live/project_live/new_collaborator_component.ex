@@ -3,10 +3,8 @@ defmodule LightningWeb.ProjectLive.NewCollaboratorComponent do
 
   use LightningWeb, :live_component
 
-  alias Lightning.Extensions.UsageLimiting.Action
-  alias Lightning.Extensions.UsageLimiting.Context
   alias Lightning.Projects
-  alias Lightning.Services.UsageLimiter
+  alias Lightning.Projects.ProjectUsersLimiter
   alias LightningWeb.ProjectLive.Collaborators
   alias Phoenix.LiveView.JS
 
@@ -38,8 +36,12 @@ defmodule LightningWeb.ProjectLive.NewCollaboratorComponent do
     with :ok <- limit_adding_users(socket, params),
          {:ok, project_users} <- prepare_for_insertion(socket, params),
          {:ok, _project} <- add_project_users(socket, project_users) do
-      send(self(), :collaborators_updated)
-      {:noreply, socket}
+      {:noreply,
+       socket
+       |> put_flash(:info, "Collaborators updated successfully!")
+       |> push_navigate(
+         to: ~p"/projects/#{socket.assigns.project}/settings#collaboration"
+       )}
     end
   end
 
@@ -73,14 +75,9 @@ defmodule LightningWeb.ProjectLive.NewCollaboratorComponent do
 
     project_users = Ecto.Changeset.get_embed(changeset, :collaborators)
 
-    case UsageLimiter.limit_action(
-           %Action{
-             type: :new_user,
-             amount: Enum.count(project_users)
-           },
-           %Context{
-             project_id: socket.assigns.project.id
-           }
+    case ProjectUsersLimiter.request_new(
+           socket.assigns.project.id,
+           Enum.count(project_users)
          ) do
       :ok ->
         :ok

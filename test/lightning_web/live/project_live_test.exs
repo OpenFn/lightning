@@ -2168,12 +2168,43 @@ defmodule LightningWeb.ProjectLiveTest do
         )
         |> render_submit()
 
-        updated_html = render(view)
-        # users are shown in the page
-        for new_user <- [admin, editor, viewer] do
-          assert updated_html =~ new_user.last_name
-        end
+        flash =
+          assert_redirected(
+            view,
+            ~p"/projects/#{project}/settings#collaboration"
+          )
+
+        assert flash["info"] =~ "Collaborators updated successfully!"
       end
+    end
+
+    test "add collaborators button is disabled if limit is reached", %{
+      conn: conn
+    } do
+      %{id: project_id} = project = insert(:project)
+
+      {conn, _user} = setup_project_user(conn, project, :admin)
+
+      error_msg = "some meaningful error message"
+
+      Mox.expect(
+        Lightning.Extensions.MockUsageLimiter,
+        :limit_action,
+        4,
+        fn %{type: :new_user, amount: 1}, %{project_id: ^project_id} ->
+          {:error, :too_many_users, %{text: error_msg}}
+        end
+      )
+
+      {:ok, view, html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/settings#collaboration"
+        )
+
+      assert html =~ error_msg
+
+      assert has_element?(view, "#show_collaborators_modal_button:disabled")
     end
 
     test "error message is displayed if the allowed limits are exceeded", %{
@@ -2185,6 +2216,15 @@ defmodule LightningWeb.ProjectLiveTest do
 
       # users to add
       [admin, editor, viewer] = insert_list(3, :user)
+
+      # return ok for enabling the add collaboratos button
+      Mox.stub(
+        Lightning.Extensions.MockUsageLimiter,
+        :limit_action,
+        fn %{type: :new_user, amount: 1}, %{project_id: ^project_id} ->
+          :ok
+        end
+      )
 
       {:ok, view, html} =
         live(
@@ -2348,13 +2388,17 @@ defmodule LightningWeb.ProjectLiveTest do
         assert has_element?(view, "#remove_#{project_user.id}_modal")
 
         # try clicking the confirm button
-        html =
-          view
-          |> element("#remove_#{project_user.id}_modal_confirm_button")
-          |> render_click()
+        view
+        |> element("#remove_#{project_user.id}_modal_confirm_button")
+        |> render_click()
 
-        refute html =~ "You are not authorized to perform this action"
-        assert html =~ "Collaborator removed successfully!"
+        flash =
+          assert_redirected(
+            view,
+            ~p"/projects/#{project}/settings#collaboration"
+          )
+
+        assert flash["info"] == "Collaborator removed successfully!"
 
         # project user is removed
         refute Repo.get(Lightning.Projects.ProjectUser, project_user.id)

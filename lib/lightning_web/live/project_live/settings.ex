@@ -11,6 +11,7 @@ defmodule LightningWeb.ProjectLive.Settings do
   alias Lightning.Policies.ProjectUsers
   alias Lightning.Projects
   alias Lightning.Projects.ProjectUser
+  alias Lightning.Projects.ProjectUsersLimiter
   alias Lightning.VersionControl
   alias Lightning.WebhookAuthMethods
   alias Lightning.Workflows.WebhookAuthMethod
@@ -30,13 +31,7 @@ defmodule LightningWeb.ProjectLive.Settings do
       VersionControl.subscribe(current_user)
     end
 
-    project_users =
-      Projects.get_project_users!(project.id)
-
-    project_user =
-      Enum.find(project_users, fn project_user ->
-        project_user.user_id == current_user.id
-      end)
+    project_user = Projects.get_project_user(project, current_user)
 
     credentials = Credentials.list_credentials(project)
     auth_methods = WebhookAuthMethods.list_for_project(project)
@@ -121,7 +116,7 @@ defmodule LightningWeb.ProjectLive.Settings do
        active_menu_item: :settings,
        webhook_auth_methods: auth_methods,
        credentials: credentials,
-       project_users: project_users,
+       project_users: [],
        current_user: socket.assigns.current_user,
        project_changeset: Projects.change_project(socket.assigns.project),
        can_delete_project: can_delete_project,
@@ -169,7 +164,14 @@ defmodule LightningWeb.ProjectLive.Settings do
   end
 
   defp apply_action(socket, :index, _params) do
-    socket |> assign(:page_title, "Project settings")
+    project_users = Projects.get_project_users!(socket.assigns.project.id)
+
+    socket
+    |> assign(
+      page_title: "Project settings",
+      project_users: project_users,
+      show_collaborators_modal: false
+    )
   end
 
   defp apply_action(socket, :delete, %{"project_id" => id}) do
@@ -329,9 +331,8 @@ defmodule LightningWeb.ProjectLive.Settings do
       {:noreply,
        socket
        |> put_flash(:info, "Collaborator removed successfully!")
-       |> assign(
-         :project_users,
-         Projects.get_project_users!(assigns.project.id)
+       |> push_navigate(
+         to: ~p"/projects/#{assigns.project}/settings#collaboration"
        )}
     else
       {:noreply,
@@ -341,16 +342,6 @@ defmodule LightningWeb.ProjectLive.Settings do
   end
 
   @impl true
-  def handle_info(:collaborators_updated, socket) do
-    project_users =
-      Projects.get_project_users!(socket.assigns.project.id)
-
-    {:noreply,
-     socket
-     |> assign(project_users: project_users, show_collaborators_modal: false)
-     |> put_flash(:info, "Collaborators updated successfully!")}
-  end
-
   def handle_info({:forward, mod, opts}, socket) do
     send_update(mod, opts)
     {:noreply, socket}
@@ -586,5 +577,15 @@ defmodule LightningWeb.ProjectLive.Settings do
 
   defp user_has_valid_oauth_token(user) do
     VersionControl.oauth_token_valid?(user.github_oauth_token)
+  end
+
+  defp get_collaborator_limit_error(project) do
+    case ProjectUsersLimiter.request_new(project.id, 1) do
+      :ok ->
+        nil
+
+      {:error, _reason, %{text: error}} ->
+        error
+    end
   end
 end
