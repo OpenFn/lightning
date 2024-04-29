@@ -580,7 +580,7 @@ defmodule LightningWeb.ProjectLive.Settings do
   end
 
   defp get_collaborator_limit_error(project) do
-    case ProjectUsersLimiter.limit_adding_project_users(project.id, 1) do
+    case ProjectUsersLimiter.request_new(project.id, 1) do
       :ok ->
         nil
 

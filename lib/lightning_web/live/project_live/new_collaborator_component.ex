@@ -75,7 +75,7 @@ defmodule LightningWeb.ProjectLive.NewCollaboratorComponent do
 
     project_users = Ecto.Changeset.get_embed(changeset, :collaborators)
 
-    case ProjectUsersLimiter.limit_adding_project_users(
+    case ProjectUsersLimiter.request_new(
            socket.assigns.project.id,
            Enum.count(project_users)
          ) do
