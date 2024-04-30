@@ -47,7 +47,7 @@ defmodule LightningWeb.CredentialLive.Scopes do
           </a>
         </div>
       </h3>
-      <div class="grid grid-cols-4 gap-1">
+      <div class="flex flex-wrap gap-1">
         <%= for scope <- @scopes do %>
           <.input
             id={"#{@id}_#{scope}"}

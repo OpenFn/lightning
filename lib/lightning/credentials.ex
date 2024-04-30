@@ -75,7 +75,7 @@ defmodule Lightning.Credentials do
 
   def list_credentials(%Project{} = project) do
     Ecto.assoc(project, :credentials)
-    |> preload([:user, :project_credentials])
+    |> preload([:user, :project_credentials, :projects, :oauth_client])
     |> Repo.all()
   end
 
@@ -89,7 +89,10 @@ defmodule Lightning.Credentials do
 
   """
   def list_credentials_for_user(user_id) do
-    from(c in Credential, where: c.user_id == ^user_id, preload: :projects)
+    from(c in Credential,
+      where: c.user_id == ^user_id,
+      preload: [:projects, :oauth_client]
+    )
     |> Repo.all()
   end
 
@@ -244,6 +247,8 @@ defmodule Lightning.Credentials do
   defp put_typed_body(body, "raw"), do: {:ok, body}
 
   defp put_typed_body(body, "salesforce_oauth"), do: {:ok, body}
+
+  defp put_typed_body(body, "oauth"), do: {:ok, body}
 
   defp put_typed_body(body, schema_name) do
     schema = get_schema(schema_name)

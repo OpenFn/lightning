@@ -61,14 +61,27 @@ defmodule LightningWeb.OidcController do
   end
 
   def new(conn, %{"state" => state, "code" => code}) do
+    broadcast_message(state, %{code: code})
+    close_browser_window(conn)
+  end
+
+  def new(conn, %{"error" => error_message, "state" => state}) do
+    broadcast_message(state, %{error: error_message})
+    close_browser_window(conn)
+  end
+
+  defp broadcast_message(state, data) do
     [subscription_id, mod, component_id] =
       OauthCredentialHelper.decode_state(state)
 
-    OauthCredentialHelper.broadcast_forward(subscription_id, mod,
-      id: component_id,
-      code: code
+    OauthCredentialHelper.broadcast_forward(
+      subscription_id,
+      mod,
+      Map.put(data, :id, component_id)
     )
+  end
 
+  defp close_browser_window(conn) do
     html(conn, """
       <html>
         <body>

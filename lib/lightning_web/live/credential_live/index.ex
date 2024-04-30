@@ -5,6 +5,7 @@ defmodule LightningWeb.CredentialLive.Index do
   use LightningWeb, :live_view
 
   alias Lightning.Credentials
+  alias Lightning.OauthClients
 
   on_mount {LightningWeb.Hooks, :assign_projects}
 
@@ -15,6 +16,7 @@ defmodule LightningWeb.CredentialLive.Index do
        socket,
        current_user: socket.assigns.current_user,
        credentials: list_credentials(socket.assigns.current_user.id),
+       oauth_clients: list_clients(socket.assigns.current_user.id),
        active_menu_item: :credentials,
        selected_credential_type: nil,
        page_title: "Credentials"
@@ -66,6 +68,20 @@ defmodule LightningWeb.CredentialLive.Index do
      |> assign(credentials: list_credentials(socket.assigns.current_user.id))}
   end
 
+  def handle_event(
+        "delete_oauth_client",
+        %{"oauth_client_id" => oauth_client_id},
+        socket
+      ) do
+    OauthClients.get_client!(oauth_client_id) |> OauthClients.delete_client()
+
+    {:noreply,
+     socket
+     |> put_flash(:info, "Oauth client deleted successfully!")
+     |> assign(:oauth_clients, list_clients(socket.assigns.current_user.id))
+     |> push_patch(to: ~p"/credentials")}
+  end
+
   @doc """
   A generic handler for forwarding updates from PubSub
   """
@@ -77,6 +93,17 @@ defmodule LightningWeb.CredentialLive.Index do
 
   defp list_credentials(user_id) do
     Credentials.list_credentials_for_user(user_id)
+    |> Enum.map(fn c ->
+      project_names =
+        Map.get(c, :projects, [])
+        |> Enum.map_join(", ", fn p -> p.name end)
+
+      Map.put(c, :project_names, project_names)
+    end)
+  end
+
+  defp list_clients(user_id) do
+    OauthClients.list_clients_for_user(user_id)
     |> Enum.map(fn c ->
       project_names =
         Map.get(c, :projects, [])

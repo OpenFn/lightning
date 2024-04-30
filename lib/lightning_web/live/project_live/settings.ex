@@ -7,6 +7,8 @@ defmodule LightningWeb.ProjectLive.Settings do
 
   alias Lightning.Accounts.User
   alias Lightning.Credentials
+  alias Lightning.Credentials.Credential
+  alias Lightning.OauthClients
   alias Lightning.Policies.Permissions
   alias Lightning.Policies.ProjectUsers
   alias Lightning.Projects
@@ -35,8 +37,11 @@ defmodule LightningWeb.ProjectLive.Settings do
 
     project_user = Projects.get_project_user(project, current_user)
 
-    credentials = Credentials.list_credentials(project)
+    credentials = list_credentials(project)
+    oauth_clients = list_clients(project)
     auth_methods = WebhookAuthMethods.list_for_project(project)
+
+    projects = Projects.get_projects_for_user(current_user)
 
     can_delete_project =
       ProjectUsers
@@ -121,7 +126,8 @@ defmodule LightningWeb.ProjectLive.Settings do
        active_menu_item: :settings,
        webhook_auth_methods: auth_methods,
        credentials: credentials,
-       project_users: [],
+       oauth_clients: oauth_clients,
+       project_users: project_users,
        current_user: socket.assigns.current_user,
        project_changeset: Projects.change_project(socket.assigns.project),
        can_delete_project: can_delete_project,
@@ -137,8 +143,63 @@ defmodule LightningWeb.ProjectLive.Settings do
        can_initiate_github_sync: can_initiate_github_sync,
        can_receive_failure_alerts: can_receive_failure_alerts,
        selected_credential_type: nil,
-       show_collaborators_modal: false
+       show_collaborators_modal: false,
+       projects: projects
      )}
+  end
+
+  defp list_credentials(project) do
+    Credentials.list_credentials(project)
+    |> Enum.map(fn c ->
+      project_names =
+        Map.get(c, :projects, [])
+        |> Enum.map_join(", ", fn p -> p.name end)
+
+      Map.put(c, :project_names, project_names)
+    end)
+  end
+
+  defp list_clients(project) do
+    OauthClients.list_clients(project)
+    |> Enum.map(fn c ->
+      project_names =
+        if c.global,
+          do: "GLOBAL",
+          else:
+            Map.get(c, :projects, [])
+            |> Enum.map_join(", ", fn p -> p.name end)
+
+      Map.put(c, :project_names, project_names)
+    end)
+  end
+
+  defp repo_settings(%Project{id: project_id}) do
+    repo_connection = VersionControl.get_repo_connection(project_id)
+
+    project_repo_connection = %{"repo" => nil, "branch" => nil}
+
+    # {show_github_setup, show_repo_setup, show_sync_button}
+    case repo_connection do
+      nil ->
+        {true, false, false, project_repo_connection}
+
+      %{repo: nil} ->
+        {false, true, false, project_repo_connection}
+
+      %{repo: r, branch: b, github_installation_id: g} ->
+        {false, true, true,
+         %{"repo" => r, "branch" => b, "github_installation_id" => g}}
+    end
+  end
+
+  # we should only run this if repo setting is pending
+  defp collect_project_repo_connections(project_id) do
+    pid = self()
+
+    Task.start(fn ->
+      resp = VersionControl.fetch_installation_repos(project_id)
+      send(pid, {:repos_fetched, resp})
+    end)
   end
 
   defp can_edit_digest_alert(
@@ -317,6 +378,44 @@ defmodule LightningWeb.ProjectLive.Settings do
       digest ->
         Projects.update_project_user(project_user, %{digest: digest})
         |> dispatch_flash(socket)
+    end
+  end
+
+  def handle_event(
+        "delete_oauth_client",
+        %{"oauth_client_id" => oauth_client_id},
+        %{assigns: assigns} = socket
+      ) do
+    OauthClients.get_client!(oauth_client_id) |> OauthClients.delete_client()
+
+    {:noreply,
+     socket
+     |> put_flash(:info, "Oauth client deleted successfully!")
+     |> assign(
+       :oauth_clients,
+       list_clients(assigns.project)
+     )}
+  end
+
+  def handle_event(
+        "delete_credential",
+        %{"credential_id" => credential_id},
+        %{assigns: assigns} = socket
+      ) do
+    credential = Credentials.get_credential!(credential_id)
+
+    case Credentials.schedule_credential_deletion(credential) do
+      {:ok, %Credential{}} ->
+        {:noreply,
+         socket
+         |> put_flash(:info, "Credential deleted successfully!")
+         |> assign(
+           :credentials,
+           list_credentials(assigns.project)
+         )}
+
+      {:error, %Ecto.Changeset{} = _changeset} ->
+        {:noreply, socket}
     end
   end
 

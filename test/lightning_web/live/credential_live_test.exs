@@ -255,11 +255,11 @@ defmodule LightningWeb.CredentialLiveTest do
       assert index_live |> has_element?("#credential-form-new_body")
 
       index_live
-      |> element("#project_list_for_")
+      |> element("#project_credentials_list_for_")
       |> render_change(%{"selected_project" => %{"id" => project.id}})
 
       index_live
-      |> element("button", "Add")
+      |> element("#add-new-project-button-to-credential-", "Add")
       |> render_click()
 
       assert index_live
@@ -334,7 +334,7 @@ defmodule LightningWeb.CredentialLiveTest do
              )
              |> render_change()
 
-      refute index_live |> submit_disabled()
+      refute index_live |> submit_disabled("save-credential-button-new")
 
       {:ok, _index_live, _html} =
         index_live
@@ -409,11 +409,13 @@ defmodule LightningWeb.CredentialLiveTest do
 
       assert index_live
              |> form("#credential-form-new",
-               credential: %{body: %{host: "http://localhost"}}
+               credential: %{
+                 body: %{host: "http://localhost"}
+               }
              )
              |> render_change()
 
-      refute index_live |> submit_disabled()
+      refute index_live |> submit_disabled("save-credential-button-new")
 
       {:ok, _index_live, html} =
         index_live
@@ -463,12 +465,12 @@ defmodule LightningWeb.CredentialLiveTest do
                body: %{baseUrl: "http://localhost"}
              })
 
-      refute index_live |> submit_disabled()
+      refute index_live |> submit_disabled("save-credential-button-new")
 
       assert index_live
              |> fill_credential(%{body: %{baseUrl: ""}})
 
-      refute index_live |> submit_disabled()
+      refute index_live |> submit_disabled("save-credential-button-new")
 
       {:ok, _index_live, _html} =
         index_live
@@ -538,11 +540,11 @@ defmodule LightningWeb.CredentialLiveTest do
       {:ok, view, _html} = live(conn, ~p"/credentials")
 
       view
-      |> element("#project_list_for_#{credential.id}")
+      |> element("#project_credentials_list_for_#{credential.id}")
       |> render_change(selected_project: %{"id" => project.id})
 
       view
-      |> element("#add-new-project-button-to-#{credential.id}")
+      |> element("#add-new-project-button-to-credential-#{credential.id}")
       |> render_click()
 
       view |> form("#credential-form-#{credential.id}") |> render_submit()
@@ -635,12 +637,12 @@ defmodule LightningWeb.CredentialLiveTest do
 
       # Try adding an existing project credential
       view
-      |> element("#project_list_for_#{credential.id}")
+      |> element("#project_credentials_list_for_#{credential.id}")
       |> render_change(selected_project: %{"id" => project.id})
 
       html =
         view
-        |> element("#add-new-project-button-to-#{credential.id}")
+        |> element("#add-new-project-button-to-credential-#{credential.id}")
         |> render_click()
 
       assert html =~ project.name,
@@ -659,11 +661,11 @@ defmodule LightningWeb.CredentialLiveTest do
 
       # now let's add it back
       view
-      |> element("#project_list_for_#{credential.id}")
+      |> element("#project_credentials_list_for_#{credential.id}")
       |> render_change(selected_project: %{"id" => project.id})
 
       view
-      |> element("#add-new-project-button-to-#{credential.id}")
+      |> element("#add-new-project-button-to-credential-#{credential.id}")
       |> render_click()
 
       assert view |> delete_credential_button(project.id) |> has_element?(),
@@ -873,7 +875,7 @@ defmodule LightningWeb.CredentialLiveTest do
 
       assert index_live |> has_element?("h3", "Test User")
 
-      refute index_live |> submit_disabled()
+      refute index_live |> submit_disabled("save-credential-button-new")
 
       {:ok, _index_live, _html} =
         index_live
@@ -1457,7 +1459,7 @@ defmodule LightningWeb.CredentialLiveTest do
 
       assert index_live |> has_element?("h3", "Test User")
 
-      refute index_live |> submit_disabled()
+      refute index_live |> submit_disabled("save-credential-button-new")
 
       {:ok, _index_live, _html} =
         index_live
@@ -1689,7 +1691,7 @@ defmodule LightningWeb.CredentialLiveTest do
 
       assert index_live |> has_element?("h3", "Test User")
 
-      refute index_live |> submit_disabled()
+      refute index_live |> submit_disabled("save-credential-button-new")
 
       {:ok, _index_live, _html} =
         index_live
@@ -1978,7 +1980,7 @@ defmodule LightningWeb.CredentialLiveTest do
     |> LightningWeb.OauthCredentialHelper.decode_state()
   end
 
-  defp submit_disabled(live) do
-    live |> has_element?("button[type=submit][disabled]")
+  defp submit_disabled(live, id \\ "button") do
+    has_element?(live, "#{id}[type=submit][disabled]")
   end
 end

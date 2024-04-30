@@ -194,7 +194,10 @@ defmodule LightningWeb.Components.NewInputs do
             transition duration-200 cursor-pointer"
           {@rest}
         />
-        <%= @label %>
+        <%= @label %><span
+          :if={Map.get(@rest, :required, false)}
+          class="text-red-500"
+        > *</span>
       </label>
       <.error :for={msg <- @errors}><%= msg %></.error>
     </div>
@@ -204,30 +207,25 @@ defmodule LightningWeb.Components.NewInputs do
   def input(%{type: "select"} = assigns) do
     ~H"""
     <div phx-feedback-for={@name}>
-      <.label :if={@label} class="mb-2" for={@id}><%= @label %></.label>
-      <div class="flex w-full">
-        <div class="relative items-center">
-          <select
-            id={@id}
-            name={@name}
-            class={[
-              "block w-full rounded-lg border border-secondary-300 bg-white",
-              "sm:text-sm shadow-sm",
-              "focus:border-primary-300 focus:ring focus:ring-primary-200 focus:ring-opacity-50",
-              "disabled:cursor-not-allowed #{@button_placement == "right" && "rounded-r-none"}",
-              "#{@button_placement == "left" && "rounded-l-none"}"
-            ]}
-            multiple={@multiple}
-            {@rest}
-          >
-            <option :if={@prompt} value=""><%= @prompt %></option>
-            <%= Phoenix.HTML.Form.options_for_select(@options, @value) %>
-          </select>
-        </div>
-        <div class="relative ronded-l-none">
-          <%= render_slot(@inner_block) %>
-        </div>
-      </div>
+      <.label :if={@label} class="mb-2" for={@id}>
+        <%= @label %>
+        <span :if={Map.get(@rest, :required, false)} class="text-red-500"> *</span>
+      </.label>
+      <select
+        id={@id}
+        name={@name}
+        class={[
+          "block w-full rounded-lg border border-secondary-300 bg-white",
+          "sm:text-sm shadow-sm",
+          "focus:border-primary-300 focus:ring focus:ring-primary-200 focus:ring-opacity-50",
+          "disabled:cursor-not-allowed"
+        ]}
+        multiple={@multiple}
+        {@rest}
+      >
+        <option :if={@prompt} value=""><%= @prompt %></option>
+        <%= Phoenix.HTML.Form.options_for_select(@options, @value) %>
+      </select>
       <.error :for={msg <- @errors}><%= msg %></.error>
     </div>
     """
@@ -236,7 +234,12 @@ defmodule LightningWeb.Components.NewInputs do
   def input(%{type: "textarea"} = assigns) do
     ~H"""
     <div phx-feedback-for={@name} class={@class}>
-      <.label for={@id}><%= @label %></.label>
+      <.label for={@id}>
+        <%= @label %><span
+          :if={Map.get(@rest, :required, false)}
+          class="text-red-500"
+        > *</span>
+      </.label>
       <textarea
         id={@id}
         name={@name}
@@ -261,7 +264,12 @@ defmodule LightningWeb.Components.NewInputs do
   def input(%{type: "password"} = assigns) do
     ~H"""
     <div phx-feedback-for={@name}>
-      <.label for={@id}><%= @label %></.label>
+      <.label for={@id}>
+        <%= @label %><span
+          :if={Map.get(@rest, :required, false)}
+          class="text-red-500"
+        > *</span>
+      </.label>
       <div class="relative mt-2 rounded-lg shadow-sm">
         <input
           type={@type}
@@ -302,7 +310,7 @@ defmodule LightningWeb.Components.NewInputs do
           />
         </div>
       </div>
-      <div class="error-space h-6">
+      <div :if={Enum.any?(@errors)} class="error-space h-6">
         <.error :for={msg <- @errors}><%= msg %></.error>
       </div>
     </div>
@@ -338,7 +346,12 @@ defmodule LightningWeb.Components.NewInputs do
   def input(assigns) do
     ~H"""
     <div phx-feedback-for={@name}>
-      <.label :if={@label} for={@id} class="mb-2"><%= @label %></.label>
+      <.label :if={@label} for={@id} class="mb-2">
+        <%= @label %><span
+          :if={Map.get(@rest, :required, false)}
+          class="text-red-500"
+        > *</span>
+      </.label>
       <input
         type={@type}
         name={@name}
@@ -347,11 +360,11 @@ defmodule LightningWeb.Components.NewInputs do
         class={[
           "focus:outline focus:outline-2 focus:outline-offset-1 block w-full rounded-lg text-slate-900 focus:ring-0 sm:text-sm sm:leading-6",
           "phx-no-feedback:border-slate-300 phx-no-feedback:focus:border-slate-400 disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-500",
-          @class,
           @errors == [] &&
             "border-slate-300 focus:border-slate-400 focus:outline-indigo-600",
           @errors != [] &&
-            "border-danger-400 focus:border-danger-400 focus:outline-danger-400"
+            "border-danger-400 focus:border-danger-400 focus:outline-danger-400",
+          @class
         ]}
         {@rest}
       />

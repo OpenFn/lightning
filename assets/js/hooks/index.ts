@@ -8,6 +8,32 @@ import { initiateSaveAndRun } from '../common';
 
 export { LogLineHighlight, ElapsedIndicator, TabSelector };
 
+export const EditMandatoryScope = {
+  mounted() {
+    this.el.addEventListener('dblclick', e => {
+      const scopeValue = this.el.id;
+      this.pushEventTo(this.el, 'edit_mandatory_scope', { scope: scopeValue });
+    });
+  },
+};
+
+export const EditOptionalScope = {
+  mounted() {
+    this.el.addEventListener('dblclick', e => {
+      const scopeValue = this.el.id;
+      this.pushEventTo(this.el, 'edit_optional_scope', { scope: scopeValue });
+    });
+  },
+};
+
+export const ClearInput = {
+  mounted() {
+    this.handleEvent('clear_input', () => {
+      this.el.value = '';
+    });
+  },
+} as PhoenixHook;
+
 export const ModalHook = {
   mounted() {
     this.handleEvent('close_modal', () => {

@@ -7,6 +7,7 @@ defmodule Lightning.Credentials.Credential do
   import Ecto.Changeset
 
   alias Lightning.Accounts.User
+  alias Lightning.Credentials.OauthClient
   alias Lightning.Projects.ProjectCredential
 
   @type t :: %__MODULE__{
@@ -25,6 +26,7 @@ defmodule Lightning.Credentials.Credential do
     field :scheduled_deletion, :utc_datetime
 
     belongs_to :user, User
+    belongs_to :oauth_client, OauthClient
 
     has_many :project_credentials, ProjectCredential
     has_many :projects, through: [:project_credentials, :project]
@@ -40,12 +42,14 @@ defmodule Lightning.Credentials.Credential do
       :body,
       :production,
       :user_id,
+      :oauth_client_id,
       :schema,
       :scheduled_deletion
     ])
     |> cast_assoc(:project_credentials)
     |> validate_required([:name, :body, :user_id])
     |> assoc_constraint(:user)
+    |> assoc_constraint(:oauth_client)
     |> validate_transfer_ownership()
   end
 

@@ -194,7 +194,7 @@ defmodule LightningWeb.OidcControllerTest do
         )
 
       assert_receive {:forward, LightningWeb.OidcControllerTest,
-                      [id: ^component_id, code: "callback_code"]}
+                      %{id: ^component_id, code: "callback_code"}}
 
       assert Regex.match?(
                ~r/window\.onload\s*=\s*function\(\)\s*\{\s*window\.close\(\);\s*\}/,

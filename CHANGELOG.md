@@ -17,6 +17,9 @@ and this project adheres to
 
 ### Added
 
+- Add and Edit Oauth Clients
+  [#1919](https://github.com/OpenFn/lightning/issues/1919)
+
 ### Changed
 
 ### Fixed

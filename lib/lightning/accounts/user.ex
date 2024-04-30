@@ -36,6 +36,7 @@ defmodule Lightning.Accounts.User do
 
     has_one :user_totp, Lightning.Accounts.UserTOTP
     has_many :credentials, Lightning.Credentials.Credential
+    has_many :oauth_clients, Lightning.Credentials.OauthClient
     has_many :project_users, Lightning.Projects.ProjectUser
     has_many :projects, through: [:project_users, :project]
 
