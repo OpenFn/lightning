@@ -149,6 +149,20 @@
                     Edit
                   </.link>
                 </span>
+                |
+                <span>
+                  <.link phx-click={
+                    show_modal("delete_oauth_client_#{client.id}_modal")
+                  }>
+                    Delete
+                  </.link>
+                </span>
+
+                <LightningWeb.Components.Credentials.delete_oauth_client_modal
+                  :if={client.user_id == @current_user.id}
+                  id={"delete_oauth_client_#{client.id}_modal"}
+                  client={client}
+                />
                 <.live_component
                   id={"edit-oauth-client-#{client.id}-modal"}
                   module={LightningWeb.CredentialLive.OauthClientFormComponent}
@@ -175,7 +189,19 @@
     <div class="hidden sm:block" aria-hidden="true">
       <div class="py-2"></div>
     </div>
-    <.table id="credentials">
+    <button
+      :if={@credentials === []}
+      type="button"
+      id="open-create-credential-modal-big-buttton"
+      phx-click={show_modal("new-credential-modal")}
+      class="relative block w-full rounded-lg border-2 border-dashed border-gray-300 p-10 text-center hover:border-gray-400 focus:outline-none"
+    >
+      <Heroicons.plus_circle class="mx-auto w-12 h-12 text-secondary-400" />
+      <span class="mt-2 block text-sm font-semibold text-secondary-600">
+        Create a new Credential
+      </span>
+    </button>
+    <.table :if={@credentials !== []} id="credentials">
       <.tr>
         <.th>Name</.th>
         <.th>Projects with Access</.th>

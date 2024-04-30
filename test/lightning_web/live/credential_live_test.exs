@@ -666,7 +666,7 @@ defmodule LightningWeb.CredentialLiveTest do
       |> render_change(selected_project: %{"id" => project.id})
 
       view
-      |> element("#add-new-project-button-to-#{credential.id}")
+      |> element("#add-new-project-button-to-credential-#{credential.id}")
       |> render_click()
 
       assert view |> delete_credential_button(project.id) |> has_element?(),

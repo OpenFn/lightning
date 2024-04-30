@@ -309,7 +309,8 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
       credential: assigns.credential,
       projects: assigns.projects,
       users: assigns.users,
-      api_version: assigns.credential.body["apiVersion"]
+      api_version: assigns.credential.body["apiVersion"],
+      parent_component: assigns.parent_component
     )
     |> assign(additional_assigns)
   end
@@ -483,11 +484,11 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
                 Control which projects have access to this credentials
               </p>
               <div class="mt-4">
-                <.project_credentials
+                <LightningWeb.Components.Credentials.project_credentials
                   form={f}
                   projects={@projects}
                   selected={@selected_project}
-                  phx_target={@myself}
+                  phx_target={@parent_component}
                 />
               </div>
             </fieldset>
@@ -496,7 +497,10 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
             :if={@action == :edit and @allow_credential_transfer}
             class="space-y-4"
           >
-            <.credential_transfer form={f} users={@users} />
+            <LightningWeb.Components.Credentials.credential_transfer
+              form={f}
+              users={@users}
+            />
           </div>
         </div>
         <.modal_footer class="mt-6 mx-4">
@@ -524,12 +528,6 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
       </.form>
     </div>
     """
-  end
-
-  defp project_name(projects, id) do
-    Enum.find_value(projects, fn {name, project_id} ->
-      if project_id == id, do: name
-    end)
   end
 
   defp display_loader?(oauth_progress) do
@@ -571,100 +569,5 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
 
   defp display_error?(oauth_progress, display_reauthorize_banner) do
     oauth_progress in @oauth_states.failure && !display_reauthorize_banner
-  end
-
-  attr :projects, :list, required: true
-  attr :selected, :map, required: true
-  attr :phx_target, :any, default: nil
-  attr :form, :map, required: true
-
-  defp project_credentials(assigns) do
-    ~H"""
-    <div class="col-span-3">
-      <%= Phoenix.HTML.Form.label(@form, :project_credentials, "Project Access",
-        class: "block text-sm font-medium text-secondary-700"
-      ) %>
-
-      <div class="flex w-full items-center gap-2 pb-3 mt-1">
-        <div class="grow">
-          <LightningWeb.Components.Form.select_field
-            form={:project}
-            name={:id}
-            values={@projects}
-            value={@selected}
-            prompt=""
-            phx-change="select_item"
-            id={"project_credentials_list_for_#{@form[:id].value}"}
-          />
-        </div>
-        <div class="grow-0 items-right">
-          <.button
-            id={"add-new-project-button-to-#{@form[:id].value}"}
-            disabled={@selected == ""}
-            phx-value-projectid={@selected}
-            phx-click="add_new_project"
-          >
-            Add
-          </.button>
-        </div>
-      </div>
-
-      <.inputs_for :let={project_credential} field={@form[:project_credentials]}>
-        <%= if project_credential[:delete].value != true do %>
-          <div class="flex w-full gap-2 items-center pb-2">
-            <div class="grow">
-              <%= project_name(@projects, project_credential[:project_id].value) %>
-              <.old_error field={project_credential[:project_id]} />
-            </div>
-            <div class="grow-0 items-right">
-              <.button
-                id={"delete-project-credential-#{@form[:id].value}-button"}
-                phx-value-projectid={project_credential[:project_id].value}
-                phx-click="delete_project"
-              >
-                Remove
-              </.button>
-            </div>
-          </div>
-        <% end %>
-        <.input type="hidden" field={project_credential[:project_id]} />
-        <.input
-          type="hidden"
-          field={project_credential[:delete]}
-          value={to_string(project_credential[:delete].value)}
-        />
-      </.inputs_for>
-    </div>
-    """
-  end
-
-  attr :users, :list, required: true
-  attr :form, :map, required: true
-
-  defp credential_transfer(assigns) do
-    ~H"""
-    <div class="hidden sm:block" aria-hidden="true">
-      <div class="border-t border-secondary-200 mb-6"></div>
-    </div>
-    <fieldset>
-      <legend class="contents text-base font-medium text-gray-900">
-        Transfer Ownership
-      </legend>
-      <p class="text-sm text-gray-500">
-        Assign ownership of this credential to someone else.
-      </p>
-      <div class="mt-4">
-        <%= Phoenix.HTML.Form.label(@form, :owner,
-          class: "block text-sm font-medium text-secondary-700"
-        ) %>
-        <LightningWeb.Components.Form.select_field
-          form={@form}
-          name={:user_id}
-          values={@users}
-        />
-        <.old_error field={@form[:user_id]} />
-      </div>
-    </fieldset>
-    """
   end
 end

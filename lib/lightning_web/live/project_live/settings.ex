@@ -392,9 +392,7 @@ defmodule LightningWeb.ProjectLive.Settings do
         %{"oauth_client_id" => oauth_client_id},
         %{assigns: assigns} = socket
       ) do
-    oauth_client = OauthClients.get_client!(oauth_client_id)
-
-    OauthClients.delete_client(oauth_client)
+    OauthClients.get_client!(oauth_client_id) |> OauthClients.delete_client()
 
     {:noreply,
      socket
@@ -833,104 +831,6 @@ defmodule LightningWeb.ProjectLive.Settings do
       {:error, _error} ->
         put_flash(socket, :error, "Oops! Error connecting to github")
     end
-  end
-
-  defp delete_credential_modal(assigns) do
-    ~H"""
-    <.modal id={@id} width="max-w-md">
-      <:title>
-        <div class="flex justify-between">
-          <span class="font-bold">
-            Delete Credential
-          </span>
-
-          <button
-            phx-click={hide_modal(@id)}
-            type="button"
-            class="rounded-md bg-white text-gray-400 hover:text-gray-500 focus:outline-none"
-            aria-label={gettext("close")}
-          >
-            <span class="sr-only">Close</span>
-            <Heroicons.x_mark solid class="h-5 w-5 stroke-current" />
-          </button>
-        </div>
-      </:title>
-      <div class="px-6">
-        <p class="text-sm text-gray-500">
-          You are about the delete the credential "<%= @credential.name %>" which may be used in other projects. All jobs using this credential will fail.
-          <br /><br />Do you want to proceed with this action?
-        </p>
-      </div>
-      <div class="flex flex-row-reverse gap-4 mx-6 mt-2">
-        <.button
-          id={"#{@id}_confirm_button"}
-          type="button"
-          phx-value-credential_id={@credential.id}
-          phx-click="delete_credential"
-          color_class="bg-red-600 hover:bg-red-700 text-white"
-          phx-disable-with="Deleting..."
-        >
-          Delete
-        </.button>
-        <button
-          type="button"
-          phx-click={hide_modal(@id)}
-          class="inline-flex items-center rounded-md bg-white px-3.5 py-2.5 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
-        >
-          Cancel
-        </button>
-      </div>
-    </.modal>
-    """
-  end
-
-  defp delete_oauth_client_modal(assigns) do
-    ~H"""
-    <.modal id={@id} width="max-w-md">
-      <:title>
-        <div class="flex justify-between">
-          <span class="font-bold">
-            Delete Oauth Client
-          </span>
-
-          <button
-            phx-click={hide_modal(@id)}
-            type="button"
-            class="rounded-md bg-white text-gray-400 hover:text-gray-500 focus:outline-none"
-            aria-label={gettext("close")}
-          >
-            <span class="sr-only">Close</span>
-            <Heroicons.x_mark solid class="h-5 w-5 stroke-current" />
-          </button>
-        </div>
-      </:title>
-      <div class="px-6">
-        <p class="text-sm text-gray-500">
-          You are about the delete the Oauth client "<%= @client.name %>" which may be used in other projects. All jobs dependent on this client will fail.
-          <br /><br />Do you want to proceed with this action?
-        </p>
-      </div>
-      <div class="flex flex-row-reverse gap-4 mx-6 mt-2">
-        <.button
-          id={"#{@id}_confirm_button"}
-          type="button"
-          phx-value-oauth_client_id={@client.id}
-          phx-click="delete_oauth_client"
-          color_class="bg-red-600 hover:bg-red-700 text-white"
-          phx-disable-with="Deleting..."
-        >
-          Delete
-        </.button>
-        <button
-          type="button"
-          phx-click={hide_modal(@id)}
-          class="inline-flex items-center rounded-md bg-white px-3.5 py-2.5 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
-        >
-          Cancel
-        </button>
-      </div>
-    </.modal>
-    """
   end
 
   defp confirm_user_removal_modal(assigns) do

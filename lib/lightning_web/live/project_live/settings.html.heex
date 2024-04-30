@@ -407,7 +407,7 @@
                           ~p"/projects/#{@project.id}/settings#credentials"
                         }
                       />
-                      <.delete_oauth_client_modal
+                      <LightningWeb.Components.Credentials.delete_oauth_client_modal
                         :if={client.user_id == @current_user.id}
                         id={"delete_oauth_client_#{client.id}_modal"}
                         client={client}
@@ -499,7 +499,7 @@
                         ~p"/projects/#{@project.id}/settings#credentials"
                       }
                     />
-                    <.delete_credential_modal
+                    <LightningWeb.Components.Credentials.delete_credential_modal
                       :if={credential.user_id == @current_user.id}
                       id={"delete_credential_#{credential.id}_modal"}
                       credential={credential}

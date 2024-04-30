@@ -68,6 +68,20 @@ defmodule LightningWeb.CredentialLive.Index do
      |> assign(credentials: list_credentials(socket.assigns.current_user.id))}
   end
 
+  def handle_event(
+        "delete_oauth_client",
+        %{"oauth_client_id" => oauth_client_id},
+        socket
+      ) do
+    OauthClients.get_client!(oauth_client_id) |> OauthClients.delete_client()
+
+    {:noreply,
+     socket
+     |> put_flash(:info, "Oauth client deleted successfully!")
+     |> assign(:oauth_clients, list_clients(socket.assigns.current_user.id))
+     |> push_patch(to: ~p"/credentials")}
+  end
+
   @doc """
   A generic handler for forwarding updates from PubSub
   """
