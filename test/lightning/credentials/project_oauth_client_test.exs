@@ -1,4 +1,4 @@
-defmodule Lightning.Credentials.OauthClientTest do
+defmodule Lightning.Credentials.ProjectOauthClientTest do
   use Lightning.DataCase, async: true
 
   alias Lightning.Projects.ProjectOauthClient

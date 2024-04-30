@@ -221,7 +221,7 @@
               action={:edit}
               credential_type={@selected_credential_type}
               credential={credential}
-              selected_oauth_client={credential.oauth_client |> IO.inspect()}
+              selected_oauth_client={credential.oauth_client}
               current_user={@current_user}
               projects={@projects}
               project={nil}

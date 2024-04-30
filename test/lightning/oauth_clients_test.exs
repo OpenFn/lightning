@@ -5,32 +5,63 @@ defmodule Lightning.OauthClientsTest do
   alias Lightning.OauthClients
   alias Lightning.Repo
 
-  describe "list_clients/1" do
-    test "returns all oauth clients for a given project" do
-      project = insert(:project)
+  defp client_id_in_list?(client, clients) do
+    Enum.any?(clients, fn c -> c.id == client.id end)
+  end
 
-      _client1 =
+  describe "list_clients/1" do
+    test "returns only oauth clients associated with a given project" do
+      [project_1, project_2, project_3] = insert_list(3, :project)
+
+      client_1 =
         insert(:oauth_client,
-          project_oauth_clients: [
-            %{project_id: project.id}
-          ]
+          project_oauth_clients: [%{project: project_1}, %{project: project_2}]
         )
 
-      _client2 = insert(:oauth_client)
+      client_2 =
+        insert(:oauth_client, project_oauth_clients: [%{project: project_1}])
 
-      result = OauthClients.list_clients(project)
-      assert length(result) == 2
-      assert Enum.all?(result, fn client -> client.project_id == project.id end)
+      client_3 = insert(:oauth_client)
+
+      project_1_clients = OauthClients.list_clients(project_1)
+      project_2_clients = OauthClients.list_clients(project_2)
+      project_3_clients = OauthClients.list_clients(project_3)
+
+      assert length(project_1_clients) === 2
+      assert length(project_2_clients) === 1
+      assert length(project_3_clients) === 0
+
+      assert client_id_in_list?(client_1, project_1_clients)
+      assert client_id_in_list?(client_2, project_1_clients)
+      refute client_id_in_list?(client_3, project_1_clients)
+
+      assert client_id_in_list?(client_1, project_2_clients)
+      refute client_id_in_list?(client_2, project_2_clients)
+      refute client_id_in_list?(client_3, project_2_clients)
+
+      refute client_id_in_list?(client_1, project_3_clients)
+      refute client_id_in_list?(client_2, project_3_clients)
+      refute client_id_in_list?(client_3, project_3_clients)
     end
   end
 
   describe "create_client/1" do
     test "creates a new oauth client successfully" do
-      attrs = %{name: "New Client", project_id: 123}
+      user = insert(:user)
+
+      attrs = %{
+        name: "New Client",
+        client_id: "client_id",
+        client_secret: "client_secret",
+        authorization_endpoint: "https://www.example.com",
+        token_endpoint: "https://www.example.com",
+        user_id: user.id
+      }
+
       {:ok, client} = OauthClients.create_client(attrs)
 
       assert client.name == "New Client"
-      assert client.project_id == 123
+      assert client.user_id == user.id
       assert Repo.get!(OauthClient, client.id)
     end
 
@@ -46,7 +77,7 @@ defmodule Lightning.OauthClientsTest do
 
   describe "update_client/2" do
     test "updates an existing client successfully" do
-      client = %OauthClient{name: "Old Name"} |> Repo.insert!()
+      client = insert(:oauth_client, name: "Old Name")
       updated_attrs = %{name: "Updated Name"}
       {:ok, updated_client} = OauthClients.update_client(client, updated_attrs)
 
@@ -55,8 +86,8 @@ defmodule Lightning.OauthClientsTest do
     end
 
     test "returns an error when update fails due to invalid data" do
-      client = %OauthClient{name: "Initial Name"} |> Repo.insert!()
-      # assuming name is required
+      client = insert(:oauth_client)
+
       invalid_attrs = %{name: nil}
       {:error, changeset} = OauthClients.update_client(client, invalid_attrs)
 
@@ -67,7 +98,7 @@ defmodule Lightning.OauthClientsTest do
 
   describe "delete_client/1" do
     test "deletes a client successfully" do
-      client = %OauthClient{name: "Delete Me"} |> Repo.insert!()
+      client = insert(:oauth_client)
       assert Repo.get!(OauthClient, client.id)
 
       {:ok, _deleted_client} = OauthClients.delete_client(client)
@@ -75,15 +106,6 @@ defmodule Lightning.OauthClientsTest do
       assert_raise Ecto.NoResultsError, fn ->
         Repo.get!(OauthClient, client.id)
       end
-    end
-
-    test "handles errors when deleting a non-existing client" do
-      # client does not exist in the database
-      fake_client = %OauthClient{id: -1, name: "Non-existent"}
-      {:error, _reason} = OauthClients.delete_client(fake_client)
-
-      # Just checking error path; specific error checks would depend on the implementation
-      assert true
     end
   end
 end

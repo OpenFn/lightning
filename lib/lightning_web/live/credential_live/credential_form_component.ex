@@ -322,6 +322,7 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
               Configure credential
             </button>
             <button
+              id="cancel-credential-creation"
               type="button"
               phx-click="close_modal"
               phx-target={@myself}
@@ -497,6 +498,9 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
           <.modal_footer class="mt-6 mx-6">
             <div class="sm:flex sm:flex-row-reverse">
               <button
+                id={
+                  "save-credential-button-#{@credential.id || "new"}"
+                }
                 type="submit"
                 disabled={!@changeset.valid? or @scopes_changed}
                 class="inline-flex w-full justify-center rounded-md disabled:bg-primary-300 bg-primary-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary-500 sm:ml-3 sm:w-auto"
@@ -607,7 +611,7 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
         </div>
         <div class="grow-0 items-right">
           <.button
-            id={"add-new-project-button-to-#{@form[:id].value}"}
+            id={"add-new-project-button-to-credential-#{@form[:id].value}"}
             disabled={@selected == ""}
             phx-target={@phx_target}
             phx-value-projectid={@selected}

@@ -8,6 +8,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
   alias Lightning.Extensions.UsageLimiting.Action
   alias Lightning.Extensions.UsageLimiting.Context
   alias Lightning.Invocation
+  alias Lightning.OauthClients
   alias Lightning.Policies.Permissions
   alias Lightning.Policies.ProjectUsers
   alias Lightning.Projects
@@ -276,6 +277,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
               }
             }
             current_user={@current_user}
+            oauth_clients={@oauth_clients}
             projects={[]}
             project={@project}
             show_project_credentials={false}
@@ -682,6 +684,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
        workflow_name: "",
        workflow_params: %{},
        selected_credential_type: nil,
+       oauth_clients: OauthClients.list_clients(assigns.project),
        show_wiped_dataclip_selector: false,
        admin_contacts: Projects.list_project_admin_emails(assigns.project.id)
      )}
