@@ -109,4 +109,73 @@ defmodule LightningWeb.UserRegistrationControllerTest do
       assert response =~ "Please accept the terms and conditions to register."
     end
   end
+
+  describe "POST /api/users/register" do
+    test "creates account successfully", %{conn: conn} do
+      email = unique_user_email()
+
+      conn =
+        post(conn, ~p"/api/users/register", %{
+          "user" => valid_user_attributes(email: email)
+        })
+
+      assert json_response(conn, 200)
+    end
+
+    test "creates account and initial project", %{
+      conn: conn
+    } do
+      # Modify the env so that we created new projects for new users
+      Application.put_env(:lightning, :init_project_for_new_user, true)
+
+      user_name = "Emory"
+
+      conn =
+        conn
+        |> post(~p"/api/users/register",
+          user: valid_user_attributes(first_name: user_name)
+        )
+
+      assert %{"data" => %{"id" => user_id}} = json_response(conn, 200)
+
+      expected_project_name = "#{String.downcase(user_name)}-demo"
+
+      assert project =
+               Lightning.Repo.get_by(Lightning.Projects.Project,
+                 name: expected_project_name
+               )
+
+      assert Lightning.Repo.get_by(Lightning.Projects.ProjectUser,
+               user_id: user_id,
+               role: :owner,
+               project_id: project.id
+             )
+
+      # Set this back to the default "false" before finishing the test
+      Application.put_env(:lightning, :init_project_for_new_user, false)
+    end
+
+    test "render errors for invalid data", %{conn: conn} do
+      conn =
+        post(conn, ~p"/api/users/register", %{
+          "user" => %{"email" => "with spaces"}
+        })
+
+      assert %{"errors" => errors} = json_response(conn, 400)
+
+      assert errors["email"] == ["Email address not valid."]
+    end
+
+    test "render errors for terms and conditions not accepted", %{conn: conn} do
+      conn =
+        post(conn, ~p"/api/users/register", %{
+          "user" => %{"terms_accepted" => false}
+        })
+
+      assert %{"errors" => errors} = json_response(conn, 400)
+
+      assert errors["terms_accepted"] ==
+               ["Please accept the terms and conditions to register."]
+    end
+  end
 end
