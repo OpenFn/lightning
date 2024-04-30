@@ -3,8 +3,8 @@ defmodule LightningWeb.Components.Credentials do
   use LightningWeb, :component
 
   alias LightningWeb.CredentialLive.JsonSchemaBodyComponent
-  alias LightningWeb.CredentialLive.RawBodyComponent
   alias LightningWeb.CredentialLive.OauthComponent
+  alias LightningWeb.CredentialLive.RawBodyComponent
 
   def delete_credential_modal(assigns) do
     ~H"""
