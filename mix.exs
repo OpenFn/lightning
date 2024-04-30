@@ -68,7 +68,7 @@ defmodule Lightning.MixProject do
       # {:rexbug, ">= 1.0.0", only: :test},
       {:bcrypt_elixir, "~> 2.0"},
       {:bodyguard, "~> 2.2"},
-      {:brod, "~> 3.17.1"},
+      {:broadway_kafka, "~> 0.4.2"},
       {:bypass, "~> 2.1", only: :test},
       {:cachex, "~> 3.4"},
       {:cloak_ecto, "~> 1.3.0"},
