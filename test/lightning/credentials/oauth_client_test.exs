@@ -57,6 +57,37 @@ defmodule Lightning.Credentials.OauthClientTest do
       end)
     end
 
+    test "URLS that are not required can be null" do
+      attrs = %{
+        userinfo_endpoint: nil,
+        scopes_doc_url: nil
+      }
+
+      changeset =
+        OauthClient.changeset(%OauthClient{}, attrs)
+
+      keys_with_errors = Keyword.keys(changeset.errors)
+
+      Map.keys(attrs)
+      |> Enum.each(fn key -> assert key not in keys_with_errors end)
+    end
+
+    test "Any other type of URL is invalid" do
+      attrs = %{
+        userinfo_endpoint: 123,
+        scopes_doc_url: false
+      }
+
+      changeset =
+        OauthClient.changeset(%OauthClient{}, attrs)
+
+      Map.keys(attrs)
+      |> Enum.each(fn key ->
+        assert {"is invalid", [type: :string, validation: :cast]} ==
+                 changeset.errors[key]
+      end)
+    end
+
     test "creates changeset with optional attributes" do
       optional_attrs = Map.put_new(@valid_attrs, :global, true)
       changeset = OauthClient.changeset(%OauthClient{}, optional_attrs)

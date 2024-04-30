@@ -112,11 +112,11 @@ defmodule Lightning.AuthProviders.OauthHTTPClient do
         if status in success_statuses do
           Jason.decode(body)
         else
-          {:error, "Failed to fetch user info: #{inspect(body)}"}
+          {:error, "#{inspect(body)}"}
         end
 
       {:error, reason} ->
-        {:error, "HTTP request failed: #{inspect(reason)}"}
+        {:error, "#{inspect(reason)}"}
     end
   end
 

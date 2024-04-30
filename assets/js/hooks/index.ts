@@ -11,7 +11,7 @@ export { LogLineHighlight, ElapsedIndicator, TabSelector };
 export const EditMandatoryScope = {
   mounted() {
     this.el.addEventListener('dblclick', e => {
-      const scopeValue = this.el.id;
+      const scopeValue = this.el.dataset.scope;
       this.pushEventTo(this.el, 'edit_mandatory_scope', { scope: scopeValue });
     });
   },
@@ -20,7 +20,7 @@ export const EditMandatoryScope = {
 export const EditOptionalScope = {
   mounted() {
     this.el.addEventListener('dblclick', e => {
-      const scopeValue = this.el.id;
+      const scopeValue = this.el.dataset.scope;
       this.pushEventTo(this.el, 'edit_optional_scope', { scope: scopeValue });
     });
   },

@@ -474,8 +474,10 @@ defmodule LightningWeb.CredentialLive.OauthClientFormComponent do
       <div class="flex flex-wrap items-center border border-gray-300 rounded-lg px-2">
         <span
           :for={scope <- @scopes}
-          id={scope}
+          id={"#{@id}-#{scope}"}
           phx-hook={@on_edit}
+          data-scope={scope}
+          phx-target={@phx_target}
           class="inline-flex items-center rounded-md bg-blue-50 p-2 text-xs font-medium text-gray-600 ring-1 ring-inset ring-gray-500/10 mr-1 my-1"
         >
           <%= scope %>

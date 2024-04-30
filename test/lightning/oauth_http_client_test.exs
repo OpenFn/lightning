@@ -96,8 +96,86 @@ defmodule Lightning.AuthProviders.OauthHTTPClientTest do
           token_endpoint
         )
 
-      assert {:error, "Failed to fetch user info: \"Invalid refresh token\""} ==
+      assert {:error, "\"Invalid refresh token\""} ==
                result
+    end
+  end
+
+  describe "still_fresh/3" do
+    test "returns true if the token is still fresh based on expires_in" do
+      current_time = DateTime.utc_now()
+      future_time = DateTime.add(current_time, 10 * 60, :second)
+      params = %{"expires_in" => DateTime.to_unix(future_time)}
+
+      assert Lightning.AuthProviders.OauthHTTPClient.still_fresh(
+               params,
+               5,
+               :minute
+             )
+    end
+
+    test "returns false if the token has expired" do
+      expired_time =
+        DateTime.utc_now() |> DateTime.add(-30, :minute)
+
+      params = %{"expires_at" => DateTime.to_unix(expired_time)}
+
+      refute Lightning.AuthProviders.OauthHTTPClient.still_fresh(
+               params,
+               5,
+               :minute
+             )
+    end
+
+    test "returns false if the token has a nil expires_at / expires_in value" do
+      ~w(expires_at expires_in)
+      |> Enum.each(fn key ->
+        params = %{key => nil}
+
+        refute Lightning.AuthProviders.OauthHTTPClient.still_fresh(
+                 params,
+                 5,
+                 :minute
+               )
+      end)
+    end
+
+    test "handles invalid expiration data" do
+      params = %{}
+
+      assert {:error, "No valid expiration data found"} ===
+               Lightning.AuthProviders.OauthHTTPClient.still_fresh(
+                 params,
+                 5,
+                 :minute
+               )
+    end
+  end
+
+  describe "generate_authorize_url/3" do
+    test "generates a correct authorization URL with default parameters" do
+      base_url = "http://example.com/auth"
+      client_id = "client123"
+      custom_params = [scope: "email", state: "xyz"]
+
+      expected_params = [
+        access_type: "offline",
+        client_id: "client123",
+        prompt: "consent",
+        redirect_uri: "http://localhost:4002/authenticate/callback",
+        response_type: "code",
+        scope: "email",
+        state: "xyz"
+      ]
+
+      expected_url = "#{base_url}?#{URI.encode_query(expected_params)}"
+
+      assert expected_url ===
+               Lightning.AuthProviders.OauthHTTPClient.generate_authorize_url(
+                 base_url,
+                 client_id,
+                 custom_params
+               )
     end
   end
 
@@ -142,7 +220,26 @@ defmodule Lightning.AuthProviders.OauthHTTPClientTest do
           userinfo_endpoint
         )
 
-      assert {:error, "Failed to fetch user info: \"Token expired\""} == result
+      assert {:error, "\"Token expired\""} == result
+    end
+
+    test "handles http request error" do
+      token = "accessToken"
+      userinfo_endpoint = "http://example.com/userinfo"
+
+      expect(Lightning.AuthProviders.OauthHTTPClient.Mock, :call, fn
+        env, _opts
+        when env.method == :get and env.url == userinfo_endpoint ->
+          {:error, :nxdomain}
+      end)
+
+      result =
+        Lightning.AuthProviders.OauthHTTPClient.fetch_userinfo(
+          token,
+          userinfo_endpoint
+        )
+
+      assert {:error, ":nxdomain"} == result
     end
   end
 end

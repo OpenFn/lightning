@@ -96,7 +96,7 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
 
     {:ok,
      build_assigns(socket, assigns,
-       api_version: nil,
+       apiVersion: nil,
        mandatory_scopes: mandatory_scopes,
        optional_scopes: optional_scopes,
        selected_scopes: mandatory_scopes,
@@ -191,17 +191,6 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
   @impl true
   def handle_event(
         "validate",
-        %{
-          "_target" => ["credential", "apiVersion"],
-          "credential" => %{"apiVersion" => api_version}
-        },
-        socket
-      ) do
-    {:noreply, assign(socket, :api_version, api_version)}
-  end
-
-  def handle_event(
-        "validate",
         %{"credential" => credential_params} = _params,
         socket
       ) do
@@ -212,7 +201,10 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
       )
       |> Map.put(:action, :validate)
 
-    {:noreply, socket |> assign(changeset: changeset)}
+    api_version = Map.get(credential_params, "apiVersion", nil)
+
+    {:noreply,
+     socket |> assign(changeset: changeset) |> assign(:apiVersion, api_version)}
   end
 
   @impl true
@@ -309,7 +301,7 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
       credential: assigns.credential,
       projects: assigns.projects,
       users: assigns.users,
-      api_version: assigns.credential.body["apiVersion"],
+      apiVersion: assigns.credential.body["apiVersion"],
       parent_component: assigns.parent_component
     )
     |> assign(additional_assigns)
@@ -322,7 +314,7 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
     user_id = Ecto.Changeset.fetch_field!(socket.assigns.changeset, :user_id)
     body = Ecto.Changeset.fetch_field!(socket.assigns.changeset, :body)
 
-    body = Map.put(body, "apiVersion", socket.assigns.api_version)
+    body = Map.put(body, "apiVersion", socket.assigns.apiVersion)
 
     params
     |> Map.put("user_id", user_id)
@@ -345,7 +337,7 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
   defp save_credential(socket, :edit, params) do
     body =
       Ecto.Changeset.fetch_field!(socket.assigns.changeset, :body)
-      |> Map.put("apiVersion", socket.assigns.api_version)
+      |> Map.put("apiVersion", socket.assigns.apiVersion)
 
     params =
       Map.put(params, "body", body)
@@ -392,7 +384,7 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
       |> assign(:display_error, display_error)
 
     ~H"""
-    <div>
+    <div id={@id}>
       <.form
         :let={f}
         for={@changeset}
@@ -430,8 +422,8 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
           <div class="space-y-4 mt-5">
             <NewInputs.input
               type="text"
-              field={f[:api_version]}
-              value={@api_version || nil}
+              field={f[:apiVersion]}
+              value={@apiVersion || nil}
               label="API Version"
             />
           </div>

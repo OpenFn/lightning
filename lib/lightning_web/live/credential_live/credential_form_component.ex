@@ -394,7 +394,7 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
         </:title>
         <.live_component
           module={GenericOauthComponent}
-          id={"generic-oauth-component-#{@credential.id}"}
+          id={"generic-oauth-component-#{@credential.id || "new"}"}
           action={@action}
           selected_client={@selected_oauth_client}
           changeset={@changeset}

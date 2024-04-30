@@ -348,7 +348,7 @@
           >
             <Heroicons.plus_circle class="mx-auto w-12 h-12 text-secondary-400" />
             <span class="mt-2 block text-sm font-semibold text-secondary-600">
-              Create a new OAuth Client
+              Create a new OAuth client
             </span>
           </button>
           <.table
@@ -359,7 +359,7 @@
             <tbody class="w-full">
               <.tr class="flex">
                 <.th class="w-2/12">Name</.th>
-                <.th class="w-3/12">Project With Access</.th>
+                <.th class="w-3/12">Projects With Access</.th>
                 <.th class="w-2/12">Client ID</.th>
                 <.th class="w-3/12">Authorization URL</.th>
                 <.th class="w-2/12">Actions</.th>
@@ -386,9 +386,12 @@
                       </span>
                       |
                       <span>
-                        <.link phx-click={
-                          show_modal("delete_oauth_client_#{client.id}_modal")
-                        }>
+                        <.link
+                          id={"delete-oauth-client-#{client.id}-button"}
+                          phx-click={
+                            show_modal("delete_oauth_client_#{client.id}_modal")
+                          }
+                        >
                           Delete
                         </.link>
                       </span>
@@ -442,7 +445,7 @@
           <.table :if={@credentials !== []} id="credentials">
             <.tr>
               <.th>Name</.th>
-              <.th>Project with access</.th>
+              <.th>Projects with access</.th>
               <.th>Type</.th>
               <.th>Production</.th>
               <.th>Actions</.th>
