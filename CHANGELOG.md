@@ -32,6 +32,8 @@ and this project adheres to
 
 - Assure workflow is always passed to Run.enqueue
   [#2032](https://github.com/OpenFn/lightning/issues/2032)
+- Fix regression on History page where snapshots were not preloaded correctly
+  [#2026](https://github.com/OpenFn/lightning/issues/2026)
 
 ## [v2.4.2] 2024-04-24
 

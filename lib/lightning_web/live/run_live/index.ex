@@ -284,7 +284,12 @@ defmodule LightningWeb.RunLive.Index do
     work_order =
       Lightning.Repo.preload(
         work_order,
-        [:workflow, :dataclip, runs: [steps: [:job, :input_dataclip]]],
+        [
+          :dataclip,
+          :snapshot,
+          :workflow,
+          runs: [steps: [:job, :input_dataclip]]
+        ],
         force: true
       )
 
