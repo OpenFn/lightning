@@ -51,7 +51,7 @@ defmodule LightningWeb.UserRegistrationController do
           &Routes.user_confirmation_url(conn, :edit, &1)
         )
 
-      if Application.get_env(:lightning, :init_project_for_new_user) do
+      if Lightning.Config.init_project_for_new_user() do
         create_initial_project(user)
       end
 

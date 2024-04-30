@@ -48,6 +48,11 @@ defmodule Lightning.Config do
     def purge_deleted_after_days do
       Application.get_env(:lightning, :purge_deleted_after_days)
     end
+
+    @impl true
+    def init_project_for_new_user do
+      Application.get_env(:lightning, :init_project_for_new_user)
+    end
   end
 
   defmodule Utils do
@@ -97,6 +102,7 @@ defmodule Lightning.Config do
   @callback worker_secret() :: binary() | nil
   @callback grace_period() :: integer()
   @callback purge_deleted_after_days() :: integer()
+  @callback init_project_for_new_user() :: boolean()
 
   @doc """
   Returns the Token signer used to sign and verify run tokens.
@@ -126,6 +132,10 @@ defmodule Lightning.Config do
 
   def purge_deleted_after_days do
     impl().purge_deleted_after_days()
+  end
+
+  def init_project_for_new_user do
+    impl().init_project_for_new_user()
   end
 
   defp impl do

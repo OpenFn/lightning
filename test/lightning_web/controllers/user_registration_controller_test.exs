@@ -2,6 +2,12 @@ defmodule LightningWeb.UserRegistrationControllerTest do
   use LightningWeb.ConnCase, async: true
 
   import Lightning.AccountsFixtures
+  import Mox
+
+  setup do
+    verify_on_exit!()
+    :ok
+  end
 
   describe "GET /users/register" do
     test "renders registration page", %{conn: conn} do
@@ -48,8 +54,7 @@ defmodule LightningWeb.UserRegistrationControllerTest do
     test "creates account and initial project and logs the user in", %{
       conn: conn
     } do
-      # Modify the env so that we created new projects for new users
-      Application.put_env(:lightning, :init_project_for_new_user, true)
+      expect(Lightning.MockConfig, :init_project_for_new_user, fn -> true end)
 
       # conn
       # |> post(~p"/users/confirm",
@@ -82,9 +87,6 @@ defmodule LightningWeb.UserRegistrationControllerTest do
       assert project
              |> Lightning.Projects.project_steps_query()
              |> Lightning.Repo.aggregate(:count, :id) == 0
-
-      # Set this back to the default "false" before finishing the test
-      Application.put_env(:lightning, :init_project_for_new_user, false)
     end
 
     test "render errors for invalid data", %{conn: conn} do
@@ -125,8 +127,7 @@ defmodule LightningWeb.UserRegistrationControllerTest do
     test "creates account and initial project", %{
       conn: conn
     } do
-      # Modify the env so that we created new projects for new users
-      Application.put_env(:lightning, :init_project_for_new_user, true)
+      expect(Lightning.MockConfig, :init_project_for_new_user, fn -> true end)
 
       user_name = "Emory"
 
@@ -150,9 +151,6 @@ defmodule LightningWeb.UserRegistrationControllerTest do
                role: :owner,
                project_id: project.id
              )
-
-      # Set this back to the default "false" before finishing the test
-      Application.put_env(:lightning, :init_project_for_new_user, false)
     end
 
     test "render errors for invalid data", %{conn: conn} do
