@@ -12,6 +12,16 @@ defmodule Lightning.Services.SharedDomainDispatcher do
   end
 
   @impl true
+  def register_superuser(attrs) do
+    adapter().register_superuser(attrs)
+  end
+
+  @impl true
+  def create_user(attrs) do
+    adapter().create_user(attrs)
+  end
+
+  @impl true
   def create_project(attrs) do
     adapter().create_project(attrs)
   end

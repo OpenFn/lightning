@@ -10,6 +10,7 @@ defmodule LightningWeb.FirstSetupLive.Superuser do
   import LightningWeb.Components.Form
 
   alias Lightning.Accounts
+  alias Lightning.Services.SharedDomainDispatcher
 
   @impl true
   def mount(_params, _session, socket) do
@@ -42,7 +43,7 @@ defmodule LightningWeb.FirstSetupLive.Superuser do
         %{"superuser_registration" => registration_params},
         socket
       ) do
-    case Accounts.register_superuser(registration_params) do
+    case SharedDomainDispatcher.register_superuser(registration_params) do
       {:ok, user} ->
         {:noreply,
          socket

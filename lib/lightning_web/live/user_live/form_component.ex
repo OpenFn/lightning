@@ -5,6 +5,7 @@ defmodule LightningWeb.UserLive.FormComponent do
   use LightningWeb, :live_component
 
   alias Lightning.Accounts
+  alias Lightning.Services.SharedDomainDispatcher
 
   @impl true
   def update(%{user: user} = assigns, socket) do
@@ -44,7 +45,7 @@ defmodule LightningWeb.UserLive.FormComponent do
   end
 
   defp save_user(socket, :new, user_params) do
-    case Accounts.create_user(user_params) do
+    case SharedDomainDispatcher.create_user(user_params) do
       {:ok, user} ->
         {:ok, _} =
           Accounts.deliver_user_confirmation_instructions(

@@ -118,7 +118,7 @@ defmodule Lightning.SetupUtils do
     super_user =
       if opts[:create_super] do
         {:ok, super_user} =
-          Accounts.register_superuser(%{
+          SharedDomainDispatcher.register_superuser(%{
             first_name: "Sizwe",
             last_name: "Super",
             email: "super@openfn.org",
@@ -138,7 +138,7 @@ defmodule Lightning.SetupUtils do
       end
 
     {:ok, admin} =
-      Accounts.create_user(%{
+      SharedDomainDispatcher.create_user(%{
         first_name: "Amy",
         last_name: "Admin",
         email: "demo@openfn.org",
@@ -146,7 +146,7 @@ defmodule Lightning.SetupUtils do
       })
 
     {:ok, editor} =
-      Accounts.create_user(%{
+      SharedDomainDispatcher.create_user(%{
         first_name: "Esther",
         last_name: "Editor",
         email: "editor@openfn.org",
@@ -154,7 +154,7 @@ defmodule Lightning.SetupUtils do
       })
 
     {:ok, viewer} =
-      Accounts.create_user(%{
+      SharedDomainDispatcher.create_user(%{
         first_name: "Vikram",
         last_name: "Viewer",
         email: "viewer@openfn.org",

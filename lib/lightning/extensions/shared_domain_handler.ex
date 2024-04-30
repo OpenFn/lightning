@@ -11,6 +11,14 @@ defmodule Lightning.Extensions.SharedDomainHandler do
     do: Lightning.Accounts.register_user(Repo, user_params)
 
   @impl true
+  def register_superuser(user_params),
+    do: Lightning.Accounts.register_superuser(Repo, user_params)
+
+  @impl true
+  def create_user(user_params),
+    do: Lightning.Accounts.create_user(Repo, user_params)
+
+  @impl true
   def create_project(attrs),
     do: Lightning.Projects.create_project(Repo, attrs)
 end

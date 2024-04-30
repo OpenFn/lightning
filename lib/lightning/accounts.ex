@@ -87,10 +87,10 @@ defmodule Lightning.Accounts do
     {:ok, %{users_deleted: users_to_delete}}
   end
 
-  def create_user(attrs) do
+  def create_user(repo \\ Lightning.Repo, attrs) do
     %User{}
     |> User.changeset(attrs)
-    |> Repo.insert()
+    |> repo.insert()
   end
 
   @doc """
@@ -319,12 +319,12 @@ defmodule Lightning.Accounts do
       {:error, %Ecto.Changeset{}}
   """
 
-  def register_superuser(attrs) do
+  def register_superuser(repo \\ Lightning.Repo, attrs) do
     User.superuser_registration_changeset(attrs)
     |> Ecto.Changeset.apply_action(:insert)
     |> case do
       {:ok, data} ->
-        struct(User, data) |> Repo.insert()
+        struct(User, data) |> repo.insert()
 
       {:error, changeset} ->
         {:error, changeset}
