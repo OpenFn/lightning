@@ -17,6 +17,14 @@ and this project adheres to
 
 ### Added
 
+### Changed
+
+### Fixed
+
+## [v2.4.3] - 2024-05-01
+
+### Added
+
 - Allow menu items customization
   [#1988](https://github.com/OpenFn/lightning/issues/1988)
 - Workflow Snapshot support
@@ -35,7 +43,7 @@ and this project adheres to
 - Fix regression on History page where snapshots were not preloaded correctly
   [#2026](https://github.com/OpenFn/lightning/issues/2026)
 
-## [v2.4.2] 2024-04-24
+## [v2.4.2] - 2024-04-24
 
 ### Fixed
 
@@ -44,14 +52,14 @@ and this project adheres to
 - Fix provisioning API includes deleted workflows in project state
   [#2001](https://github.com/OpenFn/lightning/issues/2001)
 
-## [v2.4.1] 2024-04-19
+## [v2.4.1] - 2024-04-19
 
 ### Fixed
 
 - Fix github cli deploy action failing to auto-commit
   [#1995](https://github.com/OpenFn/lightning/issues/1995)
 
-## [v2.4.1-pre] 2024-04-18
+## [v2.4.1-pre] - 2024-04-18
 
 ### Added
 
