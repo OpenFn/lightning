@@ -66,7 +66,8 @@ defmodule Lightning.Workflows.Trigger do
         :type,
         :workflow_id,
         :cron_expression,
-        :has_auth_method
+        :has_auth_method,
+        :kafka_configuration
       ])
 
     changeset
@@ -102,11 +103,18 @@ defmodule Lightning.Workflows.Trigger do
       :webhook ->
         changeset
         |> put_change(:cron_expression, nil)
+        |> put_change(:kafka_configuration, nil)
 
       :cron ->
         changeset
         |> put_default(:cron_expression, "0 0 * * *")
         |> validate_cron()
+        |> put_change(:kafka_configuration, nil)
+
+      :kafka ->
+        changeset
+        |> put_change(:cron_expression, nil)
+        |> validate_required([:kafka_configuration])
 
       nil ->
         changeset
