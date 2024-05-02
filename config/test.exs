@@ -6,8 +6,8 @@ config :bcrypt_elixir, :log_rounds, 1
 # mock adapter for tesla
 config :tesla, adapter: Lightning.Tesla.Mock
 
-config :tesla, Lightning.VersionControl.GithubClient,
-  adapter: Lightning.GithubClient.Mock
+# config :tesla, Lightning.VersionControl.GithubClient,
+#   adapter: Lightning.GithubClient.Mock
 
 config :tesla, Lightning.AuthProviders.OauthHTTPClient,
   adapter: Lightning.AuthProviders.OauthHTTPClient.Mock

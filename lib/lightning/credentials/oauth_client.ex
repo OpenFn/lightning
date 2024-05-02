@@ -95,14 +95,10 @@ defmodule Lightning.Credentials.OauthClient do
     end)
   end
 
-  defp valid_url?(nil), do: true
-
   defp valid_url?(url) when is_binary(url) do
     Regex.match?(
       ~r/^(https?:\/\/)?([\da-z\.-]+)\.([a-z\.]{2,6})([\/\w \.-]*)*\/?$/i,
       url
     )
   end
-
-  defp valid_url?(_), do: false
 end

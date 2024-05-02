@@ -127,7 +127,7 @@ defmodule LightningWeb.ProjectLive.Settings do
        webhook_auth_methods: auth_methods,
        credentials: credentials,
        oauth_clients: oauth_clients,
-       project_users: project_users,
+       project_users: [],
        current_user: socket.assigns.current_user,
        project_changeset: Projects.change_project(socket.assigns.project),
        can_delete_project: can_delete_project,
@@ -170,35 +170,6 @@ defmodule LightningWeb.ProjectLive.Settings do
             |> Enum.map_join(", ", fn p -> p.name end)
 
       Map.put(c, :project_names, project_names)
-    end)
-  end
-
-  defp repo_settings(%Project{id: project_id}) do
-    repo_connection = VersionControl.get_repo_connection(project_id)
-
-    project_repo_connection = %{"repo" => nil, "branch" => nil}
-
-    # {show_github_setup, show_repo_setup, show_sync_button}
-    case repo_connection do
-      nil ->
-        {true, false, false, project_repo_connection}
-
-      %{repo: nil} ->
-        {false, true, false, project_repo_connection}
-
-      %{repo: r, branch: b, github_installation_id: g} ->
-        {false, true, true,
-         %{"repo" => r, "branch" => b, "github_installation_id" => g}}
-    end
-  end
-
-  # we should only run this if repo setting is pending
-  defp collect_project_repo_connections(project_id) do
-    pid = self()
-
-    Task.start(fn ->
-      resp = VersionControl.fetch_installation_repos(project_id)
-      send(pid, {:repos_fetched, resp})
     end)
   end
 
