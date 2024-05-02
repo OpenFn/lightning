@@ -3,7 +3,7 @@ defmodule Lightning.Repo.Migrations.AddKafkaConfigurationToTriggers do
 
   def change do
     alter table(:triggers) do
-      add :kafka_configuration, :map, default: %{}, null: false
+      add :kafka_configuration, :map, null: true
     end
   end
 end
