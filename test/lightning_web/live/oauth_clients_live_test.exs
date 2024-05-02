@@ -1,14 +1,4 @@
 defmodule LightningWeb.OauthClientsLiveTest do
-  @moduledoc """
-  Remaining tests to implement:
-  - Handle error when saving client thru the form
-  - Update client: handle success and error
-  - Close client creation modal
-  - Handle project oauth client deletion from the form
-  - Handle project oauth client addition from the form
-  - Handle project oauth client selection from the form
-  - Handle form validation
-  """
   use LightningWeb.ConnCase, async: false
 
   import Phoenix.LiveViewTest
@@ -212,6 +202,20 @@ defmodule LightningWeb.OauthClientsLiveTest do
         valid_client_attrs: valid_client_attrs,
         invalid_client_attrs: invalid_client_attrs
       }
+    end
+
+    test "closing the modal redirects to index page", %{
+      conn: conn,
+      project: project
+    } do
+      [~p"/credentials", ~p"/projects/#{project}/settings#credentials"]
+      |> Enum.each(fn url ->
+        {:ok, view, _html} = live(conn, url)
+
+        view |> element("#close-oauth-client-modal-form-new") |> render_click()
+
+        assert_redirect(view, url)
+      end)
     end
 
     test "can create a new oauth client", %{

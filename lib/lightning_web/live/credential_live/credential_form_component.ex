@@ -304,6 +304,7 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
           <div class="flex justify-between">
             <span class="font-bold"><.modal_title action={@action} /></span>
             <button
+              id="close-credential-modal-type-picker"
               phx-click="close_modal"
               phx-target={@myself}
               type="button"
@@ -358,7 +359,7 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
               Configure credential
             </button>
             <button
-              id="cancel-credential-creation"
+              id="cancel-credential-type-picker"
               type="button"
               phx-click="close_modal"
               phx-target={@myself}
@@ -381,6 +382,7 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
           <div class="flex justify-between">
             <span class="font-bold"><.modal_title action={@action} /></span>
             <button
+              id={"close-credential-modal-form-#{@credential.id || "new"}"}
               phx-click="close_modal"
               phx-target={@myself}
               type="button"
@@ -418,6 +420,7 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
           <div class="flex justify-between">
             <span class="font-bold"><.modal_title action={@action} /></span>
             <button
+              id={"close-credential-modal-form-#{@credential.id || "new"}"}
               phx-click="close_modal"
               phx-target={@myself}
               type="button"

@@ -534,6 +534,7 @@ defmodule LightningWeb.CredentialLive.OauthClientFormComponent do
           <div class="flex justify-between">
             <span class="font-bold"><.modal_title action={@action} /></span>
             <button
+              id={"close-oauth-client-modal-form-#{@oauth_client.id || "new"}"}
               phx-click="close_modal"
               phx-target={@myself}
               type="button"

@@ -733,7 +733,7 @@ defmodule LightningWeb.ProjectLiveTest do
 
       {:ok, _view, html} =
         view
-        |> element("#cancel-credential-creation", "Cancel")
+        |> element("#cancel-credential-type-picker", "Cancel")
         |> render_click()
         |> follow_redirect(
           conn,
