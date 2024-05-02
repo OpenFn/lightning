@@ -1263,6 +1263,218 @@ defmodule LightningWeb.CredentialLiveTest do
     end
   end
 
+  describe "errors when creating generic oauth credentials" do
+    test "error when fetching authorization code", %{conn: conn, user: user} do
+      oauth_client = insert(:oauth_client, user: user)
+
+      {:ok, view, _html} = live(conn, ~p"/credentials")
+
+      view |> select_credential_type(oauth_client.id)
+      view |> click_continue()
+
+      refute view |> has_element?("#credential-type-picker")
+
+      view
+      |> fill_credential(%{
+        name: "My Generic OAuth Credential"
+      })
+
+      authorize_url =
+        view
+        |> element("#credential-form-new")
+        |> render()
+        |> Floki.parse_fragment!()
+        |> Floki.find("a[phx-click=authorize_click]")
+        |> Floki.attribute("href")
+        |> List.first()
+
+      [subscription_id, mod, component_id] = get_decoded_state(authorize_url)
+
+      assert view.id == subscription_id
+      assert view |> element(component_id)
+
+      view
+      |> element("#authorize-button")
+      |> render_click()
+
+      refute view
+             |> has_element?("#authorize-button")
+
+      LightningWeb.OauthCredentialHelper.broadcast_forward(subscription_id, mod,
+        id: component_id,
+        error: "failed fetching authorization code"
+      )
+
+      Lightning.ApplicationHelpers.dynamically_absorb_delay(fn ->
+        {_, assigns} =
+          Lightning.LiveViewHelpers.get_component_assigns_by(view,
+            id: "generic-oauth-component-new"
+          )
+
+        :code_failed === assigns[:oauth_progress]
+      end)
+
+      assert view |> has_element?("p", "Failed retrieving authentication code.")
+    end
+
+    test "error when fetching token", %{conn: conn, user: user} do
+      Mox.stub(Lightning.AuthProviders.OauthHTTPClient.Mock, :call, fn env,
+                                                                       _opts ->
+        case env.url do
+          "http://example.com/oauth2/token" ->
+            {:error, :unauthorized}
+
+          "http://example.com/oauth2/userinfo" ->
+            {:ok,
+             %Tesla.Env{
+               status: 200,
+               body:
+                 Jason.encode!(%{"picture" => "image.png", "name" => "Test User"})
+             }}
+        end
+      end)
+
+      oauth_client = insert(:oauth_client, user: user)
+
+      {:ok, view, _html} = live(conn, ~p"/credentials")
+
+      view |> select_credential_type(oauth_client.id)
+      view |> click_continue()
+
+      refute view |> has_element?("#credential-type-picker")
+
+      view
+      |> fill_credential(%{
+        name: "My Generic OAuth Credential"
+      })
+
+      authorize_url =
+        view
+        |> element("#credential-form-new")
+        |> render()
+        |> Floki.parse_fragment!()
+        |> Floki.find("a[phx-click=authorize_click]")
+        |> Floki.attribute("href")
+        |> List.first()
+
+      [subscription_id, mod, component_id] = get_decoded_state(authorize_url)
+
+      assert view.id == subscription_id
+      assert view |> element(component_id)
+
+      view
+      |> element("#authorize-button")
+      |> render_click()
+
+      refute view
+             |> has_element?("#authorize-button")
+
+      LightningWeb.OauthCredentialHelper.broadcast_forward(subscription_id, mod,
+        id: component_id,
+        code: "authcode123"
+      )
+
+      Lightning.ApplicationHelpers.dynamically_absorb_delay(fn ->
+        {_, assigns} =
+          Lightning.LiveViewHelpers.get_component_assigns_by(view,
+            id: "generic-oauth-component-new"
+          )
+
+        :token_failed === assigns[:oauth_progress]
+      end)
+
+      assert view
+             |> has_element?(
+               "p",
+               "Failed retrieving the token from the provider."
+             )
+    end
+
+    test "error when fetching userinfo", %{conn: conn, user: user} do
+      Mox.stub(Lightning.AuthProviders.OauthHTTPClient.Mock, :call, fn env,
+                                                                       _opts ->
+        case env.url do
+          "http://example.com/oauth2/token" ->
+            {:ok,
+             %Tesla.Env{
+               status: 200,
+               body:
+                 Jason.encode!(%{
+                   "access_token" => "ya29.a0AVvZ",
+                   "refresh_token" => "1//03vpp6Li",
+                   "expires_at" => 3600,
+                   "token_type" => "Bearer",
+                   "id_token" => "eyJhbGciO",
+                   "scope" => "scope1 scope2"
+                 })
+             }}
+
+          "http://example.com/oauth2/userinfo" ->
+            {:ok,
+             %Tesla.Env{
+               status: 500,
+               body: "Internal Server Error"
+             }}
+        end
+      end)
+
+      oauth_client = insert(:oauth_client, user: user)
+
+      {:ok, view, _html} = live(conn, ~p"/credentials")
+
+      view |> select_credential_type(oauth_client.id)
+      view |> click_continue()
+
+      refute view |> has_element?("#credential-type-picker")
+
+      view
+      |> fill_credential(%{
+        name: "My Generic OAuth Credential"
+      })
+
+      authorize_url =
+        view
+        |> element("#credential-form-new")
+        |> render()
+        |> Floki.parse_fragment!()
+        |> Floki.find("a[phx-click=authorize_click]")
+        |> Floki.attribute("href")
+        |> List.first()
+
+      [subscription_id, mod, component_id] = get_decoded_state(authorize_url)
+
+      assert view.id == subscription_id
+      assert view |> element(component_id)
+
+      view
+      |> element("#authorize-button")
+      |> render_click()
+
+      refute view
+             |> has_element?("#authorize-button")
+
+      LightningWeb.OauthCredentialHelper.broadcast_forward(subscription_id, mod,
+        id: component_id,
+        code: "authcode123"
+      )
+
+      Lightning.ApplicationHelpers.dynamically_absorb_delay(fn ->
+        {_, assigns} =
+          Lightning.LiveViewHelpers.get_component_assigns_by(view,
+            id: "generic-oauth-component-new"
+          )
+
+        :userinfo_failed === assigns[:oauth_progress]
+      end)
+
+      assert view
+             |> has_element?(
+               "p",
+               " Failed retrieving your information."
+             )
+    end
+  end
+
   describe "salesforce oauth credential" do
     setup do
       bypass = Bypass.open()

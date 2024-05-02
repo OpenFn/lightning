@@ -185,7 +185,7 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
       "Failed fetching userinfo using #{socket.assigns.selected_client.name}. Received error message: #{inspect(error)}"
     )
 
-    {:noreply, assign(socket, :oauth_progress, :token_failed)}
+    {:noreply, assign(socket, :oauth_progress, :userinfo_failed)}
   end
 
   @impl true
