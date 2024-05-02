@@ -51,7 +51,8 @@ defmodule Lightning.Workflows.Snapshot do
       field :custom_path, :string
       field :cron_expression, :string
       field :enabled, :boolean
-      field :type, Ecto.Enum, values: [:webhook, :cron]
+      field :kafka_configuration, :map
+      field :type, Ecto.Enum, values: [:webhook, :cron, :kafka]
 
       field :inserted_at, :utc_datetime
       field :updated_at, :utc_datetime
