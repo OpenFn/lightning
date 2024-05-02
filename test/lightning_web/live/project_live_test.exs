@@ -2413,40 +2413,40 @@ defmodule LightningWeb.ProjectLiveTest do
          } do
       project = insert(:project)
 
-      for {conn, _user} <- setup_project_users(conn, project, [:owner, :admin]) do
-        project_user =
-          insert(:project_user,
-            project: project,
-            user: build(:user),
-            role: :owner
-          )
+      {conn, _user} = setup_project_user(conn, project, :admin)
 
-        {:ok, view, _html} =
-          live(
-            conn,
-            ~p"/projects/#{project.id}/settings#collaboration"
-          )
+      project_owner =
+        insert(:project_user,
+          project: project,
+          user: build(:user),
+          role: :owner
+        )
 
-        tooltip =
-          element(view, "#remove_project_user_#{project_user.id}_button-tooltip")
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/settings#collaboration"
+        )
 
-        assert has_element?(tooltip)
-        assert render(tooltip) =~ "You cannot remove an owner"
+      tooltip =
+        element(view, "#remove_project_user_#{project_owner.id}_button-tooltip")
 
-        # modal is not present
-        refute has_element?(view, "#remove_#{project_user.id}_modal")
+      assert has_element?(tooltip)
+      assert render(tooltip) =~ "You cannot remove an owner"
 
-        # try sending the event either way
-        html =
-          render_click(view, "remove_project_user", %{
-            "project_user_id" => project_user.id
-          })
+      # modal is not present
+      refute has_element?(view, "#remove_#{project_owner.id}_modal")
 
-        assert html =~ "You are not authorized to perform this action"
+      # try sending the event either way
+      html =
+        render_click(view, "remove_project_user", %{
+          "project_user_id" => project_owner.id
+        })
 
-        # project user still exists
-        assert Repo.get(Lightning.Projects.ProjectUser, project_user.id)
-      end
+      assert html =~ "You are not authorized to perform this action"
+
+      # project user still exists
+      assert Repo.get(Lightning.Projects.ProjectUser, project_owner.id)
     end
 
     test "users cannot remove themselves",

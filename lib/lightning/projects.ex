@@ -183,11 +183,12 @@ defmodule Lightning.Projects do
   """
   def create_project(attrs \\ %{}) do
     %Project{}
-    |> Project.changeset(attrs)
+    |> Project.project_with_users_changeset(attrs)
     |> Repo.insert()
     |> tap(fn result ->
       with {:ok, project} <- result do
         Events.project_created(project)
+        schedule_project_addition_emails(%Project{project_users: []}, project)
       end
     end)
   end
@@ -205,7 +206,8 @@ defmodule Lightning.Projects do
 
   """
   def update_project(%Project{} = project, attrs) do
-    changeset = Project.changeset(project, attrs)
+    project = Repo.preload(project, :project_users)
+    changeset = Project.project_with_users_changeset(project, attrs)
 
     case Repo.update(changeset) do
       {:ok, updated_project} ->
@@ -213,6 +215,7 @@ defmodule Lightning.Projects do
           send_data_retention_change_email(updated_project)
         end
 
+        schedule_project_addition_emails(project, updated_project)
         {:ok, updated_project}
 
       error ->
@@ -268,17 +271,21 @@ defmodule Lightning.Projects do
     params = %{project_users: project_users}
 
     with {:ok, updated_project} <- update_project(project, params) do
-      emails =
-        Enum.map(
-          updated_project.project_users,
-          fn pu ->
-            UserNotifier.new(%{type: "project_addition", project_user_id: pu.id})
-          end
-        )
-
-      Oban.insert_all(Lightning.Oban, emails)
       {:ok, updated_project.project_users}
     end
+  end
+
+  defp schedule_project_addition_emails(old_project, updated_project) do
+    existing_user_ids = Enum.map(old_project.project_users, & &1.user_id)
+
+    emails =
+      updated_project.project_users
+      |> Enum.reject(fn pu -> pu.user_id in existing_user_ids end)
+      |> Enum.map(fn pu ->
+        UserNotifier.new(%{type: "project_addition", project_user_id: pu.id})
+      end)
+
+    Oban.insert_all(Lightning.Oban, emails)
   end
 
   @spec delete_project_user!(ProjectUser.t()) :: ProjectUser.t()

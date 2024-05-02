@@ -15,42 +15,38 @@ defmodule LightningWeb.ProjectLive.FormComponent do
   import Ecto.Changeset, only: [fetch_field!: 2]
   import LightningWeb.Components.Form
 
-  alias Lightning.Accounts.UserNotifier
   alias Lightning.Projects
-  alias Lightning.Repo
+  alias Lightning.Projects.Project
 
   @impl true
   def update(
         %{project: project, users: users} = assigns,
         socket
       ) do
-    project_users_ids = Enum.map(project.project_users, & &1.user_id)
+    project_users =
+      users
+      |> Enum.sort_by(fn user -> user.first_name end, :asc)
+      |> Enum.map(fn user ->
+        existing_project_user =
+          Enum.find(project.project_users, fn pu -> pu.user_id == user.id end)
 
-    users_without_access =
-      Enum.reject(users, fn user -> user.id in project_users_ids end)
-
-    p_users_without_access =
-      Enum.map(users_without_access, fn user ->
-        %Lightning.Projects.ProjectUser{user_id: user.id, user: user, role: nil}
+        %{
+          id: existing_project_user && existing_project_user.id,
+          user_id: user.id,
+          role: existing_project_user && existing_project_user.role
+        }
       end)
 
-    all_project_users = project.project_users ++ p_users_without_access
-
-    project_users =
-      Enum.sort_by(
-        all_project_users,
-        fn p_user -> p_user.user.first_name end,
-        :asc
-      )
-
     changeset =
-      Projects.change_project(%{project | project_users: project_users})
+      Project.project_with_users_changeset(
+        project,
+        %{project_users: project_users}
+      )
 
     {:ok,
      socket
      |> assign(assigns)
      |> assign(:changeset, changeset)
-     |> assign(:project_users, project_users)
      |> assign(
        :name,
        Projects.url_safe_project_name(fetch_field!(changeset, :name))
@@ -64,11 +60,11 @@ defmodule LightningWeb.ProjectLive.FormComponent do
         %{assigns: assigns} = socket
       ) do
     # we update the project here so that we can mantain the users in the changeset after validation
-    project = %{assigns.project | project_users: assigns.project_users}
+    # project = %{assigns.project | project_users: assigns.project_users}
 
     changeset =
-      project
-      |> Projects.change_project(
+      assigns.project
+      |> Project.project_with_users_changeset(
         project_params
         |> coerce_raw_name_to_safe_name()
       )
@@ -97,22 +93,18 @@ defmodule LightningWeb.ProjectLive.FormComponent do
       end)
       |> Enum.into(%{})
 
-    params = Map.merge(project_params, %{"project_users" => users_params})
+    params =
+      Map.merge(project_params, %{
+        "project_users" => users_params,
+        "users_sort" => Map.keys(users_params)
+      })
 
     save_project(socket, socket.assigns.action, params)
   end
 
   defp save_project(socket, :edit, project_params) do
     case Projects.update_project(socket.assigns.project, project_params) do
-      {:ok, project} ->
-        users_to_notify =
-          filter_users_to_notify(
-            project,
-            project_params |> Map.get("project_users", %{})
-          )
-
-        notify_project_users(project, users_to_notify)
-
+      {:ok, _project} ->
         {:noreply,
          socket
          |> put_flash(:info, "Project updated successfully")
@@ -124,16 +116,8 @@ defmodule LightningWeb.ProjectLive.FormComponent do
   end
 
   defp save_project(socket, :new, project_params) do
-    case Projects.create_project(project_params) do
-      {:ok, project} ->
-        users_to_notify =
-          filter_users_to_notify(
-            project,
-            project_params |> Map.get("project_users", %{})
-          )
-
-        notify_project_users(project, users_to_notify)
-
+    case Projects.create_project(project_params) |> dbg() do
+      {:ok, _project} ->
         {:noreply,
          socket
          |> put_flash(:info, "Project created successfully")
@@ -142,34 +126,6 @@ defmodule LightningWeb.ProjectLive.FormComponent do
       {:error, %Ecto.Changeset{} = changeset} ->
         {:noreply, assign(socket, changeset: changeset)}
     end
-  end
-
-  # TODO: Determine the list of users to notify into the Project context
-  # by using the changeset to determine what records are going to be added/removed
-  defp filter_users_to_notify(project, project_users_params) do
-    project = Repo.preload(project, :project_users)
-
-    existing_project_users =
-      project.project_users
-      |> Enum.map(fn pu -> pu.user_id end)
-
-    added_project_users =
-      project_users_params
-      |> Map.values()
-      |> Enum.filter(fn pu -> pu["delete"] != "true" end)
-      |> Enum.map(fn pu -> pu["user_id"] end)
-
-    added_project_users -- existing_project_users
-  end
-
-  defp notify_project_users(project, users_to_notify) do
-    users_to_notify
-    |> Enum.map(fn user ->
-      UserNotifier.deliver_project_addition_notification(
-        Lightning.Accounts.get_user!(user),
-        project
-      )
-    end)
   end
 
   defp coerce_raw_name_to_safe_name(%{"raw_name" => raw_name} = params) do
@@ -184,5 +140,9 @@ defmodule LightningWeb.ProjectLive.FormComponent do
 
   defp full_user_name(user) do
     "#{user.first_name} #{user.last_name}"
+  end
+
+  defp find_user_by_id(users, user_id) do
+    Enum.find(users, fn user -> user.id == user_id end)
   end
 end
