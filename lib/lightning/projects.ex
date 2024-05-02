@@ -279,9 +279,10 @@ defmodule Lightning.Projects do
   @spec add_project_users(Project.t(), [map(), ...]) ::
           {:ok, [ProjectUser.t(), ...]} | {:error, Ecto.Changeset.t()}
   def add_project_users(project, project_users) do
-    # make the current users an empty list to avoid deleting existing project users
-    project = %{project | project_users: []}
-    params = %{project_users: project_users}
+    project = Repo.preload(project, :project_users)
+    # include the current list to ensure project owner validations work correctly
+    current_users = Enum.map(project.project_users, fn pu -> %{id: pu.id} end)
+    params = %{project_users: project_users ++ current_users}
 
     with {:ok, updated_project} <- update_project_with_users(project, params) do
       {:ok, updated_project.project_users}
