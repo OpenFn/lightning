@@ -9,6 +9,8 @@ defmodule Lightning.Workflows.Snapshot do
   import Ecto.Changeset
   import Ecto.Query
 
+  alias Ecto.Multi
+
   alias Lightning.Projects.ProjectCredential
   alias Lightning.Repo
   alias Lightning.Workflows.Workflow
@@ -180,28 +182,44 @@ defmodule Lightning.Workflows.Snapshot do
   @spec get_or_create_latest_for(Workflow.t()) ::
           {:ok, t()} | {:error, Ecto.Changeset.t()}
   def get_or_create_latest_for(workflow) do
-    Ecto.Multi.new()
-    |> Ecto.Multi.one(:existing, get_current_query(workflow))
-    |> Ecto.Multi.run(:snapshot, fn repo, %{existing: snapshot} ->
-      if snapshot do
-        {:ok, snapshot}
-      else
+    Multi.new()
+    |> get_or_create_latest_for(workflow)
+    |> Repo.transaction()
+    |> case do
+      {:ok, %{snapshot: snapshot}} -> {:ok, snapshot}
+      {:error, _name, error, _multi} -> {:error, error}
+    end
+  end
+
+  @spec get_or_create_latest_for(Multi.t(), Workflow.t()) :: Multi.t()
+  def get_or_create_latest_for(multi, workflow) do
+    multi
+    |> Multi.one(:__existing, get_current_query(workflow))
+    |> Multi.merge(fn %{__existing: snapshot} ->
+      return_or_create(snapshot, workflow)
+    end)
+  end
+
+  defp return_or_create(snapshot, workflow) do
+    if snapshot do
+      Multi.new() |> Multi.put(:snapshot, snapshot)
+    else
+      Multi.new()
+      |> Multi.one(
+        :__workflow,
         from(w in Workflow,
           where: w.id == ^workflow.id,
           preload: [:jobs, :triggers, :edges],
           lock: "FOR UPDATE"
         )
-        |> repo.one()
-        |> then(fn
-          nil -> {:error, :no_workflow}
-          workflow -> create(workflow)
-        end)
-      end
-    end)
-    |> Repo.transaction()
-    |> case do
-      {:ok, %{snapshot: snapshot}} -> {:ok, snapshot}
-      {:error, _name, error, _multi} -> {:error, error}
+      )
+      |> Multi.merge(fn %{__workflow: workflow} ->
+        if workflow do
+          Multi.new() |> Multi.insert(:snapshot, build(workflow))
+        else
+          Multi.new() |> Multi.error(:workflow, :no_workflow)
+        end
+      end)
     end
   end
 end

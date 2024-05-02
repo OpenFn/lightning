@@ -19,6 +19,9 @@ and this project adheres to
 
 ### Changed
 
+- Changed Snapshot `get_or_create_latest_for` to accept multis allow controlling
+  of which repo it uses.
+
 ### Fixed
 
 ## [v2.4.3] - 2024-05-01
