@@ -733,7 +733,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
         else
           socket
           |> put_flash(:error, "Workflow not found")
-          |> push_redirect(to: ~p"/projects/#{socket.assigns.projectd}/w")
+          |> push_redirect(to: ~p"/projects/#{socket.assigns.project}/w")
         end
     end
   end
