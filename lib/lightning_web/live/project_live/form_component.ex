@@ -54,16 +54,9 @@ defmodule LightningWeb.ProjectLive.FormComponent do
   end
 
   @impl true
-  def handle_event(
-        "validate",
-        %{"project" => project_params},
-        %{assigns: assigns} = socket
-      ) do
-    # we update the project here so that we can mantain the users in the changeset after validation
-    # project = %{assigns.project | project_users: assigns.project_users}
-
+  def handle_event("validate", %{"project" => project_params}, socket) do
     changeset =
-      assigns.project
+      socket.assigns.project
       |> Project.project_with_users_changeset(
         project_params
         |> coerce_raw_name_to_safe_name()
@@ -103,7 +96,10 @@ defmodule LightningWeb.ProjectLive.FormComponent do
   end
 
   defp save_project(socket, :edit, project_params) do
-    case Projects.update_project(socket.assigns.project, project_params) do
+    case Projects.update_project_with_users(
+           socket.assigns.project,
+           project_params
+         ) do
       {:ok, _project} ->
         {:noreply,
          socket
@@ -116,7 +112,7 @@ defmodule LightningWeb.ProjectLive.FormComponent do
   end
 
   defp save_project(socket, :new, project_params) do
-    case Projects.create_project(project_params) |> dbg() do
+    case Projects.create_project(project_params) do
       {:ok, _project} ->
         {:noreply,
          socket

@@ -52,10 +52,10 @@ defmodule Lightning.ProjectsTest do
     end
 
     test "get_project_with_users!/1 returns the project with given id" do
-      user = user_fixture()
+      user = insert(:user)
 
       project =
-        project_fixture(project_users: [%{user_id: user.id}])
+        insert(:project, project_users: [%{user_id: user.id, role: :editor}])
         |> Repo.preload(project_users: [:user])
 
       assert Projects.get_project_with_users!(project.id) == project
@@ -82,7 +82,9 @@ defmodule Lightning.ProjectsTest do
 
     test "get_project_user!/1 returns the project_user with given id" do
       project_user =
-        project_fixture(project_users: [%{user_id: user_fixture().id}]).project_users
+        insert(:project,
+          project_users: [%{user_id: insert(:user).id, role: :editor}]
+        ).project_users
         |> List.first()
 
       assert Projects.get_project_user!(project_user.id) == project_user
@@ -96,23 +98,70 @@ defmodule Lightning.ProjectsTest do
       assert Projects.get_project_user(Ecto.UUID.generate()) == nil
 
       project_user =
-        project_fixture(project_users: [%{user_id: user_fixture().id}]).project_users
+        insert(:project,
+          project_users: [%{user_id: insert(:user).id, role: :editor}]
+        ).project_users
         |> List.first()
 
       assert Projects.get_project_user(project_user.id) == project_user
     end
 
     test "create_project/1 with valid data creates a project" do
-      %{id: user_id} = user_fixture()
-      valid_attrs = %{name: "some-name", project_users: [%{user_id: user_id}]}
+      %{id: user_id} = insert(:user)
+
+      valid_attrs = %{
+        name: "some-name",
+        project_users: [%{user_id: user_id, role: :owner}]
+      }
 
       assert {:ok, %Project{id: project_id} = project} =
                Projects.create_project(valid_attrs)
 
       assert project.name == "some-name"
 
-      assert [%{project_id: ^project_id, user_id: ^user_id}] =
+      assert [%{project_id: ^project_id, user_id: ^user_id, role: :owner}] =
                project.project_users
+    end
+
+    test "create_project/1 expects project to have exactly one owner" do
+      user = insert(:user)
+
+      # creates successfully if there's one
+      assert {:ok, _project} =
+               Projects.create_project(%{
+                 name: "some-name",
+                 project_users: [%{user_id: user.id, role: :owner}]
+               })
+
+      # errors out if there is none
+      for role <- [:admin, :editor, :viewer] do
+        assert {:error, %Ecto.Changeset{errors: errors}} =
+                 Projects.create_project(%{
+                   name: "some-name",
+                   project_users: [%{user_id: user.id, role: role}]
+                 })
+
+        assert [
+                 {:owner,
+                  {"you have not specified an owner for the project", []}}
+               ] ==
+                 errors
+      end
+
+      # errors out if there is more than one
+      another_user = insert(:user)
+
+      assert {:error, %Ecto.Changeset{errors: errors}} =
+               Projects.create_project(%{
+                 name: "some-name",
+                 project_users: [
+                   %{user_id: user.id, role: :owner},
+                   %{user_id: another_user.id, role: :owner}
+                 ]
+               })
+
+      assert [{:owner, {"a project can have only one owner", []}}] ==
+               errors
     end
 
     test "create_project/1 with invalid data returns error changeset" do

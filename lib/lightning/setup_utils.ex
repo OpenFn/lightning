@@ -71,7 +71,7 @@ defmodule Lightning.SetupUtils do
       workorders: [failure_dhis2_workorder]
     } =
       create_dhis2_project([
-        %{user_id: admin.id, role: :admin}
+        %{user_id: admin.id, role: :owner}
       ])
 
     %{

@@ -206,8 +206,7 @@ defmodule Lightning.Projects do
 
   """
   def update_project(%Project{} = project, attrs) do
-    project = Repo.preload(project, :project_users)
-    changeset = Project.project_with_users_changeset(project, attrs)
+    changeset = Project.changeset(project, attrs)
 
     case Repo.update(changeset) do
       {:ok, updated_project} ->
@@ -215,12 +214,26 @@ defmodule Lightning.Projects do
           send_data_retention_change_email(updated_project)
         end
 
-        schedule_project_addition_emails(project, updated_project)
         {:ok, updated_project}
 
       error ->
         error
     end
+  end
+
+  @spec update_project_with_users(Project.t(), map()) ::
+          {:ok, Project.t()} | {:error, Ecto.Changeset.t()}
+  def update_project_with_users(%Project{} = project, attrs) do
+    project = Repo.preload(project, :project_users)
+
+    project
+    |> Project.project_with_users_changeset(attrs)
+    |> Repo.update()
+    |> tap(fn result ->
+      with {:ok, updated_project} <- result do
+        schedule_project_addition_emails(project, updated_project)
+      end
+    end)
   end
 
   defp retention_setting_updated?(changeset) do
@@ -270,7 +283,7 @@ defmodule Lightning.Projects do
     project = %{project | project_users: []}
     params = %{project_users: project_users}
 
-    with {:ok, updated_project} <- update_project(project, params) do
+    with {:ok, updated_project} <- update_project_with_users(project, params) do
       {:ok, updated_project.project_users}
     end
   end

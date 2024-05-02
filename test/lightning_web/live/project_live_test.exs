@@ -71,7 +71,7 @@ defmodule LightningWeb.ProjectLiveTest do
       assert html =~ project.name
     end
 
-    test "saves new project with no members", %{conn: conn} do
+    test "fails to save a project with no members", %{conn: conn} do
       {:ok, index_live, _html} =
         live(conn, Routes.project_index_path(conn, :index))
 
@@ -80,20 +80,17 @@ defmodule LightningWeb.ProjectLiveTest do
 
       assert_patch(index_live, Routes.project_index_path(conn, :new))
 
-      index_live
-      |> form("#project-form", project: @create_attrs)
-      |> render_change()
+      html =
+        index_live
+        |> form("#project-form", project: @create_attrs)
+        |> render_submit()
 
-      index_live
-      |> form("#project-users-form")
-      |> render_submit()
-
-      assert_patch(index_live, Routes.project_index_path(conn, :index))
-      assert render(index_live) =~ "Project created successfully"
+      assert html =~ "you have not specified an owner for the project"
     end
 
-    test "saves new project", %{conn: conn} do
-      user = insert(:user, first_name: "1st", last_name: "user")
+    test "saves new project with members", %{conn: conn} do
+      user_1 = insert(:user, first_name: "1st", last_name: "user")
+      user_2 = insert(:user, first_name: "another", last_name: "person")
 
       {:ok, index_live, _html} =
         live(conn, Routes.project_index_path(conn, :index))
@@ -102,26 +99,49 @@ defmodule LightningWeb.ProjectLiveTest do
                "Projects"
 
       assert_patch(index_live, Routes.project_index_path(conn, :new))
+
+      # error for no owner is not shown until you make a change
+      refute render(index_live) =~
+               "you have not specified an owner for the project"
 
       assert index_live
              |> form("#project-form", project: @invalid_attrs)
              |> render_change() =~ "can&#39;t be blank"
 
+      assert render(index_live) =~
+               "you have not specified an owner for the project"
+
+      user_1_index = find_user_index_in_list(index_live, user_1)
+      user_2_index = find_user_index_in_list(index_live, user_2)
+
+      # error for multiple owners is displayed
+      html =
+        index_live
+        |> form("#project-form",
+          project: %{
+            "project_users" => %{
+              user_1_index => %{"user_id" => user_1.id, "role" => "owner"},
+              user_2_index => %{"user_id" => user_2.id, "role" => "owner"}
+            }
+          }
+        )
+        |> render_change()
+
+      assert html =~ "a project can have only one owner"
+
       index_live
-      |> form("#project-form", project: @create_attrs)
+      |> form("#project-form",
+        project:
+          Map.merge(@create_attrs, %{
+            "project_users" => %{
+              user_1_index => %{"user_id" => user_1.id, "role" => "owner"},
+              user_2_index => %{"user_id" => user_2.id, "role" => "editor"}
+            }
+          })
+      )
       |> render_change()
 
-      user_index = find_user_index_in_list(index_live, user)
-
-      index_live
-      |> form("#project-users-form",
-        project: %{
-          "project_users" => %{
-            user_index => %{"user_id" => user.id, "role" => "editor"}
-          }
-        }
-      )
-      |> render_submit()
+      index_live |> form("#project-form") |> render_submit()
 
       assert_patch(index_live, Routes.project_index_path(conn, :index))
       assert render(index_live) =~ "Project created successfully"
@@ -318,17 +338,19 @@ defmodule LightningWeb.ProjectLiveTest do
     test "Edits a project", %{conn: conn, user: superuser} do
       user1 = insert(:user, first_name: "2")
       user2 = insert(:user, first_name: "3")
-      project = insert(:project)
+
+      project =
+        insert(:project, project_users: [%{role: :owner, user_id: user1.id}])
 
       {:ok, view, _html} = live(conn, ~p"/settings/projects/#{project.id}")
 
       view
-      |> form("#project-users-form",
+      |> form("#project-form",
         project: %{
           "project_users" => %{
             find_user_index_in_list(view, user1) => %{
               "user_id" => user1.id,
-              "role" => "editor"
+              "role" => "owner"
             },
             find_user_index_in_list(view, user2) => %{
               "user_id" => user2.id,
@@ -551,11 +573,11 @@ defmodule LightningWeb.ProjectLiveTest do
            conn: conn,
            user: user
          } do
-      {:ok, project} =
-        Lightning.Projects.create_project(%{
+      project =
+        insert(:project,
           name: "project-1",
           project_users: [%{user_id: user.id, role: :admin}]
-        })
+        )
 
       {:ok, credential} =
         Lightning.Credentials.create_credential(%{
@@ -597,11 +619,11 @@ defmodule LightningWeb.ProjectLiveTest do
          } do
       [:admin, :editor]
       |> Enum.each(fn role ->
-        {:ok, project} =
-          Lightning.Projects.create_project(%{
+        project =
+          insert(:project,
             name: "project-1",
             project_users: [%{user_id: user.id, role: role}]
-          })
+          )
 
         {:ok, view, html} =
           live(
@@ -644,11 +666,11 @@ defmodule LightningWeb.ProjectLiveTest do
            conn: conn,
            user: user
          } do
-      {:ok, project} =
-        Lightning.Projects.create_project(%{
+      project =
+        insert(:project,
           name: "project-1",
           project_users: [%{user_id: user.id, role: :viewer}]
-        })
+        )
 
       {:ok, view, html} =
         live(
@@ -690,11 +712,11 @@ defmodule LightningWeb.ProjectLiveTest do
       conn: conn,
       user: user
     } do
-      {:ok, project} =
-        Lightning.Projects.create_project(%{
+      project =
+        insert(:project,
           name: "project-1",
           project_users: [%{user_id: user.id, role: :viewer}]
-        })
+        )
 
       credential_name = "My Credential"
 
@@ -724,11 +746,11 @@ defmodule LightningWeb.ProjectLiveTest do
            conn: conn,
            user: user
          } do
-      {:ok, project} =
-        Lightning.Projects.create_project(%{
+      project =
+        insert(:project,
           name: "project-1",
           project_users: [%{user_id: user.id, role: :admin}]
-        })
+        )
 
       {:ok, view, html} =
         live(
@@ -768,11 +790,11 @@ defmodule LightningWeb.ProjectLiveTest do
            conn: conn,
            user: user
          } do
-      {:ok, project} =
-        Lightning.Projects.create_project(%{
+      project =
+        insert(:project,
           name: "project-1",
           project_users: [%{user_id: user.id, role: :admin}]
-        })
+        )
 
       {:ok, view, html} =
         live(
@@ -796,11 +818,11 @@ defmodule LightningWeb.ProjectLiveTest do
       conn: conn,
       user: user
     } do
-      {:ok, project} =
-        Lightning.Projects.create_project(%{
+      project =
+        insert(:project,
           name: "project-1",
           project_users: [%{user_id: user.id, role: :viewer}]
-        })
+        )
 
       {:ok, view, html} =
         live(
@@ -830,8 +852,8 @@ defmodule LightningWeb.ProjectLiveTest do
          %{conn: conn, user: authenticated_user} do
       unauthenticated_user = user_fixture(first_name: "Bob")
 
-      {:ok, project} =
-        Lightning.Projects.create_project(%{
+      project =
+        insert(:project,
           name: "project-1",
           project_users: [
             %{
@@ -845,7 +867,7 @@ defmodule LightningWeb.ProjectLiveTest do
               failure_alert: true
             }
           ]
-        })
+        )
 
       {:ok, view, _html} =
         live(
@@ -3972,7 +3994,7 @@ defmodule LightningWeb.ProjectLiveTest do
 
   defp find_user_index_in_list(view, user) do
     Floki.parse_fragment!(render(view))
-    |> Floki.find("#project-users-form tbody tr")
+    |> Floki.find("#project-form tbody tr")
     |> Enum.find_index(fn el ->
       Floki.find(el, "td:first-child()") |> Floki.text() =~
         "#{user.first_name} #{user.last_name}"

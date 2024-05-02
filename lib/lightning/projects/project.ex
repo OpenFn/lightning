@@ -117,11 +117,12 @@ defmodule Lightning.Projects.Project do
 
   def project_with_users_changeset(project, attrs) do
     project
-    |> changeset(attrs)
+    |> cast(attrs, [:id, :name, :description])
     |> cast_assoc(:project_users,
       required: true,
       sort_param: :users_sort
     )
+    |> validate()
     |> validate_project_owner()
   end
 

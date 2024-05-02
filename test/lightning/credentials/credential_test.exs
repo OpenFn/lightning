@@ -13,29 +13,19 @@ defmodule Lightning.Credentials.CredentialTest do
 
     test "user_id not valid for transfer" do
       %{id: user_id, first_name: first_name, last_name: last_name} =
-        Lightning.AccountsFixtures.user_fixture(
-          first_name: "Elias",
-          last_name: "BA"
-        )
+        insert(:user, first_name: "Elias", last_name: "BA")
 
-      Lightning.Projects.create_project(%{
-        name: "project-a",
-        project_users: [%{user_id: user_id}]
-      })
+      insert(:project, name: "project-a", project_users: [%{user_id: user_id}])
 
-      {:ok, %Lightning.Projects.Project{id: project_id_b, name: project_name_b}} =
-        Lightning.Projects.create_project(%{
-          name: "project-b"
-        })
+      %{id: project_id_b, name: project_name_b} =
+        insert(:project, name: "project-b")
 
-      {:ok, %Lightning.Projects.Project{id: project_id_c, name: project_name_c}} =
-        Lightning.Projects.create_project(%{
-          name: "project-c"
-        })
+      %{id: project_id_c, name: project_name_c} =
+        insert(:project, name: "project-c")
 
       errors =
         Credential.changeset(
-          Lightning.CredentialsFixtures.credential_fixture(
+          insert(:credential,
             project_credentials: [
               %{project_id: project_id_b},
               %{project_id: project_id_c}
@@ -51,17 +41,17 @@ defmodule Lightning.Credentials.CredentialTest do
     end
 
     test "user_id is valid for transfer" do
-      %{id: user_id_1} = Lightning.AccountsFixtures.user_fixture()
-      %{id: user_id_2} = Lightning.AccountsFixtures.user_fixture()
+      %{id: user_id_1} = insert(:user)
+      %{id: user_id_2} = insert(:user)
 
-      {:ok, %Lightning.Projects.Project{id: project_id}} =
-        Lightning.Projects.create_project(%{
+      %{id: project_id} =
+        insert(:project,
           name: "some-name",
           project_users: [%{user_id: user_id_1}, %{user_id: user_id_2}]
-        })
+        )
 
       credential =
-        Lightning.CredentialsFixtures.credential_fixture(
+        insert(:credential,
           user_id: user_id_1,
           project_credentials: [%{project_id: project_id}]
         )
