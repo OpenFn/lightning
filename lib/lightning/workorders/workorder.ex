@@ -64,6 +64,5 @@ defmodule Lightning.WorkOrder do
     changeset
     |> assoc_constraint(:workflow)
     |> assoc_constraint(:snapshot)
-    |> foreign_key_constraint(:snapshot_id)
   end
 end

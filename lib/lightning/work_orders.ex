@@ -140,9 +140,9 @@ defmodule Lightning.WorkOrders do
 
   defp get_or_create_snapshot(multi, workflow \\ nil) do
     multi
-    |> Multi.run(:snapshot, fn _repo, changes ->
+    |> Multi.merge(fn changes ->
       workflow = workflow || changes[:workflow]
-      Snapshot.get_or_create_latest_for(workflow)
+      Multi.new() |> Snapshot.get_or_create_latest_for(workflow)
     end)
   end
 
@@ -228,6 +228,7 @@ defmodule Lightning.WorkOrders do
     |> validate_required_assoc(:dataclip)
     |> assoc_constraint(:trigger)
     |> assoc_constraint(:workflow)
+    |> assoc_constraint(:snapshot)
   end
 
   def build_for(%Job{} = job, attrs) do
@@ -252,6 +253,7 @@ defmodule Lightning.WorkOrders do
     |> validate_required_assoc(:dataclip)
     |> assoc_constraint(:trigger)
     |> assoc_constraint(:workflow)
+    |> assoc_constraint(:snapshot)
   end
 
   @doc """
