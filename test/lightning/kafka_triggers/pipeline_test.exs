@@ -22,8 +22,6 @@ defmodule Lightning.KafkaTriggers.PipelineTest do
           topics: topics
         )
 
-        # IO.inspect(call_history(Broadway))
-
         assert called Broadway.start_link(
           Pipeline,
           name: name,
