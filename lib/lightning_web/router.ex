@@ -21,6 +21,7 @@ defmodule LightningWeb.Router do
     plug :put_secure_browser_headers
     plug :fetch_current_user
     plug LightningWeb.Plugs.FirstSetup
+    plug LightningWeb.Plugs.RegisterGatekeeper
   end
 
   pipeline :api do

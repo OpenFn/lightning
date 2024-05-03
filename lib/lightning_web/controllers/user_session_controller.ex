@@ -8,7 +8,8 @@ defmodule LightningWeb.UserSessionController do
   def new(conn, _params) do
     render(conn, "new.html",
       error_message: nil,
-      auth_handler_url: auth_handler_url()
+      auth_handler_url: auth_handler_url(),
+      allow_sign_up: !Application.get_env(:lightning, :disable_registration)
     )
   end
 
