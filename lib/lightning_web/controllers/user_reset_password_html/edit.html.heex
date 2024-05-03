@@ -56,7 +56,10 @@
                   <div class="grow"></div>
 
                   <div class="flex-none">
-                    <.link :if={@allow_sign_up} href={Routes.user_registration_path(@conn, :new)}>
+                    <.link
+                      :if={@allow_sign_up}
+                      href={Routes.user_registration_path(@conn, :new)}
+                    >
                       Register
                     </.link>
                   </div>

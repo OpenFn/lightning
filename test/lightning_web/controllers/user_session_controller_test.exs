@@ -31,6 +31,8 @@ defmodule LightningWeb.UserSessionControllerTest do
   end
 
   setup do
+    Application.put_env(:lightning, :disable_registration, false)
+
     %{user: user_fixture()}
   end
 

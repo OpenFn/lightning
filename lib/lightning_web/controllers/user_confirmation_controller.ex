@@ -27,7 +27,10 @@ defmodule LightningWeb.UserConfirmationController do
   end
 
   def edit(conn, %{"token" => token}) do
-    render(conn, "edit.html", token: token)
+    render(conn, "edit.html",
+      token: token,
+      allow_sign_up: !Application.get_env(:lightning, :disable_registration)
+    )
   end
 
   def confirm_email(conn, %{"token" => token}) do

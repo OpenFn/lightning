@@ -29,7 +29,8 @@ defmodule LightningWeb.UserResetPasswordController do
 
   def edit(conn, _params) do
     render(conn, "edit.html",
-      changeset: Accounts.change_user_password(conn.assigns.user)
+      changeset: Accounts.change_user_password(conn.assigns.user),
+      allow_sign_up: !Application.get_env(:lightning, :disable_registration)
     )
   end
 
@@ -43,7 +44,10 @@ defmodule LightningWeb.UserResetPasswordController do
         |> redirect(to: Routes.user_session_path(conn, :new))
 
       {:error, changeset} ->
-        render(conn, "edit.html", changeset: changeset)
+        render(conn, "edit.html",
+          changeset: changeset,
+          allow_sign_up: !Application.get_env(:lightning, :disable_registration)
+        )
     end
   end
 

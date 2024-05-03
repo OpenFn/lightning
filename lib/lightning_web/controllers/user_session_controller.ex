@@ -21,7 +21,10 @@ defmodule LightningWeb.UserSessionController do
       %User{disabled: true} ->
         conn
         |> put_flash(:error, "This user account is disabled")
-        |> render("new.html", auth_handler_url: auth_handler_url())
+        |> render("new.html",
+          auth_handler_url: auth_handler_url(),
+          allow_sign_up: !Application.get_env(:lightning, :disable_registration)
+        )
 
       %User{scheduled_deletion: x} when x != nil ->
         conn
@@ -29,7 +32,10 @@ defmodule LightningWeb.UserSessionController do
           :error,
           "This user account is scheduled for deletion"
         )
-        |> render("new.html", auth_handler_url: auth_handler_url())
+        |> render("new.html",
+          auth_handler_url: auth_handler_url(),
+          allow_sign_up: !Application.get_env(:lightning, :disable_registration)
+        )
 
       %User{mfa_enabled: true} = user ->
         totp_params = Map.take(user_params, ["remember_me"])
@@ -47,7 +53,10 @@ defmodule LightningWeb.UserSessionController do
       _ ->
         conn
         |> put_flash(:error, "Invalid email or password")
-        |> render("new.html", auth_handler_url: auth_handler_url())
+        |> render("new.html",
+          auth_handler_url: auth_handler_url(),
+          allow_sign_up: !Application.get_env(:lightning, :disable_registration)
+        )
     end
   end
 
