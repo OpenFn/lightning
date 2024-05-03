@@ -62,18 +62,22 @@ defmodule Lightning.CredentialsTest do
     end
 
     test "get_credential!/1 returns the credential with given id" do
-      user = user_fixture()
-      credential = credential_fixture(user_id: user.id)
+      user = insert(:user)
+      credential = insert(:credential, user_id: user.id)
       assert Credentials.get_credential!(credential.id) == credential
     end
 
     test "delete_credential/1 deletes a credential and removes it from associated jobs and projects" do
-      user = user_fixture()
+      user = insert(:user)
 
-      project = project_fixture(user_id: user.id)
+      project =
+        insert(:project, project_users: [%{role: :owner, user_id: user.id}])
 
       project_credential =
-        project_credential_fixture(user_id: user.id, project_id: project.id)
+        insert(:project_credential,
+          project: project,
+          credential: build(:credential, user: user)
+        )
 
       credential_id = project_credential.credential_id
 
@@ -219,24 +223,24 @@ defmodule Lightning.CredentialsTest do
     end
 
     test "change_credential/1 returns a credential changeset" do
-      user = user_fixture()
-      credential = credential_fixture(user_id: user.id)
+      user = insert(:user)
+      credential = insert(:credential, user_id: user.id)
       assert %Ecto.Changeset{} = Credentials.change_credential(credential)
     end
 
     test "invalid_projects_for_user/2 returns a list of invalid projects, given a credential and a user" do
-      %{id: user_id_1} = Lightning.AccountsFixtures.user_fixture()
-      %{id: user_id_2} = Lightning.AccountsFixtures.user_fixture()
-      %{id: user_id_3} = Lightning.AccountsFixtures.user_fixture()
+      %{id: user_id_1} = insert(:user)
+      %{id: user_id_2} = insert(:user)
+      %{id: user_id_3} = insert(:user)
 
-      {:ok, %Lightning.Projects.Project{id: project_id}} =
-        Lightning.Projects.create_project(%{
+      %Lightning.Projects.Project{id: project_id} =
+        insert(:project,
           name: "some-name",
           project_users: [%{user_id: user_id_1}, %{user_id: user_id_2}]
-        })
+        )
 
       credential =
-        Lightning.CredentialsFixtures.credential_fixture(
+        insert(:credential,
           user_id: user_id_1,
           project_credentials: [%{project_id: project_id}]
         )
@@ -537,8 +541,8 @@ defmodule Lightning.CredentialsTest do
     end
 
     test "returns error changeset with invalid data" do
-      user = user_fixture()
-      credential = credential_fixture(user_id: user.id)
+      user = insert(:user)
+      credential = insert(:credential, user_id: user.id)
 
       assert {:error, %Ecto.Changeset{}} =
                Credentials.update_credential(credential, @invalid_attrs)
@@ -549,13 +553,13 @@ defmodule Lightning.CredentialsTest do
 
   describe "migrate_credential_body/1" do
     test "casts body to field types based on schema" do
-      user = user_fixture()
+      user = insert(:user)
 
-      {:ok, %Lightning.Projects.Project{id: project_id}} =
-        Lightning.Projects.create_project(%{
+      %Lightning.Projects.Project{id: project_id} =
+        insert(:project,
           name: "some-name",
           project_users: [%{user_id: user.id}]
-        })
+        )
 
       body = %{
         "user" => "user1",

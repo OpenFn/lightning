@@ -38,7 +38,7 @@ defmodule Lightning.Projects.ProjectUser do
     belongs_to :project, Project
     field :delete, :boolean, virtual: true
     field :failure_alert, :boolean, default: true
-    field :role, RolesEnum, default: :editor
+    field :role, RolesEnum
     field :digest, DigestEnum, default: :weekly
 
     timestamps()
@@ -58,6 +58,10 @@ defmodule Lightning.Projects.ProjectUser do
     |> validate_required([:user_id])
     |> unique_constraint([:project_id, :user_id],
       message: "user already a member of this project."
+    )
+    |> unique_constraint([:project_id],
+      name: "project_owner_unique_index",
+      message: "project can have only one owner"
     )
     |> maybe_remove_user()
   end

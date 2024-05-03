@@ -11,15 +11,13 @@ defmodule Lightning.ProjectsFixtures do
   """
   @spec project_fixture(attrs :: Keyword.t()) :: Lightning.Projects.Project.t()
   def project_fixture(attrs \\ []) when is_list(attrs) do
-    {:ok, project} =
-      attrs
-      |> Enum.into(%{
+    attrs =
+      Enum.into(attrs, %{
         name: "a-test-project",
         project_users: []
       })
-      |> Lightning.Projects.create_project()
 
-    project
+    Factories.insert(:project, attrs)
   end
 
   def canonical_project_fixture(attrs \\ %{}) do

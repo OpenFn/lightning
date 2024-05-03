@@ -24,6 +24,8 @@ and this project adheres to
 
 - Changed Snapshot `get_or_create_latest_for` to accept multis allow controlling
   of which repo it uses.
+- Require exactly one owner for each project
+  [#1991](https://github.com/OpenFn/lightning/issues/1991)
 
 ### Fixed
 

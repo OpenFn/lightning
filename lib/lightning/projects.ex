@@ -183,11 +183,12 @@ defmodule Lightning.Projects do
   """
   def create_project(attrs \\ %{}) do
     %Project{}
-    |> Project.changeset(attrs)
+    |> Project.project_with_users_changeset(attrs)
     |> Repo.insert()
     |> tap(fn result ->
       with {:ok, project} <- result do
         Events.project_created(project)
+        schedule_project_addition_emails(%Project{project_users: []}, project)
       end
     end)
   end
@@ -218,6 +219,21 @@ defmodule Lightning.Projects do
       error ->
         error
     end
+  end
+
+  @spec update_project_with_users(Project.t(), map()) ::
+          {:ok, Project.t()} | {:error, Ecto.Changeset.t()}
+  def update_project_with_users(%Project{} = project, attrs) do
+    project = Repo.preload(project, :project_users)
+
+    project
+    |> Project.project_with_users_changeset(attrs)
+    |> Repo.update()
+    |> tap(fn result ->
+      with {:ok, updated_project} <- result do
+        schedule_project_addition_emails(project, updated_project)
+      end
+    end)
   end
 
   defp retention_setting_updated?(changeset) do
@@ -263,22 +279,27 @@ defmodule Lightning.Projects do
   @spec add_project_users(Project.t(), [map(), ...]) ::
           {:ok, [ProjectUser.t(), ...]} | {:error, Ecto.Changeset.t()}
   def add_project_users(project, project_users) do
-    # make the current users an empty list to avoid deleting existing project users
-    project = %{project | project_users: []}
-    params = %{project_users: project_users}
+    project = Repo.preload(project, :project_users)
+    # include the current list to ensure project owner validations work correctly
+    current_users = Enum.map(project.project_users, fn pu -> %{id: pu.id} end)
+    params = %{project_users: project_users ++ current_users}
 
-    with {:ok, updated_project} <- update_project(project, params) do
-      emails =
-        Enum.map(
-          updated_project.project_users,
-          fn pu ->
-            UserNotifier.new(%{type: "project_addition", project_user_id: pu.id})
-          end
-        )
-
-      Oban.insert_all(Lightning.Oban, emails)
+    with {:ok, updated_project} <- update_project_with_users(project, params) do
       {:ok, updated_project.project_users}
     end
+  end
+
+  defp schedule_project_addition_emails(old_project, updated_project) do
+    existing_user_ids = Enum.map(old_project.project_users, & &1.user_id)
+
+    emails =
+      updated_project.project_users
+      |> Enum.reject(fn pu -> pu.user_id in existing_user_ids end)
+      |> Enum.map(fn pu ->
+        UserNotifier.new(%{type: "project_addition", project_user_id: pu.id})
+      end)
+
+    Oban.insert_all(Lightning.Oban, emails)
   end
 
   @spec delete_project_user!(ProjectUser.t()) :: ProjectUser.t()

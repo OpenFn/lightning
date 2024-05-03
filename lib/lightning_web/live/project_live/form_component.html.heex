@@ -5,6 +5,7 @@
     id="project-form"
     phx-target={@myself}
     phx-change="validate"
+    phx-submit="save"
   >
     <div class="flex items-end gap-2">
       <div class="w-3/6">
@@ -20,28 +21,35 @@
         <.old_error field={f[:name]} />
       </div>
       <div class="">
-        <%= if (@changeset.valid?) do %>
+        <%= if to_string(f[:name].value) != "" do %>
           Your project will be named <span class="font-mono border rounded-md p-1 bg-yellow-100 border-slate-300">
       <%= @name %></span>.
         <% end %>
       </div>
     </div>
-  </.form>
-  <div class="sm:flex sm:items-center mt-8">
-    <div class="sm:flex-auto">
-      <h1 class="text-base font-semibold leading-6 text-gray-600">
-        Manage project users
-      </h1>
+    <div class="sm:flex sm:items-center mt-8 mb-2">
+      <div class="sm:flex-auto">
+        <h1 class="text-base font-semibold leading-6 text-gray-600">
+          Manage project users
+        </h1>
+      </div>
     </div>
-  </div>
-  <.form
-    :let={f}
-    for={@changeset}
-    id="project-users-form"
-    phx-target={@myself}
-    phx-submit="save"
-  >
-    <%= Phoenix.HTML.Form.hidden_input(f, :name) %>
+
+    <div
+      :if={@changeset.action && Enum.count(f[:owner].errors) > 0}
+      class="border-red-400 bg-red-50 p-4"
+    >
+      <div class="flex">
+        <div class="flex-shrink-0">
+          <Heroicons.exclamation_triangle class="h-5 w-5 text-red-400" />
+        </div>
+        <div class="ml-3">
+          <p class="text-sm text-red-700">
+            <%= translate_error(hd(f[:owner].errors)) %>
+          </p>
+        </div>
+      </div>
+    </div>
     <div class="mt-2 flow-root">
       <div class="-mx-4 -my-2 overflow-x-auto sm:-mx-6 lg:-mx-8">
         <div class="inline-block min-w-full py-2 align-middle sm:px-6 lg:px-8">
@@ -57,19 +65,30 @@
             }
           >
             <:col :let={form} label="NAME">
-              <%= full_user_name(form.data.user) %>
+              <%= @users
+              |> find_user_by_id(form[:user_id].value)
+              |> full_user_name() %>
               <.input :if={form.data.id} type="hidden" field={form[:id]} />
               <.input type="hidden" field={form[:user_id]} />
+              <input
+                type="hidden"
+                name={"#{f.name}[users_sort][]"}
+                value={form.index}
+              />
             </:col>
             <:col :let={form} label="EMAIL">
-              <%= form.data.user.email %>
+              <%= find_user_by_id(@users, form[:user_id].value).email %>
             </:col>
             <:col :let={form} label="NO ACCESS" label_class="text-center">
               <div class="text-center">
-                <%= Phoenix.HTML.Form.radio_button(form, :role, nil,
-                  class:
-                    "h-4 w-4 border-gray-300 text-indigo-600 focus:ring-indigo-600"
-                ) %>
+                <.input
+                  id={form[:role].id <> "_no_access"}
+                  type="radio"
+                  field={form[:role]}
+                  class="h-4 w-4 border-gray-300 text-indigo-600 focus:ring-indigo-600"
+                  checked={to_string(form[:role].value) == ""}
+                  value=""
+                />
               </div>
             </:col>
             <:col
@@ -79,10 +98,14 @@
               label_class="text-center"
             >
               <div class="text-center">
-                <%= Phoenix.HTML.Form.radio_button(form, :role, role,
-                  class:
-                    "h-4 w-4 border-gray-300 text-indigo-600 focus:ring-indigo-600"
-                ) %>
+                <.input
+                  id={form[:role].id <> "_" <> role}
+                  type="radio"
+                  field={form[:role]}
+                  class="h-4 w-4 border-gray-300 text-indigo-600 focus:ring-indigo-600"
+                  checked={to_string(form[:role].value) == role}
+                  value={role}
+                />
               </div>
             </:col>
           </.new_table>

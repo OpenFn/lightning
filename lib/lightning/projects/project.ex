@@ -60,7 +60,6 @@ defmodule Lightning.Projects.Project do
       :history_retention_period,
       :dataclip_retention_period
     ])
-    |> cast_assoc(:project_users)
     |> validate()
   end
 
@@ -114,5 +113,38 @@ defmodule Lightning.Projects.Project do
     project
     |> cast(attrs, [:name])
     |> validate_confirmation(:name, message: "doesn't match the project name")
+  end
+
+  def project_with_users_changeset(project, attrs) do
+    project
+    |> cast(attrs, [:id, :name, :description])
+    |> cast_assoc(:project_users,
+      required: true,
+      sort_param: :users_sort
+    )
+    |> validate()
+    |> validate_project_owner()
+  end
+
+  defp validate_project_owner(changeset) do
+    changeset
+    |> get_assoc(:project_users)
+    |> Enum.count(fn project_user ->
+      get_field(project_user, :role) == :owner
+    end)
+    |> case do
+      1 ->
+        changeset
+
+      0 ->
+        add_error(
+          changeset,
+          :owner,
+          "Every project must have exactly one owner. Please specify one below."
+        )
+
+      _more_than_1 ->
+        add_error(changeset, :owner, "A project can have only one owner.")
+    end
   end
 end
