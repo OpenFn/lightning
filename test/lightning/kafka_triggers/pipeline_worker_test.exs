@@ -11,7 +11,22 @@ defmodule Lightning.KafkaTriggers.PipelineWorkerTest do
     setup do
       {:ok, pid} = start_supervised(PipelineSupervisor)
 
-      %{pid: pid}
+      trigger_1 =
+        insert(
+          :trigger,
+          type: :kafka,
+          kafka_configuration: configuration(1, true),
+          enabled: true
+        )
+      trigger_2 =
+        insert(
+          :trigger,
+          type: :kafka,
+          kafka_configuration: configuration(2, true),
+          enabled: true
+        )
+
+      %{pid: pid, trigger_1: trigger_1, trigger_2: trigger_2}
     end
 
     test "does not attempt anything if the supervisor is not running" do
@@ -22,21 +37,6 @@ defmodule Lightning.KafkaTriggers.PipelineWorkerTest do
           start_child: fn _sup_pid, _child_spec -> {:ok, "fake-pid"} end,
           count_children: fn _sup_pid -> %{specs: 1} end
         ] do
-
-        _trigger_1 =
-          insert(
-            :trigger,
-            type: :kafka,
-            kafka_configuration: configuration(1),
-            enabled: true
-          )
-        _trigger_2 =
-          insert(
-            :trigger,
-            type: :kafka,
-            kafka_configuration: configuration(2),
-            enabled: true
-          )
 
         perform_job(PipelineWorker, %{})
 
@@ -54,21 +54,6 @@ defmodule Lightning.KafkaTriggers.PipelineWorkerTest do
           count_children: fn _sup_pid -> %{specs: 1} end
         ] do
 
-        _trigger_1 =
-          insert(
-            :trigger,
-            type: :kafka,
-            kafka_configuration: configuration(1),
-            enabled: true
-          )
-        _trigger_2 =
-          insert(
-            :trigger,
-            type: :kafka,
-            kafka_configuration: configuration(2),
-            enabled: true
-          )
-
         assert perform_job(PipelineWorker, %{}) == :ok
       end
     end
@@ -81,21 +66,6 @@ defmodule Lightning.KafkaTriggers.PipelineWorkerTest do
           start_child: fn _sup_pid, _child_spec -> {:ok, "fake-pid"} end,
           count_children: fn _sup_pid -> %{specs: 1} end
         ] do
-
-        _trigger_1 =
-          insert(
-            :trigger,
-            type: :kafka,
-            kafka_configuration: configuration(1),
-            enabled: true
-          )
-        _trigger_2 =
-          insert(
-            :trigger,
-            type: :kafka,
-            kafka_configuration: configuration(2),
-            enabled: true
-          )
 
         perform_job(PipelineWorker, %{})
 
@@ -111,48 +81,20 @@ defmodule Lightning.KafkaTriggers.PipelineWorkerTest do
           count_children: fn _sup_pid -> %{specs: 1} end
         ] do
 
-        _trigger_1 =
-          insert(
-            :trigger,
-            type: :kafka,
-            kafka_configuration: configuration(1),
-            enabled: true
-          )
-        _trigger_2 =
-          insert(
-            :trigger,
-            type: :kafka,
-            kafka_configuration: configuration(2),
-            enabled: true
-          )
-
         assert perform_job(PipelineWorker, %{}) == :ok
       end
     end
 
     test "asks supervisor to start a child for each trigger", %{
-      pid: pid
+      pid: pid,
+      trigger_1: trigger_1,
+      trigger_2: trigger_2
     } do
       with_mock Supervisor,
         [
           start_child: fn _sup_pid, _child_spec -> {:ok, "fake-pid"} end,
           count_children: fn _sup_pid -> %{specs: 0} end
         ] do
-
-        trigger_1 =
-          insert(
-            :trigger,
-            type: :kafka,
-            kafka_configuration: configuration(1),
-            enabled: true
-          )
-        trigger_2 =
-          insert(
-            :trigger,
-            type: :kafka,
-            kafka_configuration: configuration(2),
-            enabled: true
-          )
 
         perform_job(PipelineWorker, %{})
 
@@ -175,12 +117,19 @@ defmodule Lightning.KafkaTriggers.PipelineWorkerTest do
       end
     end
 
-    def configuration(index) do
+    def configuration(index, false = _authentication) do
       %{
         "group_id" => "lightning-#{index}",
         "hosts" => [["host-#{index}", 9092], ["other-host-#{index}", 9093]],
         "topics" => ["topic-#{index}-1", "topic-#{index}-2"]
       }
+    end
+
+    def configuration(index, true = _authentication) do
+      configuration(index, false)
+      |> Map.merge(%{
+        "authentication" => ["plain", "my-user-#{index}", "secret-#{index}"]
+      })
     end
 
     def child_spec(trigger, index) do
@@ -194,6 +143,7 @@ defmodule Lightning.KafkaTriggers.PipelineWorkerTest do
               group_id: "lightning-#{index}",
               hosts: [{"host-#{index}", 9092}, {"other-host-#{index}", 9093}],
               name: trigger.id |> String.to_atom(),
+              sasl: {"plain", "my-user-#{index}", "secret-#{index}"},
               topics: ["topic-#{index}-1", "topic-#{index}-2"]
             ]
           ]
