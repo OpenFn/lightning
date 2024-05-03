@@ -10,38 +10,40 @@ defmodule Lightning.KafkaTriggers.PipelineWorker do
   def perform(_args) do
     supervisor = GenServer.whereis(:kafka_pipeline_supervisor)
 
-    %{specs: child_count} = DynamicSupervisor.count_children(supervisor)
+    if supervisor do
+      %{specs: child_count} = DynamicSupervisor.count_children(supervisor)
 
-    if child_count == 0 do
-      KafkaTriggers.find_enabled_triggers
-      |> Enum.map(fn trigger ->
-        %{
-          "group_id" => group_id,
-          "hosts" => hosts_list,
-          "topics" => topics,
-        } = trigger.kafka_configuration
+      if child_count == 0 do
+        KafkaTriggers.find_enabled_triggers
+        |> Enum.map(fn trigger ->
+          %{
+            "group_id" => group_id,
+            "hosts" => hosts_list,
+            "topics" => topics,
+          } = trigger.kafka_configuration
 
-        hosts = hosts_list |> Enum.map(fn [host, port] -> {host, port} end)
+          hosts = hosts_list |> Enum.map(fn [host, port] -> {host, port} end)
 
-        %{
-          id: trigger.id,
-          start: {
-            Pipeline,
-            :start_link,
-            [
+          %{
+            id: trigger.id,
+            start: {
+              Pipeline,
+              :start_link,
               [
-                group_id: group_id,
-                hosts: hosts,
-                name: trigger.id |> String.to_atom(),
-                topics: topics
+                [
+                  group_id: group_id,
+                  hosts: hosts,
+                  name: trigger.id |> String.to_atom(),
+                  topics: topics
+                ]
               ]
-            ]
+            }
           }
-        }
-      end)
-      |> Enum.each(fn child_spec ->
-        DynamicSupervisor.start_child(supervisor, child_spec)
-      end)
+        end)
+        |> Enum.each(fn child_spec ->
+          DynamicSupervisor.start_child(supervisor, child_spec)
+        end)
+      end
     end
 
     :ok
