@@ -17,7 +17,7 @@ defmodule Lightning.KafkaTriggers.PipelineWorkerTest do
     test "does not attempt anything if the supervisor is not running" do
       stop_supervised!(PipelineSupervisor)
 
-      with_mock DynamicSupervisor,
+      with_mock Supervisor,
         [
           start_child: fn _sup_pid, _child_spec -> {:ok, "fake-pid"} end,
           count_children: fn _sup_pid -> %{specs: 1} end
@@ -40,15 +40,15 @@ defmodule Lightning.KafkaTriggers.PipelineWorkerTest do
 
         perform_job(PipelineWorker, %{})
 
-        assert_not_called(DynamicSupervisor.count_children(:_))
-        assert_not_called(DynamicSupervisor.start_child(:_, :_))
+        assert_not_called(Supervisor.count_children(:_))
+        assert_not_called(Supervisor.start_child(:_, :_))
       end
     end
 
     test "returns :ok if the supervisor is not running" do
       stop_supervised!(PipelineSupervisor)
 
-      with_mock DynamicSupervisor,
+      with_mock Supervisor,
         [
           start_child: fn _sup_pid, _child_spec -> {:ok, "fake-pid"} end,
           count_children: fn _sup_pid -> %{specs: 1} end
@@ -76,7 +76,7 @@ defmodule Lightning.KafkaTriggers.PipelineWorkerTest do
     test "does not start children if supervisor already has children", %{
       pid: pid
     } do
-      with_mock DynamicSupervisor,
+      with_mock Supervisor,
         [
           start_child: fn _sup_pid, _child_spec -> {:ok, "fake-pid"} end,
           count_children: fn _sup_pid -> %{specs: 1} end
@@ -99,13 +99,13 @@ defmodule Lightning.KafkaTriggers.PipelineWorkerTest do
 
         perform_job(PipelineWorker, %{})
 
-        assert_called(DynamicSupervisor.count_children(pid))
-        assert_not_called(DynamicSupervisor.start_child(:_, :_))
+        assert_called(Supervisor.count_children(pid))
+        assert_not_called(Supervisor.start_child(:_, :_))
       end
     end
 
     test "returns :ok if supervisor already has chidren" do
-      with_mock DynamicSupervisor,
+      with_mock Supervisor,
         [
           start_child: fn _sup_pid, _child_spec -> {:ok, "fake-pid"} end,
           count_children: fn _sup_pid -> %{specs: 1} end
@@ -133,7 +133,7 @@ defmodule Lightning.KafkaTriggers.PipelineWorkerTest do
     test "asks supervisor to start a child for each trigger", %{
       pid: pid
     } do
-      with_mock DynamicSupervisor,
+      with_mock Supervisor,
         [
           start_child: fn _sup_pid, _child_spec -> {:ok, "fake-pid"} end,
           count_children: fn _sup_pid -> %{specs: 0} end
@@ -157,16 +157,16 @@ defmodule Lightning.KafkaTriggers.PipelineWorkerTest do
         perform_job(PipelineWorker, %{})
 
         assert_called(
-          DynamicSupervisor.start_child(pid, child_spec(trigger_1, 1))
+          Supervisor.start_child(pid, child_spec(trigger_1, 1))
         )
         assert_called(
-          DynamicSupervisor.start_child(pid, child_spec(trigger_2, 2))
+          Supervisor.start_child(pid, child_spec(trigger_2, 2))
         )
       end
     end
 
     test "returns :ok" do
-      with_mock DynamicSupervisor,
+      with_mock Supervisor,
         [
           start_child: fn _sup_pid, _child_spec -> {:ok, "fake-pid"} end,
           count_children: fn _sup_pid -> %{specs: 0} end
