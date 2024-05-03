@@ -143,7 +143,8 @@ defmodule Lightning.ProjectsTest do
 
         assert [
                  {:owner,
-                  {"you have not specified an owner for the project", []}}
+                  {"Every project must have exactly one owner. Please specify one below.",
+                   []}}
                ] ==
                  errors
       end
@@ -160,7 +161,7 @@ defmodule Lightning.ProjectsTest do
                  ]
                })
 
-      assert [{:owner, {"a project can have only one owner", []}}] ==
+      assert [{:owner, {"A project can have only one owner.", []}}] ==
                errors
     end
 

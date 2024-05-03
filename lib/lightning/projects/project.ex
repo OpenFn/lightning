@@ -140,11 +140,11 @@ defmodule Lightning.Projects.Project do
         add_error(
           changeset,
           :owner,
-          "you have not specified an owner for the project"
+          "Every project must have exactly one owner. Please specify one below."
         )
 
       _more_than_1 ->
-        add_error(changeset, :owner, "a project can have only one owner")
+        add_error(changeset, :owner, "A project can have only one owner.")
     end
   end
 end
