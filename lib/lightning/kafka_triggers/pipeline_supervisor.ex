@@ -1,12 +1,12 @@
 defmodule Lightning.KafkaTriggers.PipelineSupervisor do
-  use DynamicSupervisor
+  use Supervisor
 
   def start_link(_opts) do
-    DynamicSupervisor.start_link(__MODULE__, [], name: :kafka_pipeline_supervisor)
+    Supervisor.start_link(__MODULE__, [], name: :kafka_pipeline_supervisor)
   end
 
   @impl true
   def init(_opts) do
-    DynamicSupervisor.init(strategy: :one_for_one)
+    Supervisor.init([], strategy: :one_for_one)
   end
 end
