@@ -3,8 +3,8 @@ defmodule LightningWeb.Plugs.RegisterGatekeeper do
   Plug to conditionally render a 404 page if sign-up is disabled,
   otherwise continue.
   """
-  import Plug.Conn
   use Phoenix.Controller
+  import Plug.Conn
 
   def init(opts), do: opts
 
