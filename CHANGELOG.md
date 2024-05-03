@@ -17,6 +17,10 @@ and this project adheres to
 
 ### Added
 
+## [v2.4.4] - 2024-05-03
+
+### Added
+
 - Benchmarking script that simulates data from a cold chain.
   [#1993](https://github.com/OpenFn/lightning/issues/1993)
 
@@ -28,6 +32,9 @@ and this project adheres to
   [#1991](https://github.com/OpenFn/lightning/issues/1991)
 
 ### Fixed
+
+- Fixed issue preventing credential updates
+  [#1861](https://github.com/OpenFn/lightning/issues/1861)
 
 ## [v2.4.3] - 2024-05-01
 
