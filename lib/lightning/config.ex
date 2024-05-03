@@ -102,7 +102,7 @@ defmodule Lightning.Config do
   @callback worker_secret() :: binary() | nil
   @callback grace_period() :: integer()
   @callback purge_deleted_after_days() :: integer()
-  @callback check_flag?(atom()) :: boolean()
+  @callback check_flag?(atom()) :: boolean() | nil
 
   @doc """
   Returns the Token signer used to sign and verify run tokens.

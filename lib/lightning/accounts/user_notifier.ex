@@ -57,14 +57,14 @@ defmodule Lightning.Accounts.UserNotifier do
   @doc """
   Deliver instructions to confirm account.
   """
-  def deliver_confirmation_instructions(user, url) do
+  def deliver_confirmation_instructions(user, token) do
     deliver(user.email, "Confirmation instructions", """
 
     Hi #{user.first_name},
 
-    Welcome and thanks for registering a new account on OpenFn/Lightning. Please confirm your account by visiting the URL below:
+    Welcome and thanks for registering a new account on OpenFn. Please confirm your account by visiting the URL below:
 
-    #{url}.
+    #{url(LightningWeb.Endpoint, ~p"/users/confirm/#{token}")} .
 
     If you didn't create an account with us, please ignore this.
 
@@ -74,14 +74,14 @@ defmodule Lightning.Accounts.UserNotifier do
   @doc """
   Deliver instructions to confirm account.
   """
-  def deliver_confirmation_instructions(enroller, user, url) do
+  def deliver_confirmation_instructions(enroller, user, token) do
     deliver(user.email, "New OpenFn Lightning account", """
 
     Hi #{user.first_name},
 
-    #{enroller.first_name} has just created an account for you on OpenFn/Lightning. You can complete your registration by visiting the URL below:
+    #{enroller.first_name} has just created an account for you on OpenFn. You can complete your registration by visiting the URL below:
 
-    #{url}.
+    #{url(LightningWeb.Endpoint, ~p"/users/confirm/#{token}")} .
 
     If you do not wish to have an account, please ignore this email.
 

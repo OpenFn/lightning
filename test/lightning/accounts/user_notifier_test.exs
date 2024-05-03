@@ -58,36 +58,54 @@ defmodule Lightning.Accounts.UserNotifierTest do
     end
 
     test "deliver_confirmation_instructions/2" do
+      token = "sometoken"
+
       UserNotifier.deliver_confirmation_instructions(
         %User{
           email: "real@email.com"
         },
-        "https://lightning/users/confirm/token"
+        token
       )
+
+      url =
+        LightningWeb.Router.Helpers.user_confirmation_url(
+          LightningWeb.Endpoint,
+          :edit,
+          token
+        )
 
       assert_email_sent(
         subject: "Confirmation instructions",
         to: "real@email.com",
         text_body:
-          "\nHi ,\n\nWelcome and thanks for registering a new account on OpenFn/Lightning. Please confirm your account by visiting the URL below:\n\nhttps://lightning/users/confirm/token.\n\nIf you didn't create an account with us, please ignore this.\n\n"
+          "\nHi ,\n\nWelcome and thanks for registering a new account on OpenFn. Please confirm your account by visiting the URL below:\n\n#{url} .\n\nIf you didn't create an account with us, please ignore this.\n\n"
       )
     end
 
     test "deliver_confirmation_instructions/3" do
+      token = "sometoken"
+
       UserNotifier.deliver_confirmation_instructions(
         %User{first_name: "Super User", email: "super@email.com"},
         %User{
           first_name: "Joe",
           email: "real@email.com"
         },
-        "https://lightning/users/confirm/token"
+        token
       )
+
+      url =
+        LightningWeb.Router.Helpers.user_confirmation_url(
+          LightningWeb.Endpoint,
+          :edit,
+          token
+        )
 
       assert_email_sent(
         subject: "New OpenFn Lightning account",
         to: "real@email.com",
         text_body:
-          "\nHi Joe,\n\nSuper User has just created an account for you on OpenFn/Lightning. You can complete your registration by visiting the URL below:\n\nhttps://lightning/users/confirm/token.\n\nIf you do not wish to have an account, please ignore this email.\n\n"
+          "\nHi Joe,\n\nSuper User has just created an account for you on OpenFn. You can complete your registration by visiting the URL below:\n\n#{url} .\n\nIf you do not wish to have an account, please ignore this email.\n\n"
       )
     end
 
