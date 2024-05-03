@@ -17,6 +17,9 @@ and this project adheres to
 
 ### Added
 
+- Benchmarking script that simulates data from a cold chain.
+  [#1993](https://github.com/OpenFn/lightning/issues/1993)
+
 ### Changed
 
 - Changed Snapshot `get_or_create_latest_for` to accept multis allow controlling
