@@ -126,29 +126,21 @@ defmodule Lightning.OauthClientsTest do
     test "removes a project association and logs the event" do
       project = insert(:project)
 
-      %{project_oauth_clients: [project_oauth_client]} =
-        client =
+      client =
         insert(:oauth_client,
           name: "Test Client",
           project_oauth_clients: [%{project: project}]
         )
-        |> Repo.preload(:project_oauth_clients)
 
       updated_attrs = %{
-        "project_oauth_clients" => %{
-          "0" => %{
-            "_persistent_id" => "0",
-            "project_id" => project.id,
-            "delete" => "true",
-            "id" => project_oauth_client.id
-          }
-        }
+        project_oauth_clients: []
       }
 
       {:ok, updated_client} = OauthClients.update_client(client, updated_attrs)
 
       assert audit_logged?(updated_client, "updated")
       assert audit_logged?(updated_client, "removed_from_project")
+      refute audit_logged?(updated_client, "added_to_project")
 
       refute Enum.any?(OauthClients.list_clients(project), fn c ->
                c.id == updated_client.id
