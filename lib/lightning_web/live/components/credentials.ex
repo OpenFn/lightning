@@ -32,7 +32,7 @@ defmodule LightningWeb.Components.Credentials do
           <br /><br />Do you want to proceed with this action?
         </p>
       </div>
-      <div class="flex flex-row-reverse gap-4 mx-6 mt-2">
+      <div class="flex flex-row-reverse gap-4 mx-6 mt-[24px]">
         <.button
           id={"#{@id}_confirm_button"}
           type="button"
@@ -81,7 +81,7 @@ defmodule LightningWeb.Components.Credentials do
           <br /><br />Do you want to proceed with this action?
         </p>
       </div>
-      <div class="flex flex-row-reverse gap-4 mx-6 mt-2">
+      <div class="flex flex-row-reverse gap-4 mx-6 mt-[24px]">
         <.button
           id={"#{@id}_confirm_button"}
           type="button"

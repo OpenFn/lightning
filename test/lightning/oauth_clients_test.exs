@@ -1,4 +1,5 @@
 defmodule Lightning.OauthClientsTest do
+  alias Lightning.Projects.ProjectOauthClient
   use Lightning.DataCase, async: true
 
   alias Lightning.Credentials.OauthClient
@@ -9,15 +10,15 @@ defmodule Lightning.OauthClientsTest do
     Enum.any?(clients, fn c -> c.id == client.id end)
   end
 
-  defp audit_logged(record, event_type) do
-    from(a in Lightning.Credentials.Audit.base_query(),
-      where: a.item_id == ^record.id
+  defp list_audits(record, event_type) do
+    from(a in Lightning.Credentials.OauthClientAudit.base_query(),
+      where: a.item_id == ^record.id and a.event == ^event_type
     )
     |> Repo.all()
-    |> Enum.any?(fn a ->
-      a.item_id == record.id &&
-        a.event in [event_type]
-    end)
+  end
+
+  defp audit_logged?(record, event_type) do
+    list_audits(record, event_type) |> Enum.count() >= 1
   end
 
   describe "list_clients/1" do
@@ -73,8 +74,8 @@ defmodule Lightning.OauthClientsTest do
 
       {:ok, client} = OauthClients.create_client(attrs)
 
-      assert audit_logged(client, "created")
-      assert audit_logged(client, "added_to_project")
+      assert audit_logged?(client, "created")
+      assert audit_logged?(client, "added_to_project")
 
       assert client.name == "New Client"
       assert client.user_id == user.id
@@ -110,8 +111,8 @@ defmodule Lightning.OauthClientsTest do
 
       {:ok, updated_client} = OauthClients.update_client(client, updated_attrs)
 
-      assert audit_logged(updated_client, "updated")
-      assert audit_logged(updated_client, "added_to_project")
+      assert audit_logged?(updated_client, "updated")
+      assert audit_logged?(updated_client, "added_to_project")
 
       assert updated_client.name == "Updated Name"
       assert updated_client.id == client.id
@@ -146,8 +147,8 @@ defmodule Lightning.OauthClientsTest do
 
       {:ok, updated_client} = OauthClients.update_client(client, updated_attrs)
 
-      assert audit_logged(updated_client, "updated")
-      assert audit_logged(updated_client, "removed_from_project")
+      assert audit_logged?(updated_client, "updated")
+      assert audit_logged?(updated_client, "removed_from_project")
 
       refute Enum.any?(OauthClients.list_clients(project), fn c ->
                c.id == updated_client.id
@@ -160,7 +161,7 @@ defmodule Lightning.OauthClientsTest do
       invalid_attrs = %{name: nil}
       {:error, changeset} = OauthClients.update_client(client, invalid_attrs)
 
-      refute audit_logged(client, "updated")
+      refute audit_logged?(client, "updated")
 
       assert changeset.valid? == false
       assert changeset.errors[:name] != nil
@@ -180,7 +181,7 @@ defmodule Lightning.OauthClientsTest do
       assert audit.event == "deleted"
       assert audit.item_id == oauth_client.id
 
-      assert audit_logged(client, "deleted")
+      assert audit_logged?(client, "deleted")
 
       assert_raise Ecto.NoResultsError, fn ->
         Repo.get!(OauthClient, client.id)
@@ -192,6 +193,221 @@ defmodule Lightning.OauthClientsTest do
       refute Enum.any?(all_project_oauth_clients, fn poc ->
                poc.client_id === client.id
              end)
+    end
+  end
+
+  describe "global clients" do
+    test "non global clients are not associated to all projects of the instance" do
+      user = insert(:user)
+      project_1 = insert(:project, name: "Project 1")
+      project_2 = insert(:project, name: "Project 2")
+
+      {:ok, non_global_client} =
+        OauthClients.create_client(%{
+          name: "Non Global Client",
+          client_id: "client_id",
+          client_secret: "client_secret",
+          authorization_endpoint: "https://www.example.com",
+          token_endpoint: "https://www.example.com",
+          user_id: user.id,
+          global: false
+        })
+
+      refute non_global_client.global
+      assert Repo.all(ProjectOauthClient) |> Enum.empty?()
+
+      assert list_audits(non_global_client, "created")
+             |> Enum.count() === 1
+
+      assert list_audits(non_global_client, "added_to_project")
+             |> Enum.count() === 0
+
+      {:ok, non_global_client} =
+        OauthClients.create_client(%{
+          name: "Non Global Client",
+          client_id: "client_id",
+          client_secret: "client_secret",
+          authorization_endpoint: "https://www.example.com",
+          token_endpoint: "https://www.example.com",
+          user_id: user.id,
+          global: false,
+          project_oauth_clients: [%{project_id: project_1.id}]
+        })
+
+      associated_projects =
+        Repo.all(ProjectOauthClient)
+        |> Enum.map(fn assoc ->
+          {assoc.project_id, assoc.oauth_client_id}
+        end)
+
+      refute non_global_client.global
+
+      assert associated_projects |> Enum.count() === 1
+
+      assert associated_projects === [{project_1.id, non_global_client.id}]
+
+      refute associated_projects === [{project_2.id, non_global_client}]
+
+      assert list_audits(non_global_client, "created")
+             |> Enum.count() === 1
+
+      assert list_audits(non_global_client, "added_to_project")
+             |> Enum.count() === 1
+    end
+
+    test "global clients are associated to all projects of the instance" do
+      user = insert(:user)
+      project_1 = insert(:project, name: "Project 1")
+      project_2 = insert(:project, name: "Project 2")
+
+      {:ok, global_client} =
+        OauthClients.create_client(%{
+          name: "Global Client",
+          client_id: "client_id",
+          client_secret: "client_secret",
+          authorization_endpoint: "https://www.example.com",
+          token_endpoint: "https://www.example.com",
+          user_id: user.id,
+          global: true
+        })
+
+      associations = Repo.all(ProjectOauthClient)
+
+      assert global_client.global
+      refute associations |> Enum.empty?()
+
+      assert associations
+             |> Enum.map(fn %{project_id: project_id, oauth_client_id: client_id} ->
+               {project_id, client_id}
+             end) == [
+               {project_1.id, global_client.id},
+               {project_2.id, global_client.id}
+             ]
+
+      assert list_audits(global_client, "created")
+             |> Enum.count() === 1
+
+      assert list_audits(global_client, "added_to_project")
+             |> Enum.count() === 2
+    end
+
+    test "updating a client from global to non global, disassociates it with all the projects of the instance" do
+      user = insert(:user)
+      _project_1 = insert(:project, name: "Project 1")
+      _project_2 = insert(:project, name: "Project 2")
+
+      {:ok, client} =
+        OauthClients.create_client(%{
+          name: "Global Client",
+          client_id: "client_id",
+          client_secret: "client_secret",
+          authorization_endpoint: "https://www.example.com",
+          token_endpoint: "https://www.example.com",
+          user_id: user.id,
+          global: true
+        })
+
+      associations = Repo.all(ProjectOauthClient)
+
+      assert associations |> Enum.count() == 2
+
+      {:ok, client} =
+        OauthClients.update_client(client, %{global: false})
+
+      associations = Repo.all(ProjectOauthClient)
+
+      assert associations |> Enum.count() == 0
+
+      assert list_audits(client, "created")
+             |> Enum.count() === 1
+
+      assert list_audits(client, "updated")
+             |> Enum.count() === 1
+
+      assert list_audits(client, "removed_from_project")
+             |> Enum.count() === 2
+    end
+
+    test "updating a client from non global to global, associates it to all the projects of the insance" do
+      user = insert(:user)
+      _project_1 = insert(:project, name: "Project 1")
+      _project_2 = insert(:project, name: "Project 2")
+
+      {:ok, client} =
+        OauthClients.create_client(%{
+          name: "Global Client",
+          client_id: "client_id",
+          client_secret: "client_secret",
+          authorization_endpoint: "https://www.example.com",
+          token_endpoint: "https://www.example.com",
+          user_id: user.id,
+          global: false
+        })
+
+      client = Repo.preload(client, :project_oauth_clients)
+
+      associations = Repo.all(ProjectOauthClient)
+
+      assert associations |> Enum.count() == 0
+
+      {:ok, client} =
+        OauthClients.update_client(client, %{global: true})
+
+      associations = Repo.all(ProjectOauthClient)
+
+      assert associations |> Enum.count() == 2
+
+      assert list_audits(client, "created")
+             |> Enum.count() === 1
+
+      assert list_audits(client, "updated")
+             |> Enum.count() === 1
+
+      assert list_audits(client, "added_to_project")
+             |> Enum.count() === 2
+    end
+
+    test "updating a client from global to non global while associating it to specific projects, associates it only to those projects" do
+      user = insert(:user)
+      project_1 = insert(:project, name: "Project 1")
+      _project_2 = insert(:project, name: "Project 2")
+
+      {:ok, client} =
+        OauthClients.create_client(%{
+          name: "Global Client",
+          client_id: "client_id",
+          client_secret: "client_secret",
+          authorization_endpoint: "https://www.example.com",
+          token_endpoint: "https://www.example.com",
+          user_id: user.id,
+          global: true
+        })
+
+      associations = Repo.all(ProjectOauthClient)
+
+      assert list_audits(client, "created")
+             |> Enum.count() === 1
+
+      assert associations |> Enum.count() == 2
+
+      # To ignore the first addition due to setting the client as global
+      Repo.delete_all(Lightning.Auditing.Audit)
+
+      {:ok, client} =
+        OauthClients.update_client(client, %{
+          global: false,
+          project_oauth_clients: [%{project_id: project_1.id}]
+        })
+
+      associations = Repo.all(ProjectOauthClient)
+
+      assert associations |> Enum.count() == 1
+
+      assert list_audits(client, "updated")
+             |> Enum.count() === 1
+
+      assert list_audits(client, "added_to_project")
+             |> Enum.count() === 1
     end
   end
 end

@@ -384,76 +384,85 @@ defmodule LightningWeb.CredentialLive.OauthClientFormComponent do
   defp project_oauth_clients(assigns) do
     ~H"""
     <div class="col-span-3">
-      <%= Phoenix.HTML.Form.label(@form, :project_oauth_clients, "Project Access",
-        class: "block text-sm font-medium text-secondary-700"
-      ) %>
-
-      <div class="flex w-full items-center gap-2 pb-3 mt-1">
-        <div class="grow">
-          <LightningWeb.Components.Form.select_field
-            form={:selected_project}
-            name={:id}
-            values={@projects}
-            value={@selected}
-            prompt=""
-            phx-change="select_item"
-            phx-target={@phx_target}
-            id={"project_oauth_clients_list_for_#{@form[:id].value}"}
-          />
-        </div>
-        <div class="grow-0 items-right">
-          <.button
-            id={"add-new-project-button-to-#{@form[:id].value}"}
-            disabled={@selected == ""}
-            phx-target={@phx_target}
-            phx-value-projectid={@selected}
-            phx-click="add_new_project"
-          >
-            Add
-          </.button>
-        </div>
-      </div>
-
       <div :if={@allow_global} class="rounded-md bg-yellow-200 p-4 mb-4">
         <h3 class="text-sm font-medium text-yellow-800">
-          <LightningWeb.Components.Form.check_box
-            form={@form}
-            field={:global}
-            label="Make client global (allow any user in this instance to use this client)"
+          <NewInputs.input
+            type="checkbox"
+            field={@form[:global]}
+            label="Make client global (allow any project in this instance to use this client)"
           />
         </h3>
       </div>
 
-      <div class="overflow-auto max-h-32">
-        <.inputs_for
-          :let={project_oauth_client}
-          field={@form[:project_oauth_clients]}
-        >
-          <%= if project_oauth_client[:delete].value != true do %>
-            <div class="flex w-full gap-2 items-center pb-2">
-              <div class="grow">
+      <div :if={!@form[:global].value}>
+        <%= Phoenix.HTML.Form.label(
+          @form,
+          :project_oauth_clients,
+          "Select the project to give access to this client",
+          class: "block text-sm font-medium text-secondary-700"
+        ) %>
+
+        <div class="flex w-full items-center gap-2 pb-3 mt-1">
+          <div class="grow">
+            <LightningWeb.Components.Form.select_field
+              form={:selected_project}
+              name={:id}
+              values={@projects}
+              value={@selected}
+              prompt=""
+              phx-change="select_item"
+              phx-target={@phx_target}
+              id={"project_oauth_clients_list_for_#{@form[:id].value}"}
+            />
+          </div>
+          <div class="grow-0 items-right">
+            <.button
+              id={"add-new-project-button-to-#{@form[:id].value}"}
+              disabled={@selected == ""}
+              phx-target={@phx_target}
+              phx-value-projectid={@selected}
+              phx-click="add_new_project"
+            >
+              Add
+            </.button>
+          </div>
+        </div>
+
+        <div class="overflow-auto max-h-32">
+          <.inputs_for
+            :let={project_oauth_client}
+            field={@form[:project_oauth_clients]}
+          >
+            <%= if project_oauth_client[:delete].value != true do %>
+              <span class="inline-flex items-center gap-1 rounded-md bg-blue-100 px-4 py-3 text-gray-600">
                 <%= project_name(@projects, project_oauth_client[:project_id].value) %>
-                <.old_error field={project_oauth_client[:project_id]} />
-              </div>
-              <div class="grow-0 items-right">
-                <.button
+                <button
                   id={"delete-project-oauth-client-#{@form[:id].value}-button"}
                   phx-target={@phx_target}
                   phx-value-projectid={project_oauth_client[:project_id].value}
                   phx-click="delete_project"
+                  type="button"
+                  class="group relative -mr-1 h-3.5 w-3.5 rounded-sm hover:bg-gray-500/20"
                 >
-                  Remove
-                </.button>
-              </div>
-            </div>
-          <% end %>
-          <.input type="hidden" field={project_oauth_client[:project_id]} />
-          <.input
-            type="hidden"
-            field={project_oauth_client[:delete]}
-            value={to_string(project_oauth_client[:delete].value)}
-          />
-        </.inputs_for>
+                  <span class="sr-only">Remove</span>
+                  <svg
+                    viewBox="0 0 14 14"
+                    class="h-3.5 w-3.5 stroke-gray-700/50 group-hover:stroke-gray-700/75"
+                  >
+                    <path d="M4 4l6 6m0-6l-6 6" />
+                  </svg>
+                  <span class="absolute -inset-1"></span>
+                </button>
+              </span>
+            <% end %>
+            <.input type="hidden" field={project_oauth_client[:project_id]} />
+            <.input
+              type="hidden"
+              field={project_oauth_client[:delete]}
+              value={to_string(project_oauth_client[:delete].value)}
+            />
+          </.inputs_for>
+        </div>
       </div>
     </div>
     """
