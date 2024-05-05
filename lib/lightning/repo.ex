@@ -3,12 +3,13 @@ defmodule Lightning.Repo do
     otp_app: :lightning,
     adapter: Ecto.Adapters.Postgres
 
-  import Ecto.Query
-
   use Scrivener, page_size: 10
 
+  import Ecto.Query
+
   alias Lightning.Credentials.OauthClient
-  alias Lightning.Projects.{Project, ProjectOauthClient}
+  alias Lightning.Projects.Project
+  alias Lightning.Projects.ProjectOauthClient
 
   def insert_with_global_oauth_clients(changeset) do
     case insert(changeset) do
