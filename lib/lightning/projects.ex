@@ -169,6 +169,11 @@ defmodule Lightning.Projects do
     |> Repo.all()
   end
 
+  @create_project Application.compile_env(
+                    :lightning,
+                    [:handlers, :create_project],
+                    &Lightning.Projects.Handlers.create/1
+                  )
   @doc """
   Creates a project.
 
@@ -182,15 +187,13 @@ defmodule Lightning.Projects do
 
   """
   def create_project(attrs \\ %{}) do
-    %Project{}
-    |> Project.project_with_users_changeset(attrs)
-    |> Repo.insert()
-    |> tap(fn result ->
-      with {:ok, project} <- result do
-        Events.project_created(project)
-        schedule_project_addition_emails(%Project{project_users: []}, project)
-      end
-    end)
+    @create_project.(attrs)
+    |> Lightning.Strategy.execute()
+    |> case do
+      {:ok, %{project: project}} -> {:ok, project}
+      {:error, :project, changeset, _changes} -> {:error, changeset}
+      {:error, _, _, %{project: project}} -> {:error, project}
+    end
   end
 
   @doc """
