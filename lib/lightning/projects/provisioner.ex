@@ -56,6 +56,18 @@ defmodule Lightning.Projects.Provisioner do
     project
     |> project_changeset(data)
     |> cast_assoc(:workflows, with: &workflow_changeset/2)
+    |> then(fn changeset ->
+      case WorkflowUsageLimiter.limit_workflows_activation(
+             project,
+             get_assoc(changeset, :workflows)
+           ) do
+        :ok ->
+          changeset
+
+        {:error, _reason, %{text: message}} ->
+          add_error(changeset, :id, message)
+      end
+    end)
   end
 
   defp maybe_add_project_user(changeset, user_or_repo_connection) do
@@ -118,15 +130,6 @@ defmodule Lightning.Projects.Provisioner do
     |> cast_assoc(:triggers, with: &trigger_changeset/2)
     |> cast_assoc(:edges, with: &edge_changeset/2)
     |> Workflow.validate()
-    |> then(fn changeset ->
-      case WorkflowUsageLimiter.limit_workflow_activation(changeset) do
-        :ok ->
-          changeset
-
-        {:error, _reason, %{text: message}} ->
-          add_error(changeset, :id, message)
-      end
-    end)
   end
 
   defp job_changeset(job, attrs) do

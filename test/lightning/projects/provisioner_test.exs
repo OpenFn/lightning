@@ -120,11 +120,14 @@ defmodule Lightning.Projects.ProvisionerTest do
       %{project: ProjectsFixtures.project_fixture(), user: insert(:user)}
     end
 
-    test "doesn't add another project user", %{project: project, user: user} do
+    test "doesn't add another project user", %{
+      project: %{id: project_id} = project,
+      user: user
+    } do
       Mox.expect(
         Lightning.Extensions.MockUsageLimiter,
         :limit_action,
-        fn %{type: :activate_workflow}, _context -> :ok end
+        fn %{type: :activate_workflow}, %{project_id: ^project_id} -> :ok end
       )
 
       %{body: body} = valid_document(project.id)
@@ -149,11 +152,14 @@ defmodule Lightning.Projects.ProvisionerTest do
       refute user2.id in project_user_ids
     end
 
-    test "changing, adding records", %{project: project, user: user} do
+    test "changing, adding records", %{
+      project: %{id: project_id} = project,
+      user: user
+    } do
       Mox.expect(
         Lightning.Extensions.MockUsageLimiter,
         :limit_action,
-        fn %{type: :activate_workflow}, _context -> :ok end
+        fn %{type: :activate_workflow}, %{project_id: ^project_id} -> :ok end
       )
 
       %{body: body} = valid_document(project.id)
@@ -196,14 +202,14 @@ defmodule Lightning.Projects.ProvisionerTest do
     end
 
     test "adding a record from another project or workflow", %{
-      project: project,
+      project: %{id: project_id} = project,
       user: user
     } do
       Mox.expect(
         Lightning.Extensions.MockUsageLimiter,
         :limit_action,
         2,
-        fn %{type: :activate_workflow}, _context -> :ok end
+        fn %{type: :activate_workflow}, %{project_id: ^project_id} -> :ok end
       )
 
       %{body: body, workflow_id: workflow_id} = valid_document(project.id)
@@ -271,11 +277,11 @@ defmodule Lightning.Projects.ProvisionerTest do
              }
     end
 
-    test "removing a record", %{project: project, user: user} do
+    test "removing a record", %{project: %{id: project_id} = project, user: user} do
       Mox.expect(
         Lightning.Extensions.MockUsageLimiter,
         :limit_action,
-        fn %{type: :activate_workflow}, _context -> :ok end
+        fn %{type: :activate_workflow}, %{project_id: ^project_id} -> :ok end
       )
 
       %{
@@ -323,11 +329,14 @@ defmodule Lightning.Projects.ProvisionerTest do
              "The edge associated with the deleted job should be removed"
     end
 
-    test "removing a workflow", %{project: project, user: user} do
+    test "removing a workflow", %{
+      project: %{id: project_id} = project,
+      user: user
+    } do
       Mox.expect(
         Lightning.Extensions.MockUsageLimiter,
         :limit_action,
-        fn %{type: :activate_workflow}, _context -> :ok end
+        fn %{type: :activate_workflow}, %{project_id: ^project_id} -> :ok end
       )
 
       %{
@@ -379,17 +388,17 @@ defmodule Lightning.Projects.ProvisionerTest do
     end
 
     test "adds error incase limit action is returns error", %{
-      project: project,
+      project: %{id: project_id} = project,
       user: user
     } do
-      %{body: body} = valid_document(project.id)
+      %{body: body} = valid_document(project_id)
       error_msg = "Oopsie Doopsie"
 
       Mox.expect(
         Lightning.Extensions.MockUsageLimiter,
         :limit_action,
         1,
-        fn _action, _context ->
+        fn _action, %{project_id: ^project_id} ->
           {:error, :too_many_workflows, %{text: error_msg}}
         end
       )
@@ -397,15 +406,11 @@ defmodule Lightning.Projects.ProvisionerTest do
       assert {:error, changeset} =
                Provisioner.import_document(project, user, body)
 
-      assert flatten_errors(changeset) == %{
-               workflows: [
-                 %{id: [error_msg]}
-               ]
-             }
+      assert flatten_errors(changeset) == %{id: [error_msg]}
     end
 
     test "sends workflow updated event", %{
-      project: project,
+      project: %{id: project_id} = project,
       user: user
     } do
       %{body: body, workflow_id: workflow_id} = valid_document(project.id)
@@ -414,7 +419,7 @@ defmodule Lightning.Projects.ProvisionerTest do
         Lightning.Extensions.MockUsageLimiter,
         :limit_action,
         1,
-        fn _action, _context ->
+        fn _action, %{project_id: ^project_id} ->
           :ok
         end
       )
