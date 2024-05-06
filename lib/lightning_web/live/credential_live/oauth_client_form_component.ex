@@ -705,9 +705,7 @@ defmodule LightningWeb.CredentialLive.OauthClientFormComponent do
             <div class="sm:flex sm:flex-row-reverse">
               <button
                 type="submit"
-                disabled={
-                  !@changeset.valid? or @changeset.changes |> map_size() <= 0
-                }
+                disabled={!@changeset.valid? or map_size(@changeset.changes) <= 0}
                 class="inline-flex w-full justify-center rounded-md disabled:bg-primary-300 bg-primary-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary-500 sm:ml-3 sm:w-auto"
               >
                 <%= case @action do %>

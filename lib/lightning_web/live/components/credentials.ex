@@ -269,4 +269,170 @@ defmodule LightningWeb.Components.Credentials do
       if project_id == id, do: name
     end)
   end
+
+  attr :id, :string, required: true
+  attr :options, :list, required: true
+  slot :inner_block, required: true
+
+  def options_menu_button(assigns) do
+    ~H"""
+    <div id={@id} class="inline-flex rounded-md shadow-sm">
+      <.button
+        type="button"
+        phx-click={show_dropdown("menu")}
+        class="relative inline-flex items-center"
+        aria-expanded="true"
+        aria-haspopup="true"
+      >
+        <%= render_slot(@inner_block) %>
+        <svg
+          class="h-5 w-5"
+          viewBox="0 0 20 20"
+          fill="currentColor"
+          aria-hidden="true"
+        >
+          <path
+            fill-rule="evenodd"
+            d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z"
+            clip-rule="evenodd"
+          />
+        </svg>
+      </.button>
+      <div class="relative -ml-px block">
+        <div
+          class="hidden absolute right-0 z-10 -mr-1 mt-12 w-56 origin-top-right rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none"
+          role="menu"
+          aria-orientation="vertical"
+          aria-labelledby="option-menu-button"
+          tabindex="-1"
+          phx-click-away={hide_dropdown("menu")}
+          id="menu"
+        >
+          <div class="py-1" role="none">
+            <a
+              :for={%{name: name, id: id, target: target} <- @options}
+              href="#"
+              class="text-gray-700 block px-4 py-2 text-sm hover:bg-gray-100"
+              role="menuitem"
+              tabindex="-1"
+              id={id}
+              phx-click={show_modal(target)}
+            >
+              <%= name %>
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+    """
+  end
+
+  attr :id, :string, required: true
+  attr :credentials, :list, required: true
+  attr :title, :string, required: true
+
+  slot :actions,
+    doc: "the slot for showing user actions in the last table column"
+
+  slot :empty_state,
+    doc: "the slot for showing an empty state"
+
+  def credentials_table(assigns) do
+    ~H"""
+    <div id={"#{@id}-table-container"}>
+      <div class="py-4 leading-loose">
+        <h6 class="font-normal text-black"><%= @title %></h6>
+      </div>
+      <%= if Enum.empty?(@credentials) do %>
+        <%= render_slot(@empty_state) %>
+      <% else %>
+        <.table id={"#{@id}-table"}>
+          <.tr>
+            <.th>Name</.th>
+            <.th>Projects with access</.th>
+            <.th>Type</.th>
+            <.th>Production</.th>
+            <.th>Actions</.th>
+          </.tr>
+
+          <.tr
+            :for={credential <- @credentials}
+            id={"#{@id}-#{credential.id}"}
+            class="hover:bg-gray-100 transition-colors duration-200"
+          >
+            <.td><%= credential.name %></.td>
+            <.td>
+              <%= credential.project_names %>
+            </.td>
+            <.td><%= credential.schema %></.td>
+            <.td>
+              <%= if credential.production do %>
+                <div class="flex">
+                  <Heroicons.exclamation_triangle class="w-5 h-5 text-secondary-500" />
+                  &nbsp;Production
+                </div>
+              <% end %>
+            </.td>
+            <.td>
+              <%= render_slot(@actions, credential) %>
+            </.td>
+          </.tr>
+        </.table>
+      <% end %>
+    </div>
+    """
+  end
+
+  attr :id, :string, required: true
+  attr :clients, :list, required: true
+  attr :title, :string, required: true
+
+  slot :actions,
+    doc: "the slot for showing user actions in the last table column"
+
+  slot :empty_state,
+    doc: "the slot for showing an empty state"
+
+  def oauth_clients_table(assigns) do
+    ~H"""
+    <div id={"#{@id}-table-container"}>
+      <div class="py-4 leading-loose">
+        <h6 class="font-normal text-black"><%= @title %></h6>
+      </div>
+      <%= if Enum.empty?(@clients) do %>
+        <%= render_slot(@empty_state) %>
+      <% else %>
+        <.table id={"#{@id}-table"}>
+          <.tr>
+            <.th>Name</.th>
+            <.th>Projects With Access</.th>
+            <.th>Authorization URL</.th>
+            <.th>Actions</.th>
+          </.tr>
+
+          <.tr
+            :for={client <- @clients}
+            id={"#{@id}-#{client.id}"}
+            class="hover:bg-gray-100 transition-colors duration-200"
+          >
+            <.td class="break-words max-w-[15rem]"><%= client.name %></.td>
+            <.td class="break-words max-w-[20rem]">
+              <%= for project_name <- client.project_names do %>
+                <span class="inline-flex items-center rounded-md bg-transparent px-1.5 py-0.5 my-0.5 text-xs font-medium ring-1 ring-inset ring-gray-500/10">
+                  <%= project_name %>
+                </span>
+              <% end %>
+            </.td>
+            <.td class="break-words max-w-[20rem]">
+              <%= client.authorization_endpoint %>
+            </.td>
+            <.td>
+              <%= render_slot(@actions, client) %>
+            </.td>
+          </.tr>
+        </.table>
+      <% end %>
+    </div>
+    """
+  end
 end
