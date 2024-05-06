@@ -351,14 +351,13 @@
               <.th>Name</.th>
               <.th>Projects With Access</.th>
               <.th>Authorization URL</.th>
-              <.th></.th>
+              <.th>Actions</.th>
             </.tr>
 
             <%= for client <- @oauth_clients do %>
               <.tr
                 id={"oauth-client-#{client.id}"}
                 class="hover:bg-gray-100 transition-colors duration-200"
-                phx-hook="ShowActionsOnRowHover"
               >
                 <.td class="break-words max-w-[15rem]"><%= client.name %></.td>
                 <.td class="break-words max-w-[20rem]">
@@ -373,7 +372,7 @@
                 </.td>
                 <.td>
                   <%= if client.user_id == @current_user.id do %>
-                    <div class="text-right hover-content opacity-0 transition-opacity duration-300 whitespace-nowrap">
+                    <div class="text-left whitespace-nowrap">
                       <span>
                         <.link
                           class="py-1 text-indigo-600 hover:text-indigo-500"

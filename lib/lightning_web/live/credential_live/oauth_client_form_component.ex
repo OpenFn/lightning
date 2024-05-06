@@ -4,7 +4,8 @@ defmodule LightningWeb.CredentialLive.OauthClientFormComponent do
   """
   use LightningWeb, :live_component
 
-  import Ecto.Changeset, only: [fetch_field!: 2, put_assoc: 3]
+  import Ecto.Changeset, only: [fetch_field!: 2]
+  #  put_assoc: 3]
 
   alias Lightning.OauthClients
   alias LightningWeb.Components.NewInputs
@@ -23,7 +24,7 @@ defmodule LightningWeb.CredentialLive.OauthClientFormComponent do
 
   @impl true
   def mount(socket) do
-    {:ok, assign(socket, available_projects: [])}
+    {:ok, assign(socket, available_projects: [], is_client_global: false)}
   end
 
   @impl true
@@ -55,13 +56,26 @@ defmodule LightningWeb.CredentialLive.OauthClientFormComponent do
   end
 
   defp assign_initial_values(socket, changeset, all_projects) do
+    is_client_global = Ecto.Changeset.fetch_field!(changeset, :global)
+
     socket
     |> assign(:changeset, changeset)
     |> assign(:all_projects, all_projects)
     |> assign(:selected_project, nil)
+    |> assign(:is_client_global, is_client_global)
   end
 
+  # defp toggle_global(changeset) do
+  #   if Ecto.Changeset.changed?(changeset, :global) and
+  #        !Ecto.Changeset.get_change(changeset, :global) do
+  #     Ecto.Changeset.put_assoc(changeset, :project_oauth_clients, [])
+  #   else
+  #     changeset
+  #   end
+  # end
+
   @impl true
+
   def handle_event(
         "validate",
         %{
@@ -94,9 +108,13 @@ defmodule LightningWeb.CredentialLive.OauthClientFormComponent do
         socket.assigns.oauth_client,
         oauth_client_params
       )
+      # |> toggle_global()
       |> Map.put(:action, :validate)
 
-    {:noreply, assign(socket, changeset: changeset)}
+    is_client_global = Ecto.Changeset.fetch_field!(changeset, :global)
+
+    {:noreply,
+     assign(socket, changeset: changeset, is_client_global: is_client_global)}
   end
 
   def handle_event("remove_mandatory_scope", %{"scope" => scope_value}, socket) do
@@ -117,39 +135,29 @@ defmodule LightningWeb.CredentialLive.OauthClientFormComponent do
 
   def handle_event(
         "select_item",
-        %{"selected_project" => %{"id" => project_id}},
+        %{"project_id" => project_id},
         socket
       ) do
-    {:noreply, assign(socket, selected_project: project_id)}
+    {:noreply,
+     socket
+     |> assign(selected_project: project_id)
+     |> push_event("clear_input", %{})}
   end
 
-  def handle_event("add_new_project", %{"projectid" => project_id}, socket) do
+  def handle_event("add_new_project", %{"project_id" => project_id}, socket) do
     project_oauth_clients =
-      fetch_field!(socket.assigns.changeset, :project_oauth_clients)
-
-    project_oauth_clients =
-      project_oauth_clients
-      |> Enum.find(fn poc ->
-        poc.project_id == project_id
-      end)
-      |> if do
-        project_oauth_clients
-        |> Enum.map(fn poc ->
-          if poc.project_id == project_id do
-            Ecto.Changeset.change(poc, %{delete: false})
-          else
-            poc
-          end
-        end)
-      else
-        Enum.concat(project_oauth_clients, [
-          %Lightning.Projects.ProjectOauthClient{project_id: project_id}
-        ])
-      end
+      Ecto.Changeset.fetch_field!(
+        socket.assigns.changeset,
+        :project_oauth_clients
+      )
+      |> Enum.map(fn %{project_id: project_id} -> %{project_id: project_id} end)
 
     changeset =
-      socket.assigns.changeset
-      |> put_assoc(:project_oauth_clients, project_oauth_clients)
+      Ecto.Changeset.put_assoc(
+        socket.assigns.changeset,
+        :project_oauth_clients,
+        [%{project_id: project_id} | project_oauth_clients]
+      )
       |> Map.put(:action, :validate)
 
     available_projects =
@@ -164,27 +172,20 @@ defmodule LightningWeb.CredentialLive.OauthClientFormComponent do
      )}
   end
 
-  def handle_event("delete_project", %{"projectid" => project_id}, socket) do
+  def handle_event("delete_project", %{"project_id" => project_id}, socket) do
     project_oauth_clients =
-      fetch_field!(socket.assigns.changeset, :project_oauth_clients)
-
-    project_oauth_clients =
-      Enum.reduce(project_oauth_clients, [], fn poc, project_oauth_clients ->
-        if poc.project_id == project_id do
-          if is_nil(poc.id) do
-            project_oauth_clients
-          else
-            project_oauth_clients ++
-              [Ecto.Changeset.change(poc, %{delete: true})]
-          end
-        else
-          project_oauth_clients ++ [poc]
-        end
+      Ecto.Changeset.fetch_field!(
+        socket.assigns.changeset,
+        :project_oauth_clients
+      )
+      |> Enum.map(fn %{project_id: project_id} -> %{project_id: project_id} end)
+      |> Enum.reject(fn %{project_id: existing_project_id} ->
+        existing_project_id == project_id
       end)
 
     changeset =
       socket.assigns.changeset
-      |> put_assoc(:project_oauth_clients, project_oauth_clients)
+      |> Ecto.Changeset.put_assoc(:project_oauth_clients, project_oauth_clients)
       |> Map.put(:action, :validate)
 
     available_projects =
@@ -367,24 +368,28 @@ defmodule LightningWeb.CredentialLive.OauthClientFormComponent do
   defp filter_available_projects(changeset, all_projects) do
     existing_ids =
       fetch_field!(changeset, :project_oauth_clients)
-      |> Enum.reject(fn poc -> poc.delete end)
-      |> Enum.map(fn poc -> poc.oauth_client_id end)
+      |> Enum.map(fn poc -> poc.project_id end)
 
     Enum.reject(all_projects, fn {_, oauth_client_id} ->
       oauth_client_id in existing_ids
     end)
   end
 
-  attr :projects, :list, required: true
-  attr :selected, :map, required: true
+  attr :available_projects, :list, required: true
+  attr :all_projects, :list, required: true
+  attr :selected, :string, required: true
   attr :allow_global, :boolean, default: false
+  attr :global, :boolean, required: true
   attr :phx_target, :any, default: nil
-  attr :form, :map, required: true
+  attr :form, :any, required: true
 
   defp project_oauth_clients(assigns) do
     ~H"""
     <div class="col-span-3">
-      <div :if={@allow_global} class="rounded-md bg-yellow-200 p-4 mb-4">
+      <div
+        :if={@allow_global}
+        class="rounded-md bg-yellow-200 p-4 mb-4 border-2 border-slate-300"
+      >
         <h3 class="text-sm font-medium text-yellow-800">
           <NewInputs.input
             type="checkbox"
@@ -394,33 +399,46 @@ defmodule LightningWeb.CredentialLive.OauthClientFormComponent do
         </h3>
       </div>
 
-      <div :if={!@form[:global].value}>
-        <%= Phoenix.HTML.Form.label(
-          @form,
-          :project_oauth_clients,
-          "Select the project to give access to this client",
-          class: "block text-sm font-medium text-secondary-700"
-        ) %>
+      <div :if={!@global}>
+        <label
+          for={"project_oauth_clients_list_for_#{@form[:id].value}"}
+          class={["block text-sm font-semibold leading-6 text-slate-800"]}
+        >
+          Project
+        </label>
 
         <div class="flex w-full items-center gap-2 pb-3 mt-1">
           <div class="grow">
-            <LightningWeb.Components.Form.select_field
-              form={:selected_project}
-              name={:id}
-              values={@projects}
-              value={@selected}
-              prompt=""
+            <select
+              id={"project_oauth_clients_list_for_#{@form[:id].value}"}
+              name={:project_id}
+              class={[
+                "block w-full rounded-lg border border-secondary-300 bg-white",
+                "sm:text-sm shadow-sm",
+                "focus:border-primary-300 focus:ring focus:ring-primary-200 focus:ring-opacity-50",
+                "disabled:cursor-not-allowed "
+              ]}
               phx-change="select_item"
               phx-target={@phx_target}
-              id={"project_oauth_clients_list_for_#{@form[:id].value}"}
-            />
+            >
+              <option value="">
+                Select a project to associate to this Oauth client
+              </option>
+              <%= Phoenix.HTML.Form.options_for_select(
+                @available_projects,
+                @selected
+              ) %>
+            </select>
           </div>
+
           <div class="grow-0 items-right">
             <.button
               id={"add-new-project-button-to-#{@form[:id].value}"}
-              disabled={@selected == ""}
+              disabled={
+                @selected == "" or @selected == nil or @available_projects == []
+              }
               phx-target={@phx_target}
-              phx-value-projectid={@selected}
+              phx-value-project_id={@selected}
               phx-click="add_new_project"
             >
               Add
@@ -433,34 +451,31 @@ defmodule LightningWeb.CredentialLive.OauthClientFormComponent do
             :let={project_oauth_client}
             field={@form[:project_oauth_clients]}
           >
-            <%= if project_oauth_client[:delete].value != true do %>
-              <span class="inline-flex items-center gap-1 rounded-md bg-blue-100 px-4 py-3 text-gray-600">
-                <%= project_name(@projects, project_oauth_client[:project_id].value) %>
-                <button
-                  id={"delete-project-oauth-client-#{@form[:id].value}-button"}
-                  phx-target={@phx_target}
-                  phx-value-projectid={project_oauth_client[:project_id].value}
-                  phx-click="delete_project"
-                  type="button"
-                  class="group relative -mr-1 h-3.5 w-3.5 rounded-sm hover:bg-gray-500/20"
+            <span class="inline-flex items-center gap-1 rounded-md bg-blue-100 px-4 py-2 mb-2 text-gray-600">
+              <%= project_name(
+                @all_projects,
+                project_oauth_client[:project_id].value
+              ) %>
+              <button
+                id={"delete-project-oauth-client-#{@form[:id].value}-button"}
+                phx-target={@phx_target}
+                phx-value-project_id={project_oauth_client[:project_id].value}
+                phx-click="delete_project"
+                type="button"
+                class="group relative -mr-1 h-3.5 w-3.5 rounded-sm hover:bg-gray-500/20"
+              >
+                <span class="sr-only">Remove</span>
+                <svg
+                  viewBox="0 0 14 14"
+                  class="h-3.5 w-3.5 stroke-gray-700/50 group-hover:stroke-gray-700/75"
                 >
-                  <span class="sr-only">Remove</span>
-                  <svg
-                    viewBox="0 0 14 14"
-                    class="h-3.5 w-3.5 stroke-gray-700/50 group-hover:stroke-gray-700/75"
-                  >
-                    <path d="M4 4l6 6m0-6l-6 6" />
-                  </svg>
-                  <span class="absolute -inset-1"></span>
-                </button>
-              </span>
-            <% end %>
+                  <path d="M4 4l6 6m0-6l-6 6" />
+                </svg>
+                <span class="absolute -inset-1"></span>
+              </button>
+            </span>
+
             <.input type="hidden" field={project_oauth_client[:project_id]} />
-            <.input
-              type="hidden"
-              field={project_oauth_client[:delete]}
-              value={to_string(project_oauth_client[:delete].value)}
-            />
           </.inputs_for>
         </div>
       </div>
@@ -479,8 +494,13 @@ defmodule LightningWeb.CredentialLive.OauthClientFormComponent do
   defp scopes_input(assigns) do
     ~H"""
     <div id={"generic-oauth-scopes-#{@id}"} class="space-y-2 mt-5">
-      <NewInputs.label><%= @label %></NewInputs.label>
-      <div class="flex flex-wrap items-center border border-gray-300 rounded-lg px-2">
+      <NewInputs.input
+        type="text"
+        label={@label}
+        field={@field}
+        phx-hook="ClearInput"
+      />
+      <div>
         <span
           :for={scope <- @scopes}
           id={"#{@id}-#{scope}"}
@@ -507,12 +527,6 @@ defmodule LightningWeb.CredentialLive.OauthClientFormComponent do
             <span class="absolute -inset-1"></span>
           </button>
         </span>
-        <NewInputs.input
-          type="text"
-          field={@field}
-          phx-hook="ClearInput"
-          class="flex-1 border-0 outline-0 ring-0 focus:border-0 focus:ring-0 focus:outline-0 focus:outline-transparent"
-        />
       </div>
     </div>
     """
@@ -538,7 +552,7 @@ defmodule LightningWeb.CredentialLive.OauthClientFormComponent do
   def render(assigns) do
     ~H"""
     <div class="mt-10 sm:mt-0">
-      <.modal id={@id} width="w-[64rem] sm:w-[32rem] md:w-[64rem]">
+      <.modal id={@id} width="w-[32rem] lg:w-[44rem]">
         <:title>
           <div class="flex justify-between">
             <span class="font-bold"><.modal_title action={@action} /></span>
@@ -633,7 +647,7 @@ defmodule LightningWeb.CredentialLive.OauthClientFormComponent do
               <legend class="contents text-base font-medium text-gray-900">
                 Manage Scopes
               </legend>
-              <p class="text-sm text-gray-500">
+              <p class="text-sm text-gray-500 pt-2">
                 Type the names of the scopes and separate them using comma
               </p>
               <.scopes_input
@@ -668,17 +682,19 @@ defmodule LightningWeb.CredentialLive.OauthClientFormComponent do
             <div class="space-y-4">
               <fieldset>
                 <legend class="contents text-base font-medium text-gray-900">
-                  Project Access
+                  Manage Project Access
                 </legend>
-                <p class="text-sm text-gray-500">
+                <p class="text-sm text-gray-500 pt-2">
                   Control which projects have access to this credentials
                 </p>
                 <div class="mt-4">
                   <.project_oauth_clients
                     form={f}
-                    projects={@all_projects}
+                    available_projects={@available_projects}
+                    all_projects={@all_projects}
                     selected={@selected_project}
                     allow_global={@allow_global}
+                    global={@is_client_global}
                     phx_target={@myself}
                   />
                 </div>
@@ -689,7 +705,9 @@ defmodule LightningWeb.CredentialLive.OauthClientFormComponent do
             <div class="sm:flex sm:flex-row-reverse">
               <button
                 type="submit"
-                disabled={!@changeset.valid?}
+                disabled={
+                  !@changeset.valid? or @changeset.changes |> map_size() <= 0
+                }
                 class="inline-flex w-full justify-center rounded-md disabled:bg-primary-300 bg-primary-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary-500 sm:ml-3 sm:w-auto"
               >
                 <%= case @action do %>
