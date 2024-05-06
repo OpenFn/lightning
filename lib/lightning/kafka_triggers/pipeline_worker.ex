@@ -19,12 +19,18 @@ defmodule Lightning.KafkaTriggers.PipelineWorker do
           %{
             "group_id" => group_id,
             "hosts" => hosts_list,
-            "authentication" => sasl_options,
+            "sasl" => sasl_options,
             "topics" => topics,
           } = trigger.kafka_configuration
 
           hosts = hosts_list |> Enum.map(& List.to_tuple(&1))
-          sasl = sasl_options |> List.to_tuple()
+          sasl =
+            case sasl_options do
+              options when is_list(options) ->
+                options |> List.to_tuple()
+              nil ->
+                nil
+            end
 
           %{
             id: trigger.id,

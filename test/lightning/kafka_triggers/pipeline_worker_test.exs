@@ -107,6 +107,31 @@ defmodule Lightning.KafkaTriggers.PipelineWorkerTest do
       end
     end
 
+    test "handles the case where the consumer group does not use SASL", %{
+      pid: pid
+    } do
+      no_auth_trigger =
+        insert(
+          :trigger,
+          type: :kafka,
+          kafka_configuration: configuration(3, false),
+          enabled: true
+        )
+
+      with_mock Supervisor,
+        [
+          start_child: fn _sup_pid, _child_spec -> {:ok, "fake-pid"} end,
+          count_children: fn _sup_pid -> %{specs: 0} end
+        ] do
+
+        perform_job(PipelineWorker, %{})
+
+        assert_called(
+          Supervisor.start_child(pid, child_spec(no_auth_trigger, 3, false))
+        )
+      end
+    end
+
     test "returns :ok" do
       with_mock Supervisor,
         [
@@ -117,22 +142,23 @@ defmodule Lightning.KafkaTriggers.PipelineWorkerTest do
       end
     end
 
-    def configuration(index, false = _authentication) do
+    def configuration(index, false = _sasl) do
       %{
         "group_id" => "lightning-#{index}",
         "hosts" => [["host-#{index}", 9092], ["other-host-#{index}", 9093]],
+        "sasl" => nil,
         "topics" => ["topic-#{index}-1", "topic-#{index}-2"]
       }
     end
 
-    def configuration(index, true = _authentication) do
+    def configuration(index, true = _sasl) do
       configuration(index, false)
       |> Map.merge(%{
-        "authentication" => ["plain", "my-user-#{index}", "secret-#{index}"]
+        "sasl" => ["plain", "my-user-#{index}", "secret-#{index}"]
       })
     end
 
-    def child_spec(trigger, index) do
+    defp child_spec(trigger, index, sasl \\ true) do
       %{
         id: trigger.id,
         start: {
@@ -143,7 +169,7 @@ defmodule Lightning.KafkaTriggers.PipelineWorkerTest do
               group_id: "lightning-#{index}",
               hosts: [{"host-#{index}", 9092}, {"other-host-#{index}", 9093}],
               name: trigger.id |> String.to_atom(),
-              sasl: {"plain", "my-user-#{index}", "secret-#{index}"},
+              sasl: sasl_config(index, sasl),
               topics: ["topic-#{index}-1", "topic-#{index}-2"]
             ]
           ]
@@ -151,4 +177,10 @@ defmodule Lightning.KafkaTriggers.PipelineWorkerTest do
       }
     end
   end
+
+  defp sasl_config(index, true = _sasl) do
+    {"plain", "my-user-#{index}", "secret-#{index}"}
+  end
+
+  defp sasl_config(_index, false = _sasl), do: nil
 end
