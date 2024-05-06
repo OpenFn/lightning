@@ -153,7 +153,7 @@ defmodule LightningWeb.ProjectLive.Settings do
     |> Enum.map(fn c ->
       project_names =
         Map.get(c, :projects, [])
-        |> Enum.map_join(", ", fn p -> p.name end)
+        |> Enum.map(fn p -> p.name end)
 
       Map.put(c, :project_names, project_names)
     end)

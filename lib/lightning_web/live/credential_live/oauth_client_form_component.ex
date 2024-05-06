@@ -65,17 +65,7 @@ defmodule LightningWeb.CredentialLive.OauthClientFormComponent do
     |> assign(:is_client_global, is_client_global)
   end
 
-  # defp toggle_global(changeset) do
-  #   if Ecto.Changeset.changed?(changeset, :global) and
-  #        !Ecto.Changeset.get_change(changeset, :global) do
-  #     Ecto.Changeset.put_assoc(changeset, :project_oauth_clients, [])
-  #   else
-  #     changeset
-  #   end
-  # end
-
   @impl true
-
   def handle_event(
         "validate",
         %{
@@ -108,7 +98,6 @@ defmodule LightningWeb.CredentialLive.OauthClientFormComponent do
         socket.assigns.oauth_client,
         oauth_client_params
       )
-      # |> toggle_global()
       |> Map.put(:action, :validate)
 
     is_client_global = Ecto.Changeset.fetch_field!(changeset, :global)
@@ -370,8 +359,8 @@ defmodule LightningWeb.CredentialLive.OauthClientFormComponent do
       fetch_field!(changeset, :project_oauth_clients)
       |> Enum.map(fn poc -> poc.project_id end)
 
-    Enum.reject(all_projects, fn {_, oauth_client_id} ->
-      oauth_client_id in existing_ids
+    Enum.reject(all_projects, fn {_, project_id} ->
+      project_id in existing_ids
     end)
   end
 

@@ -3,6 +3,8 @@ defmodule Lightning.Credentials do
   The Credentials context.
   """
 
+  alias Lightning.Projects.ProjectCredential
+
   use Oban.Worker,
     queue: :background,
     max_attempts: 1
@@ -178,7 +180,7 @@ defmodule Lightning.Credentials do
 
     Multi.new()
     |> Multi.update(:credential, changeset)
-    |> derive_events(changeset)
+    |> manage_projects_association(credential, changeset)
     |> Repo.transaction()
     |> case do
       {:error, :credential, changeset, _changes} ->
@@ -187,6 +189,92 @@ defmodule Lightning.Credentials do
       {:ok, %{credential: credential}} ->
         {:ok, credential}
     end
+  end
+
+  defp manage_projects_association(
+         multi,
+         %Credential{} = old_credential,
+         %Ecto.Changeset{} = changeset
+       ) do
+    projects_changed? =
+      Ecto.Changeset.changed?(changeset, :project_credentials)
+
+    provided_projects_ids =
+      if projects_changed? do
+        Ecto.Changeset.get_assoc(changeset, :project_credentials, :changeset)
+        |> Enum.map(fn changeset ->
+          Ecto.Changeset.get_change(changeset, :project_id)
+        end)
+      else
+        []
+      end
+      |> Enum.reject(fn value -> is_nil(value) end)
+
+    associated_projects_query =
+      if projects_changed? and Enum.count(provided_projects_ids) > 0 do
+        from pc in ProjectCredential,
+          where:
+            pc.credential_id == ^old_credential.id and
+              pc.project_id not in ^provided_projects_ids
+      else
+        from pc in ProjectCredential,
+          where: pc.credential_id == ^old_credential.id
+      end
+
+    projects_to_add =
+      Repo.all(
+        from project in Project, where: project.id in ^provided_projects_ids
+      )
+
+    associated_projects = Repo.all(associated_projects_query)
+
+    multi
+    |> Multi.delete_all(
+      :remove_associated_projects,
+      associated_projects_query
+    )
+    |> Multi.run(:audit_removed_associations, fn _, _ ->
+      associated_projects
+      |> Enum.reduce(Multi.new(), fn project, acc ->
+        Multi.insert(acc, {:audit, project.id}, fn _ ->
+          Audit.event(
+            "removed_from_project",
+            old_credential.id,
+            old_credential.user_id,
+            %{
+              before: %{project_id: project.project_id},
+              after: %{project_id: nil}
+            }
+          )
+        end)
+      end)
+      |> Repo.transaction()
+    end)
+    |> Multi.run(:audit_added_associations, fn _, _ ->
+      projects_to_add
+      |> Enum.reduce(Multi.new(), fn project, acc ->
+        Multi.insert(acc, {:audit, project.id}, fn _ ->
+          Audit.event(
+            "added_to_project",
+            old_credential.id,
+            old_credential.user_id,
+            %{
+              before: %{project_id: nil},
+              after: %{project_id: project.id}
+            }
+          )
+        end)
+      end)
+      |> Multi.insert(:audit_client_update, fn _ ->
+        Audit.event(
+          "updated",
+          old_credential.id,
+          old_credential.user_id,
+          changeset
+        )
+      end)
+      |> Repo.transaction()
+    end)
   end
 
   @doc """

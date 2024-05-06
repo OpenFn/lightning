@@ -28,7 +28,7 @@ defmodule Lightning.Credentials.Credential do
     belongs_to :user, User
     belongs_to :oauth_client, OauthClient
 
-    has_many :project_credentials, ProjectCredential
+    has_many :project_credentials, ProjectCredential, on_replace: :delete
     has_many :projects, through: [:project_credentials, :project]
 
     timestamps(type: :utc_datetime)
@@ -46,7 +46,7 @@ defmodule Lightning.Credentials.Credential do
       :schema,
       :scheduled_deletion
     ])
-    |> cast_assoc(:project_credentials)
+    |> cast_assoc(:project_credentials, with: &ProjectCredential.changeset/2)
     |> validate_required([:name, :body, :user_id])
     |> assoc_constraint(:user)
     |> assoc_constraint(:oauth_client)

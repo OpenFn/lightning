@@ -302,7 +302,9 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
       projects: assigns.projects,
       users: assigns.users,
       apiVersion: assigns.credential.body["apiVersion"],
-      parent_component: assigns.parent_component
+      parent_component: assigns.parent_component,
+      available_projects: assigns.available_projects,
+      selected_project: assigns.selected_project
     )
     |> assign(additional_assigns)
   end
@@ -478,8 +480,9 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
               <div class="mt-4">
                 <LightningWeb.Components.Credentials.project_credentials
                   form={f}
-                  projects={@projects}
-                  selected={@selected_project}
+                  available_projects={@available_projects}
+                  all_projects={@projects}
+                  selected={@selected_project |> IO.inspect()}
                   phx_target={@parent_component}
                 />
               </div>
