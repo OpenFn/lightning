@@ -266,10 +266,7 @@
               </button>
             </:empty_state>
             <:actions :let={client}>
-              <div
-                :if={client.user_id == @current_user.id}
-                class="text-left whitespace-nowrap"
-              >
+              <div :if={client.user_id == @current_user.id}>
                 <span>
                   <.link phx-click={
                     show_modal("edit-oauth-client-#{client.id}-modal")
@@ -327,10 +324,7 @@
               </button>
             </:empty_state>
             <:actions :let={credential}>
-              <div
-                :if={credential.user_id == @current_user.id}
-                class="text-left whitespace-nowrap"
-              >
+              <div :if={credential.user_id == @current_user.id}>
                 <span>
                   <.link phx-click={
                     show_modal("edit-credential-#{credential.id}-modal")
