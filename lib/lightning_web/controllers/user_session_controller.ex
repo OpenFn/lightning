@@ -8,8 +8,7 @@ defmodule LightningWeb.UserSessionController do
   def new(conn, _params) do
     render(conn, "new.html",
       error_message: nil,
-      auth_handler_url: auth_handler_url(),
-      allow_sign_up: !Application.get_env(:lightning, :disable_registration)
+      auth_handler_url: auth_handler_url()
     )
   end
 
@@ -22,8 +21,7 @@ defmodule LightningWeb.UserSessionController do
         conn
         |> put_flash(:error, "This user account is disabled")
         |> render("new.html",
-          auth_handler_url: auth_handler_url(),
-          allow_sign_up: !Application.get_env(:lightning, :disable_registration)
+          auth_handler_url: auth_handler_url()
         )
 
       %User{scheduled_deletion: x} when x != nil ->
@@ -33,8 +31,7 @@ defmodule LightningWeb.UserSessionController do
           "This user account is scheduled for deletion"
         )
         |> render("new.html",
-          auth_handler_url: auth_handler_url(),
-          allow_sign_up: !Application.get_env(:lightning, :disable_registration)
+          auth_handler_url: auth_handler_url()
         )
 
       %User{mfa_enabled: true} = user ->
@@ -54,8 +51,7 @@ defmodule LightningWeb.UserSessionController do
         conn
         |> put_flash(:error, "Invalid email or password")
         |> render("new.html",
-          auth_handler_url: auth_handler_url(),
-          allow_sign_up: !Application.get_env(:lightning, :disable_registration)
+          auth_handler_url: auth_handler_url()
         )
     end
   end

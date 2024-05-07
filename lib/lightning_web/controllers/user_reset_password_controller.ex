@@ -6,9 +6,7 @@ defmodule LightningWeb.UserResetPasswordController do
   plug :get_user_by_reset_password_token when action in [:edit, :update]
 
   def new(conn, _params) do
-    render(conn, "new.html",
-      allow_sign_up: !Application.get_env(:lightning, :disable_registration)
-    )
+    render(conn, "new.html")
   end
 
   def create(conn, %{"user" => %{"email" => email}}) do
@@ -29,8 +27,7 @@ defmodule LightningWeb.UserResetPasswordController do
 
   def edit(conn, _params) do
     render(conn, "edit.html",
-      changeset: Accounts.change_user_password(conn.assigns.user),
-      allow_sign_up: !Application.get_env(:lightning, :disable_registration)
+      changeset: Accounts.change_user_password(conn.assigns.user)
     )
   end
 
@@ -44,10 +41,7 @@ defmodule LightningWeb.UserResetPasswordController do
         |> redirect(to: Routes.user_session_path(conn, :new))
 
       {:error, changeset} ->
-        render(conn, "edit.html",
-          changeset: changeset,
-          allow_sign_up: !Application.get_env(:lightning, :disable_registration)
-        )
+        render(conn, "edit.html", changeset: changeset)
     end
   end
 

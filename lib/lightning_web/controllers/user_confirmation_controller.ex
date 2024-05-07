@@ -4,9 +4,7 @@ defmodule LightningWeb.UserConfirmationController do
   alias Lightning.Accounts
 
   def new(conn, _params) do
-    render(conn, "new.html",
-      allow_sign_up: !Application.get_env(:lightning, :disable_registration)
-    )
+    render(conn, "new.html")
   end
 
   def create(conn, %{"user" => %{"email" => email}}) do
@@ -27,10 +25,7 @@ defmodule LightningWeb.UserConfirmationController do
   end
 
   def edit(conn, %{"token" => token}) do
-    render(conn, "edit.html",
-      token: token,
-      allow_sign_up: !Application.get_env(:lightning, :disable_registration)
-    )
+    render(conn, "edit.html", token: token)
   end
 
   def confirm_email(conn, %{"token" => token}) do

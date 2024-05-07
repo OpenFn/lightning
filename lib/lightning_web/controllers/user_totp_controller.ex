@@ -10,8 +10,7 @@ defmodule LightningWeb.UserTOTPController do
     render(conn, "new.html",
       error_message: nil,
       remember_me: params["user"]["remember_me"],
-      authentication_type: authentication_type(params["authentication_type"]),
-      allow_sign_up: !Application.get_env(:lightning, :disable_registration)
+      authentication_type: authentication_type(params["authentication_type"])
     )
   end
 
@@ -26,8 +25,7 @@ defmodule LightningWeb.UserTOTPController do
       render(conn, "new.html",
         remember_me: params["remember_me"],
         authentication_type: params["authentication_type"],
-        error_message: "Invalid two-factor authentication code",
-        allow_sign_up: !Application.get_env(:lightning, :disable_registration)
+        error_message: "Invalid two-factor authentication code"
       )
     end
   end

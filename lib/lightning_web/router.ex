@@ -21,7 +21,14 @@ defmodule LightningWeb.Router do
     plug :put_secure_browser_headers
     plug :fetch_current_user
     plug LightningWeb.Plugs.FirstSetup
-    plug LightningWeb.Plugs.RegisterGatekeeper
+
+    plug LightningWeb.Plugs.BlockRoutes, [
+      {
+        "/users/register",
+        :allow_signup,
+        "Self-signup has been disabled for this instance. Please contact the administrator."
+      }
+    ]
   end
 
   pipeline :api do

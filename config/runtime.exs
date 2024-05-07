@@ -283,8 +283,8 @@ config :lightning,
        env!("QUEUE_RESULT_RETENTION_PERIOD_SECONDS", :integer, 60)
 
 config :lightning,
-       :disable_registration,
-       env!("DISABLE_REGISTRATION", &Utils.ensure_boolean/1, false)
+       :allow_signup,
+       env!("ALLOW_SIGNUP", &Utils.ensure_boolean/1, false)
 
 config :lightning,
        :init_project_for_new_user,

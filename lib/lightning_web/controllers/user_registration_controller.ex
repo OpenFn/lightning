@@ -7,10 +7,7 @@ defmodule LightningWeb.UserRegistrationController do
   def new(conn, _params) do
     changeset = Accounts.change_user_registration()
 
-    render(conn, "new.html",
-      changeset: changeset,
-      allow_sign_up: !Application.get_env(:lightning, :disable_registration)
-    )
+    render(conn, "new.html", changeset: changeset)
   end
 
   defp create_initial_project(%Lightning.Accounts.User{
@@ -45,10 +42,7 @@ defmodule LightningWeb.UserRegistrationController do
         |> UserAuth.redirect_with_return_to()
 
       {:error, %Ecto.Changeset{} = changeset} ->
-        render(conn, "new.html",
-          changeset: changeset,
-          allow_sign_up: !Application.get_env(:lightning, :disable_registration)
-        )
+        render(conn, "new.html", changeset: changeset)
     end
   end
 end

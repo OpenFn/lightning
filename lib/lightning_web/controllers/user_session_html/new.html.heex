@@ -71,12 +71,11 @@
             <div class="text-xs text-secondary-700">
               <div class="flex">
                 <div class="flex-none">
-                  <.link
-                    :if={@allow_sign_up}
-                    href={Routes.user_registration_path(@conn, :new)}
-                  >
+                  <.register_link href={
+                    Routes.user_registration_path(@conn, :new)
+                  }>
                     Register
-                  </.link>
+                  </.register_link>
                 </div>
                 <div class="grow"></div>
 

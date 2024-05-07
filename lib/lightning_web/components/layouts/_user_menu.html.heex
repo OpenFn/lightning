@@ -8,9 +8,9 @@
     </li>
   <% else %>
     <li>
-      <.link href={Routes.user_registration_path(@conn, :new)}>
+      <.register_link href={Routes.user_registration_path(@conn, :new)}>
         Register
-      </.link>
+      </.register_link>
     </li>
     <li>
       <.link href={Routes.user_session_path(@conn, :new)}>
