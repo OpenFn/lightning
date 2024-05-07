@@ -169,7 +169,7 @@ defmodule Lightning.Projects do
     |> Repo.all()
   end
 
-  defmodule CreateProject do
+  defmodule Handlers do
     alias Lightning.Repo
     alias Lightning.Projects.Project
 
@@ -183,14 +183,13 @@ defmodule Lightning.Projects do
       |> tap(fn result ->
         with {:ok, project} <- result do
           Events.project_created(project)
-
           Notifications.added_to_project(%Project{project_users: []}, project)
         end
       end)
     end
   end
 
-  @behaviour CreateProject
+  @behaviour Handlers
 
   @doc """
   Creates a project.
@@ -204,9 +203,9 @@ defmodule Lightning.Projects do
       {:error, %Ecto.Changeset{}}
 
   """
-  @impl CreateProject
-  defdelegate create_project(attrs \\ %{}),
-    to: Application.compile_env(:lightning, :project_handlers, CreateProject)
+  @impl true
+  def create_project(attrs \\ %{}),
+    do: Lightning.Services.AdapterHelper.adapter(:projects).create_project(attrs)
 
   @doc """
   Updates a project.

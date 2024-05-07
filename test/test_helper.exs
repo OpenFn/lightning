@@ -38,3 +38,5 @@ Application.put_env(:lightning, Lightning.Extensions,
   usage_limiter: Lightning.Extensions.MockUsageLimiter,
   run_queue: Lightning.Extensions.FifoRunQueue
 )
+
+IO.inspect("started lightning test_helper.exs")
