@@ -372,24 +372,11 @@ defmodule Lightning.Accounts do
           with {:ok, user} <- result do
             Events.user_registered(user)
             deliver_user_confirmation_instructions(user)
-            maybe_create_initial_project(user)
           end
         end)
 
       {:error, changeset} ->
         {:error, changeset}
-    end
-  end
-
-  defp maybe_create_initial_project(user) do
-    if Lightning.Config.check_flag?(:init_project_for_new_user) do
-      project_name =
-        "#{String.downcase(user.first_name)}-demo" |> String.replace(" ", "-")
-
-      Lightning.SetupUtils.create_starter_project(
-        project_name,
-        [%{user_id: user.id, role: :owner}]
-      )
     end
   end
 
