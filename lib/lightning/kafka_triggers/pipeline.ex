@@ -52,14 +52,16 @@ defmodule Lightning.KafkaTriggers.Pipeline do
 
   defp client_config(opts) do
     sasl = opts |> Keyword.get(:sasl)
+    ssl = opts |> Keyword.get(:ssl)
+
+    base_config = [{:ssl, ssl}]
 
     case sasl do
       nil ->
-        []
+        base_config
       sasl ->
         {mechanism, username, password} = sasl
-        # [{:client_config, [{:sasl, {String.to_atom(mechanism), username, password}}, {:ssl, true}]} | base_opts]
-        [{:sasl, {String.to_atom(mechanism), username, password}}]
+        [{:sasl, {String.to_atom(mechanism), username, password}} | base_config]
     end
   end
 end

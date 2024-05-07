@@ -12,6 +12,7 @@ defmodule Lightning.KafkaTriggers.PipelineTest do
       name = "my_pipeline"
       sasl = {"plain", "my_username", "my_secret"}
       sasl_expected = {:plain, "my_username", "my_secret"}
+      ssl = true
       topics = ["my_topic"]
 
       with_mock Broadway,
@@ -22,6 +23,7 @@ defmodule Lightning.KafkaTriggers.PipelineTest do
           hosts: hosts,
           name: name,
           sasl: sasl,
+          ssl: ssl,
           topics: topics
         )
 
@@ -38,6 +40,7 @@ defmodule Lightning.KafkaTriggers.PipelineTest do
               [
                 client_config: [
                   sasl: sasl_expected,
+                  ssl: ssl
                 ],
                 hosts: hosts,
                 group_id: group_id,
@@ -62,6 +65,7 @@ defmodule Lightning.KafkaTriggers.PipelineTest do
       hosts = [{"localhost", 9092}]
       name = "my_pipeline"
       sasl = nil
+      ssl = true
       topics = ["my_topic"]
 
       with_mock Broadway,
@@ -72,6 +76,7 @@ defmodule Lightning.KafkaTriggers.PipelineTest do
           hosts: hosts,
           name: name,
           sasl: sasl,
+          ssl: ssl,
           topics: topics
         )
 
@@ -86,7 +91,7 @@ defmodule Lightning.KafkaTriggers.PipelineTest do
             {
               BroadwayKafka.Producer,
               [
-                client_config: [],
+                client_config: [ssl: ssl],
                 hosts: hosts,
                 group_id: group_id,
                 topics: topics,
