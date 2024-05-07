@@ -19,7 +19,7 @@ defmodule Lightning.Projects do
   alias Lightning.Projects.Project
   alias Lightning.Projects.ProjectCredential
   alias Lightning.Projects.ProjectUser
-  alias Lightning.Projects.ProjectUser
+  alias Lightning.Projects.Notifications
   alias Lightning.Repo
   alias Lightning.Run
   alias Lightning.RunStep
@@ -169,6 +169,29 @@ defmodule Lightning.Projects do
     |> Repo.all()
   end
 
+  defmodule CreateProject do
+    alias Lightning.Repo
+    alias Lightning.Projects.Project
+
+    @callback create_project(map()) ::
+                {:ok, Project.t()} | {:error, Ecto.Changeset.t()}
+
+    def create_project(attrs) do
+      %Project{}
+      |> Project.project_with_users_changeset(attrs)
+      |> Repo.insert()
+      |> tap(fn result ->
+        with {:ok, project} <- result do
+          Events.project_created(project)
+
+          Notifications.added_to_project(%Project{project_users: []}, project)
+        end
+      end)
+    end
+  end
+
+  @behaviour CreateProject
+
   @doc """
   Creates a project.
 
@@ -181,17 +204,9 @@ defmodule Lightning.Projects do
       {:error, %Ecto.Changeset{}}
 
   """
-  def create_project(attrs \\ %{}) do
-    %Project{}
-    |> Project.project_with_users_changeset(attrs)
-    |> Repo.insert()
-    |> tap(fn result ->
-      with {:ok, project} <- result do
-        Events.project_created(project)
-        schedule_project_addition_emails(%Project{project_users: []}, project)
-      end
-    end)
-  end
+  @impl CreateProject
+  defdelegate create_project(attrs \\ %{}),
+    to: Application.compile_env(:lightning, :project_handlers, CreateProject)
 
   @doc """
   Updates a project.
@@ -211,7 +226,7 @@ defmodule Lightning.Projects do
     case Repo.update(changeset) do
       {:ok, updated_project} ->
         if retention_setting_updated?(changeset) do
-          send_data_retention_change_email(updated_project)
+          Notifications.data_retention_change(updated_project)
         end
 
         {:ok, updated_project}
@@ -231,7 +246,7 @@ defmodule Lightning.Projects do
     |> Repo.update()
     |> tap(fn result ->
       with {:ok, updated_project} <- result do
-        schedule_project_addition_emails(project, updated_project)
+        Notifications.added_to_project(project, updated_project)
       end
     end)
   end
@@ -239,23 +254,6 @@ defmodule Lightning.Projects do
   defp retention_setting_updated?(changeset) do
     Map.has_key?(changeset.changes, :history_retention_period) or
       Map.has_key?(changeset.changes, :dataclip_retention_period)
-  end
-
-  defp send_data_retention_change_email(updated_project) do
-    users_query =
-      from pu in Ecto.assoc(updated_project, :project_users),
-        join: u in assoc(pu, :user),
-        where: pu.role in ^[:admin, :owner],
-        select: u
-
-    users = Repo.all(users_query)
-
-    Enum.each(users, fn user ->
-      UserNotifier.send_data_retention_change_email(
-        user,
-        updated_project
-      )
-    end)
   end
 
   @doc """
@@ -287,19 +285,6 @@ defmodule Lightning.Projects do
     with {:ok, updated_project} <- update_project_with_users(project, params) do
       {:ok, updated_project.project_users}
     end
-  end
-
-  defp schedule_project_addition_emails(old_project, updated_project) do
-    existing_user_ids = Enum.map(old_project.project_users, & &1.user_id)
-
-    emails =
-      updated_project.project_users
-      |> Enum.reject(fn pu -> pu.user_id in existing_user_ids end)
-      |> Enum.map(fn pu ->
-        UserNotifier.new(%{type: "project_addition", project_user_id: pu.id})
-      end)
-
-    Oban.insert_all(Lightning.Oban, emails)
   end
 
   @spec delete_project_user!(ProjectUser.t()) :: ProjectUser.t()
