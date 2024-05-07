@@ -21,6 +21,10 @@ and this project adheres to
 
 ### Fixed
 
+## [v2.4.5] - 2024-05-07
+
+### Fixed
+
 - Fix provioning API calls workflow limiter without the project ID
   [#2057](https://github.com/OpenFn/lightning/issues/2057)
 
