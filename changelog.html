@@ -5,15 +5,15 @@
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="generator" content="ExDoc v0.30.9">
-    <meta name="project" content="Lightning v2.4.4">
+    <meta name="project" content="Lightning v2.4.5">
 
-    <title>Changelog — Lightning v2.4.4</title>
+    <title>Changelog — Lightning v2.4.5</title>
     <link rel="stylesheet" href="dist/html-elixir-XFYN5IVA.css" />
 
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-EPF2X7PV.js"></script>
-    <script src="dist/sidebar_items-4E1C1107.js"></script>
+    <script src="dist/sidebar_items-8DDAA8B3.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -72,7 +72,7 @@
 Lightning
       </a>
       <div class="sidebar-projectVersion" translate="no">
-        v2.4.4
+        v2.4.5
       </div>
     </div>
     <ul id="sidebar-listNav" class="sidebar-listNav" role="tablist">
@@ -160,6 +160,18 @@ and this project adheres to
   </a>
   <span class="text">Fixed</span>
 </h3>
+<h2 id="v2-4-5-2024-05-07" class="section-heading">
+  <a href="#v2-4-5-2024-05-07" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
+  </a>
+  <span class="text">[v2.4.5] - 2024-05-07</span>
+</h2>
+<h3 id="fixed-1" class="section-heading">
+  <a href="#fixed-1" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
+  </a>
+  <span class="text">Fixed</span>
+</h3>
 <ul><li>Fix provioning API calls workflow limiter without the project ID
 <a href="https://github.com/OpenFn/lightning/issues/2057">#2057</a></li></ul><h2 id="v2-4-4-2024-05-03" class="section-heading">
   <a href="#v2-4-4-2024-05-03" class="hover-link">
@@ -182,8 +194,8 @@ and this project adheres to
 </h3>
 <ul><li>Changed Snapshot <code class="inline">get_or_create_latest_for</code> to accept multis allow controlling
 of which repo it uses.</li><li>Require exactly one owner for each project
-<a href="https://github.com/OpenFn/lightning/issues/1991">#1991</a></li></ul><h3 id="fixed-1" class="section-heading">
-  <a href="#fixed-1" class="hover-link">
+<a href="https://github.com/OpenFn/lightning/issues/1991">#1991</a></li></ul><h3 id="fixed-2" class="section-heading">
+  <a href="#fixed-2" class="hover-link">
     <i class="ri-link-m" aria-hidden="true"></i>
   </a>
   <span class="text">Fixed</span>
@@ -210,8 +222,8 @@ of which repo it uses.</li><li>Require exactly one owner for each project
   </a>
   <span class="text">Changed</span>
 </h3>
-<ul><li>Bumped @openfn/ws-worker to 1.1.6</li></ul><h3 id="fixed-2" class="section-heading">
-  <a href="#fixed-2" class="hover-link">
+<ul><li>Bumped @openfn/ws-worker to 1.1.6</li></ul><h3 id="fixed-3" class="section-heading">
+  <a href="#fixed-3" class="hover-link">
     <i class="ri-link-m" aria-hidden="true"></i>
   </a>
   <span class="text">Fixed</span>
@@ -224,8 +236,8 @@ of which repo it uses.</li><li>Require exactly one owner for each project
   </a>
   <span class="text">[v2.4.2] - 2024-04-24</span>
 </h2>
-<h3 id="fixed-3" class="section-heading">
-  <a href="#fixed-3" class="hover-link">
+<h3 id="fixed-4" class="section-heading">
+  <a href="#fixed-4" class="hover-link">
     <i class="ri-link-m" aria-hidden="true"></i>
   </a>
   <span class="text">Fixed</span>
@@ -238,8 +250,8 @@ of which repo it uses.</li><li>Require exactly one owner for each project
   </a>
   <span class="text">[v2.4.1] - 2024-04-19</span>
 </h2>
-<h3 id="fixed-4" class="section-heading">
-  <a href="#fixed-4" class="hover-link">
+<h3 id="fixed-5" class="section-heading">
+  <a href="#fixed-5" class="hover-link">
     <i class="ri-link-m" aria-hidden="true"></i>
   </a>
   <span class="text">Fixed</span>
@@ -290,8 +302,8 @@ have access to <a href="https://github.com/OpenFn/lightning/issues/1895">#1895</
 <ul><li>Change all System.get_env calls in runtime.exs to use dotenvy
 <a href="https://github.com/OpenFn/lightning/issues/1968">#1968</a></li><li>Track usage tracking submission status in new field
 <a href="https://github.com/OpenFn/lightning/issues/1789">#1789</a></li><li>Send richer version info as part of usage tracking submission.
-<a href="https://github.com/OpenFn/lightning/issues/1819">#1819</a></li></ul><h3 id="fixed-5" class="section-heading">
-  <a href="#fixed-5" class="hover-link">
+<a href="https://github.com/OpenFn/lightning/issues/1819">#1819</a></li></ul><h3 id="fixed-6" class="section-heading">
+  <a href="#fixed-6" class="hover-link">
     <i class="ri-link-m" aria-hidden="true"></i>
   </a>
   <span class="text">Fixed</span>
@@ -313,8 +325,8 @@ have access to <a href="https://github.com/OpenFn/lightning/issues/1895">#1895</
 <ul><li>Run the usage tracking submission job more frequently to reduce the risk of
 Oban unavailability at a particular time.
 <a href="https://github.com/OpenFn/lightning/issues/1778">#1778</a></li><li>Remove code supporting V1 usage tracking submissions.
-<a href="https://github.com/OpenFn/lightning/issues/1853">#1853</a></li></ul><h3 id="fixed-6" class="section-heading">
-  <a href="#fixed-6" class="hover-link">
+<a href="https://github.com/OpenFn/lightning/issues/1853">#1853</a></li></ul><h3 id="fixed-7" class="section-heading">
+  <a href="#fixed-7" class="hover-link">
     <i class="ri-link-m" aria-hidden="true"></i>
   </a>
   <span class="text">Fixed</span>
@@ -353,8 +365,8 @@ While this will limit partial string matching to the beginning of words (not
 the middle or end) it will make searching way more performant
 <a href="https://github.com/OpenFn/lightning/issues/1939">#1939</a></li><li>Translate job error messages using errors.po file
 <a href="https://github.com/OpenFn/lightning/issues/1935">#1935</a></li><li>Improve the UI/UX of the run panel on the inspector for small screens
-<a href="https://github.com/OpenFn/lightning/issues/1909">#1909</a></li></ul><h3 id="fixed-7" class="section-heading">
-  <a href="#fixed-7" class="hover-link">
+<a href="https://github.com/OpenFn/lightning/issues/1909">#1909</a></li></ul><h3 id="fixed-8" class="section-heading">
+  <a href="#fixed-8" class="hover-link">
     <i class="ri-link-m" aria-hidden="true"></i>
   </a>
   <span class="text">Fixed</span>
@@ -374,8 +386,8 @@ the middle or end) it will make searching way more performant
 </h3>
 <ul><li>Enable users to connect to their Github accounts in preparation for
 streamlined GitHub project sync setup
-<a href="https://github.com/OpenFn/lightning/issues/1894">#1894</a></li></ul><h3 id="fixed-8" class="section-heading">
-  <a href="#fixed-8" class="hover-link">
+<a href="https://github.com/OpenFn/lightning/issues/1894">#1894</a></li></ul><h3 id="fixed-9" class="section-heading">
+  <a href="#fixed-9" class="hover-link">
     <i class="ri-link-m" aria-hidden="true"></i>
   </a>
   <span class="text">Fixed</span>
@@ -471,8 +483,8 @@ periods <a href="https://github.com/OpenFn/lightning/issues/1918">#1918</a></li>
   <span class="text">Changed</span>
 </h3>
 <ul><li>Upgrade Elixir to 1.16.2</li><li>Remove all values from <code class="inline">.env.example</code>.
-<a href="https://github.com/OpenFn/lightning/issues/1904">#1904</a></li></ul><h3 id="fixed-9" class="section-heading">
-  <a href="#fixed-9" class="hover-link">
+<a href="https://github.com/OpenFn/lightning/issues/1904">#1904</a></li></ul><h3 id="fixed-10" class="section-heading">
+  <a href="#fixed-10" class="hover-link">
     <i class="ri-link-m" aria-hidden="true"></i>
   </a>
   <span class="text">Fixed</span>
@@ -484,8 +496,8 @@ periods <a href="https://github.com/OpenFn/lightning/issues/1918">#1918</a></li>
   </a>
   <span class="text">[v2.0.8] - 2024-02-29</span>
 </h2>
-<h3 id="fixed-10" class="section-heading">
-  <a href="#fixed-10" class="hover-link">
+<h3 id="fixed-11" class="section-heading">
+  <a href="#fixed-11" class="hover-link">
     <i class="ri-link-m" aria-hidden="true"></i>
   </a>
   <span class="text">Fixed</span>
@@ -517,8 +529,8 @@ set up a Github repo::OpenFn project sync
 <a href="https://github.com/OpenFn/lightning/issues/1790">#1790</a></li><li>Require setting <code class="inline">IS_RESETTABLE_DEMO</code> to &quot;yes&quot; via ENV before allowing the
 destructive <code class="inline">Demo.reset_demo/0</code> function from being called.
 <a href="https://github.com/OpenFn/lightning/issues/1720">#1720</a></li><li>Remove version display condition that was redundant due to shadowing
-<a href="https://github.com/OpenFn/lightning/issues/1819">#1819</a></li></ul><h3 id="fixed-11" class="section-heading">
-  <a href="#fixed-11" class="hover-link">
+<a href="https://github.com/OpenFn/lightning/issues/1819">#1819</a></li></ul><h3 id="fixed-12" class="section-heading">
+  <a href="#fixed-12" class="hover-link">
     <i class="ri-link-m" aria-hidden="true"></i>
   </a>
   <span class="text">Fixed</span>
@@ -530,8 +542,8 @@ destructive <code class="inline">Demo.reset_demo/0</code> function from being ca
   </a>
   <span class="text">[v2.0.5] - 2024-02-25</span>
 </h2>
-<h3 id="fixed-12" class="section-heading">
-  <a href="#fixed-12" class="hover-link">
+<h3 id="fixed-13" class="section-heading">
+  <a href="#fixed-13" class="hover-link">
     <i class="ri-link-m" aria-hidden="true"></i>
   </a>
   <span class="text">Fixed</span>
@@ -558,8 +570,8 @@ scopes<a href="https://github.com/OpenFn/Lightning/issues/1706">#1706</a></li></
   <span class="text">Changed</span>
 </h3>
 <ul><li>Stop sending <code class="inline">operating_system_detail</code> to the usage tracker
-<a href="https://github.com/OpenFn/lightning/issues/1785">#1785</a></li></ul><h3 id="fixed-13" class="section-heading">
-  <a href="#fixed-13" class="hover-link">
+<a href="https://github.com/OpenFn/lightning/issues/1785">#1785</a></li></ul><h3 id="fixed-14" class="section-heading">
+  <a href="#fixed-14" class="hover-link">
     <i class="ri-link-m" aria-hidden="true"></i>
   </a>
   <span class="text">Fixed</span>
@@ -590,8 +602,8 @@ non-first step <a href="https://github.com/OpenFn/lightning/issues/1780">#1780</
 to ensure anonymity are default.
 <a href="https://github.com/OpenFn/lightning/issues/1742">#1742</a></p></li><li><p>Usage Tracking submissions will now run daily rather than hourly.
 <a href="https://github.com/OpenFn/lightning/issues/1742">#1742</a></p></li><li><p>Bumped @openfn/ws-worker to <code class="inline">v1.0</code> (this is used in dev mode when starting the
-worker from your mix app: <code class="inline">RTM=true iex -S mix phx.server</code>)</p></li><li><p>Bumped @openfn/cli to <code class="inline">v1.0</code> (this is used for adaptor docs and magic)</p></li></ul><h3 id="fixed-14" class="section-heading">
-  <a href="#fixed-14" class="hover-link">
+worker from your mix app: <code class="inline">RTM=true iex -S mix phx.server</code>)</p></li><li><p>Bumped @openfn/cli to <code class="inline">v1.0</code> (this is used for adaptor docs and magic)</p></li></ul><h3 id="fixed-15" class="section-heading">
+  <a href="#fixed-15" class="hover-link">
     <i class="ri-link-m" aria-hidden="true"></i>
   </a>
   <span class="text">Fixed</span>
@@ -603,8 +615,8 @@ worker from your mix app: <code class="inline">RTM=true iex -S mix phx.server</c
   </a>
   <span class="text">[v2.0.2] - 2024-02-14</span>
 </h2>
-<h3 id="fixed-15" class="section-heading">
-  <a href="#fixed-15" class="hover-link">
+<h3 id="fixed-16" class="section-heading">
+  <a href="#fixed-16" class="hover-link">
     <i class="ri-link-m" aria-hidden="true"></i>
   </a>
   <span class="text">Fixed</span>
@@ -625,8 +637,8 @@ GoogleSheets jobs from running after token expiration
 </h3>
 <ul><li>Renamed ImpactTracking to UsageTracking
 <a href="https://github.com/OpenFn/lightning/issues/1729">#1729</a></li><li>Block github installation if there's a pending installation in another project
-<a href="https://github.com/OpenFn/Lightning/issues/1731">#1731</a></li></ul><h3 id="fixed-16" class="section-heading">
-  <a href="#fixed-16" class="hover-link">
+<a href="https://github.com/OpenFn/Lightning/issues/1731">#1731</a></li></ul><h3 id="fixed-17" class="section-heading">
+  <a href="#fixed-17" class="hover-link">
     <i class="ri-link-m" aria-hidden="true"></i>
   </a>
   <span class="text">Fixed</span>
@@ -656,8 +668,8 @@ documentation and help with v1 to v2 migration.</p></blockquote><h3 id="changed-
 </h3>
 <ul><li>Bump <code class="inline">@openfn/worker</code> to <code class="inline">v0.8.1</code></li><li>Only show GoogleSheets and Salesforce credential options if Oauth clients are
 registered with the instance via ENV
-<a href="https://github.com/OpenFn/Lightning/issues/1734">#1734</a></li></ul><h3 id="fixed-17" class="section-heading">
-  <a href="#fixed-17" class="hover-link">
+<a href="https://github.com/OpenFn/Lightning/issues/1734">#1734</a></li></ul><h3 id="fixed-18" class="section-heading">
+  <a href="#fixed-18" class="hover-link">
     <i class="ri-link-m" aria-hidden="true"></i>
   </a>
   <span class="text">Fixed</span>
@@ -685,8 +697,8 @@ registered with the instance via ENV
   <span class="text">Changed</span>
 </h3>
 <ul><li>Use <code class="inline">PAYLOAD_SIZE_KB</code> in k6 load testing script, set thresholds on wait time,
-set default payload size to <code class="inline">2kb</code></li></ul><h3 id="fixed-18" class="section-heading">
-  <a href="#fixed-18" class="hover-link">
+set default payload size to <code class="inline">2kb</code></li></ul><h3 id="fixed-19" class="section-heading">
+  <a href="#fixed-19" class="hover-link">
     <i class="ri-link-m" aria-hidden="true"></i>
   </a>
   <span class="text">Fixed</span>
@@ -699,8 +711,8 @@ set default payload size to <code class="inline">2kb</code></li></ul><h3 id="fix
   </a>
   <span class="text">[v2.0.0-rc11] - 2024-02-08</span>
 </h2>
-<h3 id="fixed-19" class="section-heading">
-  <a href="#fixed-19" class="hover-link">
+<h3 id="fixed-20" class="section-heading">
+  <a href="#fixed-20" class="hover-link">
     <i class="ri-link-m" aria-hidden="true"></i>
   </a>
   <span class="text">Fixed</span>
@@ -719,8 +731,8 @@ issue <a href="https://github.com/OpenFn/lightning/issues/1724">#1724</a></li></
   <span class="text">Changed</span>
 </h3>
 <ul><li>Implemented safeguards to prevent deletion of jobs with associated run history
-<a href="https://github.com/OpenFn/Lightning/issues/1570">#1570</a></li></ul><h3 id="fixed-20" class="section-heading">
-  <a href="#fixed-20" class="hover-link">
+<a href="https://github.com/OpenFn/Lightning/issues/1570">#1570</a></li></ul><h3 id="fixed-21" class="section-heading">
+  <a href="#fixed-21" class="hover-link">
     <i class="ri-link-m" aria-hidden="true"></i>
   </a>
   <span class="text">Fixed</span>
@@ -746,8 +758,8 @@ issue <a href="https://github.com/OpenFn/lightning/issues/1724">#1724</a></li></
 <a href="https://github.com/OpenFn/Lightning/issues/1211">#1211</a></li><li>Disable selecting work orders having wiped dataclips in the history page
 <a href="https://github.com/OpenFn/Lightning/issues/1210">#1210</a></li><li>Hide rerun button in inspector when the selected step has a wiped dataclip
 <a href="https://github.com/OpenFn/Lightning/issues/1639">#1639</a></li><li>Add rate limiter to webhook endpoints and runtime limiter for runs.
-<a href="https://github.com/OpenFn/Lightning/issues/639">#639</a></li></ul><h3 id="fixed-21" class="section-heading">
-  <a href="#fixed-21" class="hover-link">
+<a href="https://github.com/OpenFn/Lightning/issues/639">#639</a></li></ul><h3 id="fixed-22" class="section-heading">
+  <a href="#fixed-22" class="hover-link">
     <i class="ri-link-m" aria-hidden="true"></i>
   </a>
   <span class="text">Fixed</span>
@@ -809,8 +821,8 @@ ENV/secrets to use <code class="inline">WORKER_RUNS_PRIVATE_KEY</code> rather th
 worker as &quot;input&quot; state to avoid confusion while writing jobs.
 <a href="https://github.com/OpenFn/Lightning/issues/1664">1664</a></li><li>Named-spaced all worker environment variables with <code class="inline">WORKER_</code> and added
 documentation for how to configure them.
-<a href="https://github.com/OpenFn/Lightning/pull/1672">#1672</a></li><li>Bumped to <code class="inline">@openfn/ws-worker@0.6.0</code></li><li>Bumped to <code class="inline">@openfn/cli@0.4.15</code></li></ul><h3 id="fixed-22" class="section-heading">
-  <a href="#fixed-22" class="hover-link">
+<a href="https://github.com/OpenFn/Lightning/pull/1672">#1672</a></li><li>Bumped to <code class="inline">@openfn/ws-worker@0.6.0</code></li><li>Bumped to <code class="inline">@openfn/cli@0.4.15</code></li></ul><h3 id="fixed-23" class="section-heading">
+  <a href="#fixed-23" class="hover-link">
     <i class="ri-link-m" aria-hidden="true"></i>
   </a>
   <span class="text">Fixed</span>
@@ -854,8 +866,8 @@ parts of the backend to match terms now used in the frontend:<ul><li>Renamed the
 </h3>
 <ul><li>Bump to <code class="inline">@openfn/cli@0.4.14</code></li><li>Do not persist the active tab setting on the job editor
 <a href="https://github.com/OpenFn/Lightning/issues/1504">#1504</a></li><li>Make condition label optional
-<a href="https://github.com/OpenFn/Lightning/issues/1648">#1648</a></li></ul><h3 id="fixed-23" class="section-heading">
-  <a href="#fixed-23" class="hover-link">
+<a href="https://github.com/OpenFn/Lightning/issues/1648">#1648</a></li></ul><h3 id="fixed-24" class="section-heading">
+  <a href="#fixed-24" class="hover-link">
     <i class="ri-link-m" aria-hidden="true"></i>
   </a>
   <span class="text">Fixed</span>
@@ -887,8 +899,8 @@ parts of the backend to match terms now used in the frontend:<ul><li>Renamed the
   <span class="text">Changed</span>
 </h3>
 <ul><li>Bumped CLI version to <code class="inline">0.4.13</code></li><li>Bumped worker version to <code class="inline">0.5.0</code></li><li>Give project editors and viewers read only access to project settings instead
-<a href="https://github.com/OpenFn/Lightning/issues/1477">#1477</a></li></ul><h3 id="fixed-24" class="section-heading">
-  <a href="#fixed-24" class="hover-link">
+<a href="https://github.com/OpenFn/Lightning/issues/1477">#1477</a></li></ul><h3 id="fixed-25" class="section-heading">
+  <a href="#fixed-25" class="hover-link">
     <i class="ri-link-m" aria-hidden="true"></i>
   </a>
   <span class="text">Fixed</span>
@@ -904,8 +916,8 @@ adaptor path that is nil
   </a>
   <span class="text">[2.0.0-rc2] - 2024-01-08</span>
 </h2>
-<h3 id="fixed-25" class="section-heading">
-  <a href="#fixed-25" class="hover-link">
+<h3 id="fixed-26" class="section-heading">
+  <a href="#fixed-26" class="hover-link">
     <i class="ri-link-m" aria-hidden="true"></i>
   </a>
   <span class="text">Fixed</span>
@@ -966,8 +978,8 @@ is delivered.</p></li></ul><h2 id="v0-12-2-2023-12-24" class="section-heading">
   <span class="text">Changed</span>
 </h3>
 <ul><li>Bumped worker to address occasional git install issue
-<code class="inline">&quot;@openfn/ws-worker&quot;: &quot;^0.3.2&quot;</code></li></ul><h3 id="fixed-26" class="section-heading">
-  <a href="#fixed-26" class="hover-link">
+<code class="inline">&quot;@openfn/ws-worker&quot;: &quot;^0.3.2&quot;</code></li></ul><h3 id="fixed-27" class="section-heading">
+  <a href="#fixed-27" class="hover-link">
     <i class="ri-link-m" aria-hidden="true"></i>
   </a>
   <span class="text">Fixed</span>
@@ -988,8 +1000,8 @@ GoogleSheetsComponent <a href="https://github.com/OpenFn/Lightning/issues/1578">
   <span class="text">Changed</span>
 </h3>
 <ul><li>Hide project security setting tab from non-authorized users
-<a href="https://github.com/OpenFn/Lightning/issues/1477">#1477</a></li></ul><h3 id="fixed-27" class="section-heading">
-  <a href="#fixed-27" class="hover-link">
+<a href="https://github.com/OpenFn/Lightning/issues/1477">#1477</a></li></ul><h3 id="fixed-28" class="section-heading">
+  <a href="#fixed-28" class="hover-link">
     <i class="ri-link-m" aria-hidden="true"></i>
   </a>
   <span class="text">Fixed</span>
@@ -1021,8 +1033,8 @@ GoogleSheetsComponent <a href="https://github.com/OpenFn/Lightning/issues/1578">
 <ul><li>Derive dataclip in inspector from the attempt &amp; step
 <a href="https://github.com/OpenFn/Lightning/issues/1551">#1551</a></li><li>Updated CLI to 0.4.10 (fixes logging)</li><li>Changed UserBackupToken model to use UTC timestamps (6563cb77)</li><li>Restore FK relationship between <code class="inline">work_orders</code> and <code class="inline">attempts</code> pending a
 decision re: further partitioning.
-<a href="https://github.com/OpenFn/Lightning/issues/1254">#1254</a></li></ul><h3 id="fixed-28" class="section-heading">
-  <a href="#fixed-28" class="hover-link">
+<a href="https://github.com/OpenFn/Lightning/issues/1254">#1254</a></li></ul><h3 id="fixed-29" class="section-heading">
+  <a href="#fixed-29" class="hover-link">
     <i class="ri-link-m" aria-hidden="true"></i>
   </a>
   <span class="text">Fixed</span>
@@ -1073,8 +1085,8 @@ docker-compose setup. <a href="https://github.com/OpenFn/Lightning/pull/1485">#1
 <a href="https://github.com/OpenFn/Lightning/issues/1461">#1461</a></li><li>Scrub log lines using multiple credentials samples
 <a href="https://github.com/OpenFn/Lightning/issues/1519">#1519</a></li><li>Remove custom telemetry plumbing.
 <a href="https://github.com/OpenFn/Lightning/issues/1259">1259</a></li><li>Enhance UX to prevent modal closure when Monaco/Dataclip editor is focused
-<a href="https://github.com/OpenFn/Lightning/pull/1510">#1510</a></li></ul><h3 id="fixed-29" class="section-heading">
-  <a href="#fixed-29" class="hover-link">
+<a href="https://github.com/OpenFn/Lightning/pull/1510">#1510</a></li></ul><h3 id="fixed-30" class="section-heading">
+  <a href="#fixed-30" class="hover-link">
     <i class="ri-link-m" aria-hidden="true"></i>
   </a>
   <span class="text">Fixed</span>
@@ -1100,8 +1112,8 @@ created <a href="https://github.com/OpenFn/Lightning/issues/1417">#1417</a></li>
 interface and shorter page URLs
 <a href="https://github.com/OpenFn/Lightning/issues/1331">#1331</a></li><li>Use dynamic Endpoint config only on prod
 <a href="https://github.com/OpenFn/Lightning/issues/1435">#1435</a></li><li>Validate schema field with any of expected values
-<a href="https://github.com/OpenFn/Lightning/issues/1502">#1502</a></li></ul><h3 id="fixed-30" class="section-heading">
-  <a href="#fixed-30" class="hover-link">
+<a href="https://github.com/OpenFn/Lightning/issues/1502">#1502</a></li></ul><h3 id="fixed-31" class="section-heading">
+  <a href="#fixed-31" class="hover-link">
     <i class="ri-link-m" aria-hidden="true"></i>
   </a>
   <span class="text">Fixed</span>
@@ -1124,8 +1136,8 @@ and <code class="inline">Lightning.Invocation.Run.new_from</code>.
   <span class="text">Changed</span>
 </h3>
 <ul><li>Increased History search timeout to 30s
-<a href="https://github.com/OpenFn/Lightning/issues/1461">#1461</a></li></ul><h3 id="fixed-31" class="section-heading">
-  <a href="#fixed-31" class="hover-link">
+<a href="https://github.com/OpenFn/Lightning/issues/1461">#1461</a></li></ul><h3 id="fixed-32" class="section-heading">
+  <a href="#fixed-32" class="hover-link">
     <i class="ri-link-m" aria-hidden="true"></i>
   </a>
   <span class="text">Fixed</span>
@@ -1157,8 +1169,8 @@ and <code class="inline">Lightning.Invocation.Run.new_from</code>.
 <ul><li>Sort project collaborators by first name
 <a href="https://github.com/OpenFn/Lightning/issues/1326">#1326</a></li><li>Work orders will now be set in a &quot;pending&quot; state when retries are enqueued.
 <a href="https://github.com/OpenFn/Lightning/issues/1340">#1340</a></li><li>Avoid printing 2FA codes by default
-<a href="https://github.com/OpenFn/Lightning/issues/1322">#1322</a></li></ul><h3 id="fixed-32" class="section-heading">
-  <a href="#fixed-32" class="hover-link">
+<a href="https://github.com/OpenFn/Lightning/issues/1322">#1322</a></li></ul><h3 id="fixed-33" class="section-heading">
+  <a href="#fixed-33" class="hover-link">
     <i class="ri-link-m" aria-hidden="true"></i>
   </a>
   <span class="text">Fixed</span>
@@ -1185,8 +1197,8 @@ to address <a href="https://github.com/OpenFn/Lightning/issues/1421">#1421</a></
   </a>
   <span class="text">[v0.10.1] - 2023-11-21</span>
 </h2>
-<h3 id="fixed-33" class="section-heading">
-  <a href="#fixed-33" class="hover-link">
+<h3 id="fixed-34" class="section-heading">
+  <a href="#fixed-34" class="hover-link">
     <i class="ri-link-m" aria-hidden="true"></i>
   </a>
   <span class="text">Fixed</span>
@@ -1222,7 +1234,7 @@ work orders up to <code class="inline">v0.10.0</code>, though the granularity of
 will be less than <code class="inline">v0.10.0</code> and the final states are not guaranteed to be
 accurate for workflows with multiple branches and leaf nodes with varying exit
 reasons.</p><p>The migration scripts can be run with a single function call in SetupUtils from
-a connect <code class="inline">iex</code> session:</p><pre><code class="makeup elixir" translate="no"><span class="nc">Lightning.SetupUtils</span><span class="o">.</span><span class="n">approximate_state_for_attempts_and_workorders</span><span class="p" data-group-id="3491000148-1">(</span><span class="p" data-group-id="3491000148-1">)</span></code></pre><p>Note that (like lots of <em>other</em> functionality in <code class="inline">SetupUtils</code>, calling this
+a connect <code class="inline">iex</code> session:</p><pre><code class="makeup elixir" translate="no"><span class="nc">Lightning.SetupUtils</span><span class="o">.</span><span class="n">approximate_state_for_attempts_and_workorders</span><span class="p" data-group-id="0608343735-1">(</span><span class="p" data-group-id="0608343735-1">)</span></code></pre><p>Note that (like lots of <em>other</em> functionality in <code class="inline">SetupUtils</code>, calling this
 function is a destructive action and you should only do it if you've backed up
 your data and you know what you're doing.)</p><p>As always, we recommend backing up your data before migrating. (And thanks for
 bearing with us as we move towards our first stable Lightning release.)</p><h3 id="added-23" class="section-heading">
@@ -1268,8 +1280,8 @@ key from <code class="inline">attempts</code>. <a href="https://github.com/OpenF
 <a href="https://github.com/OpenFn/Lightning/issues/1176">#1176</a></li><li>Update &quot;Delete&quot; to &quot;Delete Job&quot; on Job panel and include javascript deletion
 confirmation <a href="https://github.com/OpenFn/Lightning/issues/1105">#1105</a></li><li>Move &quot;Enabled&quot; property from &quot;Jobs&quot; to &quot;Edges&quot;
 <a href="https://github.com/OpenFn/Lightning/issues/895">#895</a></li><li>Incorrect wording on the &quot;Delete&quot; tooltip
-<a href="https://github.com/OpenFn/Lightning/issues/1313">#1313</a></li></ul><h3 id="fixed-34" class="section-heading">
-  <a href="#fixed-34" class="hover-link">
+<a href="https://github.com/OpenFn/Lightning/issues/1313">#1313</a></li></ul><h3 id="fixed-35" class="section-heading">
+  <a href="#fixed-35" class="hover-link">
     <i class="ri-link-m" aria-hidden="true"></i>
   </a>
   <span class="text">Fixed</span>
@@ -1304,8 +1316,8 @@ inspector interface <a href="https://github.com/OpenFn/Lightning/issues/1283">#1
   <span class="text">Changed</span>
 </h3>
 <ul><li>Prevent deletion of first job of a workflow
-<a href="https://github.com/OpenFn/Lightning/issues/1097">#1097</a></li></ul><h3 id="fixed-35" class="section-heading">
-  <a href="#fixed-35" class="hover-link">
+<a href="https://github.com/OpenFn/Lightning/issues/1097">#1097</a></li></ul><h3 id="fixed-36" class="section-heading">
+  <a href="#fixed-36" class="hover-link">
     <i class="ri-link-m" aria-hidden="true"></i>
   </a>
   <span class="text">Fixed</span>
@@ -1370,8 +1382,8 @@ inspector interface <a href="https://github.com/OpenFn/Lightning/issues/1283">#1
   <span class="text">Changed</span>
 </h3>
 <ul><li>Enhanced the job editor/inspector interface
-<a href="https://github.com/OpenFn/Lightning/issues/1025">#1025</a></li></ul><h3 id="fixed-36" class="section-heading">
-  <a href="#fixed-36" class="hover-link">
+<a href="https://github.com/OpenFn/Lightning/issues/1025">#1025</a></li></ul><h3 id="fixed-37" class="section-heading">
+  <a href="#fixed-37" class="hover-link">
     <i class="ri-link-m" aria-hidden="true"></i>
   </a>
   <span class="text">Fixed</span>
@@ -1400,8 +1412,8 @@ inspector interface <a href="https://github.com/OpenFn/Lightning/issues/1283">#1
   <span class="text">Changed</span>
 </h3>
 <ul><li>Restyle history table <a href="https://github.com/OpenFn/Lightning/issues/1029">#1029</a></li><li>Moved Filter and Search controls to the top of the history page
-<a href="https://github.com/OpenFn/Lightning/issues/1027">#1027</a></li></ul><h3 id="fixed-37" class="section-heading">
-  <a href="#fixed-37" class="hover-link">
+<a href="https://github.com/OpenFn/Lightning/issues/1027">#1027</a></li></ul><h3 id="fixed-38" class="section-heading">
+  <a href="#fixed-38" class="hover-link">
     <i class="ri-link-m" aria-hidden="true"></i>
   </a>
   <span class="text">Fixed</span>
@@ -1414,8 +1426,8 @@ inspector interface <a href="https://github.com/OpenFn/Lightning/issues/1283">#1
   </a>
   <span class="text">[v0.8.2] - 2023-08-31</span>
 </h2>
-<h3 id="fixed-38" class="section-heading">
-  <a href="#fixed-38" class="hover-link">
+<h3 id="fixed-39" class="section-heading">
+  <a href="#fixed-39" class="hover-link">
     <i class="ri-link-m" aria-hidden="true"></i>
   </a>
   <span class="text">Fixed</span>
@@ -1456,8 +1468,8 @@ instance and sync projects using our latest portability spec
 <a href="https://github.com/OpenFn/Lightning/issues/957">#957</a></li><li>Reimplement skipped CredentialLive tests
 <a href="https://github.com/OpenFn/Lightning/issues/962">#962</a></li><li>Reimplement skipped WorkflowLive.IndexTest test
 <a href="https://github.com/OpenFn/Lightning/issues/964">#964</a></li><li>Show GitHub installation ID and repo link to help setup/debugging for version
-control <a href="https://github.com/OpenFn/Lightning/issues/1059">1059</a></li></ul><h3 id="fixed-39" class="section-heading">
-  <a href="#fixed-39" class="hover-link">
+control <a href="https://github.com/OpenFn/Lightning/issues/1059">1059</a></li></ul><h3 id="fixed-40" class="section-heading">
+  <a href="#fixed-40" class="hover-link">
     <i class="ri-link-m" aria-hidden="true"></i>
   </a>
   <span class="text">Fixed</span>
@@ -1479,8 +1491,8 @@ editor <a href="https://github.com/OpenFn/Lightning/issues/1030">1030</a></li></
   <span class="text">Changed</span>
 </h3>
 <ul><li>Version control in project settings is now named Export your project
-<a href="https://github.com/OpenFn/Lightning/issues/1015">#1015</a></li></ul><h3 id="fixed-40" class="section-heading">
-  <a href="#fixed-40" class="hover-link">
+<a href="https://github.com/OpenFn/Lightning/issues/1015">#1015</a></li></ul><h3 id="fixed-41" class="section-heading">
+  <a href="#fixed-41" class="hover-link">
     <i class="ri-link-m" aria-hidden="true"></i>
   </a>
   <span class="text">Fixed</span>
@@ -1499,8 +1511,8 @@ during refactor <a href="https://github.com/OpenFn/Lightning/issues/975">#975</a
   </a>
   <span class="text">Changed</span>
 </h3>
-<ul><li>NodeJs security patch <a href="https://github.com/OpenFn/Lightning/pull/1009">1009</a></li></ul><h3 id="fixed-41" class="section-heading">
-  <a href="#fixed-41" class="hover-link">
+<ul><li>NodeJs security patch <a href="https://github.com/OpenFn/Lightning/pull/1009">1009</a></li></ul><h3 id="fixed-42" class="section-heading">
+  <a href="#fixed-42" class="hover-link">
     <i class="ri-link-m" aria-hidden="true"></i>
   </a>
   <span class="text">Fixed</span>
@@ -1511,8 +1523,8 @@ during refactor <a href="https://github.com/OpenFn/Lightning/issues/975">#975</a
   </a>
   <span class="text">[v0.7.1] - 2023-08-04</span>
 </h2>
-<h3 id="fixed-42" class="section-heading">
-  <a href="#fixed-42" class="hover-link">
+<h3 id="fixed-43" class="section-heading">
+  <a href="#fixed-43" class="hover-link">
     <i class="ri-link-m" aria-hidden="true"></i>
   </a>
   <span class="text">Fixed</span>
@@ -1538,8 +1550,8 @@ during refactor <a href="https://github.com/OpenFn/Lightning/issues/975">#975</a
 </h3>
 <ul><li>Moved to Elixir 1.15 and Erlang 26.0.2 to sort our an annoying ElixirLS issue
 that was slowing down our engineers.</li><li>Update Debian base to use bookworm (Debian 12) for our Docker images</li><li>Change new credential modal to take up less space on the screen
-<a href="https://github.com/OpenFn/Lightning/issues/931">#931</a></li><li>Placeholder nodes are now purely handled client-side</li></ul><h3 id="fixed-43" class="section-heading">
-  <a href="#fixed-43" class="hover-link">
+<a href="https://github.com/OpenFn/Lightning/issues/931">#931</a></li><li>Placeholder nodes are now purely handled client-side</li></ul><h3 id="fixed-44" class="section-heading">
+  <a href="#fixed-44" class="hover-link">
     <i class="ri-link-m" aria-hidden="true"></i>
   </a>
   <span class="text">Fixed</span>
@@ -1583,8 +1595,8 @@ days <a href="https://github.com/OpenFn/Lightning/issues/968">#968</a></li></ul>
   </a>
   <span class="text">[v0.7.0-pre3] - 2023-07-26</span>
 </h2>
-<h3 id="fixed-44" class="section-heading">
-  <a href="#fixed-44" class="hover-link">
+<h3 id="fixed-45" class="section-heading">
+  <a href="#fixed-45" class="hover-link">
     <i class="ri-link-m" aria-hidden="true"></i>
   </a>
   <span class="text">Fixed</span>
@@ -1616,8 +1628,8 @@ Authy, Google Authenticator etc
 <ul><li>In <code class="inline">v0.7.0</code> we change the underlying workflow building and execution
 infrastructure to align with a standard &quot;nodes and edges&quot; design for directed
 acyclic graphs (DAGs). Make sure to run the migrations!
-<a href="https://github.com/OpenFn/Lightning/issues/793">793</a></li></ul><h3 id="fixed-45" class="section-heading">
-  <a href="#fixed-45" class="hover-link">
+<a href="https://github.com/OpenFn/Lightning/issues/793">793</a></li></ul><h3 id="fixed-46" class="section-heading">
+  <a href="#fixed-46" class="hover-link">
     <i class="ri-link-m" aria-hidden="true"></i>
   </a>
   <span class="text">Fixed</span>
@@ -1639,8 +1651,8 @@ acyclic graphs (DAGs). Make sure to run the migrations!
 </h3>
 <ul><li>Add feature to bulk rerun work orders from a specific step in their workflow;
 e.g., &quot;rerun these 50 work orders, starting each at step 4.&quot;
-<a href="https://github.com/OpenFn/Lightning/pull/906">#906</a></li></ul><h3 id="fixed-46" class="section-heading">
-  <a href="#fixed-46" class="hover-link">
+<a href="https://github.com/OpenFn/Lightning/pull/906">#906</a></li></ul><h3 id="fixed-47" class="section-heading">
+  <a href="#fixed-47" class="hover-link">
     <i class="ri-link-m" aria-hidden="true"></i>
   </a>
   <span class="text">Fixed</span>
@@ -1659,8 +1671,8 @@ e.g., &quot;rerun these 50 work orders, starting each at step 4.&quot;
   <span class="text">Added</span>
 </h3>
 <ul><li>Add public API token to the demo site setup script</li><li>Check and renew OAuth credentials when running a job
-<a href="https://github.com/OpenFn/Lightning/issues/646">#646</a></li></ul><h3 id="fixed-47" class="section-heading">
-  <a href="#fixed-47" class="hover-link">
+<a href="https://github.com/OpenFn/Lightning/issues/646">#646</a></li></ul><h3 id="fixed-48" class="section-heading">
+  <a href="#fixed-48" class="hover-link">
     <i class="ri-link-m" aria-hidden="true"></i>
   </a>
   <span class="text">Fixed</span>
@@ -1682,8 +1694,8 @@ deployments <a href="https://github.com/OpenFn/Lightning/issues/917">#917</a></l
 </h3>
 <ul><li>Ability to rerun work orders from start by selecting one of more of them from
 the History page and clicking the &quot;Rerun&quot; button.
-<a href="https://github.com/OpenFn/Lightning/issues/659">#659</a></li></ul><h3 id="fixed-48" class="section-heading">
-  <a href="#fixed-48" class="hover-link">
+<a href="https://github.com/OpenFn/Lightning/issues/659">#659</a></li></ul><h3 id="fixed-49" class="section-heading">
+  <a href="#fixed-49" class="hover-link">
     <i class="ri-link-m" aria-hidden="true"></i>
   </a>
   <span class="text">Fixed</span>
@@ -1695,8 +1707,8 @@ the History page and clicking the &quot;Rerun&quot; button.
   </a>
   <span class="text">[0.6.3] - 2023-06-15</span>
 </h2>
-<h3 id="fixed-49" class="section-heading">
-  <a href="#fixed-49" class="hover-link">
+<h3 id="fixed-50" class="section-heading">
+  <a href="#fixed-50" class="hover-link">
     <i class="ri-link-m" aria-hidden="true"></i>
   </a>
   <span class="text">Fixed</span>
@@ -1708,8 +1720,8 @@ the History page and clicking the &quot;Rerun&quot; button.
   </a>
   <span class="text">[0.6.2] - 2023-06-09</span>
 </h2>
-<h3 id="fixed-50" class="section-heading">
-  <a href="#fixed-50" class="hover-link">
+<h3 id="fixed-51" class="section-heading">
+  <a href="#fixed-51" class="hover-link">
     <i class="ri-link-m" aria-hidden="true"></i>
   </a>
   <span class="text">Fixed</span>
@@ -1721,8 +1733,8 @@ the History page and clicking the &quot;Rerun&quot; button.
   </a>
   <span class="text">[0.6.1] - 2023-06-08</span>
 </h2>
-<h3 id="fixed-51" class="section-heading">
-  <a href="#fixed-51" class="hover-link">
+<h3 id="fixed-52" class="section-heading">
+  <a href="#fixed-52" class="hover-link">
     <i class="ri-link-m" aria-hidden="true"></i>
   </a>
   <span class="text">Fixed</span>
@@ -1753,8 +1765,8 @@ delete projects <a href="https://github.com/OpenFn/Lightning/issues/746">#746</a
   <span class="text">Changed</span>
 </h3>
 <ul><li>Ability to store run log lines as rows in a separate table
-<a href="https://github.com/OpenFn/Lightning/issues/514">#514</a></li></ul><h3 id="fixed-52" class="section-heading">
-  <a href="#fixed-52" class="hover-link">
+<a href="https://github.com/OpenFn/Lightning/issues/514">#514</a></li></ul><h3 id="fixed-53" class="section-heading">
+  <a href="#fixed-53" class="hover-link">
     <i class="ri-link-m" aria-hidden="true"></i>
   </a>
   <span class="text">Fixed</span>
@@ -1786,8 +1798,8 @@ credential&quot; <a href="https://github.com/OpenFn/Lightning/issues/812">#812</
   <span class="text">Changed</span>
 </h3>
 <ul><li>The <code class="inline">delete-project</code> function now delete all associated activities
-<a href="https://github.com/OpenFn/Lightning/issues/759">#759</a></li></ul><h3 id="fixed-53" class="section-heading">
-  <a href="#fixed-53" class="hover-link">
+<a href="https://github.com/OpenFn/Lightning/issues/759">#759</a></li></ul><h3 id="fixed-54" class="section-heading">
+  <a href="#fixed-54" class="hover-link">
     <i class="ri-link-m" aria-hidden="true"></i>
   </a>
   <span class="text">Fixed</span>
@@ -1817,8 +1829,8 @@ canvas or click the &quot;Close&quot; button to close.)
   <span class="text">Changed</span>
 </h3>
 <ul><li>The secret scrubber now ignores booleans
-<a href="https://github.com/OpenFn/Lightning/issues/690">690</a></li></ul><h3 id="fixed-54" class="section-heading">
-  <a href="#fixed-54" class="hover-link">
+<a href="https://github.com/OpenFn/Lightning/issues/690">690</a></li></ul><h3 id="fixed-55" class="section-heading">
+  <a href="#fixed-55" class="hover-link">
     <i class="ri-link-m" aria-hidden="true"></i>
   </a>
   <span class="text">Fixed</span>
@@ -1860,8 +1872,8 @@ environment variable the grace period can be altered. Note that setting this
 variable to <code class="inline">0</code> will make automatic purging <em>never</em> occur but will still make
 &quot;deleted&quot; projects and users unavailable. This has been requested by certain
 organizations that must retain audit logs in a Lightning instance.
-<a href="https://github.com/OpenFn/Lightning/issues/758">758</a></li></ul><h3 id="fixed-55" class="section-heading">
-  <a href="#fixed-55" class="hover-link">
+<a href="https://github.com/OpenFn/Lightning/issues/758">758</a></li></ul><h3 id="fixed-56" class="section-heading">
+  <a href="#fixed-56" class="hover-link">
     <i class="ri-link-m" aria-hidden="true"></i>
   </a>
   <span class="text">Fixed</span>
@@ -1889,8 +1901,8 @@ organizations that must retain audit logs in a Lightning instance.
 <ul><li>Set log level to <code class="inline">info</code> for runs. Most of the <code class="inline">debug</code> logging is useful for
 the CLI, but not for Lightning. In the future the log level will be
 configurable at instance &gt; project &gt; job level by the <code class="inline">superuser</code> and any
-project <code class="inline">admin</code>.</li><li>Renamed license file so that automagic github icon is less confusing</li></ul><h3 id="fixed-56" class="section-heading">
-  <a href="#fixed-56" class="hover-link">
+project <code class="inline">admin</code>.</li><li>Renamed license file so that automagic github icon is less confusing</li></ul><h3 id="fixed-57" class="section-heading">
+  <a href="#fixed-57" class="hover-link">
     <i class="ri-link-m" aria-hidden="true"></i>
   </a>
   <span class="text">Fixed</span>
@@ -1925,8 +1937,8 @@ OpenHIE demo workflow <a href="https://github.com/OpenFn/Lightning/issues/448">4
 </h3>
 <ul><li>Improved errors when decoding encryption keys for use with Cloak.
 <a href="https://github.com/OpenFn/Lightning/issues/684">#684</a></li><li>Allow users to run ANY job with a custom input.
-<a href="https://github.com/OpenFn/Lightning/issues/629">#629</a></li></ul><h3 id="fixed-57" class="section-heading">
-  <a href="#fixed-57" class="hover-link">
+<a href="https://github.com/OpenFn/Lightning/issues/629">#629</a></li></ul><h3 id="fixed-58" class="section-heading">
+  <a href="#fixed-58" class="hover-link">
     <i class="ri-link-m" aria-hidden="true"></i>
   </a>
   <span class="text">Fixed</span>
@@ -1965,8 +1977,8 @@ the schema <a href="https://github.com/OpenFn/Lightning/issues/685">#685</a></li
   </a>
   <span class="text">Changed</span>
 </h3>
-<ul><li>Upgraded to Phoenix 1.7 (3945856)</li></ul><h3 id="fixed-58" class="section-heading">
-  <a href="#fixed-58" class="hover-link">
+<ul><li>Upgraded to Phoenix 1.7 (3945856)</li></ul><h3 id="fixed-59" class="section-heading">
+  <a href="#fixed-59" class="hover-link">
     <i class="ri-link-m" aria-hidden="true"></i>
   </a>
   <span class="text">Fixed</span>
@@ -1995,8 +2007,8 @@ location for credential schemas
   <span class="text">Changed</span>
 </h3>
 <ul><li>Users cannot register if they have not selected the terms and conditions
-<a href="https://github.com/OpenFn/Lightning/issues/531">#531</a></li></ul><h3 id="fixed-59" class="section-heading">
-  <a href="#fixed-59" class="hover-link">
+<a href="https://github.com/OpenFn/Lightning/issues/531">#531</a></li></ul><h3 id="fixed-60" class="section-heading">
+  <a href="#fixed-60" class="hover-link">
     <i class="ri-link-m" aria-hidden="true"></i>
   </a>
   <span class="text">Fixed</span>
@@ -2025,8 +2037,8 @@ communicate with each other.</li><li>Users can set up realtime alerts for a proj
 <ul><li>Better code-assist and intelliense in the Job Editor</li><li>Updated @openfn/workflow-diagram to 0.4.0</li><li>Make plus button part of job nodes in Workflow Diagram</li><li>Updated @openfn/adaptor-docs to 0.0.5</li><li>Updated @openfn/describe-package to 0.0.10</li><li>Create an follow a manual Run from the Job Inspector</li><li>View all workflows in a project on the workflows index page</li><li>Move @openfn/workflow-diagram into the application, the NPM module is now
 deprecated.</li><li>Remove workflow name from first node</li><li>Move the used parts of <code class="inline">@openfn/engine</code> into the application.</li><li>[BREAKING CHANGE] Ported <code class="inline">mix openfn.install.runtime</code> into application, use
 <code class="inline">mix lightning.install_runtime</code>.</li><li>[BREAKING CHANGE] Introduced <code class="inline">@openfn/cli</code> as the new runtime for Jobs</li><li>Rename a workflow through the page heading</li><li>Hide the dataclips tab for beta</li><li>Make adaptor default to common@latest</li><li>Remove jobs list page</li><li>Better error handling in the docs panel</li><li>Disable credential ownership transfer in dev and prod environments</li><li>Add project settings page</li><li>Change Work Order filters to apply to the aggregate state of the work order
-and not the run directly</li><li>Enable jobs by default</li><li>Set log level to info</li><li>Add Beta checkbox to register page</li><li>User roles and permissions</li></ul><h3 id="fixed-60" class="section-heading">
-  <a href="#fixed-60" class="hover-link">
+and not the run directly</li><li>Enable jobs by default</li><li>Set log level to info</li><li>Add Beta checkbox to register page</li><li>User roles and permissions</li></ul><h3 id="fixed-61" class="section-heading">
+  <a href="#fixed-61" class="hover-link">
     <i class="ri-link-m" aria-hidden="true"></i>
   </a>
   <span class="text">Fixed</span>
@@ -2037,8 +2049,8 @@ and not the run directly</li><li>Enable jobs by default</li><li>Set log level to
   </a>
   <span class="text">[0.3.1] - 2022-11-22</span>
 </h2>
-<h3 id="fixed-61" class="section-heading">
-  <a href="#fixed-61" class="hover-link">
+<h3 id="fixed-62" class="section-heading">
+  <a href="#fixed-62" class="hover-link">
     <i class="ri-link-m" aria-hidden="true"></i>
   </a>
   <span class="text">Fixed</span>
@@ -2124,8 +2136,8 @@ owner</li><li>Users only have the following roles: user, superuser</li></ul><h2 
 e.g., <code class="inline">language-dhis2</code> provides a single schema which defines the required
 attributes for <code class="inline">state.configuration</code>, while <code class="inline">language-common</code> provides multiple
 credential schemas like &quot;oauth&quot; or &quot;basic auth&quot; which define attributes for
-<code class="inline">state.configuration</code> and which might be used by lots of different jobs.)</p><h3 id="fixed-62" class="section-heading">
-  <a href="#fixed-62" class="hover-link">
+<code class="inline">state.configuration</code> and which might be used by lots of different jobs.)</p><h3 id="fixed-63" class="section-heading">
+  <a href="#fixed-63" class="hover-link">
     <i class="ri-link-m" aria-hidden="true"></i>
   </a>
   <span class="text">Fixed</span>
@@ -2136,8 +2148,8 @@ credential schemas like &quot;oauth&quot; or &quot;basic auth&quot; which define
   </a>
   <span class="text">[0.1.11] - 2022-08-05</span>
 </h2>
-<h3 id="fixed-63" class="section-heading">
-  <a href="#fixed-63" class="hover-link">
+<h3 id="fixed-64" class="section-heading">
+  <a href="#fixed-64" class="hover-link">
     <i class="ri-link-m" aria-hidden="true"></i>
   </a>
   <span class="text">Fixed</span>
@@ -2155,8 +2167,8 @@ crashes in Oban</li></ul><h2 id="0-1-10-2022-08-05" class="section-heading">
   </a>
   <span class="text">Added</span>
 </h3>
-<ul><li>Credential auditing</li><li>Build/version information display for easier debugging</li></ul><h3 id="fixed-64" class="section-heading">
-  <a href="#fixed-64" class="hover-link">
+<ul><li>Credential auditing</li><li>Build/version information display for easier debugging</li></ul><h3 id="fixed-65" class="section-heading">
+  <a href="#fixed-65" class="hover-link">
     <i class="ri-link-m" aria-hidden="true"></i>
   </a>
   <span class="text">Fixed</span>
@@ -2181,8 +2193,8 @@ dropdown</li><li>Create and edit dataclips</li><li>Add a production tag to crede
   </a>
   <span class="text">Changed</span>
 </h3>
-<ul><li>Navigate between projects through a project picker on the navbar</li></ul><h3 id="fixed-65" class="section-heading">
-  <a href="#fixed-65" class="hover-link">
+<ul><li>Navigate between projects through a project picker on the navbar</li></ul><h3 id="fixed-66" class="section-heading">
+  <a href="#fixed-66" class="hover-link">
     <i class="ri-link-m" aria-hidden="true"></i>
   </a>
   <span class="text">Fixed</span>
