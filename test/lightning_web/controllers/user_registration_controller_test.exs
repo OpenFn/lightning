@@ -10,7 +10,7 @@ defmodule LightningWeb.UserRegistrationControllerTest do
 
   describe "GET /users/register" do
     setup do
-      expect(Lightning.MockConfig, :check_access?, fn _flag ->
+      expect(Lightning.MockConfig, :check_flag?, fn _flag ->
         true
       end)
 
@@ -37,7 +37,7 @@ defmodule LightningWeb.UserRegistrationControllerTest do
 
   describe "POST /users/register" do
     setup do
-      expect(Lightning.MockConfig, :check_access?, fn _flag ->
+      expect(Lightning.MockConfig, :check_flag?, fn _flag ->
         true
       end)
 

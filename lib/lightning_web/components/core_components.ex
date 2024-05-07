@@ -37,7 +37,7 @@ defmodule LightningWeb.CoreComponents do
 
   def register_link(assigns) do
     ~H"""
-    <.link :if={Lightning.Config.check_access?(:allow_signup)} href={@href}>
+    <.link :if={Lightning.Config.check_flag?(:allow_signup)} href={@href}>
       <%= render_slot(@inner_block) %>
     </.link>
     """

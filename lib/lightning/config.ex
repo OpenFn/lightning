@@ -50,7 +50,7 @@ defmodule Lightning.Config do
     end
 
     @impl true
-    def check_access?(flag) do
+    def check_flag?(flag) do
       Application.get_env(:lightning, flag)
     end
   end
@@ -102,7 +102,7 @@ defmodule Lightning.Config do
   @callback worker_secret() :: binary() | nil
   @callback grace_period() :: integer()
   @callback purge_deleted_after_days() :: integer()
-  @callback check_access?(atom()) :: boolean()
+  @callback check_flag?(atom()) :: boolean()
 
   @doc """
   Returns the Token signer used to sign and verify run tokens.
@@ -134,8 +134,8 @@ defmodule Lightning.Config do
     impl().purge_deleted_after_days()
   end
 
-  def check_access?(flag) do
-    impl().check_access?(flag)
+  def check_flag?(flag) do
+    impl().check_flag?(flag)
   end
 
   defp impl do

@@ -42,7 +42,7 @@ defmodule LightningWeb.UserSessionControllerTest do
 
   describe "GET /users/log_in" do
     test "renders log in page", %{conn: conn} do
-      expect(Lightning.MockConfig, :check_access?, fn _flag ->
+      expect(Lightning.MockConfig, :check_flag?, fn _flag ->
         true
       end)
 
@@ -57,7 +57,7 @@ defmodule LightningWeb.UserSessionControllerTest do
     test "register button is not available when signup is disabled", %{
       conn: conn
     } do
-      expect(Lightning.MockConfig, :check_access?, fn _flag ->
+      expect(Lightning.MockConfig, :check_flag?, fn _flag ->
         false
       end)
 
@@ -112,7 +112,7 @@ defmodule LightningWeb.UserSessionControllerTest do
     end
 
     test "renders log in page for an invalid token", %{conn: conn} do
-      expect(Lightning.MockConfig, :check_access?, fn _flag ->
+      expect(Lightning.MockConfig, :check_flag?, fn _flag ->
         true
       end)
 
