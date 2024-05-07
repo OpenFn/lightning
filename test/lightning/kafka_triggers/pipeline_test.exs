@@ -86,6 +86,7 @@ defmodule Lightning.KafkaTriggers.PipelineTest do
             {
               BroadwayKafka.Producer,
               [
+                client_config: [],
                 hosts: hosts,
                 group_id: group_id,
                 topics: topics,
