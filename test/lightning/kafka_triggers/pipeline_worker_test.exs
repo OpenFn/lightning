@@ -15,14 +15,14 @@ defmodule Lightning.KafkaTriggers.PipelineWorkerTest do
         insert(
           :trigger,
           type: :kafka,
-          kafka_configuration: configuration(1, true),
+          kafka_configuration: configuration(index: 1),
           enabled: true
         )
       trigger_2 =
         insert(
           :trigger,
           type: :kafka,
-          kafka_configuration: configuration(2, true),
+          kafka_configuration: configuration(index: 2),
           enabled: true
         )
 
@@ -99,10 +99,10 @@ defmodule Lightning.KafkaTriggers.PipelineWorkerTest do
         perform_job(PipelineWorker, %{})
 
         assert_called(
-          Supervisor.start_child(pid, child_spec(trigger_1, 1))
+          Supervisor.start_child(pid, child_spec(trigger: trigger_1, index: 1))
         )
         assert_called(
-          Supervisor.start_child(pid, child_spec(trigger_2, 2))
+          Supervisor.start_child(pid, child_spec(trigger: trigger_2, index: 2))
         )
       end
     end
@@ -114,7 +114,7 @@ defmodule Lightning.KafkaTriggers.PipelineWorkerTest do
         insert(
           :trigger,
           type: :kafka,
-          kafka_configuration: configuration(3, false),
+          kafka_configuration: configuration(index: 3, sasl: false),
           enabled: true
         )
 
@@ -127,7 +127,10 @@ defmodule Lightning.KafkaTriggers.PipelineWorkerTest do
         perform_job(PipelineWorker, %{})
 
         assert_called(
-          Supervisor.start_child(pid, child_spec(no_auth_trigger, 3, false))
+          Supervisor.start_child(
+            pid,
+            child_spec(trigger: no_auth_trigger, index: 3, sasl: false)
+          )
         )
       end
     end
@@ -142,23 +145,29 @@ defmodule Lightning.KafkaTriggers.PipelineWorkerTest do
       end
     end
 
-    def configuration(index, false = _sasl) do
+    defp configuration(opts) do
+      index = opts |> Keyword.get(:index)
+      sasl = opts |> Keyword.get(:sasl, true)
+
+      sasl_config = if sasl do
+                      ["plain", "my-user-#{index}", "secret-#{index}"]
+                    else
+                      nil
+                    end
+
       %{
         "group_id" => "lightning-#{index}",
         "hosts" => [["host-#{index}", 9092], ["other-host-#{index}", 9093]],
-        "sasl" => nil,
+        "sasl" => sasl_config,
         "topics" => ["topic-#{index}-1", "topic-#{index}-2"]
       }
     end
 
-    def configuration(index, true = _sasl) do
-      configuration(index, false)
-      |> Map.merge(%{
-        "sasl" => ["plain", "my-user-#{index}", "secret-#{index}"]
-      })
-    end
+    defp child_spec(opts) do
+      trigger = opts |> Keyword.get(:trigger)
+      index = opts |> Keyword.get(:index)
+      sasl = opts |> Keyword.get(:sasl, true)
 
-    defp child_spec(trigger, index, sasl \\ true) do
       %{
         id: trigger.id,
         start: {
