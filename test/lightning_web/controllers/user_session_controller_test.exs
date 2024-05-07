@@ -6,6 +6,8 @@ defmodule LightningWeb.UserSessionControllerTest do
 
   alias Lightning.AuthProviders
 
+  import Mox
+
   def create_handler(endpoint_url) do
     wellknown = %AuthProviders.WellKnown{
       authorization_endpoint: "#{endpoint_url}/authorization_endpoint",
@@ -30,18 +32,39 @@ defmodule LightningWeb.UserSessionControllerTest do
     handler
   end
 
-  setup do
-    Application.put_env(:lightning, :disable_registration, false)
+  setup :verify_on_exit!
 
+  Mox.stub_with(Lightning.MockConfig, Lightning.Config.API)
+
+  setup do
     %{user: user_fixture()}
   end
 
   describe "GET /users/log_in" do
     test "renders log in page", %{conn: conn} do
+      expect(Lightning.MockConfig, :check_access?, fn _flag ->
+        true
+      end)
+
       conn = get(conn, Routes.user_session_path(conn, :new))
       response = html_response(conn, 200)
       assert response =~ "Log in"
       assert response =~ "Register"
+      assert response =~ "Forgot your password?"
+      refute response =~ "via external provider"
+    end
+
+    test "register button is not available when signup is disabled", %{
+      conn: conn
+    } do
+      expect(Lightning.MockConfig, :check_access?, fn _flag ->
+        false
+      end)
+
+      conn = get(conn, Routes.user_session_path(conn, :new))
+      response = html_response(conn, 200)
+      assert response =~ "Log in"
+      refute response =~ "Register"
       assert response =~ "Forgot your password?"
       refute response =~ "via external provider"
     end
@@ -89,6 +112,10 @@ defmodule LightningWeb.UserSessionControllerTest do
     end
 
     test "renders log in page for an invalid token", %{conn: conn} do
+      expect(Lightning.MockConfig, :check_access?, fn _flag ->
+        true
+      end)
+
       conn = get(conn, Routes.user_session_path(conn, :exchange_token, "oops"))
       assert "/users/log_in" = redirected_path = redirected_to(conn)
 

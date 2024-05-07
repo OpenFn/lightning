@@ -26,10 +26,10 @@ defmodule LightningWeb.Plugs.BlockRoutes do
   defp get_route_flag_and_message(path, routes_flags) do
     Enum.find_value(routes_flags, :allow, fn {route, flag, message} ->
       if String.starts_with?(path, route) do
-        if !Application.get_env(:lightning, flag) do
-          {:block, message}
-        else
+        if Lightning.Config.check_access?(flag) do
           :allow
+        else
+          {:block, message}
         end
       else
         :allow
