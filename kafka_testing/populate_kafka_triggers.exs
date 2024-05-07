@@ -11,6 +11,8 @@ hosts = [["localhost", 9096], ["localhost", 9095], ["localhost", 9094]]
 foo_configuration = %{
   group_id: "my-foo-group",
   hosts: hosts,
+  sasl: nil,
+  ssl: false,
   topics: ["foo_topic"]
 }
 
@@ -25,6 +27,8 @@ foo_changeset |> Repo.insert()
 bar_configuration = %{
   group_id: "my-bar-group",
   hosts: hosts,
+  sasl: nil,
+  ssl: false,
   topics: ["bar_topic"]
 }
 
@@ -39,6 +43,8 @@ bar_changeset |> Repo.insert()
 baz_configuration = %{
   group_id: "my-baz-group",
   hosts: hosts,
+  sasl: nil,
+  ssl: false,
   topics: ["baz_topic"]
 }
 
