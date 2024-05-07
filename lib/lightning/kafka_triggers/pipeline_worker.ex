@@ -20,6 +20,7 @@ defmodule Lightning.KafkaTriggers.PipelineWorker do
             "group_id" => group_id,
             "hosts" => hosts_list,
             "sasl" => sasl_options,
+            "ssl" => ssl,
             "topics" => topics,
           } = trigger.kafka_configuration
 
@@ -43,6 +44,7 @@ defmodule Lightning.KafkaTriggers.PipelineWorker do
                   hosts: hosts,
                   name: trigger.id |> String.to_atom(),
                   sasl: sasl,
+                  ssl: ssl,
                   topics: topics
                 ]
               ]

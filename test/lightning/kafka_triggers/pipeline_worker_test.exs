@@ -22,7 +22,7 @@ defmodule Lightning.KafkaTriggers.PipelineWorkerTest do
         insert(
           :trigger,
           type: :kafka,
-          kafka_configuration: configuration(index: 2),
+          kafka_configuration: configuration(index: 2, ssl: false),
           enabled: true
         )
 
@@ -102,7 +102,10 @@ defmodule Lightning.KafkaTriggers.PipelineWorkerTest do
           Supervisor.start_child(pid, child_spec(trigger: trigger_1, index: 1))
         )
         assert_called(
-          Supervisor.start_child(pid, child_spec(trigger: trigger_2, index: 2))
+          Supervisor.start_child(
+            pid,
+            child_spec(trigger: trigger_2, index: 2, ssl: false)
+          )
         )
       end
     end
@@ -148,6 +151,7 @@ defmodule Lightning.KafkaTriggers.PipelineWorkerTest do
     defp configuration(opts) do
       index = opts |> Keyword.get(:index)
       sasl = opts |> Keyword.get(:sasl, true)
+      ssl = opts |> Keyword.get(:ssl, true)
 
       sasl_config = if sasl do
                       ["plain", "my-user-#{index}", "secret-#{index}"]
@@ -159,6 +163,7 @@ defmodule Lightning.KafkaTriggers.PipelineWorkerTest do
         "group_id" => "lightning-#{index}",
         "hosts" => [["host-#{index}", 9092], ["other-host-#{index}", 9093]],
         "sasl" => sasl_config,
+        "ssl" => ssl,
         "topics" => ["topic-#{index}-1", "topic-#{index}-2"]
       }
     end
@@ -167,6 +172,7 @@ defmodule Lightning.KafkaTriggers.PipelineWorkerTest do
       trigger = opts |> Keyword.get(:trigger)
       index = opts |> Keyword.get(:index)
       sasl = opts |> Keyword.get(:sasl, true)
+      ssl = opts |> Keyword.get(:ssl, true)
 
       %{
         id: trigger.id,
@@ -179,6 +185,7 @@ defmodule Lightning.KafkaTriggers.PipelineWorkerTest do
               hosts: [{"host-#{index}", 9092}, {"other-host-#{index}", 9093}],
               name: trigger.id |> String.to_atom(),
               sasl: sasl_config(index, sasl),
+              ssl: ssl,
               topics: ["topic-#{index}-1", "topic-#{index}-2"]
             ]
           ]
