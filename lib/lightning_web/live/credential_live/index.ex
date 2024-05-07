@@ -106,8 +106,11 @@ defmodule LightningWeb.CredentialLive.Index do
     OauthClients.list_clients_for_user(user_id)
     |> Enum.map(fn c ->
       project_names =
-        Map.get(c, :projects, [])
-        |> Enum.map(fn p -> p.name end)
+        if c.global,
+          do: ["GLOBAL"],
+          else:
+            Map.get(c, :projects, [])
+            |> Enum.map(fn p -> p.name end)
 
       Map.put(c, :project_names, project_names)
     end)

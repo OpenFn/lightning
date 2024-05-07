@@ -2,9 +2,6 @@ defmodule Lightning.Credentials do
   @moduledoc """
   The Credentials context.
   """
-
-  alias Lightning.Projects.ProjectCredential
-
   use Oban.Worker,
     queue: :background,
     max_attempts: 1
@@ -21,6 +18,7 @@ defmodule Lightning.Credentials do
   alias Lightning.Credentials.SchemaDocument
   alias Lightning.Credentials.SensitiveValues
   alias Lightning.Projects.Project
+  alias Lightning.Projects.ProjectCredential
   alias Lightning.Repo
 
   require Logger
@@ -228,12 +226,7 @@ defmodule Lightning.Credentials do
 
     associated_projects = Repo.all(associated_projects_query)
 
-    multi
-    |> Multi.delete_all(
-      :remove_associated_projects,
-      associated_projects_query
-    )
-    |> Multi.run(:audit_removed_associations, fn _, _ ->
+    removed_associations_multi =
       associated_projects
       |> Enum.reduce(Multi.new(), fn project, acc ->
         Multi.insert(acc, {:audit, project.id}, fn _ ->
@@ -248,9 +241,8 @@ defmodule Lightning.Credentials do
           )
         end)
       end)
-      |> Repo.transaction()
-    end)
-    |> Multi.run(:audit_added_associations, fn _, _ ->
+
+    added_associations_multi =
       projects_to_add
       |> Enum.reduce(Multi.new(), fn project, acc ->
         Multi.insert(acc, {:audit, project.id}, fn _ ->
@@ -265,16 +257,22 @@ defmodule Lightning.Credentials do
           )
         end)
       end)
-      |> Multi.insert(:audit_client_update, fn _ ->
-        Audit.event(
-          "updated",
-          old_credential.id,
-          old_credential.user_id,
-          changeset
-        )
-      end)
-      |> Repo.transaction()
+
+    multi
+    |> Multi.delete_all(
+      :remove_associated_projects,
+      associated_projects_query
+    )
+    |> Multi.insert(:audit_credential_update, fn _ ->
+      Audit.event(
+        "updated",
+        old_credential.id,
+        old_credential.user_id,
+        changeset
+      )
     end)
+    |> Multi.append(added_associations_multi)
+    |> Multi.append(removed_associations_multi)
   end
 
   @doc """

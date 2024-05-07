@@ -482,7 +482,7 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
                   form={f}
                   available_projects={@available_projects}
                   all_projects={@projects}
-                  selected={@selected_project |> IO.inspect()}
+                  selected={@selected_project}
                   phx_target={@parent_component}
                 />
               </div>

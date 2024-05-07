@@ -181,7 +181,9 @@ defmodule Lightning.OauthClients do
       {:error, %Ecto.Changeset{}}
   """
   def update_client(%OauthClient{} = client, attrs) do
-    changeset = OauthClient.changeset(client, attrs)
+    changeset =
+      OauthClient.changeset(client, attrs)
+      |> gather_projects_for_global()
 
     Multi.new()
     |> Multi.update(:client, changeset)
@@ -192,33 +194,46 @@ defmodule Lightning.OauthClients do
         {:error, changeset}
 
       {:ok, %{client: client}} ->
-        {:ok, client |> Repo.reload() |> Repo.preload(:project_oauth_clients)}
+        {:ok, client}
     end
+  end
+
+  defp gather_projects_for_global(
+         %Ecto.Changeset{changes: %{global: true}} = changeset
+       ) do
+    project_oauth_clients =
+      Repo.all(Project)
+      |> Enum.map(fn %Project{id: project_id} ->
+        %ProjectOauthClient{project_id: project_id}
+      end)
+
+    Ecto.Changeset.put_assoc(
+      changeset,
+      :project_oauth_clients,
+      project_oauth_clients
+    )
+  end
+
+  defp gather_projects_for_global(%Ecto.Changeset{} = changeset) do
+    changeset
   end
 
   defp manage_projects_association(
          multi,
-         %OauthClient{global: false} = old_client,
+         _old_client,
+         %Ecto.Changeset{changes: changes} = _changeset
+       )
+       when map_size(changes) == 0 do
+    multi
+  end
+
+  defp manage_projects_association(
+         multi,
+         %OauthClient{} = old_client,
          %Ecto.Changeset{changes: %{global: true}} = changeset
        ) do
-    projects = Repo.all(Project)
-
-    project_oauth_clients =
-      Enum.map(projects, fn %Project{id: project_id} ->
-        %ProjectOauthClient{project_id: project_id}
-      end)
-
-    changeset =
-      Ecto.Changeset.put_assoc(
-        changeset,
-        :project_oauth_clients,
-        project_oauth_clients
-      )
-
-    multi
-    |> Multi.update(:updated_client, changeset)
-    |> Multi.run(:audit_events, fn _repo, _ ->
-      project_oauth_clients
+    added_associations_multi =
+      Ecto.Changeset.fetch_field!(changeset, :project_oauth_clients)
       |> Enum.reduce(Multi.new(), fn project, acc ->
         Multi.insert(acc, {:audit, project.project_id}, fn _ ->
           OauthClientAudit.event(
@@ -232,16 +247,17 @@ defmodule Lightning.OauthClients do
           )
         end)
       end)
-      |> Multi.insert(:audit_client_update, fn _ ->
-        OauthClientAudit.event(
-          "updated",
-          old_client.id,
-          old_client.user_id,
-          changeset
-        )
-      end)
-      |> Repo.transaction()
+
+    multi
+    |> Multi.insert(:audit_client_update, fn _ ->
+      OauthClientAudit.event(
+        "updated",
+        old_client.id,
+        old_client.user_id,
+        changeset
+      )
     end)
+    |> Multi.append(added_associations_multi)
   end
 
   defp manage_projects_association(
@@ -274,19 +290,14 @@ defmodule Lightning.OauthClients do
           where: poc.oauth_client_id == ^old_client.id
       end
 
-    preojects_to_add =
+    projects_to_add =
       Repo.all(
         from project in Project, where: project.id in ^provided_projects_ids
       )
 
     associated_projects = Repo.all(associated_projects_query)
 
-    multi
-    |> Multi.delete_all(
-      :remove_associated_projects,
-      associated_projects_query
-    )
-    |> Multi.run(:audit_removed_associations, fn _, _ ->
+    removed_associations_multi =
       associated_projects
       |> Enum.reduce(Multi.new(), fn project, acc ->
         Multi.insert(acc, {:audit, project.id}, fn _ ->
@@ -301,10 +312,9 @@ defmodule Lightning.OauthClients do
           )
         end)
       end)
-      |> Repo.transaction()
-    end)
-    |> Multi.run(:audit_added_associations, fn _, _ ->
-      preojects_to_add
+
+    added_associations_multi =
+      projects_to_add
       |> Enum.reduce(Multi.new(), fn project, acc ->
         Multi.insert(acc, {:audit, project.id}, fn _ ->
           OauthClientAudit.event(
@@ -318,16 +328,22 @@ defmodule Lightning.OauthClients do
           )
         end)
       end)
-      |> Multi.insert(:audit_client_update, fn _ ->
-        OauthClientAudit.event(
-          "updated",
-          old_client.id,
-          old_client.user_id,
-          changeset
-        )
-      end)
-      |> Repo.transaction()
+
+    multi
+    |> Multi.delete_all(
+      :remove_associated_projects,
+      associated_projects_query
+    )
+    |> Multi.insert(:audit_client_update, fn _ ->
+      OauthClientAudit.event(
+        "updated",
+        old_client.id,
+        old_client.user_id,
+        changeset
+      )
     end)
+    |> Multi.append(added_associations_multi)
+    |> Multi.append(removed_associations_multi)
   end
 
   defp derive_events(

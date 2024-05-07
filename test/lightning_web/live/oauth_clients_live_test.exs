@@ -380,7 +380,7 @@ defmodule LightningWeb.OauthClientsLiveTest do
 
       view
       |> element(
-        "[phx-click='delete_project'][phx-value-projectid='#{project.id}']"
+        "[phx-click='delete_project'][phx-value-project_id='#{project.id}']"
       )
       |> render_click()
 

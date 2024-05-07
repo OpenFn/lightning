@@ -24,7 +24,7 @@ defmodule LightningWeb.CredentialLive.OauthClientFormComponent do
 
   @impl true
   def mount(socket) do
-    {:ok, assign(socket, available_projects: [], is_client_global: false)}
+    {:ok, assign(socket, available_projects: [], is_global: false)}
   end
 
   @impl true
@@ -56,13 +56,13 @@ defmodule LightningWeb.CredentialLive.OauthClientFormComponent do
   end
 
   defp assign_initial_values(socket, changeset, all_projects) do
-    is_client_global = Ecto.Changeset.fetch_field!(changeset, :global)
+    is_global = Ecto.Changeset.fetch_field!(changeset, :global)
 
     socket
     |> assign(:changeset, changeset)
     |> assign(:all_projects, all_projects)
     |> assign(:selected_project, nil)
-    |> assign(:is_client_global, is_client_global)
+    |> assign(:is_global, is_global)
   end
 
   @impl true
@@ -98,12 +98,21 @@ defmodule LightningWeb.CredentialLive.OauthClientFormComponent do
         socket.assigns.oauth_client,
         oauth_client_params
       )
+      |> maybe_clear_projects()
       |> Map.put(:action, :validate)
 
-    is_client_global = Ecto.Changeset.fetch_field!(changeset, :global)
+    available_projects =
+      filter_available_projects(changeset, socket.assigns.all_projects)
+
+    is_global = Ecto.Changeset.fetch_field!(changeset, :global)
 
     {:noreply,
-     assign(socket, changeset: changeset, is_client_global: is_client_global)}
+     assign(socket,
+       changeset: changeset,
+       is_global: is_global,
+       available_projects: available_projects,
+       selected_project: nil
+     )}
   end
 
   def handle_event("remove_mandatory_scope", %{"scope" => scope_value}, socket) do
@@ -233,6 +242,15 @@ defmodule LightningWeb.CredentialLive.OauthClientFormComponent do
         socket
         |> assign(scope_key, new_scopes)
         |> assign(changeset: new_changeset)
+    end
+  end
+
+  defp maybe_clear_projects(changeset) do
+    if Ecto.Changeset.changed?(changeset, :global) and
+         !Ecto.Changeset.get_change(changeset, :global) do
+      Ecto.Changeset.put_assoc(changeset, :project_oauth_clients, [])
+    else
+      changeset
     end
   end
 
@@ -683,7 +701,7 @@ defmodule LightningWeb.CredentialLive.OauthClientFormComponent do
                     all_projects={@all_projects}
                     selected={@selected_project}
                     allow_global={@allow_global}
-                    global={@is_client_global}
+                    global={@is_global}
                     phx_target={@myself}
                   />
                 </div>
@@ -694,7 +712,7 @@ defmodule LightningWeb.CredentialLive.OauthClientFormComponent do
             <div class="sm:flex sm:flex-row-reverse">
               <button
                 type="submit"
-                disabled={!@changeset.valid? or map_size(@changeset.changes) <= 0}
+                disabled={!@changeset.valid?}
                 class="inline-flex w-full justify-center rounded-md disabled:bg-primary-300 bg-primary-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary-500 sm:ml-3 sm:w-auto"
               >
                 <%= case @action do %>
