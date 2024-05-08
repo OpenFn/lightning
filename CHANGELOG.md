@@ -21,6 +21,10 @@ and this project adheres to
   [1789](https://github.com/OpenFn/lightning/issues/1789)
 - Make signup feature configurable
   [#2049](https://github.com/OpenFn/lightning/issues/2049)
+- Apply runtime limits to worker execution
+  [#2015](https://github.com/OpenFn/lightning/pull/2015)
+- Limit usage for failure alerts
+  [#2011](https://github.com/OpenFn/lightning/pull/2011)
 
 ### Changed
 
