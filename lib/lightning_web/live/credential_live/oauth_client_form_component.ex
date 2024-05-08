@@ -4,9 +4,6 @@ defmodule LightningWeb.CredentialLive.OauthClientFormComponent do
   """
   use LightningWeb, :live_component
 
-  import Ecto.Changeset, only: [fetch_field!: 2]
-  #  put_assoc: 3]
-
   alias Lightning.OauthClients
   alias LightningWeb.Components.NewInputs
   alias Phoenix.LiveView.JS
@@ -24,22 +21,41 @@ defmodule LightningWeb.CredentialLive.OauthClientFormComponent do
 
   @impl true
   def mount(socket) do
-    {:ok, assign(socket, available_projects: [], is_global: false)}
+    {:ok,
+     assign(socket,
+       available_projects: [],
+       selected_projects: [],
+       is_global: false
+     )}
   end
 
   @impl true
   def update(%{projects: projects} = assigns, socket) do
     changeset = OauthClients.change_client(assigns.oauth_client)
-    all_projects = Enum.map(projects, &{&1.name, &1.id})
     initial_assigns = Map.filter(assigns, fn {k, _} -> k in @valid_assigns end)
+
+    selected_projects =
+      changeset
+      |> Ecto.Changeset.get_assoc(:project_oauth_clients, :struct)
+      |> Lightning.Repo.preload(:project)
+      |> Enum.map(fn poc -> poc.project end)
+
+    available_projects =
+      filter_available_projects(projects, selected_projects)
+
+    is_global = Ecto.Changeset.fetch_field!(changeset, :global)
 
     {:ok,
      socket
      |> assign(initial_assigns)
      |> assign_scopes(assigns.oauth_client, :mandatory_scopes)
      |> assign_scopes(assigns.oauth_client, :optional_scopes)
-     |> assign_initial_values(changeset, all_projects)
-     |> update_available_projects()}
+     |> assign(:changeset, changeset)
+     |> assign(:projects, projects)
+     |> assign(:selected_project, nil)
+     |> assign(:available_projects, available_projects)
+     |> assign(:selected_projects, selected_projects)
+     |> assign(:is_global, is_global)}
   end
 
   defp assign_scopes(socket, oauth_client, scope_type) do
@@ -53,16 +69,6 @@ defmodule LightningWeb.CredentialLive.OauthClientFormComponent do
     else
       updated_socket
     end
-  end
-
-  defp assign_initial_values(socket, changeset, all_projects) do
-    is_global = Ecto.Changeset.fetch_field!(changeset, :global)
-
-    socket
-    |> assign(:changeset, changeset)
-    |> assign(:all_projects, all_projects)
-    |> assign(:selected_project, nil)
-    |> assign(:is_global, is_global)
   end
 
   @impl true
@@ -98,17 +104,21 @@ defmodule LightningWeb.CredentialLive.OauthClientFormComponent do
         socket.assigns.oauth_client,
         oauth_client_params
       )
-      |> maybe_clear_projects()
       |> Map.put(:action, :validate)
 
+    updated_socket =
+      socket |> assign(:changeset, changeset) |> maybe_clear_selected_projects()
+
     available_projects =
-      filter_available_projects(changeset, socket.assigns.all_projects)
+      filter_available_projects(
+        updated_socket.assigns.projects,
+        updated_socket.assigns.selected_projects
+      )
 
     is_global = Ecto.Changeset.fetch_field!(changeset, :global)
 
     {:noreply,
-     assign(socket,
-       changeset: changeset,
+     assign(updated_socket,
        is_global: is_global,
        available_projects: available_projects,
        selected_project: nil
@@ -143,55 +153,44 @@ defmodule LightningWeb.CredentialLive.OauthClientFormComponent do
   end
 
   def handle_event("add_new_project", %{"project_id" => project_id}, socket) do
-    project_oauth_clients =
-      Ecto.Changeset.fetch_field!(
-        socket.assigns.changeset,
-        :project_oauth_clients
-      )
-      |> Enum.map(fn %{project_id: project_id} -> %{project_id: project_id} end)
+    selected =
+      socket.assigns.available_projects
+      |> Enum.find(fn project -> project_id == project.id end)
 
-    changeset =
-      Ecto.Changeset.put_assoc(
-        socket.assigns.changeset,
-        :project_oauth_clients,
-        [%{project_id: project_id} | project_oauth_clients]
-      )
-      |> Map.put(:action, :validate)
+    selected_projects = socket.assigns.selected_projects ++ [selected]
 
     available_projects =
-      filter_available_projects(changeset, socket.assigns.all_projects)
+      filter_available_projects(socket.assigns.projects, selected_projects)
 
     {:noreply,
      socket
      |> assign(
-       changeset: changeset,
        available_projects: available_projects,
+       selected_projects: selected_projects,
        selected_project: nil
-     )}
+     )
+     |> push_event("clear_input", %{})}
   end
 
   def handle_event("delete_project", %{"project_id" => project_id}, socket) do
-    project_oauth_clients =
-      Ecto.Changeset.fetch_field!(
-        socket.assigns.changeset,
-        :project_oauth_clients
-      )
-      |> Enum.map(fn %{project_id: project_id} -> %{project_id: project_id} end)
-      |> Enum.reject(fn %{project_id: existing_project_id} ->
-        existing_project_id == project_id
-      end)
+    selected =
+      socket.assigns.selected_projects
+      |> Enum.find(fn project -> project_id == project.id end)
 
-    changeset =
-      socket.assigns.changeset
-      |> Ecto.Changeset.put_assoc(:project_oauth_clients, project_oauth_clients)
-      |> Map.put(:action, :validate)
+    selected_projects =
+      socket.assigns.selected_projects
+      |> Enum.reject(fn project -> project.id == selected.id end)
 
     available_projects =
-      filter_available_projects(changeset, socket.assigns.all_projects)
+      filter_available_projects(socket.assigns.projects, selected_projects)
 
     {:noreply,
      socket
-     |> assign(changeset: changeset, available_projects: available_projects)}
+     |> assign(
+       available_projects: available_projects,
+       selected_projects: selected_projects
+     )
+     |> push_event("clear_input", %{})}
   end
 
   def handle_event("save", %{"oauth_client" => oauth_client_params}, socket) do
@@ -245,12 +244,12 @@ defmodule LightningWeb.CredentialLive.OauthClientFormComponent do
     end
   end
 
-  defp maybe_clear_projects(changeset) do
-    if Ecto.Changeset.changed?(changeset, :global) and
-         !Ecto.Changeset.get_change(changeset, :global) do
-      Ecto.Changeset.put_assoc(changeset, :project_oauth_clients, [])
+  defp maybe_clear_selected_projects(socket) do
+    if Ecto.Changeset.changed?(socket.assigns.changeset, :global) and
+         !Ecto.Changeset.get_change(socket.assigns.changeset, :global) do
+      assign(socket, selected_projects: [])
     else
-      changeset
+      socket
     end
   end
 
@@ -282,24 +281,53 @@ defmodule LightningWeb.CredentialLive.OauthClientFormComponent do
     |> Enum.sort()
   end
 
-  defp update_available_projects(socket) do
-    update(
-      socket,
-      :available_projects,
-      fn _,
-         %{
-           all_projects: all_projects,
-           changeset: changeset
-         } ->
-        filter_available_projects(changeset, all_projects)
-      end
-    )
-  end
-
   defp save_oauth_client(socket, mode, oauth_client_params) do
+    project_oauth_clients =
+      Ecto.Changeset.fetch_field!(
+        socket.assigns.changeset,
+        :project_oauth_clients
+      )
+
+    selected_projects_ids =
+      Enum.map(socket.assigns.selected_projects, fn project -> project.id end)
+
+    projects_to_delete =
+      project_oauth_clients
+      |> Enum.filter(fn poc -> poc.project_id not in selected_projects_ids end)
+      |> Enum.map(fn poc ->
+        %{
+          "id" => poc.id,
+          "project_id" => poc.project_id,
+          "delete" => "true"
+        }
+      end)
+
+    projects_to_keep =
+      project_oauth_clients
+      |> Enum.filter(fn poc -> poc.project_id in selected_projects_ids end)
+      |> Enum.map(fn poc ->
+        %{
+          "id" => poc.id,
+          "project_id" => poc.project_id
+        }
+      end)
+
+    projects_to_add =
+      selected_projects_ids
+      |> Enum.reject(fn id ->
+        id in Enum.map(project_oauth_clients, & &1.project_id)
+      end)
+      |> Enum.map(fn id -> %{"project_id" => id} end)
+
+    project_oauth_clients =
+      projects_to_delete ++ projects_to_add ++ projects_to_keep
+
     case mode do
       :edit ->
-        params = add_scopes_to_params(oauth_client_params, socket)
+        params =
+          add_scopes_to_params(oauth_client_params, socket)
+          |> Map.put("project_oauth_clients", project_oauth_clients)
+
         update_oauth_client(socket, params)
 
       :new ->
@@ -372,18 +400,21 @@ defmodule LightningWeb.CredentialLive.OauthClientFormComponent do
     {:noreply, assign(socket, :changeset, changeset)}
   end
 
-  defp filter_available_projects(changeset, all_projects) do
-    existing_ids =
-      fetch_field!(changeset, :project_oauth_clients)
-      |> Enum.map(fn poc -> poc.project_id end)
+  defp filter_available_projects(projects, selected_projects) do
+    if selected_projects == [] do
+      projects
+    else
+      existing_ids = Enum.map(selected_projects, fn project -> project.id end)
 
-    Enum.reject(all_projects, fn {_, project_id} ->
-      project_id in existing_ids
-    end)
+      Enum.reject(projects, fn %{id: project_id} ->
+        project_id in existing_ids
+      end)
+    end
   end
 
   attr :available_projects, :list, required: true
-  attr :all_projects, :list, required: true
+  attr :projects, :list, required: true
+  attr :selected_projects, :list, required: true
   attr :selected, :string, required: true
   attr :allow_global, :boolean, default: false
   attr :global, :boolean, required: true
@@ -432,7 +463,8 @@ defmodule LightningWeb.CredentialLive.OauthClientFormComponent do
                 Select a project to associate to this Oauth client
               </option>
               <%= Phoenix.HTML.Form.options_for_select(
-                @available_projects,
+                @available_projects
+                |> Enum.map(fn %{id: id, name: name} -> {name, id} end),
                 @selected
               ) %>
             </select>
@@ -454,36 +486,29 @@ defmodule LightningWeb.CredentialLive.OauthClientFormComponent do
         </div>
 
         <div class="overflow-auto max-h-32">
-          <.inputs_for
-            :let={project_oauth_client}
-            field={@form[:project_oauth_clients]}
+          <span
+            :for={project <- @selected_projects}
+            class="inline-flex items-center gap-1 rounded-md bg-blue-100 px-4 mr-1 py-2 mb-2 text-gray-600"
           >
-            <span class="inline-flex items-center gap-1 rounded-md bg-blue-100 px-4 py-2 mb-2 text-gray-600">
-              <%= project_name(
-                @all_projects,
-                project_oauth_client[:project_id].value
-              ) %>
-              <button
-                id={"delete-project-oauth-client-#{@form[:id].value}-button"}
-                phx-target={@phx_target}
-                phx-value-project_id={project_oauth_client[:project_id].value}
-                phx-click="delete_project"
-                type="button"
-                class="group relative -mr-1 h-3.5 w-3.5 rounded-sm hover:bg-gray-500/20"
+            <%= project.name %>
+            <button
+              id={"delete-project-oauth-client-#{project.id}-button"}
+              phx-target={@phx_target}
+              phx-value-project_id={project.id}
+              phx-click="delete_project"
+              type="button"
+              class="group relative -mr-1 h-3.5 w-3.5 rounded-sm hover:bg-gray-500/20"
+            >
+              <span class="sr-only">Remove</span>
+              <svg
+                viewBox="0 0 14 14"
+                class="h-3.5 w-3.5 stroke-gray-700/50 group-hover:stroke-gray-700/75"
               >
-                <span class="sr-only">Remove</span>
-                <svg
-                  viewBox="0 0 14 14"
-                  class="h-3.5 w-3.5 stroke-gray-700/50 group-hover:stroke-gray-700/75"
-                >
-                  <path d="M4 4l6 6m0-6l-6 6" />
-                </svg>
-                <span class="absolute -inset-1"></span>
-              </button>
-            </span>
-
-            <.input type="hidden" field={project_oauth_client[:project_id]} />
-          </.inputs_for>
+                <path d="M4 4l6 6m0-6l-6 6" />
+              </svg>
+              <span class="absolute -inset-1"></span>
+            </button>
+          </span>
         </div>
       </div>
     </div>
@@ -549,11 +574,11 @@ defmodule LightningWeb.CredentialLive.OauthClientFormComponent do
     """
   end
 
-  defp project_name(projects, id) do
-    Enum.find_value(projects, fn {name, project_id} ->
-      if project_id == id, do: name
-    end)
-  end
+  # defp project_name(projects, id) do
+  #   Enum.find_value(projects, fn {name, project_id} ->
+  #     if project_id == id, do: name
+  #   end)
+  # end
 
   @impl true
   def render(assigns) do
@@ -698,7 +723,8 @@ defmodule LightningWeb.CredentialLive.OauthClientFormComponent do
                   <.project_oauth_clients
                     form={f}
                     available_projects={@available_projects}
-                    all_projects={@all_projects}
+                    selected_projects={@selected_projects}
+                    projects={@projects}
                     selected={@selected_project}
                     allow_global={@allow_global}
                     global={@is_global}

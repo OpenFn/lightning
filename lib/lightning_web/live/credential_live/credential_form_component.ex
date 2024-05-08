@@ -384,11 +384,8 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
           changeset={@changeset}
           credential={@credential}
           projects={@all_projects}
-          available_projects={@available_projects}
-          selected_project={@selected_project}
           users={@users}
           allow_credential_transfer={@allow_credential_transfer}
-          parent_component={@myself}
           return_to={@return_to}
         />
       </.modal>

@@ -51,6 +51,7 @@ defmodule Lightning.Projects.ProjectOauthClient do
 
   @doc false
   def changeset(project_oauth_client, %{"delete" => "true"}) do
+    IO.inspect(label: "YOUUUUUUUU")
     %{change(project_oauth_client, delete: true) | action: :delete}
   end
 
@@ -62,8 +63,10 @@ defmodule Lightning.Projects.ProjectOauthClient do
   This changeset is used for adding new or updating existing associations between an OAuth client and a project.
   """
   def changeset(project_oauth_client, attrs) do
+    IO.inspect(label: "YOUUUUUUUU ANOTHER")
+
     project_oauth_client
-    |> cast(attrs, [:oauth_client_id, :project_id])
+    |> cast(attrs, [:oauth_client_id, :project_id, :delete])
     |> validate_required([:project_id])
     |> unique_constraint([:project_id, :oauth_client_id],
       message: "oauth client already added to this project."

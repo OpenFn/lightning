@@ -27,6 +27,7 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
      |> assign_new(:userinfo, fn -> nil end)
      |> assign_new(:authorize_url, fn -> nil end)
      |> assign_new(:scopes_changed, fn -> false end)
+     |> assign_new(:available_projects, fn -> [] end)
      |> assign_new(:oauth_progress, fn -> :not_started end)}
   end
 
@@ -203,8 +204,19 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
 
     api_version = Map.get(credential_params, "apiVersion", nil)
 
+    available_projects =
+      filter_available_projects(changeset, socket.assigns.projects)
+
     {:noreply,
-     socket |> assign(changeset: changeset) |> assign(:apiVersion, api_version)}
+     assign(socket,
+       changeset: changeset,
+       api_version: api_version,
+       available_projects: available_projects,
+       selected_project: nil
+     )}
+
+    # {:noreply,
+    #  socket |> assign(changeset: changeset) |> assign(:apiVersion, api_version)}
   end
 
   @impl true
@@ -249,6 +261,89 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
         socket
       ) do
     save_credential(socket, socket.assigns.action, credential_params)
+  end
+
+  def handle_event(
+        "select_item",
+        %{"project_id" => project_id},
+        socket
+      ) do
+    {:noreply, socket |> assign(selected_project: project_id)}
+  end
+
+  def handle_event("add_new_project", %{"project_id" => project_id}, socket) do
+    project_credentials =
+      Ecto.Changeset.fetch_field!(
+        socket.assigns.changeset,
+        :project_credentials
+      )
+      |> Enum.map(fn %{project_id: project_id} -> %{project_id: project_id} end)
+
+    changeset =
+      Ecto.Changeset.put_assoc(
+        socket.assigns.changeset,
+        :project_credentials,
+        [%{project_id: project_id} | project_credentials]
+      )
+      |> Map.put(:action, :validate)
+
+    available_projects =
+      filter_available_projects(changeset, socket.assigns.projects)
+
+    {:noreply,
+     socket
+     |> assign(
+       changeset: changeset,
+       available_projects: available_projects,
+       selected_project: nil
+     )}
+  end
+
+  def handle_event("delete_project", %{"project_id" => project_id}, socket) do
+    project_credentials =
+      Ecto.Changeset.fetch_field!(
+        socket.assigns.changeset,
+        :project_credentials
+      )
+      |> Enum.map(fn %{project_id: project_id} -> %{project_id: project_id} end)
+      |> Enum.reject(fn %{project_id: existing_project_id} ->
+        existing_project_id == project_id
+      end)
+
+    changeset =
+      socket.assigns.changeset
+      |> Ecto.Changeset.put_assoc(:project_credentials, project_credentials)
+      |> Map.put(:action, :validate)
+
+    available_projects =
+      filter_available_projects(changeset, socket.assigns.projects)
+
+    {:noreply,
+     socket
+     |> assign(changeset: changeset, available_projects: available_projects)}
+  end
+
+  defp filter_available_projects(changeset, projects) do
+    existing_ids =
+      Ecto.Changeset.fetch_field!(changeset, :project_credentials)
+      |> Enum.map(fn pu -> pu.project_id end)
+
+    projects
+    |> Enum.reject(fn {_, project_id} -> project_id in existing_ids end)
+  end
+
+  defp update_available_projects(socket) do
+    update(
+      socket,
+      :available_projects,
+      fn _,
+         %{
+           projects: projects,
+           changeset: changeset
+         } ->
+        filter_available_projects(changeset, projects)
+      end
+    )
   end
 
   defp maybe_refresh_token(socket, assigns, selected_client) do
@@ -301,12 +396,10 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
       credential: assigns.credential,
       projects: assigns.projects,
       users: assigns.users,
-      apiVersion: assigns.credential.body["apiVersion"],
-      parent_component: assigns.parent_component,
-      available_projects: assigns.available_projects,
-      selected_project: assigns.selected_project
+      apiVersion: assigns.credential.body["apiVersion"]
     )
     |> assign(additional_assigns)
+    |> update_available_projects()
   end
 
   defp get_scopes(%{body: %{"scope" => scope}}), do: String.split(scope)
@@ -483,7 +576,7 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
                   available_projects={@available_projects}
                   all_projects={@projects}
                   selected={@selected_project}
-                  phx_target={@parent_component}
+                  phx_target={@myself}
                 />
               </div>
             </fieldset>

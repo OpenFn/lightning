@@ -133,7 +133,7 @@ defmodule Lightning.OauthClientsTest do
         )
 
       updated_attrs = %{
-        project_oauth_clients: []
+        project_oauth_clients: [%{project: project, delete: true}]
       }
 
       {:ok, updated_client} = OauthClients.update_client(client, updated_attrs)

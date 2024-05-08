@@ -37,7 +37,7 @@ defmodule Lightning.Credentials.OauthClient do
     belongs_to :user, User
 
     has_many :credentials, Credential
-    has_many :project_oauth_clients, ProjectOauthClient, on_replace: :delete
+    has_many :project_oauth_clients, ProjectOauthClient
     has_many :projects, through: [:project_oauth_clients, :project]
 
     timestamps(type: :utc_datetime)
@@ -82,7 +82,9 @@ defmodule Lightning.Credentials.OauthClient do
     |> validate_url(:token_endpoint)
     |> validate_url(:userinfo_endpoint)
     |> validate_url(:scopes_doc_url)
-    |> cast_assoc(:project_oauth_clients, with: &ProjectOauthClient.changeset/2)
+    |> cast_assoc(:project_oauth_clients,
+      with: &ProjectOauthClient.changeset/2
+    )
     |> assoc_constraint(:user)
   end
 

@@ -241,6 +241,7 @@
                     target: "new-credential-modal"
                   }
                 ]}
+                disabled={!@can_create_project_credential}
               >
                 Add new
               </LightningWeb.Components.Credentials.options_menu_button>
@@ -257,7 +258,8 @@
                 type="button"
                 id="open-create-oauth-client-modal-big-buttton"
                 phx-click={show_modal("new-oauth-client-modal")}
-                class="relative block w-full rounded-lg border-2 border-dashed border-gray-300 p-10 text-center hover:border-gray-400 focus:outline-none"
+                class="relative block w-full rounded-lg border-2 border-dashed border-gray-300 p-10 text-center hover:border-gray-400 disabled:hover:border-gray-300 focus:outline-none"
+                disabled={!@can_create_project_credential}
               >
                 <Heroicons.plus_circle class="mx-auto w-12 h-12 text-secondary-400" />
                 <span class="mt-2 block text-sm font-semibold text-secondary-600">
@@ -315,7 +317,8 @@
                 type="button"
                 id="open-create-credential-modal-big-buttton"
                 phx-click={show_modal("new-credential-modal")}
-                class="relative block w-full rounded-lg border-2 border-dashed border-gray-300 p-10 text-center hover:border-gray-400 focus:outline-none"
+                class="relative block w-full rounded-lg border-2 border-dashed border-gray-300 p-10 text-center hover:border-gray-400 disabled:hover:border-gray-300 focus:outline-none"
+                disabled={!@can_create_project_credential}
               >
                 <Heroicons.plus_circle class="mx-auto w-12 h-12 text-secondary-400" />
                 <span class="mt-2 block text-sm font-semibold text-secondary-600">

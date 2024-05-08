@@ -299,6 +299,7 @@ defmodule LightningWeb.Components.Credentials do
 
   attr :id, :string, required: true
   attr :options, :list, required: true
+  attr :disabled, :boolean, default: false
   slot :inner_block, required: true
 
   def options_menu_button(assigns) do
@@ -310,6 +311,7 @@ defmodule LightningWeb.Components.Credentials do
         class="relative inline-flex items-center"
         aria-expanded="true"
         aria-haspopup="true"
+        disabled={@disabled}
       >
         <%= render_slot(@inner_block) %>
         <svg
@@ -344,6 +346,7 @@ defmodule LightningWeb.Components.Credentials do
               tabindex="-1"
               id={id}
               phx-click={show_modal(target)}
+              disabled={@disabled}
             >
               <%= name %>
             </a>
