@@ -6,6 +6,7 @@ defmodule Lightning.UsageTrackingTest do
 
   alias Lightning.Repo
   alias Lightning.UsageTracking
+  alias Lightning.UsageTracking.Client
   alias Lightning.UsageTracking.DailyReportConfiguration
   alias Lightning.UsageTracking.GithubClient
   alias Lightning.UsageTracking.Report
@@ -938,6 +939,86 @@ defmodule Lightning.UsageTrackingTest do
 
       assert UsageTracking.lightning_version() ==
                "#{spec_version}:other:sanitised"
+    end
+  end
+
+  describe ".submit_report/2" do
+    setup do
+      report =
+        insert(
+          :usage_tracking_report,
+          data: %{foo: "bar"},
+          submission_status: :pending,
+          submitted: false,
+          submitted_at: nil
+        )
+
+      %{host: "https://impact.openfn.org", report: report}
+    end
+
+    test "submits data to the impact tracker", %{
+      host: host,
+      report: report
+    } do
+      with_mock Client,
+        submit_metrics: fn _metrics, _host -> :ok end do
+        UsageTracking.submit_report(report, host)
+
+        assert_called(Client.submit_metrics(report.data, host))
+      end
+    end
+
+    test "updates report to indicate successful submission", %{
+      host: host,
+      report: report
+    } do
+      with_mock Client,
+        submit_metrics: fn _metrics, _host -> :ok end do
+        UsageTracking.submit_report(report, host)
+      end
+
+      assert %{
+               submitted: true,
+               submitted_at: submitted_at,
+               submission_status: :success
+             } = Repo.get!(Report, report.id)
+
+      assert DateTime.diff(DateTime.utc_now(), submitted_at, :second) < 2
+    end
+
+    test "updates report to indicate unsuccessful submission", %{
+      host: host,
+      report: report
+    } do
+      with_mock Client,
+        submit_metrics: fn _metrics, _host -> :error end do
+        UsageTracking.submit_report(report, host)
+      end
+
+      assert %{
+               submitted: false,
+               submitted_at: nil,
+               submission_status: :failure
+             } = Repo.get!(Report, report.id)
+    end
+
+    test "returns the updated report", %{
+      host: host,
+      report: report
+    } do
+      updated_report =
+        with_mock Client,
+          submit_metrics: fn _metrics, _host -> :ok end do
+          UsageTracking.submit_report(report, host)
+        end
+
+      assert %{
+               submitted: true,
+               submitted_at: submitted_at,
+               submission_status: :success
+             } = updated_report
+
+      assert DateTime.diff(DateTime.utc_now(), submitted_at, :second) < 2
     end
   end
 
