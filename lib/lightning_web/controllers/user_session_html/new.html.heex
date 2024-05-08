@@ -71,7 +71,10 @@
             <div class="text-xs text-secondary-700">
               <div class="flex">
                 <div class="flex-none">
-                  <.link href={Routes.user_registration_path(@conn, :new)}>
+                  <.link
+                    :if={Lightning.Config.check_flag?(:allow_signup)}
+                    href={~p"/users/register"}
+                  >
                     Register
                   </.link>
                 </div>

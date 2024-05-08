@@ -19,6 +19,8 @@ and this project adheres to
 
 - Allow for automatic resubmission of failed usage tracking report submissions.
   [1789](https://github.com/OpenFn/lightning/issues/1789)
+- Make signup feature configurable
+  [#2049](https://github.com/OpenFn/lightning/issues/2049)
 
 ### Changed
 

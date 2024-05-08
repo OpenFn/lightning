@@ -132,6 +132,9 @@ configurtaion is:
 - `IS_RESETTABLE_DEMO` - If set to `yes` it allows this instance to be reset to
   the initial "Lightning Demo" state. Note that this will destroy _most_ of what
   you have in your database!
+- `ALLOW_SIGNUP`: Set to `true` to enable user access to the registration page.
+  Set to `false` to disable new user registrations and block access to the
+  registration page. Default is `true`.
 
 ### Google Oauth2
 

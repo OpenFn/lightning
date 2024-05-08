@@ -2,8 +2,21 @@ defmodule LightningWeb.UserRegistrationControllerTest do
   use LightningWeb.ConnCase, async: true
 
   import Lightning.AccountsFixtures
+  import Mox
+
+  setup :verify_on_exit!
+
+  Mox.stub_with(Lightning.MockConfig, Lightning.Config.API)
 
   describe "GET /users/register" do
+    setup do
+      expect(Lightning.MockConfig, :check_flag?, fn _flag ->
+        true
+      end)
+
+      :ok
+    end
+
     test "renders registration page", %{conn: conn} do
       conn = get(conn, Routes.user_registration_path(conn, :new))
       response = html_response(conn, 200)
@@ -23,6 +36,14 @@ defmodule LightningWeb.UserRegistrationControllerTest do
   end
 
   describe "POST /users/register" do
+    setup do
+      expect(Lightning.MockConfig, :check_flag?, fn _flag ->
+        true
+      end)
+
+      :ok
+    end
+
     @tag :capture_log
     test "creates account and logs the user in", %{conn: conn} do
       email = unique_user_email()
