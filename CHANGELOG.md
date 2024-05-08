@@ -17,6 +17,9 @@ and this project adheres to
 
 ### Added
 
+- Allow for automatic resubmission of failed usage tracking report submissions.
+  [1789](https://github.com/OpenFn/lightning/issues/1789)
+
 ### Changed
 
 ### Fixed
@@ -91,8 +94,6 @@ and this project adheres to
 
 - Add custom metric to track the number of finalised runs.
   [#1790](https://github.com/OpenFn/lightning/issues/1790)
-- Allow for automatic resubmission of failed usage tracking report submissions.
-  [1789](https://github.com/OpenFn/lightning/issues/1789)
 
 ### Changed
 
