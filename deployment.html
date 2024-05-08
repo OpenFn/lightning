@@ -13,7 +13,7 @@
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-EPF2X7PV.js"></script>
-    <script src="dist/sidebar_items-8DDAA8B3.js"></script>
+    <script src="dist/sidebar_items-309A2459.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -206,7 +206,8 @@ encrypting and signing data.</li><li><code class="inline">SENTRY_DSN</code> - if
 on with each run of <code class="inline">UsageTracking.DayWorker</code>. This will only have a
 noticeable effect in cases where there is a backlog, or where reports are
 being generated retroactively (defaults to 10).</li><li><code class="inline">USAGE_TRACKING_ENABLED</code> - enables the submission of anonymised usage data to
-OpenFn (defaults to <code class="inline">true</code>).</li><li><code class="inline">USAGE_TRACKING_UUIDS</code> - indicates whether submissions should include
+OpenFn (defaults to <code class="inline">true</code>).</li><li><code class="inline">USAGE_TRACKING_RESUBMISSION_BATCH_SIZE</code> - the number of failed reports that
+will be submitted on each resubmission run (defaults to 10).</li><li><code class="inline">USAGE_TRACKING_UUIDS</code> - indicates whether submissions should include
 cleartext uuids or not. Options are <code class="inline">cleartext</code> or <code class="inline">hashed_only</code>, with the
 default being <code class="inline">hashed_only</code>.</li><li><code class="inline">QUEUE_RESULT_RETENTION_PERIOD_SECONDS</code> - the number of seconds to keep
 completed (successful) <code class="inline">ObanJobs</code> in the queue (not to be confused with runs

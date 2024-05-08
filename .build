@@ -111,6 +111,8 @@ Lightning.UsageTracking.Report.html
 Lightning.UsageTracking.ReportData.html
 Lightning.UsageTracking.ReportWorker.html
 Lightning.UsageTracking.ResponseProcessor.html
+Lightning.UsageTracking.ResubmissionCandidatesWorker.html
+Lightning.UsageTracking.ResubmissionWorker.html
 Lightning.UsageTracking.RunService.html
 Lightning.UsageTracking.UserQueries.html
 Lightning.UsageTracking.UserService.html
@@ -275,8 +277,8 @@ dist/merriweather-latin-ext-300-normal-K6L27CZ5.woff2
 dist/merriweather-vietnamese-300-italic-EHHNZPUO.woff2
 dist/merriweather-vietnamese-300-normal-U376L4Z4.woff2
 dist/remixicon-NKANDIL5.woff2
-dist/search_data-AD75BC8B.js
-dist/sidebar_items-8DDAA8B3.js
+dist/search_data-C5F4AF21.js
+dist/sidebar_items-309A2459.js
 index.html
 provisioning.html
 readme.html
