@@ -1,6 +1,10 @@
 defmodule Lightning.KafkaTriggers.Pipeline do
   use Broadway
 
+  alias Lightning.KafkaTriggers
+  alias Lightning.Repo
+  alias Lightning.Workflows.Trigger
+
   def start_link(opts) do
     name = opts |> Keyword.get(:name)
 
@@ -27,12 +31,25 @@ defmodule Lightning.KafkaTriggers.Pipeline do
   end
 
   def handle_message(_processor, message, context) do
-    %{name: name} = context
-    %Broadway.Message{data: data, metadata: %{ts: ts}} = message
+    %{trigger_id: trigger_id} = context
 
-    IO.puts(">>>> #{name} received #{data} produced at #{ts}")
+    %{
+      data: data,
+      metadata: %{
+        partition: partition,
+        ts: timestamp
+      }
+    } = message
+
+    Trigger
+    |> Repo.get_by(trigger_id)
+    |> KafkaTriggers.update_partition_data(partition, timestamp)
+
+    # IO.inspect(message, label: :full_message)
+    # %Broadway.Message{data: data, metadata: %{ts: ts}} = message
+
+    IO.puts(">>>> #{trigger_id} received #{data} produced at #{timestamp}")
     # IO.inspect(message) 
-    # Need to return the message
     message
   end
 

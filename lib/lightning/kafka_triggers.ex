@@ -12,4 +12,15 @@ defmodule Lightning.KafkaTriggers do
 
     query |> Repo.all()
   end
+
+  def update_partition_data(_trigger, _partition, _timestamp) do
+    %Trigger{
+      kafka_configuration: existing_kafka_configuration
+    } = trigger
+
+    updated_kafka_configuration =
+      existing_kafka_configuration
+      |> Map.merge(%{"partition_timestamps" => %{"#{partition}" => timestamp}})
+
+  end
 end
