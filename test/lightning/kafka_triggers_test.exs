@@ -28,4 +28,63 @@ defmodule Lightning.KafkaTriggersTest do
       |> Enum.any?(& &1.id == id)
     end
   end
+
+  describe ".update_partition_data" do
+    setup do
+      %{partition: 7, timestamp: 124}
+    end
+
+    test "adds data for partition if the trigger has no partition data", %{
+      partition: partition,
+      timestamp: timestamp
+    } do
+      trigger = insert(:trigger, kafka_configuration: configuration(%{}))
+
+      trigger
+      |> KafkaTriggers.update_partition_data(partition, timestamp)
+
+      trigger
+      |> assert_persisted_config(%{"#{partition}" => timestamp})
+    end
+
+    test "adds data for partition if partition is new but there is data", %{
+      partition: partition,
+      timestamp: timestamp
+    } do
+      trigger = insert(:trigger, kafka_configuration: configuration(%{"3" => 123}))
+
+      trigger
+      |> KafkaTriggers.update_partition_data(partition, timestamp)
+
+      trigger
+      |> assert_persisted_config(%{
+        "3" => 123,
+        "#{partition}" => timestamp
+      })
+    end
+
+    defp configuration(partition_timestamps) do
+      # TODO Centralise the generation of config to avoid drift
+      %{
+        "group_id" => "lightning-1",
+        "hosts" => [["host-1", 9092], ["other-host-1", 9093]],
+        "partition_timestamps" => partition_timestamps,
+        "sasl" => nil,
+        "ssl" => false,
+        "topics" => ["bar_topic"]
+      }
+    end
+
+    defp assert_persisted_config(trigger, expected_partition_timestamps) do
+      reloaded_trigger = Trigger |> Repo.get(trigger.id)
+
+      %Trigger{
+        kafka_configuration: %{
+          "partition_timestamps" => partition_timestamps
+        } 
+      } = reloaded_trigger
+
+      assert partition_timestamps == expected_partition_timestamps
+    end
+  end
 end
