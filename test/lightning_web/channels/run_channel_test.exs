@@ -10,6 +10,15 @@ defmodule LightningWeb.RunChannelTest do
   import Lightning.Factories
   import Lightning.BypassHelpers
 
+  setup _ do
+    Mox.stub_with(
+      Lightning.Extensions.MockUsageLimiter,
+      Lightning.Extensions.UsageLimiter
+    )
+
+    :ok
+  end
+
   describe "joining" do
     test "without providing a token" do
       assert LightningWeb.UserSocket
@@ -157,7 +166,7 @@ defmodule LightningWeb.RunChannelTest do
                "edges" => edges,
                "starting_node_id" => run.starting_trigger_id,
                "dataclip_id" => run.dataclip_id,
-               "options" => %LightningWeb.RunOptions{output_dataclips: true}
+               "options" => %{output_dataclips: true}
              }
     end
 
@@ -221,8 +230,43 @@ defmodule LightningWeb.RunChannelTest do
                "edges" => edges,
                "starting_node_id" => run.starting_trigger_id,
                "dataclip_id" => run.dataclip_id,
-               "options" => %LightningWeb.RunOptions{output_dataclips: false}
+               "options" => %{output_dataclips: false}
              }
+    end
+
+    test "fetch:plan includes options from usage limiter", %{
+      credential: credential
+    } do
+      project = insert(:project, retention_policy: :erase_all)
+
+      workflow_context =
+        create_workflow(%{project: project, credential: credential})
+
+      %{run: run} =
+        create_run(
+          %{project: project, credential: credential}
+          |> Map.merge(workflow_context)
+        )
+
+      %{socket: socket} = create_socket(%{run: run})
+      project_id = project.id
+
+      extra_options = [run_timeout_ms: 5000]
+
+      Mox.expect(
+        Lightning.Extensions.MockUsageLimiter,
+        :get_run_options,
+        fn %{project_id: ^project_id} -> extra_options end
+      )
+
+      ref = push(socket, "fetch:plan", %{})
+
+      assert_reply ref, :ok, payload
+
+      expected_options =
+        Map.merge(%{output_dataclips: false}, Map.new(extra_options))
+
+      assert match?(%{"options" => ^expected_options}, payload)
     end
 
     test "fetch:dataclip handles all types", %{

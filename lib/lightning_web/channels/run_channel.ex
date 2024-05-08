@@ -5,12 +5,13 @@ defmodule LightningWeb.RunChannel do
   use LightningWeb, :channel
 
   alias Lightning.Credentials
+  alias Lightning.Extensions.UsageLimiting.Context
   alias Lightning.Projects
   alias Lightning.Repo
   alias Lightning.Runs
   alias Lightning.Scrubber
+  alias Lightning.Services.UsageLimiter
   alias Lightning.Workers
-  alias LightningWeb.RunOptions
   alias LightningWeb.RunWithOptions
 
   require Jason.Helpers
@@ -52,13 +53,19 @@ defmodule LightningWeb.RunChannel do
 
   @impl true
   def handle_in("fetch:plan", _payload, socket) do
-    %{retention_policy: retention_policy, run: run} = socket.assigns
+    %{retention_policy: retention_policy, run: run, project_id: project_id} =
+      socket.assigns
 
-    options = %RunOptions{
+    default_options = [
       output_dataclips: include_output_dataclips?(retention_policy)
-    }
+    ]
 
-    {:reply, {:ok, RunWithOptions.render(run, options)}, socket}
+    extra_options =
+      UsageLimiter.get_run_options(%Context{project_id: project_id})
+
+    run_options = Keyword.merge(default_options, extra_options)
+
+    {:reply, {:ok, RunWithOptions.render(run, run_options)}, socket}
   end
 
   def handle_in("run:start", _payload, socket) do

@@ -30,4 +30,7 @@ defmodule Lightning.Extensions.StubUsageLimiter do
   def limit_action(_action, _context) do
     {:error, :too_many_runs, %Message{text: "Runs limit exceeded"}}
   end
+
+  @impl true
+  def get_run_options(_context), do: []
 end

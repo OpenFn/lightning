@@ -16,5 +16,10 @@ defmodule Lightning.Services.UsageLimiter do
     adapter().limit_action(action, context)
   end
 
+  @impl true
+  def get_run_options(context) do
+    adapter().get_run_options(context)
+  end
+
   defp adapter, do: adapter(:usage_limiter)
 end
