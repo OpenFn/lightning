@@ -13,7 +13,7 @@
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-EPF2X7PV.js"></script>
-    <script src="dist/sidebar_items-309A2459.js"></script>
+    <script src="dist/sidebar_items-19CA7F9E.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -193,6 +193,14 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
+        <a href="#c:get_run_options/1" translate="no">get_run_options(context)</a>
+
+      </div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
         <a href="#c:limit_action/2" translate="no">limit_action(action, context)</a>
 
       </div>
@@ -331,6 +339,35 @@ Pages
 
           <pre translate="no"><span class="attribute">@callback</span> check_limits(context :: Lightning.Extensions.UsageLimiting.Context.t()) ::
   :ok | <a href="#t:error/0">error</a>()</pre>
+
+      </div>
+
+
+  </section>
+</section>
+<section class="detail" id="c:get_run_options/1">
+
+  <div class="detail-header">
+    <a href="#c:get_run_options/1" class="detail-link" title="Link to this callback">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this callback</span>
+    </a>
+    <h1 class="signature" translate="no">get_run_options(context)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/extensions/usage_limiting.ex#L38" class="icon-action" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@callback</span> get_run_options(context :: Lightning.Extensions.UsageLimiting.Context.t()) ::
+  LightningWeb.RunWithOptions.run_options()</pre>
 
       </div>
 
