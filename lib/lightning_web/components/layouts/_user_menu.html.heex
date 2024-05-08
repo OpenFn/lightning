@@ -8,9 +8,12 @@
     </li>
   <% else %>
     <li>
-      <.register_link href={Routes.user_registration_path(@conn, :new)}>
+      <.link
+        :if={Lightning.Config.check_flag?(:allow_signup)}
+        href={~p"/users/register"}
+      >
         Register
-      </.register_link>
+      </.link>
     </li>
     <li>
       <.link href={Routes.user_session_path(@conn, :new)}>

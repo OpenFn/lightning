@@ -32,17 +32,6 @@ defmodule LightningWeb.CoreComponents do
     """
   end
 
-  attr :href, :string, required: true
-  slot :inner_block, required: true
-
-  def register_link(assigns) do
-    ~H"""
-    <.link :if={Lightning.Config.check_flag?(:allow_signup)} href={@href}>
-      <%= render_slot(@inner_block) %>
-    </.link>
-    """
-  end
-
   @doc ~S"""
   Renders a table with generic styling.
 
