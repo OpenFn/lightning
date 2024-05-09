@@ -42,7 +42,7 @@ defmodule Lightning.KafkaTriggers.PipelineWorker do
                 [
                   group_id: group_id,
                   hosts: hosts,
-                  name: trigger.id |> String.to_atom(),
+                  trigger_id: trigger.id |> String.to_atom(),
                   sasl: sasl,
                   ssl: ssl,
                   topics: topics

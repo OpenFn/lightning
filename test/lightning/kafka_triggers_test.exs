@@ -93,6 +93,30 @@ defmodule Lightning.KafkaTriggersTest do
       })
     end
 
+    test "updates persisted partition data if persisted timestamp is older", %{
+      partition: partition,
+      timestamp: timestamp
+    } do
+      trigger =
+        insert(
+          :trigger,
+          type: :kafka,
+          kafka_configuration: configuration(%{
+            "3" => 123,
+            "#{partition}" => timestamp - 1
+          })
+        )
+
+      trigger
+      |> KafkaTriggers.update_partition_data(partition, timestamp)
+
+      trigger
+      |> assert_persisted_config(%{
+        "3" => 123,
+        "#{partition}" => timestamp
+      })
+    end
+
     defp configuration(partition_timestamps) do
       # TODO Centralise the generation of config to avoid drift
       %{

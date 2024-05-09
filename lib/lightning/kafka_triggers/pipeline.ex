@@ -6,12 +6,12 @@ defmodule Lightning.KafkaTriggers.Pipeline do
   alias Lightning.Workflows.Trigger
 
   def start_link(opts) do
-    name = opts |> Keyword.get(:name)
+    trigger_id = opts |> Keyword.get(:trigger_id)
 
     Broadway.start_link(__MODULE__,
-      name: name,
+      name: trigger_id,
       context: %{
-        name: name
+        trigger_id: trigger_id
       },
       producer: [
         module:
@@ -42,13 +42,13 @@ defmodule Lightning.KafkaTriggers.Pipeline do
     } = message
 
     Trigger
-    |> Repo.get_by(trigger_id)
+    |> Repo.get(trigger_id |> Atom.to_string())
     |> KafkaTriggers.update_partition_data(partition, timestamp)
 
     # IO.inspect(message, label: :full_message)
     # %Broadway.Message{data: data, metadata: %{ts: ts}} = message
 
-    IO.puts(">>>> #{trigger_id} received #{data} produced at #{timestamp}")
+    IO.puts(">>>> #{trigger_id} received #{data} on #{partition} produced at #{timestamp}")
     # IO.inspect(message) 
     message
   end

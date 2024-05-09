@@ -183,7 +183,7 @@ defmodule Lightning.KafkaTriggers.PipelineWorkerTest do
             [
               group_id: "lightning-#{index}",
               hosts: [{"host-#{index}", 9092}, {"other-host-#{index}", 9093}],
-              name: trigger.id |> String.to_atom(),
+              trigger_id: trigger.id |> String.to_atom(),
               sasl: sasl_config(index, sasl),
               ssl: ssl,
               topics: ["topic-#{index}-1", "topic-#{index}-2"]
