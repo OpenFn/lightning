@@ -16,6 +16,7 @@ defmodule Lightning.Projects.Provisioner do
   alias Lightning.Projects.ProjectUser
   alias Lightning.Repo
   alias Lightning.VersionControl.ProjectRepoConnection
+  alias Lightning.VersionControl.VersionControlUsageLimiter
   alias Lightning.Workflows.Edge
   alias Lightning.Workflows.Job
   alias Lightning.Workflows.Trigger
@@ -30,24 +31,29 @@ defmodule Lightning.Projects.Provisioner do
           User.t() | ProjectRepoConnection.t(),
           map()
         ) ::
-          {:error, Ecto.Changeset.t(Project.t())}
+          {:error,
+           Ecto.Changeset.t(Project.t())
+           | Lightning.Extensions.UsageLimiting.message()}
           | {:ok, Project.t()}
-  def import_document(nil, %User{} = user, data),
-    do: import_document(%Project{}, user, data)
+  def import_document(nil, %User{} = user, data) do
+    import_document(%Project{}, user, data)
+  end
 
   def import_document(project, user_or_repo_connection, data) do
-    project
-    |> preload_dependencies()
-    |> parse_document(data)
-    |> maybe_add_project_user(user_or_repo_connection)
-    |> Repo.insert_or_update()
-    |> case do
-      {:ok, %{workflows: workflows} = project} ->
-        Enum.each(workflows, &Lightning.Workflows.Events.workflow_updated/1)
-        {:ok, preload_dependencies(project)}
+    with :ok <- VersionControlUsageLimiter.limit_github_sync(project.id) do
+      project
+      |> preload_dependencies()
+      |> parse_document(data)
+      |> maybe_add_project_user(user_or_repo_connection)
+      |> Repo.insert_or_update()
+      |> case do
+        {:ok, %{workflows: workflows} = project} ->
+          Enum.each(workflows, &Lightning.Workflows.Events.workflow_updated/1)
+          {:ok, preload_dependencies(project)}
 
-      {:error, changeset} ->
-        {:error, changeset}
+        {:error, changeset} ->
+          {:error, changeset}
+      end
     end
   end
 

@@ -12,7 +12,12 @@ defmodule Lightning.Extensions.UsageLimiting do
   defmodule Action do
     @moduledoc false
     @type t :: %__MODULE__{
-            type: :new_run | :activate_workflow | :new_user | :alert_failure,
+            type:
+              :new_run
+              | :activate_workflow
+              | :new_user
+              | :alert_failure
+              | :github_sync,
             amount: pos_integer()
           }
 

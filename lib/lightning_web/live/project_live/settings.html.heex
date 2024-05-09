@@ -678,7 +678,15 @@
           <div class="hidden sm:block" aria-hidden="true">
             <div class="py-2"></div>
           </div>
-
+          <div>
+            <%= if assigns[:github_banner] do %>
+              <%= Phoenix.LiveView.TagEngine.component(
+                @github_banner.function,
+                @github_banner.attrs,
+                {__ENV__.module, __ENV__.function, __ENV__.file, __ENV__.line}
+              ) %>
+            <% end %>
+          </div>
           <%= if  @github_enabled do %>
             <%= if @project_repo_connection do %>
               <.live_component
@@ -723,6 +731,7 @@
                     <GithubComponents.connect_to_github_link
                       id="connect-github-link"
                       user={@current_user}
+                      disabled={is_map(assigns[:github_banner])}
                     />
                   </div>
                 </div>

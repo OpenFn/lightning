@@ -9,6 +9,7 @@ defmodule LightningWeb.Hooks do
 
   alias Lightning.Policies.Permissions
   alias Lightning.Policies.ProjectUsers
+  alias Lightning.VersionControl.VersionControlUsageLimiter
 
   @doc """
   Finds and assigns a project to the socket, if a user doesn't have access
@@ -71,5 +72,15 @@ defmodule LightningWeb.Hooks do
     {:cont,
      socket
      |> assign_new(:projects, fn -> projects end)}
+  end
+
+  def on_mount(:limit_github_sync, _params, _session, socket) do
+    case VersionControlUsageLimiter.limit_github_sync(socket.assigns.project.id) do
+      :ok ->
+        {:cont, socket}
+
+      {:error, %{function: func} = component} when is_function(func) ->
+        {:cont, assign(socket, github_banner: component)}
+    end
   end
 end

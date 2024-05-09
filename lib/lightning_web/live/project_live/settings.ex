@@ -22,6 +22,7 @@ defmodule LightningWeb.ProjectLive.Settings do
   require Logger
 
   on_mount {LightningWeb.Hooks, :project_scope}
+  on_mount {LightningWeb.Hooks, :limit_github_sync}
 
   @impl true
   def mount(_params, _session, socket) do

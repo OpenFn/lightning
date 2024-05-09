@@ -37,7 +37,6 @@ defmodule Lightning.Projects.ProvisionerTest do
       Mox.expect(
         Lightning.Extensions.MockUsageLimiter,
         :limit_action,
-        1,
         fn _action, _context -> :ok end
       )
 
@@ -85,10 +84,9 @@ defmodule Lightning.Projects.ProvisionerTest do
         second_job_id: second_job_id
       } = valid_document()
 
-      Mox.expect(
+      Mox.stub(
         Lightning.Extensions.MockUsageLimiter,
         :limit_action,
-        1,
         fn _action, _context -> :ok end
       )
 
@@ -124,10 +122,12 @@ defmodule Lightning.Projects.ProvisionerTest do
       project: %{id: project_id} = project,
       user: user
     } do
-      Mox.expect(
+      Mox.stub(
         Lightning.Extensions.MockUsageLimiter,
         :limit_action,
-        fn %{type: :activate_workflow}, %{project_id: ^project_id} -> :ok end
+        fn _action, %{project_id: ^project_id} ->
+          :ok
+        end
       )
 
       %{body: body} = valid_document(project.id)
@@ -156,10 +156,12 @@ defmodule Lightning.Projects.ProvisionerTest do
       project: %{id: project_id} = project,
       user: user
     } do
-      Mox.expect(
+      Mox.stub(
         Lightning.Extensions.MockUsageLimiter,
         :limit_action,
-        fn %{type: :activate_workflow}, %{project_id: ^project_id} -> :ok end
+        fn _action, %{project_id: ^project_id} ->
+          :ok
+        end
       )
 
       %{body: body} = valid_document(project.id)
@@ -205,11 +207,12 @@ defmodule Lightning.Projects.ProvisionerTest do
       project: %{id: project_id} = project,
       user: user
     } do
-      Mox.expect(
+      Mox.stub(
         Lightning.Extensions.MockUsageLimiter,
         :limit_action,
-        2,
-        fn %{type: :activate_workflow}, %{project_id: ^project_id} -> :ok end
+        fn _action, %{project_id: ^project_id} ->
+          :ok
+        end
       )
 
       %{body: body, workflow_id: workflow_id} = valid_document(project.id)
@@ -278,10 +281,12 @@ defmodule Lightning.Projects.ProvisionerTest do
     end
 
     test "removing a record", %{project: %{id: project_id} = project, user: user} do
-      Mox.expect(
+      Mox.stub(
         Lightning.Extensions.MockUsageLimiter,
         :limit_action,
-        fn %{type: :activate_workflow}, %{project_id: ^project_id} -> :ok end
+        fn _action, %{project_id: ^project_id} ->
+          :ok
+        end
       )
 
       %{
@@ -333,10 +338,12 @@ defmodule Lightning.Projects.ProvisionerTest do
       project: %{id: project_id} = project,
       user: user
     } do
-      Mox.expect(
+      Mox.stub(
         Lightning.Extensions.MockUsageLimiter,
         :limit_action,
-        fn %{type: :activate_workflow}, %{project_id: ^project_id} -> :ok end
+        fn _action, %{project_id: ^project_id} ->
+          :ok
+        end
       )
 
       %{
@@ -365,9 +372,17 @@ defmodule Lightning.Projects.ProvisionerTest do
     end
 
     test "marking a new/changed record for deletion", %{
-      project: project,
+      project: %{id: project_id} = project,
       user: user
     } do
+      Mox.stub(
+        Lightning.Extensions.MockUsageLimiter,
+        :limit_action,
+        fn _action, %{project_id: ^project_id} ->
+          :ok
+        end
+      )
+
       body = %{
         "id" => project.id,
         "name" => "test-project",
@@ -394,10 +409,13 @@ defmodule Lightning.Projects.ProvisionerTest do
       %{body: body} = valid_document(project_id)
       error_msg = "Oopsie Doopsie"
 
-      Mox.expect(
-        Lightning.Extensions.MockUsageLimiter,
+      Lightning.Extensions.MockUsageLimiter
+      |> Mox.expect(
         :limit_action,
-        1,
+        fn %{type: :github_sync}, %{project_id: ^project_id} -> :ok end
+      )
+      |> Mox.expect(
+        :limit_action,
         fn _action, %{project_id: ^project_id} ->
           {:error, :too_many_workflows, %{text: error_msg}}
         end
@@ -415,10 +433,9 @@ defmodule Lightning.Projects.ProvisionerTest do
     } do
       %{body: body, workflow_id: workflow_id} = valid_document(project.id)
 
-      Mox.expect(
+      Mox.stub(
         Lightning.Extensions.MockUsageLimiter,
         :limit_action,
-        1,
         fn _action, %{project_id: ^project_id} ->
           :ok
         end

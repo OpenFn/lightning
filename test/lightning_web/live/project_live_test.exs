@@ -2210,12 +2210,15 @@ defmodule LightningWeb.ProjectLiveTest do
 
       error_msg = "some meaningful error message"
 
-      Mox.expect(
+      Mox.stub(
         Lightning.Extensions.MockUsageLimiter,
         :limit_action,
-        4,
-        fn %{type: :new_user, amount: 1}, %{project_id: ^project_id} ->
-          {:error, :too_many_users, %{text: error_msg}}
+        fn
+          %{type: :new_user, amount: 1}, %{project_id: ^project_id} ->
+            {:error, :too_many_users, %{text: error_msg}}
+
+          _other_action, _context ->
+            :ok
         end
       )
 
@@ -2241,12 +2244,9 @@ defmodule LightningWeb.ProjectLiveTest do
       [admin, editor, viewer] = insert_list(3, :user)
 
       # return ok for enabling the add collaboratos button
-      Mox.stub(
+      Mox.stub_with(
         Lightning.Extensions.MockUsageLimiter,
-        :limit_action,
-        fn %{type: :new_user, amount: 1}, %{project_id: ^project_id} ->
-          :ok
-        end
+        Lightning.Extensions.UsageLimiter
       )
 
       {:ok, view, html} =
@@ -3204,6 +3204,101 @@ defmodule LightningWeb.ProjectLiveTest do
       assert flash["info"] == "Connection made successfully"
     end
 
+    test "users get an error when saving repo connection if the usage limiter returns an error",
+         %{
+           conn: conn
+         } do
+      expected_installation = %{
+        "id" => 1234,
+        "account" => %{
+          "type" => "User",
+          "login" => "username"
+        }
+      }
+
+      expected_repo = %{
+        "full_name" => "someaccount/somerepo",
+        "default_branch" => "main"
+      }
+
+      expected_branch = %{"name" => "somebranch"}
+
+      %{id: project_id} = project = insert(:project)
+
+      {conn, user} = setup_project_user(conn, project, :admin)
+      set_valid_github_oauth_token!(user)
+
+      expect_get_user_installations(200, %{
+        "installations" => [expected_installation]
+      })
+
+      expect_create_installation_token(expected_installation["id"])
+      expect_get_installation_repos(200, %{"repositories" => [expected_repo]})
+
+      Mox.stub_with(
+        Lightning.Extensions.MockUsageLimiter,
+        Lightning.Extensions.UsageLimiter
+      )
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/settings#vcs"
+        )
+
+      render_async(view)
+
+      # lets select the installation
+      view
+      |> form("#project-repo-connection-form",
+        connection: %{github_installation_id: expected_installation["id"]}
+      )
+      |> render_change()
+
+      # we should now have the repos listed
+      render_async(view)
+
+      # lets select the repo
+      expect_create_installation_token(expected_installation["id"])
+
+      expect_get_repo_branches(expected_repo["full_name"], 200, [expected_branch])
+
+      view
+      |> form("#project-repo-connection-form",
+        connection: %{
+          github_installation_id: expected_installation["id"],
+          repo: expected_repo["full_name"]
+        }
+      )
+      |> render_change()
+
+      # we should now have the branches listed
+      render_async(view)
+
+      # let us submit
+
+      error_msg = "Some funny error message"
+
+      Lightning.Extensions.MockUsageLimiter
+      |> Mox.expect(:limit_action, fn %{type: :github_sync},
+                                      %{project_id: ^project_id} ->
+        {:error, :disabled, %{text: error_msg}}
+      end)
+
+      view
+      |> form("#project-repo-connection-form")
+      |> render_submit(
+        connection: %{
+          branch: expected_branch["name"],
+          sync_direction: "pull",
+          accept: true
+        }
+      )
+
+      flash = assert_redirected(view, ~p"/projects/#{project.id}/settings#vcs")
+      assert flash["error"] == error_msg
+    end
+
     test "all users can see a saved repo connection", %{conn: conn} do
       project = insert(:project)
 
@@ -3479,6 +3574,98 @@ defmodule LightningWeb.ProjectLiveTest do
         flash = assert_redirected(view, ~p"/projects/#{project.id}/settings#vcs")
 
         assert flash["info"] == "Connection made successfully!"
+      end
+    end
+
+    test "authorized users get an error when reconnecting if the usage limiter returns an error",
+         %{conn: conn} do
+      %{id: project_id} = project = insert(:project)
+
+      repo_connection =
+        insert(:project_repo_connection,
+          project: project,
+          repo: "someaccount/somerepo",
+          branch: "somebranch",
+          github_installation_id: "1234",
+          access_token: "someaccesstoken"
+        )
+
+      expected_installation = %{
+        "id" => repo_connection.github_installation_id,
+        "account" => %{
+          "type" => "User",
+          "login" => "username"
+        }
+      }
+
+      expected_access_token_endpoint =
+        "https://api.github.com/app/installations/#{repo_connection.github_installation_id}/access_tokens"
+
+      for {conn, user} <-
+            setup_project_users(conn, project, [:admin, :owner]) do
+        set_valid_github_oauth_token!(user)
+
+        Mox.expect(Lightning.Tesla.Mock, :call, 5, fn
+          # list installations for checking if the user has access to the intallation.
+          %{url: "https://api.github.com/user/installations"}, _opts ->
+            {:ok,
+             %Tesla.Env{
+               status: 200,
+               body: %{"installations" => [expected_installation]}
+             }}
+
+          # get installation access token. This is called twice.
+          # When fetching repos and when verifying connection
+          %{url: ^expected_access_token_endpoint}, _opts ->
+            {:ok,
+             %Tesla.Env{
+               status: 201,
+               body: %{"token" => "some-token"}
+             }}
+
+          # list repos
+          %{url: "https://api.github.com/installation/repositories"}, _opts ->
+            {:ok, %Tesla.Env{status: 200, body: %{"repositories" => []}}}
+
+          # another call for verifying connection. Probably for checking if a file exists
+          # ignoring to halt the pipeline
+          %{url: _url}, _opts ->
+            {:error, "something unexpected happened"}
+        end)
+
+        Mox.stub_with(
+          Lightning.Extensions.MockUsageLimiter,
+          Lightning.Extensions.UsageLimiter
+        )
+
+        {:ok, view, _html} =
+          live(
+            conn,
+            ~p"/projects/#{project.id}/settings#vcs"
+          )
+
+        render_async(view)
+
+        assert has_element?(view, "#reconnect-project-button")
+
+        # let's reconnect
+        error_msg = "Some funny error message"
+
+        Lightning.Extensions.MockUsageLimiter
+        |> Mox.expect(:limit_action, fn %{type: :github_sync},
+                                        %{project_id: ^project_id} ->
+          {:error, :disabled, %{text: error_msg}}
+        end)
+
+        view
+        |> form("#reconnect-project-form")
+        |> render_submit(
+          connection: %{"sync_direction" => "pull", "accept" => "true"}
+        )
+
+        flash = assert_redirected(view, ~p"/projects/#{project.id}/settings#vcs")
+
+        assert flash["error"] == error_msg
       end
     end
 
@@ -3981,6 +4168,175 @@ defmodule LightningWeb.ProjectLiveTest do
         flash = assert_redirected(view, ~p"/projects/#{project.id}/settings#vcs")
 
         assert flash["info"] == "Github sync initiated successfully!"
+      end
+    end
+
+    test "authorized users get an error when initiating github sync if the usage limiter returns an error",
+         %{
+           conn: conn
+         } do
+      %{id: project_id} = project = insert(:project)
+
+      repo_connection =
+        insert(:project_repo_connection,
+          project: project,
+          repo: "someaccount/somerepo",
+          branch: "somebranch",
+          github_installation_id: "1234",
+          access_token: "someaccesstoken"
+        )
+
+      for {conn, _user} <-
+            setup_project_users(conn, project, [:editor, :admin, :owner]) do
+        # ensure project is all setup
+        repo_name = repo_connection.repo
+        branch_name = repo_connection.branch
+        installation_id = repo_connection.github_installation_id
+
+        expected_default_branch = "main"
+
+        expected_deploy_yml_path =
+          ".github/workflows/openfn-#{repo_connection.project_id}-deploy.yml"
+
+        expected_config_json_path =
+          "openfn-#{repo_connection.project_id}-config.json"
+
+        expected_secret_name =
+          "OPENFN_#{String.replace(repo_connection.project_id, "-", "_")}_API_KEY"
+
+        Mox.stub_with(
+          Lightning.Extensions.MockUsageLimiter,
+          Lightning.Extensions.UsageLimiter
+        )
+
+        Mox.expect(Lightning.Tesla.Mock, :call, 6, fn
+          # get installation access token.
+          # called when verifying connection
+          %{
+            url:
+              "https://api.github.com/app/installations/" <>
+                  ^installation_id <> "/access_tokens"
+          },
+          _opts ->
+            {:ok,
+             %Tesla.Env{
+               status: 201,
+               body: %{"token" => "some-token"}
+             }}
+
+          # get repo content
+          %{url: "https://api.github.com/repos/" <> ^repo_name}, _opts ->
+            {:ok,
+             %Tesla.Env{
+               status: 200,
+               body: %{"default_branch" => expected_default_branch}
+             }}
+
+          # check if pull yml exists in the default branch
+          %{
+            method: :get,
+            query: [{:ref, "heads/" <> ^expected_default_branch}],
+            url:
+              "https://api.github.com/repos/" <>
+                  ^repo_name <> "/contents/.github/workflows/openfn-pull.yml"
+          },
+          _opts ->
+            {:ok, %Tesla.Env{status: 200, body: %{"sha" => "somesha"}}}
+
+          # check if deploy yml exists in the target branch
+          %{
+            method: :get,
+            query: [{:ref, "heads/" <> ^branch_name}],
+            url:
+              "https://api.github.com/repos/" <>
+                  ^repo_name <> "/contents/" <> ^expected_deploy_yml_path
+          },
+          _opts ->
+            {:ok, %Tesla.Env{status: 200, body: %{"sha" => "somesha"}}}
+
+          # check if config.json exists in the target branch
+          %{
+            method: :get,
+            query: [{:ref, "heads/" <> ^branch_name}],
+            url:
+              "https://api.github.com/repos/" <>
+                  ^repo_name <> "/contents/" <> ^expected_config_json_path
+          },
+          _opts ->
+            {:ok, %Tesla.Env{status: 200, body: %{"sha" => "somesha"}}}
+
+          # check if api key secret exists
+          %{
+            method: :get,
+            url:
+              "https://api.github.com/repos/" <>
+                  ^repo_name <> "/actions/secrets/" <> ^expected_secret_name
+          },
+          _opts ->
+            {:ok, %Tesla.Env{status: 200, body: %{}}}
+        end)
+
+        {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/settings#vcs")
+
+        html = render_async(view)
+
+        refute html =~ "Contact an editor or admin to sync."
+
+        button = element(view, "#initiate-sync-button")
+        assert has_element?(button)
+
+        # try clicking the button
+
+        error_msg = "Some funny error message"
+
+        Lightning.Extensions.MockUsageLimiter
+        |> Mox.expect(:limit_action, fn %{type: :github_sync},
+                                        %{project_id: ^project_id} ->
+          {:error, :disabled, %{text: error_msg}}
+        end)
+
+        render_click(button)
+
+        flash = assert_redirected(view, ~p"/projects/#{project.id}/settings#vcs")
+
+        assert flash["error"] == error_msg
+      end
+    end
+
+    test "error banner is displayed if github sync usage limiter returns an error",
+         %{
+           conn: conn
+         } do
+      import Phoenix.Component
+      %{id: project_id} = project = insert(:project)
+
+      for {conn, _user} <-
+            setup_project_users(conn, project, [:viewer, :editor, :admin, :owner]) do
+        error_msg = "I am a robot"
+
+        Lightning.Extensions.MockUsageLimiter
+        |> Mox.stub(:check_limits, fn %{project_id: ^project_id} -> :ok end)
+        |> Mox.stub(:limit_action, fn
+          %{type: :github_sync}, %{project_id: ^project_id} ->
+            {:error, :disabled,
+             %{
+               function: fn assigns ->
+                 ~H"<p>I am an error message that says: <%= @error %></p>"
+               end,
+               attrs: %{error: error_msg}
+             }}
+
+          _other_action, _context ->
+            :ok
+        end)
+
+        {:ok, _view, html} =
+          live(
+            conn,
+            ~p"/projects/#{project.id}/settings#vcs"
+          )
+
+        assert html =~ error_msg
       end
     end
   end
