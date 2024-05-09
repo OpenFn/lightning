@@ -11,6 +11,7 @@ hosts = [["localhost", 9096], ["localhost", 9095], ["localhost", 9094]]
 foo_configuration = %{
   group_id: "my-foo-group",
   hosts: hosts,
+  partition_timestamps: %{},
   sasl: nil,
   ssl: false,
   topics: ["foo_topic"]
@@ -27,6 +28,7 @@ foo_changeset |> Repo.insert()
 bar_configuration = %{
   group_id: "my-bar-group",
   hosts: hosts,
+  partition_timestamps: %{},
   sasl: nil,
   ssl: false,
   topics: ["bar_topic"]
@@ -43,6 +45,7 @@ bar_changeset |> Repo.insert()
 baz_configuration = %{
   group_id: "my-baz-group",
   hosts: hosts,
+  partition_timestamps: %{},
   sasl: nil,
   ssl: false,
   topics: ["baz_topic"]
@@ -132,6 +135,27 @@ defmodule KafkaTestingUtils do
         "hosts" => [[host, String.to_integer(port)]],
         "sasl" => ["plain", username, password],
         "ssl" => true
+      }
+      new_config = config |> Map.merge(changes) 
+      changeset = Trigger.changeset(trigger, %{kafka_configuration: new_config}) 
+      changeset |> Repo.update()
+    end)
+  end
+
+  def add_empty_partition_timestamps_to_config do
+    alias Lightning.Workflows.Trigger
+    alias Lightning.Repo
+
+    import Ecto.Query
+
+    query = from t in Trigger, where: t.type == :kafka
+
+    triggers = Repo.all(query)
+
+    triggers
+    |> Enum.each(fn %{kafka_configuration: config} = trigger -> 
+      changes = %{
+        "partition_timestamps" => %{}
       }
       new_config = config |> Map.merge(changes) 
       changeset = Trigger.changeset(trigger, %{kafka_configuration: new_config}) 
