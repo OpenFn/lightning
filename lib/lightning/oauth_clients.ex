@@ -75,7 +75,7 @@ defmodule Lightning.OauthClients do
   """
   def list_clients_for_user(user_id) do
     from(c in OauthClient,
-      where: c.user_id == ^user_id or c.global,
+      where: c.user_id == ^user_id,
       preload: :projects
     )
     |> Repo.all()

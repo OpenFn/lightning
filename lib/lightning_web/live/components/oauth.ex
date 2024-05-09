@@ -312,11 +312,11 @@ defmodule LightningWeb.Components.Oauth do
 
   def missing_client_warning(assigns) do
     ~H"""
-    <div class="rounded-md bg-yellow-50 p-4 mb-4">
+    <div class="rounded-md bg-red-50 p-4 mb-4">
       <div class="flex">
         <div class="flex-shrink-0">
           <svg
-            class="h-5 w-5 text-yellow-400"
+            class="h-5 w-5 text-red-400"
             viewBox="0 0 20 20"
             fill="currentColor"
             aria-hidden="true"
@@ -329,10 +329,10 @@ defmodule LightningWeb.Components.Oauth do
           </svg>
         </div>
         <div class="ml-3">
-          <h3 class="text-sm font-medium text-yellow-800">Something went wrong.</h3>
-          <div class="mt-2 text-sm text-yellow-700">
+          <h3 class="text-sm font-medium text-red-800">Oauth client not found.</h3>
+          <div class="mt-2 text-sm text-red-700">
             <p>
-              The Oauth client associated with this credential is not found. The token won't be refreshed and your userinfos won't be accessible.
+            The associated Oauth client for this credential cannot be found. Create a new client or contact your administrator.
             </p>
           </div>
         </div>

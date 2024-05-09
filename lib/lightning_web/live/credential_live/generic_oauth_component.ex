@@ -164,7 +164,10 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
          )
        end)}
     else
-      {:noreply, updated_socket}
+      {:noreply,
+       updated_socket
+       |> IO.inspect()
+       |> put_flash(:info, "Token fetched successfuly")}
     end
   end
 
@@ -552,6 +555,7 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
           </div>
 
           <.scopes_picklist
+            :if={@scopes |> Enum.count() > 0}
             id={"scope_selection_#{@credential.id || "new"}"}
             target={@myself}
             on_change="check_scope"
@@ -592,7 +596,6 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
               provider={@selected_client.name}
               myself={@myself}
             />
-
             <.userinfo
               :if={@display_userinfo && @selected_client}
               myself={@myself}

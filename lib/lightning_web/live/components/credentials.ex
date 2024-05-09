@@ -387,7 +387,14 @@ defmodule LightningWeb.Components.Credentials do
             <.td class="break-words max-w-[15rem] flex items-center">
               <%= credential.name %>
               <%= if credential.schema == "oauth" and !credential.oauth_client_id do %>
-                <Heroicons.exclamation_triangle class="h-5 w-5 ml-2" />
+                <span
+                  id={"#{credential.id}-client-not-found-tooltip"}
+                  phx-hook="Tooltip"
+                  aria-label="OAuth client not found"
+                  data-allow-html="true"
+                >
+                  <Heroicons.exclamation_triangle class="h-5 w-5 ml-2" />
+                </span>
               <% end %>
             </.td>
             <.td class="break-words max-w-[25rem]">
@@ -458,7 +465,7 @@ defmodule LightningWeb.Components.Credentials do
                 </span>
               <% end %>
             </.td>
-            <.td class="break-words max-w-[20rem]">
+            <.td class="break-words max-w-[21rem]">
               <%= client.authorization_endpoint %>
             </.td>
             <.td>
