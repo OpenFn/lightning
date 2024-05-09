@@ -169,17 +169,17 @@ defmodule LightningWeb.Components.Credentials do
   end
 
   attr :available_projects, :list, required: true
-  attr :all_projects, :list, required: true
+  attr :projects, :list, required: true
+  attr :selected_projects, :list, required: true
   attr :selected, :string, required: true
   attr :phx_target, :any, default: nil
-  attr :form, :any, required: true
 
   def project_credentials(assigns) do
     ~H"""
     <div class="col-span-3">
       <div>
         <label
-          for={"project_oauth_clients_list_for_#{@form[:id].value}"}
+          for={"project_oauth_clients_list_for_#{@selected}"}
           class={["block text-sm font-semibold leading-6 text-slate-800"]}
         >
           Project
@@ -188,7 +188,7 @@ defmodule LightningWeb.Components.Credentials do
         <div class="flex w-full items-center gap-2 pb-3 mt-1">
           <div class="grow">
             <select
-              id={"project_oauth_clients_list_for_#{@form[:id].value}"}
+              id={"project_oauth_clients_list_for_#{@selected}"}
               name={:project_id}
               class={[
                 "block w-full rounded-lg border border-secondary-300 bg-white",
@@ -203,7 +203,8 @@ defmodule LightningWeb.Components.Credentials do
                 Select a project to associate to this credential
               </option>
               <%= Phoenix.HTML.Form.options_for_select(
-                @available_projects,
+                @available_projects
+                |> Enum.map(fn %{id: id, name: name} -> {name, id} end),
                 @selected
               ) %>
             </select>
@@ -211,7 +212,7 @@ defmodule LightningWeb.Components.Credentials do
 
           <div class="grow-0 items-right">
             <.button
-              id={"add-new-project-button-to-#{@form[:id].value}"}
+              id="add-new-project-button-to-"
               disabled={
                 @selected == "" or @selected == nil or @available_projects == []
               }
@@ -225,36 +226,29 @@ defmodule LightningWeb.Components.Credentials do
         </div>
 
         <div class="overflow-auto max-h-32">
-          <.inputs_for
-            :let={project_oauth_client}
-            field={@form[:project_credentials]}
+          <span
+            :for={project <- @selected_projects}
+            class="inline-flex items-center gap-1 rounded-md bg-blue-100 px-4 mr-1 py-2 mb-2 text-gray-600"
           >
-            <span class="inline-flex items-center gap-1 rounded-md bg-blue-100 px-4 py-2 mb-2 text-gray-600">
-              <%= project_name(
-                @all_projects,
-                project_oauth_client[:project_id].value
-              ) %>
-              <button
-                id={"delete-project-oauth-client-#{@form[:id].value}-button"}
-                phx-target={@phx_target}
-                phx-value-project_id={project_oauth_client[:project_id].value}
-                phx-click="delete_project"
-                type="button"
-                class="group relative -mr-1 h-3.5 w-3.5 rounded-sm hover:bg-gray-500/20"
+            <%= project.name %>
+            <button
+              id={"delete-project-credential-#{project.id}-button"}
+              phx-target={@phx_target}
+              phx-value-project_id={project.id}
+              phx-click="delete_project"
+              type="button"
+              class="group relative -mr-1 h-3.5 w-3.5 rounded-sm hover:bg-gray-500/20"
+            >
+              <span class="sr-only">Remove</span>
+              <svg
+                viewBox="0 0 14 14"
+                class="h-3.5 w-3.5 stroke-gray-700/50 group-hover:stroke-gray-700/75"
               >
-                <span class="sr-only">Remove</span>
-                <svg
-                  viewBox="0 0 14 14"
-                  class="h-3.5 w-3.5 stroke-gray-700/50 group-hover:stroke-gray-700/75"
-                >
-                  <path d="M4 4l6 6m0-6l-6 6" />
-                </svg>
-                <span class="absolute -inset-1"></span>
-              </button>
-            </span>
-
-            <.input type="hidden" field={project_oauth_client[:project_id]} />
-          </.inputs_for>
+                <path d="M4 4l6 6m0-6l-6 6" />
+              </svg>
+              <span class="absolute -inset-1"></span>
+            </button>
+          </span>
         </div>
       </div>
     </div>
@@ -291,11 +285,11 @@ defmodule LightningWeb.Components.Credentials do
     """
   end
 
-  defp project_name(projects, id) do
-    Enum.find_value(projects, fn {name, project_id} ->
-      if project_id == id, do: name
-    end)
-  end
+  # defp project_name(projects, id) do
+  #   Enum.find_value(projects, fn {name, project_id} ->
+  #     if project_id == id, do: name
+  #   end)
+  # end
 
   attr :id, :string, required: true
   attr :options, :list, required: true

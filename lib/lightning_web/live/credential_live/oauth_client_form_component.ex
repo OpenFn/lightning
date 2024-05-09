@@ -281,7 +281,7 @@ defmodule LightningWeb.CredentialLive.OauthClientFormComponent do
     |> Enum.sort()
   end
 
-  defp save_oauth_client(socket, mode, oauth_client_params) do
+  defp prepare_projects(socket) do
     project_oauth_clients =
       Ecto.Changeset.fetch_field!(
         socket.assigns.changeset,
@@ -319,21 +319,24 @@ defmodule LightningWeb.CredentialLive.OauthClientFormComponent do
       end)
       |> Enum.map(fn id -> %{"project_id" => id} end)
 
-    project_oauth_clients =
-      projects_to_delete ++ projects_to_add ++ projects_to_keep
+    projects_to_delete ++ projects_to_add ++ projects_to_keep
+  end
+
+  defp save_oauth_client(socket, mode, oauth_client_params) do
+    project_oauth_clients = prepare_projects(socket)
+
+    params =
+      oauth_client_params
+      |> Map.put("project_oauth_clients", project_oauth_clients)
+      |> add_scopes_to_params(socket)
 
     case mode do
       :edit ->
-        params =
-          add_scopes_to_params(oauth_client_params, socket)
-          |> Map.put("project_oauth_clients", project_oauth_clients)
-
         update_oauth_client(socket, params)
 
       :new ->
         params =
-          add_scopes_to_params(oauth_client_params, socket)
-          |> add_new_client_specific_fields(socket)
+          add_new_client_specific_fields(oauth_client_params, socket)
 
         create_oauth_client(socket, params)
     end
