@@ -17,6 +17,14 @@ and this project adheres to
 
 ### Added
 
+### Changed
+
+### Fixed
+
+## [v2.4.6] - 2024-05-08
+
+### Added
+
 - Allow for automatic resubmission of failed usage tracking report submissions.
   [1789](https://github.com/OpenFn/lightning/issues/1789)
 - Make signup feature configurable
@@ -25,10 +33,6 @@ and this project adheres to
   [#2015](https://github.com/OpenFn/lightning/pull/2015)
 - Limit usage for failure alerts
   [#2011](https://github.com/OpenFn/lightning/pull/2011)
-
-### Changed
-
-### Fixed
 
 ## [v2.4.5] - 2024-05-07
 
