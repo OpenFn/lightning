@@ -390,8 +390,11 @@ defmodule LightningWeb.Components.Credentials do
             id={"#{@id}-#{credential.id}"}
             class="hover:bg-gray-100 transition-colors duration-200"
           >
-            <.td class="break-words max-w-[15rem]">
+            <.td class="break-words max-w-[15rem] flex items-center">
               <%= credential.name %>
+              <%= if credential.schema == "oauth" and !credential.oauth_client_id do %>
+                <Heroicons.exclamation_triangle class="h-5 w-5 ml-2" />
+              <% end %>
             </.td>
             <.td class="break-words max-w-[25rem]">
               <%= for project_name <- credential.project_names do %>

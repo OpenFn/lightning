@@ -33,7 +33,7 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
 
   @impl true
   def update(%{selected_client: nil, action: _action} = assigns, socket) do
-    selected_scopes = String.split(assigns.credential.body["scope"], ",")
+    selected_scopes = process_scopes(assigns.credential.body["scope"], " ")
 
     {:ok,
      build_assigns(socket, assigns,
@@ -54,7 +54,8 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
     mandatory_scopes = process_scopes(selected_client.mandatory_scopes, ",")
     optional_scopes = process_scopes(selected_client.optional_scopes, ",")
 
-    scopes = Enum.uniq(mandatory_scopes ++ optional_scopes ++ selected_scopes)
+    scopes = mandatory_scopes ++ optional_scopes ++ selected_scopes
+    scopes = scopes |> Enum.map(&String.downcase/1) |> Enum.uniq()
     state = build_state(socket.id, __MODULE__, assigns.id)
     stringified_scopes = Enum.join(selected_scopes, " ")
 
@@ -383,6 +384,7 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
   defp process_scopes(scopes_string, delimiter) do
     scopes_string
     |> to_string()
+    |> String.downcase()
     |> String.split(delimiter)
     |> Enum.reject(&(&1 == ""))
   end
@@ -510,7 +512,8 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
             scopes={@scopes}
             selected_scopes={@selected_scopes}
             mandatory_scopes={@mandatory_scopes}
-            doc_url={@selected_client.scopes_doc_url}
+            disabled={!@selected_client}
+            doc_url={@selected_client && @selected_client.scopes_doc_url}
             provider={(@selected_client && @selected_client.name) || ""}
           />
 
@@ -543,8 +546,9 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
               provider={@selected_client.name}
               myself={@myself}
             />
+            <.missing_client_warning :if={!@selected_client} />
             <.userinfo
-              :if={@display_userinfo}
+              :if={@display_userinfo && @selected_client}
               myself={@myself}
               userinfo={@userinfo}
               socket={@socket}

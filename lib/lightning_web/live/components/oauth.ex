@@ -10,6 +10,7 @@ defmodule LightningWeb.Components.Oauth do
   attr :scopes, :any, required: true
   attr :provider, :string, required: true
   attr :doc_url, :any, default: nil
+  attr :disabled, :boolean, default: false
 
   def scopes_picklist(assigns) do
     ~H"""
@@ -40,8 +41,8 @@ defmodule LightningWeb.Components.Oauth do
             type="checkbox"
             name={scope}
             value={scope}
-            checked={scope in @selected_scopes}
-            disabled={scope in @mandatory_scopes}
+            checked={scope in @selected_scopes or scope in @mandatory_scopes}
+            disabled={scope in @mandatory_scopes || @disabled}
             phx-change={@on_change}
             phx-target={@target}
             label={scope}
@@ -301,6 +302,37 @@ defmodule LightningWeb.Components.Oauth do
             here
             <Heroicons.arrow_top_right_on_square class="h-4 w-4 text-indigo-600 inline-block" />.
           </.link>.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+    """
+  end
+
+  def missing_client_warning(assigns) do
+    ~H"""
+    <div class="rounded-md bg-yellow-50 p-4 mb-4">
+      <div class="flex">
+        <div class="flex-shrink-0">
+          <svg
+            class="h-5 w-5 text-yellow-400"
+            viewBox="0 0 20 20"
+            fill="currentColor"
+            aria-hidden="true"
+          >
+            <path
+              fill-rule="evenodd"
+              d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z"
+              clip-rule="evenodd"
+            />
+          </svg>
+        </div>
+        <div class="ml-3">
+          <h3 class="text-sm font-medium text-yellow-800">Something went wrong.</h3>
+          <div class="mt-2 text-sm text-yellow-700">
+            <p>
+              The Oauth client associated with this credential is not found. The token won't be refreshed and your userinfos won't be accessible.
             </p>
           </div>
         </div>
