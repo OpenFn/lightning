@@ -3613,7 +3613,7 @@ defmodule LightningWeb.ProjectLiveTest do
 
         refute has_element?(view, "#reconnect-project-button")
 
-        assert html =~ "Your project is all setup"
+        assert html =~ "Your repository is properly configured."
       end
     end
 
