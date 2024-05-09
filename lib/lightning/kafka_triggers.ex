@@ -27,6 +27,8 @@ defmodule Lightning.KafkaTriggers do
     updated_partition_timestamps =
       partition_timestamps
       |> case do
+        existing = %{^partition_key => existing_timestamp} when existing_timestamp < timestamp ->
+          existing |> Map.merge(%{partition_key => timestamp})
         existing = %{^partition_key => _existing_timestamp} ->
           existing
         existing ->
