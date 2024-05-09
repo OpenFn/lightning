@@ -336,7 +336,7 @@ defmodule LightningWeb.CredentialLive.OauthClientFormComponent do
 
       :new ->
         params =
-          add_new_client_specific_fields(oauth_client_params, socket)
+          add_new_client_specific_fields(params, socket)
 
         create_oauth_client(socket, params)
     end

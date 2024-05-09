@@ -2,6 +2,9 @@ defmodule Lightning.Projects do
   @moduledoc """
   The Projects context.
   """
+  alias Lightning.Credentials.OauthClient
+  alias Lightning.Projects.ProjectOauthClient
+
   use Oban.Worker,
     queue: :background,
     max_attempts: 1
@@ -167,6 +170,31 @@ defmodule Lightning.Projects do
       select: u.email
     )
     |> Repo.all()
+  end
+
+  def insert_with_global_oauth_clients(changeset) do
+    case Repo.insert(changeset) do
+      {:ok, project} ->
+        associate_global_oauth_clients(project)
+        {:ok, project}
+
+      error ->
+        error
+    end
+  end
+
+  defp associate_global_oauth_clients(%Project{id: project_id}) do
+    # Fetch global OAuth clients
+    global_clients = Repo.all(from c in OauthClient, where: c.global)
+
+    # Associate each global OAuth client with the new project
+    Enum.each(global_clients, fn %OauthClient{id: oauth_client_id} ->
+      %ProjectOauthClient{
+        oauth_client_id: oauth_client_id,
+        project_id: project_id
+      }
+      |> Repo.insert()
+    end)
   end
 
   @doc """

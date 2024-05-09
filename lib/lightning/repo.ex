@@ -5,37 +5,6 @@ defmodule Lightning.Repo do
 
   use Scrivener, page_size: 10
 
-  import Ecto.Query
-
-  alias Lightning.Credentials.OauthClient
-  alias Lightning.Projects.Project
-  alias Lightning.Projects.ProjectOauthClient
-
-  def insert_with_global_oauth_clients(changeset) do
-    case insert(changeset) do
-      {:ok, project} ->
-        associate_global_oauth_clients(project)
-        {:ok, project}
-
-      error ->
-        error
-    end
-  end
-
-  defp associate_global_oauth_clients(%Project{id: project_id}) do
-    # Fetch global OAuth clients
-    global_clients = all(from c in OauthClient, where: c.global)
-
-    # Associate each global OAuth client with the new project
-    Enum.each(global_clients, fn %OauthClient{id: oauth_client_id} ->
-      %ProjectOauthClient{
-        oauth_client_id: oauth_client_id,
-        project_id: project_id
-      }
-      |> insert()
-    end)
-  end
-
   @doc """
   A small wrapper around `Repo.transaction/2`.
 
