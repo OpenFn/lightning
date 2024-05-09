@@ -3,6 +3,7 @@ defmodule Lightning.AccountsFixtures do
   This module defines test helpers for creating
   entities via the `Lightning.Accounts` context.
   """
+  alias Lightning.Factories
 
   def unique_user_email, do: "user#{System.unique_integer()}@example.com"
   def valid_user_password, do: "hello world!"
@@ -17,12 +18,7 @@ defmodule Lightning.AccountsFixtures do
   end
 
   def user_fixture(attrs \\ []) when is_list(attrs) do
-    {:ok, user} =
-      attrs
-      |> valid_user_attributes()
-      |> Lightning.Accounts.register_user()
-
-    user
+    Factories.insert(:user, valid_user_attributes(attrs))
   end
 
   def superuser_fixture(attrs \\ []) when is_list(attrs) do

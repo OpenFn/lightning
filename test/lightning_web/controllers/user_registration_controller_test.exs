@@ -4,19 +4,18 @@ defmodule LightningWeb.UserRegistrationControllerTest do
   import Lightning.AccountsFixtures
   import Mox
 
-  setup :verify_on_exit!
+  setup do
+    verify_on_exit!()
 
-  Mox.stub_with(Lightning.MockConfig, Lightning.Config.API)
+    Mox.stub(Lightning.MockConfig, :check_flag?, fn
+      :allow_signup -> true
+      :init_project_for_new_user -> false
+    end)
+
+    :ok
+  end
 
   describe "GET /users/register" do
-    setup do
-      expect(Lightning.MockConfig, :check_flag?, fn _flag ->
-        true
-      end)
-
-      :ok
-    end
-
     test "renders registration page", %{conn: conn} do
       conn = get(conn, Routes.user_registration_path(conn, :new))
       response = html_response(conn, 200)
@@ -36,14 +35,6 @@ defmodule LightningWeb.UserRegistrationControllerTest do
   end
 
   describe "POST /users/register" do
-    setup do
-      expect(Lightning.MockConfig, :check_flag?, fn _flag ->
-        true
-      end)
-
-      :ok
-    end
-
     @tag :capture_log
     test "creates account and logs the user in", %{conn: conn} do
       email = unique_user_email()
@@ -70,13 +61,10 @@ defmodule LightningWeb.UserRegistrationControllerTest do
       conn: conn
     } do
       # Modify the env so that we created new projects for new users
-      Application.put_env(:lightning, :init_project_for_new_user, true)
+      Lightning.MockConfig
+      |> expect(:check_flag?, fn :allow_signup -> true end)
+      |> expect(:check_flag?, fn :init_project_for_new_user -> true end)
 
-      # conn
-      # |> post(~p"/users/confirm",
-      #   user: valid_user_attributes(first_name: "Emory")
-      # )
-      # |> get("/")
       conn =
         conn
         |> post(~p"/users/register",
@@ -103,9 +91,6 @@ defmodule LightningWeb.UserRegistrationControllerTest do
       assert project
              |> Lightning.Projects.project_steps_query()
              |> Lightning.Repo.aggregate(:count, :id) == 0
-
-      # Set this back to the default "false" before finishing the test
-      Application.put_env(:lightning, :init_project_for_new_user, false)
     end
 
     test "render errors for invalid data", %{conn: conn} do

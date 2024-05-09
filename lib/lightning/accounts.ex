@@ -369,7 +369,10 @@ defmodule Lightning.Accounts do
         struct(User, data)
         |> Repo.insert()
         |> tap(fn result ->
-          with {:ok, user} <- result, do: Events.user_registered(user)
+          with {:ok, user} <- result do
+            Events.user_registered(user)
+            deliver_user_confirmation_instructions(user)
+          end
         end)
 
       {:error, changeset} ->
@@ -802,45 +805,35 @@ defmodule Lightning.Accounts do
 
   ## Examples
 
-      iex> deliver_user_confirmation_instructions(user, &Routes.user_confirmation_url(conn, :edit, &1))
+      iex> deliver_user_confirmation_instructions(user)
       {:ok, %{to: ..., body: ...}}
 
-      iex> deliver_user_confirmation_instructions(confirmed_user, &Routes.user_confirmation_url(conn, :edit, &1))
+      iex> deliver_user_confirmation_instructions(confirmed_user)
       {:error, :already_confirmed}
 
   """
-  def deliver_user_confirmation_instructions(
-        %User{} = user,
-        confirmation_url_fun
-      )
-      when is_function(confirmation_url_fun, 1) do
+  def deliver_user_confirmation_instructions(%User{} = user) do
     if user.confirmed_at do
       {:error, :already_confirmed}
     else
-      encoded_token = build_email_token(user)
-
       UserNotifier.deliver_confirmation_instructions(
         user,
-        confirmation_url_fun.(encoded_token)
+        build_email_token(user)
       )
     end
   end
 
   def deliver_user_confirmation_instructions(
         %User{} = registerer,
-        %User{} = user,
-        confirmation_url_fun
-      )
-      when is_function(confirmation_url_fun, 1) do
+        %User{} = user
+      ) do
     if user.confirmed_at do
       {:error, :already_confirmed}
     else
-      encoded_token = build_email_token(user)
-
       UserNotifier.deliver_confirmation_instructions(
         registerer,
         user,
-        confirmation_url_fun.(encoded_token)
+        build_email_token(user)
       )
     end
   end
