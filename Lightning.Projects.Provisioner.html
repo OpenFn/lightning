@@ -216,7 +216,7 @@ ahead of time in the case of new records.</p>
     </a>
     <h1 class="signature" translate="no">import_document(project, user, data)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/provisioner.ex#L35" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/provisioner.ex#L38" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -234,7 +234,9 @@ ahead of time in the case of new records.</p>
   | <a href="Lightning.VersionControl.ProjectRepoConnection.html#t:t/0">Lightning.VersionControl.ProjectRepoConnection.t</a>(),
   <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>()
 ) ::
-  {:error, <a href="https://hexdocs.pm/ecto/3.10.3/Ecto.Changeset.html#t:t/1">Ecto.Changeset.t</a>(<a href="Lightning.Projects.Project.html#t:t/0">Lightning.Projects.Project.t</a>())}
+  {:error,
+   <a href="https://hexdocs.pm/ecto/3.10.3/Ecto.Changeset.html#t:t/1">Ecto.Changeset.t</a>(<a href="Lightning.Projects.Project.html#t:t/0">Lightning.Projects.Project.t</a>())
+   | <a href="Lightning.Extensions.UsageLimiting.html#t:message/0">Lightning.Extensions.UsageLimiting.message</a>()}
   | {:ok, <a href="Lightning.Projects.Project.html#t:t/0">Lightning.Projects.Project.t</a>()}</pre>
 
       </div>
@@ -251,7 +253,7 @@ ahead of time in the case of new records.</p>
     </a>
     <h1 class="signature" translate="no">parse_document(project, data)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/provisioner.ex#L55" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/provisioner.ex#L61" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -280,7 +282,7 @@ ahead of time in the case of new records.</p>
     </a>
     <h1 class="signature" translate="no">preload_dependencies(project)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/provisioner.ex#L102" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/provisioner.ex#L108" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -309,7 +311,7 @@ ahead of time in the case of new records.</p>
     </a>
     <h1 class="signature" translate="no">validate_extraneous_params(changeset)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/provisioner.ex#L218" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/provisioner.ex#L224" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
