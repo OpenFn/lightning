@@ -17,6 +17,9 @@ and this project adheres to
 
 ### Added
 
+- Add Github sync to usage limiter
+  [#2031](https://github.com/OpenFn/lightning/pull/2031)
+
 ### Changed
 
 ### Fixed
