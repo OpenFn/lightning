@@ -10,7 +10,7 @@ defmodule Lightning.KafkaTriggers.PipelineTest do
     test "starts a Broadway GenServer process with SASL credentials" do
       group_id = "my_group"
       hosts = [{"localhost", 9092}]
-      name = "my_pipeline"
+      trigger_id = :my_trigger_id
       sasl = {"plain", "my_username", "my_secret"}
       sasl_expected = {:plain, "my_username", "my_secret"}
       ssl = true
@@ -22,7 +22,7 @@ defmodule Lightning.KafkaTriggers.PipelineTest do
         Pipeline.start_link(
           group_id: group_id,
           hosts: hosts,
-          name: name,
+          trigger_id: trigger_id,
           sasl: sasl,
           ssl: ssl,
           topics: topics
@@ -30,9 +30,9 @@ defmodule Lightning.KafkaTriggers.PipelineTest do
 
         assert called Broadway.start_link(
           Pipeline,
-          name: name,
+          name: trigger_id,
           context: %{
-            name: name,
+            trigger_id: trigger_id,
           },
           producer: [
             module:
@@ -64,7 +64,7 @@ defmodule Lightning.KafkaTriggers.PipelineTest do
     test "starts a Broadway GenServer process without SASL credentials" do
       group_id = "my_group"
       hosts = [{"localhost", 9092}]
-      name = "my_pipeline"
+      trigger_id = :my_trigger_id
       sasl = nil
       ssl = true
       topics = ["my_topic"]
@@ -75,7 +75,7 @@ defmodule Lightning.KafkaTriggers.PipelineTest do
         Pipeline.start_link(
           group_id: group_id,
           hosts: hosts,
-          name: name,
+          trigger_id: trigger_id,
           sasl: sasl,
           ssl: ssl,
           topics: topics
@@ -83,9 +83,9 @@ defmodule Lightning.KafkaTriggers.PipelineTest do
 
         assert called Broadway.start_link(
           Pipeline,
-          name: name,
+          name: trigger_id,
           context: %{
-            name: name,
+            trigger_id: trigger_id,
           },
           producer: [
             module:
