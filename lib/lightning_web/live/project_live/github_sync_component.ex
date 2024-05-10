@@ -495,7 +495,7 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
             </div>
             <div class="ml-3">
               <p class="text-sm font-medium text-green-800">
-                Your project is all setup
+                Your repository is properly configured.
               </p>
             </div>
             <div class="ml-auto pl-3">
