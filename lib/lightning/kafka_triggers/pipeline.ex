@@ -56,6 +56,7 @@ defmodule Lightning.KafkaTriggers.Pipeline do
   defp build_producer_opts(opts) do
     hosts = opts |> Keyword.get(:hosts)
     group_id = opts |> Keyword.get(:group_id)
+    offset_reset_policy = opts |> Keyword.get(:offset_reset_policy)
     topics = opts |> Keyword.get(:topics)
 
     [
@@ -63,7 +64,7 @@ defmodule Lightning.KafkaTriggers.Pipeline do
       hosts: hosts,
       group_id: group_id,
       topics: topics,
-      offset_reset_policy: :earliest,
+      offset_reset_policy: offset_reset_policy,
     ]
   end
 
