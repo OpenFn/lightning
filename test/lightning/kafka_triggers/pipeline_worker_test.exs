@@ -138,6 +138,12 @@ defmodule Lightning.KafkaTriggers.PipelineWorkerTest do
       end
     end
 
+    # test "uses earliest partition timestamp for offset if there is data", %{
+    #   pid: pid
+    # } do
+    #
+    # end
+
     test "returns :ok" do
       with_mock Supervisor,
         [
@@ -150,6 +156,7 @@ defmodule Lightning.KafkaTriggers.PipelineWorkerTest do
 
     defp configuration(opts) do
       index = opts |> Keyword.get(:index)
+      partition_timestamps = opts |> Keyword.get(:partition_timestamps, %{})
       sasl = opts |> Keyword.get(:sasl, true)
       ssl = opts |> Keyword.get(:ssl, true)
 
@@ -159,9 +166,13 @@ defmodule Lightning.KafkaTriggers.PipelineWorkerTest do
                       nil
                     end
 
+      initial_offset_reset_policy = "171524976732#{index}" |> String.to_integer()
+
       %{
         "group_id" => "lightning-#{index}",
         "hosts" => [["host-#{index}", 9092], ["other-host-#{index}", 9093]],
+        "initial_offset_reset_policy" => initial_offset_reset_policy,
+        "partition_timestamps" => partition_timestamps,
         "sasl" => sasl_config,
         "ssl" => ssl,
         "topics" => ["topic-#{index}-1", "topic-#{index}-2"]
@@ -171,6 +182,12 @@ defmodule Lightning.KafkaTriggers.PipelineWorkerTest do
     defp child_spec(opts) do
       trigger = opts |> Keyword.get(:trigger)
       index = opts |> Keyword.get(:index)
+      offset_reset_policy =
+        opts
+        |> Keyword.get(
+          :offset_reset_policy,
+          "171524976732#{index}" |> String.to_integer()
+        )
       sasl = opts |> Keyword.get(:sasl, true)
       ssl = opts |> Keyword.get(:ssl, true)
 
@@ -183,6 +200,7 @@ defmodule Lightning.KafkaTriggers.PipelineWorkerTest do
             [
               group_id: "lightning-#{index}",
               hosts: [{"host-#{index}", 9092}, {"other-host-#{index}", 9093}],
+              offset_reset_policy: offset_reset_policy,
               trigger_id: trigger.id |> String.to_atom(),
               sasl: sasl_config(index, sasl),
               ssl: ssl,
