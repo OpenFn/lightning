@@ -291,26 +291,6 @@ defmodule Lightning.Credentials do
     end
   end
 
-  # Migration only
-  def migrate_credential_body(
-        %Credential{body: body, schema: schema_name} = credential
-      ) do
-    case put_typed_body(body, schema_name) do
-      {:ok, ^body} ->
-        :ok
-
-      {:ok, changed_body} ->
-        credential
-        |> change_credential(%{body: changed_body})
-        |> Repo.update!()
-
-      {:error, %Ecto.Changeset{errors: errors}} ->
-        Logger.warning(fn ->
-          "Casting credential on migration failed with reason: #{inspect(errors)}"
-        end)
-    end
-  end
-
   defp cast_body_change(
          %Ecto.Changeset{valid?: true, changes: %{body: body}} = changeset
        ) do

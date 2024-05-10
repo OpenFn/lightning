@@ -554,51 +554,6 @@ defmodule Lightning.CredentialsTest do
     end
   end
 
-  describe "migrate_credential_body/1" do
-    test "casts body to field types based on schema" do
-      user = insert(:user)
-
-      %Lightning.Projects.Project{id: project_id} =
-        insert(:project,
-          name: "some-name",
-          project_users: [%{user_id: user.id}]
-        )
-
-      body = %{
-        "user" => "user1",
-        "password" => "pass1",
-        "host" => "https://dbhost",
-        "database" => "test_db",
-        "port" => "5000",
-        "ssl" => "true",
-        "allowSelfSignedCert" => "false"
-      }
-
-      %{id: id} =
-        insert(:credential,
-          name: "Test Postgres",
-          user_id: user.id,
-          body: body,
-          project_credentials: [
-            %{project_id: project_id}
-          ],
-          schema: "postgresql"
-        )
-
-      assert %Credential{body: updated_body} =
-               Repo.all(Credential)
-               |> Enum.find(&(&1.id == id))
-               |> Credentials.migrate_credential_body()
-
-      assert updated_body ==
-               Map.merge(body, %{
-                 "port" => 5000,
-                 "ssl" => true,
-                 "allowSelfSignedCert" => false
-               })
-    end
-  end
-
   describe "has_activity_in_projects?/1" do
     setup do
       {:ok, credential: insert(:credential)}
