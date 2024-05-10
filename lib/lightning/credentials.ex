@@ -18,7 +18,6 @@ defmodule Lightning.Credentials do
   alias Lightning.Credentials.SchemaDocument
   alias Lightning.Credentials.SensitiveValues
   alias Lightning.Projects.Project
-  # alias Lightning.Projects.ProjectCredential
   alias Lightning.Repo
 
   require Logger

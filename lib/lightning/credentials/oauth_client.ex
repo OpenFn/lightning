@@ -13,6 +13,7 @@ defmodule Lightning.Credentials.OauthClient do
   alias Lightning.Accounts.User
   alias Lightning.Credentials.Credential
   alias Lightning.Projects.ProjectOauthClient
+  alias Lightning.Validators
 
   @type t :: %__MODULE__{
           __meta__: Ecto.Schema.Metadata.t(),
@@ -78,29 +79,13 @@ defmodule Lightning.Credentials.OauthClient do
       :authorization_endpoint,
       :token_endpoint
     ])
-    |> validate_url(:authorization_endpoint)
-    |> validate_url(:token_endpoint)
-    |> validate_url(:userinfo_endpoint)
-    |> validate_url(:scopes_doc_url)
+    |> Validators.validate_url(:authorization_endpoint)
+    |> Validators.validate_url(:token_endpoint)
+    |> Validators.validate_url(:userinfo_endpoint)
+    |> Validators.validate_url(:scopes_doc_url)
     |> cast_assoc(:project_oauth_clients,
       with: &ProjectOauthClient.changeset/2
     )
     |> assoc_constraint(:user)
-  end
-
-  defp validate_url(changeset, field) do
-    validate_change(changeset, field, fn _, value ->
-      case valid_url?(value) do
-        true -> []
-        false -> [{field, "must be a valid URL"}]
-      end
-    end)
-  end
-
-  defp valid_url?(url) when is_binary(url) do
-    Regex.match?(
-      ~r/^(https?:\/\/)?([\da-z\.-]+)\.([a-z\.]{2,6})([\/\w \.-]*)*\/?$/i,
-      url
-    )
   end
 end

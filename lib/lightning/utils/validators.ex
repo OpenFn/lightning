@@ -79,4 +79,23 @@ defmodule Lightning.Validators do
         changeset
     end
   end
+
+  @doc """
+  Validate that a field is a valid URL.
+  """
+  @spec validate_url(Ecto.Changeset.t(), atom()) :: Ecto.Changeset.t()
+  def validate_url(changeset, field) do
+    validate_change(changeset, field, fn _, value ->
+      with url when is_binary(url) <- value,
+           true <-
+             Regex.match?(
+               ~r/^(https?:\/\/)?([\da-z\.-]+)\.([a-z\.]{2,6})([\/\w \.-]*)*\/?$/i,
+               url
+             ) do
+        []
+      else
+        _ -> [{field, "must be a valid URL"}]
+      end
+    end)
+  end
 end
