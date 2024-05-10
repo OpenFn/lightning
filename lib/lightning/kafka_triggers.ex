@@ -43,4 +43,27 @@ defmodule Lightning.KafkaTriggers do
     |> Trigger.changeset(%{kafka_configuration: updated_kafka_configuration})
     |> Repo.update()
   end
+
+  def determine_offset_reset_policy(trigger) do
+    %Trigger{kafka_configuration: kafka_configuration} = trigger
+
+    case kafka_configuration do
+      config = %{"partition_timestamps" => ts} when map_size(ts) == 0 ->
+        initial_policy(config)
+      %{"partition_timestamps" => ts} ->
+        earliest_timestamp(ts)
+    end
+  end
+
+  defp initial_policy(%{"initial_offset_reset_policy" => initial_policy}) do
+    case initial_policy do
+      policy when is_integer(policy) -> policy
+      policy when policy in ["earliest", "latest"] -> policy |> String.to_atom()
+      _unrecognised_policy -> :latest
+    end
+  end
+
+  defp earliest_timestamp(timestamps) do
+    timestamps |> Map.values() |> Enum.sort |> hd()
+  end
 end
