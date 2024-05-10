@@ -138,12 +138,6 @@ defmodule Lightning.KafkaTriggers.PipelineWorkerTest do
       end
     end
 
-    # test "uses earliest partition timestamp for offset if there is data", %{
-    #   pid: pid
-    # } do
-    #
-    # end
-
     test "returns :ok" do
       with_mock Supervisor,
         [

@@ -19,7 +19,6 @@ defmodule Lightning.KafkaTriggers.PipelineWorker do
           %{
             "group_id" => group_id,
             "hosts" => hosts_list,
-            # "initial_offset_reset_policy" => initial_offset_reset_policy,
             "sasl" => sasl_options,
             "ssl" => ssl,
             "topics" => topics,

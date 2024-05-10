@@ -10,11 +10,12 @@ defmodule Lightning.KafkaTriggers.PipelineTest do
     test "starts a Broadway GenServer process with SASL credentials" do
       group_id = "my_group"
       hosts = [{"localhost", 9092}]
-      trigger_id = :my_trigger_id
+      offset_reset_policy = :latest
       sasl = {"plain", "my_username", "my_secret"}
       sasl_expected = {:plain, "my_username", "my_secret"}
       ssl = true
       topics = ["my_topic"]
+      trigger_id = :my_trigger_id
 
       with_mock Broadway,
         [start_link: fn _module, _opts -> {:ok, "fake-pid"} end] do
@@ -22,10 +23,11 @@ defmodule Lightning.KafkaTriggers.PipelineTest do
         Pipeline.start_link(
           group_id: group_id,
           hosts: hosts,
-          trigger_id: trigger_id,
+          offset_reset_policy: offset_reset_policy,
           sasl: sasl,
           ssl: ssl,
-          topics: topics
+          topics: topics,
+          trigger_id: trigger_id
         )
 
         assert called Broadway.start_link(
@@ -46,7 +48,7 @@ defmodule Lightning.KafkaTriggers.PipelineTest do
                 hosts: hosts,
                 group_id: group_id,
                 topics: topics,
-                offset_reset_policy: :earliest
+                offset_reset_policy: offset_reset_policy
               ]
             },
             concurrency: 1
@@ -64,10 +66,11 @@ defmodule Lightning.KafkaTriggers.PipelineTest do
     test "starts a Broadway GenServer process without SASL credentials" do
       group_id = "my_group"
       hosts = [{"localhost", 9092}]
-      trigger_id = :my_trigger_id
+      offset_reset_policy = :latest
       sasl = nil
       ssl = true
       topics = ["my_topic"]
+      trigger_id = :my_trigger_id
 
       with_mock Broadway,
         [start_link: fn _module, _opts -> {:ok, "fake-pid"} end] do
@@ -75,10 +78,11 @@ defmodule Lightning.KafkaTriggers.PipelineTest do
         Pipeline.start_link(
           group_id: group_id,
           hosts: hosts,
-          trigger_id: trigger_id,
+          offset_reset_policy: offset_reset_policy,
           sasl: sasl,
           ssl: ssl,
-          topics: topics
+          topics: topics,
+          trigger_id: trigger_id
         )
 
         assert called Broadway.start_link(
@@ -96,7 +100,7 @@ defmodule Lightning.KafkaTriggers.PipelineTest do
                 hosts: hosts,
                 group_id: group_id,
                 topics: topics,
-                offset_reset_policy: :earliest
+                offset_reset_policy: offset_reset_policy
               ]
             },
             concurrency: 1
