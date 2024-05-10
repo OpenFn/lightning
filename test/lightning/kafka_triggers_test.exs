@@ -141,4 +141,74 @@ defmodule Lightning.KafkaTriggersTest do
       assert partition_timestamps == expected_partition_timestamps
     end
   end
+
+  describe ".determine_offset_reset_policy" do
+    test "returns :earliest if 'earliest'" do
+      policy =
+        "earliest"
+        |> build_trigger()
+        |> KafkaTriggers.determine_offset_reset_policy()
+
+      assert policy == :earliest
+    end
+
+    test "returns :latest if 'latest'" do
+      policy =
+        "latest"
+        |> build_trigger()
+        |> KafkaTriggers.determine_offset_reset_policy()
+
+      assert policy == :latest
+    end
+
+    test "returns policy if integer (i.e. a timestamp)" do
+      timestamp = 1715312900123
+
+      policy =
+        timestamp
+        |> build_trigger()
+        |> KafkaTriggers.determine_offset_reset_policy()
+
+      assert policy == timestamp
+    end
+
+    test "returns :latest if unrecognised string" do
+      policy =
+        "woteva"
+        |> build_trigger()
+        |> KafkaTriggers.determine_offset_reset_policy()
+
+      assert policy == :latest
+    end
+
+    test "returns earliest partition timestamp if data is available" do
+      partition_timestamps = %{
+        "1" => 1715312900121,
+        "2" => 1715312900120,
+        "3" => 1715312900123,
+      }
+
+      policy =
+        "earliest"
+        |> build_trigger(partition_timestamps)
+        |> KafkaTriggers.determine_offset_reset_policy()
+
+      assert policy == 1715312900120
+    end
+
+    defp build_trigger(initial_offset_reset, partition_timestamps \\ %{}) do
+      # TODO Centralise the generation of config to avoid drift
+      kafka_configuration = %{
+        "group_id" => "lightning-1",
+        "hosts" => [["host-1", 9092], ["other-host-1", 9093]],
+        "initial_offset_reset_policy" => initial_offset_reset,
+        "partition_timestamps" => partition_timestamps,
+        "sasl" => nil,
+        "ssl" => false,
+        "topics" => ["bar_topic"]
+      }
+
+      build(:trigger, type: :kafka, kafka_configuration: kafka_configuration)
+    end
+  end
 end
