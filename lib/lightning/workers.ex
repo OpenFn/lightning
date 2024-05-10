@@ -48,6 +48,9 @@ defmodule Lightning.Workers do
         "exp",
         fn ->
           Lightning.current_time()
+          |> DateTime.add(
+            Application.get_env(:lightning, :max_run_duration_seconds)
+          )
           |> DateTime.add(Lightning.Config.grace_period())
           |> DateTime.to_unix()
         end,
