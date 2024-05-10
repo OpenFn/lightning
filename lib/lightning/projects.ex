@@ -2,9 +2,6 @@ defmodule Lightning.Projects do
   @moduledoc """
   The Projects context.
   """
-  alias Lightning.Credentials.OauthClient
-  alias Lightning.Projects.ProjectOauthClient
-
   use Oban.Worker,
     queue: :background,
     max_attempts: 1
@@ -14,6 +11,7 @@ defmodule Lightning.Projects do
   alias Ecto.Multi
   alias Lightning.Accounts.User
   alias Lightning.Accounts.UserNotifier
+  alias Lightning.Credentials.OauthClient
   alias Lightning.ExportUtils
   alias Lightning.Invocation.Dataclip
   alias Lightning.Invocation.LogLine
@@ -21,15 +19,16 @@ defmodule Lightning.Projects do
   alias Lightning.Projects.Events
   alias Lightning.Projects.Project
   alias Lightning.Projects.ProjectCredential
+  alias Lightning.Projects.ProjectOauthClient
   alias Lightning.Projects.ProjectUser
   alias Lightning.Projects.ProjectUser
   alias Lightning.Repo
   alias Lightning.Run
   alias Lightning.RunStep
+  alias Lightning.WorkOrder
   alias Lightning.Workflows.Job
   alias Lightning.Workflows.Trigger
   alias Lightning.Workflows.Workflow
-  alias Lightning.WorkOrder
 
   require Logger
 

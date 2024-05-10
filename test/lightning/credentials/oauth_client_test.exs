@@ -53,7 +53,7 @@ defmodule Lightning.Credentials.OauthClientTest do
       changeset = OauthClient.changeset(%OauthClient{}, @invalid_attrs)
 
       Enum.each(url_fields, fn field ->
-        assert {"must be a valid URL", []} == changeset.errors[field]
+        assert {"must be either a http or https URL", []} == changeset.errors[field]
       end)
     end
 

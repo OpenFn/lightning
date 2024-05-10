@@ -28,6 +28,7 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
       Application.fetch_env!(:lightning, LightningWeb)
       |> Keyword.get(:allow_credential_transfer)
 
+<<<<<<< HEAD
     updated_socket =
       socket
       |> assign(scopes: [])
@@ -39,11 +40,24 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
       |> assign(oauth_clients: [])
       |> assign(allow_credential_transfer: allow_credential_transfer)
 
+=======
+>>>>>>> 4286083d0 (Tweaks)
     {:ok, schemas_path} = Application.fetch_env(:lightning, :schemas_path)
 
-    type_options = get_type_options(updated_socket, schemas_path)
+    type_options = get_type_options(schemas_path)
 
-    {:ok, assign(updated_socket, type_options: type_options)}
+    {:ok,
+     socket
+     |> assign(
+       scopes: [],
+       scopes_changed: false,
+       schema: false,
+       available_projects: [],
+       selected_projects: [],
+       oauth_clients: [],
+       allow_credential_transfer: allow_credential_transfer,
+       type_options: type_options
+     )}
   end
 
   @impl true
@@ -631,7 +645,7 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
     end
   end
 
-  defp get_type_options(socket, schemas_path) do
+  defp get_type_options(schemas_path) do
     schemas_options =
       Path.wildcard("#{schemas_path}/*.json")
       |> Enum.map(fn p ->
@@ -645,15 +659,14 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
     schemas_options
     |> Enum.concat([{"Raw JSON", "raw", nil, nil}])
     |> handle_oauth_item(
-      {"GoogleSheets", "googlesheets",
-       Routes.static_path(socket, "/images/oauth-2.png"), nil},
+      {"GoogleSheets", "googlesheets", ~p"/images/oauth-2.png", nil},
       get_in(oauth_clients_from_env, [:google, :client_id])
     )
     |> handle_oauth_item(
       {
         "Salesforce",
         "salesforce_oauth",
-        Routes.static_path(socket, "/images/oauth-2.png"),
+        ~p"/images/oauth-2.png",
         nil
       },
       get_in(oauth_clients_from_env, [:salesforce, :client_id])

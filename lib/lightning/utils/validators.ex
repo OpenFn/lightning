@@ -87,12 +87,23 @@ defmodule Lightning.Validators do
   def validate_url(changeset, field) do
     validate_change(changeset, field, fn _, value ->
       with url when is_binary(url) <- value,
-           true <-
-             Regex.match?(
-               ~r/^(https?:\/\/)?([\da-z\.-]+)\.([a-z\.]{2,6})([\/\w \.-]*)*\/?$/i,
-               url
-             ) do
-        []
+           {:ok, uri} <- URI.new(url) do
+        cond do
+          uri.scheme not in ["http", "https"] ->
+            [{field, "must be either a http or https URL"}]
+
+          is_nil(uri.host) or byte_size(uri.host) == 0 ->
+            [{field, "host can't be blank"}]
+
+          byte_size(uri.host) > 255 ->
+            [{field, "host must be less than 255 characters"}]
+
+          not String.match?(uri.host, ~r/^[^-][\da-z\.]+[^-]$/i) ->
+            [{field, "host has invalid characters"}]
+
+          true ->
+            []
+        end
       else
         _ -> [{field, "must be a valid URL"}]
       end
