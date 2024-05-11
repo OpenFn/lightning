@@ -22,7 +22,7 @@ defmodule Lightning.CredentialsTest do
   describe "Model interactions" do
     @invalid_attrs %{body: nil, name: nil}
 
-    test "list_credentials_for_user/1 returns all credentials for given user" do
+    test "list_credentials/1 returns all credentials for given user" do
       user_1 = user_fixture()
       user_2 = user_fixture()
 
@@ -34,19 +34,13 @@ defmodule Lightning.CredentialsTest do
         credential_fixture(user_id: user_2.id)
         |> Repo.preload([:projects, :oauth_client])
 
-      assert Credentials.list_credentials_for_user(user_1.id) == [
+      assert Credentials.list_credentials(user_1) == [
                credential_1
              ]
 
-      assert Credentials.list_credentials_for_user(user_2.id) == [
+      assert Credentials.list_credentials(user_2) == [
                credential_2
              ]
-    end
-
-    test "list_credentials/0 returns all credentials" do
-      user = user_fixture()
-      credential = credential_fixture(user_id: user.id)
-      assert Credentials.list_credentials() == [credential]
     end
 
     test "list_credentials/1 returns all credentials for a project" do

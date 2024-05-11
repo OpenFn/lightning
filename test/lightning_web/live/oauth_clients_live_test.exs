@@ -149,7 +149,7 @@ defmodule LightningWeb.OauthClientsLiveTest do
                    client.name |> Phoenix.HTML.Safe.to_iodata() |> to_string()
 
           [project_names] =
-            OauthClients.list_clients_for_user(client.user_id)
+            OauthClients.list_clients(user)
             |> Enum.sort_by(&(&1.project_oauth_clients |> length))
             |> Enum.map(fn c ->
               Enum.map(c.projects, fn p -> p.name end)

@@ -283,9 +283,9 @@ defmodule Lightning.OauthClientsTest do
              |> Enum.count() === 2
     end
 
-    test "updating a client from global to non global, disassociates it with all the projects of the instance" do
+    test "updating a client from non global to global, doesn't affect project oauth clients" do
       user = insert(:user)
-      _project_1 = insert(:project, name: "Project 1")
+      project_1 = insert(:project, name: "Project 1")
       _project_2 = insert(:project, name: "Project 2")
 
       {:ok, client} =
@@ -296,72 +296,53 @@ defmodule Lightning.OauthClientsTest do
           authorization_endpoint: "https://www.example.com",
           token_endpoint: "https://www.example.com",
           user_id: user.id,
-          global: true
-        })
-
-      associations = Repo.all(ProjectOauthClient)
-
-      assert associations |> Enum.count() == 2
-
-      {:ok, client} =
-        OauthClients.update_client(client, %{global: false})
-
-      associations = Repo.all(ProjectOauthClient)
-
-      assert associations |> Enum.count() == 0
-
-      assert list_audits(client, "created")
-             |> Enum.count() === 1
-
-      assert list_audits(client, "updated")
-             |> Enum.count() === 1
-
-      assert list_audits(client, "removed_from_project")
-             |> Enum.count() === 2
-    end
-
-    test "updating a client from non global to global, associates it to all the projects of the insance" do
-      user = insert(:user)
-      _project_1 = insert(:project, name: "Project 1")
-      _project_2 = insert(:project, name: "Project 2")
-
-      {:ok, client} =
-        OauthClients.create_client(%{
-          name: "Global Client",
-          client_id: "client_id",
-          client_secret: "client_secret",
-          authorization_endpoint: "https://www.example.com",
-          token_endpoint: "https://www.example.com",
-          user_id: user.id,
-          global: false
+          global: false,
+          project_oauth_clients: [%{project_id: project_1.id}]
         })
 
       client = Repo.preload(client, :project_oauth_clients)
 
       associations = Repo.all(ProjectOauthClient)
 
-      assert associations |> Enum.count() == 0
+      assert associations |> Enum.count() == 1
+
+      assert list_audits(client, "updated")
+             |> Enum.count() == 0
+
+      assert list_audits(client, "created")
+             |> Enum.count() == 1
+
+      assert list_audits(client, "added_to_project")
+             |> Enum.count() == 1
+
+      assert list_audits(client, "removed_from_projects")
+             |> Enum.count() == 0
+
+      Repo.delete_all(Lightning.Auditing.Audit)
 
       {:ok, client} =
         OauthClients.update_client(client, %{global: true})
 
       associations = Repo.all(ProjectOauthClient)
 
-      assert associations |> Enum.count() == 2
-
-      assert list_audits(client, "created")
-             |> Enum.count() === 1
+      assert associations |> Enum.count() == 1
 
       assert list_audits(client, "updated")
-             |> Enum.count() === 1
+             |> Enum.count() == 1
+
+      assert list_audits(client, "created")
+             |> Enum.count() == 0
 
       assert list_audits(client, "added_to_project")
-             |> Enum.count() === 2
+             |> Enum.count() == 0
+
+      assert list_audits(client, "removed_from_projects")
+             |> Enum.count() == 0
     end
 
     test "updating a client from global to non global while associating it to specific projects, associates it only to those projects" do
       user = insert(:user)
-      project_1 = insert(:project, name: "Project 1")
+      _project_1 = insert(:project, name: "Project 1")
       _project_2 = insert(:project, name: "Project 2")
 
       {:ok, client} =
@@ -385,10 +366,17 @@ defmodule Lightning.OauthClientsTest do
       # To ignore the first addition due to setting the client as global
       Repo.delete_all(Lightning.Auditing.Audit)
 
+      project_3 = insert(:project, name: "Project 3")
+
       {:ok, client} =
         OauthClients.update_client(client, %{
           global: false,
-          project_oauth_clients: [%{project_id: project_1.id}]
+          project_oauth_clients:
+            associations
+            |> Enum.map(fn poc ->
+              %{id: poc.id, project_id: poc.project_id, delete: poc.delete}
+            end)
+            |> Enum.concat([%{project_id: project_3.id}])
         })
 
       associations = Repo.all(ProjectOauthClient)

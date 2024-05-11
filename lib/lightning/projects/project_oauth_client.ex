@@ -50,8 +50,14 @@ defmodule Lightning.Projects.ProjectOauthClient do
   end
 
   @doc false
-  def changeset(project_oauth_client, %{"delete" => "true"}) do
-    %{change(project_oauth_client, delete: true) | action: :delete}
+  def changeset(project_oauth_client, %{"delete" => delete_value})
+      when delete_value in ["true", true] do
+    change_delete_action(project_oauth_client)
+  end
+
+  def changeset(project_oauth_client, %{delete: delete_value})
+      when delete_value in ["true", true] do
+    change_delete_action(project_oauth_client)
   end
 
   @doc """
@@ -68,5 +74,9 @@ defmodule Lightning.Projects.ProjectOauthClient do
     |> unique_constraint([:project_id, :oauth_client_id],
       message: "oauth client already added to this project."
     )
+  end
+
+  defp change_delete_action(project_oauth_client) do
+    %{change(project_oauth_client, delete: true) | action: :delete}
   end
 end

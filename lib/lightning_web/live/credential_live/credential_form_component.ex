@@ -7,6 +7,7 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
   alias Lightning.Credentials
   alias LightningWeb.Components.NewInputs
   alias LightningWeb.CredentialLive.GenericOauthComponent
+  alias LightningWeb.CredentialLive.Helpers
   alias Phoenix.LiveView.JS
 
   @valid_assigns [
@@ -112,7 +113,10 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
       |> Enum.map(fn poc -> poc.project end)
 
     available_projects =
-      filter_available_projects(projects, selected_projects)
+      Helpers.filter_available_projects(
+        projects,
+        selected_projects
+      )
 
     {:ok,
      socket
@@ -135,8 +139,6 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
 
   @impl true
   def handle_event("validate", %{"credential" => credential_params}, socket) do
-    IO.inspect("ARE YOU CALLED FROM CREDENTIAL FORM?")
-
     changeset =
       Credentials.change_credential(
         socket.assigns.credential,
@@ -145,7 +147,7 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
       |> Map.put(:action, :validate)
 
     available_projects =
-      filter_available_projects(
+      Helpers.filter_available_projects(
         socket.assigns.projects,
         socket.assigns.selected_projects
       )
@@ -238,42 +240,11 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
   end
 
   def handle_event("add_new_project", %{"project_id" => project_id}, socket) do
-    selected =
-      socket.assigns.available_projects
-      |> Enum.find(fn project -> project_id == project.id end)
-
-    selected_projects = socket.assigns.selected_projects ++ [selected]
-
-    available_projects =
-      filter_available_projects(socket.assigns.projects, selected_projects)
-
-    {:noreply,
-     socket
-     |> assign(
-       available_projects: available_projects,
-       selected_projects: selected_projects,
-       selected_project: nil
-     )}
+    {:noreply, Helpers.select_project(socket, project_id)}
   end
 
   def handle_event("delete_project", %{"project_id" => project_id}, socket) do
-    selected =
-      socket.assigns.selected_projects
-      |> Enum.find(fn project -> project_id == project.id end)
-
-    selected_projects =
-      socket.assigns.selected_projects
-      |> Enum.reject(fn project -> project.id == selected.id end)
-
-    available_projects =
-      filter_available_projects(socket.assigns.projects, selected_projects)
-
-    {:noreply,
-     socket
-     |> assign(
-       available_projects: available_projects,
-       selected_projects: selected_projects
-     )}
+    {:noreply, Helpers.unselect_project(socket, project_id)}
   end
 
   def handle_event("save", %{"credential" => credential_params}, socket) do
@@ -281,7 +252,12 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
       maybe_add_oauth_specific_fields(socket, credential_params)
 
     if socket.assigns.can_create_project_credential do
-      project_credentials = prepare_projects(socket)
+      project_credentials =
+        Helpers.prepare_projects_associations(
+          socket.assigns.changeset,
+          socket.assigns.selected_projects,
+          :project_credentials
+        )
 
       credential_params =
         Map.put(credential_params, "project_credentials", project_credentials)
@@ -303,47 +279,6 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
     {:noreply,
      socket
      |> push_navigate(to: socket.assigns.return_to)}
-  end
-
-  defp prepare_projects(socket) do
-    project_credentials =
-      Ecto.Changeset.fetch_field!(
-        socket.assigns.changeset,
-        :project_credentials
-      )
-
-    selected_projects_ids =
-      Enum.map(socket.assigns.selected_projects, fn project -> project.id end)
-
-    projects_to_delete =
-      project_credentials
-      |> Enum.filter(fn poc -> poc.project_id not in selected_projects_ids end)
-      |> Enum.map(fn poc ->
-        %{
-          "id" => poc.id,
-          "project_id" => poc.project_id,
-          "delete" => "true"
-        }
-      end)
-
-    projects_to_keep =
-      project_credentials
-      |> Enum.filter(fn poc -> poc.project_id in selected_projects_ids end)
-      |> Enum.map(fn poc ->
-        %{
-          "id" => poc.id,
-          "project_id" => poc.project_id
-        }
-      end)
-
-    projects_to_add =
-      selected_projects_ids
-      |> Enum.reject(fn id ->
-        id in Enum.map(project_credentials, & &1.project_id)
-      end)
-      |> Enum.map(fn id -> %{"project_id" => id} end)
-
-    projects_to_delete ++ projects_to_add ++ projects_to_keep
   end
 
   @impl true
@@ -798,18 +733,6 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
 
       {:error, %Ecto.Changeset{} = changeset} ->
         {:noreply, assign(socket, :changeset, changeset)}
-    end
-  end
-
-  defp filter_available_projects(projects, selected_projects) do
-    if selected_projects == [] do
-      projects
-    else
-      existing_ids = Enum.map(selected_projects, fn project -> project.id end)
-
-      Enum.reject(projects, fn %{id: project_id} ->
-        project_id in existing_ids
-      end)
     end
   end
 end

@@ -10,6 +10,7 @@ defmodule Lightning.Credentials do
   import Lightning.Helpers, only: [coerce_json_field: 2]
 
   alias Ecto.Multi
+  alias Lightning.Accounts.User
   alias Lightning.Accounts.UserNotifier
   alias Lightning.AuthProviders.Common
   alias Lightning.Credentials
@@ -60,34 +61,33 @@ defmodule Lightning.Credentials do
   end
 
   @doc """
-  Returns the list of credentials.
+  Retrieves all credentials based on the given context, either a Project or a User.
+
+  ## Parameters
+
+    - context: The Project or User struct to retrieve credentials for.
+
+  ## Returns
+
+    - A list of credentials associated with the given Project or created by the given User.
 
   ## Examples
 
-      iex> list_credentials()
-      [%Credential{}, ...]
+    When given a Project:
+      iex> list_credentials(%Project{id: 1})
+      [%Credential{project_id: 1}, %Credential{project_id: 1}]
 
+    When given a User:
+      iex> list_credentials(%User{id: 123})
+      [%Credential{user_id: 123}, %Credential{user_id: 123}]
   """
-  def list_credentials do
-    Repo.all(Credential)
-  end
-
   def list_credentials(%Project{} = project) do
     Ecto.assoc(project, :credentials)
     |> preload([:user, :project_credentials, :projects, :oauth_client])
     |> Repo.all()
   end
 
-  @doc """
-  Returns the list of credentials for a given user.
-
-  ## Examples
-
-      iex> list_credentials_for_user(123)
-      [%Credential{user_id: 123}, %Credential{user_id: 123},...]
-
-  """
-  def list_credentials_for_user(user_id) do
+  def list_credentials(%User{id: user_id}) do
     from(c in Credential,
       where: c.user_id == ^user_id,
       preload: [:projects, :oauth_client]

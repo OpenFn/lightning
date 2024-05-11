@@ -332,7 +332,7 @@ defmodule LightningWeb.Components.Oauth do
           <h3 class="text-sm font-medium text-red-800">Oauth client not found.</h3>
           <div class="mt-2 text-sm text-red-700">
             <p>
-            The associated Oauth client for this credential cannot be found. Create a new client or contact your administrator.
+              The associated Oauth client for this credential cannot be found. Create a new client or contact your administrator.
             </p>
           </div>
         </div>

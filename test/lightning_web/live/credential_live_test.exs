@@ -1,4 +1,5 @@
 defmodule LightningWeb.CredentialLiveTest do
+  alias Lightning.Accounts.User
   use LightningWeb.ConnCase, async: false
 
   import Phoenix.LiveViewTest
@@ -69,7 +70,7 @@ defmodule LightningWeb.CredentialLiveTest do
                credential.name |> Phoenix.HTML.Safe.to_iodata() |> to_string()
 
       [[], project_names] =
-        Credentials.list_credentials_for_user(credential.user_id)
+        Credentials.list_credentials(%User{id: credential.user_id})
         |> Enum.sort_by(&(&1.project_credentials |> length))
         |> Enum.map(fn c ->
           Enum.map(c.projects, fn p -> p.name end)
@@ -898,7 +899,7 @@ defmodule LightningWeb.CredentialLiveTest do
       assert flash == %{"info" => "Credential created successfully"}
 
       credential =
-        Lightning.Credentials.list_credentials_for_user(user.id) |> List.first()
+        Lightning.Credentials.list_credentials(user) |> List.first()
 
       token =
         Lightning.AuthProviders.Common.TokenBody.new(credential.body)
@@ -1249,7 +1250,7 @@ defmodule LightningWeb.CredentialLiveTest do
       assert flash == %{"info" => "Credential created successfully"}
 
       credential =
-        Lightning.Credentials.list_credentials_for_user(user.id) |> List.first()
+        Lightning.Credentials.list_credentials(user) |> List.first()
 
       assert %{
                access_token: "ya29.a0AVvZ",
@@ -1602,7 +1603,7 @@ defmodule LightningWeb.CredentialLiveTest do
       assert flash == %{"info" => "Credential created successfully"}
 
       credential =
-        Lightning.Credentials.list_credentials_for_user(user.id) |> List.first()
+        Lightning.Credentials.list_credentials(user) |> List.first()
 
       token =
         Lightning.AuthProviders.Common.TokenBody.new(credential.body)
@@ -2152,7 +2153,7 @@ defmodule LightningWeb.CredentialLiveTest do
       assert flash == %{"info" => "Credential created successfully"}
 
       credential =
-        Lightning.Credentials.list_credentials_for_user(user.id) |> List.first()
+        Lightning.Credentials.list_credentials(user) |> List.first()
 
       token = Lightning.AuthProviders.Common.TokenBody.new(credential.body)
 
@@ -2384,7 +2385,7 @@ defmodule LightningWeb.CredentialLiveTest do
       assert flash == %{"info" => "Credential created successfully"}
 
       credential =
-        Lightning.Credentials.list_credentials_for_user(user.id) |> List.first()
+        Lightning.Credentials.list_credentials(user) |> List.first()
 
       token = Lightning.AuthProviders.Common.TokenBody.new(credential.body)
 

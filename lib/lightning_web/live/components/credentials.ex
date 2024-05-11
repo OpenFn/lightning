@@ -179,7 +179,7 @@ defmodule LightningWeb.Components.Credentials do
     <div class="col-span-3">
       <div>
         <label
-          for={"project_oauth_clients_list_for_#{@selected}"}
+          for={"project_credentials_list_for_#{@selected}"}
           class={["block text-sm font-semibold leading-6 text-slate-800"]}
         >
           Project
@@ -188,7 +188,7 @@ defmodule LightningWeb.Components.Credentials do
         <div class="flex w-full items-center gap-2 pb-3 mt-1">
           <div class="grow">
             <select
-              id={"project_oauth_clients_list_for_#{@selected}"}
+              id={"project_credentials_list_for_#{@selected}"}
               name={:project_id}
               class={[
                 "block w-full rounded-lg border border-secondary-300 bg-white",
@@ -284,12 +284,6 @@ defmodule LightningWeb.Components.Credentials do
     </fieldset>
     """
   end
-
-  # defp project_name(projects, id) do
-  #   Enum.find_value(projects, fn {name, project_id} ->
-  #     if project_id == id, do: name
-  #   end)
-  # end
 
   attr :id, :string, required: true
   attr :options, :list, required: true
