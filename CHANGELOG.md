@@ -22,6 +22,9 @@ and this project adheres to
 
 ### Changed
 
+- Remove illogical cancel buttons on user/pass change screen
+  [#2067](https://github.com/OpenFn/lightning/issues/2067)
+
 ### Fixed
 
 ## [v2.4.6] - 2024-05-08
