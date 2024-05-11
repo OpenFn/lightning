@@ -24,6 +24,13 @@ and this project adheres to
 
 ### Fixed
 
+## [v2.4.7] - 2024-05-11
+
+### Fixed
+
+- Fixed early worker token expiry bug
+  [#2070](https://github.com/OpenFn/lightning/issues/2070)
+
 ## [v2.4.6] - 2024-05-08
 
 ### Added
