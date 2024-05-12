@@ -235,7 +235,7 @@ defmodule LightningWeb.OauthClientsLiveTest do
             |> render_change()
 
           assert html =~ "This field can&#39;t be blank."
-          assert html =~ "must be a valid URL"
+          assert html =~ "must be either a http or https URL"
 
           {view, added_mandatory_scopes, added_optional_scopes} =
             perforom_scopes_management_tests(view)
@@ -321,7 +321,7 @@ defmodule LightningWeb.OauthClientsLiveTest do
       client = insert(:oauth_client, name: "My Oauth Client", user: user)
 
       audit_events_query =
-        from(a in Lightning.Credentials.Audit.base_query(),
+        from(a in Lightning.Credentials.OauthClientAudit.base_query(),
           where: a.item_id == ^client.id,
           select: {a.event, type(a.changes, :map)}
         )
@@ -331,18 +331,21 @@ defmodule LightningWeb.OauthClientsLiveTest do
       {:ok, view, _html} = live(conn, ~p"/credentials")
 
       view
-      |> element("#project_oauth_clients_list_for_#{client.id}")
-      |> render_change(selected_project: %{"id" => project.id})
+      |> element("#project-oauth-clients-list-#{client.id}")
+      |> render_change(%{"project_id" => project.id})
 
       view
-      |> element("#add-new-project-button-to-#{client.id}")
+      |> element("#add-project-oauth-client-button-#{client.id}")
       |> render_click()
 
-      view |> form("#oauth-client-form-#{client.id}") |> render_submit()
+      view
+      |> form("#oauth-client-form-#{client.id}")
+      |> render_submit()
 
       assert_redirected(view, ~p"/credentials")
 
-      audit_events = Lightning.Repo.all(audit_events_query)
+      audit_events =
+        Lightning.Repo.all(audit_events_query)
 
       assert Enum.count(audit_events) == 2
 
@@ -380,7 +383,7 @@ defmodule LightningWeb.OauthClientsLiveTest do
 
       view
       |> element(
-        "[phx-click='delete_project'][phx-value-project_id='#{project.id}']"
+        "[phx-click='remove_selected_project'][phx-value-project_id='#{project.id}']"
       )
       |> render_click()
 
@@ -418,12 +421,12 @@ defmodule LightningWeb.OauthClientsLiveTest do
       {:ok, view, _html} = live(conn, ~p"/credentials")
 
       view
-      |> element("#project_oauth_clients_list_for_#{client.id}")
-      |> render_change(selected_project: %{"id" => project.id})
+      |> element("#project-oauth-clients-list-#{client.id}")
+      |> render_change(%{"project_id" => project.id})
 
       html =
         view
-        |> element("#add-new-project-button-to-#{client.id}")
+        |> element("#add-project-oauth-client-button-#{client.id}")
         |> render_click()
 
       assert html =~ project.name,
@@ -431,7 +434,7 @@ defmodule LightningWeb.OauthClientsLiveTest do
 
       assert view
              |> element(
-               "[phx-click='delete_project'][phx-value-projectid='#{project.id}']"
+               "[phx-click='remove_selected_project'][phx-value-project_id='#{project.id}']"
              )
              |> has_element?()
 
@@ -439,29 +442,29 @@ defmodule LightningWeb.OauthClientsLiveTest do
 
       view
       |> element(
-        "[phx-click='delete_project'][phx-value-projectid='#{project.id}']"
+        "[phx-click='remove_selected_project'][phx-value-project_id='#{project.id}']"
       )
       |> render_click()
 
       refute view
              |> element(
-               "[phx-click='delete_project'][phx-value-projectid='#{project.id}']"
+               "[phx-click='remove_selected_project'][phx-value-project_id='#{project.id}']"
              )
              |> has_element?(),
              "project is removed from list"
 
       # now let's add it back
       view
-      |> element("#project_oauth_clients_list_for_#{client.id}")
-      |> render_change(selected_project: %{"id" => project.id})
+      |> element("#project-oauth-clients-list-#{client.id}")
+      |> render_change(%{"project_id" => project.id})
 
       view
-      |> element("#add-new-project-button-to-#{client.id}")
+      |> element("#add-project-oauth-client-button-#{client.id}")
       |> render_click()
 
       assert view
              |> element(
-               "[phx-click='delete_project'][phx-value-projectid='#{project.id}']"
+               "[phx-click='remove_selected_project'][phx-value-project_id='#{project.id}']"
              )
              |> has_element?(),
              "project is added back"

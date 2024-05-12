@@ -63,7 +63,7 @@ defmodule LightningWeb.CredentialLiveTest do
       {:ok, _index_live, html} = live(conn, ~p"/credentials")
 
       assert html =~ "Credentials"
-      assert html =~ "Projects with Access"
+      assert html =~ "Projects with access"
       assert html =~ "Type"
 
       assert html =~
@@ -147,7 +147,7 @@ defmodule LightningWeb.CredentialLiveTest do
       assert html =~ "Cancel deletion"
       assert html =~ "Delete now"
 
-      assert has_element?(view, "#credential-#{credential.id}")
+      assert has_element?(view, "#credentials-#{credential.id}")
     end
 
     test "cancel a scheduled for deletion credential", %{
@@ -161,11 +161,11 @@ defmodule LightningWeb.CredentialLiveTest do
         live(conn, ~p"/credentials")
 
       assert index_live
-             |> element("#credential-#{credential.id} a", "Cancel deletion")
+             |> element("#credentials-#{credential.id} a", "Cancel deletion")
              |> has_element?()
 
       index_live
-      |> element("#credential-#{credential.id} a", "Cancel deletion")
+      |> element("#credentials-#{credential.id} a", "Cancel deletion")
       |> render_click()
 
       {:ok, index_live, html} = live(conn, ~p"/credentials")
@@ -175,7 +175,7 @@ defmodule LightningWeb.CredentialLiveTest do
 
       assert html =~ "Delete"
 
-      assert has_element?(index_live, "#credential-#{credential.id}")
+      assert has_element?(index_live, "#credentials-#{credential.id}")
     end
 
     test "can delete credential that has no activity in projects", %{
@@ -227,7 +227,7 @@ defmodule LightningWeb.CredentialLiveTest do
       {:ok, index_live, _html} =
         live(conn, ~p"/credentials")
 
-      assert has_element?(index_live, "#credential-#{credential.id}")
+      assert has_element?(index_live, "#credentials-#{credential.id}")
     end
 
     test "user can only delete their own credential", %{
@@ -288,11 +288,11 @@ defmodule LightningWeb.CredentialLiveTest do
       assert index_live |> has_element?("#credential-form-new_body")
 
       index_live
-      |> element("#project_credentials_list_for_")
-      |> render_change(%{"selected_project" => %{"id" => project.id}})
+      |> element("#project-credentials-list-new")
+      |> render_change(%{"project_id" => project.id})
 
       index_live
-      |> element("#add-new-project-button-to-credential-", "Add")
+      |> element("#add-project-credential-button-new", "Add")
       |> render_click()
 
       assert index_live
@@ -573,11 +573,11 @@ defmodule LightningWeb.CredentialLiveTest do
       {:ok, view, _html} = live(conn, ~p"/credentials")
 
       view
-      |> element("#project_credentials_list_for_#{credential.id}")
-      |> render_change(selected_project: %{"id" => project.id})
+      |> element("#project-credentials-list-#{credential.id}")
+      |> render_change(%{"project_id" => project.id})
 
       view
-      |> element("#add-new-project-button-to-credential-#{credential.id}")
+      |> element("#add-project-credential-button-#{credential.id}")
       |> render_click()
 
       view |> form("#credential-form-#{credential.id}") |> render_submit()
@@ -670,12 +670,12 @@ defmodule LightningWeb.CredentialLiveTest do
 
       # Try adding an existing project credential
       view
-      |> element("#project_credentials_list_for_")
-      |> render_change(selected_project: %{"id" => project.id})
+      |> element("#project-credentials-list-#{credential.id}")
+      |> render_change(%{"project_id" => project.id})
 
       html =
         view
-        |> element("#add-new-project-button-to-credential-#{credential.id}")
+        |> element("#add-project-credential-button-#{credential.id}")
         |> render_click()
 
       assert html =~ project.name,
@@ -694,11 +694,11 @@ defmodule LightningWeb.CredentialLiveTest do
 
       # now let's add it back
       view
-      |> element("#project_credentials_list_for_#{credential.id}")
-      |> render_change(selected_project: %{"id" => project.id})
+      |> element("#project-credentials-list-#{credential.id}")
+      |> render_change(%{"project_id" => project.id})
 
       view
-      |> element("#add-new-project-button-to-credential-#{credential.id}")
+      |> element("#add-project-credential-button-#{credential.id}")
       |> render_click()
 
       assert view |> delete_credential_button(project.id) |> has_element?(),
@@ -1156,43 +1156,8 @@ defmodule LightningWeb.CredentialLiveTest do
       index_live
       |> fill_credential(%{
         name: "My Credential",
-        apiVersion: "34"
+        api_version: "34"
       })
-
-      # authorize_url =
-      #   view
-      #   |> element("#credential-form-new")
-      #   |> render()
-      #   |> Floki.parse_fragment!()
-      #   |> Floki.find("a[phx-click=authorize_click]")
-      #   |> Floki.attribute("href")
-      #   |> List.first()
-
-      # [subscription_id, mod, component_id] = get_decoded_state(authorize_url)
-
-      # assert view.id == subscription_id
-      # assert view |> element(component_id)
-
-      # view
-      # |> element("#authorize-button")
-      # |> render_click()
-
-      # refute view
-      #        |> has_element?("#authorize-button")
-
-      # LightningWeb.OauthCredentialHelper.broadcast_forward(subscription_id, mod,
-      #   id: component_id,
-      #   code: "authcode123"
-      # )
-
-      # Lightning.ApplicationHelpers.dynamically_absorb_delay(fn ->
-      #   {_, assigns} =
-      #     Lightning.LiveViewHelpers.get_component_assigns_by(view,
-      #       id: "generic-oauth-component-new"
-      #     )
-
-      #   :userinfo_received === assigns[:oauth_progress]
-      # end)
 
       # Get the state from the authorize url in order to fake the calling
       # off the action in the OidcController

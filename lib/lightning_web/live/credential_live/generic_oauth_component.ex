@@ -381,7 +381,7 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
       credential: assigns.credential,
       projects: assigns.projects,
       users: assigns.users,
-      api_version: assigns.credential.body["api_version"],
+      api_version: assigns.credential.body["apiVersion"],
       selected_projects: selected_projects,
       available_projects: available_projects
     )
@@ -395,7 +395,7 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
     user_id = Ecto.Changeset.fetch_field!(socket.assigns.changeset, :user_id)
     body = Ecto.Changeset.fetch_field!(socket.assigns.changeset, :body)
 
-    body = Map.put(body, "api_version", socket.assigns.api_version)
+    body = Map.put(body, "apiVersion", socket.assigns.api_version)
 
     params
     |> Map.put("user_id", user_id)
@@ -418,7 +418,7 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
   defp save_credential(socket, :edit, params) do
     body =
       Ecto.Changeset.fetch_field!(socket.assigns.changeset, :body)
-      |> Map.put("api_version", socket.assigns.api_version)
+      |> Map.put("apiVersion", socket.assigns.api_version)
 
     params =
       Map.put(params, "body", body)

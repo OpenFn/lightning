@@ -127,13 +127,17 @@ defmodule Lightning.OauthClientsTest do
       project = insert(:project)
 
       client =
+        %{project_oauth_clients: [poc]} =
         insert(:oauth_client,
           name: "Test Client",
           project_oauth_clients: [%{project: project}]
         )
+        |> Repo.preload(:project_oauth_clients)
 
       updated_attrs = %{
-        project_oauth_clients: [%{project_id: project.id, delete: true}]
+        project_oauth_clients: [
+          %{id: poc.id, project_id: project.id, delete: true}
+        ]
       }
 
       {:ok, updated_client} = OauthClients.update_client(client, updated_attrs)
@@ -261,6 +265,8 @@ defmodule Lightning.OauthClientsTest do
           user_id: user.id,
           global: true
         })
+
+      client = Repo.preload(client, :project_oauth_clients)
 
       associations = Repo.all(ProjectOauthClient)
 
