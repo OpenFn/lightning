@@ -440,7 +440,8 @@ defmodule LightningWeb.CredentialLive.OauthClientFormComponent do
                 field={f[:mandatory_scopes]}
                 label="Mandatory Scopes"
                 on_delete="remove_mandatory_scope"
-                on_edit="EditMandatoryScope"
+                on_edit="EditScope"
+                event_type="edit_mandatory_scope"
                 scopes={@mandatory_scopes}
                 phx_target={@myself}
               />
@@ -450,7 +451,8 @@ defmodule LightningWeb.CredentialLive.OauthClientFormComponent do
                 field={f[:optional_scopes]}
                 label="Optional Scopes"
                 on_delete="remove_optional_scope"
-                on_edit="EditOptionalScope"
+                on_edit="EditScope"
+                event_type="edit_optional_scope"
                 scopes={@optional_scopes}
                 phx_target={@myself}
               />
@@ -539,6 +541,7 @@ defmodule LightningWeb.CredentialLive.OauthClientFormComponent do
   attr :field, :any, required: true
   attr :on_delete, :string, required: true
   attr :on_edit, :string, required: true
+  attr :event_type, :string, required: true
   attr :phx_target, :any, required: true
 
   defp scopes_input(assigns) do
@@ -556,6 +559,7 @@ defmodule LightningWeb.CredentialLive.OauthClientFormComponent do
           id={"#{@id}-#{scope}"}
           phx-hook={@on_edit}
           data-scope={scope}
+          data-event-type={@event_type}
           phx-target={@phx_target}
           class="inline-flex items-center rounded-md bg-blue-50 p-2 text-xs font-medium text-gray-600 ring-1 ring-inset ring-gray-500/10 mr-1 my-1"
         >

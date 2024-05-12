@@ -8,20 +8,12 @@ import { initiateSaveAndRun } from '../common';
 
 export { LogLineHighlight, ElapsedIndicator, TabSelector };
 
-export const EditMandatoryScope = {
+export const EditScope = {
   mounted() {
     this.el.addEventListener('dblclick', e => {
       const scopeValue = this.el.dataset.scope;
-      this.pushEventTo(this.el, 'edit_mandatory_scope', { scope: scopeValue });
-    });
-  },
-};
-
-export const EditOptionalScope = {
-  mounted() {
-    this.el.addEventListener('dblclick', e => {
-      const scopeValue = this.el.dataset.scope;
-      this.pushEventTo(this.el, 'edit_optional_scope', { scope: scopeValue });
+      const eventType = this.el.dataset.eventType;
+      this.pushEventTo(this.el, eventType, { scope: scopeValue });
     });
   },
 };
