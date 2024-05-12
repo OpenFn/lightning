@@ -99,7 +99,6 @@ export default {
   },
   destroyed() {
     window.removeEventListener('hashchange', this._onHashChange);
-    this.observer.disconnect();
   },
   getHash() {
     return window.location.hash.replace('#', '');
