@@ -1062,6 +1062,39 @@ defmodule LightningWeb.CredentialLiveTest do
       assert edit_live |> has_element?("h3", "Test User")
     end
 
+    test "when oauth client is deleted, oauth credentials associated to it will render a warning banner",
+         %{user: user, conn: conn} do
+      oauth_client = insert(:oauth_client, user: user)
+
+      credential =
+        insert(:credential,
+          name: "My OAuth Credential",
+          schema: "oauth",
+          oauth_client: oauth_client,
+          user: user
+        )
+
+      {:ok, view, html} = live(conn, ~p"/credentials")
+
+      assert html =~ credential.name
+      refute view |> has_element?("h3", "Oauth client not found.")
+
+      refute view
+             |> has_element?(
+               "span[phx-hook='Tooltip', aria-label='OAuth client not found']"
+             )
+
+      Repo.delete!(oauth_client)
+
+      {:ok, view, html} = live(conn, ~p"/credentials")
+
+      assert html =~ credential.name
+      assert view |> has_element?("h3", "Oauth client not found.")
+
+      assert view
+             |> has_element?("span##{credential.id}-client-not-found-tooltip")
+    end
+
     test "generic oauth credential will render a scope pick list", %{
       user: user,
       conn: conn
