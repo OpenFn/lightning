@@ -5,7 +5,6 @@ defmodule LightningWeb.RunWithOptions do
   alias Lightning.Run
   alias Lightning.Workflows.Snapshot.Edge
   alias Lightning.Workflows.Snapshot.Job
-  # alias Lightning.Workflows.Snapshot
   alias Lightning.Workflows.Snapshot.Trigger
 
   @type run_options :: [
