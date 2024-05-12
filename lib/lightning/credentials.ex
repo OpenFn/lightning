@@ -177,7 +177,7 @@ defmodule Lightning.Credentials do
 
     Multi.new()
     |> Multi.update(:credential, changeset)
-    |> manage_projects_association(credential, changeset)
+    |> derive_events(changeset)
     |> Repo.transaction()
     |> case do
       {:error, :credential, changeset, _changes} ->
@@ -185,89 +185,6 @@ defmodule Lightning.Credentials do
 
       {:ok, %{credential: credential}} ->
         {:ok, credential}
-    end
-  end
-
-  defp manage_projects_association(
-         multi,
-         _old_credential,
-         %Ecto.Changeset{changes: changes} = _changeset
-       )
-       when map_size(changes) == 0 do
-    multi
-  end
-
-  defp manage_projects_association(
-         multi,
-         %Credential{} = old_credential,
-         %Ecto.Changeset{} = changeset
-       ) do
-    projects_changed? =
-      Ecto.Changeset.changed?(changeset, :project_credentials)
-
-    if projects_changed? do
-      project_credentials =
-        Ecto.Changeset.get_assoc(changeset, :project_credentials, :struct)
-
-      to_be_deleted =
-        project_credentials |> Enum.filter(fn poc -> poc.delete end)
-
-      to_be_added =
-        project_credentials |> Enum.reject(fn poc -> poc.id end)
-
-      removed_associations_multi =
-        to_be_deleted
-        |> Enum.reduce(Multi.new(), fn poc, acc ->
-          Multi.insert(acc, {:audit, poc.project_id}, fn _ ->
-            Audit.event(
-              "removed_from_project",
-              old_credential.id,
-              old_credential.user_id,
-              %{
-                before: %{project_id: poc.project_id},
-                after: %{project_id: nil}
-              }
-            )
-          end)
-        end)
-
-      added_associations_multi =
-        to_be_added
-        |> Enum.reduce(Multi.new(), fn poc, acc ->
-          Multi.insert(acc, {:audit, poc.project_id}, fn _ ->
-            Audit.event(
-              "added_to_project",
-              old_credential.id,
-              old_credential.user_id,
-              %{
-                before: %{project_id: nil},
-                after: %{project_id: poc.project_id}
-              }
-            )
-          end)
-        end)
-
-      multi
-      |> Multi.insert(:audit_credential_update, fn _ ->
-        Audit.event(
-          "updated",
-          old_credential.id,
-          old_credential.user_id,
-          changeset
-        )
-      end)
-      |> Multi.append(added_associations_multi)
-      |> Multi.append(removed_associations_multi)
-    else
-      multi
-      |> Multi.insert(:audit_credential_update, fn _ ->
-        Audit.event(
-          "updated",
-          old_credential.id,
-          old_credential.user_id,
-          changeset
-        )
-      end)
     end
   end
 
