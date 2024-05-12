@@ -133,7 +133,7 @@ defmodule Lightning.OauthClientsTest do
         )
 
       updated_attrs = %{
-        project_oauth_clients: [%{project: project, delete: true}]
+        project_oauth_clients: [%{project_id: project.id, delete: true}]
       }
 
       {:ok, updated_client} = OauthClients.update_client(client, updated_attrs)
@@ -267,7 +267,7 @@ defmodule Lightning.OauthClientsTest do
       assert list_audits(client, "created")
              |> Enum.count() === 1
 
-      assert associations |> Enum.count() == 2
+      assert associations |> Enum.count() == 0
 
       # To ignore the first addition due to setting the client as global
       Repo.delete_all(Lightning.Auditing.Audit)

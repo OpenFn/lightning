@@ -369,7 +369,7 @@ defmodule LightningWeb.OauthClientsLiveTest do
       insert(:project_oauth_client, project: project, oauth_client: client)
 
       audit_events_query =
-        from(a in Lightning.Credentials.Audit.base_query(),
+        from(a in Lightning.Credentials.OauthClientAudit.base_query(),
           where: a.item_id == ^client.id,
           select: {a.event, type(a.changes, :map)}
         )

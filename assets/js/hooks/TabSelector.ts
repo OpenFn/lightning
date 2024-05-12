@@ -6,7 +6,6 @@ type TabSelector = PhoenixHook<{
   activeClasses: string[];
   disabledClasses: string[];
   inactiveClasses: string[];
-  observer: MutationObserver;
   _onHashChange(e: Event): void;
   hashChanged(hash: string): void;
   getHash(): string;

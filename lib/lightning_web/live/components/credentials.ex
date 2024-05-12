@@ -168,18 +168,41 @@ defmodule LightningWeb.Components.Credentials do
     """
   end
 
+  attr :id, :string, required: true
+  attr :type, :atom, required: true
   attr :available_projects, :list, required: true
   attr :projects, :list, required: true
   attr :selected_projects, :list, required: true
   attr :selected, :string, required: true
   attr :phx_target, :any, default: nil
 
-  def project_credentials(assigns) do
+  def projects_picker(assigns) do
+    additionals =
+      case assigns.type do
+        :credential ->
+          %{
+            select_id: "project-credentials-list-#{assigns.id}",
+            prompt: "Select a project to associate to this credential",
+            add_project_id: "add-project-credential-button-#{assigns.id}",
+            remove_project_id: "remove-project-credential-button-#{assigns.id}"
+          }
+
+        :oauth_client ->
+          %{
+            select_id: "project-oauth-clients-list-#{assigns.id}",
+            prompt: "Select a project to associate to this OAuth client",
+            add_project_id: "add-project-oauth-client-button-#{assigns.id}",
+            remove_project_id: "remove-project-oauth-client-button-#{assigns.id}"
+          }
+      end
+
+    assigns = assign(assigns, additionals)
+
     ~H"""
     <div class="col-span-3">
       <div>
         <label
-          for={"project_credentials_list_for_#{@selected}"}
+          for={@select_id}
           class={["block text-sm font-semibold leading-6 text-slate-800"]}
         >
           Project
@@ -188,7 +211,7 @@ defmodule LightningWeb.Components.Credentials do
         <div class="flex w-full items-center gap-2 pb-3 mt-1">
           <div class="grow">
             <select
-              id={"project_credentials_list_for_#{@selected}"}
+              id={@select_id}
               name={:project_id}
               class={[
                 "block w-full rounded-lg border border-secondary-300 bg-white",
@@ -196,15 +219,12 @@ defmodule LightningWeb.Components.Credentials do
                 "focus:border-primary-300 focus:ring focus:ring-primary-200 focus:ring-opacity-50",
                 "disabled:cursor-not-allowed "
               ]}
-              phx-change="select_item"
+              phx-change="select_project"
               phx-target={@phx_target}
             >
-              <option value="">
-                Select a project to associate to this credential
-              </option>
+              <option value=""><%= @prompt %></option>
               <%= Phoenix.HTML.Form.options_for_select(
-                @available_projects
-                |> Enum.map(fn %{id: id, name: name} -> {name, id} end),
+                map_projects_for_select(@available_projects),
                 @selected
               ) %>
             </select>
@@ -212,13 +232,11 @@ defmodule LightningWeb.Components.Credentials do
 
           <div class="grow-0 items-right">
             <.button
-              id="add-new-project-button-to-"
-              disabled={
-                @selected == "" or @selected == nil or @available_projects == []
-              }
+              id={@add_project_id}
+              disabled={disable_add_button(@available_projects, @selected_projects)}
               phx-target={@phx_target}
               phx-value-project_id={@selected}
-              phx-click="add_new_project"
+              phx-click="add_selected_project"
             >
               Add
             </.button>
@@ -232,10 +250,10 @@ defmodule LightningWeb.Components.Credentials do
           >
             <%= project.name %>
             <button
-              id={"delete-project-credential-#{project.id}-button"}
+              id={"#{@remove_project_id}-#{project.id}"}
               phx-target={@phx_target}
               phx-value-project_id={project.id}
-              phx-click="delete_project"
+              phx-click="remove_selected_project"
               type="button"
               class="group relative -mr-1 h-3.5 w-3.5 rounded-sm hover:bg-gray-500/20"
             >
@@ -253,6 +271,16 @@ defmodule LightningWeb.Components.Credentials do
       </div>
     </div>
     """
+  end
+
+  defp map_projects_for_select(projects) do
+    Enum.map(projects, fn %{id: id, name: name} ->
+      {name, id}
+    end)
+  end
+
+  defp disable_add_button(available_projects, selected) do
+    selected == "" or selected == nil or available_projects == []
   end
 
   attr :users, :list, required: true

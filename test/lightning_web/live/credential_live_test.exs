@@ -115,7 +115,7 @@ defmodule LightningWeb.CredentialLiveTest do
       assert html =~ "Cancel deletion"
       assert html =~ "Delete now"
 
-      assert has_element?(view, "#credential-#{credential.id}")
+      assert has_element?(view, "#credentials-#{credential.id}")
     end
 
     test "can schedule for deletion a credential that is associated to activities",
@@ -670,7 +670,7 @@ defmodule LightningWeb.CredentialLiveTest do
 
       # Try adding an existing project credential
       view
-      |> element("#project_credentials_list_for_#{credential.id}")
+      |> element("#project_credentials_list_for_")
       |> render_change(selected_project: %{"id" => project.id})
 
       html =

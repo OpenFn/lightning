@@ -278,7 +278,7 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
   end
 
   def handle_event(
-        "select_item",
+        "select_project",
         %{"project_id" => project_id},
         socket
       ) do
@@ -288,7 +288,7 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
      |> assign(api_version: socket.assigns.api_version)}
   end
 
-  def handle_event("add_new_project", %{"project_id" => project_id}, socket) do
+  def handle_event("add_selected_project", %{"project_id" => project_id}, socket) do
     {:noreply,
      socket
      |> assign(
@@ -302,7 +302,11 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
      |> assign(selected_project: nil)}
   end
 
-  def handle_event("delete_project", %{"project_id" => project_id}, socket) do
+  def handle_event(
+        "remove_selected_project",
+        %{"project_id" => project_id},
+        socket
+      ) do
     {:noreply,
      assign(
        socket,
@@ -557,7 +561,9 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
                 Control which projects have access to this credentials
               </p>
               <div class="mt-4">
-                <LightningWeb.Components.Credentials.project_credentials
+                <LightningWeb.Components.Credentials.projects_picker
+                  id={@credential.id || "new"}
+                  type={:credential}
                   available_projects={@available_projects}
                   selected_projects={@selected_projects}
                   projects={@projects}
