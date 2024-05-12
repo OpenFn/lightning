@@ -1,5 +1,4 @@
 defmodule LightningWeb.CredentialLiveTest do
-  alias Lightning.Accounts.User
   use LightningWeb.ConnCase, async: false
 
   import Phoenix.LiveViewTest
@@ -11,6 +10,7 @@ defmodule LightningWeb.CredentialLiveTest do
 
   import Ecto.Query
 
+  alias Lightning.Accounts.User
   alias Lightning.Credentials
 
   @create_attrs %{

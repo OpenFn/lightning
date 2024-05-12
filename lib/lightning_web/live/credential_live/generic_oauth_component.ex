@@ -289,11 +289,29 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
   end
 
   def handle_event("add_new_project", %{"project_id" => project_id}, socket) do
-    {:noreply, Helpers.select_project(socket, project_id)}
+    {:noreply,
+     socket
+     |> assign(
+       Helpers.select_project(
+         project_id,
+         socket.assigns.projects,
+         socket.assigns.available_projects,
+         socket.assigns.selected_projects
+       )
+     )
+     |> assign(selected_project: nil)}
   end
 
   def handle_event("delete_project", %{"project_id" => project_id}, socket) do
-    {:noreply, Helpers.unselect_project(socket, project_id)}
+    {:noreply,
+     assign(
+       socket,
+       Helpers.unselect_project(
+         project_id,
+         socket.assigns.projects,
+         socket.assigns.selected_projects
+       )
+     )}
   end
 
   defp maybe_refresh_token(socket, assigns, selected_client) do

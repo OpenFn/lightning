@@ -110,19 +110,17 @@ defmodule LightningWeb.CredentialLive.OauthClientFormComponent do
       )
       |> Map.put(:action, :validate)
 
-    updated_socket =
-      socket |> assign(:changeset, changeset) |> maybe_clear_selected_projects()
-
     available_projects =
       Helpers.filter_available_projects(
-        updated_socket.assigns.projects,
-        updated_socket.assigns.selected_projects
+        socket.assigns.projects,
+        socket.assigns.selected_projects
       )
 
     is_global = Ecto.Changeset.fetch_field!(changeset, :global)
 
     {:noreply,
-     assign(updated_socket,
+     assign(socket,
+       changeset: changeset,
        is_global: is_global,
        available_projects: available_projects,
        selected_project: nil
@@ -159,14 +157,28 @@ defmodule LightningWeb.CredentialLive.OauthClientFormComponent do
   def handle_event("add_new_project", %{"project_id" => project_id}, socket) do
     {:noreply,
      socket
-     |> Helpers.select_project(project_id)
+     |> assign(
+       Helpers.select_project(
+         project_id,
+         socket.assigns.projects,
+         socket.assigns.available_projects,
+         socket.assigns.selected_projects
+       )
+     )
+     |> assign(selected_project: nil)
      |> push_event("clear_input", %{})}
   end
 
   def handle_event("delete_project", %{"project_id" => project_id}, socket) do
     {:noreply,
-     socket
-     |> Helpers.unselect_project(project_id)
+     assign(
+       socket,
+       Helpers.unselect_project(
+         project_id,
+         socket.assigns.projects,
+         socket.assigns.selected_projects
+       )
+     )
      |> push_event("clear_input", %{})}
   end
 
@@ -221,17 +233,18 @@ defmodule LightningWeb.CredentialLive.OauthClientFormComponent do
     end
   end
 
-  defp maybe_clear_selected_projects(socket) do
-    should_clear =
-      Ecto.Changeset.changed?(socket.assigns.changeset, :global) and
-        !Ecto.Changeset.get_change(socket.assigns.changeset, :global)
+  # defp maybe_clear_selected_projects(socket) do
+  #   should_clear =
+  #     Ecto.Changeset.changed?(socket.assigns.changeset, :global) and
+  #       !Ecto.Changeset.get_change(socket.assigns.changeset, :global)
 
-    if should_clear do
-      assign(socket, selected_projects: [])
-    else
-      socket
-    end
-  end
+  #   if should_clear do
+  #     Ecto.change
+  #     assign(socket, selected_projects: [])
+  #   else
+  #     socket
+  #   end
+  # end
 
   defp parse_and_update_scopes(socket, value, scope_type) do
     separators = ~r/[, ]+/
