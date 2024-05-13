@@ -2,6 +2,7 @@ defmodule Lightning.KafkaTriggers.Pipeline do
   use Broadway
 
   alias Lightning.KafkaTriggers
+  alias Lightning.KafkaTriggers.TriggerKafkaMessageRecord
   alias Lightning.Repo
   alias Lightning.Workflows.Trigger
 
@@ -36,20 +37,34 @@ defmodule Lightning.KafkaTriggers.Pipeline do
     %{
       data: data,
       metadata: %{
+        offset: offset,
         partition: partition,
+        topic: topic,
         ts: timestamp
       }
     } = message
 
-    Trigger
-    |> Repo.get(trigger_id |> Atom.to_string())
-    |> KafkaTriggers.update_partition_data(partition, timestamp)
+    topic_partition_offset = "#{topic}_#{partition}_#{offset}"
 
-    # IO.inspect(message, label: :full_message)
-    # %Broadway.Message{data: data, metadata: %{ts: ts}} = message
+    record_changeset = TriggerKafkaMessageRecord.changeset(
+      %TriggerKafkaMessageRecord{},
+      %{topic_partition_offset: topic_partition_offset, trigger_id: trigger_id |> Atom.to_string()}
+    )
 
-    IO.puts(">>>> #{trigger_id} received #{data} on #{partition} produced at #{timestamp}")
-    # IO.inspect(message) 
+    if {:ok, _} = record_changeset |> Repo.insert() do
+      Trigger
+      |> Repo.get(trigger_id |> Atom.to_string())
+      |> KafkaTriggers.update_partition_data(partition, timestamp)
+
+      # IO.inspect(message, label: :full_message)
+      # %Broadway.Message{data: data, metadata: %{ts: ts}} = message
+
+      IO.puts(">>>> #{trigger_id} received #{data} on #{partition} produced at #{timestamp}")
+      # IO.inspect(message) 
+    else
+      IO.puts("**** #{trigger_id} received DUPLICATE #{data} on #{partition} produced at #{timestamp}")
+    end
+
     message
   end
 
