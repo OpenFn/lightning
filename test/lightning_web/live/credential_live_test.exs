@@ -954,6 +954,7 @@ defmodule LightningWeb.CredentialLiveTest do
           name: "OAuth credential",
           oauth_client: oauth_client,
           user: user,
+          schema: "oauth",
           project_credentials: [
             %{project: project_1},
             %{project: project_2},
