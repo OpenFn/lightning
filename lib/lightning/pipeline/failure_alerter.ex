@@ -1,10 +1,8 @@
 defmodule Lightning.FailureAlerter do
   @moduledoc false
 
-  alias Lightning.Extensions.UsageLimiting.Action
-  alias Lightning.Extensions.UsageLimiting.Context
+  alias Lightning.Projects.ProjectAlertsLimiter
   alias Lightning.Run
-  alias Lightning.Services.UsageLimiter
 
   def alert_on_failure(nil), do: nil
 
@@ -14,7 +12,7 @@ defmodule Lightning.FailureAlerter do
   def alert_on_failure(%Run{} = run) do
     workflow = run.work_order.workflow
 
-    if :ok == limit_failure_alert(workflow.project_id) do
+    if :ok == ProjectAlertsLimiter.limit_failure_alert(workflow.project_id) do
       Lightning.Accounts.get_users_to_alert_for_project(%{
         id: workflow.project_id
       })
@@ -93,11 +91,5 @@ defmodule Lightning.FailureAlerter do
         nil
         # {:cancel, "Failure notification rate limit is reached"} or Logger
     end
-  end
-
-  defp limit_failure_alert(project_id) do
-    UsageLimiter.limit_action(%Action{type: :alert_failure}, %Context{
-      project_id: project_id
-    })
   end
 end

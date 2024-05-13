@@ -19,6 +19,7 @@ defmodule LightningWeb.ProjectLiveTest do
   alias Lightning.Repo
 
   setup :stub_usage_limiter_ok
+  setup :verify_on_exit!
 
   @create_attrs %{
     raw_name: "some name"
@@ -2210,7 +2211,7 @@ defmodule LightningWeb.ProjectLiveTest do
 
       error_msg = "some meaningful error message"
 
-      Mox.stub(
+      stub(
         Lightning.Extensions.MockUsageLimiter,
         :limit_action,
         fn
@@ -2244,9 +2245,16 @@ defmodule LightningWeb.ProjectLiveTest do
       [admin, editor, viewer] = insert_list(3, :user)
 
       # return ok for enabling the add collaboratos button
-      Mox.stub_with(
+      stub(
         Lightning.Extensions.MockUsageLimiter,
-        Lightning.Extensions.UsageLimiter
+        :limit_action,
+        fn
+          %{type: :new_user, amount: 1}, %{project_id: ^project_id} ->
+            :ok
+
+          _action, _project ->
+            :ok
+        end
       )
 
       {:ok, view, html} =
@@ -2508,6 +2516,72 @@ defmodule LightningWeb.ProjectLiveTest do
         # project user still exists
         assert Repo.get(Lightning.Projects.ProjectUser, project_user.id)
       end
+    end
+
+    test "users cant see form to toggle failure alerts if limiter returns error",
+         %{conn: conn} do
+      %{id: project_id} = project = insert(:project)
+      user = insert(:user)
+
+      project_user =
+        insert(:project_user, user: user, project: project, failure_alert: true)
+
+      conn = log_in_user(conn, user)
+
+      # let us first return :ok
+      stub(
+        Lightning.Extensions.MockUsageLimiter,
+        :limit_action,
+        fn
+          %{type: :alert_failure}, %{project_id: ^project_id} ->
+            :ok
+
+          _other_action, _context ->
+            :ok
+        end
+      )
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/settings#collaboration"
+        )
+
+      # form exists
+      form_id = "form#failure-alert-#{project_user.id}"
+      assert has_element?(view, form_id)
+
+      # status is displayed as enabled
+      assert view |> has_element?("#{form_id} option[selected]", "Enabled")
+
+      refute has_element?(view, "#failure-alert-status-#{project_user.id}")
+
+      # now let us return error
+      stub(
+        Lightning.Extensions.MockUsageLimiter,
+        :limit_action,
+        fn
+          %{type: :alert_failure}, %{project_id: ^project_id} ->
+            {:error, :disabled, %{text: "some error message"}}
+
+          _other_action, _context ->
+            :ok
+        end
+      )
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/settings#collaboration"
+        )
+
+      # form does not exist
+      refute has_element?(view, "form#failure-alert-#{project_user.id}")
+
+      # status is displayed as disabled even though it is enabled on the project user
+      assert view
+             |> element("#failure-alert-status-#{project_user.id}")
+             |> render() =~ "Disabled"
     end
   end
 

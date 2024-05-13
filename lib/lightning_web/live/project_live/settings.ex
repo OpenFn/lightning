@@ -10,6 +10,7 @@ defmodule LightningWeb.ProjectLive.Settings do
   alias Lightning.Policies.Permissions
   alias Lightning.Policies.ProjectUsers
   alias Lightning.Projects
+  alias Lightning.Projects.ProjectAlertsLimiter
   alias Lightning.Projects.ProjectUser
   alias Lightning.Projects.ProjectUsersLimiter
   alias Lightning.VersionControl
@@ -109,6 +110,9 @@ defmodule LightningWeb.ProjectLive.Settings do
         project_user
       )
 
+    can_receive_failure_alerts =
+      :ok == ProjectAlertsLimiter.limit_failure_alert(project.id)
+
     repo_connection = VersionControl.get_repo_connection_for_project(project.id)
 
     {:ok,
@@ -131,6 +135,7 @@ defmodule LightningWeb.ProjectLive.Settings do
        github_enabled: VersionControl.github_enabled?(),
        can_install_github: can_write_github_connection,
        can_initiate_github_sync: can_initiate_github_sync,
+       can_receive_failure_alerts: can_receive_failure_alerts,
        selected_credential_type: nil,
        show_collaborators_modal: false
      )}
@@ -394,7 +399,7 @@ defmodule LightningWeb.ProjectLive.Settings do
     end
   end
 
-  def failure_alert(assigns) do
+  defp failure_alert(assigns) do
     assigns =
       assigns
       |> assign(
@@ -403,26 +408,31 @@ defmodule LightningWeb.ProjectLive.Settings do
       )
 
     ~H"""
-    <%= if @can_edit_failure_alert do %>
-      <.form
-        :let={form}
-        for={%{"failure_alert" => @project_user.failure_alert}}
-        phx-change="set_failure_alert"
-        id={"failure-alert-#{@project_user.id}"}
-      >
-        <%= Phoenix.HTML.Form.hidden_input(form, :project_user_id,
-          value: @project_user.id
-        ) %>
-        <LightningWeb.Components.Form.select_field
-          form={form}
-          name="failure_alert"
-          values={[Disabled: false, Enabled: true]}
-        />
-      </.form>
-    <% else %>
-      <%= if @project_user.failure_alert,
-        do: "Enabled",
-        else: "Disabled" %>
+    <%= cond do %>
+      <% @can_receive_failure_alerts && @can_edit_failure_alert -> %>
+        <.form
+          :let={form}
+          for={%{"failure_alert" => @project_user.failure_alert}}
+          phx-change="set_failure_alert"
+          id={"failure-alert-#{@project_user.id}"}
+        >
+          <%= Phoenix.HTML.Form.hidden_input(form, :project_user_id,
+            value: @project_user.id
+          ) %>
+          <LightningWeb.Components.Form.select_field
+            form={form}
+            name="failure_alert"
+            values={[Disabled: false, Enabled: true]}
+          />
+        </.form>
+      <% @can_receive_failure_alerts -> %>
+        <span id={"failure-alert-status-#{@project_user.id}"}>
+          <%= if @project_user.failure_alert,
+            do: "Enabled",
+            else: "Disabled" %>
+        </span>
+      <% true -> %>
+        <span id={"failure-alert-status-#{@project_user.id}"}>Disabled</span>
     <% end %>
     """
   end
