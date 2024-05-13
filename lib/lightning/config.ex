@@ -45,6 +45,11 @@ defmodule Lightning.Config do
     end
 
     @impl true
+    def default_max_run_duration do
+      Application.get_env(:lightning, :max_run_duration_seconds)
+    end
+
+    @impl true
     def purge_deleted_after_days do
       Application.get_env(:lightning, :purge_deleted_after_days)
     end
@@ -101,6 +106,7 @@ defmodule Lightning.Config do
   @callback repo_connection_token_signer() :: Joken.Signer.t()
   @callback worker_secret() :: binary() | nil
   @callback grace_period() :: integer()
+  @callback default_max_run_duration() :: integer()
   @callback purge_deleted_after_days() :: integer()
   @callback check_flag?(atom()) :: boolean() | nil
 
@@ -124,6 +130,10 @@ defmodule Lightning.Config do
 
   def grace_period do
     impl().grace_period()
+  end
+
+  def default_max_run_duration do
+    impl().default_max_run_duration()
   end
 
   def repo_connection_token_signer do

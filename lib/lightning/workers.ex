@@ -46,14 +46,7 @@ defmodule Lightning.Workers do
       )
       |> add_claim(
         "exp",
-        fn ->
-          Lightning.current_time()
-          |> DateTime.add(
-            Application.get_env(:lightning, :max_run_duration_seconds)
-          )
-          |> DateTime.add(Lightning.Config.grace_period())
-          |> DateTime.to_unix()
-        end,
+        nil,
         fn exp, _claims, %{current_time: current_time} ->
           current_time |> DateTime.to_unix() < exp
         end
@@ -61,14 +54,23 @@ defmodule Lightning.Workers do
     end
   end
 
-  def generate_run_token(run) do
+  def generate_run_token(run, run_timeout_ms) do
     {:ok, token, _claims} =
       RunToken.generate_and_sign(
-        %{"id" => run.id},
+        %{"id" => run.id, "exp" => calculate_token_expiry(run_timeout_ms)},
         Lightning.Config.run_token_signer()
       )
 
     token
+  end
+
+  defp calculate_token_expiry(run_timeout_ms) do
+    run_timeout_s = div(run_timeout_ms, 1000)
+
+    Lightning.current_time()
+    |> DateTime.add(run_timeout_s, :second)
+    |> DateTime.add(Lightning.Config.grace_period())
+    |> DateTime.to_unix()
   end
 
   @doc """

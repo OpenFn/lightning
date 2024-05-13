@@ -11,5 +11,6 @@ defmodule Lightning.Extensions.UsageLimiter do
   def limit_action(_action, _context), do: :ok
 
   @impl true
-  def get_run_options(_context), do: []
+  def get_run_options(_context),
+    do: [run_timeout_ms: Lightning.Config.default_max_run_duration() * 1000]
 end

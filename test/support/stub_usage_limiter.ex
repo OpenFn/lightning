@@ -1,6 +1,7 @@
 defmodule Lightning.Extensions.StubUsageLimiter do
   @behaviour Lightning.Extensions.UsageLimiting
 
+  alias Lightning.Config
   alias Lightning.Extensions.Message
 
   defmodule Banner do
@@ -32,5 +33,6 @@ defmodule Lightning.Extensions.StubUsageLimiter do
   end
 
   @impl true
-  def get_run_options(_context), do: []
+  def get_run_options(_context),
+    do: [run_timeout_ms: Config.default_max_run_duration()]
 end
