@@ -940,6 +940,71 @@ defmodule LightningWeb.CredentialLiveTest do
              } = token
     end
 
+    test "allow the user to edit an oauth credential", %{
+      conn: conn,
+      user: user
+    } do
+      [project_1, project_2, project_3] =
+        insert_list(3, :project, project_users: [%{user: user, role: :owner}])
+
+      oauth_client = insert(:oauth_client, user: user)
+
+      credential =
+        insert(:credential,
+          name: "OAuth credential",
+          oauth_client: oauth_client,
+          user: user,
+          project_credentials: [
+            %{project: project_1},
+            %{project: project_2},
+            %{project: project_3}
+          ]
+        )
+
+      {:ok, view, _html} = live(conn, ~p"/credentials")
+
+      view
+      |> fill_credential(
+        %{
+          name: "My Generic OAuth Credential"
+        },
+        "#credential-form-#{credential.id}"
+      )
+
+      view
+      |> element(
+        "#remove-project-credential-button-#{credential.id}-#{project_1.id}"
+      )
+      |> render_click()
+
+      refute view |> submit_disabled("save-credential-button-#{credential.id}")
+
+      {:ok, _index_live, _html} =
+        view
+        |> form("#credential-form-#{credential.id}")
+        |> render_submit()
+        |> follow_redirect(
+          conn,
+          ~p"/credentials"
+        )
+
+      {_path, flash} = assert_redirect(view)
+      assert flash == %{"info" => "Credential updated successfully"}
+
+      credential =
+        credential
+        |> Repo.reload!()
+        |> Repo.preload(:project_credentials)
+
+      assert Enum.all?(credential.project_credentials, fn pc ->
+               pc.project_id in [project_2.id, project_3.id]
+             end)
+
+      refute Enum.find(credential.project_credentials, fn pc ->
+               pc.project_id == project_1.id
+             end)
+    end
+
     test "re-authenticate banner is not rendered the first time we pick permissions",
          %{
            conn: conn,
