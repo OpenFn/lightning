@@ -14,7 +14,7 @@ defmodule Lightning.KafkaTriggers.PipelineWorker do
       %{specs: child_count} = Supervisor.count_children(supervisor)
 
       if child_count == 0 do
-        KafkaTriggers.find_enabled_triggers
+        KafkaTriggers.find_enabled_triggers()
         |> Enum.map(fn trigger ->
           %{
             "group_id" => group_id,

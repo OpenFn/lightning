@@ -57,13 +57,15 @@ defmodule Lightning.KafkaTriggers do
 
   defp initial_policy(%{"initial_offset_reset_policy" => initial_policy}) do
     case initial_policy do
-      policy when is_integer(policy) -> policy
+      policy when is_integer(policy) -> {:timestamp, policy}
       policy when policy in ["earliest", "latest"] -> policy |> String.to_atom()
       _unrecognised_policy -> :latest
     end
   end
 
   defp earliest_timestamp(timestamps) do
-    timestamps |> Map.values() |> Enum.sort |> hd()
+    timestamp = timestamps |> Map.values() |> Enum.sort |> hd()
+
+    {:timestamp, timestamp}
   end
 end
