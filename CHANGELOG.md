@@ -22,6 +22,9 @@ and this project adheres to
 
 ### Changed
 
+- Remove illogical cancel buttons on user/pass change screen
+  [#2067](https://github.com/OpenFn/lightning/issues/2067)
+
 ### Fixed
 
 - Stop users from configuring failure alerts when the limiter returns error

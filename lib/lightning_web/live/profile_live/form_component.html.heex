@@ -44,14 +44,6 @@
           <.old_error field={f[:current_password]} />
         </div>
         <div class="col-span-6">
-          <span>
-            <.link
-              navigate={Routes.settings_index_path(@socket, :index)}
-              class="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-secondary-700 hover:bg-secondary-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-secondary-500"
-            >
-              Cancel
-            </.link>
-          </span>
           <LightningWeb.Components.Form.submit_button
             disabled={!@email_changeset.valid?}
             phx-disable-with="Sending confirmation email..."
@@ -115,19 +107,12 @@
         </div>
         <div class="col-span-6">
           <span>
-            <.link
-              navigate={Routes.dashboard_index_path(@socket, :index)}
-              class="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-secondary-700 hover:bg-secondary-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-secondary-500"
+            <LightningWeb.Components.Form.submit_button
+              disabled={!@password_changeset.valid?}
+              phx-disable-with="Saving..."
             >
-              Cancel
-            </.link>
-          </span>
-          <span>
-            <%= Phoenix.HTML.Form.submit("Update password",
-              phx_disable_with: "Saving...",
-              class:
-                "inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
-            ) %>
+              Update password
+            </LightningWeb.Components.Form.submit_button>
           </span>
         </div>
       </div>
