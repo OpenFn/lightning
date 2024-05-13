@@ -24,6 +24,9 @@ and this project adheres to
 
 ### Fixed
 
+- Stop users from configuring failure alerts when the limiter returns error
+  [#2076](https://github.com/OpenFn/lightning/pull/2076)
+
 ## [v2.4.7] - 2024-05-11
 
 ### Fixed
