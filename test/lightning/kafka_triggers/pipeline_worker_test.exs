@@ -176,14 +176,10 @@ defmodule Lightning.KafkaTriggers.PipelineWorkerTest do
     defp child_spec(opts) do
       trigger = opts |> Keyword.get(:trigger)
       index = opts |> Keyword.get(:index)
-      offset_reset_policy =
-        opts
-        |> Keyword.get(
-          :offset_reset_policy,
-          "171524976732#{index}" |> String.to_integer()
-        )
       sasl = opts |> Keyword.get(:sasl, true)
       ssl = opts |> Keyword.get(:ssl, true)
+
+      offset_timestamp = "171524976732#{index}" |> String.to_integer()
 
       %{
         id: trigger.id,
@@ -194,7 +190,7 @@ defmodule Lightning.KafkaTriggers.PipelineWorkerTest do
             [
               group_id: "lightning-#{index}",
               hosts: [{"host-#{index}", 9092}, {"other-host-#{index}", 9093}],
-              offset_reset_policy: offset_reset_policy,
+              offset_reset_policy: {:timestamp, offset_timestamp},
               trigger_id: trigger.id |> String.to_atom(),
               sasl: sasl_config(index, sasl),
               ssl: ssl,
