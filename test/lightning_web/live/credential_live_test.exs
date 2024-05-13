@@ -833,6 +833,9 @@ defmodule LightningWeb.CredentialLiveTest do
       conn: conn,
       user: user
     } do
+      [project_1, project_2, project_3] =
+        insert_list(3, :project, project_users: [%{user: user, role: :owner}])
+
       oauth_client = insert(:oauth_client, user: user)
 
       {:ok, view, _html} = live(conn, ~p"/credentials")
@@ -884,6 +887,21 @@ defmodule LightningWeb.CredentialLiveTest do
 
       assert view |> has_element?("h3", "Test User")
 
+      [project_1, project_2, project_3]
+      |> Enum.each(fn project ->
+        view
+        |> element("#project-credentials-list-new")
+        |> render_change(%{"project_id" => project.id})
+
+        view
+        |> element("#add-project-credential-button-new", "Add")
+        |> render_click()
+      end)
+
+      view
+      |> element("#remove-project-credential-button-new-#{project_2.id}")
+      |> render_click()
+
       refute view |> submit_disabled("save-credential-button-new")
 
       {:ok, _index_live, _html} =
@@ -900,6 +918,16 @@ defmodule LightningWeb.CredentialLiveTest do
 
       credential =
         Lightning.Credentials.list_credentials(user) |> List.first()
+
+      assert credential.project_credentials
+             |> Enum.all?(fn pc ->
+               pc.project_id in Enum.map([project_1, project_3], fn project ->
+                 project.id
+               end)
+             end)
+
+      refute credential.project_credentials
+             |> Enum.find(fn pc -> pc.project_id == project_2.id end)
 
       token =
         Lightning.AuthProviders.Common.TokenBody.new(credential.body)
