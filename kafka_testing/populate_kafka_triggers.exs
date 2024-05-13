@@ -218,3 +218,15 @@ group_id_mappings = [
   ["my-bar-group-1", "my-bar-group-2"],
   ["my-baz-group-1", "my-baz-group-2"],
 ]
+
+group_id_mappings = [
+  ["my-foo-group-2", "my-foo-group-3"],
+  ["my-bar-group-2", "my-bar-group-3"],
+  ["my-baz-group-2", "my-baz-group-3"],
+]
+
+group_id_mappings = [
+  ["my-foo-group-3", "my-foo-group-4"],
+  ["my-bar-group-3", "my-bar-group-4"],
+  ["my-baz-group-3", "my-baz-group-4"],
+]
