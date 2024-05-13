@@ -169,7 +169,7 @@ defmodule Lightning.KafkaTriggersTest do
         |> build_trigger()
         |> KafkaTriggers.determine_offset_reset_policy()
 
-      assert policy == timestamp
+      assert policy == {:timestamp, timestamp}
     end
 
     test "returns :latest if unrecognised string" do
@@ -193,7 +193,7 @@ defmodule Lightning.KafkaTriggersTest do
         |> build_trigger(partition_timestamps)
         |> KafkaTriggers.determine_offset_reset_policy()
 
-      assert policy == 1715312900120
+      assert policy == {:timestamp, 1715312900120}
     end
 
     defp build_trigger(initial_offset_reset, partition_timestamps \\ %{}) do
