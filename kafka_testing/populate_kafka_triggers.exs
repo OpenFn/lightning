@@ -72,10 +72,18 @@ PipelineWorker.perform(%Oban.Job{args: %{}})
 # DynamicSupervisor.terminate_child(sup, bar)
 
 defmodule KafkaTestingUtils do
+  alias Lightning.KafkaTriggers.PipelineSupervisor
+  alias Lightning.KafkaTriggers.PipelineWorker
   alias Lightning.Workflows.Trigger
   alias Lightning.Repo
 
   import Ecto.Query
+
+  def start_supervisor_and_children() do
+    {:ok, sup} = PipelineSupervisor.start_link([])
+
+    PipelineWorker.perform(%Oban.Job{args: %{}})
+  end
 
   def switch_to_auth_config do
     query = from t in Trigger, where: t.type == :kafka
@@ -134,11 +142,8 @@ defmodule KafkaTestingUtils do
   end
 
   def add_empty_partition_timestamps_to_config do
-    query = from t in Trigger, where: t.type == :kafka
 
-    triggers = Repo.all(query)
-
-    triggers
+    all_kafka_triggers()
     |> Enum.each(fn %{kafka_configuration: config} = trigger ->
       changes = %{
         "partition_timestamps" => %{}
@@ -195,3 +200,21 @@ defmodule KafkaTestingUtils do
     |> Repo.update()
   end
 end
+
+group_id_mappings = [
+  ["my-foo-group-1", "my-foo-group"],
+  ["my-bar-group-1", "my-bar-group"],
+  ["my-baz-group-1", "my-baz-group"],
+]
+
+group_id_mappings = [
+  ["my-foo-group", "my-foo-group-1"],
+  ["my-bar-group", "my-bar-group-1"],
+  ["my-baz-group", "my-baz-group-1"],
+]
+
+group_id_mappings = [
+  ["my-foo-group-1", "my-foo-group-2"],
+  ["my-bar-group-1", "my-bar-group-2"],
+  ["my-baz-group-1", "my-baz-group-2"],
+]
