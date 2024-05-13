@@ -2,6 +2,7 @@ defmodule LightningWeb.ProjectLiveTest do
   use LightningWeb.ConnCase, async: false
 
   import Phoenix.LiveViewTest
+  import Phoenix.Component
   import Lightning.ProjectsFixtures
   import Lightning.AccountsFixtures
   import Lightning.Factories
@@ -2652,6 +2653,66 @@ defmodule LightningWeb.ProjectLiveTest do
       end
     end
 
+    test "button/link to connect to github is disabled if the limiter returns an error",
+         %{conn: conn} do
+      %{id: project_id} = project = insert(:project)
+      # let us return ok first
+      stub(Lightning.Extensions.MockUsageLimiter, :limit_action, fn
+        %{type: :github_sync}, %{project_id: ^project_id} ->
+          :ok
+
+        _other_action, _context ->
+          :ok
+      end)
+
+      {conn, _user} = setup_project_user(conn, project, :admin)
+
+      {:ok, view, html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/settings#vcs"
+        )
+
+      assert html =~ "Connect your OpenFn account to GitHub"
+      assert has_element?(view, "a#connect-github-link")
+
+      refute has_element?(view, "#connect-github-link-tooltip")
+
+      # now let us return an error
+      error_msg = "github error reason"
+
+      stub(Lightning.Extensions.MockUsageLimiter, :limit_action, fn
+        %{type: :github_sync}, %{project_id: ^project_id} ->
+          {:error, :disabled,
+           %{
+             function: fn assigns ->
+               ~H"<p><%= @error %></p>"
+             end,
+             attrs: %{error: error_msg},
+             text: error_msg
+           }}
+
+        _other_action, _context ->
+          :ok
+      end)
+
+      for {conn, _user} <-
+            setup_project_users(conn, project, [:admin, :owner]) do
+        {:ok, view, html} =
+          live(
+            conn,
+            ~p"/projects/#{project.id}/settings#vcs"
+          )
+
+        assert html =~ "Connect your OpenFn account to GitHub"
+        refute has_element?(view, "a#connect-github-link")
+        assert has_element?(view, "button#connect-github-link")
+
+        assert view |> element("#connect-github-link-tooltip") |> render() =~
+                 error_msg
+      end
+    end
+
     test "authorized users see form to connect branch if they have already connected their github account",
          %{conn: conn} do
       project = insert(:project)
@@ -4381,7 +4442,6 @@ defmodule LightningWeb.ProjectLiveTest do
          %{
            conn: conn
          } do
-      import Phoenix.Component
       %{id: project_id} = project = insert(:project)
 
       for {conn, _user} <-

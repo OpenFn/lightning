@@ -12,21 +12,39 @@ defmodule LightningWeb.Components.GithubComponents do
   attr :user, Lightning.Accounts.User, required: true
   attr :github_query_params, :map
   attr :disabled, :boolean, default: false
+  attr :tooltip, :string
 
   def connect_to_github_link(assigns) do
     assigns =
       assign_new(assigns, :github_query_params, fn -> build_query_params() end)
 
     ~H"""
-    <.link
-      id={@id}
-      href={"https://github.com/login/oauth/authorize?" <> Plug.Conn.Query.encode(@github_query_params)}
-      target="_blank"
-      class={[@class, "#{if @disabled, do: "bg-primary-300 cursor-not-allowed"}"]}
-      {if @user.github_oauth_token, do: ["phx-hook": "Tooltip", "aria-label": "Your token has expired"], else: []}
-    >
-      <%= if @user.github_oauth_token, do: "Reconnect", else: "Connect" %> your Github Account
-    </.link>
+    <%= if !@disabled do %>
+      <.link
+        id={@id}
+        href={"https://github.com/login/oauth/authorize?" <> Plug.Conn.Query.encode(@github_query_params)}
+        target="_blank"
+        class={@class}
+        {if @user.github_oauth_token, do: ["phx-hook": "Tooltip", "aria-label": "Your token has expired"], else: []}
+      >
+        <%= if @user.github_oauth_token, do: "Reconnect", else: "Connect" %> your Github Account
+      </.link>
+    <% else %>
+      <span
+        id={"#{@id}-tooltip"}
+        phx-hook="Tooltip"
+        aria-label={@tooltip}
+        data-allow-html="true"
+      >
+        <button
+          id={@id}
+          class={[@class, "disabled:bg-primary-300"]}
+          disabled={@disabled}
+        >
+          Connect your Github Account
+        </button>
+      </span>
+    <% end %>
     """
   end
 
