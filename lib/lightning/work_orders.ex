@@ -344,6 +344,7 @@ defmodule Lightning.WorkOrders do
         |> put_assoc(:starting_job, starting_job)
         |> put_assoc(:steps, steps)
         |> put_assoc(:created_by, creating_user)
+        |> Run.add_options(dataclip.project_id)
         |> validate_required_assoc(:snapshot)
         |> validate_required_assoc(:dataclip)
         |> validate_required_assoc(:work_order)
