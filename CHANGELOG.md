@@ -21,6 +21,9 @@ and this project adheres to
 
 ### Fixed
 
+- Disable emails on reset demo create project
+  [#2063](https://github.com/OpenFn/lightning/pull/2063)
+
 ## [v2.4.8] - 2024-05-13
 
 ### Added
