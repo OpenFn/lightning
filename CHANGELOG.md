@@ -21,6 +21,10 @@ and this project adheres to
 
 ### Fixed
 
+- Correctly pass max allowed run time into the Run token, ensuring it's valid
+  for the entirety of the Runs execution time
+  [#2072](https://github.com/OpenFn/lightning/issues/2072)
+
 ## [v2.4.8] - 2024-05-13
 
 ### Added
