@@ -5,15 +5,15 @@
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="generator" content="ExDoc v0.30.9">
-    <meta name="project" content="Lightning v2.4.7">
+    <meta name="project" content="Lightning v2.4.9">
 
-    <title>Lightning.Config — Lightning v2.4.7</title>
+    <title>Lightning.Config — Lightning v2.4.9</title>
     <link rel="stylesheet" href="dist/html-elixir-XFYN5IVA.css" />
 
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-EPF2X7PV.js"></script>
-    <script src="dist/sidebar_items-CBDAD766.js"></script>
+    <script src="dist/sidebar_items-78CB3996.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -72,7 +72,7 @@
 Lightning
       </a>
       <div class="sidebar-projectVersion" translate="no">
-        v2.4.7
+        v2.4.9
       </div>
     </div>
     <ul id="sidebar-listNav" class="sidebar-listNav" role="tablist">
@@ -131,7 +131,7 @@ Pages
     </a>
 
   <span translate="no">Lightning.Config</span> <small>behaviour</small>
-  <small class="app-vsn" translate="no">(Lightning v2.4.7)</small>
+  <small class="app-vsn" translate="no">(Lightning v2.4.9)</small>
 
 </h1>
 
@@ -156,6 +156,14 @@ Pages
     <div class="summary-row">
       <div class="summary-signature">
         <a href="#c:check_flag?/1" translate="no">check_flag?(atom)</a>
+
+      </div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#c:default_max_run_duration/0" translate="no">default_max_run_duration()</a>
 
       </div>
 
@@ -225,9 +233,22 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
+        <a href="#default_max_run_duration/0" translate="no">default_max_run_duration()</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Returns the default maximum run duration in seconds.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
         <a href="#grace_period/0" translate="no">grace_period()</a>
 
       </div>
+
+        <div class="summary-synopsis"><p>The grace period is 20% of the max run duration and may be used to wait for
+an additional amount of time after a run was meant to be finished.</p></div>
 
     </div>
 
@@ -297,7 +318,7 @@ Pages
     </a>
     <h1 class="signature" translate="no">check_flag?(atom)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L105" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L107" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -316,6 +337,34 @@ Pages
 
   </section>
 </section>
+<section class="detail" id="c:default_max_run_duration/0">
+
+  <div class="detail-header">
+    <a href="#c:default_max_run_duration/0" class="detail-link" title="Link to this callback">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this callback</span>
+    </a>
+    <h1 class="signature" translate="no">default_max_run_duration()</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L105" class="icon-action" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@callback</span> default_max_run_duration() :: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">integer</a>()</pre>
+
+      </div>
+
+
+  </section>
+</section>
 <section class="detail" id="c:grace_period/0">
 
   <div class="detail-header">
@@ -325,7 +374,7 @@ Pages
     </a>
     <h1 class="signature" translate="no">grace_period()</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L103" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L104" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -353,7 +402,7 @@ Pages
     </a>
     <h1 class="signature" translate="no">purge_deleted_after_days()</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L104" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L106" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -381,7 +430,7 @@ Pages
     </a>
     <h1 class="signature" translate="no">repo_connection_token_signer()</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L101" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L102" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -409,7 +458,7 @@ Pages
     </a>
     <h1 class="signature" translate="no">run_token_signer()</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L99" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L100" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -437,7 +486,7 @@ Pages
     </a>
     <h1 class="signature" translate="no">worker_secret()</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L102" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L103" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -465,7 +514,7 @@ Pages
     </a>
     <h1 class="signature" translate="no">worker_token_signer()</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L100" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L101" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -505,7 +554,7 @@ Pages
     </a>
     <h1 class="signature" translate="no">check_flag?(flag)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L137" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L152" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -516,6 +565,28 @@ Pages
   <section class="docstring">
 
 
+  </section>
+</section>
+<section class="detail" id="default_max_run_duration/0">
+
+  <div class="detail-header">
+    <a href="#default_max_run_duration/0" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">default_max_run_duration()</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L140" class="icon-action" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+<p>Returns the default maximum run duration in seconds.</p>
   </section>
 </section>
 <section class="detail" id="grace_period/0">
@@ -527,7 +598,7 @@ Pages
     </a>
     <h1 class="signature" translate="no">grace_period()</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L125" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L133" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -537,7 +608,8 @@ Pages
 
   <section class="docstring">
 
-
+<p>The grace period is 20% of the max run duration and may be used to wait for
+an additional amount of time after a run was meant to be finished.</p><p>The returned value is in seconds.</p>
   </section>
 </section>
 <section class="detail" id="purge_deleted_after_days/0">
@@ -549,7 +621,7 @@ Pages
     </a>
     <h1 class="signature" translate="no">purge_deleted_after_days()</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L133" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L148" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -571,7 +643,7 @@ Pages
     </a>
     <h1 class="signature" translate="no">repo_connection_token_signer()</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L129" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L144" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -593,7 +665,7 @@ Pages
     </a>
     <h1 class="signature" translate="no">run_token_signer()</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L110" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L112" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -615,7 +687,7 @@ Pages
     </a>
     <h1 class="signature" translate="no">worker_secret()</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L121" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L123" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -637,7 +709,7 @@ Pages
     </a>
     <h1 class="signature" translate="no">worker_token_signer()</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L117" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L119" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
