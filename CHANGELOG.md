@@ -21,7 +21,12 @@ and this project adheres to
 
 ### Fixed
 
-- Disable emails on reset demo create project
+## [v2.4.10] - 2024-05-14
+
+### Fixed
+
+- Fix the "reset demo" script by disabling the emailing that was introduced to
+  the `create_project` function.
   [#2063](https://github.com/OpenFn/lightning/pull/2063)
 
 ## [v2.4.9] - 2024-05-14
