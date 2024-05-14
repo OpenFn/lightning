@@ -48,6 +48,8 @@ defmodule LightningWeb.CredentialLive.FormComponent do
 
   @impl true
   def update(%{body: body}, socket) do
+    IO.inspect(body, label: "Token in body")
+
     {:ok,
      update(socket, :changeset, fn changeset, %{credential: credential} ->
        params = changeset.params |> Map.put("body", body)
@@ -61,6 +63,8 @@ defmodule LightningWeb.CredentialLive.FormComponent do
 
     users = list_users()
     scopes = get_scopes(assigns.credential)
+
+    IO.inspect(assigns.credential.body)
 
     sandbox_value = get_sandbox_value(assigns.credential)
 
@@ -424,7 +428,7 @@ defmodule LightningWeb.CredentialLive.FormComponent do
                   label="Sandbox instance?"
                   phx-change="check_sandbox"
                   phx-target={@myself}
-                  id="salesforce_sandbox_instance_checkbox"
+                  id={"salesforce_sandbox_instance_checkbox_#{@credential.id || "new"}"}
                 />
 
                 <.input
@@ -436,7 +440,7 @@ defmodule LightningWeb.CredentialLive.FormComponent do
                   value={@api_version}
                   phx-change="api_version"
                   phx-target={@myself}
-                  id="salesforce_api_version_input"
+                  id={"salesforce_api_version_input_#{@credential.id || "new"}"}
                 />
                 <%= fieldset %>
               </div>
@@ -530,8 +534,6 @@ defmodule LightningWeb.CredentialLive.FormComponent do
       action={@action}
       schema={@schema}
       update_body={@update_body}
-      sandbox_value={@sandbox_value}
-      api_version={@api_version}
       scopes_changed={@scopes_changed}
     >
       <%= render_slot(@inner_block, l) %>
@@ -767,6 +769,8 @@ defmodule LightningWeb.CredentialLive.FormComponent do
          credential_params
        ) do
     %{credential: form_credential} = socket.assigns
+
+    IO.inspect(credential_params, label: "params")
 
     with {:same_user, true} <-
            {:same_user,

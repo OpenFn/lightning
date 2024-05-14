@@ -1482,6 +1482,114 @@ defmodule LightningWeb.CredentialLiveTest do
                sandbox: true
              } = token
     end
+
+    test "update a prod salesforce credential to turn into a sandbox one", %{
+      user: user,
+      bypass: bypass,
+      conn: conn
+    } do
+      # TODO: replace this with a proper Mock via Lightning.Config
+      Lightning.ApplicationHelpers.put_temporary_env(:lightning, :oauth_clients,
+        google: [client_id: "foo"],
+        salesforce: [
+          client_id: "foo",
+          client_secret: "bar",
+          prod_wellknown_url: "http://localhost:#{bypass.port}/auth/.well-known",
+          sandbox_wellknown_url:
+            "http://localhost:#{bypass.port}/auth/.well-known"
+        ]
+      )
+
+      expect_wellknown(bypass)
+
+      expect_token(
+        bypass,
+        Lightning.AuthProviders.Common.get_wellknown!(
+          "http://localhost:#{bypass.port}/auth/.well-known"
+        ),
+        %{
+          access_token: "ya29.a0AVvZ...",
+          refresh_token: "1//03vpp6Li...",
+          expires_at: 3600,
+          token_type: "Bearer",
+          id_token: "eyJhbGciO...",
+          scope: "scope1 scope2"
+        }
+      )
+
+      expect_userinfo(
+        bypass,
+        Lightning.AuthProviders.Common.get_wellknown!(
+          "http://localhost:#{bypass.port}/auth/.well-known"
+        ),
+        """
+        {"picture": "image.png", "name": "Test User"}
+        """
+      )
+
+      expect_introspect(
+        bypass,
+        Lightning.AuthProviders.Common.get_wellknown!(
+          "http://localhost:#{bypass.port}/auth/.well-known"
+        ),
+        %{
+          access_token: "ya29.a0AVvZ...",
+          refresh_token: "1//03vpp6Li...",
+          expires_at: 3600,
+          token_type: "Bearer",
+          id_token: "eyJhbGciO...",
+          scope: "scope1 scope2"
+        }
+      )
+
+      credential =
+        insert(:credential,
+          schema: "salesforce_oauth",
+          user: user,
+          body: %{
+            access_token: "ya29.a0AVvZ...",
+            refresh_token: "1//03vpp6Li...",
+            expires_at: 3600,
+            scope: "scope1 scope2",
+            instance_url: "login.salesforce.com",
+            sandbox: true
+          }
+        )
+
+      token_body = Lightning.AuthProviders.Common.TokenBody.new(credential.body)
+
+      assert token_body.instance_url == "login.salesforce.com"
+      assert token_body.sandbox
+
+      {:ok, view, _html} = live(conn, ~p"/credentials")
+
+      assert view |> has_element?("#credential-form-#{credential.id}")
+
+      view
+      |> element("#salesforce_sandbox_instance_checkbox_#{credential.id}")
+      |> render_change(%{"sandbox" => "false"})
+
+      {:ok, _view, _html} =
+        view
+        |> form("#credential-form-#{credential.id}")
+        |> render_submit()
+        |> follow_redirect(
+          conn,
+          ~p"/credentials"
+        )
+
+      {_path, flash} = assert_redirect(view)
+      assert flash == %{"info" => "Credential updated successfully"}
+
+      credential = Repo.reload!(credential)
+
+      token_body =
+        Lightning.AuthProviders.Common.TokenBody.new(credential.body)
+        |> IO.inspect()
+
+      assert token_body.instance_url == "test.salesforce.com"
+      assert token_body.sandbox
+    end
   end
 
   describe "googlesheets credential" do

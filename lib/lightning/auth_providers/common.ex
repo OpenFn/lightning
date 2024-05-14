@@ -89,7 +89,7 @@ defmodule Lightning.AuthProviders.Common do
   Retrieves user information from the OAuth provider.
   """
   def get_userinfo(client, token, wellknown_url) do
-    {:ok, wellknown} = get_wellknown(wellknown_url)
+    {:ok, wellknown} = get_wellknown(wellknown_url) |> IO.inspect()
 
     OAuth2.Client.get(%{client | token: token}, wellknown.userinfo_endpoint)
   end

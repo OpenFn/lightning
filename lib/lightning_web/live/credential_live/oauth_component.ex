@@ -21,8 +21,6 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
   attr :action, :any, required: true
   attr :scopes_changed, :boolean, default: false
   attr :schema, :string, required: true
-  attr :sandbox_value, :boolean, default: false
-  attr :api_version, :string, default: ""
   slot :inner_block
 
   def fieldset(assigns) do
@@ -55,8 +53,6 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
            scopes_changed: @scopes_changed,
            token_body_changeset: @token_body_changeset,
            update_body: @update_body,
-           sandbox_value: @sandbox_value,
-           api_version: @api_version,
            schema: @schema,
            id: "inner-form-#{@id}"
          ],
@@ -565,14 +561,14 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
           id: _id,
           action: _action,
           scopes_changed: _scopes_changed,
-          sandbox_value: _sandbox_value,
-          api_version: _api_version,
           token_body_changeset: _changeset,
           update_body: _body,
           schema: _schema
         } = params,
         socket
       ) do
+    IO.inspect("ARE YOU BEING CALLED ?")
+
     token =
       params.token_body_changeset
       |> Ecto.Changeset.apply_changes()
@@ -600,18 +596,6 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
 
   def update(%{scopes: scopes}, socket) do
     handle_scopes_update(scopes, socket)
-  end
-
-  def update(%{api_version: api_version}, socket) do
-    socket.assigns.token.result
-    |> token_to_params()
-    |> maybe_add_specific_provider_params(
-      socket.assigns,
-      socket.assigns.provider
-    )
-    |> socket.assigns.update_body.()
-
-    {:ok, socket |> assign(api_version: api_version)}
   end
 
   def update(%{sandbox: sandbox}, socket) do
@@ -644,8 +628,6 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
            id: id,
            action: action,
            scopes_changed: scopes_changed,
-           sandbox_value: sandbox_value,
-           api_version: api_version,
            token_body_changeset: token_body_changeset,
            update_body: update_body,
            schema: schema
@@ -662,8 +644,6 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
       token: AsyncResult.ok(token),
       update_body: update_body,
       adapter: adapter,
-      sandbox: sandbox_value,
-      api_version: api_version,
       provider: adapter.provider_name,
       action: action,
       scopes_changed: scopes_changed
