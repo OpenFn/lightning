@@ -177,6 +177,15 @@ defmodule KafkaTestingUtils do
     Repo.all(query)
   end
 
+  def link_triggers_to_workflow(workflow_id) do
+    all_kafka_triggers()
+    |> Enum.each(fn trigger ->
+      trigger
+      |> Trigger.changeset(%{workflow_id: workflow_id})
+      |> Repo.update()
+    end)
+  end
+
   defp find_trigger_for_group(triggers, required_group_id) do
     triggers
     |> Enum.find(fn trigger ->

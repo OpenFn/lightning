@@ -1,10 +1,13 @@
 defmodule Lightning.KafkaTriggers.Pipeline do
   use Broadway
 
+  import Ecto.Query
+
   alias Lightning.KafkaTriggers
   alias Lightning.KafkaTriggers.TriggerKafkaMessageRecord
   alias Lightning.Repo
   alias Lightning.Workflows.Trigger
+  alias Lightning.WorkOrders
 
   def start_link(opts) do
     trigger_id = opts |> Keyword.get(:trigger_id)
@@ -53,8 +56,25 @@ defmodule Lightning.KafkaTriggers.Pipeline do
 
     case record_changeset |> Repo.insert() do
       {:ok, _} ->
-        Trigger
-        |> Repo.get(trigger_id |> Atom.to_string())
+        # TODO Use the UsageLimiter for this
+        without_run? = false
+
+        trigger =
+          Trigger
+          |> preload([:workflow])
+          |> Repo.get(trigger_id |> Atom.to_string())
+
+        WorkOrders.create_for(trigger,
+          workflow: trigger.workflow,
+          dataclip: %{
+            body: data |> Jason.decode!(),
+            type: :kafka,
+            project_id: trigger.workflow.project_id
+          },
+          without_run: without_run?
+        )|> IO.inspect(label: :create_for)
+
+        trigger
         |> KafkaTriggers.update_partition_data(partition, timestamp)
 
         # IO.inspect(message, label: :full_message)

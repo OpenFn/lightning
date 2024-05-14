@@ -34,8 +34,8 @@ defmodule Lightning.Invocation.Dataclip do
           source_step: Step.t() | Ecto.Association.NotLoaded.t() | nil
         }
 
-  @type source_type :: :http_request | :global | :step_result | :saved_input
-  @source_types [:http_request, :global, :step_result, :saved_input]
+  @type source_type :: :http_request | :global | :step_result | :saved_input | :kafka
+  @source_types [:http_request, :global, :step_result, :saved_input, :kafka]
 
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id
