@@ -1030,7 +1030,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
   end
 
   def handle_info(%DataclipUpdated{dataclip: dataclip}, socket) do
-    dataclip = Invocation.get_dataclip_details!(dataclip.id)
+    dataclip = Invocation.get_dataclip!(dataclip.id)
 
     {:noreply,
      assign_dataclips(socket, socket.assigns.selectable_dataclips, dataclip)}

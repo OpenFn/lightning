@@ -111,94 +111,21 @@ defmodule LightningWeb.Components.Viewers do
   end
 
   attr :id, :string, required: true
-
-  attr :stream, :list,
-    required: true,
-    doc: """
-    A stream of lines to render. In the shape of `%{id: String.t(), line: String.t(), index: integer()}`
-    """
-
-  attr :stream_empty?, :boolean, required: true
-
-  attr :run_state, :any, required: true
-
-  attr :input_or_output, :atom, required: true, values: [:input, :output]
-
-  attr :class, :string,
-    default: nil,
-    doc: "Additional classes to add to the log viewer container"
-
-  attr :type, :atom,
-    default: nil,
-    values: [nil | Dataclip.source_types()]
+  attr :dataclip, :map, required: true
 
   def dataclip_viewer(assigns) do
     ~H"""
-    <div class={[
-      "rounded-md shadow-sm bg-slate-700 border-slate-300",
-      "text-slate-200 text-sm font-mono w-full h-full relative",
-      @class
-    ]}>
-      <.dataclip_type :if={@type} type={@type} id={"#{@id}-type"} />
-      <div
-        class={[
-          "overscroll-contain scroll-smooth",
-          "grid grid-flow-row-dense grid-cols-[min-content_1fr]",
-          "min-h-[2rem]",
-          "log-viewer relative"
-        ]}
-        id={@id}
-        phx-update="stream"
-      >
-        <div
-          :for={{dom_id, %{line: line, index: index}} <- @stream}
-          class="group contents"
-          id={dom_id}
-        >
-          <div class="log-viewer__prefix" data-line-prefix={index}></div>
-          <div data-log-line class="log-viewer__message">
-            <pre class="whitespace-break-spaces"><%= line %></pre>
-          </div>
-        </div>
-      </div>
-      <%= if @run_state in Lightning.Run.final_states() and @stream_empty? do %>
-        <div class={[
-          "m-2 relative rounded-md",
-          "p-12 text-center col-span-full"
-        ]}>
-          <span class="relative inline-flex">
-            <div class="inline-flex">
-              No <%= @input_or_output %> state could be saved for this run.
-            </div>
-          </span>
-        </div>
-      <% else %>
-        <div
-          :if={@stream_empty?}
-          id={"#{@id}-nothing-yet"}
-          class={[
-            "m-2 relative rounded-md",
-            "p-12 text-center col-span-full"
-          ]}
-        >
-          <.text_ping_loader>
-            Nothing yet
-          </.text_ping_loader>
-        </div>
-      <% end %>
+    <div
+      id={@id}
+      class="overflow-auto h-full"
+      phx-hook="DataclipViewer"
+      data-id={@dataclip.id}
+    >
     </div>
     """
   end
 
   attr :id, :string, required: true
-
-  attr :stream, :list,
-    required: true,
-    doc: """
-    A stream of lines to render. In the shape of `%{id: String.t(), line: String.t(), index: integer()}`
-    """
-
-  attr :stream_empty?, :boolean, required: true
 
   attr :run_state, :any, required: true
 
@@ -228,23 +155,54 @@ defmodule LightningWeb.Components.Viewers do
         project_id={@project_id}
       />
     <% else %>
-      <.dataclip_viewer
-        id={@id}
-        class={@class}
-        stream={@stream}
-        stream_empty?={@stream_empty?}
-        input_or_output={@input_or_output}
-        run_state={@run_state}
-        type={
-          case @dataclip do
-            %AsyncResult{ok?: true, result: %{type: type}} -> type
-            %{type: type} -> type
-            _ -> nil
-          end
+      <div
+        :if={
+          @run_state in Lightning.Run.final_states() and
+            is_nil(dataclip_from_result(@dataclip))
         }
+        class={[
+          "m-2 relative rounded-md",
+          "p-12 text-center col-span-full"
+        ]}
+      >
+        <span class="relative inline-flex">
+          <div class="inline-flex">
+            No <%= @input_or_output %> state could be saved for this run.
+          </div>
+        </span>
+      </div>
+
+      <div
+        :if={
+          @run_state not in Lightning.Run.final_states() and
+            is_nil(dataclip_from_result(@dataclip))
+        }
+        id={"#{@id}-nothing-yet"}
+        class={[
+          "m-2 relative rounded-md",
+          "p-12 text-center col-span-full"
+        ]}
+      >
+        <.text_ping_loader>
+          Nothing yet
+        </.text_ping_loader>
+      </div>
+
+      <.dataclip_viewer
+        :if={dataclip_from_result(@dataclip)}
+        id={@id}
+        dataclip={dataclip_from_result(@dataclip)}
       />
     <% end %>
     """
+  end
+
+  defp dataclip_from_result(result) do
+    case result do
+      %AsyncResult{ok?: true, result: dataclip} -> dataclip
+      %{type: _} = dataclip -> dataclip
+      _ -> nil
+    end
   end
 
   attr :id, :string, default: nil

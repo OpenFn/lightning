@@ -176,19 +176,17 @@ defmodule LightningWeb.RunLive.Show do
               </Common.tab_bar>
 
               <Common.panel_content for_hash="log">
-                <Viewers.log_viewer
+                <%!-- <Viewers.log_viewer
                   id={"run-log-#{run.id}"}
                   highlight_id={@selected_step_id}
                   stream={@streams.log_lines}
                   run_state={@run.result.state}
                   stream_empty?={@log_lines_stream_empty?}
-                />
+                /> --%>
               </Common.panel_content>
               <Common.panel_content for_hash="input">
                 <Viewers.step_dataclip_viewer
                   id={"step-input-#{@selected_step_id}"}
-                  stream={@streams.input_dataclip}
-                  stream_empty?={@input_dataclip_stream_empty?}
                   run_state={@run.result.state}
                   step={@selected_step}
                   dataclip={@input_dataclip}
@@ -201,8 +199,6 @@ defmodule LightningWeb.RunLive.Show do
               <Common.panel_content for_hash="output">
                 <Viewers.step_dataclip_viewer
                   id={"step-output-#{@selected_step_id}"}
-                  stream={@streams.output_dataclip}
-                  stream_empty?={@output_dataclip_stream_empty?}
                   run_state={@run.result.state}
                   step={@selected_step}
                   dataclip={@output_dataclip}
@@ -236,11 +232,7 @@ defmodule LightningWeb.RunLive.Show do
      )
      |> stream(:log_lines, [])
      |> assign(:log_lines_stream_empty?, true)
-     |> stream(:input_dataclip, [])
-     |> assign(:input_dataclip_stream_empty?, true)
      |> assign(:input_dataclip, false)
-     |> stream(:output_dataclip, [])
-     |> assign(:output_dataclip_stream_empty?, true)
      |> assign(:output_dataclip, false)
      |> assign(:run, AsyncResult.loading())
      |> assign(:log_lines, AsyncResult.loading())

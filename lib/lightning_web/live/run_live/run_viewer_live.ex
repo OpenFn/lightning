@@ -138,13 +138,13 @@ defmodule LightningWeb.RunLive.RunViewerLive do
                 </div>
 
                 <div class="flex min-h-0 h-full grow bg-slate-700 overflow-auto rounded-md">
-                  <Viewers.log_viewer
+                  <%!-- <Viewers.log_viewer
                     id={"run-log-#{run.id}"}
                     highlight_id={@selected_step_id}
                     run_state={run.state}
                     stream={@streams.log_lines}
                     stream_empty?={@log_lines_stream_empty?}
-                  />
+                  /> --%>
                 </div>
               </div>
             </Common.panel_content>
@@ -184,10 +184,7 @@ defmodule LightningWeb.RunLive.RunViewerLive do
                   <div class="flex-1 grow inset-0 overflow-auto rounded-md">
                     <Viewers.step_dataclip_viewer
                       id={"step-input-#{@selected_step_id}"}
-                      class="overflow-auto h-full"
                       run_state={@run.result.state}
-                      stream={@streams.input_dataclip}
-                      stream_empty?={@input_dataclip_stream_empty?}
                       step={@selected_step}
                       dataclip={@input_dataclip}
                       input_or_output={:input}
@@ -234,9 +231,6 @@ defmodule LightningWeb.RunLive.RunViewerLive do
                   <div class="flex-1 grow inset-0 overflow-auto rounded-md">
                     <Viewers.step_dataclip_viewer
                       id={"step-output-#{@selected_step_id}"}
-                      class="overflow-auto h-full"
-                      stream={@streams.output_dataclip}
-                      stream_empty?={@output_dataclip_stream_empty?}
                       run_state={@run.result.state}
                       step={@selected_step}
                       dataclip={@output_dataclip}
@@ -278,11 +272,7 @@ defmodule LightningWeb.RunLive.RunViewerLive do
      )
      |> stream(:log_lines, [])
      |> assign(:log_lines_stream_empty?, true)
-     |> stream(:input_dataclip, [])
-     |> assign(:input_dataclip_stream_empty?, true)
      |> assign(:input_dataclip, false)
-     |> stream(:output_dataclip, [])
-     |> assign(:output_dataclip_stream_empty?, true)
      |> assign(:output_dataclip, false)
      |> assign(:run, AsyncResult.loading())
      |> assign(:log_lines, AsyncResult.loading())

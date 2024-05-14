@@ -1,15 +1,10 @@
 defmodule LightningWeb.RunLive.Streaming do
-  import Phoenix.Component, only: [assign: 2, changed?: 2]
+  import Phoenix.Component, only: [assign: 2]
   import Phoenix.LiveView
   import Ecto.Query
 
-  alias Lightning.Credentials
-  alias Lightning.Invocation.Dataclip
-  alias Lightning.Invocation.Step
   alias Lightning.Repo
   alias Lightning.Runs
-  alias Lightning.RunStep
-  alias Lightning.Scrubber
   alias Phoenix.LiveView.AsyncResult
 
   @doc """
@@ -42,91 +37,38 @@ defmodule LightningWeb.RunLive.Streaming do
     end
   end
 
-  def get_dataclip_lines(step, field) do
+  def get_dataclip(step, field) do
     import Ecto.Query
 
     from(d in Ecto.assoc(step, field))
-    |> Lightning.Invocation.Query.select_as_input()
     |> Repo.one()
-    |> case do
-      nil ->
-        {nil, []}
-
-      %Dataclip{id: id, type: type, body: nil, wiped_at: %{} = wiped_at} ->
-        {%{id: id, step_id: step.id, type: type, wiped_at: wiped_at}, []}
-
-      %Dataclip{id: id, body: body, type: type, wiped_at: wiped_at} ->
-        {%{id: id, step_id: step.id, type: type, wiped_at: wiped_at},
-         body
-         |> Jason.encode!(pretty: true)
-         |> maybe_scrub(type, step)
-         |> String.split("\n")
-         |> Stream.with_index(1)
-         |> Stream.map(fn {line, index} ->
-           %{id: index, line: line, index: index}
-         end)}
-    end
   end
 
-  def maybe_load_input_dataclip(socket, chunk_size) do
-    live_view_pid = self()
-
+  def maybe_load_input_dataclip(socket) do
     %{selected_step: selected_step} = socket.assigns
 
     if selected_step && needs_dataclip_stream?(socket, :input_dataclip) do
       socket
       |> assign_async(:input_dataclip, fn ->
-        {dataclip, lines} =
-          get_dataclip_lines(selected_step, :input_dataclip)
-
-        lines
-        |> Stream.chunk_every(chunk_size)
-        |> Stream.each(fn lines ->
-          send(live_view_pid, {:input_dataclip, lines})
-        end)
-        |> Stream.run()
-
-        {:ok, %{input_dataclip: dataclip}}
+        {:ok, %{input_dataclip: get_dataclip(selected_step, :input_dataclip)}}
       end)
     else
       socket
     end
   end
 
-  def maybe_load_output_dataclip(socket, chunk_size) do
-    live_view_pid = self()
-
+  def maybe_load_output_dataclip(socket) do
     %{selected_step: selected_step} = socket.assigns
 
     if selected_step && selected_step.output_dataclip_id &&
          needs_dataclip_stream?(socket, :output_dataclip) do
       socket
       |> assign_async(:output_dataclip, fn ->
-        {dataclip, lines} =
-          get_dataclip_lines(selected_step, :output_dataclip)
-
-        lines
-        |> Stream.chunk_every(chunk_size)
-        |> Stream.each(fn lines ->
-          send(live_view_pid, {:output_dataclip, lines})
-        end)
-        |> Stream.run()
-
-        {:ok, %{output_dataclip: dataclip}}
+        {:ok, %{output_dataclip: get_dataclip(selected_step, :output_dataclip)}}
       end)
     else
       socket
     end
-  end
-
-  def reset_dataclip_streams(socket) do
-    socket
-    |> stream(:input_dataclip, [], reset: true)
-    |> stream(:output_dataclip, [], reset: true)
-    |> assign(
-      input_dataclip_stream_empty?: true,
-      output_dataclip_stream_empty?: true
-    )
   end
 
   def unselect_step(socket) do
@@ -137,7 +79,6 @@ defmodule LightningWeb.RunLive.Streaming do
       input_dataclip: false,
       output_dataclip: false
     )
-    |> reset_dataclip_streams()
   end
 
   def sort_steps(steps) do
@@ -146,45 +87,6 @@ defmodule LightningWeb.RunLive.Streaming do
       DateTime.compare(x.started_at, y.started_at) == :lt
     end)
   end
-
-  defp maybe_scrub(body_str, :step_result, %Step{
-         id: step_id,
-         started_at: started_at
-       }) do
-    run_step =
-      from(as in RunStep,
-        where: as.step_id == ^step_id,
-        select: as.run_id
-      )
-
-    from(as in RunStep,
-      join: s in assoc(as, :step),
-      join: j in assoc(s, :job),
-      join: c in assoc(j, :credential),
-      where: as.run_id in subquery(run_step),
-      where: s.started_at <= ^started_at,
-      select: c
-    )
-    |> Repo.all()
-    |> case do
-      [] ->
-        body_str
-
-      credentials ->
-        {:ok, scrubber} = Scrubber.start_link([])
-
-        credentials
-        |> Enum.reduce(scrubber, fn credential, scrubber ->
-          samples = Credentials.sensitive_values_for(credential)
-          basic_auth = Credentials.basic_auth_for(credential)
-          :ok = Scrubber.add_samples(scrubber, samples, basic_auth)
-          scrubber
-        end)
-        |> Scrubber.scrub(body_str)
-    end
-  end
-
-  defp maybe_scrub(body_str, _type, _step), do: body_str
 
   defp needs_dataclip_stream?(socket, assign) do
     selected_step_id = socket.assigns.selected_step_id
@@ -227,20 +129,6 @@ defmodule LightningWeb.RunLive.Streaming do
          socket
          |> stream(:log_lines, lines)
          |> assign(:log_lines_stream_empty?, false)}
-      end
-
-      def handle_info({:input_dataclip, lines}, socket) do
-        {:noreply,
-         socket
-         |> stream(:input_dataclip, lines)
-         |> assign(:input_dataclip_stream_empty?, false)}
-      end
-
-      def handle_info({:output_dataclip, lines}, socket) do
-        {:noreply,
-         socket
-         |> stream(:output_dataclip, lines)
-         |> assign(:output_dataclip_stream_empty?, false)}
       end
 
       def handle_info(
@@ -337,13 +225,13 @@ defmodule LightningWeb.RunLive.Streaming do
     quote do
       import unquote(__MODULE__)
 
-      def maybe_load_input_dataclip(socket) do
-        maybe_load_input_dataclip(socket, @chunk_size)
-      end
+      # def maybe_load_input_dataclip(socket) do
+      #   maybe_load_input_dataclip(socket)
+      # end
 
-      def maybe_load_output_dataclip(socket) do
-        maybe_load_output_dataclip(socket, @chunk_size)
-      end
+      # def maybe_load_output_dataclip(socket) do
+      #   maybe_load_output_dataclip(socket)
+      # end
 
       def apply_selected_step_id(socket, id) do
         case id do
@@ -354,13 +242,6 @@ defmodule LightningWeb.RunLive.Streaming do
           _ ->
             socket
             |> assign(selected_step_id: id)
-            |> then(fn socket ->
-              if changed?(socket, :selected_step_id) do
-                reset_dataclip_streams(socket)
-              else
-                socket
-              end
-            end)
             |> handle_steps_change()
         end
       end
