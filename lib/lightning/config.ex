@@ -34,14 +34,15 @@ defmodule Lightning.Config do
       )
     end
 
-    @doc """
-    The grace period is 20% of the max run duration and may be used to wait for
-    an additional amount of time after a run was meant to be finished.
-    """
     @impl true
     def grace_period do
       (Application.get_env(:lightning, :max_run_duration_seconds) * 0.2)
       |> trunc()
+    end
+
+    @impl true
+    def default_max_run_duration do
+      Application.get_env(:lightning, :max_run_duration_seconds)
     end
 
     @impl true
@@ -89,7 +90,7 @@ defmodule Lightning.Config do
         "no" ->
           false
 
-        _ ->
+        _other ->
           raise ArgumentError,
                 "expected true, false, yes or no, got: #{inspect(value)}"
       end
@@ -101,6 +102,7 @@ defmodule Lightning.Config do
   @callback repo_connection_token_signer() :: Joken.Signer.t()
   @callback worker_secret() :: binary() | nil
   @callback grace_period() :: integer()
+  @callback default_max_run_duration() :: integer()
   @callback purge_deleted_after_days() :: integer()
   @callback check_flag?(atom()) :: boolean() | nil
 
@@ -122,8 +124,21 @@ defmodule Lightning.Config do
     impl().worker_secret()
   end
 
+  @doc """
+  The grace period is 20% of the max run duration and may be used to wait for
+  an additional amount of time after a run was meant to be finished.
+
+  The returned value is in seconds.
+  """
   def grace_period do
     impl().grace_period()
+  end
+
+  @doc """
+  Returns the default maximum run duration in seconds.
+  """
+  def default_max_run_duration do
+    impl().default_max_run_duration()
   end
 
   def repo_connection_token_signer do

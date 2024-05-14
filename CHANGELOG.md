@@ -24,6 +24,18 @@ and this project adheres to
 - Disable emails on reset demo create project
   [#2063](https://github.com/OpenFn/lightning/pull/2063)
 
+## [v2.4.9] - 2024-05-14
+
+### Changed
+
+- Bumped @openfn/ws-worker to 1.1.8
+
+### Fixed
+
+- Correctly pass max allowed run time into the Run token, ensuring it's valid
+  for the entirety of the Runs execution time
+  [#2072](https://github.com/OpenFn/lightning/issues/2072)
+
 ## [v2.4.8] - 2024-05-13
 
 ### Added
