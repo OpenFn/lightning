@@ -4,8 +4,8 @@ defmodule LightningWeb.WorkerChannel do
   """
   use LightningWeb, :channel
 
-  alias Lightning.Extensions.UsageLimiting.Context
   alias Lightning.Extensions.UsageLimiter
+  alias Lightning.Extensions.UsageLimiting.Context
   alias Lightning.Runs
   alias Lightning.Workers
 
