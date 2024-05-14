@@ -282,11 +282,14 @@ defmodule Lightning.SetupUtils do
 
   def create_openhie_project(project_users) do
     {:ok, openhie_project} =
-      Projects.create_project(%{
-        name: "openhie-project",
-        id: "4adf2644-ed4e-4f97-a24c-ab35b3cb1efa",
-        project_users: project_users
-      })
+      Projects.create_project(
+        %{
+          name: "openhie-project",
+          id: "4adf2644-ed4e-4f97-a24c-ab35b3cb1efa",
+          project_users: project_users
+        },
+        false
+      )
 
     {:ok, openhie_workflow} =
       Workflows.save_workflow(%{
@@ -502,10 +505,13 @@ defmodule Lightning.SetupUtils do
 
   def create_dhis2_project(project_users) do
     {:ok, project} =
-      Projects.create_project(%{
-        name: "dhis2-project",
-        project_users: project_users
-      })
+      Projects.create_project(
+        %{
+          name: "dhis2-project",
+          project_users: project_users
+        },
+        false
+      )
 
     {:ok, dhis2_workflow} =
       Workflows.save_workflow(%{

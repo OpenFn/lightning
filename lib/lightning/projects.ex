@@ -181,14 +181,17 @@ defmodule Lightning.Projects do
       {:error, %Ecto.Changeset{}}
 
   """
-  def create_project(attrs \\ %{}) do
+  def create_project(attrs \\ %{}, schedule_email? \\ true) do
     %Project{}
     |> Project.project_with_users_changeset(attrs)
     |> Repo.insert()
     |> tap(fn result ->
       with {:ok, project} <- result do
         Events.project_created(project)
-        schedule_project_addition_emails(%Project{project_users: []}, project)
+
+        if schedule_email? do
+          schedule_project_addition_emails(%Project{project_users: []}, project)
+        end
       end
     end)
   end
