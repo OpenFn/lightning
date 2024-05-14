@@ -1,11 +1,11 @@
 defmodule LightningWeb.RunChannelTest do
-  alias Lightning.Extensions.UsageLimiter
   use LightningWeb.ChannelCase, async: true
 
+  alias Lightning.Extensions.UsageLimiter
+  alias Lightning.Extensions.UsageLimiting.Context
   alias Lightning.Invocation.Dataclip
   alias Lightning.Invocation.Step
   alias Lightning.Workers
-  alias Lightning.Extensions.UsageLimiting.Context
 
   import Ecto.Query
   import Lightning.TestUtils
@@ -97,10 +97,9 @@ defmodule LightningWeb.RunChannelTest do
       # A valid token, but the id doesn't match the channel name
       id = Ecto.UUID.generate()
       other_id = Ecto.UUID.generate()
-      run_timeout_ms = 1000
 
       bearer =
-        Workers.generate_run_token(%{id: id}, run_timeout_ms)
+        Workers.generate_run_token(%{id: id}, run_timeout_ms: 1000)
 
       assert {:error, %{reason: "unauthorized"}} =
                socket
@@ -114,10 +113,8 @@ defmodule LightningWeb.RunChannelTest do
     test "joining with a valid token but run is not found", %{socket: socket} do
       id = Ecto.UUID.generate()
 
-      run_timeout_ms = 1000
-
       bearer =
-        Workers.generate_run_token(%{id: id}, run_timeout_ms)
+        Workers.generate_run_token(%{id: id}, run_timeout_ms: 1000)
 
       assert {:error, %{reason: "not_found"}} =
                socket
@@ -546,8 +543,7 @@ defmodule LightningWeb.RunChannelTest do
           LightningWeb.RunChannel,
           "run:#{run.id}",
           %{
-            "token" =>
-              Workers.generate_run_token(run, run_options[:run_timeout_ms])
+            "token" => Workers.generate_run_token(run, run_options)
           }
         )
 
@@ -799,7 +795,7 @@ defmodule LightningWeb.RunChannelTest do
         |> subscribe_and_join(
           LightningWeb.RunChannel,
           "run:#{run.id}",
-          %{"token" => Workers.generate_run_token(run, 2)}
+          %{"token" => Workers.generate_run_token(run, run_timeout_ms: 2)}
         )
 
       %{socket: socket, run: run, workflow: workflow}
@@ -945,7 +941,7 @@ defmodule LightningWeb.RunChannelTest do
         |> subscribe_and_join(
           LightningWeb.RunChannel,
           "run:#{run.id}",
-          %{"token" => Workers.generate_run_token(run, 2)}
+          %{"token" => Workers.generate_run_token(run, run_timeout_ms: 2)}
         )
 
       %{
@@ -1187,7 +1183,7 @@ defmodule LightningWeb.RunChannelTest do
       |> subscribe_and_join(
         LightningWeb.RunChannel,
         "run:#{run.id}",
-        %{"token" => Workers.generate_run_token(run, 2)}
+        %{"token" => Workers.generate_run_token(run, run_timeout_ms: 2)}
       )
 
     %{socket: socket}

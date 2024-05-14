@@ -1,15 +1,15 @@
 defmodule Lightning.FailureAlertTest do
-  alias Lightning.Extensions.UsageLimiter
   use LightningWeb.ChannelCase, async: true
 
   import Lightning.Factories
   import Lightning.Helpers, only: [ms_to_human: 1]
   import Swoosh.TestAssertions
 
+  alias Lightning.Extensions.UsageLimiter
+  alias Lightning.Extensions.UsageLimiting.Context
+  alias Lightning.FailureAlerter
   alias Lightning.Repo
   alias Lightning.Workers
-  alias Lightning.FailureAlerter
-  alias Lightning.Extensions.UsageLimiting.Context
 
   setup do
     Mox.stub(Lightning.Extensions.MockUsageLimiter, :check_limits, fn _context ->
@@ -275,8 +275,7 @@ defmodule Lightning.FailureAlertTest do
           LightningWeb.RunChannel,
           "run:#{run.id}",
           %{
-            "token" =>
-              Workers.generate_run_token(run, run_options[:run_timeout_ms])
+            "token" => Workers.generate_run_token(run, run_options)
           }
         )
 

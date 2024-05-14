@@ -4,8 +4,8 @@ defmodule LightningWeb.WorkerChannel do
   """
   use LightningWeb, :channel
 
-  alias Lightning.Extensions.UsageLimiting.Context
   alias Lightning.Extensions.UsageLimiter
+  alias Lightning.Extensions.UsageLimiting.Context
   alias Lightning.Runs
   alias Lightning.Workers
 
@@ -24,17 +24,13 @@ defmodule LightningWeb.WorkerChannel do
     {:error, %{reason: "unauthorized"}}
   end
 
-  defp project_id(run) do
+  defp run_options(run) do
     run
     |> Lightning.Repo.preload(:workflow)
     |> Map.get(:workflow)
-    |> Map.get(:project_id)
-  end
-
-  defp run_options(id) do
-    UsageLimiter.get_run_options(%Context{
-      project_id: id
-    })
+    |> then(fn %{project_id: project_id} ->
+      UsageLimiter.get_run_options(%Context{project_id: project_id})
+    end)
   end
 
   @impl true
@@ -44,10 +40,10 @@ defmodule LightningWeb.WorkerChannel do
         runs =
           runs
           |> Enum.map(fn run ->
-            opts = run |> project_id() |> run_options()
+            opts = run_options(run)
 
             token =
-              Lightning.Workers.generate_run_token(run, opts[:run_timeout_ms])
+              Lightning.Workers.generate_run_token(run, opts)
 
             %{
               "id" => run.id,

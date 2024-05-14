@@ -54,7 +54,13 @@ defmodule Lightning.Workers do
     end
   end
 
-  def generate_run_token(run, run_timeout_ms) do
+  @spec generate_run_token(
+          Lightning.Run.t(),
+          LightningWeb.RunWithOptions.run_options()
+        ) :: binary()
+  def generate_run_token(run, run_options) do
+    run_timeout_ms = run_options[:run_timeout_ms]
+
     {:ok, token, _claims} =
       RunToken.generate_and_sign(
         %{"id" => run.id, "exp" => calculate_token_expiry(run_timeout_ms)},
@@ -65,10 +71,8 @@ defmodule Lightning.Workers do
   end
 
   defp calculate_token_expiry(run_timeout_ms) do
-    run_timeout_s = div(run_timeout_ms, 1000)
-
     Lightning.current_time()
-    |> DateTime.add(run_timeout_s, :second)
+    |> DateTime.add(run_timeout_ms, :millisecond)
     |> DateTime.add(Lightning.Config.grace_period())
     |> DateTime.to_unix()
   end
@@ -133,7 +137,7 @@ defmodule Lightning.Workers do
       "nbf" ->
         :nbf_not_reached
 
-      _ ->
+      _other ->
         error
     end
   end

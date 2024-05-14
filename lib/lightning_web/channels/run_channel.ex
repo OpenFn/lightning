@@ -56,14 +56,11 @@ defmodule LightningWeb.RunChannel do
     %{retention_policy: retention_policy, run: run, project_id: project_id} =
       socket.assigns
 
-    default_options = [
-      output_dataclips: include_output_dataclips?(retention_policy)
-    ]
-
-    extra_options =
-      UsageLimiter.get_run_options(%Context{project_id: project_id})
-
-    run_options = Keyword.merge(default_options, extra_options)
+    run_options =
+      Keyword.merge(
+        [output_dataclips: include_output_dataclips?(retention_policy)],
+        UsageLimiter.get_run_options(%Context{project_id: project_id})
+      )
 
     {:reply, {:ok, RunWithOptions.render(run, run_options)}, socket}
   end
