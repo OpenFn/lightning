@@ -327,5 +327,61 @@ defmodule Lightning.KafkaTriggersTest do
         )
       end
     end
+
+    test "raises an error if group_id is not provided", %{
+      hosts: hosts,
+      initial_offset_reset_policy: initial_offset_reset_policy,
+      topics: topics
+    } do
+      assert_raise KeyError, ~r/group_id/, fn ->
+        KafkaTriggers.build_trigger_configuration(
+          hosts: hosts,
+          initial_offset_reset_policy: initial_offset_reset_policy,
+          topics: topics
+        )
+      end
+    end
+
+    test "raises an error if hosts is not provided", %{
+      group_id: group_id,
+      initial_offset_reset_policy: initial_offset_reset_policy,
+      topics: topics
+    } do
+      assert_raise KeyError, ~r/hosts/, fn ->
+        KafkaTriggers.build_trigger_configuration(
+          group_id: group_id,
+          initial_offset_reset_policy: initial_offset_reset_policy,
+          topics: topics
+        )
+      end
+    end
+
+    test "raises an error if initial_offset_reset_policy is not provided", %{
+      group_id: group_id,
+      hosts: hosts,
+      topics: topics
+    } do
+      assert_raise KeyError, ~r/initial_offset_reset_policy/, fn ->
+        KafkaTriggers.build_trigger_configuration(
+          group_id: group_id,
+          hosts: hosts,
+          topics: topics
+        )
+      end
+    end
+
+    test "raises an error if topics is not provided", %{
+      group_id: group_id,
+      hosts: hosts,
+      initial_offset_reset_policy: initial_offset_reset_policy
+    } do
+      assert_raise KeyError, ~r/topics/, fn ->
+        KafkaTriggers.build_trigger_configuration(
+          group_id: group_id,
+          hosts: hosts,
+          initial_offset_reset_policy: initial_offset_reset_policy
+        )
+      end
+    end
   end
 end
