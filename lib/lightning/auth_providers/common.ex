@@ -64,7 +64,8 @@ defmodule Lightning.AuthProviders.Common do
   Requests an authentication token from the OAuth provider.
   """
   def get_token(client, params),
-    do: OAuth2.Client.get_token(client, params)
+    do:
+      OAuth2.Client.get_token(client, params) |> IO.inspect(label: "get_token/2")
 
   @doc """
   Refreshes the authentication token using the OAuth provider.
@@ -89,7 +90,7 @@ defmodule Lightning.AuthProviders.Common do
   Retrieves user information from the OAuth provider.
   """
   def get_userinfo(client, token, wellknown_url) do
-    {:ok, wellknown} = get_wellknown(wellknown_url) |> IO.inspect()
+    {:ok, wellknown} = get_wellknown(wellknown_url)
 
     OAuth2.Client.get(
       %{client | token: token},
@@ -194,6 +195,7 @@ defmodule Lightning.AuthProviders.Common do
         {"Content-Type", "application/x-www-form-urlencoded"}
       ]
     )
+    |> IO.inspect(label: "Introspection URL")
     |> handle_introspection_result(token)
   end
 

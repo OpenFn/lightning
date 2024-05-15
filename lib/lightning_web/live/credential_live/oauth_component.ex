@@ -89,10 +89,20 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
       display_authorize_button?(assigns, display_reauthorize_banner)
 
     display_userinfo =
-      display_userinfo?(assigns.oauth_progress, display_reauthorize_banner)
+      display_userinfo?(
+        assigns.oauth_progress,
+        display_reauthorize_banner,
+        assigns.scopes_changed,
+        assigns.sandbox_changed
+      )
 
     display_error =
-      display_error?(assigns.oauth_progress, display_reauthorize_banner)
+      display_error?(
+        assigns.oauth_progress,
+        display_reauthorize_banner,
+        assigns.scopes_changed,
+        assigns.sandbox_changed
+      )
 
     assigns =
       assigns
@@ -145,7 +155,7 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
         type={@oauth_progress}
         myself={@myself}
         provider={@provider}
-        authorize_url={@authorize_url}
+        authorize_url={@authorize_url |> IO.inspect()}
       />
     </fieldset>
     """
@@ -569,16 +579,10 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
         } = params,
         socket
       ) do
-    IO.inspect("ARE YOU BEING CALLED ?")
-
     token =
       params.token_body_changeset
-      |> IO.inspect(label: "BEFORE -------------")
       |> Ecto.Changeset.apply_changes()
       |> params_to_token()
-      |> IO.inspect(label: "AFTER -------------")
-
-    # |> IO.inspect(label: "FINALY -------------")
 
     {:ok,
      socket
@@ -616,6 +620,7 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
     {:ok,
      socket
      |> assign(
+       sandbox: sandbox,
        client: client,
        authorize_url: authorize_url
      )}
@@ -657,6 +662,10 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
        ) do
     adapter = Credentials.lookup_adapter(schema)
 
+    sandbox =
+      token_body_changeset
+      |> Ecto.Changeset.fetch_field!(:sandbox)
+      |> IO.inspect(label: "Sandbox in update")
 
     socket
     |> assign(
@@ -669,13 +678,15 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
       provider: adapter.provider_name,
       action: action,
       scopes_changed: scopes_changed,
-      sandbox_changed: sandbox_changed
+      sandbox_changed: sandbox_changed,
+      sandbox: sandbox
     )
   end
 
   defp update_client(socket) do
     wellknown_url =
       socket.assigns.adapter.wellknown_url(socket.assigns.sandbox)
+      |> IO.inspect(label: "Update Client")
 
     socket
     |> assign_new(:client, fn %{token: token} ->
@@ -942,12 +953,24 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
       !display_reauthorize_banner
   end
 
-  defp display_userinfo?(oauth_progress, display_reauthorize_banner) do
-    oauth_progress == :userinfo_received && !display_reauthorize_banner
+  defp display_userinfo?(
+         oauth_progress,
+         display_reauthorize_banner,
+         scopes_changed,
+         sandbox_changed
+       ) do
+    oauth_progress == :userinfo_received && !display_reauthorize_banner &&
+      !(scopes_changed or sandbox_changed)
   end
 
-  defp display_error?(oauth_progress, display_reauthorize_banner) do
-    oauth_progress in @oauth_states.failure && !display_reauthorize_banner
+  defp display_error?(
+         oauth_progress,
+         display_reauthorize_banner,
+         scopes_changed,
+         sandbox_changed
+       ) do
+    oauth_progress in @oauth_states.failure && !display_reauthorize_banner &&
+      !(scopes_changed || sandbox_changed)
   end
 
   defp update_form(assigns) do

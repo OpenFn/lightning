@@ -49,8 +49,6 @@ defmodule LightningWeb.CredentialLive.FormComponent do
 
   @impl true
   def update(%{body: body}, socket) do
-    IO.inspect(body, label: "Token in body")
-
     {:ok,
      update(socket, :changeset, fn changeset, %{credential: credential} ->
        params = changeset.params |> Map.put("body", body)
@@ -65,8 +63,6 @@ defmodule LightningWeb.CredentialLive.FormComponent do
 
     users = list_users()
     scopes = get_scopes(assigns.credential)
-
-    IO.inspect(assigns.credential.body)
 
     sandbox_value = get_sandbox_value(assigns.credential)
 
@@ -150,11 +146,6 @@ defmodule LightningWeb.CredentialLive.FormComponent do
   end
 
   def handle_event("api_version", %{"api_version" => version}, socket) do
-    send_update(LightningWeb.CredentialLive.OauthComponent,
-      id: "inner-form-#{socket.assigns.credential.id || "new"}",
-      api_version: version
-    )
-
     {:noreply, assign(socket, api_version: version)}
   end
 
@@ -259,7 +250,15 @@ defmodule LightningWeb.CredentialLive.FormComponent do
   end
 
   def handle_event("save", %{"credential" => credential_params}, socket) do
-    IO.inspect(credential_params)
+    credential_params =
+      if socket.assigns.schema in ["salesforce_oauth", "googlesheets"] do
+        updated_body =
+          credential_params["body"]
+          |> Map.put("sandbox", socket.assigns.sandbox_value)
+          |> Map.put("apiVersion", socket.assigns.api_version)
+
+        %{credential_params | "body" => updated_body}
+      end
 
     if socket.assigns.can_create_project_credential do
       save_credential(
@@ -741,7 +740,7 @@ defmodule LightningWeb.CredentialLive.FormComponent do
 
   defp get_sandbox_value(_), do: false
 
-  defp get_api_version(%{body: %{"api_version" => api_version}}), do: api_version
+  defp get_api_version(%{body: %{"apiVersion" => api_version}}), do: api_version
 
   defp get_api_version(_), do: nil
 
@@ -773,8 +772,6 @@ defmodule LightningWeb.CredentialLive.FormComponent do
          credential_params
        ) do
     %{credential: form_credential} = socket.assigns
-
-    IO.inspect(credential_params, label: "params")
 
     with {:same_user, true} <-
            {:same_user,

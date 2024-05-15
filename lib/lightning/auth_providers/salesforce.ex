@@ -36,7 +36,7 @@ defmodule Lightning.AuthProviders.Salesforce do
   @impl true
   def authorize_url(client, state, scopes \\ [], opts \\ []) do
     predefined_scopes = ~w[refresh_token]
-    combined_scopes = predefined_scopes ++ scopes
+    combined_scopes = Enum.uniq(predefined_scopes ++ scopes)
     Common.authorize_url(client, state, combined_scopes, opts)
   end
 
