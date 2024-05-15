@@ -170,7 +170,7 @@ defmodule Lightning.KafkaTriggers.PipelineTest do
 
     defp build_broadway_message do
       %Broadway.Message{
-        data: "Bar message 888",
+        data: %{interesting: "stuff"} |> Jason.encode!(),
         metadata: %{
           offset: 11,
           partition: 2,
