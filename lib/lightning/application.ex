@@ -34,7 +34,7 @@ defmodule Lightning.Application do
     :mnesia.wait_for_tables([:__hammer_backend_mnesia], 60_000)
 
     # Only add the Sentry backend if a dsn is provided.
-    if Application.get_env(:sentry, :included_environments, []) |> Enum.any?(),
+    if Application.get_env(:sentry, :dsn),
       do: Logger.add_backend(Sentry.LoggerBackend)
 
     adaptor_registry_childspec =

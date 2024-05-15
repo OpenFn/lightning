@@ -19,6 +19,8 @@ and this project adheres to
 
 ### Changed
 
+- Upgraded Sentry to v10 for better error reporting
+
 ### Fixed
 
 ## [v2.4.10] - 2024-05-14

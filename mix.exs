@@ -120,7 +120,7 @@ defmodule Lightning.MixProject do
       {:prom_ex, "~> 1.8.0"},
       {:rambo, "~> 0.3.4"},
       {:scrivener, "~> 2.7"},
-      {:sentry, "~> 8.0"},
+      {:sentry, "~> 10.5.0"},
       {:sobelow, "~> 0.13.0", only: [:test, :dev]},
       {:sweet_xml, "~> 0.7.1", only: [:test]},
       {:swoosh, "~> 1.9"},
