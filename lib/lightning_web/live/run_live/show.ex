@@ -176,13 +176,13 @@ defmodule LightningWeb.RunLive.Show do
               </Common.tab_bar>
 
               <Common.panel_content for_hash="log">
-                <%!-- <Viewers.log_viewer
+                <Viewers.log_viewer
                   id={"run-log-#{run.id}"}
                   highlight_id={@selected_step_id}
                   stream={@streams.log_lines}
                   run_state={@run.result.state}
                   stream_empty?={@log_lines_stream_empty?}
-                /> --%>
+                />
               </Common.panel_content>
               <Common.panel_content for_hash="input">
                 <Viewers.step_dataclip_viewer

@@ -106,13 +106,15 @@ defmodule LightningWeb.RunLive.ShowTest do
              |> element("#step-input-#{step.id}")
              |> render_async()
              |> Floki.parse_fragment!()
-             |> Floki.text() =~
-               ~s({  \"data\": {    \"x\": 1  },  \"request\": {    \"headers\": {      \"content-type\": \"multipart/mixed; boundary=plug_conn_test\"    })
+             |> Floki.find(
+               "[phx-hook='DataclipViewer'][data-id='#{step.input_dataclip_id}']"
+             )
+             |> Enum.count() == 1
 
       assert view |> output_is_empty?(step)
 
       # Complete the step
-      {:ok, _step} =
+      {:ok, step} =
         Lightning.Runs.complete_step(%{
           run_id: run_id,
           project_id: project.id,
@@ -122,7 +124,12 @@ defmodule LightningWeb.RunLive.ShowTest do
           reason: "success"
         })
 
-      assert view |> step_output(step) =~ ~r/{  \"y\": 2}/
+      assert view
+             |> step_output(step)
+             |> Floki.find(
+               "[phx-hook='DataclipViewer'][data-id='#{step.output_dataclip_id}']"
+             )
+             |> Enum.count() == 1
 
       {:ok, step_2} =
         Lightning.Runs.start_step(run, %{
@@ -145,7 +152,7 @@ defmodule LightningWeb.RunLive.ShowTest do
 
       assert view |> output_is_empty?(step_2)
 
-      {:ok, _step} =
+      {:ok, step_2} =
         Lightning.Runs.complete_step(%{
           run_id: run_id,
           project_id: project.id,
@@ -155,11 +162,22 @@ defmodule LightningWeb.RunLive.ShowTest do
           reason: "success"
         })
 
-      assert view |> step_output(step_2) =~ ~r/{  \"z\": 2}/
+      assert view
+             |> step_output(step_2)
+             |> Floki.find(
+               "[phx-hook='DataclipViewer'][data-id='#{step_2.output_dataclip_id}']"
+             )
+             |> Enum.count() == 1
 
       # Go back to the previous step and check the output gets switched back
       view |> select_step(run, job_a.name)
-      assert view |> step_output(step) =~ ~r/{  \"y\": 2}/
+
+      assert view
+             |> step_output(step)
+             |> Floki.find(
+               "[phx-hook='DataclipViewer'][data-id='#{step.output_dataclip_id}']"
+             )
+             |> Enum.count() == 1
 
       {:ok, _} = Lightning.Runs.complete_run(run, %{state: :failed})
 
@@ -210,7 +228,6 @@ defmodule LightningWeb.RunLive.ShowTest do
            |> element("#step-output-#{step.id}")
            |> render_async()
            |> Floki.parse_fragment!()
-           |> Floki.text()
   end
 
   defp output_is_empty?(view, step) do
