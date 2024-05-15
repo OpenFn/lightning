@@ -15,6 +15,22 @@ defmodule Lightning.KafkaTesting.Utils do
     PipelineWorker.perform(%Oban.Job{args: %{}})
   end
 
+  # alias Lightning.Accounts.User
+  # alias Lightning.KafkaTesting.Utils
+  # alias Lightning.KafkaTriggers
+  # alias Lightning.Repo
+  #
+  # owner = User |> Repo.get_by!(role: :superuser)
+  #
+  # config =
+  #   KafkaTriggers.build_trigger_configuration(
+  #     group_id: "15-may-group",
+  #     hosts: [["localhost", 9096], ["localhost", 9095], ["localhost", 9094]],
+  #     initial_offset_reset_policy: :earliest,
+  #     topics: ["may_15_topic"]
+  #   )
+  # Utils.create_project_with_kafka_trigger("kafka-test-may-15", owner, config)
+
   def create_project_with_kafka_trigger(project_name, owner, trigger_configuration) do
     {:ok, project} =
       Projects.create_project(%{
@@ -24,7 +40,7 @@ defmodule Lightning.KafkaTesting.Utils do
 
     {:ok, workflow} =
       Workflows.save_workflow(%{
-        name: "#{project_name} Workflow",
+        name: "#{project_name}-workflow",
         project_id: project.id
       })
 
@@ -37,7 +53,7 @@ defmodule Lightning.KafkaTesting.Utils do
 
     {:ok, job} =
       Jobs.create_job(%{
-        name: "Console log any data recevied",
+        name: "Console log any data received",
         body: """
         fn(state => console.log(state); state);
         """,
