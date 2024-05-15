@@ -452,22 +452,28 @@ if config_env() == :test do
     assert_receive_timeout: env!("ASSERT_RECEIVE_TIMEOUT", :integer, 600)
 end
 
+# TODO: set this up properly: https://github.com/OpenFn/thunderbolt/issues/60
+# release =
+#   case image_tag do
+#     nil -> "mix-v#{Application.spec(:lightning, :vsn)}"
+#     "edge" -> commit
+#     _other -> image_tag
+#   end
 release =
-  case image_tag do
-    nil -> "mix-v#{Application.spec(:lightning, :vsn)}"
-    "edge" -> commit
-    _other -> image_tag
+  if Application.spec(:thunderbolt, :vsn) do
+    "v#{Application.spec(:lightning, :vsn)}" <>
+      " (#{Application.spec(:thunderbolt, :vsn)})"
+  else
+    "v#{Application.spec(:lightning, :vsn)}"
   end
 
 config :sentry,
+  dsn: env!("SENTRY_DSN", :string),
   filter: Lightning.SentryEventFilter,
-  environment_name: config_env(),
+  environment_name: env!("SENTRY_ENVIRONMENT", :string, config_env()),
   tags: %{
     host: Application.get_env(:lightning, LightningWeb.Endpoint)[:url][:host]
   },
-  # If you've booted up with a SENTRY_DSN environment variable, use Sentry!
-  included_environments:
-    if(env!("SENTRY_DSN", :boolean, false), do: [config_env()], else: []),
   release: release,
   enable_source_code_context: true,
   root_source_code_path: File.cwd!()
