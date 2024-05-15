@@ -21,12 +21,16 @@ and this project adheres to
 
 ### Fixed
 
+- Navigate directly to settings from url hash and renders default panel
+  when there is no hash.
+  [#1971](https://github.com/OpenFn/lightning/issues/1971)
+
 ## [v2.4.12] - 2024-05-15
 
 ### Fixed
 
 - Fix render settings default panel on first load
-  [#1971](https://github.com/OpenFn/lightning/pull/1971)
+  [#1971](https://github.com/OpenFn/lightning/issues/1971)
 
 ## [v2.4.11] - 2024-05-15
 

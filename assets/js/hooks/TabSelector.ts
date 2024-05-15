@@ -53,7 +53,12 @@ export default {
     // can be removed if same approach is applied to the inspector
     // possibly having the #log on the url when the run is created.
     if (lastPathSegment === 'settings') {
-      this.hashChanged(this.defaultHash);
+      var hash = this.defaultHash;
+      
+      if (window.location.hash != '') {
+        hash = window.location.hash.substring(1);
+      }
+      this.hashChanged(hash);
     } else {
       const observer = new MutationObserver(mutationsList => {
         for (const mutation of mutationsList) {
