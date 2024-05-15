@@ -904,6 +904,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
          end
        end
      end)}
+     |> IO.inspect(label: :handle_params)
   end
 
   def apply_action(socket, :new, params) do
@@ -1249,6 +1250,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
   def handle_event("push-change", %{"patches" => patches}, socket) do
     %{workflow: workflow, snapshot: snapshot} = socket.assigns
+    IO.inspect(patches, label: :patches)
     # Apply the incoming patches to the current workflow params producing a new
     # set of params.
     {:ok, params} =
@@ -1676,6 +1678,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
     |> assign(snapshot: snapshot)
     |> assign(snapshot_version_tag: snapshot_version_tag)
     |> assign_changeset(changeset)
+    |> IO.inspect(label: :after_ass)
   end
 
   defp apply_params(socket, params, type) do

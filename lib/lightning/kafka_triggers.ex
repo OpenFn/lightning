@@ -68,4 +68,47 @@ defmodule Lightning.KafkaTriggers do
 
     {:timestamp, timestamp}
   end
+
+  def build_trigger_configuration(opts \\ []) do
+    group_id =
+      opts |> Keyword.get(:group_id)
+    hosts =
+      opts |> Keyword.get(:hosts)
+    initial_offset_reset_policy_option =
+      opts |> Keyword.get(:initial_offset_reset_policy)
+    sasl_option =
+      opts |> Keyword.get(:sasl, nil)
+    ssl =
+      opts |> Keyword.get(:ssl, false)
+    topics =
+      opts |> Keyword.get(:topics)
+
+    policy = policy_config_value(initial_offset_reset_policy_option)
+
+    %{
+      "group_id" => group_id,
+      "hosts" => hosts,
+      "initial_offset_reset_policy" => policy,
+      "partition_timestamps" => %{},
+      "sasl" => convert_sasl_option(sasl_option),
+      "ssl" => ssl,
+      "topics" => topics
+    }
+  end
+
+  defp convert_sasl_option([mechanism, username, password]) do
+    ["#{mechanism}", username, password]
+  end
+  defp convert_sasl_option(nil), do: nil
+
+  defp policy_config_value(initial_policy) do
+    case initial_policy do
+      policy when is_integer(policy) ->
+        policy
+      policy when policy in [:earliest, :latest] ->
+        "#{policy}"
+      _unrecognised_policy ->
+        raise "initial_offset_reset_policy must be :earliest, :latest or integer"
+    end
+  end
 end
