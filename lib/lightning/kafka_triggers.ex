@@ -70,20 +70,14 @@ defmodule Lightning.KafkaTriggers do
   end
 
   def build_trigger_configuration(opts \\ []) do
-    group_id =
-      opts |> Keyword.get(:group_id)
-    hosts =
-      opts |> Keyword.get(:hosts)
-    initial_offset_reset_policy_option =
-      opts |> Keyword.get(:initial_offset_reset_policy)
-    sasl_option =
-      opts |> Keyword.get(:sasl, nil)
-    ssl =
-      opts |> Keyword.get(:ssl, false)
-    topics =
-      opts |> Keyword.get(:topics)
+    group_id = opts |> Keyword.fetch!(:group_id)
+    hosts = opts |> Keyword.fetch!(:hosts)
+    policy_option = opts |> Keyword.fetch!(:initial_offset_reset_policy)
+    topics = opts |> Keyword.fetch!(:topics)
+    sasl_option = opts |> Keyword.get(:sasl, nil)
+    ssl = opts |> Keyword.get(:ssl, false)
 
-    policy = policy_config_value(initial_offset_reset_policy_option)
+    policy = policy_config_value(policy_option)
 
     %{
       "group_id" => group_id,
