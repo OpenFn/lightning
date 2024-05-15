@@ -72,7 +72,7 @@ defmodule Lightning.KafkaTriggers.Pipeline do
             project_id: trigger.workflow.project_id
           },
           without_run: without_run?
-        )|> IO.inspect(label: :create_for)
+        )
 
         trigger
         |> KafkaTriggers.update_partition_data(partition, timestamp)
