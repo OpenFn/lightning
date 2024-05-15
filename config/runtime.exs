@@ -468,7 +468,7 @@ release =
   end
 
 config :sentry,
-  dsn: env!("SENTRY_DSN", :string),
+  dsn: env!("SENTRY_DSN", :string, nil),
   filter: Lightning.SentryEventFilter,
   environment_name: env!("SENTRY_ENVIRONMENT", :string, config_env()),
   tags: %{
