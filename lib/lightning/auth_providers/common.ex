@@ -22,7 +22,7 @@ defmodule Lightning.AuthProviders.Common do
       field :scope, :string
       field :instance_url, :string
       field :sandbox, :boolean, default: false
-      field :api_version, :string, default: nil
+      field :apiVersion, :string, default: nil
     end
 
     @doc """
@@ -54,7 +54,7 @@ defmodule Lightning.AuthProviders.Common do
         :scope,
         :instance_url,
         :sandbox,
-        :api_version
+        :apiVersion
       ])
       |> validate_required([:access_token, :refresh_token])
     end
@@ -64,8 +64,7 @@ defmodule Lightning.AuthProviders.Common do
   Requests an authentication token from the OAuth provider.
   """
   def get_token(client, params),
-    do:
-      OAuth2.Client.get_token(client, params) |> IO.inspect(label: "get_token/2")
+    do: OAuth2.Client.get_token(client, params)
 
   @doc """
   Refreshes the authentication token using the OAuth provider.
@@ -195,7 +194,6 @@ defmodule Lightning.AuthProviders.Common do
         {"Content-Type", "application/x-www-form-urlencoded"}
       ]
     )
-    |> IO.inspect(label: "Introspection URL")
     |> handle_introspection_result(token)
   end
 

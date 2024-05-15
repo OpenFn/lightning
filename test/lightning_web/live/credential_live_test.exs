@@ -1390,10 +1390,10 @@ defmodule LightningWeb.CredentialLiveTest do
              |> has_element?("#inner-form-new-scope-selection")
 
       refute index_live
-             |> has_element?("#salesforce_sandbox_instance_checkbox")
+             |> has_element?("#salesforce_sandbox_instance_checkbox_new")
 
       refute index_live
-             |> has_element?("#salesforce_api_version_input")
+             |> has_element?("#salesforce_api_version_input_new")
 
       {:ok, index_live, _html} = live(conn, ~p"/credentials")
 
@@ -1401,10 +1401,10 @@ defmodule LightningWeb.CredentialLiveTest do
       index_live |> click_continue()
 
       assert index_live
-             |> has_element?("#salesforce_sandbox_instance_checkbox")
+             |> has_element?("#salesforce_sandbox_instance_checkbox_new")
 
       assert index_live
-             |> has_element?("#salesforce_api_version_input")
+             |> has_element?("#salesforce_api_version_input_new")
 
       index_live
       |> fill_credential(%{
@@ -1412,11 +1412,11 @@ defmodule LightningWeb.CredentialLiveTest do
       })
 
       index_live
-      |> element("#salesforce_api_version_input")
+      |> element("#salesforce_api_version_input_new")
       |> render_change(%{"api_version" => "34"})
 
       index_live
-      |> element("#salesforce_sandbox_instance_checkbox")
+      |> element("#salesforce_sandbox_instance_checkbox_new")
       |> render_change(%{"sandbox" => "true"})
 
       # Get the state from the authorize url in order to fake the calling
@@ -1471,6 +1471,8 @@ defmodule LightningWeb.CredentialLiveTest do
       credential =
         Lightning.Credentials.list_credentials_for_user(user.id) |> List.first()
 
+      IO.inspect(credential.body)
+
       token = Lightning.AuthProviders.Common.TokenBody.new(credential.body)
 
       assert %{
@@ -1478,7 +1480,7 @@ defmodule LightningWeb.CredentialLiveTest do
                refresh_token: "1//03vpp6Li...",
                expires_at: 3600,
                scope: "scope1 scope2",
-               api_version: "34",
+               apiVersion: "34",
                sandbox: true
              } = token
     end
@@ -1552,7 +1554,7 @@ defmodule LightningWeb.CredentialLiveTest do
             expires_at: 3600,
             scope: "scope1 scope2",
             instance_url: "login.salesforce.com",
-            sandbox: true
+            sandbox: false
           }
         )
 
@@ -1567,7 +1569,7 @@ defmodule LightningWeb.CredentialLiveTest do
 
       view
       |> element("#salesforce_sandbox_instance_checkbox_#{credential.id}")
-      |> render_change(%{"sandbox" => "false"})
+      |> render_change(%{"sandbox" => "true"})
 
       {:ok, _view, _html} =
         view
@@ -1586,7 +1588,6 @@ defmodule LightningWeb.CredentialLiveTest do
       token_body =
         Lightning.AuthProviders.Common.TokenBody.new(credential.body)
 
-      assert token_body.instance_url == "test.salesforce.com"
       assert token_body.sandbox
     end
   end

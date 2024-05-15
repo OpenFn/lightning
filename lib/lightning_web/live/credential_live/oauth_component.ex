@@ -1,11 +1,11 @@
 defmodule LightningWeb.CredentialLive.OauthComponent do
   @moduledoc ""
-  alias Lightning.AuthProviders.Common.TokenBody
   use LightningWeb, :live_component
 
   import LightningWeb.OauthCredentialHelper
 
   alias Lightning.AuthProviders.Common
+  alias Lightning.AuthProviders.Common.TokenBody
   alias Lightning.Credentials
   alias Phoenix.LiveView.AsyncResult
 
@@ -155,7 +155,7 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
         type={@oauth_progress}
         myself={@myself}
         provider={@provider}
-        authorize_url={@authorize_url |> IO.inspect()}
+        authorize_url={@authorize_url}
       />
     </fieldset>
     """
@@ -665,7 +665,6 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
     sandbox =
       token_body_changeset
       |> Ecto.Changeset.fetch_field!(:sandbox)
-      |> IO.inspect(label: "Sandbox in update")
 
     socket
     |> assign(
@@ -686,7 +685,6 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
   defp update_client(socket) do
     wellknown_url =
       socket.assigns.adapter.wellknown_url(socket.assigns.sandbox)
-      |> IO.inspect(label: "Update Client")
 
     socket
     |> assign_new(:client, fn %{token: token} ->

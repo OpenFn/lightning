@@ -251,14 +251,7 @@ defmodule LightningWeb.CredentialLive.FormComponent do
 
   def handle_event("save", %{"credential" => credential_params}, socket) do
     credential_params =
-      if socket.assigns.schema in ["salesforce_oauth", "googlesheets"] do
-        updated_body =
-          credential_params["body"]
-          |> Map.put("sandbox", socket.assigns.sandbox_value)
-          |> Map.put("apiVersion", socket.assigns.api_version)
-
-        %{credential_params | "body" => updated_body}
-      end
+      maybe_add_oauth_specific_fields(socket, credential_params)
 
     if socket.assigns.can_create_project_credential do
       save_credential(
@@ -669,6 +662,19 @@ defmodule LightningWeb.CredentialLive.FormComponent do
         filter_available_projects(changeset, all_projects)
       end
     )
+  end
+
+  defp maybe_add_oauth_specific_fields(socket, params) do
+    if socket.assigns.schema in ["salesforce_oauth", "googlesheets"] do
+      updated_body =
+        params["body"]
+        |> Map.put("sandbox", socket.assigns.sandbox_value)
+        |> Map.put("apiVersion", socket.assigns.api_version)
+
+      %{params | "body" => updated_body}
+    else
+      params
+    end
   end
 
   defp get_type_options(socket, schemas_path) do
