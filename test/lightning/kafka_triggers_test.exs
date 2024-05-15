@@ -211,4 +211,121 @@ defmodule Lightning.KafkaTriggersTest do
       build(:trigger, type: :kafka, kafka_configuration: kafka_configuration)
     end
   end
+
+  describe "build_trigger_configuration" do
+    setup do
+      %{
+        group_id: "my_little_group",
+        hosts: [["host-1", 9092], ["host-2", 9092]],
+        initial_offset_reset_policy: 1715764260123,
+        topics: ["my_little_topic"]
+      }
+    end
+
+    test "returns Kafka trigger configurtion with some defaults", %{
+      group_id: group_id,
+      hosts: hosts,
+      initial_offset_reset_policy: initial_offset_reset_policy,
+      topics: topics
+    } do
+      expected = %{
+        "group_id" => group_id,
+        "hosts" => hosts,
+        "initial_offset_reset_policy" => initial_offset_reset_policy,
+        "partition_timestamps" => %{},
+        "sasl" => nil,
+        "ssl" => false,
+        "topics" => topics
+      }
+
+      config =
+        KafkaTriggers.build_trigger_configuration(
+          group_id: group_id,
+          hosts: hosts,
+          initial_offset_reset_policy: initial_offset_reset_policy,
+          topics: topics
+        )
+
+      assert config == expected
+    end
+
+    test "allows sasl and ssl to be set", %{
+      group_id: group_id,
+      hosts: hosts,
+      initial_offset_reset_policy: initial_offset_reset_policy,
+      topics: topics
+    } do
+      sasl = [:plain, "my_user", "my_secret"]
+      ssl = true
+
+      expected = %{
+        "group_id" => group_id,
+        "hosts" => hosts,
+        "initial_offset_reset_policy" => initial_offset_reset_policy,
+        "partition_timestamps" => %{},
+        "sasl" => ["plain", "my_user", "my_secret"],
+        "ssl" => true,
+        "topics" => topics
+      }
+
+      config =
+        KafkaTriggers.build_trigger_configuration(
+          group_id: group_id,
+          hosts: hosts,
+          initial_offset_reset_policy: initial_offset_reset_policy,
+          sasl: sasl,
+          ssl: ssl,
+          topics: topics
+        )
+
+      assert config == expected
+    end
+
+    test "converts an initial_offset_reset_policy of :earliest", %{
+      group_id: group_id,
+      hosts: hosts,
+      topics: topics
+    } do
+      config =
+        KafkaTriggers.build_trigger_configuration(
+          group_id: group_id,
+          hosts: hosts,
+          initial_offset_reset_policy: :earliest,
+          topics: topics
+        )
+
+      assert %{"initial_offset_reset_policy" => "earliest"} = config
+    end
+
+    test "converts an initial_offset_reset_policy of :latest", %{
+      group_id: group_id,
+      hosts: hosts,
+      topics: topics
+    } do
+      config =
+        KafkaTriggers.build_trigger_configuration(
+          group_id: group_id,
+          hosts: hosts,
+          initial_offset_reset_policy: :latest,
+          topics: topics
+        )
+
+      assert %{"initial_offset_reset_policy" => "latest"} = config
+    end
+
+    test "raises on an unrecognised initial_offset_reset_policy", %{
+      group_id: group_id,
+      hosts: hosts,
+      topics: topics
+    } do
+      assert_raise RuntimeError, ~r/initial_offset_reset_policy/, fn ->
+        KafkaTriggers.build_trigger_configuration(
+          group_id: group_id,
+          hosts: hosts,
+          initial_offset_reset_policy: :unobtainium,
+          topics: topics
+        )
+      end
+    end
+  end
 end
