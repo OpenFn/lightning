@@ -46,16 +46,26 @@ export default {
 
     window.addEventListener('hashchange', this._onHashChange);
 
-    const observer = new MutationObserver((mutationsList, observer) => {
-      for (const mutation of mutationsList) {
-        if (mutation.type === 'childList') {
-          this.hashChanged(this.getHash() || this.defaultHash);
-        }
-      }
-    });
+    // Get the last segment of the current path
+    const lastPathSegment = window.location.pathname.split('/').at(-1);
 
-    const config = { childList: true, subtree: true };
-    observer.observe(document.body, config);
+    // The observer is not used on the settings page, i.e this condition
+    // can be removed if same approach is applied to the inspector
+    // possibly having the #log on the url when the run is created.
+    if (lastPathSegment === 'settings') {
+      this.hashChanged(this.defaultHash);
+    } else {
+      const observer = new MutationObserver(mutationsList => {
+        for (const mutation of mutationsList) {
+          if (mutation.type === 'childList') {
+            this.hashChanged(this.getHash() || this.defaultHash);
+          }
+        }
+      });
+
+      const config = { childList: true, subtree: true };
+      observer.observe(document.body, config);
+    }
   },
   hashChanged(nextHash: string) {
     let activePanel: HTMLElement | null = null;
