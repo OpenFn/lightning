@@ -184,7 +184,7 @@ defmodule LightningWeb.RunLive.Show do
                   stream_empty?={@log_lines_stream_empty?}
                 />
               </Common.panel_content>
-              <Common.panel_content for_hash="input">
+              <Common.panel_content for_hash="input" class="flex-1">
                 <Viewers.step_dataclip_viewer
                   id={"step-input-#{@selected_step_id}"}
                   run_state={@run.result.state}
@@ -196,7 +196,7 @@ defmodule LightningWeb.RunLive.Show do
                   can_edit_data_retention={@can_edit_data_retention}
                 />
               </Common.panel_content>
-              <Common.panel_content for_hash="output">
+              <Common.panel_content for_hash="output" class="flex-1">
                 <Viewers.step_dataclip_viewer
                   id={"step-output-#{@selected_step_id}"}
                   run_state={@run.result.state}

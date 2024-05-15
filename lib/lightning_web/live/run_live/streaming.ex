@@ -45,27 +45,24 @@ defmodule LightningWeb.RunLive.Streaming do
   end
 
   def maybe_load_input_dataclip(socket) do
-    %{selected_step: selected_step} = socket.assigns
+    %{selected_step: selected_step, input_dataclip: dataclip} = socket.assigns
 
-    if selected_step && needs_dataclip_stream?(socket, :input_dataclip) do
+    if selected_step &&
+         (!dataclip or selected_step.input_dataclip_id != dataclip.id) do
       socket
-      |> assign_async(:input_dataclip, fn ->
-        {:ok, %{input_dataclip: get_dataclip(selected_step, :input_dataclip)}}
-      end)
+      |> assign(input_dataclip: get_dataclip(selected_step, :input_dataclip))
     else
       socket
     end
   end
 
   def maybe_load_output_dataclip(socket) do
-    %{selected_step: selected_step} = socket.assigns
+    %{selected_step: selected_step, output_dataclip: dataclip} = socket.assigns
 
     if selected_step && selected_step.output_dataclip_id &&
-         needs_dataclip_stream?(socket, :output_dataclip) do
+         (!dataclip or selected_step.output_dataclip_id != dataclip.id) do
       socket
-      |> assign_async(:output_dataclip, fn ->
-        {:ok, %{output_dataclip: get_dataclip(selected_step, :output_dataclip)}}
-      end)
+      |> assign(output_dataclip: get_dataclip(selected_step, :output_dataclip))
     else
       socket
     end
@@ -86,27 +83,6 @@ defmodule LightningWeb.RunLive.Streaming do
     |> Enum.sort(fn x, y ->
       DateTime.compare(x.started_at, y.started_at) == :lt
     end)
-  end
-
-  defp needs_dataclip_stream?(socket, assign) do
-    selected_step_id = socket.assigns.selected_step_id
-
-    case socket.assigns[assign] do
-      false ->
-        true
-
-      %Phoenix.LiveView.AsyncResult{loading: true} ->
-        false
-
-      %Phoenix.LiveView.AsyncResult{
-        ok?: true,
-        result: %{step_id: ^selected_step_id}
-      } ->
-        false
-
-      _ ->
-        true
-    end
   end
 
   defmacro __using__(opts) do

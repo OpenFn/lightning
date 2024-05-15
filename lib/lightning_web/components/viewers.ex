@@ -14,7 +14,6 @@ defmodule LightningWeb.Components.Viewers do
 
   alias Lightning.Invocation.Dataclip
   alias LightningWeb.Components.Icon
-  alias Phoenix.LiveView.AsyncResult
 
   require Lightning.Run
 
@@ -117,7 +116,7 @@ defmodule LightningWeb.Components.Viewers do
     ~H"""
     <div
       id={@id}
-      class="overflow-auto h-full"
+      class="h-full log-viewer"
       phx-hook="DataclipViewer"
       data-id={@dataclip.id}
     >
@@ -134,7 +133,7 @@ defmodule LightningWeb.Components.Viewers do
     doc: "Additional classes to add to the log viewer container"
 
   attr :step, :map
-  attr :dataclip, :map, doc: "Can be an `AsyncResult` or `Dataclip`"
+  attr :dataclip, :map, doc: "`%Dataclip{}`"
   attr :input_or_output, :atom, required: true, values: [:input, :output]
   attr :project_id, :string, required: true
 
@@ -158,7 +157,7 @@ defmodule LightningWeb.Components.Viewers do
       <div
         :if={
           @run_state in Lightning.Run.final_states() and
-            is_nil(dataclip_from_result(@dataclip))
+            is_nil(@dataclip)
         }
         class={[
           "m-2 relative rounded-md",
@@ -175,7 +174,7 @@ defmodule LightningWeb.Components.Viewers do
       <div
         :if={
           @run_state not in Lightning.Run.final_states() and
-            is_nil(dataclip_from_result(@dataclip))
+            is_nil(@dataclip)
         }
         id={"#{@id}-nothing-yet"}
         class={[
@@ -188,21 +187,9 @@ defmodule LightningWeb.Components.Viewers do
         </.text_ping_loader>
       </div>
 
-      <.dataclip_viewer
-        :if={dataclip_from_result(@dataclip)}
-        id={@id}
-        dataclip={dataclip_from_result(@dataclip)}
-      />
+      <.dataclip_viewer :if={@dataclip} id={@id} dataclip={@dataclip} />
     <% end %>
     """
-  end
-
-  defp dataclip_from_result(result) do
-    case result do
-      %AsyncResult{ok?: true, result: dataclip} -> dataclip
-      %{type: _} = dataclip -> dataclip
-      _ -> nil
-    end
   end
 
   attr :id, :string, default: nil
@@ -300,18 +287,6 @@ defmodule LightningWeb.Components.Viewers do
   defp step_finished?(%{finished_at: %_{}}), do: true
 
   defp step_finished?(_other), do: false
-
-  defp dataclip_wiped?(_step, %AsyncResult{ok?: false}, _input_or_output) do
-    false
-  end
-
-  defp dataclip_wiped?(
-         step,
-         %AsyncResult{ok?: true, result: result},
-         input_or_output
-       ) do
-    dataclip_wiped?(step, result, input_or_output)
-  end
 
   defp dataclip_wiped?(_step, %{wiped_at: %_{}} = _dataclip, _input_or_output) do
     true

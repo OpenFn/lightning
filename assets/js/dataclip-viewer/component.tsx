@@ -8,14 +8,16 @@ export function mount(el: HTMLElement, content: string) {
   render(content);
 
   function render(content: string) {
+    console.log('rendering', content);
     componentRoot.render(
-      <Monaco
-        defaultLanguage="json"
-        theme="default"
-        defaultPath="dataclip.json"
-        value={content}
-        options={{ readOnly: true }}
-      />
+      // <Monaco
+      //   defaultLanguage="json"
+      //   theme="default"
+      //   defaultPath="dataclip.json"
+      //   value={content}
+      //   options={{ readOnly: true }}
+      // />
+      <div>{content}</div>
     );
   }
 
