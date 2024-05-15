@@ -21,6 +21,9 @@ and this project adheres to
 
 ### Fixed
 
+- Fix render settings default panel on first load
+  [#1971](https://github.com/OpenFn/lightning/pull/1971)
+
 ## [v2.4.11] - 2024-05-15
 
 ### Changed
