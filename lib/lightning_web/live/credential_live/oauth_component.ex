@@ -1,5 +1,6 @@
 defmodule LightningWeb.CredentialLive.OauthComponent do
   @moduledoc ""
+  alias Lightning.AuthProviders.Common.TokenBody
   use LightningWeb, :live_component
 
   import LightningWeb.OauthCredentialHelper
@@ -20,6 +21,7 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
   attr :update_body, :any, required: true
   attr :action, :any, required: true
   attr :scopes_changed, :boolean, default: false
+  attr :sandbox_changed, :boolean, default: false
   attr :schema, :string, required: true
   slot :inner_block
 
@@ -51,6 +53,7 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
            form: @form,
            action: @action,
            scopes_changed: @scopes_changed,
+           sandbox_changed: @sandbox_changed,
            token_body_changeset: @token_body_changeset,
            update_body: @update_body,
            schema: @schema,
@@ -106,9 +109,7 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
         body_form <- Phoenix.HTML.FormData.to_form(:credential, @form, :body, [])
       }>
         <%= Phoenix.HTML.Form.hidden_input(body_form, :scope) %>
-        <%= Phoenix.HTML.Form.hidden_input(body_form, :sandbox) %>
         <%= Phoenix.HTML.Form.hidden_input(body_form, :expires_at) %>
-        <%= Phoenix.HTML.Form.hidden_input(body_form, :api_version) %>
         <%= Phoenix.HTML.Form.hidden_input(body_form, :access_token) %>
         <%= Phoenix.HTML.Form.hidden_input(body_form, :instance_url) %>
         <%= Phoenix.HTML.Form.hidden_input(body_form, :refresh_token) %>
@@ -561,6 +562,7 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
           id: _id,
           action: _action,
           scopes_changed: _scopes_changed,
+          sandbox_changed: _sandbox_changed,
           token_body_changeset: _changeset,
           update_body: _body,
           schema: _schema
@@ -571,8 +573,12 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
 
     token =
       params.token_body_changeset
+      |> IO.inspect(label: "BEFORE -------------")
       |> Ecto.Changeset.apply_changes()
       |> params_to_token()
+      |> IO.inspect(label: "AFTER -------------")
+
+    # |> IO.inspect(label: "FINALY -------------")
 
     {:ok,
      socket
@@ -609,7 +615,21 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
 
     {:ok,
      socket
-     |> assign(sandbox: sandbox, client: client, authorize_url: authorize_url)}
+     |> assign(
+       client: client,
+       authorize_url: authorize_url
+     )}
+  end
+
+  defp params_to_token(%TokenBody{} = token) do
+    struct!(
+      OAuth2.AccessToken,
+      token
+      |> Map.from_struct()
+      |> Map.filter(fn {k, _v} ->
+        k in [:access_token, :refresh_token, :expires_at]
+      end)
+    )
   end
 
   defp reset_assigns(socket) do
@@ -628,6 +648,7 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
            id: id,
            action: action,
            scopes_changed: scopes_changed,
+           sandbox_changed: sandbox_changed,
            token_body_changeset: token_body_changeset,
            update_body: update_body,
            schema: schema
@@ -635,6 +656,7 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
          token
        ) do
     adapter = Credentials.lookup_adapter(schema)
+
 
     socket
     |> assign(
@@ -646,7 +668,8 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
       adapter: adapter,
       provider: adapter.provider_name,
       action: action,
-      scopes_changed: scopes_changed
+      scopes_changed: scopes_changed,
+      sandbox_changed: sandbox_changed
     )
   end
 
@@ -738,16 +761,12 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
       client: client,
       adapter: adapter,
       sandbox: sandbox,
-      provider: provider,
       update_body: update_body
     } = socket.assigns
 
     wellknown_url = adapter.wellknown_url(sandbox)
 
-    parsed_token =
-      token
-      |> token_to_params()
-      |> maybe_add_specific_provider_params(socket.assigns, provider)
+    parsed_token = token_to_params(token)
 
     update_body.(parsed_token)
 
@@ -767,6 +786,7 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
      socket
      |> assign(:oauth_progress, :token_failed)
      |> assign(:scopes_changed, false)
+     |> assign(:sandbox_changed, false)
      |> assign(token: AsyncResult.failed(%AsyncResult{}, reason))}
   end
 
@@ -777,6 +797,7 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
      socket
      |> assign(:oauth_progress, :refresh_failed)
      |> assign(:scopes_changed, false)
+     |> assign(:sandbox_changed, false)
      |> assign(token: AsyncResult.failed(%AsyncResult{}, reason))}
   end
 
@@ -787,6 +808,7 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
      socket
      |> assign(:oauth_progress, :token_failed)
      |> assign(:scopes_changed, false)
+     |> assign(:sandbox_changed, false)
      |> assign(token: AsyncResult.failed(%AsyncResult{}, "Network error"))}
   end
 
@@ -795,6 +817,7 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
      socket
      |> assign(:oauth_progress, :userinfo_received)
      |> assign(scopes_changed: false)
+     |> assign(:sandbox_changed, false)
      |> assign(userinfo: AsyncResult.ok(userinfo))}
   end
 
@@ -811,6 +834,7 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
      socket
      |> assign(:oauth_progress, :userinfo_failed)
      |> assign(scopes_changed: false)
+     |> assign(:sandbox_changed, false)
      |> assign(userinfo: AsyncResult.failed(%AsyncResult{}, reason))}
   end
 
@@ -821,6 +845,7 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
      socket
      |> assign(:oauth_progress, :userinfo_failed)
      |> assign(:scopes_changed, false)
+     |> assign(:sandbox_changed, false)
      |> assign(userinfo: AsyncResult.failed(%AsyncResult{}, "Network error"))}
   end
 
@@ -885,27 +910,6 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
     end)
   end
 
-  defp params_to_token(%Lightning.AuthProviders.Common.TokenBody{} = token) do
-    struct!(
-      OAuth2.AccessToken,
-      token
-      |> Map.from_struct()
-      |> Map.filter(fn {k, _v} ->
-        k in [:access_token, :refresh_token, :expires_at]
-      end)
-    )
-  end
-
-  defp maybe_add_specific_provider_params(token_params, assigns, "Salesforce") do
-    assigns
-    |> Map.take([:sandbox, :api_version])
-    |> Map.merge(token_params)
-  end
-
-  defp maybe_add_specific_provider_params(token_params, _assigns, _provider) do
-    token_params
-  end
-
   defp display_loader?(oauth_progress) do
     oauth_progress not in List.flatten([:not_started | Map.values(@oauth_states)])
   end
@@ -913,16 +917,17 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
   defp display_reauthorize_banner?(%{
          action: action,
          scopes_changed: scopes_changed,
+         sandbox_changed: sandbox_changed,
          oauth_progress: oauth_progress
        }) do
     case action do
       :new ->
-        scopes_changed &&
+        (sandbox_changed || scopes_changed) &&
           oauth_progress in (@oauth_states.success ++
                                @oauth_states.failure)
 
       :edit ->
-        scopes_changed && oauth_progress not in [:started]
+        (sandbox_changed || scopes_changed) && oauth_progress not in [:started]
 
       _ ->
         false
