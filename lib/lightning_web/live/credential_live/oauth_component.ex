@@ -619,22 +619,7 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
 
     {:ok,
      socket
-     |> assign(
-       sandbox: sandbox,
-       client: client,
-       authorize_url: authorize_url
-     )}
-  end
-
-  defp params_to_token(%TokenBody{} = token) do
-    struct!(
-      OAuth2.AccessToken,
-      token
-      |> Map.from_struct()
-      |> Map.filter(fn {k, _v} ->
-        k in [:access_token, :refresh_token, :expires_at]
-      end)
-    )
+     |> assign(sandbox: sandbox, client: client, authorize_url: authorize_url)}
   end
 
   defp reset_assigns(socket) do
@@ -917,6 +902,17 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
       :expires_at, v1, v2 when v2 in [nil, ""] -> v1
       _k, _v1, v2 -> v2
     end)
+  end
+
+  defp params_to_token(%TokenBody{} = token) do
+    struct!(
+      OAuth2.AccessToken,
+      token
+      |> Map.from_struct()
+      |> Map.filter(fn {k, _v} ->
+        k in [:access_token, :refresh_token, :expires_at]
+      end)
+    )
   end
 
   defp display_loader?(oauth_progress) do
