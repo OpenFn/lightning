@@ -13,12 +13,12 @@ defmodule Lightning.DataclipScrubber do
   alias Lightning.Scrubber
 
   @spec scrub_dataclip_body!(Dataclip.t()) :: String.t()
-  def scrub_dataclip_body!(dataclip) do
+  def scrub_dataclip_body!(%{body: body} = dataclip) when is_binary(body) do
     if dataclip.type == :step_result do
       step_query = from s in Step, where: s.output_dataclip_id == ^dataclip.id
-      scrub_body(dataclip.body, Repo.one(step_query))
+      scrub_body(body, Repo.one(step_query))
     else
-      dataclip.body
+      body
     end
   end
 
