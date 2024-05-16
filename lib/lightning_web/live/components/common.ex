@@ -299,7 +299,7 @@ defmodule LightningWeb.Components.Common do
           :http_request -> ~w[bg-green-500 text-green-900]
           :global -> ~w[bg-blue-500 text-blue-900]
           :saved_input -> ~w[bg-yellow-500 text-yellow-900]
-          _ -> []
+          _other -> []
         end
 
     assigns = assign(assigns, class: class)

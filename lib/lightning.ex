@@ -13,8 +13,8 @@ defmodule Lightning do
 
     This behaviour is used to mock specific functions in tests.
     """
-    @pubsub Lightning.PubSub
     @behaviour Lightning
+    @pubsub Lightning.PubSub
 
     @impl true
     def current_time do
@@ -68,7 +68,7 @@ defmodule Lightning do
   def subscribe(topic), do: impl().subscribe(topic)
 
   @spec release() :: release_info()
-  def release(), do: impl().release()
+  def release, do: impl().release()
 
   defp impl do
     Application.get_env(:lightning, __MODULE__, API)
