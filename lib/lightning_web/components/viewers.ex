@@ -116,8 +116,9 @@ defmodule LightningWeb.Components.Viewers do
     ~H"""
     <div
       id={@id}
-      class="h-full log-viewer"
+      class="h-full"
       phx-hook="DataclipViewer"
+      phx-update="ignore"
       data-id={@dataclip.id}
     >
     </div>
@@ -133,7 +134,7 @@ defmodule LightningWeb.Components.Viewers do
     doc: "Additional classes to add to the log viewer container"
 
   attr :step, :map
-  attr :dataclip, :map, doc: "`%Dataclip{}`"
+  attr :dataclip, Dataclip
   attr :input_or_output, :atom, required: true, values: [:input, :output]
   attr :project_id, :string, required: true
 
@@ -187,7 +188,11 @@ defmodule LightningWeb.Components.Viewers do
         </.text_ping_loader>
       </div>
 
-      <.dataclip_viewer :if={@dataclip} id={@id} dataclip={@dataclip} />
+      <.dataclip_viewer
+        :if={@dataclip}
+        id={"step-#{@input_or_output}-dataclip-viewer"}
+        dataclip={@dataclip}
+      />
     <% end %>
     """
   end
