@@ -41,6 +41,7 @@ defmodule LightningWeb.CredentialLive.FormComponent do
      |> assign(scopes: [])
      |> assign(type_options: type_options)
      |> assign(scopes_changed: false)
+     |> assign(sandbox_changed: false)
      |> assign(schema: false)
      |> assign(available_projects: [])
      |> assign(allow_credential_transfer: allow_credential_transfer)}
@@ -53,7 +54,8 @@ defmodule LightningWeb.CredentialLive.FormComponent do
        params = changeset.params |> Map.put("body", body)
        Credentials.change_credential(credential, params)
      end)
-     |> assign(scopes_changed: false)}
+     |> assign(scopes_changed: false)
+     |> assign(sandbox_changed: false)}
   end
 
   def update(%{projects: projects} = assigns, socket) do
@@ -132,23 +134,19 @@ defmodule LightningWeb.CredentialLive.FormComponent do
   end
 
   def handle_event("check_sandbox", %{"sandbox" => value}, socket) do
-    sandbox_value = String.to_atom(value)
+    sandbox_value = String.to_existing_atom(value)
 
     send_update(LightningWeb.CredentialLive.OauthComponent,
       id: "inner-form-#{socket.assigns.credential.id || "new"}",
       sandbox: sandbox_value
     )
 
-    {:noreply, socket |> assign(sandbox_value: sandbox_value)}
+    {:noreply,
+     assign(socket, sandbox_value: sandbox_value, sandbox_changed: true)}
   end
 
   def handle_event("api_version", %{"api_version" => version}, socket) do
-    send_update(LightningWeb.CredentialLive.OauthComponent,
-      id: "inner-form-#{socket.assigns.credential.id || "new"}",
-      api_version: version
-    )
-
-    {:noreply, socket |> assign(api_version: version)}
+    {:noreply, assign(socket, api_version: version)}
   end
 
   def handle_event(
@@ -252,6 +250,9 @@ defmodule LightningWeb.CredentialLive.FormComponent do
   end
 
   def handle_event("save", %{"credential" => credential_params}, socket) do
+    credential_params =
+      maybe_add_oauth_specific_fields(socket, credential_params)
+
     if socket.assigns.can_create_project_credential do
       save_credential(
         socket,
@@ -383,10 +384,9 @@ defmodule LightningWeb.CredentialLive.FormComponent do
             form={f}
             type={@schema}
             action={@action}
-            sandbox_value={@sandbox_value}
-            api_version={@api_version}
             update_body={@update_body}
             scopes_changed={@scopes_changed}
+            sandbox_changed={@sandbox_changed}
           >
             <div class="space-y-6 bg-white px-4 py-5 sm:p-6">
               <fieldset>
@@ -424,7 +424,7 @@ defmodule LightningWeb.CredentialLive.FormComponent do
                   label="Sandbox instance?"
                   phx-change="check_sandbox"
                   phx-target={@myself}
-                  id="salesforce_sandbox_instance_checkbox"
+                  id={"salesforce_sandbox_instance_checkbox_#{@credential.id || "new"}"}
                 />
 
                 <.input
@@ -436,7 +436,7 @@ defmodule LightningWeb.CredentialLive.FormComponent do
                   value={@api_version}
                   phx-change="api_version"
                   phx-target={@myself}
-                  id="salesforce_api_version_input"
+                  id={"salesforce_api_version_input_#{@credential.id || "new"}"}
                 />
                 <%= fieldset %>
               </div>
@@ -474,7 +474,7 @@ defmodule LightningWeb.CredentialLive.FormComponent do
             <div class="sm:flex sm:flex-row-reverse">
               <button
                 type="submit"
-                disabled={!@changeset.valid? or @scopes_changed}
+                disabled={!@changeset.valid? or @scopes_changed or @sandbox_changed}
                 class="inline-flex w-full justify-center rounded-md disabled:bg-primary-300 bg-primary-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary-500 sm:ml-3 sm:w-auto"
               >
                 Save
@@ -500,10 +500,9 @@ defmodule LightningWeb.CredentialLive.FormComponent do
   attr :action, :any, required: false
   attr :phx_target, :any, default: nil
   attr :schema, :string, required: false
-  attr :sandbox_value, :boolean, default: false
-  attr :api_version, :string, default: ""
   attr :update_body, :any, required: false
   attr :scopes_changed, :boolean, required: false
+  attr :sandbox_changed, :boolean, required: false
   slot :inner_block
 
   defp form_component(%{type: "googlesheets"} = assigns) do
@@ -530,9 +529,8 @@ defmodule LightningWeb.CredentialLive.FormComponent do
       action={@action}
       schema={@schema}
       update_body={@update_body}
-      sandbox_value={@sandbox_value}
-      api_version={@api_version}
       scopes_changed={@scopes_changed}
+      sandbox_changed={@sandbox_changed}
     >
       <%= render_slot(@inner_block, l) %>
     </OauthComponent.fieldset>
@@ -666,6 +664,19 @@ defmodule LightningWeb.CredentialLive.FormComponent do
     )
   end
 
+  defp maybe_add_oauth_specific_fields(socket, params) do
+    if socket.assigns.schema in ["salesforce_oauth", "googlesheets"] do
+      updated_body =
+        params["body"]
+        |> Map.put("sandbox", socket.assigns.sandbox_value)
+        |> Map.put("apiVersion", socket.assigns.api_version)
+
+      %{params | "body" => updated_body}
+    else
+      params
+    end
+  end
+
   defp get_type_options(socket, schemas_path) do
     schemas_options =
       Path.wildcard("#{schemas_path}/*.json")
@@ -735,7 +746,7 @@ defmodule LightningWeb.CredentialLive.FormComponent do
 
   defp get_sandbox_value(_), do: false
 
-  defp get_api_version(%{body: %{"api_version" => api_version}}), do: api_version
+  defp get_api_version(%{body: %{"apiVersion" => api_version}}), do: api_version
 
   defp get_api_version(_), do: nil
 
