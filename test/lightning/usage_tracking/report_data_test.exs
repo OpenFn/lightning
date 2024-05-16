@@ -1,7 +1,6 @@
 defmodule Lightning.UsageTracking.ReportDataTest do
   use Lightning.DataCase, async: false
 
-  import Lightning.ApplicationHelpers, only: [put_temporary_env: 3]
   import Mock
 
   alias Lightning.UsageTracking
@@ -416,11 +415,15 @@ defmodule Lightning.UsageTracking.ReportDataTest do
   defp setup_data_for_version_generation(context) do
     commit = "abc123"
 
-    put_temporary_env(:lightning, :image_info,
-      branch: "foo-bar",
-      commit: commit,
-      image_tag: "edge"
-    )
+    Mox.stub(LightningMock, :release, fn ->
+      %{
+        label: "v#{Application.spec(:lightning, :vsn)}",
+        commit: commit,
+        image_tag: "edge",
+        branch: "main",
+        vsn: Application.spec(:lightning, :vsn)
+      }
+    end)
 
     context
     |> Map.merge(%{

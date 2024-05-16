@@ -1,7 +1,6 @@
 defmodule Lightning.UsageTrackingTest do
   use Lightning.DataCase, async: false
 
-  import Lightning.ApplicationHelpers, only: [put_temporary_env: 3]
   import Mock
 
   alias Lightning.Repo
@@ -863,7 +862,7 @@ defmodule Lightning.UsageTrackingTest do
       commit: commit,
       spec_version: spec_version
     } do
-      set_env(branch: "ignored", commit: commit, image_tag: "edge")
+      set_release(branch: "ignored", commit: commit, image_tag: "edge")
 
       assert UsageTracking.lightning_version() ==
                "#{spec_version}:edge:#{commit}"
@@ -873,7 +872,7 @@ defmodule Lightning.UsageTrackingTest do
       commit: commit,
       spec_version: spec_version
     } do
-      set_env(branch: "ignored", commit: commit, image_tag: spec_version)
+      set_release(branch: "ignored", commit: commit, image_tag: spec_version)
 
       assert UsageTracking.lightning_version() ==
                "#{spec_version}:match:#{commit}"
@@ -883,7 +882,7 @@ defmodule Lightning.UsageTrackingTest do
       commit: commit,
       spec_version: spec_version
     } do
-      set_env(branch: "ignored", commit: commit, image_tag: "unique")
+      set_release(branch: "ignored", commit: commit, image_tag: "unique")
 
       assert UsageTracking.lightning_version() ==
                "#{spec_version}:other:#{commit}"
@@ -916,7 +915,7 @@ defmodule Lightning.UsageTrackingTest do
       commit: commit,
       spec_version: version
     } do
-      set_env(branch: "ignored", commit: commit, image_tag: "edge")
+      set_release(branch: "ignored", commit: commit, image_tag: "edge")
 
       assert UsageTracking.lightning_version() == "#{version}:edge:sanitised"
     end
@@ -925,7 +924,7 @@ defmodule Lightning.UsageTrackingTest do
       commit: commit,
       spec_version: spec_version
     } do
-      set_env(branch: "ignored", commit: commit, image_tag: spec_version)
+      set_release(branch: "ignored", commit: commit, image_tag: spec_version)
 
       assert UsageTracking.lightning_version() ==
                "#{spec_version}:match:sanitised"
@@ -935,7 +934,7 @@ defmodule Lightning.UsageTrackingTest do
       commit: commit,
       spec_version: spec_version
     } do
-      set_env(branch: "ignored", commit: commit, image_tag: "unique")
+      set_release(branch: "ignored", commit: commit, image_tag: "unique")
 
       assert UsageTracking.lightning_version() ==
                "#{spec_version}:other:sanitised"
@@ -1022,7 +1021,15 @@ defmodule Lightning.UsageTrackingTest do
     end
   end
 
-  defp set_env(values) do
-    put_temporary_env(:lightning, :image_info, values)
+  defp set_release(values) do
+    original = Lightning.API.release()
+    allowed_keys = Map.keys(original)
+
+    override =
+      values
+      |> Enum.reject(fn {k, _} -> k not in allowed_keys end)
+      |> Map.new()
+
+    Mox.stub(LightningMock, :release, fn -> Map.merge(original, override) end)
   end
 end

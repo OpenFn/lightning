@@ -165,14 +165,14 @@ config :lightning, :workers,
       end
     end)
 
-image_tag = env!("IMAGE_TAG", :string, nil)
-branch = env!("BRANCH", :string, nil)
-commit = env!("COMMIT", :string, nil)
+release = [
+  label: "v#{Application.spec(:lightning, :vsn)}",
+  image_tag: env!("IMAGE_TAG", :string, nil),
+  branch: env!("BRANCH", :string, nil),
+  commit: env!("COMMIT", :string, nil)
+]
 
-config :lightning, :image_info,
-  image_tag: image_tag,
-  branch: branch,
-  commit: commit
+config :lightning, :release, release
 
 config :lightning, :email_addresses,
   admin: env!("EMAIL_ADMIN", :string, "support@openfn.org")
@@ -301,9 +301,6 @@ if api_key = env!("MAILGUN_API_KEY", :string, nil) do
     domain: env!("MAILGUN_DOMAIN", :string)
 end
 
-url_port = env!("URL_PORT", :integer, 443)
-url_scheme = env!("URL_SCHEME", :string, "https")
-
 # Use the `PRIMARY_ENCRYPTION_KEY` env variable if available, else fall back
 # to defaults.
 # Defaults are set for `dev` and `test` modes.
@@ -347,6 +344,11 @@ config :lightning, Lightning.Repo,
   queue_target: env!("DATABASE_QUEUE_TARGET", :integer, 50),
   queue_interval: env!("DATABASE_QUEUE_INTERVAL", :integer, 1000)
 
+url_scheme = env!("URL_SCHEME", :string, "https")
+host = env!("URL_HOST", :string, "example.com")
+port = env!("PORT", :integer, 4000)
+url_port = env!("URL_PORT", :integer, 443)
+
 if config_env() == :prod do
   unless database_url do
     raise """
@@ -378,9 +380,6 @@ if config_env() == :prod do
       environment variable SECRET_KEY_BASE is missing.
       You can generate one by calling: mix phx.gen.secret
       """
-
-  host = env!("URL_HOST", :string, "example.com")
-  port = env!("PORT", :integer, 4000)
 
   listen_address =
     env!(
@@ -452,29 +451,12 @@ if config_env() == :test do
     assert_receive_timeout: env!("ASSERT_RECEIVE_TIMEOUT", :integer, 600)
 end
 
-# TODO: set this up properly: https://github.com/OpenFn/thunderbolt/issues/60
-# release =
-#   case image_tag do
-#     nil -> "mix-v#{Application.spec(:lightning, :vsn)}"
-#     "edge" -> commit
-#     _other -> image_tag
-#   end
-release =
-  if Application.spec(:thunderbolt, :vsn) do
-    "v#{Application.spec(:lightning, :vsn)}" <>
-      " (#{Application.spec(:thunderbolt, :vsn)})"
-  else
-    "v#{Application.spec(:lightning, :vsn)}"
-  end
-
 config :sentry,
   dsn: env!("SENTRY_DSN", :string, nil),
   filter: Lightning.SentryEventFilter,
   environment_name: env!("SENTRY_ENVIRONMENT", :string, config_env()),
-  tags: %{
-    host: Application.get_env(:lightning, LightningWeb.Endpoint)[:url][:host]
-  },
-  release: release,
+  tags: %{host: host},
+  release: release[:label],
   enable_source_code_context: true,
   root_source_code_path: File.cwd!()
 

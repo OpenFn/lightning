@@ -33,6 +33,9 @@ Mox.defmock(Lightning.Extensions.MockUsageLimiter,
 Mox.defmock(Lightning.MockConfig, for: Lightning.Config)
 Application.put_env(:lightning, Lightning.Config, Lightning.MockConfig)
 
+Mox.defmock(LightningMock, for: Lightning)
+Application.put_env(:lightning, Lightning, LightningMock)
+
 Application.put_env(:lightning, Lightning.Extensions,
   rate_limiter: Lightning.Extensions.MockRateLimiter,
   usage_limiter: Lightning.Extensions.MockUsageLimiter,
