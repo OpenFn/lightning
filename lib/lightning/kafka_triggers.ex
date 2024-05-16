@@ -105,4 +105,10 @@ defmodule Lightning.KafkaTriggers do
         raise "initial_offset_reset_policy must be :earliest, :latest or integer"
     end
   end
+
+  def build_topic_partition_offset(%Broadway.Message{metadata: metadata}) do
+    %{topic: topic, partition: partition, offset: offset} = metadata
+
+    "#{topic}_#{partition}_#{offset}"
+  end
 end
