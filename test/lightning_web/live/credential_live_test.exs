@@ -1471,8 +1471,6 @@ defmodule LightningWeb.CredentialLiveTest do
       credential =
         Lightning.Credentials.list_credentials_for_user(user.id) |> List.first()
 
-      IO.inspect(credential.body)
-
       token = Lightning.AuthProviders.Common.TokenBody.new(credential.body)
 
       assert %{
