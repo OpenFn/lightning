@@ -384,4 +384,33 @@ defmodule Lightning.KafkaTriggersTest do
       end
     end
   end
+
+  describe ".build_topic_partition_offset" do
+    test "builds based on the proivded message" do
+      message = build_broadway_message("foo", 2, 1)
+      assert KafkaTriggers.build_topic_partition_offset(message) == "foo_2_1"
+
+      message = build_broadway_message("bar", 4, 2)
+      assert KafkaTriggers.build_topic_partition_offset(message) == "bar_4_2"
+    end
+
+    defp build_broadway_message(topic, partition, offset) do
+      %Broadway.Message{
+        data: %{interesting: "stuff"} |> Jason.encode!(),
+        metadata: %{
+          offset: offset,
+          partition: partition,
+          key: "",
+          headers: [],
+          ts: 1715164718283,
+          topic: topic
+        },
+        acknowledger: nil,
+        batcher: :default,
+        batch_key: {"bar_topic", 2},
+        batch_mode: :bulk,
+        status: :ok
+      }
+    end
+  end
 end
