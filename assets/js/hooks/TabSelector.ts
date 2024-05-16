@@ -46,20 +46,12 @@ export default {
 
     window.addEventListener('hashchange', this._onHashChange);
 
-    // Get the last segment of the current path
-    const lastPathSegment = window.location.pathname.split('/').at(-1);
+    const pathSegments = window.location.pathname.split('/');
+    const isJobInspectorPage = pathSegments.length > 3 && 
+      pathSegments.at(1) === 'projects' && pathSegments.at(3) === 'w';
 
-    // The observer is not used on the settings page, i.e this condition
-    // can be removed if same approach is applied to the inspector
-    // possibly having the #log on the url when the run is created.
-    if (lastPathSegment === 'settings') {
-      var hash = this.defaultHash;
-      
-      if (window.location.hash != '') {
-        hash = window.location.hash.substring(1);
-      }
-      this.hashChanged(hash);
-    } else {
+    // The observer is still needed for the job inspector tabs
+    if (isJobInspectorPage) {
       const observer = new MutationObserver(mutationsList => {
         for (const mutation of mutationsList) {
           if (mutation.type === 'childList') {
@@ -70,6 +62,8 @@ export default {
 
       const config = { childList: true, subtree: true };
       observer.observe(document.body, config);
+    } else {
+      this.hashChanged(this.getHash() || this.defaultHash);
     }
   },
   hashChanged(nextHash: string) {
