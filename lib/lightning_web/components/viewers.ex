@@ -116,11 +116,14 @@ defmodule LightningWeb.Components.Viewers do
     ~H"""
     <div
       id={@id}
-      class="h-full"
+      class="h-full relative"
       phx-hook="DataclipViewer"
       phx-update="ignore"
       data-id={@dataclip.id}
+      data-target={"#{@id}-viewer"}
     >
+      <.dataclip_type id={"#{@id}-type"} type={@dataclip.type} />
+      <div id={"#{@id}-viewer"} class="h-full"></div>
     </div>
     """
   end
@@ -280,7 +283,9 @@ defmodule LightningWeb.Components.Viewers do
         "absolute top-0 right-0 flex items-center gap-2 group z-10"
       ]}
     >
-      <div class="hidden group-hover:block font-mono">type: <%= @type %></div>
+      <div class="hidden group-hover:block font-mono text-white">
+        type: <%= @type %>
+      </div>
       <div class={[
         "rounded-bl-md rounded-tr-md p-1 opacity-70 group-hover:opacity-100 content-center",
         @color
