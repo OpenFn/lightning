@@ -19,6 +19,12 @@ and this project adheres to
 
 ### Changed
 
+### Fixed
+
+## [v2.4.14] - 2024-05-16
+
+### Changed
+
 - Refactored image and version info
   [#2097](https://github.com/OpenFn/lightning/pull/2097)
 
