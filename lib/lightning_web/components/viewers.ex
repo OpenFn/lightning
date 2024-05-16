@@ -149,56 +149,54 @@ defmodule LightningWeb.Components.Viewers do
 
   def step_dataclip_viewer(assigns) do
     ~H"""
-    <div id={@id} class="h-full">
-      <%= if dataclip_wiped?(@step, @dataclip, @input_or_output) do %>
-        <.wiped_dataclip_viewer
-          id={@id}
-          can_edit_data_retention={@can_edit_data_retention}
-          admin_contacts={@admin_contacts}
-          input_or_output={@input_or_output}
-          project_id={@project_id}
-        />
-      <% else %>
-        <div
-          :if={
-            @run_state in Lightning.Run.final_states() and
-              is_nil(@dataclip)
-          }
-          class={[
-            "m-2 relative rounded-md",
-            "p-12 text-center col-span-full"
-          ]}
-        >
-          <span class="relative inline-flex">
-            <div class="inline-flex">
-              No <%= @input_or_output %> state could be saved for this run.
-            </div>
-          </span>
-        </div>
+    <%= if dataclip_wiped?(@step, @dataclip, @input_or_output) do %>
+      <.wiped_dataclip_viewer
+        id={@id}
+        can_edit_data_retention={@can_edit_data_retention}
+        admin_contacts={@admin_contacts}
+        input_or_output={@input_or_output}
+        project_id={@project_id}
+      />
+    <% else %>
+      <div
+        :if={
+          @run_state in Lightning.Run.final_states() and
+            is_nil(@dataclip)
+        }
+        class={[
+          "m-2 relative rounded-md",
+          "p-12 text-center col-span-full"
+        ]}
+      >
+        <span class="relative inline-flex">
+          <div class="inline-flex">
+            No <%= @input_or_output %> state could be saved for this run.
+          </div>
+        </span>
+      </div>
 
-        <div
-          :if={
-            @run_state not in Lightning.Run.final_states() and
-              is_nil(@dataclip)
-          }
-          id={"#{@id}-nothing-yet"}
-          class={[
-            "m-2 relative rounded-md",
-            "p-12 text-center col-span-full"
-          ]}
-        >
-          <.text_ping_loader>
-            Nothing yet
-          </.text_ping_loader>
-        </div>
+      <div
+        :if={
+          @run_state not in Lightning.Run.final_states() and
+            is_nil(@dataclip)
+        }
+        id={"#{@id}-nothing-yet"}
+        class={[
+          "m-2 relative rounded-md",
+          "p-12 text-center col-span-full"
+        ]}
+      >
+        <.text_ping_loader>
+          Nothing yet
+        </.text_ping_loader>
+      </div>
 
-        <.dataclip_viewer
-          :if={@dataclip}
-          id={"step-#{@input_or_output}-dataclip-viewer"}
-          dataclip={@dataclip}
-        />
-      <% end %>
-    </div>
+      <.dataclip_viewer
+        :if={@dataclip}
+        id={"step-#{@input_or_output}-dataclip-viewer"}
+        dataclip={@dataclip}
+      />
+    <% end %>
     """
   end
 

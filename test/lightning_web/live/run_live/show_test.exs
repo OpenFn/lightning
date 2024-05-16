@@ -103,7 +103,6 @@ defmodule LightningWeb.RunLive.ShowTest do
 
       # Check that the input dataclip is rendered
       assert view
-             |> element("#step-input-#{step.id}")
              |> render_async()
              |> Floki.parse_fragment!()
              |> Floki.find(
@@ -125,7 +124,8 @@ defmodule LightningWeb.RunLive.ShowTest do
         })
 
       assert view
-             |> step_output(step)
+             |> render_async()
+             |> Floki.parse_fragment!()
              |> Floki.find(
                "[phx-hook='DataclipViewer'][data-id='#{step.output_dataclip_id}']"
              )
@@ -163,7 +163,8 @@ defmodule LightningWeb.RunLive.ShowTest do
         })
 
       assert view
-             |> step_output(step_2)
+             |> render_async()
+             |> Floki.parse_fragment!()
              |> Floki.find(
                "[phx-hook='DataclipViewer'][data-id='#{step_2.output_dataclip_id}']"
              )
@@ -173,7 +174,8 @@ defmodule LightningWeb.RunLive.ShowTest do
       view |> select_step(run, job_a.name)
 
       assert view
-             |> step_output(step)
+             |> render_async()
+             |> Floki.parse_fragment!()
              |> Floki.find(
                "[phx-hook='DataclipViewer'][data-id='#{step.output_dataclip_id}']"
              )
@@ -221,13 +223,6 @@ defmodule LightningWeb.RunLive.ShowTest do
     view
     |> element("#step-list-#{run.id} a[data-phx-link]", job_name)
     |> render_click()
-  end
-
-  defp step_output(view, step) do
-    assert view
-           |> element("#step-output-#{step.id}")
-           |> render_async()
-           |> Floki.parse_fragment!()
   end
 
   defp output_is_empty?(view, step) do
