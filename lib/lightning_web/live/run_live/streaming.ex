@@ -59,7 +59,7 @@ defmodule LightningWeb.RunLive.Streaming do
   def maybe_load_output_dataclip(socket) do
     %{selected_step: selected_step, output_dataclip: dataclip} = socket.assigns
 
-    if selected_step && selected_step.output_dataclip_id &&
+    if selected_step &&
          (!dataclip or selected_step.output_dataclip_id != dataclip.id) do
       socket
       |> assign(output_dataclip: get_dataclip(selected_step, :output_dataclip))
