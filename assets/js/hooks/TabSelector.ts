@@ -31,7 +31,8 @@ export default {
 
     // Trigger a URL hash change when the server sends a 'push-hash' event.
     this.handleEvent<{ hash: string }>('push-hash', ({ hash }) => {
-      window.location.hash = hash;
+      this.hashChanged(hash);
+      window.location.hash = "#" + hash;
     });
 
     this._onHashChange = _evt => {
@@ -46,25 +47,7 @@ export default {
 
     window.addEventListener('hashchange', this._onHashChange);
 
-    const pathSegments = window.location.pathname.split('/');
-    const isJobInspectorPage = pathSegments.length > 3 && 
-      pathSegments.at(1) === 'projects' && pathSegments.at(3) === 'w';
-
-    // The observer is still needed for the job inspector tabs
-    if (isJobInspectorPage) {
-      const observer = new MutationObserver(mutationsList => {
-        for (const mutation of mutationsList) {
-          if (mutation.type === 'childList') {
-            this.hashChanged(this.getHash() || this.defaultHash);
-          }
-        }
-      });
-
-      const config = { childList: true, subtree: true };
-      observer.observe(document.body, config);
-    } else {
-      this.hashChanged(this.getHash() || this.defaultHash);
-    }
+    this.hashChanged(this.getHash() || this.defaultHash);
   },
   hashChanged(nextHash: string) {
     let activePanel: HTMLElement | null = null;

@@ -1052,9 +1052,18 @@ defmodule LightningWeb.WorkflowLive.Edit do
         %{assigns: %{follow_run: %{id: follow_run_id}}} = socket
       )
       when run.id === follow_run_id do
-    {:noreply,
-     socket
-     |> assign(follow_run: run)}
+    socket =
+      socket
+      |> assign(follow_run: run)
+      |> then(fn socket ->
+        if run.state == :started do
+          push_event(socket, "push-hash", %{hash: "log"})
+        else
+          socket
+        end
+      end)
+
+    {:noreply, socket}
   end
 
   def handle_info(%{}, socket), do: {:noreply, socket}

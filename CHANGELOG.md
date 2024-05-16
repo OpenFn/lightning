@@ -62,6 +62,8 @@ and this project adheres to
   [#99](https://github.com/OpenFn/lightning/issues/99)
 - Removes stacked viewer after switching tabs and steps.
   [#2064](https://github.com/OpenFn/lightning/issues/2064)
+- Select the inspector log tab by pushing an URL hash.
+  [#2051](https://github.com/OpenFn/lightning/issues/2051)
 
 ## [v2.4.13] - 2024-05-16
 
