@@ -7,9 +7,30 @@ const EditorComponent = ({ dataclipId }: { dataclipId: string }) => {
 
   useEffect(() => {
     async function fetchDataclipContent() {
+      // Retrieve last modified timestamp from local storage if available
+      const lastModified = localStorage.getItem(`lastModified-${dataclipId}`);
+      const headers = new Headers();
+
+      // If a last modified date is present, append the 'If-Modified-Since' header
+      if (lastModified) {
+        headers.append('Last-Modified', lastModified);
+        headers.append('If-Modified-Since', lastModified);
+      }
+
       try {
-        const response = await fetch(`/dataclip/body/${dataclipId}`);
-        if (!response.ok) throw new Error('Network response was not ok');
+        const response = await fetch(`/dataclip/body/${dataclipId}`, {
+          headers,
+          cache: 'no-cache',
+        });
+        if (!response.ok && response.status !== 304) {
+          throw new Error('Network response was not ok');
+        }
+
+        const newLastModified = response.headers.get('Last-Modified');
+        if (response.ok && newLastModified) {
+          localStorage.setItem(`lastModified-${dataclipId}`, newLastModified);
+        }
+
         return await response.text();
       } catch (error) {
         console.error('Error fetching content:', error);
@@ -18,6 +39,7 @@ const EditorComponent = ({ dataclipId }: { dataclipId: string }) => {
     }
 
     fetchDataclipContent().then(fetchedContent => {
+      console.log('Fetched content:', fetchedContent);
       setContent(fetchedContent);
       if (editorRef.current) {
         editorRef.current.setValue(fetchedContent);
