@@ -1,8 +1,8 @@
 defmodule LightningWeb.DataclipController do
   use LightningWeb, :controller
 
-  alias Lightning.Invocation
   alias Lightning.DataclipScrubber
+  alias Lightning.Invocation
 
   def show(conn, %{"id" => dataclip_id}) do
     dataclip = Invocation.get_dataclip_details!(dataclip_id)
