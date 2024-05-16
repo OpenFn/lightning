@@ -21,6 +21,9 @@ and this project adheres to
 
 ### Fixed
 
+- Removes stacked viewer after switching tabs and steps.
+  [#2064](https://github.com/OpenFn/lightning/issues/2064)
+
 ## [v2.4.13] - 2024-05-16
 
 ### Fixed
@@ -28,8 +31,9 @@ and this project adheres to
 - Fixed issue where updating an existing Salesforce credential to use a
   `sandbox` endpoint would not properly re-authenticate.
   [#1842](https://github.com/OpenFn/lightning/issues/1842)
-- Navigate directly to settings from url hash and renders default panel when
-  there is no hash. [#1971](https://github.com/OpenFn/lightning/issues/1971)
+- Navigate directly to settings from url hash and renders default panel 
+  when there is no hash. 
+  [#1971](https://github.com/OpenFn/lightning/issues/1971)
 
 ## [v2.4.12] - 2024-05-15
 
