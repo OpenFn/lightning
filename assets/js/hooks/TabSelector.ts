@@ -47,10 +47,8 @@ export default {
     window.addEventListener('hashchange', this._onHashChange);
 
     const pathSegments = window.location.pathname.split('/');
-    const isJobInspectorPage =
-      pathSegments.length > 3 &&
-      pathSegments.at(1) === 'projects' &&
-      pathSegments.at(3) === 'w';
+    const isJobInspectorPage = pathSegments.length > 3 && 
+      pathSegments.at(1) === 'projects' && pathSegments.at(3) === 'w';
 
     // The observer is still needed for the job inspector tabs
     if (isJobInspectorPage) {

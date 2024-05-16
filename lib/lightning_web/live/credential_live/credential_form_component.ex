@@ -411,7 +411,7 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
   def render(%{page: :second} = assigns) do
     ~H"""
     <div class="mt-10 sm:mt-0">
-      <.modal id={@id} width="xl:min-w-1/3 min-w-1/2 max-w-full">
+      <.modal id={@id} width="xl:min-w-1/3 min-w-1/2 w-[300px]">
         <:title>
           <div class="flex justify-between">
             <span class="font-bold"><.modal_title action={@action} /></span>
