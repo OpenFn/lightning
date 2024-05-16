@@ -73,8 +73,8 @@ defmodule LightningWeb.RunLive.Streaming do
     |> assign(
       selected_step_id: nil,
       selected_step: nil,
-      input_dataclip: false,
-      output_dataclip: false
+      input_dataclip: nil,
+      output_dataclip: nil
     )
   end
 

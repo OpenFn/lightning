@@ -232,8 +232,8 @@ defmodule LightningWeb.RunLive.Show do
      )
      |> stream(:log_lines, [])
      |> assign(:log_lines_stream_empty?, true)
-     |> assign(:input_dataclip, false)
-     |> assign(:output_dataclip, false)
+     |> assign(:input_dataclip, nil)
+     |> assign(:output_dataclip, nil)
      |> assign(:run, AsyncResult.loading())
      |> assign(:log_lines, AsyncResult.loading())
      |> assign(
