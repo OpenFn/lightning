@@ -24,6 +24,30 @@ and this project adheres to
 - Fixed issue where updating an existing Salesforce credential to use a
   `sandbox` endpoint would not properly re-authenticate.
   [#1842](https://github.com/OpenFn/lightning/issues/1842)
+- Navigate directly to settings from url hash and renders default panel
+  when there is no hash.
+  [#1971](https://github.com/OpenFn/lightning/issues/1971)
+
+## [v2.4.12] - 2024-05-15
+
+### Fixed
+
+- Fix render settings default panel on first load
+  [#1971](https://github.com/OpenFn/lightning/issues/1971)
+
+## [v2.4.11] - 2024-05-15
+
+### Changed
+
+- Upgraded Sentry to v10 for better error reporting.
+
+## [v2.4.10] - 2024-05-14
+
+### Fixed
+
+- Fix the "reset demo" script by disabling the emailing that was introduced to
+  the `create_project` function.
+  [#2063](https://github.com/OpenFn/lightning/pull/2063)
 
 ## [v2.4.9] - 2024-05-14
 
