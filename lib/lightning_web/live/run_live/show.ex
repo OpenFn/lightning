@@ -96,7 +96,7 @@ defmodule LightningWeb.RunLive.Show do
                   <:value>
                     <%= if run.finished_at do %>
                       <Common.wrapper_tooltip
-                        id={run.id <> "start-tip"}
+                        id={run.id <> "finish-tip"}
                         tooltip={DateTime.to_iso8601(run.finished_at)}
                       >
                         <%= Timex.Format.DateTime.Formatters.Relative.format!(
@@ -125,7 +125,7 @@ defmodule LightningWeb.RunLive.Show do
                 steps={@steps}
                 class="flex-1 items-center"
               >
-                <.link patch={"?step=#{step.id}"} id={"select-step-#{step.id}"}>
+                <.link patch={"?step=#{step.id}"}>
                   <.step_item
                     step={step}
                     is_clone={
