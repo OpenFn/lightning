@@ -301,9 +301,6 @@ if api_key = env!("MAILGUN_API_KEY", :string, nil) do
     domain: env!("MAILGUN_DOMAIN", :string)
 end
 
-url_port = env!("URL_PORT", :integer, 443)
-url_scheme = env!("URL_SCHEME", :string, "https")
-
 # Use the `PRIMARY_ENCRYPTION_KEY` env variable if available, else fall back
 # to defaults.
 # Defaults are set for `dev` and `test` modes.
@@ -347,8 +344,10 @@ config :lightning, Lightning.Repo,
   queue_target: env!("DATABASE_QUEUE_TARGET", :integer, 50),
   queue_interval: env!("DATABASE_QUEUE_INTERVAL", :integer, 1000)
 
+url_scheme = env!("URL_SCHEME", :string, "https")
 host = env!("URL_HOST", :string, "example.com")
 port = env!("PORT", :integer, 4000)
+url_port = env!("URL_PORT", :integer, 443)
 
 if config_env() == :prod do
   unless database_url do
@@ -451,14 +450,6 @@ if config_env() == :test do
   config :ex_unit,
     assert_receive_timeout: env!("ASSERT_RECEIVE_TIMEOUT", :integer, 600)
 end
-
-# TODO: set this up properly: https://github.com/OpenFn/thunderbolt/issues/60
-# release =
-#   case image_tag do
-#     nil -> "mix-v#{Application.spec(:lightning, :vsn)}"
-#     "edge" -> commit
-#     _other -> image_tag
-#   end
 
 config :sentry,
   dsn: env!("SENTRY_DSN", :string, nil),
