@@ -30,6 +30,7 @@ defmodule Lightning.Credentials.OauthClient do
     field :authorization_endpoint, :string
     field :token_endpoint, :string
     field :userinfo_endpoint, :string
+    field :introspection_endpoint, :string
     field :global, :boolean, default: false
     field :mandatory_scopes, :string
     field :optional_scopes, :string
@@ -66,6 +67,7 @@ defmodule Lightning.Credentials.OauthClient do
       :authorization_endpoint,
       :token_endpoint,
       :userinfo_endpoint,
+      :introspection_endpoint,
       :global,
       :user_id,
       :mandatory_scopes,
@@ -82,6 +84,7 @@ defmodule Lightning.Credentials.OauthClient do
     |> Validators.validate_url(:authorization_endpoint)
     |> Validators.validate_url(:token_endpoint)
     |> Validators.validate_url(:userinfo_endpoint)
+    |> Validators.validate_url(:introspection_endpoint)
     |> Validators.validate_url(:scopes_doc_url)
     |> cast_assoc(:project_oauth_clients,
       with: &ProjectOauthClient.changeset/2

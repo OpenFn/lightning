@@ -12,6 +12,7 @@ defmodule Lightning.Repo.Migrations.CreateOauthClientsTables do
       add :user_id, references(:users, on_delete: :delete_all, type: :binary_id), null: false
       add :token_endpoint, :string
       add :userinfo_endpoint, :string
+      add :introspection_endpoint, :string
       add :mandatory_scopes, :text, null: true
       add :optional_scopes, :text, null: true
       add :scopes_doc_url, :string, null: true
