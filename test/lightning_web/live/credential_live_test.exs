@@ -1561,7 +1561,7 @@ defmodule LightningWeb.CredentialLiveTest do
       token_body = Lightning.AuthProviders.Common.TokenBody.new(credential.body)
 
       assert token_body.instance_url == "login.salesforce.com"
-      assert token_body.sandbox
+      assert token_body.sandbox == false
 
       {:ok, view, _html} = live(conn, ~p"/credentials")
 
