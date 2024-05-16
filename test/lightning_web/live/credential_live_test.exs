@@ -1165,7 +1165,10 @@ defmodule LightningWeb.CredentialLiveTest do
       edit_live |> render()
 
       assert edit_live
-             |> has_element?("p", "Failed retrieving your information.")
+             |> has_element?(
+               "p",
+               "That seemed to work, but we couldn't fetch your user information."
+             )
 
       # Now respond with success
       expect_userinfo(
@@ -1176,7 +1179,7 @@ defmodule LightningWeb.CredentialLiveTest do
         """
       )
 
-      edit_live |> element("a", "try again.") |> render_click()
+      edit_live |> element("a", "Try again") |> render_click()
 
       assert wait_for_assigns(edit_live, :userinfo_received, credential.id)
 
@@ -1850,7 +1853,10 @@ defmodule LightningWeb.CredentialLiveTest do
       edit_live |> render()
 
       assert edit_live
-             |> has_element?("p", "Failed retrieving your information.")
+             |> has_element?(
+               "p",
+               "That seemed to work, but we couldn't fetch your user information."
+             )
 
       # Now respond with success
       expect_userinfo(
@@ -1861,7 +1867,7 @@ defmodule LightningWeb.CredentialLiveTest do
         """
       )
 
-      edit_live |> element("a", "try again.") |> render_click()
+      edit_live |> element("a", "Try again") |> render_click()
 
       assert wait_for_assigns(edit_live, :userinfo_received, credential.id)
 
