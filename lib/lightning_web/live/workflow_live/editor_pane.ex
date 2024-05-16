@@ -83,8 +83,10 @@ defmodule LightningWeb.WorkflowLive.EditorPane do
     {:noreply, socket}
   end
 
-  defp fetch_credential(project_credential_id) do
-    project_credential_id &&
-      Credentials.get_credential_by_project_credential(project_credential_id)
+  defp fetch_credential(id) do
+    case Ecto.UUID.cast(id) do
+      {:ok, _uuid} -> Credentials.get_credential_by_project_credential(id)
+      :error -> nil
+    end
   end
 end

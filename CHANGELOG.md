@@ -21,6 +21,9 @@ and this project adheres to
 
 ### Fixed
 
+- Fixed issue where updating adaptor name and version of job node in the
+  workflow canvas crashes the app when no credential is selected
+  [#99](https://github.com/OpenFn/lightning/issues/99)
 - Removes stacked viewer after switching tabs and steps.
   [#2064](https://github.com/OpenFn/lightning/issues/2064)
 
