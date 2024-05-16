@@ -7,7 +7,6 @@ defmodule Lightning.KafkaTriggers.Pipeline do
   alias Lightning.KafkaTriggers.TriggerKafkaMessageRecord
   alias Lightning.Repo
   alias Lightning.Workflows.Trigger
-  alias Lightning.WorkOrders
 
   def start_link(opts) do
     trigger_id = opts |> Keyword.get(:trigger_id)
@@ -40,39 +39,40 @@ defmodule Lightning.KafkaTriggers.Pipeline do
     %{
       data: data,
       metadata: %{
-        offset: offset,
+        # offset: offset,
         partition: partition,
-        topic: topic,
+        # topic: topic,
         ts: timestamp
       }
     } = message
 
-    topic_partition_offset = "#{topic}_#{partition}_#{offset}"
+    topic_partition_offset =
+      KafkaTriggers.build_topic_partition_offset(message)
 
     record_changeset = TriggerKafkaMessageRecord.changeset(
       %TriggerKafkaMessageRecord{},
-      %{topic_partition_offset: topic_partition_offset, trigger_id: trigger_id |> Atom.to_string()}
+      %{
+        topic_partition_offset: topic_partition_offset,
+        trigger_id: trigger_id |> Atom.to_string()
+      }
     )
 
     case record_changeset |> Repo.insert() do
       {:ok, _} ->
-        # TODO Use the UsageLimiter for this
-        without_run? = false
-
         trigger =
           Trigger
           |> preload([:workflow])
           |> Repo.get(trigger_id |> Atom.to_string())
-
-        WorkOrders.create_for(trigger,
-          workflow: trigger.workflow,
-          dataclip: %{
-            body: data |> Jason.decode!(),
-            type: :kafka,
-            project_id: trigger.workflow.project_id
-          },
-          without_run: without_run?
-        )
+        #
+        # WorkOrders.create_for(trigger,
+        #   workflow: trigger.workflow,
+        #   dataclip: %{
+        #     body: data |> Jason.decode!(),
+        #     type: :kafka,
+        #     project_id: trigger.workflow.project_id
+        #   },
+        #   without_run: without_run?
+        # )
 
         trigger
         |> KafkaTriggers.update_partition_data(partition, timestamp)
@@ -82,7 +82,7 @@ defmodule Lightning.KafkaTriggers.Pipeline do
 
         IO.puts(">>>> #{trigger_id} received #{data} on #{partition} produced at #{timestamp}")
         # IO.inspect(message) 
-      _ ->
+      # {:error, %{errors: [trigger_id: {"has_already_been_taken", _}]}} ->
         IO.puts("**** #{trigger_id} received DUPLICATE #{data} on #{partition} produced at #{timestamp}")
     end
 

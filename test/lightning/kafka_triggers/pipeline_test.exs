@@ -3,7 +3,9 @@ defmodule Lightning.KafkaTriggers.PipelineTest do
 
   import Mock
 
+  alias Lightning.KafkaTriggers.TriggerKafkaMessageRecord
   alias Lightning.KafkaTriggers.Pipeline
+  alias Lightning.Repo
   alias Lightning.Workflows.Trigger
 
   describe ".start_link/1" do
@@ -165,7 +167,52 @@ defmodule Lightning.KafkaTriggers.PipelineTest do
       } = Trigger |> Repo.get(trigger_2.id)
 
       assert %{"1" => 1715164718281, "2" => 1715164718283} = trigger_1_timestamps
-      assert %{"1" => 1715164718281, "2" => 1715164718282} = trigger_2_timestamps
+      assert trigger_2_timestamps == partition_timestamps()
+    end
+
+    test "records the message for the purposes of future deduplication", %{
+      context: context
+    } do
+      trigger_id = context.trigger_id |> Atom.to_string()
+
+      message = build_broadway_message()
+
+      Pipeline.handle_message(nil, message, context)
+
+      message_record = Repo.one(TriggerKafkaMessageRecord)
+
+      assert %TriggerKafkaMessageRecord{
+        trigger_id: ^trigger_id,
+        topic_partition_offset: "bar_topic_2_11"
+      } = message_record
+    end
+
+    test "does not update partition timestamps if message is duplicate", %{
+      trigger_1: trigger_1,
+      trigger_2: trigger_2,
+      context: context,
+    } do
+      trigger_id = context.trigger_id |> Atom.to_string()
+
+      message = build_broadway_message()
+
+      insert_message_record(trigger_id)
+
+      Pipeline.handle_message(nil, message, context)
+
+      %{
+        kafka_configuration: %{
+          "partition_timestamps" => trigger_1_timestamps
+        }
+      } = Trigger |> Repo.get(trigger_1.id)
+      %{
+        kafka_configuration: %{
+          "partition_timestamps" => trigger_2_timestamps
+        }
+      } = Trigger |> Repo.get(trigger_2.id)
+
+      assert trigger_1_timestamps == partition_timestamps()
+      assert trigger_2_timestamps == partition_timestamps()
     end
 
     defp build_broadway_message do
@@ -201,14 +248,28 @@ defmodule Lightning.KafkaTriggers.PipelineTest do
       %{
         "group_id" => "lightning-#{index}",
         "hosts" => [["host-#{index}", 9092], ["other-host-#{index}", 9093]],
-        "partition_timestamps" => %{
-          "1" => 1715164718281,
-          "2" => 1715164718282
-        },
+        "partition_timestamps" => partition_timestamps(),
         "sasl" => sasl_config,
         "ssl" => ssl,
         "topics" => ["topic-#{index}-1", "topic-#{index}-2"]
       }
+    end
+
+    defp partition_timestamps do
+      %{
+        "1" => 1715164718281,
+        "2" => 1715164718282
+      }
+    end
+
+    defp insert_message_record(trigger_id) do
+      TriggerKafkaMessageRecord.changeset(
+        %TriggerKafkaMessageRecord{},
+        %{
+          topic_partition_offset: "bar_topic_2_11",
+          trigger_id: trigger_id
+        }
+      ) |> Repo.insert()
     end
   end
 end
