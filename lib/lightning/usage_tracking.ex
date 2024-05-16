@@ -4,7 +4,6 @@ defmodule Lightning.UsageTracking do
   """
   import Ecto.Query
 
-  alias Lightning.Helpers
   alias Lightning.Repo
   alias Lightning.UsageTracking.Client
   alias Lightning.UsageTracking.DailyReportConfiguration
@@ -199,21 +198,22 @@ defmodule Lightning.UsageTracking do
   end
 
   def lightning_version do
-    %{image: image, commit: commit, spec_version: vsn} = Helpers.version_data()
+    info = Lightning.release()
 
-    "#{vsn}:#{image_for_submission(image, vsn)}:#{commit_for_submission(commit)}"
+    "v#{info.vsn}:#{image_for_submission(info.image_tag, info.vsn)}:#{commit_for_submission(info.commit)}"
   end
 
   defp commit_for_submission(commit) do
     if GithubClient.open_fn_commit?(commit), do: commit, else: "sanitised"
   end
 
-  defp image_for_submission(version, version) do
-    "match"
+  defp image_for_submission(tag, vsn) do
+    cond do
+      tag == "edge" -> "edge"
+      tag == "v#{vsn}" -> "match"
+      true -> "other"
+    end
   end
-
-  defp image_for_submission("edge" = _image, _spec_version), do: "edge"
-  defp image_for_submission(_image, _spec_version), do: "other"
 
   def submit_report(report, host) do
     report.data

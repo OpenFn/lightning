@@ -1,16 +1,21 @@
 defmodule LightningWeb.Components.CommonTest do
-  use LightningWeb.ConnCase, async: false
+  use LightningWeb.ConnCase, async: true
 
-  import Lightning.ApplicationHelpers, only: [put_temporary_env: 3]
   import Phoenix.LiveViewTest
 
   describe "version_chip on docker release" do
     setup do
-      put_temporary_env(:lightning, :image_info,
-        image_tag: "v#{Application.spec(:lightning, :vsn)}",
-        branch: "main",
-        commit: "abcdef7"
-      )
+      Mox.stub(LightningMock, :release, fn ->
+        %{
+          label: "v#{Application.spec(:lightning, :vsn)}",
+          commit: "abcdef7",
+          image_tag: "v#{Application.spec(:lightning, :vsn)}",
+          branch: "main",
+          vsn: Application.spec(:lightning, :vsn)
+        }
+      end)
+
+      :ok
     end
 
     test "displays the version and a badge" do
@@ -27,15 +32,17 @@ defmodule LightningWeb.Components.CommonTest do
   end
 
   describe "version_chip on docker edge" do
-    setup do
-      put_temporary_env(:lightning, :image_info,
-        image_tag: "edge",
-        branch: "main",
-        commit: "abcdef7"
-      )
-    end
-
     test "displays the SHA and a cube" do
+      Mox.stub(LightningMock, :release, fn ->
+        %{
+          label: "v#{Application.spec(:lightning, :vsn)}",
+          commit: "abcdef7",
+          image_tag: "edge",
+          branch: "main",
+          vsn: Application.spec(:lightning, :vsn)
+        }
+      end)
+
       html = render_component(&LightningWeb.Components.Common.version_chip/1)
 
       assert html =~ "Docker image tag found"
@@ -48,39 +55,18 @@ defmodule LightningWeb.Components.CommonTest do
     end
   end
 
-  describe "version_chip on tag mismatch" do
-    setup do
-      put_temporary_env(:lightning, :image_info,
-        image_tag: "vX.Y.Z",
-        branch: "main",
-        commit: "abcdef7"
-      )
-    end
-
-    test "displays the version and a badge" do
-      html = render_component(&LightningWeb.Components.Common.version_chip/1)
-
-      assert html =~
-               "Detected image tag that does not match application version"
-
-      assert html =~ "v#{elem(:application.get_key(:lightning, :vsn), 1)}"
-
-      # Check for the warning icon
-      assert html =~
-               "M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"
-    end
-  end
-
   describe "version_chip on tag mismatch where image_tag == 'edge'" do
-    setup do
-      put_temporary_env(:lightning, :image_info,
-        image_tag: "edge",
-        branch: "main",
-        commit: "abcdef7"
-      )
-    end
-
     test "displays the SHA and a cube" do
+      Mox.stub(LightningMock, :release, fn ->
+        %{
+          label: "v#{Application.spec(:lightning, :vsn)}",
+          commit: "abcdef7",
+          image_tag: "edge",
+          branch: "main",
+          vsn: Application.spec(:lightning, :vsn)
+        }
+      end)
+
       html = render_component(&LightningWeb.Components.Common.version_chip/1)
 
       assert html =~ "Docker image tag found"
@@ -94,15 +80,17 @@ defmodule LightningWeb.Components.CommonTest do
   end
 
   describe "version_chip all other cases" do
-    setup do
-      put_temporary_env(:lightning, :image_info,
-        image_tag: nil,
-        branch: "main",
-        commit: "abcdef7"
-      )
-    end
-
     test "displays the Lightning version without an icon" do
+      Mox.stub(LightningMock, :release, fn ->
+        %{
+          label: "v#{Application.spec(:lightning, :vsn)}",
+          commit: "abcdef7",
+          image_tag: nil,
+          branch: "main",
+          vsn: Application.spec(:lightning, :vsn)
+        }
+      end)
+
       html = render_component(&LightningWeb.Components.Common.version_chip/1)
 
       assert html =~ "Lightning v#{Application.spec(:lightning, :vsn)}"

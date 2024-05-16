@@ -2,45 +2,33 @@ defmodule LightningWeb.Components.Common do
   @moduledoc false
   use LightningWeb, :component
 
-  alias Lightning.Helpers
   alias Phoenix.LiveView.JS
 
-  def version_chip(assigns) do
-    %{image: image, branch: branch, commit: commit, spec_version: vsn} =
-      Helpers.version_data()
+  attr :icon_classes, :string, default: "h-4 w-4 inline-block mr-1"
 
+  def version_chip(assigns) do
     {display, message, type} =
-      cond do
-        # If running in docker on edge, display commit SHA.
-        image == "edge" ->
-          {commit,
-           "Docker image tag found: '#{image}' unreleased build from #{commit} on #{branch}",
+      Lightning.release()
+      |> case do
+        %{image_tag: "edge"} = info ->
+          {info.commit,
+           "Docker image tag found: '#{info.image_tag}' unreleased build from #{info.commit} on #{info.branch}",
            :edge}
 
-        # If running in docker and tag matches :vsn, display :vsn and standard message.
-        image == vsn ->
-          {vsn,
-           "Docker image tag found: '#{image}' tagged release build from #{commit}",
+        %{image_tag: image} = info when not is_nil(image) ->
+          {info.label,
+           "Docker image tag found: '#{info.image_tag}' tagged release build from #{info.commit}",
            :release}
 
-        # If running in docker and tag doesn't match :vsn, display commit.
-        image != nil and image != vsn ->
-          {commit,
-           "Detected image tag that does not match application version #{vsn}; image tag '#{image}' built from #{commit}",
-           :warn}
-
-        true ->
-          {vsn, "Lightning #{vsn}", :no_docker}
+        info ->
+          {info.label, "Lightning #{info.vsn}", :no_docker}
       end
-
-    icon_classes = "h-4 w-4 inline-block mr-1"
 
     assigns =
       assign(assigns,
         display: display,
         message: message,
-        type: type,
-        icon_classes: icon_classes
+        type: type
       )
 
     ~H"""

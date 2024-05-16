@@ -165,14 +165,14 @@ config :lightning, :workers,
       end
     end)
 
-image_tag = env!("IMAGE_TAG", :string, nil)
-branch = env!("BRANCH", :string, nil)
-commit = env!("COMMIT", :string, nil)
+release = [
+  label: "v#{Application.spec(:lightning, :vsn)}",
+  image_tag: env!("IMAGE_TAG", :string, nil),
+  branch: env!("BRANCH", :string, nil),
+  commit: env!("COMMIT", :string, nil)
+]
 
-config :lightning, :image_info,
-  image_tag: image_tag,
-  branch: branch,
-  commit: commit
+config :lightning, :release, release
 
 config :lightning, :email_addresses,
   admin: env!("EMAIL_ADMIN", :string, "support@openfn.org")
@@ -347,6 +347,9 @@ config :lightning, Lightning.Repo,
   queue_target: env!("DATABASE_QUEUE_TARGET", :integer, 50),
   queue_interval: env!("DATABASE_QUEUE_INTERVAL", :integer, 1000)
 
+host = env!("URL_HOST", :string, "example.com")
+port = env!("PORT", :integer, 4000)
+
 if config_env() == :prod do
   unless database_url do
     raise """
@@ -378,9 +381,6 @@ if config_env() == :prod do
       environment variable SECRET_KEY_BASE is missing.
       You can generate one by calling: mix phx.gen.secret
       """
-
-  host = env!("URL_HOST", :string, "example.com")
-  port = env!("PORT", :integer, 4000)
 
   listen_address =
     env!(
@@ -459,22 +459,13 @@ end
 #     "edge" -> commit
 #     _other -> image_tag
 #   end
-release =
-  if Application.spec(:thunderbolt, :vsn) do
-    "v#{Application.spec(:lightning, :vsn)}" <>
-      " (#{Application.spec(:thunderbolt, :vsn)})"
-  else
-    "v#{Application.spec(:lightning, :vsn)}"
-  end
 
 config :sentry,
   dsn: env!("SENTRY_DSN", :string, nil),
   filter: Lightning.SentryEventFilter,
   environment_name: env!("SENTRY_ENVIRONMENT", :string, config_env()),
-  tags: %{
-    host: Application.get_env(:lightning, LightningWeb.Endpoint)[:url][:host]
-  },
-  release: release,
+  tags: %{host: host},
+  release: release[:label],
   enable_source_code_context: true,
   root_source_code_path: File.cwd!()
 

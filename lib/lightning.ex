@@ -13,39 +13,62 @@ defmodule Lightning do
 
     This behaviour is used to mock specific functions in tests.
     """
-    @callback current_time() :: DateTime.t()
-    @callback broadcast(binary(), {atom(), any()}) :: :ok | {:error, term()}
-    @callback subscribe(binary()) :: :ok | {:error, term()}
-
     @pubsub Lightning.PubSub
+    @behaviour Lightning
 
+    @impl true
     def current_time do
       DateTime.utc_now()
     end
 
+    @impl true
     def broadcast(topic, msg) do
       Phoenix.PubSub.broadcast(@pubsub, topic, msg)
     end
 
+    @impl true
     def subscribe(topic) do
       Phoenix.PubSub.subscribe(@pubsub, topic)
     end
+
+    @impl true
+    def release do
+      Application.get_env(:lightning, :release,
+        label: nil,
+        commit: nil,
+        image_tag: nil,
+        branch: nil
+      )
+      |> Keyword.merge(vsn: Application.spec(:lightning, :vsn))
+      |> Map.new()
+    end
   end
 
+  @type release_info() :: %{
+          label: String.t() | nil,
+          commit: String.t() | nil,
+          image_tag: String.t() | nil,
+          branch: String.t() | nil,
+          vsn: String.t()
+        }
+
   # credo:disable-for-next-line
-  @behaviour API
+  @callback current_time() :: DateTime.t()
+  @callback broadcast(binary(), {atom(), any()}) :: :ok | {:error, term()}
+  @callback subscribe(binary()) :: :ok | {:error, term()}
+  @callback release() :: release_info()
 
   @doc """
   Returns the current time at UTC.
   """
-  @impl true
   def current_time, do: impl().current_time()
 
-  @impl true
   def broadcast(topic, msg), do: impl().broadcast(topic, msg)
 
-  @impl true
   def subscribe(topic), do: impl().subscribe(topic)
+
+  @spec release() :: release_info()
+  def release(), do: impl().release()
 
   defp impl do
     Application.get_env(:lightning, __MODULE__, API)
