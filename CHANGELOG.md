@@ -21,6 +21,9 @@ and this project adheres to
 
 ### Fixed
 
+- Fixed issue where updating an existing Salesforce credential to use a
+  `sandbox` endpoint would not properly re-authenticate. [#1842](https://github.com/OpenFn/lightning/issues/1842)
+
 ## [v2.4.9] - 2024-05-14
 
 ### Changed
