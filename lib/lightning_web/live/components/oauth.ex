@@ -169,26 +169,25 @@ defmodule LightningWeb.Components.Oauth do
 
   def error_block(%{type: :userinfo_failed} = assigns) do
     ~H"""
-    <div class="rounded-md bg-yellow-50 border border-yellow-200 p-4">
+    <div class="rounded-md bg-blue-50 p-4">
       <div class="flex">
         <div class="flex-shrink-0">
-          <Heroicons.exclamation_triangle class="h-5 w-5 text-yellow-400" />
+          <Heroicons.exclamation_triangle class="h-5 w-5 text-blue-400" />
         </div>
-        <div class="ml-3">
-          <h3 class="text-sm font-medium text-yellow-800">Something went wrong.</h3>
-          <div class="mt-2 text-sm text-yellow-700">
-            <p class="text-sm mt-2">
-              Failed retrieving your information. Please
-              <a
-                href="#"
-                phx-click="try_userinfo_again"
-                phx-target={@myself}
-                class="hover:underline text-primary-900"
-              >
-                try again.
-              </a>
-            </p>
-          </div>
+        <div class="ml-3 flex-1 md:flex md:justify-between">
+          <p class="text-sm text-blue-700">
+            That seemed to work, but we couldn't fetch your user information. You can save your credential now or try again.
+          </p>
+          <p class="mt-3 text-sm md:ml-6 md:mt-0">
+            <a
+              href="#"
+              class="whitespace-nowrap font-medium text-blue-700 hover:text-blue-600"
+              phx-click="try_userinfo_again"
+              phx-target={@myself}
+            >
+              Try again <span aria-hidden="true"> &rarr;</span>
+            </a>
+          </p>
         </div>
       </div>
     </div>
@@ -263,7 +262,7 @@ defmodule LightningWeb.Components.Oauth do
           <Heroicons.exclamation_triangle class="h-5 w-5 text-red-400" />
         </div>
         <div class="ml-3">
-          <h3 class="text-sm font-medium text-red-800">Oauth client not found.</h3>
+          <h3 class="text-sm font-medium text-red-800">OAuth client not found.</h3>
           <div class="mt-2 text-sm text-red-700">
             <p>
               The associated Oauth client for this credential cannot be found. Create a new client or contact your administrator.

@@ -112,10 +112,9 @@ defmodule LightningWeb.Components.Credentials do
   attr :action, :any, required: false
   attr :phx_target, :any, default: nil
   attr :schema, :string, required: false
-  attr :sandbox_value, :boolean, default: false
-  attr :api_version, :string, default: ""
   attr :update_body, :any, required: false
   attr :scopes_changed, :boolean, required: false
+  attr :sandbox_changed, :boolean, required: false
   attr :oauth_clients, :list, required: false
   slot :inner_block
 
@@ -143,9 +142,8 @@ defmodule LightningWeb.Components.Credentials do
       action={@action}
       schema={@schema}
       update_body={@update_body}
-      sandbox_value={@sandbox_value}
-      api_version={@api_version}
       scopes_changed={@scopes_changed}
+      sandbox_changed={@sandbox_changed}
     >
       <%= render_slot(@inner_block, l) %>
     </OauthComponent.fieldset>

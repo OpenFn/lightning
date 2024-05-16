@@ -29,7 +29,6 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
       Application.fetch_env!(:lightning, LightningWeb)
       |> Keyword.get(:allow_credential_transfer)
 
-<<<<<<< HEAD
     updated_socket =
       socket
       |> assign(scopes: [])
@@ -41,24 +40,11 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
       |> assign(oauth_clients: [])
       |> assign(allow_credential_transfer: allow_credential_transfer)
 
-=======
->>>>>>> 4286083d0 (Tweaks)
     {:ok, schemas_path} = Application.fetch_env(:lightning, :schemas_path)
 
     type_options = get_type_options(schemas_path)
 
-    {:ok,
-     socket
-     |> assign(
-       scopes: [],
-       scopes_changed: false,
-       schema: false,
-       available_projects: [],
-       selected_projects: [],
-       oauth_clients: [],
-       allow_credential_transfer: allow_credential_transfer,
-       type_options: type_options
-     )}
+    {:ok, assign(updated_socket, type_options: type_options)}
   end
 
   @impl true
@@ -575,20 +561,6 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
       </.modal>
     </div>
     """
-  end
-
-  defp update_available_projects(socket) do
-    update(
-      socket,
-      :available_projects,
-      fn _,
-         %{
-           all_projects: all_projects,
-           changeset: changeset
-         } ->
-        filter_available_projects(changeset, all_projects)
-      end
-    )
   end
 
   defp maybe_add_oauth_specific_fields(socket, params) do
