@@ -32,6 +32,41 @@ defmodule Lightning.AuthProviders.OauthHTTPClient do
     Tesla.client([Tesla.Middleware.FormUrlencoded])
     |> post(client.token_endpoint, body)
     |> handle_resp([200])
+    |> maybe_introspect(client)
+  end
+
+  defp maybe_introspect({:ok, token}, client) do
+    introspect(client, token)
+  end
+
+  defp maybe_introspect({:error, reason}, _client) do
+    {:error, reason}
+  end
+
+  defp introspect(client, token) do
+    if client.introspection_endpoint do
+      body = %{
+        token: token["access_token"],
+        client_id: client.client_id,
+        client_secret: client.client_secret,
+        token_type_hint: "access_token"
+      }
+
+      Tesla.client([Tesla.Middleware.FormUrlencoded])
+      |> post(client.introspection_endpoint, body)
+      |> handle_resp([200])
+      |> process_resp(token)
+    else
+      {:ok, token}
+    end
+  end
+
+  defp process_resp({:ok, response}, token) do
+    {:ok, Map.put(token, "expires_at", response["exp"])}
+  end
+
+  defp process_resp({:error, _reason}, token) do
+    {:ok, token}
   end
 
   @doc """
