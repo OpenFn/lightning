@@ -2628,11 +2628,7 @@ defmodule LightningWeb.CredentialLiveTest do
       assert edit_live
              |> has_element?(
                "p",
-<<<<<<< HEAD
-               "That seemed to work, but we couldn't fetch your user information."
-=======
                "That seemed to work, but we couldn't fetch your user information. You can save your credential now or try again."
->>>>>>> 96295ed26 (Click testing and test fixes)
              )
 
       # Now respond with success
@@ -2644,11 +2640,7 @@ defmodule LightningWeb.CredentialLiveTest do
         """
       )
 
-<<<<<<< HEAD
       edit_live |> element("a", "Try again") |> render_click()
-=======
-      edit_live |> element("a", " Try again") |> render_click()
->>>>>>> 96295ed26 (Click testing and test fixes)
 
       assert wait_for_assigns(edit_live, :userinfo_received, credential.id)
 
