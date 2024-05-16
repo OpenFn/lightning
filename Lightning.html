@@ -5,15 +5,15 @@
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="generator" content="ExDoc v0.30.9">
-    <meta name="project" content="Lightning v2.4.13">
+    <meta name="project" content="Lightning v2.4.14">
 
-    <title>Lightning — Lightning v2.4.13</title>
+    <title>Lightning — Lightning v2.4.14</title>
     <link rel="stylesheet" href="dist/html-elixir-XFYN5IVA.css" />
 
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-EPF2X7PV.js"></script>
-    <script src="dist/sidebar_items-4B4456DC.js"></script>
+    <script src="dist/sidebar_items-E876958D.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -21,7 +21,7 @@
 
 
   </head>
-  <body data-type="modules" class="page-module">
+  <body data-type="modules" class="page-behaviour">
     <script>
 
       try {
@@ -72,7 +72,7 @@
 Lightning
       </a>
       <div class="sidebar-projectVersion" translate="no">
-        v2.4.13
+        v2.4.14
       </div>
     </div>
     <ul id="sidebar-listNav" class="sidebar-listNav" role="tablist">
@@ -130,8 +130,8 @@ Pages
       <span class="sr-only">View Source</span>
     </a>
 
-  <span translate="no">Lightning</span> 
-  <small class="app-vsn" translate="no">(Lightning v2.4.13)</small>
+  <span translate="no">Lightning</span> <small>behaviour</small>
+  <small class="app-vsn" translate="no">(Lightning v2.4.14)</small>
 
 </h1>
 
@@ -150,10 +150,70 @@ if it comes from the database, an external API or others.</p>
       </a>
       <span class="text">Summary</span>
     </h1>
+<div class="summary-types summary">
+  <h2>
+    <a href="#types">Types</a>
+  </h2>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#t:release_info/0" translate="no">release_info()</a>
+
+      </div>
+
+    </div>
+
+</div>
+<div class="summary-callbacks summary">
+  <h2>
+    <a href="#callbacks">Callbacks</a>
+  </h2>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#c:broadcast/2" translate="no">broadcast(binary, {})</a>
+
+      </div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#c:current_time/0" translate="no">current_time()</a>
+
+      </div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#c:release/0" translate="no">release()</a>
+
+      </div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#c:subscribe/1" translate="no">subscribe(binary)</a>
+
+      </div>
+
+    </div>
+
+</div>
 <div class="summary-functions summary">
   <h2>
     <a href="#functions">Functions</a>
   </h2>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#broadcast/2" translate="no">broadcast(topic, msg)</a>
+
+      </div>
+
+    </div>
 
     <div class="summary-row">
       <div class="summary-signature">
@@ -165,10 +225,199 @@ if it comes from the database, an external API or others.</p>
 
     </div>
 
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#release/0" translate="no">release()</a>
+
+      </div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#subscribe/1" translate="no">subscribe(topic)</a>
+
+      </div>
+
+    </div>
+
 </div>
 
   </section>
 
+
+  <section id="types" class="details-list">
+    <h1 class="section-heading">
+      <a class="hover-link" href="#types">
+        <i class="ri-link-m" aria-hidden="true"></i>
+      </a>
+      <span class="text">Types</span>
+    </h1>
+    <div class="types-list">
+<section class="detail" id="t:release_info/0">
+
+  <div class="detail-header">
+    <a href="#t:release_info/0" class="detail-link" title="Link to this type">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this type</span>
+    </a>
+    <h1 class="signature" translate="no">release_info()</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning.ex#L47" class="icon-action" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@type</span> release_info() :: %{
+  label: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>() | nil,
+  commit: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>() | nil,
+  image_tag: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>() | nil,
+  branch: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>() | nil,
+  vsn: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>()
+}</pre>
+
+      </div>
+
+
+  </section>
+</section>
+
+    </div>
+  </section>
+
+  <section id="callbacks" class="details-list">
+    <h1 class="section-heading">
+      <a class="hover-link" href="#callbacks">
+        <i class="ri-link-m" aria-hidden="true"></i>
+      </a>
+      <span class="text">Callbacks</span>
+    </h1>
+    <div class="callbacks-list">
+<section class="detail" id="c:broadcast/2">
+
+  <div class="detail-header">
+    <a href="#c:broadcast/2" class="detail-link" title="Link to this callback">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this callback</span>
+    </a>
+    <h1 class="signature" translate="no">broadcast(binary, {})</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning.ex#L57" class="icon-action" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@callback</span> broadcast(
+  <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">binary</a>(),
+  {<a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">atom</a>(), <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">any</a>()}
+) :: :ok | {:error, <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>()}</pre>
+
+      </div>
+
+
+  </section>
+</section>
+<section class="detail" id="c:current_time/0">
+
+  <div class="detail-header">
+    <a href="#c:current_time/0" class="detail-link" title="Link to this callback">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this callback</span>
+    </a>
+    <h1 class="signature" translate="no">current_time()</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning.ex#L56" class="icon-action" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@callback</span> current_time() :: <a href="https://hexdocs.pm/elixir/DateTime.html#t:t/0">DateTime.t</a>()</pre>
+
+      </div>
+
+
+  </section>
+</section>
+<section class="detail" id="c:release/0">
+
+  <div class="detail-header">
+    <a href="#c:release/0" class="detail-link" title="Link to this callback">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this callback</span>
+    </a>
+    <h1 class="signature" translate="no">release()</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning.ex#L59" class="icon-action" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@callback</span> release() :: <a href="#t:release_info/0">release_info</a>()</pre>
+
+      </div>
+
+
+  </section>
+</section>
+<section class="detail" id="c:subscribe/1">
+
+  <div class="detail-header">
+    <a href="#c:subscribe/1" class="detail-link" title="Link to this callback">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this callback</span>
+    </a>
+    <h1 class="signature" translate="no">subscribe(binary)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning.ex#L58" class="icon-action" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@callback</span> subscribe(<a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">binary</a>()) :: :ok | {:error, <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>()}</pre>
+
+      </div>
+
+
+  </section>
+</section>
+
+    </div>
+  </section>
 
   <section id="functions" class="details-list">
     <h1 class="section-heading">
@@ -178,6 +427,28 @@ if it comes from the database, an external API or others.</p>
       <span class="text">Functions</span>
     </h1>
     <div class="functions-list">
+<section class="detail" id="broadcast/2">
+
+  <div class="detail-header">
+    <a href="#broadcast/2" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">broadcast(topic, msg)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning.ex#L66" class="icon-action" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+
+  </section>
+</section>
 <section class="detail" id="current_time/0">
 
   <div class="detail-header">
@@ -187,7 +458,7 @@ if it comes from the database, an external API or others.</p>
     </a>
     <h1 class="signature" translate="no">current_time()</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning.ex#L42" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning.ex#L64" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -198,6 +469,56 @@ if it comes from the database, an external API or others.</p>
   <section class="docstring">
 
 <p>Returns the current time at UTC.</p>
+  </section>
+</section>
+<section class="detail" id="release/0">
+
+  <div class="detail-header">
+    <a href="#release/0" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">release()</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning.ex#L71" class="icon-action" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> release() :: <a href="#t:release_info/0">release_info</a>()</pre>
+
+      </div>
+
+
+  </section>
+</section>
+<section class="detail" id="subscribe/1">
+
+  <div class="detail-header">
+    <a href="#subscribe/1" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">subscribe(topic)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning.ex#L68" class="icon-action" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+
   </section>
 </section>
 
