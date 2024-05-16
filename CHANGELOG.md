@@ -21,6 +21,10 @@ and this project adheres to
 
 ### Fixed
 
+- Fixed issue where updating adaptor name and version of job node in the
+  workflow canvas crashes the app when no credential is selected
+  [#99](https://github.com/OpenFn/lightning/issues/99)
+
 ## [v2.4.13] - 2024-05-16
 
 ### Fixed
