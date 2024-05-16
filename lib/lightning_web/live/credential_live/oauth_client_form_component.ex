@@ -400,6 +400,16 @@ defmodule LightningWeb.CredentialLive.OauthClientFormComponent do
               <div>
                 <NewInputs.input
                   type="text"
+                  field={f[:introspection_endpoint]}
+                  label="Introspection URL"
+                />
+              </div>
+            </div>
+
+            <div class="space-y-4">
+              <div>
+                <NewInputs.input
+                  type="text"
                   field={f[:userinfo_endpoint]}
                   label="UserInfo URL"
                 />

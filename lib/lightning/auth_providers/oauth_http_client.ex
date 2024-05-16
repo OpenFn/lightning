@@ -44,7 +44,9 @@ defmodule Lightning.AuthProviders.OauthHTTPClient do
   end
 
   defp introspect(client, token) do
-    if client.introspection_endpoint do
+    introspection_endpoint = Map.get(client, :introspection_endpoint)
+
+    if introspection_endpoint do
       body = %{
         token: token["access_token"],
         client_id: client.client_id,
@@ -53,7 +55,7 @@ defmodule Lightning.AuthProviders.OauthHTTPClient do
       }
 
       Tesla.client([Tesla.Middleware.FormUrlencoded])
-      |> post(client.introspection_endpoint, body)
+      |> post(introspection_endpoint, body)
       |> handle_resp([200])
       |> process_resp(token)
     else
