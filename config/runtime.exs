@@ -407,14 +407,12 @@ if config_env() == :prod do
 
   config :lightning, LightningWeb.Endpoint,
     url: [host: host, port: url_port, scheme: url_scheme],
-    http: [
-      ip: listen_address,
-      port: port,
-      compress: true
-    ],
     secret_key_base: secret_key_base,
     check_origin: origins,
     http: [
+      ip: listen_address,
+      port: port,
+      compress: true,
       protocol_options: [
         max_frame_size:
           Application.get_env(:lightning, :max_dataclip_size_bytes, 10_000_000),

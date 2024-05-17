@@ -7,6 +7,8 @@ defmodule LightningWeb.DataclipController do
   @max_age 86_400
 
   def show(conn, %{"id" => dataclip_id}) do
+    IO.inspect(conn)
+
     case get_req_header(conn, "if-modified-since") do
       [last_modified] ->
         dataclip = Invocation.get_dataclip!(dataclip_id)
@@ -34,6 +36,7 @@ defmodule LightningWeb.DataclipController do
 
     conn
     |> put_resp_content_type("text/plain")
+    |> put_resp_header("vary", "Accept-Encoding, Cookie")
     |> put_resp_header("cache-control", "private, max-age=#{@max_age}")
     |> put_resp_header("last-modified", to_rfc1123!(dataclip.updated_at))
     |> send_resp(200, body)
