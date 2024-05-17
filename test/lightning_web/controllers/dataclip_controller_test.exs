@@ -115,36 +115,98 @@ defmodule LightningWeb.DataclipControllerTest do
     }
   end
 
-  setup :create_steps_dataclips
+  describe "GET /dataclip/body/:id" do
+    setup :create_steps_dataclips
 
-  test "/dataclip/body/:id scrubbs lines from step_result dataclip", %{
-    conn: conn,
-    user: user,
-    step2: selected_step
-  } do
-    conn =
-      conn
-      |> log_in_user(user)
-      |> get(~p"/dataclip/body/#{selected_step.output_dataclip_id}")
+    setup %{conn: conn, user: user} do
+      %{conn: log_in_user(conn, user)}
+    end
 
-    body = text_response(conn, 200)
+    test "scrubbs lines from step_result dataclip", %{
+      conn: conn,
+      step2: selected_step
+    } do
+      conn = get(conn, ~p"/dataclip/body/#{selected_step.output_dataclip_id}")
 
-    dataclip_lines = String.split(body, "\n")
+      body = text_response(conn, 200)
 
-    # foo: "bar" is not scrubbed because it is from a following job executed on step3
-    expected_lines = [
-      ~S("integer":***),
-      ~S("another_no":***),
-      ~S("third_no":12***34),
-      ~S("map":{"list":[{"any-key":"some-***s"}]}),
-      ~S("bool":true),
-      ~S("foo":"bar")
-    ]
+      dataclip_lines = String.split(body, "\n")
 
-    Enum.each(dataclip_lines, fn line ->
-      Enum.any?(expected_lines, fn expected_line ->
-        String.contains?(line, expected_line)
+      # foo: "bar" is not scrubbed because it is from a following job executed on step3
+      expected_lines = [
+        ~S("integer":***),
+        ~S("another_no":***),
+        ~S("third_no":12***34),
+        ~S("map":{"list":[{"any-key":"some-***s"}]}),
+        ~S("bool":true),
+        ~S("foo":"bar")
+      ]
+
+      Enum.each(dataclip_lines, fn line ->
+        Enum.any?(expected_lines, fn expected_line ->
+          String.contains?(line, expected_line)
+        end)
       end)
-    end)
+    end
+
+    test "returns 304 when the dataclip is not outdated", %{
+      conn: conn,
+      output_dataclip: dataclip
+    } do
+      last_modified =
+        Timex.format!(
+          dataclip.updated_at,
+          "%a, %d %b %Y %H:%M:%S GMT",
+          :strftime
+        )
+
+      conn =
+        conn
+        |> put_req_header("if-modified-since", last_modified)
+        |> get(~p"/dataclip/body/#{dataclip.id}")
+
+      assert conn.status == 304
+    end
+
+    test "returns 200 when the dataclip is outdated", %{
+      conn: conn,
+      output_dataclip: dataclip
+    } do
+      last_modified =
+        dataclip.updated_at
+        |> DateTime.add(-20)
+        |> Timex.format!(
+          "%a, %d %b %Y %H:%M:%S GMT",
+          :strftime
+        )
+
+      conn =
+        conn
+        |> put_req_header("if-modified-since", last_modified)
+        |> get(~p"/dataclip/body/#{dataclip.id}")
+
+      assert text_response(conn, 200) =~ "some-bars"
+      assert get_resp_header(conn, "cache-control") == ["private, max-age=86400"]
+
+      assert get_resp_header(conn, "last-modified") == [
+               Timex.format!(
+                 dataclip.updated_at,
+                 "%a, %d %b %Y %H:%M:%S GMT",
+                 :strftime
+               )
+             ]
+    end
+
+    test "handles invalid If-Modified-Since header gracefully", %{
+      conn: conn,
+      output_dataclip: dataclip
+    } do
+      conn =
+        conn
+        |> put_req_header("if-modified-since", "invalid-date-format")
+        |> get(~p"/dataclip/body/#{dataclip.id}")
+
+      assert text_response(conn, 200) =~ "some-bars"
+    end
   end
 end

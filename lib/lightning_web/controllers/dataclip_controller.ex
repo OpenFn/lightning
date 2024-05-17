@@ -4,7 +4,7 @@ defmodule LightningWeb.DataclipController do
   alias Lightning.DataclipScrubber
   alias Lightning.Invocation
 
-  @max_age 86400
+  @max_age 86_400
 
   def show(conn, %{"id" => dataclip_id}) do
     case get_req_header(conn, "if-modified-since") do
