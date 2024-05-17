@@ -406,7 +406,7 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
     |> Credentials.create_credential()
     |> case do
       {:ok, credential} ->
-        Helpers.handle_save_response(socket, credential)
+        {:noreply, Helpers.handle_save_response(socket, credential)}
 
       {:error, %Ecto.Changeset{} = changeset} ->
         {:noreply, assign(socket, :changeset, changeset)}
