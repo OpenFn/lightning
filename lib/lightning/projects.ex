@@ -19,7 +19,6 @@ defmodule Lightning.Projects do
   alias Lightning.Projects.Project
   alias Lightning.Projects.ProjectCredential
   alias Lightning.Projects.ProjectUser
-  alias Lightning.Projects.ProjectUser
   alias Lightning.Repo
   alias Lightning.Run
   alias Lightning.RunStep

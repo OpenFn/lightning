@@ -1,49 +1,46 @@
 defmodule Lightning.CredentialsTest do
-  alias Lightning.CredentialsFixtures
   use Lightning.DataCase, async: true
 
-  alias Lightning.Repo
   alias Lightning.Credentials
-  alias Lightning.Credentials.{Credential, Audit}
+  alias Lightning.Credentials.{Audit, Credential}
+  alias Lightning.CredentialsFixtures
+  alias Lightning.Repo
+
   import Lightning.BypassHelpers
   import Lightning.Factories
-  import Swoosh.TestAssertions
+  import Ecto.Query
 
   import Lightning.{
-    JobsFixtures,
-    CredentialsFixtures,
     AccountsFixtures,
+    CredentialsFixtures,
+    JobsFixtures,
     ProjectsFixtures
   }
 
-  import Ecto.Query
+  import Swoosh.TestAssertions
 
   describe "Model interactions" do
     @invalid_attrs %{body: nil, name: nil}
 
-    test "list_credentials_for_user/1 returns all credentials for given user" do
+    test "list_credentials/1 returns all credentials for given user" do
       user_1 = user_fixture()
       user_2 = user_fixture()
 
       credential_1 =
-        credential_fixture(user_id: user_1.id) |> Repo.preload(:projects)
+        credential_fixture(user_id: user_1.id)
+        |> Repo.preload([:projects, :oauth_client])
 
       credential_2 =
-        credential_fixture(user_id: user_2.id) |> Repo.preload(:projects)
+        credential_fixture(user_id: user_2.id)
+        |> Repo.preload([:projects, :oauth_client])
 
-      assert Credentials.list_credentials_for_user(user_1.id) == [
+      assert Credentials.list_credentials(user_1) == [
                credential_1
              ]
 
-      assert Credentials.list_credentials_for_user(user_2.id) == [
+      assert Credentials.list_credentials(user_2) == [
                credential_2
              ]
-    end
-
-    test "list_credentials/0 returns all credentials" do
-      user = user_fixture()
-      credential = credential_fixture(user_id: user.id)
-      assert Credentials.list_credentials() == [credential]
     end
 
     test "list_credentials/1 returns all credentials for a project" do
@@ -56,7 +53,7 @@ defmodule Lightning.CredentialsTest do
           user: user,
           project_credentials: [%{project_id: project.id}]
         )
-        |> Repo.preload(:user)
+        |> Repo.preload([:user, :projects, :oauth_client])
 
       assert Credentials.list_credentials(project) == [credential]
     end
@@ -548,51 +545,6 @@ defmodule Lightning.CredentialsTest do
                Credentials.update_credential(credential, @invalid_attrs)
 
       assert credential == Credentials.get_credential!(credential.id)
-    end
-  end
-
-  describe "migrate_credential_body/1" do
-    test "casts body to field types based on schema" do
-      user = insert(:user)
-
-      %Lightning.Projects.Project{id: project_id} =
-        insert(:project,
-          name: "some-name",
-          project_users: [%{user_id: user.id}]
-        )
-
-      body = %{
-        "user" => "user1",
-        "password" => "pass1",
-        "host" => "https://dbhost",
-        "database" => "test_db",
-        "port" => "5000",
-        "ssl" => "true",
-        "allowSelfSignedCert" => "false"
-      }
-
-      %{id: id} =
-        insert(:credential,
-          name: "Test Postgres",
-          user_id: user.id,
-          body: body,
-          project_credentials: [
-            %{project_id: project_id}
-          ],
-          schema: "postgresql"
-        )
-
-      assert %Credential{body: updated_body} =
-               Repo.all(Credential)
-               |> Enum.find(&(&1.id == id))
-               |> Credentials.migrate_credential_body()
-
-      assert updated_body ==
-               Map.merge(body, %{
-                 "port" => 5000,
-                 "ssl" => true,
-                 "allowSelfSignedCert" => false
-               })
     end
   end
 

@@ -4,7 +4,9 @@ defmodule LightningWeb.CredentialLiveHelpers do
 
   def delete_credential_button(live, id) do
     live
-    |> element("[phx-click='delete_project'][phx-value-projectid='#{id}']")
+    |> element(
+      "[phx-click='remove_selected_project'][phx-value-project_id='#{id}']"
+    )
   end
 
   def select_credential_type(live, type) do

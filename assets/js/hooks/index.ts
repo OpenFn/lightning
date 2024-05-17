@@ -8,6 +8,24 @@ import { initiateSaveAndRun } from '../common';
 
 export { LogLineHighlight, ElapsedIndicator, TabSelector };
 
+export const EditScope = {
+  mounted() {
+    this.el.addEventListener('dblclick', e => {
+      const scopeValue = this.el.dataset.scope;
+      const eventType = this.el.dataset.eventType;
+      this.pushEventTo(this.el, eventType, { scope: scopeValue });
+    });
+  },
+};
+
+export const ClearInput = {
+  mounted() {
+    this.handleEvent('clear_input', () => {
+      this.el.value = '';
+    });
+  },
+} as PhoenixHook;
+
 export const ModalHook = {
   mounted() {
     this.handleEvent('close_modal', () => {

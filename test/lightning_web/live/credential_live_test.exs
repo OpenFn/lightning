@@ -10,6 +10,7 @@ defmodule LightningWeb.CredentialLiveTest do
 
   import Ecto.Query
 
+  alias Lightning.Accounts.User
   alias Lightning.Credentials
 
   @create_attrs %{
@@ -62,14 +63,14 @@ defmodule LightningWeb.CredentialLiveTest do
       {:ok, _index_live, html} = live(conn, ~p"/credentials")
 
       assert html =~ "Credentials"
-      assert html =~ "Projects with Access"
+      assert html =~ "Projects with access"
       assert html =~ "Type"
 
       assert html =~
                credential.name |> Phoenix.HTML.Safe.to_iodata() |> to_string()
 
       [[], project_names] =
-        Credentials.list_credentials_for_user(credential.user_id)
+        Credentials.list_credentials(%User{id: credential.user_id})
         |> Enum.sort_by(&(&1.project_credentials |> length))
         |> Enum.map(fn c ->
           Enum.map(c.projects, fn p -> p.name end)
@@ -114,7 +115,7 @@ defmodule LightningWeb.CredentialLiveTest do
       assert html =~ "Cancel deletion"
       assert html =~ "Delete now"
 
-      assert has_element?(view, "#credential-#{credential.id}")
+      assert has_element?(view, "#credentials-#{credential.id}")
     end
 
     test "can schedule for deletion a credential that is associated to activities",
@@ -146,7 +147,7 @@ defmodule LightningWeb.CredentialLiveTest do
       assert html =~ "Cancel deletion"
       assert html =~ "Delete now"
 
-      assert has_element?(view, "#credential-#{credential.id}")
+      assert has_element?(view, "#credentials-#{credential.id}")
     end
 
     test "cancel a scheduled for deletion credential", %{
@@ -160,11 +161,11 @@ defmodule LightningWeb.CredentialLiveTest do
         live(conn, ~p"/credentials")
 
       assert index_live
-             |> element("#credential-#{credential.id} a", "Cancel deletion")
+             |> element("#credentials-#{credential.id} a", "Cancel deletion")
              |> has_element?()
 
       index_live
-      |> element("#credential-#{credential.id} a", "Cancel deletion")
+      |> element("#credentials-#{credential.id} a", "Cancel deletion")
       |> render_click()
 
       {:ok, index_live, html} = live(conn, ~p"/credentials")
@@ -174,7 +175,7 @@ defmodule LightningWeb.CredentialLiveTest do
 
       assert html =~ "Delete"
 
-      assert has_element?(index_live, "#credential-#{credential.id}")
+      assert has_element?(index_live, "#credentials-#{credential.id}")
     end
 
     test "can delete credential that has no activity in projects", %{
@@ -226,7 +227,7 @@ defmodule LightningWeb.CredentialLiveTest do
       {:ok, index_live, _html} =
         live(conn, ~p"/credentials")
 
-      assert has_element?(index_live, "#credential-#{credential.id}")
+      assert has_element?(index_live, "#credentials-#{credential.id}")
     end
 
     test "user can only delete their own credential", %{
@@ -239,6 +240,38 @@ defmodule LightningWeb.CredentialLiveTest do
         |> follow_redirect(conn, ~p"/credentials")
 
       assert html =~ "You can&#39;t perform this action"
+    end
+
+    test "delete credentials in project settings page", %{
+      conn: conn,
+      user: user
+    } do
+      project = insert(:project, project_users: [%{user: user, role: :owner}])
+
+      credential =
+        insert(:credential,
+          user: user,
+          project_credentials: [%{project: project}]
+        )
+
+      {:ok, view, html} =
+        live(conn, ~p"/projects/#{project}/settings#credentials")
+
+      assert html =~ credential.name
+
+      view
+      |> element("#delete_credential_#{credential.id}_modal_confirm_button")
+      |> render_click() =~ "Credential deleted successfully!"
+
+      {:ok, _view, html} =
+        live(conn, ~p"/projects/#{project}/settings#credentials")
+
+      refute html =~ credential.name
+
+      credential =
+        Lightning.Repo.get(Lightning.Credentials.Credential, credential.id)
+
+      assert credential.scheduled_deletion
     end
   end
 
@@ -255,11 +288,11 @@ defmodule LightningWeb.CredentialLiveTest do
       assert index_live |> has_element?("#credential-form-new_body")
 
       index_live
-      |> element("#project_list_for_")
-      |> render_change(%{"selected_project" => %{"id" => project.id}})
+      |> element("#project-credentials-list-new")
+      |> render_change(%{"project_id" => project.id})
 
       index_live
-      |> element("button", "Add")
+      |> element("#add-project-credential-button-new", "Add")
       |> render_click()
 
       assert index_live
@@ -334,7 +367,7 @@ defmodule LightningWeb.CredentialLiveTest do
              )
              |> render_change()
 
-      refute index_live |> submit_disabled()
+      refute index_live |> submit_disabled("save-credential-button-new")
 
       {:ok, _index_live, _html} =
         index_live
@@ -409,11 +442,13 @@ defmodule LightningWeb.CredentialLiveTest do
 
       assert index_live
              |> form("#credential-form-new",
-               credential: %{body: %{host: "http://localhost"}}
+               credential: %{
+                 body: %{host: "http://localhost"}
+               }
              )
              |> render_change()
 
-      refute index_live |> submit_disabled()
+      refute index_live |> submit_disabled("save-credential-button-new")
 
       {:ok, _index_live, html} =
         index_live
@@ -463,12 +498,12 @@ defmodule LightningWeb.CredentialLiveTest do
                body: %{baseUrl: "http://localhost"}
              })
 
-      refute index_live |> submit_disabled()
+      refute index_live |> submit_disabled("save-credential-button-new")
 
       assert index_live
              |> fill_credential(%{body: %{baseUrl: ""}})
 
-      refute index_live |> submit_disabled()
+      refute index_live |> submit_disabled("save-credential-button-new")
 
       {:ok, _index_live, _html} =
         index_live
@@ -538,11 +573,11 @@ defmodule LightningWeb.CredentialLiveTest do
       {:ok, view, _html} = live(conn, ~p"/credentials")
 
       view
-      |> element("#project_list_for_#{credential.id}")
-      |> render_change(selected_project: %{"id" => project.id})
+      |> element("#project-credentials-list-#{credential.id}")
+      |> render_change(%{"project_id" => project.id})
 
       view
-      |> element("#add-new-project-button-to-#{credential.id}")
+      |> element("#add-project-credential-button-#{credential.id}")
       |> render_click()
 
       view |> form("#credential-form-#{credential.id}") |> render_submit()
@@ -635,12 +670,12 @@ defmodule LightningWeb.CredentialLiveTest do
 
       # Try adding an existing project credential
       view
-      |> element("#project_list_for_#{credential.id}")
-      |> render_change(selected_project: %{"id" => project.id})
+      |> element("#project-credentials-list-#{credential.id}")
+      |> render_change(%{"project_id" => project.id})
 
       html =
         view
-        |> element("#add-new-project-button-to-#{credential.id}")
+        |> element("#add-project-credential-button-#{credential.id}")
         |> render_click()
 
       assert html =~ project.name,
@@ -659,11 +694,11 @@ defmodule LightningWeb.CredentialLiveTest do
 
       # now let's add it back
       view
-      |> element("#project_list_for_#{credential.id}")
-      |> render_change(selected_project: %{"id" => project.id})
+      |> element("#project-credentials-list-#{credential.id}")
+      |> render_change(%{"project_id" => project.id})
 
       view
-      |> element("#add-new-project-button-to-#{credential.id}")
+      |> element("#add-project-credential-button-#{credential.id}")
       |> render_click()
 
       assert view |> delete_credential_button(project.id) |> has_element?(),
@@ -758,6 +793,778 @@ defmodule LightningWeb.CredentialLiveTest do
       assert html =~ "Credential updated successfully"
       assert html =~ credential_1.name
       refute html =~ "the one for giving away"
+    end
+  end
+
+  describe "generic oauth credential" do
+    setup do
+      Mox.stub(Lightning.AuthProviders.OauthHTTPClient.Mock, :call, fn env,
+                                                                       _opts ->
+        case env.url do
+          "http://example.com/oauth2/token" ->
+            {:ok,
+             %Tesla.Env{
+               status: 200,
+               body:
+                 Jason.encode!(%{
+                   "access_token" => "ya29.a0AVvZ",
+                   "refresh_token" => "1//03vpp6Li",
+                   "expires_at" => 3600,
+                   "token_type" => "Bearer",
+                   "id_token" => "eyJhbGciO",
+                   "scope" => "scope1 scope2"
+                 })
+             }}
+
+          "http://example.com/oauth2/userinfo" ->
+            {:ok,
+             %Tesla.Env{
+               status: 200,
+               body:
+                 Jason.encode!(%{"picture" => "image.png", "name" => "Test User"})
+             }}
+        end
+      end)
+
+      :ok
+    end
+
+    test "allow the user to create a new generic oauth credential", %{
+      conn: conn,
+      user: user
+    } do
+      [project_1, project_2, project_3] =
+        insert_list(3, :project, project_users: [%{user: user, role: :owner}])
+
+      oauth_client = insert(:oauth_client, user: user)
+
+      {:ok, view, _html} = live(conn, ~p"/credentials")
+
+      view |> select_credential_type(oauth_client.id)
+      view |> click_continue()
+
+      refute view |> has_element?("#credential-type-picker")
+
+      view
+      |> fill_credential(%{
+        name: "My Generic OAuth Credential"
+      })
+
+      authorize_url =
+        view
+        |> element("#credential-form-new")
+        |> render()
+        |> Floki.parse_fragment!()
+        |> Floki.find("a[phx-click=authorize_click]")
+        |> Floki.attribute("href")
+        |> List.first()
+
+      [subscription_id, mod, component_id] = get_decoded_state(authorize_url)
+
+      assert view.id == subscription_id
+      assert view |> element(component_id)
+
+      view
+      |> element("#authorize-button")
+      |> render_click()
+
+      refute view
+             |> has_element?("#authorize-button")
+
+      LightningWeb.OauthCredentialHelper.broadcast_forward(subscription_id, mod,
+        id: component_id,
+        code: "authcode123"
+      )
+
+      Lightning.ApplicationHelpers.dynamically_absorb_delay(fn ->
+        {_, assigns} =
+          Lightning.LiveViewHelpers.get_component_assigns_by(view,
+            id: "generic-oauth-component-new"
+          )
+
+        :userinfo_received === assigns[:oauth_progress]
+      end)
+
+      assert view |> has_element?("h3", "Test User")
+
+      [project_1, project_2, project_3]
+      |> Enum.each(fn project ->
+        view
+        |> element("#project-credentials-list-new")
+        |> render_change(%{"project_id" => project.id})
+
+        view
+        |> element("#add-project-credential-button-new", "Add")
+        |> render_click()
+      end)
+
+      view
+      |> element("#remove-project-credential-button-new-#{project_2.id}")
+      |> render_click()
+
+      refute view |> submit_disabled("save-credential-button-new")
+
+      {:ok, _index_live, _html} =
+        view
+        |> form("#credential-form-new")
+        |> render_submit()
+        |> follow_redirect(
+          conn,
+          ~p"/credentials"
+        )
+
+      {_path, flash} = assert_redirect(view)
+      assert flash == %{"info" => "Credential created successfully"}
+
+      credential =
+        Lightning.Credentials.list_credentials(user) |> List.first()
+
+      assert credential.project_credentials
+             |> Enum.all?(fn pc ->
+               pc.project_id in Enum.map([project_1, project_3], fn project ->
+                 project.id
+               end)
+             end)
+
+      refute credential.project_credentials
+             |> Enum.find(fn pc -> pc.project_id == project_2.id end)
+
+      token =
+        Lightning.AuthProviders.Common.TokenBody.new(credential.body)
+
+      assert %{
+               access_token: "ya29.a0AVvZ",
+               refresh_token: "1//03vpp6Li",
+               expires_at: 3600,
+               scope: "scope1 scope2"
+             } = token
+    end
+
+    test "allow the user to edit an oauth credential", %{
+      conn: conn,
+      user: user
+    } do
+      [project_1, project_2, project_3] =
+        insert_list(3, :project, project_users: [%{user: user, role: :owner}])
+
+      oauth_client = insert(:oauth_client, user: user)
+
+      credential =
+        insert(:credential,
+          name: "OAuth credential",
+          oauth_client: oauth_client,
+          user: user,
+          schema: "oauth",
+          project_credentials: [
+            %{project: project_1},
+            %{project: project_2},
+            %{project: project_3}
+          ]
+        )
+
+      {:ok, view, _html} = live(conn, ~p"/credentials")
+
+      view
+      |> fill_credential(
+        %{
+          name: "My Generic OAuth Credential"
+        },
+        "#credential-form-#{credential.id}"
+      )
+
+      view
+      |> element(
+        "#remove-project-credential-button-#{credential.id}-#{project_1.id}"
+      )
+      |> render_click()
+
+      refute view |> submit_disabled("save-credential-button-#{credential.id}")
+
+      {:ok, _index_live, _html} =
+        view
+        |> form("#credential-form-#{credential.id}")
+        |> render_submit()
+        |> follow_redirect(
+          conn,
+          ~p"/credentials"
+        )
+
+      {_path, flash} = assert_redirect(view)
+      assert flash == %{"info" => "Credential updated successfully"}
+
+      credential =
+        credential
+        |> Repo.reload!()
+        |> Repo.preload(:project_credentials)
+
+      assert Enum.all?(credential.project_credentials, fn pc ->
+               pc.project_id in [project_2.id, project_3.id]
+             end)
+
+      refute Enum.find(credential.project_credentials, fn pc ->
+               pc.project_id == project_1.id
+             end)
+    end
+
+    test "re-authenticate banner is not rendered the first time we pick permissions",
+         %{
+           conn: conn,
+           user: user
+         } do
+      oauth_client = insert(:oauth_client, user: user)
+
+      {:ok, view, _html} = live(conn, ~p"/credentials")
+
+      view |> select_credential_type(oauth_client.id)
+      view |> click_continue()
+
+      assert view
+             |> has_element?("#scope_selection_new")
+
+      refute view |> has_element?("#re-authorize-banner")
+      assert view |> has_element?("#authorize-button")
+
+      oauth_client.optional_scopes
+      |> String.split(",")
+      |> Enum.each(fn scope ->
+        view
+        |> element("#scope_selection_new_#{scope}")
+        |> render_change(%{"_target" => [scope]})
+      end)
+
+      refute view |> has_element?("#re-authorize-banner")
+      assert view |> has_element?("#authorize-button")
+    end
+
+    test "re-authenticate banner rendered when scopes are changed",
+         %{
+           conn: conn,
+           user: user
+         } do
+      oauth_client = insert(:oauth_client, user: user)
+
+      credential =
+        insert(:credential,
+          name: "my-credential",
+          schema: "oauth",
+          body: %{
+            "access_token" => "access_token",
+            "refresh_token" => "refresh_token",
+            "expires_at" =>
+              Timex.now() |> Timex.shift(days: 4) |> DateTime.to_unix(),
+            "scope" =>
+              String.split(oauth_client.mandatory_scopes, ",") |> Enum.join(" ")
+          },
+          user: user,
+          oauth_client: oauth_client
+        )
+
+      {:ok, index_live, _html} = live(conn, ~p"/credentials")
+
+      index_live |> select_credential_type(oauth_client.id)
+      index_live |> click_continue()
+
+      assert index_live
+             |> has_element?("#scope_selection_new")
+
+      refute index_live |> has_element?("#re-authorize-banner")
+      refute index_live |> has_element?("#re-authorize-button")
+
+      oauth_client.optional_scopes
+      |> String.split(",")
+      |> Enum.each(fn scope ->
+        index_live
+        |> element("#scope_selection_#{credential.id}_#{scope}")
+        |> render_change(%{"_target" => [scope]})
+      end)
+
+      assert index_live |> has_element?("#re-authorize-banner")
+      assert index_live |> has_element?("#re-authorize-button")
+    end
+
+    test "correctly renders a valid existing token", %{
+      conn: conn,
+      user: user
+    } do
+      oauth_client = insert(:oauth_client, user: user)
+
+      expires_at = DateTime.to_unix(DateTime.utc_now()) + 3600
+
+      credential =
+        credential_fixture(
+          user_id: user.id,
+          schema: "oauth",
+          body: %{
+            access_token: "ya29.a0AVvZ...",
+            refresh_token: "1//03vpp6Li...",
+            expires_at: expires_at,
+            scope:
+              String.split(oauth_client.mandatory_scopes, ",") |> Enum.join(" ")
+          },
+          oauth_client_id: oauth_client.id
+        )
+
+      {:ok, edit_live, _html} = live(conn, ~p"/credentials")
+
+      Lightning.ApplicationHelpers.dynamically_absorb_delay(fn ->
+        {_, assigns} =
+          Lightning.LiveViewHelpers.get_component_assigns_by(edit_live,
+            id: "generic-oauth-component-#{credential.id}"
+          )
+
+        :userinfo_received === assigns[:oauth_progress]
+      end)
+
+      assert edit_live |> has_element?("h3", "Test User")
+    end
+
+    test "renewing an expired but valid token", %{
+      user: user,
+      conn: conn
+    } do
+      oauth_client = insert(:oauth_client, user: user)
+
+      expires_at = DateTime.to_unix(DateTime.utc_now()) - 50
+
+      credential =
+        credential_fixture(
+          user_id: user.id,
+          schema: "oauth",
+          body: %{
+            access_token: "ya29.a0AVvZ...",
+            refresh_token: "1//03vpp6Li...",
+            expires_at: expires_at,
+            scope:
+              String.split(oauth_client.mandatory_scopes, ",") |> Enum.join(" ")
+          },
+          oauth_client_id: oauth_client.id
+        )
+
+      {:ok, edit_live, _html} = live(conn, ~p"/credentials")
+
+      Lightning.ApplicationHelpers.dynamically_absorb_delay(fn ->
+        {_, assigns} =
+          Lightning.LiveViewHelpers.get_component_assigns_by(edit_live,
+            id: "generic-oauth-component-#{credential.id}"
+          )
+
+        :userinfo_received === assigns[:oauth_progress]
+      end)
+
+      edit_live |> render()
+
+      assert edit_live |> has_element?("h3", "Test User")
+    end
+
+    test "when oauth client is deleted, oauth credentials associated to it will render a warning banner",
+         %{user: user, conn: conn} do
+      oauth_client = insert(:oauth_client, user: user)
+
+      credential =
+        insert(:credential,
+          name: "My OAuth Credential",
+          schema: "oauth",
+          oauth_client: oauth_client,
+          user: user
+        )
+
+      {:ok, view, html} = live(conn, ~p"/credentials")
+
+      assert html =~ credential.name
+      refute view |> has_element?("h3", "Oauth client not found.")
+
+      refute view
+             |> has_element?(
+               "span[phx-hook='Tooltip', aria-label='OAuth client not found']"
+             )
+
+      Repo.delete!(oauth_client)
+
+      {:ok, view, html} = live(conn, ~p"/credentials")
+
+      assert html =~ credential.name
+      assert view |> has_element?("h3", "OAuth client not found.")
+
+      assert view
+             |> has_element?("span##{credential.id}-client-not-found-tooltip")
+    end
+
+    test "generic oauth credential will render a scope pick list", %{
+      user: user,
+      conn: conn
+    } do
+      oauth_client = insert(:oauth_client, user: user)
+
+      {:ok, index_live, _html} = live(conn, ~p"/credentials")
+
+      index_live |> select_credential_type(oauth_client.id)
+      index_live |> click_continue()
+
+      assert index_live
+             |> has_element?("#scope_selection_new")
+
+      not_chosen_scopes =
+        ~W(wave_api api custom_permissions id profile email address)
+
+      scopes_to_choose = oauth_client.optional_scopes |> String.split(",")
+
+      scopes_to_choose
+      |> Enum.each(fn scope ->
+        index_live
+        |> element("#scope_selection_new_#{scope}")
+        |> render_change(%{"_target" => [scope]})
+      end)
+
+      %{query: query} =
+        index_live
+        |> element("#credential-form-new")
+        |> render()
+        |> Floki.parse_fragment!()
+        |> Floki.find("a[phx-click=authorize_click]")
+        |> Floki.attribute("href")
+        |> List.first()
+        |> URI.parse()
+
+      scopes_in_url =
+        query
+        |> URI.decode_query()
+        |> Map.get("scope")
+
+      assert scopes_in_url
+             |> String.contains?(
+               scopes_to_choose
+               |> Enum.reverse()
+               |> Enum.join(" ")
+             )
+
+      refute scopes_in_url
+             |> String.contains?(
+               not_chosen_scopes
+               |> Enum.reverse()
+               |> Enum.join(" ")
+             )
+
+      # Unselecting one of the already selected scopes will remove it from the authorization url
+      scope_to_unselect = scopes_to_choose |> Enum.at(0)
+
+      index_live
+      |> element("#scope_selection_new_#{scope_to_unselect}")
+      |> render_change(%{"_target" => [scope_to_unselect]})
+
+      %{query: query} =
+        index_live
+        |> element("#credential-form-new")
+        |> render()
+        |> Floki.parse_fragment!()
+        |> Floki.find("a[phx-click=authorize_click]")
+        |> Floki.attribute("href")
+        |> List.first()
+        |> URI.parse()
+
+      scopes_in_url =
+        query
+        |> URI.decode_query()
+        |> Map.get("scope")
+
+      refute scopes_in_url |> String.contains?(scope_to_unselect)
+    end
+
+    test "generic oauth credential will render an input for api version",
+         %{
+           user: user,
+           conn: conn
+         } do
+      oauth_client = insert(:oauth_client, user: user)
+      {:ok, index_live, _html} = live(conn, ~p"/credentials")
+
+      index_live |> select_credential_type(oauth_client.id)
+      index_live |> click_continue()
+
+      index_live
+      |> fill_credential(%{
+        name: "My Credential",
+        api_version: "34"
+      })
+
+      # Get the state from the authorize url in order to fake the calling
+      # off the action in the OidcController
+      authorize_url =
+        index_live
+        |> element("#credential-form-new")
+        |> render()
+        |> Floki.parse_fragment!()
+        |> Floki.find("a[phx-click=authorize_click]")
+        |> Floki.attribute("href")
+        |> List.first()
+
+      [subscription_id, mod, component_id] = get_decoded_state(authorize_url)
+
+      assert index_live.id == subscription_id
+      assert index_live |> element(component_id)
+
+      # Click on the 'Authorize with Google button
+      index_live
+      |> element("#authorize-button")
+      |> render_click()
+
+      # Once authorizing the button isn't available
+      refute index_live
+             |> has_element?("#authorize-button")
+
+      # `handle_info/2` in LightingWeb.CredentialLive.Edit forwards the data
+      # as a `send_update/3` call to the GoogleSheets component
+      LightningWeb.OauthCredentialHelper.broadcast_forward(subscription_id, mod,
+        id: component_id,
+        code: "1234"
+      )
+
+      Lightning.ApplicationHelpers.dynamically_absorb_delay(fn ->
+        {_, assigns} =
+          Lightning.LiveViewHelpers.get_component_assigns_by(index_live,
+            id: "generic-oauth-component-new"
+          )
+
+        :userinfo_received === assigns[:oauth_progress]
+      end)
+
+      assert index_live |> has_element?("h3", "Test User")
+
+      {:ok, _index_live, _html} =
+        index_live
+        |> form("#credential-form-new")
+        |> render_submit()
+        |> follow_redirect(
+          conn,
+          ~p"/credentials"
+        )
+
+      {_path, flash} = assert_redirect(index_live)
+      assert flash == %{"info" => "Credential created successfully"}
+
+      credential =
+        Lightning.Credentials.list_credentials(user) |> List.first()
+
+      assert %{
+               access_token: "ya29.a0AVvZ",
+               refresh_token: "1//03vpp6Li",
+               expires_at: 3600,
+               scope: "scope1 scope2",
+               apiVersion: "34"
+             } =
+               credential.body
+               |> Map.new(fn {k, v} -> {String.to_atom(k), v} end)
+    end
+  end
+
+  describe "errors when creating generic oauth credentials" do
+    test "error when fetching authorization code", %{conn: conn, user: user} do
+      oauth_client = insert(:oauth_client, user: user)
+
+      {:ok, view, _html} = live(conn, ~p"/credentials")
+
+      view |> select_credential_type(oauth_client.id)
+      view |> click_continue()
+
+      refute view |> has_element?("#credential-type-picker")
+
+      view
+      |> fill_credential(%{
+        name: "My Generic OAuth Credential"
+      })
+
+      authorize_url =
+        view
+        |> element("#credential-form-new")
+        |> render()
+        |> Floki.parse_fragment!()
+        |> Floki.find("a[phx-click=authorize_click]")
+        |> Floki.attribute("href")
+        |> List.first()
+
+      [subscription_id, mod, component_id] = get_decoded_state(authorize_url)
+
+      assert view.id == subscription_id
+      assert view |> element(component_id)
+
+      view
+      |> element("#authorize-button")
+      |> render_click()
+
+      refute view
+             |> has_element?("#authorize-button")
+
+      LightningWeb.OauthCredentialHelper.broadcast_forward(subscription_id, mod,
+        id: component_id,
+        error: "failed fetching authorization code"
+      )
+
+      Lightning.ApplicationHelpers.dynamically_absorb_delay(fn ->
+        {_, assigns} =
+          Lightning.LiveViewHelpers.get_component_assigns_by(view,
+            id: "generic-oauth-component-new"
+          )
+
+        :code_failed === assigns[:oauth_progress]
+      end)
+
+      assert view |> has_element?("p", "Failed retrieving authentication code.")
+    end
+
+    test "error when fetching token", %{conn: conn, user: user} do
+      Mox.stub(Lightning.AuthProviders.OauthHTTPClient.Mock, :call, fn env,
+                                                                       _opts ->
+        case env.url do
+          "http://example.com/oauth2/token" ->
+            {:error, :unauthorized}
+
+          "http://example.com/oauth2/userinfo" ->
+            {:ok,
+             %Tesla.Env{
+               status: 200,
+               body:
+                 Jason.encode!(%{"picture" => "image.png", "name" => "Test User"})
+             }}
+        end
+      end)
+
+      oauth_client = insert(:oauth_client, user: user)
+
+      {:ok, view, _html} = live(conn, ~p"/credentials")
+
+      view |> select_credential_type(oauth_client.id)
+      view |> click_continue()
+
+      refute view |> has_element?("#credential-type-picker")
+
+      view
+      |> fill_credential(%{
+        name: "My Generic OAuth Credential"
+      })
+
+      authorize_url =
+        view
+        |> element("#credential-form-new")
+        |> render()
+        |> Floki.parse_fragment!()
+        |> Floki.find("a[phx-click=authorize_click]")
+        |> Floki.attribute("href")
+        |> List.first()
+
+      [subscription_id, mod, component_id] = get_decoded_state(authorize_url)
+
+      assert view.id == subscription_id
+      assert view |> element(component_id)
+
+      view
+      |> element("#authorize-button")
+      |> render_click()
+
+      refute view
+             |> has_element?("#authorize-button")
+
+      LightningWeb.OauthCredentialHelper.broadcast_forward(subscription_id, mod,
+        id: component_id,
+        code: "authcode123"
+      )
+
+      Lightning.ApplicationHelpers.dynamically_absorb_delay(fn ->
+        {_, assigns} =
+          Lightning.LiveViewHelpers.get_component_assigns_by(view,
+            id: "generic-oauth-component-new"
+          )
+
+        :token_failed === assigns[:oauth_progress]
+      end)
+
+      assert view
+             |> has_element?(
+               "p",
+               "Failed retrieving the token from the provider."
+             )
+    end
+
+    test "error when fetching userinfo", %{conn: conn, user: user} do
+      Mox.stub(Lightning.AuthProviders.OauthHTTPClient.Mock, :call, fn env,
+                                                                       _opts ->
+        case env.url do
+          "http://example.com/oauth2/token" ->
+            {:ok,
+             %Tesla.Env{
+               status: 200,
+               body:
+                 Jason.encode!(%{
+                   "access_token" => "ya29.a0AVvZ",
+                   "refresh_token" => "1//03vpp6Li",
+                   "expires_at" => 3600,
+                   "token_type" => "Bearer",
+                   "id_token" => "eyJhbGciO",
+                   "scope" => "scope1 scope2"
+                 })
+             }}
+
+          "http://example.com/oauth2/userinfo" ->
+            {:ok,
+             %Tesla.Env{
+               status: 500,
+               body: "Internal Server Error"
+             }}
+        end
+      end)
+
+      oauth_client = insert(:oauth_client, user: user)
+
+      {:ok, view, _html} = live(conn, ~p"/credentials")
+
+      view |> select_credential_type(oauth_client.id)
+      view |> click_continue()
+
+      refute view |> has_element?("#credential-type-picker")
+
+      view
+      |> fill_credential(%{
+        name: "My Generic OAuth Credential"
+      })
+
+      authorize_url =
+        view
+        |> element("#credential-form-new")
+        |> render()
+        |> Floki.parse_fragment!()
+        |> Floki.find("a[phx-click=authorize_click]")
+        |> Floki.attribute("href")
+        |> List.first()
+
+      [subscription_id, mod, component_id] = get_decoded_state(authorize_url)
+
+      assert view.id == subscription_id
+      assert view |> element(component_id)
+
+      view
+      |> element("#authorize-button")
+      |> render_click()
+
+      refute view
+             |> has_element?("#authorize-button")
+
+      LightningWeb.OauthCredentialHelper.broadcast_forward(subscription_id, mod,
+        id: component_id,
+        code: "authcode123"
+      )
+
+      Lightning.ApplicationHelpers.dynamically_absorb_delay(fn ->
+        {_, assigns} =
+          Lightning.LiveViewHelpers.get_component_assigns_by(view,
+            id: "generic-oauth-component-new"
+          )
+
+        :userinfo_failed === assigns[:oauth_progress]
+      end)
+
+      assert view
+             |> has_element?(
+               "p",
+               "That seemed to work, but we couldn't fetch your user information. You can save your credential now or try again."
+             )
     end
   end
 
@@ -873,7 +1680,7 @@ defmodule LightningWeb.CredentialLiveTest do
 
       assert index_live |> has_element?("h3", "Test User")
 
-      refute index_live |> submit_disabled()
+      refute index_live |> submit_disabled("save-credential-button-new")
 
       {:ok, _index_live, _html} =
         index_live
@@ -888,7 +1695,7 @@ defmodule LightningWeb.CredentialLiveTest do
       assert flash == %{"info" => "Credential created successfully"}
 
       credential =
-        Lightning.Credentials.list_credentials_for_user(user.id) |> List.first()
+        Lightning.Credentials.list_credentials(user) |> List.first()
 
       token =
         Lightning.AuthProviders.Common.TokenBody.new(credential.body)
@@ -972,40 +1779,6 @@ defmodule LightningWeb.CredentialLiveTest do
 
       assert index_live |> has_element?("#re-authorize-banner")
       assert index_live |> has_element?("#re-authorize-button")
-    end
-
-    test "rendering error component for various error type" do
-      render_component(
-        &LightningWeb.CredentialLive.OauthComponent.error_block/1,
-        type: :token_failed,
-        authorize_url: "https://www",
-        myself: nil,
-        provider: "Salesforce"
-      ) =~ "Failed retrieving the token from the provider"
-
-      render_component(
-        &LightningWeb.CredentialLive.OauthComponent.error_block/1,
-        type: :refresh_failed,
-        authorize_url: "https://www",
-        myself: nil,
-        provider: "Salesforce"
-      ) =~ "Failed renewing your access token"
-
-      render_component(
-        &LightningWeb.CredentialLive.OauthComponent.error_block/1,
-        type: :userinfo_failed,
-        authorize_url: "https://www",
-        myself: nil,
-        provider: "Salesforce"
-      ) =~ "Failed retrieving your information"
-
-      render_component(
-        &LightningWeb.CredentialLive.OauthComponent.error_block/1,
-        type: :no_refresh_token,
-        authorize_url: "https://www",
-        myself: nil,
-        provider: "Salesforce"
-      ) =~ "The token is missing it's"
     end
 
     test "correctly renders a valid existing token", %{
@@ -1167,7 +1940,7 @@ defmodule LightningWeb.CredentialLiveTest do
       assert edit_live
              |> has_element?(
                "p",
-               "That seemed to work, but we couldn't fetch your user information."
+               "That seemed to work, but we couldn't fetch your user information. You can save your credential now or try again."
              )
 
       # Now respond with success
@@ -1457,7 +2230,7 @@ defmodule LightningWeb.CredentialLiveTest do
 
       assert index_live |> has_element?("h3", "Test User")
 
-      refute index_live |> submit_disabled()
+      refute index_live |> submit_disabled("save-credential-button-new")
 
       {:ok, _index_live, _html} =
         index_live
@@ -1472,7 +2245,7 @@ defmodule LightningWeb.CredentialLiveTest do
       assert flash == %{"info" => "Credential created successfully"}
 
       credential =
-        Lightning.Credentials.list_credentials_for_user(user.id) |> List.first()
+        Lightning.Credentials.list_credentials(user) |> List.first()
 
       token = Lightning.AuthProviders.Common.TokenBody.new(credential.body)
 
@@ -1689,7 +2462,7 @@ defmodule LightningWeb.CredentialLiveTest do
 
       assert index_live |> has_element?("h3", "Test User")
 
-      refute index_live |> submit_disabled()
+      refute index_live |> submit_disabled("save-credential-button-new")
 
       {:ok, _index_live, _html} =
         index_live
@@ -1704,7 +2477,7 @@ defmodule LightningWeb.CredentialLiveTest do
       assert flash == %{"info" => "Credential created successfully"}
 
       credential =
-        Lightning.Credentials.list_credentials_for_user(user.id) |> List.first()
+        Lightning.Credentials.list_credentials(user) |> List.first()
 
       token = Lightning.AuthProviders.Common.TokenBody.new(credential.body)
 
@@ -1855,7 +2628,7 @@ defmodule LightningWeb.CredentialLiveTest do
       assert edit_live
              |> has_element?(
                "p",
-               "That seemed to work, but we couldn't fetch your user information."
+               "That seemed to work, but we couldn't fetch your user information. You can save your credential now or try again."
              )
 
       # Now respond with success
@@ -1978,7 +2751,7 @@ defmodule LightningWeb.CredentialLiveTest do
     |> LightningWeb.OauthCredentialHelper.decode_state()
   end
 
-  defp submit_disabled(live) do
-    live |> has_element?("button[type=submit][disabled]")
+  defp submit_disabled(live, id \\ "button") do
+    has_element?(live, "#{id}[type=submit][disabled]")
   end
 end

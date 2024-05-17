@@ -14,7 +14,7 @@
     </LayoutComponents.header>
   </:header>
   <LayoutComponents.centered>
-    <div class=" relative flex">
+    <div class="relative flex">
       <div class="pr-4 pt-0 sticky top-0 self-start rounded-md">
         <div class="flex-none">
           <LightningWeb.Components.Common.tab_bar
@@ -219,7 +219,7 @@
             <div class="leading-loose">
               <h6 class="font-medium text-black">Project credentials</h6>
               <small class="block text-xs text-gray-600">
-                View and edit credentials that are currently accessible for use in this project.
+                Manage Oauth 2.0 Clients and Credentials accessible to this project.
               </small>
               <.permissions_message
                 :if={!@can_create_project_credential}
@@ -227,93 +227,185 @@
               />
             </div>
             <div class="sm:block" aria-hidden="true">
-              <.button
-                id="new-credential-button"
-                phx-click={show_modal("new-credential-modal")}
-                {if !@can_create_project_credential, do: [disabled: "disabled"], else: []}
-              >
-                New credential
-              </.button>
-              <.live_component
-                id="new-credential-modal"
-                module={LightningWeb.CredentialLive.FormComponent}
-                action={:new}
-                credential_type={@selected_credential_type}
-                credential={
-                  %Lightning.Credentials.Credential{
-                    user_id: @current_user.id,
-                    project_credentials: [
-                      %Lightning.Projects.ProjectCredential{
-                        project_id: @project.id
-                      }
-                    ]
+              <LightningWeb.Components.Credentials.options_menu_button
+                id="options-menu-button"
+                options={[
+                  %{
+                    name: "Oauth client",
+                    id: "option-menu-item-0",
+                    target: "new-oauth-client-modal"
+                  },
+                  %{
+                    name: "Credential",
+                    id: "option-menu-item-1",
+                    target: "new-credential-modal"
                   }
-                }
-                current_user={@current_user}
-                projects={[]}
-                project={@project}
-                show_project_credentials={false}
-                can_create_project_credential={@can_create_project_credential}
-                return_to={~p"/projects/#{@project.id}/settings#credentials"}
-              />
+                ]}
+                disabled={!@can_create_project_credential}
+              >
+                Add new
+              </LightningWeb.Components.Credentials.options_menu_button>
             </div>
           </div>
-          <div class="hidden sm:block" aria-hidden="true">
-            <div class="py-2"></div>
-          </div>
-          <.table id="credentials">
-            <.tr>
-              <.th>Name</.th>
-              <.th>Type</.th>
-              <.th>Owner</.th>
-              <.th>Production</.th>
-              <.th>Actions</.th>
-            </.tr>
 
-            <%= for credential <- @credentials do %>
-              <.tr id={"credential-#{credential.id}"}>
-                <.td><%= credential.name %></.td>
-                <.td><%= credential.schema %></.td>
-                <.td><%= credential.user.email %></.td>
-                <.td>
-                  <%= if credential.production do %>
-                    <div class="flex">
-                      <Heroicons.exclamation_triangle class="w-5 h-5 text-secondary-500" />
-                      &nbsp;Production
-                    </div>
-                  <% end %>
-                </.td>
-                <.td>
-                  <%= if credential.user_id == @current_user.id do %>
-                    <span>
-                      <.link phx-click={
-                        show_modal("edit-credential-#{credential.id}-modal")
-                      }>
-                        Edit
-                      </.link>
-                    </span>
-                    <.live_component
-                      id={"edit-credential-#{credential.id}-modal"}
-                      module={LightningWeb.CredentialLive.FormComponent}
-                      action={:edit}
-                      credential_type={nil}
-                      credential={credential}
-                      current_user={@current_user}
-                      projects={[]}
-                      project={@project}
-                      show_project_credentials={false}
-                      can_create_project_credential={
-                        @can_create_project_credential
-                      }
-                      return_to={
-                        ~p"/projects/#{@project.id}/settings#credentials"
-                      }
-                    />
-                  <% end %>
-                </.td>
-              </.tr>
-            <% end %>
-          </.table>
+          <LightningWeb.Components.Credentials.oauth_clients_table
+            id="oauth-clients"
+            title="Oauth Clients"
+            clients={@oauth_clients}
+          >
+            <:empty_state>
+              <button
+                type="button"
+                id="open-create-oauth-client-modal-big-buttton"
+                phx-click={show_modal("new-oauth-client-modal")}
+                class="relative block w-full rounded-lg border-2 border-dashed border-gray-300 p-10 text-center hover:border-gray-400 disabled:hover:border-gray-300 focus:outline-none"
+                disabled={!@can_create_project_credential}
+              >
+                <Heroicons.plus_circle class="mx-auto w-12 h-12 text-secondary-400" />
+                <span class="mt-2 block text-sm font-semibold text-secondary-600">
+                  Create a new OAuth client
+                </span>
+              </button>
+            </:empty_state>
+            <:actions :let={client}>
+              <div :if={client.user_id == @current_user.id}>
+                <span>
+                  <.link phx-click={
+                    show_modal("edit-oauth-client-#{client.id}-modal")
+                  }>
+                    Edit
+                  </.link>
+                </span>
+                |
+                <span>
+                  <.link
+                    id={"delete-oauth-client-#{client.id}-button"}
+                    phx-click={
+                      show_modal("delete_oauth_client_#{client.id}_modal")
+                    }
+                  >
+                    Delete
+                  </.link>
+                </span>
+              </div>
+              <.live_component
+                id={"edit-oauth-client-#{client.id}-modal"}
+                module={LightningWeb.CredentialLive.OauthClientFormComponent}
+                action={:edit}
+                oauth_client={client}
+                projects={@projects}
+                project={@project}
+                allow_global={@current_user.role === :superuser}
+                can_create_oauth_client={@can_create_project_credential}
+                return_to={~p"/projects/#{@project.id}/settings#credentials"}
+              />
+              <LightningWeb.Components.Credentials.delete_oauth_client_modal
+                :if={client.user_id == @current_user.id}
+                id={"delete_oauth_client_#{client.id}_modal"}
+                client={client}
+              />
+            </:actions>
+          </LightningWeb.Components.Credentials.oauth_clients_table>
+
+          <LightningWeb.Components.Credentials.credentials_table
+            id="credentials"
+            title="Credentials"
+            credentials={@credentials}
+          >
+            <:empty_state>
+              <button
+                type="button"
+                id="open-create-credential-modal-big-buttton"
+                phx-click={show_modal("new-credential-modal")}
+                class="relative block w-full rounded-lg border-2 border-dashed border-gray-300 p-10 text-center hover:border-gray-400 disabled:hover:border-gray-300 focus:outline-none"
+                disabled={!@can_create_project_credential}
+              >
+                <Heroicons.plus_circle class="mx-auto w-12 h-12 text-secondary-400" />
+                <span class="mt-2 block text-sm font-semibold text-secondary-600">
+                  Create a new Credential
+                </span>
+              </button>
+            </:empty_state>
+            <:actions :let={credential}>
+              <div :if={credential.user_id == @current_user.id}>
+                <span>
+                  <.link phx-click={
+                    show_modal("edit-credential-#{credential.id}-modal")
+                  }>
+                    Edit
+                  </.link>
+                </span>
+                |
+                <span>
+                  <.link phx-click={
+                    show_modal("delete_credential_#{credential.id}_modal")
+                  }>
+                    Delete
+                  </.link>
+                </span>
+                <.live_component
+                  id={"edit-credential-#{credential.id}-modal"}
+                  module={LightningWeb.CredentialLive.CredentialFormComponent}
+                  action={:edit}
+                  credential_type={nil}
+                  credential={credential}
+                  selected_oauth_client={credential.oauth_client}
+                  projects={@projects}
+                  project={@project}
+                  can_create_project_credential={@can_create_project_credential}
+                  current_user={@current_user}
+                  return_to={~p"/projects/#{@project.id}/settings#credentials"}
+                />
+                <LightningWeb.Components.Credentials.delete_credential_modal
+                  :if={credential.user_id == @current_user.id}
+                  id={"delete_credential_#{credential.id}_modal"}
+                  credential={credential}
+                />
+              </div>
+            </:actions>
+          </LightningWeb.Components.Credentials.credentials_table>
+
+          <.live_component
+            id="new-credential-modal"
+            module={LightningWeb.CredentialLive.CredentialFormComponent}
+            action={:new}
+            credential_type={@selected_credential_type}
+            credential={
+              %Lightning.Credentials.Credential{
+                user_id: @current_user.id,
+                project_credentials: [
+                  %Lightning.Projects.ProjectCredential{
+                    project_id: @project.id
+                  }
+                ]
+              }
+            }
+            oauth_clients={@oauth_clients}
+            projects={@projects}
+            project={@project}
+            can_create_project_credential={@can_create_project_credential}
+            return_to={~p"/projects/#{@project.id}/settings#credentials"}
+          />
+          <.live_component
+            id="new-oauth-client-modal"
+            module={LightningWeb.CredentialLive.OauthClientFormComponent}
+            action={:new}
+            oauth_client={
+              %Lightning.Credentials.OauthClient{
+                user_id: @current_user.id,
+                project_oauth_clients: [
+                  %Lightning.Projects.ProjectOauthClient{
+                    project_id: @project.id
+                  }
+                ]
+              }
+            }
+            projects={@projects}
+            project={@project}
+            allow_global={@current_user.role === :superuser}
+            can_create_oauth_client={@can_create_project_credential}
+            return_to={~p"/projects/#{@project.id}/settings#credentials"}
+          />
         </LightningWeb.Components.Common.panel_content>
         <LightningWeb.Components.Common.panel_content for_hash="webhook_security">
           <div class="flex justify-between content-center">

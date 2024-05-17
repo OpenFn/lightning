@@ -47,7 +47,7 @@ defmodule Lightning.Accounts do
 
     # Delete the credentials of the user.
     # Note that there's a nilify constraint that set all project_credentials associated to this user to nil
-    Credentials.list_credentials_for_user(id)
+    Credentials.list_credentials(%User{id: id})
     |> Enum.each(&Credentials.delete_credential/1)
 
     Repo.get(User, id) |> delete_user()
