@@ -20,7 +20,8 @@ defmodule LightningWeb.DataclipController do
       maybe_respond_with_body(conn, dataclip_without_body)
     else
       conn
-      |> send_resp(403, "You are not authorized to view this dataclip.")
+      |> put_status(403)
+      |> json(%{error: "You are not authorized to view this dataclip."})
     end
   end
 
@@ -30,8 +31,7 @@ defmodule LightningWeb.DataclipController do
         if dataclip_is_modified?(dataclip, last_modified) do
           respond_with_body(conn, dataclip.id)
         else
-          conn
-          |> send_resp(304, "")
+          conn |> send_resp(304, "")
         end
 
       [] ->
@@ -49,7 +49,7 @@ defmodule LightningWeb.DataclipController do
       })
 
     conn
-    |> put_resp_content_type("text/plain")
+    |> put_resp_content_type("application/json")
     |> put_resp_header("vary", "Accept-Encoding, Cookie")
     |> put_resp_header("cache-control", "private, max-age=#{@max_age}")
     |> put_resp_header("last-modified", to_rfc1123!(dataclip.updated_at))

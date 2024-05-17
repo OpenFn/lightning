@@ -128,7 +128,7 @@ defmodule LightningWeb.DataclipControllerTest do
     } do
       conn = get(conn, ~p"/dataclip/body/#{selected_step.output_dataclip_id}")
 
-      body = text_response(conn, 200)
+      body = response(conn, 200)
 
       dataclip_lines = String.split(body, "\n")
 
@@ -185,8 +185,9 @@ defmodule LightningWeb.DataclipControllerTest do
         |> put_req_header("if-modified-since", last_modified)
         |> get(~p"/dataclip/body/#{dataclip.id}")
 
-      assert text_response(conn, 200) =~ "some-bars"
+      assert response(conn, 200) =~ "some-bars"
       assert get_resp_header(conn, "cache-control") == ["private, max-age=86400"]
+      assert get_resp_header(conn, "vary") == ["Accept-Encoding, Cookie"]
 
       assert get_resp_header(conn, "last-modified") == [
                Timex.format!(
@@ -206,7 +207,7 @@ defmodule LightningWeb.DataclipControllerTest do
         |> put_req_header("if-modified-since", "invalid-date-format")
         |> get(~p"/dataclip/body/#{dataclip.id}")
 
-      assert text_response(conn, 200) =~ "some-bars"
+      assert response(conn, 200) =~ "some-bars"
     end
 
     test "returns 403 when the user is not part of the dataclip's project", %{
