@@ -208,5 +208,15 @@ defmodule LightningWeb.DataclipControllerTest do
 
       assert text_response(conn, 200) =~ "some-bars"
     end
+
+    test "returns 403 when the user is not part of the dataclip's project", %{
+      conn: conn,
+      output_dataclip: dataclip
+    } do
+      user = insert(:user)
+      conn = conn |> log_in_user(user) |> get(~p"/dataclip/body/#{dataclip.id}")
+
+      assert conn.status == 403
+    end
   end
 end

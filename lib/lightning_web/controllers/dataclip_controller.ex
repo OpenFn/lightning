@@ -3,25 +3,39 @@ defmodule LightningWeb.DataclipController do
 
   alias Lightning.DataclipScrubber
   alias Lightning.Invocation
+  alias Lightning.Policies.Dataclips
+  alias Lightning.Policies.Permissions
 
   @max_age 86_400
 
   def show(conn, %{"id" => dataclip_id}) do
-    IO.inspect(conn)
+    dataclip_without_body = Invocation.get_dataclip!(dataclip_id)
 
+    if Permissions.can?(
+         Dataclips,
+         :view_dataclip,
+         conn.assigns.current_user,
+         dataclip_without_body
+       ) do
+      maybe_respond_with_body(conn, dataclip_without_body)
+    else
+      conn
+      |> send_resp(403, "You are not authorized to view this dataclip.")
+    end
+  end
+
+  defp maybe_respond_with_body(conn, dataclip) do
     case get_req_header(conn, "if-modified-since") do
       [last_modified] ->
-        dataclip = Invocation.get_dataclip!(dataclip_id)
-
         if dataclip_is_modified?(dataclip, last_modified) do
-          respond_with_body(conn, dataclip_id)
+          respond_with_body(conn, dataclip.id)
         else
           conn
           |> send_resp(304, "")
         end
 
       [] ->
-        respond_with_body(conn, dataclip_id)
+        respond_with_body(conn, dataclip.id)
     end
   end
 
