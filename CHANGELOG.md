@@ -19,11 +19,15 @@ and this project adheres to
 
 ### Changed
 
+### Fixed
+
+## [v2.5.0-pre2] - 2024-05-17
+
+### Changed
+
 - Replace LiveView Dataclip component with React Monaco bringing large
   performance improvements when viewing large dataclips.
   [#1872](https://github.com/OpenFn/lightning/issues/1872)
-
-### Fixed
 
 ## [v2.5.0-pre] - 2024-05-17
 
