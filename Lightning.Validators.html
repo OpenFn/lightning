@@ -13,7 +13,7 @@
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-EPF2X7PV.js"></script>
-    <script src="dist/sidebar_items-E876958D.js"></script>
+    <script src="dist/sidebar_items-6CEC977B.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -183,6 +183,16 @@ Pages
 
     </div>
 
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#validate_url/2" translate="no">validate_url(changeset, field)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Validate that a field is a valid URL.</p></div>
+
+    </div>
+
 </div>
 
   </section>
@@ -223,10 +233,10 @@ Pages
       </div>
 
 <p>Validate that only one of the fields is set at a time.</p><p>Example:</p><pre><code class="makeup elixir" translate="no"><span class="n">changeset</span><span class="w">
-</span><span class="o">|&gt;</span><span class="w"> </span><span class="n">validate_exclusive</span><span class="p" data-group-id="6282021806-1">(</span><span class="w">
-  </span><span class="p" data-group-id="6282021806-2">[</span><span class="ss">:source_job_id</span><span class="p">,</span><span class="w"> </span><span class="ss">:source_trigger_id</span><span class="p" data-group-id="6282021806-2">]</span><span class="p">,</span><span class="w">
+</span><span class="o">|&gt;</span><span class="w"> </span><span class="n">validate_exclusive</span><span class="p" data-group-id="6830623896-1">(</span><span class="w">
+  </span><span class="p" data-group-id="6830623896-2">[</span><span class="ss">:source_job_id</span><span class="p">,</span><span class="w"> </span><span class="ss">:source_trigger_id</span><span class="p" data-group-id="6830623896-2">]</span><span class="p">,</span><span class="w">
   </span><span class="s">&quot;source_job_id and source_trigger_id are mutually exclusive&quot;</span><span class="w">
-</span><span class="p" data-group-id="6282021806-1">)</span></code></pre>
+</span><span class="p" data-group-id="6830623896-1">)</span></code></pre>
   </section>
 </section>
 <section class="detail" id="validate_one_required/3">
@@ -291,6 +301,34 @@ This should only be used when using <code class="inline">put_assoc</code>, not <
 <code class="inline">cast_assoc</code> provides a <code class="inline">required: true</code> option.
 Unlike <code class="inline">validate_required</code>, this does not add the field to the <code class="inline">required</code>
 list in the schema.</p></blockquote>
+  </section>
+</section>
+<section class="detail" id="validate_url/2">
+
+  <div class="detail-header">
+    <a href="#validate_url/2" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">validate_url(changeset, field)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/utils/validators.ex#L87" class="icon-action" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> validate_url(<a href="https://hexdocs.pm/ecto/3.10.3/Ecto.Changeset.html#t:t/0">Ecto.Changeset.t</a>(), <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">atom</a>()) :: <a href="https://hexdocs.pm/ecto/3.10.3/Ecto.Changeset.html#t:t/0">Ecto.Changeset.t</a>()</pre>
+
+      </div>
+
+<p>Validate that a field is a valid URL.</p>
   </section>
 </section>
 

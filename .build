@@ -20,6 +20,7 @@ Lightning.AuthProviders.Common.html
 Lightning.AuthProviders.Google.html
 Lightning.AuthProviders.Handler.html
 Lightning.AuthProviders.OAuthBehaviour.html
+Lightning.AuthProviders.OauthHTTPClient.html
 Lightning.AuthProviders.Salesforce.html
 Lightning.AuthProviders.Store.html
 Lightning.AuthProviders.WellKnown.html
@@ -31,6 +32,8 @@ Lightning.Config.Utils.html
 Lightning.Config.html
 Lightning.Credentials.Audit.html
 Lightning.Credentials.Credential.html
+Lightning.Credentials.OauthClient.html
+Lightning.Credentials.OauthClientAudit.html
 Lightning.Credentials.Schema.html
 Lightning.Credentials.SchemaDocument.html
 Lightning.Credentials.SensitiveValues.html
@@ -62,6 +65,7 @@ Lightning.LogMessage.html
 Lightning.MetadataService.Error.html
 Lightning.MetadataService.html
 Lightning.Name.html
+Lightning.OauthClients.html
 Lightning.ObanManager.html
 Lightning.Policies.Permissions.html
 Lightning.Policies.ProjectUsers.html
@@ -70,6 +74,7 @@ Lightning.Policies.Users.html
 Lightning.Projects.Events.html
 Lightning.Projects.Project.html
 Lightning.Projects.ProjectCredential.html
+Lightning.Projects.ProjectOauthClient.html
 Lightning.Projects.ProjectUser.DigestEnum.html
 Lightning.Projects.ProjectUser.RolesEnum.html
 Lightning.Projects.ProjectUser.html
@@ -166,9 +171,12 @@ LightningWeb.Components.Modal.html
 LightningWeb.Components.NewInputs.html
 LightningWeb.Components.Pills.html
 LightningWeb.Components.Viewers.html
-LightningWeb.CredentialLive.FormComponent.html
+LightningWeb.CredentialLive.CredentialFormComponent.html
+LightningWeb.CredentialLive.GenericOauthComponent.html
+LightningWeb.CredentialLive.Helpers.html
 LightningWeb.CredentialLive.Index.html
 LightningWeb.CredentialLive.JsonSchemaBodyComponent.html
+LightningWeb.CredentialLive.OauthClientFormComponent.html
 LightningWeb.CredentialLive.OauthComponent.html
 LightningWeb.CredentialLive.RawBodyComponent.html
 LightningWeb.DataclipLive.FormComponent.html
@@ -278,8 +286,8 @@ dist/merriweather-latin-ext-300-normal-K6L27CZ5.woff2
 dist/merriweather-vietnamese-300-italic-EHHNZPUO.woff2
 dist/merriweather-vietnamese-300-normal-U376L4Z4.woff2
 dist/remixicon-NKANDIL5.woff2
-dist/search_data-4A12DDE6.js
-dist/sidebar_items-E876958D.js
+dist/search_data-C4D86180.js
+dist/sidebar_items-6CEC977B.js
 index.html
 provisioning.html
 readme.html

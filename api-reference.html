@@ -13,7 +13,7 @@
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-EPF2X7PV.js"></script>
-    <script src="dist/sidebar_items-E876958D.js"></script>
+    <script src="dist/sidebar_items-6CEC977B.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -359,6 +359,17 @@ by defining a set of required functions that each provider must implement.</p></
 </div>
 <div class="summary-row">
   <div class="summary-signature">
+    <a href="Lightning.AuthProviders.OauthHTTPClient.html" translate="no">Lightning.AuthProviders.OauthHTTPClient</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>Handles OAuth interactions for generic providers, including token fetching,
+refreshing, and user information retrieval. This module uses Tesla to make HTTP
+requests configured with middleware appropriate for OAuth specific tasks.</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
     <a href="Lightning.AuthProviders.Salesforce.html" translate="no">Lightning.AuthProviders.Salesforce</a>
 
   </div>
@@ -454,6 +465,27 @@ by defining a set of required functions that each provider must implement.</p></
   </div>
 
     <div class="summary-synopsis"><p>The Credential model.</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="Lightning.Credentials.OauthClient.html" translate="no">Lightning.Credentials.OauthClient</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>Defines the Ecto schema for an OAuth client. This schema is responsible for representing
+OAuth client data in the database, including details such as client ID, client secret,
+and endpoints necessary for OAuth operations. It also links to associated users and
+projects through relational fields.</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="Lightning.Credentials.OauthClientAudit.html" translate="no">Lightning.Credentials.OauthClientAudit</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>Model for storing changes to Oauth clients</p></div>
 
 </div>
 <div class="summary-row">
@@ -728,6 +760,17 @@ communication issues with the worker.</p></div>
 </div>
 <div class="summary-row">
   <div class="summary-signature">
+    <a href="Lightning.OauthClients.html" translate="no">Lightning.OauthClients</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>Manages operations for OAuth clients within the Lightning application, providing
+functions to create, retrieve, update, and delete OAuth clients, as well as managing
+their associations with projects and handling audit trails for changes.</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
     <a href="Lightning.ObanManager.html" translate="no">Lightning.ObanManager</a>
 
   </div>
@@ -805,6 +848,19 @@ communication issues with the worker.</p></div>
   </div>
 
     <div class="summary-synopsis"><p>Join table to assign credentials to a project</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="Lightning.Projects.ProjectOauthClient.html" translate="no">Lightning.Projects.ProjectOauthClient</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>Manages the relationship between OAuth clients and projects, acting as a join table.
+This module defines the schema and validations needed for creating and managing
+associations between <code class="inline">OauthClient</code> and <code class="inline">Project</code>. It ensures that an OAuth client
+can be associated with a project, facilitating the management of access permissions
+and settings specific to a project.</p></div>
 
 </div>
 <div class="summary-row">
@@ -1652,11 +1708,29 @@ with the newer CoreComponents conventions introduced in Phoenix 1.7.</p></div>
 </div>
 <div class="summary-row">
   <div class="summary-signature">
-    <a href="LightningWeb.CredentialLive.FormComponent.html" translate="no">LightningWeb.CredentialLive.FormComponent</a>
+    <a href="LightningWeb.CredentialLive.CredentialFormComponent.html" translate="no">LightningWeb.CredentialLive.CredentialFormComponent</a>
 
   </div>
 
     <div class="summary-synopsis"><p>Form Component for working with a single Credential</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="LightningWeb.CredentialLive.GenericOauthComponent.html" translate="no">LightningWeb.CredentialLive.GenericOauthComponent</a>
+
+  </div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="LightningWeb.CredentialLive.Helpers.html" translate="no">LightningWeb.CredentialLive.Helpers</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>This module provides helper functions for managing project associations
+within credential live views, allowing dynamic assignment and update
+of projects associations to credentials and / or oauth clients.</p></div>
 
 </div>
 <div class="summary-row">
@@ -1673,6 +1747,15 @@ with the newer CoreComponents conventions introduced in Phoenix 1.7.</p></div>
     <a href="LightningWeb.CredentialLive.JsonSchemaBodyComponent.html" translate="no">LightningWeb.CredentialLive.JsonSchemaBodyComponent</a>
 
   </div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="LightningWeb.CredentialLive.OauthClientFormComponent.html" translate="no">LightningWeb.CredentialLive.OauthClientFormComponent</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>Form Component for working with a single Credential</p></div>
 
 </div>
 <div class="summary-row">
