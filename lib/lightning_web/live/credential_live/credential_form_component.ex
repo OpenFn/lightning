@@ -369,6 +369,8 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
   end
 
   def render(%{page: :second, schema: "oauth"} = assigns) do
+    assigns = assign(assigns, %{on_save: Map.get(assigns, :on_save)})
+
     ~H"""
     <div class="mt-10 sm:mt-0">
       <.modal id={@id} width="xl:min-w-1/3 min-w-1/2 w-[300px]">
@@ -400,6 +402,7 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
           credential={@credential}
           projects={@projects}
           users={@users}
+          on_save={@on_save}
           allow_credential_transfer={@allow_credential_transfer}
           return_to={@return_to}
         />
