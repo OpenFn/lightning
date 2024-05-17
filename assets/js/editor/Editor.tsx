@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
-import Monaco from '@monaco-editor/react';
+import MonacoEditor, { Monaco } from '@monaco-editor/react';
 import type { EditorProps as MonacoProps } from '@monaco-editor/react/lib/types';
 
 import { fetchDTSListing, fetchFile } from '@openfn/describe-package';
@@ -8,6 +8,7 @@ import { initiateSaveAndRun } from '../common';
 
 // static imports for core lib
 import dts_es5 from './lib/es5.min.dts';
+import { setTheme } from '../monaco';
 
 export const DEFAULT_TEXT =
   '// Get started by adding operations from the API reference\n';
@@ -161,30 +162,14 @@ export default function Editor({
 
   const monacoRef = useRef<any>(null);
 
-  const beforeMount = useCallback((monaco: typeof Monaco) => {
+  const beforeMount = (monaco: Monaco) => {
     monacoRef.current = monaco;
-
-    monaco.editor.defineTheme('default', {
-      base: 'vs-dark',
-      inherit: true,
-      rules: [],
-      colors: {
-        'editor.foreground': '#E2E8F0',
-        'editor.background': '#334155', // slate-700
-        'editor.lineHighlightBackground': '#475569', // slate-600
-        'editor.selectionBackground': '#4f5b66',
-        'editorCursor.foreground': '#c0c5ce',
-        'editorWhitespace.foreground': '#65737e',
-        'editorIndentGuide.background': '#65737F',
-        'editorIndentGuide.activeBackground': '#FBC95A',
-      },
-    });
-    monaco.editor.setTheme('default');
-  }, []);
+    setTheme(monaco);
+  };
 
   const handleSourceChange = useCallback(
-    (newSource: string) => {
-      if (onChange) {
+    (newSource: string | undefined) => {
+      if (onChange && newSource) {
         onChange(newSource);
       }
     },
@@ -192,7 +177,7 @@ export default function Editor({
   );
 
   const handleEditorDidMount = useCallback(
-    (editor: any, _monaco: typeof Monaco) => {
+    (editor: any, _monaco: Monaco) => {
       let monaco = monacoRef.current;
 
       editor.addCommand(
@@ -349,10 +334,11 @@ export default function Editor({
       <div className="relative z-10 h-0 overflow-visible text-right text-xs text-white">
         {loading && loadingIndicator}
       </div>
-      <Monaco
+      <MonacoEditor
         defaultLanguage="javascript"
         theme="default"
         defaultPath="/job.js"
+        loading={<div>Loading...</div>}
         value={source || DEFAULT_TEXT}
         options={options}
         beforeMount={beforeMount}

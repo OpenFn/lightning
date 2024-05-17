@@ -19,6 +19,10 @@ and this project adheres to
 
 ### Changed
 
+- Replace LiveView Dataclip component with React Monaco bringing large
+  performance improvements when viewing large dataclips.
+  [#1872](https://github.com/OpenFn/lightning/issues/1872)
+
 ### Fixed
 
 ## [v2.4.14] - 2024-05-16
@@ -35,8 +39,6 @@ and this project adheres to
   [#99](https://github.com/OpenFn/lightning/issues/99)
 - Removes stacked viewer after switching tabs and steps.
   [#2064](https://github.com/OpenFn/lightning/issues/2064)
-- Fixed issue where the browser would hang when inspecting a Run with a huge
-  dataclip. [#1872](https://github.com/OpenFn/lightning/issues/1872)
 
 ## [v2.4.13] - 2024-05-16
 
