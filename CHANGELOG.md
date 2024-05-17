@@ -17,12 +17,16 @@ and this project adheres to
 
 ### Added
 
-- Add and Edit Oauth Clients
-  [#1919](https://github.com/OpenFn/lightning/issues/1919)
-
 ### Changed
 
 ### Fixed
+
+## [v2.5.0-pre] - 2024-05-17
+
+### Added
+
+- Allow users to build Oauth clients and associated credentials via the user
+  interface. [#1919](https://github.com/OpenFn/lightning/issues/1919)
 
 ## [v2.4.14] - 2024-05-16
 

@@ -180,7 +180,7 @@ defmodule LightningWeb.Components.Credentials do
         :credential ->
           %{
             select_id: "project-credentials-list-#{assigns.id}",
-            prompt: "Select a project to associate to this credential",
+            prompt: "Grant projects access to this credential",
             add_project_id: "add-project-credential-button-#{assigns.id}",
             remove_project_id: "remove-project-credential-button-#{assigns.id}"
           }
@@ -188,7 +188,7 @@ defmodule LightningWeb.Components.Credentials do
         :oauth_client ->
           %{
             select_id: "project-oauth-clients-list-#{assigns.id}",
-            prompt: "Select a project to associate to this OAuth client",
+            prompt: "Grant projects access to this OAuth client",
             add_project_id: "add-project-oauth-client-button-#{assigns.id}",
             remove_project_id: "remove-project-oauth-client-button-#{assigns.id}"
           }
@@ -256,12 +256,7 @@ defmodule LightningWeb.Components.Credentials do
               class="group relative -mr-1 h-3.5 w-3.5 rounded-sm hover:bg-gray-500/20"
             >
               <span class="sr-only">Remove</span>
-              <svg
-                viewBox="0 0 14 14"
-                class="h-3.5 w-3.5 stroke-gray-700/50 group-hover:stroke-gray-700/75"
-              >
-                <path d="M4 4l6 6m0-6l-6 6" />
-              </svg>
+                <Heroicons.x_mark solid class="w-4 h-4" />
               <span class="absolute -inset-1"></span>
             </button>
           </span>
@@ -419,7 +414,7 @@ defmodule LightningWeb.Components.Credentials do
             </.td>
             <.td class="break-words max-w-[25rem]">
               <%= for project_name <- credential.project_names do %>
-                <span class="inline-flex items-center rounded-md bg-transparent px-1.5 py-0.5 my-0.5 text-xs font-medium ring-1 ring-inset ring-gray-500/10">
+                <span class="inline-flex items-center rounded-md bg-primary-50 p-1 my-0.5 text-xs font-medium ring-1 ring-inset ring-gray-500/10">
                   <%= project_name %>
                 </span>
               <% end %>
@@ -480,7 +475,7 @@ defmodule LightningWeb.Components.Credentials do
             <.td class="break-words max-w-[15rem]"><%= client.name %></.td>
             <.td class="break-words max-w-[20rem]">
               <%= for project_name <- client.project_names do %>
-                <span class="inline-flex items-center rounded-md bg-transparent px-1.5 py-0.5 my-0.5 text-xs font-medium ring-1 ring-inset ring-gray-500/10">
+                <span class="inline-flex items-center rounded-md bg-primary-50 p-1 my-0.5 text-xs font-medium ring-1 ring-inset ring-gray-500/10">
                   <%= project_name %>
                 </span>
               <% end %>

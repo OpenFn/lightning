@@ -261,10 +261,12 @@
                 class="relative block w-full rounded-lg border-2 border-dashed border-gray-300 p-10 text-center hover:border-gray-400 disabled:hover:border-gray-300 focus:outline-none"
                 disabled={!@can_create_project_credential}
               >
-                <Heroicons.plus_circle class="mx-auto w-12 h-12 text-secondary-400" />
-                <span class="mt-2 block text-sm font-semibold text-secondary-600">
-                  Create a new OAuth client
-                </span>
+                <div class="m-2">
+                  <Heroicons.plus_circle class="mx-auto w-12 h-12 text-secondary-400" />
+                  <span class="mt-2 block text-xs font-semibold text-secondary-600">
+                    Create a new OAuth client
+                  </span>
+                </div>
               </button>
             </:empty_state>
             <:actions :let={client}>
@@ -320,10 +322,12 @@
                 class="relative block w-full rounded-lg border-2 border-dashed border-gray-300 p-10 text-center hover:border-gray-400 disabled:hover:border-gray-300 focus:outline-none"
                 disabled={!@can_create_project_credential}
               >
-                <Heroicons.plus_circle class="mx-auto w-12 h-12 text-secondary-400" />
-                <span class="mt-2 block text-sm font-semibold text-secondary-600">
-                  Create a new Credential
-                </span>
+                <div class="m-2">
+                  <Heroicons.plus_circle class="mx-auto w-12 h-12 text-secondary-400" />
+                  <span class="mt-2 block text-xs font-semibold text-secondary-600">
+                    Create a new Credential
+                  </span>
+                </div>
               </button>
             </:empty_state>
             <:actions :let={credential}>
