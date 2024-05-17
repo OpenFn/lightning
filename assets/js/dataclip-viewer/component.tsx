@@ -1,4 +1,4 @@
-import MonacoEditor from '@monaco-editor/react';
+import MonacoEditor, { Monaco } from '@monaco-editor/react';
 import React, { useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 
@@ -16,6 +16,25 @@ export function mount(el: HTMLElement, dataclipId: string) {
   }
 
   return { unmount, render };
+}
+
+function editorWillMount(monaco: typeof Monaco) {
+  monaco.editor.defineTheme('default', {
+    base: 'vs-dark',
+    inherit: true,
+    rules: [],
+    colors: {
+      'editor.foreground': '#E2E8F0',
+      'editor.background': '#334155', // slate-700
+      'editor.lineHighlightBackground': '#475569', // slate-600
+      'editor.selectionBackground': '#4f5b66',
+      'editorCursor.foreground': '#c0c5ce',
+      'editorWhitespace.foreground': '#65737e',
+      'editorIndentGuide.background': '#65737F',
+      'editorIndentGuide.activeBackground': '#FBC95A',
+    },
+  });
+  monaco.editor.setTheme('default');
 }
 
 const EditorComponent = ({ dataclipId }: { dataclipId: string }) => {
@@ -62,9 +81,11 @@ const EditorComponent = ({ dataclipId }: { dataclipId: string }) => {
   return (
     <MonacoEditor
       defaultLanguage="json"
-      theme="vs-dark"
+      theme="default"
       value={content}
+      loading={<div>Loading...</div>}
       onMount={editor => (editorRef.current = editor)}
+      beforeMount={editorWillMount}
       options={{
         readOnly: true,
         lineNumbersMinChars: 3,
