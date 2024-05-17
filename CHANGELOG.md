@@ -21,6 +21,9 @@ and this project adheres to
 
 ### Fixed
 
+- Fix credential not added automatically after being created from the canvas.
+  [#2105](https://github.com/OpenFn/lightning/issues/2105)
+
 ## [v2.5.0-pre2] - 2024-05-17
 
 ### Changed
