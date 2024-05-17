@@ -82,8 +82,10 @@ defmodule Lightning.KafkaTriggers.Pipeline do
 
         IO.puts(">>>> #{trigger_id} received #{data} on #{partition} produced at #{timestamp}")
         # IO.inspect(message) 
-      # {:error, %{errors: [trigger_id: {"has_already_been_taken", _}]}} ->
+      {:error, %{errors: [trigger_id: {_, [constraint: :unique, constraint_name: _]}]}} ->
         IO.puts("**** #{trigger_id} received DUPLICATE #{data} on #{partition} produced at #{timestamp}")
+      _ ->
+        raise "Unhandled error when persisting TriggerKafkaMessageRecord"
     end
 
     message
