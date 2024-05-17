@@ -256,7 +256,7 @@ defmodule LightningWeb.Components.Credentials do
               class="group relative -mr-1 h-3.5 w-3.5 rounded-sm hover:bg-gray-500/20"
             >
               <span class="sr-only">Remove</span>
-                <Heroicons.x_mark solid class="w-4 h-4" />
+              <Heroicons.x_mark solid class="w-4 h-4" />
               <span class="absolute -inset-1"></span>
             </button>
           </span>
