@@ -61,7 +61,7 @@ defmodule Lightning.Invocation do
           Dataclip.t() | nil
   def get_dataclip_for_run(run_id) do
     query =
-      from d in Query.dataclip_with_body(),
+      from d in Dataclip,
         join: a in Lightning.Run,
         on: a.dataclip_id == d.id and a.id == ^run_id
 
@@ -75,7 +75,7 @@ defmodule Lightning.Invocation do
           Dataclip.t() | nil
   def get_dataclip_for_run_and_job(run_id, job_id) do
     query =
-      from d in Query.dataclip_with_body(),
+      from d in Dataclip,
         join: s in Lightning.Invocation.Step,
         on: s.input_dataclip_id == d.id and s.job_id == ^job_id,
         join: a in assoc(s, :runs),

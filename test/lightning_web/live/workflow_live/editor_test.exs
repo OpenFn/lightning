@@ -376,9 +376,12 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       })
       |> render_submit()
 
-      assert render(view) =~ body["val"]
-
       new_dataclip = Lightning.Repo.one(dataclip_query)
+
+      assert has_element?(
+               view,
+               "#manual-job-#{job.id} form [phx-hook='DataclipViewer'][data-id='#{new_dataclip.id}']"
+             )
 
       element =
         view
@@ -729,8 +732,10 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       refute run.dataclip_id == output_dataclip.id
 
       # the form has the dataclips body
-      assert element(view, "#manual-job-#{job_2.id} form") |> render() =~
-               output_dataclip.body["val"]
+      assert has_element?(
+               view,
+               "#manual-job-#{job_2.id} form [phx-hook='DataclipViewer'][data-id='#{output_dataclip.id}']"
+             )
 
       # the step dataclip is selected
       element =
@@ -897,9 +902,15 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       assert render(element) =~ "selected"
 
       # the body is rendered correctly
-      form = element(view, "#manual-job-#{job_2.id} form")
-      assert render(form) =~ output_dataclip.body["uuid"]
-      refute render(form) =~ "Input data for this step has not been retained"
+      form = "#manual-job-#{job_2.id} form"
+
+      assert has_element?(
+               view,
+               "#{form} [phx-hook='DataclipViewer'][data-id='#{output_dataclip.id}']"
+             )
+
+      refute view |> element(form) |> render() =~
+               "Input data for this step has not been retained"
 
       # Wait out all the async renders on RunViewerLive, avoiding Postgrex client
       # disconnection warnings.
@@ -1230,8 +1241,13 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
         )
 
       # dataclip body is displayed
+      assert has_element?(
+               view,
+               "#manual-job-#{job_1.id} [phx-hook='DataclipViewer'][data-id='#{input_dataclip.id}']"
+             ),
+             "dataclip body is present"
+
       html = view |> element("#manual-job-#{job_1.id}") |> render()
-      assert html =~ unique_val, "dataclip body is present"
       refute html =~ "data for this step has not been retained"
 
       # let's subscribe to events to make sure we're in sync with liveview
@@ -1249,8 +1265,11 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       }
 
       # dataclip body is still present
-      html = view |> element("#manual-job-#{job_1.id}") |> render()
-      assert html =~ unique_val, "dataclip body is present when the step starts"
+      assert has_element?(
+               view,
+               "#manual-job-#{job_1.id} [phx-hook='DataclipViewer'][data-id='#{input_dataclip.id}']"
+             ),
+             "dataclip body is present when the step starts"
 
       # lets wipe the dataclip
       Lightning.Runs.wipe_dataclips(run)
@@ -1265,8 +1284,13 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       render(view)
 
       # dataclip body is nolonger present
+      refute has_element?(
+               view,
+               "#manual-job-#{job_1.id} [phx-hook='DataclipViewer'][data-id='#{input_dataclip.id}']"
+             ),
+             "dataclip body has been removed"
+
       html = view |> element("#manual-job-#{job_1.id}") |> render()
-      refute html =~ unique_val, "dataclip body has been removed"
       assert html =~ "data for this step has not been retained"
     end
 
@@ -1558,16 +1582,17 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
         assert html =~ log_line.message
 
         # input tab shows correct information
-        html =
-          run_view |> element("div[data-panel-hash='input']") |> render_async()
 
-        assert html =~ input_dataclip.body["input"]
+        assert has_element?(
+                 run_view,
+                 "div[data-panel-hash='input'] [phx-hook='DataclipViewer'][data-id='#{input_dataclip.id}']"
+               )
 
         # output tab shows correct information
-        html =
-          run_view |> element("div[data-panel-hash='output']") |> render_async()
-
-        assert html =~ output_dataclip.body["output"]
+        assert has_element?(
+                 run_view,
+                 "div[data-panel-hash='output'] [phx-hook='DataclipViewer'][data-id='#{output_dataclip.id}']"
+               )
       end
     end
   end

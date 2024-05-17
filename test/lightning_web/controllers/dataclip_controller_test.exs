@@ -1,7 +1,6 @@
-defmodule LightningWeb.RunLive.StreamingTest do
-  use Lightning.DataCase, async: true
-
-  alias LightningWeb.RunLive.Streaming
+defmodule LightningWeb.DataclipControllerTest do
+  use LightningWeb.ConnCase
+  import Lightning.Factories
 
   defp create_steps_dataclips(_context) do
     user = insert(:user)
@@ -111,20 +110,27 @@ defmodule LightningWeb.RunLive.StreamingTest do
       run: run,
       output_dataclip: output_dataclip,
       job: job2,
-      step2: step2
+      step2: step2,
+      user: user
     }
   end
 
-  describe "get_dataclip_lines" do
+  describe "GET /dataclip/body/:id" do
     setup :create_steps_dataclips
 
-    test "streams scrubbed lines from step_result dataclip", %{
+    setup %{conn: conn, user: user} do
+      %{conn: log_in_user(conn, user)}
+    end
+
+    test "scrubbs lines from step_result dataclip", %{
+      conn: conn,
       step2: selected_step
     } do
-      dataclip_lines =
-        Streaming.get_dataclip_lines(selected_step, :output_dataclip)
-        |> elem(1)
-        |> Enum.to_list()
+      conn = get(conn, ~p"/dataclip/body/#{selected_step.output_dataclip_id}")
+
+      body = response(conn, 200)
+
+      dataclip_lines = String.split(body, "\n")
 
       # foo: "bar" is not scrubbed because it is from a following job executed on step3
       expected_lines = [
@@ -136,11 +142,82 @@ defmodule LightningWeb.RunLive.StreamingTest do
         ~S("foo":"bar")
       ]
 
-      Enum.each(dataclip_lines, fn %{line: line} ->
+      Enum.each(dataclip_lines, fn line ->
         Enum.any?(expected_lines, fn expected_line ->
           String.contains?(line, expected_line)
         end)
       end)
+    end
+
+    test "returns 304 when the dataclip is not outdated", %{
+      conn: conn,
+      output_dataclip: dataclip
+    } do
+      last_modified =
+        Timex.format!(
+          dataclip.updated_at,
+          "%a, %d %b %Y %H:%M:%S GMT",
+          :strftime
+        )
+
+      conn =
+        conn
+        |> put_req_header("if-modified-since", last_modified)
+        |> get(~p"/dataclip/body/#{dataclip.id}")
+
+      assert conn.status == 304
+    end
+
+    test "returns 200 when the dataclip is outdated", %{
+      conn: conn,
+      output_dataclip: dataclip
+    } do
+      last_modified =
+        dataclip.updated_at
+        |> DateTime.add(-20)
+        |> Timex.format!(
+          "%a, %d %b %Y %H:%M:%S GMT",
+          :strftime
+        )
+
+      conn =
+        conn
+        |> put_req_header("if-modified-since", last_modified)
+        |> get(~p"/dataclip/body/#{dataclip.id}")
+
+      assert response(conn, 200) =~ "some-bars"
+      assert get_resp_header(conn, "cache-control") == ["private, max-age=86400"]
+      assert get_resp_header(conn, "vary") == ["Accept-Encoding, Cookie"]
+
+      assert get_resp_header(conn, "last-modified") == [
+               Timex.format!(
+                 dataclip.updated_at,
+                 "%a, %d %b %Y %H:%M:%S GMT",
+                 :strftime
+               )
+             ]
+    end
+
+    test "handles invalid If-Modified-Since header gracefully", %{
+      conn: conn,
+      output_dataclip: dataclip
+    } do
+      conn =
+        conn
+        |> put_req_header("if-modified-since", "invalid-date-format")
+        |> get(~p"/dataclip/body/#{dataclip.id}")
+
+      assert response(conn, 200) =~ "some-bars"
+    end
+
+    test "returns 403 when the user is not part of the dataclip's project", %{
+      conn: conn,
+      output_dataclip: dataclip
+    } do
+      user = insert(:user)
+      conn = conn |> log_in_user(user) |> get(~p"/dataclip/body/#{dataclip.id}")
+
+      assert conn.status == 403
     end
   end
 end

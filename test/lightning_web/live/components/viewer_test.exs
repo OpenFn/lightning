@@ -81,14 +81,9 @@ defmodule LightningWeb.Components.ViewerTest do
       html =
         render_component(&Viewers.step_dataclip_viewer/1,
           id: "test",
-          stream: [],
-          stream_empty?: true,
           step: finished_step,
           run_state: :lost,
-          dataclip: %Phoenix.LiveView.AsyncResult{
-            ok?: false,
-            loading: [:input_dataclip]
-          },
+          dataclip: nil,
           input_or_output: :input,
           project_id: project.id,
           admin_contacts: ["test@email.com"],
@@ -105,8 +100,6 @@ defmodule LightningWeb.Components.ViewerTest do
       html =
         render_component(&Viewers.step_dataclip_viewer/1,
           id: "test",
-          stream: [],
-          stream_empty?: true,
           step: finished_step,
           run_state: :success,
           dataclip: wiped_dataclip,
@@ -125,8 +118,6 @@ defmodule LightningWeb.Components.ViewerTest do
       html =
         render_component(&Viewers.step_dataclip_viewer/1,
           id: "test",
-          stream: [],
-          stream_empty?: true,
           step: finished_step,
           run_state: :success,
           dataclip: wiped_dataclip,
@@ -145,8 +136,6 @@ defmodule LightningWeb.Components.ViewerTest do
       html =
         render_component(&Viewers.step_dataclip_viewer/1,
           id: "test",
-          stream: [],
-          stream_empty?: true,
           step: finished_step,
           run_state: :success,
           dataclip: nil,
@@ -163,8 +152,6 @@ defmodule LightningWeb.Components.ViewerTest do
       html =
         render_component(&Viewers.step_dataclip_viewer/1,
           id: "test",
-          stream: [],
-          stream_empty?: true,
           step: running_step,
           run_state: :pending,
           dataclip: nil,
@@ -179,30 +166,7 @@ defmodule LightningWeb.Components.ViewerTest do
       refute html =~ "this policy\n      </a>\n      for future runs"
       refute html =~ "test@email.com"
 
-      # loading async result always shows the pending state
-      html =
-        render_component(&Viewers.step_dataclip_viewer/1,
-          id: "test",
-          stream: [],
-          stream_empty?: true,
-          run_state: :pending,
-          step: finished_step,
-          dataclip: %Phoenix.LiveView.AsyncResult{
-            ok?: false,
-            loading: [:input_dataclip]
-          },
-          input_or_output: :input,
-          project_id: project.id,
-          admin_contacts: ["test@email.com"],
-          can_edit_data_retention: true
-        )
-
-      assert html =~ "Nothing yet"
-      refute html =~ "data for this step has not been retained"
-      refute html =~ "this policy\n      </a>\n      for future runs"
-      refute html =~ "test@email.com"
-
-      # completed async result shows the right information
+      # finished step with dataclip shows the right information
       html =
         render_component(&Viewers.step_dataclip_viewer/1,
           id: "test",
@@ -210,11 +174,7 @@ defmodule LightningWeb.Components.ViewerTest do
           stream_empty?: true,
           step: finished_step,
           run_state: :success,
-          dataclip: %Phoenix.LiveView.AsyncResult{
-            ok?: true,
-            loading: nil,
-            result: wiped_dataclip
-          },
+          dataclip: wiped_dataclip,
           input_or_output: :input,
           project_id: project.id,
           admin_contacts: ["test@email.com"],

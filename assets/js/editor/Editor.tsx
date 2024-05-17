@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
-import Monaco from '@monaco-editor/react';
+import MonacoEditor, { Monaco } from '@monaco-editor/react';
 import type { EditorProps as MonacoProps } from '@monaco-editor/react/lib/types';
 
 import { fetchDTSListing, fetchFile } from '@openfn/describe-package';
@@ -8,6 +8,7 @@ import { initiateSaveAndRun } from '../common';
 
 // static imports for core lib
 import dts_es5 from './lib/es5.min.dts';
+import { setTheme } from '../monaco';
 
 export const DEFAULT_TEXT =
   '// Get started by adding operations from the API reference\n';
@@ -44,7 +45,7 @@ const spinner = (
 );
 
 const loadingIndicator = (
-  <div className="bg-vs-dark inline-block p-2">
+  <div className="inline-block p-2">
     <span className="mr-2">Loading</span>
     {spinner}
   </div>
@@ -153,16 +154,22 @@ export default function Editor({
 }: EditorProps) {
   const [lib, setLib] = useState<Lib[]>();
   const [loading, setLoading] = useState(false);
-  const [monaco, setMonaco] = useState<typeof Monaco>();
   const [options, setOptions] = useState(defaultOptions);
   const listeners = useRef<{
     insertSnippet?: EventListenerOrEventListenerObject;
     updateLayout?: any;
   }>({});
 
+  const monacoRef = useRef<any>(null);
+
+  const beforeMount = (monaco: Monaco) => {
+    monacoRef.current = monaco;
+    setTheme(monaco);
+  };
+
   const handleSourceChange = useCallback(
-    (newSource: string) => {
-      if (onChange) {
+    (newSource: string | undefined) => {
+      if (onChange && newSource) {
         onChange(newSource);
       }
     },
@@ -170,8 +177,8 @@ export default function Editor({
   );
 
   const handleEditorDidMount = useCallback(
-    (editor: any, monaco: typeof Monaco) => {
-      setMonaco(monaco);
+    (editor: any, _monaco: Monaco) => {
+      let monaco = monacoRef.current;
 
       editor.addCommand(
         monaco.KeyCode.Escape,
@@ -264,6 +271,7 @@ export default function Editor({
   );
 
   useEffect(() => {
+    let monaco = monacoRef.current;
     if (monaco && metadata) {
       const p = monaco.languages.registerCompletionItemProvider(
         'javascript',
@@ -277,28 +285,7 @@ export default function Editor({
         p.dispose();
       };
     }
-  }, [monaco, metadata]);
-
-  useEffect(() => {
-    if (monaco) {
-      monaco.editor.defineTheme('default', {
-        base: 'vs-dark',
-        inherit: true,
-        rules: [],
-        colors: {
-          'editor.foreground': '#E2E8F0',
-          'editor.background': '#334155', // slate-700
-          'editor.lineHighlightBackground': '#475569', // slate-600
-          'editor.selectionBackground': '#4f5b66',
-          'editorCursor.foreground': '#c0c5ce',
-          'editorWhitespace.foreground': '#65737e',
-          'editorIndentGuide.background': '#65737F',
-          'editorIndentGuide.activeBackground': '#FBC95A',
-        },
-      });
-      monaco.editor.setTheme('default');
-    }
-  });
+  }, [monacoRef, metadata]);
 
   useEffect(() => {
     // Create a node to hold overflow widgets
@@ -337,22 +324,24 @@ export default function Editor({
   }, [adaptor]);
 
   useEffect(() => {
-    if (monaco) {
-      monaco.languages.typescript.javascriptDefaults.setExtraLibs(lib);
-    }
-  }, [monaco, lib]);
+    monacoRef.current?.languages.typescript.javascriptDefaults.setExtraLibs(
+      lib
+    );
+  }, [monacoRef, lib]);
 
   return (
     <>
       <div className="relative z-10 h-0 overflow-visible text-right text-xs text-white">
         {loading && loadingIndicator}
       </div>
-      <Monaco
+      <MonacoEditor
         defaultLanguage="javascript"
         theme="default"
         defaultPath="/job.js"
+        loading={<div>Loading...</div>}
         value={source || DEFAULT_TEXT}
         options={options}
+        beforeMount={beforeMount}
         onMount={handleEditorDidMount}
         onChange={handleSourceChange}
       />

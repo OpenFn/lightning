@@ -184,11 +184,9 @@ defmodule LightningWeb.RunLive.Show do
                   stream_empty?={@log_lines_stream_empty?}
                 />
               </Common.panel_content>
-              <Common.panel_content for_hash="input">
+              <Common.panel_content for_hash="input" class="flex-1">
                 <Viewers.step_dataclip_viewer
                   id={"step-input-#{@selected_step_id}"}
-                  stream={@streams.input_dataclip}
-                  stream_empty?={@input_dataclip_stream_empty?}
                   run_state={@run.result.state}
                   step={@selected_step}
                   dataclip={@input_dataclip}
@@ -198,11 +196,9 @@ defmodule LightningWeb.RunLive.Show do
                   can_edit_data_retention={@can_edit_data_retention}
                 />
               </Common.panel_content>
-              <Common.panel_content for_hash="output">
+              <Common.panel_content for_hash="output" class="flex-1">
                 <Viewers.step_dataclip_viewer
                   id={"step-output-#{@selected_step_id}"}
-                  stream={@streams.output_dataclip}
-                  stream_empty?={@output_dataclip_stream_empty?}
                   run_state={@run.result.state}
                   step={@selected_step}
                   dataclip={@output_dataclip}
@@ -236,12 +232,8 @@ defmodule LightningWeb.RunLive.Show do
      )
      |> stream(:log_lines, [])
      |> assign(:log_lines_stream_empty?, true)
-     |> stream(:input_dataclip, [])
-     |> assign(:input_dataclip_stream_empty?, true)
-     |> assign(:input_dataclip, false)
-     |> stream(:output_dataclip, [])
-     |> assign(:output_dataclip_stream_empty?, true)
-     |> assign(:output_dataclip, false)
+     |> assign(:input_dataclip, nil)
+     |> assign(:output_dataclip, nil)
      |> assign(:run, AsyncResult.loading())
      |> assign(:log_lines, AsyncResult.loading())
      |> assign(

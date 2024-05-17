@@ -29,7 +29,7 @@ defmodule Lightning.Invocation.Dataclip do
           __meta__: Ecto.Schema.Metadata.t(),
           id: Ecto.UUID.t() | nil,
           project_id: Ecto.UUID.t() | nil,
-          body: %{} | nil,
+          body: %{} | String.t() | nil,
           request: %{} | nil,
           source_step: Step.t() | Ecto.Association.NotLoaded.t() | nil
         }

@@ -29,11 +29,13 @@ import * as Hooks from './hooks';
 import JobEditor from './job-editor';
 import JobEditorResizer from './job-editor-resizer/mount';
 import WorkflowEditor from './workflow-editor';
+import DataclipViewer from './dataclip-viewer';
 
 let hooks = {
   JobEditor,
   JobEditorResizer,
   WorkflowEditor,
+  DataclipViewer,
   ...Hooks,
 };
 

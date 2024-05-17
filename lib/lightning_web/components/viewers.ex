@@ -14,7 +14,6 @@ defmodule LightningWeb.Components.Viewers do
 
   alias Lightning.Invocation.Dataclip
   alias LightningWeb.Components.Icon
-  alias Phoenix.LiveView.AsyncResult
 
   require Lightning.Run
 
@@ -111,94 +110,25 @@ defmodule LightningWeb.Components.Viewers do
   end
 
   attr :id, :string, required: true
-
-  attr :stream, :list,
-    required: true,
-    doc: """
-    A stream of lines to render. In the shape of `%{id: String.t(), line: String.t(), index: integer()}`
-    """
-
-  attr :stream_empty?, :boolean, required: true
-
-  attr :run_state, :any, required: true
-
-  attr :input_or_output, :atom, required: true, values: [:input, :output]
-
-  attr :class, :string,
-    default: nil,
-    doc: "Additional classes to add to the log viewer container"
-
-  attr :type, :atom,
-    default: nil,
-    values: [nil | Dataclip.source_types()]
+  attr :dataclip, :map, required: true
 
   def dataclip_viewer(assigns) do
     ~H"""
-    <div class={[
-      "rounded-md shadow-sm bg-slate-700 border-slate-300",
-      "text-slate-200 text-sm font-mono w-full h-full relative",
-      @class
-    ]}>
-      <.dataclip_type :if={@type} type={@type} id={"#{@id}-type"} />
-      <div
-        class={[
-          "overscroll-contain scroll-smooth",
-          "grid grid-flow-row-dense grid-cols-[min-content_1fr]",
-          "min-h-[2rem]",
-          "log-viewer relative"
-        ]}
-        id={@id}
-        phx-update="stream"
-      >
-        <div
-          :for={{dom_id, %{line: line, index: index}} <- @stream}
-          class="group contents"
-          id={dom_id}
-        >
-          <div class="log-viewer__prefix" data-line-prefix={index}></div>
-          <div data-log-line class="log-viewer__message">
-            <pre class="whitespace-break-spaces"><%= line %></pre>
-          </div>
-        </div>
-      </div>
-      <%= if @run_state in Lightning.Run.final_states() and @stream_empty? do %>
-        <div class={[
-          "m-2 relative rounded-md",
-          "p-12 text-center col-span-full"
-        ]}>
-          <span class="relative inline-flex">
-            <div class="inline-flex">
-              No <%= @input_or_output %> state could be saved for this run.
-            </div>
-          </span>
-        </div>
-      <% else %>
-        <div
-          :if={@stream_empty?}
-          id={"#{@id}-nothing-yet"}
-          class={[
-            "m-2 relative rounded-md",
-            "p-12 text-center col-span-full"
-          ]}
-        >
-          <.text_ping_loader>
-            Nothing yet
-          </.text_ping_loader>
-        </div>
-      <% end %>
+    <div
+      id={@id}
+      class="h-full relative"
+      phx-hook="DataclipViewer"
+      phx-update="ignore"
+      data-id={@dataclip.id}
+      data-target={"#{@id}-viewer"}
+    >
+      <.dataclip_type id={"#{@id}-type"} type={@dataclip.type} />
+      <div id={"#{@id}-viewer"} class="h-full"></div>
     </div>
     """
   end
 
   attr :id, :string, required: true
-
-  attr :stream, :list,
-    required: true,
-    doc: """
-    A stream of lines to render. In the shape of `%{id: String.t(), line: String.t(), index: integer()}`
-    """
-
-  attr :stream_empty?, :boolean, required: true
 
   attr :run_state, :any, required: true
 
@@ -207,7 +137,7 @@ defmodule LightningWeb.Components.Viewers do
     doc: "Additional classes to add to the log viewer container"
 
   attr :step, :map
-  attr :dataclip, :map, doc: "Can be an `AsyncResult` or `Dataclip`"
+  attr :dataclip, Dataclip
   attr :input_or_output, :atom, required: true, values: [:input, :output]
   attr :project_id, :string, required: true
 
@@ -228,20 +158,43 @@ defmodule LightningWeb.Components.Viewers do
         project_id={@project_id}
       />
     <% else %>
-      <.dataclip_viewer
-        id={@id}
-        class={@class}
-        stream={@stream}
-        stream_empty?={@stream_empty?}
-        input_or_output={@input_or_output}
-        run_state={@run_state}
-        type={
-          case @dataclip do
-            %AsyncResult{ok?: true, result: %{type: type}} -> type
-            %{type: type} -> type
-            _ -> nil
-          end
+      <div
+        :if={
+          @run_state in Lightning.Run.final_states() and
+            is_nil(@dataclip)
         }
+        class={[
+          "m-2 relative rounded-md",
+          "p-12 text-center col-span-full"
+        ]}
+      >
+        <span class="relative inline-flex">
+          <div class="inline-flex">
+            No <%= @input_or_output %> state could be saved for this run.
+          </div>
+        </span>
+      </div>
+
+      <div
+        :if={
+          @run_state not in Lightning.Run.final_states() and
+            is_nil(@dataclip)
+        }
+        id={"#{@id}-nothing-yet"}
+        class={[
+          "m-2 relative rounded-md",
+          "p-12 text-center col-span-full"
+        ]}
+      >
+        <.text_ping_loader>
+          Nothing yet
+        </.text_ping_loader>
+      </div>
+
+      <.dataclip_viewer
+        :if={@dataclip}
+        id={"step-#{@input_or_output}-dataclip-viewer"}
+        dataclip={@dataclip}
       />
     <% end %>
     """
@@ -328,9 +281,11 @@ defmodule LightningWeb.Components.Viewers do
         "absolute top-0 right-0 flex items-center gap-2 group z-10"
       ]}
     >
-      <div class="hidden group-hover:block font-mono">type: <%= @type %></div>
+      <div class="hidden group-hover:block font-mono text-white text-xs">
+        type: <%= @type %>
+      </div>
       <div class={[
-        "rounded-bl-md rounded-tr-md p-1 opacity-70 group-hover:opacity-100 content-center",
+        "rounded-bl-md rounded-tr-md p-1 pt-0 opacity-70 group-hover:opacity-100 content-center",
         @color
       ]}>
         <.icon :if={@icon} name={@icon} class="h-4 w-4 inline-block align-middle" />
@@ -342,18 +297,6 @@ defmodule LightningWeb.Components.Viewers do
   defp step_finished?(%{finished_at: %_{}}), do: true
 
   defp step_finished?(_other), do: false
-
-  defp dataclip_wiped?(_step, %AsyncResult{ok?: false}, _input_or_output) do
-    false
-  end
-
-  defp dataclip_wiped?(
-         step,
-         %AsyncResult{ok?: true, result: result},
-         input_or_output
-       ) do
-    dataclip_wiped?(step, result, input_or_output)
-  end
 
   defp dataclip_wiped?(_step, %{wiped_at: %_{}} = _dataclip, _input_or_output) do
     true

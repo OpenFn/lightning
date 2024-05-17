@@ -23,7 +23,7 @@ defmodule LightningWeb.Dev.ComponentsLive do
        log_lines: lines,
        highlight_id: highlight_id
      )
-     |> stream(
+     |> assign(
        :dataclip,
        dataclip()
        |> Enum.with_index(1)
@@ -43,14 +43,14 @@ defmodule LightningWeb.Dev.ComponentsLive do
           </li>
           <.variation title="For a dataclip">
             <div class="max-h-[400px] inline-flex">
-              <Viewers.dataclip_viewer
+              <%!-- <Viewers.dataclip_viewer
                 id="dataclip-viewer"
                 stream={@streams.dataclip}
                 run_state={%Run{state: :success}}
                 input_or_output={:output}
                 stream_empty?={false}
                 class=""
-              />
+              /> --%>
             </div>
           </.variation>
           <.variation title="With data">
