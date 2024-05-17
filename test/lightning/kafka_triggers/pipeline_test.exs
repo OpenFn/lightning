@@ -3,6 +3,7 @@ defmodule Lightning.KafkaTriggers.PipelineTest do
 
   import Mock
 
+  alias Ecto.Changeset
   alias Lightning.KafkaTriggers.TriggerKafkaMessageRecord
   alias Lightning.KafkaTriggers.Pipeline
   alias Lightning.Repo
@@ -213,6 +214,22 @@ defmodule Lightning.KafkaTriggers.PipelineTest do
 
       assert trigger_1_timestamps == partition_timestamps()
       assert trigger_2_timestamps == partition_timestamps()
+    end
+
+    test "raises error on non-duplicate TriggerKafkaMessageRecord save error", %{
+      context: context
+    } do
+      message = build_broadway_message()
+
+      Pipeline.handle_message(nil, message, context)
+
+      with_mock Repo,
+        [insert: fn _ -> {:error, %Changeset{}} end] do
+
+        assert_raise RuntimeError, ~r/Unhandled error/, fn -> 
+          Pipeline.handle_message(nil, message, context)
+        end
+      end
     end
 
     defp build_broadway_message do
