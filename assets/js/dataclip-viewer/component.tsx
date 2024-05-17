@@ -1,5 +1,22 @@
-import React, { useEffect, useRef, useState } from 'react';
 import MonacoEditor from '@monaco-editor/react';
+import React, { useEffect, useRef, useState } from 'react';
+import { createRoot } from 'react-dom/client';
+
+export function mount(el: HTMLElement, dataclipId: string) {
+  const componentRoot = createRoot(el);
+
+  render(dataclipId);
+
+  function render(dataclipId: string) {
+    componentRoot.render(<EditorComponent dataclipId={dataclipId} />);
+  }
+
+  function unmount() {
+    return componentRoot.unmount();
+  }
+
+  return { unmount, render };
+}
 
 const EditorComponent = ({ dataclipId }: { dataclipId: string }) => {
   const [content, setContent] = useState<string>('');
@@ -39,9 +56,10 @@ const EditorComponent = ({ dataclipId }: { dataclipId: string }) => {
 
     fetchDataclipContent().then(fetchedContent => {
       setContent(fetchedContent);
-      if (editorRef.current) {
-        editorRef.current.setValue(fetchedContent);
-      }
+      // Why is this needed, isn't just setting the content via useState enough?
+      // if (editorRef.current) {
+      //   editorRef.current.setValue(fetchedContent);
+      // }
     });
   }, [dataclipId]);
 
@@ -51,9 +69,17 @@ const EditorComponent = ({ dataclipId }: { dataclipId: string }) => {
       theme="vs-dark"
       value={content}
       onMount={editor => (editorRef.current = editor)}
-      options={{ readOnly: true }}
+      options={{
+        readOnly: true,
+        lineNumbersMinChars: 3,
+        tabSize: 2,
+        scrollBeyondLastLine: false,
+        overviewRulerLanes: 0,
+        overviewRulerBorder: false,
+        fontFamily: 'Fira Code VF',
+        fontSize: 14,
+        fontLigatures: true,
+      }}
     />
   );
 };
-
-export default EditorComponent;

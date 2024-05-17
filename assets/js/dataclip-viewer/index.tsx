@@ -1,15 +1,22 @@
-import React from 'react';
-import { createRoot } from 'react-dom/client';
+import { PhoenixHook } from '../hooks/PhoenixHook';
+import type { mount } from './component';
 
-const DataclipViewer = {
-  root: null as ReturnType<typeof createRoot> | null,
+type DataclipViewer = PhoenixHook<
+  {
+    component: ReturnType<typeof mount> | null;
+    componentModule: Promise<{ mount: typeof mount }>;
+  },
+  { target: string; id: string }
+>;
 
-  mounted() {
+export default {
+  mounted(this: DataclipViewer) {
     const editorContainer = document.getElementById(this.el.dataset.target);
+    this.componentModule = import('./component.js');
+
     if (editorContainer) {
-      import('./component').then(({ default: EditorComponent }) => {
-        this.root = createRoot(editorContainer);
-        this.root.render(<EditorComponent dataclipId={this.el.dataset.id} />);
+      this.componentModule.then(({ mount }) => {
+        this.component = mount(editorContainer, this.el.dataset.id);
       });
     } else {
       console.error(
@@ -19,18 +26,10 @@ const DataclipViewer = {
   },
 
   updated() {
-    if (this.root) {
-      import('./component').then(({ default: EditorComponent }) => {
-        this.root.render(<EditorComponent dataclipId={this.el.dataset.id} />);
-      });
-    }
+    this.component?.render(this.el.dataset.id);
   },
 
   destroyed() {
-    if (this.root) {
-      this.root.unmount();
-    }
+    this.component?.unmount();
   },
-};
-
-export default DataclipViewer;
+} as DataclipViewer;
