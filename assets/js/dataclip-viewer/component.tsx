@@ -56,10 +56,6 @@ const EditorComponent = ({ dataclipId }: { dataclipId: string }) => {
 
     fetchDataclipContent().then(fetchedContent => {
       setContent(fetchedContent);
-      // Why is this needed, isn't just setting the content via useState enough?
-      // if (editorRef.current) {
-      //   editorRef.current.setValue(fetchedContent);
-      // }
     });
   }, [dataclipId]);
 
