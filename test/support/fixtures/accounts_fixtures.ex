@@ -13,7 +13,8 @@ defmodule Lightning.AccountsFixtures do
     Enum.into(attrs, %{
       email: unique_user_email(),
       password: valid_user_password(),
-      first_name: valid_first_name()
+      first_name: valid_first_name(),
+      last_name: "Last"
     })
   end
 

@@ -99,6 +99,7 @@ defmodule Lightning.Accounts.User do
         ]
     )
     |> validate_email()
+    |> validate_name()
     |> validate_password(opts)
     |> validate_change(:terms_accepted, fn :terms_accepted, terms_accepted ->
       if terms_accepted do

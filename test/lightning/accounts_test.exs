@@ -446,7 +446,7 @@ defmodule Lightning.AccountsTest do
     test "returns a changeset" do
       assert %Ecto.Changeset{} = changeset = Accounts.change_user_registration()
 
-      assert changeset.required == [:password, :email]
+      assert changeset.required == [:password, :first_name, :last_name, :email]
     end
 
     test "allows fields to be set" do
