@@ -34,7 +34,7 @@ defmodule LightningWeb.DataclipController do
 
     conn
     |> put_resp_content_type("text/plain")
-    |> put_resp_header("cache-control", "no-cache, private, max-age=#{@max_age}")
+    |> put_resp_header("cache-control", "private, max-age=#{@max_age}")
     |> put_resp_header("last-modified", to_rfc1123!(dataclip.updated_at))
     |> send_resp(200, body)
   end
