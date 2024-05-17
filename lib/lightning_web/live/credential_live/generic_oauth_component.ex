@@ -406,15 +406,7 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
     |> Credentials.create_credential()
     |> case do
       {:ok, credential} ->
-        if socket.assigns[:on_save] do
-          socket.assigns[:on_save].(credential)
-          {:noreply, push_event(socket, "close_modal", %{})}
-        else
-          {:noreply,
-           socket
-           |> put_flash(:info, "Credential created successfully")
-           |> push_redirect(to: socket.assigns.return_to)}
-        end
+        Helpers.handle_save_response(socket, credential)
 
       {:error, %Ecto.Changeset{} = changeset} ->
         {:noreply, assign(socket, :changeset, changeset)}
