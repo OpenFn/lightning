@@ -32,14 +32,12 @@
           type="button"
           id="open-create-oauth-client-modal-big-buttton"
           phx-click={show_modal("new-oauth-client-modal")}
-          class="relative block w-full rounded-lg border-2 border-dashed border-gray-300 p-10 text-center hover:border-gray-400 focus:outline-none"
+          class="relative block w-full rounded-lg border-2 border-dashed border-gray-300 p-4 text-center hover:border-gray-400 focus:outline-none"
         >
-          <div class="m-2">
-            <Heroicons.plus_circle class="mx-auto w-12 h-12 text-secondary-400" />
-            <span class="mt-2 block text-xs font-semibold text-secondary-600">
-              Create a new OAuth client
-            </span>
-          </div>
+          <Heroicons.plus_circle class="mx-auto w-12 h-12 text-secondary-400" />
+          <span class="mt-2 block text-xs font-semibold text-secondary-600">
+            Create a new OAuth client
+          </span>
         </button>
       </:empty_state>
       <:actions :let={client}>
@@ -88,14 +86,12 @@
           type="button"
           id="open-create-credential-modal-big-buttton"
           phx-click={show_modal("new-credential-modal")}
-          class="relative block w-full rounded-lg border-2 border-dashed border-gray-300 p-10 text-center hover:border-gray-400 focus:outline-none"
+          class="relative block w-full rounded-lg border-2 border-dashed border-gray-300 p-4 text-center hover:border-gray-400 focus:outline-none"
         >
-          <div class="m-2">
-            <Heroicons.plus_circle class="mx-auto w-12 h-12 text-secondary-400" />
-            <span class="mt-2 block text-xs font-semibold text-secondary-600">
-              Create a new Credential
-            </span>
-          </div>
+          <Heroicons.plus_circle class="mx-auto w-12 h-12 text-secondary-400" />
+          <span class="mt-2 block text-xs font-semibold text-secondary-600">
+            Create a new Credential
+          </span>
         </button>
       </:empty_state>
       <:actions :let={credential}>
