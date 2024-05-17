@@ -2,6 +2,7 @@ defmodule Lightning.Credentials do
   @moduledoc """
   The Credentials context.
   """
+
   use Oban.Worker,
     queue: :background,
     max_attempts: 1
@@ -13,6 +14,7 @@ defmodule Lightning.Credentials do
   alias Lightning.Accounts.User
   alias Lightning.Accounts.UserNotifier
   alias Lightning.AuthProviders.Common
+  alias Lightning.AuthProviders.OauthHTTPClient
   alias Lightning.Credentials
   alias Lightning.Credentials.Audit
   alias Lightning.Credentials.Credential
@@ -551,32 +553,64 @@ defmodule Lightning.Credentials do
     project_credentials -- project_users
   end
 
-  def maybe_refresh_token(%Credential{schema: schema} = credential) do
-    case lookup_adapter(schema) do
-      nil ->
+  def maybe_refresh_token(%Credential{schema: "oauth"} = credential) do
+    cond do
+      OauthHTTPClient.still_fresh(credential.body) ->
         {:ok, credential}
 
-      adapter ->
-        token = Common.TokenBody.new(credential.body)
+      is_nil(credential.oauth_client_id) ->
+        {:ok, credential}
 
-        if Common.still_fresh(token) do
-          {:ok, credential}
-        else
-          wellknown_url = adapter.wellknown_url(token.sandbox)
+      true ->
+        %{oauth_client: oauth_client, body: rotten_token} =
+          Lightning.Repo.preload(credential, :oauth_client)
 
-          {:ok, refreshed_token} =
-            adapter.refresh_token(token, wellknown_url)
+        case OauthHTTPClient.refresh_token(
+               oauth_client.client_id,
+               oauth_client.client_secret,
+               rotten_token["refresh_token"],
+               oauth_client.token_endpoint
+             ) do
+          {:ok, fresh_token} ->
+            update_credential(credential, %{body: fresh_token})
 
-          update_credential(credential, %{
-            body:
-              refreshed_token
-              |> Common.TokenBody.from_oauth2_token()
-              |> Lightning.Helpers.json_safe()
-          })
+          {:error, error} ->
+            {:error, error}
         end
     end
   end
 
+  # TODO: Remove this function when deprecating salesforce and googlesheets oauth
+  def maybe_refresh_token(%Credential{schema: schema} = credential)
+      when schema in ["salesforce_oauth", "googlesheets"] do
+    token = Common.TokenBody.new(credential.body)
+
+    if Common.still_fresh(token) do
+      {:ok, credential}
+    else
+      adapter = lookup_adapter(schema)
+      wellknown_url = adapter.wellknown_url(token.sandbox)
+
+      case adapter.refresh_token(token, wellknown_url) do
+        {:ok, refreshed_token} ->
+          updated_body =
+            refreshed_token
+            |> Common.TokenBody.from_oauth2_token()
+            |> Lightning.Helpers.json_safe()
+
+          update_credential(credential, %{body: updated_body})
+
+        {:error, error} ->
+          {:error, error}
+      end
+    end
+  end
+
+  def maybe_refresh_token(%Credential{} = credential) do
+    {:ok, credential}
+  end
+
+  # TODO: Remove this function when deprecating salesforce and googlesheets oauth
   def lookup_adapter(schema) do
     case :ets.lookup(:adapter_lookup, schema) do
       [{^schema, adapter}] -> adapter
