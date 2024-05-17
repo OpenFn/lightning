@@ -26,6 +26,8 @@ and this project adheres to
 - Replace the "not working?" prompt by "All good, but if your credential stops
   working, you may need to re-authorize here.".
   [#2102](https://github.com/OpenFn/lightning/issues/1872)
+- Fix Generic Oauth credentials don't get included in the refresh flow
+  [#2106](https://github.com/OpenFn/lightning/pull/2106)
 
 ## [v2.5.0-pre2] - 2024-05-17
 
