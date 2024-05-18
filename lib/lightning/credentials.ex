@@ -567,12 +567,7 @@ defmodule Lightning.Credentials do
         %{oauth_client: oauth_client, body: rotten_token} =
           Lightning.Repo.preload(credential, :oauth_client)
 
-        case OauthHTTPClient.refresh_token(
-               oauth_client.client_id,
-               oauth_client.client_secret,
-               rotten_token["refresh_token"],
-               oauth_client.token_endpoint
-             ) do
+        case OauthHTTPClient.refresh_token(oauth_client, rotten_token) do
           {:ok, fresh_token} ->
             update_credential(credential, %{body: fresh_token})
 
