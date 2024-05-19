@@ -41,6 +41,7 @@ Lightning.Credentials.html
 Lightning.DashboardStats.ProjectMetrics.html
 Lightning.DashboardStats.WorkflowStats.html
 Lightning.DashboardStats.html
+Lightning.DataclipScrubber.html
 Lightning.Demo.html
 Lightning.ExportUtils.html
 Lightning.Extensions.FifoRunQueue.html
@@ -67,6 +68,7 @@ Lightning.MetadataService.html
 Lightning.Name.html
 Lightning.OauthClients.html
 Lightning.ObanManager.html
+Lightning.Policies.Dataclips.html
 Lightning.Policies.Permissions.html
 Lightning.Policies.ProjectUsers.html
 Lightning.Policies.Provisioning.html
@@ -179,6 +181,7 @@ LightningWeb.CredentialLive.JsonSchemaBodyComponent.html
 LightningWeb.CredentialLive.OauthClientFormComponent.html
 LightningWeb.CredentialLive.OauthComponent.html
 LightningWeb.CredentialLive.RawBodyComponent.html
+LightningWeb.DataclipController.html
 LightningWeb.DataclipLive.FormComponent.html
 LightningWeb.DataclipLive.Show.html
 LightningWeb.DownloadsController.html
@@ -286,8 +289,8 @@ dist/merriweather-latin-ext-300-normal-K6L27CZ5.woff2
 dist/merriweather-vietnamese-300-italic-EHHNZPUO.woff2
 dist/merriweather-vietnamese-300-normal-U376L4Z4.woff2
 dist/remixicon-NKANDIL5.woff2
-dist/search_data-BA40CDA4.js
-dist/sidebar_items-EFE9B330.js
+dist/search_data-35432E42.js
+dist/sidebar_items-505AA09B.js
 index.html
 provisioning.html
 readme.html
