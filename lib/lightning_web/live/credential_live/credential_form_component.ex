@@ -64,10 +64,12 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
     IO.inspect(assigns, label: "update with projects")
     pid = self()
 
+    socket = assign(socket, assigns)
+
     %{
       action: action,
       allow_credential_transfer: allow_credential_transfer
-    } = socket = assign(socket, assigns)
+    } = socket.assigns
 
     socket =
       if changed?(socket, :project) or changed?(socket, :action) do
@@ -111,7 +113,6 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
     api_version = get_api_version(assigns.credential)
 
     changeset = Credentials.change_credential(assigns.credential)
-
 
     update_body = fn body ->
       update_body(pid, assigns.id, body)
