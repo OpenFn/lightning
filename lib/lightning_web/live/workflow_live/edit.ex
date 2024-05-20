@@ -297,7 +297,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
             end
           }
           can_create_project_credential={@can_edit_workflow}
-          allow_credential_transfer={false}
           return_to={
             ~p"/projects/#{@project.id}/w/#{@workflow.id}?s=#{@selected_job.id}"
           }

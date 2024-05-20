@@ -364,7 +364,6 @@
                   projects={@projects}
                   project={@project}
                   can_create_project_credential={@can_create_project_credential}
-                  allow_credential_transfer={false}
                   current_user={@current_user}
                   return_to={~p"/projects/#{@project.id}/settings#credentials"}
                 />
@@ -396,7 +395,6 @@
             projects={@projects}
             project={@project}
             can_create_project_credential={@can_create_project_credential}
-            allow_credential_transfer={false}
             return_to={~p"/projects/#{@project.id}/settings#credentials"}
           />
           <.live_component

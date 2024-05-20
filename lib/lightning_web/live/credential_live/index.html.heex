@@ -127,7 +127,6 @@
             project={nil}
             show_project_credentials={true}
             can_create_project_credential={true}
-            allow_credential_transfer={false}
             return_to={~p"/credentials"}
           />
         </div>
@@ -164,7 +163,6 @@
       oauth_clients={@oauth_clients}
       show_project_credentials={true}
       can_create_project_credential={true}
-      allow_credential_transfer={false}
       return_to={~p"/credentials"}
     />
     <%= if @live_action == :delete do %>

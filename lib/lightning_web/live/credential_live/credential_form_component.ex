@@ -49,8 +49,6 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
 
   @impl true
   def update(%{body: body}, socket) do
-    IO.inspect("update with body")
-
     {:ok,
      update(socket, :changeset, fn changeset, %{credential: credential} ->
        params = changeset.params |> Map.put("body", body)
@@ -61,15 +59,9 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
   end
 
   def update(%{projects: projects} = assigns, socket) do
-    IO.inspect(assigns, label: "update with projects")
     pid = self()
 
     socket = assign(socket, assigns)
-
-    %{
-      action: action,
-      allow_credential_transfer: allow_credential_transfer
-    } = socket.assigns
 
     socket =
       if changed?(socket, :project) or changed?(socket, :action) do
@@ -79,7 +71,7 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
             else: OauthClients.list_clients(assigns.current_user)
 
         type_options =
-          if action == :new do
+          if assigns.action == :new do
             {:ok, schemas_path} =
               Application.fetch_env(:lightning, :schemas_path)
 
@@ -103,7 +95,7 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
       end
 
     users =
-      if allow_credential_transfer do
+      if socket.assigns.allow_credential_transfer do
         list_users()
       else
         []
@@ -124,15 +116,6 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
     page = if assigns.action === :new, do: :first, else: :second
 
     schema = assigns.credential.schema || false
-
-    # type_options =
-    #   if assigns.action === :new,
-    #     do:
-    #       socket.assigns.type_options ++
-    #         Enum.map(assigns.oauth_clients, fn client ->
-    #           {client.name, client.id, nil, "oauth"}
-    #         end),
-    #     else: []
 
     selected_projects =
       changeset
@@ -443,7 +426,6 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
           projects={@projects}
           users={@users}
           on_save={@on_save}
-          allow_credential_transfer={@allow_credential_transfer}
           return_to={@return_to}
         />
       </.modal>
