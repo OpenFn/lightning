@@ -4,6 +4,7 @@ defmodule Lightning.KafkaTriggers.Pipeline do
   import Ecto.Query
 
   alias Lightning.KafkaTriggers
+  alias Lightning.KafkaTriggers.TriggerKafkaMessage
   alias Lightning.KafkaTriggers.TriggerKafkaMessageRecord
   alias Lightning.Repo
   alias Lightning.Workflows.Trigger
@@ -39,15 +40,17 @@ defmodule Lightning.KafkaTriggers.Pipeline do
     %{
       data: data,
       metadata: %{
+        key: key,
         # offset: offset,
         partition: partition,
-        # topic: topic,
+        topic: topic,
         ts: timestamp
       }
     } = message
 
     topic_partition_offset =
       KafkaTriggers.build_topic_partition_offset(message)
+
 
     record_changeset = TriggerKafkaMessageRecord.changeset(
       %TriggerKafkaMessageRecord{},
@@ -58,11 +61,24 @@ defmodule Lightning.KafkaTriggers.Pipeline do
     )
 
     case record_changeset |> Repo.insert() do
+      # TODO Use transaction for DB operations
       {:ok, _} ->
         trigger =
           Trigger
           |> preload([:workflow])
           |> Repo.get(trigger_id |> Atom.to_string())
+
+        %TriggerKafkaMessage{}
+        |> TriggerKafkaMessage.changeset(
+          %{
+            data: data,
+            key: key,
+            message_timestamp: timestamp,
+            metadata: message.metadata,
+            topic: topic,
+            trigger_id: trigger_id |> Atom.to_string(),
+          }
+        ) |> Repo.insert()
         #
         # WorkOrders.create_for(trigger,
         #   workflow: trigger.workflow,
@@ -81,7 +97,7 @@ defmodule Lightning.KafkaTriggers.Pipeline do
         # %Broadway.Message{data: data, metadata: %{ts: ts}} = message
 
         IO.puts(">>>> #{trigger_id} received #{data} on #{partition} produced at #{timestamp}")
-        # IO.inspect(message) 
+        # IO.inspect(message)
       {:error, %{errors: [trigger_id: {_, [constraint: :unique, constraint_name: _]}]}} ->
         IO.puts("**** #{trigger_id} received DUPLICATE #{data} on #{partition} produced at #{timestamp}")
       _ ->

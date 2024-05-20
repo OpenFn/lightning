@@ -8,7 +8,7 @@ defmodule Lightning.Repo.Migrations.CreateTriggerKafkaMessages do
       add :work_order_id, references(:work_orders, type: :binary_id), null: true
       add :topic, :string, null: false
       add :key, :string, null: true
-      add :message_timestamp, :integer, null: false
+      add :message_timestamp, :bigint, null: false
       add :metadata, :map, null: false
       add :data, :binary, null: false
 
