@@ -1,6 +1,7 @@
 defmodule Lightning.KafkaTriggers do
   import Ecto.Query
 
+  alias Lightning.KafkaTriggers.TriggerKafkaMessage
   alias Lightning.Repo
   alias Lightning.Workflows.Trigger
 
@@ -110,5 +111,18 @@ defmodule Lightning.KafkaTriggers do
     %{topic: topic, partition: partition, offset: offset} = metadata
 
     "#{topic}_#{partition}_#{offset}"
+  end
+
+  def find_message_candidate_sets do
+    query =
+      from t in TriggerKafkaMessage,
+      select: [t.trigger_id, t.topic, t.key],
+      distinct: [t.trigger_id, t.topic, t.key]
+
+    query
+    |> Repo.all()
+    |> Enum.map(fn [trigger_id, topic, key] ->
+      %{trigger_id: trigger_id, topic: topic, key: key}
+    end)
   end
 end
