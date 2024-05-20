@@ -22,7 +22,7 @@ defmodule Lightning.OauthClientsTest do
   end
 
   describe "list_clients/1" do
-    test "returns only oauth clients associated with a given project" do
+    test "returns oauth clients associated with a given project" do
       [project_1, project_2, project_3] = insert_list(3, :project)
 
       client_1 =
@@ -54,6 +54,51 @@ defmodule Lightning.OauthClientsTest do
       refute client_id_in_list?(client_1, project_3_clients)
       refute client_id_in_list?(client_2, project_3_clients)
       refute client_id_in_list?(client_3, project_3_clients)
+    end
+
+    test "returns global oauth clients even when they are not associated to a given project or user" do
+      project = insert(:project)
+      user = insert(:user)
+
+      projects_clients = OauthClients.list_clients(project)
+      users_clients = OauthClients.list_clients(user)
+
+      assert Enum.empty?(projects_clients)
+      assert Enum.empty?(users_clients)
+
+      global_client = insert(:oauth_client, global: true)
+
+      projects_clients = OauthClients.list_clients(project)
+      users_clients = OauthClients.list_clients(user)
+
+      assert length(projects_clients) == 1
+      assert length(users_clients) == 1
+
+      project_client = List.first(projects_clients)
+      user_client = List.first(users_clients)
+
+      assert project_client.id == global_client.id
+      assert user_client.id == global_client.id
+    end
+
+    test "returns oauth clients associated with a given user" do
+      [user_1, user_2] = insert_list(2, :user)
+
+      client_1 = insert(:oauth_client, user: user_1)
+
+      client_2 = insert(:oauth_client, user: user_2)
+
+      user_1_clients = OauthClients.list_clients(user_1)
+      user_2_clients = OauthClients.list_clients(user_2)
+
+      assert length(user_1_clients) == 1
+      assert length(user_2_clients) == 1
+
+      assert client_id_in_list?(client_1, user_1_clients)
+      assert client_id_in_list?(client_2, user_2_clients)
+
+      refute client_id_in_list?(client_1, user_2_clients)
+      refute client_id_in_list?(client_2, user_1_clients)
     end
   end
 
