@@ -21,6 +21,9 @@ and this project adheres to
 
 ### Fixed
 
+- Ensure Global OAuth Clients Accessibility for All Users
+  [#2114](https://github.com/OpenFn/lightning/issues/2114)
+
 ## [v2.5.0-pre3] - 2024-05-20
 
 ### Fixed
