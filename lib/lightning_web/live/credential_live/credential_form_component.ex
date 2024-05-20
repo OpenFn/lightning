@@ -73,7 +73,10 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
 
     socket =
       if changed?(socket, :project) or changed?(socket, :action) do
-        oauth_clients = OauthClients.list_clients(assigns.project)
+        oauth_clients =
+          if socket.assigns.project,
+            do: OauthClients.list_clients(assigns.project),
+            else: OauthClients.list_clients(assigns.current_user)
 
         type_options =
           if action == :new do
