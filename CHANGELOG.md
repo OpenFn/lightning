@@ -21,6 +21,10 @@ and this project adheres to
 
 ### Fixed
 
+## [v2.5.0-pre4] - 2024-05-20
+
+### Fixed
+
 - Fix duplicate credential type bug
   [#2100](https://github.com/OpenFn/lightning/issues/2100)
 - Ensure Global OAuth Clients Accessibility for All Users
