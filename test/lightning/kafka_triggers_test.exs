@@ -413,4 +413,70 @@ defmodule Lightning.KafkaTriggersTest do
       }
     end
   end
+
+  describe ".find_message_candidate_sets" do
+    test "returns all distinct combinations of trigger, topic, key" do
+      trigger_1 = insert(:trigger, type: :kafka)
+      trigger_2 = insert(:trigger, type: :kafka)
+
+      message = insert(
+        :trigger_kafka_message,
+        trigger: trigger_1,
+        topic: "topic-1",
+        key: "key-1"
+      )
+      _message_duplicate = insert(
+        :trigger_kafka_message,
+        trigger: trigger_1,
+        topic: "topic-1",
+        key: "key-1"
+      )
+      different_key = insert(
+        :trigger_kafka_message,
+        trigger: trigger_1,
+        topic: "topic-1",
+        key: "key-2"
+      )
+      nil_key = insert(
+        :trigger_kafka_message,
+        trigger: trigger_1,
+        topic: "topic-1",
+        key: nil
+      )
+      different_topic = insert(
+        :trigger_kafka_message,
+        trigger: trigger_1,
+        topic: "topic-2",
+        key: "key-1"
+      )
+      different_trigger = insert(
+        :trigger_kafka_message,
+        trigger: trigger_2,
+        topic: "topic-1",
+        key: "key-1"
+      )
+
+      sets = KafkaTriggers.find_message_candidate_sets()
+
+      assert sets |> Enum.count() == 5
+
+      assert [%{trigger_id: _, topic: _, key: _} | _other] = sets
+
+      assert sets |> number_of_sets_for(message) == 1
+      assert sets |> number_of_sets_for(different_key) == 1
+      assert sets |> number_of_sets_for(nil_key) == 1
+      assert sets |> number_of_sets_for(different_topic) == 1
+      assert sets |> number_of_sets_for(different_trigger) == 1
+    end
+
+    def number_of_sets_for(sets, %{trigger: trigger, topic: topic, key: key}) do
+      sets
+      |> Enum.count(fn
+        %{trigger_id: _} = set ->
+          set.trigger_id == trigger.id && set.topic == topic && set.key == key
+        _ ->
+          false
+      end)
+    end
+  end
 end
