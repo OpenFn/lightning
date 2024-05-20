@@ -7,6 +7,8 @@ defmodule LightningWeb.Router do
   import LightningWeb.UserAuth
   import Phoenix.LiveDashboard.Router
 
+  use Lightning.BuildMacros
+
   alias CredentialLive
   alias JobLive
   alias ProjectLive
@@ -209,7 +211,7 @@ defmodule LightningWeb.Router do
     live_dashboard "/dashboard", metrics: LightningWeb.Telemetry
   end
 
-  if Mix.env() == :dev do
+  do_in(:dev) do
     import PhoenixStorybook.Router
 
     scope "/" do
