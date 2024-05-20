@@ -253,6 +253,15 @@ defmodule Lightning.Factories do
     }
   end
 
+  def trigger_kafka_message_factory do
+    %Lightning.KafkaTriggers.TriggerKafkaMessage{
+      trigger: build(:trigger, type: :kafka),
+      topic: "arb_topic",
+      message_timestamp: System.os_time(:millisecond),
+      metadata: %{},
+      data: %{some: :data} |> Jason.encode!()
+    }
+  end
   # ----------------------------------------------------------------------------
   # Helpers
   # ----------------------------------------------------------------------------
