@@ -91,7 +91,7 @@ defmodule Lightning.MixProject do
       {:joken, "~> 2.6.0"},
       {:jsonpatch, "~> 1.0.2"},
       {:junit_formatter, "~> 3.0", only: [:test]},
-      {:libcluster, "~> 3.3", only: [:dev, :test]},
+      {:libcluster, "~> 3.3"},
       {:mimic, "~> 1.7.2", only: :test},
       {:mix_test_watch, "~> 1.0", only: [:test, :dev], runtime: false},
       {:mock, "~> 0.3.8", only: :test},
