@@ -3,11 +3,10 @@ defmodule LightningWeb.Router do
   The router for Lightning.
   """
   use LightningWeb, :router
+  use Lightning.BuildMacros
 
   import LightningWeb.UserAuth
   import Phoenix.LiveDashboard.Router
-
-  use Lightning.BuildMacros
 
   alias CredentialLive
   alias JobLive
