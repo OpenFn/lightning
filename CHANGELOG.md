@@ -22,6 +22,9 @@ and this project adheres to
 
 ### Changed
 
+- Counts workorders for email digest
+  [#2121](https://github.com/OpenFn/lightning/issues/2121)
+
 ### Fixed
 
 - Stopped sending emails when creating a starter project
