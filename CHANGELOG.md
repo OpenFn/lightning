@@ -21,6 +21,13 @@ and this project adheres to
 
 ### Fixed
 
+## [v2.5.0] - 2024-05-20
+
+### Fixed
+
+- When a refresh token is updated, save it!
+  [#2124](https://github.com/OpenFn/lightning/pull/2124)
+
 ## [v2.5.0-pre4] - 2024-05-20
 
 ### Fixed
