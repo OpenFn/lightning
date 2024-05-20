@@ -144,4 +144,15 @@ defmodule LightningWeb.CredentialLive.Helpers do
       available_projects: new_available_projects
     }
   end
+
+  def handle_save_response(socket, credential) do
+    if socket.assigns[:on_save] do
+      socket.assigns[:on_save].(credential)
+      Phoenix.LiveView.push_event(socket, "close_modal", %{})
+    else
+      socket
+      |> Phoenix.LiveView.put_flash(:info, "Credential created successfully")
+      |> Phoenix.LiveView.push_redirect(to: socket.assigns.return_to)
+    end
+  end
 end

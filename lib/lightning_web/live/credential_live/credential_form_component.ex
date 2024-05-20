@@ -31,14 +31,17 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
 
     updated_socket =
       socket
-      |> assign(scopes: [])
-      |> assign(scopes_changed: false)
-      |> assign(sandbox_changed: false)
-      |> assign(schema: false)
-      |> assign(available_projects: [])
-      |> assign(selected_projects: [])
-      |> assign(oauth_clients: [])
-      |> assign(allow_credential_transfer: allow_credential_transfer)
+      |> assign(
+        on_save: nil,
+        scopes: [],
+        scopes_changed: false,
+        sandbox_changed: false,
+        schema: false,
+        available_projects: [],
+        selected_projects: [],
+        oauth_clients: [],
+        allow_credential_transfer: allow_credential_transfer
+      )
 
     {:ok, schemas_path} = Application.fetch_env(:lightning, :schemas_path)
 
@@ -400,6 +403,7 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
           credential={@credential}
           projects={@projects}
           users={@users}
+          on_save={@on_save}
           allow_credential_transfer={@allow_credential_transfer}
           return_to={@return_to}
         />
@@ -717,15 +721,7 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
     |> Credentials.create_credential()
     |> case do
       {:ok, credential} ->
-        if socket.assigns[:on_save] do
-          socket.assigns[:on_save].(credential)
-          {:noreply, push_event(socket, "close_modal", %{})}
-        else
-          {:noreply,
-           socket
-           |> put_flash(:info, "Credential created successfully")
-           |> push_redirect(to: socket.assigns.return_to)}
-        end
+        {:noreply, Helpers.handle_save_response(socket, credential)}
 
       {:error, %Ecto.Changeset{} = changeset} ->
         {:noreply, assign(socket, :changeset, changeset)}

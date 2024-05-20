@@ -383,7 +383,8 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
       users: assigns.users,
       api_version: assigns.credential.body["apiVersion"],
       selected_projects: selected_projects,
-      available_projects: available_projects
+      available_projects: available_projects,
+      on_save: assigns.on_save
     )
     |> assign(additional_assigns)
   end
@@ -404,11 +405,8 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
     |> Map.put("oauth_client_id", socket.assigns.selected_client.id)
     |> Credentials.create_credential()
     |> case do
-      {:ok, _credential} ->
-        {:noreply,
-         socket
-         |> put_flash(:info, "Credential created successfully")
-         |> push_redirect(to: socket.assigns.return_to)}
+      {:ok, credential} ->
+        {:noreply, Helpers.handle_save_response(socket, credential)}
 
       {:error, %Ecto.Changeset{} = changeset} ->
         {:noreply, assign(socket, :changeset, changeset)}
