@@ -22,8 +22,8 @@ and this project adheres to
 
 ### Changed
 
-- Counts workorders for email digest
-  [#2121](https://github.com/OpenFn/lightning/issues/2121)
+- Improve performance and memory consumption on queries and logic for digest
+  mailer [#2121](https://github.com/OpenFn/lightning/issues/2121)
 
 ### Fixed
 
