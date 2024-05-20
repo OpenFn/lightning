@@ -19,6 +19,9 @@ and this project adheres to
 
 ### Changed
 
+- Don't compile Phoenix Storybook in production and test environments
+  [#2119](https://github.com/OpenFn/lightning/pull/2119)
+
 ### Fixed
 
 ## [v2.5.0-pre4] - 2024-05-20
