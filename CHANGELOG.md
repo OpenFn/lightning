@@ -23,6 +23,9 @@ and this project adheres to
 
 - Fix credential not added automatically after being created from the canvas.
   [#2105](https://github.com/OpenFn/lightning/issues/2105)
+- Replace the "not working?" prompt by "All good, but if your credential stops
+  working, you may need to re-authorize here.".
+  [#2102](https://github.com/OpenFn/lightning/issues/1872)
 
 ## [v2.5.0-pre2] - 2024-05-17
 

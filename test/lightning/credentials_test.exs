@@ -591,7 +591,7 @@ defmodule Lightning.CredentialsTest do
   end
 
   describe "maybe_refresh_token/1" do
-    test "doesn't refresh non OAuth credentials" do
+    test "doesn't refresh non-OAuth credentials" do
       credential = CredentialsFixtures.credential_fixture()
       {:ok, refreshed_credential} = Credentials.maybe_refresh_token(credential)
       assert credential == refreshed_credential

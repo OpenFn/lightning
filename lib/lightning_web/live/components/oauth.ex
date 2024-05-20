@@ -74,7 +74,7 @@ defmodule LightningWeb.Components.Oauth do
       <div class="flex items-center">
         <img
           src={@userinfo["picture"]}
-          class="h-14 w-14 rounded-full"
+          class="h-20 w-20 rounded-full"
           alt={@userinfo["name"]}
           onerror={"this.onerror=null;this.src='#{Routes.static_path(
               @socket,
@@ -89,8 +89,8 @@ defmodule LightningWeb.Components.Oauth do
           <p class="text-sm text-gray-500">
             <a href="#"><%= @userinfo["email"] %></a>
           </p>
-          <div class="text-sm mt-1">
-            Not working?
+          <div class="text-sm mt-2">
+            All good, but if your credential stops working, you may need to re-authorize
             <.link
               href={@authorize_url}
               target="_blank"
@@ -98,7 +98,7 @@ defmodule LightningWeb.Components.Oauth do
               phx-click="authorize_click"
               class="hover:underline text-primary-900"
             >
-              Reauthorize.
+              here.
             </.link>
           </div>
         </div>
