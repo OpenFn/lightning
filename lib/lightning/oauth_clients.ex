@@ -58,14 +58,12 @@ defmodule Lightning.OauthClients do
       [%OauthClient{user_id: 123}, %OauthClient{user_id: 123}]
   """
   def list_clients(%Project{} = project) do
-    # Define a subquery for global OAuth clients
     global_clients_subquery =
       from(c in OauthClient,
         where: c.global == true,
         select: c.id
       )
 
-    # Main query that fetches all unique clients based on the project or their global status
     clients_query =
       from(c in OauthClient,
         left_join: poc in ProjectOauthClient,
@@ -74,7 +72,6 @@ defmodule Lightning.OauthClients do
           poc.project_id == ^project.id or
             c.id in subquery(global_clients_subquery),
         preload: [:user, :project_oauth_clients, :projects],
-        # Ensuring distinct results based on client IDs
         distinct: true
       )
 
@@ -83,7 +80,7 @@ defmodule Lightning.OauthClients do
 
   def list_clients(%User{id: user_id}) do
     from(c in OauthClient,
-      where: c.user_id == ^user_id,
+      where: c.user_id == ^user_id or c.global,
       preload: :projects
     )
     |> Repo.all()

@@ -90,7 +90,7 @@ defmodule LightningWeb.Components.Oauth do
             <a href="#"><%= @userinfo["email"] %></a>
           </p>
           <div class="text-sm mt-2">
-            All good, but if your credential stops working, you may need to re-authorize
+            Success. If your credential stops working, you may try to
             <.link
               href={@authorize_url}
               target="_blank"
@@ -98,7 +98,7 @@ defmodule LightningWeb.Components.Oauth do
               phx-click="authorize_click"
               class="hover:underline text-primary-900"
             >
-              here.
+              re-authorize.
             </.link>
           </div>
         </div>
