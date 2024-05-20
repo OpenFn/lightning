@@ -538,7 +538,10 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
                   </div>
                 </fieldset>
               </div>
-              <div :if={@action == :edit and true} class="space-y-4">
+              <div
+                :if={@action == :edit and @allow_credential_transfer}
+                class="space-y-4"
+              >
                 <LightningWeb.Components.Credentials.credential_transfer
                   form={f}
                   users={@users}
