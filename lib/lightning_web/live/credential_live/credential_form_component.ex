@@ -413,6 +413,7 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
           projects={@projects}
           users={@users}
           on_save={@on_save}
+          allow_credential_transfer={@allow_credential_transfer}
           return_to={@return_to}
         />
       </.modal>
