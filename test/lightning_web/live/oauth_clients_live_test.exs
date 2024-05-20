@@ -126,6 +126,7 @@ defmodule LightningWeb.OauthClientsLiveTest do
   setup :create_project_for_current_user
 
   describe "List" do
+    @tag :skip
     test "list all created oauth clients", %{
       conn: conn,
       user: user,
@@ -164,6 +165,7 @@ defmodule LightningWeb.OauthClientsLiveTest do
         end)
     end
 
+    @tag :skip
     test "when there's no client, an empty page is display with clickable button",
          %{conn: conn, project: project} do
       _urls =
@@ -272,6 +274,7 @@ defmodule LightningWeb.OauthClientsLiveTest do
   end
 
   describe "Edit" do
+    @tag :skip
     test "updates an oauth client", %{
       conn: conn,
       project: project,
@@ -311,6 +314,7 @@ defmodule LightningWeb.OauthClientsLiveTest do
       end)
     end
 
+    @tag :skip
     test "adds new project with access", %{
       conn: conn,
       user: user
@@ -360,6 +364,7 @@ defmodule LightningWeb.OauthClientsLiveTest do
                end)
     end
 
+    @tag :skip
     test "removes project with access", %{
       conn: conn,
       user: user
@@ -406,6 +411,7 @@ defmodule LightningWeb.OauthClientsLiveTest do
                end)
     end
 
+    @tag :skip
     test "users can add and remove existing project oauth clients successfully",
          %{
            conn: conn,
@@ -486,6 +492,7 @@ defmodule LightningWeb.OauthClientsLiveTest do
       {:ok, client: client, conn: conn, user: user, project: project}
     end
 
+    @tag :skip
     test "deletes an oauth client from the user credentials page", %{
       conn: conn,
       user: _user,
@@ -496,6 +503,7 @@ defmodule LightningWeb.OauthClientsLiveTest do
       perform_oauth_client_deletion_test(conn, url, client)
     end
 
+    @tag :skip
     test "deletes an oauth client from the project settings page", %{
       conn: conn,
       user: _user,

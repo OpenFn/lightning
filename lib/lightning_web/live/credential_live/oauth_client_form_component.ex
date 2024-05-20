@@ -511,7 +511,7 @@ defmodule LightningWeb.CredentialLive.OauthClientFormComponent do
                   <% :edit -> %>
                     Save Changes
                   <% :new -> %>
-                    Add Oauth Client
+                    Add OAuth Client
                 <% end %>
               </button>
               <button
@@ -599,9 +599,9 @@ defmodule LightningWeb.CredentialLive.OauthClientFormComponent do
   defp modal_title(assigns) do
     ~H"""
     <%= if @action in [:edit] do %>
-      Edit Oauth Client
+      Edit OAuth Client
     <% else %>
-      Add an Oauth Client
+      Add an OAuth Client
     <% end %>
     """
   end

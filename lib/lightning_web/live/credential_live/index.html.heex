@@ -14,14 +14,19 @@
         id="options-menu-button"
         options={[
           %{
-            name: "Oauth client",
+            name: "Credential",
+            id: "option-menu-item-1",
+            target: "new-credential-modal"
+          },
+          %{
+            name: "OAuth client",
             id: "option-menu-item-0",
             target: "new-oauth-client-modal",
             badge: "Advanced"
           }
         ]}
       >
-        New credential
+        Add new
       </LightningWeb.Components.Credentials.options_menu_button>
     </LayoutComponents.header>
   </:header>
@@ -29,7 +34,7 @@
     <LightningWeb.Components.Credentials.oauth_clients_table
       :if={@current_user.role == :superuser}
       id="oauth-clients"
-      title="Oauth Clients"
+      title="OAuth Clients"
       clients={@oauth_clients}
     >
       <:empty_state>

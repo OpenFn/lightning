@@ -348,7 +348,7 @@ defmodule LightningWeb.Components.Credentials do
               disabled={@disabled}
             >
               <%= name %><span
-                :if={Map.get(option, :badge)}
+                :if={Map.get(option |> IO.inspect(), :badge)}
                 class="ml-2 inline-flex items-center rounded-md bg-gray-50 px-1.5 py-0.5 text-xs font-medium text-gray-600 ring-1 ring-inset ring-gray-500/10"
               ><%= Map.get(option, :badge) %></span>
             </a>

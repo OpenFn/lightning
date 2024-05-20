@@ -219,7 +219,7 @@
             <div class="leading-loose">
               <h6 class="font-medium text-black">Project credentials</h6>
               <small class="block text-xs text-gray-600">
-                Manage Oauth 2.0 Clients and Credentials accessible to this project.
+                Manage OAuth 2.0 Clients and Credentials accessible to this project.
               </small>
               <.permissions_message
                 :if={!@can_create_project_credential}
@@ -256,7 +256,7 @@
           <LightningWeb.Components.Credentials.oauth_clients_table
             :if={@current_user.role == :superuser}
             id="oauth-clients"
-            title="Oauth Clients"
+            title="OAuth Clients"
             clients={@oauth_clients}
           >
             <:empty_state>
