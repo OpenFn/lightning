@@ -254,6 +254,7 @@
           </div>
 
           <LightningWeb.Components.Credentials.oauth_clients_table
+            :if={@current_user.role == :superuser}
             id="oauth-clients"
             title="Oauth Clients"
             clients={@oauth_clients}
