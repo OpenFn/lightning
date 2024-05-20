@@ -726,6 +726,46 @@ defmodule Lightning.InvocationTest do
     end
   end
 
+  describe "exclude_wiped_dataclips/1" do
+    test "returns only workorders without wiped dataclips" do
+      project = insert(:project)
+      dataclip = insert(:dataclip)
+      dataclip_wiped = insert(:dataclip, wiped_at: Timex.now())
+
+      %{workflow: workflow, trigger: trigger} =
+        build_workflow(project: project)
+
+      workorders =
+        insert_list(2, :workorder,
+          workflow: workflow,
+          trigger: trigger,
+          dataclip: dataclip
+        )
+
+      workorders_to_exclude =
+        insert_list(2, :workorder,
+          workflow: workflow,
+          trigger: trigger,
+          dataclip: dataclip_wiped
+        )
+
+      refute Enum.any?(workorders_to_exclude, &is_nil(&1.dataclip.wiped_at))
+
+      assert found_workorders =
+               project
+               |> Invocation.search_workorders_query(
+                 SearchParams.new(%{"status" => SearchParams.status_list()})
+               )
+               |> Invocation.exclude_wiped_dataclips()
+               |> Repo.all()
+
+      assert MapSet.new(workorders, & &1.id) ==
+               MapSet.new(found_workorders, & &1.id)
+
+      refute Enum.any?(found_workorders, &Ecto.assoc_loaded?(&1.snapshot))
+    end
+  end
+
   describe "searching across workorders" do
     setup do
       project = insert(:project)
