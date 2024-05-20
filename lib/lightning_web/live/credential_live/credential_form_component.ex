@@ -5,23 +5,12 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
   use LightningWeb, :live_component
 
   alias Lightning.Credentials
+  alias Lightning.OauthClients
   alias LightningWeb.Components.NewInputs
   alias LightningWeb.CredentialLive.GenericOauthComponent
   alias LightningWeb.CredentialLive.Helpers
-  alias Phoenix.LiveView.JS
 
-  @valid_assigns [
-    :id,
-    :action,
-    :credential,
-    :current_user,
-    :projects,
-    :on_save,
-    :button,
-    :can_create_project_credential,
-    :oauth_clients,
-    :return_to
-  ]
+  alias Phoenix.LiveView.JS
 
   @impl true
   def mount(socket) do
@@ -29,25 +18,20 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
       Application.fetch_env!(:lightning, LightningWeb)
       |> Keyword.get(:allow_credential_transfer)
 
-    updated_socket =
-      socket
-      |> assign(
-        on_save: nil,
-        scopes: [],
-        scopes_changed: false,
-        sandbox_changed: false,
-        schema: false,
-        available_projects: [],
-        selected_projects: [],
-        oauth_clients: [],
-        allow_credential_transfer: allow_credential_transfer
-      )
-
-    {:ok, schemas_path} = Application.fetch_env(:lightning, :schemas_path)
-
-    type_options = get_type_options(schemas_path)
-
-    {:ok, assign(updated_socket, type_options: type_options)}
+    {:ok,
+     socket
+     |> assign(
+       on_save: nil,
+       scopes: [],
+       scopes_changed: false,
+       sandbox_changed: false,
+       schema: false,
+       project: nil,
+       available_projects: [],
+       selected_projects: [],
+       oauth_clients: [],
+       allow_credential_transfer: allow_credential_transfer
+     )}
   end
 
   @impl true
@@ -64,7 +48,46 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
   def update(%{projects: projects} = assigns, socket) do
     pid = self()
 
-    users = list_users()
+    socket = assign(socket, assigns)
+
+    socket =
+      if changed?(socket, :project) or changed?(socket, :action) do
+        oauth_clients =
+          if socket.assigns.project,
+            do: OauthClients.list_clients(assigns.project),
+            else: OauthClients.list_clients(assigns.current_user)
+
+        type_options =
+          if assigns.action == :new do
+            {:ok, schemas_path} =
+              Application.fetch_env(:lightning, :schemas_path)
+
+            get_type_options(schemas_path)
+            |> Enum.concat(
+              Enum.map(oauth_clients, fn client ->
+                {client.name, client.id, nil, "oauth"}
+              end)
+            )
+            |> Enum.sort_by(& &1, :asc)
+          else
+            []
+          end
+
+        assign(socket,
+          oauth_clients: oauth_clients,
+          type_options: type_options
+        )
+      else
+        socket
+      end
+
+    users =
+      if socket.assigns.allow_credential_transfer do
+        list_users()
+      else
+        []
+      end
+
     scopes = get_scopes(assigns.credential)
 
     sandbox_value = get_sandbox_value(assigns.credential)
@@ -73,9 +96,6 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
 
     changeset = Credentials.change_credential(assigns.credential)
 
-    initial_assigns =
-      Map.filter(assigns, &match?({k, _} when k in @valid_assigns, &1))
-
     update_body = fn body ->
       update_body(pid, assigns.id, body)
     end
@@ -83,17 +103,6 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
     page = if assigns.action === :new, do: :first, else: :second
 
     schema = assigns.credential.schema || false
-
-    type_options =
-      if assigns.action === :new,
-        do:
-          socket.assigns.type_options ++
-            Enum.map(assigns.oauth_clients, fn client ->
-              {client.name, client.id, nil, "oauth"}
-            end),
-        else: []
-
-    type_options = Enum.sort_by(type_options, & &1, :asc)
 
     selected_projects =
       changeset
@@ -109,21 +118,21 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
 
     {:ok,
      socket
-     |> assign(initial_assigns)
-     |> assign(page: page)
-     |> assign(users: users)
-     |> assign(scopes: scopes)
-     |> assign(sandbox_value: sandbox_value)
-     |> assign(api_version: api_version)
-     |> assign(changeset: changeset)
-     |> assign(update_body: update_body)
-     |> assign(projects: projects)
-     |> assign(selected_oauth_client: assigns.credential.oauth_client)
-     |> assign(schema: schema)
-     |> assign(selected_project: nil)
-     |> assign(selected_projects: selected_projects)
-     |> assign(available_projects: available_projects)
-     |> assign(type_options: type_options)}
+     |> assign(
+       page: page,
+       users: users,
+       scopes: scopes,
+       sandbox_value: sandbox_value,
+       api_version: api_version,
+       changeset: changeset,
+       update_body: update_body,
+       projects: projects,
+       selected_oauth_client: assigns.credential.oauth_client,
+       schema: schema,
+       selected_project: nil,
+       selected_projects: selected_projects,
+       available_projects: available_projects
+     )}
   end
 
   @impl true

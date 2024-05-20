@@ -349,9 +349,7 @@ defmodule LightningWeb.Components.Form do
       <div class="ml-3 text-sm">
         <LightningWeb.CoreComponents.old_error field={@form[@field]} />
         <%= Phoenix.HTML.Form.label(@form, @label || @field, @label_opts) %>
-        <%= if assigns[:inner_block] do %>
-          <%= render_slot(@inner_block) %>
-        <% end %>
+        <%= render_slot(@inner_block) %>
       </div>
     </div>
     """
@@ -388,9 +386,7 @@ defmodule LightningWeb.Components.Form do
         <%= Phoenix.HTML.Form.label(@form, @field, @opts) do %>
           <div class="flex items-center">
             <%= @title %>
-            <%= if @logo do %>
-              <img src={@logo} class="w-3 h-3 ml-1" />
-            <% end %>
+            <img :if={@logo} src={@logo} class="w-3 h-3 ml-1" />
           </div>
         <% end %>
         <LightningWeb.Components.Common.tooltip
@@ -402,9 +398,7 @@ defmodule LightningWeb.Components.Form do
       <%= Phoenix.HTML.Form.label(@form, @field, @opts) do %>
         <div class="flex items-center">
           <%= @title %>
-          <%= if @logo do %>
-            <img src={@logo} class="w-3 h-3 ml-1" />
-          <% end %>
+          <img :if={@logo} src={@logo} class="w-3 h-3 ml-1" />
         </div>
       <% end %>
     <% end %>

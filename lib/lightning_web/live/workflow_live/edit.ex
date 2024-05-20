@@ -260,48 +260,47 @@ defmodule LightningWeb.WorkflowLive.Edit do
             </span>
           </div>
         </div>
-        <%= if @selected_job do %>
-          <.live_component
-            id="new-credential-modal"
-            module={LightningWeb.CredentialLive.CredentialFormComponent}
-            action={:new}
-            credential_type={@selected_credential_type}
-            credential={
-              %Lightning.Credentials.Credential{
-                user_id: @current_user.id,
-                project_credentials: [
-                  %Lightning.Projects.ProjectCredential{
-                    project_id: @project.id
-                  }
-                ]
-              }
+        <.live_component
+          :if={@selected_job}
+          id="new-credential-modal"
+          module={LightningWeb.CredentialLive.CredentialFormComponent}
+          action={:new}
+          credential_type={@selected_credential_type}
+          credential={
+            %Lightning.Credentials.Credential{
+              user_id: @current_user.id,
+              project_credentials: [
+                %Lightning.Projects.ProjectCredential{
+                  project_id: @project.id
+                }
+              ]
             }
-            current_user={@current_user}
-            oauth_clients={@oauth_clients}
-            projects={[]}
-            project={@project}
-            show_project_credentials={false}
-            on_save={
-              fn credential ->
-                form =
-                  single_inputs_for(@workflow_form, :jobs, @selected_job.id)
+          }
+          current_user={@current_user}
+          oauth_clients={@oauth_clients}
+          projects={[]}
+          project={@project}
+          show_project_credentials={false}
+          on_save={
+            fn credential ->
+              form =
+                single_inputs_for(@workflow_form, :jobs, @selected_job.id)
 
-                params =
-                  LightningWeb.Utils.build_params_for_field(
-                    form,
-                    :project_credential_id,
-                    credential.project_credentials |> Enum.at(0) |> Map.get(:id)
-                  )
+              params =
+                LightningWeb.Utils.build_params_for_field(
+                  form,
+                  :project_credential_id,
+                  credential.project_credentials |> Enum.at(0) |> Map.get(:id)
+                )
 
-                send_form_changed(params)
-              end
-            }
-            can_create_project_credential={@can_edit_workflow}
-            return_to={
-              ~p"/projects/#{@project.id}/w/#{@workflow.id}?s=#{@selected_job.id}"
-            }
-          />
-        <% end %>
+              send_form_changed(params)
+            end
+          }
+          can_create_project_credential={@can_edit_workflow}
+          return_to={
+            ~p"/projects/#{@project.id}/w/#{@workflow.id}?s=#{@selected_job.id}"
+          }
+        />
         <.form
           id="workflow-form"
           for={@workflow_form}

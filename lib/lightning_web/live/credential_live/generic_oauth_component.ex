@@ -23,14 +23,16 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
 
     {:ok,
      socket
-     |> assign(:selected_client, nil)
-     |> assign(:selected_project, nil)
-     |> assign(:userinfo, nil)
-     |> assign(:authorize_url, nil)
-     |> assign(:scopes_changed, false)
-     |> assign(:available_projects, [])
-     |> assign(:selected_projects, [])
-     |> assign(:oauth_progress, :not_started)}
+     |> assign(
+       selected_client: nil,
+       selected_project: nil,
+       userinfo: nil,
+       authorize_url: nil,
+       scopes_changed: false,
+       available_projects: [],
+       selected_projects: [],
+       oauth_progress: :not_started
+     )}
   end
 
   @impl true
