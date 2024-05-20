@@ -4,6 +4,7 @@ defmodule Lightning.KafkaTriggers.PipelineTest do
   import Mock
 
   alias Ecto.Changeset
+  alias Lightning.KafkaTriggers.TriggerKafkaMessage
   alias Lightning.KafkaTriggers.TriggerKafkaMessageRecord
   alias Lightning.KafkaTriggers.Pipeline
   alias Lightning.Repo
@@ -171,6 +172,43 @@ defmodule Lightning.KafkaTriggers.PipelineTest do
       assert trigger_2_timestamps == partition_timestamps()
     end
 
+    test "persists a TriggerKafkaMessage for further processing", %{
+      context: context
+    } do
+      trigger_id = Atom.to_string(context.trigger_id)
+
+      message = build_broadway_message()
+
+      Pipeline.handle_message(nil, message, context)
+
+      trigger_kafka_message = Repo.one(TriggerKafkaMessage)
+
+      metadata = message.metadata |> stringify_keys()
+      data = message.data
+
+      assert %{
+        data: ^data,
+        key: "abc_123_def",
+        message_timestamp: 1715164718283,
+        metadata: ^metadata,
+        topic: "bar_topic",
+        trigger_id: ^trigger_id,
+        work_order_id: nil
+      } = trigger_kafka_message
+    end
+
+    test "converts empty Kafka key to nil TriggerKafkaMessage key", %{
+      context: context
+    } do
+      message = build_broadway_message("")
+
+      Pipeline.handle_message(nil, message, context)
+
+      trigger_kafka_message = Repo.one(TriggerKafkaMessage)
+
+      assert %{key: nil} = trigger_kafka_message
+    end
+
     test "records the message for the purposes of future deduplication", %{
       context: context
     } do
@@ -216,6 +254,20 @@ defmodule Lightning.KafkaTriggers.PipelineTest do
       assert trigger_2_timestamps == partition_timestamps()
     end
 
+    test "does not create TriggerKafkaMessage if message is duplicate", %{
+      context: context
+    } do
+      trigger_id = context.trigger_id |> Atom.to_string()
+
+      message = build_broadway_message()
+
+      insert_message_record(trigger_id)
+
+      Pipeline.handle_message(nil, message, context)
+
+      assert Repo.one(TriggerKafkaMessage) == nil
+    end
+
     test "raises error on non-duplicate TriggerKafkaMessageRecord save error", %{
       context: context
     } do
@@ -232,13 +284,13 @@ defmodule Lightning.KafkaTriggers.PipelineTest do
       end
     end
 
-    defp build_broadway_message do
+    defp build_broadway_message(key \\ "abc_123_def") do
       %Broadway.Message{
         data: %{interesting: "stuff"} |> Jason.encode!(),
         metadata: %{
           offset: 11,
           partition: 2,
-          key: "",
+          key: key,
           headers: [],
           ts: 1715164718283,
           topic: "bar_topic"
@@ -287,6 +339,25 @@ defmodule Lightning.KafkaTriggers.PipelineTest do
           trigger_id: trigger_id
         }
       ) |> Repo.insert()
+    end
+
+    # Put this in a helper
+    defp stringify_keys(map) do
+      map
+      |> Map.keys()
+      |> Enum.reduce(%{}, fn key, acc ->
+        acc |> stringify_key(key, map[key])
+      end)
+    end
+
+    defp stringify_key(acc, key, val) when is_map(val) and not is_struct(val) do
+      acc
+      |> Map.merge(%{to_string(key) => stringify_keys(val)})
+    end
+
+    defp stringify_key(acc, key, val) do
+      acc
+      |> Map.merge(%{to_string(key) => val})
     end
   end
 end
