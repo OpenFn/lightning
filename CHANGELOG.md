@@ -21,6 +21,9 @@ and this project adheres to
 
 ### Fixed
 
+- Fix duplicate credential type bug
+  [#2100](https://github.com/OpenFn/lightning/issues/2100)
+
 ## [v2.5.0-pre3] - 2024-05-20
 
 ### Fixed
