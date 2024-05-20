@@ -2,18 +2,27 @@
   <:header>
     <LayoutComponents.header current_user={@current_user}>
       <:title><%= @page_title %></:title>
+      <.button
+        :if={@current_user.role != :superuser}
+        id="new-credential-button"
+        phx-click={show_modal("new-credential-modal")}
+      >
+        New credential
+      </.button>
       <LightningWeb.Components.Credentials.options_menu_button
+        :if={@current_user.role == :superuser}
         id="options-menu-button"
         options={[
-          %{
-            name: "Oauth client",
-            id: "option-menu-item-0",
-            target: "new-oauth-client-modal"
-          },
           %{
             name: "Credential",
             id: "option-menu-item-1",
             target: "new-credential-modal"
+          },
+          %{
+            name: "OAuth client",
+            id: "option-menu-item-0",
+            target: "new-oauth-client-modal",
+            badge: "Advanced"
           }
         ]}
       >
@@ -23,8 +32,9 @@
   </:header>
   <LayoutComponents.centered>
     <LightningWeb.Components.Credentials.oauth_clients_table
+      :if={@current_user.role == :superuser}
       id="oauth-clients"
-      title="Oauth Clients"
+      title="OAuth Clients"
       clients={@oauth_clients}
     >
       <:empty_state>
@@ -80,6 +90,7 @@
       id="credentials"
       title="Credentials"
       credentials={@credentials}
+      display_table_title={@current_user.role == :superuser}
     >
       <:empty_state>
         <button

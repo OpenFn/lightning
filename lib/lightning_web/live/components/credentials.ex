@@ -309,6 +309,7 @@ defmodule LightningWeb.Components.Credentials do
   attr :id, :string, required: true
   attr :options, :list, required: true
   attr :disabled, :boolean, default: false
+  attr :badge, :any, default: false
   slot :inner_block, required: true
 
   def options_menu_button(assigns) do
@@ -323,18 +324,7 @@ defmodule LightningWeb.Components.Credentials do
         disabled={@disabled}
       >
         <%= render_slot(@inner_block) %>
-        <svg
-          class="h-5 w-5"
-          viewBox="0 0 20 20"
-          fill="currentColor"
-          aria-hidden="true"
-        >
-          <path
-            fill-rule="evenodd"
-            d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z"
-            clip-rule="evenodd"
-          />
-        </svg>
+        <Heroicons.chevron_down class="ml-1 h-5 w-5" />
       </.button>
       <div class="relative -ml-px block">
         <div
@@ -348,7 +338,7 @@ defmodule LightningWeb.Components.Credentials do
         >
           <div class="py-1" role="none">
             <a
-              :for={%{name: name, id: id, target: target} <- @options}
+              :for={%{name: name, id: id, target: target} = option <- @options}
               href="#"
               class="text-gray-700 block px-4 py-2 text-sm hover:bg-gray-100"
               role="menuitem"
@@ -357,7 +347,10 @@ defmodule LightningWeb.Components.Credentials do
               phx-click={show_modal(target)}
               disabled={@disabled}
             >
-              <%= name %>
+              <%= name %><span
+                :if={Map.get(option |> IO.inspect(), :badge)}
+                class="ml-2 inline-flex items-center rounded-md bg-gray-50 px-1.5 py-0.5 text-xs font-medium text-gray-600 ring-1 ring-inset ring-gray-500/10"
+              ><%= Map.get(option, :badge) %></span>
             </a>
           </div>
         </div>
@@ -369,6 +362,7 @@ defmodule LightningWeb.Components.Credentials do
   attr :id, :string, required: true
   attr :credentials, :list, required: true
   attr :title, :string, required: true
+  attr :display_table_title, :boolean, default: true
 
   slot :actions,
     doc: "the slot for showing user actions in the last table column"
@@ -379,7 +373,7 @@ defmodule LightningWeb.Components.Credentials do
   def credentials_table(assigns) do
     ~H"""
     <div id={"#{@id}-table-container"}>
-      <div class="py-4 leading-loose">
+      <div :if={@display_table_title} class="py-4 leading-loose">
         <h6 class="font-normal text-black"><%= @title %></h6>
       </div>
       <%= if Enum.empty?(@credentials) do %>
