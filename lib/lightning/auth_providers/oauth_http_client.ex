@@ -58,6 +58,13 @@ defmodule Lightning.AuthProviders.OauthHTTPClient do
     |> post(client.token_endpoint, body)
     |> handle_resp([200])
     |> maybe_introspect(client)
+    |> case do
+      {:ok, new_token} ->
+        {:ok, Map.put_new(new_token, "refresh_token", token["refresh_token"])}
+
+      {:error, error} ->
+        {:error, error}
+    end
   end
 
   @doc """
