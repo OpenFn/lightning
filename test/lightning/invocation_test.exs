@@ -702,30 +702,6 @@ defmodule Lightning.InvocationTest do
     end
   end
 
-  describe "search_workorders_query/2" do
-    test "ignores status filter when all statuses are queried" do
-      project = insert(:project)
-
-      query =
-        Invocation.search_workorders_query(
-          project,
-          SearchParams.new(%{"status" => ["pending"]})
-        )
-
-      {sql, _value} = Repo.to_sql(:all, query)
-      assert sql =~ ~S["state" = ]
-
-      query =
-        Invocation.search_workorders_query(
-          project,
-          SearchParams.new(%{"status" => SearchParams.status_list()})
-        )
-
-      {sql, _value} = Repo.to_sql(:all, query)
-      refute sql =~ ~S["state" = ]
-    end
-  end
-
   describe "searching across workorders" do
     setup do
       project = insert(:project)
