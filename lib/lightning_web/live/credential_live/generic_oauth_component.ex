@@ -62,9 +62,7 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
     stringified_scopes = Enum.join(selected_scopes, " ")
 
     authorize_url =
-      OauthHTTPClient.generate_authorize_url(
-        selected_client.authorization_endpoint,
-        selected_client.client_id,
+      OauthHTTPClient.generate_authorize_url(selected_client,
         state: state,
         scope: stringified_scopes
       )
@@ -91,9 +89,7 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
     stringified_scopes = Enum.join(mandatory_scopes, " ")
 
     authorize_url =
-      OauthHTTPClient.generate_authorize_url(
-        selected_client.authorization_endpoint,
-        selected_client.client_id,
+      OauthHTTPClient.generate_authorize_url(selected_client,
         state: state,
         scope: stringified_scopes
       )
@@ -159,10 +155,7 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
       {:noreply,
        updated_socket
        |> start_async(:userinfo, fn ->
-         OauthHTTPClient.fetch_userinfo(
-           token["access_token"],
-           socket.assigns.selected_client.userinfo_endpoint
-         )
+         OauthHTTPClient.fetch_userinfo(socket.assigns.selected_client, token)
        end)}
     else
       {:noreply, updated_socket}
@@ -242,9 +235,7 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
     stringified_scopes = Enum.join(selected_scopes, " ")
 
     authorize_url =
-      OauthHTTPClient.generate_authorize_url(
-        socket.assigns.selected_client.authorization_endpoint,
-        socket.assigns.selected_client.client_id,
+      OauthHTTPClient.generate_authorize_url(socket.assigns.selected_client,
         state: state,
         scope: stringified_scopes
       )
@@ -326,8 +317,8 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
 
           start_async(socket, :userinfo, fn ->
             OauthHTTPClient.fetch_userinfo(
-              assigns.credential.body["access_token"],
-              selected_client.userinfo_endpoint
+              selected_client,
+              assigns.credential.body
             )
           end)
         else
@@ -338,12 +329,7 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
         Logger.info("Refreshing token.")
 
         start_async(socket, :token, fn ->
-          OauthHTTPClient.refresh_token(
-            selected_client.client_id,
-            selected_client.client_secret,
-            assigns.credential.body["refresh_token"],
-            selected_client.token_endpoint
-          )
+          OauthHTTPClient.refresh_token(selected_client, assigns.credential.body)
         end)
 
       {:error, reason} ->

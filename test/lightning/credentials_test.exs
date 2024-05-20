@@ -9,6 +9,7 @@ defmodule Lightning.CredentialsTest do
   import Lightning.BypassHelpers
   import Lightning.Factories
   import Ecto.Query
+  import Mox
 
   import Lightning.{
     AccountsFixtures,
@@ -18,6 +19,8 @@ defmodule Lightning.CredentialsTest do
   }
 
   import Swoosh.TestAssertions
+
+  setup :verify_on_exit!
 
   describe "Model interactions" do
     @invalid_attrs %{body: nil, name: nil}
@@ -590,8 +593,9 @@ defmodule Lightning.CredentialsTest do
     end
   end
 
-  describe "maybe_refresh_token/1" do
-    test "doesn't refresh non-OAuth credentials" do
+  # TODO: Remove this function when deprecating salesforce and googlesheets oauth
+  describe "maybe_refresh_token/1 to remove" do
+    test "doesn't refresh non OAuth credentials" do
       credential = CredentialsFixtures.credential_fixture()
       {:ok, refreshed_credential} = Credentials.maybe_refresh_token(credential)
       assert credential == refreshed_credential
@@ -684,6 +688,44 @@ defmodule Lightning.CredentialsTest do
                  credential.body["expires_at"],
                "Expected new expiry to be greater than the old expiry for #{oauth.provider |> Atom.to_string()}"
       end)
+    end
+
+    test "doesn't refresh oauth credentials when they're oauth client is nil" do
+      rotten_token = %{
+        "access_token" =>
+          "00DWS000000fDCb!AQEAQHRBgVJ4Bbb4XTr218Sn672cpnALW9FMkaATpdh8EwLhEJiNUrHg0eHiCBqHOh06F3pIyJym5gx4YD1vFv2fomMOOdzF",
+        "apiVersion" => "",
+        "expires_at" => 1000,
+        "id" =>
+          "https://login.salesforce.com/id/00DWS000000fDCb2AM/005WS000000OYRxYAO",
+        "instance_url" => "https://ciddiqia-dev-ed.develop.my.salesforce.com",
+        "issued_at" => "1715970504545",
+        "refresh_token" =>
+          "5Aep861z1aTCxS7eDOBJfa.2w9vR3Zh1uBh.2j6mBITbTXHOFonbXeWCjVyVMQsWJY9wekHK4diVJzLmt8avLvC",
+        "scope" => "refresh_token",
+        "signature" => "H6q34zM7qKZcX8NF05WtGGhn6/Lian9p4PgN/OVdvtk=",
+        "token_type" => "Bearer"
+      }
+
+      rotten_credential =
+        insert(:credential,
+          schema: "oauth",
+          oauth_client: nil,
+          body: rotten_token,
+          user: build(:user)
+        )
+
+      {:ok, fresh_credential} =
+        Credentials.maybe_refresh_token(rotten_credential)
+
+      assert fresh_credential == rotten_credential
+
+      assert rotten_credential.body == rotten_token
+      assert fresh_credential.body == rotten_token
+      assert rotten_credential.body == fresh_credential.body
+
+      assert fresh_credential.body["expires_at"] ==
+               rotten_credential.body["expires_at"]
     end
   end
 

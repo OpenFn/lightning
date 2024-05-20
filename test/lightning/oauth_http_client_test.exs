@@ -1,5 +1,6 @@
 defmodule Lightning.AuthProviders.OauthHTTPClientTest do
   use ExUnit.Case, async: true
+
   import Mox
 
   setup :verify_on_exit!
@@ -67,10 +68,12 @@ defmodule Lightning.AuthProviders.OauthHTTPClientTest do
 
       result =
         Lightning.AuthProviders.OauthHTTPClient.refresh_token(
-          client_id,
-          client_secret,
-          refresh_token,
-          token_endpoint
+          %{
+            client_id: client_id,
+            client_secret: client_secret,
+            token_endpoint: token_endpoint
+          },
+          %{"refresh_token" => refresh_token}
         )
 
       assert {:ok, response_body} == result
@@ -90,10 +93,12 @@ defmodule Lightning.AuthProviders.OauthHTTPClientTest do
 
       result =
         Lightning.AuthProviders.OauthHTTPClient.refresh_token(
-          client_id,
-          client_secret,
-          refresh_token,
-          token_endpoint
+          %{
+            client_id: client_id,
+            client_secret: client_secret,
+            token_endpoint: token_endpoint
+          },
+          %{"refresh_token" => refresh_token}
         )
 
       assert {:error, "\"Invalid refresh token\""} ==
@@ -154,9 +159,14 @@ defmodule Lightning.AuthProviders.OauthHTTPClientTest do
 
   describe "generate_authorize_url/3" do
     test "generates a correct authorization URL with default parameters" do
-      base_url = "http://example.com/auth"
+      authorization_endpoint = "http://example.com/auth"
       client_id = "client123"
       custom_params = [scope: "email", state: "xyz"]
+
+      client = %{
+        client_id: client_id,
+        authorization_endpoint: authorization_endpoint
+      }
 
       expected_params = [
         access_type: "offline",
@@ -168,12 +178,12 @@ defmodule Lightning.AuthProviders.OauthHTTPClientTest do
         state: "xyz"
       ]
 
-      expected_url = "#{base_url}?#{URI.encode_query(expected_params)}"
+      expected_url =
+        "#{authorization_endpoint}?#{URI.encode_query(expected_params)}"
 
       assert expected_url ===
                Lightning.AuthProviders.OauthHTTPClient.generate_authorize_url(
-                 base_url,
-                 client_id,
+                 client,
                  custom_params
                )
     end
@@ -197,8 +207,8 @@ defmodule Lightning.AuthProviders.OauthHTTPClientTest do
 
       result =
         Lightning.AuthProviders.OauthHTTPClient.fetch_userinfo(
-          token,
-          userinfo_endpoint
+          %{userinfo_endpoint: userinfo_endpoint},
+          %{"access_token" => token}
         )
 
       assert {:ok, response_body} == result
@@ -216,8 +226,8 @@ defmodule Lightning.AuthProviders.OauthHTTPClientTest do
 
       result =
         Lightning.AuthProviders.OauthHTTPClient.fetch_userinfo(
-          token,
-          userinfo_endpoint
+          %{userinfo_endpoint: userinfo_endpoint},
+          %{"access_token" => token}
         )
 
       assert {:error, "\"Token expired\""} == result
@@ -235,8 +245,8 @@ defmodule Lightning.AuthProviders.OauthHTTPClientTest do
 
       result =
         Lightning.AuthProviders.OauthHTTPClient.fetch_userinfo(
-          token,
-          userinfo_endpoint
+          %{userinfo_endpoint: userinfo_endpoint},
+          %{"access_token" => token}
         )
 
       assert {:error, ":nxdomain"} == result
