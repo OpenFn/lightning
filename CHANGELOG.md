@@ -19,6 +19,9 @@ and this project adheres to
 
 ### Changed
 
+- Counts workorders for email digest
+  [#2121](https://github.com/OpenFn/lightning/issues/2121)
+
 ### Fixed
 
 ## [v2.5.0-pre4] - 2024-05-20
