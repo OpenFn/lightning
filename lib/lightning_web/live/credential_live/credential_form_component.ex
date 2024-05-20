@@ -31,14 +31,17 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
 
     updated_socket =
       socket
-      |> assign(scopes: [])
-      |> assign(scopes_changed: false)
-      |> assign(sandbox_changed: false)
-      |> assign(schema: false)
-      |> assign(available_projects: [])
-      |> assign(selected_projects: [])
-      |> assign(oauth_clients: [])
-      |> assign(allow_credential_transfer: allow_credential_transfer)
+      |> assign(
+        on_save: nil,
+        scopes: [],
+        scopes_changed: false,
+        sandbox_changed: false,
+        schema: false,
+        available_projects: [],
+        selected_projects: [],
+        oauth_clients: [],
+        allow_credential_transfer: allow_credential_transfer
+      )
 
     {:ok, schemas_path} = Application.fetch_env(:lightning, :schemas_path)
 
@@ -369,8 +372,6 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
   end
 
   def render(%{page: :second, schema: "oauth"} = assigns) do
-    assigns = assign(assigns, %{on_save: Map.get(assigns, :on_save)})
-
     ~H"""
     <div class="mt-10 sm:mt-0">
       <.modal id={@id} width="xl:min-w-1/3 min-w-1/2 w-[300px]">
