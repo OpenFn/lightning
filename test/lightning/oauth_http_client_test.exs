@@ -47,6 +47,7 @@ defmodule Lightning.AuthProviders.OauthHTTPClientTest do
       token_endpoint = "http://example.com/refresh"
 
       response_body = %{
+        "refresh_token" => "validRefreshToken",
         "access_token" => "newToken123",
         "token_type" => "bearer"
       }
