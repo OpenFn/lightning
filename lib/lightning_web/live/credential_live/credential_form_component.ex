@@ -12,19 +12,6 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
 
   alias Phoenix.LiveView.JS
 
-  # @valid_assigns [
-  #   :id,
-  #   :action,
-  #   :credential,
-  #   :current_user,
-  #   :projects,
-  #   :on_save,
-  #   :button,
-  #   :can_create_project_credential,
-  #   :oauth_clients,
-  #   :return_to
-  # ]
-
   @impl true
   def mount(socket) do
     allow_credential_transfer =
