@@ -51,23 +51,29 @@ defmodule Lightning.DigestEmailWorker do
       )
       |> Repo.all()
 
-    Enum.each(project_users, fn pu ->
-      digest_data =
-        Workflows.get_workflows_for(pu.project)
+    project_users
+    |> Enum.group_by(& &1.project.id)
+    |> Enum.each(fn {_project_id, project_users} ->
+      [%{project: project} | _other] = project_users
+
+      project_digest_data =
+        Workflows.get_workflows_for(project)
         |> Enum.map(fn workflow ->
           get_digest_data(workflow, start_date, end_date)
         end)
 
-      UserNotifier.deliver_project_digest(
-        digest_data,
-        %{
-          user: pu.user,
-          project: pu.project,
-          digest: digest,
-          start_date: start_date,
-          end_date: end_date
-        }
-      )
+      Enum.each(project_users, fn pu ->
+        UserNotifier.deliver_project_digest(
+          project_digest_data,
+          %{
+            user: pu.user,
+            project: pu.project,
+            digest: digest,
+            start_date: start_date,
+            end_date: end_date
+          }
+        )
+      end)
     end)
 
     {:ok, project_users}
@@ -93,16 +99,16 @@ defmodule Lightning.DigestEmailWorker do
   def get_digest_data(workflow, start_date, end_date) do
     project = Projects.get_project!(workflow.project_id)
 
-    successful_workorders =
-      search_workorders(project, %{
+    successful_count =
+      count_workorders(project, %{
         "success" => true,
         "date_after" => start_date,
         "date_before" => end_date,
         "workflow_id" => workflow.id
       })
 
-    failed_workorders =
-      search_workorders(project, %{
+    failed_count =
+      count_workorders(project, %{
         "crashed" => true,
         "failed" => true,
         "pending" => true,
@@ -114,15 +120,15 @@ defmodule Lightning.DigestEmailWorker do
 
     %{
       workflow: workflow,
-      successful_workorders: successful_workorders.total_entries,
-      failed_workorders: failed_workorders.total_entries
+      successful_workorders: successful_count,
+      failed_workorders: failed_count
     }
   end
 
-  defp search_workorders(project, params) do
+  defp count_workorders(project, params) do
     search_params = SearchParams.new(params)
 
-    Lightning.Invocation.search_workorders(
+    Lightning.Invocation.count_workorders(
       project,
       search_params
     )
