@@ -13,7 +13,7 @@
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-EPF2X7PV.js"></script>
-    <script src="dist/sidebar_items-FE02B072.js"></script>
+    <script src="dist/sidebar_items-133408E5.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -181,6 +181,22 @@ Pages
       </div>
 
         <div class="summary-synopsis"><p>Returns an <code class="inline">%Ecto.Changeset{}</code> for tracking step changes.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#count_workorders/2" translate="no">count_workorders(project, search_params)</a>
+
+      </div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#count_workorders_query/2" translate="no">count_workorders_query(project, search_params)</a>
+
+      </div>
 
     </div>
 
@@ -464,7 +480,7 @@ Pages
     </a>
     <h1 class="signature" translate="no">assemble_logs_for_step(step)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation.ex#L589" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation.ex#L632" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -511,8 +527,8 @@ Pages
   </a>
   <span class="text">Examples</span>
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">change_dataclip</span><span class="p" data-group-id="6050552525-1">(</span><span class="n">dataclip</span><span class="p" data-group-id="6050552525-1">)</span><span class="w">
-</span><span class="p" data-group-id="6050552525-2">%</span><span class="nc" data-group-id="6050552525-2">Ecto.Changeset</span><span class="p" data-group-id="6050552525-2">{</span><span class="ss">data</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="6050552525-3">%</span><span class="nc" data-group-id="6050552525-3">Dataclip</span><span class="p" data-group-id="6050552525-3">{</span><span class="p" data-group-id="6050552525-3">}</span><span class="p" data-group-id="6050552525-2">}</span></code></pre>
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">change_dataclip</span><span class="p" data-group-id="0739431856-1">(</span><span class="n">dataclip</span><span class="p" data-group-id="0739431856-1">)</span><span class="w">
+</span><span class="p" data-group-id="0739431856-2">%</span><span class="nc" data-group-id="0739431856-2">Ecto.Changeset</span><span class="p" data-group-id="0739431856-2">{</span><span class="ss">data</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="0739431856-3">%</span><span class="nc" data-group-id="0739431856-3">Dataclip</span><span class="p" data-group-id="0739431856-3">{</span><span class="p" data-group-id="0739431856-3">}</span><span class="p" data-group-id="0739431856-2">}</span></code></pre>
   </section>
 </section>
 <section class="detail" id="change_step/2">
@@ -542,8 +558,52 @@ Pages
   </a>
   <span class="text">Examples</span>
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">change_step</span><span class="p" data-group-id="5435698588-1">(</span><span class="n">step</span><span class="p" data-group-id="5435698588-1">)</span><span class="w">
-</span><span class="p" data-group-id="5435698588-2">%</span><span class="nc" data-group-id="5435698588-2">Ecto.Changeset</span><span class="p" data-group-id="5435698588-2">{</span><span class="ss">data</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="5435698588-3">%</span><span class="nc" data-group-id="5435698588-3">Step</span><span class="p" data-group-id="5435698588-3">{</span><span class="p" data-group-id="5435698588-3">}</span><span class="p" data-group-id="5435698588-2">}</span></code></pre>
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">change_step</span><span class="p" data-group-id="5632729036-1">(</span><span class="n">step</span><span class="p" data-group-id="5632729036-1">)</span><span class="w">
+</span><span class="p" data-group-id="5632729036-2">%</span><span class="nc" data-group-id="5632729036-2">Ecto.Changeset</span><span class="p" data-group-id="5632729036-2">{</span><span class="ss">data</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="5632729036-3">%</span><span class="nc" data-group-id="5632729036-3">Step</span><span class="p" data-group-id="5632729036-3">{</span><span class="p" data-group-id="5632729036-3">}</span><span class="p" data-group-id="5632729036-2">}</span></code></pre>
+  </section>
+</section>
+<section class="detail" id="count_workorders/2">
+
+  <div class="detail-header">
+    <a href="#count_workorders/2" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">count_workorders(project, search_params)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation.ex#L355" class="icon-action" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+
+  </section>
+</section>
+<section class="detail" id="count_workorders_query/2">
+
+  <div class="detail-header">
+    <a href="#count_workorders_query/2" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">count_workorders_query(project, search_params)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation.ex#L386" class="icon-action" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+
   </section>
 </section>
 <section class="detail" id="create_dataclip/1">
@@ -581,11 +641,11 @@ Pages
   </a>
   <span class="text">Examples</span>
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">create_dataclip</span><span class="p" data-group-id="0903473436-1">(</span><span class="p" data-group-id="0903473436-2">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">value</span><span class="p" data-group-id="0903473436-2">}</span><span class="p" data-group-id="0903473436-1">)</span><span class="w">
-</span><span class="p" data-group-id="0903473436-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="0903473436-4">%</span><span class="nc" data-group-id="0903473436-4">Dataclip</span><span class="p" data-group-id="0903473436-4">{</span><span class="p" data-group-id="0903473436-4">}</span><span class="p" data-group-id="0903473436-3">}</span><span class="w">
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">create_dataclip</span><span class="p" data-group-id="1192285206-1">(</span><span class="p" data-group-id="1192285206-2">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">value</span><span class="p" data-group-id="1192285206-2">}</span><span class="p" data-group-id="1192285206-1">)</span><span class="w">
+</span><span class="p" data-group-id="1192285206-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="1192285206-4">%</span><span class="nc" data-group-id="1192285206-4">Dataclip</span><span class="p" data-group-id="1192285206-4">{</span><span class="p" data-group-id="1192285206-4">}</span><span class="p" data-group-id="1192285206-3">}</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">create_dataclip</span><span class="p" data-group-id="0903473436-5">(</span><span class="p" data-group-id="0903473436-6">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">bad_value</span><span class="p" data-group-id="0903473436-6">}</span><span class="p" data-group-id="0903473436-5">)</span><span class="w">
-</span><span class="p" data-group-id="0903473436-7">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="0903473436-8">%</span><span class="nc" data-group-id="0903473436-8">Ecto.Changeset</span><span class="p" data-group-id="0903473436-8">{</span><span class="p" data-group-id="0903473436-8">}</span><span class="p" data-group-id="0903473436-7">}</span></code></pre>
+</span><span class="gp unselectable">iex&gt; </span><span class="n">create_dataclip</span><span class="p" data-group-id="1192285206-5">(</span><span class="p" data-group-id="1192285206-6">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">bad_value</span><span class="p" data-group-id="1192285206-6">}</span><span class="p" data-group-id="1192285206-5">)</span><span class="w">
+</span><span class="p" data-group-id="1192285206-7">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="1192285206-8">%</span><span class="nc" data-group-id="1192285206-8">Ecto.Changeset</span><span class="p" data-group-id="1192285206-8">{</span><span class="p" data-group-id="1192285206-8">}</span><span class="p" data-group-id="1192285206-7">}</span></code></pre>
   </section>
 </section>
 <section class="detail" id="delete_dataclip/1">
@@ -613,11 +673,11 @@ Pages
   </a>
   <span class="text">Examples</span>
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">delete_dataclip</span><span class="p" data-group-id="9130244097-1">(</span><span class="n">dataclip</span><span class="p" data-group-id="9130244097-1">)</span><span class="w">
-</span><span class="p" data-group-id="9130244097-2">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="9130244097-3">%</span><span class="nc" data-group-id="9130244097-3">Dataclip</span><span class="p" data-group-id="9130244097-3">{</span><span class="p" data-group-id="9130244097-3">}</span><span class="p" data-group-id="9130244097-2">}</span><span class="w">
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">delete_dataclip</span><span class="p" data-group-id="7027298904-1">(</span><span class="n">dataclip</span><span class="p" data-group-id="7027298904-1">)</span><span class="w">
+</span><span class="p" data-group-id="7027298904-2">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="7027298904-3">%</span><span class="nc" data-group-id="7027298904-3">Dataclip</span><span class="p" data-group-id="7027298904-3">{</span><span class="p" data-group-id="7027298904-3">}</span><span class="p" data-group-id="7027298904-2">}</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">delete_dataclip</span><span class="p" data-group-id="9130244097-4">(</span><span class="n">dataclip</span><span class="p" data-group-id="9130244097-4">)</span><span class="w">
-</span><span class="p" data-group-id="9130244097-5">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="9130244097-6">%</span><span class="nc" data-group-id="9130244097-6">Ecto.Changeset</span><span class="p" data-group-id="9130244097-6">{</span><span class="p" data-group-id="9130244097-6">}</span><span class="p" data-group-id="9130244097-5">}</span></code></pre>
+</span><span class="gp unselectable">iex&gt; </span><span class="n">delete_dataclip</span><span class="p" data-group-id="7027298904-4">(</span><span class="n">dataclip</span><span class="p" data-group-id="7027298904-4">)</span><span class="w">
+</span><span class="p" data-group-id="7027298904-5">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="7027298904-6">%</span><span class="nc" data-group-id="7027298904-6">Ecto.Changeset</span><span class="p" data-group-id="7027298904-6">{</span><span class="p" data-group-id="7027298904-6">}</span><span class="p" data-group-id="7027298904-5">}</span></code></pre>
   </section>
 </section>
 <section class="detail" id="exclude_wiped_dataclips/1">
@@ -629,7 +689,7 @@ Pages
     </a>
     <h1 class="signature" translate="no">exclude_wiped_dataclips(work_order_query)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation.ex#L380" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation.ex#L411" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -674,14 +734,14 @@ Pages
   </a>
   <span class="text">Examples</span>
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">get_dataclip</span><span class="p" data-group-id="7996204550-1">(</span><span class="s">&quot;27b73932-16c7-4a72-86a3-85d805ccff98&quot;</span><span class="p" data-group-id="7996204550-1">)</span><span class="w">
-</span><span class="p" data-group-id="7996204550-2">%</span><span class="nc" data-group-id="7996204550-2">Dataclip</span><span class="p" data-group-id="7996204550-2">{</span><span class="p" data-group-id="7996204550-2">}</span><span class="w">
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">get_dataclip</span><span class="p" data-group-id="0005209722-1">(</span><span class="s">&quot;27b73932-16c7-4a72-86a3-85d805ccff98&quot;</span><span class="p" data-group-id="0005209722-1">)</span><span class="w">
+</span><span class="p" data-group-id="0005209722-2">%</span><span class="nc" data-group-id="0005209722-2">Dataclip</span><span class="p" data-group-id="0005209722-2">{</span><span class="p" data-group-id="0005209722-2">}</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">get_dataclip</span><span class="p" data-group-id="7996204550-3">(</span><span class="s">&quot;27b73932-16c7-4a72-86a3-85d805ccff98&quot;</span><span class="p" data-group-id="7996204550-3">)</span><span class="w">
+</span><span class="gp unselectable">iex&gt; </span><span class="n">get_dataclip</span><span class="p" data-group-id="0005209722-3">(</span><span class="s">&quot;27b73932-16c7-4a72-86a3-85d805ccff98&quot;</span><span class="p" data-group-id="0005209722-3">)</span><span class="w">
 </span><span class="no">nil</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">get_dataclip</span><span class="p" data-group-id="7996204550-4">(</span><span class="p" data-group-id="7996204550-5">%</span><span class="nc" data-group-id="7996204550-5">Step</span><span class="p" data-group-id="7996204550-5">{</span><span class="ss">id</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;a uuid&quot;</span><span class="p" data-group-id="7996204550-5">}</span><span class="p" data-group-id="7996204550-4">)</span><span class="w">
-</span><span class="p" data-group-id="7996204550-6">%</span><span class="nc" data-group-id="7996204550-6">Dataclip</span><span class="p" data-group-id="7996204550-6">{</span><span class="p" data-group-id="7996204550-6">}</span></code></pre>
+</span><span class="gp unselectable">iex&gt; </span><span class="n">get_dataclip</span><span class="p" data-group-id="0005209722-4">(</span><span class="p" data-group-id="0005209722-5">%</span><span class="nc" data-group-id="0005209722-5">Step</span><span class="p" data-group-id="0005209722-5">{</span><span class="ss">id</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;a uuid&quot;</span><span class="p" data-group-id="0005209722-5">}</span><span class="p" data-group-id="0005209722-4">)</span><span class="w">
+</span><span class="p" data-group-id="0005209722-6">%</span><span class="nc" data-group-id="0005209722-6">Dataclip</span><span class="p" data-group-id="0005209722-6">{</span><span class="p" data-group-id="0005209722-6">}</span></code></pre>
   </section>
 </section>
 <section class="detail" id="get_dataclip!/1">
@@ -715,10 +775,10 @@ Pages
   </a>
   <span class="text">Examples</span>
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">get_dataclip!</span><span class="p" data-group-id="1274761166-1">(</span><span class="mi">123</span><span class="p" data-group-id="1274761166-1">)</span><span class="w">
-</span><span class="p" data-group-id="1274761166-2">%</span><span class="nc" data-group-id="1274761166-2">Dataclip</span><span class="p" data-group-id="1274761166-2">{</span><span class="p" data-group-id="1274761166-2">}</span><span class="w">
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">get_dataclip!</span><span class="p" data-group-id="1628018235-1">(</span><span class="mi">123</span><span class="p" data-group-id="1628018235-1">)</span><span class="w">
+</span><span class="p" data-group-id="1628018235-2">%</span><span class="nc" data-group-id="1628018235-2">Dataclip</span><span class="p" data-group-id="1628018235-2">{</span><span class="p" data-group-id="1628018235-2">}</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">get_dataclip!</span><span class="p" data-group-id="1274761166-3">(</span><span class="mi">456</span><span class="p" data-group-id="1274761166-3">)</span><span class="w">
+</span><span class="gp unselectable">iex&gt; </span><span class="n">get_dataclip!</span><span class="p" data-group-id="1628018235-3">(</span><span class="mi">456</span><span class="p" data-group-id="1628018235-3">)</span><span class="w">
 </span><span class="gt">** (Ecto.NoResultsError)</span></code></pre>
   </section>
 </section>
@@ -885,10 +945,10 @@ Pages
   </a>
   <span class="text">Examples</span>
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">get_step!</span><span class="p" data-group-id="1050169454-1">(</span><span class="mi">123</span><span class="p" data-group-id="1050169454-1">)</span><span class="w">
-</span><span class="p" data-group-id="1050169454-2">%</span><span class="nc" data-group-id="1050169454-2">Step</span><span class="p" data-group-id="1050169454-2">{</span><span class="p" data-group-id="1050169454-2">}</span><span class="w">
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">get_step!</span><span class="p" data-group-id="2307739887-1">(</span><span class="mi">123</span><span class="p" data-group-id="2307739887-1">)</span><span class="w">
+</span><span class="p" data-group-id="2307739887-2">%</span><span class="nc" data-group-id="2307739887-2">Step</span><span class="p" data-group-id="2307739887-2">{</span><span class="p" data-group-id="2307739887-2">}</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">get_step!</span><span class="p" data-group-id="1050169454-3">(</span><span class="mi">456</span><span class="p" data-group-id="1050169454-3">)</span><span class="w">
+</span><span class="gp unselectable">iex&gt; </span><span class="n">get_step!</span><span class="p" data-group-id="2307739887-3">(</span><span class="mi">456</span><span class="p" data-group-id="2307739887-3">)</span><span class="w">
 </span><span class="gt">** (Ecto.NoResultsError)</span></code></pre>
   </section>
 </section>
@@ -982,7 +1042,7 @@ Pages
     </a>
     <h1 class="signature" translate="no">get_workorders_by_ids(ids)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation.ex#L541" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation.ex#L584" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -1048,8 +1108,8 @@ Pages
   </a>
   <span class="text">Examples</span>
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">list_dataclips</span><span class="p" data-group-id="5217864931-1">(</span><span class="p" data-group-id="5217864931-1">)</span><span class="w">
-</span><span class="p" data-group-id="5217864931-2">[</span><span class="p" data-group-id="5217864931-3">%</span><span class="nc" data-group-id="5217864931-3">Dataclip</span><span class="p" data-group-id="5217864931-3">{</span><span class="p" data-group-id="5217864931-3">}</span><span class="p">,</span><span class="w"> </span><span class="n">...</span><span class="p" data-group-id="5217864931-2">]</span></code></pre>
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">list_dataclips</span><span class="p" data-group-id="8574508972-1">(</span><span class="p" data-group-id="8574508972-1">)</span><span class="w">
+</span><span class="p" data-group-id="8574508972-2">[</span><span class="p" data-group-id="8574508972-3">%</span><span class="nc" data-group-id="8574508972-3">Dataclip</span><span class="p" data-group-id="8574508972-3">{</span><span class="p" data-group-id="8574508972-3">}</span><span class="p">,</span><span class="w"> </span><span class="n">...</span><span class="p" data-group-id="8574508972-2">]</span></code></pre>
   </section>
 </section>
 <section class="detail" id="list_dataclips/1">
@@ -1158,8 +1218,8 @@ Pages
   </a>
   <span class="text">Examples</span>
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">list_steps</span><span class="p" data-group-id="4534112428-1">(</span><span class="p" data-group-id="4534112428-1">)</span><span class="w">
-</span><span class="p" data-group-id="4534112428-2">[</span><span class="p" data-group-id="4534112428-3">%</span><span class="nc" data-group-id="4534112428-3">Step</span><span class="p" data-group-id="4534112428-3">{</span><span class="p" data-group-id="4534112428-3">}</span><span class="p">,</span><span class="w"> </span><span class="n">...</span><span class="p" data-group-id="4534112428-2">]</span></code></pre>
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">list_steps</span><span class="p" data-group-id="8718681679-1">(</span><span class="p" data-group-id="8718681679-1">)</span><span class="w">
+</span><span class="p" data-group-id="8718681679-2">[</span><span class="p" data-group-id="8718681679-3">%</span><span class="nc" data-group-id="8718681679-3">Step</span><span class="p" data-group-id="8718681679-3">{</span><span class="p" data-group-id="8718681679-3">}</span><span class="p">,</span><span class="w"> </span><span class="n">...</span><span class="p" data-group-id="8718681679-2">]</span></code></pre>
   </section>
 </section>
 <section class="detail" id="list_steps_for_project/2">
@@ -1230,7 +1290,7 @@ Pages
     </a>
     <h1 class="signature" translate="no">logs_for_step(step)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation.ex#L583" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation.ex#L626" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -1286,7 +1346,7 @@ Pages
   </a>
   <span class="text">Example:</span>
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="n">search_workorders</span><span class="p" data-group-id="4784808117-1">(</span><span class="p" data-group-id="4784808117-2">%</span><span class="nc" data-group-id="4784808117-2">Project</span><span class="p" data-group-id="4784808117-2">{</span><span class="ss">id</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p" data-group-id="4784808117-2">}</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="4784808117-3">%</span><span class="nc" data-group-id="4784808117-3">SearchParams</span><span class="p" data-group-id="4784808117-3">{</span><span class="ss">status</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="4784808117-4">[</span><span class="s">&quot;completed&quot;</span><span class="p" data-group-id="4784808117-4">]</span><span class="p" data-group-id="4784808117-3">}</span><span class="p" data-group-id="4784808117-1">)</span></code></pre>
+<pre><code class="makeup elixir" translate="no"><span class="n">search_workorders</span><span class="p" data-group-id="2961885709-1">(</span><span class="p" data-group-id="2961885709-2">%</span><span class="nc" data-group-id="2961885709-2">Project</span><span class="p" data-group-id="2961885709-2">{</span><span class="ss">id</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p" data-group-id="2961885709-2">}</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="2961885709-3">%</span><span class="nc" data-group-id="2961885709-3">SearchParams</span><span class="p" data-group-id="2961885709-3">{</span><span class="ss">status</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="2961885709-4">[</span><span class="s">&quot;completed&quot;</span><span class="p" data-group-id="2961885709-4">]</span><span class="p" data-group-id="2961885709-3">}</span><span class="p" data-group-id="2961885709-1">)</span></code></pre>
   </section>
 </section>
 <section class="detail" id="search_workorders/3">
@@ -1322,7 +1382,7 @@ Pages
     </a>
     <h1 class="signature" translate="no">search_workorders_query(project, search_params)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation.ex#L355" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation.ex#L361" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -1360,11 +1420,11 @@ Pages
   </a>
   <span class="text">Examples</span>
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">update_dataclip</span><span class="p" data-group-id="1910847733-1">(</span><span class="n">dataclip</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="1910847733-2">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">new_value</span><span class="p" data-group-id="1910847733-2">}</span><span class="p" data-group-id="1910847733-1">)</span><span class="w">
-</span><span class="p" data-group-id="1910847733-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="1910847733-4">%</span><span class="nc" data-group-id="1910847733-4">Dataclip</span><span class="p" data-group-id="1910847733-4">{</span><span class="p" data-group-id="1910847733-4">}</span><span class="p" data-group-id="1910847733-3">}</span><span class="w">
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">update_dataclip</span><span class="p" data-group-id="0574362545-1">(</span><span class="n">dataclip</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="0574362545-2">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">new_value</span><span class="p" data-group-id="0574362545-2">}</span><span class="p" data-group-id="0574362545-1">)</span><span class="w">
+</span><span class="p" data-group-id="0574362545-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="0574362545-4">%</span><span class="nc" data-group-id="0574362545-4">Dataclip</span><span class="p" data-group-id="0574362545-4">{</span><span class="p" data-group-id="0574362545-4">}</span><span class="p" data-group-id="0574362545-3">}</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">update_dataclip</span><span class="p" data-group-id="1910847733-5">(</span><span class="n">dataclip</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="1910847733-6">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">bad_value</span><span class="p" data-group-id="1910847733-6">}</span><span class="p" data-group-id="1910847733-5">)</span><span class="w">
-</span><span class="p" data-group-id="1910847733-7">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="1910847733-8">%</span><span class="nc" data-group-id="1910847733-8">Ecto.Changeset</span><span class="p" data-group-id="1910847733-8">{</span><span class="p" data-group-id="1910847733-8">}</span><span class="p" data-group-id="1910847733-7">}</span></code></pre>
+</span><span class="gp unselectable">iex&gt; </span><span class="n">update_dataclip</span><span class="p" data-group-id="0574362545-5">(</span><span class="n">dataclip</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="0574362545-6">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">bad_value</span><span class="p" data-group-id="0574362545-6">}</span><span class="p" data-group-id="0574362545-5">)</span><span class="w">
+</span><span class="p" data-group-id="0574362545-7">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="0574362545-8">%</span><span class="nc" data-group-id="0574362545-8">Ecto.Changeset</span><span class="p" data-group-id="0574362545-8">{</span><span class="p" data-group-id="0574362545-8">}</span><span class="p" data-group-id="0574362545-7">}</span></code></pre>
   </section>
 </section>
 <section class="detail" id="with_runs/1">
@@ -1376,7 +1436,7 @@ Pages
     </a>
     <h1 class="signature" translate="no">with_runs(query)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation.ex#L545" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation.ex#L588" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
