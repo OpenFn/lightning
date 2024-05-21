@@ -297,9 +297,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
             end
           }
           can_create_project_credential={@can_edit_workflow}
-          return_to={
-            ~p"/projects/#{@project.id}/w/#{@workflow.id}?s=#{@selected_job.id}"
-          }
+          return_to={"#{@base_url}?name=#{@workflow.name}&s=#{@selected_job.id}"}
         />
         <.form
           id="workflow-form"
