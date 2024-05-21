@@ -125,4 +125,8 @@ defmodule Lightning.KafkaTriggers do
       %{trigger_id: trigger_id, topic: topic, key: key}
     end)
   end
+
+  def send_after(pid, message, delay) do
+    Process.send_after(pid, message, delay)
+  end
 end
