@@ -4,11 +4,11 @@ defmodule Lightning.KafkaTriggers.TriggerKafkaMessage do
   import Ecto.Changeset
 
   alias Lightning.Workflows.Trigger
+  alias Lightning.WorkOrder
 
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id
   schema "trigger_kafka_messages" do
-    field :work_order_id, :binary_id
     field :topic, :string
     field :key, :string
     field :message_timestamp, :integer
@@ -16,6 +16,7 @@ defmodule Lightning.KafkaTriggers.TriggerKafkaMessage do
     field :data, :binary
 
     belongs_to :trigger, Trigger
+    belongs_to :work_order, WorkOrder
 
     timestamps()
   end

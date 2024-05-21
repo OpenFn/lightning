@@ -4,6 +4,8 @@ defmodule Lightning.KafkaTriggers do
   alias Lightning.KafkaTriggers.TriggerKafkaMessage
   alias Lightning.Repo
   alias Lightning.Workflows.Trigger
+  alias Lightning.WorkOrder
+  alias Lightning.WorkOrders
 
   def find_enabled_triggers do
     query =
@@ -128,5 +130,38 @@ defmodule Lightning.KafkaTriggers do
 
   def send_after(pid, message, delay) do
     Process.send_after(pid, message, delay)
+  end
+
+  def process_candidate_for(candidate_set) do
+    candidate = find_candidate_for(candidate_set)
+
+    %{data: data, trigger: %{workflow: workflow} = trigger} = candidate
+
+    {:ok, %WorkOrder{id: work_order_id}} =
+      WorkOrders.create_for(trigger,
+        workflow: workflow,
+        dataclip: %{
+          body: data |> Jason.decode!(),
+          type: :kafka,
+          project_id: workflow.project_id
+        },
+        without_run: false
+      ) |> IO.inspect()
+
+    candidate
+    |> TriggerKafkaMessage.changeset(%{work_order_id: work_order_id})
+    |> Repo.update()
+
+    :ok
+  end
+
+  def find_candidate_for(%{trigger_id: trigger_id, topic: topic, key: key}) do
+    query = from t in TriggerKafkaMessage,
+      where: t.trigger_id == ^trigger_id and t.topic == ^topic and t.key == ^key,
+      order_by: t.message_timestamp,
+      limit: 1,
+      preload: [trigger: [:workflow]]
+
+    query |> Repo.one()
   end
 end
