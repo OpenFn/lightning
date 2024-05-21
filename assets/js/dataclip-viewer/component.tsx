@@ -45,6 +45,24 @@ const DataclipViewer = ({ dataclipId }: { dataclipId: string }) => {
   };
 
   useEffect(() => {
+    const onResize = () => {
+      const editor = monacoRef.current as any;
+      if (editor) {
+        editor.layout({ width: 0, height: 0 });
+        editor.layout()
+      }
+    };
+
+    window.addEventListener('resize', onResize)
+    document.addEventListener('update-layout', onResize)
+
+    return () => {
+      window.removeEventListener('resize', onResize)
+      document.removeEventListener('update-layout', onResize)
+    }
+  }, []);
+
+  useEffect(() => {
     fetchDataclipContent(dataclipId).then(setContent)
   }, [dataclipId]);
 
