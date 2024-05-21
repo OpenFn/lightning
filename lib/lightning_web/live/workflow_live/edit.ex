@@ -297,7 +297,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
             end
           }
           can_create_project_credential={@can_edit_workflow}
-          return_to={"#{@base_url}?name=#{@workflow.name}&s=#{@selected_job.id}"}
+          return_to={return_to(@live_action, @base_url, @workflow, @selected_job)}
         />
         <.form
           id="workflow-form"
@@ -1453,5 +1453,15 @@ defmodule LightningWeb.WorkflowLive.Edit do
     else
       socket
     end
+  end
+
+  defp return_to(action, base_url, workflow, selected_job) do
+    query_params =
+      case action do
+        :edit -> %{s: selected_job.id}
+        :new -> %{name: workflow.name, s: selected_job.id}
+      end
+
+    "#{base_url}?#{URI.encode_query(query_params)}"
   end
 end
