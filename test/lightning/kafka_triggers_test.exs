@@ -2,7 +2,10 @@ defmodule Lightning.KafkaTriggersTest do
   use Lightning.DataCase, async: true
 
   alias Lightning.KafkaTriggers
+  alias Lightning.KafkaTriggers.TriggerKafkaMessage
   alias Lightning.Workflows.Trigger
+  alias Lightning.Workflows.Workflow
+  alias Lightning.WorkOrder
 
   describe ".find_enabled_triggers/0" do
     test "returns enabled kafka triggers" do
@@ -505,6 +508,186 @@ defmodule Lightning.KafkaTriggersTest do
       KafkaTriggers.send_after(target_pid, :test_message, 100)
 
       assert_receive(:hello_from_dummy, 150)
+    end
+  end
+
+  describe ".process_candidate_for/1" do
+    setup do
+      other_message =
+        insert(
+          :trigger_kafka_message,
+          key: "other-key",
+          topic: "other-test-topic",
+          work_order: nil
+        )
+
+      message =
+        insert(
+          :trigger_kafka_message,
+          data: %{triggers: :test} |> Jason.encode!(),
+          key: "test-key",
+          topic: "test-topic",
+          work_order: nil
+        )
+
+      candidate_set = %{
+          trigger_id: message.trigger.id,
+          topic: message.topic,
+          key: message.key
+      }
+
+      %{
+        candidate_set: candidate_set,
+        message: message,
+        other_message: other_message
+      }
+    end
+
+    test "returns :ok but does nothing if there is no candidate for the set", %{
+      candidate_set: candidate_set,
+    } do
+      no_such_set = candidate_set |> Map.merge(%{key: "no-such-key"})
+
+      assert KafkaTriggers.process_candidate_for(no_such_set) == :ok
+    end
+
+    test "if candidate exists sans work_order, creates work_order", %{
+      message: message,
+      candidate_set: candidate_set,
+    } do
+      %{trigger: %{workflow: workflow} = trigger} = message
+      project_id = workflow.project_id
+
+      assert KafkaTriggers.process_candidate_for(candidate_set) == :ok
+
+      %{work_order: work_order} =
+        TriggerKafkaMessage
+        |> Repo.get(message.id)
+        |> Repo.preload([
+          work_order: [
+            :dataclip,
+            :runs,
+            trigger: [workflow: [:project]],
+            workflow: [:project]
+          ]
+        ])
+
+      assert %WorkOrder {
+        dataclip:  %{
+          body: %{"triggers" => "test"},
+          project_id: ^project_id,
+          type: :kafka
+        },
+        trigger: ^trigger,
+        workflow: ^workflow,
+      } = work_order
+    end
+  end
+
+  describe "find_candidate_for/1" do
+    setup do
+      other_trigger = insert(:trigger)
+      trigger = insert(:trigger)
+
+      _other_trigger_set_message_1 =
+        insert(
+          :trigger_kafka_message,
+          trigger: other_trigger,
+          key: "set_key",
+          topic: "set_topic",
+          message_timestamp: 10 |> timestamp_from_offset
+        )
+
+      _other_key_set_message_1 =
+        insert(
+          :trigger_kafka_message,
+          trigger: trigger,
+          key: "other_set_key",
+          topic: "set_topic",
+          message_timestamp: 10 |> timestamp_from_offset
+        )
+
+      _other_key_set_message_1 =
+        insert(
+          :trigger_kafka_message,
+          trigger: trigger,
+          key: "set_key",
+          topic: "other_set_topic",
+          message_timestamp: 10 |> timestamp_from_offset
+        )
+
+      _set_message_2 =
+        insert(
+          :trigger_kafka_message,
+          trigger: trigger,
+          key: "set_key",
+          topic: "set_topic",
+          message_timestamp: 120 |> timestamp_from_offset
+        )
+      _set_message_3 = 
+        insert(
+          :trigger_kafka_message,
+          trigger: trigger,
+          key: "set_key",
+          topic: "set_topic",
+          message_timestamp: 130 |> timestamp_from_offset
+        )
+      
+      set_message_1 = 
+        insert(
+          :trigger_kafka_message,
+          trigger: trigger,
+          key: "set_key",
+          topic: "set_topic",
+          message_timestamp: 110 |> timestamp_from_offset
+        )
+
+      candidate_set = %{
+        trigger_id: trigger.id, topic: "set_topic", key: "set_key"
+      }
+
+      %{
+        candidate_set: candidate_set,
+        message: set_message_1
+      }
+    end
+
+    test "returns nil if it can't find a message for the candidate set", %{
+      candidate_set: candidate_set
+    } do
+      no_such_set = candidate_set |> Map.merge(%{key: "no-such-key"})
+
+      assert KafkaTriggers.find_candidate_for(no_such_set) == nil
+    end
+
+    test "returns earliest message - based on message timestamp - for set", %{
+      candidate_set: candidate_set,
+      message: message
+    } do
+      message_id = message.id
+
+      assert %TriggerKafkaMessage{
+        id: ^message_id
+      } = KafkaTriggers.find_candidate_for(candidate_set)
+    end
+
+    test "preloads `:workflow`, and `:trigger`", %{
+      candidate_set: candidate_set,
+    } do
+      candidate = KafkaTriggers.find_candidate_for(candidate_set)
+
+      assert %{
+        trigger: %Trigger{
+          workflow: %Workflow{
+          }
+        }
+      } = candidate
+    end
+
+    def timestamp_from_offset(offset) do
+      DateTime.utc_now()
+      |> DateTime.add(offset)
+      |> DateTime.to_unix(:millisecond)
     end
   end
 end
