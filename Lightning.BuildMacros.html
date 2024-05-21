@@ -7,7 +7,7 @@
     <meta name="generator" content="ExDoc v0.30.9">
     <meta name="project" content="Lightning v2.5.1">
 
-    <title>LightningWeb.CredentialLive.OauthClientFormComponent — Lightning v2.5.1</title>
+    <title>Lightning.BuildMacros — Lightning v2.5.1</title>
     <link rel="stylesheet" href="dist/html-elixir-XFYN5IVA.css" />
 
 
@@ -125,19 +125,19 @@ Pages
 </button>
 
 
-    <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/credential_live/oauth_client_form_component.ex#L1" title="View Source" class="icon-action" rel="help">
+    <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/build_macros.ex#L1" title="View Source" class="icon-action" rel="help">
       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
       <span class="sr-only">View Source</span>
     </a>
 
-  <span translate="no">LightningWeb.CredentialLive.OauthClientFormComponent</span> 
+  <span translate="no">Lightning.BuildMacros</span> 
   <small class="app-vsn" translate="no">(Lightning v2.5.1)</small>
 
 </h1>
 
 
   <section id="moduledoc">
-<p>Form Component for working with a single Credential</p>
+<p>Macros for building Lightning.</p>
   </section>
 
 
@@ -155,11 +155,12 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#global_client_checkbox/1" translate="no">global_client_checkbox(assigns)</a>
+        <a href="#do_in/2" translate="no">do_in(envs, list)</a>
 
       </div>
 
-        <div class="summary-synopsis"><h2>Attributes</h2><ul><li><code class="inline">form</code> (<code class="inline">:any</code>) (required)</li></ul></div>
+        <div class="summary-synopsis"><p>Conditionally evaluates the block if the current environment is in the
+given list of environments.</p></div>
 
     </div>
 
@@ -176,32 +177,47 @@ Pages
       <span class="text">Functions</span>
     </h1>
     <div class="functions-list">
-<section class="detail" id="global_client_checkbox/1">
+<section class="detail" id="do_in/2">
 
   <div class="detail-header">
-    <a href="#global_client_checkbox/1" class="detail-link" title="Link to this function">
+    <a href="#do_in/2" class="detail-link" title="Link to this macro">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
+      <span class="sr-only">Link to this macro</span>
     </a>
-    <h1 class="signature" translate="no">global_client_checkbox(assigns)</h1>
+    <h1 class="signature" translate="no">do_in(envs, list)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/credential_live/oauth_client_form_component.ex#L534" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/build_macros.ex#L28" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
 
 
+      <span class="note">(macro)</span>
+
   </div>
 
   <section class="docstring">
 
-<h2 id="global_client_checkbox/1-attributes" class="section-heading">
-  <a href="#global_client_checkbox/1-attributes" class="hover-link">
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> do_in([<a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">atom</a>()] | <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">atom</a>(), [{:do, <a href="https://hexdocs.pm/elixir/Macro.html#t:t/0">Macro.t</a>()}]) :: <a href="https://hexdocs.pm/elixir/Macro.html#t:t/0">Macro.t</a>()</pre>
+
+      </div>
+
+<p>Conditionally evaluates the block if the current environment is in the
+given list of environments.</p><h2 id="do_in/2-examples" class="section-heading">
+  <a href="#do_in/2-examples" class="hover-link">
     <i class="ri-link-m" aria-hidden="true"></i>
   </a>
-  <span class="text">Attributes</span>
+  <span class="text">Examples</span>
 </h2>
-<ul><li><code class="inline">form</code> (<code class="inline">:any</code>) (required)</li></ul>
+<pre><code class="makeup elixir" translate="no"><span class="n">do_in</span><span class="p" data-group-id="1411280344-1">(</span><span class="ss">:dev</span><span class="p" data-group-id="1411280344-1">)</span><span class="w"> </span><span class="k" data-group-id="1411280344-2">do</span><span class="w">
+  </span><span class="nc">IO</span><span class="o">.</span><span class="n">puts</span><span class="p" data-group-id="1411280344-3">(</span><span class="s">&quot;This will only be printed in the dev environment&quot;</span><span class="p" data-group-id="1411280344-3">)</span><span class="w">
+</span><span class="k" data-group-id="1411280344-2">end</span><span class="w">
+
+</span><span class="n">do_in</span><span class="p" data-group-id="1411280344-4">(</span><span class="p" data-group-id="1411280344-5">[</span><span class="ss">:dev</span><span class="p">,</span><span class="w"> </span><span class="ss">:test</span><span class="p" data-group-id="1411280344-5">]</span><span class="p" data-group-id="1411280344-4">)</span><span class="w"> </span><span class="k" data-group-id="1411280344-6">do</span><span class="w">
+  </span><span class="nc">IO</span><span class="o">.</span><span class="n">puts</span><span class="p" data-group-id="1411280344-7">(</span><span class="s">&quot;This will only be printed in the dev and test environments&quot;</span><span class="p" data-group-id="1411280344-7">)</span><span class="w">
+</span><span class="k" data-group-id="1411280344-6">end</span></code></pre>
   </section>
 </section>
 
