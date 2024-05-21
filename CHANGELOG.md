@@ -22,8 +22,8 @@ and this project adheres to
 
 ### Changed
 
-- Improve performance and memory consumption on queries and logic for digest
-  mailer [#2121](https://github.com/OpenFn/lightning/issues/2121)
+- Refactor count workorders to reuse search code  
+  [#2121](https://github.com/OpenFn/lightning/issues/2121)
 
 ### Fixed
 
@@ -83,6 +83,8 @@ and this project adheres to
   credentials [#2131](https://github.com/OpenFn/lightning/issues/2131)
 
 ## [v2.5.1]
+
+### Fixed
 
 - Don't compile Phoenix Storybook in production and test environments
   [#2119](https://github.com/OpenFn/lightning/pull/2119)
