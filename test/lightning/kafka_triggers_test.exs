@@ -479,4 +479,32 @@ defmodule Lightning.KafkaTriggersTest do
       end)
     end
   end
+
+  describe ".send_after/3" do
+    defmodule DummyServer do
+      use GenServer
+
+      def start_link(process_to_notify) do
+        GenServer.start_link(__MODULE__, process_to_notify)
+      end
+
+      @impl true
+      def init(process_to_notify) do
+        {:ok, process_to_notify}
+      end
+
+      @impl true
+      def handle_info(:test_message, process_to_notify) do
+        Process.send(process_to_notify, :hello_from_dummy, [])
+      end
+    end
+
+    test "queues a message to be sent after the specified delay" do
+      {:ok, target_pid} = DummyServer.start_link(self())
+
+      KafkaTriggers.send_after(target_pid, :test_message, 100)
+
+      assert_receive(:hello_from_dummy, 150)
+    end
+  end
 end
