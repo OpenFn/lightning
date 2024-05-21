@@ -132,7 +132,9 @@ defmodule LightningWeb.RunLive.Streaming do
           ) do
         {:noreply,
          socket
-         |> push_event("logs", %{logs: [log_line]})}
+         |> push_event("logs-#{socket.assigns.run.result.id}", %{
+           logs: [log_line]
+         })}
       end
     end
   end

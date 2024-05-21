@@ -145,6 +145,15 @@ defmodule LightningWeb.RunLive.RunViewerLive do
                     stream={@streams.log_lines}
                     stream_empty?={@log_lines_stream_empty?}
                   /> --%>
+                  <div
+                    id={"run-log-#{run.id}"}
+                    class="h-full"
+                    phx-hook="LogViewer"
+                    phx-update="ignore"
+                    data-run-id={run.id}
+                    data-step-id={@selected_step_id}
+                  >
+                  </div>
                 </div>
               </div>
             </Common.panel_content>

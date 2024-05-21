@@ -11,13 +11,6 @@ export type LogLine = {
   step_id: string;
 };
 
-type LogMetadata = {
-  id: string;
-  source: string;
-  step_id: string;
-  line: number;
-};
-
 // The VER logs are multiline
 function splitLogMessages(logs: LogLine[]): LogLine[] {
   const newLogs: LogLine[] = [];
@@ -58,21 +51,15 @@ function findLogIndicesByStepId(
 export function mount(el: HTMLElement) {
   const componentRoot = createRoot(el);
 
-  render([]);
+  render();
 
-  function render(logs: LogLine[]) {
+  function render() {
     if (el.dataset.runId === undefined) {
       throw new Error(
         'runId is missing from the element dataset. Ensure you have set data-run-id on the element.'
       );
     }
-    componentRoot.render(
-      <LogViewer
-        logs={logs}
-        runId={el.dataset.runId}
-        stepId={el.dataset.stepId}
-      />
-    );
+    componentRoot.render(<LogViewer hookEl={el} />);
   }
 
   function unmount() {
@@ -82,23 +69,26 @@ export function mount(el: HTMLElement) {
   return { unmount, render };
 }
 
-const LogViewer = ({
-  logs,
-  stepId,
-}: {
-  logs: LogLine[];
-  stepId: string | undefined;
-}) => {
-  // const [logs, setLogs] = useState<LogLine[]>([]);
+const LogViewer = ({ hookEl }: { hookEl: HTMLElement }) => {
+  let runId = hookEl.dataset.runId;
+  let stepId = hookEl.dataset.stepId;
+  let logs: LogLine[] = [];
+  let decorationsCollection: any = null;
   const monacoRef = useRef<Monaco | null>(null);
   const editorRef = useRef<any | null>(null);
 
-  // window.addEventListener(`phx:logs-${runId}`, (event: CustomEvent) => {
-  //   console.log('phx:logs', event.detail.logs);
-  //   setLogs(logs.concat(event.detail.logs));
-  // });
+  window.addEventListener(`phx:logs-${runId}`, (event: CustomEvent) => {
+    const splitLogs = splitLogMessages(event.detail.logs);
+    console.log('splitLogs', splitLogs);
+    logs = logs.concat(splitLogs);
+    editorRef.current?.setValue(logs.map(log => `${log.message}`).join('\n'));
+    maybeHighlightStep();
+  });
 
-  const splitLogs = splitLogMessages(logs);
+  hookEl.addEventListener('log-viewer:updated', (event: CustomEvent) => {
+    stepId = event.detail.stepId;
+    maybeHighlightStep();
+  });
 
   const beforeMount = (monaco: Monaco) => {
     monacoRef.current = monaco;
@@ -109,31 +99,27 @@ const LogViewer = ({
     editorRef.current = editor;
   };
 
-  if (
-    stepId !== undefined &&
-    logs.length > 0 &&
-    monacoRef.current !== null &&
-    editorRef.current !== null
-  ) {
-    let monaco = monacoRef.current;
-    let editor = editorRef.current;
-    const { first, last } = findLogIndicesByStepId(splitLogs, stepId);
-    if (first !== null && last !== null) {
-      console.log('first', first, 'last', last);
-      console.log('monaco editor', editor);
-      console.log('monaco editor type', editor.getEditorType());
+  function maybeHighlightStep() {
+    // clear previous highlights
+    decorationsCollection?.clear();
 
-      const decos = editor.createDecorationsCollection([
-        {
-          range: new monaco.Range(first + 1, 1, last + 1, 1),
-          options: {
-            inlineClassName: 'bg-yellow-400 w-1 ml-0.5',
+    if (stepId !== undefined && logs.length > 0) {
+      let monaco = monacoRef.current;
+      let editor = editorRef.current;
+      const { first, last } = findLogIndicesByStepId(logs, stepId);
+      if (first !== null && last !== null) {
+        decorationsCollection = editor?.createDecorationsCollection([
+          {
+            range: new monaco.Range(first + 1, 1, last + 1, 1),
+            options: {
+              isWholeLine: true,
+              linesDecorationsClassName: 'log-viewer-highlighted',
+            },
           },
-        },
-      ]);
+        ]);
 
-      console.log('decos', decos);
-      editor.revealLine(first + 1);
+        editor?.revealLineInCenter(first + 1);
+      }
     }
   }
 
@@ -155,9 +141,9 @@ const LogViewer = ({
           enabled: false,
         },
         wordWrap: 'on',
-        lineNumbersMinChars: 8,
+        lineNumbersMinChars: 12,
         lineNumbers: originalLineNumber => {
-          const log = splitLogs[originalLineNumber - 1];
+          const log = logs[originalLineNumber - 1];
           if (log) {
             return `${originalLineNumber} (${log.source})`;
           }
