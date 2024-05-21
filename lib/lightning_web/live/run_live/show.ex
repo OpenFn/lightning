@@ -175,14 +175,23 @@ defmodule LightningWeb.RunLive.Show do
                 </Common.tab_item>
               </Common.tab_bar>
 
-              <Common.panel_content for_hash="log">
-                <Viewers.log_viewer
+              <Common.panel_content for_hash="log" class="flex-1">
+                <%!-- <Viewers.log_viewer
                   id={"run-log-#{run.id}"}
                   highlight_id={@selected_step_id}
                   stream={@streams.log_lines}
                   run_state={@run.result.state}
                   stream_empty?={@log_lines_stream_empty?}
-                />
+                /> --%>
+                <div
+                  id={"run-log-#{run.id}"}
+                  class="h-full"
+                  phx-hook="LogViewer"
+                  phx-update="ignore"
+                  data-run-id={run.id}
+                  data-step-id={@selected_step_id}
+                >
+                </div>
               </Common.panel_content>
               <Common.panel_content for_hash="input" class="flex-1">
                 <Viewers.step_dataclip_viewer
@@ -230,8 +239,6 @@ defmodule LightningWeb.RunLive.Show do
        selected_step_id: nil,
        steps: []
      )
-     |> stream(:log_lines, [])
-     |> assign(:log_lines_stream_empty?, true)
      |> assign(:input_dataclip, nil)
      |> assign(:output_dataclip, nil)
      |> assign(:run, AsyncResult.loading())
