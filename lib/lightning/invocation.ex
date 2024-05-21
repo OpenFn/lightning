@@ -353,7 +353,7 @@ defmodule Lightning.Invocation do
     |> Repo.paginate(params)
   end
 
-  def search_workorders_without_wiped_dataclips(
+  def search_workorders_for_retry(
         %Project{id: project_id},
         search_params
       ) do

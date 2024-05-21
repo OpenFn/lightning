@@ -212,7 +212,7 @@ defmodule Lightning.InvocationTest do
     ).entries()
   end
 
-  describe "search_workorders_without_wiped_dataclips/2" do
+  describe "search_workorders_for_retry/2" do
     test "returns workorders without preloading and without wiped dataclips" do
       project = insert(:project)
       dataclip = insert(:dataclip)
@@ -235,7 +235,7 @@ defmodule Lightning.InvocationTest do
       )
 
       assert found_workorders =
-               Invocation.search_workorders_without_wiped_dataclips(
+               Invocation.search_workorders_for_retry(
                  project,
                  SearchParams.new(%{"status" => SearchParams.status_list()})
                )
@@ -243,7 +243,10 @@ defmodule Lightning.InvocationTest do
       assert MapSet.new(workorders, & &1.id) ==
                MapSet.new(found_workorders, & &1.id)
 
+      refute Enum.any?(found_workorders, &Ecto.assoc_loaded?(&1.dataclip))
       refute Enum.any?(found_workorders, &Ecto.assoc_loaded?(&1.snapshot))
+      refute Enum.any?(found_workorders, &Ecto.assoc_loaded?(&1.workflow))
+      refute Enum.any?(found_workorders, &Ecto.assoc_loaded?(&1.runs))
     end
   end
 
