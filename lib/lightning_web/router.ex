@@ -3,6 +3,7 @@ defmodule LightningWeb.Router do
   The router for Lightning.
   """
   use LightningWeb, :router
+  use Lightning.BuildMacros
 
   import LightningWeb.UserAuth
   import Phoenix.LiveDashboard.Router
@@ -209,7 +210,7 @@ defmodule LightningWeb.Router do
     live_dashboard "/dashboard", metrics: LightningWeb.Telemetry
   end
 
-  if Mix.env() == :dev do
+  do_in(:dev) do
     import PhoenixStorybook.Router
 
     scope "/" do
