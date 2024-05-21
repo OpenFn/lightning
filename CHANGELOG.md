@@ -19,12 +19,14 @@ and this project adheres to
 
 ### Changed
 
+### Fixed
+
+## [v2.5.1]
+
 - Don't compile Phoenix Storybook in production and test environments
   [#2119](https://github.com/OpenFn/lightning/pull/2119)
 - Improve performance and memory consumption on queries and logic for digest
   mailer [#2121](https://github.com/OpenFn/lightning/issues/2121)
-
-### Fixed
 
 ## [v2.5.0] - 2024-05-20
 
