@@ -21,6 +21,8 @@ and this project adheres to
 
 ### Fixed
 
+- Dataclip Viewer now responds to page resize and internal page layout
+
 ## [v2.5.1]
 
 - Don't compile Phoenix Storybook in production and test environments
