@@ -82,7 +82,7 @@ and this project adheres to
 - Preserve custom values (like `apiVersion`) during token refresh for OAuth2
   credentials [#2131](https://github.com/OpenFn/lightning/issues/2131)
 
-## [v2.5.1]
+## [v2.5.1] - 2024-05-21
 
 ### Fixed
 
