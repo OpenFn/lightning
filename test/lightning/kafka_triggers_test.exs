@@ -1,9 +1,12 @@
 defmodule Lightning.KafkaTriggersTest do
   use Lightning.DataCase, async: true
 
+  require Lightning.Run
+
   alias Lightning.Invocation
   alias Lightning.KafkaTriggers
   alias Lightning.KafkaTriggers.TriggerKafkaMessage
+  alias Lightning.Run
   alias Lightning.Workflows.Trigger
   alias Lightning.Workflows.Workflow
   alias Lightning.WorkOrder
@@ -626,6 +629,21 @@ defmodule Lightning.KafkaTriggersTest do
       assert TriggerKafkaMessage |> Repo.get(message_2.id) != nil
       assert TriggerKafkaMessage |> Repo.get(other_message.id) != nil
     end
+
+    test "if candidate does not have successful work_order, does not delete", %{
+      candidate_set: candidate_set,
+      message_1: message_1,
+      message_2: message_2,
+      other_message: other_message
+    } do
+      KafkaTriggers.process_candidate_for(candidate_set)
+
+      assert KafkaTriggers.process_candidate_for(candidate_set) == :ok
+
+      assert TriggerKafkaMessage |> Repo.get(message_1.id) != nil
+      assert TriggerKafkaMessage |> Repo.get(message_2.id) != nil
+      assert TriggerKafkaMessage |> Repo.get(other_message.id) != nil
+    end
   end
 
   describe "find_candidate_for/1" do
@@ -733,6 +751,26 @@ defmodule Lightning.KafkaTriggersTest do
       DateTime.utc_now()
       |> DateTime.add(offset)
       |> DateTime.to_unix(:millisecond)
+    end
+  end
+
+  describe ".successful/1" do
+    test "returns true if work_order is successful", %{} do
+      work_order = build(:workorder, state: :success)
+      assert KafkaTriggers.successful?(work_order)
+    end
+
+    test "returns false if work_order is not successful", %{} do
+      states_other_than_success()
+      |> Enum.each(fn state ->
+        work_order = build(:workorder, state: state)
+        refute KafkaTriggers.successful?(work_order)
+      end)
+    end
+
+    def states_other_than_success do
+      [:rejected, :pending, :running] ++ Run.final_states()
+      |> Enum.reject(& &1 == :success)
     end
   end
 end

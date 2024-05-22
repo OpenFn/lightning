@@ -161,6 +161,10 @@ defmodule Lightning.KafkaTriggers do
     |> Repo.update()
   end
 
+  defp handle_candidate(%{work_order: work_order} = candidate) do
+    if successful?(work_order), do: candidate |> Repo.delete()
+  end
+
   def find_candidate_for(%{trigger_id: trigger_id, topic: topic, key: key}) do
     query = from t in TriggerKafkaMessage,
       where: t.trigger_id == ^trigger_id and t.topic == ^topic and t.key == ^key,
@@ -169,5 +173,9 @@ defmodule Lightning.KafkaTriggers do
       preload: [:work_order, trigger: [:workflow]]
 
     query |> Repo.one()
+  end
+
+  def successful?(%{state: state}) do
+    state == :success
   end
 end
