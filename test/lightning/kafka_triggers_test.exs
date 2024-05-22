@@ -1,5 +1,7 @@
 defmodule Lightning.KafkaTriggersTest do
-  use Lightning.DataCase, async: true
+  use Lightning.DataCase, async: false
+
+  import Mock
 
   require Lightning.Run
 
@@ -636,13 +638,28 @@ defmodule Lightning.KafkaTriggersTest do
       message_2: message_2,
       other_message: other_message
     } do
-      KafkaTriggers.process_candidate_for(candidate_set)
+      assert KafkaTriggers.process_candidate_for(candidate_set) == :ok
 
       assert KafkaTriggers.process_candidate_for(candidate_set) == :ok
 
       assert TriggerKafkaMessage |> Repo.get(message_1.id) != nil
       assert TriggerKafkaMessage |> Repo.get(message_2.id) != nil
       assert TriggerKafkaMessage |> Repo.get(other_message.id) != nil
+    end
+
+    test "rolls back if an error occurs", %{
+      candidate_set: candidate_set,
+    } do
+      with_mock(TriggerKafkaMessage,
+        [:passthrough],
+          changeset: fn _message, _changes -> raise "rollback" end
+      ) do
+        assert_raise RuntimeError, ~r/rollback/, fn ->
+          KafkaTriggers.process_candidate_for(candidate_set)
+        end
+      end
+
+      assert WorkOrder |> Repo.all() == []
     end
   end
 
@@ -720,7 +737,7 @@ defmodule Lightning.KafkaTriggersTest do
     } do
       no_such_set = candidate_set |> Map.merge(%{key: "no-such-key"})
 
-      assert KafkaTriggers.find_candidate_for(no_such_set) == nil
+      assert KafkaTriggers.find_candidate_for(no_such_set) |> Repo.one() == nil
     end
 
     test "returns earliest message - based on message timestamp - for set", %{
@@ -731,13 +748,13 @@ defmodule Lightning.KafkaTriggersTest do
 
       assert %TriggerKafkaMessage{
         id: ^message_id
-      } = KafkaTriggers.find_candidate_for(candidate_set)
+      } = KafkaTriggers.find_candidate_for(candidate_set) |> Repo.one()
     end
 
     test "preloads `:workflow`, and `:trigger`", %{
       candidate_set: candidate_set,
     } do
-      candidate = KafkaTriggers.find_candidate_for(candidate_set)
+      candidate = KafkaTriggers.find_candidate_for(candidate_set) |> Repo.one()
 
       assert %{
         trigger: %Trigger{
@@ -754,7 +771,7 @@ defmodule Lightning.KafkaTriggersTest do
     end
   end
 
-  describe ".successful/1" do
+  describe ".successful?/1" do
     test "returns true if work_order is successful", %{} do
       work_order = build(:workorder, state: :success)
       assert KafkaTriggers.successful?(work_order)
