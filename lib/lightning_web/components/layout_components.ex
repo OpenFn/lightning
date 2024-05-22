@@ -7,6 +7,10 @@ defmodule LightningWeb.LayoutComponents do
   import PetalComponents.Dropdown
   import PetalComponents.Avatar
 
+  # Steps for rendering menu items:
+  # 1. Infer the scope by the active menu item or if there is a selected project
+  # 2. Knowing the scope, render the custom scope menu if there is one
+  #    otherwise render the default menu.
   def scope(active_menu_item, selected_project, custom_scopes) do
     cond do
       active_menu_item in [:profile, :tokens, :credentials] -> :user_scope
@@ -37,7 +41,6 @@ defmodule LightningWeb.LayoutComponents do
       <Menu.projects_dropdown
         projects={assigns[:projects]}
         selected_project={assigns[:project]}
-        active_menu_item={assigns[:active_menu_item]}
       />
     <% else %>
       <div class="p-2 mb-4 mt-4 text-center text-primary-300 bg-primary-800">
@@ -61,7 +64,7 @@ defmodule LightningWeb.LayoutComponents do
           project_id={@project.id}
           active_menu_item={@active_menu_item}
         />
-      <% Map.has_key?(assigns, :custom_scope_menu) -> %>
+      <% assigns[:custom_scope_menu] -> %>
         <%= Phoenix.LiveView.TagEngine.component(
           @custom_scope_menu.component,
           Map.take(assigns, @custom_scope_menu.assigns_keys),
