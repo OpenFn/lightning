@@ -514,6 +514,9 @@ defmodule Lightning.KafkaTriggersTest do
 
   describe ".process_candidate_for/1" do
     setup do
+      trigger = insert(:trigger, type: :kafka)
+      message_timestamp = System.os_time(:millisecond)
+
       other_message =
         insert(
           :trigger_kafka_message,
@@ -522,24 +525,38 @@ defmodule Lightning.KafkaTriggersTest do
           work_order: nil
         )
 
-      message =
+      message_1 =
         insert(
           :trigger_kafka_message,
           data: %{triggers: :test} |> Jason.encode!(),
           key: "test-key",
+          message_timestamp: message_timestamp,
           topic: "test-topic",
+          trigger: trigger,
+          work_order: nil
+        )
+
+      message_2 =
+        insert(
+          :trigger_kafka_message,
+          data: %{triggers: :more_test} |> Jason.encode!(),
+          key: "test-key",
+          message_timestamp: message_timestamp + 100,
+          topic: "test-topic",
+          trigger: trigger,
           work_order: nil
         )
 
       candidate_set = %{
-          trigger_id: message.trigger.id,
-          topic: message.topic,
-          key: message.key
+          trigger_id: message_1.trigger.id,
+          topic: message_1.topic,
+          key: message_1.key
       }
 
       %{
         candidate_set: candidate_set,
-        message: message,
+        message_1: message_1,
+        message_2: message_2,
         other_message: other_message
       }
     end
@@ -553,17 +570,17 @@ defmodule Lightning.KafkaTriggersTest do
     end
 
     test "if candidate exists sans work_order, creates work_order", %{
-      message: message,
       candidate_set: candidate_set,
+      message_1: message_1,
     } do
-      %{trigger: %{workflow: workflow} = trigger} = message
+      %{trigger: %{workflow: workflow} = trigger} = message_1
       project_id = workflow.project_id
 
       assert KafkaTriggers.process_candidate_for(candidate_set) == :ok
 
       %{work_order: work_order} =
         TriggerKafkaMessage
-        |> Repo.get(message.id)
+        |> Repo.get(message_1.id)
         |> Repo.preload([
           work_order: [
             [dataclip: Invocation.Query.dataclip_with_body()],
@@ -583,6 +600,32 @@ defmodule Lightning.KafkaTriggersTest do
         workflow: ^workflow,
       } = work_order
     end
+
+    test "if candidate has successful work_order, deletes candidate", %{
+      candidate_set: candidate_set,
+      message_1: message_1,
+      message_2: message_2,
+      other_message: other_message
+    } do
+      KafkaTriggers.process_candidate_for(candidate_set)
+
+      updated_message_1 =
+        TriggerKafkaMessage
+        |> Repo.get(message_1.id)
+        |> Repo.preload(:work_order)
+
+      %{work_order: work_order} = updated_message_1
+
+      work_order
+      |> WorkOrder.changeset(%{state: :success})
+      |> Repo.update()
+
+      assert KafkaTriggers.process_candidate_for(candidate_set) == :ok
+
+      assert TriggerKafkaMessage |> Repo.get(message_1.id) == nil
+      assert TriggerKafkaMessage |> Repo.get(message_2.id) != nil
+      assert TriggerKafkaMessage |> Repo.get(other_message.id) != nil
+    end
   end
 
   describe "find_candidate_for/1" do
@@ -593,54 +636,55 @@ defmodule Lightning.KafkaTriggersTest do
       _other_trigger_set_message_1 =
         insert(
           :trigger_kafka_message,
-          trigger: other_trigger,
           key: "set_key",
+          message_timestamp: 10 |> timestamp_from_offset,
           topic: "set_topic",
-          message_timestamp: 10 |> timestamp_from_offset
+          trigger: other_trigger
         )
 
       _other_key_set_message_1 =
         insert(
           :trigger_kafka_message,
-          trigger: trigger,
           key: "other_set_key",
+          message_timestamp: 10 |> timestamp_from_offset,
           topic: "set_topic",
-          message_timestamp: 10 |> timestamp_from_offset
+          trigger: trigger
         )
 
       _other_key_set_message_1 =
         insert(
           :trigger_kafka_message,
-          trigger: trigger,
           key: "set_key",
+          message_timestamp: 10 |> timestamp_from_offset,
           topic: "other_set_topic",
-          message_timestamp: 10 |> timestamp_from_offset
+          trigger: trigger
         )
 
       _set_message_2 =
         insert(
           :trigger_kafka_message,
-          trigger: trigger,
           key: "set_key",
+          message_timestamp: 120 |> timestamp_from_offset,
           topic: "set_topic",
-          message_timestamp: 120 |> timestamp_from_offset
+          trigger: trigger
         )
       _set_message_3 = 
         insert(
           :trigger_kafka_message,
-          trigger: trigger,
           key: "set_key",
+          message_timestamp: 130 |> timestamp_from_offset,
           topic: "set_topic",
-          message_timestamp: 130 |> timestamp_from_offset
+          trigger: trigger
         )
       
       set_message_1 = 
         insert(
           :trigger_kafka_message,
-          trigger: trigger,
           key: "set_key",
+          message_timestamp: 110 |> timestamp_from_offset,
           topic: "set_topic",
-          message_timestamp: 110 |> timestamp_from_offset
+          trigger: trigger,
+          work_order: build(:workorder)
         )
 
       candidate_set = %{
@@ -679,9 +723,9 @@ defmodule Lightning.KafkaTriggersTest do
 
       assert %{
         trigger: %Trigger{
-          workflow: %Workflow{
-          }
-        }
+          workflow: %Workflow{}
+        },
+        work_order: %WorkOrder{}
       } = candidate
     end
 
