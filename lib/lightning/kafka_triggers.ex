@@ -136,25 +136,29 @@ defmodule Lightning.KafkaTriggers do
     case find_candidate_for(candidate_set) do
       nil -> :ok
       candidate ->
-        %{data: data, trigger: %{workflow: workflow} = trigger} = candidate
-
-        {:ok, %WorkOrder{id: work_order_id}} =
-          WorkOrders.create_for(trigger,
-            workflow: workflow,
-            dataclip: %{
-              body: data |> Jason.decode!(),
-              type: :kafka,
-              project_id: workflow.project_id
-            },
-            without_run: false
-          )
-
-        candidate
-        |> TriggerKafkaMessage.changeset(%{work_order_id: work_order_id})
-        |> Repo.update()
+        handle_candidate(candidate)
 
         :ok
     end
+  end
+
+  defp handle_candidate(%{work_order: nil} = candidate) do
+    %{data: data, trigger: %{workflow: workflow} = trigger} = candidate
+
+    {:ok, %WorkOrder{id: work_order_id}} =
+      WorkOrders.create_for(trigger,
+        workflow: workflow,
+        dataclip: %{
+          body: data |> Jason.decode!(),
+          type: :kafka,
+          project_id: workflow.project_id
+        },
+        without_run: false
+      )
+
+    candidate
+    |> TriggerKafkaMessage.changeset(%{work_order_id: work_order_id})
+    |> Repo.update()
   end
 
   def find_candidate_for(%{trigger_id: trigger_id, topic: topic, key: key}) do
@@ -162,7 +166,7 @@ defmodule Lightning.KafkaTriggers do
       where: t.trigger_id == ^trigger_id and t.topic == ^topic and t.key == ^key,
       order_by: t.message_timestamp,
       limit: 1,
-      preload: [trigger: [:workflow]]
+      preload: [:work_order, trigger: [:workflow]]
 
     query |> Repo.one()
   end
