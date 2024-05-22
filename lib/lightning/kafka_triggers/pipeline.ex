@@ -79,16 +79,6 @@ defmodule Lightning.KafkaTriggers.Pipeline do
             trigger_id: trigger_id |> Atom.to_string(),
           }
         ) |> Repo.insert()
-        #
-        # WorkOrders.create_for(trigger,
-        #   workflow: trigger.workflow,
-        #   dataclip: %{
-        #     body: data |> Jason.decode!(),
-        #     type: :kafka,
-        #     project_id: trigger.workflow.project_id
-        #   },
-        #   without_run: without_run?
-        # )
 
         trigger
         |> KafkaTriggers.update_partition_data(partition, timestamp)
