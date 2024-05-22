@@ -133,13 +133,20 @@ defmodule Lightning.KafkaTriggers do
   end
 
   def process_candidate_for(candidate_set) do
-    case find_candidate_for(candidate_set) do
-      nil -> :ok
-      candidate ->
-        handle_candidate(candidate)
+    Repo.transaction(fn ->
+      candidate_set
+      |> find_candidate_for()
+      |> lock("FOR UPDATE SKIP LOCKED")
+      |> Repo.one()
+      |> case do
+        nil ->
+          nil
+        candidate ->
+          handle_candidate(candidate)
+      end
+    end)
 
-        :ok
-    end
+    :ok
   end
 
   defp handle_candidate(%{work_order: nil} = candidate) do
@@ -158,7 +165,7 @@ defmodule Lightning.KafkaTriggers do
 
     candidate
     |> TriggerKafkaMessage.changeset(%{work_order_id: work_order_id})
-    |> Repo.update()
+    |> Repo.update!()
   end
 
   defp handle_candidate(%{work_order: work_order} = candidate) do
@@ -166,13 +173,11 @@ defmodule Lightning.KafkaTriggers do
   end
 
   def find_candidate_for(%{trigger_id: trigger_id, topic: topic, key: key}) do
-    query = from t in TriggerKafkaMessage,
+    from t in TriggerKafkaMessage,
       where: t.trigger_id == ^trigger_id and t.topic == ^topic and t.key == ^key,
       order_by: t.message_timestamp,
       limit: 1,
       preload: [:work_order, trigger: [:workflow]]
-
-    query |> Repo.one()
   end
 
   def successful?(%{state: state}) do
