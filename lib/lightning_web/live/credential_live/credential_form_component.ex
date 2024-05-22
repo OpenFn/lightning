@@ -296,9 +296,7 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
   end
 
   def handle_event("close_modal", _, socket) do
-    {:noreply,
-     socket
-     |> push_navigate(to: socket.assigns.return_to)}
+    {:noreply, push_event(socket, "close_modal", %{})}
   end
 
   @impl true
