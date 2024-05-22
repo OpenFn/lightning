@@ -133,26 +133,28 @@ defmodule Lightning.KafkaTriggers do
   end
 
   def process_candidate_for(candidate_set) do
-    candidate = find_candidate_for(candidate_set)
+    case find_candidate_for(candidate_set) do
+      nil -> :ok
+      candidate ->
+        %{data: data, trigger: %{workflow: workflow} = trigger} = candidate
 
-    %{data: data, trigger: %{workflow: workflow} = trigger} = candidate
+        {:ok, %WorkOrder{id: work_order_id}} =
+          WorkOrders.create_for(trigger,
+            workflow: workflow,
+            dataclip: %{
+              body: data |> Jason.decode!(),
+              type: :kafka,
+              project_id: workflow.project_id
+            },
+            without_run: false
+          )
 
-    {:ok, %WorkOrder{id: work_order_id}} =
-      WorkOrders.create_for(trigger,
-        workflow: workflow,
-        dataclip: %{
-          body: data |> Jason.decode!(),
-          type: :kafka,
-          project_id: workflow.project_id
-        },
-        without_run: false
-      ) |> IO.inspect()
+        candidate
+        |> TriggerKafkaMessage.changeset(%{work_order_id: work_order_id})
+        |> Repo.update()
 
-    candidate
-    |> TriggerKafkaMessage.changeset(%{work_order_id: work_order_id})
-    |> Repo.update()
-
-    :ok
+        :ok
+    end
   end
 
   def find_candidate_for(%{trigger_id: trigger_id, topic: topic, key: key}) do

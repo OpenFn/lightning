@@ -1,6 +1,7 @@
 defmodule Lightning.KafkaTriggersTest do
   use Lightning.DataCase, async: true
 
+  alias Lightning.Invocation
   alias Lightning.KafkaTriggers
   alias Lightning.KafkaTriggers.TriggerKafkaMessage
   alias Lightning.Workflows.Trigger
@@ -565,7 +566,7 @@ defmodule Lightning.KafkaTriggersTest do
         |> Repo.get(message.id)
         |> Repo.preload([
           work_order: [
-            :dataclip,
+            [dataclip: Invocation.Query.dataclip_with_body()],
             :runs,
             trigger: [workflow: [:project]],
             workflow: [:project]
@@ -574,7 +575,7 @@ defmodule Lightning.KafkaTriggersTest do
 
       assert %WorkOrder {
         dataclip:  %{
-          body: %{"triggers" => "test"},
+          body: %{"triggers"  => "test"},
           project_id: ^project_id,
           type: :kafka
         },
