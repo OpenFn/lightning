@@ -1,5 +1,4 @@
 defmodule Lightning.KafkaTriggers.PipelineWorker do
-
   alias Lightning.KafkaTriggers
   alias Lightning.KafkaTriggers.Pipeline
 
@@ -21,14 +20,16 @@ defmodule Lightning.KafkaTriggers.PipelineWorker do
             "hosts" => hosts_list,
             "sasl" => sasl_options,
             "ssl" => ssl,
-            "topics" => topics,
+            "topics" => topics
           } = trigger.kafka_configuration
 
-          hosts = hosts_list |> Enum.map(& List.to_tuple(&1))
+          hosts = hosts_list |> Enum.map(&List.to_tuple(&1))
+
           sasl =
             case sasl_options do
               options when is_list(options) ->
                 options |> List.to_tuple()
+
               nil ->
                 nil
             end

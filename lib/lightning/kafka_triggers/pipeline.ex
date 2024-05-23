@@ -18,11 +18,10 @@ defmodule Lightning.KafkaTriggers.Pipeline do
         trigger_id: trigger_id
       },
       producer: [
-        module:
-          {
-            BroadwayKafka.Producer,
-            build_producer_opts(opts)
-          },
+        module: {
+          BroadwayKafka.Producer,
+          build_producer_opts(opts)
+        },
         concurrency: 1
       ],
       processors: [
@@ -51,14 +50,14 @@ defmodule Lightning.KafkaTriggers.Pipeline do
     topic_partition_offset =
       KafkaTriggers.build_topic_partition_offset(message)
 
-
-    record_changeset = TriggerKafkaMessageRecord.changeset(
-      %TriggerKafkaMessageRecord{},
-      %{
-        topic_partition_offset: topic_partition_offset,
-        trigger_id: trigger_id |> Atom.to_string()
-      }
-    )
+    record_changeset =
+      TriggerKafkaMessageRecord.changeset(
+        %TriggerKafkaMessageRecord{},
+        %{
+          topic_partition_offset: topic_partition_offset,
+          trigger_id: trigger_id |> Atom.to_string()
+        }
+      )
 
     case record_changeset |> Repo.insert() do
       # TODO Use transaction for DB operations
@@ -69,16 +68,15 @@ defmodule Lightning.KafkaTriggers.Pipeline do
           |> Repo.get(trigger_id |> Atom.to_string())
 
         %TriggerKafkaMessage{}
-        |> TriggerKafkaMessage.changeset(
-          %{
-            data: data,
-            key: key,
-            message_timestamp: timestamp,
-            metadata: message.metadata,
-            topic: topic,
-            trigger_id: trigger_id |> Atom.to_string(),
-          }
-        ) |> Repo.insert()
+        |> TriggerKafkaMessage.changeset(%{
+          data: data,
+          key: key,
+          message_timestamp: timestamp,
+          metadata: message.metadata,
+          topic: topic,
+          trigger_id: trigger_id |> Atom.to_string()
+        })
+        |> Repo.insert()
 
         trigger
         |> KafkaTriggers.update_partition_data(partition, timestamp)
@@ -86,10 +84,17 @@ defmodule Lightning.KafkaTriggers.Pipeline do
         # IO.inspect(message, label: :full_message)
         # %Broadway.Message{data: data, metadata: %{ts: ts}} = message
 
-        IO.puts(">>>> #{trigger_id} received #{data} on #{partition} produced at #{timestamp}")
-        # IO.inspect(message)
-      {:error, %{errors: [trigger_id: {_, [constraint: :unique, constraint_name: _]}]}} ->
-        IO.puts("**** #{trigger_id} received DUPLICATE #{data} on #{partition} produced at #{timestamp}")
+        IO.puts(
+          ">>>> #{trigger_id} received #{data} on #{partition} produced at #{timestamp}"
+        )
+
+      # IO.inspect(message)
+      {:error,
+       %{errors: [trigger_id: {_, [constraint: :unique, constraint_name: _]}]}} ->
+        IO.puts(
+          "**** #{trigger_id} received DUPLICATE #{data} on #{partition} produced at #{timestamp}"
+        )
+
       _ ->
         raise "Unhandled error when persisting TriggerKafkaMessageRecord"
     end
@@ -108,7 +113,7 @@ defmodule Lightning.KafkaTriggers.Pipeline do
       hosts: hosts,
       group_id: group_id,
       topics: topics,
-      offset_reset_policy: offset_reset_policy,
+      offset_reset_policy: offset_reset_policy
     ]
   end
 
@@ -121,6 +126,7 @@ defmodule Lightning.KafkaTriggers.Pipeline do
     case sasl do
       nil ->
         base_config
+
       sasl ->
         {mechanism, username, password} = sasl
         [{:sasl, {String.to_atom(mechanism), username, password}} | base_config]
