@@ -48,8 +48,7 @@ const DataclipViewer = ({ dataclipId }: { dataclipId: string }) => {
     const onResize = () => {
       const editor = monacoRef.current as any;
       if (editor) {
-        editor.layout({ width: 0, height: 0 });
-        editor.layout()
+        editor.layout({})
       }
     };
 

@@ -247,14 +247,7 @@ export default function Editor({
 
       // Force the editor to resize
       listeners.current.updateLayout = (_e: Event) => {
-        editor.layout({ width: 0, height: 0 });
-        setTimeout(() => {
-          try {
-            editor.layout();
-          } catch (e) {
-            editor.layout();
-          }
-        }, 1);
+        editor.layout({})
       };
 
       document.addEventListener(
