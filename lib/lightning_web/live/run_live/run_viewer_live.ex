@@ -112,7 +112,7 @@ defmodule LightningWeb.RunLive.RunViewerLive do
                 />
               </.step_list>
             </Common.panel_content>
-            <Common.panel_content for_hash="log" class="h-full mb-2">
+            <Common.panel_content for_hash="log" class="grow overflow-auto">
               <div class="flex flex-col h-full @5xl/viewer:flex-row">
                 <div class="min-h-0 max-h-[30%] 0 mb-2 overflow-auto flex-none flex @5xl/viewer:flex-row flex-col @5xl/viewer:max-h-[100%]">
                   <.step_list
@@ -137,7 +137,7 @@ defmodule LightningWeb.RunLive.RunViewerLive do
                   </.step_list>
                 </div>
 
-                <div class="flex min-h-0 h-full grow bg-slate-700 overflow-auto rounded-md">
+                <div class="flex-1 grow inset-0 overflow-auto rounded-md">
                   <%!-- <Viewers.log_viewer
                     id={"run-log-#{run.id}"}
                     highlight_id={@selected_step_id}
@@ -145,14 +145,16 @@ defmodule LightningWeb.RunLive.RunViewerLive do
                     stream={@streams.log_lines}
                     stream_empty?={@log_lines_stream_empty?}
                   /> --%>
-                  <div
-                    id={"run-log-#{run.id}"}
-                    class="h-full"
-                    phx-hook="LogViewer"
-                    phx-update="ignore"
-                    data-run-id={run.id}
-                    data-step-id={@selected_step_id}
-                  >
+                  <div class="h-full relative">
+                    <div
+                      id={"run-log-#{run.id}"}
+                      class="h-full"
+                      phx-hook="LogViewer"
+                      phx-update="ignore"
+                      data-run-id={run.id}
+                      data-step-id={@selected_step_id}
+                    >
+                    </div>
                   </div>
                 </div>
               </div>

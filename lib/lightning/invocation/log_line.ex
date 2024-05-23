@@ -30,7 +30,7 @@ defmodule Lightning.Invocation.LogLine do
         }
 
   @derive {Jason.Encoder,
-           only: [:id, :source, :level, :message, :step_id, :run_id]}
+           only: [:id, :source, :level, :message, :timestamp, :step_id, :run_id]}
 
   @primary_key false
   @foreign_key_type :binary_id

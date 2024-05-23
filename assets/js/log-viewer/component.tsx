@@ -9,6 +9,7 @@ export type LogLine = {
   source: string;
   level: string;
   step_id: string;
+  timestamp: string;
 };
 
 // The VER logs are multiline
@@ -51,15 +52,15 @@ function findLogIndicesByStepId(
 export function mount(el: HTMLElement) {
   const componentRoot = createRoot(el);
 
-  render();
+  render([]);
 
-  function render() {
+  function render(logs: LogLine[]) {
     if (el.dataset.runId === undefined) {
       throw new Error(
         'runId is missing from the element dataset. Ensure you have set data-run-id on the element.'
       );
     }
-    componentRoot.render(<LogViewer hookEl={el} />);
+    componentRoot.render(<LogViewer logs={logs} hookEl={el} />);
   }
 
   function unmount() {
@@ -69,23 +70,35 @@ export function mount(el: HTMLElement) {
   return { unmount, render };
 }
 
-const LogViewer = ({ hookEl }: { hookEl: HTMLElement }) => {
-  let runId = hookEl.dataset.runId;
+const LogViewer = ({
+  logs,
+  hookEl,
+}: {
+  logs: LogLine[];
+  hookEl: HTMLElement;
+}) => {
+  // let runId = hookEl.dataset.runId;
   let stepId = hookEl.dataset.stepId;
-  let logs: LogLine[] = [];
+  // let logs: LogLine[] = [];
+  const splitLogs = splitLogMessages(logs);
   let decorationsCollection: any = null;
   const monacoRef = useRef<Monaco | null>(null);
   const editorRef = useRef<any | null>(null);
 
-  window.addEventListener(`phx:logs-${runId}`, (event: CustomEvent) => {
-    const splitLogs = splitLogMessages(event.detail.logs);
-    console.log('splitLogs', splitLogs);
-    logs = logs.concat(splitLogs);
-    editorRef.current?.setValue(logs.map(log => `${log.message}`).join('\n'));
-    maybeHighlightStep();
-  });
+  // window.addEventListener(`phx:logs-${runId}`, (event: CustomEvent) => {
+  //   const splitLogs = splitLogMessages(event.detail.logs);
+  //   // console.log('splitLogs', splitLogs);
+  //   logs = logs.concat(splitLogs);
+  //   logs.sort(
+  //     (a, b) =>
+  //       new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+  //   );
+  //   console.log('logs', logs);
+  //   editorRef.current?.setValue(logs.map(log => `${log.message}`).join('\n'));
+  //   maybeHighlightStep();
+  // });
 
-  hookEl.addEventListener('log-viewer:updated', (event: CustomEvent) => {
+  hookEl.addEventListener('log-viewer:highlight-step', (event: CustomEvent) => {
     stepId = event.detail.stepId;
     maybeHighlightStep();
   });
@@ -97,6 +110,7 @@ const LogViewer = ({ hookEl }: { hookEl: HTMLElement }) => {
 
   const onMount = (editor: any) => {
     editorRef.current = editor;
+    maybeHighlightStep();
   };
 
   function maybeHighlightStep() {
@@ -106,7 +120,7 @@ const LogViewer = ({ hookEl }: { hookEl: HTMLElement }) => {
     if (stepId !== undefined && logs.length > 0) {
       let monaco = monacoRef.current;
       let editor = editorRef.current;
-      const { first, last } = findLogIndicesByStepId(logs, stepId);
+      const { first, last } = findLogIndicesByStepId(splitLogs, stepId);
       if (first !== null && last !== null) {
         decorationsCollection = editor?.createDecorationsCollection([
           {
@@ -127,7 +141,7 @@ const LogViewer = ({ hookEl }: { hookEl: HTMLElement }) => {
     <MonacoEditor
       defaultLanguage="plaintext"
       theme="default"
-      value={logs.map(log => `${log.message}`).join('\n')}
+      value={logs.map(log => log.message).join('\n')}
       loading={<div>Loading...</div>}
       beforeMount={beforeMount}
       onMount={onMount}
@@ -143,7 +157,7 @@ const LogViewer = ({ hookEl }: { hookEl: HTMLElement }) => {
         wordWrap: 'on',
         lineNumbersMinChars: 12,
         lineNumbers: originalLineNumber => {
-          const log = logs[originalLineNumber - 1];
+          const log = splitLogs[originalLineNumber - 1];
           if (log) {
             return `${originalLineNumber} (${log.source})`;
           }
