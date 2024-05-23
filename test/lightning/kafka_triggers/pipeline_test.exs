@@ -22,8 +22,7 @@ defmodule Lightning.KafkaTriggers.PipelineTest do
       trigger_id = :my_trigger_id
 
       with_mock Broadway,
-        [start_link: fn _module, _opts -> {:ok, "fake-pid"} end] do
-
+        start_link: fn _module, _opts -> {:ok, "fake-pid"} end do
         Pipeline.start_link(
           group_id: group_id,
           hosts: hosts,
@@ -34,36 +33,37 @@ defmodule Lightning.KafkaTriggers.PipelineTest do
           trigger_id: trigger_id
         )
 
-        assert called Broadway.start_link(
-          Pipeline,
-          name: trigger_id,
-          context: %{
-            trigger_id: trigger_id,
-          },
-          producer: [
-            module:
-            {
-              BroadwayKafka.Producer,
-              [
-                client_config: [
-                  sasl: sasl_expected,
-                  ssl: ssl
-                ],
-                hosts: hosts,
-                group_id: group_id,
-                topics: topics,
-                offset_reset_policy: offset_reset_policy
-              ]
-            },
-            concurrency: 1
-          ],
-          processors: [
-            default: [
-              concurrency: 10
-            ]
-          ],
-          batchers: []
-        )
+        assert called(
+                 Broadway.start_link(
+                   Pipeline,
+                   name: trigger_id,
+                   context: %{
+                     trigger_id: trigger_id
+                   },
+                   producer: [
+                     module: {
+                       BroadwayKafka.Producer,
+                       [
+                         client_config: [
+                           sasl: sasl_expected,
+                           ssl: ssl
+                         ],
+                         hosts: hosts,
+                         group_id: group_id,
+                         topics: topics,
+                         offset_reset_policy: offset_reset_policy
+                       ]
+                     },
+                     concurrency: 1
+                   ],
+                   processors: [
+                     default: [
+                       concurrency: 10
+                     ]
+                   ],
+                   batchers: []
+                 )
+               )
       end
     end
 
@@ -77,8 +77,7 @@ defmodule Lightning.KafkaTriggers.PipelineTest do
       trigger_id = :my_trigger_id
 
       with_mock Broadway,
-        [start_link: fn _module, _opts -> {:ok, "fake-pid"} end] do
-
+        start_link: fn _module, _opts -> {:ok, "fake-pid"} end do
         Pipeline.start_link(
           group_id: group_id,
           hosts: hosts,
@@ -89,33 +88,34 @@ defmodule Lightning.KafkaTriggers.PipelineTest do
           trigger_id: trigger_id
         )
 
-        assert called Broadway.start_link(
-          Pipeline,
-          name: trigger_id,
-          context: %{
-            trigger_id: trigger_id,
-          },
-          producer: [
-            module:
-            {
-              BroadwayKafka.Producer,
-              [
-                client_config: [ssl: ssl],
-                hosts: hosts,
-                group_id: group_id,
-                topics: topics,
-                offset_reset_policy: offset_reset_policy
-              ]
-            },
-            concurrency: 1
-          ],
-          processors: [
-            default: [
-              concurrency: 10
-            ]
-          ],
-          batchers: []
-        )
+        assert called(
+                 Broadway.start_link(
+                   Pipeline,
+                   name: trigger_id,
+                   context: %{
+                     trigger_id: trigger_id
+                   },
+                   producer: [
+                     module: {
+                       BroadwayKafka.Producer,
+                       [
+                         client_config: [ssl: ssl],
+                         hosts: hosts,
+                         group_id: group_id,
+                         topics: topics,
+                         offset_reset_policy: offset_reset_policy
+                       ]
+                     },
+                     concurrency: 1
+                   ],
+                   processors: [
+                     default: [
+                       concurrency: 10
+                     ]
+                   ],
+                   batchers: []
+                 )
+               )
       end
     end
   end
@@ -129,6 +129,7 @@ defmodule Lightning.KafkaTriggers.PipelineTest do
           kafka_configuration: configuration(index: 1),
           enabled: true
         )
+
       trigger_2 =
         insert(
           :trigger,
@@ -162,13 +163,16 @@ defmodule Lightning.KafkaTriggers.PipelineTest do
           "partition_timestamps" => trigger_1_timestamps
         }
       } = Trigger |> Repo.get(trigger_1.id)
+
       %{
         kafka_configuration: %{
           "partition_timestamps" => trigger_2_timestamps
         }
       } = Trigger |> Repo.get(trigger_2.id)
 
-      assert %{"1" => 1715164718281, "2" => 1715164718283} = trigger_1_timestamps
+      assert %{"1" => 1_715_164_718_281, "2" => 1_715_164_718_283} =
+               trigger_1_timestamps
+
       assert trigger_2_timestamps == partition_timestamps()
     end
 
@@ -187,14 +191,14 @@ defmodule Lightning.KafkaTriggers.PipelineTest do
       data = message.data
 
       assert %{
-        data: ^data,
-        key: "abc_123_def",
-        message_timestamp: 1715164718283,
-        metadata: ^metadata,
-        topic: "bar_topic",
-        trigger_id: ^trigger_id,
-        work_order_id: nil
-      } = trigger_kafka_message
+               data: ^data,
+               key: "abc_123_def",
+               message_timestamp: 1_715_164_718_283,
+               metadata: ^metadata,
+               topic: "bar_topic",
+               trigger_id: ^trigger_id,
+               work_order_id: nil
+             } = trigger_kafka_message
     end
 
     test "converts empty Kafka key to nil TriggerKafkaMessage key", %{
@@ -221,15 +225,15 @@ defmodule Lightning.KafkaTriggers.PipelineTest do
       message_record = Repo.one(TriggerKafkaMessageRecord)
 
       assert %TriggerKafkaMessageRecord{
-        trigger_id: ^trigger_id,
-        topic_partition_offset: "bar_topic_2_11"
-      } = message_record
+               trigger_id: ^trigger_id,
+               topic_partition_offset: "bar_topic_2_11"
+             } = message_record
     end
 
     test "does not update partition timestamps if message is duplicate", %{
       trigger_1: trigger_1,
       trigger_2: trigger_2,
-      context: context,
+      context: context
     } do
       trigger_id = context.trigger_id |> Atom.to_string()
 
@@ -244,6 +248,7 @@ defmodule Lightning.KafkaTriggers.PipelineTest do
           "partition_timestamps" => trigger_1_timestamps
         }
       } = Trigger |> Repo.get(trigger_1.id)
+
       %{
         kafka_configuration: %{
           "partition_timestamps" => trigger_2_timestamps
@@ -276,9 +281,8 @@ defmodule Lightning.KafkaTriggers.PipelineTest do
       Pipeline.handle_message(nil, message, context)
 
       with_mock Repo,
-        [insert: fn _ -> {:error, %Changeset{}} end] do
-
-        assert_raise RuntimeError, ~r/Unhandled error/, fn -> 
+        insert: fn _ -> {:error, %Changeset{}} end do
+        assert_raise RuntimeError, ~r/Unhandled error/, fn ->
           Pipeline.handle_message(nil, message, context)
         end
       end
@@ -292,7 +296,7 @@ defmodule Lightning.KafkaTriggers.PipelineTest do
           partition: 2,
           key: key,
           headers: [],
-          ts: 1715164718283,
+          ts: 1_715_164_718_283,
           topic: "bar_topic"
         },
         acknowledger: nil,
@@ -308,11 +312,12 @@ defmodule Lightning.KafkaTriggers.PipelineTest do
       sasl = opts |> Keyword.get(:sasl, true)
       ssl = opts |> Keyword.get(:ssl, true)
 
-      sasl_config = if sasl do
-                      ["plain", "my-user-#{index}", "secret-#{index}"]
-                    else
-                      nil
-                    end
+      sasl_config =
+        if sasl do
+          ["plain", "my-user-#{index}", "secret-#{index}"]
+        else
+          nil
+        end
 
       %{
         "group_id" => "lightning-#{index}",
@@ -326,8 +331,8 @@ defmodule Lightning.KafkaTriggers.PipelineTest do
 
     defp partition_timestamps do
       %{
-        "1" => 1715164718281,
-        "2" => 1715164718282
+        "1" => 1_715_164_718_281,
+        "2" => 1_715_164_718_282
       }
     end
 
@@ -338,7 +343,8 @@ defmodule Lightning.KafkaTriggers.PipelineTest do
           topic_partition_offset: "bar_topic_2_11",
           trigger_id: trigger_id
         }
-      ) |> Repo.insert()
+      )
+      |> Repo.insert()
     end
 
     # Put this in a helper
