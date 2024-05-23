@@ -10,8 +10,8 @@ defmodule Lightning.KafkaTriggers do
   def find_enabled_triggers do
     query =
       from t in Trigger,
-      where: t.type == :kafka,
-      where: t.enabled == true
+        where: t.type == :kafka,
+        where: t.enabled == true
 
     query |> Repo.all()
   end
@@ -30,10 +30,13 @@ defmodule Lightning.KafkaTriggers do
     updated_partition_timestamps =
       partition_timestamps
       |> case do
-        existing = %{^partition_key => existing_timestamp} when existing_timestamp < timestamp ->
+        existing = %{^partition_key => existing_timestamp}
+        when existing_timestamp < timestamp ->
           existing |> Map.merge(%{partition_key => timestamp})
+
         existing = %{^partition_key => _existing_timestamp} ->
           existing
+
         existing ->
           existing |> Map.merge(%{partition_key => timestamp})
       end
@@ -53,6 +56,7 @@ defmodule Lightning.KafkaTriggers do
     case kafka_configuration do
       config = %{"partition_timestamps" => ts} when map_size(ts) == 0 ->
         initial_policy(config)
+
       %{"partition_timestamps" => ts} ->
         earliest_timestamp(ts)
     end
@@ -67,7 +71,7 @@ defmodule Lightning.KafkaTriggers do
   end
 
   defp earliest_timestamp(timestamps) do
-    timestamp = timestamps |> Map.values() |> Enum.sort |> hd()
+    timestamp = timestamps |> Map.values() |> Enum.sort() |> hd()
 
     {:timestamp, timestamp}
   end
@@ -96,14 +100,17 @@ defmodule Lightning.KafkaTriggers do
   defp convert_sasl_option([mechanism, username, password]) do
     ["#{mechanism}", username, password]
   end
+
   defp convert_sasl_option(nil), do: nil
 
   defp policy_config_value(initial_policy) do
     case initial_policy do
       policy when is_integer(policy) ->
         policy
+
       policy when policy in [:earliest, :latest] ->
         "#{policy}"
+
       _unrecognised_policy ->
         raise "initial_offset_reset_policy must be :earliest, :latest or integer"
     end
@@ -118,8 +125,8 @@ defmodule Lightning.KafkaTriggers do
   def find_message_candidate_sets do
     query =
       from t in TriggerKafkaMessage,
-      select: [t.trigger_id, t.topic, t.key],
-      distinct: [t.trigger_id, t.topic, t.key]
+        select: [t.trigger_id, t.topic, t.key],
+        distinct: [t.trigger_id, t.topic, t.key]
 
     query
     |> Repo.all()
@@ -141,6 +148,7 @@ defmodule Lightning.KafkaTriggers do
       |> case do
         nil ->
           nil
+
         candidate ->
           handle_candidate(candidate)
       end

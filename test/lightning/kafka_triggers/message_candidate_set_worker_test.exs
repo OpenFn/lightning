@@ -55,11 +55,12 @@ defmodule Lightning.KafkaTriggers.MessageCandidateSetWorkerTest do
 
   describe ".handle_info :request_candidate_set - candidate set available" do
     setup do
-      message = insert(
-        :trigger_kafka_message,
-        key: "test-key",
-        work_order: nil
-      )
+      message =
+        insert(
+          :trigger_kafka_message,
+          key: "test-key",
+          work_order: nil
+        )
 
       {:ok, _server_pid} = start_supervised(MessageCandidateSetServer)
 
@@ -80,9 +81,9 @@ defmodule Lightning.KafkaTriggers.MessageCandidateSetWorkerTest do
       dynamically_absorb_delay(fn -> :sys.get_state(pid) == [:called] end, [])
 
       assert %{work_order: %WorkOrder{}} =
-        TriggerKafkaMessage
-        |> Repo.get(message.id)
-        |> Repo.preload(:work_order)
+               TriggerKafkaMessage
+               |> Repo.get(message.id)
+               |> Repo.preload(:work_order)
     end
 
     test "it enqueues a request to trigger the action after a delay", %{

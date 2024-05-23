@@ -17,9 +17,10 @@ defmodule Lightning.KafkaTriggers.MessageCandidateSetWorker do
 
   @impl true
   def handle_info(:request_candidate_set, _state) do
-    case MessageCandidateSetServer.next_candidate_set do
+    case MessageCandidateSetServer.next_candidate_set() do
       nil ->
         KafkaTriggers.send_after(self(), :request_candidate_set, 200)
+
       candidate_set ->
         KafkaTriggers.process_candidate_for(candidate_set)
         KafkaTriggers.send_after(self(), :request_candidate_set, 100)

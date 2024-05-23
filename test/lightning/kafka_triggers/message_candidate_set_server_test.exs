@@ -73,9 +73,9 @@ defmodule Lightning.KafkaTriggers.MessageCandidateSetServerTest do
       assert :sys.get_state(pid) == []
 
       assert [
-        %{trigger_id: ^trigger_id, topic: "topic-1", key: "key-1"},
-        %{trigger_id: ^trigger_id, topic: "topic-2", key: "key-2"},
-        ] = sorted_sets
+               %{trigger_id: ^trigger_id, topic: "topic-1", key: "key-1"},
+               %{trigger_id: ^trigger_id, topic: "topic-2", key: "key-2"}
+             ] = sorted_sets
     end
 
     test "refreshes the state with all messages when state has emptied", %{
@@ -107,10 +107,10 @@ defmodule Lightning.KafkaTriggers.MessageCandidateSetServerTest do
         |> Enum.sort_by(& &1.topic)
 
       assert [
-        %{trigger_id: ^trigger_id, topic: "topic-1", key: "key-1"},
-        %{trigger_id: ^trigger_id, topic: "topic-2", key: "key-2"},
-        %{trigger_id: ^trigger_id, topic: "topic-3", key: "key-3"},
-        ] = sorted_sets
+               %{trigger_id: ^trigger_id, topic: "topic-1", key: "key-1"},
+               %{trigger_id: ^trigger_id, topic: "topic-2", key: "key-2"},
+               %{trigger_id: ^trigger_id, topic: "topic-3", key: "key-3"}
+             ] = sorted_sets
     end
   end
 end

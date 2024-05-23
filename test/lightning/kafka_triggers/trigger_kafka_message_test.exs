@@ -9,11 +9,11 @@ defmodule Lightning.KafkaTriggers.TriggerKafkaMessageTest do
       %{
         data: "xxxxx",
         key: "my_key",
-        message_timestamp: 1715164718283,
+        message_timestamp: 1_715_164_718_283,
         metadata: %{meta: :data},
         topic: "my_topic",
         trigger: insert(:trigger, type: :kafka),
-        work_order: insert(:workorder),
+        work_order: insert(:workorder)
       }
     end
 
@@ -46,14 +46,14 @@ defmodule Lightning.KafkaTriggers.TriggerKafkaMessageTest do
       assert %Changeset{changes: changes, valid?: true} = changeset
 
       assert %{
-        data: ^data,
-        key: ^key,
-        message_timestamp: ^message_timestamp,
-        metadata: ^metadata,
-        topic: ^topic,
-        trigger_id: ^trigger_id,
-        work_order_id: ^work_order_id
-      } = changes
+               data: ^data,
+               key: ^key,
+               message_timestamp: ^message_timestamp,
+               metadata: ^metadata,
+               topic: ^topic,
+               trigger_id: ^trigger_id,
+               work_order_id: ^work_order_id
+             } = changes
     end
 
     test "is invalid if data is not provided", %{
@@ -80,8 +80,8 @@ defmodule Lightning.KafkaTriggers.TriggerKafkaMessageTest do
       assert %{valid?: false, errors: errors} = changeset
 
       assert [
-        {:data, {"can't be blank", [validation: :required]}}
-      ] = errors
+               {:data, {"can't be blank", [validation: :required]}}
+             ] = errors
     end
 
     test "is valid if key is not provided", %{
@@ -132,8 +132,8 @@ defmodule Lightning.KafkaTriggers.TriggerKafkaMessageTest do
       assert %{valid?: false, errors: errors} = changeset
 
       assert [
-        {:message_timestamp, {"can't be blank", [validation: :required]}}
-      ] = errors
+               {:message_timestamp, {"can't be blank", [validation: :required]}}
+             ] = errors
     end
 
     test "is invalid if metadata is not provided", %{
@@ -160,8 +160,8 @@ defmodule Lightning.KafkaTriggers.TriggerKafkaMessageTest do
       assert %{valid?: false, errors: errors} = changeset
 
       assert [
-        {:metadata, {"can't be blank", [validation: :required]}}
-      ] = errors
+               {:metadata, {"can't be blank", [validation: :required]}}
+             ] = errors
     end
 
     test "is invalid if topic is not provided", %{
@@ -188,8 +188,8 @@ defmodule Lightning.KafkaTriggers.TriggerKafkaMessageTest do
       assert %{valid?: false, errors: errors} = changeset
 
       assert [
-        {:topic, {"can't be blank", [validation: :required]}}
-      ] = errors
+               {:topic, {"can't be blank", [validation: :required]}}
+             ] = errors
     end
 
     test "is invalid if trigger_id is not provided", %{
@@ -216,8 +216,8 @@ defmodule Lightning.KafkaTriggers.TriggerKafkaMessageTest do
       assert %{valid?: false, errors: errors} = changeset
 
       assert [
-        {:trigger_id, {"can't be blank", [validation: :required]}}
-      ] = errors
+               {:trigger_id, {"can't be blank", [validation: :required]}}
+             ] = errors
     end
 
     test "is valid if a worker_order_id is not provided", %{
@@ -226,7 +226,7 @@ defmodule Lightning.KafkaTriggers.TriggerKafkaMessageTest do
       message_timestamp: message_timestamp,
       metadata: metadata,
       topic: topic,
-      trigger: trigger,
+      trigger: trigger
     } do
       attributes = %{
         data: data,
@@ -234,7 +234,7 @@ defmodule Lightning.KafkaTriggers.TriggerKafkaMessageTest do
         message_timestamp: message_timestamp,
         metadata: metadata,
         topic: topic,
-        trigger_id: trigger.id,
+        trigger_id: trigger.id
       }
 
       changeset =

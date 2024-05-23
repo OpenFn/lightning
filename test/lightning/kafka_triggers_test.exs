@@ -17,10 +17,13 @@ defmodule Lightning.KafkaTriggersTest do
     test "returns enabled kafka triggers" do
       trigger_1 =
         insert(:trigger, type: :kafka, kafka_configuration: %{}, enabled: true)
+
       trigger_2 =
         insert(:trigger, type: :kafka, kafka_configuration: %{}, enabled: true)
+
       not_kafka_trigger =
         insert(:trigger, type: :cron, enabled: true)
+
       not_enabled =
         insert(:trigger, type: :kafka, kafka_configuration: %{}, enabled: false)
 
@@ -34,7 +37,7 @@ defmodule Lightning.KafkaTriggersTest do
 
     defp contains?(triggers, %Trigger{id: id}) do
       triggers
-      |> Enum.any?(& &1.id == id)
+      |> Enum.any?(&(&1.id == id))
     end
   end
 
@@ -86,10 +89,11 @@ defmodule Lightning.KafkaTriggersTest do
         insert(
           :trigger,
           type: :kafka,
-          kafka_configuration: configuration(%{
-            "3" => 123,
-            "#{partition}" => timestamp + 1
-          })
+          kafka_configuration:
+            configuration(%{
+              "3" => 123,
+              "#{partition}" => timestamp + 1
+            })
         )
 
       trigger
@@ -110,10 +114,11 @@ defmodule Lightning.KafkaTriggersTest do
         insert(
           :trigger,
           type: :kafka,
-          kafka_configuration: configuration(%{
-            "3" => 123,
-            "#{partition}" => timestamp - 1
-          })
+          kafka_configuration:
+            configuration(%{
+              "3" => 123,
+              "#{partition}" => timestamp - 1
+            })
         )
 
       trigger
@@ -171,7 +176,7 @@ defmodule Lightning.KafkaTriggersTest do
     end
 
     test "returns policy if integer (i.e. a timestamp)" do
-      timestamp = 1715312900123
+      timestamp = 1_715_312_900_123
 
       policy =
         timestamp
@@ -192,9 +197,9 @@ defmodule Lightning.KafkaTriggersTest do
 
     test "returns earliest partition timestamp if data is available" do
       partition_timestamps = %{
-        "1" => 1715312900121,
-        "2" => 1715312900120,
-        "3" => 1715312900123,
+        "1" => 1_715_312_900_121,
+        "2" => 1_715_312_900_120,
+        "3" => 1_715_312_900_123
       }
 
       policy =
@@ -202,7 +207,7 @@ defmodule Lightning.KafkaTriggersTest do
         |> build_trigger(partition_timestamps)
         |> KafkaTriggers.determine_offset_reset_policy()
 
-      assert policy == {:timestamp, 1715312900120}
+      assert policy == {:timestamp, 1_715_312_900_120}
     end
 
     defp build_trigger(initial_offset_reset, partition_timestamps \\ %{}) do
@@ -226,7 +231,7 @@ defmodule Lightning.KafkaTriggersTest do
       %{
         group_id: "my_little_group",
         hosts: [["host-1", 9092], ["host-2", 9092]],
-        initial_offset_reset_policy: 1715764260123,
+        initial_offset_reset_policy: 1_715_764_260_123,
         topics: ["my_little_topic"]
       }
     end
@@ -411,7 +416,7 @@ defmodule Lightning.KafkaTriggersTest do
           partition: partition,
           key: "",
           headers: [],
-          ts: 1715164718283,
+          ts: 1_715_164_718_283,
           topic: topic
         },
         acknowledger: nil,
@@ -428,42 +433,53 @@ defmodule Lightning.KafkaTriggersTest do
       trigger_1 = insert(:trigger, type: :kafka)
       trigger_2 = insert(:trigger, type: :kafka)
 
-      message = insert(
-        :trigger_kafka_message,
-        trigger: trigger_1,
-        topic: "topic-1",
-        key: "key-1"
-      )
-      _message_duplicate = insert(
-        :trigger_kafka_message,
-        trigger: trigger_1,
-        topic: "topic-1",
-        key: "key-1"
-      )
-      different_key = insert(
-        :trigger_kafka_message,
-        trigger: trigger_1,
-        topic: "topic-1",
-        key: "key-2"
-      )
-      nil_key = insert(
-        :trigger_kafka_message,
-        trigger: trigger_1,
-        topic: "topic-1",
-        key: nil
-      )
-      different_topic = insert(
-        :trigger_kafka_message,
-        trigger: trigger_1,
-        topic: "topic-2",
-        key: "key-1"
-      )
-      different_trigger = insert(
-        :trigger_kafka_message,
-        trigger: trigger_2,
-        topic: "topic-1",
-        key: "key-1"
-      )
+      message =
+        insert(
+          :trigger_kafka_message,
+          trigger: trigger_1,
+          topic: "topic-1",
+          key: "key-1"
+        )
+
+      _message_duplicate =
+        insert(
+          :trigger_kafka_message,
+          trigger: trigger_1,
+          topic: "topic-1",
+          key: "key-1"
+        )
+
+      different_key =
+        insert(
+          :trigger_kafka_message,
+          trigger: trigger_1,
+          topic: "topic-1",
+          key: "key-2"
+        )
+
+      nil_key =
+        insert(
+          :trigger_kafka_message,
+          trigger: trigger_1,
+          topic: "topic-1",
+          key: nil
+        )
+
+      different_topic =
+        insert(
+          :trigger_kafka_message,
+          trigger: trigger_1,
+          topic: "topic-2",
+          key: "key-1"
+        )
+
+      different_trigger =
+        insert(
+          :trigger_kafka_message,
+          trigger: trigger_2,
+          topic: "topic-1",
+          key: "key-1"
+        )
 
       sets = KafkaTriggers.find_message_candidate_sets()
 
@@ -483,6 +499,7 @@ defmodule Lightning.KafkaTriggersTest do
       |> Enum.count(fn
         %{trigger_id: _} = set ->
           set.trigger_id == trigger.id && set.topic == topic && set.key == key
+
         _ ->
           false
       end)
@@ -553,9 +570,9 @@ defmodule Lightning.KafkaTriggersTest do
         )
 
       candidate_set = %{
-          trigger_id: message_1.trigger.id,
-          topic: message_1.topic,
-          key: message_1.key
+        trigger_id: message_1.trigger.id,
+        topic: message_1.topic,
+        key: message_1.key
       }
 
       %{
@@ -567,7 +584,7 @@ defmodule Lightning.KafkaTriggersTest do
     end
 
     test "returns :ok but does nothing if there is no candidate for the set", %{
-      candidate_set: candidate_set,
+      candidate_set: candidate_set
     } do
       no_such_set = candidate_set |> Map.merge(%{key: "no-such-key"})
 
@@ -576,7 +593,7 @@ defmodule Lightning.KafkaTriggersTest do
 
     test "if candidate exists sans work_order, creates work_order", %{
       candidate_set: candidate_set,
-      message_1: message_1,
+      message_1: message_1
     } do
       %{trigger: %{workflow: workflow} = trigger} = message_1
       project_id = workflow.project_id
@@ -586,24 +603,24 @@ defmodule Lightning.KafkaTriggersTest do
       %{work_order: work_order} =
         TriggerKafkaMessage
         |> Repo.get(message_1.id)
-        |> Repo.preload([
+        |> Repo.preload(
           work_order: [
             [dataclip: Invocation.Query.dataclip_with_body()],
             :runs,
             trigger: [workflow: [:project]],
             workflow: [:project]
           ]
-        ])
+        )
 
-      assert %WorkOrder {
-        dataclip:  %{
-          body: %{"triggers"  => "test"},
-          project_id: ^project_id,
-          type: :kafka
-        },
-        trigger: ^trigger,
-        workflow: ^workflow,
-      } = work_order
+      assert %WorkOrder{
+               dataclip: %{
+                 body: %{"triggers" => "test"},
+                 project_id: ^project_id,
+                 type: :kafka
+               },
+               trigger: ^trigger,
+               workflow: ^workflow
+             } = work_order
     end
 
     test "if candidate has successful work_order, deletes candidate", %{
@@ -648,11 +665,12 @@ defmodule Lightning.KafkaTriggersTest do
     end
 
     test "rolls back if an error occurs", %{
-      candidate_set: candidate_set,
+      candidate_set: candidate_set
     } do
-      with_mock(TriggerKafkaMessage,
+      with_mock(
+        TriggerKafkaMessage,
         [:passthrough],
-          changeset: fn _message, _changes -> raise "rollback" end
+        changeset: fn _message, _changes -> raise "rollback" end
       ) do
         assert_raise RuntimeError, ~r/rollback/, fn ->
           KafkaTriggers.process_candidate_for(candidate_set)
@@ -703,7 +721,8 @@ defmodule Lightning.KafkaTriggersTest do
           topic: "set_topic",
           trigger: trigger
         )
-      _set_message_3 = 
+
+      _set_message_3 =
         insert(
           :trigger_kafka_message,
           key: "set_key",
@@ -711,8 +730,8 @@ defmodule Lightning.KafkaTriggersTest do
           topic: "set_topic",
           trigger: trigger
         )
-      
-      set_message_1 = 
+
+      set_message_1 =
         insert(
           :trigger_kafka_message,
           key: "set_key",
@@ -723,7 +742,9 @@ defmodule Lightning.KafkaTriggersTest do
         )
 
       candidate_set = %{
-        trigger_id: trigger.id, topic: "set_topic", key: "set_key"
+        trigger_id: trigger.id,
+        topic: "set_topic",
+        key: "set_key"
       }
 
       %{
@@ -747,21 +768,21 @@ defmodule Lightning.KafkaTriggersTest do
       message_id = message.id
 
       assert %TriggerKafkaMessage{
-        id: ^message_id
-      } = KafkaTriggers.find_candidate_for(candidate_set) |> Repo.one()
+               id: ^message_id
+             } = KafkaTriggers.find_candidate_for(candidate_set) |> Repo.one()
     end
 
     test "preloads `:workflow`, and `:trigger`", %{
-      candidate_set: candidate_set,
+      candidate_set: candidate_set
     } do
       candidate = KafkaTriggers.find_candidate_for(candidate_set) |> Repo.one()
 
       assert %{
-        trigger: %Trigger{
-          workflow: %Workflow{}
-        },
-        work_order: %WorkOrder{}
-      } = candidate
+               trigger: %Trigger{
+                 workflow: %Workflow{}
+               },
+               work_order: %WorkOrder{}
+             } = candidate
     end
 
     def timestamp_from_offset(offset) do
@@ -786,8 +807,8 @@ defmodule Lightning.KafkaTriggersTest do
     end
 
     def states_other_than_success do
-      [:rejected, :pending, :running] ++ Run.final_states()
-      |> Enum.reject(& &1 == :success)
+      ([:rejected, :pending, :running] ++ Run.final_states())
+      |> Enum.reject(&(&1 == :success))
     end
   end
 end

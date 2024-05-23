@@ -22,12 +22,12 @@ defmodule Lightning.KafkaTriggers.TriggerKafkaMessageRecordTest do
 
       changes = TKMR.changeset(%TKMR{}, params)
 
-      assert %Changeset {
-                changes: %{
-                  topic_partition_offset: ^topic_partition_offset,
-                  trigger_id: ^trigger_id
-                },
-                valid?: true
+      assert %Changeset{
+               changes: %{
+                 topic_partition_offset: ^topic_partition_offset,
+                 trigger_id: ^trigger_id
+               },
+               valid?: true
              } = changes
     end
 
@@ -43,17 +43,16 @@ defmodule Lightning.KafkaTriggers.TriggerKafkaMessageRecordTest do
       %{valid?: false, errors: errors} = TKMR.changeset(%TKMR{}, params)
 
       assert [
-        topic_partition_offset: {
-          "can't be blank",
-          [validation: :required]
-        }
-      ] = errors
+               topic_partition_offset: {
+                 "can't be blank",
+                 [validation: :required]
+               }
+             ] = errors
     end
 
     test "requires trigger_id", %{
       topic_partition_offset: topic_partition_offset
     } do
-
       params = %{
         topic_partition_offset: topic_partition_offset
       }
@@ -61,11 +60,11 @@ defmodule Lightning.KafkaTriggers.TriggerKafkaMessageRecordTest do
       %{valid?: false, errors: errors} = TKMR.changeset(%TKMR{}, params)
 
       assert [
-        trigger_id: {
-          "can't be blank",
-          [validation: :required]
-        }
-      ] = errors
+               trigger_id: {
+                 "can't be blank",
+                 [validation: :required]
+               }
+             ] = errors
     end
 
     test "ensures that the combination of params is unique", %{
@@ -80,20 +79,20 @@ defmodule Lightning.KafkaTriggers.TriggerKafkaMessageRecordTest do
       }
 
       assert {:ok, _} =
-        TKMR.changeset(%TKMR{}, params) |> Repo.insert()
+               TKMR.changeset(%TKMR{}, params) |> Repo.insert()
 
-      assert {:error, %Changeset{errors: errors}} = 
-        TKMR.changeset(%TKMR{}, params) |> Repo.insert()
+      assert {:error, %Changeset{errors: errors}} =
+               TKMR.changeset(%TKMR{}, params) |> Repo.insert()
 
       assert [
-        trigger_id: {
-          "has already been taken",
-          [
-            {:constraint, :unique},
-            {:constraint_name, "trigger_kafka_message_records_pkey"}
-          ]
-        }
-      ] = errors
+               trigger_id: {
+                 "has already been taken",
+                 [
+                   {:constraint, :unique},
+                   {:constraint_name, "trigger_kafka_message_records_pkey"}
+                 ]
+               }
+             ] = errors
     end
   end
 end

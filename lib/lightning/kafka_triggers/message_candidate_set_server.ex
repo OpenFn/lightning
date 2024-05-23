@@ -27,8 +27,9 @@ defmodule Lightning.KafkaTriggers.MessageCandidateSetServer do
     case KafkaTriggers.find_message_candidate_sets() do
       [candidate_set | remaining_sets] ->
         {candidate_set, remaining_sets}
+
       [] ->
-        {nil, []} 
+        {nil, []}
     end
   end
 

@@ -1,5 +1,4 @@
 defmodule Lightning.KafkaTriggers.TriggerKafkaMessage do
-
   use Ecto.Schema
   import Ecto.Changeset
 
@@ -43,6 +42,7 @@ defmodule Lightning.KafkaTriggers.TriggerKafkaMessage do
     message
     |> cast(changes, cast_changes)
     |> validate_required(required_changes)
-    |> assoc_constraint(:trigger) # No test for this - test it
+    # No test for this - test it
+    |> assoc_constraint(:trigger)
   end
 end
