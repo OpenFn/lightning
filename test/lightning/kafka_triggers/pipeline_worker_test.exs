@@ -18,6 +18,7 @@ defmodule Lightning.KafkaTriggers.PipelineWorkerTest do
           kafka_configuration: configuration(index: 1),
           enabled: true
         )
+
       trigger_2 =
         insert(
           :trigger,
@@ -33,11 +34,8 @@ defmodule Lightning.KafkaTriggers.PipelineWorkerTest do
       stop_supervised!(PipelineSupervisor)
 
       with_mock Supervisor,
-        [
-          start_child: fn _sup_pid, _child_spec -> {:ok, "fake-pid"} end,
-          count_children: fn _sup_pid -> %{specs: 1} end
-        ] do
-
+        start_child: fn _sup_pid, _child_spec -> {:ok, "fake-pid"} end,
+        count_children: fn _sup_pid -> %{specs: 1} end do
         perform_job(PipelineWorker, %{})
 
         assert_not_called(Supervisor.count_children(:_))
@@ -49,11 +47,8 @@ defmodule Lightning.KafkaTriggers.PipelineWorkerTest do
       stop_supervised!(PipelineSupervisor)
 
       with_mock Supervisor,
-        [
-          start_child: fn _sup_pid, _child_spec -> {:ok, "fake-pid"} end,
-          count_children: fn _sup_pid -> %{specs: 1} end
-        ] do
-
+        start_child: fn _sup_pid, _child_spec -> {:ok, "fake-pid"} end,
+        count_children: fn _sup_pid -> %{specs: 1} end do
         assert perform_job(PipelineWorker, %{}) == :ok
       end
     end
@@ -62,11 +57,8 @@ defmodule Lightning.KafkaTriggers.PipelineWorkerTest do
       pid: pid
     } do
       with_mock Supervisor,
-        [
-          start_child: fn _sup_pid, _child_spec -> {:ok, "fake-pid"} end,
-          count_children: fn _sup_pid -> %{specs: 1} end
-        ] do
-
+        start_child: fn _sup_pid, _child_spec -> {:ok, "fake-pid"} end,
+        count_children: fn _sup_pid -> %{specs: 1} end do
         perform_job(PipelineWorker, %{})
 
         assert_called(Supervisor.count_children(pid))
@@ -76,11 +68,8 @@ defmodule Lightning.KafkaTriggers.PipelineWorkerTest do
 
     test "returns :ok if supervisor already has chidren" do
       with_mock Supervisor,
-        [
-          start_child: fn _sup_pid, _child_spec -> {:ok, "fake-pid"} end,
-          count_children: fn _sup_pid -> %{specs: 1} end
-        ] do
-
+        start_child: fn _sup_pid, _child_spec -> {:ok, "fake-pid"} end,
+        count_children: fn _sup_pid -> %{specs: 1} end do
         assert perform_job(PipelineWorker, %{}) == :ok
       end
     end
@@ -91,16 +80,14 @@ defmodule Lightning.KafkaTriggers.PipelineWorkerTest do
       trigger_2: trigger_2
     } do
       with_mock Supervisor,
-        [
-          start_child: fn _sup_pid, _child_spec -> {:ok, "fake-pid"} end,
-          count_children: fn _sup_pid -> %{specs: 0} end
-        ] do
-
+        start_child: fn _sup_pid, _child_spec -> {:ok, "fake-pid"} end,
+        count_children: fn _sup_pid -> %{specs: 0} end do
         perform_job(PipelineWorker, %{})
 
         assert_called(
           Supervisor.start_child(pid, child_spec(trigger: trigger_1, index: 1))
         )
+
         assert_called(
           Supervisor.start_child(
             pid,
@@ -122,11 +109,8 @@ defmodule Lightning.KafkaTriggers.PipelineWorkerTest do
         )
 
       with_mock Supervisor,
-        [
-          start_child: fn _sup_pid, _child_spec -> {:ok, "fake-pid"} end,
-          count_children: fn _sup_pid -> %{specs: 0} end
-        ] do
-
+        start_child: fn _sup_pid, _child_spec -> {:ok, "fake-pid"} end,
+        count_children: fn _sup_pid -> %{specs: 0} end do
         perform_job(PipelineWorker, %{})
 
         assert_called(
@@ -140,10 +124,8 @@ defmodule Lightning.KafkaTriggers.PipelineWorkerTest do
 
     test "returns :ok" do
       with_mock Supervisor,
-        [
-          start_child: fn _sup_pid, _child_spec -> {:ok, "fake-pid"} end,
-          count_children: fn _sup_pid -> %{specs: 0} end
-        ] do
+        start_child: fn _sup_pid, _child_spec -> {:ok, "fake-pid"} end,
+        count_children: fn _sup_pid -> %{specs: 0} end do
         assert perform_job(PipelineWorker, %{}) == :ok
       end
     end
@@ -154,11 +136,12 @@ defmodule Lightning.KafkaTriggers.PipelineWorkerTest do
       sasl = opts |> Keyword.get(:sasl, true)
       ssl = opts |> Keyword.get(:ssl, true)
 
-      sasl_config = if sasl do
-                      ["plain", "my-user-#{index}", "secret-#{index}"]
-                    else
-                      nil
-                    end
+      sasl_config =
+        if sasl do
+          ["plain", "my-user-#{index}", "secret-#{index}"]
+        else
+          nil
+        end
 
       initial_offset_reset_policy = "171524976732#{index}" |> String.to_integer()
 
