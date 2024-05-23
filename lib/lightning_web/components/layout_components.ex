@@ -2,10 +2,10 @@ defmodule LightningWeb.LayoutComponents do
   @moduledoc false
   use LightningWeb, :html
 
-  alias LightningWeb.Components.Menu
-
   import PetalComponents.Dropdown
   import PetalComponents.Avatar
+
+  alias LightningWeb.Components.Menu
 
   def menu_items(assigns) do
     assigns =
@@ -36,7 +36,7 @@ defmodule LightningWeb.LayoutComponents do
 
       <%= if assigns[:project] do %>
         <Menu.project_items
-          project_id={assigns[:project].id}
+          project_id={@project.id}
           active_menu_item={@active_menu_item}
         />
       <% else %>
