@@ -785,10 +785,115 @@ defmodule Lightning.KafkaTriggersTest do
              } = candidate
     end
 
-    def timestamp_from_offset(offset) do
-      DateTime.utc_now()
-      |> DateTime.add(offset)
-      |> DateTime.to_unix(:millisecond)
+    # def timestamp_from_offset(offset) do
+    #   DateTime.utc_now()
+    #   |> DateTime.add(offset)
+    #   |> DateTime.to_unix(:millisecond)
+    # end
+  end
+
+  describe "find_candidate_for/1 - nil key" do
+    setup do
+      other_trigger = insert(:trigger)
+      trigger = insert(:trigger)
+
+      _other_trigger_set_message_1 =
+        insert(
+          :trigger_kafka_message,
+          key: "set_key",
+          message_timestamp: 10 |> timestamp_from_offset,
+          topic: "set_topic",
+          trigger: other_trigger
+        )
+
+      _other_key_set_message_1 =
+        insert(
+          :trigger_kafka_message,
+          key: "other_set_key",
+          message_timestamp: 10 |> timestamp_from_offset,
+          topic: "set_topic",
+          trigger: trigger
+        )
+
+      _other_key_set_message_1 =
+        insert(
+          :trigger_kafka_message,
+          key: "set_key",
+          message_timestamp: 10 |> timestamp_from_offset,
+          topic: "other_set_topic",
+          trigger: trigger
+        )
+
+      _set_message_2 =
+        insert(
+          :trigger_kafka_message,
+          key: nil,
+          message_timestamp: 120 |> timestamp_from_offset,
+          topic: "set_topic",
+          trigger: trigger
+        )
+
+      _set_message_3 =
+        insert(
+          :trigger_kafka_message,
+          key: nil,
+          message_timestamp: 130 |> timestamp_from_offset,
+          topic: "set_topic",
+          trigger: trigger
+        )
+
+      set_message_1 =
+        insert(
+          :trigger_kafka_message,
+          key: nil,
+          message_timestamp: 110 |> timestamp_from_offset,
+          topic: "set_topic",
+          trigger: trigger,
+          work_order: build(:workorder)
+        )
+
+      candidate_set = %{
+        trigger_id: trigger.id,
+        topic: "set_topic",
+        key: nil
+      }
+
+      %{
+        candidate_set: candidate_set,
+        message: set_message_1
+      }
+    end
+
+    test "returns nil if it can't find a message for the candidate set", %{
+      candidate_set: candidate_set
+    } do
+      no_such_set = candidate_set |> Map.merge(%{key: "no-such-key"})
+
+      assert KafkaTriggers.find_candidate_for(no_such_set) |> Repo.one() == nil
+    end
+
+    test "returns earliest message - based on message timestamp - for set", %{
+      candidate_set: candidate_set,
+      message: message
+    } do
+      message_id = message.id
+
+      assert %TriggerKafkaMessage{
+               id: ^message_id
+             } = KafkaTriggers.find_candidate_for(candidate_set) |> Repo.one()
+    end
+
+    test "preloads `:workflow`, and `:trigger`", %{
+      candidate_set: candidate_set
+    } do
+      candidate = KafkaTriggers.find_candidate_for(candidate_set) |> Repo.one()
+
+      assert %{
+               trigger: %Trigger{
+                 workflow: %Workflow{}
+               },
+               work_order: %WorkOrder{}
+             } = candidate
     end
   end
 
@@ -810,5 +915,11 @@ defmodule Lightning.KafkaTriggersTest do
       ([:rejected, :pending, :running] ++ Run.final_states())
       |> Enum.reject(&(&1 == :success))
     end
+  end
+
+  defp timestamp_from_offset(offset) do
+    DateTime.utc_now()
+    |> DateTime.add(offset)
+    |> DateTime.to_unix(:millisecond)
   end
 end
