@@ -184,24 +184,6 @@ defmodule LightningWeb.Router do
     get "/*path", WebhooksController, :check
   end
 
-  scope "/" do
-    @routing_config Application.compile_env(
-                      :lightning,
-                      Lightning.Extensions.Routing,
-                      []
-                    )
-    @services_opts @routing_config |> Keyword.get(:session_opts, [])
-    @services_routes @routing_config |> Keyword.get(:routes, [])
-
-    pipe_through [:browser, :require_authenticated_user]
-
-    live_session :services, @services_opts do
-      Enum.each(@services_routes, fn {path, module, action, opts} ->
-        live(path, module, action, opts)
-      end)
-    end
-  end
-
   # LiveDashboard enables basic system monitoring but is only available to
   # superusers—i.e., the people who installed/maintain the instance.
   scope "/" do

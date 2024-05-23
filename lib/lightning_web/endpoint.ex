@@ -62,5 +62,6 @@ defmodule LightningWeb.Endpoint do
   plug Plug.MethodOverride
   plug Plug.Head
   plug Plug.Session, @session_options
+  plug Lightning.Extensions.Routing
   plug LightningWeb.Router
 end
