@@ -21,6 +21,9 @@ and this project adheres to
 
 ### Fixed
 
+- Preserve Custom Values During Token Refresh by Merging New and Old Tokens
+  [#2131](https://github.com/OpenFn/lightning/issues/2131)
+
 ## [v2.5.1]
 
 - Don't compile Phoenix Storybook in production and test environments
