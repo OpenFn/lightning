@@ -338,7 +338,7 @@ export default function Editor({
         defaultLanguage="javascript"
         theme="default"
         defaultPath="/job.js"
-        loading={<div>Loading...</div>}
+        loading={<div className="text-white">Loading...</div>}
         value={source || DEFAULT_TEXT}
         options={options}
         beforeMount={beforeMount}
