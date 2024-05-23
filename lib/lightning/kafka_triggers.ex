@@ -180,6 +180,14 @@ defmodule Lightning.KafkaTriggers do
     if successful?(work_order), do: candidate |> Repo.delete()
   end
 
+  def find_candidate_for(%{trigger_id: trigger_id, topic: topic, key: nil}) do
+    from t in TriggerKafkaMessage,
+      where: t.trigger_id == ^trigger_id and t.topic == ^topic and is_nil(t.key),
+      order_by: t.message_timestamp,
+      limit: 1,
+      preload: [:work_order, trigger: [:workflow]]
+  end
+
   def find_candidate_for(%{trigger_id: trigger_id, topic: topic, key: key}) do
     from t in TriggerKafkaMessage,
       where: t.trigger_id == ^trigger_id and t.topic == ^topic and t.key == ^key,
