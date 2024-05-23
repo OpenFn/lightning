@@ -486,6 +486,7 @@ defmodule Lightning.Credentials do
       credential,
       attrs |> coerce_json_field("body")
     )
+    |> cast_body_change()
   end
 
   @spec sensitive_values_for(Ecto.UUID.t() | Credential.t() | nil) :: [any()]
