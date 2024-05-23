@@ -7,71 +7,41 @@ defmodule LightningWeb.LayoutComponents do
   import PetalComponents.Dropdown
   import PetalComponents.Avatar
 
-  # Steps for rendering menu items:
-  # 1. Infer the scope by the active menu item or if there is a selected project
-  # 2. Knowing the scope, render the custom scope menu if there is one
-  #    otherwise render the default menu.
-  def scope(active_menu_item, selected_project, custom_scopes) do
-    cond do
-      active_menu_item in [:profile, :tokens, :credentials] -> :user_scope
-      selected_project != nil -> :project_scope
-      true -> Map.get(custom_scopes, active_menu_item, :none)
-    end
-  end
-
   def menu_items(assigns) do
-    custom_menu_items =
-      Application.get_env(:lightning, :menu_items, [])
-
-    scope =
-      scope(
-        assigns[:active_menu_item],
-        assigns[:project],
-        custom_menu_items[:active_item_custom_scope]
-      )
-
     assigns =
       assign(assigns,
-        custom_scope_menu: custom_menu_items[scope],
-        scope: scope
+        custom_menu_items: Application.get_env(:lightning, :menu_items)
       )
 
     ~H"""
-    <%= if assigns[:projects] do %>
-      <Menu.projects_dropdown
-        projects={assigns[:projects]}
-        selected_project={assigns[:project]}
-      />
+    <%= if @custom_menu_items do %>
+      <%= Phoenix.LiveView.TagEngine.component(
+        @custom_menu_items.component,
+        Map.take(assigns, @custom_menu_items.assigns_keys),
+        {__ENV__.module, __ENV__.function, __ENV__.file, __ENV__.line}
+      ) %>
     <% else %>
-      <div class="p-2 mb-4 mt-4 text-center text-primary-300 bg-primary-800">
-        <span class="inline-block align-middle text-sm">
-          You don't have access to any projects
-        </span>
-      </div>
-    <% end %>
+      <%= if assigns[:projects] do %>
+        <Menu.projects_dropdown
+          projects={assigns[:projects]}
+          selected_project={assigns[:project]}
+        />
+      <% else %>
+        <div class="p-2 mb-4 mt-4 text-center text-primary-300 bg-primary-800">
+          <span class="inline-block align-middle text-sm">
+            You don't have access to any projects
+          </span>
+        </div>
+      <% end %>
 
-    <%= cond do %>
-      <% @scope == :user_scope -> %>
-        <Menu.profile_items active_menu_item={@active_menu_item} />
-      <% @scope == :project_scope and assigns[:custom_scope_menu] -> %>
-        <%= Phoenix.LiveView.TagEngine.component(
-          @custom_scope_menu.component,
-          Map.take(assigns, @custom_scope_menu.assigns_keys),
-          {__ENV__.module, __ENV__.function, __ENV__.file, __ENV__.line}
-        ) %>
-      <% @scope == :project_scope -> %>
+      <%= if assigns[:project] do %>
         <Menu.project_items
-          project_id={@project.id}
+          project_id={assigns[:project].id}
           active_menu_item={@active_menu_item}
         />
-      <% assigns[:custom_scope_menu] -> %>
-        <%= Phoenix.LiveView.TagEngine.component(
-          @custom_scope_menu.component,
-          Map.take(assigns, @custom_scope_menu.assigns_keys),
-          {__ENV__.module, __ENV__.function, __ENV__.file, __ENV__.line}
-        ) %>
-      <% true -> %>
-        <% :ok %>
+      <% else %>
+        <Menu.profile_items active_menu_item={@active_menu_item} />
+      <% end %>
     <% end %>
     """
   end
