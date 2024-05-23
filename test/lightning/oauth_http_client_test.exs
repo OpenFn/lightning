@@ -40,7 +40,7 @@ defmodule Lightning.AuthProviders.OauthHTTPClientTest do
   end
 
   describe "refresh_token/4" do
-    test "refreshes the token successfully" do
+    test "refreshes the token successfully and merges with old token" do
       client_id = "id"
       client_secret = "secret"
       refresh_token = "validRefreshToken"
@@ -50,6 +50,19 @@ defmodule Lightning.AuthProviders.OauthHTTPClientTest do
         "refresh_token" => "validRefreshToken",
         "access_token" => "newToken123",
         "token_type" => "bearer"
+      }
+
+      old_token = %{
+        "refresh_token" => refresh_token,
+        "access_token" => "oldToken123",
+        "custom_key" => "custom_value"
+      }
+
+      expected_merged_token = %{
+        "refresh_token" => "validRefreshToken",
+        "access_token" => "newToken123",
+        "token_type" => "bearer",
+        "custom_key" => "custom_value"
       }
 
       expect(Lightning.AuthProviders.OauthHTTPClient.Mock, :call, fn
@@ -74,10 +87,10 @@ defmodule Lightning.AuthProviders.OauthHTTPClientTest do
             client_secret: client_secret,
             token_endpoint: token_endpoint
           },
-          %{"refresh_token" => refresh_token}
+          old_token
         )
 
-      assert {:ok, response_body} == result
+      assert {:ok, expected_merged_token} == result
     end
 
     test "handles error when refresh token is invalid" do

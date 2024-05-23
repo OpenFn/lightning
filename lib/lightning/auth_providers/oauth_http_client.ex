@@ -60,7 +60,7 @@ defmodule Lightning.AuthProviders.OauthHTTPClient do
     |> maybe_introspect(client)
     |> case do
       {:ok, new_token} ->
-        {:ok, Map.put_new(new_token, "refresh_token", token["refresh_token"])}
+        {:ok, Map.merge(token, new_token)}
 
       {:error, error} ->
         {:error, error}

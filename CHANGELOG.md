@@ -24,6 +24,13 @@ and this project adheres to
 - Fix Credential Modal Closure Error When Workflow Is Unsaved
   [#2101](https://github.com/OpenFn/lightning/pull/2101)
 
+## [v2.5.2] - 2024-05-23
+
+### Fixed
+
+- Preserve custom values (like `apiVersion`) during token refresh for OAuth2
+  credentials [#2131](https://github.com/OpenFn/lightning/issues/2131)
+
 ## [v2.5.1]
 
 - Don't compile Phoenix Storybook in production and test environments
