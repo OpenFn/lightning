@@ -14,6 +14,8 @@ defmodule Lightning.KafkaTriggers.MessageCandidateSetWorkerTest do
   setup_with_mocks([
     {KafkaTriggers, [:passthrough], [send_after: fn pid, _msg, _time -> pid end]}
   ]) do
+    Mox.set_mox_global()
+
     :ok
   end
 
