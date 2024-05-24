@@ -19,6 +19,9 @@ and this project adheres to
 
 ### Changed
 
+- Stop users from creating deprecated Salesforce and GoogleSheets credentials.
+  [#2142](https://github.com/OpenFn/lightning/issues/2142)
+
 ### Fixed
 
 - Fix Credential Modal Closure Error When Workflow Is Unsaved
