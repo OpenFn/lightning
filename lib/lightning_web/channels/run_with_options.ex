@@ -7,19 +7,7 @@ defmodule LightningWeb.RunWithOptions do
   alias Lightning.Workflows.Snapshot.Job
   alias Lightning.Workflows.Snapshot.Trigger
 
-  @type run_options :: [
-          output_dataclips: boolean(),
-          run_timeout_ms: non_neg_integer()
-        ]
-
-  @spec render(Run.t(), run_options()) :: map()
-  def render(%Run{} = run, options) do
-    options =
-      options |> Keyword.take([:output_dataclips, :run_timeout_ms]) |> Map.new()
-
-    run |> render() |> Map.put("options", options)
-  end
-
+  @spec render(Run.t()) :: map()
   def render(%Run{} = run) do
     %{
       "id" => run.id,

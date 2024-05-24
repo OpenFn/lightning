@@ -5,12 +5,12 @@ defmodule LightningWeb.RunChannel do
   use LightningWeb, :channel
 
   alias Lightning.Credentials
-  alias Lightning.Extensions.UsageLimiting.Context
-  alias Lightning.Projects
+  # alias Lightning.Extensions.UsageLimiting.Context
+  # alias Lightning.Projects
   alias Lightning.Repo
   alias Lightning.Runs
   alias Lightning.Scrubber
-  alias Lightning.Services.UsageLimiter
+  # alias Lightning.Services.UsageLimiter
   alias Lightning.Workers
   alias LightningWeb.RunWithOptions
 
@@ -35,8 +35,8 @@ defmodule LightningWeb.RunChannel do
          id: id,
          run: run,
          project_id: project_id,
-         scrubber: nil,
-         retention_policy: Projects.project_retention_policy_for(run)
+         scrubber: nil
+         #  retention_policy: Projects.project_retention_policy_for(run)
        })}
     else
       {:error, :not_found} ->
@@ -53,16 +53,20 @@ defmodule LightningWeb.RunChannel do
 
   @impl true
   def handle_in("fetch:plan", _payload, socket) do
-    %{retention_policy: retention_policy, run: run, project_id: project_id} =
-      socket.assigns
+    IO.inspect(socket.assigns)
+    %{run: run} = socket.assigns
 
-    run_options =
-      Keyword.merge(
-        [output_dataclips: include_output_dataclips?(retention_policy)],
-        UsageLimiter.get_run_options(%Context{project_id: project_id})
-      )
+    # TODO - move to run creation.
+    # %{retention_policy: retention_policy, run: run, project_id: project_id} =
+    #   socket.assigns
 
-    {:reply, {:ok, RunWithOptions.render(run, run_options)}, socket}
+    # run_options =
+    #   Keyword.merge(
+    #     [output_dataclips: include_output_dataclips?(retention_policy)],
+    #     UsageLimiter.get_run_options(%Context{project_id: project_id})
+    #   )
+
+    {:reply, {:ok, RunWithOptions.render(run)}, socket}
   end
 
   def handle_in("run:start", _payload, socket) do
@@ -146,9 +150,8 @@ defmodule LightningWeb.RunChannel do
   def handle_in("fetch:dataclip", _payload, socket) do
     body = Runs.get_input(socket.assigns.run)
 
-    if socket.assigns.retention_policy == :erase_all do
-      Runs.wipe_dataclips(socket.assigns.run)
-    end
+    if socket.assigns.run.options.burn_input_after_reading,
+      do: Runs.wipe_dataclips(socket.assigns.run)
 
     {:reply, {:ok, {:binary, body || "null"}}, socket}
   end
@@ -183,7 +186,7 @@ defmodule LightningWeb.RunChannel do
       "project_id" => socket.assigns.project_id
     }
     |> Enum.into(payload)
-    |> Runs.complete_step(socket.assigns.retention_policy)
+    |> Runs.complete_step(socket.assigns.run.options)
     |> case do
       {:error, changeset} ->
         {:reply, {:error, LightningWeb.ChangesetJSON.error(changeset)}, socket}
@@ -206,9 +209,9 @@ defmodule LightningWeb.RunChannel do
     end
   end
 
-  defp include_output_dataclips?(retention_policy) do
-    retention_policy != :erase_all
-  end
+  # defp include_output_dataclips?(retention_policy) do
+  #   retention_policy != :erase_all
+  # end
 
   defp replace_reason_with_exit_reason(params) do
     {reason, payload} = Map.pop(params, "reason")

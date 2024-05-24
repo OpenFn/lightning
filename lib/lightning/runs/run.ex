@@ -64,7 +64,7 @@ defmodule Lightning.Run do
       join_through: RunStep,
       preload_order: [asc: :started_at]
 
-    field :options, :map
+    embeds_one :options, Lightning.Runs.RunOptions
 
     field :state, Ecto.Enum,
       values:

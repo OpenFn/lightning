@@ -283,10 +283,10 @@ defmodule Lightning.Runs do
     Handlers.StartStep.call(run, params)
   end
 
-  @spec complete_step(map(), Lightning.Projects.Project.retention_policy_type()) ::
+  @spec complete_step(map(), Lightning.Run.RunOptions) ::
           {:ok, Lightning.Invocation.Step.t()} | {:error, Ecto.Changeset.t()}
-  def complete_step(params, retention_policy \\ :retain_all) do
-    Handlers.CompleteStep.call(params, retention_policy)
+  def complete_step(params, options) do
+    Handlers.CompleteStep.call(params, options)
   end
 
   @spec mark_run_lost(Lightning.Run.t()) ::
