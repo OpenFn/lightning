@@ -24,6 +24,9 @@ and this project adheres to
 - Disable Credential Save Button Until All Form Fields Are Validated
   [#2099](https://github.com/OpenFn/lightning/issues/2099)
 
+- Fix Credential Modal Closure Error When Workflow Is Unsaved
+  [#2101](https://github.com/OpenFn/lightning/pull/2101)
+
 ## [v2.5.2] - 2024-05-23
 
 ### Fixed
