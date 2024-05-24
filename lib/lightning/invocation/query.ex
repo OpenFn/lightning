@@ -99,7 +99,7 @@ defmodule Lightning.Invocation.Query do
         | body:
             fragment(
               """
-              CASE WHEN type = 'http_request'
+              CASE WHEN type IN ('http_request', 'kafka')
               THEN jsonb_build_object('data', ?, 'request', ?)
               ELSE ? END
               """,
