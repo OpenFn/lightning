@@ -10,8 +10,10 @@ import { initiateSaveAndRun } from '../common';
 import dts_es5 from './lib/es5.min.dts';
 import { setTheme } from '../monaco';
 
-export const DEFAULT_TEXT =
-  '// Get started by adding operations from the API reference\n';
+export const DEFAULT_TEXT = `// Use pure JavaScript to add operations to your
+// step. Click Docs to see list of operations or visit
+// https://bit.ly/OFNJWG for adaptor documentation
+// and example job codes.\n`;
 
 type EditorProps = {
   source?: string;
