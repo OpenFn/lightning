@@ -36,4 +36,29 @@ defmodule Lightning.Invocation.DataclipTest do
       assert {:request, {"cannot be set for this type", []}} in changeset.errors
     end
   end
+
+  describe "kafka dataclip" do
+    test "can provide a request map" do
+      {:ok, dataclip} =
+        params_with_assocs(
+          :dataclip,
+          request: %{"partition" => 3},
+          type: :kafka
+        )
+        |> Dataclip.new()
+        |> Repo.insert()
+        |> IO.inspect()
+
+      dataclip = dataclip |> Repo.reload()
+      assert dataclip.request == nil, "Does not load request in query by default"
+
+      request =
+        Dataclip
+        |> select([d], d.request)
+        |> where([d], d.id == ^dataclip.id)
+        |> Repo.one()
+
+      assert request == %{"partition" => 3}
+    end
+  end
 end

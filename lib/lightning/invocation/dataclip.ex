@@ -108,11 +108,17 @@ defmodule Lightning.Invocation.Dataclip do
   end
 
   defp validate_request(changeset) do
-    if fetch_field!(changeset, :type) != :http_request and
-         not is_nil(fetch_field!(changeset, :request)) do
-      add_error(changeset, :request, "cannot be set for this type")
-    else
-      changeset
+    %{changes: %{type: type, request: request}} = changeset
+
+    case {type, request} do
+      {:http_request, _request} ->
+        changeset
+      {:kafka, _request} ->
+        changeset
+      {_, request} when not is_nil(request) ->
+        add_error(changeset, :request, "cannot be set for this type")
+      {_, _} ->
+        changeset
     end
   end
 

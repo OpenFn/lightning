@@ -553,6 +553,11 @@ defmodule Lightning.KafkaTriggersTest do
           data: %{triggers: :test} |> Jason.encode!(),
           key: "test-key",
           message_timestamp: message_timestamp,
+          metadata: %{
+            offset: 1,
+            partition: 1,
+            topic: "test-topic"
+          },
           topic: "test-topic",
           trigger: trigger,
           work_order: nil
@@ -612,9 +617,20 @@ defmodule Lightning.KafkaTriggersTest do
           ]
         )
 
+      expected_body = %{
+        "data" => %{
+          "triggers" => "test"
+        },
+        "request" => %{
+          "offset" => 1,
+          "partition" => 1,
+          "topic" => "test-topic"
+        }
+      }
+
       assert %WorkOrder{
                dataclip: %{
-                 body: %{"triggers" => "test"},
+                 body: ^expected_body,
                  project_id: ^project_id,
                  type: :kafka
                },
@@ -784,12 +800,6 @@ defmodule Lightning.KafkaTriggersTest do
                work_order: %WorkOrder{}
              } = candidate
     end
-
-    # def timestamp_from_offset(offset) do
-    #   DateTime.utc_now()
-    #   |> DateTime.add(offset)
-    #   |> DateTime.to_unix(:millisecond)
-    # end
   end
 
   describe "find_candidate_for/1 - nil key" do

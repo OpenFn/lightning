@@ -158,13 +158,18 @@ defmodule Lightning.KafkaTriggers do
   end
 
   defp handle_candidate(%{work_order: nil} = candidate) do
-    %{data: data, trigger: %{workflow: workflow} = trigger} = candidate
+    %{
+      data: data,
+      # metadata: metadata,
+      trigger: %{workflow: workflow} = trigger
+    } = candidate
 
     {:ok, %WorkOrder{id: work_order_id}} =
       WorkOrders.create_for(trigger,
         workflow: workflow,
         dataclip: %{
           body: data |> Jason.decode!(),
+          request: %{},
           type: :kafka,
           project_id: workflow.project_id
         },
