@@ -21,6 +21,9 @@ and this project adheres to
 
 ### Fixed
 
+- Fix Credential Modal Closure Error When Workflow Is Unsaved
+  [#2101](https://github.com/OpenFn/lightning/pull/2101)
+
 ## [v2.5.2] - 2024-05-23
 
 ### Fixed
