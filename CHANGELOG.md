@@ -21,6 +21,9 @@ and this project adheres to
 
 ### Fixed
 
+- Disable Credential Save Button Until All Form Fields Are Validated
+  [#2099](https://github.com/OpenFn/lightning/issues/2099)
+
 ## [v2.5.2] - 2024-05-23
 
 ### Fixed
