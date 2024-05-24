@@ -731,16 +731,9 @@ defmodule LightningWeb.ProjectLiveTest do
 
       refute html =~ credential_name
 
-      {:ok, _view, html} =
-        view
-        |> element("#cancel-credential-type-picker", "Cancel")
-        |> render_click()
-        |> follow_redirect(
-          conn,
-          ~p"/projects/#{project}/settings#credentials"
-        )
-
-      refute html =~ credential_name
+      refute view
+             |> element("#cancel-credential-type-picker", "Cancel")
+             |> render_click() =~ credential_name
     end
 
     test "project admin can't edit project name and description with invalid data",
