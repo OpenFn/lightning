@@ -13,14 +13,13 @@ defmodule LightningWeb.Components.ViewerTest do
     end
 
     test "renders correct information", %{
-      workflow: %{jobs: [job | _rest], project: project}
+      workflow: %{jobs: [job | _rest]}
     } do
-      wiped_dataclip = insert(:dataclip, body: nil, wiped_at: DateTime.utc_now())
-
       finished_step =
         insert(:step,
           job: job,
-          input_dataclip: wiped_dataclip,
+          input_dataclip:
+            insert(:dataclip, body: nil, wiped_at: DateTime.utc_now()),
           output_dataclip: nil,
           finished_at: DateTime.utc_now()
         )
@@ -29,25 +28,13 @@ defmodule LightningWeb.Components.ViewerTest do
       html =
         render_component(&Viewers.log_viewer/1,
           id: "test",
-          stream: [],
-          stream_empty?: true,
-          step: finished_step,
+          logs_empty?: true,
+          selected_step_id: finished_step.id,
           run_state: :lost,
-          dataclip: %Phoenix.LiveView.AsyncResult{
-            ok?: false,
-            loading: [:input_dataclip]
-          },
-          input_or_output: :input,
-          project_id: project.id,
-          admin_contacts: ["test@email.com"],
-          can_edit_data_retention: true
+          run_id: "run-id"
         )
 
       assert html =~ "No logs were received for this run."
-      refute html =~ "Nothing yet"
-      refute html =~ "data for this step has not been retained"
-      refute html =~ "this policy\n      </a>\n      for future runs"
-      refute html =~ "test@email.com"
     end
   end
 

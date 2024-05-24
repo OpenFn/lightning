@@ -138,24 +138,13 @@ defmodule LightningWeb.RunLive.RunViewerLive do
                 </div>
 
                 <div class="flex-1 grow inset-0 overflow-auto rounded-md">
-                  <%!-- <Viewers.log_viewer
+                  <Viewers.log_viewer
                     id={"run-log-#{run.id}"}
-                    highlight_id={@selected_step_id}
-                    run_state={run.state}
-                    stream={@streams.log_lines}
-                    stream_empty?={@log_lines_stream_empty?}
-                  /> --%>
-                  <div class="h-full relative">
-                    <div
-                      id={"run-log-#{run.id}"}
-                      class="h-full"
-                      phx-hook="LogViewer"
-                      phx-update="ignore"
-                      data-run-id={run.id}
-                      data-step-id={@selected_step_id}
-                    >
-                    </div>
-                  </div>
+                    run_id={run.id}
+                    run_state={@run.result.state}
+                    logs_empty?={@log_lines_empty?}
+                    selected_step_id={@selected_step_id}
+                  />
                 </div>
               </div>
             </Common.panel_content>
@@ -285,6 +274,7 @@ defmodule LightningWeb.RunLive.RunViewerLive do
      |> assign(:output_dataclip, nil)
      |> assign(:run, AsyncResult.loading())
      |> assign(:log_lines, AsyncResult.loading())
+     |> assign(:log_lines_empty?, true)
      |> assign(
        can_edit_data_retention:
          Permissions.can?(
