@@ -144,7 +144,6 @@ defmodule Lightning.Credentials do
     changeset =
       %Credential{}
       |> change_credential(attrs)
-      |> cast_body_change()
 
     Multi.new()
     |> Multi.insert(
@@ -225,11 +224,9 @@ defmodule Lightning.Credentials do
 
   defp cast_body_change(changeset), do: changeset
 
-  defp put_typed_body(body, "raw"), do: {:ok, body}
-
-  defp put_typed_body(body, "salesforce_oauth"), do: {:ok, body}
-
-  defp put_typed_body(body, "oauth"), do: {:ok, body}
+  defp put_typed_body(body, schema_name)
+       when schema_name in ["raw", "salesforce_oauth", "googlesheets", "oauth"],
+       do: {:ok, body}
 
   defp put_typed_body(body, schema_name) do
     schema = get_schema(schema_name)
