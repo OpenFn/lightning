@@ -3,11 +3,20 @@ import { PhoenixHook } from './PhoenixHook';
 
 import LogLineHighlight from './LogLineHighlight';
 import ElapsedIndicator from './ElapsedIndicator';
-import TabSelector from './TabSelector';
-import { TabbedContainer, TabbedSelector, TabbedPanels } from './TabbedContainer';
+import {
+  TabbedContainer,
+  TabbedSelector,
+  TabbedPanels,
+} from './TabbedContainer';
 import { initiateSaveAndRun } from '../common';
 
-export { LogLineHighlight, ElapsedIndicator, TabSelector, TabbedContainer, TabbedSelector, TabbedPanels };
+export {
+  LogLineHighlight,
+  ElapsedIndicator,
+  TabbedContainer,
+  TabbedSelector,
+  TabbedPanels,
+};
 
 export const EditScope = {
   mounted() {

@@ -61,9 +61,7 @@ defmodule LightningWeb.Components.Common do
   attr :icon_class, :string, default: "w-4 h-4 text-primary-600 opacity-50"
 
   def tooltip(assigns) do
-    classes = ~w"
-      relative ml-1 cursor-pointer
-    "
+    classes = ~w"relative ml-1 cursor-pointer"
 
     assigns = assign(assigns, class: classes ++ List.wrap(assigns.class))
 
@@ -191,23 +189,6 @@ defmodule LightningWeb.Components.Common do
     end
   end
 
-  def item_bar(assigns) do
-    base_classes = ~w[
-      w-full rounded-md drop-shadow-sm
-      outline-2 outline-blue-300
-      bg-white flex mb-4
-      hover:outline hover:drop-shadow-none
-    ]
-
-    assigns = Map.merge(%{id: nil, class: base_classes}, assigns)
-
-    ~H"""
-    <div class={@class} id={@id}>
-      <%= render_slot(@inner_block) %>
-    </div>
-    """
-  end
-
   def flash(%{kind: :error} = assigns) do
     ~H"""
     <div
@@ -309,134 +290,5 @@ defmodule LightningWeb.Components.Common do
       <%= @type %>
     </div>
     """
-  end
-
-  attr :id, :string, required: true
-  attr :default_hash, :string, required: true
-  attr :orientation, :string, required: true, values: ["horizontal", "vertical"]
-  slot :inner_block, required: true
-
-  def tab_bar(assigns) do
-    assigns =
-      assigns
-      |> assign(
-        class:
-          case assigns[:orientation] do
-            "horizontal" ->
-              ~w[dark:border-gray-600 flex flex-initial gap-x-4 gap-y-2 border-b]
-
-            "vertical" ->
-              ~w[flex flex-col flex-wrap gap-y-2 list-none mr-4 nav nav-tabs]
-          end
-      )
-
-    ~H"""
-    <div
-      id={@id}
-      class={@class}
-      data-active-classes="border-b-2 border-primary-500 text-primary-600"
-      data-inactive-classes="border-b-2 border-transparent text-gray-500 hover:border-b-gray-300 hover:text-gray-600 hover:border-b-gray-300"
-      data-disabled-classes="border-b-2 border-transparent text-gray-500 hover:cursor-not-allowed"
-      data-default-hash={@default_hash}
-      phx-hook="TabSelector"
-    >
-      <%= render_slot(@inner_block) %>
-    </div>
-    """
-  end
-
-  attr :for_hash, :string, required: true
-  attr :class, :string, default: "flex"
-  slot :inner_block, required: true
-
-  def panel_content(assigns) do
-    ~H"""
-    <div
-      class={@class}
-      data-panel-hash={@for_hash}
-      style="display: none;"
-      lv-keep-style
-    >
-      <%= render_slot(@inner_block) %>
-    </div>
-    """
-  end
-
-  attr :hash, :string, required: true
-  attr :orientation, :string, required: true, values: ["horizontal", "vertical"]
-  attr :disabled, :boolean, default: false
-  attr :disabled_msg, :string, default: "Unavailable"
-  attr :in_inspector, :boolean, default: false
-  slot :inner_block, required: true
-
-  def tab_item(assigns) do
-    assigns =
-      assigns
-      |> assign(
-        base_classes:
-          ~w[border-t-2 border-t-transparent border-b-2 border-transparent -mb-px leading-tight] ++
-            if(assigns.in_inspector,
-              do: ~w[text-xs font-semibold text-secondary-700],
-              else: ~w[text-sm text-gray-500 font-medium]
-            ),
-        orientation_classes:
-          case assigns[:orientation] do
-            "horizontal" -> ~w[
-              px-2
-              py-2
-            ]
-            "vertical" -> ~w[
-              flex
-              items-center
-              px-3
-              py-3
-              whitespace-nowrap
-            ]
-          end,
-        disabled_classes: ~w[hover:cursor-not-allowed],
-        enabled_classes: ~w[
-          hover:border-b-gray-300
-          hover:border-b-gray-300
-          hover:text-b-gray-600
-        ]
-      )
-
-    ~H"""
-    <%= if @disabled do %>
-      <span
-        id={"tab-item-#{@hash}"}
-        aria-label={@disabled_msg}
-        phx-hook="Tooltip"
-        data-placement="bottom"
-        class={[@base_classes, @orientation_classes, @disabled_classes]}
-        data-disabled
-        data-hash={@hash}
-        lv-keep-class
-      >
-        <%= render_slot(@inner_block) %>
-      </span>
-    <% else %>
-      <a
-        id={"tab-item-#{@hash}"}
-        class={[@base_classes, @orientation_classes, @enabled_classes]}
-        data-hash={@hash}
-        lv-keep-class
-        phx-click={switch_tabs(@hash)}
-        href={"##{@hash}"}
-        {if @in_inspector, do: ["phx-hook": "MaybeToogleCollapse"], else: []}
-      >
-        <%= render_slot(@inner_block) %>
-      </a>
-    <% end %>
-    """
-  end
-
-  defp switch_tabs(hash) do
-    JS.hide(to: "[data-panel-hash]:not([data-panel-hash=#{hash}])")
-    |> JS.show(
-      to: "[data-panel-hash=#{hash}]",
-      transition: {"ease-in duration-150 delay-50", "opacity-0", "opacity-100"},
-      time: 200
-    )
   end
 end
