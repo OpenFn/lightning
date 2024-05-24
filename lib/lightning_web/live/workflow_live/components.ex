@@ -524,8 +524,7 @@ defmodule LightningWeb.WorkflowLive.Components do
   slot :tabs, required: false
   attr :class, :string, default: ""
   attr :id, :string, required: true
-  attr :panel_title, :string, required: false
-  attr :header_type, :atom, default: :simple
+  attr :panel_title, :string, default: ""
 
   def collapsible_panel(assigns) do
     ~H"""
@@ -540,18 +539,16 @@ defmodule LightningWeb.WorkflowLive.Components do
       <div class="flex-0 m-0">
         <div
           id={"#{@id}-panel-header"}
-          class={"flex justify-between items-center #{if @header_type == :tabbed, do: "p-0", else: "p-2"} #{if @header_type == :tabbed, do: "panel-header-tabs", else: "panel-header"} px-4"}
+          class="flex justify-between items-center p-2 px-4"
         >
           <div
             id={"#{@id}-panel-header-title"}
             class="text-center font-semibold text-secondary-700 panel-header-title text-xs"
           >
-            <%= case @header_type do %>
-              <% :simple -> %>
-                <%= @panel_title %>
-              <% :tabbed -> %>
-                <%= render_slot(@tabs) %>
+            <%= for tabs <- @tabs do %>
+              <%= render_slot(tabs) %>
             <% end %>
+            <%= @panel_title %>
           </div>
           <div class="close-button">
             <a

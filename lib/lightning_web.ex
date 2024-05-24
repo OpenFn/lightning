@@ -123,7 +123,6 @@ defmodule LightningWeb do
       import PetalComponents.Card
       import PetalComponents.Dropdown
       import PetalComponents.Table
-      import PetalComponents.Tabs
       import PetalComponents.Typography
 
       alias LightningWeb.Components
