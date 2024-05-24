@@ -595,42 +595,12 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
         {name |> Phoenix.HTML.Form.humanize(), name, nil, nil}
       end)
 
-    oauth_clients_from_env =
-      Application.get_env(:lightning, :oauth_clients)
-
     schemas_options
     |> Enum.concat([{"Raw JSON", "raw", nil, nil}])
-    |> handle_oauth_item(
-      {"GoogleSheets", "googlesheets", ~p"/images/oauth-2.png", nil},
-      get_in(oauth_clients_from_env, [:google, :client_id])
-    )
-    |> handle_oauth_item(
-      {
-        "Salesforce",
-        "salesforce_oauth",
-        ~p"/images/oauth-2.png",
-        nil
-      },
-      get_in(oauth_clients_from_env, [:salesforce, :client_id])
-    )
+    # TODO: Gracefully determine which adaptors define custom credential types
+    # and which adaptors use OAuth2 credential types.
+    |> List.delete({"Googlesheets", "googlesheets", nil, nil})
     |> Enum.sort_by(& &1, :asc)
-  end
-
-  defp handle_oauth_item(list, {_label, id, _image, _} = item, client_id) do
-    if is_nil(client_id) || Enum.member?(list, item) do
-      # Replace
-      Enum.reject(list, fn {_first, second, _third, _} -> second == id end)
-    else
-      Enum.map(list, fn
-        {_old_label, old_id, _old_image, _} when old_id == id -> item
-        old_item -> old_item
-      end)
-      |> append_if_missing(item)
-    end
-  end
-
-  defp append_if_missing(list, item) do
-    if Enum.member?(list, item), do: list, else: list ++ [item]
   end
 
   defp list_users do
