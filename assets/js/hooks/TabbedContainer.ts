@@ -1,25 +1,20 @@
 import { PhoenixHook } from './PhoenixHook';
 
 type TabbedContainer = PhoenixHook<{
-  panels: NodeListOf<HTMLElement>;
   defaultHash: string | null;
   activeClasses: string[];
   disabledClasses: string[];
   inactiveClasses: string[];
   _onHashChange(e: Event): void;
-  selectTab(hash: string): void;
+  selectTab(hash: string | null): void;
 }>;
 
 function getHash() {
-  return window.location.hash.replace('#', '');
+  return window.location.hash.replace('#', '') || null;
 }
 
 const TabbedContainer = {
   mounted(this: TabbedContainer) {
-    this.panels = this.el.querySelectorAll<HTMLElement>('[data-panel-hash]');
-
-    console.log(this.panels);
-
     this.defaultHash = this.el.dataset.defaultHash || null;
 
     // Trigger a URL hash change when the server sends a 'push-hash' event.
@@ -36,12 +31,8 @@ const TabbedContainer = {
     this.selectTab(getHash() || this.defaultHash);
   },
   updated() {
-    console.log('TabSelector updated');
-    this.selectTab(getHash() || this.defaultHash);
   },
   selectTab(nextHash: string | null) {
-    console.log('selectTab', nextHash);
-
     if (!nextHash) {
       return;
     }
@@ -86,13 +77,10 @@ const TabbedSelector: PhoenixHook<{
   _onHashChange(e: Event): void;
 }> = {
   mounted(this: typeof TabbedSelector) {
-    console.debug('TabbedSelector: mounted');
     this.defaultHash = this.el.dataset.defaultHash || null;
 
     // Trigger a URL hash change when the server sends a 'push-hash' event.
     this.handleEvent<{ hash: string }>('push-hash', ({ hash }) => {
-      console.log('push-hash', [hash, window.location.hash]);
-
       window.location.hash = hash;
     });
 
@@ -158,12 +146,9 @@ const TabbedPanels: PhoenixHook<{
     this.showPanel(getHash() || this.defaultHash);
   },
   updated() {
-    console.log('TabSelector updated');
     this.showPanel(getHash() || this.defaultHash);
   },
   showPanel(nextHash: string | null) {
-    console.log('showPanel', nextHash);
-
     if (!nextHash) {
       return;
     }

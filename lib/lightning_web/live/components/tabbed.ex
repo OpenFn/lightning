@@ -5,6 +5,10 @@ defmodule LightningWeb.Components.Tabbed do
   attr :default_hash, :string, default: nil
   attr :class, :string, default: ""
 
+  attr :orientation, :string,
+    default: "horizontal",
+    values: ["horizontal", "vertical"]
+
   slot :tab, required: true do
     attr :hash, :string, required: true
     attr :disabled, :boolean
@@ -15,17 +19,13 @@ defmodule LightningWeb.Components.Tabbed do
     attr :class, :string
   end
 
-  @horizontal_classes ~w[dark:border-gray-600 flex flex-col gap-x-4 gap-y-2 border-b tab-container]
-
-  def container(assigns) do
+  def container(%{orientation: "horizontal"} = assigns) do
     assigns =
       assigns
-      |> update(:class, fn
-        class ->
-          List.wrap(class) ++ @horizontal_classes
+      |> update(:class, fn class ->
+        ~w[dark:border-gray-600 flex flex-col gap-x-4 gap-y-2 border-b tab-container]
+        |> Enum.concat(List.wrap(class))
       end)
-
-    # assigns = assigns |> assign(class: @horizontal_classes ++ assigns[:class] |> List.wrap())
 
     ~H"""
     <div
@@ -46,6 +46,42 @@ defmodule LightningWeb.Components.Tabbed do
           <%= render_slot(panel) %>
         </.panel>
       <% end %>
+    </div>
+    """
+  end
+
+  def container(%{orientation: "vertical"} = assigns) do
+    assigns =
+      assigns
+      |> update(:class, fn class ->
+        ~w[flex flex-row gap-y-2 tab-container]
+        |> Enum.concat(List.wrap(class))
+      end)
+
+    ~H"""
+    <div
+      id={@id}
+      class={@class}
+      data-default-hash={@default_hash}
+      phx-hook="TabbedContainer"
+    >
+      <div
+        role="tablist"
+        class="flex flex-none flex-col space-y-4 pr-8 tabbed-selector"
+      >
+        <%= for tab <- @tab do %>
+          <.tab hash={tab[:hash]} disabled={tab[:disabled]} class="px-4">
+            <%= render_slot(tab) %>
+          </.tab>
+        <% end %>
+      </div>
+      <div class="flex-grow">
+        <%= for panel <- @panel do %>
+          <.panel hash={panel[:hash]} class={panel[:class]}>
+            <%= render_slot(panel) %>
+          </.panel>
+        <% end %>
+      </div>
     </div>
     """
   end
@@ -82,6 +118,7 @@ defmodule LightningWeb.Components.Tabbed do
   end
 
   attr :hash, :string, required: true
+  attr :class, :string, default: nil
   attr :disabled, :boolean, default: false
   attr :disabled_msg, :string, default: "Unavailable"
   slot :inner_block, required: true
@@ -92,6 +129,8 @@ defmodule LightningWeb.Components.Tabbed do
       <span
         id={"#{@hash}-tab"}
         aria-controls={"#{@hash}-panel"}
+        aria-selected="false"
+        class={@class}
         role="tab"
         data-disabled
         data-hash={@hash}
@@ -102,6 +141,8 @@ defmodule LightningWeb.Components.Tabbed do
       <a
         id={"#{@hash}-tab"}
         aria-controls={"#{@hash}-panel"}
+        aria-selected="false"
+        class={@class}
         role="tab"
         data-hash={@hash}
         href={"##{@hash}"}

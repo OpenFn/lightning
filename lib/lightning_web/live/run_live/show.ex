@@ -15,8 +15,6 @@ defmodule LightningWeb.RunLive.Show do
 
   @impl true
   def render(assigns) do
-    IO.inspect(assigns.selected_step_id)
-
     assigns =
       assigns |> assign(:no_step_selected?, is_nil(assigns.selected_step_id))
 
