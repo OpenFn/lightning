@@ -416,15 +416,13 @@ defmodule LightningWeb.WorkflowLive.Edit do
                         class="focus:ring-red-500 bg-red-600 hover:bg-red-700 disabled:bg-red-300"
                         disabled={
                           !@can_edit_workflow or @has_child_edges or @is_first_job or
-                            @has_steps or
                             @snapshot_version_tag != "latest"
                         }
                         tooltip={
                           deletion_tooltip_message(
                             @can_edit_workflow,
                             @has_child_edges,
-                            @is_first_job,
-                            @has_steps
+                            @is_first_job
                           )
                         }
                         data-confirm="Are you sure you want to delete this step?"
@@ -580,8 +578,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
   defp deletion_tooltip_message(
          can_edit_job,
          has_child_edges,
-         is_first_job,
-         has_steps
+         is_first_job
        ) do
     cond do
       !can_edit_job ->
@@ -592,9 +589,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
       is_first_job ->
         "You can't delete the first step in a workflow."
-
-      has_steps ->
-        "You can't delete a step with associated history while it's protected by your data retention period. (Workflow 'snapshots' are coming. For now, disable the incoming edge to prevent the job from running.)"
 
       true ->
         nil
@@ -975,14 +969,12 @@ defmodule LightningWeb.WorkflowLive.Edit do
       can_edit_workflow: can_edit_workflow,
       has_child_edges: has_child_edges,
       is_first_job: is_first_job,
-      has_steps: has_steps,
       snapshot_version_tag: tag
     } = socket.assigns
 
     with true <- can_edit_workflow || :not_authorized,
          true <- !has_child_edges || :has_child_edges,
          true <- !is_first_job || :is_first_job,
-         true <- !has_steps || :has_steps,
          true <- tag == "latest" || :view_only do
       edges_to_delete =
         Ecto.Changeset.get_assoc(changeset, :edges, :struct)
@@ -1009,14 +1001,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
         {:noreply,
          socket
          |> put_flash(:error, "You can't delete the first step in a workflow.")}
-
-      :has_steps ->
-        {:noreply,
-         socket
-         |> put_flash(
-           :error,
-           "You can't delete a step that has already been ran."
-         )}
 
       :view_only ->
         {:noreply,
@@ -1526,10 +1510,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
     |> Enum.any?()
   end
 
-  defp has_steps?(job) do
-    Map.has_key?(job, :steps) && !Enum.empty?(job.steps)
-  end
-
   defp get_filtered_edges(workflow_changeset, filter_func) do
     workflow_changeset
     |> Ecto.Changeset.get_assoc(:edges, :struct)
@@ -1711,7 +1691,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
       :jobs ->
         socket
         |> assign(
-          has_steps: has_steps?(value),
           has_child_edges: has_child_edges?(socket.assigns.changeset, value.id),
           is_first_job: first_job?(socket.assigns.changeset, value.id),
           selected_job: value,
