@@ -38,7 +38,7 @@ const DataclipViewer = ({ dataclipId }: { dataclipId: string }) => {
   const [content, setContent] = useState<string>('');
 
   useEffect(() => {
-    fetchDataclipContent(dataclipId).then(setContent)
+    fetchDataclipContent(dataclipId).then(setContent);
   }, [dataclipId]);
 
   return (

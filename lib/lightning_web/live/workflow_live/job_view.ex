@@ -5,6 +5,7 @@ defmodule LightningWeb.WorkflowLive.JobView do
 
   alias Lightning.Credentials
   alias LightningWeb.WorkflowLive.EditorPane
+  alias LightningWeb.Components.Tabbed
 
   attr :id, :string, required: true
   slot :top
@@ -120,39 +121,26 @@ defmodule LightningWeb.WorkflowLive.JobView do
           class="h-full"
         />
       </.collapsible_panel>
-      <.collapsible_panel
-        id="output-logs"
-        class="h-full border border-l-0"
-        header_type={:tabbed}
-      >
+      <.collapsible_panel id="output-logs" class="h-full border border-l-0">
         <:tabs>
-          <Common.tab_bar
-            id="1"
-            orientation="horizontal"
-            default_hash="log"
-            in_inspector={true}
+          <Tabbed.tabs
+            id="tab-bar-1"
+            default_hash="run"
+            class="flex flex-row space-x-6 -my-2"
           >
-            <Common.tab_item in_inspector={true} orientation="horizontal" hash="run">
+            <:tab hash="run">
               <span class="inline-block align-middle">Run</span>
-            </Common.tab_item>
-            <Common.tab_item in_inspector={true} orientation="horizontal" hash="log">
+            </:tab>
+            <:tab hash="log">
               <span class="inline-block align-middle">Log</span>
-            </Common.tab_item>
-            <Common.tab_item
-              in_inspector={true}
-              orientation="horizontal"
-              hash="input"
-            >
+            </:tab>
+            <:tab hash="input">
               <span class="inline-block align-middle">Input</span>
-            </Common.tab_item>
-            <Common.tab_item
-              in_inspector={true}
-              orientation="horizontal"
-              hash="output"
-            >
+            </:tab>
+            <:tab hash="output">
               <span class="inline-block align-middle">Output</span>
-            </Common.tab_item>
-          </Common.tab_bar>
+            </:tab>
+          </Tabbed.tabs>
         </:tabs>
 
         <%= if @follow_run_id do %>

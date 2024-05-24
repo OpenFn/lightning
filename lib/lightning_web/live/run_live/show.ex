@@ -8,12 +8,15 @@ defmodule LightningWeb.RunLive.Show do
   alias Lightning.Policies.ProjectUsers
   alias Lightning.Projects
   alias LightningWeb.Components.Viewers
+  alias LightningWeb.Components.Tabbed
   alias Phoenix.LiveView.AsyncResult
 
   on_mount {LightningWeb.Hooks, :project_scope}
 
   @impl true
   def render(assigns) do
+    IO.inspect(assigns.selected_step_id)
+
     assigns =
       assigns |> assign(:no_step_selected?, is_nil(assigns.selected_step_id))
 
@@ -30,7 +33,7 @@ defmodule LightningWeb.RunLive.Show do
         </LayoutComponents.header>
       </:header>
 
-      <LayoutComponents.centered class="@container/main">
+      <LayoutComponents.centered class="@container/main h-full">
         <.async_result :let={run} assign={@run}>
           <:loading>
             <.loading_filler />
@@ -39,8 +42,8 @@ defmodule LightningWeb.RunLive.Show do
             there was an error loading the run
           </:failed>
 
-          <div class="flex gap-6 @5xl/main:flex-row flex-col">
-            <div class="basis-1/3 flex-none flex gap-6 @5xl/main:flex-col flex-row">
+          <div class="flex gap-x-6 @5xl/main:flex-row flex-col h-full">
+            <div class="@5xl/main:basis-1/3 flex gap-y-6 @5xl/main:flex-col flex-row">
               <.detail_list
                 id={"run-detail-#{run.id}"}
                 class="flex-1 @5xl/main:flex-none"
@@ -138,8 +141,72 @@ defmodule LightningWeb.RunLive.Show do
                 </.link>
               </.step_list>
             </div>
-            <div class="basis-2/3 flex-none flex flex-col gap-4">
-              <Common.tab_bar orientation="horizontal" id="1" default_hash="log">
+            <div class="@5xl/main:basis-2/3 flex flex-col gap-4 h-full">
+              <Tabbed.container
+                id="test-tabbed-container"
+                class=""
+                default_hash="log"
+              >
+                <:tab hash="log">
+                  <.icon
+                    name="hero-command-line"
+                    class="h-5 w-5 inline-block mr-1 align-middle"
+                  />
+                  <span class="inline-block align-middle">Log</span>
+                </:tab>
+                <:tab hash="input" disabled={@no_step_selected?}>
+                  <.icon
+                    name="hero-arrow-down-on-square"
+                    class="h-5 w-5 inline-block mr-1 align-middle"
+                  />
+                  <span class="inline-block align-middle">Input</span>
+                </:tab>
+                <:tab hash="output" disabled={@no_step_selected?}>
+                  <.icon
+                    name="hero-arrow-up-on-square"
+                    class="h-5 w-5 inline-block mr-1 align-middle rotate-180"
+                  />
+                  <span class="inline-block align-middle"> Output </span>
+                </:tab>
+                <:panel hash="input" class="flex-grow h-full">
+                  <Viewers.step_dataclip_viewer
+                    id={"step-input-#{@selected_step_id}"}
+                    run_state={@run.result.state}
+                    step={@selected_step}
+                    dataclip={@input_dataclip}
+                    input_or_output={:input}
+                    project_id={@project.id}
+                    admin_contacts={@admin_contacts}
+                    can_edit_data_retention={@can_edit_data_retention}
+                  />
+                </:panel>
+                <:panel hash="log" class="flex-grow">
+                  <Viewers.log_viewer
+                    id={"run-log-#{run.id}"}
+                    highlight_id={@selected_step_id}
+                    stream={@streams.log_lines}
+                    run_state={@run.result.state}
+                    stream_empty?={@log_lines_stream_empty?}
+                  />
+                </:panel>
+                <:panel hash="output" class="flex-1">
+                  <Viewers.step_dataclip_viewer
+                    id={"step-output-#{@selected_step_id}"}
+                    run_state={@run.result.state}
+                    step={@selected_step}
+                    dataclip={@output_dataclip}
+                    input_or_output={:output}
+                    project_id={@project.id}
+                    admin_contacts={@admin_contacts}
+                    can_edit_data_retention={@can_edit_data_retention}
+                  />
+                </:panel>
+              </Tabbed.container>
+              <%!-- <Common.tab_bar
+                orientation="horizontal"
+                id="tab-bar-1"
+                default_hash="log"
+              >
                 <Common.tab_item orientation="horizontal" hash="log">
                   <.icon
                     name="hero-command-line"
@@ -207,7 +274,7 @@ defmodule LightningWeb.RunLive.Show do
                   admin_contacts={@admin_contacts}
                   can_edit_data_retention={@can_edit_data_retention}
                 />
-              </Common.panel_content>
+              </Common.panel_content> --%>
             </div>
           </div>
         </.async_result>

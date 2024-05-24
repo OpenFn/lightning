@@ -59,6 +59,10 @@ let liveSocket = new LiveSocket('/live', Socket, {
       if (from.attributes['lv-keep-class']) {
         to.setAttribute('class', from.attributes.class.value);
       }
+
+      if (from.attributes['lv-keep-hidden']) {
+        to.setAttribute('hidden', from.getAttribute('hidden'));
+      }
     },
   },
 });

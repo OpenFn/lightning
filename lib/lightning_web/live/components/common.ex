@@ -314,7 +314,6 @@ defmodule LightningWeb.Components.Common do
   attr :id, :string, required: true
   attr :default_hash, :string, required: true
   attr :orientation, :string, required: true, values: ["horizontal", "vertical"]
-  attr :in_inspector, :boolean, default: false
   slot :inner_block, required: true
 
   def tab_bar(assigns) do
@@ -324,11 +323,7 @@ defmodule LightningWeb.Components.Common do
         class:
           case assigns[:orientation] do
             "horizontal" ->
-              ~w[dark:border-gray-600 flex flex-initial gap-x-4 gap-y-2 border-b] ++
-                if(assigns.in_inspector,
-                  do: ~w[border-slate-100],
-                  else: ~w[border-gray-200]
-                )
+              ~w[dark:border-gray-600 flex flex-initial gap-x-4 gap-y-2 border-b]
 
             "vertical" ->
               ~w[flex flex-col flex-wrap gap-y-2 list-none mr-4 nav nav-tabs]
@@ -337,7 +332,7 @@ defmodule LightningWeb.Components.Common do
 
     ~H"""
     <div
-      id={"tab-bar-#{@id}"}
+      id={@id}
       class={@class}
       data-active-classes="border-b-2 border-primary-500 text-primary-600"
       data-inactive-classes="border-b-2 border-transparent text-gray-500 hover:border-b-gray-300 hover:text-gray-600 hover:border-b-gray-300"

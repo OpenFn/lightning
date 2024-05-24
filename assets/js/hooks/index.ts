@@ -4,19 +4,20 @@ import { PhoenixHook } from './PhoenixHook';
 import LogLineHighlight from './LogLineHighlight';
 import ElapsedIndicator from './ElapsedIndicator';
 import TabSelector from './TabSelector';
+import { TabbedContainer, TabbedSelector, TabbedPanels } from './TabbedContainer';
 import { initiateSaveAndRun } from '../common';
 
-export { LogLineHighlight, ElapsedIndicator, TabSelector };
+export { LogLineHighlight, ElapsedIndicator, TabSelector, TabbedContainer, TabbedSelector, TabbedPanels };
 
 export const EditScope = {
   mounted() {
-    this.el.addEventListener('dblclick', e => {
+    this.el.addEventListener('dblclick', _e => {
       const scopeValue = this.el.dataset.scope;
       const eventType = this.el.dataset.eventType;
       this.pushEventTo(this.el, eventType, { scope: scopeValue });
     });
   },
-};
+} as PhoenixHook<{}, { scope: string; eventType: string }>;
 
 export const ClearInput = {
   mounted() {
@@ -24,7 +25,7 @@ export const ClearInput = {
       this.el.value = '';
     });
   },
-} as PhoenixHook;
+} as PhoenixHook<{}, {}, HTMLInputElement>;
 
 export const ModalHook = {
   mounted() {
