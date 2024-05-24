@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
-import MonacoEditor, { Monaco } from '@monaco-editor/react';
 import type { EditorProps as MonacoProps } from '@monaco-editor/react/lib/types';
 
+import { MonacoEditor, Monaco } from '../monaco';
 import { fetchDTSListing, fetchFile } from '@openfn/describe-package';
 import createCompletionProvider from './magic-completion';
 import { initiateSaveAndRun } from '../common';
@@ -162,11 +162,6 @@ export default function Editor({
 
   const monacoRef = useRef<any>(null);
 
-  const beforeMount = (monaco: Monaco) => {
-    monacoRef.current = monaco;
-    setTheme(monaco);
-  };
-
   const handleSourceChange = useCallback(
     (newSource: string | undefined) => {
       if (onChange && newSource) {
@@ -177,8 +172,8 @@ export default function Editor({
   );
 
   const handleEditorDidMount = useCallback(
-    (editor: any, _monaco: Monaco) => {
-      let monaco = monacoRef.current;
+    (editor: any, monaco: Monaco) => {
+      monacoRef.current = monaco;
 
       editor.addCommand(
         monaco.KeyCode.Escape,
@@ -245,20 +240,10 @@ export default function Editor({
         editor.focus();
       };
 
-      // Force the editor to resize
-      listeners.current.updateLayout = (_e: Event) => {
-        editor.layout({})
-      };
-
       document.addEventListener(
         'insert-snippet',
         listeners.current.insertSnippet
       );
-      document.addEventListener(
-        'update-layout',
-        listeners.current.updateLayout
-      );
-      window.addEventListener('resize', listeners.current.updateLayout);
     },
     []
   );
@@ -302,16 +287,6 @@ export default function Editor({
           listeners.current.insertSnippet
         );
       }
-      if (listeners.current?.updateLayout) {
-        document.removeEventListener(
-          'update-layout',
-          listeners.current.updateLayout
-        );
-        window.removeEventListener(
-          'resize',
-          listeners.current.updateLayout
-        );
-      }
     };
   }, []);
 
@@ -339,12 +314,10 @@ export default function Editor({
       </div>
       <MonacoEditor
         defaultLanguage="javascript"
-        theme="default"
         defaultPath="/job.js"
         loading={<div className="text-white">Loading...</div>}
         value={source || DEFAULT_TEXT}
         options={options}
-        beforeMount={beforeMount}
         onMount={handleEditorDidMount}
         onChange={handleSourceChange}
       />

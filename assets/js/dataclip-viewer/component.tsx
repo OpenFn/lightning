@@ -1,7 +1,6 @@
-import MonacoEditor, { Monaco } from '@monaco-editor/react';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import { setTheme } from '../monaco';
+import { MonacoEditor } from '../monaco';
 
 export function mount(el: HTMLElement, dataclipId: string) {
   const componentRoot = createRoot(el);
@@ -37,29 +36,6 @@ async function fetchDataclipContent(dataclipId: string) {
 
 const DataclipViewer = ({ dataclipId }: { dataclipId: string }) => {
   const [content, setContent] = useState<string>('');
-  const monacoRef = useRef<Monaco | null>(null);
-
-  const beforeMount = (monaco: Monaco) => {
-    monacoRef.current = monaco;
-    setTheme(monaco);
-  };
-
-  useEffect(() => {
-    const onResize = () => {
-      const editor = monacoRef.current as any;
-      if (editor) {
-        editor.layout({})
-      }
-    };
-
-    window.addEventListener('resize', onResize)
-    document.addEventListener('update-layout', onResize)
-
-    return () => {
-      window.removeEventListener('resize', onResize)
-      document.removeEventListener('update-layout', onResize)
-    }
-  }, []);
 
   useEffect(() => {
     fetchDataclipContent(dataclipId).then(setContent)
@@ -71,7 +47,6 @@ const DataclipViewer = ({ dataclipId }: { dataclipId: string }) => {
       theme="default"
       value={content}
       loading={<div>Loading...</div>}
-      beforeMount={beforeMount}
       options={{
         readOnly: true,
         lineNumbersMinChars: 3,

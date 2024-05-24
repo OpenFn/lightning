@@ -25,6 +25,7 @@
     "marked": "^4.2.4",
     "monaco-editor": "^0.34.0",
     "postcss": "^8.4.23",
+    "rc-resize-observer": "^1.4.0",
     "react": "^18.1.0",
     "react-dom": "^18.1.0",
     "react-markdown": "^8.0.3",

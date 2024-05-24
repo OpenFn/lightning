@@ -1,4 +1,6 @@
-import type { Monaco } from "@monaco-editor/react";
+import React, { useRef, useCallback } from 'react';
+import ResizeObserver from 'rc-resize-observer';
+import Editor, { Monaco } from '@monaco-editor/react';
 
 export function setTheme(monaco: Monaco) {
   monaco.editor.defineTheme('default', {
@@ -17,4 +19,26 @@ export function setTheme(monaco: Monaco) {
     },
   });
   monaco.editor.setTheme('default');
+}
+
+export { Monaco }
+
+export const MonacoEditor = ({ onMount = (editor: any, monaco: Monaco) => {}, ...props}) => {
+  const monacoRef = useRef<any>(null);
+
+  const handleOnMount = useCallback((editor: any, monaco: Monaco) => {
+    monacoRef.current = monaco;
+    setTheme(monaco);
+    onMount(editor, monaco)
+  }, []);
+
+  return (
+    <ResizeObserver
+        onResize={({width, height}) => {
+          // TODO maybe either debounce or track sizes 
+          monacoRef.current?.editor.layout({width, height: height});
+        }}
+      >
+      <Editor onMount={handleOnMount} {...props} />
+   </ResizeObserver>)
 }
