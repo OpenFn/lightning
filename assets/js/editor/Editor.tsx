@@ -302,6 +302,16 @@ export default function Editor({
           listeners.current.insertSnippet
         );
       }
+      if (listeners.current?.updateLayout) {
+        document.removeEventListener(
+          'update-layout',
+          listeners.current.updateLayout
+        );
+        window.removeEventListener(
+          'resize',
+          listeners.current.updateLayout
+        );
+      }
     };
   }, []);
 
