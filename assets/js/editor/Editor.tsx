@@ -8,7 +8,6 @@ import { initiateSaveAndRun } from '../common';
 
 // static imports for core lib
 import dts_es5 from './lib/es5.min.dts';
-import { setTheme } from '../monaco';
 
 export const DEFAULT_TEXT =
   '// Get started by adding operations from the API reference\n';
@@ -171,82 +170,77 @@ export default function Editor({
     [onChange]
   );
 
-  const handleEditorDidMount = useCallback(
-    (editor: any, monaco: Monaco) => {
-      monacoRef.current = monaco;
+  const handleEditorDidMount = useCallback((editor: any, monaco: Monaco) => {
+    monacoRef.current = monaco;
 
-      editor.addCommand(
-        monaco.KeyCode.Escape,
-        () => {
-          document.activeElement.blur();
-        },
-        '!suggestWidgetVisible'
-      );
+    editor.addCommand(
+      monaco.KeyCode.Escape,
+      () => {
+        document.activeElement.blur();
+      },
+      '!suggestWidgetVisible'
+    );
 
-      editor.addCommand(
-        // https://microsoft.github.io/monaco-editor/typedoc/classes/KeyMod.html
-        // https://microsoft.github.io/monaco-editor/typedoc/enums/KeyCode.html
-        monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter,
-        function () {
-          const actionButton = document.getElementById('save-and-run')!;
-          initiateSaveAndRun(actionButton);
-        }
-      );
+    editor.addCommand(
+      // https://microsoft.github.io/monaco-editor/typedoc/classes/KeyMod.html
+      // https://microsoft.github.io/monaco-editor/typedoc/enums/KeyCode.html
+      monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter,
+      function () {
+        const actionButton = document.getElementById('save-and-run')!;
+        initiateSaveAndRun(actionButton);
+      }
+    );
 
-      editor.addCommand(
-        // https://microsoft.github.io/monaco-editor/typedoc/classes/KeyMod.html
-        // https://microsoft.github.io/monaco-editor/typedoc/enums/KeyCode.html
-        monaco.KeyMod.CtrlCmd | monaco.KeyMod.Shift | monaco.KeyCode.Enter,
-        function () {
-          const actionButton = document.getElementById(
-            'create-new-work-order'
-          )!;
-          initiateSaveAndRun(actionButton);
-        }
-      );
+    editor.addCommand(
+      // https://microsoft.github.io/monaco-editor/typedoc/classes/KeyMod.html
+      // https://microsoft.github.io/monaco-editor/typedoc/enums/KeyCode.html
+      monaco.KeyMod.CtrlCmd | monaco.KeyMod.Shift | monaco.KeyCode.Enter,
+      function () {
+        const actionButton = document.getElementById('create-new-work-order')!;
+        initiateSaveAndRun(actionButton);
+      }
+    );
 
-      monaco.languages.typescript.javascriptDefaults.setCompilerOptions({
-        // This seems to be needed to track the modules in d.ts files
-        allowNonTsExtensions: true,
+    monaco.languages.typescript.javascriptDefaults.setCompilerOptions({
+      // This seems to be needed to track the modules in d.ts files
+      allowNonTsExtensions: true,
 
-        // Disables core js libs in code completion
-        noLib: true,
-      });
+      // Disables core js libs in code completion
+      noLib: true,
+    });
 
-      listeners.current.insertSnippet = (e: Event) => {
-        // Snippets are always added to the end of the job code
-        const model = editor.getModel();
-        const lastLine = model.getLineCount();
-        const eol = model.getLineLength(lastLine);
-        const op = {
-          range: new monaco.Range(lastLine, eol, lastLine, eol),
-          // @ts-ignore event typings
-          text: `\n${e.snippet}`,
-          forceMoveMarkers: true,
-        };
-
-        // Append the snippet
-        // https://microsoft.github.io/monaco-editor/api/interfaces/monaco.editor.ICodeEditor.html#executeEdits
-        editor.executeEdits('snippets', [op]);
-
-        // Ensure the snippet is fully visible
-        const newLastLine = model.getLineCount();
-        editor.revealLines(lastLine + 1, newLastLine, 0); // 0 = smooth scroll
-
-        // Set the selection to the start of the snippet
-        editor.setSelection(new monaco.Range(lastLine + 1, 0, lastLine + 1, 0));
-
-        // ensure the editor has focus
-        editor.focus();
+    listeners.current.insertSnippet = (e: Event) => {
+      // Snippets are always added to the end of the job code
+      const model = editor.getModel();
+      const lastLine = model.getLineCount();
+      const eol = model.getLineLength(lastLine);
+      const op = {
+        range: new monaco.Range(lastLine, eol, lastLine, eol),
+        // @ts-ignore event typings
+        text: `\n${e.snippet}`,
+        forceMoveMarkers: true,
       };
 
-      document.addEventListener(
-        'insert-snippet',
-        listeners.current.insertSnippet
-      );
-    },
-    []
-  );
+      // Append the snippet
+      // https://microsoft.github.io/monaco-editor/api/interfaces/monaco.editor.ICodeEditor.html#executeEdits
+      editor.executeEdits('snippets', [op]);
+
+      // Ensure the snippet is fully visible
+      const newLastLine = model.getLineCount();
+      editor.revealLines(lastLine + 1, newLastLine, 0); // 0 = smooth scroll
+
+      // Set the selection to the start of the snippet
+      editor.setSelection(new monaco.Range(lastLine + 1, 0, lastLine + 1, 0));
+
+      // ensure the editor has focus
+      editor.focus();
+    };
+
+    document.addEventListener(
+      'insert-snippet',
+      listeners.current.insertSnippet
+    );
+  }, []);
 
   useEffect(() => {
     let monaco = monacoRef.current;
