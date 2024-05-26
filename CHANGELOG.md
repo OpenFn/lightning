@@ -21,8 +21,13 @@ and this project adheres to
 
 - Change Default Text For New Job Nodes
   [#2014](https://github.com/OpenFn/lightning/pull/2014)
+- Stop users from creating deprecated Salesforce and GoogleSheets credentials.
+  [#2142](https://github.com/OpenFn/lightning/issues/2142)
 
 ### Fixed
+
+- Disable Credential Save Button Until All Form Fields Are Validated
+  [#2099](https://github.com/OpenFn/lightning/issues/2099)
 
 - Fix Credential Modal Closure Error When Workflow Is Unsaved
   [#2101](https://github.com/OpenFn/lightning/pull/2101)
