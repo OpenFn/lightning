@@ -130,7 +130,7 @@ defmodule LightningWeb do
       alias LightningWeb.Components.Common
       alias LightningWeb.Components.Icon
       alias LightningWeb.Components.Layout
-      alias LightningWeb.Components.Settings
+      alias LightningWeb.Components.Menu
       alias LightningWeb.Router.Helpers, as: Routes
 
       import LightningWeb.Components.Pills

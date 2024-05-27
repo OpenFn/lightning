@@ -21,6 +21,8 @@ and this project adheres to
 
 - Stop users from creating deprecated Salesforce and GoogleSheets credentials.
   [#2142](https://github.com/OpenFn/lightning/issues/2142)
+- Delegate menu customization and create menu components for reuse.
+  [#1988](https://github.com/OpenFn/lightning/issues/1988)
 
 ### Fixed
 
