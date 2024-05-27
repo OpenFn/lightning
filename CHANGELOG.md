@@ -26,9 +26,10 @@ and this project adheres to
 
 - Disable Credential Save Button Until All Form Fields Are Validated
   [#2099](https://github.com/OpenFn/lightning/issues/2099)
-
 - Fix Credential Modal Closure Error When Workflow Is Unsaved
   [#2101](https://github.com/OpenFn/lightning/pull/2101)
+- Fix error when socket reconnects and user is viewing a run via the inspector
+  [#2148](https://github.com/OpenFn/lightning/issues/2148)
 
 ## [v2.5.2] - 2024-05-23
 
