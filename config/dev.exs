@@ -35,6 +35,15 @@ config :lightning, LightningWeb.Endpoint,
     storybook_tailwind: {Tailwind, :install_and_run, [:storybook, ~w(--watch)]}
   ]
 
+config :lightning, LightningWeb.WebsocketEndpoint,
+  http: [
+    ip: {0, 0, 0, 0, 0, 0, 0, 0},
+    port: 4001,
+    protocol_options: [
+      max_frame_size: 10_000_000
+    ]
+  ]
+
 config :lightning,
   schemas_path: "priv/schemas",
   adaptor_icons_path: "priv/static/images/adaptors",

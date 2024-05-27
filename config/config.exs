@@ -30,6 +30,10 @@ config :lightning, LightningWeb.Endpoint,
   pubsub_server: Lightning.PubSub,
   live_view: [signing_salt: "EfrmuOUr"]
 
+config :lightning, LightningWeb.WebsocketEndpoint,
+  url: [host: "localhost"],
+  pubsub_server: Lightning.PubSub
+
 config :lightning, Lightning.Extensions,
   rate_limiter: Lightning.Extensions.RateLimiter,
   usage_limiter: Lightning.Extensions.UsageLimiter,

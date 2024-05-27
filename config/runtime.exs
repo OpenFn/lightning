@@ -414,8 +414,6 @@ if config_env() == :prod do
       port: port,
       compress: true,
       protocol_options: [
-        max_frame_size:
-          Application.get_env(:lightning, :max_dataclip_size_bytes, 10_000_000),
         # Note that if a request is more than 10x the max dataclip size, we cut
         # the connection immediately to prevent memory issues via the
         # :max_skip_body_length setting.
@@ -423,8 +421,17 @@ if config_env() == :prod do
           Application.get_env(:lightning, :max_dataclip_size_bytes, 10_000_000) *
             10
       ]
-    ],
-    server: true
+    ]
+
+  config :lightning, LightningWeb.WebsocketEndpoint,
+    http: [
+      ip: listen_address,
+      port: 4001,
+      protocol_options: [
+        max_frame_size:
+          Application.get_env(:lightning, :max_dataclip_size_bytes, 10_000_000)
+      ]
+    ]
 
   # ## Using releases
   #

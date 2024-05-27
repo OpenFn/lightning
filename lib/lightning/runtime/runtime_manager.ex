@@ -44,7 +44,7 @@ defmodule Lightning.Runtime.RuntimeManager do
               port: 2222,
               repo_dir: nil,
               worker_secret: nil,
-              ws_url: "ws://localhost:4000/worker"
+              ws_url: "ws://localhost:4001/worker"
 
     @doc """
     Parses the keyword list of start arguments and returns a tuple,

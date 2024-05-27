@@ -99,6 +99,7 @@ defmodule Lightning.Application do
       auth_providers_cache_childspec,
       # Start the Endpoint (http/https)
       LightningWeb.Endpoint,
+      LightningWeb.WebsocketEndpoint,
       adaptor_registry_childspec,
       adaptor_service_childspec,
       {Lightning.TaskWorker, name: :cli_task_worker},
