@@ -51,6 +51,11 @@ defmodule Lightning.Config do
     end
 
     @impl true
+    def get_extension_mod(key) do
+      Lightning.Services.AdapterHelper.adapter(key)
+    end
+
+    @impl true
     def check_flag?(flag) do
       Application.get_env(:lightning, flag)
     end
@@ -104,6 +109,7 @@ defmodule Lightning.Config do
   @callback grace_period() :: integer()
   @callback default_max_run_duration() :: integer()
   @callback purge_deleted_after_days() :: integer()
+  @callback get_extension_mod(key :: atom()) :: any()
   @callback check_flag?(atom()) :: boolean() | nil
 
   @doc """
@@ -151,6 +157,10 @@ defmodule Lightning.Config do
 
   def check_flag?(flag) do
     impl().check_flag?(flag)
+  end
+
+  def get_extension_mod(key) do
+    impl().get_extension_mod(key)
   end
 
   defp impl do
