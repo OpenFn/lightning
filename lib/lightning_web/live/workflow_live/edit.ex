@@ -912,7 +912,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
   # Handle empty manual run form submission, this happens when the dataclip
   # dropdown is disabled and the socket reconnects.
-  def handle_event("manual_run_change", %{}, socket) do
+  def handle_event("manual_run_change", _params, socket) do
     {:noreply, socket}
   end
 
