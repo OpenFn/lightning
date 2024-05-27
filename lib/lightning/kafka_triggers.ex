@@ -160,7 +160,7 @@ defmodule Lightning.KafkaTriggers do
   defp handle_candidate(%{work_order: nil} = candidate) do
     %{
       data: data,
-      # metadata: metadata,
+      metadata: metadata,
       trigger: %{workflow: workflow} = trigger
     } = candidate
 
@@ -169,7 +169,7 @@ defmodule Lightning.KafkaTriggers do
         workflow: workflow,
         dataclip: %{
           body: data |> Jason.decode!(),
-          request: %{},
+          request: metadata,
           type: :kafka,
           project_id: workflow.project_id
         },
