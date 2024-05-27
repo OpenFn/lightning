@@ -21,6 +21,9 @@ and this project adheres to
 
 ### Fixed
 
+- Dataclip Viewer now responds to page resize and internal page layout
+  [#2120](https://github.com/OpenFn/lightning/issues/2120)
+
 ## [v2.5.3] - 2024-05-27
 
 ### Changed

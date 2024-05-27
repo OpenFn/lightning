@@ -164,6 +164,8 @@ div[id^='tippy-'] {
   flex: 0 0 0% !important;
   padding-left: 0.25rem;
   padding-right: 0.25rem;
+  /* override overflow rules when collapsed */
+  overflow: visible !important;
 }
 
 .collapsible-panel.collapsed .panel-content {
