@@ -7,7 +7,7 @@
     <meta name="generator" content="ExDoc v0.30.9">
     <meta name="project" content="Lightning v2.5.2">
 
-    <title>LightningWeb.LiveHelpers — Lightning v2.5.2</title>
+    <title>LightningWeb.Components.Menu — Lightning v2.5.2</title>
     <link rel="stylesheet" href="dist/html-elixir-XFYN5IVA.css" />
 
 
@@ -125,19 +125,19 @@ Pages
 </button>
 
 
-    <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/live_helpers.ex#L1" title="View Source" class="icon-action" rel="help">
+    <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/components/menu.ex#L1" title="View Source" class="icon-action" rel="help">
       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
       <span class="sr-only">View Source</span>
     </a>
 
-  <span translate="no">LightningWeb.LiveHelpers</span> 
+  <span translate="no">LightningWeb.Components.Menu</span> 
   <small class="app-vsn" translate="no">(Lightning v2.5.2)</small>
 
 </h1>
 
 
   <section id="moduledoc">
-<p>General purpose LiveView helper functions</p>
+<p>Menu components to render menu items for project and user/profile pages.</p>
   </section>
 
 
@@ -155,7 +155,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#check_limits/2" translate="no">check_limits(socket, project_id)</a>
+        <a href="#menu_item/1" translate="no">menu_item(assigns)</a>
 
       </div>
 
@@ -163,7 +163,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#display_short_uuid/1" translate="no">display_short_uuid(uuid_string)</a>
+        <a href="#profile_items/1" translate="no">profile_items(assigns)</a>
 
       </div>
 
@@ -171,7 +171,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#fade_in/1" translate="no">fade_in(opts \\ [])</a>
+        <a href="#project_items/1" translate="no">project_items(assigns)</a>
 
       </div>
 
@@ -179,39 +179,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#fade_out/1" translate="no">fade_out(opts \\ [])</a>
-
-      </div>
-
-    </div>
-
-    <div class="summary-row">
-      <div class="summary-signature">
-        <a href="#live_error_block/1" translate="no">live_error_block(assigns)</a>
-
-      </div>
-
-    </div>
-
-    <div class="summary-row">
-      <div class="summary-signature">
-        <a href="#live_info_block/1" translate="no">live_info_block(assigns)</a>
-
-      </div>
-
-    </div>
-
-    <div class="summary-row">
-      <div class="summary-signature">
-        <a href="#live_nav_block/1" translate="no">live_nav_block(assigns)</a>
-
-      </div>
-
-    </div>
-
-    <div class="summary-row">
-      <div class="summary-signature">
-        <a href="#upcase_first/1" translate="no">upcase_first(arg1)</a>
+        <a href="#projects_dropdown/1" translate="no">projects_dropdown(assigns)</a>
 
       </div>
 
@@ -230,16 +198,16 @@ Pages
       <span class="text">Functions</span>
     </h1>
     <div class="functions-list">
-<section class="detail" id="check_limits/2">
+<section class="detail" id="menu_item/1">
 
   <div class="detail-header">
-    <a href="#check_limits/2" class="detail-link" title="Link to this function">
+    <a href="#menu_item/1" class="detail-link" title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">check_limits(socket, project_id)</h1>
+    <h1 class="signature" translate="no">menu_item(assigns)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/live_helpers.ex#L171" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/components/menu.ex#L131" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -252,46 +220,16 @@ Pages
 
   </section>
 </section>
-<section class="detail" id="display_short_uuid/1">
+<section class="detail" id="profile_items/1">
 
   <div class="detail-header">
-    <a href="#display_short_uuid/1" class="detail-link" title="Link to this function">
+    <a href="#profile_items/1" class="detail-link" title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">display_short_uuid(uuid_string)</h1>
+    <h1 class="signature" translate="no">profile_items(assigns)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/live_helpers.ex#L144" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
-
-
-  </div>
-
-  <section class="docstring">
-
-      <div class="specs">
-
-          <pre translate="no"><span class="attribute">@spec</span> display_short_uuid(<a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">binary</a>()) :: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">binary</a>()</pre>
-
-      </div>
-
-
-  </section>
-</section>
-<section class="detail" id="fade_in/1">
-
-    <span id="fade_in/0"></span>
-
-  <div class="detail-header">
-    <a href="#fade_in/1" class="detail-link" title="Link to this function">
-      <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
-    </a>
-    <h1 class="signature" translate="no">fade_in(opts \\ [])</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/live_helpers.ex#L153" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/components/menu.ex#L44" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -304,18 +242,16 @@ Pages
 
   </section>
 </section>
-<section class="detail" id="fade_out/1">
-
-    <span id="fade_out/0"></span>
+<section class="detail" id="project_items/1">
 
   <div class="detail-header">
-    <a href="#fade_out/1" class="detail-link" title="Link to this function">
+    <a href="#project_items/1" class="detail-link" title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">fade_out(opts \\ [])</h1>
+    <h1 class="signature" translate="no">project_items(assigns)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/live_helpers.ex#L162" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/components/menu.ex#L7" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -328,82 +264,16 @@ Pages
 
   </section>
 </section>
-<section class="detail" id="live_error_block/1">
+<section class="detail" id="projects_dropdown/1">
 
   <div class="detail-header">
-    <a href="#live_error_block/1" class="detail-link" title="Link to this function">
+    <a href="#projects_dropdown/1" class="detail-link" title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">live_error_block(assigns)</h1>
+    <h1 class="signature" translate="no">projects_dropdown(assigns)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/live_helpers.ex#L41" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
-
-
-  </div>
-
-  <section class="docstring">
-
-
-  </section>
-</section>
-<section class="detail" id="live_info_block/1">
-
-  <div class="detail-header">
-    <a href="#live_info_block/1" class="detail-link" title="Link to this function">
-      <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
-    </a>
-    <h1 class="signature" translate="no">live_info_block(assigns)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/live_helpers.ex#L15" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
-
-
-  </div>
-
-  <section class="docstring">
-
-
-  </section>
-</section>
-<section class="detail" id="live_nav_block/1">
-
-  <div class="detail-header">
-    <a href="#live_nav_block/1" class="detail-link" title="Link to this function">
-      <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
-    </a>
-    <h1 class="signature" translate="no">live_nav_block(assigns)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/live_helpers.ex#L67" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
-
-
-  </div>
-
-  <section class="docstring">
-
-
-  </section>
-</section>
-<section class="detail" id="upcase_first/1">
-
-  <div class="detail-header">
-    <a href="#upcase_first/1" class="detail-link" title="Link to this function">
-      <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
-    </a>
-    <h1 class="signature" translate="no">upcase_first(arg1)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/live_helpers.ex#L148" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/components/menu.ex#L58" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
