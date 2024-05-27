@@ -5,166 +5,42 @@ defmodule LightningWeb.LayoutComponents do
   import PetalComponents.Dropdown
   import PetalComponents.Avatar
 
+  alias LightningWeb.Components.Menu
+
   def menu_items(assigns) do
-    project_menu_items =
-      Application.get_env(:lightning, :menu_items, [])[:project_menu] || []
-
-    replace_menu_items =
-      Application.get_env(:lightning, :menu_items, [])[:replace_projects_menu] ||
-        []
-
     assigns =
       assign(assigns,
-        project_menu_items: project_menu_items,
-        replace_menu_items: replace_menu_items
+        custom_menu_items: Application.get_env(:lightning, :menu_items)
       )
 
     ~H"""
-    <%= if assigns[:projects] do %>
-      <div class="relative my-4 mx-2 px-2">
-        <button
-          type="button"
-          class="relative w-full cursor-default rounded-md bg-white py-1.5 pl-3
-          pr-10 text-left text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300
-          focus:outline-none focus:ring-2 focus:ring-indigo-600 sm:text-sm sm:leading-6"
-          aria-haspopup="listbox"
-          aria-expanded="true"
-          aria-labelledby="listbox-label"
-          phx-click={show_dropdown("project-picklist")}
-        >
-          <span class="block truncate">
-            <%= if assigns[:project], do: @project.name, else: "Go to project" %>
-          </span>
-          <span class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
-            <svg
-              class="h-5 w-5 text-gray-400"
-              viewBox="0 0 20 20"
-              fill="currentColor"
-              aria-hidden="true"
-            >
-              <path
-                fill-rule="evenodd"
-                d="M10 3a.75.75 0 01.55.24l3.25 3.5a.75.75 0 11-1.1 1.02L10 4.852 7.3 7.76a.75.75 0 01-1.1-1.02l3.25-3.5A.75.75 0 0110 3zm-3.76 9.2a.75.75 0 011.06.04l2.7 2.908 2.7-2.908a.75.75 0 111.1 1.02l-3.25 3.5a.75.75 0 01-1.1 0l-3.25-3.5a.75.75 0 01.04-1.06z"
-                clip-rule="evenodd"
-              />
-            </svg>
-          </span>
-        </button>
-        <ul
-          id="project-picklist"
-          class="hidden absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-md bg-white py-1 text-base shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none sm:text-sm"
-          tabindex="-1"
-          role="listbox"
-          aria-labelledby="listbox-label"
-          aria-activedescendant="listbox-option-3"
-          phx-click-away={hide_dropdown("project-picklist")}
-        >
-          <%= for project <- @projects do %>
-            <.link navigate={~p"/projects/#{project.id}/w"}>
-              <li
-                class={[
-                  "text-gray-900 relative cursor-default select-none py-2 pl-3 pr-9 hover:bg-indigo-600 group hover:text-white"
-                ]}
-                role="option"
-              >
-                <span class={[
-                  "font-normal block truncate",
-                  assigns[:project] && @project.id == project.id && "font-semibold"
-                ]}>
-                  <%= project.name %>
-                </span>
-                <span class={[
-                  "absolute inset-y-0 right-0 flex items-center pr-4",
-                  (!assigns[:project] || @project.id != project.id) && "hidden"
-                ]}>
-                  <.icon
-                    name="hero-check"
-                    class="group-hover:text-white text-indigo-600"
-                  />
-                </span>
-              </li>
-            </.link>
-          <% end %>
-        </ul>
-      </div>
+    <%= if @custom_menu_items do %>
+      <%= Phoenix.LiveView.TagEngine.component(
+        @custom_menu_items.component,
+        Map.take(assigns, @custom_menu_items.assigns_keys),
+        {__ENV__.module, __ENV__.function, __ENV__.file, __ENV__.line}
+      ) %>
     <% else %>
-      <div class="p-2 mb-4 mt-4 text-center text-primary-300 bg-primary-800">
-        <span class="inline-block align-middle text-sm">
-          You don't have access to any projects
-        </span>
-      </div>
-    <% end %>
-
-    <%= if assigns[:project]  do %>
-      <Settings.menu_item
-        to={~p"/projects/#{@project.id}/w"}
-        active={@active_menu_item == :overview}
-      >
-        <Icon.workflows class="h-5 w-5 inline-block mr-2 align-middle" />
-        <span class="inline-block align-middle">Workflows</span>
-      </Settings.menu_item>
-
-      <Settings.menu_item
-        to={~p"/projects/#{@project.id}/history"}
-        active={@active_menu_item == :runs}
-      >
-        <Icon.runs class="h-5 w-5 inline-block mr-2" />
-        <span class="inline-block align-middle">History</span>
-      </Settings.menu_item>
-
-      <Settings.menu_item
-        to={"/projects/#{@project.id}/settings"}
-        active={@active_menu_item == :settings}
-      >
-        <Icon.settings class="h-5 w-5 inline-block mr-2" />
-        <span class="inline-block align-middle">Settings</span>
-      </Settings.menu_item>
-      <%= for {to, icon, text, menu_item} <- @project_menu_items do %>
-        <Settings.menu_item to={to} active={@active_menu_item == menu_item}>
-          <%= Phoenix.LiveView.TagEngine.component(
-            icon,
-            [class: "h-5 w-5 inline-block mr-1"],
-            {__ENV__.module, __ENV__.function, __ENV__.file, __ENV__.line}
-          ) %>
-          <span class="inline-block align-middle"><%= text %></span>
-        </Settings.menu_item>
-      <% end %>
-      <!-- # Commented out until new dataclips/globals list is fully functional. -->
-    <!-- <Settings.menu_item
-      to={Routes.project_dataclip_index_path(@socket, :index, @project.id)}
-      active={@active_menu_item == :dataclips}
-    >
-      <Icon.dataclips class="h-5 w-5 inline-block mr-2" />
-      <span class="inline-block align-middle">Dataclips</span>
-    </Settings.menu_item> -->
-    <% else %>
-      <%= if Enum.any?(@replace_menu_items) do %>
-        <%= for {to, icon, text, menu_item} <- @replace_menu_items do %>
-          <Settings.menu_item to={to} active={@active_menu_item == menu_item}>
-            <%= Phoenix.LiveView.TagEngine.component(
-              icon,
-              [class: "h-5 w-5 inline-block mr-1"],
-              {__ENV__.module, __ENV__.function, __ENV__.file, __ENV__.line}
-            ) %>
-            <span class="inline-block align-middle"><%= text %></span>
-          </Settings.menu_item>
-        <% end %>
+      <%= if assigns[:projects] do %>
+        <Menu.projects_dropdown
+          projects={assigns[:projects]}
+          selected_project={assigns[:project]}
+        />
       <% else %>
-        <Settings.menu_item to={~p"/profile"} active={@active_menu_item == :profile}>
-          <Heroicons.user_circle class="h-5 w-5 inline-block mr-2" /> User Profile
-        </Settings.menu_item>
-        <Settings.menu_item
-          to={~p"/credentials"}
-          active={@active_menu_item == :credentials}
-        >
-          <Heroicons.key class="h-5 w-5 inline-block mr-2" /> Credentials
-        </Settings.menu_item>
-        <Settings.menu_item
-          to={~p"/profile/tokens"}
-          active={@active_menu_item == :tokens}
-        >
-          <Heroicons.command_line class="h-5 w-5 inline-block mr-2" /> API Tokens
-        </Settings.menu_item>
+        <div class="p-2 mb-4 mt-4 text-center text-primary-300 bg-primary-800">
+          <span class="inline-block align-middle text-sm">
+            You don't have access to any projects
+          </span>
+        </div>
+      <% end %>
+
+      <%= if assigns[:project] do %>
+        <Menu.project_items
+          project_id={@project.id}
+          active_menu_item={@active_menu_item}
+        />
+      <% else %>
+        <Menu.profile_items active_menu_item={@active_menu_item} />
       <% end %>
     <% end %>
     """

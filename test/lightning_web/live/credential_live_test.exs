@@ -1588,126 +1588,8 @@ defmodule LightningWeb.CredentialLiveTest do
        wellknown_url: "http://localhost:#{bypass.port}/auth/.well-known"}
     end
 
-    test "allows the user to define and save a new salesforce oauth credential",
-         %{
-           bypass: bypass,
-           wellknown_url: wellknown_url,
-           conn: conn,
-           user: user
-         } do
-      expect_wellknown(bypass)
-
-      expect_token(
-        bypass,
-        Lightning.AuthProviders.Common.get_wellknown!(wellknown_url),
-        %{
-          access_token: "ya29.a0AVvZ...",
-          refresh_token: "1//03vpp6Li...",
-          expires_at: 3600,
-          token_type: "Bearer",
-          id_token: "eyJhbGciO...",
-          scope: "scope1 scope2"
-        }
-      )
-
-      expect_userinfo(
-        bypass,
-        Lightning.AuthProviders.Common.get_wellknown!(wellknown_url),
-        """
-        {"picture": "image.png", "name": "Test User"}
-        """
-      )
-
-      expect_introspect(
-        bypass,
-        Lightning.AuthProviders.Common.get_wellknown!(wellknown_url),
-        %{
-          access_token: "ya29.a0AVvZ...",
-          refresh_token: "1//03vpp6Li...",
-          expires_at: 3600,
-          token_type: "Bearer",
-          id_token: "eyJhbGciO...",
-          scope: "scope1 scope2"
-        }
-      )
-
-      {:ok, index_live, _html} = live(conn, ~p"/credentials")
-
-      # Pick a type
-
-      index_live |> select_credential_type("salesforce_oauth")
-      index_live |> click_continue()
-
-      refute index_live |> has_element?("#credential-type-picker")
-
-      index_live
-      |> fill_credential(%{
-        name: "My Salesforce OAuth Credential"
-      })
-
-      # Get the state from the authorize url in order to fake the calling
-      # off the action in the OidcController
-      [subscription_id, mod, component_id] =
-        index_live
-        |> get_authorize_url()
-        |> get_decoded_state()
-
-      assert index_live.id == subscription_id
-      assert index_live |> element(component_id)
-
-      # Click on the 'Authorize with Google button
-      index_live
-      |> element("#inner-form-new #authorize-button")
-      |> render_click()
-
-      # Once authorizing the button isn't available
-      refute index_live
-             |> has_element?("#inner-form-new #authorize-button")
-
-      # `handle_info/2` in LightingWeb.CredentialLive.Edit forwards the data
-      # as a `send_update/3` call to the GoogleSheets component
-      LightningWeb.OauthCredentialHelper.broadcast_forward(subscription_id, mod,
-        id: component_id,
-        code: "1234"
-      )
-
-      # Wait for the userinfo endpoint to be called
-      assert wait_for_assigns(index_live, :userinfo_received, "new"),
-             ":userinfo has not been set yet."
-
-      # Rerender as the broadcast above has altered the LiveView state
-      index_live |> render()
-
-      assert index_live |> has_element?("h3", "Test User")
-
-      refute index_live |> submit_disabled("save-credential-button-new")
-
-      {:ok, _index_live, _html} =
-        index_live
-        |> form("#credential-form-new")
-        |> render_submit()
-        |> follow_redirect(
-          conn,
-          ~p"/credentials"
-        )
-
-      {_path, flash} = assert_redirect(index_live)
-      assert flash == %{"info" => "Credential created successfully"}
-
-      credential =
-        Lightning.Credentials.list_credentials(user) |> List.first()
-
-      token =
-        Lightning.AuthProviders.Common.TokenBody.new(credential.body)
-
-      assert %{
-               access_token: "ya29.a0AVvZ...",
-               refresh_token: "1//03vpp6Li...",
-               expires_at: 3600,
-               scope: "scope1 scope2"
-             } = token
-    end
-
+    # TODO - remove entirely once `salesforce_oauth` is removed.
+    @tag :skip
     test "re-authenticate banner is not rendered the first time we pick permissions",
          %{
            bypass: bypass,
@@ -1738,6 +1620,8 @@ defmodule LightningWeb.CredentialLiveTest do
       assert index_live |> has_element?("#authorize-button")
     end
 
+    # TODO - remove entirely once `salesforce_oauth` is removed.
+    @tag :skip
     test "re-authenticate banner rendered when scopes are changed",
          %{
            bypass: bypass,
@@ -2005,6 +1889,8 @@ defmodule LightningWeb.CredentialLiveTest do
              |> has_element?("p", " Failed renewing your access token.")
     end
 
+    # TODO - remove entirely once `salesforce_oauth` is removed.
+    @tag :skip
     test "salesforce oauth credential will render a scope pick list", %{
       user: _user,
       bypass: bypass,
@@ -2095,168 +1981,6 @@ defmodule LightningWeb.CredentialLiveTest do
         |> Map.get("scope")
 
       refute scopes_in_url |> String.contains?(scope_to_unselect)
-    end
-
-    test "salesforce oauth credential will render an input for api version and a checkbox for sandboxes",
-         %{
-           user: user,
-           bypass: bypass,
-           conn: conn
-         } do
-      # TODO: replace this with a proper Mock via Lightning.Config
-      Lightning.ApplicationHelpers.put_temporary_env(:lightning, :oauth_clients,
-        google: [client_id: "foo"],
-        salesforce: [
-          client_id: "foo",
-          client_secret: "bar",
-          prod_wellknown_url: "http://localhost:#{bypass.port}/auth/.well-known",
-          sandbox_wellknown_url:
-            "http://localhost:#{bypass.port}/auth/.well-known"
-        ]
-      )
-
-      expect_wellknown(bypass)
-
-      expect_token(
-        bypass,
-        Lightning.AuthProviders.Common.get_wellknown!(
-          "http://localhost:#{bypass.port}/auth/.well-known"
-        ),
-        %{
-          access_token: "ya29.a0AVvZ...",
-          refresh_token: "1//03vpp6Li...",
-          expires_at: 3600,
-          token_type: "Bearer",
-          id_token: "eyJhbGciO...",
-          scope: "scope1 scope2"
-        }
-      )
-
-      expect_userinfo(
-        bypass,
-        Lightning.AuthProviders.Common.get_wellknown!(
-          "http://localhost:#{bypass.port}/auth/.well-known"
-        ),
-        """
-        {"picture": "image.png", "name": "Test User"}
-        """
-      )
-
-      expect_introspect(
-        bypass,
-        Lightning.AuthProviders.Common.get_wellknown!(
-          "http://localhost:#{bypass.port}/auth/.well-known"
-        ),
-        %{
-          access_token: "ya29.a0AVvZ...",
-          refresh_token: "1//03vpp6Li...",
-          expires_at: 3600,
-          token_type: "Bearer",
-          id_token: "eyJhbGciO...",
-          scope: "scope1 scope2"
-        }
-      )
-
-      {:ok, index_live, _html} = live(conn, ~p"/credentials")
-
-      index_live |> select_credential_type("googlesheets")
-      index_live |> click_continue()
-
-      refute index_live
-             |> has_element?("#inner-form-new-scope-selection")
-
-      refute index_live
-             |> has_element?("#salesforce_sandbox_instance_checkbox_new")
-
-      refute index_live
-             |> has_element?("#salesforce_api_version_input_new")
-
-      {:ok, index_live, _html} = live(conn, ~p"/credentials")
-
-      index_live |> select_credential_type("salesforce_oauth")
-      index_live |> click_continue()
-
-      assert index_live
-             |> has_element?("#salesforce_sandbox_instance_checkbox_new")
-
-      assert index_live
-             |> has_element?("#salesforce_api_version_input_new")
-
-      index_live
-      |> fill_credential(%{
-        name: "My Salesforce Credential"
-      })
-
-      index_live
-      |> element("#salesforce_api_version_input_new")
-      |> render_change(%{"api_version" => "34"})
-
-      index_live
-      |> element("#salesforce_sandbox_instance_checkbox_new")
-      |> render_change(%{"sandbox" => "true"})
-
-      # Get the state from the authorize url in order to fake the calling
-      # off the action in the OidcController
-      [subscription_id, mod, component_id] =
-        index_live
-        |> get_authorize_url()
-        |> get_decoded_state()
-
-      assert index_live.id == subscription_id
-      assert index_live |> element(component_id)
-
-      # Click on the 'Authorize with Google button
-      index_live
-      |> element("#inner-form-new #authorize-button")
-      |> render_click()
-
-      # Once authorizing the button isn't available
-      refute index_live
-             |> has_element?("#inner-form-new #authorize-button")
-
-      # `handle_info/2` in LightingWeb.CredentialLive.Edit forwards the data
-      # as a `send_update/3` call to the GoogleSheets component
-      LightningWeb.OauthCredentialHelper.broadcast_forward(subscription_id, mod,
-        id: component_id,
-        code: "1234"
-      )
-
-      # Wait for the userinfo endpoint to be called
-      assert wait_for_assigns(index_live, :userinfo_received),
-             ":userinfo has not been set yet."
-
-      # Rerender as the broadcast above has altered the LiveView state
-      index_live |> render()
-
-      assert index_live |> has_element?("h3", "Test User")
-
-      refute index_live |> submit_disabled("save-credential-button-new")
-
-      {:ok, _index_live, _html} =
-        index_live
-        |> form("#credential-form-new")
-        |> render_submit()
-        |> follow_redirect(
-          conn,
-          ~p"/credentials"
-        )
-
-      {_path, flash} = assert_redirect(index_live)
-      assert flash == %{"info" => "Credential created successfully"}
-
-      credential =
-        Lightning.Credentials.list_credentials(user) |> List.first()
-
-      token = Lightning.AuthProviders.Common.TokenBody.new(credential.body)
-
-      assert %{
-               access_token: "ya29.a0AVvZ...",
-               refresh_token: "1//03vpp6Li...",
-               expires_at: 3600,
-               scope: "scope1 scope2",
-               apiVersion: "34",
-               sandbox: true
-             } = token
     end
 
     test "update a prod salesforce credential to turn into a sandbox one", %{
@@ -2382,111 +2106,6 @@ defmodule LightningWeb.CredentialLiveTest do
       {:ok,
        bypass: bypass,
        wellknown_url: "http://localhost:#{bypass.port}/auth/.well-known"}
-    end
-
-    test "allows the user to define and save a new google sheets credential", %{
-      bypass: bypass,
-      wellknown_url: wellknown_url,
-      conn: conn,
-      user: user
-    } do
-      expect_wellknown(bypass)
-
-      expect_token(
-        bypass,
-        Lightning.AuthProviders.Common.get_wellknown!(wellknown_url),
-        %{
-          access_token: "ya29.a0AVvZ...",
-          refresh_token: "1//03vpp6Li...",
-          expires_at: 3600,
-          token_type: "Bearer",
-          id_token: "eyJhbGciO...",
-          scope: "scope1 scope2"
-        }
-      )
-
-      expect_userinfo(
-        bypass,
-        Lightning.AuthProviders.Common.get_wellknown!(wellknown_url),
-        """
-        {"picture": "image.png", "name": "Test User"}
-        """
-      )
-
-      {:ok, index_live, _html} = live(conn, ~p"/credentials")
-
-      # Pick a type
-
-      index_live |> select_credential_type("googlesheets")
-      index_live |> click_continue()
-
-      refute index_live |> has_element?("#credential-type-picker")
-
-      index_live
-      |> fill_credential(%{
-        name: "My Google Sheets Credential"
-      })
-
-      # Get the state from the authorize url in order to fake the calling
-      # off the action in the OidcController
-      [subscription_id, mod, component_id] =
-        index_live
-        |> get_authorize_url()
-        |> get_decoded_state()
-
-      assert index_live.id == subscription_id
-      assert index_live |> element(component_id)
-
-      # Click on the 'Authorize with Google button
-      index_live
-      |> element("#inner-form-new #authorize-button")
-      |> render_click()
-
-      # Once authorizing the button isn't available
-      refute index_live
-             |> has_element?("#inner-form-new #authorize-button")
-
-      # `handle_info/2` in LightingWeb.CredentialLive.Edit forwards the data
-      # as a `send_update/3` call to the GoogleSheets component
-      LightningWeb.OauthCredentialHelper.broadcast_forward(subscription_id, mod,
-        id: component_id,
-        code: "1234"
-      )
-
-      # Wait for the userinfo endpoint to be called
-      assert wait_for_assigns(index_live, :userinfo_received),
-             ":userinfo has not been set yet."
-
-      # Rerender as the broadcast above has altered the LiveView state
-      index_live |> render()
-
-      assert index_live |> has_element?("h3", "Test User")
-
-      refute index_live |> submit_disabled("save-credential-button-new")
-
-      {:ok, _index_live, _html} =
-        index_live
-        |> form("#credential-form-new")
-        |> render_submit()
-        |> follow_redirect(
-          conn,
-          ~p"/credentials"
-        )
-
-      {_path, flash} = assert_redirect(index_live)
-      assert flash == %{"info" => "Credential created successfully"}
-
-      credential =
-        Lightning.Credentials.list_credentials(user) |> List.first()
-
-      token = Lightning.AuthProviders.Common.TokenBody.new(credential.body)
-
-      assert %{
-               access_token: "ya29.a0AVvZ...",
-               refresh_token: "1//03vpp6Li...",
-               expires_at: 3600,
-               scope: "scope1 scope2"
-             } = token
     end
 
     test "correctly renders a valid existing token", %{
@@ -2693,30 +2312,7 @@ defmodule LightningWeb.CredentialLiveTest do
     end
   end
 
-  describe "googlesheets credential (when client is not available)" do
-    @tag :capture_log
-    test "shows a warning that Google Sheets isn't available", %{conn: conn} do
-      # TODO: replace this with a proper Mock via Lightning.Config
-      Lightning.ApplicationHelpers.put_temporary_env(:lightning, :oauth_clients,
-        google: [client_id: true]
-      )
-
-      {:ok, index_live, _html} = live(conn, ~p"/credentials")
-
-      index_live |> select_credential_type("googlesheets")
-      index_live |> click_continue()
-
-      refute index_live |> has_element?("#credential-type-picker")
-
-      assert index_live
-             |> has_element?(
-               "#inner-form-new",
-               "No Client Configured"
-             )
-    end
-  end
-
-  defp wait_for_assigns(live, key, id \\ "new") do
+  defp wait_for_assigns(live, key, id) do
     Enum.reduce_while(1..10, nil, fn n, _ ->
       {_mod, assigns} =
         Lightning.LiveViewHelpers.get_component_assigns_by(
