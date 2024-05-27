@@ -537,12 +537,12 @@ defmodule Lightning.KafkaTriggersTest do
   describe ".process_candidate_for/1" do
     setup do
       trigger = insert(:trigger, type: :kafka)
-      message_timestamp = System.os_time(:millisecond)
 
       other_message =
         insert(
           :trigger_kafka_message,
           key: "other-key",
+          offset: 1,
           topic: "other-test-topic",
           work_order: nil
         )
@@ -552,12 +552,12 @@ defmodule Lightning.KafkaTriggersTest do
           :trigger_kafka_message,
           data: %{triggers: :test} |> Jason.encode!(),
           key: "test-key",
-          message_timestamp: message_timestamp,
           metadata: %{
             offset: 1,
             partition: 1,
             topic: "test-topic"
           },
+          offset: 1,
           topic: "test-topic",
           trigger: trigger,
           work_order: nil
@@ -568,7 +568,7 @@ defmodule Lightning.KafkaTriggersTest do
           :trigger_kafka_message,
           data: %{triggers: :more_test} |> Jason.encode!(),
           key: "test-key",
-          message_timestamp: message_timestamp + 100,
+          offset: 2,
           topic: "test-topic",
           trigger: trigger,
           work_order: nil
@@ -707,6 +707,7 @@ defmodule Lightning.KafkaTriggersTest do
           :trigger_kafka_message,
           key: "set_key",
           message_timestamp: 10 |> timestamp_from_offset,
+          offset: 1,
           topic: "set_topic",
           trigger: other_trigger
         )
@@ -716,6 +717,7 @@ defmodule Lightning.KafkaTriggersTest do
           :trigger_kafka_message,
           key: "other_set_key",
           message_timestamp: 10 |> timestamp_from_offset,
+          offset: 1,
           topic: "set_topic",
           trigger: trigger
         )
@@ -725,6 +727,7 @@ defmodule Lightning.KafkaTriggersTest do
           :trigger_kafka_message,
           key: "set_key",
           message_timestamp: 10 |> timestamp_from_offset,
+          offset: 1,
           topic: "other_set_topic",
           trigger: trigger
         )
@@ -733,7 +736,8 @@ defmodule Lightning.KafkaTriggersTest do
         insert(
           :trigger_kafka_message,
           key: "set_key",
-          message_timestamp: 120 |> timestamp_from_offset,
+          message_timestamp: 20 |> timestamp_from_offset,
+          offset: 102,
           topic: "set_topic",
           trigger: trigger
         )
@@ -742,7 +746,8 @@ defmodule Lightning.KafkaTriggersTest do
         insert(
           :trigger_kafka_message,
           key: "set_key",
-          message_timestamp: 130 |> timestamp_from_offset,
+          message_timestamp: 30 |> timestamp_from_offset,
+          offset: 103,
           topic: "set_topic",
           trigger: trigger
         )
@@ -752,6 +757,7 @@ defmodule Lightning.KafkaTriggersTest do
           :trigger_kafka_message,
           key: "set_key",
           message_timestamp: 110 |> timestamp_from_offset,
+          offset: 101,
           topic: "set_topic",
           trigger: trigger,
           work_order: build(:workorder)
@@ -777,7 +783,7 @@ defmodule Lightning.KafkaTriggersTest do
       assert KafkaTriggers.find_candidate_for(no_such_set) |> Repo.one() == nil
     end
 
-    test "returns earliest message - based on message timestamp - for set", %{
+    test "returns earliest message - based on offset - for set", %{
       candidate_set: candidate_set,
       message: message
     } do
@@ -812,6 +818,7 @@ defmodule Lightning.KafkaTriggersTest do
           :trigger_kafka_message,
           key: "set_key",
           message_timestamp: 10 |> timestamp_from_offset,
+          offset: 1,
           topic: "set_topic",
           trigger: other_trigger
         )
@@ -821,6 +828,7 @@ defmodule Lightning.KafkaTriggersTest do
           :trigger_kafka_message,
           key: "other_set_key",
           message_timestamp: 10 |> timestamp_from_offset,
+          offset: 1,
           topic: "set_topic",
           trigger: trigger
         )
@@ -830,6 +838,7 @@ defmodule Lightning.KafkaTriggersTest do
           :trigger_kafka_message,
           key: "set_key",
           message_timestamp: 10 |> timestamp_from_offset,
+          offset: 1,
           topic: "other_set_topic",
           trigger: trigger
         )
@@ -839,6 +848,7 @@ defmodule Lightning.KafkaTriggersTest do
           :trigger_kafka_message,
           key: nil,
           message_timestamp: 120 |> timestamp_from_offset,
+          offset: 102,
           topic: "set_topic",
           trigger: trigger
         )
@@ -848,6 +858,7 @@ defmodule Lightning.KafkaTriggersTest do
           :trigger_kafka_message,
           key: nil,
           message_timestamp: 130 |> timestamp_from_offset,
+          offset: 103,
           topic: "set_topic",
           trigger: trigger
         )
@@ -857,6 +868,7 @@ defmodule Lightning.KafkaTriggersTest do
           :trigger_kafka_message,
           key: nil,
           message_timestamp: 110 |> timestamp_from_offset,
+          offset: 101,
           topic: "set_topic",
           trigger: trigger,
           work_order: build(:workorder)
@@ -882,6 +894,8 @@ defmodule Lightning.KafkaTriggersTest do
       assert KafkaTriggers.find_candidate_for(no_such_set) |> Repo.one() == nil
     end
 
+    # This can be optimised as Kafka does not guarantee order of messages
+    # with nil key
     test "returns earliest message - based on message timestamp - for set", %{
       candidate_set: candidate_set,
       message: message

@@ -12,6 +12,7 @@ defmodule Lightning.KafkaTriggers.TriggerKafkaMessage do
     field :key, :string
     field :message_timestamp, :integer
     field :metadata, :map
+    field :offset, :integer
     field :data, :binary
 
     belongs_to :trigger, Trigger
@@ -28,6 +29,7 @@ defmodule Lightning.KafkaTriggers.TriggerKafkaMessage do
       :key,
       :message_timestamp,
       :metadata,
+      :offset,
       :data
     ]
 
@@ -36,6 +38,7 @@ defmodule Lightning.KafkaTriggers.TriggerKafkaMessage do
       :topic,
       :message_timestamp,
       :metadata,
+      :offset,
       :data
     ]
 
