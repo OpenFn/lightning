@@ -108,9 +108,12 @@ defmodule Lightning.Invocation.Dataclip do
   end
 
   defp validate_request(changeset) do
-    %{changes: %{type: type, request: request}} = changeset
+    request = fetch_field!(changeset, :request)
+    type = fetch_field!(changeset, :type)
 
     case {type, request} do
+      {:kafka, nil} ->
+        add_error(changeset, :request, "must be set for kafka type")
       {:http_request, _request} ->
         changeset
       {:kafka, _request} ->
