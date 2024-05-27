@@ -5,6 +5,16 @@ defmodule Lightning.Invocation.DataclipTest do
 
   import Lightning.Factories
 
+  describe "no type provided" do
+    test "does not break request validation" do
+      changeset =
+        params_with_assocs(:dataclip, type: "")
+        |> Dataclip.new()
+
+      assert changeset.valid?
+    end
+  end
+
   describe "http_request" do
     test "can provide a request map" do
       {:ok, dataclip} =
@@ -22,6 +32,20 @@ defmodule Lightning.Invocation.DataclipTest do
         |> Repo.one()
 
       assert request == %{"url" => "https://example.com"}
+    end
+
+    test "is valid when request is set to nil" do
+      assert {:ok, _dataclip} =
+        params_with_assocs(:dataclip, request: nil)
+        |> Dataclip.new()
+        |> Repo.insert()
+    end
+
+    test "is valid when request is set absent" do
+      assert {:ok, _dataclip} =
+        params_with_assocs(:dataclip)
+        |> Dataclip.new()
+        |> Repo.insert()
     end
 
     test "only http_request dataclips can have a request" do
@@ -47,7 +71,6 @@ defmodule Lightning.Invocation.DataclipTest do
         )
         |> Dataclip.new()
         |> Repo.insert()
-        |> IO.inspect()
 
       dataclip = dataclip |> Repo.reload()
       assert dataclip.request == nil, "Does not load request in query by default"
@@ -59,6 +82,24 @@ defmodule Lightning.Invocation.DataclipTest do
         |> Repo.one()
 
       assert request == %{"partition" => 3}
+    end
+
+    test "is invalid when request is set to nil" do
+      changeset =
+        params_with_assocs(:dataclip, type: :kafka, request: nil)
+        |> Dataclip.new()
+
+      refute changeset.valid?
+      assert {:request, {"must be set for kafka type", []}} in changeset.errors
+    end
+
+    test "is invalid when request is absent" do
+      changeset =
+        params_with_assocs(:dataclip, type: :kafka)
+        |> Dataclip.new()
+
+      refute changeset.valid?
+      assert {:request, {"must be set for kafka type", []}} in changeset.errors
     end
   end
 end
