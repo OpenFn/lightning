@@ -5,6 +5,7 @@ defmodule Lightning.Config do
   defmodule API do
     @moduledoc false
     @behaviour Lightning.Config
+    alias Lightning.Services.AdapterHelper
 
     @impl true
     def run_token_signer do
@@ -52,7 +53,7 @@ defmodule Lightning.Config do
 
     @impl true
     def get_extension_mod(key) do
-      Lightning.Services.AdapterHelper.adapter(key)
+      AdapterHelper.adapter(key)
     end
 
     @impl true
