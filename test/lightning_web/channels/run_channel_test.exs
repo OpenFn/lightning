@@ -139,6 +139,8 @@ defmodule LightningWeb.RunChannelTest do
     } do
       expect(Lightning.MockConfig, :default_max_run_duration, 2, fn -> 1 end)
 
+      IO.inspect(project, label: "project")
+
       id = run.id
       ref = push(socket, "fetch:plan", %{})
 
@@ -177,9 +179,6 @@ defmodule LightningWeb.RunChannelTest do
         )
         |> Enum.map(&stringify_keys/1)
 
-      run_options =
-        UsageLimiter.get_run_options(%Context{project_id: project.id})
-
       assert payload == %{
                "id" => id,
                "triggers" => triggers,
@@ -188,8 +187,8 @@ defmodule LightningWeb.RunChannelTest do
                "starting_node_id" => run.starting_trigger_id,
                "dataclip_id" => run.dataclip_id,
                "options" => %{
-                 output_dataclips: true,
-                 run_timeout_ms: run_options[:run_timeout_ms]
+                 "output_dataclips" => true,
+                 "run_timeout_ms" => 10_000
                }
              }
     end
@@ -249,9 +248,6 @@ defmodule LightningWeb.RunChannelTest do
         )
         |> Enum.map(&stringify_keys/1)
 
-      run_options =
-        UsageLimiter.get_run_options(%Context{project_id: project.id})
-
       assert payload == %{
                "id" => id,
                "triggers" => triggers,
@@ -261,7 +257,7 @@ defmodule LightningWeb.RunChannelTest do
                "dataclip_id" => run.dataclip_id,
                "options" => %{
                  output_dataclips: false,
-                 run_timeout_ms: run_options[:run_timeout_ms]
+                 run_timeout_ms: run.options.run_timeout_ms
                }
              }
     end

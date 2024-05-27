@@ -95,6 +95,22 @@ defmodule Lightning.Projects do
   def get_project(id), do: Repo.get(Project, id)
 
   @doc """
+  Should input or output dataclips be saved for runs in this project?
+  """
+  def save_dataclips?(id) do
+    from(
+      p in Project,
+      where: p.id == ^id,
+      select: p.retention_policy
+    )
+    |> Repo.one!()
+    |> case do
+      :retain_all -> true
+      :erase_all -> false
+    end
+  end
+
+  @doc """
   Gets a single project_user.
 
   Raises `Ecto.NoResultsError` if the ProjectUser does not exist.

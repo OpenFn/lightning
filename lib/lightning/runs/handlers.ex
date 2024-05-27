@@ -178,7 +178,7 @@ defmodule Lightning.Runs.Handlers do
         output_dataclip = get_change(changeset, :output_dataclip)
 
         case {options, output_dataclip, output_dataclip_id} do
-          {%Runs.RunOptions{output_dataclips: false}, _, _} ->
+          {%Runs.RunOptions{save_dataclips: false}, _, _} ->
             changeset
 
           {_, nil, nil} ->
@@ -212,7 +212,7 @@ defmodule Lightning.Runs.Handlers do
       Repo.transact(fn ->
         with %Step{} = step <- get_step(complete_step.step_id),
              {:ok, _} <-
-               maybe_save_dataclip(complete_step, options.output_dataclips) do
+               maybe_save_dataclip(complete_step, options) do
           step
           |> Step.finished(
             complete_step.output_dataclip_id,
@@ -243,7 +243,7 @@ defmodule Lightning.Runs.Handlers do
              project_id: project_id,
              output_dataclip_id: dataclip_id
            },
-           true
+           %Lightning.Runs.RunOptions{save_dataclips: false}
          ) do
       if is_nil(dataclip_id) do
         {:ok, nil}
@@ -261,7 +261,7 @@ defmodule Lightning.Runs.Handlers do
 
     defp maybe_save_dataclip(
            %__MODULE__{output_dataclip: nil},
-           _output_dataclips
+           _run_options
          ) do
       {:ok, nil}
     end
@@ -272,7 +272,7 @@ defmodule Lightning.Runs.Handlers do
              project_id: project_id,
              output_dataclip_id: dataclip_id
            },
-           _output_dataclips
+           _run_options
          ) do
       Dataclip.new(%{
         id: dataclip_id,

@@ -36,7 +36,6 @@ defmodule LightningWeb.RunChannel do
          run: run,
          project_id: project_id,
          scrubber: nil
-         #  retention_policy: Projects.project_retention_policy_for(run)
        })}
     else
       {:error, :not_found} ->
@@ -53,18 +52,7 @@ defmodule LightningWeb.RunChannel do
 
   @impl true
   def handle_in("fetch:plan", _payload, socket) do
-    IO.inspect(socket.assigns)
     %{run: run} = socket.assigns
-
-    # TODO - move to run creation.
-    # %{retention_policy: retention_policy, run: run, project_id: project_id} =
-    #   socket.assigns
-
-    # run_options =
-    #   Keyword.merge(
-    #     [output_dataclips: include_output_dataclips?(retention_policy)],
-    #     UsageLimiter.get_run_options(%Context{project_id: project_id})
-    #   )
 
     {:reply, {:ok, RunWithOptions.render(run)}, socket}
   end
@@ -150,7 +138,7 @@ defmodule LightningWeb.RunChannel do
   def handle_in("fetch:dataclip", _payload, socket) do
     body = Runs.get_input(socket.assigns.run)
 
-    if socket.assigns.run.options.burn_input_after_reading,
+    unless socket.assigns.run.options.save_dataclips,
       do: Runs.wipe_dataclips(socket.assigns.run)
 
     {:reply, {:ok, {:binary, body || "null"}}, socket}
@@ -208,10 +196,6 @@ defmodule LightningWeb.RunChannel do
         {:reply, {:ok, %{log_line_id: log_line.id}}, socket}
     end
   end
-
-  # defp include_output_dataclips?(retention_policy) do
-  #   retention_policy != :erase_all
-  # end
 
   defp replace_reason_with_exit_reason(params) do
     {reason, payload} = Map.pop(params, "reason")

@@ -103,4 +103,21 @@ defmodule LightningWeb.RunWithOptionsTest do
                expected_result
     end
   end
+
+  describe "options_for_worker/1" do
+    test "converts RunOptions to options for the worker" do
+      lightning_options = %Lightning.Runs.RunOptions{
+        save_dataclips: true,
+        run_timeout_ms: 123
+      }
+
+      expected_worker_options = %{
+        output_dataclips: false,
+        run_timeout_ms: 123
+      }
+
+      assert RunWithOptions.options_for_worker(lightning_options) ==
+               expected_worker_options
+    end
+  end
 end

@@ -283,9 +283,9 @@ defmodule Lightning.Runs do
     Handlers.StartStep.call(run, params)
   end
 
-  @spec complete_step(map(), Lightning.Run.RunOptions) ::
+  @spec complete_step(map(), Lightning.Runs.RunOptions) ::
           {:ok, Lightning.Invocation.Step.t()} | {:error, Ecto.Changeset.t()}
-  def complete_step(params, options) do
+  def complete_step(params, options \\ Lightning.Runs.RunOptions) do
     Handlers.CompleteStep.call(params, options)
   end
 

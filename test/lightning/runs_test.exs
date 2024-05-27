@@ -288,13 +288,23 @@ defmodule Lightning.RunsTest do
       assert step.output_dataclip.body == %{"foo" => "bar"}
     end
 
-    test "wipes the dataclip if erase_all retention policy is specified" do
-      dataclip = insert(:dataclip)
+    test "wipes the dataclip if erase_all retention policy is specified at the project level when the run is created" do
       %{triggers: [trigger], jobs: [job]} = workflow = insert(:simple_workflow)
+
+      dataclip = insert(:dataclip, project: workflow.project)
+
+      Repo.get(Lightning.Projects.Project, workflow.project_id)
+      |> Ecto.Changeset.change(retention_policy: :erase_all)
+      |> Repo.update()
 
       %{runs: [run]} =
         work_order_for(trigger, workflow: workflow, dataclip: dataclip)
         |> insert()
+
+      assert %Lightning.Runs.RunOptions{
+               save_dataclips: false,
+               run_timeout_ms: 60000
+             } = run.options
 
       step =
         insert(:step, runs: [run], job: job, input_dataclip: dataclip)
@@ -309,7 +319,7 @@ defmodule Lightning.RunsTest do
             run_id: run.id,
             project_id: workflow.project_id
           },
-          :erase_all
+          run.options
         )
 
       step =
