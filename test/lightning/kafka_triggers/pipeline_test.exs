@@ -195,6 +195,7 @@ defmodule Lightning.KafkaTriggers.PipelineTest do
                key: "abc_123_def",
                message_timestamp: 1_715_164_718_283,
                metadata: ^metadata,
+               offset: 11,
                topic: "bar_topic",
                trigger_id: ^trigger_id,
                work_order_id: nil
