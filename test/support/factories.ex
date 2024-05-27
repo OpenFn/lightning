@@ -259,6 +259,7 @@ defmodule Lightning.Factories do
       topic: "arb_topic",
       message_timestamp: System.os_time(:millisecond),
       metadata: %{},
+      offset: 1001,
       data: %{some: :data} |> Jason.encode!()
     }
   end

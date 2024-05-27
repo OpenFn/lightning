@@ -9,6 +9,7 @@ defmodule Lightning.Repo.Migrations.CreateTriggerKafkaMessages do
       add :topic, :string, null: false
       add :key, :string, null: true
       add :message_timestamp, :bigint, null: false
+      add :offset, :bigint, null: false
       add :metadata, :map, null: false
       add :data, :binary, null: false
 

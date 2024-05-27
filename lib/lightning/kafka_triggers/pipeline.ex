@@ -40,7 +40,7 @@ defmodule Lightning.KafkaTriggers.Pipeline do
       data: data,
       metadata: %{
         key: key,
-        # offset: offset,
+        offset: offset,
         partition: partition,
         topic: topic,
         ts: timestamp
@@ -73,10 +73,11 @@ defmodule Lightning.KafkaTriggers.Pipeline do
           key: key,
           message_timestamp: timestamp,
           metadata: message.metadata,
+          offset: offset,
           topic: topic,
           trigger_id: trigger_id |> Atom.to_string()
         })
-        |> Repo.insert()
+        |> Repo.insert!()
 
         trigger
         |> KafkaTriggers.update_partition_data(partition, timestamp)
