@@ -60,10 +60,10 @@ defmodule Lightning.Runs.QueryTest do
           dataclip: dataclip,
           state: :claimed,
           options: %Lightning.Runs.RunOptions{
-            # set via default to milliseconds, plus 5000 extra milliseconds
+            # set via default to milliseconds, plus 5000 extra seconds
             run_timeout_ms: default_max * 1000 + 5000
           },
-          claimed_at: DateTime.add(now, -(default_max + 2))
+          claimed_at: DateTime.add(now, -(default_max + 14))
         )
 
       lost_runs =

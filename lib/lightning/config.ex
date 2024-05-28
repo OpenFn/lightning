@@ -37,8 +37,7 @@ defmodule Lightning.Config do
 
     @impl true
     def grace_period do
-      (Application.get_env(:lightning, :max_run_duration_seconds) * 0.2)
-      |> trunc()
+      Application.get_env(:lightning, :run_grace_period_seconds)
     end
 
     @impl true
@@ -138,8 +137,8 @@ defmodule Lightning.Config do
   end
 
   @doc """
-  The grace period is 20% of the max run duration and may be used to wait for
-  an additional amount of time after a run was meant to be finished.
+  The grace period is configurable and is be used to wait for an additional
+  amount of time after a given run was meant to be finished.
 
   The returned value is in seconds.
   """
