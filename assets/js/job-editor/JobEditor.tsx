@@ -163,8 +163,10 @@ export default ({
   return (
     <>
       <div className="cursor-pointer"></div>
-      <div className={`flex h-full flex-${vertical ? 'col' : 'row'} bg-vs-dark`}>
-        <div className="flex-1 rounded-md">
+      <div
+        className={`flex h-full flex-${vertical ? 'col' : 'row'} bg-vs-dark`}
+      >
+        <div className="flex-1 rounded-md overflow-hidden">
           <Editor
             source={source}
             adaptor={adaptor}
