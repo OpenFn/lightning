@@ -718,11 +718,15 @@ defmodule LightningWeb.RunChannelTest do
          context do
       %{socket: socket, run: run, workflow: workflow, project: project} = context
 
-      run_from_socket = socket.assigns.run
-      options = run_from_socket.options
-
       # dataclip is saved but wiped
       assert project.retention_policy == :erase_all
+
+      IO.inspect(run.options, label: "so why is run options...")
+
+      run_from_socket = socket.assigns.run
+      options = run_from_socket.options
+      IO.inspect(options, label: "and why is run from socket options...")
+
 
       # TODO - I see that the UsageLimiter is getting called and setting options
       # properly with `save_dataclips: false, run_timeout_ms: 1000`...
