@@ -1,7 +1,6 @@
 defmodule LightningWeb.RunChannelTest do
   use LightningWeb.ChannelCase, async: true
 
-  alias Lightning.Extensions.UsageLimiter
   alias Lightning.Extensions.UsageLimiting.Context
   alias Lightning.Invocation.Dataclip
   alias Lightning.Invocation.Step
@@ -29,6 +28,13 @@ defmodule LightningWeb.RunChannelTest do
         :ok
       end
     )
+
+    # TODO - This seems unnecessary.
+    # Mox.stub(
+    #   Lightning.Extensions.MockUsageLimiter,
+    #   :get_run_options,
+    #   &Lightning.Extensions.UsageLimiter.get_run_options/1
+    # )
 
     :ok
   end
@@ -184,8 +190,8 @@ defmodule LightningWeb.RunChannelTest do
                "starting_node_id" => run.starting_trigger_id,
                "dataclip_id" => run.dataclip_id,
                "options" => %{
-                 "output_dataclips" => true,
-                 "run_timeout_ms" => 10_000
+                 output_dataclips: true,
+                 run_timeout_ms: 60_000
                }
              }
     end
@@ -253,8 +259,8 @@ defmodule LightningWeb.RunChannelTest do
                "starting_node_id" => run.starting_trigger_id,
                "dataclip_id" => run.dataclip_id,
                "options" => %{
-                 "output_dataclips" => false,
-                 "run_timeout_ms" => run.options.run_timeout_ms
+                 output_dataclips: false,
+                 run_timeout_ms: run.options.run_timeout_ms
                }
              }
     end
@@ -263,6 +269,18 @@ defmodule LightningWeb.RunChannelTest do
       credential: credential
     } do
       project = insert(:project, retention_policy: :erase_all)
+      project_id = project.id
+
+      extra_options = [run_timeout_ms: 5000, save_dataclips: false]
+      expected_worker_options = %{run_timeout_ms: 5000, output_dataclips: false}
+
+      Mox.expect(
+        Lightning.Extensions.MockUsageLimiter,
+        :get_run_options,
+        fn %{project_id: ^project_id} ->
+          extra_options
+        end
+      )
 
       workflow_context =
         create_workflow(%{project: project, credential: credential})
@@ -274,24 +292,12 @@ defmodule LightningWeb.RunChannelTest do
         )
 
       %{socket: socket} = create_socket(%{run: run})
-      project_id = project.id
-
-      extra_options = [run_timeout_ms: 5000]
-
-      Mox.expect(
-        Lightning.Extensions.MockUsageLimiter,
-        :get_run_options,
-        fn %{project_id: ^project_id} -> extra_options end
-      )
 
       ref = push(socket, "fetch:plan", %{})
 
       assert_reply ref, :ok, payload
 
-      expected_options =
-        Map.merge(%{output_dataclips: false}, Map.new(extra_options))
-
-      assert match?(%{"options" => ^expected_options}, payload)
+      assert match?(%{"options" => ^expected_worker_options}, payload)
     end
 
     test "fetch:dataclip handles all types", %{
@@ -529,7 +535,9 @@ defmodule LightningWeb.RunChannelTest do
       expect(Lightning.MockConfig, :default_max_run_duration, fn -> 1 end)
 
       run_options =
-        UsageLimiter.get_run_options(%Context{project_id: project.id})
+        Lightning.Extensions.MockUsageLimiter.get_run_options(%Context{
+          project_id: project.id
+        })
 
       {:ok, %{}, socket} =
         LightningWeb.WorkerSocket
@@ -716,6 +724,9 @@ defmodule LightningWeb.RunChannelTest do
       # dataclip is saved but wiped
       assert project.retention_policy == :erase_all
 
+      # TODO - I see that the UsageLimiter is getting called and setting options
+      # properly with `save_dataclips: false, run_timeout_ms: 1000`...
+      # so why is this assertion false?
       assert %Lightning.Runs.RunOptions{save_dataclips: false} = options
 
       [job] = workflow.jobs
@@ -1159,7 +1170,9 @@ defmodule LightningWeb.RunChannelTest do
         starting_trigger: trigger,
         dataclip: dataclip,
         options:
-          UsageLimiter.get_run_options(%Context{project_id: project.id})
+          Lightning.Extensions.MockUsageLimiter.get_run_options(%Context{
+            project_id: project.id
+          })
           |> Enum.into(%{})
       )
 

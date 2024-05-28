@@ -114,8 +114,8 @@ defmodule LightningWeb.RunWithOptionsTest do
       }
 
       expected_worker_options = %{
-        "output_dataclips" => true,
-        "run_timeout_ms" => 123
+        output_dataclips: true,
+        run_timeout_ms: 123
       }
 
       assert RunWithOptions.options_for_worker(lightning_options) ==

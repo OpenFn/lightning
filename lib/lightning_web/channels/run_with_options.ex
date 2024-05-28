@@ -85,8 +85,8 @@ defmodule LightningWeb.RunWithOptions do
   @spec options_for_worker(Runs.RunOptions) :: map()
   def options_for_worker(%Lightning.Runs.RunOptions{} = options) do
     %{
-      "output_dataclips" => options.save_dataclips,
-      "run_timeout_ms" => options.run_timeout_ms
+      output_dataclips: options.save_dataclips,
+      run_timeout_ms: options.run_timeout_ms
     }
   end
 end
