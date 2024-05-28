@@ -1,7 +1,6 @@
-import MonacoEditor, { Monaco } from '@monaco-editor/react';
+import { MonacoEditor, Monaco } from '../monaco';
 import React, { useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import { setTheme } from '../monaco';
 
 export type LogLine = {
   id: string;
@@ -105,7 +104,6 @@ const LogViewer = ({
 
   const beforeMount = (monaco: Monaco) => {
     monacoRef.current = monaco;
-    setTheme(monaco);
   };
 
   const onMount = (editor: any) => {
@@ -156,7 +154,7 @@ const LogViewer = ({
         },
         wordWrap: 'on',
         lineNumbersMinChars: 12,
-        lineNumbers: originalLineNumber => {
+        lineNumbers: (originalLineNumber: number) => {
           const log = splitLogs[originalLineNumber - 1];
           if (log) {
             return `${originalLineNumber} (${log.source})`;

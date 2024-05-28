@@ -28,9 +28,11 @@ export const MonacoEditor = ({
   ...props
 }) => {
   const monacoRef = useRef<any>(null);
+  const editorRef = useRef<any>(null);
 
   const handleOnMount = useCallback((editor: any, monaco: Monaco) => {
     monacoRef.current = monaco;
+    editorRef.current = editor;
     setTheme(monaco);
     onMount(editor, monaco);
   }, []);
@@ -39,7 +41,7 @@ export const MonacoEditor = ({
     <ResizeObserver
       onResize={({ width, height }) => {
         // TODO maybe either debounce or track sizes
-        monacoRef.current?.editor.layout({ width, height: height });
+        editorRef.current?.layout({ width, height: height });
       }}
     >
       <Editor onMount={handleOnMount} {...props} />

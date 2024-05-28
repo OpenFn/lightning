@@ -20,6 +20,7 @@ export default {
     this.handleEvent(
       `logs-${this.el.dataset.runId}`,
       (event: { logs: LogLine[] }) => {
+        console.log('Received logs', event.logs);
         this.logLines = this.logLines.concat(event.logs);
         this.logLines.sort(
           (a, b) =>
