@@ -126,14 +126,12 @@ export default ({
 
   const toggleOrientiation = useCallback(() => {
     setVertical(!vertical);
-    resize();
     settings[SettingsKeys.ORIENTATION] = vertical ? 'h' : 'v';
     persistSettings();
   }, [vertical]);
 
   const toggleShowPanel = useCallback(() => {
     setShowPanel(!showPanel);
-    resize();
     settings[SettingsKeys.SHOW_PANEL] = !showPanel;
     persistSettings();
   }, [showPanel]);
@@ -143,13 +141,6 @@ export default ({
     if (!showPanel) {
       toggleShowPanel();
     }
-  };
-
-  // Force monaco editor to re-layout
-  const resize = () => {
-    setTimeout(() => {
-      document.dispatchEvent(new Event('update-layout'));
-    }, 2);
   };
 
   const CollapseIcon = useMemo(() => {

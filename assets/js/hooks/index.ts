@@ -64,7 +64,6 @@ export const MaybeToogleCollapse = {
       const panel = document.getElementById('output-logs');
       if (panel && panel.classList.contains('collapsed')) {
         panel.classList.remove('collapsed');
-        document.dispatchEvent(new Event('update-layout'));
       }
     });
   },
@@ -180,13 +179,11 @@ export const collapsiblePanel = {
       if (collection.length < 2) {
         target.classList.toggle('collapsed');
       }
-      document.dispatchEvent(new Event('update-layout'));
     });
 
     this.el.addEventListener('expand-panel', event => {
       const target = event.target;
       target.classList.toggle('collapsed');
-      document.dispatchEvent(new Event('update-layout'));
     });
   },
 } as PhoenixHook;
