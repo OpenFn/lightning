@@ -14,8 +14,8 @@ defmodule Lightning.Runs.Query do
   still incomplete. This indicates that we may have lost contact with the worker
   that was responsible for executing the run.
   """
-  @spec lost() :: Ecto.Queryable.t()
-  def lost() do
+  @spec lost :: Ecto.Queryable.t()
+  def lost do
     now = DateTime.utc_now()
 
     grace_period_ms = Lightning.Config.grace_period() * 1000
