@@ -58,17 +58,6 @@ export const ShowActionsOnRowHover = {
   },
 } as PhoenixHook;
 
-export const MaybeToogleCollapse = {
-  mounted() {
-    this.el.addEventListener('click', e => {
-      const panel = document.getElementById('output-logs');
-      if (panel && panel.classList.contains('collapsed')) {
-        panel.classList.remove('collapsed');
-      }
-    });
-  },
-} as PhoenixHook;
-
 export const Flash = {
   mounted() {
     let hide = () =>
@@ -171,8 +160,19 @@ export const AssocListChange = {
   },
 } as PhoenixHook<{}, {}, HTMLSelectElement>;
 
-export const collapsiblePanel = {
+export const CollapsiblePanel = {
   mounted() {
+    this.el.addEventListener('click', event => {
+      const target = event.target as HTMLElement;
+
+      // If the click target smells like a link, expand the panel.
+      if (target.closest('a[href]')) {
+        target
+          .closest('.collapsed')
+          ?.dispatchEvent(new Event('expand-panel', { bubbles: true }));
+      }
+    });
+
     this.el.addEventListener('collapse', event => {
       const target = event.target;
       const collection = document.getElementsByClassName('collapsed');
