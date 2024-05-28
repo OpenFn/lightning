@@ -181,12 +181,11 @@ div[id^='tippy-'] {
 }
 
 #output-logs.collapsed .close-button {
-  display: block !important;
-  margin-bottom: 32px;
+  @apply !block mb-24;
 }
 
 .collapsible-panel.collapsed .panel-collapse-icon {
-  display: none !important;
+  @apply !hidden;
 }
 
 .collapsible-panel.collapsed .panel-header {
@@ -209,7 +208,7 @@ div[id^='tippy-'] {
 }
 
 .collapsible-panel.collapsed .panel-header-title {
-  transform: rotate(-90deg) !important;
+  transform: rotate(90deg) !important;
 }
 
 div.line-num::before {
