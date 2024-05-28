@@ -7,6 +7,6 @@ defmodule Lightning.Runs.RunOptions do
 
   embedded_schema do
     field :save_dataclips, :boolean, default: true
-    field :run_timeout_ms, :integer, default: 10_000
+    field :run_timeout_ms, :integer, default: 60_000
   end
 end

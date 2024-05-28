@@ -20,12 +20,11 @@ defmodule Lightning.Runs.QueryTest do
 
       now = DateTime.utc_now()
 
-      max_run_duration =
+      default_max_run_duration =
         Application.get_env(:lightning, :max_run_duration_seconds)
 
       grace_period = Lightning.Config.grace_period()
-      assert grace_period == max_run_duration * 0.2
-      cutoff_age_in_seconds = (grace_period + max_run_duration) |> trunc()
+      default_max = grace_period + default_max_run_duration
 
       run_to_be_marked_lost =
         insert(:run,
@@ -33,9 +32,7 @@ defmodule Lightning.Runs.QueryTest do
           starting_trigger: trigger,
           dataclip: dataclip,
           state: :claimed,
-          claimed_at:
-            DateTime.add(now, -cutoff_age_in_seconds)
-            |> DateTime.add(-2)
+          claimed_at: DateTime.add(now, -(default_max + 2))
         )
 
       _crashed_but_NOT_lost =
@@ -44,9 +41,7 @@ defmodule Lightning.Runs.QueryTest do
           starting_trigger: trigger,
           dataclip: dataclip,
           state: :crashed,
-          claimed_at:
-            DateTime.add(now, -cutoff_age_in_seconds)
-            |> DateTime.add(-2)
+          claimed_at: DateTime.add(now, -(default_max + 2))
         )
 
       _another_run =
@@ -55,15 +50,26 @@ defmodule Lightning.Runs.QueryTest do
           starting_trigger: trigger,
           dataclip: dataclip,
           state: :claimed,
-          claimed_at:
-            DateTime.add(now, -cutoff_age_in_seconds)
-            |> DateTime.add(2)
+          claimed_at: DateTime.add(now, 0)
+        )
+
+      _an_old_run_with_a_long_timeout =
+        insert(:run,
+          work_order: work_order,
+          starting_trigger: trigger,
+          dataclip: dataclip,
+          state: :claimed,
+          options: %Lightning.Runs.RunOptions{
+            # set via default to milliseconds, plus 5000 extra milliseconds
+            run_timeout_ms: default_max * 1000 + 5000
+          },
+          claimed_at: DateTime.add(now, -(default_max + 2))
         )
 
       lost_runs =
-        Query.lost(now)
+        Query.lost()
         |> Repo.all()
-        |> Enum.map(fn att -> att.id end)
+        |> Enum.map(fn run -> run.id end)
 
       assert lost_runs == [run_to_be_marked_lost.id]
     end

@@ -32,12 +32,10 @@ defmodule Lightning.Janitor do
   unfinished runs, and marks them as lost.
   """
   def find_and_update_lost do
-    now = DateTime.utc_now()
-
-    Runs.Query.lost(now)
+    Runs.Query.lost()
     |> Repo.all()
-    |> Enum.each(fn att ->
-      Runs.mark_run_lost(att)
+    |> Enum.each(fn run ->
+      Runs.mark_run_lost(run)
     end)
   end
 end

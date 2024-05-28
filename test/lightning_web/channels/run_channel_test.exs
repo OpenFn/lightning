@@ -134,12 +134,9 @@ defmodule LightningWeb.RunChannelTest do
       socket: socket,
       run: run,
       workflow: workflow,
-      credential: credential,
-      project: project
+      credential: credential
     } do
       expect(Lightning.MockConfig, :default_max_run_duration, 2, fn -> 1 end)
-
-      IO.inspect(project, label: "project")
 
       id = run.id
       ref = push(socket, "fetch:plan", %{})
@@ -256,8 +253,8 @@ defmodule LightningWeb.RunChannelTest do
                "starting_node_id" => run.starting_trigger_id,
                "dataclip_id" => run.dataclip_id,
                "options" => %{
-                 output_dataclips: false,
-                 run_timeout_ms: run.options.run_timeout_ms
+                 "output_dataclips" => false,
+                 "run_timeout_ms" => run.options.run_timeout_ms
                }
              }
     end
@@ -335,7 +332,9 @@ defmodule LightningWeb.RunChannelTest do
     @tag project_retention_policy: :erase_all
     test "fetch:dataclip wipes dataclip body for projects with erase_all retention policy",
          context do
-      %{dataclip: dataclip, socket: socket} = context
+      %{run: run, dataclip: dataclip} = create_run(context)
+
+      %{socket: socket} = create_socket(%{run: run})
 
       ref = push(socket, "fetch:dataclip", %{})
 
@@ -711,8 +710,13 @@ defmodule LightningWeb.RunChannelTest do
          context do
       %{socket: socket, run: run, workflow: workflow, project: project} = context
 
+      run_from_socket = socket.assigns.run
+      options = run_from_socket.options
+
       # dataclip is saved but wiped
       assert project.retention_policy == :erase_all
+
+      assert %Lightning.Runs.RunOptions{save_dataclips: false} = options
 
       [job] = workflow.jobs
       %{id: step_id} = insert(:step, runs: [run], job: job)
@@ -1153,7 +1157,10 @@ defmodule LightningWeb.RunChannelTest do
       insert(:run,
         work_order: work_order,
         starting_trigger: trigger,
-        dataclip: dataclip
+        dataclip: dataclip,
+        options:
+          UsageLimiter.get_run_options(%Context{project_id: project.id})
+          |> Enum.into(%{})
       )
 
     %{
