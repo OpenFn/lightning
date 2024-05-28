@@ -82,7 +82,7 @@ defmodule LightningWeb.RunWithOptions do
   Converts `Lightning.Runs.RunOptions` to a map of options that are expected by
   the worker.
   """
-  @spec options_for_worker(Runs.RunOptions) :: map()
+  @spec options_for_worker(Lightning.Runs.RunOptions.t()) :: map()
   def options_for_worker(%Lightning.Runs.RunOptions{} = options) do
     %{
       output_dataclips: options.save_dataclips,

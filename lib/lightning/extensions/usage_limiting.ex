@@ -41,5 +41,5 @@ defmodule Lightning.Extensions.UsageLimiting do
               :ok | error()
 
   @callback get_run_options(context :: Context.t()) ::
-              LightningWeb.RunWithOptions.run_options()
+              Lightning.Runs.RunOptions.keyword_list()
 end
