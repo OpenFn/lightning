@@ -26,9 +26,17 @@ and this project adheres to
 
 - Change Default Text For New Job Nodes
   [#2014](https://github.com/OpenFn/lightning/pull/2014)
+- Persisted run options when runs are _created_, not when they are _claimed_.
+  This has the benefit of "locking in" the behavior desired by the user at the
+  time they demand a run, not whenever the worker picks it up.
+  [#2085](https://github.com/OpenFn/lightning/pull/2085)
+- Made `RUN_GRACE_PERIOD_SECONDS` a configurable ENV instead of 20% of the
+  `WORKER_MAX_RUN_DURATION`
+  [#2085](https://github.com/OpenFn/lightning/pull/2085)
 
 ### Fixed
 
+- Stopped Janitor from calling runs lost if they have special runtime options
 - Dataclip Viewer now responds to page resize and internal page layout
   [#2120](https://github.com/OpenFn/lightning/issues/2120)
 
