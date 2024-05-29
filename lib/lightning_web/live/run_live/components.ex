@@ -1,5 +1,6 @@
 defmodule LightningWeb.RunLive.Components do
   @moduledoc false
+  alias Lightning.Repo
   use LightningWeb, :component
 
   alias Lightning.WorkOrders.SearchParams
@@ -285,6 +286,7 @@ defmodule LightningWeb.RunLive.Components do
       class="bg-gray-100"
     >
       <%= for step <- @step_list do %>
+        <% IO.inspect(step |> Repo.preload(:snapshot)) %>
         <.step_list_item
           can_run_workflow={@can_run_workflow}
           project_id={@project.id}
