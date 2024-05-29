@@ -86,6 +86,7 @@ const Node = ({
   selected,
   targetPosition,
   sourcePosition,
+  data,
 
   // custom stuff
   toolbar,
@@ -110,12 +111,15 @@ const Node = ({
             <Handle
               type="target"
               isConnectable={isConnectable}
-              position={targetPosition}
               style={{
-                visibility: 'hidden',
-                height: 0,
-                top: 0,
+                visibility: data.isValidDropTarget ? 'visible' : 'hidden',
+                height: 20,
+                top: -0,
+                // marginTop: -20,
+                // position: 'absolute',
+                width: 20,
                 left: strokeWidth + anchorx,
+                backgroundColor: 'red',
               }}
             />
           )}
@@ -215,7 +219,7 @@ const Node = ({
             marginTop: '-14px',
           }}
           className="flex flex-col items-center
-                    opacity-0  group-hover:opacity-100
+                    __opacity-0  __group-hover:opacity-100
                     transition duration-150 ease-in-out"
         >
           {toolbar()}

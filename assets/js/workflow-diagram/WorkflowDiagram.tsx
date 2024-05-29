@@ -12,6 +12,7 @@ import layout from './layout';
 import nodeTypes from './nodes';
 import edgeTypes from './edges';
 import usePlaceholders from './usePlaceholders';
+import useConnect from './useConnect';
 import fromWorkflow from './util/from-workflow';
 import throttle from './util/throttle';
 import updateSelectionStyles from './util/update-selection';
@@ -184,6 +185,8 @@ export default React.forwardRef<HTMLElement, WorkflowDiagramProps>(
       }
     }, [flow, ref]);
 
+    const connectHandlers = useConnect(model, setModel);
+
     return (
       <ReactFlowProvider>
         <ReactFlow
@@ -201,6 +204,7 @@ export default React.forwardRef<HTMLElement, WorkflowDiagramProps>(
           deleteKeyCode={null}
           fitView
           fitViewOptions={{ padding: FIT_PADDING }}
+          {...connectHandlers}
         />
       </ReactFlowProvider>
     );
