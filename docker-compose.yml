@@ -8,8 +8,6 @@ x-lightning: &default-app
       - 'NODE_ENV=${NODE_ENV:-development}'
   depends_on:
     - 'postgres'
-  env_file:
-    - '.env'
   restart: '${DOCKER_RESTART_POLICY:-unless-stopped}'
   stop_grace_period: '3s'
   tty: ${TTY:-false}
@@ -40,8 +38,6 @@ services:
         limits:
           cpus: '${DOCKER_WEB_CPUS:-0}'
           memory: '${DOCKER_WEB_MEMORY:-0}'
-    env_file:
-      - '.env'
     environment:
       - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/lightning_dev
     depends_on:
@@ -66,8 +62,6 @@ services:
       web:
         condition: service_healthy
         restart: true
-    env_file:
-      - '.env'
     command:
       ['pnpm', 'start:prod', '-l', 'ws://web:${URL_PORT-4000}/worker']
     restart: '${DOCKER_RESTART_POLICY:-unless-stopped}'
