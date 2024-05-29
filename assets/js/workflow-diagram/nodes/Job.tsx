@@ -17,14 +17,27 @@ const JobNode = ({
     <Handle
       type="source"
       style={{
-        position: 'static',
-        height: 20,
+        position: 'relative',
+        height: 24,
         width: 'auto',
-        background: 'transparent',
-        borderRadius: 0,
+        // background: 'transparent',
+        // borderRadius: 0,
+
+        // These values come from tailwind but have to be set on styles to override reactflow stuff
+        backgroundColor: 'rgb(79 70 229)',
+        borderRadius: '999px',
+
+        // override react flow stuff
+        transform: 'translate(0,0)',
+        left: 'auto',
+        top: 'auto',
+        paddingLeft: '8px',
+        paddingTop: '2px',
       }}
+      className="transition duration-150 ease-in-out pointer-events-auto rounded-full
+      bg-indigo-600 py-1 px-4 text-[0.8125rem] font-semibold leading-5 text-white hover:bg-indigo-500"
     >
-      LINK
+      PATH
     </Handle>,
   ];
 

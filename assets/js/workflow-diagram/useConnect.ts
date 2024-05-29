@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import { useStore, StoreApi } from 'zustand';
 import { styleEdge } from './styles';
 import { Flow } from './types';
@@ -43,6 +43,21 @@ const setDropTargets = (model: Flow.Model, source: string) => {
   return newModel;
 };
 
+const setActiveDropTarget = (model: Flow.Model, target: string) => {
+  const newModel = {
+    nodes: model.nodes.map(n => ({
+      ...n,
+      data: {
+        ...n.data,
+        isActiveDropTarget: n.id === target,
+      },
+    })),
+    edges: model.edges,
+  };
+
+  return newModel;
+};
+
 const resetModel = (model: Flow.Model) => ({
   nodes: model.nodes.map(n => ({
     ...n,
@@ -59,6 +74,8 @@ export default (
   setModel,
   store: StoreApi<WorkflowState>
 ) => {
+  const [dragActive, setDragActive] = useState<string | false>(false);
+
   const addToStore = useStore(store!, state => state.add);
 
   const onConnect = useCallback(args => {
@@ -72,6 +89,7 @@ export default (
 
   const onConnectStart = useCallback(
     (_evt, args) => {
+      setDragActive(args.nodeId);
       setModel(setDropTargets(model, args.nodeId));
     },
     [model]
@@ -79,10 +97,29 @@ export default (
 
   const onConnectEnd = useCallback(
     (evt, args) => {
+      setDragActive(false);
       setModel(resetModel(model));
     },
     [model]
   );
 
-  return { onConnect, onConnectStart, onConnectEnd };
+  const onNodeMouseEnter = (evt, args) => {
+    if (dragActive) {
+      setModel(setActiveDropTarget(model, args.id));
+    }
+  };
+
+  const onNodeMouseLeave = (evt, args) => {
+    if (dragActive) {
+      setModel(setActiveDropTarget(model, ''));
+    }
+  };
+
+  return {
+    onConnect,
+    onConnectStart,
+    onConnectEnd,
+    onNodeMouseEnter,
+    onNodeMouseLeave,
+  };
 };
