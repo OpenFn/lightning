@@ -1,10 +1,12 @@
+import Dagre from '@dagrejs/dagre';
 import { stratify, tree } from 'd3-hierarchy';
 import { timer } from 'd3-timer';
 import { getRectOfNodes, Node, ReactFlowInstance } from 'reactflow';
 
 import { FIT_PADDING, NODE_HEIGHT, NODE_WIDTH } from './constants';
 import { Flow, Positions } from './types';
-import { styleItem } from './styles';
+
+const g = new Dagre.graphlib.Graph().setDefaultEdgeLabel(() => ({}));
 
 const layout = tree<Node>()
   // the node size configures the spacing between the nodes ([width, height])
@@ -20,25 +22,30 @@ const calculateLayout = async (
 ): Promise<Positions> => {
   const { nodes, edges } = model;
 
-  const hierarchy = stratify<Node>()
-    .id(d => d.id)
-    // get the id of each node by searching through the edges
-    // this only works if every node has one connection
-    .parentId(d => edges.find(e => e.target === d.id)?.source)(nodes);
+  g.setGraph({
+    rankdir: 'TB',
+    // nodesep: 400,
+    // edgesep: 200,
+    // ranksep: 200,
+  });
 
-  // run the layout algorithm with the hierarchy data structure
-  const root = layout(hierarchy);
-  const newNodes = root.descendants().map(d => ({
-    ...d.data,
-    position: { x: d.x, y: d.y },
-    // Ensure nodes have a width/height so that we can later do a fit to bounds
-    width: NODE_WIDTH,
-    height: NODE_HEIGHT,
-  }));
+  edges.forEach(edge => g.setEdge(edge.source, edge.target));
+  nodes.forEach(node =>
+    g.setNode(node.id, { ...node, width: 400, height: 200 })
+  );
 
-  const newModel = { nodes: newNodes, edges };
+  Dagre.layout(g);
 
-  const finalPositions = newNodes.reduce((obj, next) => {
+  const newModel = {
+    nodes: nodes.map(node => {
+      const { x, y } = g.node(node.id);
+
+      return { ...node, position: { x, y } /* width: 800, height: 200 */ };
+    }),
+    edges,
+  };
+
+  const finalPositions = newModel.nodes.reduce((obj, next) => {
     obj[next.id] = next.position;
     return obj;
   }, {} as Positions);
