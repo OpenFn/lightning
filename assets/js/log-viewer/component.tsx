@@ -1,15 +1,7 @@
 import { MonacoEditor, Monaco } from '../monaco';
-import React, { useRef, useState } from 'react';
+import React, { useRef } from 'react';
 import { createRoot } from 'react-dom/client';
-
-export type LogLine = {
-  id: string;
-  message: string;
-  source: string;
-  level: string;
-  step_id: string;
-  timestamp: string;
-};
+import { useLogStore, LogLine } from './store';
 
 // The VER logs are multiline
 function splitLogMessages(logs: LogLine[]): LogLine[] {
@@ -51,31 +43,23 @@ function findLogIndicesByStepId(
 export function mount(el: HTMLElement) {
   const componentRoot = createRoot(el);
 
-  render([]);
-
-  function render(logs: LogLine[]) {
-    if (el.dataset.runId === undefined) {
-      throw new Error(
-        'runId is missing from the element dataset. Ensure you have set data-run-id on the element.'
-      );
-    }
-    componentRoot.render(<LogViewer logs={logs} hookEl={el} />);
+  if (el.dataset.runId === undefined) {
+    throw new Error(
+      'runId is missing from the element dataset. Ensure you have set data-run-id on the element.'
+    );
   }
+  componentRoot.render(<LogViewer hookEl={el} />);
 
   function unmount() {
     return componentRoot.unmount();
   }
 
-  return { unmount, render };
+  return { unmount };
 }
 
-const LogViewer = ({
-  logs,
-  hookEl,
-}: {
-  logs: LogLine[];
-  hookEl: HTMLElement;
-}) => {
+const LogViewer = ({ hookEl }: { hookEl: HTMLElement }) => {
+  const logs: LogLine[] = useLogStore(state => state.logLines);
+
   // let runId = hookEl.dataset.runId;
   let stepId = hookEl.dataset.stepId;
   // let logs: LogLine[] = [];

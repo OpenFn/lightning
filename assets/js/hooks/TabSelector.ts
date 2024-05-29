@@ -47,8 +47,10 @@ export default {
     window.addEventListener('hashchange', this._onHashChange);
 
     const pathSegments = window.location.pathname.split('/');
-    const isJobInspectorPage = pathSegments.length > 3 && 
-      pathSegments.at(1) === 'projects' && pathSegments.at(3) === 'w';
+    const isJobInspectorPage =
+      pathSegments.length > 3 &&
+      pathSegments.at(1) === 'projects' &&
+      pathSegments.at(3) === 'w';
 
     // The observer is still needed for the job inspector tabs
     if (isJobInspectorPage) {
@@ -103,9 +105,9 @@ export default {
   },
   applyStyles(activeTab: HTMLElement | null, inactiveTabs: HTMLElement[]) {
     inactiveTabs.forEach(elem => {
-      console.log(elem.dataset);
+      // console.log(elem.dataset);
       if (elem.hasAttribute('data-disabled')) {
-        console.log(elem);
+        // console.log(elem);
 
         elem.classList.remove(...this.activeClasses);
         elem.classList.remove(...this.inactiveClasses);
