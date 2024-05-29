@@ -24,6 +24,8 @@ defmodule LightningWeb.RunChannelTest do
       end
     )
 
+    Mox.stub(Lightning.MockConfig, :default_max_run_duration, fn -> 1 end)
+
     :ok
   end
 
@@ -130,8 +132,6 @@ defmodule LightningWeb.RunChannelTest do
       workflow: workflow,
       credential: credential
     } do
-      expect(Lightning.MockConfig, :default_max_run_duration, 2, fn -> 1 end)
-
       id = run.id
       ref = push(socket, "fetch:plan", %{})
 
@@ -179,7 +179,7 @@ defmodule LightningWeb.RunChannelTest do
                "dataclip_id" => run.dataclip_id,
                "options" => %{
                  output_dataclips: true,
-                 run_timeout_ms: 60_000
+                 run_timeout_ms: 1000
                }
              }
     end
@@ -187,8 +187,6 @@ defmodule LightningWeb.RunChannelTest do
     test "fetch:plan for project with erase_all retention setting", %{
       credential: credential
     } do
-      expect(Lightning.MockConfig, :default_max_run_duration, 2, fn -> 1 end)
-
       project = insert(:project, retention_policy: :erase_all)
 
       workflow_context =
@@ -524,8 +522,6 @@ defmodule LightningWeb.RunChannelTest do
           %{},
           Lightning.Config.worker_token_signer()
         )
-
-      expect(Lightning.MockConfig, :default_max_run_duration, fn -> 1 end)
 
       run_options =
         Lightning.Extensions.MockUsageLimiter.get_run_options(%Context{
