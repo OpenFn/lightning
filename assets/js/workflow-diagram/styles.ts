@@ -75,6 +75,9 @@ export const styleNode = (node: Flow.Node) => {
 };
 
 export const styleEdge = (edge: Flow.Edge) => {
+  if (edge.id === 'NEW') {
+    console.log('style edge', edge);
+  }
   edge.style = {
     strokeWidth: '2',
     stroke: edge.selected ? EDGE_COLOR_SELECTED : EDGE_COLOR,
