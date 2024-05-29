@@ -12,11 +12,6 @@ defmodule LightningWeb.RunChannelTest do
   import Lightning.BypassHelpers
 
   setup do
-    Mox.stub_with(
-      Lightning.Extensions.MockUsageLimiter,
-      Lightning.Extensions.UsageLimiter
-    )
-
     Mox.stub(Lightning.Extensions.MockUsageLimiter, :check_limits, fn _context ->
       :ok
     end)
@@ -28,13 +23,6 @@ defmodule LightningWeb.RunChannelTest do
         :ok
       end
     )
-
-    # TODO - This seems unnecessary.
-    # Mox.stub(
-    #   Lightning.Extensions.MockUsageLimiter,
-    #   :get_run_options,
-    #   &Lightning.Extensions.UsageLimiter.get_run_options/1
-    # )
 
     :ok
   end
@@ -521,7 +509,12 @@ defmodule LightningWeb.RunChannelTest do
         insert(:run,
           work_order: work_order,
           starting_trigger: trigger,
-          dataclip: dataclip
+          dataclip: dataclip,
+          options:
+            Lightning.Extensions.MockUsageLimiter.get_run_options(%Context{
+              project_id: project.id
+            })
+            |> Enum.into(%{})
         )
 
       Lightning.Stub.reset_time()
@@ -720,16 +713,11 @@ defmodule LightningWeb.RunChannelTest do
 
       # dataclip is saved but wiped
       assert project.retention_policy == :erase_all
-
-      IO.inspect(run.options, label: "so why is run options...")
+      assert run.work_order.workflow.project_id == project.id
 
       run_from_socket = socket.assigns.run
       options = run_from_socket.options
-      IO.inspect(options, label: "and why is run from socket options...")
 
-      # TODO - I see that the UsageLimiter is getting called and setting options
-      # properly with `save_dataclips: false, run_timeout_ms: 1000`...
-      # so why is this assertion false?
       assert %Lightning.Runs.RunOptions{save_dataclips: false} = options
 
       [job] = workflow.jobs
@@ -792,7 +780,12 @@ defmodule LightningWeb.RunChannelTest do
         insert(:run,
           work_order: work_order,
           starting_trigger: trigger,
-          dataclip: dataclip
+          dataclip: dataclip,
+          options:
+            Lightning.Extensions.MockUsageLimiter.get_run_options(%Context{
+              project_id: project.id
+            })
+            |> Enum.into(%{})
         )
 
       Lightning.Stub.reset_time()
@@ -938,7 +931,12 @@ defmodule LightningWeb.RunChannelTest do
           work_order: work_order,
           starting_trigger: trigger,
           dataclip: dataclip,
-          state: run_state
+          state: run_state,
+          options:
+            Lightning.Extensions.MockUsageLimiter.get_run_options(%Context{
+              project_id: project.id
+            })
+            |> Enum.into(%{})
         )
 
       Lightning.Stub.reset_time()

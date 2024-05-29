@@ -12,12 +12,9 @@ defmodule Lightning.Extensions.UsageLimiter do
 
   @impl true
   def get_run_options(context) do
-    IO.inspect(context, label: "I get called!")
-
     [
       save_dataclips: Lightning.Projects.save_dataclips?(context.project_id),
       run_timeout_ms: Lightning.Config.default_max_run_duration() * 1000
     ]
-    |> IO.inspect(label: "And I return the right things!")
   end
 end

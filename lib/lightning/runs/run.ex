@@ -10,7 +10,7 @@ defmodule Lightning.Run do
   import Lightning.Validators
 
   alias Lightning.Accounts.User
-  alias Lightning.Extensions.UsageLimiter
+  alias Lightning.Services.UsageLimiter
   alias Lightning.Extensions.UsageLimiting.Context
   alias Lightning.Invocation.LogLine
   alias Lightning.Invocation.Step
