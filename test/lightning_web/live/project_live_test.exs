@@ -954,7 +954,7 @@ defmodule LightningWeb.ProjectLiveTest do
             Routes.project_project_settings_path(conn, :index, project.id)
           )
 
-        assert has_element?(view, "#tab-item-security")
+        assert has_element?(view, "#security-tab")
         assert html =~ "Multi-Factor Authentication"
       end)
     end
