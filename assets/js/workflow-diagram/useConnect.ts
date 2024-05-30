@@ -162,7 +162,6 @@ export default (
     ({ source, target }: { target: string }) => {
       // this is accessing a stale model :( why?
       // const targetNode = model.nodes.find(e => e.id === target);
-      // console.log({ targetNode });
       // return targetNode?.data.isValidDropTarget;
 
       // it'll work suboptimally if we duplicate the validation test

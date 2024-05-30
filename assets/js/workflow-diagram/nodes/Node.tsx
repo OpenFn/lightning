@@ -110,14 +110,6 @@ const Node = ({
             <Handle
               type="target"
               isConnectable={isConnectable}
-              // // why do these callbacks not get called?
-              // onConnect={() => {
-              //   console.log(' ON CONNECT');
-              // }}
-              // isValidConnection={() => {
-              //   console.log('********');
-              //   return false;
-              // }}
               // handles have a built-in way of updating styles when connecting - is this better?
               // See https://reactflow.dev/examples/interaction/validation
               style={{
