@@ -1,5 +1,6 @@
 import { useCallback, useState } from 'react';
 import { useStore, StoreApi } from 'zustand';
+import { getIncomers } from 'reactflow';
 import { styleEdge } from './styles';
 import { Flow } from './types';
 import { WorkflowState } from '../workflow-editor/store';
@@ -26,15 +27,44 @@ const generateEdgeDiff = (source: string, target: string) => {
   return updatedModel;
 };
 
-const setDropTargets = (model: Flow.Model, source: string) => {
+// Returns true if nodeInQuestion is a descendant of the root
+// TODO memoise this
+const isUpstream = (
+  model: Flow.Model,
+  parent: string,
+  nodeInQuestion: string
+) => {
+  // walk down the graph from parent, return true if we ever hit the node in question
+  const edges = model.edges.filter(e => e.source === parent);
+  for (const edge of edges) {
+    if (
+      edge.target === nodeInQuestion ||
+      isUpstream(model, edge.target, nodeInQuestion)
+    ) {
+      return true;
+    }
+  }
+  return false;
+};
+const isChild = (model: Flow.Model, sourceNode: string, targetNode: string) => {
+  const edges = model.edges.filter(e => e.source === sourceNode);
+
+  return edges.find(e => e.target === targetNode);
+};
+
+const setValidDropTargets = (model: Flow.Model, source: string) => {
   const newModel = {
     nodes: model.nodes.map(n => ({
       ...n,
       data: {
         ...n.data,
-        // TODO: don't allow drops on upstream nodes (circular dependenccies)
-        // TODO don't allow targets that are already connected
-        isValidDropTarget: n.id !== source && n.type === 'job',
+        isValidDropTarget:
+          n.id !== source &&
+          n.type === 'job' &&
+          // Don't allow linking to direct ancestors, as it'll cause a loop
+          !isUpstream(model, n.id, source) &&
+          // Don't allow an edge to be created if it exists
+          !isChild(model, source, n.id),
       },
     })),
     edges: model.edges,
@@ -90,7 +120,7 @@ export default (
   const onConnectStart = useCallback(
     (_evt, args) => {
       setDragActive(args.nodeId);
-      setModel(setDropTargets(model, args.nodeId));
+      setModel(setValidDropTargets(model, args.nodeId));
     },
     [model]
   );
