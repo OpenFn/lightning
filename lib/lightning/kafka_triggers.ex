@@ -135,10 +135,6 @@ defmodule Lightning.KafkaTriggers do
     end)
   end
 
-  def send_after(pid, message, delay) do
-    Process.send_after(pid, message, delay)
-  end
-
   def process_candidate_for(candidate_set) do
     Repo.transaction(fn ->
       candidate_set
