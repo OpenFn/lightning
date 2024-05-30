@@ -16,7 +16,7 @@ defmodule Lightning.Runs.Query do
   """
   @spec lost :: Ecto.Queryable.t()
   def lost do
-    now = DateTime.utc_now()
+    now = Lightning.current_time()
 
     grace_period_ms = Lightning.Config.grace_period() * 1000
 

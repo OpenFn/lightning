@@ -18,12 +18,11 @@ defmodule Lightning.Runs.QueryTest do
           dataclip: dataclip
         )
 
-      now = DateTime.utc_now()
+      now = Lightning.current_time()
 
-      default_max_run_duration =
-        Application.get_env(:lightning, :max_run_duration_seconds)
-
+      default_max_run_duration = Lightning.Config.default_max_run_duration()
       grace_period = Lightning.Config.grace_period()
+
       default_max = grace_period + default_max_run_duration
 
       run_to_be_marked_lost =
@@ -44,7 +43,7 @@ defmodule Lightning.Runs.QueryTest do
           claimed_at: DateTime.add(now, -(default_max + 2))
         )
 
-      _another_run =
+      another_run =
         insert(:run,
           work_order: work_order,
           starting_trigger: trigger,
@@ -53,7 +52,7 @@ defmodule Lightning.Runs.QueryTest do
           claimed_at: DateTime.add(now, 0)
         )
 
-      _an_old_run_with_a_long_timeout =
+      an_old_run_with_a_long_timeout =
         insert(:run,
           work_order: work_order,
           starting_trigger: trigger,
@@ -72,6 +71,23 @@ defmodule Lightning.Runs.QueryTest do
         |> Enum.map(fn run -> run.id end)
 
       assert lost_runs == [run_to_be_marked_lost.id]
+
+      Lightning.Stub.freeze_time(DateTime.add(now, 1, :day))
+
+      lost_runs =
+        Query.lost()
+        |> Repo.all()
+        |> Enum.map(fn run -> run.id end)
+        |> MapSet.new()
+
+      assert MapSet.equal?(
+               lost_runs,
+               MapSet.new([
+                 run_to_be_marked_lost.id,
+                 another_run.id,
+                 an_old_run_with_a_long_timeout.id
+               ])
+             )
     end
   end
 end
