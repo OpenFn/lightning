@@ -52,29 +52,42 @@ const isChild = (model: Flow.Model, sourceNode: string, targetNode: string) => {
   return edges.find(e => e.target === targetNode);
 };
 
-const isValidDroptarget = (
+const getDropTargetError = (
   model: Flow.Model,
   source: string,
   target: string
 ) => {
-  return (
-    target !== source &&
+  if (target === source) {
+    return true;
+  }
+
+  // TODO cannot link to trigger
+
+  if (isUpstream(model, target, source)) {
     // Don't allow linking to direct ancestors, as it'll cause a loop
-    !isUpstream(model, target, source) &&
+    return 'Cannot create circular workflow';
+  }
+
+  if (isChild(model, source, target)) {
     // Don't allow an edge to be created if it exists
-    !isChild(model, source, target)
-  );
+    return 'Steps already connected';
+  }
 };
 
 const setValidDropTargets = (model: Flow.Model, source: string) => {
   const newModel = {
-    nodes: model.nodes.map(n => ({
-      ...n,
-      data: {
-        ...n.data,
-        isValidDropTarget: isValidDroptarget(model, source, n.id),
-      },
-    })),
+    nodes: model.nodes.map(n => {
+      const err = getDropTargetError(model, source, n.id);
+      console.log(err);
+      return {
+        ...n,
+        data: {
+          ...n.data,
+          isValidDropTarget: !err,
+          dropTargetError: err,
+        },
+      };
+    }),
     edges: model.edges,
   };
   return newModel;
@@ -166,7 +179,8 @@ export default (
 
       // it'll work suboptimally if we duplicate the validation test
       // This fires a lot so its super annoying
-      return isValidDroptarget(model, source, target);
+      const err = getDropTargetError(model, source, target);
+      return !err;
     },
     [model]
   );

@@ -103,6 +103,9 @@ const Node = ({
     selected,
     hasErrors(errors)
   );
+
+  const nodeOpacity = data.isActiveDropTarget && data.dropTargetError ? 0.4 : 1;
+
   return (
     <div className="group">
       <div className="flex flex-row cursor-pointer">
@@ -150,7 +153,13 @@ const Node = ({
               />
             </>
           )}
-          <svg style={{ maxWidth: '110px', maxHeight: '110px' }}>
+          <svg
+            style={{
+              maxWidth: '110px',
+              maxHeight: '110px',
+              opacity: nodeOpacity,
+            }}
+          >
             <Shape
               shape={shape}
               width={width}
@@ -159,6 +168,26 @@ const Node = ({
               styles={style}
             />
           </svg>
+          {/* Hover an error message if trying to drop onto an illegal node */}
+          {typeof data.dropTargetError === 'string' &&
+            data.isActiveDropTarget && (
+              <div
+                style={{
+                  position: 'absolute',
+                  top: '50%',
+                  left: '0',
+                  transform: 'translate(-50%, -50%)',
+                  textAlign: 'center',
+                  border: 'solid 2px red',
+                  borderRadius: 8,
+                  zIndex: '1',
+                  background: 'rgba(255,255,255,0.8',
+                  fontSize: 20,
+                }}
+              >
+                {data.dropTargetError}
+              </div>
+            )}
           {primaryIcon && (
             <div
               style={{
@@ -169,6 +198,7 @@ const Node = ({
                 height: `${0.65 * height}px`,
                 width: `${0.65 * width}px`,
                 ...nodeLabelStyles(selected),
+                opacity: nodeOpacity,
               }}
             >
               {typeof primaryIcon === 'string' ? (
