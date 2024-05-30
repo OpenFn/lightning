@@ -4,8 +4,8 @@ defmodule LightningWeb.WorkflowLive.JobView do
   import LightningWeb.WorkflowLive.Components
 
   alias Lightning.Credentials
-  alias LightningWeb.WorkflowLive.EditorPane
   alias LightningWeb.Components.Tabbed
+  alias LightningWeb.WorkflowLive.EditorPane
 
   attr :id, :string, required: true
   slot :top

@@ -1,4 +1,5 @@
 defmodule LightningWeb.Components.Tabbed do
+  @moduledoc false
   use LightningWeb, :component
 
   attr :id, :string, required: true

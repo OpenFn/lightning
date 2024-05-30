@@ -9,8 +9,9 @@ defmodule LightningWeb.RunLive.RunViewerLive do
   alias Lightning.Policies.ProjectUsers
   alias Lightning.Projects
   alias Lightning.Projects.Project
-  alias LightningWeb.Components.Viewers
   alias LightningWeb.Components.Tabbed
+  alias LightningWeb.Components.Viewers
+
   alias Phoenix.LiveView.AsyncResult
 
   require Lightning.Run
