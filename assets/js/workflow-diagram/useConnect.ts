@@ -8,7 +8,7 @@ import toWorkflow from './util/to-workflow';
 
 const generateEdgeDiff = (source: string, target: string) => {
   const newEdge = styleEdge({
-    id: 'NEW' ?? crypto.randomUUID(),
+    id: crypto.randomUUID(),
     type: 'step',
     source,
     target,
@@ -52,24 +52,31 @@ const isChild = (model: Flow.Model, sourceNode: string, targetNode: string) => {
   return edges.find(e => e.target === targetNode);
 };
 
+const isValidDroptarget = (
+  model: Flow.Model,
+  source: string,
+  target: string
+) => {
+  return (
+    target !== source &&
+    // Don't allow linking to direct ancestors, as it'll cause a loop
+    !isUpstream(model, target, source) &&
+    // Don't allow an edge to be created if it exists
+    !isChild(model, source, target)
+  );
+};
+
 const setValidDropTargets = (model: Flow.Model, source: string) => {
   const newModel = {
     nodes: model.nodes.map(n => ({
       ...n,
       data: {
         ...n.data,
-        isValidDropTarget:
-          n.id !== source &&
-          n.type === 'job' &&
-          // Don't allow linking to direct ancestors, as it'll cause a loop
-          !isUpstream(model, n.id, source) &&
-          // Don't allow an edge to be created if it exists
-          !isChild(model, source, n.id),
+        isValidDropTarget: isValidDroptarget(model, source, n.id),
       },
     })),
     edges: model.edges,
   };
-
   return newModel;
 };
 
@@ -133,17 +140,37 @@ export default (
     [model]
   );
 
-  const onNodeMouseEnter = (evt, args) => {
-    if (dragActive) {
-      setModel(setActiveDropTarget(model, args.id));
-    }
-  };
+  const onNodeMouseEnter = useCallback(
+    (evt, args) => {
+      if (dragActive) {
+        setModel(setActiveDropTarget(model, args.id));
+      }
+    },
+    [model]
+  );
 
-  const onNodeMouseLeave = (evt, args) => {
-    if (dragActive) {
-      setModel(setActiveDropTarget(model, ''));
-    }
-  };
+  const onNodeMouseLeave = useCallback(
+    (evt, args) => {
+      if (dragActive) {
+        setModel(setActiveDropTarget(model, ''));
+      }
+    },
+    [model]
+  );
+
+  const isValidConnection = useCallback(
+    ({ source, target }: { target: string }) => {
+      // this is accessing a stale model :( why?
+      // const targetNode = model.nodes.find(e => e.id === target);
+      // console.log({ targetNode });
+      // return targetNode?.data.isValidDropTarget;
+
+      // it'll work suboptimally if we duplicate the validation test
+      // This fires a lot so its super annoying
+      return isValidDroptarget(model, source, target);
+    },
+    [model]
+  );
 
   return {
     onConnect,
@@ -151,5 +178,6 @@ export default (
     onConnectEnd,
     onNodeMouseEnter,
     onNodeMouseLeave,
+    isValidConnection,
   };
 };

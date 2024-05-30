@@ -102,7 +102,6 @@ const Node = ({
     selected,
     hasErrors(errors)
   );
-
   return (
     <div className="group">
       <div className="flex flex-row cursor-pointer">
@@ -111,6 +110,16 @@ const Node = ({
             <Handle
               type="target"
               isConnectable={isConnectable}
+              // // why do these callbacks not get called?
+              // onConnect={() => {
+              //   console.log(' ON CONNECT');
+              // }}
+              // isValidConnection={() => {
+              //   console.log('********');
+              //   return false;
+              // }}
+              // handles have a built-in way of updating styles when connecting - is this better?
+              // See https://reactflow.dev/examples/interaction/validation
               style={{
                 visibility: data.isValidDropTarget ? 'visible' : 'hidden',
 
