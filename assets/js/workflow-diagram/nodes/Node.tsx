@@ -114,25 +114,17 @@ const Node = ({
               style={{
                 visibility: data.isValidDropTarget ? 'visible' : 'hidden',
 
-                // height: 20,
-                // top: -0,
-                // marginTop: -20,
-                // position: 'absolute',
-                // width: 20,
-                // left: strokeWidth + anchorx,
-                // backgroundColor: 'red',
-
-                // abuse the handle to make the whole node the drop target
+                // abuse the handle style to make the whole node the drop target
                 left: '50px',
-                top: '-15px',
+                top: '-20px',
                 width: '150px',
                 height: '150px',
                 backgroundColor: data.isActiveDropTarget
-                  ? 'rgba(255,0,0,0.2)'
+                  ? 'rgba(79, 70, 229, 0.2)'
                   : 'transparent',
-                borderColor: 'red',
-                borderWidth: '4px',
-                borderStyle: data.isActiveDropTarget ? 'solid' : 'dotted',
+                borderColor: 'rgb(79, 70, 229)',
+                borderWidth: '6px',
+                borderStyle: data.isActiveDropTarget ? 'solid' : 'dashed',
               }}
             />
           )}
@@ -231,9 +223,12 @@ const Node = ({
             marginLeft: '2px',
             marginTop: '-14px',
           }}
-          className="flex flex-row items-center
-                    __opacity-0  __group-hover:opacity-100
-                    transition duration-150 ease-in-out"
+          className={`flex flex-row items-center
+                    opacity-0  ${
+                      (!data.isActiveDropTarget && 'group-hover:opacity-100') ??
+                      ''
+                    }
+                    transition duration-150 ease-in-out`}
         >
           {toolbar()}
         </div>
