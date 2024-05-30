@@ -11,7 +11,6 @@ import {
   InformationCircleIcon,
   XMarkIcon,
 } from '@heroicons/react/24/outline';
-import { NODE_HEIGHT, NODE_WIDTH } from '../constants';
 
 type NodeData = any;
 
@@ -135,8 +134,8 @@ const PlaceholderJobNode = ({ id, selected }: NodeProps<NodeData>) => {
         selected ? 'border-opacity-70' : 'border-opacity-30',
       ].join(' ')}
       style={{
-        width: `${NODE_WIDTH}px`,
-        height: `${NODE_HEIGHT}px`,
+        width: '180px',
+        height: '40px',
 
         // TODO for now, just curdely align this placeholder so that it sits in the right position
         // We'll later change the placeholder to look more consistent

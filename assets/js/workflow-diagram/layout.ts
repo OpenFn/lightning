@@ -1,18 +1,11 @@
 import Dagre from '@dagrejs/dagre';
-import { stratify, tree } from 'd3-hierarchy';
 import { timer } from 'd3-timer';
-import { getRectOfNodes, Node, ReactFlowInstance } from 'reactflow';
+import { getRectOfNodes, ReactFlowInstance } from 'reactflow';
 
-import { FIT_PADDING, NODE_HEIGHT, NODE_WIDTH } from './constants';
+import { FIT_PADDING } from './constants';
 import { Flow, Positions } from './types';
 
 const g = new Dagre.graphlib.Graph().setDefaultEdgeLabel(() => ({}));
-
-const layout = tree<Node>()
-  // the node size configures the spacing between the nodes ([width, height])
-  .nodeSize([200, 200])
-  // this is needed for creating equal space between all nodes
-  .separation(() => 2);
 
 const calculateLayout = async (
   model: Flow.Model,
@@ -26,12 +19,12 @@ const calculateLayout = async (
     rankdir: 'TB',
     // nodesep: 400,
     // edgesep: 200,
-    // ranksep: 200,
+    // ranksep: 400,
   });
 
   edges.forEach(edge => g.setEdge(edge.source, edge.target));
   nodes.forEach(node =>
-    g.setNode(node.id, { ...node, width: 400, height: 200 })
+    g.setNode(node.id, { ...node, width: 350, height: 140 })
   );
 
   Dagre.layout(g);
