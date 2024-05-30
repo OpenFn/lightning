@@ -65,6 +65,16 @@ const LogViewer = ({
   const onMount = (editor: any) => {
     editorRef.current = editor;
     maybeHighlightStep();
+
+    // Define a language for our logs
+    monacoRef.current.languages.register({ id: 'openFnLogs' });
+
+    // Define a simple tokenizer for the language
+    monacoRef.current.languages.setMonarchTokensProvider('openFnLogs', {
+      tokenizer: {
+        root: [[/^.{1,4}/, 'logSource']],
+      },
+    });
   };
 
   function maybeHighlightStep() {
@@ -93,9 +103,10 @@ const LogViewer = ({
 
   return (
     <MonacoEditor
-      defaultLanguage="plaintext"
+      defaultLanguage="openFnLogs"
+      language="openFnLogs"
       theme="default"
-      value={logs.map(log => `(${log.source}) ${log.message}`).join('\n')}
+      value={logs.map(log => `${log.source} ${log.message}`).join('\n')}
       loading={<div>Loading...</div>}
       beforeMount={beforeMount}
       onMount={onMount}
@@ -105,6 +116,7 @@ const LogViewer = ({
         fontFamily: 'Fira Code VF',
         fontSize: 14,
         fontLigatures: true,
+        folding: false,
         minimap: {
           enabled: false,
         },

@@ -6,7 +6,7 @@ export function setTheme(monaco: Monaco) {
   monaco.editor.defineTheme('default', {
     base: 'vs-dark',
     inherit: true,
-    rules: [],
+    rules: [{ token: 'logSource', foreground: '#868686', fontStyle: 'italic' }],
     colors: {
       'editor.foreground': '#E2E8F0',
       'editor.background': '#334155', // slate-700
