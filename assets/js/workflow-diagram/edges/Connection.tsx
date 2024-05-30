@@ -4,7 +4,6 @@ import { EDGE_COLOR_SELECTED } from '../styles';
 // TODO this is taken from https://reactflow.dev/examples/edges/custom-connectionline
 // but surely we can just use a normal edge?
 export default props => {
-  console.log(props);
   const { fromX, fromY, toX, toY } = props;
 
   return (

@@ -5,8 +5,6 @@ import { getRectOfNodes, ReactFlowInstance } from 'reactflow';
 import { FIT_PADDING } from './constants';
 import { Flow, Positions } from './types';
 
-const g = new Dagre.graphlib.Graph().setDefaultEdgeLabel(() => ({}));
-
 const calculateLayout = async (
   model: Flow.Model,
   update: (newModel: Flow.Model) => any,
@@ -15,6 +13,7 @@ const calculateLayout = async (
 ): Promise<Positions> => {
   const { nodes, edges } = model;
 
+  const g = new Dagre.graphlib.Graph().setDefaultEdgeLabel(() => ({}));
   g.setGraph({
     rankdir: 'TB',
     // nodesep: 400,
@@ -31,9 +30,9 @@ const calculateLayout = async (
 
   const newModel = {
     nodes: nodes.map(node => {
-      const { x, y } = g.node(node.id);
+      const { x, y, width, height } = g.node(node.id);
 
-      return { ...node, position: { x, y } /* width: 800, height: 200 */ };
+      return { ...node, position: { x, y }, width, height };
     }),
     edges,
   };
