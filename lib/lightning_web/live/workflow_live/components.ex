@@ -439,6 +439,17 @@ defmodule LightningWeb.WorkflowLive.Components do
           </h2>
         </div>
       <% end %>
+      <div class="grow flex justify-end">
+        <label>
+          <.button
+            id="delete-edge-button"
+            class="focus:ring-red-500 bg-red-600 hover:bg-red-700 disabled:bg-red-300"
+            data-confirm="Are you sure you want to delete this path?"
+          >
+            Delete Path
+          </.button>
+        </label>
+      </div>
     </div>
     """
   end
