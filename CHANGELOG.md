@@ -21,16 +21,29 @@ and this project adheres to
 
 - Change Default Text For New Job Nodes
   [#2014](https://github.com/OpenFn/lightning/pull/2014)
+
+### Fixed
+
+- Dataclip Viewer now responds to page resize and internal page layout
+  [#2120](https://github.com/OpenFn/lightning/issues/2120)
+
+## [v2.5.3] - 2024-05-27
+
+### Changed
+
 - Stop users from creating deprecated Salesforce and GoogleSheets credentials.
   [#2142](https://github.com/OpenFn/lightning/issues/2142)
+- Delegate menu customization and create menu components for reuse.
+  [#1988](https://github.com/OpenFn/lightning/issues/1988)
 
 ### Fixed
 
 - Disable Credential Save Button Until All Form Fields Are Validated
   [#2099](https://github.com/OpenFn/lightning/issues/2099)
-
 - Fix Credential Modal Closure Error When Workflow Is Unsaved
   [#2101](https://github.com/OpenFn/lightning/pull/2101)
+- Fix error when socket reconnects and user is viewing a run via the inspector
+  [#2148](https://github.com/OpenFn/lightning/issues/2148)
 
 ## [v2.5.2] - 2024-05-23
 

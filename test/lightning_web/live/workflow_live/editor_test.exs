@@ -140,6 +140,10 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
              )
              |> has_element?()
 
+      # Check that the liveview can handle an empty submit (dataclip dropdown is disabled)
+      # which happens on socket reconnects.
+      view |> element(~s{#manual-job-#{job.id} form}) |> render_change()
+
       assert view |> render_click("manual_run_submit", %{"manual" => %{}}) =~
                "You are not authorized to perform this action."
     end

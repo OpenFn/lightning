@@ -910,10 +910,14 @@ defmodule LightningWeb.WorkflowLive.Edit do
     {:noreply, socket |> assign_manual_run_form(changeset)}
   end
 
+  # Handle empty manual run form submission, this happens when the dataclip
+  # dropdown is disabled and the socket reconnects.
+  def handle_event("manual_run_change", _params, socket) do
+    {:noreply, socket}
+  end
+
   # The retry_from_run event is for creating a new run for an existing work
   # order, just like clicking "rerun from here" on the history page.
-
-  @impl true
   def handle_event(
         "rerun",
         %{"run_id" => run_id, "step_id" => step_id},

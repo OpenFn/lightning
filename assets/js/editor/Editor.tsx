@@ -1,14 +1,13 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
-import MonacoEditor, { Monaco } from '@monaco-editor/react';
 import type { EditorProps as MonacoProps } from '@monaco-editor/react/lib/types';
 
+import { MonacoEditor, Monaco } from '../monaco';
 import { fetchDTSListing, fetchFile } from '@openfn/describe-package';
 import createCompletionProvider from './magic-completion';
 import { initiateSaveAndRun } from '../common';
 
 // static imports for core lib
 import dts_es5 from './lib/es5.min.dts';
-import { setTheme } from '../monaco';
 
 export const DEFAULT_TEXT = `// Use pure JavaScript to add operations to your
 // step. Click Docs to see list of operations or visit
@@ -164,11 +163,6 @@ export default function Editor({
 
   const monacoRef = useRef<any>(null);
 
-  const beforeMount = (monaco: Monaco) => {
-    monacoRef.current = monaco;
-    setTheme(monaco);
-  };
-
   const handleSourceChange = useCallback(
     (newSource: string | undefined) => {
       if (onChange && newSource) {
@@ -178,99 +172,77 @@ export default function Editor({
     [onChange]
   );
 
-  const handleEditorDidMount = useCallback(
-    (editor: any, _monaco: Monaco) => {
-      let monaco = monacoRef.current;
+  const handleEditorDidMount = useCallback((editor: any, monaco: Monaco) => {
+    monacoRef.current = monaco;
 
-      editor.addCommand(
-        monaco.KeyCode.Escape,
-        () => {
-          document.activeElement.blur();
-        },
-        '!suggestWidgetVisible'
-      );
+    editor.addCommand(
+      monaco.KeyCode.Escape,
+      () => {
+        document.activeElement.blur();
+      },
+      '!suggestWidgetVisible'
+    );
 
-      editor.addCommand(
-        // https://microsoft.github.io/monaco-editor/typedoc/classes/KeyMod.html
-        // https://microsoft.github.io/monaco-editor/typedoc/enums/KeyCode.html
-        monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter,
-        function () {
-          const actionButton = document.getElementById('save-and-run')!;
-          initiateSaveAndRun(actionButton);
-        }
-      );
+    editor.addCommand(
+      // https://microsoft.github.io/monaco-editor/typedoc/classes/KeyMod.html
+      // https://microsoft.github.io/monaco-editor/typedoc/enums/KeyCode.html
+      monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter,
+      function () {
+        const actionButton = document.getElementById('save-and-run')!;
+        initiateSaveAndRun(actionButton);
+      }
+    );
 
-      editor.addCommand(
-        // https://microsoft.github.io/monaco-editor/typedoc/classes/KeyMod.html
-        // https://microsoft.github.io/monaco-editor/typedoc/enums/KeyCode.html
-        monaco.KeyMod.CtrlCmd | monaco.KeyMod.Shift | monaco.KeyCode.Enter,
-        function () {
-          const actionButton = document.getElementById(
-            'create-new-work-order'
-          )!;
-          initiateSaveAndRun(actionButton);
-        }
-      );
+    editor.addCommand(
+      // https://microsoft.github.io/monaco-editor/typedoc/classes/KeyMod.html
+      // https://microsoft.github.io/monaco-editor/typedoc/enums/KeyCode.html
+      monaco.KeyMod.CtrlCmd | monaco.KeyMod.Shift | monaco.KeyCode.Enter,
+      function () {
+        const actionButton = document.getElementById('create-new-work-order')!;
+        initiateSaveAndRun(actionButton);
+      }
+    );
 
-      monaco.languages.typescript.javascriptDefaults.setCompilerOptions({
-        // This seems to be needed to track the modules in d.ts files
-        allowNonTsExtensions: true,
+    monaco.languages.typescript.javascriptDefaults.setCompilerOptions({
+      // This seems to be needed to track the modules in d.ts files
+      allowNonTsExtensions: true,
 
-        // Disables core js libs in code completion
-        noLib: true,
-      });
+      // Disables core js libs in code completion
+      noLib: true,
+    });
 
-      listeners.current.insertSnippet = (e: Event) => {
-        // Snippets are always added to the end of the job code
-        const model = editor.getModel();
-        const lastLine = model.getLineCount();
-        const eol = model.getLineLength(lastLine);
-        const op = {
-          range: new monaco.Range(lastLine, eol, lastLine, eol),
-          // @ts-ignore event typings
-          text: `\n${e.snippet}`,
-          forceMoveMarkers: true,
-        };
-
-        // Append the snippet
-        // https://microsoft.github.io/monaco-editor/api/interfaces/monaco.editor.ICodeEditor.html#executeEdits
-        editor.executeEdits('snippets', [op]);
-
-        // Ensure the snippet is fully visible
-        const newLastLine = model.getLineCount();
-        editor.revealLines(lastLine + 1, newLastLine, 0); // 0 = smooth scroll
-
-        // Set the selection to the start of the snippet
-        editor.setSelection(new monaco.Range(lastLine + 1, 0, lastLine + 1, 0));
-
-        // ensure the editor has focus
-        editor.focus();
+    listeners.current.insertSnippet = (e: Event) => {
+      // Snippets are always added to the end of the job code
+      const model = editor.getModel();
+      const lastLine = model.getLineCount();
+      const eol = model.getLineLength(lastLine);
+      const op = {
+        range: new monaco.Range(lastLine, eol, lastLine, eol),
+        // @ts-ignore event typings
+        text: `\n${e.snippet}`,
+        forceMoveMarkers: true,
       };
 
-      // Force the editor to resize
-      listeners.current.updateLayout = (_e: Event) => {
-        editor.layout({ width: 0, height: 0 });
-        setTimeout(() => {
-          try {
-            editor.layout();
-          } catch (e) {
-            editor.layout();
-          }
-        }, 1);
-      };
+      // Append the snippet
+      // https://microsoft.github.io/monaco-editor/api/interfaces/monaco.editor.ICodeEditor.html#executeEdits
+      editor.executeEdits('snippets', [op]);
 
-      document.addEventListener(
-        'insert-snippet',
-        listeners.current.insertSnippet
-      );
-      document.addEventListener(
-        'update-layout',
-        listeners.current.updateLayout
-      );
-      window.addEventListener('resize', listeners.current.updateLayout);
-    },
-    []
-  );
+      // Ensure the snippet is fully visible
+      const newLastLine = model.getLineCount();
+      editor.revealLines(lastLine + 1, newLastLine, 0); // 0 = smooth scroll
+
+      // Set the selection to the start of the snippet
+      editor.setSelection(new monaco.Range(lastLine + 1, 0, lastLine + 1, 0));
+
+      // ensure the editor has focus
+      editor.focus();
+    };
+
+    document.addEventListener(
+      'insert-snippet',
+      listeners.current.insertSnippet
+    );
+  }, []);
 
   useEffect(() => {
     let monaco = monacoRef.current;
@@ -338,12 +310,10 @@ export default function Editor({
       </div>
       <MonacoEditor
         defaultLanguage="javascript"
-        theme="default"
         defaultPath="/job.js"
-        loading={<div>Loading...</div>}
+        loading={<div className="text-white">Loading...</div>}
         value={source || DEFAULT_TEXT}
         options={options}
-        beforeMount={beforeMount}
         onMount={handleEditorDidMount}
         onChange={handleSourceChange}
       />

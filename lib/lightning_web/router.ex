@@ -57,8 +57,11 @@ defmodule LightningWeb.Router do
   ## JSON API
 
   scope "/api", LightningWeb, as: :api do
+    pipe_through [:api]
+
+    post "/users/register", API.RegistrationController, :create
+
     pipe_through [
-      :api,
       :authenticate_bearer,
       :require_authenticated_api_resource
     ]

@@ -26,7 +26,7 @@ defmodule LightningWeb.WorkflowLive.JobView do
         </div>
         <!-- 3 column wrapper -->
         <div
-          class="grow flex h-5/6 gap-0 m-0"
+          class="grow flex h-5/6 gap-0 m-0 w-screen"
           phx-hook="collapsiblePanel"
           id="collapsibles"
         >

@@ -5,6 +5,7 @@ defmodule Lightning.Config do
   defmodule API do
     @moduledoc false
     @behaviour Lightning.Config
+    alias Lightning.Services.AdapterHelper
 
     @impl true
     def run_token_signer do
@@ -48,6 +49,11 @@ defmodule Lightning.Config do
     @impl true
     def purge_deleted_after_days do
       Application.get_env(:lightning, :purge_deleted_after_days)
+    end
+
+    @impl true
+    def get_extension_mod(key) do
+      AdapterHelper.adapter(key)
     end
 
     @impl true
@@ -104,6 +110,7 @@ defmodule Lightning.Config do
   @callback grace_period() :: integer()
   @callback default_max_run_duration() :: integer()
   @callback purge_deleted_after_days() :: integer()
+  @callback get_extension_mod(key :: atom()) :: any()
   @callback check_flag?(atom()) :: boolean() | nil
 
   @doc """
@@ -151,6 +158,10 @@ defmodule Lightning.Config do
 
   def check_flag?(flag) do
     impl().check_flag?(flag)
+  end
+
+  def get_extension_mod(key) do
+    impl().get_extension_mod(key)
   end
 
   defp impl do

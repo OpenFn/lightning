@@ -516,7 +516,10 @@ defmodule LightningWeb.WorkflowLive.Components do
     <div
       id={@id}
       lv-keep-class
-      class={["w-full flex flex-col collapsible-panel bg-slate-100", @class]}
+      class={[
+        "w-full flex flex-col collapsible-panel bg-slate-100 overflow-hidden",
+        @class
+      ]}
     >
       <div class="flex-0 m-0">
         <div
