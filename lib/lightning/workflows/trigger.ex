@@ -43,7 +43,7 @@ defmodule Lightning.Workflows.Trigger do
       join_through: "trigger_webhook_auth_methods",
       on_replace: :delete
 
-    embeds_one :kafka_configuration, KafkaConfiguration, on_replace: :delete do
+    embeds_one :kafka_configuration, KafkaConfiguration, on_replace: :update do
       field :group_id, :string
       field :hosts, {:array, {:array, :string}}
       field :initial_offset_reset_policy, :string
@@ -91,14 +91,14 @@ defmodule Lightning.Workflows.Trigger do
     kafka_configuration
     |> cast(attrs, [
       :group_id,
-      # :hosts,
-      # :initial_offset_reset_policy,
-      # :partition_timestamps,
-      # :password,
-      # :sasl,
-      # :ssl,
-      # :topics,
-      # :username
+      :hosts,
+      :initial_offset_reset_policy,
+      :partition_timestamps,
+      :password,
+      :sasl,
+      :ssl,
+      :topics,
+      :username
     ])
   end
 
