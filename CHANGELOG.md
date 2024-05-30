@@ -17,6 +17,8 @@ and this project adheres to
 
 ### Added
 
+- CORS support [#2157](https://github.com/OpenFn/lightning/issues/2157)
+
 ### Changed
 
 - Change Default Text For New Job Nodes

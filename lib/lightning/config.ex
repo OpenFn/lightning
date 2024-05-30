@@ -60,6 +60,11 @@ defmodule Lightning.Config do
     def check_flag?(flag) do
       Application.get_env(:lightning, flag)
     end
+
+    @impl true
+    def cors_origin do
+      Application.get_env(:lightning, :cors_origin)
+    end
   end
 
   defmodule Utils do
@@ -112,6 +117,7 @@ defmodule Lightning.Config do
   @callback purge_deleted_after_days() :: integer()
   @callback get_extension_mod(key :: atom()) :: any()
   @callback check_flag?(atom()) :: boolean() | nil
+  @callback cors_origin() :: list()
 
   @doc """
   Returns the Token signer used to sign and verify run tokens.
@@ -162,6 +168,10 @@ defmodule Lightning.Config do
 
   def get_extension_mod(key) do
     impl().get_extension_mod(key)
+  end
+
+  def cors_origin do
+    impl().cors_origin()
   end
 
   defp impl do

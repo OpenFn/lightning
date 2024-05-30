@@ -110,6 +110,8 @@ configurtaion is:
 - `SECRET_KEY_BASE` - a secret key used as a base to generate secrets for
   encrypting and signing data.
 - `SENTRY_DSN` - if using Sentry for error monitoring, your DSN
+- `CORS_ORIGIN` - a list of acceptable hosts for browser/cors requests (','
+  separated)
 - `URL_HOST` - the host, used for writing urls (e.g., `demo.openfn.org`)
 - `URL_PORT` - the port, usually `443` for production
 - `URL_SCHEME` - the scheme for writing urls, (e.g., `https`)
