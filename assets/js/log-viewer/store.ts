@@ -37,8 +37,8 @@ export const useLogStore = create<LogStore>(set => ({
   logLines: [],
   addLogLines: newLogs =>
     set(state => {
-      newLogs = splitLogMessages(newLogs);
-      const logs = [...state.logLines, ...newLogs];
+      const splitLogs = splitLogMessages(newLogs);
+      const logs = [...state.logLines, ...splitLogs];
 
       logs.sort(
         (a, b) =>
