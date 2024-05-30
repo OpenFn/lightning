@@ -20,6 +20,16 @@ defmodule Lightning.Runs.Query do
 
     grace_period_ms = Lightning.Config.grace_period() * 1000
 
+    # TODO: Remove after live deployment rollouts are done. ====================
+    fallback_max = Application.get_env(:lightning, :max_run_duration_seconds)
+
+    fallback_oldest_claim =
+      now
+      |> DateTime.add(-fallback_max, :second)
+      |> DateTime.add(-grace_period_ms, :millisecond)
+
+    # ==========================================================================
+
     final_states = Run.final_states()
 
     from(r in Run,
@@ -32,7 +42,7 @@ defmodule Lightning.Runs.Query do
           r.options,
           ^grace_period_ms,
           ^now
-        )
+        ) or (is_nil(r.options) and r.claimed_at < ^fallback_oldest_claim)
     )
   end
 end

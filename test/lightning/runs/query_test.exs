@@ -89,5 +89,51 @@ defmodule Lightning.Runs.QueryTest do
                ])
              )
     end
+
+    test "falls back properly to system default max duration when options is nil" do
+      dataclip = insert(:dataclip)
+      %{triggers: [trigger]} = workflow = insert(:simple_workflow)
+
+      work_order =
+        insert(:workorder,
+          workflow: workflow,
+          trigger: trigger,
+          dataclip: dataclip
+        )
+
+      now = Lightning.current_time()
+
+      default_max_run_duration = Lightning.Config.default_max_run_duration()
+      grace_period = Lightning.Config.grace_period()
+
+      default_max = grace_period + default_max_run_duration
+
+      should_be_lost =
+        insert(:run,
+          work_order: work_order,
+          starting_trigger: trigger,
+          dataclip: dataclip,
+          state: :claimed,
+          options: nil,
+          claimed_at: DateTime.add(now, -(default_max + 2))
+        )
+
+      _should_not_be_lost =
+        insert(:run,
+          work_order: work_order,
+          starting_trigger: trigger,
+          dataclip: dataclip,
+          state: :claimed,
+          options: nil,
+          claimed_at: DateTime.add(now, -(default_max - 2))
+        )
+
+      lost_runs =
+        Query.lost()
+        |> Repo.all()
+        |> Enum.map(fn run -> run.id end)
+
+      assert lost_runs == [should_be_lost.id]
+    end
   end
 end
