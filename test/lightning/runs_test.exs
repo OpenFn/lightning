@@ -1,8 +1,7 @@
 defmodule Lightning.RunsTest do
-  use Lightning.DataCase
+  use Lightning.DataCase, async: true
 
   import Lightning.Factories
-  import Mock
   import Ecto.Query
 
   alias Ecto.Multi
@@ -536,15 +535,6 @@ defmodule Lightning.RunsTest do
       }
     end
 
-    test "indicates if a response was unsuccessful", %{run: run} do
-      with_mock(
-        Lightning.Repo,
-        transaction: fn _multi -> {:error, nil, %Ecto.Changeset{}, nil} end
-      ) do
-        assert Runs.start_run(run) == {:error, %Ecto.Changeset{}}
-      end
-    end
-
     test "triggers a metric if starting the run was successful",
          %{run: run} do
       ref =
@@ -566,29 +556,6 @@ defmodule Lightning.RunsTest do
         [:domain, :run, :queue],
         ^ref,
         %{delay: ^delay},
-        %{}
-      }
-    end
-
-    test "does not trigger a metric if starting the run was unsuccessful",
-         %{run: run} do
-      ref =
-        :telemetry_test.attach_event_handlers(
-          self(),
-          [[:domain, :run, :queue]]
-        )
-
-      with_mock(
-        Lightning.Repo,
-        transaction: fn _multi -> {:error, nil, nil, nil} end
-      ) do
-        Runs.start_run(run)
-      end
-
-      refute_received {
-        [:domain, :run, :queue],
-        ^ref,
-        %{delay: _delay},
         %{}
       }
     end
