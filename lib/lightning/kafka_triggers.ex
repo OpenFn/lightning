@@ -24,7 +24,7 @@ defmodule Lightning.KafkaTriggers do
     } = trigger
 
     %{
-      "partition_timestamps" => partition_timestamps
+      partition_timestamps: partition_timestamps
     } = existing_kafka_configuration
 
     updated_partition_timestamps =
@@ -41,9 +41,9 @@ defmodule Lightning.KafkaTriggers do
           existing |> Map.merge(%{partition_key => timestamp})
       end
 
-    updated_kafka_configuration =
-      existing_kafka_configuration
-      |> Map.merge(%{"partition_timestamps" => updated_partition_timestamps})
+    updated_kafka_configuration = %{
+      partition_timestamps: updated_partition_timestamps
+    }
 
     trigger
     |> Trigger.changeset(%{kafka_configuration: updated_kafka_configuration})

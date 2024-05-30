@@ -134,12 +134,14 @@ defmodule Lightning.KafkaTriggersTest do
     defp configuration(partition_timestamps) do
       # TODO Centralise the generation of config to avoid drift
       %{
-        "group_id" => "lightning-1",
-        "hosts" => [["host-1", 9092], ["other-host-1", 9093]],
-        "partition_timestamps" => partition_timestamps,
-        "sasl" => nil,
-        "ssl" => false,
-        "topics" => ["bar_topic"]
+        group_id: "lightning-1",
+        hosts: [["host-1", "9092"], ["other-host-1", "9093"]],
+        partition_timestamps: partition_timestamps,
+        password: nil,
+        sasl: nil,
+        ssl: false,
+        topics: ["bar_topic"],
+        username: nil,
       }
     end
 
@@ -148,7 +150,7 @@ defmodule Lightning.KafkaTriggersTest do
 
       %Trigger{
         kafka_configuration: %{
-          "partition_timestamps" => partition_timestamps
+          partition_timestamps: partition_timestamps
         }
       } = reloaded_trigger
 
