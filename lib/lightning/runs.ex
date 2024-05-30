@@ -340,6 +340,5 @@ defmodule Lightning.Runs do
     )
   end
 
-  defp track_run_queue_delay({:error, _changeset}) do
-  end
+  defp track_run_queue_delay({:error, _changeset}), do: nil
 end

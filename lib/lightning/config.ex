@@ -137,7 +137,7 @@ defmodule Lightning.Config do
   end
 
   @doc """
-  The grace period is configurable and is be used to wait for an additional
+  The grace period is configurable and is used to wait for an additional
   amount of time after a given run was meant to be finished.
 
   The returned value is in seconds.

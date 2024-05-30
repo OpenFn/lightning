@@ -24,15 +24,6 @@ defmodule LightningWeb.WorkerChannel do
     {:error, %{reason: "unauthorized"}}
   end
 
-  defp run_options(run) do
-    run
-    |> Lightning.Repo.preload(:workflow)
-    |> Map.get(:workflow)
-    |> then(fn %{project_id: project_id} ->
-      UsageLimiter.get_run_options(%Context{project_id: project_id})
-    end)
-  end
-
   @impl true
   def handle_in("claim", %{"demand" => demand}, socket) do
     case Runs.claim(demand) do
@@ -56,5 +47,13 @@ defmodule LightningWeb.WorkerChannel do
       {:error, changeset} ->
         {:reply, {:error, LightningWeb.ChangesetJSON.error(changeset)}, socket}
     end
+  end
+
+  defp run_options(run) do
+    Ecto.assoc(run, :workflow)
+    |> Lightning.Repo.one()
+    |> then(fn %{project_id: project_id} ->
+      UsageLimiter.get_run_options(%Context{project_id: project_id})
+    end)
   end
 end
