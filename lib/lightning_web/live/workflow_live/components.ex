@@ -155,6 +155,62 @@ defmodule LightningWeb.WorkflowLive.Components do
     |> sort_by_name()
   end
 
+  #TODO Not tested
+  # defp get_kafka_topic(%{kafka_configuration: config} = _trigger) do
+  #   %{"topics" => [topic]} = config
+  #
+  #   topic
+  # end
+
+  # TODO Not tested
+  # defp get_kafka_hosts(%{kafka_configuration: config} = _trigger) do
+  #   %{"hosts" => hosts} = config
+  #
+  #   hosts
+  #   |> Enum.map(fn [uri, port] -> "#{uri}:#{port}" end)
+  #   |> Enum.join(", ")
+  # end
+
+  #TODO Not tested
+  # defp get_kafka_group_name(%{kafka_configuration: config} = _trigger) do
+  #   %{"topics" => [topic]} = config
+  # end
+
+  #TODO Not tested
+  defp build_kafka_trigger_form(trigger) do
+    %{kafka_configuration: config} = trigger
+
+    %{
+      "group_id" => group_id,
+      "topics" => topics,
+      "hosts" => hosts,
+    } = config
+
+    hosts_string =
+      hosts
+      |> Enum.map(fn [uri, port] -> "#{uri}:#{port}" end)
+      |> Enum.join(", ")
+
+    to_form(
+      Ecto.Changeset.change(
+        {
+          %{},
+          %{
+            group_id: :string,
+            hosts: :string,
+            topics: :string
+          }
+        },
+        %{
+          group_id: group_id,
+          hosts: hosts_string,
+          topics: topics
+        }
+      ),
+      as: :kafka_trigger
+    )
+  end
+
   attr :form, :map, required: true
   attr :cancel_url, :string, required: true
   attr :disabled, :boolean, required: true
@@ -184,6 +240,7 @@ defmodule LightningWeb.WorkflowLive.Components do
         class=""
         options={[
           "Cron Schedule (UTC)": "cron",
+          "Kafka Consumer": "kafka",
           "Webhook Event": "webhook"
         ]}
         disabled={@disabled}
@@ -200,6 +257,20 @@ defmodule LightningWeb.WorkflowLive.Components do
             module={LightningWeb.JobLive.CronSetupComponent}
             disabled={@disabled}
           />
+        <% :kafka -> %>
+          <div class="my-6">
+            <div class="col-span-4 @md:col-span-4">
+              <Form.text_field field={:hosts} form={build_kafka_trigger_form(@selected_trigger)} disabled={@disabled} />
+            </div>
+
+            <div class="col-span-4 @md:col-span-4">
+              <Form.text_field field={:topics} form={build_kafka_trigger_form(@selected_trigger)} disabled={@disabled} />
+            </div>
+
+            <div class="col-span-4 @md:col-span-4">
+              <Form.text_field field={:group_id} form={build_kafka_trigger_form(@selected_trigger)} disabled={@disabled} />
+            </div>
+          </div>
         <% :webhook -> %>
           <div class="my-6">
             <label class="block text-sm font-semibold leading-6 text-slate-800">
