@@ -31,7 +31,7 @@ defmodule Lightning.Workflows.Trigger do
     field :comment, :string
     field :custom_path, :string
     field :cron_expression, :string
-    field :kafka_configuration, :map
+    # field :kafka_configuration, :map
     field :enabled, :boolean, default: true
     belongs_to :workflow, Workflow
 
@@ -45,6 +45,18 @@ defmodule Lightning.Workflows.Trigger do
     many_to_many :webhook_auth_methods, Lightning.Workflows.WebhookAuthMethod,
       join_through: "trigger_webhook_auth_methods",
       on_replace: :delete
+
+    embeds_one :kafka_configuration, KafkaConfiguration, on_replace: :delete do
+      field :group_id, :string
+      field :hosts, {:array, {:array, :string}}
+      field :initial_offset_reset_policy, :string
+      field :partition_timestamps, :map
+      field :password, :string
+      field :sasl, :string
+      field :ssl, :boolean
+      field :topics, {:array, :string}
+      field :username, :string
+    end
 
     timestamps(type: :utc_datetime)
   end
@@ -67,11 +79,30 @@ defmodule Lightning.Workflows.Trigger do
         :workflow_id,
         :cron_expression,
         :has_auth_method,
-        :kafka_configuration
       ])
+      |> cast_embed(
+        :kafka_configuration,
+        required: false,
+        with: &kafka_configuration_changeset/2
+      )
 
     changeset
     |> validate()
+  end
+
+  defp kafka_configuration_changeset(kafka_configuration, attrs) do
+    kafka_configuration
+    |> cast(attrs, [
+      :group_id,
+      # :hosts,
+      # :initial_offset_reset_policy,
+      # :partition_timestamps,
+      # :password,
+      # :sasl,
+      # :ssl,
+      # :topics,
+      # :username
+    ])
   end
 
   def validate(changeset) do
