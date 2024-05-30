@@ -1,7 +1,8 @@
 import { MonacoEditor, Monaco } from '../monaco';
 import React, { useRef } from 'react';
 import { createRoot } from 'react-dom/client';
-import { useLogStore, LogLine } from './store';
+import { createLogStore, LogLine } from './store';
+import { useStore } from 'zustand';
 
 function findLogIndicesByStepId(
   logs: LogLine[],
@@ -21,10 +22,14 @@ function findLogIndicesByStepId(
   return { first, last };
 }
 
-export function mount(el: HTMLElement, stepId: string | undefined) {
+export function mount(
+  el: HTMLElement,
+  store: ReturnType<typeof createLogStore>,
+  stepId: string | undefined
+) {
   const componentRoot = createRoot(el);
 
-  componentRoot.render(<LogViewer el={el} stepId={stepId} />);
+  componentRoot.render(<LogViewer el={el} store={store} stepId={stepId} />);
 
   function unmount() {
     return componentRoot.unmount();
@@ -35,12 +40,14 @@ export function mount(el: HTMLElement, stepId: string | undefined) {
 
 const LogViewer = ({
   el,
+  store,
   stepId,
 }: {
   el: HTMLElement;
+  store: ReturnType<typeof createLogStore>;
   stepId: string | undefined;
 }) => {
-  const logs: LogLine[] = useLogStore(state => state.logLines);
+  const logs: LogLine[] = useStore(store, state => state.logLines);
 
   let decorationsCollection: any = null;
   const monacoRef = useRef<Monaco | null>(null);
@@ -88,7 +95,7 @@ const LogViewer = ({
     <MonacoEditor
       defaultLanguage="plaintext"
       theme="default"
-      value={logs.map(log => log.message).join('\n')}
+      value={logs.map(log => `(${log.source}) ${log.message}`).join('\n')}
       loading={<div>Loading...</div>}
       beforeMount={beforeMount}
       onMount={onMount}
@@ -102,14 +109,6 @@ const LogViewer = ({
           enabled: false,
         },
         wordWrap: 'on',
-        lineNumbersMinChars: 12,
-        lineNumbers: (originalLineNumber: number) => {
-          const log = logs[originalLineNumber - 1];
-          if (log) {
-            return `${originalLineNumber} (${log.source})`;
-          }
-          return `${originalLineNumber}`;
-        },
       }}
     />
   );

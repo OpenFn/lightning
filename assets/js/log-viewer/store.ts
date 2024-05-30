@@ -33,17 +33,19 @@ function splitLogMessages(logs: LogLine[]): LogLine[] {
   return newLogs;
 }
 
-export const useLogStore = create<LogStore>(set => ({
-  logLines: [],
-  addLogLines: newLogs =>
-    set(state => {
-      const splitLogs = splitLogMessages(newLogs);
-      const logs = [...state.logLines, ...splitLogs];
+export const createLogStore = () => {
+  return create<LogStore>(set => ({
+    logLines: [],
+    addLogLines: newLogs =>
+      set(state => {
+        const splitLogs = splitLogMessages(newLogs);
+        const logs = [...state.logLines, ...splitLogs];
 
-      logs.sort(
-        (a, b) =>
-          new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
-      );
-      return { logLines: logs };
-    }),
-}));
+        logs.sort(
+          (a, b) =>
+            new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+        );
+        return { logLines: logs };
+      }),
+  }));
+};

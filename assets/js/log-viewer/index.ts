@@ -1,9 +1,10 @@
 import { PhoenixHook } from '../hooks/PhoenixHook';
-import { useLogStore, LogLine } from './store';
+import { createLogStore, LogLine } from './store';
 import { mount } from './component';
 
 type LogViewer = PhoenixHook<{
   component: ReturnType<typeof mount> | null;
+  store: ReturnType<typeof createLogStore>;
   viewerEl: HTMLElement | null;
   loadingEl: HTMLElement | null;
 }>;
@@ -24,7 +25,9 @@ export default {
       throw new Error('Viewer or loading element not found');
     }
 
-    this.component = mount(this.viewerEl, this.el.dataset.stepId);
+    this.store = createLogStore();
+
+    this.component = mount(this.viewerEl, this.store, this.el.dataset.stepId);
 
     this.handleEvent(
       `logs-${this.el.dataset.runId}`,
@@ -33,7 +36,7 @@ export default {
           this.loadingEl.style.display = 'none';
           this.viewerEl.style.display = 'block';
         }
-        useLogStore.getState().addLogLines(event.logs);
+        this.store.getState().addLogLines(event.logs);
       }
     );
   },

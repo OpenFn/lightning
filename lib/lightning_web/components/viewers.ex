@@ -77,7 +77,7 @@ defmodule LightningWeb.Components.Viewers do
             Nothing yet
           </.text_ping_loader>
         </div>
-        <div id={"#{@id}-viewer"} class="h-full hidden"></div>
+        <div id={"#{@id}-viewer"} class="h-full rounded-md hidden"></div>
       </div>
     <% end %>
     """
