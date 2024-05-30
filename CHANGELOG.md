@@ -19,6 +19,9 @@ and this project adheres to
 
 ### Changed
 
+- Change Default Text For New Job Nodes
+  [#2014](https://github.com/OpenFn/lightning/pull/2014)
+
 ### Fixed
 
 - Dataclip Viewer now responds to page resize and internal page layout
