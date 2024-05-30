@@ -3,25 +3,6 @@ import React, { useRef } from 'react';
 import { createRoot } from 'react-dom/client';
 import { useLogStore, LogLine } from './store';
 
-// The VER logs are multiline
-function splitLogMessages(logs: LogLine[]): LogLine[] {
-  const newLogs: LogLine[] = [];
-
-  logs.forEach(log => {
-    // Split the message on every newline.
-    const messages = log.message.split('\n');
-    messages.forEach(message => {
-      // Create a new log entry for each line, copying other attributes.
-      newLogs.push({
-        ...log,
-        message: message,
-      });
-    });
-  });
-
-  return newLogs;
-}
-
 function findLogIndicesByStepId(
   logs: LogLine[],
   stepId: string
@@ -40,15 +21,10 @@ function findLogIndicesByStepId(
   return { first, last };
 }
 
-export function mount(el: HTMLElement) {
+export function mount(el: HTMLElement, stepId: string | undefined) {
   const componentRoot = createRoot(el);
 
-  if (el.dataset.runId === undefined) {
-    throw new Error(
-      'runId is missing from the element dataset. Ensure you have set data-run-id on the element.'
-    );
-  }
-  componentRoot.render(<LogViewer hookEl={el} />);
+  componentRoot.render(<LogViewer el={el} stepId={stepId} />);
 
   function unmount() {
     return componentRoot.unmount();
@@ -57,31 +33,20 @@ export function mount(el: HTMLElement) {
   return { unmount };
 }
 
-const LogViewer = ({ hookEl }: { hookEl: HTMLElement }) => {
+const LogViewer = ({
+  el,
+  stepId,
+}: {
+  el: HTMLElement;
+  stepId: string | undefined;
+}) => {
   const logs: LogLine[] = useLogStore(state => state.logLines);
 
-  // let runId = hookEl.dataset.runId;
-  let stepId = hookEl.dataset.stepId;
-  // let logs: LogLine[] = [];
-  const splitLogs = splitLogMessages(logs);
   let decorationsCollection: any = null;
   const monacoRef = useRef<Monaco | null>(null);
   const editorRef = useRef<any | null>(null);
 
-  // window.addEventListener(`phx:logs-${runId}`, (event: CustomEvent) => {
-  //   const splitLogs = splitLogMessages(event.detail.logs);
-  //   // console.log('splitLogs', splitLogs);
-  //   logs = logs.concat(splitLogs);
-  //   logs.sort(
-  //     (a, b) =>
-  //       new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
-  //   );
-  //   console.log('logs', logs);
-  //   editorRef.current?.setValue(logs.map(log => `${log.message}`).join('\n'));
-  //   maybeHighlightStep();
-  // });
-
-  hookEl.addEventListener('log-viewer:highlight-step', (event: CustomEvent) => {
+  el.addEventListener('log-viewer:highlight-step', (event: CustomEvent) => {
     stepId = event.detail.stepId;
     maybeHighlightStep();
   });
@@ -102,7 +67,7 @@ const LogViewer = ({ hookEl }: { hookEl: HTMLElement }) => {
     if (stepId !== undefined && logs.length > 0) {
       let monaco = monacoRef.current;
       let editor = editorRef.current;
-      const { first, last } = findLogIndicesByStepId(splitLogs, stepId);
+      const { first, last } = findLogIndicesByStepId(logs, stepId);
       if (first !== null && last !== null) {
         decorationsCollection = editor?.createDecorationsCollection([
           {
@@ -139,7 +104,7 @@ const LogViewer = ({ hookEl }: { hookEl: HTMLElement }) => {
         wordWrap: 'on',
         lineNumbersMinChars: 12,
         lineNumbers: (originalLineNumber: number) => {
-          const log = splitLogs[originalLineNumber - 1];
+          const log = logs[originalLineNumber - 1];
           if (log) {
             return `${originalLineNumber} (${log.source})`;
           }

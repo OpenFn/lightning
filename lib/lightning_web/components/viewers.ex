@@ -63,7 +63,21 @@ defmodule LightningWeb.Components.Viewers do
         phx-update="ignore"
         data-run-id={@run_id}
         data-step-id={@selected_step_id}
+        data-loading-el={"#{@id}-nothing-yet"}
+        data-viewer-el={"#{@id}-viewer"}
       >
+        <div
+          id={"#{@id}-nothing-yet"}
+          class={[
+            "m-2 relative rounded-md",
+            "p-12 text-center col-span-full"
+          ]}
+        >
+          <.text_ping_loader>
+            Nothing yet
+          </.text_ping_loader>
+        </div>
+        <div id={"#{@id}-viewer"} class="h-full hidden"></div>
       </div>
     <% end %>
     """
