@@ -215,6 +215,7 @@ const Node = ({
             </div>
           )}
         </div>
+        {/* TODO the drag source should ideally be in the centre and behind the node */}
         {sourcePosition && (
           <Handle
             type="source"

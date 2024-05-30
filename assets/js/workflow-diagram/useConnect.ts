@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react';
 import { useStore, StoreApi } from 'zustand';
-import { getIncomers } from 'reactflow';
+import Connection from './edges/Connection';
 import { styleEdge } from './styles';
 import { Flow } from './types';
 import { WorkflowState } from '../workflow-editor/store';
@@ -173,6 +173,7 @@ export default (
   );
 
   return {
+    connectionLineComponent: Connection,
     onConnect,
     onConnectStart,
     onConnectEnd,
