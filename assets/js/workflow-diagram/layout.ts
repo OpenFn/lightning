@@ -24,7 +24,7 @@ const calculateLayout = async (
 
   edges.forEach(edge => g.setEdge(edge.source, edge.target));
   nodes.forEach(node =>
-    g.setNode(node.id, { ...node, width: 350, height: 140 })
+    g.setNode(node.id, { ...node, width: 350, height: 200 })
   );
 
   Dagre.layout(g);
