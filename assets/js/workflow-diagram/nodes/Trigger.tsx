@@ -56,6 +56,13 @@ function getTriggerMeta(trigger: Lightning.TriggerNode): TriggerMeta {
         primaryIcon: <GlobeAltIcon />,
         secondaryIcon: trigger.has_auth_method ? lockClosedIcon : null,
       };
+    case 'kafka':
+      return {
+        label: 'Kafka trigger',
+        sublabel: `On each message consumed from the cluster`,
+        primaryIcon: <GlobeAltIcon />,
+        secondaryIcon: trigger.has_auth_method ? lockClosedIcon : null,
+      };
     case 'cron':
       try {
         return {
