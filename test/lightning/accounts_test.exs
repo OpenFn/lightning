@@ -383,6 +383,8 @@ defmodule Lightning.AccountsTest do
       assert {:ok, user} =
                Accounts.register_user(valid_user_attributes(email: email))
 
+      assert user.emails_preference == :critical
+
       assert ^user = Repo.get!(User, user.id)
       assert_receive %Events.UserRegistered{user: ^user}
 
@@ -391,6 +393,18 @@ defmodule Lightning.AccountsTest do
       assert is_binary(user.hashed_password)
       assert is_nil(user.confirmed_at)
       assert is_nil(user.password)
+    end
+
+    test "user can choose to prefer any type of email" do
+      assert {:ok, user} =
+               Accounts.register_user(
+                 valid_user_attributes(
+                   email: unique_user_email(),
+                   emails_preference: "any"
+                 )
+               )
+
+      assert user.emails_preference == :any
     end
   end
 

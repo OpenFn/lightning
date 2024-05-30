@@ -17,7 +17,10 @@ and this project adheres to
 
 ### Added
 
-- CORS support [#2157](https://github.com/OpenFn/lightning/issues/2157)
+- CORS support
+  [#2157](https://github.com/OpenFn/lightning/issues/2157)
+- Track users emails preferences
+  [#2163](https://github.com/OpenFn/lightning/issues/2163)
 
 ### Changed
 
