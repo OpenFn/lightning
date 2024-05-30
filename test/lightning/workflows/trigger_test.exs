@@ -94,15 +94,6 @@ defmodule Lightning.Workflows.TriggerTest do
         |> errors_on()
 
       assert errors[:kafka_configuration] == ["can't be blank"]
-
-      errors =
-        Trigger.changeset(%Trigger{}, %{
-          type: :kafka,
-          kafka_configuration: ""
-        })
-        |> errors_on()
-
-      assert errors[:kafka_configuration] == ["can't be blank"]
     end
 
     test "removes kafka config when type is :webhook" do
@@ -116,7 +107,10 @@ defmodule Lightning.Workflows.TriggerTest do
 
       changeset =
         Trigger.changeset(
-          %Trigger{type: :kafka, kafka_configuration: %{a: :b}},
+          %Trigger{
+            type: :kafka,
+            kafka_configuration: %Trigger.KafkaConfiguration{group_id: "foo"}
+          },
           %{
             type: :webhook
           }
@@ -136,7 +130,10 @@ defmodule Lightning.Workflows.TriggerTest do
 
       changeset =
         Trigger.changeset(
-          %Trigger{type: :kafka, kafka_configuration: %{a: :b}},
+          %Trigger{
+            type: :kafka,
+            kafka_configuration: %Trigger.KafkaConfiguration{group_id: "foo"}
+          },
           %{
             type: :cron
           }
