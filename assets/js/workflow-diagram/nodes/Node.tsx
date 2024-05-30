@@ -81,6 +81,7 @@ const SubLabel = ({ children }: React.PropsWithChildren) => {
 };
 
 const Node = ({
+  id,
   // standard  react flow stuff
   isConnectable,
   selected,
@@ -107,27 +108,47 @@ const Node = ({
       <div className="flex flex-row cursor-pointer">
         <div>
           {targetPosition && (
-            <Handle
-              type="target"
-              isConnectable={isConnectable}
-              // handles have a built-in way of updating styles when connecting - is this better?
-              // See https://reactflow.dev/examples/interaction/validation
-              style={{
-                visibility: data.isValidDropTarget ? 'visible' : 'hidden',
+            <>
+              {/*
+                This is the standard handle for existing connections
+                Setting the id ensures that edges will connect here
+              */}
+              <Handle
+                id={id}
+                type="target"
+                isConnectable={false}
+                position={targetPosition}
+                style={{
+                  visibility: 'hidden',
+                  height: 0,
+                  top: 0,
+                  left: strokeWidth + anchorx,
+                }}
+              />
 
-                // abuse the handle style to make the whole node the drop target
-                left: '50px',
-                top: '-20px',
-                width: '150px',
-                height: '150px',
-                backgroundColor: data.isActiveDropTarget
-                  ? 'rgba(79, 70, 229, 0.2)'
-                  : 'transparent',
-                borderColor: 'rgb(79, 70, 229)',
-                borderWidth: '6px',
-                borderStyle: data.isActiveDropTarget ? 'solid' : 'dashed',
-              }}
-            />
+              {/* This is the fancy, oversized drop handle */}
+              <Handle
+                type="target"
+                isConnectable={isConnectable}
+                // handles have a built-in way of updating styles when connecting - is this better?
+                // See https://reactflow.dev/examples/interaction/validation
+                style={{
+                  visibility: data.isValidDropTarget ? 'visible' : 'hidden',
+
+                  // abuse the handle style to make the whole node the drop target
+                  left: '50px',
+                  top: '-20px',
+                  width: '150px',
+                  height: '150px',
+                  backgroundColor: data.isActiveDropTarget
+                    ? 'rgba(79, 70, 229, 0.2)'
+                    : 'transparent',
+                  borderColor: 'rgb(79, 70, 229)',
+                  borderWidth: '6px',
+                  borderStyle: data.isActiveDropTarget ? 'solid' : 'dashed',
+                }}
+              />
+            </>
           )}
           <svg style={{ maxWidth: '110px', maxHeight: '110px' }}>
             <Shape

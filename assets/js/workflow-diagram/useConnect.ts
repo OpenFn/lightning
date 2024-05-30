@@ -116,6 +116,7 @@ export default (
   const addToStore = useStore(store!, state => state.add);
 
   const onConnect = useCallback(args => {
+    console.log('on connect');
     const newModel = generateEdgeDiff(args.source, args.target);
     const wf = toWorkflow(newModel);
 
