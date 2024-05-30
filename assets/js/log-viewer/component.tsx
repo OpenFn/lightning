@@ -109,6 +109,7 @@ const LogViewer = ({
           enabled: false,
         },
         wordWrap: 'on',
+        lineNumbersMinChars: 3,
       }}
     />
   );
