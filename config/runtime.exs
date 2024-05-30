@@ -344,10 +344,13 @@ config :lightning, Lightning.Repo,
   queue_target: env!("DATABASE_QUEUE_TARGET", :integer, 50),
   queue_interval: env!("DATABASE_QUEUE_INTERVAL", :integer, 1000)
 
-url_scheme = env!("URL_SCHEME", :string, "https")
 host = env!("URL_HOST", :string, "example.com")
 port = env!("PORT", :integer, 4000)
 url_port = env!("URL_PORT", :integer, 443)
+
+config :lightning,
+  cors_origin:
+    env!("CORS_ORIGIN", :string, "*") |> String.split(",") |> List.wrap()
 
 if config_env() == :prod do
   unless database_url do
@@ -404,6 +407,8 @@ if config_env() == :prod do
       end,
       nil
     )
+
+  url_scheme = env!("URL_SCHEME", :string, "https")
 
   config :lightning, LightningWeb.Endpoint,
     url: [host: host, port: url_port, scheme: url_scheme],
