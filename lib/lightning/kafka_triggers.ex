@@ -90,22 +90,25 @@ defmodule Lightning.KafkaTriggers do
 
     policy = policy_config_value(policy_option)
 
+    [sasl_type, username, password] = case sasl_option do
+      nil ->
+        [nil, nil, nil]
+      [sasl_type, username, password] ->
+        ["#{sasl_type}", username, password]
+    end
+
     %{
-      "group_id" => group_id,
-      "hosts" => hosts,
-      "initial_offset_reset_policy" => policy,
-      "partition_timestamps" => %{},
-      "sasl" => convert_sasl_option(sasl_option),
-      "ssl" => ssl,
-      "topics" => topics
+      group_id: group_id,
+      hosts: hosts,
+      initial_offset_reset_policy: policy,
+      partition_timestamps: %{},
+      password: password,
+      sasl: sasl_type,
+      ssl: ssl,
+      topics: topics,
+      username: username
     }
   end
-
-  defp convert_sasl_option([mechanism, username, password]) do
-    ["#{mechanism}", username, password]
-  end
-
-  defp convert_sasl_option(nil), do: nil
 
   defp policy_config_value(initial_policy) do
     case initial_policy do
