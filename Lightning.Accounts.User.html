@@ -311,6 +311,7 @@ Pages
   __meta__: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
   backup_codes: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
   confirmed_at: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
+  contact_preference: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
   credentials: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
   disabled: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
   email: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
@@ -357,7 +358,7 @@ Pages
     </a>
     <h1 class="signature" translate="no">changeset(user, attrs)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts/user.ex#L49" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts/user.ex#L53" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -379,7 +380,7 @@ Pages
     </a>
     <h1 class="signature" translate="no">confirm_changeset(user)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts/user.ex#L263" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts/user.ex#L270" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -401,7 +402,7 @@ Pages
     </a>
     <h1 class="signature" translate="no">details_changeset(user, attrs)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts/user.ex#L201" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts/user.ex#L208" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -423,7 +424,7 @@ Pages
     </a>
     <h1 class="signature" translate="no">email_changeset(user, attrs)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts/user.ex#L221" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts/user.ex#L228" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -445,7 +446,7 @@ Pages
     </a>
     <h1 class="signature" translate="no">github_token_changeset(user, attrs)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts/user.ex#L268" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts/user.ex#L275" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -469,7 +470,7 @@ Pages
     </a>
     <h1 class="signature" translate="no">password_changeset(user, attrs, opts \\ [])</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts/user.ex#L253" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts/user.ex#L260" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -502,7 +503,7 @@ Defaults to <code class="inline">true</code>.</li></ul>
     </a>
     <h1 class="signature" translate="no">scheduled_deletion_changeset(user, attrs)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts/user.ex#L234" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts/user.ex#L241" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -526,7 +527,7 @@ Defaults to <code class="inline">true</code>.</li></ul>
     </a>
     <h1 class="signature" translate="no">superuser_registration_changeset(attrs, opts \\ [])</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts/user.ex#L135" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts/user.ex#L142" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -574,7 +575,7 @@ Defaults to <code class="inline">true</code>.</li></ul>
     </a>
     <h1 class="signature" translate="no">user_registration_changeset(attrs, opts \\ [])</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts/user.ex#L89" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts/user.ex#L96" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -610,7 +611,7 @@ Defaults to <code class="inline">true</code>.</li></ul>
     </a>
     <h1 class="signature" translate="no">valid_password?(arg1, password)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts/user.ex#L280" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts/user.ex#L287" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -633,7 +634,7 @@ Defaults to <code class="inline">true</code>.</li></ul>
     </a>
     <h1 class="signature" translate="no">validate_current_password(changeset, password)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts/user.ex#L296" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts/user.ex#L303" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
