@@ -177,15 +177,15 @@ defmodule Lightning.KafkaTriggersTest do
       assert policy == :latest
     end
 
-    test "returns policy if integer (i.e. a timestamp)" do
-      timestamp = 1_715_312_900_123
+    test "returns policy if timestamp as a string" do
+      timestamp = "1715312900123"
 
       policy =
         timestamp
         |> build_trigger()
         |> KafkaTriggers.determine_offset_reset_policy()
 
-      assert policy == {:timestamp, timestamp}
+      assert policy == {:timestamp, timestamp |> String.to_integer()}
     end
 
     test "returns :latest if unrecognised string" do
@@ -215,13 +215,13 @@ defmodule Lightning.KafkaTriggersTest do
     defp build_trigger(initial_offset_reset, partition_timestamps \\ %{}) do
       # TODO Centralise the generation of config to avoid drift
       kafka_configuration = %{
-        "group_id" => "lightning-1",
-        "hosts" => [["host-1", 9092], ["other-host-1", 9093]],
-        "initial_offset_reset_policy" => initial_offset_reset,
-        "partition_timestamps" => partition_timestamps,
-        "sasl" => nil,
-        "ssl" => false,
-        "topics" => ["bar_topic"]
+        group_id: "lightning-1",
+        hosts: [["host-1", 9092], ["other-host-1", 9093]],
+        initial_offset_reset_policy: initial_offset_reset,
+        partition_timestamps: partition_timestamps,
+        sasl: nil,
+        ssl: false,
+        topics: ["bar_topic"]
       }
 
       build(:trigger, type: :kafka, kafka_configuration: kafka_configuration)
