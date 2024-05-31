@@ -16,23 +16,26 @@ defmodule Lightning.KafkaTriggers.PipelineWorker do
         KafkaTriggers.find_enabled_triggers()
         |> Enum.map(fn trigger ->
           %{
-            "group_id" => group_id,
-            "hosts" => hosts_list,
-            "sasl" => sasl_options,
-            "ssl" => ssl,
-            "topics" => topics
+            group_id: group_id,
+            hosts: hosts_list,
+            password: password,
+            sasl: sasl_type,
+            ssl: ssl,
+            topics: topics,
+            username: username
           } = trigger.kafka_configuration
 
-          hosts = hosts_list |> Enum.map(&List.to_tuple(&1))
+          hosts =
+            hosts_list
+            |> Enum.map(fn [host, port_string] ->
+              {host, port_string |> String.to_integer()}
+            end)
 
-          sasl =
-            case sasl_options do
-              options when is_list(options) ->
-                options |> List.to_tuple()
-
-              nil ->
-                nil
-            end
+          sasl = if sasl_type do
+            {sasl_type, username, password}
+          else
+            nil
+          end
 
           offset_reset_policy =
             KafkaTriggers.determine_offset_reset_policy(trigger)
