@@ -56,7 +56,7 @@ defmodule Lightning.Workers do
 
   @spec generate_run_token(
           Lightning.Run.t(),
-          LightningWeb.RunWithOptions.run_options()
+          Lightning.Runs.RunOptions.t()
         ) :: binary()
   def generate_run_token(run, run_options) do
     run_timeout_ms = run_options[:run_timeout_ms]

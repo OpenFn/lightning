@@ -95,6 +95,22 @@ defmodule Lightning.Projects do
   def get_project(id), do: Repo.get(Project, id)
 
   @doc """
+  Should input or output dataclips be saved for runs in this project?
+  """
+  def save_dataclips?(id) do
+    from(
+      p in Project,
+      where: p.id == ^id,
+      select: p.retention_policy
+    )
+    |> Repo.one!()
+    |> case do
+      :retain_all -> true
+      :erase_all -> false
+    end
+  end
+
+  @doc """
   Gets a single project_user.
 
   Raises `Ecto.NoResultsError` if the ProjectUser does not exist.
@@ -366,20 +382,6 @@ defmodule Lightning.Projects do
         Events.project_deleted(project)
       end
     end)
-  end
-
-  @spec project_retention_policy_for(Run.t()) ::
-          Project.retention_policy_type()
-  def project_retention_policy_for(%Run{work_order_id: wo_id}) do
-    query =
-      from(wo in WorkOrder,
-        join: wf in assoc(wo, :workflow),
-        join: p in assoc(wf, :project),
-        where: wo.id == ^wo_id,
-        select: p.retention_policy
-      )
-
-    Repo.one(query)
   end
 
   def project_runs_query(project) do

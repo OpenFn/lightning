@@ -47,9 +47,11 @@ Note that for secure deployments, it's recommended to use a combination of
 ### Limits
 
 - `WORKER_MAX_RUN_MEMORY_MB` - how much memory (in MB) can a single run use?
+- `RUN_GRACE_PERIOD_SECONDS` - how long _after_ the `MAX_RUN_DURATION_SECONDS`
+  should the server wait for the worker to send back data on a run.
 - `WORKER_MAX_RUN_DURATION_SECONDS` - the maximum duration (in seconds) that
-  workflows are allowed to run (keep this below your termination_grace_period if
-  using kubernetes)
+  workflows are allowed to run (keep this plus `RUN_GRACE_PERIOD_SECONDS` below
+  your termination_grace_period if using kubernetes)
 - `WORKER_CAPACITY` - the number of runs a ws-worker instance will take on
   concurrently.
 - `MAX_DATACLIP_SIZE_MB` - the maximum size (in MB) of a dataclip created via

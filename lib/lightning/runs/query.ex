@@ -10,28 +10,39 @@ defmodule Lightning.Runs.Query do
 
   @doc """
   Return all runs that have been claimed by a worker before the earliest
-  acceptable start time (determined by the longest acceptable run time) but are
+  acceptable start time (determined by the run options and grace period) but are
   still incomplete. This indicates that we may have lost contact with the worker
   that was responsible for executing the run.
   """
-  @spec lost(DateTime.t()) :: Ecto.Queryable.t()
-  def lost(%DateTime{} = now) do
-    max_run_duration_seconds =
-      Application.get_env(:lightning, :max_run_duration_seconds)
+  @spec lost :: Ecto.Queryable.t()
+  def lost do
+    now = Lightning.current_time()
 
-    grace_period = Lightning.Config.grace_period()
+    grace_period_ms = Lightning.Config.grace_period() * 1000
 
-    oldest_valid_claim =
+    # TODO: Remove after live deployment rollouts are done. ====================
+    fallback_max = Lightning.Config.default_max_run_duration()
+
+    fallback_oldest_claim =
       now
-      |> DateTime.add(-max_run_duration_seconds, :second)
-      |> DateTime.add(-grace_period, :second)
+      |> DateTime.add(-fallback_max, :second)
+      |> DateTime.add(-grace_period_ms, :millisecond)
+
+    # ==========================================================================
 
     final_states = Run.final_states()
 
-    from(att in Run,
-      where: is_nil(att.finished_at),
-      where: att.state not in ^final_states,
-      where: att.claimed_at < ^oldest_valid_claim
+    from(r in Run,
+      where: is_nil(r.finished_at),
+      where: r.state not in ^final_states,
+      where:
+        fragment(
+          "? + ((? ->> 'run_timeout_ms')::int + ?) * '1 millisecond'::interval < ?",
+          r.claimed_at,
+          r.options,
+          ^grace_period_ms,
+          ^now
+        ) or (is_nil(r.options) and r.claimed_at < ^fallback_oldest_claim)
     )
   end
 end

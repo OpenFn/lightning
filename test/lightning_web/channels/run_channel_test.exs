@@ -1,7 +1,6 @@
 defmodule LightningWeb.RunChannelTest do
   use LightningWeb.ChannelCase, async: true
 
-  alias Lightning.Extensions.UsageLimiter
   alias Lightning.Extensions.UsageLimiting.Context
   alias Lightning.Invocation.Dataclip
   alias Lightning.Invocation.Step
@@ -13,11 +12,6 @@ defmodule LightningWeb.RunChannelTest do
   import Lightning.BypassHelpers
 
   setup do
-    Mox.stub_with(
-      Lightning.Extensions.MockUsageLimiter,
-      Lightning.Extensions.UsageLimiter
-    )
-
     Mox.stub(Lightning.Extensions.MockUsageLimiter, :check_limits, fn _context ->
       :ok
     end)
@@ -29,6 +23,8 @@ defmodule LightningWeb.RunChannelTest do
         :ok
       end
     )
+
+    Mox.stub(Lightning.MockConfig, :default_max_run_duration, fn -> 1 end)
 
     :ok
   end
@@ -134,11 +130,8 @@ defmodule LightningWeb.RunChannelTest do
       socket: socket,
       run: run,
       workflow: workflow,
-      credential: credential,
-      project: project
+      credential: credential
     } do
-      expect(Lightning.MockConfig, :default_max_run_duration, 2, fn -> 1 end)
-
       id = run.id
       ref = push(socket, "fetch:plan", %{})
 
@@ -177,9 +170,6 @@ defmodule LightningWeb.RunChannelTest do
         )
         |> Enum.map(&stringify_keys/1)
 
-      run_options =
-        UsageLimiter.get_run_options(%Context{project_id: project.id})
-
       assert payload == %{
                "id" => id,
                "triggers" => triggers,
@@ -189,7 +179,7 @@ defmodule LightningWeb.RunChannelTest do
                "dataclip_id" => run.dataclip_id,
                "options" => %{
                  output_dataclips: true,
-                 run_timeout_ms: run_options[:run_timeout_ms]
+                 run_timeout_ms: 1000
                }
              }
     end
@@ -197,8 +187,6 @@ defmodule LightningWeb.RunChannelTest do
     test "fetch:plan for project with erase_all retention setting", %{
       credential: credential
     } do
-      expect(Lightning.MockConfig, :default_max_run_duration, 2, fn -> 1 end)
-
       project = insert(:project, retention_policy: :erase_all)
 
       workflow_context =
@@ -249,9 +237,6 @@ defmodule LightningWeb.RunChannelTest do
         )
         |> Enum.map(&stringify_keys/1)
 
-      run_options =
-        UsageLimiter.get_run_options(%Context{project_id: project.id})
-
       assert payload == %{
                "id" => id,
                "triggers" => triggers,
@@ -261,7 +246,7 @@ defmodule LightningWeb.RunChannelTest do
                "dataclip_id" => run.dataclip_id,
                "options" => %{
                  output_dataclips: false,
-                 run_timeout_ms: run_options[:run_timeout_ms]
+                 run_timeout_ms: run.options.run_timeout_ms
                }
              }
     end
@@ -270,6 +255,18 @@ defmodule LightningWeb.RunChannelTest do
       credential: credential
     } do
       project = insert(:project, retention_policy: :erase_all)
+      project_id = project.id
+
+      extra_options = [run_timeout_ms: 5000, save_dataclips: false]
+      expected_worker_options = %{run_timeout_ms: 5000, output_dataclips: false}
+
+      Mox.expect(
+        Lightning.Extensions.MockUsageLimiter,
+        :get_run_options,
+        fn %{project_id: ^project_id} ->
+          extra_options
+        end
+      )
 
       workflow_context =
         create_workflow(%{project: project, credential: credential})
@@ -281,24 +278,12 @@ defmodule LightningWeb.RunChannelTest do
         )
 
       %{socket: socket} = create_socket(%{run: run})
-      project_id = project.id
-
-      extra_options = [run_timeout_ms: 5000]
-
-      Mox.expect(
-        Lightning.Extensions.MockUsageLimiter,
-        :get_run_options,
-        fn %{project_id: ^project_id} -> extra_options end
-      )
 
       ref = push(socket, "fetch:plan", %{})
 
       assert_reply ref, :ok, payload
 
-      expected_options =
-        Map.merge(%{output_dataclips: false}, Map.new(extra_options))
-
-      assert match?(%{"options" => ^expected_options}, payload)
+      assert match?(%{"options" => ^expected_worker_options}, payload)
     end
 
     test "fetch:dataclip handles all types", %{
@@ -339,7 +324,9 @@ defmodule LightningWeb.RunChannelTest do
     @tag project_retention_policy: :erase_all
     test "fetch:dataclip wipes dataclip body for projects with erase_all retention policy",
          context do
-      %{dataclip: dataclip, socket: socket} = context
+      %{run: run, dataclip: dataclip} = create_run(context)
+
+      %{socket: socket} = create_socket(%{run: run})
 
       ref = push(socket, "fetch:dataclip", %{})
 
@@ -520,7 +507,12 @@ defmodule LightningWeb.RunChannelTest do
         insert(:run,
           work_order: work_order,
           starting_trigger: trigger,
-          dataclip: dataclip
+          dataclip: dataclip,
+          options:
+            Lightning.Extensions.MockUsageLimiter.get_run_options(%Context{
+              project_id: project.id
+            })
+            |> Enum.into(%{})
         )
 
       Lightning.Stub.reset_time()
@@ -531,10 +523,10 @@ defmodule LightningWeb.RunChannelTest do
           Lightning.Config.worker_token_signer()
         )
 
-      expect(Lightning.MockConfig, :default_max_run_duration, fn -> 1 end)
-
       run_options =
-        UsageLimiter.get_run_options(%Context{project_id: project.id})
+        Lightning.Extensions.MockUsageLimiter.get_run_options(%Context{
+          project_id: project.id
+        })
 
       {:ok, %{}, socket} =
         LightningWeb.WorkerSocket
@@ -717,6 +709,12 @@ defmodule LightningWeb.RunChannelTest do
 
       # dataclip is saved but wiped
       assert project.retention_policy == :erase_all
+      assert run.work_order.workflow.project_id == project.id
+
+      run_from_socket = socket.assigns.run
+      options = run_from_socket.options
+
+      assert %Lightning.Runs.RunOptions{save_dataclips: false} = options
 
       [job] = workflow.jobs
       %{id: step_id} = insert(:step, runs: [run], job: job)
@@ -778,7 +776,12 @@ defmodule LightningWeb.RunChannelTest do
         insert(:run,
           work_order: work_order,
           starting_trigger: trigger,
-          dataclip: dataclip
+          dataclip: dataclip,
+          options:
+            Lightning.Extensions.MockUsageLimiter.get_run_options(%Context{
+              project_id: project.id
+            })
+            |> Enum.into(%{})
         )
 
       Lightning.Stub.reset_time()
@@ -924,7 +927,12 @@ defmodule LightningWeb.RunChannelTest do
           work_order: work_order,
           starting_trigger: trigger,
           dataclip: dataclip,
-          state: run_state
+          state: run_state,
+          options:
+            Lightning.Extensions.MockUsageLimiter.get_run_options(%Context{
+              project_id: project.id
+            })
+            |> Enum.into(%{})
         )
 
       Lightning.Stub.reset_time()
@@ -1157,7 +1165,12 @@ defmodule LightningWeb.RunChannelTest do
       insert(:run,
         work_order: work_order,
         starting_trigger: trigger,
-        dataclip: dataclip
+        dataclip: dataclip,
+        options:
+          Lightning.Extensions.MockUsageLimiter.get_run_options(%Context{
+            project_id: project.id
+          })
+          |> Enum.into(%{})
       )
 
     %{

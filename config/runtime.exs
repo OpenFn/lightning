@@ -271,6 +271,10 @@ config :lightning, :plausible,
   data_domain: env!("PLAUSIBLE_DATA_DOMAIN", :string, nil)
 
 config :lightning,
+       :run_grace_period_seconds,
+       env!("RUN_GRACE_PERIOD_SECONDS", :integer, 10)
+
+config :lightning,
        :max_run_duration_seconds,
        env!("WORKER_MAX_RUN_DURATION_SECONDS", :integer, 60)
 

@@ -46,7 +46,8 @@ defmodule LightningWeb.RunWithOptionsTest do
             }
           ],
           "starting_node_id" => trigger.id,
-          "triggers" => [%{"id" => trigger.id}]
+          "triggers" => [%{"id" => trigger.id}],
+          "options" => %{"output_dataclips" => true, "run_timeout_ms" => 60000}
         }
 
       run = Runs.get_for_worker(run.id)
@@ -94,13 +95,31 @@ defmodule LightningWeb.RunWithOptionsTest do
             }
           ],
           "starting_node_id" => trigger.id,
-          "triggers" => [%{"id" => trigger.id}]
+          "triggers" => [%{"id" => trigger.id}],
+          "options" => %{"output_dataclips" => true, "run_timeout_ms" => 60000}
         }
 
       assert RunWithOptions.render(run)
              |> Jason.encode!()
              |> Jason.decode!() ==
                expected_result
+    end
+  end
+
+  describe "options_for_worker/1" do
+    test "converts RunOptions to options for the worker" do
+      lightning_options = %Lightning.Runs.RunOptions{
+        save_dataclips: true,
+        run_timeout_ms: 123
+      }
+
+      expected_worker_options = %{
+        output_dataclips: true,
+        run_timeout_ms: 123
+      }
+
+      assert RunWithOptions.options_for_worker(lightning_options) ==
+               expected_worker_options
     end
   end
 end

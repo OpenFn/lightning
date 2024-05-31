@@ -1,8 +1,7 @@
 defmodule Lightning.RunsTest do
-  use Lightning.DataCase
+  use Lightning.DataCase, async: true
 
   import Lightning.Factories
-  import Mock
   import Ecto.Query
 
   alias Ecto.Multi
@@ -288,13 +287,23 @@ defmodule Lightning.RunsTest do
       assert step.output_dataclip.body == %{"foo" => "bar"}
     end
 
-    test "wipes the dataclip if erase_all retention policy is specified" do
-      dataclip = insert(:dataclip)
+    test "wipes the dataclip if erase_all retention policy is specified at the project level when the run is created" do
       %{triggers: [trigger], jobs: [job]} = workflow = insert(:simple_workflow)
+
+      dataclip = insert(:dataclip, project: workflow.project)
+
+      Repo.get(Lightning.Projects.Project, workflow.project_id)
+      |> Ecto.Changeset.change(retention_policy: :erase_all)
+      |> Repo.update()
 
       %{runs: [run]} =
         work_order_for(trigger, workflow: workflow, dataclip: dataclip)
         |> insert()
+
+      assert %Lightning.Runs.RunOptions{
+               save_dataclips: false,
+               run_timeout_ms: 60000
+             } = run.options
 
       step =
         insert(:step, runs: [run], job: job, input_dataclip: dataclip)
@@ -309,7 +318,7 @@ defmodule Lightning.RunsTest do
             run_id: run.id,
             project_id: workflow.project_id
           },
-          :erase_all
+          run.options
         )
 
       step =
@@ -526,15 +535,6 @@ defmodule Lightning.RunsTest do
       }
     end
 
-    test "indicates if a response was unsuccessful", %{run: run} do
-      with_mock(
-        Lightning.Repo,
-        transaction: fn _multi -> {:error, nil, %Ecto.Changeset{}, nil} end
-      ) do
-        assert Runs.start_run(run) == {:error, %Ecto.Changeset{}}
-      end
-    end
-
     test "triggers a metric if starting the run was successful",
          %{run: run} do
       ref =
@@ -556,29 +556,6 @@ defmodule Lightning.RunsTest do
         [:domain, :run, :queue],
         ^ref,
         %{delay: ^delay},
-        %{}
-      }
-    end
-
-    test "does not trigger a metric if starting the run was unsuccessful",
-         %{run: run} do
-      ref =
-        :telemetry_test.attach_event_handlers(
-          self(),
-          [[:domain, :run, :queue]]
-        )
-
-      with_mock(
-        Lightning.Repo,
-        transaction: fn _multi -> {:error, nil, nil, nil} end
-      ) do
-        Runs.start_run(run)
-      end
-
-      refute_received {
-        [:domain, :run, :queue],
-        ^ref,
-        %{delay: _delay},
         %{}
       }
     end

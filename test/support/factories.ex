@@ -98,7 +98,8 @@ defmodule Lightning.Factories do
 
   def run_factory do
     %Lightning.Run{
-      id: fn -> Ecto.UUID.generate() end
+      id: fn -> Ecto.UUID.generate() end,
+      options: %Lightning.Runs.RunOptions{}
     }
   end
 

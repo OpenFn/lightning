@@ -47,6 +47,11 @@ defmodule LightningWeb.ConnCase do
     # Default to Hackney adapter so that Bypass dependent tests continue working
     Mox.stub_with(Lightning.Tesla.Mock, Tesla.Adapter.Hackney)
 
+    Mox.stub_with(
+      Lightning.Extensions.MockUsageLimiter,
+      Lightning.Extensions.UsageLimiter
+    )
+
     pid =
       Ecto.Adapters.SQL.Sandbox.start_owner!(Lightning.Repo,
         shared: not tags[:async]

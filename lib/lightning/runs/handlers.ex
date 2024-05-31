@@ -160,7 +160,7 @@ defmodule Lightning.Runs.Handlers do
       field :finished_at, :utc_datetime_usec
     end
 
-    def new(params, retention_policy) do
+    def new(params, options) do
       cast(%__MODULE__{}, params, [
         :run_id,
         :output_dataclip,
@@ -177,8 +177,8 @@ defmodule Lightning.Runs.Handlers do
         output_dataclip_id = get_change(changeset, :output_dataclip_id)
         output_dataclip = get_change(changeset, :output_dataclip)
 
-        case {retention_policy, output_dataclip, output_dataclip_id} do
-          {:erase_all, _, _} ->
+        case {options, output_dataclip, output_dataclip_id} do
+          {%Runs.RunOptions{save_dataclips: false}, _, _} ->
             changeset
 
           {_, nil, nil} ->
@@ -198,20 +198,21 @@ defmodule Lightning.Runs.Handlers do
       ])
     end
 
-    def call(params, retention_policy) do
+    def call(params, options) do
       with {:ok, complete_step} <-
-             params |> new(retention_policy) |> apply_action(:validate),
-           {:ok, step} <- update_step(complete_step, retention_policy) do
+             params |> new(options) |> apply_action(:validate),
+           {:ok, step} <- update_step(complete_step, options) do
         Runs.Events.step_completed(complete_step.run_id, step)
 
         {:ok, step}
       end
     end
 
-    defp update_step(complete_step, retention_policy) do
+    defp update_step(complete_step, options) do
       Repo.transact(fn ->
         with %Step{} = step <- get_step(complete_step.step_id),
-             {:ok, _} <- maybe_save_dataclip(complete_step, retention_policy) do
+             {:ok, _} <-
+               maybe_save_dataclip(complete_step, options) do
           step
           |> Step.finished(
             complete_step.output_dataclip_id,
@@ -242,7 +243,7 @@ defmodule Lightning.Runs.Handlers do
              project_id: project_id,
              output_dataclip_id: dataclip_id
            },
-           :erase_all
+           %Lightning.Runs.RunOptions{save_dataclips: false}
          ) do
       if is_nil(dataclip_id) do
         {:ok, nil}
@@ -260,7 +261,7 @@ defmodule Lightning.Runs.Handlers do
 
     defp maybe_save_dataclip(
            %__MODULE__{output_dataclip: nil},
-           _retention_policy
+           _run_options
          ) do
       {:ok, nil}
     end
@@ -271,7 +272,7 @@ defmodule Lightning.Runs.Handlers do
              project_id: project_id,
              output_dataclip_id: dataclip_id
            },
-           _retention_policy
+           _run_options
          ) do
       Dataclip.new(%{
         id: dataclip_id,

@@ -266,7 +266,9 @@ defmodule Lightning.FailureAlertTest do
       expect(Lightning.MockConfig, :default_max_run_duration, fn -> 1 end)
 
       run_options =
-        UsageLimiter.get_run_options(%Context{project_id: 123})
+        UsageLimiter.get_run_options(%Context{
+          project_id: run.work_order.workflow.project_id
+        })
 
       {:ok, %{}, socket} =
         LightningWeb.WorkerSocket

@@ -36,10 +36,15 @@ defmodule Lightning.WorkOrdersTest do
     @tag trigger_type: :webhook
     test "with a webhook trigger", context do
       %{workflow: workflow, trigger: trigger, snapshot: snapshot} = context
-
       project_id = workflow.project_id
+
+      project =
+        Repo.get(Lightning.Projects.Project, project_id)
+        |> Lightning.Projects.Project.changeset(%{retention_policy: :erase_all})
+        |> Repo.update!()
+
       Lightning.WorkOrders.subscribe(project_id)
-      dataclip = insert(:dataclip)
+      dataclip = insert(:dataclip, project: project)
 
       {:ok, workorder} =
         WorkOrders.create_for(trigger, dataclip: dataclip, workflow: workflow)
@@ -54,6 +59,11 @@ defmodule Lightning.WorkOrdersTest do
 
       assert run.starting_trigger.id == trigger.id
       assert run.dataclip_id == dataclip.id
+
+      assert run.options == %Lightning.Runs.RunOptions{
+               save_dataclips: false,
+               run_timeout_ms: 60000
+             }
 
       workorder_id = workorder.id
 
@@ -118,6 +128,11 @@ defmodule Lightning.WorkOrdersTest do
       assert run.starting_trigger.id == trigger.id
       assert run.snapshot_id == snapshot.id
 
+      assert run.options == %Lightning.Runs.RunOptions{
+               save_dataclips: true,
+               run_timeout_ms: 60000
+             }
+
       workorder_id = workorder.id
 
       assert_received %Events.WorkOrderCreated{
@@ -160,6 +175,11 @@ defmodule Lightning.WorkOrdersTest do
       assert run.priority == :immediate
       assert run.created_by.id == user.id
       assert run.snapshot_id == snapshot.id
+
+      assert run.options == %Lightning.Runs.RunOptions{
+               save_dataclips: true,
+               run_timeout_ms: 60000
+             }
 
       assert_received %Events.RunCreated{
         project_id: ^project_id
@@ -256,6 +276,11 @@ defmodule Lightning.WorkOrdersTest do
       assert retry_run.created_by.id == user.id
       assert retry_run.work_order_id == run.work_order_id
 
+      assert retry_run.options == %Lightning.Runs.RunOptions{
+               save_dataclips: true,
+               run_timeout_ms: 60000
+             }
+
       assert retry_run.snapshot_id == snapshot2.id,
              "Retrying automatically picks the newest snapshot for a workflow"
 
@@ -312,6 +337,11 @@ defmodule Lightning.WorkOrdersTest do
       assert retry_run.created_by.id == user.id
       assert retry_run.work_order_id == run.work_order_id
       assert retry_run.state == :available
+
+      assert retry_run.options == %Lightning.Runs.RunOptions{
+               save_dataclips: true,
+               run_timeout_ms: 60000
+             }
 
       steps = Ecto.assoc(retry_run, :steps) |> Repo.all()
       assert steps |> Enum.map(& &1.id) == [first_step.id]
@@ -586,6 +616,11 @@ defmodule Lightning.WorkOrdersTest do
       assert retry_run.created_by_id == user.id
       assert retry_run.work_order_id == old_run.work_order_id
       assert retry_run.state == :available
+
+      assert retry_run.options == %Lightning.Runs.RunOptions{
+               save_dataclips: true,
+               run_timeout_ms: 60000
+             }
 
       assert retry_run |> Repo.preload(:steps) |> Map.get(:steps) == [],
              "retrying a run from the start should not copy over steps"
