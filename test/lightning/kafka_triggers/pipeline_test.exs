@@ -160,13 +160,13 @@ defmodule Lightning.KafkaTriggers.PipelineTest do
 
       %{
         kafka_configuration: %{
-          "partition_timestamps" => trigger_1_timestamps
+          partition_timestamps: trigger_1_timestamps
         }
       } = Trigger |> Repo.get(trigger_1.id)
 
       %{
         kafka_configuration: %{
-          "partition_timestamps" => trigger_2_timestamps
+          partition_timestamps: trigger_2_timestamps
         }
       } = Trigger |> Repo.get(trigger_2.id)
 
@@ -246,13 +246,13 @@ defmodule Lightning.KafkaTriggers.PipelineTest do
 
       %{
         kafka_configuration: %{
-          "partition_timestamps" => trigger_1_timestamps
+          partition_timestamps: trigger_1_timestamps
         }
       } = Trigger |> Repo.get(trigger_1.id)
 
       %{
         kafka_configuration: %{
-          "partition_timestamps" => trigger_2_timestamps
+          partition_timestamps: trigger_2_timestamps
         }
       } = Trigger |> Repo.get(trigger_2.id)
 
@@ -313,20 +313,19 @@ defmodule Lightning.KafkaTriggers.PipelineTest do
       sasl = opts |> Keyword.get(:sasl, true)
       ssl = opts |> Keyword.get(:ssl, true)
 
-      sasl_config =
-        if sasl do
-          ["plain", "my-user-#{index}", "secret-#{index}"]
-        else
-          nil
-        end
+      password = if sasl, do: "secret-#{index}", else: nil
+      sasl_type = if sasl, do: "plain", else: nil
+      username = if sasl, do: "my-user-#{index}", else: nil
 
       %{
-        "group_id" => "lightning-#{index}",
-        "hosts" => [["host-#{index}", 9092], ["other-host-#{index}", 9093]],
-        "partition_timestamps" => partition_timestamps(),
-        "sasl" => sasl_config,
-        "ssl" => ssl,
-        "topics" => ["topic-#{index}-1", "topic-#{index}-2"]
+        group_id: "lightning-#{index}",
+        hosts: [["host-#{index}", "9092"], ["other-host-#{index}", "9093"]],
+        partition_timestamps: partition_timestamps(),
+        password: password,
+        sasl: sasl_type,
+        ssl: ssl,
+        topics: ["topic-#{index}-1", "topic-#{index}-2"],
+        username: username
       }
     end
 
