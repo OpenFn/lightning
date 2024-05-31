@@ -245,13 +245,15 @@ defmodule Lightning.KafkaTriggersTest do
       topics: topics
     } do
       expected = %{
-        "group_id" => group_id,
-        "hosts" => hosts,
-        "initial_offset_reset_policy" => initial_offset_reset_policy,
-        "partition_timestamps" => %{},
-        "sasl" => nil,
-        "ssl" => false,
-        "topics" => topics
+        group_id: group_id,
+        hosts: hosts,
+        initial_offset_reset_policy: initial_offset_reset_policy,
+        partition_timestamps: %{},
+        password: nil,
+        sasl: nil,
+        ssl: false,
+        topics: topics,
+        username: nil
       }
 
       config =
@@ -275,13 +277,15 @@ defmodule Lightning.KafkaTriggersTest do
       ssl = true
 
       expected = %{
-        "group_id" => group_id,
-        "hosts" => hosts,
-        "initial_offset_reset_policy" => initial_offset_reset_policy,
-        "partition_timestamps" => %{},
-        "sasl" => ["plain", "my_user", "my_secret"],
-        "ssl" => true,
-        "topics" => topics
+        group_id: group_id,
+        hosts: hosts,
+        initial_offset_reset_policy: initial_offset_reset_policy,
+        partition_timestamps: %{},
+        password: "my_secret",
+        sasl: "plain",
+        ssl: true,
+        topics: topics,
+        username: "my_user",
       }
 
       config =
@@ -310,7 +314,7 @@ defmodule Lightning.KafkaTriggersTest do
           topics: topics
         )
 
-      assert %{"initial_offset_reset_policy" => "earliest"} = config
+      assert %{initial_offset_reset_policy: "earliest"} = config
     end
 
     test "converts an initial_offset_reset_policy of :latest", %{
@@ -326,7 +330,7 @@ defmodule Lightning.KafkaTriggersTest do
           topics: topics
         )
 
-      assert %{"initial_offset_reset_policy" => "latest"} = config
+      assert %{initial_offset_reset_policy: "latest"} = config
     end
 
     test "raises on an unrecognised initial_offset_reset_policy", %{
