@@ -54,19 +54,23 @@ defmodule Lightning.KafkaTriggers do
     %Trigger{kafka_configuration: kafka_configuration} = trigger
 
     case kafka_configuration do
-      config = %{"partition_timestamps" => ts} when map_size(ts) == 0 ->
+      config = %{partition_timestamps: ts} when map_size(ts) == 0 ->
         initial_policy(config)
 
-      %{"partition_timestamps" => ts} ->
+      %{partition_timestamps: ts} ->
         earliest_timestamp(ts)
     end
   end
 
-  defp initial_policy(%{"initial_offset_reset_policy" => initial_policy}) do
-    case initial_policy do
-      policy when is_integer(policy) -> {:timestamp, policy}
-      policy when policy in ["earliest", "latest"] -> policy |> String.to_atom()
-      _unrecognised_policy -> :latest
+  defp initial_policy(%{initial_offset_reset_policy: initial_policy}) do
+    cond do
+      initial_policy in ["earliest", "latest"] ->
+        initial_policy |> String.to_atom()
+      String.match?(initial_policy, ~r/^\d+$/) ->
+        {timestamp, _remainder} = Integer.parse(initial_policy)
+        {:timestamp, timestamp}
+      true ->
+        :latest
     end
   end
 

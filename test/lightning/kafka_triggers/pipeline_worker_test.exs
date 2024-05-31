@@ -136,23 +136,22 @@ defmodule Lightning.KafkaTriggers.PipelineWorkerTest do
       sasl = opts |> Keyword.get(:sasl, true)
       ssl = opts |> Keyword.get(:ssl, true)
 
-      sasl_config =
-        if sasl do
-          ["plain", "my-user-#{index}", "secret-#{index}"]
-        else
-          nil
-        end
+      password = if sasl, do: "secret-#{index}", else: nil
+      sasl_type = if sasl, do: "plain", else: nil
+      username = if sasl, do: "my-user-#{index}", else: nil
 
-      initial_offset_reset_policy = "171524976732#{index}" |> String.to_integer()
+      initial_offset_reset_policy = "171524976732#{index}"
 
       %{
-        "group_id" => "lightning-#{index}",
-        "hosts" => [["host-#{index}", 9092], ["other-host-#{index}", 9093]],
-        "initial_offset_reset_policy" => initial_offset_reset_policy,
-        "partition_timestamps" => partition_timestamps,
-        "sasl" => sasl_config,
-        "ssl" => ssl,
-        "topics" => ["topic-#{index}-1", "topic-#{index}-2"]
+        group_id: "lightning-#{index}",
+        hosts: [["host-#{index}", "9092"], ["other-host-#{index}", "9093"]],
+        initial_offset_reset_policy: initial_offset_reset_policy,
+        partition_timestamps: partition_timestamps,
+        password: password,
+        sasl: sasl_type,
+        ssl: ssl,
+        topics: ["topic-#{index}-1", "topic-#{index}-2"],
+        username: username
       }
     end
 
