@@ -13,7 +13,7 @@
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-EPF2X7PV.js"></script>
-    <script src="dist/sidebar_items-5306C38B.js"></script>
+    <script src="dist/sidebar_items-216F32D5.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -155,12 +155,12 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#lost/1" translate="no">lost(now)</a>
+        <a href="#lost/0" translate="no">lost()</a>
 
       </div>
 
         <div class="summary-synopsis"><p>Return all runs that have been claimed by a worker before the earliest
-acceptable start time (determined by the longest acceptable run time) but are
+acceptable start time (determined by the run options and grace period) but are
 still incomplete. This indicates that we may have lost contact with the worker
 that was responsible for executing the run.</p></div>
 
@@ -179,14 +179,14 @@ that was responsible for executing the run.</p></div>
       <span class="text">Functions</span>
     </h1>
     <div class="functions-list">
-<section class="detail" id="lost/1">
+<section class="detail" id="lost/0">
 
   <div class="detail-header">
-    <a href="#lost/1" class="detail-link" title="Link to this function">
+    <a href="#lost/0" class="detail-link" title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">lost(now)</h1>
+    <h1 class="signature" translate="no">lost()</h1>
 
       <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs/query.ex#L18" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
@@ -200,12 +200,12 @@ that was responsible for executing the run.</p></div>
 
       <div class="specs">
 
-          <pre translate="no"><span class="attribute">@spec</span> lost(<a href="https://hexdocs.pm/elixir/DateTime.html#t:t/0">DateTime.t</a>()) :: <a href="https://hexdocs.pm/ecto/3.10.3/Ecto.Queryable.html#t:t/0">Ecto.Queryable.t</a>()</pre>
+          <pre translate="no"><span class="attribute">@spec</span> lost() :: <a href="https://hexdocs.pm/ecto/3.10.3/Ecto.Queryable.html#t:t/0">Ecto.Queryable.t</a>()</pre>
 
       </div>
 
 <p>Return all runs that have been claimed by a worker before the earliest
-acceptable start time (determined by the longest acceptable run time) but are
+acceptable start time (determined by the run options and grace period) but are
 still incomplete. This indicates that we may have lost contact with the worker
 that was responsible for executing the run.</p>
   </section>

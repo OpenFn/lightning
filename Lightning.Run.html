@@ -13,7 +13,7 @@
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-EPF2X7PV.js"></script>
-    <script src="dist/sidebar_items-5306C38B.js"></script>
+    <script src="dist/sidebar_items-216F32D5.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -169,6 +169,17 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
+        <a href="#add_options/2" translate="no">add_options(changeset, project_id)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Adds options (project-level logging options, resource limits such as timeout
+and memory usage, etc.) to the run before storing in the DB.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
         <a href="#complete/2" translate="no">complete(run, params)</a>
 
       </div>
@@ -231,7 +242,7 @@ Pages
     </a>
     <h1 class="signature" translate="no">t()</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs/run.ex#L40" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs/run.ex#L42" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -255,6 +266,7 @@ Pages
   id: <a href="https://hexdocs.pm/ecto/3.10.3/Ecto.UUID.html#t:t/0">Ecto.UUID.t</a>() | nil,
   inserted_at: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
   log_lines: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
+  options: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
   priority: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
   snapshot: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
   snapshot_id: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
@@ -287,6 +299,29 @@ Pages
       <span class="text">Functions</span>
     </h1>
     <div class="functions-list">
+<section class="detail" id="add_options/2">
+
+  <div class="detail-header">
+    <a href="#add_options/2" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">add_options(changeset, project_id)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs/run.ex#L140" class="icon-action" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+<p>Adds options (project-level logging options, resource limits such as timeout
+and memory usage, etc.) to the run before storing in the DB.</p>
+  </section>
+</section>
 <section class="detail" id="complete/2">
 
   <div class="detail-header">
@@ -296,7 +331,7 @@ Pages
     </a>
     <h1 class="signature" translate="no">complete(run, params)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs/run.ex#L141" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs/run.ex#L160" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -321,6 +356,7 @@ Pages
     id: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
     inserted_at: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
     log_lines: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
+    options: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
     priority: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
     snapshot: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
     snapshot_id: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
@@ -352,7 +388,7 @@ Pages
     </a>
     <h1 class="signature" translate="no">final_states()</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs/run.ex#L34" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs/run.ex#L36" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -376,7 +412,7 @@ Pages
     </a>
     <h1 class="signature" translate="no">for(trigger, attrs)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs/run.ex#L90" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs/run.ex#L94" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -400,7 +436,7 @@ Pages
     </a>
     <h1 class="signature" translate="no">new(attrs \\ %{})</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs/run.ex#L114" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs/run.ex#L120" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -422,7 +458,7 @@ Pages
     </a>
     <h1 class="signature" translate="no">start(run)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs/run.ex#L130" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs/run.ex#L149" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>

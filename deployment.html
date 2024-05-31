@@ -13,7 +13,7 @@
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-EPF2X7PV.js"></script>
-    <script src="dist/sidebar_items-5306C38B.js"></script>
+    <script src="dist/sidebar_items-216F32D5.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -169,9 +169,10 @@ convenience.</p><p>For more information see the <a href="workers.html">Workers</
   </a>
   <span class="text">Limits</span>
 </h3>
-<ul><li><code class="inline">WORKER_MAX_RUN_MEMORY_MB</code> - how much memory (in MB) can a single run use?</li><li><code class="inline">WORKER_MAX_RUN_DURATION_SECONDS</code> - the maximum duration (in seconds) that
-workflows are allowed to run (keep this below your termination_grace_period if
-using kubernetes)</li><li><code class="inline">WORKER_CAPACITY</code> - the number of runs a ws-worker instance will take on
+<ul><li><code class="inline">WORKER_MAX_RUN_MEMORY_MB</code> - how much memory (in MB) can a single run use?</li><li><code class="inline">RUN_GRACE_PERIOD_SECONDS</code> - how long <em>after</em> the <code class="inline">MAX_RUN_DURATION_SECONDS</code>
+should the server wait for the worker to send back data on a run.</li><li><code class="inline">WORKER_MAX_RUN_DURATION_SECONDS</code> - the maximum duration (in seconds) that
+workflows are allowed to run (keep this plus <code class="inline">RUN_GRACE_PERIOD_SECONDS</code> below
+your termination_grace_period if using kubernetes)</li><li><code class="inline">WORKER_CAPACITY</code> - the number of runs a ws-worker instance will take on
 concurrently.</li><li><code class="inline">MAX_DATACLIP_SIZE_MB</code> - the maximum size (in MB) of a dataclip created via
 the webhook trigger URL for a job. This limits the max request size via the
 JSON plug and may (in future) limit the size of dataclips that can be stored

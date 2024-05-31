@@ -13,7 +13,7 @@
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-EPF2X7PV.js"></script>
-    <script src="dist/sidebar_items-5306C38B.js"></script>
+    <script src="dist/sidebar_items-216F32D5.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -157,13 +157,18 @@ and this project adheres to
   <span class="text">Changed</span>
 </h3>
 <ul><li>Change Default Text For New Job Nodes
-<a href="https://github.com/OpenFn/lightning/pull/2014">#2014</a></li></ul><h3 id="fixed" class="section-heading">
+<a href="https://github.com/OpenFn/lightning/pull/2014">#2014</a></li><li>Persisted run options when runs are <em>created</em>, not when they are <em>claimed</em>.
+This has the benefit of &quot;locking in&quot; the behavior desired by the user at the
+time they demand a run, not whenever the worker picks it up.
+<a href="https://github.com/OpenFn/lightning/pull/2085">#2085</a></li><li>Made <code class="inline">RUN_GRACE_PERIOD_SECONDS</code> a configurable ENV instead of 20% of the
+<code class="inline">WORKER_MAX_RUN_DURATION</code>
+<a href="https://github.com/OpenFn/lightning/pull/2085">#2085</a></li></ul><h3 id="fixed" class="section-heading">
   <a href="#fixed" class="hover-link">
     <i class="ri-link-m" aria-hidden="true"></i>
   </a>
   <span class="text">Fixed</span>
 </h3>
-<ul><li>Dataclip Viewer now responds to page resize and internal page layout
+<ul><li>Stopped Janitor from calling runs lost if they have special runtime options</li><li>Dataclip Viewer now responds to page resize and internal page layout
 <a href="https://github.com/OpenFn/lightning/issues/2120">#2120</a></li></ul><h2 id="v2-5-3-2024-05-27" class="section-heading">
   <a href="#v2-5-3-2024-05-27" class="hover-link">
     <i class="ri-link-m" aria-hidden="true"></i>
@@ -1504,7 +1509,7 @@ work orders up to <code class="inline">v0.10.0</code>, though the granularity of
 will be less than <code class="inline">v0.10.0</code> and the final states are not guaranteed to be
 accurate for workflows with multiple branches and leaf nodes with varying exit
 reasons.</p><p>The migration scripts can be run with a single function call in SetupUtils from
-a connect <code class="inline">iex</code> session:</p><pre><code class="makeup elixir" translate="no"><span class="nc">Lightning.SetupUtils</span><span class="o">.</span><span class="n">approximate_state_for_attempts_and_workorders</span><span class="p" data-group-id="1477772238-1">(</span><span class="p" data-group-id="1477772238-1">)</span></code></pre><p>Note that (like lots of <em>other</em> functionality in <code class="inline">SetupUtils</code>, calling this
+a connect <code class="inline">iex</code> session:</p><pre><code class="makeup elixir" translate="no"><span class="nc">Lightning.SetupUtils</span><span class="o">.</span><span class="n">approximate_state_for_attempts_and_workorders</span><span class="p" data-group-id="8831738194-1">(</span><span class="p" data-group-id="8831738194-1">)</span></code></pre><p>Note that (like lots of <em>other</em> functionality in <code class="inline">SetupUtils</code>, calling this
 function is a destructive action and you should only do it if you've backed up
 your data and you know what you're doing.)</p><p>As always, we recommend backing up your data before migrating. (And thanks for
 bearing with us as we move towards our first stable Lightning release.)</p><h3 id="added-26" class="section-heading">
