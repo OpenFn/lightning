@@ -34,7 +34,7 @@ defmodule Lightning.Accounts.User do
     field :scheduled_deletion, :utc_datetime
     field :github_oauth_token, Lightning.Encrypted.Map, redact: true
 
-    field :emails_preference, Ecto.Enum,
+    field :contact_preference, Ecto.Enum,
       values: [:critical, :any],
       default: :critical
 
@@ -57,7 +57,7 @@ defmodule Lightning.Accounts.User do
       :last_name,
       :email,
       :password,
-      :emails_preference
+      :contact_preference
     ])
     |> validate_name()
     |> validate_email()
@@ -72,7 +72,7 @@ defmodule Lightning.Accounts.User do
     hashed_password: :string,
     disabled: :boolean,
     scheduled_deletion: :utc_datetime,
-    emails_preference:
+    contact_preference:
       Ecto.ParameterizedType.init(Ecto.Enum, values: [:critical, :any])
   }
 
