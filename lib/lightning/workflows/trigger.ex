@@ -46,17 +46,7 @@ defmodule Lightning.Workflows.Trigger do
       join_through: "trigger_webhook_auth_methods",
       on_replace: :delete
 
-    embeds_one :kafka_configuration, KafkaConfiguration, on_replace: :update do
-      field :group_id, :string
-      field :hosts, {:array, {:array, :string}}
-      field :initial_offset_reset_policy, :string
-      field :partition_timestamps, :map
-      field :password, :string
-      field :sasl, :string
-      field :ssl, :boolean
-      field :topics, {:array, :string}
-      field :username, :string
-    end
+    embeds_one :kafka_configuration, Lightning.Workflows.Trigger.KafkaConfiguration, on_replace: :update
 
     timestamps(type: :utc_datetime)
   end
@@ -175,5 +165,33 @@ defmodule Lightning.Workflows.Trigger do
               true
             )
       }
+  end
+end
+
+defmodule Lightning.Workflows.Trigger.KafkaConfiguration do
+  use Ecto.Schema
+
+  @derive {Jason.Encoder, only: [
+    :group_id,
+    :hosts,
+    :initial_offset_reset_policy,
+    :partition_timestamps,
+    :password,
+    :sasl,
+    :ssl,
+    :topics,
+    :username
+  ]}
+
+  embedded_schema do
+    field :group_id, :string
+    field :hosts, {:array, {:array, :string}}
+    field :initial_offset_reset_policy, :string
+    field :partition_timestamps, :map
+    field :password, :string
+    field :sasl, :string
+    field :ssl, :boolean
+    field :topics, {:array, :string}
+    field :username, :string
   end
 end
