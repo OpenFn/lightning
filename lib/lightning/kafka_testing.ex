@@ -20,7 +20,7 @@ defmodule Lightning.KafkaTesting.Utils do
       opts
       |> Keyword.get(
         :hosts,
-        [["localhost", 9096], ["localhost", 9095], ["localhost", 9094]]
+        [["localhost", "9096"], ["localhost", "9095"], ["localhost", "9094"]]
       )
     topics= opts |> Keyword.get(:topics, ["may_15_topic"])
 
