@@ -17,8 +17,15 @@ and this project adheres to
 
 ### Added
 
-- CORS support
-  [#2157](https://github.com/OpenFn/lightning/issues/2157)
+### Changed
+
+### Fixed
+
+## [v2.5.4] - 2024-05-31
+
+### Added
+
+- CORS support [#2157](https://github.com/OpenFn/lightning/issues/2157)
 - Track users emails preferences
   [#2163](https://github.com/OpenFn/lightning/issues/2163)
 
@@ -37,6 +44,7 @@ and this project adheres to
 ### Fixed
 
 - Stopped Janitor from calling runs lost if they have special runtime options
+  [#2079](https://github.com/OpenFn/lightning/issues/2079)
 - Dataclip Viewer now responds to page resize and internal page layout
   [#2120](https://github.com/OpenFn/lightning/issues/2120)
 
