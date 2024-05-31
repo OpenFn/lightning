@@ -21,7 +21,7 @@ defmodule Lightning.Runs.Query do
     grace_period_ms = Lightning.Config.grace_period() * 1000
 
     # TODO: Remove after live deployment rollouts are done. ====================
-    fallback_max = Application.get_env(:lightning, :max_run_duration_seconds)
+    fallback_max = Lightning.Config.default_max_run_duration()
 
     fallback_oldest_claim =
       now

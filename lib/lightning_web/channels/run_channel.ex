@@ -5,12 +5,9 @@ defmodule LightningWeb.RunChannel do
   use LightningWeb, :channel
 
   alias Lightning.Credentials
-  # alias Lightning.Extensions.UsageLimiting.Context
-  # alias Lightning.Projects
   alias Lightning.Repo
   alias Lightning.Runs
   alias Lightning.Scrubber
-  # alias Lightning.Services.UsageLimiter
   alias Lightning.Workers
   alias LightningWeb.RunWithOptions
 
