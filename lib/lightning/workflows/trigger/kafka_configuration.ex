@@ -2,6 +2,8 @@ defmodule Lightning.Workflows.Trigger.KafkaConfiguration do
   use Ecto.Schema
   import Ecto.Changeset
 
+  @sasl_types [:plain, :scram_sha_256, :scram_sha_512]
+
   @derive {Jason.Encoder, only: [
     :group_id,
     :hosts,
@@ -21,7 +23,7 @@ defmodule Lightning.Workflows.Trigger.KafkaConfiguration do
     field :initial_offset_reset_policy, :string
     field :partition_timestamps, :map
     field :password, :string
-    field :sasl, :string
+    field :sasl, Ecto.Enum, values: @sasl_types, default: nil
     field :ssl, :boolean
     field :topics, {:array, :string}
     field :topics_string, :string, virtual: true
@@ -33,24 +35,35 @@ defmodule Lightning.Workflows.Trigger.KafkaConfiguration do
     |> cast(attrs, [
       :group_id,
       :hosts,
+      :hosts_string,
       :initial_offset_reset_policy,
       :partition_timestamps,
       :password,
       :sasl,
       :ssl,
       :topics,
+      :topics_string,
       :username
     ])
-    |> apply_hosts_string(attrs)
-    |> apply_topics_string(attrs)
+    |> apply_hosts_string()
+    |> apply_topics_string()
   end
 
   def generate_hosts_string(changeset) do
     hosts_string =
       changeset
       |> get_field(:hosts)
-      |> Enum.map(fn [host, port] -> "#{host}:#{port}" end)
-      |> Enum.join(", ")
+      |> case do
+        nil ->
+          ""
+        hosts ->
+          hosts
+          |> Enum.map(fn
+            [host, port] -> "#{host}:#{port}"
+            something_else -> something_else # TODO Not tested
+          end)
+          |> Enum.join(", ")
+      end
 
     changeset
     |> put_change(:hosts_string, hosts_string)
@@ -60,14 +73,20 @@ defmodule Lightning.Workflows.Trigger.KafkaConfiguration do
     topics_string =
       changeset
       |> get_field(:topics)
-      |> Enum.join(", ")
+      |> case do
+        nil ->
+          ""
+        topics ->
+          topics
+          |> Enum.join(", ")
+      end
 
     changeset
     |> put_change(:topics_string, topics_string)
   end
 
-  def apply_hosts_string(changeset, attrs) do
-    case attrs[:hosts_string] do
+  def apply_hosts_string(changeset) do
+    case get_field(changeset, :hosts_string) do
       nil ->
         changeset
       "" ->
@@ -79,6 +98,10 @@ defmodule Lightning.Workflows.Trigger.KafkaConfiguration do
           |> Enum.map(fn host ->
             host
             |> String.split(":")
+            |> case do
+              [host, port] -> [host, port]
+              something_else -> something_else # TODO Not tested
+            end
             |> Enum.map(&String.trim/1)
           end)
 
@@ -86,8 +109,8 @@ defmodule Lightning.Workflows.Trigger.KafkaConfiguration do
     end
   end
 
-  def apply_topics_string(changeset, attrs) do
-    case attrs[:topics_string] do
+  def apply_topics_string(changeset) do
+    case get_field(changeset, :topics_string) do
       nil ->
         changeset
       "" ->
@@ -101,4 +124,6 @@ defmodule Lightning.Workflows.Trigger.KafkaConfiguration do
         changeset |> put_change(:topics, topics)
     end
   end
+
+  def sasl_types, do: @sasl_types |> Enum.map(&Atom.to_string(&1))
 end
