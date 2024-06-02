@@ -33,6 +33,17 @@ defmodule Lightning.Workflows.Trigger.KafkaConfigurationTest do
 
       assert hosts_string == "host1:9092"
     end
+
+    # TODO Also test for empty
+    test "returns empty string if hosts is nil" do
+      changeset = KafkaConfiguration.changeset(%KafkaConfiguration{}, %{})
+
+      %Changeset{
+        changes: %{hosts_string: hosts_string}
+      } = KafkaConfiguration.generate_hosts_string(changeset)
+
+      assert hosts_string == ""
+    end
   end
 
   describe "generate_topics_string/1" do
@@ -58,6 +69,17 @@ defmodule Lightning.Workflows.Trigger.KafkaConfigurationTest do
       } = KafkaConfiguration.generate_topics_string(changeset)
 
       assert topics_string == "foo"
+    end
+
+    # TODO Also test for empty
+    test "returns empty string if hosts is nil" do
+      changeset = KafkaConfiguration.changeset(%KafkaConfiguration{}, %{})
+
+      %Changeset{
+        changes: %{topics_string: topics_string}
+      } = KafkaConfiguration.generate_topics_string(changeset)
+
+      assert topics_string == ""
     end
   end
 
@@ -128,7 +150,8 @@ defmodule Lightning.Workflows.Trigger.KafkaConfigurationTest do
           hosts: [
             ["host3", "9094"],
             ["host4", "9095"]
-          ]
+          ],
+          hosts_string: "host3:9094, host4:9095"
         })
 
       assert changes == expectation
@@ -147,7 +170,10 @@ defmodule Lightning.Workflows.Trigger.KafkaConfigurationTest do
 
       expectation =
         base_expectation
-        |> Map.merge(%{topics: ["biz", "boz"]})
+        |> Map.merge(%{
+          topics: ["biz", "boz"],
+          topics_string: "biz, boz"
+        })
 
       assert changes == expectation
     end
@@ -168,11 +194,13 @@ defmodule Lightning.Workflows.Trigger.KafkaConfigurationTest do
     test "replaces the hosts with hosts from the hosts_string", %{
       changeset: changeset
     } do
+      changeset =
+        changeset
+        |> Changeset.put_change(:hosts_string, "host3:9094, host4:9095")
+
       %Changeset{changes: %{hosts: hosts}} =
         changeset
-        |> KafkaConfiguration.apply_hosts_string(
-          %{hosts_string: "host3:9094,host4:9095"}
-        )
+        |> KafkaConfiguration.apply_hosts_string()
 
       assert hosts == [
         ["host3", "9094"],
@@ -183,11 +211,13 @@ defmodule Lightning.Workflows.Trigger.KafkaConfigurationTest do
     test "removes whitespace from the hosts_string entries", %{
       changeset: changeset
     } do
+      changeset =
+        changeset
+        |> Changeset.put_change(:hosts_string,  " host3 : 9094 , host4:9095 ")
+
       %Changeset{changes: %{hosts: hosts}} =
         changeset
-        |> KafkaConfiguration.apply_hosts_string(
-          %{hosts_string: " host3 : 9094 , host4:9095 "}
-        )
+        |> KafkaConfiguration.apply_hosts_string()
 
       assert hosts == [
         ["host3", "9094"],
@@ -198,9 +228,13 @@ defmodule Lightning.Workflows.Trigger.KafkaConfigurationTest do
     test "does nothing if hosts_string is nil", %{
       changeset: changeset
     } do
+      changeset =
+        changeset
+        |> Changeset.put_change(:hosts_string, nil)
+
       %Changeset{changes: %{hosts: hosts}} =
         changeset
-        |> KafkaConfiguration.apply_hosts_string(%{hosts_string: nil})
+        |> KafkaConfiguration.apply_hosts_string()
 
       assert hosts == [
         ["host1", "9092"],
@@ -213,7 +247,7 @@ defmodule Lightning.Workflows.Trigger.KafkaConfigurationTest do
     } do
       %Changeset{changes: %{hosts: hosts}} =
         changeset
-        |> KafkaConfiguration.apply_hosts_string(%{hosts_string: nil})
+        |> KafkaConfiguration.apply_hosts_string()
 
       assert hosts == [
         ["host1", "9092"],
@@ -224,9 +258,12 @@ defmodule Lightning.Workflows.Trigger.KafkaConfigurationTest do
     test "clears hosts if hosts_string is an empty string", %{
       changeset: changeset
     } do
+      changeset =
+        changeset |> Changeset.put_change(:hosts_string, "")
+
       %Changeset{changes: %{hosts: hosts}} =
         changeset
-        |> KafkaConfiguration.apply_hosts_string(%{hosts_string: ""})
+        |> KafkaConfiguration.apply_hosts_string()
 
       assert hosts == []
     end
@@ -244,9 +281,12 @@ defmodule Lightning.Workflows.Trigger.KafkaConfigurationTest do
     test "replaces the topics with topics from topics_string", %{
       changeset: changeset
     } do
-      %Changeset{changes: %{topics: topics}} =
+      changeset =
         changeset
-        |> KafkaConfiguration.apply_topics_string(%{topics_string: "biz,boz"})
+        |> Changeset.put_change(:topics_string, "biz,boz")
+
+      %Changeset{changes: %{topics: topics}} =
+        changeset |> KafkaConfiguration.apply_topics_string()
 
       assert topics == ["biz", "boz"]
     end
@@ -254,11 +294,12 @@ defmodule Lightning.Workflows.Trigger.KafkaConfigurationTest do
     test "removes whitespace from the topics_string entries", %{
       changeset: changeset
     } do
-      %Changeset{changes: %{topics: topics}} =
+      changeset =
         changeset
-        |> KafkaConfiguration.apply_topics_string(
-          %{topics_string: " biz , boz "}
-        )
+        |> Changeset.put_change(:topics_string, " biz , boz ")
+
+      %Changeset{changes: %{topics: topics}} =
+        changeset |> KafkaConfiguration.apply_topics_string()
 
       assert topics == ["biz", "boz"]
     end
@@ -266,9 +307,12 @@ defmodule Lightning.Workflows.Trigger.KafkaConfigurationTest do
     test "does nothing if topics_string is nil", %{
       changeset: changeset
     } do
-      %Changeset{changes: %{topics: topics}} =
+      changeset =
         changeset
-        |> KafkaConfiguration.apply_topics_string(%{topics_string: nil})
+        |> Changeset.put_change(:topics_string, nil)
+
+      %Changeset{changes: %{topics: topics}} =
+        changeset |> KafkaConfiguration.apply_topics_string()
 
       assert topics == ["foo", "bar"]
     end
@@ -277,7 +321,7 @@ defmodule Lightning.Workflows.Trigger.KafkaConfigurationTest do
       changeset: changeset
     } do
       %Changeset{changes: %{topics: topics}} =
-        changeset |> KafkaConfiguration.apply_topics_string(%{})
+        changeset |> KafkaConfiguration.apply_topics_string()
 
       assert topics == ["foo", "bar"]
     end
@@ -285,8 +329,12 @@ defmodule Lightning.Workflows.Trigger.KafkaConfigurationTest do
     test "clears topics if topics_string is an empty string", %{
       changeset: changeset
     } do
+      changeset =
+        changeset
+        |> Changeset.put_change(:topics_string, "")
+
       %Changeset{changes: %{topics: topics}} =
-        changeset |> KafkaConfiguration.apply_topics_string(%{topics_string: ""})
+        changeset |> KafkaConfiguration.apply_topics_string()
 
       assert topics == []
     end
