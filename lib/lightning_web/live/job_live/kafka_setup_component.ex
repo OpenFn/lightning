@@ -18,7 +18,16 @@ defmodule LightningWeb.JobLive.KafkaSetupComponent do
       </div>
       <%= Phoenix.HTML.Form.inputs_for @form, :kafka_configuration, fn kafka_config -> %>
         <%
-          source = KafkaConfiguration.generate_hosts_string(kafka_config.source)
+
+        sasl_types =
+          KafkaConfiguration.sasl_types()
+          |> Enum.map(fn type -> {type, type} end)
+
+        source =
+          kafka_config.source
+          |> KafkaConfiguration.generate_hosts_string()
+          |> KafkaConfiguration.generate_topics_string()
+
           kafka_config = %{kafka_config | source: source}
         %>
         <div class="col-span-4 @md:col-span-2">
@@ -26,20 +35,35 @@ defmodule LightningWeb.JobLive.KafkaSetupComponent do
         </div>
 
         <div class="col-span-4 @md:col-span-2">
-          <Form.text_field field={:topics} form={kafka_config} disabled={@disabled} />
+          <Form.text_field field={:topics_string} form={kafka_config} disabled={@disabled} />
         </div>
 
         <div class="col-span-4 @md:col-span-2">
           <Form.text_field field={:group_id} form={kafka_config} disabled={@disabled} />
         </div>
+
+        <div class="col-span-4 @md:col-span-2">
+          <Form.check_box field={:ssl} form={kafka_config} disabled={@disabled} />
+        </div>
+
+        <div class="col-span-4 @md:col-span-2">
+          <Form.label_field field={:sasl} form={kafka_config} title={"SASL Authentication"} />
+          <Form.select_field name={:sasl} form={kafka_config} values={[{"none", nil}] ++ sasl_types} disabled={@disabled} />
+        </div>
+
+        <div class="col-span-4 @md:col-span-2">
+          <Form.text_field field={:username} form={kafka_config} disabled={@disabled} />
+        </div>
+
+        <div class="col-span-4 @md:col-span-2">
+          <Form.password_field field={:password} id={:password} form={kafka_config} disabled={@disabled} />
+        </div>
+
+        <div class="col-span-4 @md:col-span-2">
+          <Form.text_field field={:initial_offset_reset_policy} form={kafka_config} disabled={@disabled} />
+        </div>
       <% end %>
     </div>
     """
   end
-  #
-  # defp hosts_string(kafka_config) do
-  #   kafka_config.hosts
-  #   |> Enum.map(&String.join(&1, ":"))
-  #   |> Enum.join(", ")
-  # end
 end
