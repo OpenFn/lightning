@@ -32,7 +32,6 @@ defmodule Lightning.Workflows.Trigger do
     field :comment, :string
     field :custom_path, :string
     field :cron_expression, :string
-    # field :kafka_configuration, :map
     field :enabled, :boolean, default: true
     belongs_to :workflow, Workflow
 
