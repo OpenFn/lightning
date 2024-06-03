@@ -185,7 +185,7 @@ defmodule Lightning.KafkaTriggers.PipelineWorkerTest do
   end
 
   defp sasl_config(index, true = _sasl) do
-    {"plain", "my-user-#{index}", "secret-#{index}"}
+    {:plain, "my-user-#{index}", "secret-#{index}"}
   end
 
   defp sasl_config(_index, false = _sasl), do: nil

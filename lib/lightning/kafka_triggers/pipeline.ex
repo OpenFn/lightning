@@ -129,8 +129,7 @@ defmodule Lightning.KafkaTriggers.Pipeline do
         base_config
 
       sasl ->
-        {mechanism, username, password} = sasl
-        [{:sasl, {String.to_atom(mechanism), username, password}} | base_config]
+        [{:sasl, sasl} | base_config]
     end
   end
 end
