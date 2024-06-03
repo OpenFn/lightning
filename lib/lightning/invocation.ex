@@ -419,7 +419,7 @@ defmodule Lightning.Invocation do
         :snapshot,
         :dataclip,
         workflow: workflow,
-        runs: [steps: [:job, :input_dataclip]]
+        runs: [steps: [:job, :input_dataclip, :snapshot]]
       ],
       order_by: [desc_nulls_first: workorder.last_activity],
       distinct: true

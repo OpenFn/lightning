@@ -15,7 +15,7 @@ defmodule LightningWeb.RunLive.Streaming do
   def get_run_async(socket, run_id) do
     socket
     |> start_async(:run, fn ->
-      Runs.get(run_id, include: [steps: [:job], workflow: [:project]])
+      Runs.get(run_id, include: [steps: [:job, :snapshot], workflow: [:project]])
     end)
   end
 

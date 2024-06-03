@@ -1,6 +1,5 @@
 defmodule LightningWeb.RunLive.Components do
   @moduledoc false
-  alias Lightning.Repo
   use LightningWeb, :component
 
   alias Lightning.WorkOrders.SearchParams
@@ -143,6 +142,13 @@ defmodule LightningWeb.RunLive.Components do
   attr :rest, :global
 
   def step_item(assigns) do
+    job =
+      Enum.find(assigns.step.snapshot.jobs, fn job ->
+        job.id == assigns.step.job_id
+      end)
+
+    assigns = assign(assigns, job: job)
+
     ~H"""
     <div
       class={[
@@ -181,12 +187,12 @@ defmodule LightningWeb.RunLive.Components do
           </div>
         <% end %>
         <div class="flex text-sm space-x-1 text-gray-900 items-center">
-          <span><%= @step.job.name %></span>
-          <%= unless @job_id == @step.job_id do %>
+          <span><%= @job.name %></span>
+          <%= unless @job_id == @job.id do %>
             <.link
               class="pl-1"
               navigate={
-                ~p"/projects/#{@project_id}/w/#{@step.job.workflow_id}"
+                ~p"/projects/#{@project_id}/w/#{@step.snapshot.workflow_id}"
                   <> "?a=#{@run_id}&m=expand&s=#{@step.job_id}#log"
               }
             >
@@ -286,7 +292,6 @@ defmodule LightningWeb.RunLive.Components do
       class="bg-gray-100"
     >
       <%= for step <- @step_list do %>
-        <% IO.inspect(step |> Repo.preload(:snapshot)) %>
         <.step_list_item
           can_run_workflow={@can_run_workflow}
           project_id={@project.id}
@@ -306,6 +311,11 @@ defmodule LightningWeb.RunLive.Components do
   attr :can_edit_data_retention, :boolean, required: true
 
   def step_list_item(assigns) do
+    job =
+      Enum.find(assigns.step.snapshot.jobs, fn job ->
+        job.id == assigns.step.job_id
+      end)
+
     is_clone =
       DateTime.compare(assigns.step.inserted_at, assigns.run.inserted_at) ==
         :lt
@@ -316,7 +326,11 @@ defmodule LightningWeb.RunLive.Components do
       if is_clone, do: base_classes ++ ~w(opacity-50), else: base_classes
 
     assigns =
-      assign(assigns, is_clone: is_clone, step_item_classes: step_item_classes)
+      assign(assigns,
+        is_clone: is_clone,
+        step_item_classes: step_item_classes,
+        job: job
+      )
 
     ~H"""
     <div id={"step-#{@step.id}"} role="row" class={@step_item_classes}>
@@ -333,7 +347,7 @@ defmodule LightningWeb.RunLive.Components do
               }
               class="hover:underline hover:underline-offset-2"
             >
-              <span><%= @step.job.name %></span>
+              <span><%= @job.name %></span>
             </.link>
 
             <%= if @is_clone do %>
@@ -361,8 +375,8 @@ defmodule LightningWeb.RunLive.Components do
             <.link
               class="cursor-pointer"
               navigate={
-                ~p"/projects/#{@project_id}/w/#{@step.job.workflow_id}"
-                  <> "?a=#{@run.id}&m=expand&s=#{@step.job_id}#log"
+                ~p"/projects/#{@project_id}/w/#{@step.snapshot.workflow_id}"
+                  <> "?a=#{@run.id}&m=expand&s=#{@job.id}#log"
               }
             >
               <.icon
@@ -403,17 +417,25 @@ defmodule LightningWeb.RunLive.Components do
   end
 
   defp step_rerun_tag(assigns) do
+    assigns = assign(assigns, deleted: is_nil(assigns.step.job))
+
     ~H"""
     <%= if @step.input_dataclip && is_nil(@step.input_dataclip.wiped_at) do %>
       <span
         id={@step.id}
-        class="hover:text-primary-400 cursor-pointer"
-        phx-click="rerun"
-        phx-value-run_id={@run.id}
-        phx-value-step_id={@step.id}
-        title="Rerun workflow from here"
+        {if not @deleted,
+          do: ["phx-click": "rerun", "phx-value-run_id": @run.id,
+            "phx-value-step_id": @step.id, title: "Rerun workflow from here"],
+          else: [title: "Can't rerun workflow from here. This step has been deleted."]}
       >
-        <.icon naked name="hero-play-circle-mini" class="h-5 w-5" />
+        <.icon
+          {if not @deleted, do: [naked: true], else: []}
+          name="hero-play-circle-mini"
+          class={"h-5 w-5 #{if not @deleted,
+            do: "hover:text-primary-400 cursor-pointer",
+            else: "text-gray-400 hover:text-gray-400"
+        }"}
+        />
       </span>
     <% else %>
       <span
