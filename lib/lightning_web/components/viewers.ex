@@ -69,7 +69,7 @@ defmodule LightningWeb.Components.Viewers do
           id={"#{@id}-nothing-yet"}
           class={[
             "m-2 relative rounded-md",
-            "p-12 text-center col-span-full"
+            "p-12 text-center col-span-full w-full"
           ]}
         >
           <.text_ping_loader>
