@@ -34,7 +34,6 @@ defmodule Lightning.Workflows.Trigger.KafkaConfigurationTest do
       assert hosts_string == "host1:9092"
     end
 
-    # TODO Also test for empty
     test "returns empty string if hosts is nil" do
       changeset = KafkaConfiguration.changeset(%KafkaConfiguration{}, %{})
 
@@ -43,6 +42,43 @@ defmodule Lightning.Workflows.Trigger.KafkaConfigurationTest do
       } = KafkaConfiguration.generate_hosts_string(changeset)
 
       assert hosts_string == ""
+    end
+
+    test "returns empty string if hosts is an empty list" do
+      changeset =
+        KafkaConfiguration.changeset(
+          %KafkaConfiguration{},
+          %{
+            hosts: []
+          }
+        )
+
+      %Changeset{
+        changes: %{hosts_string: hosts_string}
+      } = KafkaConfiguration.generate_hosts_string(changeset)
+
+      assert hosts_string == ""
+    end
+
+    # TODO This is a bandaid for a live validation issue. Replace with a
+    # better plan.
+    test "returns_host as-is if not properly formed" do
+      changeset =
+        KafkaConfiguration.changeset(
+          %KafkaConfiguration{},
+          %{
+            hosts: [
+              ["host1"],
+              ["host2", "9093"]
+            ]
+          }
+        )
+
+      %Changeset{
+        changes: %{hosts_string: hosts_string}
+      } = KafkaConfiguration.generate_hosts_string(changeset)
+
+      assert hosts_string == "host1, host2:9093"
     end
   end
 
@@ -109,7 +145,7 @@ defmodule Lightning.Workflows.Trigger.KafkaConfigurationTest do
         initial_offset_reset_policy: "earliest",
         partition_timestamps: %{"1" => 1717174749123},
         password: "password",
-        sasl: "plain",
+        sasl: :plain,
         ssl: true,
         topics: ["foo", "bar"],
         username: "username"
@@ -267,6 +303,22 @@ defmodule Lightning.Workflows.Trigger.KafkaConfigurationTest do
 
       assert hosts == []
     end
+
+    # TODO: This is a bandaid for a live validation issue, we should
+    # not leave this in place when we go to prod.
+    test "returns a host unchanged if it is not in the expected format", %{
+      changeset: changeset
+    } do
+      changeset =
+        changeset |> Changeset.put_change(:hosts_string, "host3, host4:9095")
+
+      %Changeset{changes: %{hosts: hosts}} =
+        changeset
+        |> KafkaConfiguration.apply_hosts_string()
+
+      assert hosts == [["host3"], ["host4", "9095"]]
+    end
+      
   end
 
   describe ".apply_topics_string/2" do
