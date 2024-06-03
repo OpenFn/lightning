@@ -853,6 +853,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
            |> put_flash(:info, "Workflow saved")
            |> push_patches_applied(initial_params)
            |> on_new_navigate_to_edit(project, workflow)}
+           |> IO.inspect(label: :boom)
 
         {:error, %{text: message}} ->
           {:noreply, put_flash(socket, :error, message)}
