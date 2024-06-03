@@ -33,21 +33,20 @@ defmodule LightningWeb.Components.Viewers do
   """
 
   attr :id, :string, required: true
-
   attr :run_id, :string, required: true
-
   attr :run_state, :any, required: true
-
   attr :logs_empty?, :boolean, required: true
-
   attr :selected_step_id, :string
+
+  attr :class, :string,
+    default: nil,
+    doc: "Additional classes to add to the log viewer container"
 
   def log_viewer(assigns) do
     ~H"""
     <%= if @run_state in Lightning.Run.final_states() and @logs_empty? do %>
       <div class={[
-        "m-2 relative rounded-md",
-        "p-12 text-center col-span-full"
+        "m-2 relative p-12 text-center col-span-full"
       ]}>
         <span class="relative inline-flex">
           <div class="inline-flex">
@@ -58,7 +57,7 @@ defmodule LightningWeb.Components.Viewers do
     <% else %>
       <div
         id={@id}
-        class="h-full"
+        class={["flex grow", @class]}
         phx-hook="LogViewer"
         phx-update="ignore"
         data-run-id={@run_id}
@@ -77,7 +76,9 @@ defmodule LightningWeb.Components.Viewers do
             Nothing yet
           </.text_ping_loader>
         </div>
-        <div id={"#{@id}-viewer"} class="h-full rounded-md hidden"></div>
+        <div class="relative flex grow">
+          <div id={"#{@id}-viewer"} class="hidden absolute inset-0 rounded-md"></div>
+        </div>
       </div>
     <% end %>
     """

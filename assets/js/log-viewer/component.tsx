@@ -1,25 +1,22 @@
-import { MonacoEditor, Monaco } from '../monaco';
-import React, { useRef } from 'react';
+import type { editor as __MonacoEditor } from 'monaco-editor/esm/vs/editor/editor.api';
+import React, { useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import { createLogStore, LogLine } from './store';
-import { useStore } from 'zustand';
+import { useShallow } from 'zustand/react/shallow';
+import { Monaco, MonacoEditor } from '../monaco';
+import { LogLine, createLogStore } from './store';
 
 function findLogIndicesByStepId(
   logs: LogLine[],
   stepId: string
 ): { first: number | null; last: number | null } {
-  let first: number | null = null;
-  let last: number | null = null;
-  logs.forEach((log, index) => {
-    if (log.step_id === stepId) {
-      last = index;
-      if (first === null) {
-        first = index;
-      }
-    }
-  });
+  let firstIndex = logs.findIndex(log => log.step_id === stepId);
+  let lastIndex = logs.findLastIndex(log => log.step_id === stepId);
 
-  return { first, last };
+  if (firstIndex === -1) {
+    return { first: null, last: null };
+  } else {
+    return { first: firstIndex, last: lastIndex + 1 };
+  }
 }
 
 export function mount(
@@ -29,7 +26,7 @@ export function mount(
 ) {
   const componentRoot = createRoot(el);
 
-  componentRoot.render(<LogViewer el={el} store={store} stepId={stepId} />);
+  componentRoot.render(<LogViewer logStore={store} stepId={stepId} />);
 
   function unmount() {
     return componentRoot.unmount();
@@ -39,77 +36,80 @@ export function mount(
 }
 
 const LogViewer = ({
-  el,
-  store,
-  stepId,
+  logStore,
 }: {
-  el: HTMLElement;
-  store: ReturnType<typeof createLogStore>;
+  logStore: ReturnType<typeof createLogStore>;
   stepId: string | undefined;
 }) => {
-  const logs: LogLine[] = useStore(store, state => state.logLines);
+  const stepId = logStore(state => state.stepId);
+  const highlightedRanges = logStore(
+    useShallow(state => state.highlightedRanges)
+  );
+  const formattedLogLines = logStore(
+    useShallow(state => state.formattedLogLines)
+  );
 
-  let decorationsCollection: any = null;
-  const monacoRef = useRef<Monaco | null>(null);
-  const editorRef = useRef<any | null>(null);
+  const [monaco, setMonaco] = useState<Monaco | null>(null);
+  const [editor, setEditor] =
+    useState<__MonacoEditor.IStandaloneCodeEditor | null>(null);
 
-  el.addEventListener('log-viewer:highlight-step', (event: CustomEvent) => {
-    stepId = event.detail.stepId;
-    maybeHighlightStep();
-  });
+  const decorationsCollection =
+    useRef<__MonacoEditor.IEditorDecorationsCollection | null>(null);
 
-  const beforeMount = (monaco: Monaco) => {
-    monacoRef.current = monaco;
-  };
+  useEffect(() => {
+    if (stepId && highlightedRanges.length > 0) {
+      let firstLine = highlightedRanges[0].start;
 
-  const onMount = (editor: any) => {
-    editorRef.current = editor;
-    maybeHighlightStep();
+      editor?.revealLineNearTop(firstLine);
+    }
+  }, [stepId]);
 
-    // Define a language for our logs
-    monacoRef.current.languages.register({ id: 'openFnLogs' });
-
-    // Define a simple tokenizer for the language
-    monacoRef.current.languages.setMonarchTokensProvider('openFnLogs', {
-      tokenizer: {
-        root: [[/^.{1,4}/, 'logSource']],
-      },
-    });
-  };
-
-  function maybeHighlightStep() {
-    // clear previous highlights
-    decorationsCollection?.clear();
-
-    if (stepId !== undefined && logs.length > 0) {
-      let monaco = monacoRef.current;
-      let editor = editorRef.current;
-      const { first, last } = findLogIndicesByStepId(logs, stepId);
-      if (first !== null && last !== null) {
-        decorationsCollection = editor?.createDecorationsCollection([
-          {
-            range: new monaco.Range(first + 1, 1, last + 1, 1),
+  useEffect(() => {
+    if (monaco && editor ) {
+        console.log(highlightedRanges);
+        
+        const decorations = highlightedRanges.map(range => {
+          return {
+            range: new monaco.Range(range.start, 1, range.end, 1),
             options: {
               isWholeLine: true,
               linesDecorationsClassName: 'log-viewer-highlighted',
             },
-          },
-        ]);
+          };
+        });
 
-        editor?.revealLineInCenter(first + 1);
-      }
+        if (decorationsCollection.current) {
+          decorationsCollection.current.set(decorations);
+        } else {
+          decorationsCollection.current =
+            editor.createDecorationsCollection(decorations);
+        }
     }
-  }
+  }, [highlightedRanges, monaco, editor, formattedLogLines]);
+
+  useEffect(() => {
+    if (monaco) {
+      // Define a language for our logs
+      monaco!.languages.register({ id: 'openFnLogs' });
+
+      // Define a simple tokenizer for the language
+      monaco!.languages.setMonarchTokensProvider('openFnLogs', {
+        tokenizer: {
+          root: [[/^([A-Z\/]{2,4})/, 'logSource']],
+        },
+      });
+    }
+  }, [monaco]);
 
   return (
     <MonacoEditor
       defaultLanguage="openFnLogs"
       language="openFnLogs"
       theme="default"
-      value={logs.map(log => `${log.source} ${log.message}`).join('\n')}
+      value={formattedLogLines}
       loading={<div>Loading...</div>}
-      beforeMount={beforeMount}
-      onMount={onMount}
+      beforeMount={setMonaco}
+      onMount={setEditor}
       options={{
         readOnly: true,
         scrollBeyondLastLine: false,

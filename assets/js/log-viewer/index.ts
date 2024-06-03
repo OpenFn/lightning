@@ -26,15 +26,16 @@ export default {
     }
 
     this.store = createLogStore();
+    this.store.getState().setStepId(this.el.dataset.stepId);
 
-    this.component = mount(this.viewerEl, this.store, this.el.dataset.stepId);
+    this.component = mount(this.viewerEl, this.store);
 
     this.handleEvent(
       `logs-${this.el.dataset.runId}`,
       (event: { logs: LogLine[] }) => {
         if (this.loadingEl && this.viewerEl) {
-          this.loadingEl.style.display = 'none';
-          this.viewerEl.style.display = 'block';
+          this.viewerEl.classList.remove('hidden');
+          this.loadingEl.classList.add('hidden');
         }
         this.store.getState().addLogLines(event.logs);
       }
@@ -42,11 +43,12 @@ export default {
   },
 
   updated() {
-    this.viewerEl?.dispatchEvent(
-      new CustomEvent('log-viewer:highlight-step', {
-        detail: { stepId: this.el.dataset.stepId },
-      })
-    );
+    this.store.getState().setStepId(this.el.dataset.stepId);
+    // this.el.dispatchEvent(
+    //   new CustomEvent('log-viewer:highlight-step', {
+    //     detail: { stepId: this.el.dataset.stepId },
+    //   })
+    // );
   },
 
   destroyed() {

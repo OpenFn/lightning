@@ -178,6 +178,7 @@ defmodule LightningWeb.RunLive.Show do
               <Common.panel_content for_hash="log" class="flex-1">
                 <Viewers.log_viewer
                   id={"run-log-#{run.id}"}
+                  class="h-full"
                   run_id={run.id}
                   run_state={@run.result.state}
                   logs_empty?={@log_lines_empty?}

@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { subscribeWithSelector } from 'zustand/middleware';
 
 export type LogLine = {
   id: string;
@@ -6,46 +7,110 @@ export type LogLine = {
   source: string;
   level: string;
   step_id: string;
-  timestamp: string;
+  timestamp: Date;
 };
 
-type LogStore = {
+interface LogStore {
+  stepId: string | undefined;
+  setStepId: (stepId: string | undefined) => void;
   logLines: LogLine[];
+  formattedLogLines: string;
   addLogLines: (newLogs: LogLine[]) => void;
-};
+  highlightedRanges: { start: number; end: number }[];
+}
 
-// The VER logs are multiline
-function splitLogMessages(logs: LogLine[]): LogLine[] {
-  const newLogs: LogLine[] = [];
+function findSelectedRanges(logs: LogLine[], stepId: string | undefined) {
+  if (!stepId) return [];
 
-  logs.forEach(log => {
-    // Split the message on every newline.
-    const messages = log.message.split('\n');
-    messages.forEach(message => {
-      // Create a new log entry for each line, copying other attributes.
-      newLogs.push({
-        ...log,
-        message: message,
-      });
-    });
-  });
+  const { ranges } = logs.reduce<{
+    ranges: { start: number; end: number }[];
+    marker: number;
+  }>(
+    ({ ranges, marker }, log) => {
+      // Get the number of newlines in the message, used to determine the end index.
+      const newLineCount = [...log.message.matchAll(/\r\n/g)].length;
+      const nextMarker = marker + 1 + newLineCount;
 
-  return newLogs;
+      if (log.step_id !== stepId) {
+        return { ranges, marker: nextMarker };
+      }
+
+      const last = ranges[ranges.length - 1];
+
+      if (!last) {
+        return {
+          ranges: [{ start: marker, end: nextMarker }],
+          marker: nextMarker,
+        };
+      }
+
+      if (last.end <= nextMarker) {
+        last.end = nextMarker;
+      } else {
+        ranges.push({ start: marker, end: nextMarker });
+      }
+
+      return { ranges, marker: nextMarker };
+    },
+    { ranges: [], marker: 0 }
+  );
+
+  return ranges;
+}
+
+function coerceLogs(logs: LogLine[]): LogLine[] {
+  return logs.map(log => ({
+    ...log,
+    timestamp: new Date(log.timestamp),
+    message: log.message.replace(/\n/g, '\r\n'),
+  }));
+}
+
+function formatLogLine(log: LogLine) {
+  return `${log.source} ${log.message}`;
 }
 
 export const createLogStore = () => {
-  return create<LogStore>(set => ({
-    logLines: [],
-    addLogLines: newLogs =>
-      set(state => {
-        const splitLogs = splitLogMessages(newLogs);
-        const logs = [...state.logLines, ...splitLogs];
+  const createStore = create<LogStore>()(
+    subscribeWithSelector((set, get) => ({
+      stepId: undefined,
+      setStepId: (stepId: string | undefined) => set({ stepId }),
+      highlightedRanges: [],
+      logLines: [],
+      stepSetAt: undefined,
+      formattedLogLines: '',
+      addLogLines: newLogs => {
+        newLogs = coerceLogs(newLogs);
+        const logLines = get().logLines.concat(newLogs);
 
-        logs.sort(
-          (a, b) =>
-            new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+        logLines.sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
+
+        set({
+          formattedLogLines: logLines.map(formatLogLine).join('\n'),
+          logLines,
+        });
+      },
+    }))
+  );
+
+  // Subscribe to the store and update the highlighted ranges when the
+  // log lines or step ID changes.
+  createStore.subscribe<[LogLine[], undefined | string]>(
+    state => [state.logLines, state.stepId],
+    ([logLines, stepId], _) => {
+      createStore.setState({
+        highlightedRanges: findSelectedRanges(logLines, stepId),
+      });
+    },
+    {
+      equalityFn: ([prevLogLines, prevStepId], [nextLogLines, nextStepId]) => {
+        return (
+          prevLogLines.length === nextLogLines.length &&
+          prevStepId === nextStepId
         );
-        return { logLines: logs };
-      }),
-  }));
+      },
+    }
+  );
+
+  return createStore;
 };

@@ -219,5 +219,5 @@ div.line-num::before {
 }
 
 .log-viewer-highlighted {
-  @apply bg-yellow-400 ml-0.5 !w-0.5;
+  @apply bg-yellow-400 ml-1 !w-0.5;
 }
