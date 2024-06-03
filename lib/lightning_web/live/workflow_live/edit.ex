@@ -1220,7 +1220,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
              to: ~p"/projects/#{project.id}/w/#{workflow.id}?#{query_params}",
              replace: true
            )}
-           |> IO.inspect(label: :boom)
 
         {:error, %{text: message}} ->
           {:noreply, put_flash(socket, :error, message)}
