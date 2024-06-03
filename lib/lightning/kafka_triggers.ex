@@ -207,4 +207,52 @@ defmodule Lightning.KafkaTriggers do
   def successful?(%{state: state}) do
     state == :success
   end
+
+  def enable_disable_triggers(_triggers) do
+  end
+
+  def generate_pipeline_child_spec(trigger) do
+    %{
+      group_id: group_id,
+      hosts: hosts_list,
+      password: password,
+      sasl: sasl_type,
+      ssl: ssl,
+      topics: topics,
+      username: username
+    } = trigger.kafka_configuration
+
+    hosts =
+      hosts_list
+      |> Enum.map(fn [host, port_string] ->
+        {host, port_string |> String.to_integer()}
+      end)
+
+    sasl = if sasl_type do
+      {sasl_type, username, password}
+    else
+      nil
+    end
+
+    offset_reset_policy = determine_offset_reset_policy(trigger)
+
+    %{
+      id: trigger.id,
+      start: {
+        Lightning.KafkaTriggers.Pipeline,
+        :start_link,
+        [
+          [
+            group_id: group_id,
+            hosts: hosts,
+            offset_reset_policy: offset_reset_policy,
+            trigger_id: trigger.id |> String.to_atom(),
+            sasl: sasl,
+            ssl: ssl,
+            topics: topics
+          ]
+        ]
+      }
+    }
+  end
 end

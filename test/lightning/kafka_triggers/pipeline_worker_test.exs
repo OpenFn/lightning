@@ -3,7 +3,7 @@ defmodule Lightning.KafkaTriggers.PipelineWorkerTest do
 
   import Mock
 
-  alias Lightning.KafkaTriggers.Pipeline
+  # alias Lightning.KafkaTriggers.Pipeline
   alias Lightning.KafkaTriggers.PipelineSupervisor
   alias Lightning.KafkaTriggers.PipelineWorker
 
@@ -166,7 +166,7 @@ defmodule Lightning.KafkaTriggers.PipelineWorkerTest do
       %{
         id: trigger.id,
         start: {
-          Pipeline,
+          Lightning.KafkaTriggers.Pipeline,
           :start_link,
           [
             [
