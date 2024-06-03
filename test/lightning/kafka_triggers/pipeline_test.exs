@@ -15,7 +15,7 @@ defmodule Lightning.KafkaTriggers.PipelineTest do
       group_id = "my_group"
       hosts = [{"localhost", 9092}]
       offset_reset_policy = :latest
-      sasl = {"plain", "my_username", "my_secret"}
+      sasl = {:plain, "my_username", "my_secret"}
       sasl_expected = {:plain, "my_username", "my_secret"}
       ssl = true
       topics = ["my_topic"]
@@ -314,7 +314,7 @@ defmodule Lightning.KafkaTriggers.PipelineTest do
       ssl = opts |> Keyword.get(:ssl, true)
 
       password = if sasl, do: "secret-#{index}", else: nil
-      sasl_type = if sasl, do: "plain", else: nil
+      sasl_type = if sasl, do: :plain, else: nil
       username = if sasl, do: "my-user-#{index}", else: nil
 
       %{
