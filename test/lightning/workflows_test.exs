@@ -3,8 +3,11 @@ defmodule Lightning.WorkflowsTest do
 
   import Lightning.Factories
 
+  alias Lightning.KafkaTriggers
   alias Lightning.Workflows
   alias Lightning.Workflows.Trigger
+
+  import Mock
 
   describe "workflows" do
     test "list_workflows/0 returns all workflows" do
@@ -62,6 +65,29 @@ defmodule Lightning.WorkflowsTest do
                |> Workflows.save_workflow()
 
       assert workflow.name == "some-updated-name"
+    end
+
+    test "save_workflow/1 triggers any additional kafka trigger processing" do
+      workflow = insert(:workflow)
+
+      _trigger_1 = insert(:trigger, type: :kafka, workflow: workflow)
+      _trigger_2 = insert(:trigger, type: :kafka, workflow: workflow)
+
+      update_attrs = %{name: "some-updated-name"}
+
+      with_mock KafkaTriggers,
+        [enable_disable_triggers: fn _trigger -> :ok end] do
+
+        {:ok, updated_workflow} = 
+          Workflows.change_workflow(workflow, update_attrs)
+          |> Workflows.save_workflow()
+
+        updated_workflow = updated_workflow |> Repo.preload(:triggers)
+
+        assert_called(
+          KafkaTriggers.enable_disable_triggers(updated_workflow.triggers)
+        )
+      end
     end
 
     test "save_workflow/1 using attrs" do

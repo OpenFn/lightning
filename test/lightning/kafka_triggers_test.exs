@@ -924,4 +924,99 @@ defmodule Lightning.KafkaTriggersTest do
     |> DateTime.add(offset)
     |> DateTime.to_unix(:millisecond)
   end
+
+  describe ".enable_disable_triggers/1" do
+
+  end
+
+  describe ".generate_pipeline_child_spec/1" do
+    test "generates a child spec based on a kafka trigger" do
+      trigger =
+        insert(
+          :trigger,
+          type: :kafka,
+          kafka_configuration: new_configuration(index: 1),
+          enabled: true
+        )
+
+      expected_child_spec = child_spec(trigger: trigger, index: 1)
+      actual_child_spec = KafkaTriggers.generate_pipeline_child_spec(trigger)
+
+      assert actual_child_spec == expected_child_spec
+    end
+
+    test "generates a child spec based on a kafka trigger that has no auth" do
+      trigger =
+        insert(
+          :trigger,
+          type: :kafka,
+          kafka_configuration: new_configuration(index: 1, sasl: false),
+          enabled: true
+        )
+
+      expected_child_spec = child_spec(trigger: trigger, index: 1, sasl: false)
+      actual_child_spec = KafkaTriggers.generate_pipeline_child_spec(trigger)
+
+      assert actual_child_spec == expected_child_spec
+    end
+    # TODO merge with other confirution method
+    defp new_configuration(opts) do
+      index = opts |> Keyword.get(:index)
+      partition_timestamps = opts |> Keyword.get(:partition_timestamps, %{})
+      sasl = opts |> Keyword.get(:sasl, true)
+      ssl = opts |> Keyword.get(:ssl, true)
+
+      password = if sasl, do: "secret-#{index}", else: nil
+      sasl_type = if sasl, do: "plain", else: nil
+      username = if sasl, do: "my-user-#{index}", else: nil
+
+      initial_offset_reset_policy = "171524976732#{index}"
+
+      %{
+        group_id: "lightning-#{index}",
+        hosts: [["host-#{index}", "9092"], ["other-host-#{index}", "9093"]],
+        initial_offset_reset_policy: initial_offset_reset_policy,
+        partition_timestamps: partition_timestamps,
+        password: password,
+        sasl: sasl_type,
+        ssl: ssl,
+        topics: ["topic-#{index}-1", "topic-#{index}-2"],
+        username: username
+      }
+    end
+
+    defp child_spec(opts) do
+      trigger = opts |> Keyword.get(:trigger)
+      index = opts |> Keyword.get(:index)
+      sasl = opts |> Keyword.get(:sasl, true)
+      ssl = opts |> Keyword.get(:ssl, true)
+
+      offset_timestamp = "171524976732#{index}" |> String.to_integer()
+
+      %{
+        id: trigger.id,
+        start: {
+          Lightning.KafkaTriggers.Pipeline,
+          :start_link,
+          [
+            [
+              group_id: "lightning-#{index}",
+              hosts: [{"host-#{index}", 9092}, {"other-host-#{index}", 9093}],
+              offset_reset_policy: {:timestamp, offset_timestamp},
+              trigger_id: trigger.id |> String.to_atom(),
+              sasl: sasl_config(index, sasl),
+              ssl: ssl,
+              topics: ["topic-#{index}-1", "topic-#{index}-2"]
+            ]
+          ]
+        }
+      }
+    end
+
+    defp sasl_config(index, true = _sasl) do
+      {:plain, "my-user-#{index}", "secret-#{index}"}
+    end
+
+    defp sasl_config(_index, false = _sasl), do: nil
+  end
 end

@@ -1,6 +1,6 @@
 defmodule Lightning.KafkaTriggers.PipelineWorker do
   alias Lightning.KafkaTriggers
-  alias Lightning.KafkaTriggers.Pipeline
+  # alias Lightning.KafkaTriggers.Pipeline
 
   use Oban.Worker,
     queue: :background
@@ -15,49 +15,7 @@ defmodule Lightning.KafkaTriggers.PipelineWorker do
       if child_count == 0 do
         KafkaTriggers.find_enabled_triggers()
         |> Enum.map(fn trigger ->
-          %{
-            group_id: group_id,
-            hosts: hosts_list,
-            password: password,
-            sasl: sasl_type,
-            ssl: ssl,
-            topics: topics,
-            username: username
-          } = trigger.kafka_configuration
-
-          hosts =
-            hosts_list
-            |> Enum.map(fn [host, port_string] ->
-              {host, port_string |> String.to_integer()}
-            end)
-
-          sasl = if sasl_type do
-            {sasl_type, username, password}
-          else
-            nil
-          end
-
-          offset_reset_policy =
-            KafkaTriggers.determine_offset_reset_policy(trigger)
-
-          %{
-            id: trigger.id,
-            start: {
-              Pipeline,
-              :start_link,
-              [
-                [
-                  group_id: group_id,
-                  hosts: hosts,
-                  offset_reset_policy: offset_reset_policy,
-                  trigger_id: trigger.id |> String.to_atom(),
-                  sasl: sasl,
-                  ssl: ssl,
-                  topics: topics
-                ]
-              ]
-            }
-          }
+          KafkaTriggers.generate_pipeline_child_spec(trigger)
         end)
         |> Enum.each(fn child_spec ->
           Supervisor.start_child(supervisor, child_spec)

@@ -7,6 +7,7 @@ defmodule Lightning.Workflows do
 
   alias Ecto.Multi
 
+  alias Lightning.KafkaTriggers
   alias Lightning.Projects.Project
   alias Lightning.Repo
   alias Lightning.Workflows.Edge
@@ -67,6 +68,12 @@ defmodule Lightning.Workflows do
     |> Repo.transaction()
     |> case do
       {:ok, %{workflow: workflow}} ->
+        workflow
+        |> Repo.preload(:triggers)
+        |> then(fn %{triggers: triggers} ->
+          KafkaTriggers.enable_disable_triggers(triggers)
+        end) 
+
         Events.workflow_updated(workflow)
 
         {:ok, workflow}
