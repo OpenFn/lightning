@@ -208,7 +208,19 @@ defmodule Lightning.KafkaTriggers do
     state == :success
   end
 
-  def enable_disable_triggers(_triggers) do
+  def enable_disable_triggers(triggers) do
+    supervisor = GenServer.whereis(:kafka_pipeline_supervisor)
+
+    triggers
+    |> Enum.filter(& &1.type == :kafka)
+    |> Enum.each(fn
+      %{enabled: true} = trigger ->
+        spec = generate_pipeline_child_spec(trigger)
+        Supervisor.start_child(supervisor, spec)
+      %{enabled: false} = trigger ->
+        Supervisor.terminate_child(supervisor, trigger.id)
+        Supervisor.delete_child(supervisor, trigger.id)
+    end)
   end
 
   def generate_pipeline_child_spec(trigger) do
