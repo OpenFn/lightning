@@ -60,7 +60,9 @@ defmodule Lightning.Workflows.Trigger.KafkaConfiguration do
           hosts
           |> Enum.map(fn
             [host, port] -> "#{host}:#{port}"
-            something_else -> something_else # TODO Not tested
+            #TODO something_else is a bandaid for a live validation issue
+            # make a better plan
+            something_else -> something_else
           end)
           |> Enum.join(", ")
       end
@@ -100,7 +102,9 @@ defmodule Lightning.Workflows.Trigger.KafkaConfiguration do
             |> String.split(":")
             |> case do
               [host, port] -> [host, port]
-              something_else -> something_else # TODO Not tested
+              #TODO something_else is a bandaid for a live validation issue
+              # make a better plan
+              something_else -> something_else
             end
             |> Enum.map(&String.trim/1)
           end)
