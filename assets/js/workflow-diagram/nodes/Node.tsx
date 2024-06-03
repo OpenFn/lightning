@@ -4,6 +4,8 @@ import Shape from '../components/Shape';
 import { nodeIconStyles, nodeLabelStyles } from '../styles';
 import { ExclamationCircleIcon } from '@heroicons/react/24/outline';
 
+import { XCircleIcon } from '@heroicons/react/24/outline';
+
 type NodeData = any;
 
 type BaseNodeProps = NodeProps<NodeData> & {
@@ -177,15 +179,22 @@ const Node = ({
                   top: '50%',
                   left: '0',
                   transform: 'translate(-50%, -50%)',
-                  textAlign: 'center',
+                  textAlign: 'left',
                   border: 'solid 2px red',
                   borderRadius: 8,
                   zIndex: '1',
                   background: 'rgba(255,255,255,0.8',
                   fontSize: 20,
+                  paddingLeft: 6,
+                  paddingRight: 6,
+                  display: 'flex',
                 }}
               >
-                {data.dropTargetError}
+                <XCircleIcon
+                  className="inline-block h-6 w-6 mr-2"
+                  style={{ color: 'red', marginTop: '2px' }}
+                />
+                <span>{data.dropTargetError}</span>
               </div>
             )}
           {primaryIcon && (

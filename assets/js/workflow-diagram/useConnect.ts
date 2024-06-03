@@ -114,6 +114,7 @@ const resetModel = (model: Flow.Model) => ({
     data: {
       ...n.data,
       isValidDropTarget: false,
+      isActiveDropTarget: false,
     },
   })),
   edges: model.edges,
