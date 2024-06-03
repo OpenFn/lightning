@@ -5,13 +5,16 @@ import { getRectOfNodes, ReactFlowInstance } from 'reactflow';
 import { FIT_PADDING } from './constants';
 import { Flow, Positions } from './types';
 
+export type LayoutOpts = { duration: number | false; autofit: boolean };
+
 const calculateLayout = async (
   model: Flow.Model,
   update: (newModel: Flow.Model) => any,
   flow: ReactFlowInstance,
-  duration: number | false = 500
+  options: LayoutOuts = {}
 ): Promise<Positions> => {
   const { nodes, edges } = model;
+  const { duration } = options;
 
   const g = new Dagre.graphlib.Graph().setDefaultEdgeLabel(() => ({}));
   g.setGraph({
@@ -46,7 +49,7 @@ const calculateLayout = async (
 
   // If the old model had no positions, this is a first load and we should not animate
   if (hasOldPositions && duration) {
-    await animate(model, newModel, update, flow, duration);
+    await animate(model, newModel, update, flow, options);
   } else {
     update(newModel);
   }
@@ -61,8 +64,9 @@ export const animate = (
   to: Flow.Model,
   setModel: (newModel: Flow.Model) => void,
   flowInstance: ReactFlowInstance,
-  duration = 500
+  options: LayoutOpts
 ) => {
+  const { duration = 500, autofit = true } = options;
   return new Promise<void>(resolve => {
     const transitions = to.nodes.map(node => {
       // We usually animate a node from its previous position
@@ -84,7 +88,7 @@ export const animate = (
 
     // create a timer to animate the nodes to their new positions
     const t = timer((elapsed: number) => {
-      const s = elapsed / duration;
+      const s = elapsed / (duration || 0);
 
       const currNodes = transitions.map(({ node, from, to }) => ({
         ...node,
@@ -99,7 +103,9 @@ export const animate = (
       if (isFirst) {
         // Synchronise a fit to the final position with the same duration
         const bounds = getRectOfNodes(to.nodes);
-        flowInstance.fitBounds(bounds, { duration, padding: FIT_PADDING });
+        if (autofit) {
+          flowInstance.fitBounds(bounds, { duration, padding: FIT_PADDING });
+        }
         isFirst = false;
       }
 
