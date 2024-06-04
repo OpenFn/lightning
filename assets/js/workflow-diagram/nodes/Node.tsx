@@ -241,7 +241,7 @@ const Node = ({
         <div
           style={{
             width: `${width}px`,
-            marginLeft: '2px',
+            marginLeft: '4px',
             marginTop: '-14px',
           }}
           className={`flex flex-row items-center
