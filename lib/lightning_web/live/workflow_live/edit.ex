@@ -19,6 +19,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
   alias Lightning.Services.UsageLimiter
   alias Lightning.Workflows
   alias Lightning.Workflows.Job
+  alias Lightning.Workflows.Snapshot
   alias Lightning.Workflows.Trigger
   alias Lightning.Workflows.Workflow
   alias Lightning.WorkOrders
@@ -678,7 +679,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
        selected_job: nil,
        selected_trigger: nil,
        selection_mode: nil,
-       query_params: %{"s" => nil, "m" => nil, "a" => nil},
+       query_params: %{"snapshot" => nil, "s" => nil, "m" => nil, "a" => nil},
        workflow: nil,
        workflow_name: "",
        workflow_params: %{},
@@ -721,6 +722,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
         workflow =
           Workflows.get_workflow(workflow_id)
           |> Lightning.Repo.preload([
+            :snapshots,
             :edges,
             triggers: Trigger.with_auth_methods_query(),
             jobs:
@@ -1216,17 +1218,24 @@ defmodule LightningWeb.WorkflowLive.Edit do
   defp editor_is_empty(form, job) do
     %Phoenix.HTML.FormField{field: field_name, form: parent_form} = form[:jobs]
 
-    errors =
+    found_job =
       parent_form.impl.to_form(parent_form.source, parent_form, field_name, [])
       |> Enum.find(fn f -> Ecto.Changeset.get_field(f.source, :id) == job.id end)
-      |> Map.get(:source)
-      |> Map.get(:errors)
 
-    error_message = LightningWeb.CoreComponents.translate_errors(errors, :body)
+    if found_job do
+      errors =
+        found_job
+        |> Map.get(:source)
+        |> Map.get(:errors)
 
-    is_empty? = Keyword.has_key?(errors, :body)
+      error_message = LightningWeb.CoreComponents.translate_errors(errors, :body)
 
-    {is_empty?, error_message}
+      is_empty? = Keyword.has_key?(errors, :body)
+
+      {is_empty?, error_message}
+    else
+      {false, nil}
+    end
   end
 
   defp has_child_edges?(workflow_changeset, job_id) do
@@ -1242,7 +1251,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
   end
 
   defp has_steps?(job) do
-    !Enum.empty?(job.steps)
+    Map.has_key?(job, :steps) && !Enum.empty?(job.steps)
   end
 
   defp get_filtered_edges(workflow_changeset, filter_func) do
@@ -1307,8 +1316,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
     |> assign(
       query_params:
         params
-        |> Map.take(["s", "m", "a"])
-        |> Enum.into(%{"s" => nil, "m" => nil, "a" => nil})
+        |> Map.take(["snapshot", "s", "m", "a"])
+        |> Enum.into(%{"snapshot" => nil, "s" => nil, "m" => nil, "a" => nil})
     )
     |> apply_query_params()
   end
@@ -1321,11 +1330,34 @@ defmodule LightningWeb.WorkflowLive.Edit do
         socket |> unselect_all()
 
       # Try to select the given item, possibly with a mode (such as `expand`)
-      %{"s" => selected_id, "m" => mode} ->
-        case find_item_in_changeset(socket.assigns.changeset, selected_id) do
+      %{"snapshot" => nil, "s" => selected_id, "m" => mode} ->
+        case find_item(socket.assigns.changeset, selected_id) do
           [type, selected] ->
             socket
             |> set_selected_node(type, selected, mode)
+
+          nil ->
+            socket |> unselect_all()
+        end
+
+      %{"snapshot" => snapshot_id, "s" => selected_id, "m" => mode} ->
+        snapshot =
+          Enum.find(socket.assigns.workflow.snapshots, fn snapshot ->
+            snapshot.id == snapshot_id
+          end)
+
+        params =
+          snapshot
+          |> Ecto.Changeset.change()
+          |> WorkflowParams.to_map(&Ecto.Changeset.get_embed/2)
+
+        snapshot
+        |> find_item(selected_id)
+        |> case do
+          [type, selected] ->
+            socket
+            |> set_selected_node(type, selected, mode)
+            |> apply_params(params)
 
           nil ->
             socket |> unselect_all()
@@ -1441,12 +1473,20 @@ defmodule LightningWeb.WorkflowLive.Edit do
     end
   end
 
-  # find the changeset for the selected item
-  # it could be an edge, a job or a trigger
-  defp find_item_in_changeset(changeset, id) do
+  defp find_item(%Ecto.Changeset{} = changeset, id) do
+    find_item_helper(changeset, id, fn data, field ->
+      Ecto.Changeset.get_assoc(data, field, :struct)
+    end)
+  end
+
+  defp find_item(%Snapshot{} = snapshot, id) do
+    find_item_helper(snapshot, id, &Map.get/2)
+  end
+
+  defp find_item_helper(data, id, accessor) do
     [:jobs, :triggers, :edges]
     |> Enum.reduce_while(nil, fn field, _ ->
-      Ecto.Changeset.get_assoc(changeset, field, :struct)
+      accessor.(data, field)
       |> Enum.find(&(&1.id == id))
       |> case do
         nil ->

@@ -85,7 +85,9 @@ defmodule LightningWeb.WorkflowLive.JobView do
           </div>
           <.adaptor_block adaptor={@job.adaptor} />
           <.credential_block credential={
-            fetch_credential(@form[:project_credential_id].value)
+            fetch_credential(
+              @form[:project_credential_id] && @form[:project_credential_id].value
+            )
           } />
           <div class="flex flex-grow items-center justify-end">
             <.link

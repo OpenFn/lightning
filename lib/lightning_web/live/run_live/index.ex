@@ -323,7 +323,7 @@ defmodule LightningWeb.RunLive.Index do
            socket
            |> put_flash(:error, error_text)}
 
-        {:error, changeset} ->
+        {:error, _changeset} ->
           {:noreply,
            socket
            |> put_flash(:error, "Oops! an error occured during retry.")}
