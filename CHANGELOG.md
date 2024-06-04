@@ -24,6 +24,9 @@ and this project adheres to
 
 ### Fixed
 
+- Stopped sending emails when creating a starter project
+  [#2161](https://github.com/OpenFn/lightning/issues/2161)
+
 ## [v2.5.4] - 2024-05-31
 
 ### Added
@@ -50,8 +53,6 @@ and this project adheres to
   [#2079](https://github.com/OpenFn/lightning/issues/2079)
 - Dataclip Viewer now responds to page resize and internal page layout
   [#2120](https://github.com/OpenFn/lightning/issues/2120)
-- Stopped sending emails when creating a starter project
-  [#2161](https://github.com/OpenFn/lightning/issues/2161)
 
 ## [v2.5.3] - 2024-05-27
 
