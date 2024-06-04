@@ -28,7 +28,7 @@ function findSelectedRanges(logs: LogLine[], stepId: string | undefined) {
   }>(
     ({ ranges, marker }, log) => {
       // Get the number of newlines in the message, used to determine the end index.
-      const newLineCount = [...log.message.matchAll(/\r\n/g)].length;
+      const newLineCount = [...log.message.matchAll(/\n/g)].length;
       const nextMarker = marker + 1 + newLineCount;
 
       if (log.step_id !== stepId) {
@@ -62,7 +62,7 @@ function coerceLogs(logs: LogLine[]): LogLine[] {
   return logs.map(log => ({
     ...log,
     timestamp: new Date(log.timestamp),
-    message: log.message.replace(/\n/g, '\r\n'),
+    message: log.message.replace(/\n/g, `\n${log.source} `),
   }));
 }
 

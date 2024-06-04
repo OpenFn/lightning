@@ -65,25 +65,23 @@ const LogViewer = ({
   }, [stepId]);
 
   useEffect(() => {
-    if (monaco && editor ) {
-        console.log(highlightedRanges);
-        
-        const decorations = highlightedRanges.map(range => {
-          return {
-            range: new monaco.Range(range.start, 1, range.end, 1),
-            options: {
-              isWholeLine: true,
-              linesDecorationsClassName: 'log-viewer-highlighted',
-            },
-          };
-        });
+    if (monaco && editor) {
+      const decorations = highlightedRanges.map(range => {
+        return {
+          range: new monaco.Range(range.start, 1, range.end, 1),
+          options: {
+            isWholeLine: true,
+            linesDecorationsClassName: 'log-viewer-highlighted',
+          },
+        };
+      });
 
-        if (decorationsCollection.current) {
-          decorationsCollection.current.set(decorations);
-        } else {
-          decorationsCollection.current =
-            editor.createDecorationsCollection(decorations);
-        }
+      if (decorationsCollection.current) {
+        decorationsCollection.current.set(decorations);
+      } else {
+        decorationsCollection.current =
+          editor.createDecorationsCollection(decorations);
+      }
     }
   }, [highlightedRanges, monaco, editor, formattedLogLines]);
 
