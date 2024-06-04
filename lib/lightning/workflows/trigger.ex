@@ -79,18 +79,25 @@ defmodule Lightning.Workflows.Trigger do
     |> validate()
   end
 
-  defp set_enabled_per_type(%{type: :kafka} = changeset) do
-    IO.inspect(changeset, label: :changeset)
-    if !get_change(changeset, :enabled) do
+  defp set_enabled_per_type(changeset) do
+    if get_change(changeset, :type) == :kafka and !get_change(changeset, :enabled) do
       put_change(changeset, :enabled, false)
     else
       changeset
     end
   end
 
-  defp set_enabled_per_type(changeset) do
-    changeset
-  end
+  # defp set_enabled_per_type(%{changes: %{type: :kafka}} = changeset) do
+  #   if !get_change(changeset, :enabled) do
+  #     put_change(changeset, :enabled, false)
+  #   else
+  #     changeset
+  #   end
+  # end
+  #
+  # defp set_enabled_per_type(changeset) do
+  #   changeset
+  # end
 
   def validate(changeset) do
     changeset

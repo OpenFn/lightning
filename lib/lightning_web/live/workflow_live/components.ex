@@ -169,7 +169,7 @@ defmodule LightningWeb.WorkflowLive.Components do
         type:
           form.source
           |> Ecto.Changeset.get_field(:type),
-        trigger_enabled: Map.get(form.params, "enabled", form.data.enabled)
+        trigger_enabled: Ecto.Changeset.get_field(form.source, :enabled)
       )
 
     ~H"""
