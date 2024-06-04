@@ -1,6 +1,5 @@
 defmodule Lightning.KafkaTriggers.PipelineWorker do
   alias Lightning.KafkaTriggers
-  # alias Lightning.KafkaTriggers.Pipeline
 
   use Oban.Worker,
     queue: :background
