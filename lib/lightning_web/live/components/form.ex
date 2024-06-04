@@ -150,7 +150,8 @@ defmodule LightningWeb.Components.Form do
     <%= Phoenix.HTML.Form.password_input(@form, @id,
       class: @input_classes,
       required: @required,
-      value: @value
+      value: @value,
+      placeholder: "password not shown"
     ) %>
     """
   end
