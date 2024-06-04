@@ -21,17 +21,24 @@ defmodule LightningWeb.API.ProvisioningController do
              :provision_project,
              conn.assigns.current_resource,
              project
-           ),
-         {:ok, project} <-
-           Provisioner.import_document(
+           ) do
+      case Provisioner.import_document(
              project,
              conn.assigns.current_resource,
              params
            ) do
-      conn
-      |> put_status(:created)
-      |> put_resp_header("location", ~p"/api/provision/#{project.id}")
-      |> render("create.json", project: project)
+        {:ok, project} ->
+          conn
+          |> put_status(:created)
+          |> put_resp_header("location", ~p"/api/provision/#{project.id}")
+          |> render("create.json", project: project)
+
+        {:error, %Ecto.Changeset{} = changeset} ->
+          conn
+          |> put_status(:unprocessable_entity)
+          |> put_view(json: LightningWeb.ChangesetJSON)
+          |> render("provisioning_error.json", changeset: changeset)
+      end
     end
   end
 
