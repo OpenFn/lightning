@@ -38,6 +38,12 @@ defmodule LightningWeb.API.ProvisioningController do
           |> put_status(:unprocessable_entity)
           |> put_view(json: LightningWeb.ChangesetJSON)
           |> render("provisioning_error.json", changeset: changeset)
+
+        {:error, error} ->
+          conn
+          |> put_status(:unauthorized)
+          |> put_view(LightningWeb.ErrorView)
+          |> render(:"401", error: error)
       end
     end
   end
