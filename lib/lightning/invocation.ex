@@ -325,6 +325,11 @@ defmodule Lightning.Invocation do
     search_workorders(project, search_params, %{})
   end
 
+  @spec search_workorders(
+          Lightning.Projects.Project.t(),
+          SearchParams.t(),
+          keyword | map
+        ) :: Scrivener.Page.t(WorkOrder.t())
   def search_workorders(
         %Project{id: project_id},
         %SearchParams{search_term: search_term} = search_params,
@@ -372,7 +377,7 @@ defmodule Lightning.Invocation do
   end
 
   defp search_workorders_query(
-         base_query,
+         query,
          %SearchParams{status: status_list} = search_params
        ) do
     status_filter =
@@ -382,7 +387,7 @@ defmodule Lightning.Invocation do
         status_list
       end
 
-    base_query
+    query
     |> filter_by_workorder_id(search_params.workorder_id)
     |> filter_by_workflow_id(search_params.workflow_id)
     |> filter_by_statuses(status_filter)
