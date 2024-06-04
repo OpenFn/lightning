@@ -30,12 +30,14 @@ import JobEditor from './job-editor';
 import JobEditorResizer from './job-editor-resizer/mount';
 import WorkflowEditor from './workflow-editor';
 import DataclipViewer from './dataclip-viewer';
+import LogViewer from './log-viewer';
 
 let hooks = {
   JobEditor,
   JobEditorResizer,
   WorkflowEditor,
   DataclipViewer,
+  LogViewer,
   ...Hooks,
 };
 

@@ -124,7 +124,7 @@ defmodule LightningWeb.WorkflowLive.ManualWorkorder do
     </div>
     <div
       :if={@selected_dataclip && is_nil(@selected_dataclip.wiped_at)}
-      class="grow overflow-y-auto rounded-md"
+      class="grow overflow-y-auto"
     >
       <LightningWeb.Components.Viewers.dataclip_viewer
         dataclip={@selected_dataclip}

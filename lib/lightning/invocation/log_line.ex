@@ -29,6 +29,9 @@ defmodule Lightning.Invocation.LogLine do
           run: Run.t() | Ecto.Association.NotLoaded.t() | nil
         }
 
+  @derive {Jason.Encoder,
+           only: [:id, :source, :level, :message, :timestamp, :step_id, :run_id]}
+
   @primary_key false
   @foreign_key_type :binary_id
   schema "log_lines" do

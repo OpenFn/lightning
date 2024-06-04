@@ -17,14 +17,22 @@ and this project adheres to
 
 ### Added
 
+- Replace LiveView Log Viewer component with React Monaco
+  [#1863](https://github.com/OpenFn/lightning/issues/1863)
+
 ### Changed
 
 - Don't show deprecated adaptor versions in the adaptor version picklist (to be
   followed by some graceful deprecation handling/warning in
   [later work](https://github.com/OpenFn/lightning/issues/2172))
   [#2169](https://github.com/OpenFn/lightning/issues/2169)
+- Refactor count workorders to reuse search code  
+  [#2121](https://github.com/OpenFn/lightning/issues/2121)
 
 ### Fixed
+
+- Stopped sending emails when creating a starter project
+  [#2161](https://github.com/OpenFn/lightning/issues/2161)
 
 ## [v2.5.4] - 2024-05-31
 
@@ -78,7 +86,9 @@ and this project adheres to
 - Preserve custom values (like `apiVersion`) during token refresh for OAuth2
   credentials [#2131](https://github.com/OpenFn/lightning/issues/2131)
 
-## [v2.5.1]
+## [v2.5.1] - 2024-05-21
+
+### Fixed
 
 - Don't compile Phoenix Storybook in production and test environments
   [#2119](https://github.com/OpenFn/lightning/pull/2119)

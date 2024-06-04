@@ -54,7 +54,10 @@ defmodule LightningWeb.RunLive.ShowTest do
              |> render_async() =~ "Enqueued",
              "has enqueued state"
 
-      assert view |> log_is_empty?(run)
+      assert has_element?(
+               view,
+               "div[data-panel-hash='log'] [phx-hook='LogViewer'][data-run-id='#{run_id}']"
+             )
 
       refute view
              |> has_element?("#step-list-#{run_id} > *"),
@@ -92,12 +95,14 @@ defmodule LightningWeb.RunLive.ShowTest do
       assert html =~ job_a.name
       assert html =~ "Running"
 
-      add_log(run, ["I'm the worker, I'm working!"])
+      {:ok, log_line_1} = add_log(run, ["I'm the worker, I'm working!"])
 
-      {:ok, log_line} = add_log({run, step}, %{message: "hello"})
+      {:ok, log_line_2} = add_log({run, step}, %{message: "hello"})
 
-      assert view |> has_log_line?("I'm the worker, I'm working!")
-      assert view |> has_log_line?(log_line.message)
+      event_name = "logs-#{run.id}"
+
+      assert_push_event(view, ^event_name, %{logs: [^log_line_1]})
+      assert_push_event(view, ^event_name, %{logs: [^log_line_2]})
 
       view |> select_step(run, job_a.name)
 
@@ -204,15 +209,6 @@ defmodule LightningWeb.RunLive.ShowTest do
     })
   end
 
-  defp has_log_line?(view, text) do
-    view
-    |> element("[id^='run-log-']:not([id$='-nothing-yet'])")
-    |> render_async() =~
-      text
-      |> Phoenix.HTML.Safe.to_iodata()
-      |> to_string()
-  end
-
   defp step_list_item(view, run, step) do
     view
     |> element("#step-list-#{run.id} > [data-step-id='#{step.id}']")
@@ -228,10 +224,5 @@ defmodule LightningWeb.RunLive.ShowTest do
   defp output_is_empty?(view, step) do
     view
     |> has_element?("#step-output-#{step.id}-nothing-yet")
-  end
-
-  defp log_is_empty?(view, run) do
-    view
-    |> has_element?("#run-log-#{run.id}-nothing-yet")
   end
 end

@@ -103,8 +103,8 @@ defmodule LightningWeb.RunLive.Streaming do
       def handle_info({:log_line_chunk, lines}, socket) do
         {:noreply,
          socket
-         |> stream(:log_lines, lines)
-         |> assign(:log_lines_stream_empty?, false)}
+         |> assign(:log_lines_empty?, false)
+         |> push_event("logs-#{socket.assigns.run.result.id}", %{logs: lines})}
       end
 
       def handle_info(
@@ -133,8 +133,10 @@ defmodule LightningWeb.RunLive.Streaming do
           ) do
         {:noreply,
          socket
-         |> stream_insert(:log_lines, log_line)
-         |> assign(:log_lines_stream_empty?, false)}
+         |> assign(:log_lines_empty?, false)
+         |> push_event("logs-#{socket.assigns.run.result.id}", %{
+           logs: [log_line]
+         })}
       end
     end
   end

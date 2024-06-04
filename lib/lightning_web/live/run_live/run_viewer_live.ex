@@ -112,9 +112,9 @@ defmodule LightningWeb.RunLive.RunViewerLive do
                 />
               </.step_list>
             </Common.panel_content>
-            <Common.panel_content for_hash="log" class="h-full mb-2">
+            <Common.panel_content for_hash="log" class="grow overflow-auto">
               <div class="flex flex-col h-full @5xl/viewer:flex-row">
-                <div class="min-h-0 max-h-[30%] 0 mb-2 overflow-auto flex-none flex @5xl/viewer:flex-row flex-col @5xl/viewer:max-h-[100%]">
+                <div class="z-50 min-h-0 max-h-[30%] mb-2 overflow-auto flex-none flex @5xl/viewer:flex-row flex-col @5xl/viewer:max-h-[100%]">
                   <.step_list
                     :let={step}
                     id={"log-tab-step-list-#{run.id}"}
@@ -136,14 +136,13 @@ defmodule LightningWeb.RunLive.RunViewerLive do
                     />
                   </.step_list>
                 </div>
-
-                <div class="flex min-h-0 h-full grow bg-slate-700 overflow-auto rounded-md">
+                <div class="flex flex-1 grow">
                   <Viewers.log_viewer
                     id={"run-log-#{run.id}"}
-                    highlight_id={@selected_step_id}
-                    run_state={run.state}
-                    stream={@streams.log_lines}
-                    stream_empty?={@log_lines_stream_empty?}
+                    run_id={run.id}
+                    run_state={@run.result.state}
+                    logs_empty?={@log_lines_empty?}
+                    selected_step_id={@selected_step_id}
                   />
                 </div>
               </div>
@@ -270,12 +269,11 @@ defmodule LightningWeb.RunLive.RunViewerLive do
        job_id: Map.get(session, "job_id"),
        steps: []
      )
-     |> stream(:log_lines, [])
-     |> assign(:log_lines_stream_empty?, true)
      |> assign(:input_dataclip, nil)
      |> assign(:output_dataclip, nil)
      |> assign(:run, AsyncResult.loading())
      |> assign(:log_lines, AsyncResult.loading())
+     |> assign(:log_lines_empty?, true)
      |> assign(
        can_edit_data_retention:
          Permissions.can?(

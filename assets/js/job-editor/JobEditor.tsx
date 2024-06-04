@@ -163,7 +163,7 @@ export default ({
   return (
     <>
       <div className="cursor-pointer"></div>
-      <div className={`flex h-full flex-${vertical ? 'col' : 'row'} bg-vs-dark`}>
+      <div className={`flex h-full flex-${vertical ? 'col' : 'row'}`}>
         <div className="flex-1 rounded-md">
           <Editor
             source={source}

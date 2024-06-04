@@ -38,7 +38,7 @@ const DataclipViewer = ({ dataclipId }: { dataclipId: string }) => {
   const [content, setContent] = useState<string>('');
 
   useEffect(() => {
-    fetchDataclipContent(dataclipId).then(setContent)
+    fetchDataclipContent(dataclipId).then(setContent);
   }, [dataclipId]);
 
   return (
@@ -57,6 +57,10 @@ const DataclipViewer = ({ dataclipId }: { dataclipId: string }) => {
         fontFamily: 'Fira Code VF',
         fontSize: 14,
         fontLigatures: true,
+        minimap: {
+          enabled: false,
+        },
+        wordWrap: 'on',
       }}
     />
   );
