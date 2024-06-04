@@ -257,7 +257,10 @@ defmodule Lightning.AdaptorRegistry do
       repo: details["repository"]["url"],
       latest: details["dist-tags"]["latest"],
       versions:
-        Enum.map(details["versions"], fn {version, _detail} ->
+        Enum.reject(details["versions"], fn {_version, detail} ->
+          detail["deprecated"]
+        end)
+        |> Enum.map(fn {version, _detail} ->
           %{version: version}
         end)
     }
