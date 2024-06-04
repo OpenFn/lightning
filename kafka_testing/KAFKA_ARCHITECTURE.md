@@ -125,6 +125,28 @@ If the `MessageCandidateSetWorker` is unable to find a
 it will `enqueue` a message to itself using `Process.send_after` to request
 another MCSID.
 
+### Workflows.Trigger.KafkaConfiguration
+
+`KafkaConfiguration` is a wrapper around the configuration for a Kafka trigger
+and, as such, many of its fields are fairly self-explanatory, with two
+exceptions:
+
+`initial_offset_reset_policy` determines what happens when a new consumer group
+connects to a topic and there is no committed offset. It can have three possible
+values `earliest` (start from the earliest message in the topic),
+`latest` (start from the latest message in the topic) or a UNIX timestamp
+with millsecond precision. If a timestamp is given the cluster will attempt to
+start from the message with the offset closest to the timestamp. Using a
+timestamp may be useful for migration scenarios but is has not been tested 
+outside of a local Kafka cluster so more testing is required.
+
+`partition_timestamps` this tracks the last timestamp for each partition. It is
+hoped that this will be useful for cases where a trigger has been disabled for
+so long that the cluster no longer retains a committed offset for the consumer
+group. In this case, the offset provided when the consumer group starts will
+be the ealiest of the timestamps across all partitions rather than what 
+was provided in `initial_offset_reset_policy`.
+
 ## Testing
 
 ### Additional test tooling
@@ -281,3 +303,6 @@ and create your Kafka trigger accordingly.
 When creating a Trigger via the Admin UI, you will need to select SSL and set
 `SASL Authentication`, `Username` and `Password` based on what Confluent
 provides.
+
+Confluent provides a nice UI which is useful for setting up topics or
+producting the occasional message.
