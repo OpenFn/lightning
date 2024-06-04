@@ -78,7 +78,6 @@ const setValidDropTargets = (model: Flow.Model, source: string) => {
   const newModel = {
     nodes: model.nodes.map(n => {
       const err = getDropTargetError(model, source, n.id);
-      console.log(err);
       return {
         ...n,
         data: {
@@ -133,8 +132,6 @@ export default (
     const newModel = generateEdgeDiff(args.source, args.target);
     const wf = toWorkflow(newModel);
 
-    // TODO this doesn't seem to save right now?
-    console.log('WARNING: changes are not saved');
     addToStore(wf);
   }, []);
 

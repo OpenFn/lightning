@@ -10,10 +10,8 @@ function PathButton() {
         position: 'relative',
         height: 24,
         width: 'auto',
-        // borderRadius: 0,
 
         // These values come from tailwind but have to be set on styles to override reactflow stuff
-        // backgroundColor: 'rgb(79 70 229)',
         borderRadius: '999px',
         borderWidth: '0',
 
