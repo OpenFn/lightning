@@ -464,8 +464,6 @@ defmodule LightningWeb.WorkflowLive.Components do
     """
   end
 
-  # disabled={@form[:source_trigger_id]}
-
   attr :form, :map, required: true
 
   def workflow_name_field(assigns) do
