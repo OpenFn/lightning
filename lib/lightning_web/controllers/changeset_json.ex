@@ -108,17 +108,7 @@ defmodule LightningWeb.ChangesetJSON do
       end
 
     if changesets do
-      child =
-        Enum.reduce(changesets, %{}, fn changeset, acc ->
-          child = traverse_provision_errors(changeset)
-
-          if child == %{} do
-            acc
-          else
-            child_name = changeset |> child_name_func.() |> to_string()
-            Map.put(acc, child_name, child)
-          end
-        end)
+      child = traverse_nested_changesets(changesets, child_name_func)
 
       if child == %{} do
         acc
@@ -128,6 +118,19 @@ defmodule LightningWeb.ChangesetJSON do
     else
       acc
     end
+  end
+
+  defp traverse_nested_changesets(changesets, child_name_func) do
+    Enum.reduce(changesets, %{}, fn changeset, acc ->
+      child = traverse_provision_errors(changeset)
+
+      if child == %{} do
+        acc
+      else
+        child_name = changeset |> child_name_func.() |> to_string()
+        Map.put(acc, child_name, child)
+      end
+    end)
   end
 
   defp find_item_by_id(items, id) do
