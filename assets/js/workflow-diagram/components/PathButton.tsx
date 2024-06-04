@@ -24,7 +24,10 @@ function PathButton() {
       className="transition duration-150 ease-in-out pointer-events-auto rounded-full
       !bg-indigo-600 hover:!bg-indigo-500 py-1 px-4 text-[0.8125rem] font-semibold leading-5 text-white"
     >
-      <LinkIcon className="inline h-4 w-4" style={{ marginTop: '-6px' }} />
+      <LinkIcon
+        className="inline h-4 w-4"
+        style={{ marginTop: '-6px', pointerEvents: 'none' }}
+      />
     </Handle>
   );
 }
