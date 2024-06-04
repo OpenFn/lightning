@@ -45,9 +45,7 @@ defmodule LightningWeb.Components.Viewers do
   def log_viewer(assigns) do
     ~H"""
     <%= if @run_state in Lightning.Run.final_states() and @logs_empty? do %>
-      <div class={[
-        "m-2 relative p-12 text-center col-span-full"
-      ]}>
+      <div class={["m-2 relative p-12 text-center col-span-full"]}>
         <span class="relative inline-flex">
           <div class="inline-flex">
             No logs were received for this run.
@@ -65,18 +63,15 @@ defmodule LightningWeb.Components.Viewers do
         data-loading-el={"#{@id}-nothing-yet"}
         data-viewer-el={"#{@id}-viewer"}
       >
-        <div
-          id={"#{@id}-nothing-yet"}
-          class={[
-            "m-2 relative rounded-md",
-            "p-12 text-center col-span-full w-full"
-          ]}
-        >
-          <.text_ping_loader>
-            Nothing yet
-          </.text_ping_loader>
-        </div>
-        <div class="relative flex grow">
+        <div class="relative grow">
+          <div
+            id={"#{@id}-nothing-yet"}
+            class="m-2  rounded-md p-12 text-center bg-slate-700 font-mono text-gray-200"
+          >
+            <.text_ping_loader>
+              Nothing yet
+            </.text_ping_loader>
+          </div>
           <div id={"#{@id}-viewer"} class="hidden absolute inset-0 rounded-md"></div>
         </div>
       </div>
@@ -156,10 +151,7 @@ defmodule LightningWeb.Components.Viewers do
             is_nil(@dataclip)
         }
         id={"#{@id}-nothing-yet"}
-        class={[
-          "m-2 relative rounded-md",
-          "p-12 text-center col-span-full"
-        ]}
+        class="m-2 relative rounded-md p-12 text-center bg-slate-700 font-mono text-gray-200"
       >
         <.text_ping_loader>
           Nothing yet

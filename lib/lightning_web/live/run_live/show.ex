@@ -30,7 +30,7 @@ defmodule LightningWeb.RunLive.Show do
         </LayoutComponents.header>
       </:header>
 
-      <LayoutComponents.centered class="@container/main">
+      <LayoutComponents.centered class="@container/main h-full">
         <.async_result :let={run} assign={@run}>
           <:loading>
             <.loading_filler />
@@ -39,8 +39,8 @@ defmodule LightningWeb.RunLive.Show do
             there was an error loading the run
           </:failed>
 
-          <div class="flex gap-6 @5xl/main:flex-row flex-col">
-            <div class="basis-1/3 flex-none flex gap-6 @5xl/main:flex-col flex-row">
+          <div class="flex gap-6 @5xl/main:flex-row flex-col h-full">
+            <div class="@5xl/main:basis-1/3 flex gap-y-6 @5xl/main:flex-col flex-row">
               <.detail_list
                 id={"run-detail-#{run.id}"}
                 class="flex-1 @5xl/main:flex-none"
@@ -138,7 +138,7 @@ defmodule LightningWeb.RunLive.Show do
                 </.link>
               </.step_list>
             </div>
-            <div class="basis-2/3 flex-none flex flex-col gap-4">
+            <div class="@5xl/main:basis-2/3 grow flex flex-col gap-4">
               <Common.tab_bar orientation="horizontal" id="1" default_hash="log">
                 <Common.tab_item orientation="horizontal" hash="log">
                   <.icon

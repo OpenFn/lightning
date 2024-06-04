@@ -21,12 +21,11 @@ function findLogIndicesByStepId(
 
 export function mount(
   el: HTMLElement,
-  store: ReturnType<typeof createLogStore>,
-  stepId: string | undefined
+  store: ReturnType<typeof createLogStore>
 ) {
   const componentRoot = createRoot(el);
 
-  componentRoot.render(<LogViewer logStore={store} stepId={stepId} />);
+  componentRoot.render(<LogViewer logStore={store} />);
 
   function unmount() {
     return componentRoot.unmount();
@@ -39,7 +38,6 @@ const LogViewer = ({
   logStore,
 }: {
   logStore: ReturnType<typeof createLogStore>;
-  stepId: string | undefined;
 }) => {
   const stepId = logStore(state => state.stepId);
   const highlightedRanges = logStore(
