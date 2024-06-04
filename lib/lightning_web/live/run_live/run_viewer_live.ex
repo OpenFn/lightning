@@ -149,10 +149,10 @@ defmodule LightningWeb.RunLive.RunViewerLive do
                   <div class="flex min-h-0 h-full grow bg-slate-700 overflow-auto rounded-md">
                     <Viewers.log_viewer
                       id={"run-log-#{run.id}"}
-                      highlight_id={@selected_step_id}
-                      run_state={run.state}
-                      stream={@streams.log_lines}
-                      stream_empty?={@log_lines_stream_empty?}
+                      run_id={run.id}
+                      run_state={@run.result.state}
+                      logs_empty?={@log_lines_empty?}
+                      selected_step_id={@selected_step_id}
                     />
                   </div>
                 </div>

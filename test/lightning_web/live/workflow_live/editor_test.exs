@@ -1579,10 +1579,6 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
         # This ensures that stream messages are processed
         render(run_view)
 
-        # log panel shows correct information
-        html =
-          run_view |> element("div#log-panel") |> render_async()
-
         assert has_element?(
                  run_view,
                  "div[data-panel-hash='log'] [phx-hook='LogViewer'][data-run-id='#{run.id}']"

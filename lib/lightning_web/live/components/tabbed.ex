@@ -135,6 +135,7 @@ defmodule LightningWeb.Components.Tabbed do
         role="tab"
         data-disabled
         data-hash={@hash}
+        lv-keep-aria
       >
         <%= render_slot(@inner_block) %>
       </span>
@@ -147,6 +148,7 @@ defmodule LightningWeb.Components.Tabbed do
         role="tab"
         data-hash={@hash}
         href={"##{@hash}"}
+        lv-keep-aria
       >
         <%= render_slot(@inner_block) %>
       </a>
@@ -159,6 +161,9 @@ defmodule LightningWeb.Components.Tabbed do
   slot :inner_block, required: true
 
   def panel(assigns) do
+    assigns =
+      assigns |> update(:class, fn class -> List.wrap(class) ++ ~w[hidden] end)
+
     ~H"""
     <div
       id={"#{@hash}-panel"}
@@ -166,8 +171,7 @@ defmodule LightningWeb.Components.Tabbed do
       class={@class}
       role="tabpanel"
       tabindex="0"
-      lv-keep-hidden
-      hidden
+      lv-keep-class
     >
       <%= render_slot(@inner_block) %>
     </div>

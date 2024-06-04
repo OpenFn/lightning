@@ -63,6 +63,14 @@ let liveSocket = new LiveSocket('/live', Socket, {
       if (from.attributes['lv-keep-hidden']) {
         to.setAttribute('hidden', from.getAttribute('hidden'));
       }
+
+      if (from.attributes['lv-keep-aria']) {
+        Object.values(from.attributes).forEach(attr => {
+          if (attr.name.startsWith('aria-')) {
+            to.setAttribute(attr.name, attr.value);
+          }
+        });
+      }
     },
   },
 });

@@ -31,6 +31,9 @@ const TabbedContainer = {
     this.selectTab(getHash() || this.defaultHash);
   },
   updated() {
+    // console.log('TabbedContainer: updated', getHash());
+    // TODO: check to see if we need to do this, or if it interferes
+    this.selectTab(getHash());
   },
   selectTab(nextHash: string | null) {
     if (!nextHash) {
@@ -58,12 +61,12 @@ const TabbedContainer = {
       this.el
         .querySelectorAll<HTMLElement>('[role=tabpanel]')
         .forEach(panel => {
-          panel.setAttribute('hidden', 'true');
+          panel.classList.add('hidden');
         });
 
       this.el
         .querySelector(`#${targetTab.getAttribute('aria-controls')}`)
-        ?.removeAttribute('hidden');
+        ?.classList.remove('hidden');
     });
   },
   destroyed() {
@@ -132,13 +135,11 @@ const TabbedPanels: PhoenixHook<{
 
     // Trigger a URL hash change when the server sends a 'push-hash' event.
     this.handleEvent<{ hash: string }>('push-hash', ({ hash }) => {
-      console.log('push-hash', [hash, window.location.hash]);
-
       window.location.hash = hash;
     });
 
     this._onHashChange = _evt => {
-      this.showPanel(getHash());
+      this.showPanel(getHash() || this.defaultHash);
     };
 
     window.addEventListener('hashchange', this._onHashChange);
@@ -146,7 +147,7 @@ const TabbedPanels: PhoenixHook<{
     this.showPanel(getHash() || this.defaultHash);
   },
   updated() {
-    this.showPanel(getHash() || this.defaultHash);
+    this.showPanel(getHash());
   },
   showPanel(nextHash: string | null) {
     if (!nextHash) {
@@ -165,10 +166,10 @@ const TabbedPanels: PhoenixHook<{
       this.el
         .querySelectorAll<HTMLElement>('[role=tabpanel]')
         .forEach(panel => {
-          panel.setAttribute('hidden', 'true');
+          panel.classList.add('hidden');
         });
 
-      targetPanel.removeAttribute('hidden');
+      targetPanel.classList.remove('hidden');
     });
   },
   destroyed() {

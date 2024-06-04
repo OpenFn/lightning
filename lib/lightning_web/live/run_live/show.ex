@@ -181,10 +181,11 @@ defmodule LightningWeb.RunLive.Show do
                 <:panel hash="log" class="flex-grow">
                   <Viewers.log_viewer
                     id={"run-log-#{run.id}"}
-                    highlight_id={@selected_step_id}
-                    stream={@streams.log_lines}
+                    class="h-full"
+                    run_id={run.id}
                     run_state={@run.result.state}
-                    stream_empty?={@log_lines_stream_empty?}
+                    logs_empty?={@log_lines_empty?}
+                    selected_step_id={@selected_step_id}
                   />
                 </:panel>
                 <:panel hash="output" class="flex-1">
