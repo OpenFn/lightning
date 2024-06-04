@@ -806,6 +806,40 @@ defmodule LightningWeb.WorkflowLive.Edit do
     end
   end
 
+  def handle_event("delete_edge", %{"id" => id}, socket) do
+    %{
+      changeset: changeset,
+      workflow_params: initial_params,
+      can_edit_workflow: can_edit_workflow
+    } = socket.assigns
+
+    case can_edit_workflow do
+      true ->
+        edges_to_delete =
+          Ecto.Changeset.get_assoc(changeset, :edges, :struct)
+          |> Enum.filter(&(&1.id == id))
+
+        next_params =
+          Map.update!(initial_params, "edges", fn edges ->
+            edges
+            |> Enum.reject(fn edge ->
+              edge["id"] in Enum.map(edges_to_delete, & &1.id)
+            end)
+          end)
+          |> Map.update!("jobs", &Enum.reject(&1, fn job -> job["id"] == id end))
+
+        {:noreply,
+         socket
+         |> apply_params(next_params)
+         |> push_patches_applied(initial_params)}
+
+      :not_authorized ->
+        {:noreply,
+         socket
+         |> put_flash(:error, "You are not authorized to perform this action.")}
+    end
+  end
+
   def handle_event("validate", %{"workflow" => params}, socket) do
     {:noreply, handle_new_params(socket, params)}
   end

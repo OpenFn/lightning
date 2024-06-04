@@ -373,6 +373,11 @@ defmodule LightningWeb.WorkflowLive.Components do
         :edge_enabled,
         Map.get(form.params, "enabled", form.data.enabled)
       )
+      |> assign(:edge_id, Map.get(form.params, "id", form.data.id))
+      |> assign(
+        :source_trigger_id,
+        Map.get(form.params, "source_trigger_id", form.data.source_trigger_id)
+      )
       |> assign(
         :edge_condition,
         Map.get(
@@ -439,20 +444,27 @@ defmodule LightningWeb.WorkflowLive.Components do
           </h2>
         </div>
       <% end %>
-      <div class="grow flex justify-end">
-        <label>
-          <.button
-            id="delete-edge-button"
-            class="focus:ring-red-500 bg-red-600 hover:bg-red-700 disabled:bg-red-300"
-            data-confirm="Are you sure you want to delete this path?"
-          >
-            Delete Path
-          </.button>
-        </label>
-      </div>
+      <%= unless Phoenix.HTML.Form.input_value(@form, :source_trigger_id) do %>
+        <div class="grow flex justify-end">
+          <label>
+            <.button
+              id="delete-edge-button"
+              class="focus:ring-red-500 bg-red-600 hover:bg-red-700 disabled:bg-red-300"
+              data-confirm="Are you sure you want to delete this path?"
+              phx-click="delete_edge"
+              phx-value-id={@edge_id}
+              disabled={@disabled or @source_trigger_id}
+            >
+              Delete Path
+            </.button>
+          </label>
+        </div>
+      <% end %>
     </div>
     """
   end
+
+  # disabled={@form[:source_trigger_id]}
 
   attr :form, :map, required: true
 
