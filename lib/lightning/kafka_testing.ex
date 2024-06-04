@@ -13,6 +13,36 @@ defmodule Lightning.KafkaTesting.Utils do
 
   import Ecto.Query
 
+  def which_children() do
+    supervisor = GenServer.whereis(:kafka_pipeline_supervisor)
+    Supervisor.which_children(supervisor)
+  end
+
+  def setup(opts \\ []) do
+    group_id = opts |> Keyword.get(:group_id, "15-may-group")
+    hosts =
+      opts
+      |> Keyword.get(
+        :hosts,
+        [["localhost", "9096"], ["localhost", "9095"], ["localhost", "9094"]]
+      )
+    topics= opts |> Keyword.get(:topics, ["may_15_topic"])
+
+    Demo.reset_demo()
+
+    owner = User |> Repo.get_by!(role: :superuser)
+
+    config =
+      KafkaTriggers.build_trigger_configuration(
+        group_id: group_id,
+        hosts: hosts,
+        initial_offset_reset_policy: :earliest,
+        topics: topics
+      )
+
+    create_project_with_kafka_trigger("kafka-test-may-15", owner, config)
+  end
+
   # Only use in local dev environment
   def setup_and_start(opts \\ []) do
     group_id = opts |> Keyword.get(:group_id, "15-may-group")
