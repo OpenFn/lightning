@@ -24,6 +24,9 @@ and this project adheres to
 
 ### Fixed
 
+- Stopped sending emails when creating a starter project
+  [#2161](https://github.com/OpenFn/lightning/issues/2161)
+
 ## [v2.5.4] - 2024-05-31
 
 ### Added

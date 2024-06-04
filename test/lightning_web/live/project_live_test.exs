@@ -11,6 +11,7 @@ defmodule LightningWeb.ProjectLiveTest do
     only: [put_temporary_env: 3]
 
   import Lightning.GithubHelpers
+  import Swoosh.TestAssertions
 
   import Mox
 
@@ -147,6 +148,18 @@ defmodule LightningWeb.ProjectLiveTest do
 
       assert_patch(index_live, Routes.project_index_path(conn, :index))
       assert render(index_live) =~ "Project created successfully"
+
+      project_name = String.replace(@create_attrs.raw_name, " ", "-")
+
+      assert_email_sent(
+        to: [{"", user_1.email}],
+        subject: "Project #{project_name}"
+      )
+
+      assert_email_sent(
+        to: [{"", user_2.email}],
+        subject: "Project #{project_name}"
+      )
     end
 
     test "project owners can delete a project from the settings page",

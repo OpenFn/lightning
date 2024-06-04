@@ -166,12 +166,15 @@ defmodule Lightning.SetupUtils do
 
   def create_starter_project(name, project_users) do
     {:ok, project} =
-      Projects.create_project(%{
-        name: name,
-        history_retention_period:
-          Application.get_env(:lightning, :default_retention_period),
-        project_users: project_users
-      })
+      Projects.create_project(
+        %{
+          name: name,
+          history_retention_period:
+            Application.get_env(:lightning, :default_retention_period),
+          project_users: project_users
+        },
+        false
+      )
 
     {:ok, workflow} =
       Workflows.save_workflow(%{

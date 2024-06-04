@@ -1,6 +1,7 @@
 defmodule Lightning.SetupUtilsTest do
   alias Lightning.Invocation
   use Lightning.DataCase, async: true
+  import Swoosh.TestAssertions
 
   alias Lightning.{Accounts, Projects, Workflows, Jobs, SetupUtils}
   alias Lightning.Accounts.User
@@ -222,6 +223,8 @@ defmodule Lightning.SetupUtilsTest do
              """
 
       assert job_3.adaptor == "@openfn/language-dhis2@latest"
+
+      assert_no_email_sent()
     end
   end
 
