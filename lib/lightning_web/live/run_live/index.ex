@@ -467,9 +467,7 @@ defmodule LightningWeb.RunLive.Index do
     filter = SearchParams.new(socket.assigns.filters)
 
     socket.assigns.project
-    |> Invocation.search_workorders_query(filter)
-    |> Invocation.exclude_wiped_dataclips()
-    |> Lightning.Repo.all()
+    |> Invocation.search_workorders_for_retry(filter)
     |> WorkOrders.retry_many(job_id,
       created_by: socket.assigns.current_user,
       project_id: socket.assigns.project.id
@@ -488,9 +486,7 @@ defmodule LightningWeb.RunLive.Index do
     filter = SearchParams.new(socket.assigns.filters)
 
     socket.assigns.project
-    |> Invocation.search_workorders_query(filter)
-    |> Invocation.exclude_wiped_dataclips()
-    |> Lightning.Repo.all()
+    |> Invocation.search_workorders_for_retry(filter)
     |> WorkOrders.retry_many(
       created_by: socket.assigns.current_user,
       project_id: socket.assigns.project.id

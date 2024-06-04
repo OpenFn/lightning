@@ -325,8 +325,13 @@ defmodule Lightning.Invocation do
     search_workorders(project, search_params, %{})
   end
 
+  @spec search_workorders(
+          Lightning.Projects.Project.t(),
+          SearchParams.t(),
+          keyword | map
+        ) :: Scrivener.Page.t(WorkOrder.t())
   def search_workorders(
-        %Project{} = project,
+        %Project{id: project_id},
         %SearchParams{search_term: search_term} = search_params,
         params \\ %{}
       ) do
@@ -347,21 +352,34 @@ defmodule Lightning.Invocation do
         end
       )
 
-    project
+    project_id
+    |> base_query()
     |> search_workorders_query(search_params)
     |> Repo.paginate(params)
   end
 
-  def count_workorders(%Project{} = project, search_params) do
-    project
-    |> count_workorders_query(search_params)
+  def search_workorders_for_retry(
+        %Project{id: project_id},
+        search_params
+      ) do
+    project_id
+    |> base_query_without_preload()
+    |> search_workorders_query(search_params)
+    |> exclude_wiped_dataclips()
+    |> Repo.all()
+  end
+
+  def count_workorders(%Project{id: project_id}, search_params) do
+    project_id
+    |> base_query_without_preload()
+    |> search_workorders_query(search_params)
     |> Repo.aggregate(:count)
   end
 
-  def search_workorders_query(
-        %Project{id: project_id},
-        %SearchParams{status: status_list} = search_params
-      ) do
+  defp search_workorders_query(
+         query,
+         %SearchParams{status: status_list} = search_params
+       ) do
     status_filter =
       if SearchParams.all_statuses_set?(search_params) do
         []
@@ -369,7 +387,7 @@ defmodule Lightning.Invocation do
         status_list
       end
 
-    base_query_with_preload(project_id)
+    query
     |> filter_by_workorder_id(search_params.workorder_id)
     |> filter_by_workflow_id(search_params.workflow_id)
     |> filter_by_statuses(status_filter)
@@ -383,38 +401,13 @@ defmodule Lightning.Invocation do
     )
   end
 
-  def count_workorders_query(
-        %Project{id: project_id},
-        %SearchParams{status: status_list} = search_params
-      ) do
-    status_filter =
-      if SearchParams.all_statuses_set?(search_params) do
-        []
-      else
-        status_list
-      end
-
-    base_query(project_id)
-    |> filter_by_workorder_id(search_params.workorder_id)
-    |> filter_by_workflow_id(search_params.workflow_id)
-    |> filter_by_statuses(status_filter)
-    |> filter_by_wo_date_after(search_params.wo_date_after)
-    |> filter_by_wo_date_before(search_params.wo_date_before)
-    |> filter_by_date_after(search_params.date_after)
-    |> filter_by_date_before(search_params.date_before)
-    |> filter_by_body_or_log_or_id(
-      search_params.search_fields,
-      search_params.search_term
-    )
-  end
-
-  def exclude_wiped_dataclips(work_order_query) do
+  defp exclude_wiped_dataclips(work_order_query) do
     work_order_query
     |> join(:inner, [workorder: wo], assoc(wo, :dataclip), as: :dataclip)
     |> where([dataclip: d], is_nil(d.wiped_at))
   end
 
-  defp base_query_with_preload(project_id) do
+  defp base_query(project_id) do
     from(
       workorder in WorkOrder,
       as: :workorder,
@@ -433,14 +426,15 @@ defmodule Lightning.Invocation do
     )
   end
 
-  defp base_query(project_id) do
+  defp base_query_without_preload(project_id) do
     from(
       workorder in WorkOrder,
       as: :workorder,
       join: workflow in assoc(workorder, :workflow),
       as: :workflow,
       where: workflow.project_id == ^project_id,
-      select: workorder.id,
+      select: workorder,
+      order_by: [desc_nulls_first: workorder.last_activity],
       distinct: true
     )
   end

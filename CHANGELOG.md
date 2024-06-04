@@ -22,6 +22,9 @@ and this project adheres to
 
 ### Changed
 
+- Refactor count workorders to reuse search code  
+  [#2121](https://github.com/OpenFn/lightning/issues/2121)
+
 ### Fixed
 
 - Stopped sending emails when creating a starter project
@@ -79,7 +82,9 @@ and this project adheres to
 - Preserve custom values (like `apiVersion`) during token refresh for OAuth2
   credentials [#2131](https://github.com/OpenFn/lightning/issues/2131)
 
-## [v2.5.1]
+## [v2.5.1] - 2024-05-21
+
+### Fixed
 
 - Don't compile Phoenix Storybook in production and test environments
   [#2119](https://github.com/OpenFn/lightning/pull/2119)

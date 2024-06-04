@@ -212,6 +212,44 @@ defmodule Lightning.InvocationTest do
     ).entries()
   end
 
+  describe "search_workorders_for_retry/2" do
+    test "returns workorders without preloading and without wiped dataclips" do
+      project = insert(:project)
+      dataclip = insert(:dataclip)
+      wiped_dataclip = insert(:dataclip, wiped_at: Timex.now())
+
+      %{workflow: workflow, trigger: trigger} =
+        build_workflow(project: project)
+
+      workorders =
+        insert_list(2, :workorder,
+          workflow: workflow,
+          trigger: trigger,
+          dataclip: dataclip
+        )
+
+      insert_list(2, :workorder,
+        workflow: workflow,
+        trigger: trigger,
+        dataclip: wiped_dataclip
+      )
+
+      assert found_workorders =
+               Invocation.search_workorders_for_retry(
+                 project,
+                 SearchParams.new(%{"status" => SearchParams.status_list()})
+               )
+
+      assert MapSet.new(workorders, & &1.id) ==
+               MapSet.new(found_workorders, & &1.id)
+
+      refute Enum.any?(found_workorders, &Ecto.assoc_loaded?(&1.dataclip))
+      refute Enum.any?(found_workorders, &Ecto.assoc_loaded?(&1.snapshot))
+      refute Enum.any?(found_workorders, &Ecto.assoc_loaded?(&1.workflow))
+      refute Enum.any?(found_workorders, &Ecto.assoc_loaded?(&1.runs))
+    end
+  end
+
   describe "search_workorders/1" do
     test "returns workorders ordered inserted at desc, with nulls first" do
       project = insert(:project)
@@ -699,30 +737,6 @@ defmodule Lightning.InvocationTest do
         e in [DBConnection.ConnectionError] ->
           assert e.message =~ "timeout"
       end
-    end
-  end
-
-  describe "search_workorders_query/2" do
-    test "ignores status filter when all statuses are queried" do
-      project = insert(:project)
-
-      query =
-        Invocation.search_workorders_query(
-          project,
-          SearchParams.new(%{"status" => ["pending"]})
-        )
-
-      {sql, _value} = Repo.to_sql(:all, query)
-      assert sql =~ ~S["state" = ]
-
-      query =
-        Invocation.search_workorders_query(
-          project,
-          SearchParams.new(%{"status" => SearchParams.status_list()})
-        )
-
-      {sql, _value} = Repo.to_sql(:all, query)
-      refute sql =~ ~S["state" = ]
     end
   end
 
