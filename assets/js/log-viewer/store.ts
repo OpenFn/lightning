@@ -62,7 +62,6 @@ function coerceLogs(logs: LogLine[]): LogLine[] {
   return logs.map(log => ({
     ...log,
     timestamp: new Date(log.timestamp),
-    message: log.message.replace(/\n/g, `\n${log.source} `),
   }));
 }
 
