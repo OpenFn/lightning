@@ -70,7 +70,7 @@ const getDropTargetError = (
 
   if (isChild(model, source, target)) {
     // Don't allow an edge to be created if it exists
-    return 'Steps already connected';
+    return 'Already connected to this step';
   }
 };
 
