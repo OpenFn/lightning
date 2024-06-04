@@ -19,6 +19,11 @@ and this project adheres to
 
 ### Changed
 
+- Don't show deprecated adaptor versions in the adaptor version picklist (to be
+  followed by some graceful deprecation handling/warning in
+  [later work](https://github.com/OpenFn/lightning/issues/2172))
+  [#2169](https://github.com/OpenFn/lightning/issues/2169)
+
 ### Fixed
 
 ## [v2.5.4] - 2024-05-31
