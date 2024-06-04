@@ -213,7 +213,7 @@ export default React.forwardRef<HTMLElement, WorkflowDiagramProps>(
           fitViewOptions={{ padding: FIT_PADDING }}
           {...connectHandlers}
         >
-          <Controls showInteractive={false} position="top-left">
+          <Controls showInteractive={false} position="bottom-left">
             <ControlButton
               onClick={() => {
                 setAutofit(!autofit);
