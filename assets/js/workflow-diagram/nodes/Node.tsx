@@ -1,11 +1,8 @@
 import React, { memo } from 'react';
 import { Handle, NodeProps } from 'reactflow';
-import {
-  ExclamationCircleIcon,
-  XCircleIcon,
-} from '@heroicons/react/24/outline';
 
 import Shape from '../components/Shape';
+import ErrorMessage from '../components/ErrorMessage';
 import { nodeIconStyles, nodeLabelStyles } from '../styles';
 
 type NodeData = any;
@@ -18,10 +15,6 @@ type BaseNodeProps = NodeProps<NodeData> & {
   sublabel?: string;
   toolbar?: any;
   errors?: any;
-};
-
-type ErrorMessageProps = {
-  message?: string;
 };
 
 type ErrorObject = {
@@ -55,18 +48,6 @@ const Label: React.FC<LabelProps> = ({ children, hasErrors = false }) => {
         className={`line-clamp-2 align-left text-m max-w-[275px] text-ellipsis overflow-hidden ${textColorClass}`}
       >
         {children}
-      </p>
-    );
-  }
-  return null;
-};
-
-const ErrorMessage: React.FC<ErrorMessageProps> = ({ message }) => {
-  if (message && message.length) {
-    return (
-      <p className="line-clamp-2 align-left text-xs text-red-500 flex items-center">
-        <ExclamationCircleIcon className="mr-1 w-5" />
-        {message}
       </p>
     );
   }
@@ -108,7 +89,7 @@ const Node = ({
     hasErrors(errors)
   );
 
-  const nodeOpacity = data.isActiveDropTarget && data.dropTargetError ? 0.4 : 1;
+  const nodeOpacity = data.dropTargetError ? 0.4 : 1;
 
   return (
     <div className="group">
@@ -173,33 +154,6 @@ const Node = ({
               styles={style}
             />
           </svg>
-          {/* Hover an error message if trying to drop onto an illegal node */}
-          {typeof data.dropTargetError === 'string' &&
-            data.isActiveDropTarget && (
-              <div
-                style={{
-                  position: 'absolute',
-                  top: '50%',
-                  left: '0',
-                  transform: 'translate(-50%, -50%)',
-                  textAlign: 'left',
-                  border: 'solid 2px red',
-                  borderRadius: 8,
-                  zIndex: '1',
-                  background: 'rgba(255,255,255,0.8',
-                  fontSize: 20,
-                  paddingLeft: 6,
-                  paddingRight: 6,
-                  display: 'flex',
-                }}
-              >
-                <XCircleIcon
-                  className="inline-block h-6 w-6 mr-2"
-                  style={{ color: 'red', marginTop: '2px' }}
-                />
-                <span>{data.dropTargetError}</span>
-              </div>
-            )}
           {primaryIcon && (
             <div
               style={{
@@ -271,14 +225,16 @@ const Node = ({
             }}
           />
         )}
-        <div className="flex flex-col flex-1 justify-center ml-2">
+        <div className="flex flex-col flex-1 ml-2 mt-8">
           <Label hasErrors={hasErrors(errors)}>{label}</Label>
-          {hasErrors(errors) && (
-            <ErrorMessage
-              message={errorsMessage(errors) || 'An error occurred'}
-            />
-          )}
           <SubLabel>{sublabel}</SubLabel>
+          {data.isActiveDropTarget &&
+            typeof data.dropTargetError === 'string' && (
+              <ErrorMessage>{data.dropTargetError}</ErrorMessage>
+            )}
+          {hasErrors(errors) && (
+            <ErrorMessage>{errorsMessage(errors)}</ErrorMessage>
+          )}
         </div>
       </div>
       {toolbar && (
