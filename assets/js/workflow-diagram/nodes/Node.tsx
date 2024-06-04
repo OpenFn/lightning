@@ -1,9 +1,12 @@
 import React, { memo } from 'react';
 import { Handle, NodeProps } from 'reactflow';
-import { XCircleIcon } from '@heroicons/react/24/outline';
+import {
+  ExclamationCircleIcon,
+  XCircleIcon,
+} from '@heroicons/react/24/outline';
+
 import Shape from '../components/Shape';
 import { nodeIconStyles, nodeLabelStyles } from '../styles';
-import { ExclamationCircleIcon } from '@heroicons/react/24/outline';
 
 type NodeData = any;
 
