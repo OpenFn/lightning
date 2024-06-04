@@ -140,16 +140,17 @@ const Node = ({
                   visibility: data.isValidDropTarget ? 'visible' : 'hidden',
 
                   // abuse the handle style to make the whole node the drop target
-                  left: '50px',
-                  top: '-20px',
-                  width: '150px',
-                  height: '150px',
+                  left: '52px',
+                  top: '-12px',
+                  width: '128px',
+                  height: '128px',
                   backgroundColor: data.isActiveDropTarget
                     ? 'rgba(79, 70, 229, 0.2)'
                     : 'transparent',
                   borderColor: 'rgb(79, 70, 229)',
-                  borderWidth: '6px',
+                  borderWidth: '4px',
                   borderStyle: data.isActiveDropTarget ? 'solid' : 'dashed',
+                  borderRadius: '20%',
                 }}
               />
             </>
