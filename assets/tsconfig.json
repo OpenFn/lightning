@@ -4,7 +4,7 @@
     "module": "NodeNext",
     "moduleResolution": "Node16",
     "rootDir": "../",
-    "lib": ["dom", "ES2022"],
+    "lib": ["dom", "ES2023"],
     "jsx": "react",
     "strict": true,
     "esModuleInterop": true,

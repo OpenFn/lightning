@@ -54,19 +54,19 @@ defmodule LightningWeb.Dev.ComponentsLive do
             </div>
           </.variation>
           <.variation title="With data">
-            <Viewers.log_viewer
+            <%!-- <Viewers.log_viewer
               id="log-viewer-data"
               stream={@log_lines}
               run_state={%Run{state: :success}}
               highlight_id={@highlight_id}
               stream_empty?={false}
-            />
+            /> --%>
           </.variation>
           <.variation title="Empty">
             <Viewers.log_viewer
               id="log-viewer"
-              stream={[]}
-              stream_empty?={true}
+              logs_empty?={true}
+              run_id="run-id"
               run_state={%Run{state: :crashed}}
             />
           </.variation>

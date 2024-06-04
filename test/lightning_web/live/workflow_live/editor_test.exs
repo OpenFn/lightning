@@ -1580,10 +1580,11 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
         render(run_view)
 
         # log tab shows correct information
-        html =
-          run_view |> element("div[data-panel-hash='log']") |> render_async()
 
-        assert html =~ log_line.message
+        assert has_element?(
+                 run_view,
+                 "div[data-panel-hash='log'] [phx-hook='LogViewer'][data-run-id='#{run.id}']"
+               )
 
         # input tab shows correct information
 

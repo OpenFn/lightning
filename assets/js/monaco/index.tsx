@@ -1,12 +1,13 @@
 import React, { useRef, useCallback } from 'react';
 import ResizeObserver from 'rc-resize-observer';
 import Editor, { Monaco } from '@monaco-editor/react';
+import type { editor } from 'monaco-editor';
 
 export function setTheme(monaco: Monaco) {
   monaco.editor.defineTheme('default', {
     base: 'vs-dark',
     inherit: true,
-    rules: [],
+    rules: [{ token: 'logSource', foreground: '#868686', fontStyle: 'italic' }],
     colors: {
       'editor.foreground': '#E2E8F0',
       'editor.background': '#334155', // slate-700
@@ -24,13 +25,15 @@ export function setTheme(monaco: Monaco) {
 export { Monaco };
 
 export const MonacoEditor = ({
-  onMount = (editor: any, monaco: Monaco) => {},
+  onMount = (_editor: editor.IStandaloneCodeEditor, _monaco: Monaco) => {},
   ...props
 }) => {
-  const monacoRef = useRef<any>(null);
+  const monacoRef = useRef<Monaco | null>(null);
+  const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
 
   const handleOnMount = useCallback((editor: any, monaco: Monaco) => {
     monacoRef.current = monaco;
+    editorRef.current = editor;
     setTheme(monaco);
     onMount(editor, monaco);
   }, []);
@@ -38,8 +41,10 @@ export const MonacoEditor = ({
   return (
     <ResizeObserver
       onResize={({ width, height }) => {
-        // TODO maybe either debounce or track sizes
-        monacoRef.current?.editor.layout({ width, height: height });
+        if (width > 0 && height > 0) {
+          // TODO maybe either debounce or track sizes
+          editorRef.current?.layout({ width, height });
+        }
       }}
     >
       <Editor onMount={handleOnMount} {...props} />
