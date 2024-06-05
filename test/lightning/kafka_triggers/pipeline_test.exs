@@ -46,7 +46,8 @@ defmodule Lightning.KafkaTriggers.PipelineTest do
                        [
                          client_config: [
                            sasl: sasl_expected,
-                           ssl: ssl
+                           ssl: ssl,
+                           connect_timeout: 30000
                          ],
                          hosts: hosts,
                          group_id: group_id,
@@ -99,7 +100,7 @@ defmodule Lightning.KafkaTriggers.PipelineTest do
                      module: {
                        BroadwayKafka.Producer,
                        [
-                         client_config: [ssl: ssl],
+                         client_config: [ssl: ssl, connect_timeout: 30000],
                          hosts: hosts,
                          group_id: group_id,
                          topics: topics,
