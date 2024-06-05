@@ -175,15 +175,16 @@ export const CollapsiblePanel = {
 
     this.el.addEventListener('collapse', event => {
       const target = event.target;
-      const collection = document.getElementsByClassName('collapsed');
-      if (collection.length < 2) {
-        target.classList.toggle('collapsed');
+      if (target) {
+        const collection = this.el.getElementsByClassName('collapsed');
+        if (collection.length < 2) {
+          target.classList.add('collapsed');
+        }
       }
     });
 
     this.el.addEventListener('expand-panel', event => {
-      const target = event.target;
-      target.classList.toggle('collapsed');
+      event.target.classList.remove('collapsed');
     });
   },
 } as PhoenixHook;

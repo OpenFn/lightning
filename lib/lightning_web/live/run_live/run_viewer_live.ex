@@ -123,7 +123,7 @@ defmodule LightningWeb.RunLive.RunViewerLive do
               </:panel>
               <:panel hash="log" class="h-full mb-2">
                 <div class="flex flex-col h-full @5xl/viewer:flex-row">
-                  <div class="min-h-0 max-h-[30%] 0 mb-2 overflow-auto flex-none flex @5xl/viewer:flex-row flex-col @5xl/viewer:max-h-[100%]">
+                  <div class="z-50 min-h-0 max-h-[30%] 0 mb-2 overflow-auto flex-none flex @5xl/viewer:flex-row flex-col @5xl/viewer:max-h-[100%]">
                     <.step_list
                       :let={step}
                       id={"log-tab-step-list-#{run.id}"}
@@ -166,7 +166,7 @@ defmodule LightningWeb.RunLive.RunViewerLive do
                   </div>
                 <% else %>
                   <div class="flex flex-col h-full @5xl/viewer:flex-row">
-                    <div class="min-h-0 max-h-[30%] 0 mb-2 overflow-auto flex-none flex @5xl/viewer:flex-row flex-col @5xl/viewer:max-h-[100%]">
+                    <div class="z-50 min-h-0 max-h-[30%] 0 mb-2 overflow-auto flex-none flex @5xl/viewer:flex-row flex-col @5xl/viewer:max-h-[100%]">
                       <.step_list
                         :let={step}
                         id={"input-tab-step-list-#{run.id}"}
@@ -214,7 +214,7 @@ defmodule LightningWeb.RunLive.RunViewerLive do
                   </div>
                 <% else %>
                   <div class="flex flex-col h-full @5xl/viewer:flex-row">
-                    <div class="min-h-0 max-h-[30%] 0 mb-2 overflow-auto flex-none flex @5xl/viewer:flex-row flex-col @5xl/viewer:max-h-[100%]">
+                    <div class="z-50 min-h-0 max-h-[30%] 0 mb-2 overflow-auto flex-none flex @5xl/viewer:flex-row flex-col @5xl/viewer:max-h-[100%]">
                       <.step_list
                         :let={step}
                         id={"output-tab-step-list-#{run.id}"}

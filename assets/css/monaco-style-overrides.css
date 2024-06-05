@@ -2,13 +2,13 @@
 .monaco-editor,
 .monaco-editor .overflow-guard {
   background-color: transparent !important;
-  border-radius: 0.375rem;
+  @apply rounded-md;
 }
 .monaco-editor .margin {
-  border-top-left-radius: 0.375rem; /* matches rounded-md */
-  border-bottom-left-radius: 0.375rem;
+  @apply rounded-l-md;
 }
 .monaco-editor .monaco-scrollable-element  {
+  @apply rounded-r-md;
   border-top-right-radius: 0.375rem;
   border-bottom-right-radius: 0.375rem;
 }
