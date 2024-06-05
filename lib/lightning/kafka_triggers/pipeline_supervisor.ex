@@ -9,8 +9,9 @@ defmodule Lightning.KafkaTriggers.PipelineSupervisor do
 
   @impl true
   def init(_opts) do
-    # TODO Not tested
     if Mix.env != :test do
+      # TODO Find an alternative way to do this that is testable or live
+      # with the blindspot?
       Oban.insert(Lightning.Oban, PipelineWorker.new(%{}, schedule_in: 10))
     end
 
