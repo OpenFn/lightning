@@ -492,7 +492,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
         "You can't delete a step that other downstream steps depend on."
 
       is_first_job ->
-        "You can't delete the only step of a workflow."
+        "You can't delete the first step in a workflow."
 
       has_steps ->
         "You can't delete a step with associated history while it's protected by your data retention period. (Workflow 'snapshots' are coming. For now, disable the incoming edge to prevent the job from running.)"
@@ -740,6 +740,16 @@ defmodule LightningWeb.WorkflowLive.Edit do
     end
   end
 
+  defp remove_edges_from_params(initial_params, edges_to_delete, id) do
+    Map.update!(initial_params, "edges", fn edges ->
+      edges
+      |> Enum.reject(fn edge ->
+        edge["id"] in Enum.map(edges_to_delete, & &1.id)
+      end)
+    end)
+    |> Map.update!("jobs", &Enum.reject(&1, fn job -> job["id"] == id end))
+  end
+
   @impl true
   def handle_event("get-initial-state", _params, socket) do
     {:noreply,
@@ -767,14 +777,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
         Ecto.Changeset.get_assoc(changeset, :edges, :struct)
         |> Enum.filter(&(&1.target_job_id == id))
 
-      next_params =
-        Map.update!(initial_params, "edges", fn edges ->
-          edges
-          |> Enum.reject(fn edge ->
-            edge["id"] in Enum.map(edges_to_delete, & &1.id)
-          end)
-        end)
-        |> Map.update!("jobs", &Enum.reject(&1, fn job -> job["id"] == id end))
+      next_params = remove_edges_from_params(initial_params, edges_to_delete, id)
 
       {:noreply,
        socket
@@ -794,7 +797,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
       :is_first_job ->
         {:noreply,
          socket
-         |> put_flash(:error, "You can't delete the first step of a workflow.")}
+         |> put_flash(:error, "You can't delete the first step in a workflow.")}
 
       :has_steps ->
         {:noreply,
@@ -803,6 +806,39 @@ defmodule LightningWeb.WorkflowLive.Edit do
            :error,
            "You can't delete a step that has already been ran."
          )}
+    end
+  end
+
+  def handle_event("delete_edge", %{"id" => id}, socket) do
+    %{
+      changeset: changeset,
+      workflow_params: initial_params,
+      can_edit_workflow: can_edit_workflow,
+      selected_edge: selected_edge
+    } = socket.assigns
+
+    with true <- can_edit_workflow || :not_authorized,
+         true <- is_nil(selected_edge.source_trigger_id) || :is_initial_edge do
+      edges_to_delete =
+        Ecto.Changeset.get_assoc(changeset, :edges, :struct)
+        |> Enum.filter(&(&1.id == id))
+
+      next_params = remove_edges_from_params(initial_params, edges_to_delete, id)
+
+      {:noreply,
+       socket
+       |> apply_params(next_params)
+       |> push_patches_applied(initial_params)}
+    else
+      :is_initial_edge ->
+        {:noreply,
+         socket
+         |> put_flash(:error, "You cannot remove the first edge in a workflow.")}
+
+      :not_authorized ->
+        {:noreply,
+         socket
+         |> put_flash(:error, "You are not authorized to delete edges.")}
     end
   end
 

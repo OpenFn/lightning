@@ -6,6 +6,7 @@ defmodule Lightning.WorkflowLive.Helpers do
 
   alias Lightning.Projects.Project
   alias Lightning.Workflows.Job
+  alias Lightning.Workflows.Edge
 
   # Interaction Helpers
 
@@ -47,6 +48,12 @@ defmodule Lightning.WorkflowLive.Helpers do
   def click_delete_job(view, job) do
     view
     |> delete_job_button(job)
+    |> render_click()
+  end
+
+  def click_delete_edge(view, trigger) do
+    view
+    |> delete_edge_button(trigger)
     |> render_click()
   end
 
@@ -105,6 +112,11 @@ defmodule Lightning.WorkflowLive.Helpers do
   def force_event(view, :delete_node, job) do
     view
     |> render_click("delete_node", %{id: job.id})
+  end
+
+  def force_event(view, :delete_edge, edge) do
+    view
+    |> render_click("delete_edge", %{id: edge.id})
   end
 
   @doc """
@@ -273,6 +285,12 @@ defmodule Lightning.WorkflowLive.Helpers do
     |> has_element?()
   end
 
+  def delete_edge_button_is_disabled?(view, %Edge{} = edge) do
+    delete_edge_button(view, edge)
+    |> Map.update!(:selector, &(&1 <> "[disabled]"))
+    |> has_element?()
+  end
+
   def has_workflow_edit_container?(view, workflow) do
     view
     |> element("#workflow-edit-#{workflow.id}")
@@ -335,6 +353,11 @@ defmodule Lightning.WorkflowLive.Helpers do
   def delete_job_button(view, %Job{} = job) do
     view
     |> element("#job-pane-#{job.id} button[phx-click='delete_node']")
+  end
+
+  def delete_edge_button(view, %Edge{} = edge) do
+    view
+    |> element("#edge-pane-#{edge.id} button[phx-click='delete_edge']")
   end
 
   def delete_workflow_link(view, workflow) do

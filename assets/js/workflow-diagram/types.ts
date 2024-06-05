@@ -54,10 +54,22 @@ export namespace Lightning {
   };
 }
 
-export namespace Flow {
-  export type Node = ReactFlow.Node;
+export type NodeData = {
+  isValidDropTarget?: boolean;
+  isActiveDropTarget?: boolean;
+  enabled?: boolean;
+};
 
-  export type Edge = ReactFlow.Edge;
+export type EdgeData = {
+  enabled?: boolean;
+  placeholder?: boolean;
+  condition_type?: string;
+};
+
+export namespace Flow {
+  export type Node = ReactFlow.Node<NodeData>;
+
+  export type Edge = ReactFlow.Edge<EdgeData>;
 
   export type Model = {
     nodes: Node[];

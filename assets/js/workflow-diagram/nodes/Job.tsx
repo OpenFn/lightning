@@ -1,7 +1,8 @@
-import React, { memo, useEffect, useState } from 'react';
+import React, { memo } from 'react';
 import { Position, NodeProps } from 'reactflow';
 import Node from './Node';
 import PlusButton from '../components/PlusButton';
+import PathButton from '../components/PathButton';
 import getAdaptorName from '../util/get-adaptor-name';
 import useAdaptorIcons, { AdaptorIconData } from '../useAdaptorIcons';
 
@@ -12,7 +13,9 @@ const JobNode = ({
   sourcePosition = Position.Bottom,
   ...props
 }: NodeProps<NodeData>) => {
-  const toolbar = () => props.data?.allowPlaceholder && <PlusButton />;
+  const toolbar = () => [
+    props.data?.allowPlaceholder && [<PlusButton />, <PathButton />],
+  ];
 
   const adaptorIconsData = useAdaptorIcons();
 
@@ -25,9 +28,10 @@ const JobNode = ({
       label={props.data?.name}
       primaryIcon={icon}
       sublabel={adaptor}
+      isConnectable={true}
       targetPosition={targetPosition}
       sourcePosition={sourcePosition}
-      allowSource
+      // allowSource
       toolbar={toolbar}
       errors={props.data?.errors}
     />

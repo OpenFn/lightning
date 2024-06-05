@@ -1,5 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import ReactFlow, {
+  Controls,
+  ControlButton,
   NodeChange,
   ReactFlowInstance,
   ReactFlowProvider,
@@ -7,11 +9,13 @@ import ReactFlow, {
 } from 'reactflow';
 import { useStore, StoreApi } from 'zustand';
 import { shallow } from 'zustand/shallow';
+import { ViewfinderCircleIcon, XMarkIcon } from '@heroicons/react/24/outline';
 
 import layout from './layout';
 import nodeTypes from './nodes';
 import edgeTypes from './edges';
 import usePlaceholders from './usePlaceholders';
+import useConnect from './useConnect';
 import fromWorkflow from './util/from-workflow';
 import throttle from './util/throttle';
 import updateSelectionStyles from './util/update-selection';
@@ -38,6 +42,8 @@ export default React.forwardRef<HTMLElement, WorkflowDiagramProps>(
     const { selection, onSelectionChange, store } = props;
 
     const [model, setModel] = useState<Flow.Model>({ nodes: [], edges: [] });
+
+    const [autofit, setAutofit] = useState<boolean>(true);
 
     const updateSelection = useCallback(
       (id?: string | null) => {
@@ -96,10 +102,12 @@ export default React.forwardRef<HTMLElement, WorkflowDiagramProps>(
 
         if (layoutId) {
           chartCache.current.lastLayout = layoutId;
-          layout(newModel, setModel, flow, 300).then(positions => {
-            // Note we don't update positions until the animation has finished
-            chartCache.current.positions = positions;
-          });
+          layout(newModel, setModel, flow, { duration: 300, autofit }).then(
+            positions => {
+              // Note we don't update positions until the animation has finished
+              chartCache.current.positions = positions;
+            }
+          );
         } else {
           // If layout is id, ensure nodes have positions
           // This is really only needed when there's a single trigger node
@@ -184,6 +192,8 @@ export default React.forwardRef<HTMLElement, WorkflowDiagramProps>(
       }
     }, [flow, ref]);
 
+    const connectHandlers = useConnect(model, setModel, store);
+
     return (
       <ReactFlowProvider>
         <ReactFlow
@@ -201,7 +211,19 @@ export default React.forwardRef<HTMLElement, WorkflowDiagramProps>(
           deleteKeyCode={null}
           fitView
           fitViewOptions={{ padding: FIT_PADDING }}
-        />
+          {...connectHandlers}
+        >
+          <Controls showInteractive={false} position="bottom-left">
+            <ControlButton
+              onClick={() => {
+                setAutofit(!autofit);
+              }}
+              title="Automatically fit view"
+            >
+              <ViewfinderCircleIcon style={{ opacity: autofit ? 1 : 0.4 }} />
+            </ControlButton>
+          </Controls>
+        </ReactFlow>
       </ReactFlowProvider>
     );
   }

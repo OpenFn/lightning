@@ -412,7 +412,82 @@ defmodule LightningWeb.WorkflowLive.EditTest do
     end
 
     @tag role: :editor
-    test "can't delete the only step in a workflow", %{
+    test "cannot delete an edge between a trigger and a job", %{
+      conn: conn,
+      project: project,
+      workflow: workflow
+    } do
+      {:ok, view, _html} = live(conn, ~p"/projects/#{project}/w/#{workflow}")
+
+      [trigger_edge, other_edge] = workflow.edges
+
+      assert view |> select_node(other_edge) =~
+               "Delete Path"
+
+      refute view |> select_node(trigger_edge) =~
+               "Delete Path"
+
+      assert view |> force_event(:delete_edge, trigger_edge) =~
+               "You cannot remove the first edge in a workflow."
+    end
+
+    @tag role: :editor
+    test "can delete an edge between two jobs", %{
+      conn: conn,
+      project: project,
+      workflow: workflow
+    } do
+      {:ok, view, _html} = live(conn, ~p"/projects/#{project}/w/#{workflow}")
+
+      [_trigger_edge, other_edge] = workflow.edges
+
+      assert view |> select_node(other_edge) =~
+               "Delete Path"
+
+      view |> select_node(other_edge)
+
+      assert_patched(
+        view,
+        ~p"/projects/#{project}/w/#{workflow}?s=#{other_edge}"
+      )
+
+      view |> click_delete_edge(other_edge)
+
+      assert_push_event(view, "patches-applied", %{
+        patches: [
+          %{op: "remove", path: "/edges/1"}
+        ]
+      })
+    end
+
+    @tag role: :viewer
+    test "cannot delete edges", %{
+      conn: conn,
+      project: project,
+      workflow: workflow
+    } do
+      {:ok, view, _html} = live(conn, ~p"/projects/#{project}/w/#{workflow}")
+
+      [_trigger_edge, other_edge] = workflow.edges
+
+      assert view |> select_node(other_edge) =~
+               "Delete Path"
+
+      view |> select_node(other_edge)
+
+      assert_patched(
+        view,
+        ~p"/projects/#{project}/w/#{workflow}?s=#{other_edge}"
+      )
+
+      assert view |> delete_edge_button_is_disabled?(other_edge)
+
+      assert view |> force_event(:delete_edge, other_edge) =~
+               "You are not authorized to delete edges."
+    end
+
+    @tag role: :editor
+    test "can't delete the first step in a workflow", %{
       conn: conn,
       project: project
     } do
@@ -438,7 +513,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       assert view |> delete_job_button_is_disabled?(job)
 
       assert view |> force_event(:delete_node, job) =~
-               "You can&#39;t delete the first step of a workflow."
+               "You can&#39;t delete the first step in a workflow."
     end
 
     @tag role: :editor

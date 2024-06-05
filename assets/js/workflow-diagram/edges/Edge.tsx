@@ -1,5 +1,11 @@
 import React, { FC } from 'react';
-import { SmoothStepEdge, EdgeProps, EdgeLabelRenderer } from 'reactflow';
+import {
+  SmoothStepEdge,
+  BezierEdge,
+  Edge,
+  EdgeProps,
+  EdgeLabelRenderer,
+} from 'reactflow';
 import { labelStyles } from '../styles';
 
 const CustomEdge: FC<EdgeProps> = props => {
@@ -12,7 +18,9 @@ const CustomEdge: FC<EdgeProps> = props => {
   const labelY = (sourceY + targetY) / 2;
   return (
     <>
-      <SmoothStepEdge {...stepEdgeProps} />
+      {/* Curvature does nothing?? */}
+      <BezierEdge {...stepEdgeProps} pathOptions={{ curvature: 0 }} />
+      {/* <SmoothStepEdge {...stepEdgeProps} pathOptions={{ borderRadius: 500 }} /> */}
       {label && (
         <EdgeLabelRenderer>
           <div
