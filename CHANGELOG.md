@@ -21,6 +21,9 @@ and this project adheres to
 
 ### Fixed
 
+- Rewrite TabSelector (now Tabbed) components fixing a number of navigation
+  issues [#2051](https://github.com/OpenFn/lightning/issues/2051)
+
 ## [v2.6.0] - 2024-06-05
 
 ### Added
