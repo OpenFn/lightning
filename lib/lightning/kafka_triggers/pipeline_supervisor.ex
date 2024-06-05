@@ -10,7 +10,9 @@ defmodule Lightning.KafkaTriggers.PipelineSupervisor do
   @impl true
   def init(_opts) do
     # TODO Not tested
-    Oban.insert(Lightning.Oban, PipelineWorker.new(%{}, schedule_in: 10))
+    if Mix.env != :test do
+      Oban.insert(Lightning.Oban, PipelineWorker.new(%{}, schedule_in: 10))
+    end
 
     Supervisor.init([], strategy: :one_for_one)
   end
