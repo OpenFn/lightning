@@ -22,6 +22,7 @@ and this project adheres to
 
 ### Changed
 
+- Bump default CLI to `@openfn/cli@1.3.2`
 - Don't show deprecated adaptor versions in the adaptor version picklist (to be
   followed by some graceful deprecation handling/warning in
   [later work](https://github.com/OpenFn/lightning/issues/2172))
