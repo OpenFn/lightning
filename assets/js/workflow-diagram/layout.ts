@@ -1,4 +1,4 @@
-import Dagre from '@dagrejs/dagre';
+import Dagre from '../../vendor/dagre';
 import { timer } from 'd3-timer';
 import { getRectOfNodes, ReactFlowInstance } from 'reactflow';
 
@@ -29,7 +29,7 @@ const calculateLayout = async (
     g.setNode(node.id, { ...node, width: 350, height: 200 })
   );
 
-  Dagre.layout(g);
+  Dagre.layout(g, { disableOptimalOrderHeuristic: true });
 
   const newModel = {
     nodes: nodes.map(node => {
