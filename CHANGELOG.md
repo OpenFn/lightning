@@ -27,8 +27,10 @@ and this project adheres to
   followed by some graceful deprecation handling/warning in
   [later work](https://github.com/OpenFn/lightning/issues/2172))
   [#2169](https://github.com/OpenFn/lightning/issues/2169)
-- Refactor count workorders to reuse search code  
+- Refactor count workorders to reuse search code
   [#2121](https://github.com/OpenFn/lightning/issues/2121)
+- Updated provisioning error message to include workflow and job names
+  [#2140](https://github.com/OpenFn/lightning/issues/2140)
 
 ### Fixed
 

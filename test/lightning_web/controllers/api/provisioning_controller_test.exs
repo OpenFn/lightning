@@ -415,7 +415,9 @@ defmodule LightningWeb.API.ProvisioningControllerTest do
       assert response == %{
                "errors" => %{
                  "name" => ["This field can't be blank."],
-                 "workflows" => [%{"id" => ["This field can't be blank."]}]
+                 "workflows" => %{
+                   "default" => %{"id" => ["This field can't be blank."]}
+                 }
                }
              }
 
@@ -444,23 +446,74 @@ defmodule LightningWeb.API.ProvisioningControllerTest do
 
       assert response == %{
                "errors" => %{
-                 "workflows" => [
-                   %{
-                     "jobs" => [
-                       %{
+                 "workflows" => %{
+                   "default" => %{
+                     "jobs" => %{
+                       "first-job" => %{
                          "id" => ["This field can't be blank."],
                          "body" => ["Code editor cannot be empty."]
                        },
-                       %{
+                       "" => %{
                          "name" => ["Job name can't be blank."],
                          "id" => ["This field can't be blank."]
                        }
-                     ],
+                     },
                      "id" => ["This field can't be blank."]
                    }
-                 ]
+                 }
                }
              }
+
+      job_id = Ecto.UUID.generate()
+      trigger_id = Ecto.UUID.generate()
+
+      for trigger_type <- ["cron", "webhook"] do
+        body = %{
+          "id" => project.id,
+          "name" => "test-project",
+          "workflows" => [
+            %{
+              "id" => Ecto.UUID.generate(),
+              "name" => "default",
+              "jobs" => [
+                %{
+                  "id" => job_id,
+                  "name" => "first-job",
+                  "adaptor" => "@openfn/language-common@latest",
+                  "body" => "console.log('hello world')"
+                }
+              ],
+              "triggers" => [
+                %{"id" => trigger_id, "type" => trigger_type}
+              ],
+              "edges" => [
+                %{
+                  "id" => Ecto.UUID.generate(),
+                  "source_trigger_id" => trigger_id,
+                  "target_job_id" => job_id
+                }
+              ]
+            }
+          ]
+        }
+
+        conn = post(conn, ~p"/api/provision", body)
+        response = json_response(conn, 422)
+
+        assert response == %{
+                 "errors" => %{
+                   "workflows" => %{
+                     "default" => %{
+                       "edges" => %{
+                         "#{trigger_type}->first-job" => %{
+                           "condition_type" => ["This field can't be blank."]
+                         }
+                       }
+                     }
+                   }
+                 }
+               }
+      end
     end
 
     test "allows an owner to update an existing project", %{

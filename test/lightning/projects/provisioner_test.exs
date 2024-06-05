@@ -269,6 +269,7 @@ defmodule Lightning.Projects.ProvisionerTest do
           body
           |> add_entity_to_workflow(workflow_id, "edges", %{
             "id" => other_edge_id,
+            "source_job_id" => third_job_id,
             "condition_type" => "on_job_success"
           })
         )
@@ -276,6 +277,50 @@ defmodule Lightning.Projects.ProvisionerTest do
       assert flatten_errors(changeset) == %{
                workflows: [
                  %{edges: [%{id: ["This email address already exists."]}]}
+               ]
+             }
+    end
+
+    test "fails when an edge has no source", %{
+      project: %{id: project_id} = project,
+      user: user
+    } do
+      Mox.stub(
+        Lightning.Extensions.MockUsageLimiter,
+        :limit_action,
+        fn _action, %{project_id: ^project_id} ->
+          :ok
+        end
+      )
+
+      %{body: body, workflow_id: workflow_id} = valid_document(project.id)
+
+      %{id: other_edge_id} = Lightning.Factories.insert(:edge)
+
+      {:error, changeset} =
+        Provisioner.import_document(
+          project,
+          user,
+          body
+          |> add_entity_to_workflow(workflow_id, "edges", %{
+            "id" => other_edge_id,
+            "condition_type" => "on_job_success"
+          })
+        )
+
+      assert flatten_errors(changeset) == %{
+               workflows: [
+                 %{
+                   edges: [
+                     %{
+                       source_job_id: [
+                         "source_job_id or source_trigger_id must be present"
+                       ]
+                     },
+                     %{},
+                     %{}
+                   ]
+                 }
                ]
              }
     end
