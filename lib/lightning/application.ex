@@ -104,11 +104,18 @@ defmodule Lightning.Application do
       {Lightning.TaskWorker, name: :cli_task_worker},
       {Lightning.Runtime.RuntimeManager,
        worker_secret: Lightning.Config.worker_secret()},
-      Lightning.KafkaTriggers.PipelineSupervisor,
-      Lightning.KafkaTriggers.MessageCandidateSetSupervisor,
       # Start a worker by calling: Lightning.Worker.start_link(arg)
       # {Lightning.Worker, arg}
     ]
+
+    children = if Mix.env != :test do
+      children ++ [
+        Lightning.KafkaTriggers.PipelineSupervisor,
+        Lightning.KafkaTriggers.MessageCandidateSetSupervisor,
+      ]
+    else
+      children
+    end
 
     # See https://hexdocs.pm/elixir/Supervisor.html
     # for other strategies and supported options
