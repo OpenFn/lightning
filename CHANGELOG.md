@@ -31,6 +31,8 @@ and this project adheres to
 
 ### Fixed
 
+- Don't let two deploy workflows run at the same time to prevent git collisions
+  [#2044](https://github.com/OpenFn/lightning/issues/2044)
 - Stopped sending emails when creating a starter project
   [#2161](https://github.com/OpenFn/lightning/issues/2161)
 
