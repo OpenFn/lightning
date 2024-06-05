@@ -373,11 +373,6 @@ defmodule LightningWeb.WorkflowLive.Components do
         :edge_enabled,
         Map.get(form.params, "enabled", form.data.enabled)
       )
-      |> assign(:edge_id, Map.get(form.params, "id", form.data.id))
-      |> assign(
-        :source_trigger_id,
-        Map.get(form.params, "source_trigger_id", form.data.source_trigger_id)
-      )
       |> assign(
         :edge_condition,
         Map.get(
@@ -425,7 +420,7 @@ defmodule LightningWeb.WorkflowLive.Components do
           </.label>
         </div>
       <% end %>
-      <%= if Phoenix.HTML.Form.input_value(@form, :source_trigger_id) do %>
+      <%= if @form[:source_trigger_id].value do %>
         <div class="max-w-xl text-sm text-gray-500 mt-3">
           <p>This path will be active if its trigger is enabled.</p>
         </div>
@@ -444,7 +439,7 @@ defmodule LightningWeb.WorkflowLive.Components do
           </h2>
         </div>
       <% end %>
-      <%= unless Phoenix.HTML.Form.input_value(@form, :source_trigger_id) do %>
+      <%= unless @form[:source_trigger_id].value do %>
         <div class="grow flex justify-end">
           <label>
             <.button
@@ -452,8 +447,8 @@ defmodule LightningWeb.WorkflowLive.Components do
               class="focus:ring-red-500 bg-red-600 hover:bg-red-700 disabled:bg-red-300"
               data-confirm="Are you sure you want to delete this path?"
               phx-click="delete_edge"
-              phx-value-id={@edge_id}
-              disabled={@disabled or @source_trigger_id}
+              phx-value-id={@form[:id].value}
+              disabled={@disabled or @form[:source_trigger_id].value}
             >
               Delete Path
             </.button>

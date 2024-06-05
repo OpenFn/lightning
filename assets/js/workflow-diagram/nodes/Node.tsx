@@ -241,8 +241,9 @@ const Node = ({
         <div
           style={{
             width: `${width}px`,
-            marginLeft: '4px',
-            marginTop: '-14px',
+            marginLeft: '2px',
+            marginTop: '-18px',
+            justifyContent: 'center',
           }}
           className={`flex flex-row items-center
                     opacity-0  ${
