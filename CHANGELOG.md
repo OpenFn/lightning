@@ -21,6 +21,17 @@ and this project adheres to
 
 ### Fixed
 
+## [v2.6.0] - 2024-06-05
+
+### Added
+
+- Support multiple edges leading to the same step (a.k.a., "drag & drop")
+  [#2008](https://github.com/OpenFn/lightning/issues/2008)
+
+### Changed
+
+### Fixed
+
 ## [v2.5.5] - 2024-06-05
 
 ### Added
