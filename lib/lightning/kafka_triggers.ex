@@ -16,6 +16,13 @@ defmodule Lightning.KafkaTriggers do
     query |> Repo.all()
   end
 
+  @doc """ 
+  Updates the partition-specific timestamps for a given trigger. These
+  timestamps are used to provide an updated offset reset policy should the
+  associated consumer group have been used previously but has not connected to
+  the cluster for a long enough time that the cluster no longer has a committed
+  offset.
+  """
   def update_partition_data(trigger, partition, timestamp) do
     partition_key = partition |> Integer.to_string()
 
@@ -50,6 +57,10 @@ defmodule Lightning.KafkaTriggers do
     |> Repo.update()
   end
 
+  @doc """
+  Selects the appropriate offset reset policy for a given trigger based on the
+  presence of partition-specific timestamps.
+  """
   def determine_offset_reset_policy(trigger) do
     %Trigger{kafka_configuration: kafka_configuration} = trigger
 
@@ -62,6 +73,8 @@ defmodule Lightning.KafkaTriggers do
     end
   end
 
+  # Converts the initial_offset_reset_policy configuration value to a format
+  # suitable for use by a `Pipeline` process.
   defp initial_policy(%{initial_offset_reset_policy: initial_policy}) do
     cond do
       initial_policy in ["earliest", "latest"] ->
@@ -80,6 +93,11 @@ defmodule Lightning.KafkaTriggers do
     {:timestamp, timestamp}
   end
 
+  @doc """
+  This method has been rendered obsolete by the introduction of the
+  embedded schema for the Kafka configuration. It is still used in some tests
+  but should be replaced.
+  """
   def build_trigger_configuration(opts \\ []) do
     group_id = opts |> Keyword.fetch!(:group_id)
     hosts = opts |> Keyword.fetch!(:hosts)
@@ -110,6 +128,8 @@ defmodule Lightning.KafkaTriggers do
     }
   end
 
+  # TODO This method is only used in the `build_trigger_configuration` method
+  # and can be removed when the caller is removed.
   defp policy_config_value(initial_policy) do
     case initial_policy do
       policy when is_integer(policy) ->
@@ -123,12 +143,20 @@ defmodule Lightning.KafkaTriggers do
     end
   end
 
+  @doc """
+  Generate the key that is used to identify duplicate messages when used in
+  association with the trigger id.
+  """
   def build_topic_partition_offset(%Broadway.Message{metadata: metadata}) do
     %{topic: topic, partition: partition, offset: offset} = metadata
 
     "#{topic}_#{partition}_#{offset}"
   end
 
+  @doc """
+  This method finds all unique MessageCandidateSetIDs present in the
+  `TriggerKafkaMessage` table.
+  """
   def find_message_candidate_sets do
     query =
       from t in TriggerKafkaMessage,
@@ -160,6 +188,8 @@ defmodule Lightning.KafkaTriggers do
     :ok
   end
 
+  # Take the appropriate action based on the state of the candidate.
+  # TODO If this method was public, it may make simpler tests possible.
   defp handle_candidate(%{work_order: nil} = candidate) do
     %{
       data: data,
@@ -188,6 +218,13 @@ defmodule Lightning.KafkaTriggers do
     if successful?(work_order), do: candidate |> Repo.delete()
   end
 
+  @doc """
+  Find the MessageCandidateSetCandidate for the MessageCandidateSet identified
+  by the MessageCanididateSetID (i.e. trigger_id, topic, key).
+
+  Within the current implementation, this no longer needs to be a public method,
+  but having it as a public method allows for easier testing.
+  """
   def find_candidate_for(%{trigger_id: trigger_id, topic: topic, key: nil}) do
     from t in TriggerKafkaMessage,
       where: t.trigger_id == ^trigger_id and t.topic == ^topic and is_nil(t.key),
@@ -223,6 +260,9 @@ defmodule Lightning.KafkaTriggers do
     end)
   end
 
+  @doc """
+  Generate the child spec needed to start a `Pipeline` child process.
+  """
   def generate_pipeline_child_spec(trigger) do
     %{
       group_id: group_id,
