@@ -17,6 +17,14 @@ and this project adheres to
 
 ### Added
 
+### Changed
+
+### Fixed
+
+## [v2.5.5] - 2024-06-05
+
+### Added
+
 - Replace LiveView Log Viewer component with React Monaco
   [#1863](https://github.com/OpenFn/lightning/issues/1863)
 
