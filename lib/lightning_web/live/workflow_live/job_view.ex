@@ -126,7 +126,7 @@ defmodule LightningWeb.WorkflowLive.JobView do
           <Tabbed.tabs
             id="tab-bar-1"
             default_hash="run"
-            class="flex flex-row space-x-6 -my-2"
+            class="flex flex-row space-x-6 -my-2 job-viewer-tabs"
           >
             <:tab hash="run">
               <span class="inline-block align-middle">Run</span>

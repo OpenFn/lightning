@@ -225,8 +225,16 @@ div.line-num::before {
   @apply h-full;
 }
 
+.run-tab-container [role='tablist'] {
+  @apply border-b border-gray-200 -m-1;
+}
+
+.job-viewer-tabs[role='tablist'] [role='tab'] {
+  @apply !text-xs;
+}
+
 .tabbed-selector[role='tablist'] [role='tab'] {
-  @apply text-xs
+  @apply text-sm
     font-semibold
   text-secondary-700
     py-2
@@ -249,8 +257,4 @@ div.line-num::before {
         hover:text-gray-600
         hover:border-b-gray-300;
   }
-}
-
-.tab-container [role='tabpanel'] {
-  @apply text-xs font-semibold text-secondary-700;
 }

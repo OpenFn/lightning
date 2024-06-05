@@ -141,8 +141,8 @@ defmodule LightningWeb.RunLive.Show do
             </div>
             <div class="@5xl/main:basis-2/3 flex flex-col gap-4 h-full">
               <Tabbed.container
-                id="test-tabbed-container"
-                class=""
+                id={"run-#{run.id}-tabbed-container"}
+                class="run-tab-container"
                 default_hash="log"
               >
                 <:tab hash="log">

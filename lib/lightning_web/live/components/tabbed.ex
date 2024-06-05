@@ -25,7 +25,7 @@ defmodule LightningWeb.Components.Tabbed do
     assigns =
       assigns
       |> update(:class, fn class ->
-        ~w[dark:border-gray-600 flex flex-col gap-x-4 gap-y-2 border-b tab-container]
+        ~w[flex flex-col gap-x-4 gap-y-2 tab-container]
         |> Enum.concat(List.wrap(class))
       end)
 

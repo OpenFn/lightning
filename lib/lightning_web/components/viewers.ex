@@ -66,7 +66,7 @@ defmodule LightningWeb.Components.Viewers do
         <div class="relative grow">
           <div
             id={"#{@id}-nothing-yet"}
-            class="m-2  rounded-md p-12 text-center bg-slate-700 font-mono text-gray-200"
+            class="relative rounded-md p-12 text-center bg-slate-700 font-mono text-gray-200"
           >
             <.text_ping_loader>
               Nothing yet
@@ -151,7 +151,7 @@ defmodule LightningWeb.Components.Viewers do
             is_nil(@dataclip)
         }
         id={"#{@id}-nothing-yet"}
-        class="m-2 relative rounded-md p-12 text-center bg-slate-700 font-mono text-gray-200"
+        class="relative rounded-md p-12 text-center bg-slate-700 font-mono text-gray-200"
       >
         <.text_ping_loader>
           Nothing yet
