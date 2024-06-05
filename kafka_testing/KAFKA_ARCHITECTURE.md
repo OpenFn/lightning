@@ -28,6 +28,18 @@ Most of the logic is currently in Lightning.KafkaTriggers.
 Lightning.KafkaTesting.Utils contains some helper functions that may be useful
 during testing, but most are obsolete and need to be retired.
 
+## Caveat Developor :)
+
+As of 2024-06-05, the Kafka implementation is still in a very early stage of
+testing and should be considered experimental. The code has been tested with
+very light loads on a single node Lightning installation running on a
+developer's workstation.
+
+The primary risk remains the behaviour of the Lightning/Kafka integration under
+conditons closer to those that will be encountered in production scenarios. As
+a result, there are a number of sharp edges and affordances that are not present,
+and much of the code can do with some housekeeping. 
+
 ## Detail
 
 ### KafkaTriggers.PipelineSupervisor
@@ -69,7 +81,14 @@ the message is discarded.
 Work still needs to be done on a process that will remove stale
 TriggerKafkaMessageRecord entries.
 
-### MessageCandidateSetServer
+### KafkaTriggers.MessageCandidateSetSupervisor
+
+The `MessageCandidateSetSupervisor` supervises the `MessageCandidateSetServer`
+and the `MessageCandidateSetWorker`. Currently, it starts one of each - while
+there can be more than one `MessageCandidateSetWorker`, there should only be
+a single `MessageCandidateSetServer`.
+
+### KafkaTriggers.MessageCandidateSetServer
 
 A `MessageCandidateSet` is the collection of TriggerKafkaMessage records that
 all have the same trigger_id, topic and key. Each unique combination of
@@ -86,7 +105,7 @@ the database and store these in memory. It will serve from memory until the list
 has been exhausted, whereupon it will, once again, retrieve all distinct MCSIDs
 from the database.
 
-### MessageCandidateSetWorker
+### KafkaTriggers.MessageCandidateSetWorker
 
 When a `MessageCandidateSetWorker` is started, it will  `enqueue` a message to
 itself using `Process.send_after`. Upon receipt of ths message, it will
@@ -146,6 +165,28 @@ so long that the cluster no longer retains a committed offset for the consumer
 group. In this case, the offset provided when the consumer group starts will
 be the ealiest of the timestamps across all partitions rather than what 
 was provided in `initial_offset_reset_policy`.
+
+### Workflows
+
+`Workflows.save_workflow/1` has been extended to call 
+`KafkaTriggers.enable_disabled_triggers/0` after saving a workflow. This takes
+a collection of all the triggers in the workflow and attempts to add or remove
+pipelines based on the state of any Kafka triggers present in the set.
+
+This implementation was chosed largely for speed of implementation rather than
+as an expression of design intent - a possible alternative is to enqueue an
+Oban job to handle the call.
+
+### KafkaTesting.Utils
+
+This module contains a number of functions that were useful during the initial
+development and testing of the Kafk implementation. Most of these functions have
+been rendered obsolete by the introduction of the `KafkaConfiguration` as well
+as a functional UI to create Kafka triggers and the addition of 
+`PipelineSupervisor` and `MessageCandidateSetSupervisor` to the supervision tree.
+
+`Utils.which_children/0` is still useful to track the running `Pipeline`
+instances.
 
 ## Testing
 
