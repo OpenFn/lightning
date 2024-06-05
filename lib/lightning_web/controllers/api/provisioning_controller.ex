@@ -36,8 +36,7 @@ defmodule LightningWeb.API.ProvisioningController do
         {:error, %Ecto.Changeset{} = changeset} ->
           conn
           |> put_status(:unprocessable_entity)
-          |> put_view(json: LightningWeb.ChangesetJSON)
-          |> render("provisioning_error.json", changeset: changeset)
+          |> render("error.json", changeset: changeset)
 
         {:error, error} ->
           conn
