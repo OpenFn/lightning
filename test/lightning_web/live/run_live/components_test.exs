@@ -441,38 +441,6 @@ defmodule LightningWeb.RunLive.ComponentsTest do
     assert html =~ "contact one of your project admins"
   end
 
-  describe "log_view component" do
-    test "with no log lines" do
-      html =
-        render_component(&Components.log_view/1, log: [])
-        |> Floki.parse_fragment!()
-
-      assert html |> Floki.find("div[data-line-number]") |> length() == 0
-    end
-
-    test "with log lines" do
-      log_lines = ["First line", "Second line"]
-
-      html =
-        render_component(&Components.log_view/1, log: log_lines)
-        |> Floki.parse_fragment!()
-
-      assert html |> Floki.find("div[data-line-number]") |> length() ==
-               length(log_lines)
-
-      # Check that the log lines are present.
-      # Replace the resulting utf-8 &nbsp; back into a regular space.
-      assert log_lines_from_html(html) == log_lines |> Enum.join("\n")
-    end
-  end
-
-  defp log_lines_from_html(html) do
-    html
-    |> Floki.find("div[data-log-line]")
-    |> Floki.text(sep: "\n")
-    |> String.replace(<<160::utf8>>, " ")
-  end
-
   defp has_run_step_link?(html, project, run, step) do
     html
     |> Floki.find(

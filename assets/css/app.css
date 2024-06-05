@@ -110,13 +110,9 @@
 }
 
 div[id^='tippy-'] {
-  color: rgb(241 245 249);
-  background: rgb(15 23 42);
-  border-radius: 0.375rem;
-  padding: 0.5rem;
-  z-index: 9999;
-  margin: 2px;
-  text-align: center;
+  @apply rounded-md p-2 z-[9999] 
+         text-xs text-center text-primary-50
+         bg-primary-950;
 }
 
 @keyframes fade-in-scale-keys {

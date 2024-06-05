@@ -7,8 +7,8 @@ defmodule LightningWeb.RunLive.Show do
   alias Lightning.Policies.Permissions
   alias Lightning.Policies.ProjectUsers
   alias Lightning.Projects
-  alias LightningWeb.Components.Viewers
   alias LightningWeb.Components.Tabbed
+  alias LightningWeb.Components.Viewers
   alias Phoenix.LiveView.AsyncResult
 
   on_mount {LightningWeb.Hooks, :project_scope}
@@ -152,14 +152,22 @@ defmodule LightningWeb.RunLive.Show do
                   />
                   <span class="inline-block align-middle">Log</span>
                 </:tab>
-                <:tab hash="input" disabled={@no_step_selected?}>
+                <:tab
+                  hash="input"
+                  disabled={@no_step_selected?}
+                  disabled_msg="A valid step must be selected to view its input"
+                >
                   <.icon
                     name="hero-arrow-down-on-square"
                     class="h-5 w-5 inline-block mr-1 align-middle"
                   />
                   <span class="inline-block align-middle">Input</span>
                 </:tab>
-                <:tab hash="output" disabled={@no_step_selected?}>
+                <:tab
+                  hash="output"
+                  disabled={@no_step_selected?}
+                  disabled_msg="A valid step (with a readable output) must be selected to view its output"
+                >
                   <.icon
                     name="hero-arrow-up-on-square"
                     class="h-5 w-5 inline-block mr-1 align-middle rotate-180"

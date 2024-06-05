@@ -13,6 +13,7 @@ defmodule LightningWeb.Components.Tabbed do
   slot :tab, required: true do
     attr :hash, :string, required: true
     attr :disabled, :boolean
+    attr :disabled_msg, :string
   end
 
   slot :panel, required: true do
@@ -37,7 +38,11 @@ defmodule LightningWeb.Components.Tabbed do
     >
       <div role="tablist" class="flex flex-row space-x-4 tabbed-selector">
         <%= for tab <- @tab do %>
-          <.tab hash={tab[:hash]} disabled={tab[:disabled]}>
+          <.tab
+            hash={tab[:hash]}
+            disabled={tab[:disabled]}
+            disabled_msg={tab[:disabled_msg]}
+          >
             <%= render_slot(tab) %>
           </.tab>
         <% end %>
@@ -71,7 +76,12 @@ defmodule LightningWeb.Components.Tabbed do
         class="flex flex-none flex-col space-y-4 pr-8 tabbed-selector"
       >
         <%= for tab <- @tab do %>
-          <.tab hash={tab[:hash]} disabled={tab[:disabled]} class="px-4">
+          <.tab
+            hash={tab[:hash]}
+            disabled={tab[:disabled]}
+            disabled_msg={tab[:disabled_msg]}
+            class="px-4"
+          >
             <%= render_slot(tab) %>
           </.tab>
         <% end %>
@@ -94,6 +104,7 @@ defmodule LightningWeb.Components.Tabbed do
   slot :tab, required: true do
     attr :hash, :string, required: true
     attr :disabled, :boolean
+    attr :disabled_msg, :string
   end
 
   def tabs(assigns) do
@@ -110,7 +121,11 @@ defmodule LightningWeb.Components.Tabbed do
       id={@id}
     >
       <%= for tab <- @tab do %>
-        <.tab hash={tab[:hash]} disabled={tab[:disabled]}>
+        <.tab
+          hash={tab[:hash]}
+          disabled={tab[:disabled]}
+          disabled_msg={tab[:disabled_msg]}
+        >
           <%= render_slot(tab) %>
         </.tab>
       <% end %>
@@ -121,7 +136,7 @@ defmodule LightningWeb.Components.Tabbed do
   attr :hash, :string, required: true
   attr :class, :string, default: nil
   attr :disabled, :boolean, default: false
-  attr :disabled_msg, :string, default: "Unavailable"
+  attr :disabled_msg, :string
   slot :inner_block, required: true
 
   def tab(assigns) do
@@ -135,6 +150,9 @@ defmodule LightningWeb.Components.Tabbed do
         role="tab"
         data-disabled
         data-hash={@hash}
+        phx-hook="Tooltip"
+        aria-label={@disabled_msg}
+        data-allow-html="true"
         lv-keep-aria
       >
         <%= render_slot(@inner_block) %>

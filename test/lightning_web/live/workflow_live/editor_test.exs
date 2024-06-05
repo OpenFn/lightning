@@ -1581,7 +1581,7 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
 
         assert has_element?(
                  run_view,
-                 "div[data-panel-hash='log'] [phx-hook='LogViewer'][data-run-id='#{run.id}']"
+                 "div#log-panel [phx-hook='LogViewer'][data-run-id='#{run.id}']"
                )
 
         # input panel shows correct information
