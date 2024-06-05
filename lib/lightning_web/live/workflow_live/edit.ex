@@ -767,14 +767,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
         Ecto.Changeset.get_assoc(changeset, :edges, :struct)
         |> Enum.filter(&(&1.target_job_id == id))
 
-      next_params =
-        Map.update!(initial_params, "edges", fn edges ->
-          edges
-          |> Enum.reject(fn edge ->
-            edge["id"] in Enum.map(edges_to_delete, & &1.id)
-          end)
-        end)
-        |> Map.update!("jobs", &Enum.reject(&1, fn job -> job["id"] == id end))
+      next_params = remove_edges_from_params(initial_params, edges_to_delete)
 
       {:noreply,
        socket
@@ -820,14 +813,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
         Ecto.Changeset.get_assoc(changeset, :edges, :struct)
         |> Enum.filter(&(&1.id == id))
 
-      next_params =
-        Map.update!(initial_params, "edges", fn edges ->
-          edges
-          |> Enum.reject(fn edge ->
-            edge["id"] in Enum.map(edges_to_delete, & &1.id)
-          end)
-        end)
-        |> Map.update!("jobs", &Enum.reject(&1, fn job -> job["id"] == id end))
+      next_params = remove_edges_from_params(initial_params, edges_to_delete)
 
       {:noreply,
        socket
@@ -844,6 +830,16 @@ defmodule LightningWeb.WorkflowLive.Edit do
          socket
          |> put_flash(:error, "You are not authorized to delete edges.")}
     end
+  end
+
+  defp remove_edges_from_params(initial_params, edges_to_delete) do
+    Map.update!(initial_params, "edges", fn edges ->
+      edges
+      |> Enum.reject(fn edge ->
+        edge["id"] in Enum.map(edges_to_delete, & &1.id)
+      end)
+    end)
+    |> Map.update!("jobs", &Enum.reject(&1, fn job -> job["id"] == id end))
   end
 
   def handle_event("validate", %{"workflow" => params}, socket) do
