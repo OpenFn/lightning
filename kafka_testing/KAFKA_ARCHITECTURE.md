@@ -214,10 +214,12 @@ Create a network so that the cluster can communicate amongst themselves:
 docker network create kafka-network
 ```
 
-Start the cluster:
+Start the cluster. Note: The `KAFKA_MEMORY_LIMIT` and `KAFKA_MEMORY_RESERVE`
+are set to 1000M, but these should be adjusted to a value that is appropriate
+for your system.
 
 ```
-docker-compose -f kafka_testing/docker-compose.kafka-testing-cluster.yml up -d
+KAFKA_MEMORY_LIMIT=1000M KAFKA_MEMORY_RESERVE=1000M KAFKA_DEBUG=false docker-compose -f kafka_testing/docker-compose.kafka-testing-cluster.yml up -d
 ```
 
 The cluster does not auto-provision topics as I found that it does not seem
