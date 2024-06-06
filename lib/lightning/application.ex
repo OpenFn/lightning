@@ -110,7 +110,12 @@ defmodule Lightning.Application do
       # {Lightning.Worker, arg}
     ]
 
-    children = if Mix.env != :test do
+    run_kafka_trigger_supervisors = Application.get_env(
+      :lightning,
+      :kafka_triggers
+    )[:run_supervisors]
+
+    children = if run_kafka_trigger_supervisors do
       children ++ [
         Lightning.KafkaTriggers.PipelineSupervisor,
         Lightning.KafkaTriggers.MessageCandidateSetSupervisor,
