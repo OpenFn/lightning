@@ -138,3 +138,6 @@ end
 config :lightning, :is_resettable_demo, true
 
 config :lightning, :apollo, endpoint: "http://localhost:3000"
+
+config :lightning, :kafka_triggers,
+  run_supervisors: true
