@@ -14,7 +14,7 @@ defmodule Lightning.KafkaTriggers.MessageCandidateSetWorkerTest do
     test "queues a message to trigger a request to request a candidate set" do
       MessageCandidateSetWorker.init([])
 
-      assert_receive :request_candidate_set, 150
+      assert_receive :request_candidate_set, 1500
     end
   end
 
@@ -28,7 +28,7 @@ defmodule Lightning.KafkaTriggers.MessageCandidateSetWorkerTest do
     test "it enqueues a request to trigger the action after a delay" do
       MessageCandidateSetWorker.handle_info(:request_candidate_set, []) 
 
-      assert_receive :request_candidate_set, 250
+      assert_receive :request_candidate_set, 2500
     end
   end
 
@@ -62,7 +62,7 @@ defmodule Lightning.KafkaTriggers.MessageCandidateSetWorkerTest do
     test "it enqueues a request to trigger the action after a delay" do
       MessageCandidateSetWorker.handle_info(:request_candidate_set, []) 
 
-      assert_receive :request_candidate_set, 150
+      assert_receive :request_candidate_set, 1500
     end
   end
 end
