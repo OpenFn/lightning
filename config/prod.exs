@@ -21,3 +21,6 @@ config :lightning,
 
 # For now, do not export any open-telephony messages
 config :opentelemetry, traces_exporter: :none
+
+config :lightning, :kafka_triggers,
+  run_supervisors: true

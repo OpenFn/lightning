@@ -136,3 +136,6 @@ else
 end
 
 config :lightning, :is_resettable_demo, true
+
+config :lightning, :kafka_triggers,
+  run_supervisors: true
