@@ -120,6 +120,9 @@ COPY --from=builder --chown=lightning:root /app/priv/openfn ./priv/openfn
 COPY --from=builder --chown=lightning:root /app/priv/schemas ./priv/schemas
 COPY --from=builder --chown=lightning:root /app/priv/github ./priv/github
 
+COPY entrypoint.sh /app/entrypoint.sh                                                               
+RUN chmod +x /app/entrypoint.sh
+
 USER lightning
 
 ENV SCHEMAS_PATH="/app/priv/schemas"
@@ -127,4 +130,4 @@ ENV COMMIT=${COMMIT}
 ENV BRANCH=${BRANCH}
 ENV IMAGE_TAG=${IMAGE_TAG}
 
-CMD /app/bin/server
+CMD ["/app/entrypoint.sh"]
