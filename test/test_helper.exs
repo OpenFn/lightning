@@ -42,5 +42,7 @@ Application.put_env(:lightning, Lightning, LightningMock)
 Application.put_env(:lightning, Lightning.Extensions,
   rate_limiter: Lightning.Extensions.MockRateLimiter,
   usage_limiter: Lightning.Extensions.MockUsageLimiter,
-  run_queue: Lightning.Extensions.FifoRunQueue
+  run_queue: Lightning.Extensions.FifoRunQueue,
+  account_hook: Lightning.Extensions.AccountHook,
+  project_hook: Lightning.Extensions.ProjectHook
 )

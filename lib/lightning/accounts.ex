@@ -2,7 +2,6 @@ defmodule Lightning.Accounts do
   @moduledoc """
   The Accounts context.
   """
-
   use Oban.Worker,
     queue: :background,
     max_attempts: 1
@@ -18,6 +17,7 @@ defmodule Lightning.Accounts do
   alias Lightning.Accounts.UserTOTP
   alias Lightning.Credentials
   alias Lightning.Repo
+  alias Lightning.Services.AccountHook
 
   require Logger
 
@@ -88,9 +88,9 @@ defmodule Lightning.Accounts do
   end
 
   def create_user(attrs) do
-    %User{}
-    |> User.changeset(attrs)
-    |> Repo.insert()
+    Repo.transact(fn ->
+      AccountHook.handle_create_user(attrs)
+    end)
   end
 
   @doc """
@@ -320,15 +320,9 @@ defmodule Lightning.Accounts do
   """
 
   def register_superuser(attrs) do
-    User.superuser_registration_changeset(attrs)
-    |> Ecto.Changeset.apply_action(:insert)
-    |> case do
-      {:ok, data} ->
-        struct(User, data) |> Repo.insert()
-
-      {:error, changeset} ->
-        {:error, changeset}
-    end
+    Repo.transact(fn ->
+      AccountHook.handle_register_superuser(attrs)
+    end)
   end
 
   @doc """
@@ -362,22 +356,15 @@ defmodule Lightning.Accounts do
 
   """
   def register_user(attrs) do
-    User.user_registration_changeset(attrs)
-    |> Ecto.Changeset.apply_action(:insert)
-    |> case do
-      {:ok, data} ->
-        struct(User, data)
-        |> Repo.insert()
-        |> tap(fn result ->
-          with {:ok, user} <- result do
-            Events.user_registered(user)
-            deliver_user_confirmation_instructions(user)
-          end
-        end)
-
-      {:error, changeset} ->
-        {:error, changeset}
-    end
+    Repo.transact(fn ->
+      AccountHook.handle_register_user(attrs)
+    end)
+    |> tap(fn result ->
+      with {:ok, user} <- result do
+        Events.user_registered(user)
+        deliver_user_confirmation_instructions(user)
+      end
+    end)
   end
 
   @doc """

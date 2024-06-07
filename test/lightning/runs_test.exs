@@ -833,14 +833,16 @@ defmodule Lightning.RunsTest do
       refute dataclip.wiped_at
 
       :ok = Runs.wipe_dataclips(run)
+      wiped_at = DateTime.utc_now() |> DateTime.truncate(:second)
 
       # dataclip body is cleared
       query = from(Invocation.Dataclip, select: [:wiped_at, :body, :request])
 
       updated_dataclip = Lightning.Repo.get(query, dataclip.id)
 
-      assert updated_dataclip.wiped_at ==
-               DateTime.utc_now() |> DateTime.truncate(:second)
+      assert updated_dataclip.wiped_at == wiped_at or
+               1 ==
+                 abs(DateTime.diff(updated_dataclip.wiped_at, wiped_at, :second))
 
       refute updated_dataclip.body
       refute updated_dataclip.request

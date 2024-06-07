@@ -22,6 +22,7 @@ defmodule Lightning.Projects do
   alias Lightning.Repo
   alias Lightning.Run
   alias Lightning.RunStep
+  alias Lightning.Services.ProjectHook
   alias Lightning.Workflows.Job
   alias Lightning.Workflows.Trigger
   alias Lightning.Workflows.Workflow
@@ -197,17 +198,17 @@ defmodule Lightning.Projects do
 
   """
   def create_project(attrs \\ %{}, schedule_email? \\ true) do
-    %Project{}
-    |> Project.project_with_users_changeset(attrs)
-    |> Repo.insert()
-    |> tap(fn result ->
-      with {:ok, project} <- result do
-        Events.project_created(project)
-
+    Repo.transact(fn ->
+      with {:ok, project} <- ProjectHook.handle_create_project(attrs) do
         if schedule_email? do
           schedule_project_addition_emails(%Project{project_users: []}, project)
         end
+
+        {:ok, project}
       end
+    end)
+    |> tap(fn result ->
+      with {:ok, project} <- result, do: Events.project_created(project)
     end)
   end
 
@@ -346,41 +347,19 @@ defmodule Lightning.Projects do
       # coveralls-ignore-stop
     end)
 
-    Repo.transaction(fn ->
-      project_runs_query(project) |> Repo.delete_all()
+    Repo.transact(fn ->
+      with {:ok, project} <- ProjectHook.handle_delete_project(project) do
+        Logger.debug(fn ->
+          # coveralls-ignore-start
+          "Project ##{project.id} deleted."
+          # coveralls-ignore-stop
+        end)
 
-      project_run_step_query(project) |> Repo.delete_all()
-
-      project_workorders_query(project) |> Repo.delete_all()
-
-      project_steps_query(project) |> Repo.delete_all()
-
-      project_jobs_query(project) |> Repo.delete_all()
-
-      project_triggers_query(project) |> Repo.delete_all()
-
-      project_workflows_query(project) |> Repo.delete_all()
-
-      project_users_query(project) |> Repo.delete_all()
-
-      project_credentials_query(project) |> Repo.delete_all()
-
-      project_dataclips_query(project) |> Repo.delete_all()
-
-      {:ok, project} = Repo.delete(project)
-
-      Logger.debug(fn ->
-        # coveralls-ignore-start
-        "Project ##{project.id} deleted."
-        # coveralls-ignore-stop
-      end)
-
-      project
+        {:ok, project}
+      end
     end)
     |> tap(fn result ->
-      with {:ok, _project} <- result do
-        Events.project_deleted(project)
-      end
+      with {:ok, _project} <- result, do: Events.project_deleted(project)
     end)
   end
 
