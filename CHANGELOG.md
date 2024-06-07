@@ -21,6 +21,8 @@ and this project adheres to
 
 - Return 403s when Provisioning API fails because of usage limits
   [#2182](https://github.com/OpenFn/lightning/pull/2182)
+- Update email notification for changing retention period
+  [#2066](https://github.com/OpenFn/lightning/issues/2066)
 
 ### Fixed
 

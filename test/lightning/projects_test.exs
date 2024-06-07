@@ -1386,7 +1386,7 @@ defmodule Lightning.ProjectsTest do
     Hi #{user.first_name},
 
     We'd like to inform you that the data retention policy for your project, #{project.name}, was recently updated.
-    If you haven't approved this, we recommend logging into your Lightning account to reset the retention policy.
+    If you haven't approved this change, we recommend that you log in into your OpenFn account to reset the policy.
 
     Should you require assistance with your account, feel free to contact #{Application.get_env(:lightning, :email_addresses)[:admin]}.
 
@@ -1399,9 +1399,7 @@ defmodule Lightning.ProjectsTest do
     |> Swoosh.Email.from(
       {"Lightning", Application.get_env(:lightning, :email_addresses)[:admin]}
     )
-    |> Swoosh.Email.subject(
-      "Important Update to Your #{project.name} Data Retention Policy"
-    )
+    |> Swoosh.Email.subject("An update to your #{project.name} retention policy")
     |> Swoosh.Email.text_body(body)
   end
 

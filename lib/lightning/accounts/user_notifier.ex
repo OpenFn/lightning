@@ -127,12 +127,12 @@ defmodule Lightning.Accounts.UserNotifier do
   def send_data_retention_change_email(user, updated_project) do
     deliver(
       user.email,
-      "Important Update to Your #{updated_project.name} Data Retention Policy",
+      "An update to your #{updated_project.name} retention policy",
       """
       Hi #{user.first_name},
 
       We'd like to inform you that the data retention policy for your project, #{updated_project.name}, was recently updated.
-      If you haven't approved this, we recommend logging into your Lightning account to reset the retention policy.
+      If you haven't approved this change, we recommend that you log in into your OpenFn account to reset the policy.
 
       Should you require assistance with your account, feel free to contact #{admin()}.
 
