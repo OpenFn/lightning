@@ -43,11 +43,7 @@ defmodule LightningWeb.ErrorView do
     """
   end
 
-  def render("403.json", %{error: %{text: text}}) do
-    %{"error" => text}
-  end
-
-  def render("403.json", error: error) do
+  def render("403.json", %{error: error}) do
     %{"error" => error}
   end
 

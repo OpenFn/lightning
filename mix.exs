@@ -20,11 +20,12 @@ defmodule Lightning.MixProject do
       ],
       test_coverage: [tool: ExCoveralls],
       preferred_cli_env: [
-        verify: :test,
-        coveralls: :test,
         "coveralls.detail": :test,
+        "coveralls.html": :test,
         "coveralls.post": :test,
-        "coveralls.html": :test
+        "test.watch": :test,
+        coveralls: :test,
+        verify: :test
       ],
 
       # Docs

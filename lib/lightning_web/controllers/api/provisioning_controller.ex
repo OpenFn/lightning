@@ -42,7 +42,13 @@ defmodule LightningWeb.API.ProvisioningController do
           conn
           |> put_status(:forbidden)
           |> put_view(LightningWeb.ErrorView)
-          |> render(:"403", error: error)
+          |> render(:"403",
+            error:
+              case error do
+                %Lightning.Extensions.Message{text: text} -> text
+                _ -> error
+              end
+          )
       end
     end
   end
