@@ -181,7 +181,7 @@ defmodule LightningWeb.RunLive.Components do
         <% end %>
         <div class="flex text-sm space-x-1 text-gray-900 items-center">
           <span><%= @step.job.name %></span>
-          <%= unless @job_id == @step.job.id do %>
+          <%= unless @job_id == @step.job_id do %>
             <.link
               class="pl-1"
               navigate={
@@ -500,67 +500,6 @@ defmodule LightningWeb.RunLive.Components do
       </Common.wrapper_tooltip>
     <% end %>
     """
-  end
-
-  attr :log, :list, required: true
-  attr :class, :string, default: nil
-
-  def log_view(%{log: log} = assigns) do
-    assigns = assigns |> assign(log: log |> Enum.with_index(1))
-
-    ~H"""
-    <style>
-      div.line-num::before { content: attr(data-line-number); padding-left: 0.1em; max-width: min-content;}
-    </style>
-    <div class={[
-      "rounded-md text-slate-200 bg-slate-700 border-slate-300 shadow-sm
-                    font-mono proportional-nums w-full text-sm overflow-y-auto min-h-full",
-      @class
-    ]}>
-      <%= for { line, i } <- @log do %>
-        <.log_line num={i} line={line} />
-      <% end %>
-    </div>
-    """
-  end
-
-  attr :line, :string, required: true
-  attr :num, :integer, required: true
-
-  def log_line(%{line: line, num: num} = assigns) do
-    # Format the log lines replacing single spaces with non-breaking spaces.
-    assigns =
-      assigns
-      |> assign(
-        line: line |> spaces_to_nbsp(),
-        num: num |> to_string() |> String.pad_leading(3) |> spaces_to_nbsp()
-      )
-
-    ~H"""
-    <div class="group flex flex-row hover:bg-slate-600
-              first:hover:rounded-tr-md first:hover:rounded-tl-md
-              last:hover:rounded-br-md last:hover:rounded-bl-md ">
-      <div
-        data-line-number={@num}
-        class="line-num grow-0 border-r border-slate-500 align-top
-                pr-2 text-right text-slate-400 inline-block
-                group-hover:text-slate-300 group-first:pt-2 group-last:pb-2"
-      >
-      </div>
-      <div data-log-line class="grow pl-2 group-first:pt-2 group-last:pb-2">
-        <pre class="whitespace-pre-line break-all"><%= @line %></pre>
-      </div>
-    </div>
-    """
-  end
-
-  defp spaces_to_nbsp(str) when is_binary(str) do
-    str
-    |> String.codepoints()
-    |> Enum.map(fn
-      " " -> raw("&nbsp;")
-      c -> c
-    end)
   end
 
   @spec step_icon(%{

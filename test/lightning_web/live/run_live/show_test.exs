@@ -56,7 +56,7 @@ defmodule LightningWeb.RunLive.ShowTest do
 
       assert has_element?(
                view,
-               "div[data-panel-hash='log'] [phx-hook='LogViewer'][data-run-id='#{run_id}']"
+               "div#log-panel [phx-hook='LogViewer'][data-run-id='#{run_id}']"
              )
 
       refute view

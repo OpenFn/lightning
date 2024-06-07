@@ -1344,12 +1344,12 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
 
       render_async(run_view)
 
-      # input tab shows correct information
-      html = run_view |> element("div[data-panel-hash='input']") |> render()
+      # input panel shows correct information
+      html = run_view |> element("div#input-panel") |> render()
       assert html =~ "No input/output available. This step was never started."
 
-      # output tab shows correct information
-      html = run_view |> element("div[data-panel-hash='output']") |> render()
+      # output panel shows correct information
+      html = run_view |> element("div#output-panel") |> render()
       assert html =~ "No input/output available. This step was never started."
     end
 
@@ -1393,14 +1393,14 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       refute has_element?(view, "button", "Create New Work Order")
 
       render_async(run_view)
-      # input tab shows correct information
-      html = run_view |> element("div[data-panel-hash='input']") |> render()
+      # input panel shows correct information
+      html = run_view |> element("div#input-panel") |> render()
 
       assert html =~ "Nothing yet"
       refute html =~ "No input/output available. This step was never started."
 
-      # output tab shows correct information
-      html = run_view |> element("div[data-panel-hash='output']") |> render()
+      # output panel shows correct information
+      html = run_view |> element("div#output-panel") |> render()
 
       assert html =~ "Nothing yet"
       refute html =~ "No input/output available. This step was never started."
@@ -1441,13 +1441,13 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       # make sure event is processed by the run viewer
       render_async(run_view)
 
-      # input tab shows correct information
-      html = run_view |> element("div[data-panel-hash='input']") |> render()
+      # input panel shows correct information
+      html = run_view |> element("div#input-panel") |> render()
       refute html =~ "Nothing yet"
       assert html =~ "No input/output available. This step was never started."
 
-      # output tab shows correct information
-      html = run_view |> element("div[data-panel-hash='output']") |> render()
+      # output panel shows correct information
+      html = run_view |> element("div#output-panel") |> render()
       refute html =~ "Nothing yet"
       assert html =~ "No input/output available. This step was never started."
     end
@@ -1579,24 +1579,22 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
         # This ensures that stream messages are processed
         render(run_view)
 
-        # log tab shows correct information
-
         assert has_element?(
                  run_view,
-                 "div[data-panel-hash='log'] [phx-hook='LogViewer'][data-run-id='#{run.id}']"
+                 "div#log-panel [phx-hook='LogViewer'][data-run-id='#{run.id}']"
                )
 
-        # input tab shows correct information
+        # input panel shows correct information
 
         assert has_element?(
                  run_view,
-                 "div[data-panel-hash='input'] [phx-hook='DataclipViewer'][data-id='#{input_dataclip.id}']"
+                 "div#input-panel [phx-hook='DataclipViewer'][data-id='#{input_dataclip.id}']"
                )
 
-        # output tab shows correct information
+        # output panel shows correct information
         assert has_element?(
                  run_view,
-                 "div[data-panel-hash='output'] [phx-hook='DataclipViewer'][data-id='#{output_dataclip.id}']"
+                 "div#output-panel [phx-hook='DataclipViewer'][data-id='#{output_dataclip.id}']"
                )
       end
     end

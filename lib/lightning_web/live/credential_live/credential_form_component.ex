@@ -195,11 +195,9 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
     {:noreply, assign(socket, api_version: version)}
   end
 
-  def handle_event(
-        "schema_selected",
-        %{"selected" => type} = _params,
-        socket
-      ) do
+  def handle_event("schema_selected", %{"selected" => type} = params, socket) do
+    schema_selection_form = to_form(params)
+
     client =
       Enum.find(socket.assigns.oauth_clients, nil, fn client ->
         client.id == type
@@ -212,16 +210,15 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
 
     {:noreply,
      socket
-     |> assign(changeset: changeset)
-     |> assign(schema: schema)
-     |> assign(selected_oauth_client: client)}
+     |> assign(
+       changeset: changeset,
+       schema: schema,
+       selected_oauth_client: client,
+       schema_selection_form: schema_selection_form
+     )}
   end
 
-  def handle_event(
-        "schema_selected",
-        %{"_target" => ["selected"]},
-        socket
-      ) do
+  def handle_event("schema_selected", %{"_target" => ["selected"]}, socket) do
     {:noreply, socket}
   end
 
@@ -301,6 +298,12 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
 
   @impl true
   def render(%{page: :first} = assigns) do
+    assigns =
+      assigns
+      |> assign_new(:schema_selection_form, fn ->
+        to_form(%{"selected" => nil})
+      end)
+
     ~H"""
     <div class="text-xs">
       <.modal id={@id} width="xl:min-w-1/3 min-w-1/2 max-w-full">
@@ -322,9 +325,8 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
         </:title>
         <div class="container mx-auto px-4">
           <.form
-            :let={f}
             id="credential-schema-picker"
-            for={%{}}
+            for={@schema_selection_form}
             phx-target={@myself}
             phx-change="schema_selected"
           >
@@ -333,13 +335,15 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
                 :for={{name, key, logo, _id} <- @type_options}
                 class="flex items-center p-2"
               >
-                <%= Phoenix.HTML.Form.radio_button(f, :selected, key,
-                  id: "credential-schema-picker_selected_#{key}",
-                  class:
-                    "h-4 w-4 border-gray-300 text-indigo-600 focus:ring-indigo-500"
-                ) %>
+                <.input
+                  type="radio"
+                  field={@schema_selection_form[:selected]}
+                  value={key}
+                  checked={@schema_selection_form[:selected].value == key}
+                  id={"credential-schema-picker_selected_#{key}"}
+                />
                 <LightningWeb.Components.Form.label_field
-                  form={f}
+                  form={@schema_selection_form}
                   field={:selected}
                   for={"credential-schema-picker_selected_#{key}"}
                   title={name}

@@ -579,7 +579,7 @@ defmodule LightningWeb.ProjectLive.Settings do
 
   def permissions_message(assigns) do
     ~H"""
-    <small id="permission" class="mt-2 text-red-700">
+    <small class="mt-2 text-red-700">
       Role based permissions: You cannot modify this project's <%= @section %>
     </small>
     """

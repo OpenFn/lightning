@@ -7,6 +7,7 @@ defmodule LightningWeb.RunLive.Show do
   alias Lightning.Policies.Permissions
   alias Lightning.Policies.ProjectUsers
   alias Lightning.Projects
+  alias LightningWeb.Components.Tabbed
   alias LightningWeb.Components.Viewers
   alias Phoenix.LiveView.AsyncResult
 
@@ -39,7 +40,7 @@ defmodule LightningWeb.RunLive.Show do
             there was an error loading the run
           </:failed>
 
-          <div class="flex gap-6 @5xl/main:flex-row flex-col h-full">
+          <div class="flex gap-x-6 @5xl/main:flex-row flex-col h-full">
             <div class="@5xl/main:basis-1/3 flex gap-y-6 @5xl/main:flex-col flex-row">
               <.detail_list
                 id={"run-detail-#{run.id}"}
@@ -138,17 +139,20 @@ defmodule LightningWeb.RunLive.Show do
                 </.link>
               </.step_list>
             </div>
-            <div class="@5xl/main:basis-2/3 grow flex flex-col gap-4">
-              <Common.tab_bar orientation="horizontal" id="1" default_hash="log">
-                <Common.tab_item orientation="horizontal" hash="log">
+            <div class="@5xl/main:basis-2/3 flex flex-col gap-4 h-full">
+              <Tabbed.container
+                id={"run-#{run.id}-tabbed-container"}
+                class="run-tab-container"
+                default_hash="log"
+              >
+                <:tab hash="log">
                   <.icon
                     name="hero-command-line"
                     class="h-5 w-5 inline-block mr-1 align-middle"
                   />
                   <span class="inline-block align-middle">Log</span>
-                </Common.tab_item>
-                <Common.tab_item
-                  orientation="horizontal"
+                </:tab>
+                <:tab
                   hash="input"
                   disabled={@no_step_selected?}
                   disabled_msg="A valid step must be selected to view its input"
@@ -158,9 +162,8 @@ defmodule LightningWeb.RunLive.Show do
                     class="h-5 w-5 inline-block mr-1 align-middle"
                   />
                   <span class="inline-block align-middle">Input</span>
-                </Common.tab_item>
-                <Common.tab_item
-                  orientation="horizontal"
+                </:tab>
+                <:tab
                   hash="output"
                   disabled={@no_step_selected?}
                   disabled_msg="A valid step (with a readable output) must be selected to view its output"
@@ -169,46 +172,43 @@ defmodule LightningWeb.RunLive.Show do
                     name="hero-arrow-up-on-square"
                     class="h-5 w-5 inline-block mr-1 align-middle rotate-180"
                   />
-                  <span class="inline-block align-middle">
-                    Output
-                  </span>
-                </Common.tab_item>
-              </Common.tab_bar>
-
-              <Common.panel_content for_hash="log" class="flex-1">
-                <Viewers.log_viewer
-                  id={"run-log-#{run.id}"}
-                  class="h-full"
-                  run_id={run.id}
-                  run_state={@run.result.state}
-                  logs_empty?={@log_lines_empty?}
-                  selected_step_id={@selected_step_id}
-                />
-              </Common.panel_content>
-              <Common.panel_content for_hash="input" class="flex-1">
-                <Viewers.step_dataclip_viewer
-                  id={"step-input-#{@selected_step_id}"}
-                  run_state={@run.result.state}
-                  step={@selected_step}
-                  dataclip={@input_dataclip}
-                  input_or_output={:input}
-                  project_id={@project.id}
-                  admin_contacts={@admin_contacts}
-                  can_edit_data_retention={@can_edit_data_retention}
-                />
-              </Common.panel_content>
-              <Common.panel_content for_hash="output" class="flex-1">
-                <Viewers.step_dataclip_viewer
-                  id={"step-output-#{@selected_step_id}"}
-                  run_state={@run.result.state}
-                  step={@selected_step}
-                  dataclip={@output_dataclip}
-                  input_or_output={:output}
-                  project_id={@project.id}
-                  admin_contacts={@admin_contacts}
-                  can_edit_data_retention={@can_edit_data_retention}
-                />
-              </Common.panel_content>
+                  <span class="inline-block align-middle"> Output </span>
+                </:tab>
+                <:panel hash="input" class="flex-grow h-full">
+                  <Viewers.step_dataclip_viewer
+                    id={"step-input-#{@selected_step_id}"}
+                    run_state={@run.result.state}
+                    step={@selected_step}
+                    dataclip={@input_dataclip}
+                    input_or_output={:input}
+                    project_id={@project.id}
+                    admin_contacts={@admin_contacts}
+                    can_edit_data_retention={@can_edit_data_retention}
+                  />
+                </:panel>
+                <:panel hash="log" class="flex-grow">
+                  <Viewers.log_viewer
+                    id={"run-log-#{run.id}"}
+                    class="h-full"
+                    run_id={run.id}
+                    run_state={@run.result.state}
+                    logs_empty?={@log_lines_empty?}
+                    selected_step_id={@selected_step_id}
+                  />
+                </:panel>
+                <:panel hash="output" class="flex-1">
+                  <Viewers.step_dataclip_viewer
+                    id={"step-output-#{@selected_step_id}"}
+                    run_state={@run.result.state}
+                    step={@selected_step}
+                    dataclip={@output_dataclip}
+                    input_or_output={:output}
+                    project_id={@project.id}
+                    admin_contacts={@admin_contacts}
+                    can_edit_data_retention={@can_edit_data_retention}
+                  />
+                </:panel>
+              </Tabbed.container>
             </div>
           </div>
         </.async_result>

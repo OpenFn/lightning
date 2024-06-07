@@ -4,6 +4,7 @@ defmodule LightningWeb.WorkflowLive.JobView do
   import LightningWeb.WorkflowLive.Components
 
   alias Lightning.Credentials
+  alias LightningWeb.Components.Tabbed
   alias LightningWeb.WorkflowLive.EditorPane
 
   attr :id, :string, required: true
@@ -27,7 +28,7 @@ defmodule LightningWeb.WorkflowLive.JobView do
         <!-- 3 column wrapper -->
         <div
           class="grow flex h-5/6 gap-0 m-0 w-screen"
-          phx-hook="collapsiblePanel"
+          phx-hook="CollapsiblePanel"
           id="collapsibles"
         >
           <%= render_slot(@inner_block) %>
@@ -120,39 +121,26 @@ defmodule LightningWeb.WorkflowLive.JobView do
           class="h-full"
         />
       </.collapsible_panel>
-      <.collapsible_panel
-        id="output-logs"
-        class="h-full border border-l-0"
-        header_type={:tabbed}
-      >
+      <.collapsible_panel id="output-logs" class="h-full border border-l-0">
         <:tabs>
-          <Common.tab_bar
-            id="1"
-            orientation="horizontal"
-            default_hash="log"
-            in_inspector={true}
+          <Tabbed.tabs
+            id="tab-bar-1"
+            default_hash="run"
+            class="flex flex-row space-x-6 -my-2 job-viewer-tabs"
           >
-            <Common.tab_item in_inspector={true} orientation="horizontal" hash="run">
+            <:tab hash="run">
               <span class="inline-block align-middle">Run</span>
-            </Common.tab_item>
-            <Common.tab_item in_inspector={true} orientation="horizontal" hash="log">
+            </:tab>
+            <:tab hash="log">
               <span class="inline-block align-middle">Log</span>
-            </Common.tab_item>
-            <Common.tab_item
-              in_inspector={true}
-              orientation="horizontal"
-              hash="input"
-            >
+            </:tab>
+            <:tab hash="input">
               <span class="inline-block align-middle">Input</span>
-            </Common.tab_item>
-            <Common.tab_item
-              in_inspector={true}
-              orientation="horizontal"
-              hash="output"
-            >
+            </:tab>
+            <:tab hash="output">
               <span class="inline-block align-middle">Output</span>
-            </Common.tab_item>
-          </Common.tab_bar>
+            </:tab>
+          </Tabbed.tabs>
         </:tabs>
 
         <%= if @follow_run_id do %>
