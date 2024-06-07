@@ -7,4 +7,7 @@ defmodule Lightning.Extensions.ProjectHooking do
 
   @callback handle_create_project(attrs :: map()) ::
               {:ok, Project.t()} | {:error, Changeset.t()}
+
+  @callback handle_delete_project(Project.t()) ::
+              {:ok, Project.t()} | {:error, Changeset.t()}
 end

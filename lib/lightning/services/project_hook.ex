@@ -15,5 +15,11 @@ defmodule Lightning.Services.ProjectHook do
     adapter().handle_create_project(attrs)
   end
 
+  @spec handle_delete_project(Project.t()) ::
+          {:ok, Project.t()} | {:error, Changeset.t()}
+  def handle_delete_project(project) do
+    adapter().handle_delete_project(project)
+  end
+
   defp adapter, do: adapter(:project_hook)
 end

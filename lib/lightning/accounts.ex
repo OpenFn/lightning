@@ -358,7 +358,7 @@ defmodule Lightning.Accounts do
   def register_user(attrs) do
     Repo.transact(fn ->
       with {:ok, user} <- AccountHook.handle_register_user(attrs) do
-        # always delivers and if transaction fails,
+        # always delivers and if the transaction fails,
         # the user will need to register again as usual
         deliver_user_confirmation_instructions(user)
         {:ok, user}
