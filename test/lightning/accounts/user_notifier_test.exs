@@ -13,8 +13,7 @@ defmodule Lightning.Accounts.UserNotifierTest do
     test "notify_project_deletion/2" do
       Mox.expect(Lightning.MockConfig, :purge_deleted_after_days, fn -> 7 end)
 
-      admin_email =
-        Application.get_env(:lightning, :email_addresses) |> Keyword.get(:admin)
+      admin_email = Lightning.Config.instance_admin_email()
 
       user =
         Lightning.AccountsFixtures.user_fixture(

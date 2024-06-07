@@ -174,8 +174,9 @@ release = [
 
 config :lightning, :release, release
 
-config :lightning, :email_addresses,
-  admin: env!("EMAIL_ADMIN", :string, "support@openfn.org")
+config :lightning, :emails,
+  admin_email: env!("EMAIL_ADMIN", :string, "support@openfn.org"),
+  sender_name: env!("EMAIL_SENDER_NAME", :string, "Lightning")
 
 config :lightning, :adaptor_service,
   adaptors_path: env!("ADAPTORS_PATH", :string, "./priv/openfn")

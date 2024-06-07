@@ -19,7 +19,8 @@ defmodule Lightning.FailureEmail do
       new()
       |> to(email)
       |> from(
-        {"Lightning", Application.get_env(:lightning, :email_addresses)[:admin]}
+        {Lightning.Config.email_sender_name(),
+         Lightning.Config.instance_admin_email()}
       )
       |> subject(
         failure_subject(
