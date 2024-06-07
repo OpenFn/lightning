@@ -19,9 +19,6 @@ and this project adheres to
 
 ### Changed
 
-- Return 403 when limiter for provisioning returns error
-  [#2181](https://github.com/OpenFn/lightning/issues/2181)
-
 ### Fixed
 
 ## [v2.6.0] - 2024-06-05
