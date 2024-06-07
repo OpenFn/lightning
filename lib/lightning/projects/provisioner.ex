@@ -51,8 +51,8 @@ defmodule Lightning.Projects.Provisioner do
           Enum.each(workflows, &Lightning.Workflows.Events.workflow_updated/1)
           {:ok, preload_dependencies(project)}
 
-        {:error, changeset} ->
-          {:error, changeset}
+        {:error, error} ->
+          {:error, error}
       end
     end
   end

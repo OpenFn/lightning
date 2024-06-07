@@ -43,6 +43,10 @@ defmodule LightningWeb.ErrorView do
     """
   end
 
+  def render("403.json", %{error: error}) do
+    %{"error" => error}
+  end
+
   defp logo_bar(assigns) do
     ~H"""
     <nav class="bg-secondary-800">

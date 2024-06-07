@@ -19,6 +19,9 @@ and this project adheres to
 
 ### Changed
 
+- Return 403s when Provisioning API fails because of usage limits
+  [#2182](https://github.com/OpenFn/lightning/pull/2182)
+
 ### Fixed
 
 ## [v2.6.0] - 2024-06-05

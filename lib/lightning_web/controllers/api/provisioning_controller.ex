@@ -40,9 +40,15 @@ defmodule LightningWeb.API.ProvisioningController do
 
         {:error, error} ->
           conn
-          |> put_status(:unauthorized)
+          |> put_status(:forbidden)
           |> put_view(LightningWeb.ErrorView)
-          |> render(:"401", error: error)
+          |> render(:"403",
+            error:
+              case error do
+                %Lightning.Extensions.Message{text: text} -> text
+                _ -> error
+              end
+          )
       end
     end
   end

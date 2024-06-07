@@ -371,7 +371,7 @@ defmodule LightningWeb.API.ProvisioningControllerTest do
       assert response.status == 403
     end
 
-    test "fails with 401 when usage limiter returns an error", %{
+    test "fails with 403 when usage limiter returns an error", %{
       conn: conn
     } do
       %{id: project_id} = project = insert(:project)
@@ -388,13 +388,16 @@ defmodule LightningWeb.API.ProvisioningControllerTest do
           "Bearer #{repo_connection.access_token}"
         )
 
+      error_text = "some error message"
+
       Lightning.Extensions.MockUsageLimiter
       |> Mox.expect(:limit_action, fn %{type: :github_sync},
                                       %{project_id: ^project_id} ->
-        {:error, :disabled, %{text: "some error message"}}
+        {:error, :disabled, %Lightning.Extensions.Message{text: error_text}}
       end)
 
-      assert post(conn, ~p"/api/provision", body) |> json_response(401)
+      assert post(conn, ~p"/api/provision", body) |> json_response(403) ==
+               %{"error" => error_text}
     end
 
     test "fails with a 422 on validation errors", %{conn: conn, user: user} do
