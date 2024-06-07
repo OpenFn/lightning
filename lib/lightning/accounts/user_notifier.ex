@@ -18,7 +18,7 @@ defmodule Lightning.Accounts.UserNotifier do
   alias Lightning.Projects.Project
   alias Lightning.WorkOrders.SearchParams
 
-  defp admin, do: Application.get_env(:lightning, :email_addresses)[:admin]
+  defp admin, do: Lightning.Config.instance_admin_email()
 
   @impl Oban.Worker
   def perform(%{
@@ -45,7 +45,7 @@ defmodule Lightning.Accounts.UserNotifier do
     email =
       new()
       |> to(recipient)
-      |> from({"Lightning", admin()})
+      |> from({Lightning.Config.email_sender_name(), admin()})
       |> subject(subject)
       |> text_body(body)
 
@@ -127,12 +127,12 @@ defmodule Lightning.Accounts.UserNotifier do
   def send_data_retention_change_email(user, updated_project) do
     deliver(
       user.email,
-      "Important Update to Your #{updated_project.name} Data Retention Policy",
+      "An update to your #{updated_project.name} retention policy",
       """
       Hi #{user.first_name},
 
       We'd like to inform you that the data retention policy for your project, #{updated_project.name}, was recently updated.
-      If you haven't approved this, we recommend logging into your Lightning account to reset the retention policy.
+      If you haven't approved this change, we recommend that you log in into your OpenFn account to reset the policy.
 
       Should you require assistance with your account, feel free to contact #{admin()}.
 
@@ -304,17 +304,13 @@ defmodule Lightning.Accounts.UserNotifier do
     if grace_period > 0, do: "#{grace_period} day(s) from today", else: "today"
   end
 
-  defp instance_admin_email do
-    Application.get_env(:lightning, :email_addresses) |> Keyword.get(:admin)
-  end
-
   def notify_project_deletion(%User{} = user, %Project{} = project) do
     deliver(user.email, "Project scheduled for deletion", """
     Hi #{user.first_name},
 
     #{project.name} project has been scheduled for deletion. All of the workflows in this project have been disabled,
     and the resources will be deleted in #{human_readable_grace_period()} at 02:00 UTC. If this doesn't sound right, please email
-    #{instance_admin_email()} to cancel the deletion.
+    #{admin()} to cancel the deletion.
     """)
   end
 end

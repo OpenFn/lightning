@@ -567,8 +567,7 @@ defmodule Lightning.ProjectsTest do
       project = Projects.get_project!(project.id)
       assert project.scheduled_deletion != nil
 
-      admin_email =
-        Application.get_env(:lightning, :email_addresses) |> Keyword.get(:admin)
+      admin_email = Lightning.Config.instance_admin_email()
 
       [user_2, user_1]
       |> Enum.each(fn user ->
@@ -1386,9 +1385,9 @@ defmodule Lightning.ProjectsTest do
     Hi #{user.first_name},
 
     We'd like to inform you that the data retention policy for your project, #{project.name}, was recently updated.
-    If you haven't approved this, we recommend logging into your Lightning account to reset the retention policy.
+    If you haven't approved this change, we recommend that you log in into your OpenFn account to reset the policy.
 
-    Should you require assistance with your account, feel free to contact #{Application.get_env(:lightning, :email_addresses)[:admin]}.
+    Should you require assistance with your account, feel free to contact #{Lightning.Config.instance_admin_email()}.
 
     Best regards,
     The OpenFn Team
@@ -1397,11 +1396,10 @@ defmodule Lightning.ProjectsTest do
     Swoosh.Email.new()
     |> Swoosh.Email.to(user.email)
     |> Swoosh.Email.from(
-      {"Lightning", Application.get_env(:lightning, :email_addresses)[:admin]}
+      {Lightning.Config.email_sender_name(),
+       Lightning.Config.instance_admin_email()}
     )
-    |> Swoosh.Email.subject(
-      "Important Update to Your #{project.name} Data Retention Policy"
-    )
+    |> Swoosh.Email.subject("An update to your #{project.name} retention policy")
     |> Swoosh.Email.text_body(body)
   end
 

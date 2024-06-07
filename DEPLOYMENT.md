@@ -139,6 +139,9 @@ configurtaion is:
 - `ALLOW_SIGNUP`: Set to `true` to enable user access to the registration page.
   Set to `false` to disable new user registrations and block access to the
   registration page. Default is `true`.
+- `EMAIL_ADMIN` - This is used as the sender email address for system emails.
+It is also displayed in the menu as the support email.
+- `EMAIL_SENDER_NAME` - This is displayed in the email client as the sender name for emails sent by the application.
 
 ### Google Oauth2
 

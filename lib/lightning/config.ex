@@ -64,6 +64,18 @@ defmodule Lightning.Config do
     def cors_origin do
       Application.get_env(:lightning, :cors_origin)
     end
+
+    @impl true
+    def instance_admin_email do
+      Application.get_env(:lightning, :emails, [])
+      |> Keyword.get(:admin_email)
+    end
+
+    @impl true
+    def email_sender_name do
+      Application.get_env(:lightning, :emails, [])
+      |> Keyword.get(:sender_name)
+    end
   end
 
   defmodule Utils do
@@ -117,6 +129,8 @@ defmodule Lightning.Config do
   @callback get_extension_mod(key :: atom()) :: any()
   @callback check_flag?(atom()) :: boolean() | nil
   @callback cors_origin() :: list()
+  @callback instance_admin_email() :: String.t()
+  @callback email_sender_name() :: String.t()
 
   @doc """
   Returns the Token signer used to sign and verify run tokens.
@@ -171,6 +185,14 @@ defmodule Lightning.Config do
 
   def cors_origin do
     impl().cors_origin()
+  end
+
+  def instance_admin_email do
+    impl().instance_admin_email()
+  end
+
+  def email_sender_name do
+    impl().email_sender_name()
   end
 
   defp impl do
