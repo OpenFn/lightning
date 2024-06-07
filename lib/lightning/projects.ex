@@ -22,6 +22,7 @@ defmodule Lightning.Projects do
   alias Lightning.Repo
   alias Lightning.Run
   alias Lightning.RunStep
+  alias Lightning.Services.ProjectHook
   alias Lightning.Workflows.Job
   alias Lightning.Workflows.Trigger
   alias Lightning.Workflows.Workflow
@@ -197,17 +198,17 @@ defmodule Lightning.Projects do
 
   """
   def create_project(attrs \\ %{}, schedule_email? \\ true) do
-    %Project{}
-    |> Project.project_with_users_changeset(attrs)
-    |> Repo.insert()
-    |> tap(fn result ->
-      with {:ok, project} <- result do
-        Events.project_created(project)
-
+    Repo.transact(fn ->
+      with {:ok, project} <- ProjectHook.handle_create_project(attrs) do
         if schedule_email? do
           schedule_project_addition_emails(%Project{project_users: []}, project)
         end
+
+        {:ok, project}
       end
+    end)
+    |> tap(fn result ->
+      with {:ok, project} <- result, do: Events.project_created(project)
     end)
   end
 
