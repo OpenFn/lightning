@@ -91,7 +91,7 @@ LABEL branch=${BRANCH}
 LABEL commit=${COMMIT}
 
 RUN apt-get update -y && apt-get install -y libstdc++6 openssl libncurses5 \
-  locales curl gpg libsodium-dev
+  locales curl gpg libsodium-dev postgresql-client
 
 RUN apt-get clean && rm -f /var/lib/apt/lists/*_**
 
@@ -119,6 +119,9 @@ COPY --from=builder --chown=lightning:root /app/_build/${MIX_ENV}/rel/lightning 
 COPY --from=builder --chown=lightning:root /app/priv/openfn ./priv/openfn
 COPY --from=builder --chown=lightning:root /app/priv/schemas ./priv/schemas
 COPY --from=builder --chown=lightning:root /app/priv/github ./priv/github
+
+COPY wait_for_postgresql.sh /app/wait_for_postgresql.sh                                                               
+RUN chmod +x /app/wait_for_postgresql.sh
 
 COPY entrypoint.sh /app/entrypoint.sh                                                               
 RUN chmod +x /app/entrypoint.sh
