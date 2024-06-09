@@ -537,6 +537,7 @@ defmodule Lightning.KafkaTriggersTest do
             topic: "test-topic"
           },
           offset: 1,
+          processing_data: %{"existing" => "data"},
           topic: "test-topic",
           trigger: trigger,
           work_order: nil
@@ -616,6 +617,27 @@ defmodule Lightning.KafkaTriggersTest do
                trigger: ^trigger,
                workflow: ^workflow
              } = work_order
+    end
+
+    test "candidate, no workorder, broken data adds an error message", %{
+      candidate_set: candidate_set,
+      message_1: message_1
+    } do
+      message_1
+      |> TriggerKafkaMessage.changeset(%{data: "not a JSON object"})
+      |> Repo.update!()
+
+      expected =
+        message_1.processing_data
+        |> Map.merge(%{"errors" => ["Data is not a JSON object"]})
+
+      assert KafkaTriggers.process_candidate_for(candidate_set) == :ok
+
+      %{work_order_id: nil, processing_data: processing_data} =
+        TriggerKafkaMessage
+        |> Repo.get(message_1.id)
+
+      assert processing_data == expected
     end
 
     test "if candidate has successful work_order, deletes candidate", %{
