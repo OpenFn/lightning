@@ -85,4 +85,18 @@ end
 defmodule Lightning.Encrypted.Binary do
   @moduledoc false
   use Cloak.Ecto.Binary, vault: Lightning.Vault
+
+  # From https://github.com/danielberkompas/cloak/issues/84
+  # TODO How do I test this?
+  def embed_as(_format), do: :dump
+
+  def dump(value) do
+    with {:ok, encrypted} <- super(value) do
+      {:ok, Base.encode64(encrypted)}
+    end
+  end
+
+  def load(nil), do: {:ok, nil}
+
+  def load(value), do: super(Base.decode64!(value))
 end

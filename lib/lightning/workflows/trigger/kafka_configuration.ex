@@ -22,12 +22,12 @@ defmodule Lightning.Workflows.Trigger.KafkaConfiguration do
     field :hosts_string, :string, virtual: true
     field :initial_offset_reset_policy, :string
     field :partition_timestamps, :map, default: %{}
-    field :password, :string
+    field :password, Lightning.Encrypted.Binary
     field :sasl, Ecto.Enum, values: @sasl_types, default: nil
     field :ssl, :boolean
     field :topics, {:array, :string}
     field :topics_string, :string, virtual: true
-    field :username, :string
+    field :username, Lightning.Encrypted.Binary
   end
 
   def changeset(kafka_configuration, attrs) do
