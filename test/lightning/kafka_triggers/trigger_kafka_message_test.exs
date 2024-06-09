@@ -12,6 +12,7 @@ defmodule Lightning.KafkaTriggers.TriggerKafkaMessageTest do
         message_timestamp: 1_715_164_718_283,
         metadata: %{meta: :data},
         offset: 99,
+        processing_data: %{errors: []},
         topic: "my_topic",
         trigger: insert(:trigger, type: :kafka),
         work_order: insert(:workorder)
@@ -24,6 +25,7 @@ defmodule Lightning.KafkaTriggers.TriggerKafkaMessageTest do
       message_timestamp: message_timestamp,
       metadata: metadata,
       offset: offset,
+      processing_data: processing_data,
       topic: topic,
       trigger: trigger,
       work_order: work_order
@@ -37,6 +39,7 @@ defmodule Lightning.KafkaTriggers.TriggerKafkaMessageTest do
         message_timestamp: message_timestamp,
         metadata: metadata,
         offset: offset,
+        processing_data: processing_data,
         topic: topic,
         trigger_id: trigger.id,
         work_order_id: work_order.id
@@ -54,6 +57,7 @@ defmodule Lightning.KafkaTriggers.TriggerKafkaMessageTest do
                message_timestamp: ^message_timestamp,
                metadata: ^metadata,
                offset: ^offset,
+               processing_data: ^processing_data,
                topic: ^topic,
                trigger_id: ^trigger_id,
                work_order_id: ^work_order_id
@@ -65,6 +69,7 @@ defmodule Lightning.KafkaTriggers.TriggerKafkaMessageTest do
       message_timestamp: message_timestamp,
       metadata: metadata,
       offset: offset,
+      processing_data: processing_data,
       topic: topic,
       trigger: trigger,
       work_order: work_order
@@ -74,6 +79,7 @@ defmodule Lightning.KafkaTriggers.TriggerKafkaMessageTest do
         message_timestamp: message_timestamp,
         metadata: metadata,
         offset: offset,
+        processing_data: processing_data,
         topic: topic,
         trigger_id: trigger.id,
         work_order_id: work_order.id
@@ -95,6 +101,7 @@ defmodule Lightning.KafkaTriggers.TriggerKafkaMessageTest do
       message_timestamp: message_timestamp,
       metadata: metadata,
       offset: offset,
+      processing_data: processing_data,
       topic: topic,
       trigger: trigger,
       work_order: work_order
@@ -104,6 +111,7 @@ defmodule Lightning.KafkaTriggers.TriggerKafkaMessageTest do
         message_timestamp: message_timestamp,
         metadata: metadata,
         offset: offset,
+        processing_data: processing_data,
         topic: topic,
         trigger_id: trigger.id,
         work_order_id: work_order.id
@@ -121,6 +129,7 @@ defmodule Lightning.KafkaTriggers.TriggerKafkaMessageTest do
       key: key,
       metadata: metadata,
       offset: offset,
+      processing_data: processing_data,
       topic: topic,
       trigger: trigger,
       work_order: work_order
@@ -130,6 +139,7 @@ defmodule Lightning.KafkaTriggers.TriggerKafkaMessageTest do
         key: key,
         metadata: metadata,
         offset: offset,
+        processing_data: processing_data,
         topic: topic,
         trigger_id: trigger.id,
         work_order_id: work_order.id
@@ -151,6 +161,7 @@ defmodule Lightning.KafkaTriggers.TriggerKafkaMessageTest do
       key: key,
       message_timestamp: message_timestamp,
       offset: offset,
+      processing_data: processing_data,
       topic: topic,
       trigger: trigger,
       work_order: work_order
@@ -160,6 +171,7 @@ defmodule Lightning.KafkaTriggers.TriggerKafkaMessageTest do
         key: key,
         message_timestamp: message_timestamp,
         offset: offset,
+        processing_data: processing_data,
         topic: topic,
         trigger_id: trigger.id,
         work_order_id: work_order.id
@@ -181,6 +193,7 @@ defmodule Lightning.KafkaTriggers.TriggerKafkaMessageTest do
       key: key,
       message_timestamp: message_timestamp,
       metadata: metadata,
+      processing_data: processing_data,
       topic: topic,
       trigger: trigger,
       work_order: work_order
@@ -190,6 +203,7 @@ defmodule Lightning.KafkaTriggers.TriggerKafkaMessageTest do
         key: key,
         message_timestamp: message_timestamp,
         metadata: metadata,
+        processing_data: processing_data,
         topic: topic,
         trigger_id: trigger.id,
         work_order_id: work_order.id,
@@ -212,6 +226,7 @@ defmodule Lightning.KafkaTriggers.TriggerKafkaMessageTest do
       message_timestamp: message_timestamp,
       metadata: metadata,
       offset: offset,
+      processing_data: processing_data,
       trigger: trigger,
       work_order: work_order
     } do
@@ -221,6 +236,7 @@ defmodule Lightning.KafkaTriggers.TriggerKafkaMessageTest do
         message_timestamp: message_timestamp,
         metadata: metadata,
         offset: offset,
+        processing_data: processing_data,
         trigger_id: trigger.id,
         work_order_id: work_order.id
       }
@@ -242,6 +258,7 @@ defmodule Lightning.KafkaTriggers.TriggerKafkaMessageTest do
       message_timestamp: message_timestamp,
       metadata: metadata,
       offset: offset,
+      processing_data: processing_data,
       topic: topic,
       work_order: work_order
     } do
@@ -251,6 +268,7 @@ defmodule Lightning.KafkaTriggers.TriggerKafkaMessageTest do
         message_timestamp: message_timestamp,
         metadata: metadata,
         offset: offset,
+        processing_data: processing_data,
         topic: topic,
         work_order_id: work_order.id
       }
@@ -272,6 +290,7 @@ defmodule Lightning.KafkaTriggers.TriggerKafkaMessageTest do
       message_timestamp: message_timestamp,
       metadata: metadata,
       offset: offset,
+      processing_data: processing_data,
       topic: topic,
       trigger: trigger
     } do
@@ -281,8 +300,38 @@ defmodule Lightning.KafkaTriggers.TriggerKafkaMessageTest do
         message_timestamp: message_timestamp,
         metadata: metadata,
         offset: offset,
+        processing_data: processing_data,
         topic: topic,
         trigger_id: trigger.id
+      }
+
+      changeset =
+        %TriggerKafkaMessage{}
+        |> TriggerKafkaMessage.changeset(attributes)
+
+      assert %Changeset{valid?: true} = changeset
+    end
+
+    test "is valid if processing_data is not provided", %{
+      data: data,
+      key: key,
+      message_timestamp: message_timestamp,
+      metadata: metadata,
+      offset: offset,
+      topic: topic,
+      trigger: trigger,
+      work_order: work_order
+    } do
+
+      attributes = %{
+        data: data,
+        key: key,
+        message_timestamp: message_timestamp,
+        metadata: metadata,
+        offset: offset,
+        topic: topic,
+        trigger_id: trigger.id,
+        work_order_id: work_order.id
       }
 
       changeset =

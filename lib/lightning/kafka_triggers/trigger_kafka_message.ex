@@ -13,6 +13,7 @@ defmodule Lightning.KafkaTriggers.TriggerKafkaMessage do
     field :message_timestamp, :integer
     field :metadata, :map
     field :offset, :integer
+    field :processing_data, :map
     field :data, :binary
 
     belongs_to :trigger, Trigger
@@ -30,6 +31,7 @@ defmodule Lightning.KafkaTriggers.TriggerKafkaMessage do
       :message_timestamp,
       :metadata,
       :offset,
+      :processing_data,
       :data
     ]
 
