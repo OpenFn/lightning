@@ -197,21 +197,36 @@ defmodule Lightning.KafkaTriggers do
       trigger: %{workflow: workflow} = trigger
     } = candidate
 
-    {:ok, %WorkOrder{id: work_order_id}} =
-      WorkOrders.create_for(trigger,
-        workflow: workflow,
-        dataclip: %{
-          body: data |> Jason.decode!(),
-          request: metadata,
-          type: :kafka,
-          project_id: workflow.project_id
-        },
-        without_run: false
-      )
+    data
+    |> Jason.decode()
+    |> case do
+      {:ok, body} ->
+        {:ok, %WorkOrder{id: work_order_id}} =
+          WorkOrders.create_for(trigger,
+            workflow: workflow,
+            dataclip: %{
+              body: body,
+              request: metadata,
+              type: :kafka,
+              project_id: workflow.project_id
+            },
+            without_run: false
+          )
 
-    candidate
-    |> TriggerKafkaMessage.changeset(%{work_order_id: work_order_id})
-    |> Repo.update!()
+        candidate
+        |> TriggerKafkaMessage.changeset(%{work_order_id: work_order_id})
+        |> Repo.update!()
+      {:error, _decode_error} ->
+        # TODO Add details from _decode_error?
+        
+        processing_data =
+          candidate.processing_data
+          |> Map.merge(%{"errors" => ["Data is not a JSON object"]})
+
+        candidate
+        |> TriggerKafkaMessage.changeset(%{processing_data: processing_data})
+        |> Repo.update!()
+    end
   end
 
   defp handle_candidate(%{work_order: work_order} = candidate) do
