@@ -31,19 +31,19 @@ defmodule LightningWeb.JobLive.KafkaSetupComponent do
           kafka_config = %{kafka_config | source: source}
         %>
         <div class="col-span-4 @md:col-span-2">
-          <Form.text_field field={:hosts_string} form={kafka_config} disabled={@disabled} />
+          <Form.text_field field={:hosts_string} form={kafka_config} label={"Hosts"} disabled={@disabled} />
         </div>
 
         <div class="col-span-4 @md:col-span-2">
-          <Form.text_field field={:topics_string} form={kafka_config} disabled={@disabled} />
+          <Form.text_field field={:topics_string} form={kafka_config} label={"Topics"} disabled={@disabled} />
         </div>
 
         <div class="col-span-4 @md:col-span-2">
-          <Form.text_field field={:group_id} form={kafka_config} disabled={@disabled} />
+          <Form.text_field field={:group_id} form={kafka_config} label={"Consumer Group ID"} disabled={@disabled} />
         </div>
 
         <div class="col-span-4 @md:col-span-2">
-          <Form.check_box field={:ssl} form={kafka_config} disabled={@disabled} />
+          <Form.check_box field={:ssl} form={kafka_config} label={"SSL"} disabled={@disabled} />
         </div>
 
         <div class="col-span-4 @md:col-span-2">
