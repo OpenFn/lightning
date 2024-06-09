@@ -22,9 +22,7 @@ defmodule Lightning.KafkaTriggers.MessageCandidateSetWorker do
         Process.send_after(self(), :request_candidate_set, 2000)
 
       candidate_set ->
-        # NOTE(frank): This was crashing the entire application in case anything unexpected happens
-        # For my case, the message was non-json.
-        spawn(fn -> KafkaTriggers.process_candidate_for(candidate_set) end)
+        KafkaTriggers.process_candidate_for(candidate_set)
         Process.send_after(self(), :request_candidate_set, 1000)
     end
 
