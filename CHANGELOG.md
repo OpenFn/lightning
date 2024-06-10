@@ -23,6 +23,8 @@ and this project adheres to
   [#2182](https://github.com/OpenFn/lightning/pull/2182)
 - Update email notification for changing retention period
   [#2066](https://github.com/OpenFn/lightning/issues/2066)
+- Return 415s when Webhooks are sent Content-Types what are not supported.
+  [#2180](https://github.com/OpenFn/lightning/issues/2180)
 
 ### Fixed
 
