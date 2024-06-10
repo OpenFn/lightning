@@ -213,6 +213,118 @@ defmodule Lightning.Workflows.Trigger.KafkaConfigurationTest do
 
       assert changes == expectation
     end
+
+    test "is invalid if sasl selected but no username", %{
+      base_changes: base_changes,
+    } do
+      changeset = KafkaConfiguration.changeset(
+        %KafkaConfiguration{},
+        base_changes
+        |> Map.merge(%{sasl: "plain", username: nil, password: "x"})
+      )
+
+      assert %Changeset{errors: errors, valid?: false} = changeset
+
+      assert errors == [
+        username: {"Required if SASL is selected", []},
+      ]
+    end
+
+    test "is invalid if sasl selected but no password", %{
+      base_changes: base_changes,
+    } do
+      changeset = KafkaConfiguration.changeset(
+        %KafkaConfiguration{},
+        base_changes
+        |> Map.merge(%{sasl: "plain", username: "x", password: nil})
+      )
+
+      assert %Changeset{errors: errors, valid?: false} = changeset
+
+      assert errors == [
+        password: {"Required if SASL is selected", []},
+      ]
+    end
+
+    test "is invalid if sasl selected but no username or password", %{
+      base_changes: base_changes,
+    } do
+      changeset = KafkaConfiguration.changeset(
+        %KafkaConfiguration{},
+        base_changes
+        |> Map.merge(%{sasl: "plain", username: nil, password: nil})
+      )
+
+      assert %Changeset{errors: errors, valid?: false} = changeset
+
+      password_error = errors |> Keyword.get(:password, nil)
+      assert password_error == {"Required if SASL is selected", []}
+
+      username_error = errors |> Keyword.get(:username, nil)
+      assert username_error == {"Required if SASL is selected", []}
+    end
+
+    test "is invalid if no sasl but username", %{
+      base_changes: base_changes,
+    } do
+      changeset = KafkaConfiguration.changeset(
+        %KafkaConfiguration{},
+        base_changes
+        |> Map.merge(%{sasl: nil, username: "x", password: nil})
+      )
+
+      assert %Changeset{errors: errors, valid?: false} = changeset
+
+      assert errors == [
+        username: {"Requires SASL to be selected", []},
+      ]
+    end
+
+    test "is invalid if no sasl but password", %{
+      base_changes: base_changes,
+    } do
+      changeset = KafkaConfiguration.changeset(
+        %KafkaConfiguration{},
+        base_changes
+        |> Map.merge(%{sasl: nil, username: nil, password: "x"})
+      )
+
+      assert %Changeset{errors: errors, valid?: false} = changeset
+
+      assert errors == [
+        password: {"Requires SASL to be selected", []},
+      ]
+    end
+
+    test "is invalid if no sasl but username and password", %{
+      base_changes: base_changes,
+    } do
+      changeset = KafkaConfiguration.changeset(
+        %KafkaConfiguration{},
+        base_changes
+        |> Map.merge(%{sasl: nil, username: "x", password: "x"})
+      )
+
+      assert %Changeset{errors: errors, valid?: false} = changeset
+
+      password_error = errors |> Keyword.get(:password, nil)
+      assert password_error == {"Requires SASL to be selected", []}
+
+      username_error = errors |> Keyword.get(:username, nil)
+      assert username_error == {"Requires SASL to be selected", []}
+    end
+
+    # test "invalid if hosts is not a list of host, port pairs", %{
+    #   base_changes: base_changes,
+    # } do
+    #   changeset = KafkaConfiguration.changeset(
+    #     %KafkaConfiguration{},
+    #     base_changes
+    #     |> Map.merge(%{hosts_string: "host:9091, host:, :9093"})
+    #   )
+    #
+    #   assert %Changeset{errors: errors, valid?: false} = changeset
+    # end
   end
 
   describe ".apply_hosts_string/2" do
