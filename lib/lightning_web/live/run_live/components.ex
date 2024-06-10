@@ -193,7 +193,7 @@ defmodule LightningWeb.RunLive.Components do
               class="pl-1"
               navigate={
                 ~p"/projects/#{@project_id}/w/#{@step.snapshot.workflow_id}"
-                  <> "?snapshot=#{@step.snapshot.id}&a=#{@run_id}&m=expand&s=#{@step.job_id}#log"
+                  <> "?v=#{@step.snapshot.lock_version}&a=#{@run_id}&m=expand&s=#{@step.job_id}#log"
               }
             >
               <.icon
@@ -376,7 +376,7 @@ defmodule LightningWeb.RunLive.Components do
               class="cursor-pointer"
               navigate={
                 ~p"/projects/#{@project_id}/w/#{@step.snapshot.workflow_id}"
-                  <> "?snapshot=#{@step.snapshot.id}&a=#{@run.id}&m=expand&s=#{@job.id}#log"
+                  <> "?v=#{@step.snapshot.lock_version}&a=#{@run.id}&m=expand&s=#{@job.id}#log"
               }
             >
               <.icon

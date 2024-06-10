@@ -1,4 +1,5 @@
 defmodule LightningWeb.WorkflowLive.JobView do
+  alias Lightning.Helpers
   use LightningWeb, :component
 
   import LightningWeb.WorkflowLive.Components
@@ -60,6 +61,8 @@ defmodule LightningWeb.WorkflowLive.JobView do
   attr :close_url, :any, required: true
   attr :socket, :any, required: true
   attr :follow_run_id, :any, default: nil
+  attr :snapshot_date, :any, required: true
+  attr :snapshot_version, :string, required: true
 
   slot :footer
 
@@ -89,6 +92,10 @@ defmodule LightningWeb.WorkflowLive.JobView do
               @form[:project_credential_id] && @form[:project_credential_id].value
             )
           } />
+          <.snapshot_version_chip
+            snapshot_date={@snapshot_date}
+            version={@snapshot_version}
+          />
           <div class="flex flex-grow items-center justify-end">
             <.link
               id={"close-job-edit-view-#{@job.id}"}
@@ -119,7 +126,7 @@ defmodule LightningWeb.WorkflowLive.JobView do
           module={EditorPane}
           id={"job-editor-pane-#{@job.id}"}
           form={@form}
-          disabled={false}
+          disabled={@snapshot_version != "latest"}
           class="h-full"
         />
       </.collapsible_panel>
@@ -170,6 +177,30 @@ defmodule LightningWeb.WorkflowLive.JobView do
         <%= render_slot(@footer) %>
       </:bottom>
     </.container>
+    """
+  end
+
+  defp snapshot_version_chip(assigns) do
+    ~H"""
+    <div id="modal-header-workflow-snapshot-block" class="flex items-baseline">
+      <span
+        id="workflow-snapshot-version-chip"
+        phx-hook="Tooltip"
+        data-placement="bottom"
+        aria-label={
+          if @version == "latest",
+            do: "This is the latest version of the workflow.",
+            else:
+              "You are viewing a snapshot of this workflow that was made on #{Helpers.format_date(@snapshot_date)}"
+        }
+        class={"inline-flex items-center rounded-md bg-#{if @version == "latest", do: "blue-100", else: "yellow-100"} px-2 py-1 text-xs font-medium text-#{if @version == "latest", do: "blue-800", else: "yellow-800"}"}
+      >
+        <% IO.inspect(@version) %>
+        <%= if @version == "latest",
+          do: @version,
+          else: String.slice(@version, 1..7) %>
+      </span>
+    </div>
     """
   end
 

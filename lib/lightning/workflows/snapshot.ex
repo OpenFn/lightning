@@ -176,6 +176,14 @@ defmodule Lightning.Workflows.Snapshot do
     )
   end
 
+  def get_by_version(workflow_id, version) do
+    from(s in __MODULE__,
+      join: w in assoc(s, :workflow),
+      where: s.workflow_id == ^workflow_id and s.lock_version == ^version
+    )
+    |> Repo.one()
+  end
+
   @doc """
   Get the latest snapshot for a workflow, or create one if it doesn't exist.
   """
