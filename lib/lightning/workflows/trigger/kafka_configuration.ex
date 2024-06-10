@@ -4,17 +4,18 @@ defmodule Lightning.Workflows.Trigger.KafkaConfiguration do
 
   @sasl_types [:plain, :scram_sha_256, :scram_sha_512]
 
-  @derive {Jason.Encoder, only: [
-    :group_id,
-    :hosts,
-    :initial_offset_reset_policy,
-    :partition_timestamps,
-    :password,
-    :sasl,
-    :ssl,
-    :topics,
-    :username
-  ]}
+  @derive {Jason.Encoder,
+           only: [
+             :group_id,
+             :hosts,
+             :initial_offset_reset_policy,
+             :partition_timestamps,
+             :password,
+             :sasl,
+             :ssl,
+             :topics,
+             :username
+           ]}
 
   embedded_schema do
     field :group_id, :string
@@ -63,11 +64,12 @@ defmodule Lightning.Workflows.Trigger.KafkaConfiguration do
       |> case do
         nil ->
           ""
+
         hosts ->
           hosts
           |> Enum.map(fn
             [host, port] -> "#{host}:#{port}"
-            #TODO something_else is a bandaid for a live validation issue
+            # TODO something_else is a bandaid for a live validation issue
             # make a better plan
             something_else -> something_else
           end)
@@ -85,6 +87,7 @@ defmodule Lightning.Workflows.Trigger.KafkaConfiguration do
       |> case do
         nil ->
           ""
+
         topics ->
           topics
           |> Enum.join(", ")
@@ -98,10 +101,12 @@ defmodule Lightning.Workflows.Trigger.KafkaConfiguration do
     case get_field(changeset, :hosts_string) do
       nil ->
         changeset
+
       "" ->
         changeset |> put_change(:hosts, [])
+
       hosts_string ->
-        [hosts, errors] = 
+        [hosts, errors] =
           hosts_string
           |> String.split(",")
           |> Enum.reduce([[], []], fn host, [hosts, errors] ->
@@ -109,11 +114,12 @@ defmodule Lightning.Workflows.Trigger.KafkaConfiguration do
             |> String.split(":")
             |> case do
               [host, port] ->
-                trimmed_set = 
+                trimmed_set =
                   [host, port]
                   |> Enum.map(&String.trim/1)
 
                 [[trimmed_set | hosts], errors]
+
               _incorrect_result ->
                 [hosts, [host | errors]]
             end
@@ -122,6 +128,7 @@ defmodule Lightning.Workflows.Trigger.KafkaConfiguration do
         case errors do
           [] ->
             changeset |> put_change(:hosts, hosts |> Enum.reverse())
+
           _ ->
             changeset
             |> add_error(
@@ -136,10 +143,12 @@ defmodule Lightning.Workflows.Trigger.KafkaConfiguration do
     case get_field(changeset, :topics_string) do
       nil ->
         changeset
+
       "" ->
         changeset |> put_change(:topics, [])
+
       topics_string ->
-        topics = 
+        topics =
           topics_string
           |> String.split(",")
           |> Enum.map(&String.trim/1)
@@ -153,35 +162,41 @@ defmodule Lightning.Workflows.Trigger.KafkaConfiguration do
     |> get_field(:sasl)
     |> case do
       nil ->
-        changeset = case get_field(changeset, :password) do
-          nil ->
-            changeset
-          _ ->
-            changeset
-            |> add_error(:password, "Requires SASL to be selected")
-        end
+        changeset =
+          case get_field(changeset, :password) do
+            nil ->
+              changeset
+
+            _ ->
+              changeset
+              |> add_error(:password, "Requires SASL to be selected")
+          end
 
         case get_field(changeset, :username) do
           nil ->
             changeset
+
           _ ->
             changeset
             |> add_error(:username, "Requires SASL to be selected")
         end
 
       _sasl_type ->
-        changeset = case get_field(changeset, :password) do
-          nil ->
-            changeset
-            |> add_error(:password, "Required if SASL is selected")
-          _ ->
-            changeset
-        end
+        changeset =
+          case get_field(changeset, :password) do
+            nil ->
+              changeset
+              |> add_error(:password, "Required if SASL is selected")
+
+            _ ->
+              changeset
+          end
 
         case get_field(changeset, :username) do
           nil ->
             changeset
             |> add_error(:username, "Required if SASL is selected")
+
           _ ->
             changeset
         end
