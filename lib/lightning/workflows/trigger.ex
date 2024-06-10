@@ -68,7 +68,7 @@ defmodule Lightning.Workflows.Trigger do
         :type,
         :workflow_id,
         :cron_expression,
-        :has_auth_method,
+        :has_auth_method
       ])
       |> cast_embed(
         :kafka_configuration,
