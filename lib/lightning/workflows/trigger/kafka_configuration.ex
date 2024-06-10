@@ -47,6 +47,7 @@ defmodule Lightning.Workflows.Trigger.KafkaConfiguration do
     ])
     |> apply_hosts_string()
     |> apply_topics_string()
+    |> validate_sasl_credentials()
   end
 
   def generate_hosts_string(changeset) do
@@ -126,6 +127,46 @@ defmodule Lightning.Workflows.Trigger.KafkaConfiguration do
           |> Enum.map(&String.trim/1)
 
         changeset |> put_change(:topics, topics)
+    end
+  end
+
+  def validate_sasl_credentials(changeset) do
+    changeset
+    |> get_field(:sasl)
+    |> case do
+      nil ->
+        changeset = case get_field(changeset, :password) do
+          nil ->
+            changeset
+          _ ->
+            changeset
+            |> add_error(:password, "Requires SASL to be selected")
+        end
+
+        case get_field(changeset, :username) do
+          nil ->
+            changeset
+          _ ->
+            changeset
+            |> add_error(:username, "Requires SASL to be selected")
+        end
+
+      _sasl_type ->
+        changeset = case get_field(changeset, :password) do
+          nil ->
+            changeset
+            |> add_error(:password, "Required if SASL is selected")
+          _ ->
+            changeset
+        end
+
+        case get_field(changeset, :username) do
+          nil ->
+            changeset
+            |> add_error(:username, "Required if SASL is selected")
+          _ ->
+            changeset
+        end
     end
   end
 
