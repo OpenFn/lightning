@@ -47,28 +47,6 @@ defmodule Lightning.Workflows.Trigger.KafkaConfiguration do
     ])
     |> apply_hosts_string()
     |> apply_topics_string()
-    |> apply_password(kafka_configuration)
-  end
-
-  def apply_password(changeset, kafka_configuration) do
-    # TODO No longer needed - just need to handle the case for nil or empty
-    # string
-    new_password =
-      changeset
-      |> get_field(:password)
-      |> case do
-        nil ->
-          kafka_configuration.password
-        "" ->
-          kafka_configuration.password
-        "********************" ->
-          kafka_configuration.password
-        password ->
-          password
-      end
-
-    changeset
-    |> put_change(:password, new_password)
   end
 
   def generate_hosts_string(changeset) do

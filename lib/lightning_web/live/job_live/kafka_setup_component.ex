@@ -28,7 +28,10 @@ defmodule LightningWeb.JobLive.KafkaSetupComponent do
           |> KafkaConfiguration.generate_hosts_string()
           |> KafkaConfiguration.generate_topics_string()
 
-          kafka_config = %{kafka_config | source: source}
+        password = source.changes |> Map.get(:password, Map.get(source.data, :password, ""))
+
+        kafka_config = %{kafka_config | source: source}
+
         %>
         <div class="col-span-4 @md:col-span-2">
           <Form.text_field field={:hosts_string} form={kafka_config} label={"Hosts"} disabled={@disabled} />
@@ -56,7 +59,7 @@ defmodule LightningWeb.JobLive.KafkaSetupComponent do
         </div>
 
         <div class="col-span-4 @md:col-span-2">
-          <Form.password_field field={:password} id={:password} form={kafka_config} disabled={@disabled} />
+          <Form.password_field field={:password} id={:password} form={kafka_config} value={password} disabled={@disabled} />
         </div>
 
         <div class="col-span-4 @md:col-span-2">
