@@ -127,12 +127,14 @@ defmodule Lightning.Workflows.Trigger.KafkaConfigurationTest do
           ["host1", "9092"],
           ["host2", "9093"]
         ],
+        hosts_string: "host1:9092, host2:9093",
         initial_offset_reset_policy: "earliest",
         partition_timestamps: %{"1" => 1717174749123},
         password: "password",
         sasl: "plain",
         ssl: true,
         topics: ["foo", "bar"],
+        topics_string: "foo, bar",
         username: "username"
       }
 
@@ -142,12 +144,14 @@ defmodule Lightning.Workflows.Trigger.KafkaConfigurationTest do
           ["host1", "9092"],
           ["host2", "9093"]
         ],
+        hosts_string: "host1:9092, host2:9093",
         initial_offset_reset_policy: "earliest",
         partition_timestamps: %{"1" => 1717174749123},
         password: "password",
         sasl: :plain,
         ssl: true,
         topics: ["foo", "bar"],
+        topics_string: "foo, bar",
         username: "username"
       }
 
@@ -193,7 +197,7 @@ defmodule Lightning.Workflows.Trigger.KafkaConfigurationTest do
       assert changes == expectation
     end
 
-    test "allows topics_string to override hosts", %{
+    test "allows topics_string to override topics", %{
       base_changes: base_changes,
       base_expectation: base_expectation
     } do
@@ -314,6 +318,71 @@ defmodule Lightning.Workflows.Trigger.KafkaConfigurationTest do
       assert username_error == {"Requires SASL to be selected", []}
     end
 
+    test "is invalid if hosts_string is not provided", %{
+      base_changes: base_changes
+    } do
+      changeset = KafkaConfiguration.changeset(
+        %KafkaConfiguration{},
+        base_changes
+        |> Map.merge(%{hosts_string: nil})
+      )
+
+      assert %Changeset{errors: errors, valid?: false} = changeset
+
+      assert errors == [
+        hosts_string: {"can't be blank", [{:validation, :required}]},
+      ]
+    end
+
+    test "is invalid if topics_string is not provided", %{
+      base_changes: base_changes
+    } do
+      changeset = KafkaConfiguration.changeset(
+        %KafkaConfiguration{},
+        base_changes
+        |> Map.merge(%{topics_string: nil})
+      )
+
+      assert %Changeset{errors: errors, valid?: false} = changeset
+
+      assert errors == [
+        topics_string: {"can't be blank", [{:validation, :required}]},
+      ]
+    end
+
+    test "is invalid if initial_offset_reset_policy is not provided", %{
+      base_changes: base_changes
+    } do
+      changeset = KafkaConfiguration.changeset(
+        %KafkaConfiguration{},
+        base_changes
+        |> Map.merge(%{initial_offset_reset_policy: nil})
+      )
+
+      assert %Changeset{errors: errors, valid?: false} = changeset
+
+      assert errors == [
+        initial_offset_reset_policy: {
+          "can't be blank", [{:validation, :required}]
+        },
+      ]
+    end
+
+    test "is invalid if group_id is not provided", %{
+      base_changes: base_changes
+    } do
+      changeset = KafkaConfiguration.changeset(
+        %KafkaConfiguration{},
+        base_changes
+        |> Map.merge(%{group_id: nil})
+      )
+
+      assert %Changeset{errors: errors, valid?: false} = changeset
+
+      assert errors == [
+        group_id: {"can't be blank", [{:validation, :required}]},
+      ]
+    end
     # test "invalid if hosts is not a list of host, port pairs", %{
     #   base_changes: base_changes,
     # } do
@@ -416,19 +485,21 @@ defmodule Lightning.Workflows.Trigger.KafkaConfigurationTest do
       assert hosts == []
     end
 
-    # TODO: This is a bandaid for a live validation issue, we should
-    # not leave this in place when we go to prod.
-    test "returns a host unchanged if it is not in the expected format", %{
+    test "sets an error if the host/port couplets are incorrect", %{
       changeset: changeset
     } do
       changeset =
-        changeset |> Changeset.put_change(:hosts_string, "host3, host4:9095")
-
-      %Changeset{changes: %{hosts: hosts}} =
         changeset
+        |> Changeset.put_change(:hosts_string, "host3, host4:9095")
         |> KafkaConfiguration.apply_hosts_string()
 
-      assert hosts == [["host3"], ["host4", "9095"]]
+      assert %{errors: errors, valid?: false} = changeset
+
+      assert errors == [
+        hosts_string: {
+          "Must be specified in the format `host:port, host:port`", []
+        },
+      ]
     end
       
   end
