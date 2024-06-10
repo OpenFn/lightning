@@ -45,6 +45,12 @@ defmodule Lightning.Workflows.Trigger.KafkaConfiguration do
       :topics_string,
       :username
     ])
+    |> validate_required([
+      :group_id,
+      :hosts_string,
+      :initial_offset_reset_policy,
+      :topics_string
+    ])
     |> apply_hosts_string()
     |> apply_topics_string()
     |> validate_sasl_credentials()
@@ -95,22 +101,34 @@ defmodule Lightning.Workflows.Trigger.KafkaConfiguration do
       "" ->
         changeset |> put_change(:hosts, [])
       hosts_string ->
-        hosts = 
+        [hosts, errors] = 
           hosts_string
           |> String.split(",")
-          |> Enum.map(fn host ->
+          |> Enum.reduce([[], []], fn host, [hosts, errors] ->
             host
             |> String.split(":")
             |> case do
-              [host, port] -> [host, port]
-              #TODO something_else is a bandaid for a live validation issue
-              # make a better plan
-              something_else -> something_else
+              [host, port] ->
+                trimmed_set = 
+                  [host, port]
+                  |> Enum.map(&String.trim/1)
+
+                [[trimmed_set | hosts], errors]
+              _incorrect_result ->
+                [hosts, [host | errors]]
             end
-            |> Enum.map(&String.trim/1)
           end)
 
-        changeset |> put_change(:hosts, hosts)
+        case errors do
+          [] ->
+            changeset |> put_change(:hosts, hosts |> Enum.reverse())
+          _ ->
+            changeset
+            |> add_error(
+              :hosts_string,
+              "Must be specified in the format `host:port, host:port`"
+            )
+        end
     end
   end
 
