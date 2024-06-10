@@ -6,12 +6,13 @@ defmodule Lightning.Workflows.Trigger.KafkaConfigurationTest do
 
   describe "generate_hosts_string/1" do
     test "adds hosts_string change to changeset" do
-      changeset = KafkaConfiguration.changeset(%KafkaConfiguration{}, %{
-        hosts: [
-          ["host1", "9092"],
-          ["host2", "9093"]
-        ]
-      })
+      changeset =
+        KafkaConfiguration.changeset(%KafkaConfiguration{}, %{
+          hosts: [
+            ["host1", "9092"],
+            ["host2", "9093"]
+          ]
+        })
 
       %Changeset{
         changes: %{hosts_string: hosts_string}
@@ -21,11 +22,12 @@ defmodule Lightning.Workflows.Trigger.KafkaConfigurationTest do
     end
 
     test "adds hosts_string change to changeset correctly for single host" do
-      changeset = KafkaConfiguration.changeset(%KafkaConfiguration{}, %{
-        hosts: [
-          ["host1", "9092"]
-        ]
-      })
+      changeset =
+        KafkaConfiguration.changeset(%KafkaConfiguration{}, %{
+          hosts: [
+            ["host1", "9092"]
+          ]
+        })
 
       %Changeset{
         changes: %{hosts_string: hosts_string}
@@ -84,9 +86,10 @@ defmodule Lightning.Workflows.Trigger.KafkaConfigurationTest do
 
   describe "generate_topics_string/1" do
     test "adds hosts_string change to changeset" do
-      changeset = KafkaConfiguration.changeset(%KafkaConfiguration{}, %{
-        topics: ["foo", "bar"]
-      })
+      changeset =
+        KafkaConfiguration.changeset(%KafkaConfiguration{}, %{
+          topics: ["foo", "bar"]
+        })
 
       %Changeset{
         changes: %{topics_string: topics_string}
@@ -96,9 +99,10 @@ defmodule Lightning.Workflows.Trigger.KafkaConfigurationTest do
     end
 
     test "adds topics_string change to changeset correctly for single topic" do
-      changeset = KafkaConfiguration.changeset(%KafkaConfiguration{}, %{
-        topics: ["foo"]
-      })
+      changeset =
+        KafkaConfiguration.changeset(%KafkaConfiguration{}, %{
+          topics: ["foo"]
+        })
 
       %Changeset{
         changes: %{topics_string: topics_string}
@@ -129,7 +133,7 @@ defmodule Lightning.Workflows.Trigger.KafkaConfigurationTest do
         ],
         hosts_string: "host1:9092, host2:9093",
         initial_offset_reset_policy: "earliest",
-        partition_timestamps: %{"1" => 1717174749123},
+        partition_timestamps: %{"1" => 1_717_174_749_123},
         password: "password",
         sasl: "plain",
         ssl: true,
@@ -146,7 +150,7 @@ defmodule Lightning.Workflows.Trigger.KafkaConfigurationTest do
         ],
         hosts_string: "host1:9092, host2:9093",
         initial_offset_reset_policy: "earliest",
-        partition_timestamps: %{"1" => 1717174749123},
+        partition_timestamps: %{"1" => 1_717_174_749_123},
         password: "password",
         sasl: :plain,
         ssl: true,
@@ -177,10 +181,11 @@ defmodule Lightning.Workflows.Trigger.KafkaConfigurationTest do
       base_changes: base_changes,
       base_expectation: base_expectation
     } do
-      changeset = KafkaConfiguration.changeset(
-        %KafkaConfiguration{},
-        base_changes |> Map.merge(%{hosts_string: "host3:9094, host4:9095"})
-      )
+      changeset =
+        KafkaConfiguration.changeset(
+          %KafkaConfiguration{},
+          base_changes |> Map.merge(%{hosts_string: "host3:9094, host4:9095"})
+        )
 
       assert %Changeset{changes: changes, valid?: true} = changeset
 
@@ -201,10 +206,11 @@ defmodule Lightning.Workflows.Trigger.KafkaConfigurationTest do
       base_changes: base_changes,
       base_expectation: base_expectation
     } do
-      changeset = KafkaConfiguration.changeset(
-        %KafkaConfiguration{},
-        base_changes |> Map.merge(%{topics_string: "biz, boz"})
-      )
+      changeset =
+        KafkaConfiguration.changeset(
+          %KafkaConfiguration{},
+          base_changes |> Map.merge(%{topics_string: "biz, boz"})
+        )
 
       assert %Changeset{changes: changes, valid?: true} = changeset
 
@@ -219,45 +225,48 @@ defmodule Lightning.Workflows.Trigger.KafkaConfigurationTest do
     end
 
     test "is invalid if sasl selected but no username", %{
-      base_changes: base_changes,
+      base_changes: base_changes
     } do
-      changeset = KafkaConfiguration.changeset(
-        %KafkaConfiguration{},
-        base_changes
-        |> Map.merge(%{sasl: "plain", username: nil, password: "x"})
-      )
+      changeset =
+        KafkaConfiguration.changeset(
+          %KafkaConfiguration{},
+          base_changes
+          |> Map.merge(%{sasl: "plain", username: nil, password: "x"})
+        )
 
       assert %Changeset{errors: errors, valid?: false} = changeset
 
       assert errors == [
-        username: {"Required if SASL is selected", []},
-      ]
+               username: {"Required if SASL is selected", []}
+             ]
     end
 
     test "is invalid if sasl selected but no password", %{
-      base_changes: base_changes,
+      base_changes: base_changes
     } do
-      changeset = KafkaConfiguration.changeset(
-        %KafkaConfiguration{},
-        base_changes
-        |> Map.merge(%{sasl: "plain", username: "x", password: nil})
-      )
+      changeset =
+        KafkaConfiguration.changeset(
+          %KafkaConfiguration{},
+          base_changes
+          |> Map.merge(%{sasl: "plain", username: "x", password: nil})
+        )
 
       assert %Changeset{errors: errors, valid?: false} = changeset
 
       assert errors == [
-        password: {"Required if SASL is selected", []},
-      ]
+               password: {"Required if SASL is selected", []}
+             ]
     end
 
     test "is invalid if sasl selected but no username or password", %{
-      base_changes: base_changes,
+      base_changes: base_changes
     } do
-      changeset = KafkaConfiguration.changeset(
-        %KafkaConfiguration{},
-        base_changes
-        |> Map.merge(%{sasl: "plain", username: nil, password: nil})
-      )
+      changeset =
+        KafkaConfiguration.changeset(
+          %KafkaConfiguration{},
+          base_changes
+          |> Map.merge(%{sasl: "plain", username: nil, password: nil})
+        )
 
       assert %Changeset{errors: errors, valid?: false} = changeset
 
@@ -269,45 +278,48 @@ defmodule Lightning.Workflows.Trigger.KafkaConfigurationTest do
     end
 
     test "is invalid if no sasl but username", %{
-      base_changes: base_changes,
+      base_changes: base_changes
     } do
-      changeset = KafkaConfiguration.changeset(
-        %KafkaConfiguration{},
-        base_changes
-        |> Map.merge(%{sasl: nil, username: "x", password: nil})
-      )
+      changeset =
+        KafkaConfiguration.changeset(
+          %KafkaConfiguration{},
+          base_changes
+          |> Map.merge(%{sasl: nil, username: "x", password: nil})
+        )
 
       assert %Changeset{errors: errors, valid?: false} = changeset
 
       assert errors == [
-        username: {"Requires SASL to be selected", []},
-      ]
+               username: {"Requires SASL to be selected", []}
+             ]
     end
 
     test "is invalid if no sasl but password", %{
-      base_changes: base_changes,
+      base_changes: base_changes
     } do
-      changeset = KafkaConfiguration.changeset(
-        %KafkaConfiguration{},
-        base_changes
-        |> Map.merge(%{sasl: nil, username: nil, password: "x"})
-      )
+      changeset =
+        KafkaConfiguration.changeset(
+          %KafkaConfiguration{},
+          base_changes
+          |> Map.merge(%{sasl: nil, username: nil, password: "x"})
+        )
 
       assert %Changeset{errors: errors, valid?: false} = changeset
 
       assert errors == [
-        password: {"Requires SASL to be selected", []},
-      ]
+               password: {"Requires SASL to be selected", []}
+             ]
     end
 
     test "is invalid if no sasl but username and password", %{
-      base_changes: base_changes,
+      base_changes: base_changes
     } do
-      changeset = KafkaConfiguration.changeset(
-        %KafkaConfiguration{},
-        base_changes
-        |> Map.merge(%{sasl: nil, username: "x", password: "x"})
-      )
+      changeset =
+        KafkaConfiguration.changeset(
+          %KafkaConfiguration{},
+          base_changes
+          |> Map.merge(%{sasl: nil, username: "x", password: "x"})
+        )
 
       assert %Changeset{errors: errors, valid?: false} = changeset
 
@@ -321,90 +333,86 @@ defmodule Lightning.Workflows.Trigger.KafkaConfigurationTest do
     test "is invalid if hosts_string is not provided", %{
       base_changes: base_changes
     } do
-      changeset = KafkaConfiguration.changeset(
-        %KafkaConfiguration{},
-        base_changes
-        |> Map.merge(%{hosts_string: nil})
-      )
+      changeset =
+        KafkaConfiguration.changeset(
+          %KafkaConfiguration{},
+          base_changes
+          |> Map.merge(%{hosts_string: nil})
+        )
 
       assert %Changeset{errors: errors, valid?: false} = changeset
 
       assert errors == [
-        hosts_string: {"can't be blank", [{:validation, :required}]},
-      ]
+               hosts_string: {"can't be blank", [{:validation, :required}]}
+             ]
     end
 
     test "is invalid if topics_string is not provided", %{
       base_changes: base_changes
     } do
-      changeset = KafkaConfiguration.changeset(
-        %KafkaConfiguration{},
-        base_changes
-        |> Map.merge(%{topics_string: nil})
-      )
+      changeset =
+        KafkaConfiguration.changeset(
+          %KafkaConfiguration{},
+          base_changes
+          |> Map.merge(%{topics_string: nil})
+        )
 
       assert %Changeset{errors: errors, valid?: false} = changeset
 
       assert errors == [
-        topics_string: {"can't be blank", [{:validation, :required}]},
-      ]
+               topics_string: {"can't be blank", [{:validation, :required}]}
+             ]
     end
 
     test "is invalid if initial_offset_reset_policy is not provided", %{
       base_changes: base_changes
     } do
-      changeset = KafkaConfiguration.changeset(
-        %KafkaConfiguration{},
-        base_changes
-        |> Map.merge(%{initial_offset_reset_policy: nil})
-      )
+      changeset =
+        KafkaConfiguration.changeset(
+          %KafkaConfiguration{},
+          base_changes
+          |> Map.merge(%{initial_offset_reset_policy: nil})
+        )
 
       assert %Changeset{errors: errors, valid?: false} = changeset
 
       assert errors == [
-        initial_offset_reset_policy: {
-          "can't be blank", [{:validation, :required}]
-        },
-      ]
+               initial_offset_reset_policy: {
+                 "can't be blank",
+                 [{:validation, :required}]
+               }
+             ]
     end
 
     test "is invalid if group_id is not provided", %{
       base_changes: base_changes
     } do
-      changeset = KafkaConfiguration.changeset(
-        %KafkaConfiguration{},
-        base_changes
-        |> Map.merge(%{group_id: nil})
-      )
+      changeset =
+        KafkaConfiguration.changeset(
+          %KafkaConfiguration{},
+          base_changes
+          |> Map.merge(%{group_id: nil})
+        )
 
       assert %Changeset{errors: errors, valid?: false} = changeset
 
       assert errors == [
-        group_id: {"can't be blank", [{:validation, :required}]},
-      ]
+               group_id: {"can't be blank", [{:validation, :required}]}
+             ]
     end
-    # test "invalid if hosts is not a list of host, port pairs", %{
-    #   base_changes: base_changes,
-    # } do
-    #   changeset = KafkaConfiguration.changeset(
-    #     %KafkaConfiguration{},
-    #     base_changes
-    #     |> Map.merge(%{hosts_string: "host:9091, host:, :9093"})
-    #   )
-    #
-    #   assert %Changeset{errors: errors, valid?: false} = changeset
-    # end
   end
 
   describe ".apply_hosts_string/2" do
     setup do
-      changeset = Changeset.change(
-        %KafkaConfiguration{},
-        hosts: [
-          ["host1", "9092"],
-          ["host2", "9093"]
-        ]
-      )
+      changeset =
+        Changeset.change(
+          %KafkaConfiguration{},
+          hosts: [
+            ["host1", "9092"],
+            ["host2", "9093"]
+          ]
+        )
+
       %{changeset: changeset}
     end
 
@@ -420,9 +428,9 @@ defmodule Lightning.Workflows.Trigger.KafkaConfigurationTest do
         |> KafkaConfiguration.apply_hosts_string()
 
       assert hosts == [
-        ["host3", "9094"],
-        ["host4", "9095"]
-      ]
+               ["host3", "9094"],
+               ["host4", "9095"]
+             ]
     end
 
     test "removes whitespace from the hosts_string entries", %{
@@ -430,16 +438,16 @@ defmodule Lightning.Workflows.Trigger.KafkaConfigurationTest do
     } do
       changeset =
         changeset
-        |> Changeset.put_change(:hosts_string,  " host3 : 9094 , host4:9095 ")
+        |> Changeset.put_change(:hosts_string, " host3 : 9094 , host4:9095 ")
 
       %Changeset{changes: %{hosts: hosts}} =
         changeset
         |> KafkaConfiguration.apply_hosts_string()
 
       assert hosts == [
-        ["host3", "9094"],
-        ["host4", "9095"]
-      ]
+               ["host3", "9094"],
+               ["host4", "9095"]
+             ]
     end
 
     test "does nothing if hosts_string is nil", %{
@@ -454,9 +462,9 @@ defmodule Lightning.Workflows.Trigger.KafkaConfigurationTest do
         |> KafkaConfiguration.apply_hosts_string()
 
       assert hosts == [
-        ["host1", "9092"],
-        ["host2", "9093"]
-      ]
+               ["host1", "9092"],
+               ["host2", "9093"]
+             ]
     end
 
     test "does nothing if hosts_string is absent", %{
@@ -467,9 +475,9 @@ defmodule Lightning.Workflows.Trigger.KafkaConfigurationTest do
         |> KafkaConfiguration.apply_hosts_string()
 
       assert hosts == [
-        ["host1", "9092"],
-        ["host2", "9093"]
-      ]
+               ["host1", "9092"],
+               ["host2", "9093"]
+             ]
     end
 
     test "clears hosts if hosts_string is an empty string", %{
@@ -496,20 +504,22 @@ defmodule Lightning.Workflows.Trigger.KafkaConfigurationTest do
       assert %{errors: errors, valid?: false} = changeset
 
       assert errors == [
-        hosts_string: {
-          "Must be specified in the format `host:port, host:port`", []
-        },
-      ]
+               hosts_string: {
+                 "Must be specified in the format `host:port, host:port`",
+                 []
+               }
+             ]
     end
-      
   end
 
   describe ".apply_topics_string/2" do
     setup do
-      changeset = Changeset.change(
-        %KafkaConfiguration{},
-        topics: ["foo", "bar"]
-      )
+      changeset =
+        Changeset.change(
+          %KafkaConfiguration{},
+          topics: ["foo", "bar"]
+        )
+
       %{changeset: changeset}
     end
 

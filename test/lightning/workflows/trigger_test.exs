@@ -57,7 +57,7 @@ defmodule Lightning.Workflows.TriggerTest do
     end
 
     test "allows creation of kafka trigger" do
-      changeset = 
+      changeset =
         Trigger.changeset(%Trigger{}, %{
           type: :kafka,
           kafka_configuration: %{}
@@ -89,7 +89,7 @@ defmodule Lightning.Workflows.TriggerTest do
     test "is invalid if type is :kafka but kafka_configuration is not set" do
       errors =
         Trigger.changeset(%Trigger{}, %{
-          type: :kafka,
+          type: :kafka
         })
         |> errors_on()
 
