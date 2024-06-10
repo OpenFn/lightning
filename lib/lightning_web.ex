@@ -22,7 +22,6 @@ defmodule LightningWeb do
 
   def router do
     quote do
-      # , helpers: false
       use Phoenix.Router
 
       import Plug.Conn
