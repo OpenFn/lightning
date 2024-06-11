@@ -321,11 +321,14 @@ defmodule Lightning.KafkaTriggers.PipelineTest do
       %{
         group_id: "lightning-#{index}",
         hosts: [["host-#{index}", "9092"], ["other-host-#{index}", "9093"]],
+        hosts_string: "host-#{index}:9092, other-host-#{index}:9093",
+        initial_offset_reset_policy: "earliest",
         partition_timestamps: partition_timestamps(),
         password: password,
         sasl: sasl_type,
         ssl: ssl,
         topics: ["topic-#{index}-1", "topic-#{index}-2"],
+        topics_string: "topic-#{index}-1, topic-#{index}-2",
         username: username
       }
     end

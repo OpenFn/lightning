@@ -60,7 +60,22 @@ defmodule Lightning.Workflows.TriggerTest do
       changeset =
         Trigger.changeset(%Trigger{}, %{
           type: :kafka,
-          kafka_configuration: %{}
+          kafka_configuration: %{
+            group_id: "group_id",
+            hosts: [
+              ["host1", "9092"],
+              ["host2", "9093"]
+            ],
+            hosts_string: "host1:9092, host2:9093",
+            initial_offset_reset_policy: "earliest",
+            partition_timestamps: %{"1" => 1_717_174_749_123},
+            password: "password",
+            sasl: "plain",
+            ssl: true,
+            topics: ["foo", "bar"],
+            topics_string: "foo, bar",
+            username: "username"
+          }
         })
 
       assert %{valid?: true} = changeset
