@@ -49,7 +49,9 @@ defmodule Lightning.KafkaTriggers do
       end
 
     updated_kafka_configuration = %{
-      partition_timestamps: updated_partition_timestamps
+      hosts_string: generate_hosts_string(existing_kafka_configuration),
+      partition_timestamps: updated_partition_timestamps,
+      topics_string: generate_topics_string(existing_kafka_configuration)
     }
 
     trigger
@@ -328,5 +330,36 @@ defmodule Lightning.KafkaTriggers do
         ]
       }
     }
+  end
+
+  # TODO Centralise the below two methods and test
+  defp generate_hosts_string(kafka_configuration) do
+    kafka_configuration.hosts
+    |> case do
+      nil ->
+        ""
+
+      hosts ->
+        hosts
+        |> Enum.map(fn
+          [host, port] -> "#{host}:#{port}"
+            # TODO something_else is a bandaid for a live validation issue
+            # make a better plan
+          something_else -> something_else
+        end)
+        |> Enum.join(", ")
+    end
+  end
+
+  defp generate_topics_string(kafka_configuration) do
+    kafka_configuration.topics
+    |> case do
+      nil ->
+        ""
+
+      topics ->
+        topics
+        |> Enum.join(", ")
+    end
   end
 end
