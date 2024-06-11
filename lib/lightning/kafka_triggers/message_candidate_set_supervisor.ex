@@ -12,7 +12,7 @@ defmodule Lightning.KafkaTriggers.MessageCandidateSetSupervisor do
   def init(_opts) do
     children = [
       MessageCandidateSetServer,
-      MessageCandidateSetWorker,
+      MessageCandidateSetWorker
     ]
 
     Supervisor.init(children, strategy: :one_for_one)
