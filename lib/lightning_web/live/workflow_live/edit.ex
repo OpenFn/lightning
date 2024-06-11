@@ -1,6 +1,5 @@
 defmodule LightningWeb.WorkflowLive.Edit do
   @moduledoc false
-  alias Lightning.Workflows.Snapshot
   use LightningWeb, {:live_view, container: {:div, []}}
 
   import LightningWeb.Components.NewInputs
@@ -20,7 +19,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
   alias Lightning.Services.UsageLimiter
   alias Lightning.Workflows
   alias Lightning.Workflows.Job
-  # alias Lightning.Workflows.Snapshot
+  alias Lightning.Workflows.Snapshot
   alias Lightning.Workflows.Trigger
   alias Lightning.Workflows.Workflow
   alias Lightning.WorkOrders
@@ -58,7 +57,18 @@ defmodule LightningWeb.WorkflowLive.Edit do
         <LayoutComponents.header current_user={@current_user}>
           <:title>
             <.workflow_name_field form={@workflow_form} />
+            <div class="mx-2"></div>
+            <LightningWeb.WorkflowLive.JobView.snapshot_version_chip
+              snapshot_date={@snapshot.inserted_at}
+              version={@snapshot_version}
+            />
           </:title>
+          <.snapshot_version_switcher
+            :if={@snapshot && @snapshot.lock_version != @workflow.lock_version}
+            label="Switch to the latest version to retry this run"
+            version={@snapshot_version}
+          />
+          <div class="mx-2"></div>
           <.with_changes_indicator changeset={@changeset}>
             <div class="flex flex-row gap-2">
               <.icon
@@ -820,32 +830,28 @@ defmodule LightningWeb.WorkflowLive.Edit do
   end
 
   def handle_event("switch-snapshot-version", _params, socket) do
-    {changeset, version} =
-      case socket.assigns.changeset do
-        %Ecto.Changeset{data: %Snapshot{}} ->
-          {Ecto.Changeset.change(socket.assigns.workflow), "latest"}
+    %{changeset: prev_changeset, project: project, workflow: workflow} =
+      socket.assigns
 
-        %Ecto.Changeset{data: %Workflow{}} ->
-          {Ecto.Changeset.change(socket.assigns.snapshot),
-           socket.assigns.snapshot.id}
-      end
+    {next_changeset, version} = switch_changeset(socket)
 
-    IO.inspect(changeset.data)
+    workflow_params = WorkflowParams.to_map(prev_changeset)
 
-    lock_version = Ecto.Changeset.get_field(changeset, :lock_version)
+    lock_version = Ecto.Changeset.get_field(next_changeset, :lock_version)
 
-    params =
-      Enum.reject(socket.assigns.query_params, fn {_key, value} ->
-        value == nil
-      end)
+    query_params =
+      socket.assigns.query_params
+      |> Map.reject(fn {_k, v} -> is_nil(v) end)
+      |> Map.put("v", lock_version)
+
+    # send_form_changed(%{"workflow" => WorkflowParams.to_map(next_changeset)})
 
     {:noreply,
      socket
-     |> assign(snapshot_version: version)
-     |> assign_changeset(changeset)
+     |> assign_changeset(next_changeset, version)
+     |> push_patches_applied(workflow_params)
      |> push_patch(
-       to:
-         ~p"/projects/#{socket.assigns.project.id}/w/#{socket.assigns.workflow.id}?#{params}&v=#{lock_version}"
+       to: ~p"/projects/#{project.id}/w/#{workflow.id}?#{query_params}"
      )}
   end
 
@@ -933,6 +939,10 @@ defmodule LightningWeb.WorkflowLive.Edit do
   end
 
   def handle_event("validate", %{"workflow" => params}, socket) do
+    {:noreply, handle_new_params(socket, params)}
+  end
+
+  def handle_event("validate", %{"snapshot" => params}, socket) do
     {:noreply, handle_new_params(socket, params)}
   end
 
@@ -1395,26 +1405,31 @@ defmodule LightningWeb.WorkflowLive.Edit do
         do: "latest",
         else: snapshot.id
 
+    changeset = Ecto.Changeset.change(snapshot)
+
     socket
     |> assign(workflow: workflow)
     |> assign(snapshot: snapshot)
     |> assign(snapshot_version: snapshot_version)
-    |> apply_params(socket.assigns.workflow_params)
+    |> assign_changeset(changeset)
+
+    # |> apply_params(socket.assigns.workflow_params)
   end
 
   defp apply_params(socket, params) do
+    # if socket.assigns.snapshot.lock_version <
+    #      socket.assigns.workflow.lock_version do
+    #   Ecto.Changeset.change(socket.assigns.snapshot)
+    # else
     changeset =
-      if socket.assigns.workflow.lock_version >
-           socket.assigns.snapshot.lock_version do
-        Ecto.Changeset.change(socket.assigns.snapshot)
-      else
-        socket.assigns.workflow
-        |> Workflow.changeset(
-          params
-          |> set_default_adaptors()
-          |> Map.put("project_id", socket.assigns.project.id)
-        )
-      end
+      socket.assigns.workflow
+      |> Workflow.changeset(
+        params
+        |> set_default_adaptors()
+        |> Map.put("project_id", socket.assigns.project.id)
+      )
+
+    # end
 
     assign_changeset(socket, changeset)
   end
@@ -1447,49 +1462,35 @@ defmodule LightningWeb.WorkflowLive.Edit do
           nil ->
             socket |> unselect_all()
         end
-
-        # %{"snapshot" => snapshot_id, "s" => selected_id, "m" => mode} ->
-        #   snapshot =
-        #     Enum.find(socket.assigns.workflow.snapshots, fn snapshot ->
-        #       snapshot.id == snapshot_id
-        #     end)
-
-        #   params =
-        #     snapshot
-        #     |> Ecto.Changeset.change()
-        #     |> WorkflowParams.to_map(&Ecto.Changeset.get_embed/2)
-
-        #   snapshot
-        #   |> find_item(selected_id)
-        #   |> case do
-        #     [type, selected] ->
-        #       socket
-        #       |> set_selected_node(type, selected, mode)
-        #       |> apply_params(params)
-        #       |> assign(snapshot: snapshot)
-
-        #     nil ->
-        #       socket |> unselect_all()
-        #   end
     end
     |> maybe_follow_run(socket.assigns.query_params)
   end
 
-  defp assign_changeset(socket, changeset) do
-    workflow_params =
-      case changeset do
-        %{data: %Snapshot{}} ->
-          WorkflowParams.to_map(changeset, &Ecto.Changeset.get_embed/2)
+  defp switch_changeset(socket) do
+    %{changeset: changeset, workflow: workflow, snapshot: snapshot} =
+      socket.assigns
 
-        %{data: %Workflow{}} ->
-          WorkflowParams.to_map(changeset)
-      end
+    case changeset do
+      %Ecto.Changeset{data: %Snapshot{}} ->
+        {Ecto.Changeset.change(workflow), "latest"}
+
+      %Ecto.Changeset{data: %Workflow{}} ->
+        {Ecto.Changeset.change(snapshot), snapshot.id}
+    end
+  end
+
+  defp assign_changeset(socket, changeset) do
+    workflow_params = WorkflowParams.to_map(changeset)
 
     socket
     |> assign(
       changeset: changeset,
       workflow_params: workflow_params
     )
+  end
+
+  defp assign_changeset(socket, changeset, version) do
+    assign_changeset(socket, changeset) |> assign(snapshot_version: version)
   end
 
   defp push_patches_applied(socket, initial_params) do

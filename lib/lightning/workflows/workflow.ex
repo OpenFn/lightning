@@ -16,6 +16,7 @@ defmodule Lightning.Workflows.Workflow do
   alias Lightning.Workflows.Job
   alias Lightning.Workflows.Snapshot
   alias Lightning.Workflows.Trigger
+  alias Lightning.Workflows.Workflow
 
   @type t :: %__MODULE__{
           __meta__: Ecto.Schema.Metadata.t(),
@@ -75,14 +76,16 @@ defmodule Lightning.Workflows.Workflow do
 
   @spec workflow_activated?(Ecto.Changeset.t()) :: boolean()
   def workflow_activated?(changeset) do
-    changeset
-    |> get_assoc(:triggers)
+    case changeset do
+      %Ecto.Changeset{data: %Workflow{}} -> get_assoc(changeset, :triggers)
+      %Ecto.Changeset{data: %Snapshot{}} -> get_embed(changeset, :triggers)
+    end
     |> Enum.any?(fn trigger_changeset ->
-      if trigger_changeset.data.__meta__.state == :built do
-        get_field(trigger_changeset, :enabled) == true
-      else
-        get_change(trigger_changeset, :enabled) == true
-      end
+      # if trigger_changeset.data.__meta__.state == :built do
+      get_field(trigger_changeset, :enabled) == true
+      # else
+      #   get_change(trigger_changeset, :enabled) == true
+      # end
     end)
   end
 

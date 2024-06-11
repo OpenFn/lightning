@@ -1,10 +1,10 @@
 defmodule LightningWeb.WorkflowLive.JobView do
-  alias Lightning.Helpers
   use LightningWeb, :component
 
   import LightningWeb.WorkflowLive.Components
 
   alias Lightning.Credentials
+  alias Lightning.Helpers
   alias LightningWeb.Components.Tabbed
   alias LightningWeb.WorkflowLive.EditorPane
 
@@ -180,7 +180,7 @@ defmodule LightningWeb.WorkflowLive.JobView do
     """
   end
 
-  defp snapshot_version_chip(assigns) do
+  def snapshot_version_chip(assigns) do
     ~H"""
     <div id="modal-header-workflow-snapshot-block" class="flex items-baseline">
       <span
@@ -195,10 +195,9 @@ defmodule LightningWeb.WorkflowLive.JobView do
         }
         class={"inline-flex items-center rounded-md bg-#{if @version == "latest", do: "blue-100", else: "yellow-100"} px-2 py-1 text-xs font-medium text-#{if @version == "latest", do: "blue-800", else: "yellow-800"}"}
       >
-        <% IO.inspect(@version) %>
         <%= if @version == "latest",
           do: @version,
-          else: String.slice(@version, 1..7) %>
+          else: String.slice(@version, 0..6) %>
       </span>
     </div>
     """

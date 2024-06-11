@@ -243,7 +243,7 @@ defmodule LightningWeb.RunLive.Index do
             :workflow,
             :dataclip,
             :snapshot,
-            runs: [steps: [:job, :input_dataclip]]
+            runs: [steps: [:job, :input_dataclip, :snapshot]]
           ]
         ],
         force: true
@@ -288,7 +288,7 @@ defmodule LightningWeb.RunLive.Index do
           :dataclip,
           :snapshot,
           :workflow,
-          runs: [steps: [:job, :input_dataclip]]
+          runs: [steps: [:job, :input_dataclip, :snapshot]]
         ],
         force: true
       )

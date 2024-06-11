@@ -271,6 +271,7 @@ defmodule LightningWeb.RunLive.Components do
 
   attr :project, :map, required: true
   attr :run, :map, required: true
+  attr :workflow_version, :integer, required: true
   attr :can_edit_data_retention, :boolean, required: true
   attr :can_run_workflow, :boolean, required: true
 
@@ -297,6 +298,7 @@ defmodule LightningWeb.RunLive.Components do
           project_id={@project.id}
           run={@run}
           can_edit_data_retention={@can_edit_data_retention}
+          workflow_version={@workflow_version}
           step={step}
         />
       <% end %>
@@ -306,6 +308,7 @@ defmodule LightningWeb.RunLive.Components do
 
   attr :step, :map, required: true
   attr :run, :map, required: true
+  attr :workflow_version, :integer, required: true
   attr :project_id, :string, required: true
   attr :can_run_workflow, :boolean, required: true
   attr :can_edit_data_retention, :boolean, required: true
@@ -417,16 +420,25 @@ defmodule LightningWeb.RunLive.Components do
   end
 
   defp step_rerun_tag(assigns) do
-    assigns = assign(assigns, deleted: is_nil(assigns.step.job))
+    assigns =
+      assign(assigns,
+        deleted: is_nil(assigns.step.job),
+        latest: assigns.workflow_version == assigns.step.snapshot.lock_version
+      )
 
     ~H"""
     <%= if @step.input_dataclip && is_nil(@step.input_dataclip.wiped_at) do %>
       <span
         id={@step.id}
-        {if not @deleted,
-          do: ["phx-click": "rerun", "phx-value-run_id": @run.id,
-            "phx-value-step_id": @step.id, title: "Rerun workflow from here"],
-          else: [title: "Can't rerun workflow from here. This step has been deleted."]}
+        {if not @deleted do
+          if @latest do
+            ["phx-click": "rerun", "phx-value-run_id": @run.id, "phx-value-step_id": @step.id, title: "Rerun workflow from here"]
+          else
+            ["phx-click": "rerun", "phx-value-run_id": @run.id, "phx-value-step_id": @step.id, title: "Retries will be executed with the latest version of this workflow"]
+          end
+        else
+          [title: "This step has been deleted and cannot be retried. Try running from other steps"]
+        end}
       >
         <.icon
           {if not @deleted, do: [naked: true], else: []}
