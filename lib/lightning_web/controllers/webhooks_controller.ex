@@ -9,7 +9,23 @@ defmodule LightningWeb.WebhooksController do
   alias Lightning.Workflows
   alias Lightning.WorkOrders
 
-  require OpenTelemetry.Tracer
+  plug :reject_unfetched when action in [:create]
+
+  # Reject requests with unfetched body params, as they are not supported
+  # See Plug.Parsers in Endpoint for more information.
+  defp reject_unfetched(conn, _) do
+    case conn.body_params do
+      %Plug.Conn.Unfetched{} ->
+        conn
+        |> put_status(415)
+        |> put_view(LightningWeb.ErrorView)
+        |> render(:"415")
+        |> halt()
+
+      _ ->
+        conn
+    end
+  end
 
   @spec create(Plug.Conn.t(), %{path: binary()}) :: Plug.Conn.t()
   def check(conn, _params) do

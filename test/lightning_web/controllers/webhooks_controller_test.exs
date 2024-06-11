@@ -179,6 +179,19 @@ defmodule LightningWeb.WebhooksControllerTest do
       assert Runs.get_dataclip_request(run) ==
                ~s({\"path\": [\"i\", \"#{trigger_id}\"], \"method\": \"POST\", \"headers\": {\"content-type\": \"multipart/mixed; boundary=plug_conn_test\"}, \"query_params\": {\"moar\": \"things\", \"extra\": \"stuff\"}})
     end
+
+    test "returns 415 when client sends xml", %{conn: conn} do
+      %{triggers: [%{id: trigger_id}]} =
+        insert(:simple_workflow) |> Lightning.Repo.preload(:triggers)
+
+      conn =
+        conn
+        |> put_req_header("content-type", "text/xml")
+        |> put_req_header("accepts", "*/*")
+        |> post("/i/#{trigger_id}", "{}")
+
+      assert response(conn, 415) == ~s({"error":"Unsupported Media Type"})
+    end
   end
 
   describe "a disabled message" do
