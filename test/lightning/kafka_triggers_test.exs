@@ -137,11 +137,14 @@ defmodule Lightning.KafkaTriggersTest do
       %{
         group_id: "lightning-1",
         hosts: [["host-1", "9092"], ["other-host-1", "9093"]],
+        hosts_string: "host-1:9092,other-host-1:9093",
+        initial_offset_reset_policy: "earliest",
         partition_timestamps: partition_timestamps,
         password: nil,
         sasl: nil,
         ssl: false,
         topics: ["bar_topic"],
+        topics_string: "bar_topic",
         username: nil
       }
     end
