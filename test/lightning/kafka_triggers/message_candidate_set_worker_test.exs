@@ -26,7 +26,7 @@ defmodule Lightning.KafkaTriggers.MessageCandidateSetWorkerTest do
     end
 
     test "it enqueues a request to trigger the action after a delay" do
-      MessageCandidateSetWorker.handle_info(:request_candidate_set, []) 
+      MessageCandidateSetWorker.handle_info(:request_candidate_set, [])
 
       assert_receive :request_candidate_set, 2500
     end
@@ -44,14 +44,14 @@ defmodule Lightning.KafkaTriggers.MessageCandidateSetWorkerTest do
       {:ok, _server_pid} = start_supervised(MessageCandidateSetServer)
 
       %{
-        message: message,
+        message: message
       }
     end
 
     test "processes the candidate for the candidate set", %{
-      message: message,
+      message: message
     } do
-      MessageCandidateSetWorker.handle_info(:request_candidate_set, []) 
+      MessageCandidateSetWorker.handle_info(:request_candidate_set, [])
 
       assert %{work_order: %WorkOrder{}} =
                TriggerKafkaMessage
@@ -60,7 +60,7 @@ defmodule Lightning.KafkaTriggers.MessageCandidateSetWorkerTest do
     end
 
     test "it enqueues a request to trigger the action after a delay" do
-      MessageCandidateSetWorker.handle_info(:request_candidate_set, []) 
+      MessageCandidateSetWorker.handle_info(:request_candidate_set, [])
 
       assert_receive :request_candidate_set, 1500
     end

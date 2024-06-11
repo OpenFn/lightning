@@ -142,7 +142,7 @@ defmodule Lightning.KafkaTriggersTest do
         sasl: nil,
         ssl: false,
         topics: ["bar_topic"],
-        username: nil,
+        username: nil
       }
     end
 
@@ -286,7 +286,7 @@ defmodule Lightning.KafkaTriggersTest do
         sasl: "plain",
         ssl: true,
         topics: topics,
-        username: "my_user",
+        username: "my_user"
       }
 
       config =
@@ -957,6 +957,7 @@ defmodule Lightning.KafkaTriggersTest do
           enabled: true,
           kafka_configuration: new_configuration(index: 1)
         )
+
       enabled_trigger_2 =
         insert(
           :trigger,
@@ -965,18 +966,21 @@ defmodule Lightning.KafkaTriggersTest do
           kafka_configuration: new_configuration(index: 2)
         )
 
-      disabled_trigger_1 = insert(
-        :trigger,
-        type: :kafka,
-        enabled: false,
-        kafka_configuration: new_configuration(index: 4)
-      )
-      disabled_trigger_2 = insert(
-        :trigger,
-        type: :kafka,
-        enabled: false,
-        kafka_configuration: new_configuration(index: 5)
-      )
+      disabled_trigger_1 =
+        insert(
+          :trigger,
+          type: :kafka,
+          enabled: false,
+          kafka_configuration: new_configuration(index: 4)
+        )
+
+      disabled_trigger_2 =
+        insert(
+          :trigger,
+          type: :kafka,
+          enabled: false,
+          kafka_configuration: new_configuration(index: 5)
+        )
 
       {:ok, pid} = start_supervised(PipelineSupervisor)
 
@@ -996,29 +1000,22 @@ defmodule Lightning.KafkaTriggersTest do
     } do
       with_mock Supervisor,
         start_child: fn _sup_pid, _child_spec -> {:ok, "fake-pid"} end do
-
-        KafkaTriggers.enable_disable_triggers(
-          [
-            enabled_trigger_1,
-            enabled_trigger_2
-          ]
-        )
+        KafkaTriggers.enable_disable_triggers([
+          enabled_trigger_1,
+          enabled_trigger_2
+        ])
 
         assert_called(
           Supervisor.start_child(
             pid,
-            KafkaTriggers.generate_pipeline_child_spec(
-              enabled_trigger_1
-            )
+            KafkaTriggers.generate_pipeline_child_spec(enabled_trigger_1)
           )
         )
 
         assert_called(
           Supervisor.start_child(
             pid,
-            KafkaTriggers.generate_pipeline_child_spec(
-              enabled_trigger_2
-            )
+            KafkaTriggers.generate_pipeline_child_spec(enabled_trigger_2)
           )
         )
       end
@@ -1033,14 +1030,10 @@ defmodule Lightning.KafkaTriggersTest do
         delete_child: fn _sup_pid, _child_id -> {:ok, "anything"} end,
         start_child: fn _sup_pid, _child_spec -> {:ok, "fake-pid"} end,
         terminate_child: fn _sup_pid, _child_id -> {:ok, "anything"} end do
-
-
-        KafkaTriggers.enable_disable_triggers(
-          [
-            disabled_trigger_1,
-            disabled_trigger_2
-          ]
-        )
+        KafkaTriggers.enable_disable_triggers([
+          disabled_trigger_1,
+          disabled_trigger_2
+        ])
 
         assert_called(
           Supervisor.terminate_child(
@@ -1081,29 +1074,28 @@ defmodule Lightning.KafkaTriggersTest do
         delete_child: fn _sup_pid, _child_id -> {:ok, "anything"} end,
         start_child: fn _sup_pid, _child_spec -> {:ok, "fake-pid"} end,
         terminate_child: fn _sup_pid, _child_id -> {:ok, "anything"} end do
+        disabled_non_kafka_trigger =
+          insert(
+            :trigger,
+            type: :cron,
+            kafka_configuration: nil,
+            enabled: false
+          )
 
-        disabled_non_kafka_trigger = insert(
-          :trigger,
-          type: :cron,
-          kafka_configuration: nil,
-          enabled: false
-        )
+        enabled_non_kafka_trigger =
+          insert(
+            :trigger,
+            type: :webhook,
+            kafka_configuration: nil,
+            enabled: true
+          )
 
-        enabled_non_kafka_trigger = insert(
-          :trigger,
-          type: :webhook,
-          kafka_configuration: nil,
-          enabled: true
-        )
-
-        KafkaTriggers.enable_disable_triggers(
-          [
-            enabled_trigger_1,
-            disabled_non_kafka_trigger,
-            disabled_trigger_1,
-            enabled_non_kafka_trigger
-          ]
-        )
+        KafkaTriggers.enable_disable_triggers([
+          enabled_trigger_1,
+          disabled_non_kafka_trigger,
+          disabled_trigger_1,
+          enabled_non_kafka_trigger
+        ])
 
         assert_called_exactly(
           Supervisor.start_child(
@@ -1174,6 +1166,7 @@ defmodule Lightning.KafkaTriggersTest do
 
       assert actual_child_spec == expected_child_spec
     end
+
     # TODO merge with other configuration method
     defp new_configuration(opts) do
       index = opts |> Keyword.get(:index)

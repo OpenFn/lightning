@@ -206,7 +206,7 @@ defmodule Lightning.KafkaTriggers.TriggerKafkaMessageTest do
         processing_data: processing_data,
         topic: topic,
         trigger_id: trigger.id,
-        work_order_id: work_order.id,
+        work_order_id: work_order.id
       }
 
       changeset =
@@ -322,7 +322,6 @@ defmodule Lightning.KafkaTriggers.TriggerKafkaMessageTest do
       trigger: trigger,
       work_order: work_order
     } do
-
       attributes = %{
         data: data,
         key: key,

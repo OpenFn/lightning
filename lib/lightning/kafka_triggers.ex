@@ -16,7 +16,7 @@ defmodule Lightning.KafkaTriggers do
     query |> Repo.all()
   end
 
-  @doc """ 
+  @doc """
   Updates the partition-specific timestamps for a given trigger. These
   timestamps are used to provide an updated offset reset policy should the
   associated consumer group have been used previously but has not connected to
@@ -79,9 +79,11 @@ defmodule Lightning.KafkaTriggers do
     cond do
       initial_policy in ["earliest", "latest"] ->
         initial_policy |> String.to_atom()
+
       String.match?(initial_policy, ~r/^\d+$/) ->
         {timestamp, _remainder} = Integer.parse(initial_policy)
         {:timestamp, timestamp}
+
       true ->
         :latest
     end
@@ -108,12 +110,14 @@ defmodule Lightning.KafkaTriggers do
 
     policy = policy_config_value(policy_option)
 
-    [sasl_type, username, password] = case sasl_option do
-      nil ->
-        [nil, nil, nil]
-      [sasl_type, username, password] ->
-        ["#{sasl_type}", username, password]
-    end
+    [sasl_type, username, password] =
+      case sasl_option do
+        nil ->
+          [nil, nil, nil]
+
+        [sasl_type, username, password] ->
+          ["#{sasl_type}", username, password]
+      end
 
     %{
       group_id: group_id,
@@ -216,9 +220,10 @@ defmodule Lightning.KafkaTriggers do
         candidate
         |> TriggerKafkaMessage.changeset(%{work_order_id: work_order_id})
         |> Repo.update!()
+
       {:error, _decode_error} ->
         # TODO Add details from _decode_error?
-        
+
         processing_data =
           candidate.processing_data
           |> Map.merge(%{"errors" => ["Data is not a JSON object"]})
@@ -264,11 +269,12 @@ defmodule Lightning.KafkaTriggers do
     supervisor = GenServer.whereis(:kafka_pipeline_supervisor)
 
     triggers
-    |> Enum.filter(& &1.type == :kafka)
+    |> Enum.filter(&(&1.type == :kafka))
     |> Enum.each(fn
       %{enabled: true} = trigger ->
         spec = generate_pipeline_child_spec(trigger)
         Supervisor.start_child(supervisor, spec)
+
       %{enabled: false} = trigger ->
         Supervisor.terminate_child(supervisor, trigger.id)
         Supervisor.delete_child(supervisor, trigger.id)
@@ -295,11 +301,12 @@ defmodule Lightning.KafkaTriggers do
         {host, port_string |> String.to_integer()}
       end)
 
-    sasl = if sasl_type do
-      {sasl_type, username, password}
-    else
-      nil
-    end
+    sasl =
+      if sasl_type do
+        {sasl_type, username, password}
+      else
+        nil
+      end
 
     offset_reset_policy = determine_offset_reset_policy(trigger)
 
