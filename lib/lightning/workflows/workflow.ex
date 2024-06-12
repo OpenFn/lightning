@@ -81,11 +81,7 @@ defmodule Lightning.Workflows.Workflow do
       %Ecto.Changeset{data: %Snapshot{}} -> get_embed(changeset, :triggers)
     end
     |> Enum.any?(fn trigger_changeset ->
-      # if trigger_changeset.data.__meta__.state == :built do
       get_field(trigger_changeset, :enabled) == true
-      # else
-      #   get_change(trigger_changeset, :enabled) == true
-      # end
     end)
   end
 
