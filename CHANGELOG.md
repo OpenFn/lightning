@@ -26,6 +26,7 @@ and this project adheres to
 ### Changed
 
 - Erlang to 26.2.5
+- Update debian bookworm from 20240130 to 20240513.
 - Return 403s when Provisioning API fails because of usage limits
   [#2182](https://github.com/OpenFn/lightning/pull/2182)
 - Update email notification for changing retention period
