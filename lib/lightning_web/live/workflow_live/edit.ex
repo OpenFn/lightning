@@ -64,7 +64,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
             />
           </:title>
           <.snapshot_version_switcher
-            :if={@snapshot && @snapshot.lock_version != @workflow.lock_version}
+            :if={display_snapshot_version_switcher(@snapshot, @workflow)}
             label="Switch to the latest version to retry this run"
             version={@snapshot_version_tag}
           />
@@ -140,9 +140,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
                     editor_is_empty(@workflow_form, @selected_job) %>
 
                   <.snapshot_version_switcher
-                    :if={
-                      @snapshot && @snapshot.lock_version != @workflow.lock_version
-                    }
+                    :if={display_snapshot_version_switcher(@snapshot, @workflow)}
                     label="Switch to the latest version to retry this run"
                     version={@snapshot_version_tag}
                   />
@@ -512,6 +510,10 @@ defmodule LightningWeb.WorkflowLive.Edit do
     "#{assigns[:base_url]}?#{query_string}"
   end
 
+  defp display_snapshot_version_switcher(snapshot, workflow) do
+    snapshot && snapshot.lock_version != workflow.lock_version
+  end
+
   defp step_retryable?(step, form, selectable_dataclips) do
     step_dataclip_id = step && step.input_dataclip_id
 
@@ -874,9 +876,12 @@ defmodule LightningWeb.WorkflowLive.Edit do
     %{changeset: prev_changeset, project: project, workflow: workflow} =
       socket.assigns
 
-    {type, next_changeset, version} = switch_changeset(socket)
+    {_type, next_changeset, version} = switch_changeset(socket)
 
-    workflow_params = WorkflowParams.to_map(prev_changeset)
+    prev_params = WorkflowParams.to_map(prev_changeset)
+    next_params = WorkflowParams.to_map(next_changeset)
+
+    patches = WorkflowParams.to_patches(prev_params, next_params)
 
     lock_version = Ecto.Changeset.get_field(next_changeset, :lock_version)
 
@@ -885,14 +890,16 @@ defmodule LightningWeb.WorkflowLive.Edit do
       |> Map.reject(fn {_k, v} -> is_nil(v) end)
       |> Map.put("v", lock_version)
 
-    send_form_changed(%{
-      Atom.to_string(type) => WorkflowParams.to_map(next_changeset)
-    })
+    # send_form_changed(%{
+    #   Atom.to_string(type) => WorkflowParams.to_map(next_changeset)
+    # })
 
     {:noreply,
      socket
-     |> assign_changeset(next_changeset, version)
-     |> push_patches_applied(workflow_params)
+     |> assign(changeset: next_changeset)
+     |> assign(workflow_params: next_params)
+     |> assign(snapshot_version_tag: version)
+     |> push_event("patches-applied", %{patches: patches})
      |> push_patch(
        to: ~p"/projects/#{project.id}/w/#{workflow.id}?#{query_params}"
      )}
@@ -1169,6 +1176,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
       can_edit_workflow: can_edit_workflow,
       can_run_workflow: can_run_workflow
     } = socket.assigns
+
+    IO.inspect(socket.assigns.changeset, label: "THE CHANGESET")
 
     socket = socket |> apply_params(workflow_params, :workflow)
 
@@ -1455,12 +1464,12 @@ defmodule LightningWeb.WorkflowLive.Edit do
   end
 
   defp assign_workflow(socket, workflow, snapshot) do
-    snapshot_version_tag =
-      if snapshot.lock_version == workflow.lock_version,
-        do: "latest",
-        else: snapshot.id
-
-    changeset = Ecto.Changeset.change(snapshot)
+    {changeset, snapshot_version_tag} =
+      if snapshot.lock_version == workflow.lock_version do
+        {Ecto.Changeset.change(workflow), "latest"}
+      else
+        {Ecto.Changeset.change(snapshot), snapshot.id}
+      end
 
     socket
     |> assign(workflow: workflow)
@@ -1544,16 +1553,11 @@ defmodule LightningWeb.WorkflowLive.Edit do
     )
   end
 
-  defp assign_changeset(socket, changeset, version) do
-    socket
-    |> assign_changeset(changeset)
-    |> assign(snapshot_version_tag: version)
-  end
-
   defp push_patches_applied(socket, initial_params) do
     next_params = socket.assigns.workflow_params
 
-    patches = WorkflowParams.to_patches(initial_params, next_params)
+    patches =
+      WorkflowParams.to_patches(initial_params, next_params) |> IO.inspect()
 
     socket
     |> push_event("patches-applied", %{patches: patches})
@@ -1623,7 +1627,10 @@ defmodule LightningWeb.WorkflowLive.Edit do
     params =
       query_params
       |> Map.put("a", run.id)
-      |> Map.put("v", socket.assigns.snapshot.lock_version)
+      |> Map.put(
+        "v",
+        Ecto.Changeset.get_field(socket.assigns.changeset, :lock_version)
+      )
       |> Enum.into([])
 
     socket
