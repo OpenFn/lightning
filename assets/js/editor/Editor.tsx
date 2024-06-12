@@ -9,10 +9,10 @@ import { initiateSaveAndRun } from '../common';
 // static imports for core lib
 import dts_es5 from './lib/es5.min.dts';
 
-export const DEFAULT_TEXT = `// Use pure JavaScript to add operations to your
-// step. Click Docs to see list of operations or visit
-// https://bit.ly/OFNJWG for our job writing guide
-// and example job codes.\n`;
+export const DEFAULT_TEXT = `
+// Check out the Job Writing Guide for help getting started:
+// https://docs.openfn.org/documentation/jobs/job-writing-guide
+`;
 
 type EditorProps = {
   source?: string;
