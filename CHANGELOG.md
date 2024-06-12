@@ -26,6 +26,7 @@ and this project adheres to
   [#2066](https://github.com/OpenFn/lightning/issues/2066)
 - Return 415s when Webhooks are sent Content-Types what are not supported.
   [#2180](https://github.com/OpenFn/lightning/issues/2180)
+- Updated the default step text
 
 ### Fixed
 
