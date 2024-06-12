@@ -61,8 +61,8 @@ defmodule LightningWeb.WorkflowLive.JobView do
   attr :close_url, :any, required: true
   attr :socket, :any, required: true
   attr :follow_run_id, :any, default: nil
-  attr :snapshot_date, :any, required: true
-  attr :snapshot_version, :string, required: true
+  attr :snapshot, :any, required: true
+  attr :snapshot_version_tag, :string, required: true
 
   slot :footer
 
@@ -93,8 +93,8 @@ defmodule LightningWeb.WorkflowLive.JobView do
             )
           } />
           <.snapshot_version_chip
-            snapshot_date={@snapshot_date}
-            version={@snapshot_version}
+            snapshot={@snapshot}
+            version={@snapshot_version_tag}
           />
           <div class="flex flex-grow items-center justify-end">
             <.link
@@ -126,7 +126,7 @@ defmodule LightningWeb.WorkflowLive.JobView do
           module={EditorPane}
           id={"job-editor-pane-#{@job.id}"}
           form={@form}
-          disabled={@snapshot_version != "latest"}
+          disabled={@snapshot_version_tag != "latest"}
           class="h-full"
         />
       </.collapsible_panel>
@@ -182,7 +182,10 @@ defmodule LightningWeb.WorkflowLive.JobView do
 
   def snapshot_version_chip(assigns) do
     ~H"""
-    <div id="modal-header-workflow-snapshot-block" class="flex items-baseline">
+    <div
+      id="modal-header-workflow-snapshot-block"
+      class="flex items-baseline text-sm font-normal"
+    >
       <span
         id="workflow-snapshot-version-chip"
         phx-hook="Tooltip"
@@ -191,7 +194,7 @@ defmodule LightningWeb.WorkflowLive.JobView do
           if @version == "latest",
             do: "This is the latest version of the workflow.",
             else:
-              "You are viewing a snapshot of this workflow that was made on #{Helpers.format_date(@snapshot_date)}"
+              "You are viewing a snapshot of this workflow that was made on #{Helpers.format_date(@snapshot.inserted_at)}"
         }
         class={"inline-flex items-center rounded-md bg-#{if @version == "latest", do: "blue-100", else: "yellow-100"} px-2 py-1 text-xs font-medium text-#{if @version == "latest", do: "blue-800", else: "yellow-800"}"}
       >

@@ -242,8 +242,14 @@ defmodule LightningWeb.RunLive.Index do
           work_order: [
             :workflow,
             :dataclip,
-            :snapshot,
-            runs: [steps: [:job, :input_dataclip, :snapshot]]
+            runs: [
+              steps: [
+                :job,
+                :input_dataclip,
+                snapshot: [triggers: [:webhook_auth_methods]]
+              ]
+            ],
+            snapshot: [triggers: [:webhook_auth_methods]]
           ]
         ],
         force: true
@@ -286,9 +292,15 @@ defmodule LightningWeb.RunLive.Index do
         work_order,
         [
           :dataclip,
-          :snapshot,
           :workflow,
-          runs: [steps: [:job, :input_dataclip, :snapshot]]
+          runs: [
+            steps: [
+              :job,
+              :input_dataclip,
+              snapshot: [triggers: [:webhook_auth_methods]]
+            ]
+          ],
+          snapshot: [triggers: [:webhook_auth_methods]]
         ],
         force: true
       )

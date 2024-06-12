@@ -52,6 +52,11 @@ defmodule Lightning.Workflows.Snapshot do
       field :cron_expression, :string
       field :enabled, :boolean
       field :type, Ecto.Enum, values: [:webhook, :cron]
+      field :has_auth_method, :boolean, virtual: true
+
+      many_to_many :webhook_auth_methods, Lightning.Workflows.WebhookAuthMethod,
+        join_through: "trigger_webhook_auth_methods",
+        on_replace: :delete
 
       field :inserted_at, :utc_datetime
       field :updated_at, :utc_datetime
@@ -179,7 +184,8 @@ defmodule Lightning.Workflows.Snapshot do
   def get_by_version(workflow_id, version) do
     from(s in __MODULE__,
       join: w in assoc(s, :workflow),
-      where: s.workflow_id == ^workflow_id and s.lock_version == ^version
+      where: s.workflow_id == ^workflow_id and s.lock_version == ^version,
+      preload: [triggers: [:webhook_auth_methods]]
     )
     |> Repo.one()
   end
