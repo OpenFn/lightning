@@ -969,7 +969,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
       {:noreply,
        socket
-       |> apply_params(next_params)
+       |> apply_params(next_params, :workflow)
        |> push_patches_applied(initial_params)}
     else
       :is_initial_edge ->
@@ -1470,8 +1470,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
     |> assign(snapshot: snapshot)
     |> assign(snapshot_version_tag: snapshot_version_tag)
     |> assign_changeset(changeset)
-
-    # |> apply_params(socket.assigns.workflow_params)
   end
 
   defp apply_params(socket, params, type) do
