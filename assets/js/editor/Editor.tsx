@@ -10,7 +10,7 @@ import { initiateSaveAndRun } from '../common';
 import dts_es5 from './lib/es5.min.dts';
 
 export const DEFAULT_TEXT = `
-// Check out the Job Writing guide for help getting started:
+// Check out the Job Writing Guide for help getting started:
 // https://docs.openfn.org/documentation/jobs/job-writing-guide
 `;
 
