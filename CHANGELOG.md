@@ -19,6 +19,12 @@ and this project adheres to
 
 ### Changed
 
+### Fixed
+
+## [v2.6.1] - 2024-06-12
+
+### Changed
+
 - Erlang to 26.2.5
 - Return 403s when Provisioning API fails because of usage limits
   [#2182](https://github.com/OpenFn/lightning/pull/2182)
