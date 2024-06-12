@@ -18,6 +18,17 @@ defmodule Lightning.KafkaTesting.Utils do
     Supervisor.which_children(supervisor)
   end
 
+  def seed_database() do
+    # TODO Not sure if all of these are strictly necessary
+    {:ok, _} = Application.ensure_all_started(:logger);
+    {:ok, _} = Application.ensure_all_started(:ecto);
+    {:ok, _} = Application.ensure_all_started(:ecto_sql);
+    {:ok, _} = Application.ensure_all_started(:postgrex);
+    {:ok, _} = Lightning.Repo.start_link();
+
+    Lightning.Demo.reset_demo()
+  end
+
   def setup(opts \\ []) do
     group_id = opts |> Keyword.get(:group_id, "15-may-group")
     hosts =
