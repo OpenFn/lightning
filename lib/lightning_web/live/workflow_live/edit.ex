@@ -876,7 +876,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
     %{changeset: prev_changeset, project: project, workflow: workflow} =
       socket.assigns
 
-    {_type, next_changeset, version} = switch_changeset(socket)
+    {next_changeset, version} = switch_changeset(socket)
 
     prev_params = WorkflowParams.to_map(prev_changeset)
     next_params = WorkflowParams.to_map(next_changeset)
@@ -889,10 +889,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
       socket.assigns.query_params
       |> Map.reject(fn {_k, v} -> is_nil(v) end)
       |> Map.put("v", lock_version)
-
-    # send_form_changed(%{
-    #   Atom.to_string(type) => WorkflowParams.to_map(next_changeset)
-    # })
 
     {:noreply,
      socket
@@ -1176,8 +1172,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
       can_edit_workflow: can_edit_workflow,
       can_run_workflow: can_run_workflow
     } = socket.assigns
-
-    IO.inspect(socket.assigns.changeset, label: "THE CHANGESET")
 
     socket = socket |> apply_params(workflow_params, :workflow)
 
@@ -1536,10 +1530,10 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
     case changeset do
       %Ecto.Changeset{data: %Snapshot{}} ->
-        {:workflow, Ecto.Changeset.change(workflow), "latest"}
+        {Ecto.Changeset.change(workflow), "latest"}
 
       %Ecto.Changeset{data: %Workflow{}} ->
-        {:snapshot, Ecto.Changeset.change(snapshot), snapshot.id}
+        {Ecto.Changeset.change(snapshot), snapshot.id}
     end
   end
 
@@ -1557,7 +1551,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
     next_params = socket.assigns.workflow_params
 
     patches =
-      WorkflowParams.to_patches(initial_params, next_params) |> IO.inspect()
+      WorkflowParams.to_patches(initial_params, next_params)
 
     socket
     |> push_event("patches-applied", %{patches: patches})

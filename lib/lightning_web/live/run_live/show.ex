@@ -58,6 +58,14 @@ defmodule LightningWeb.RunLive.Show do
                       </span>
                       <.icon name="hero-arrow-up-right" class="h-2 w-2 float-right" />
                     </.link>
+                    <LightningWeb.WorkflowLive.JobView.snapshot_version_chip
+                      snapshot={run.snapshot}
+                      version={
+                        if run.snapshot.lock_version != @workflow.lock_version,
+                          do: run.snapshot.id,
+                          else: "latest"
+                      }
+                    />
                   </:value>
                 </.list_item>
                 <.list_item>

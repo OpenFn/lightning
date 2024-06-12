@@ -107,6 +107,9 @@ export default {
         const { attributeName, oldValue } = mutation as AttributeMutationRecord;
         const newValue = this.el.getAttribute(attributeName);
 
+        console.log('OLD VALUE', oldValue);
+        console.log('NEW VALUE', newValue);
+
         if (oldValue !== newValue) {
           this.render();
         }
@@ -114,7 +117,12 @@ export default {
     });
 
     this.observer.observe(this.el, {
-      attributeFilter: ['data-adaptor', 'data-change-event'],
+      attributeFilter: [
+        'data-adaptor',
+        'data-change-event',
+        'data-disabled',
+        'data-source',
+      ],
       attributeOldValue: true,
     });
   },

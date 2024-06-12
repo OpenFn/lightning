@@ -272,7 +272,6 @@ export default function Editor({
       ...defaultOptions,
       overflowWidgetsDomNode: overflowNode,
       fixedOverflowWidgets: true,
-      readOnly: disabled,
     });
 
     return () => {
@@ -313,7 +312,10 @@ export default function Editor({
         defaultPath="/job.js"
         loading={<div className="text-white">Loading...</div>}
         value={source || DEFAULT_TEXT}
-        options={options}
+        options={{
+          ...options,
+          readOnly: disabled,
+        }}
         onMount={handleEditorDidMount}
         onChange={handleSourceChange}
       />
