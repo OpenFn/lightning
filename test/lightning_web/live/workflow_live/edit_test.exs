@@ -1,4 +1,6 @@
 defmodule LightningWeb.WorkflowLive.EditTest do
+  # alias Lightning.Workflows
+  alias Lightning.Workflows
   alias Lightning.Repo
   use LightningWeb.ConnCase, async: true
   import Phoenix.LiveViewTest
@@ -17,16 +19,22 @@ defmodule LightningWeb.WorkflowLive.EditTest do
   describe "New credential from project context " do
     setup %{project: project} do
       %{job: job} = workflow_job_fixture(project_id: project.id)
-      %{job: job}
+      workflow = Repo.get(Workflow, job.workflow_id)
+      {:ok, snapshot} = Workflows.Snapshot.get_or_create_latest_for(workflow)
+      %{job: job, workflow: workflow, snapshot: snapshot}
     end
 
     test "open credential modal from the job inspector (edit_workflow)", %{
       conn: conn,
       project: project,
-      job: job
+      job: job,
+      workflow: workflow
     } do
       {:ok, view, _html} =
-        live(conn, ~p"/projects/#{project.id}/w/#{job.workflow_id}?s=#{job.id}")
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w/#{job.workflow_id}?s=#{job.id}&v=#{workflow.lock_version}"
+        )
 
       assert has_element?(view, "#job-pane-#{job.id}")
 
@@ -40,10 +48,14 @@ defmodule LightningWeb.WorkflowLive.EditTest do
     test "create new credential from job inspector and update the job form", %{
       conn: conn,
       project: project,
-      job: job
+      job: job,
+      workflow: workflow
     } do
       {:ok, view, _html} =
-        live(conn, ~p"/projects/#{project.id}/w/#{job.workflow_id}?s=#{job.id}")
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w/#{job.workflow_id}?s=#{job.id}&v=#{workflow.lock_version}"
+        )
 
       view |> CredentialLiveHelpers.select_credential_type("raw")
       view |> CredentialLiveHelpers.click_continue()
@@ -195,6 +207,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       click_save(view)
 
       assert %{id: workflow_id} =
+               workflow =
                Lightning.Repo.one(
                  from w in Workflow,
                    where:
@@ -203,9 +216,12 @@ defmodule LightningWeb.WorkflowLive.EditTest do
                          ^workflow_name
                )
 
-      #
-      %{"info" => "Workflow saved"} =
-        assert_redirected(view, ~p"/projects/#{project.id}/w/#{workflow_id}")
+      assert_patched(
+        view,
+        ~p"/projects/#{project.id}/w/#{workflow_id}?#{[m: "expand", s: job.id, v: workflow.lock_version]}"
+      )
+
+      render(view) =~ "Workflow saved"
 
       # workflow updated event is emitted
       assert_received %Lightning.Workflows.Events.WorkflowUpdated{
@@ -235,7 +251,10 @@ defmodule LightningWeb.WorkflowLive.EditTest do
         workflow_fixture(name: "A random workflow", project_id: project.id)
 
       {:ok, view, _html} =
-        live(conn, ~p"/projects/#{project.id}/w/#{workflow.id}")
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version]}"
+        )
 
       assert view |> has_element?(~s(input[name="workflow[name]"]))
 
@@ -266,11 +285,14 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       workflow: workflow
     } do
       {:ok, view, _html} =
-        live(conn, ~p"/projects/#{project.id}/w/#{workflow.id}")
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version]}"
+        )
 
       job = workflow.jobs |> Enum.at(1)
 
-      view |> select_node(job)
+      view |> select_node(job, workflow.lock_version)
 
       view |> click_edit(job)
 
@@ -291,7 +313,10 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       workflow: workflow
     } do
       {:ok, view, _html} =
-        live(conn, ~p"/projects/#{project.id}/w/#{workflow.id}")
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version]}"
+        )
 
       assert view |> page_title() =~ workflow.name
 
@@ -299,7 +324,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       job_2 = workflow.jobs |> Enum.at(1)
 
-      view |> select_node(job_2)
+      view |> select_node(job_2, workflow.lock_version)
       view |> fill_job_fields(job_2, %{name: ""})
 
       assert view |> job_form_has_error(job_2, "name", "can't be blank")
@@ -319,14 +344,19 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       workflow: workflow
     } do
       {:ok, view, _html} =
-        live(conn, ~p"/projects/#{project.id}/w/#{workflow.id}")
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version]}"
+        )
 
-      form_html = view |> select_node(Enum.at(workflow.jobs, 0))
+      form_html =
+        view |> select_node(Enum.at(workflow.jobs, 0), workflow.lock_version)
 
       assert form_html =~ "Job Name"
       refute form_html =~ "Path"
 
-      form_html = view |> select_node(Enum.at(workflow.edges, 0))
+      form_html =
+        view |> select_node(Enum.at(workflow.edges, 0), workflow.lock_version)
 
       assert form_html =~ "Path"
 
@@ -334,7 +364,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
                ~S[<option selected="selected" value="always">Always</option><option value="js_expression">Matches a Javascript Expression</option></select>]
 
       edge_on_edit = Enum.at(workflow.edges, 1)
-      form_html = view |> select_node(edge_on_edit)
+      form_html = view |> select_node(edge_on_edit, workflow.lock_version)
 
       assert form_html =~
                ~S[<option selected="selected" value="on_job_success">On Success</option>]
@@ -385,10 +415,14 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
     @tag role: :editor
     test "can delete a job", %{conn: conn, project: project, workflow: workflow} do
-      {:ok, view, _html} = live(conn, ~p"/projects/#{project}/w/#{workflow}")
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project}/w/#{workflow}?#{[v: workflow.lock_version]}"
+        )
 
       [job_1, job_2] = workflow.jobs
-      view |> select_node(job_1)
+      view |> select_node(job_1, workflow.lock_version)
 
       assert view |> delete_job_button_is_disabled?(job_1)
 
@@ -396,8 +430,12 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       assert view |> force_event(:delete_node, job_1) =~
                "Delete all descendant steps first."
 
-      view |> select_node(job_2)
-      assert_patched(view, ~p"/projects/#{project}/w/#{workflow}?s=#{job_2}")
+      view |> select_node(job_2, workflow.lock_version)
+
+      assert_patched(
+        view,
+        ~p"/projects/#{project}/w/#{workflow}?s=#{job_2}&v=#{workflow.lock_version}"
+      )
 
       refute view |> delete_job_button_is_disabled?(job_2)
 
@@ -417,14 +455,18 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       project: project,
       workflow: workflow
     } do
-      {:ok, view, _html} = live(conn, ~p"/projects/#{project}/w/#{workflow}")
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project}/w/#{workflow}?#{[v: workflow.lock_version]}"
+        )
 
       [trigger_edge, other_edge] = workflow.edges
 
-      assert view |> select_node(other_edge) =~
+      assert view |> select_node(other_edge, workflow.lock_version) =~
                "Delete Path"
 
-      refute view |> select_node(trigger_edge) =~
+      refute view |> select_node(trigger_edge, workflow.lock_version) =~
                "Delete Path"
 
       assert view |> force_event(:delete_edge, trigger_edge) =~
@@ -437,18 +479,22 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       project: project,
       workflow: workflow
     } do
-      {:ok, view, _html} = live(conn, ~p"/projects/#{project}/w/#{workflow}")
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project}/w/#{workflow}?#{[v: workflow.lock_version]}"
+        )
 
       [_trigger_edge, other_edge] = workflow.edges
 
-      assert view |> select_node(other_edge) =~
+      assert view |> select_node(other_edge, workflow.lock_version) =~
                "Delete Path"
 
-      view |> select_node(other_edge)
+      view |> select_node(other_edge, workflow.lock_version)
 
       assert_patched(
         view,
-        ~p"/projects/#{project}/w/#{workflow}?s=#{other_edge}"
+        ~p"/projects/#{project}/w/#{workflow}?s=#{other_edge}&v=#{workflow.lock_version}"
       )
 
       view |> click_delete_edge(other_edge)
@@ -466,18 +512,22 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       project: project,
       workflow: workflow
     } do
-      {:ok, view, _html} = live(conn, ~p"/projects/#{project}/w/#{workflow}")
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project}/w/#{workflow}?#{[v: workflow.lock_version]}"
+        )
 
       [_trigger_edge, other_edge] = workflow.edges
 
-      assert view |> select_node(other_edge) =~
+      assert view |> select_node(other_edge, workflow.lock_version) =~
                "Delete Path"
 
-      view |> select_node(other_edge)
+      view |> select_node(other_edge, workflow.lock_version)
 
       assert_patched(
         view,
-        ~p"/projects/#{project}/w/#{workflow}?s=#{other_edge}"
+        ~p"/projects/#{project}/w/#{workflow}?s=#{other_edge}&v=#{workflow.lock_version}"
       )
 
       assert view |> delete_edge_button_is_disabled?(other_edge)
@@ -506,9 +556,15 @@ defmodule LightningWeb.WorkflowLive.EditTest do
         |> with_edge({trigger, job})
         |> insert()
 
-      {:ok, view, _html} = live(conn, ~p"/projects/#{project}/w/#{workflow}")
+      {:ok, _snapshot} = Workflows.Snapshot.get_or_create_latest_for(workflow)
 
-      view |> select_node(job)
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project}/w/#{workflow}?#{[v: workflow.lock_version]}"
+        )
+
+      view |> select_node(job, workflow.lock_version)
 
       assert view |> delete_job_button_is_disabled?(job)
 
@@ -538,16 +594,22 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       insert(:step, job: job_b)
 
-      {:ok, view, _html} = live(conn, ~p"/projects/#{project}/w/#{workflow}")
+      {:ok, _snapshot} = Workflows.Snapshot.get_or_create_latest_for(workflow)
 
-      view |> select_node(job_b)
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project}/w/#{workflow}?#{[v: workflow.lock_version]}"
+        )
+
+      view |> select_node(job_b, workflow.lock_version)
 
       assert view |> delete_job_button_is_disabled?(job_b)
 
       assert view |> force_event(:delete_node, job_b) =~
                "You can&#39;t delete a step with associated history"
 
-      view |> select_node(job_c)
+      view |> select_node(job_c, workflow.lock_version)
 
       refute view |> delete_job_button_is_disabled?(job_b)
     end
@@ -573,8 +635,13 @@ defmodule LightningWeb.WorkflowLive.EditTest do
         |> with_edge({job_b, job_c})
         |> insert()
 
+      {:ok, _snapshot} = Workflows.Snapshot.get_or_create_latest_for(workflow)
+
       {:ok, view, html} =
-        live(conn, ~p"/projects/#{project}/w/#{workflow}?s=#{job_a}")
+        live(
+          conn,
+          ~p"/projects/#{project}/w/#{workflow}?s=#{job_a}&v=#{workflow.lock_version}"
+        )
 
       assert view |> delete_job_button_is_disabled?(job_a)
 
@@ -585,7 +652,10 @@ defmodule LightningWeb.WorkflowLive.EditTest do
                "Delete all descendant steps first"
 
       {:ok, view, html} =
-        live(conn, ~p"/projects/#{project}/w/#{workflow}?s=#{job_b}")
+        live(
+          conn,
+          ~p"/projects/#{project}/w/#{workflow}?s=#{job_b}&v=#{workflow.lock_version}"
+        )
 
       assert view |> delete_job_button_is_disabled?(job_b)
 
@@ -603,13 +673,16 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       workflow: workflow
     } do
       {:ok, view, _html} =
-        live(conn, ~p"/projects/#{project.id}/w/#{workflow.id}")
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version]}"
+        )
 
-      view |> select_node(workflow.triggers |> Enum.at(0))
+      view |> select_node(workflow.triggers |> Enum.at(0), workflow.lock_version)
 
       assert view |> input_is_disabled?("[name='workflow[triggers][0][type]']")
 
-      view |> select_node(workflow.edges |> Enum.at(0))
+      view |> select_node(workflow.edges |> Enum.at(0), workflow.lock_version)
 
       assert view
              |> input_is_disabled?("[name='workflow[edges][0][condition_type]']")
@@ -617,7 +690,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       assert view |> save_is_disabled?()
       job_1 = workflow.jobs |> Enum.at(0)
 
-      view |> select_node(job_1)
+      view |> select_node(job_1, workflow.lock_version)
 
       assert view |> input_is_disabled?(job_1, "name")
 
@@ -660,7 +733,10 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       assert edge.enabled
 
       {:ok, view, html} =
-        live(conn, ~p"/projects/#{project.id}/w/#{workflow.id}?s=#{edge.id}")
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w/#{workflow.id}?s=#{edge.id}&v=#{workflow.lock_version}"
+        )
 
       idx = get_index_of_edge(view, edge)
 

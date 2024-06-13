@@ -4,8 +4,6 @@ defmodule LightningWeb.Components.Common do
 
   alias Phoenix.LiveView.JS
 
-  attr :icon_classes, :string, default: "h-4 w-4 inline-block mr-1"
-
   attr :id, :string, required: true
   attr :inserted_at, :any, required: true
   attr :version, :any, required: true
@@ -38,6 +36,8 @@ defmodule LightningWeb.Components.Common do
     </div>
     """
   end
+
+  attr :icon_classes, :string, default: "h-4 w-4 inline-block mr-1"
 
   def version_chip(assigns) do
     {display, message, type} =

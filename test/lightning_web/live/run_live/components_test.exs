@@ -314,8 +314,6 @@ defmodule LightningWeb.RunLive.ComponentsTest do
         ]
       )
 
-    IO.inspect(run)
-
     step = List.first(run.steps)
 
     project_id = workflow.project_id

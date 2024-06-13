@@ -93,7 +93,7 @@ defmodule LightningWeb.WorkflowLive.JobView do
           } />
           <LightningWeb.Components.Common.snapshot_version_chip
             id="inspector-workflow-version"
-            inserted_at={@snapshot.inserted_at}
+            inserted_at={@snapshot && @snapshot.inserted_at}
             version={@snapshot_version}
           />
           <div class="flex flex-grow items-center justify-end">

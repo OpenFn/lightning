@@ -60,7 +60,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
             <div class="mx-2"></div>
             <LightningWeb.Components.Common.snapshot_version_chip
               id="canvas-workflow-version"
-              inserted_at={@snapshot.inserted_at}
+              inserted_at={@snapshot && @snapshot.inserted_at}
               version={@snapshot_version_tag}
             />
           </:title>
@@ -497,7 +497,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
   defp close_url(assigns, type, selection) do
     query_params = %{
       "a" => assigns[:selected_run],
-      "v" => assigns[:snapshot] && assigns[:snapshot].lock_version
+      "v" => Ecto.Changeset.get_field(assigns[:changeset], :lock_version)
     }
 
     query_params =
@@ -1635,14 +1635,13 @@ defmodule LightningWeb.WorkflowLive.Edit do
     %{query_params: query_params, project: project, workflow: workflow} =
       socket.assigns
 
+    version =
+      Ecto.Changeset.get_field(socket.assigns.changeset, :lock_version)
+
     params =
       query_params
       |> Map.put("a", run.id)
-      |> Map.put(
-        "v",
-        Ecto.Changeset.get_field(socket.assigns.changeset, :lock_version)
-      )
-      |> Enum.into([])
+      |> Map.put("v", version)
 
     socket
     |> push_patch(to: ~p"/projects/#{project}/w/#{workflow}?#{params}")
