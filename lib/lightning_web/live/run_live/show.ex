@@ -15,8 +15,9 @@ defmodule LightningWeb.RunLive.Show do
 
   @impl true
   def render(assigns) do
-    assigns =
-      assigns |> assign(:no_step_selected?, is_nil(assigns.selected_step_id))
+    no_step_selected? = is_nil(assigns.selected_step_id)
+
+    assigns = assign(assigns, :no_step_selected?, no_step_selected?)
 
     ~H"""
     <LayoutComponents.page_content>
@@ -27,6 +28,19 @@ defmodule LightningWeb.RunLive.Show do
             <span class="pl-2 font-light">
               <%= display_short_uuid(@id) %>
             </span>
+            <div class="mx-2"></div>
+            <.async_result :let={run} assign={@run}>
+              <LightningWeb.Components.Common.snapshot_version_chip
+                id="run-workflow-version"
+                inserted_at={run.snapshot.inserted_at}
+                version={
+                  if run.snapshot.lock_version ==
+                       @workflow.lock_version,
+                     do: "latest",
+                     else: String.slice(run.snapshot.id, 0..6)
+                }
+              />
+            </.async_result>
           </:title>
         </LayoutComponents.header>
       </:header>
@@ -58,14 +72,6 @@ defmodule LightningWeb.RunLive.Show do
                       </span>
                       <.icon name="hero-arrow-up-right" class="h-2 w-2 float-right" />
                     </.link>
-                    <LightningWeb.WorkflowLive.JobView.snapshot_version_chip
-                      snapshot={run.snapshot}
-                      version={
-                        if run.snapshot.lock_version != @workflow.lock_version,
-                          do: run.snapshot.id,
-                          else: "latest"
-                      }
-                    />
                   </:value>
                 </.list_item>
                 <.list_item>

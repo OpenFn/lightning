@@ -6,6 +6,39 @@ defmodule LightningWeb.Components.Common do
 
   attr :icon_classes, :string, default: "h-4 w-4 inline-block mr-1"
 
+  attr :id, :string, required: true
+  attr :inserted_at, :any, required: true
+  attr :version, :any, required: true
+
+  def snapshot_version_chip(assigns) do
+    tooltip =
+      if assigns.version == "latest",
+        do: "This is the latest version of the workflow.",
+        else:
+          "You are viewing a snapshot of this workflow that was made on #{Lightning.Helpers.format_date(assigns.inserted_at)}"
+
+    styles =
+      if assigns.version == "latest",
+        do: "bg-blue-100 text-blue-800",
+        else: "bg-yellow-100 text-yellow-800"
+
+    assigns = assign(assigns, tooltip: tooltip, styles: styles)
+
+    ~H"""
+    <div id={"#{@id}-container"} class="flex items-baseline text-sm font-normal">
+      <span
+        id={@id}
+        phx-hook="Tooltip"
+        data-placement="bottom"
+        aria-label={@tooltip}
+        class={"inline-flex items-center rounded-md px-2 py-1 text-xs font-medium #{@styles}"}
+      >
+        <%= @version %>
+      </span>
+    </div>
+    """
+  end
+
   def version_chip(assigns) do
     {display, message, type} =
       Lightning.release()

@@ -58,8 +58,9 @@ defmodule LightningWeb.WorkflowLive.Edit do
           <:title>
             <.workflow_name_field form={@workflow_form} />
             <div class="mx-2"></div>
-            <LightningWeb.WorkflowLive.JobView.snapshot_version_chip
-              snapshot={@snapshot}
+            <LightningWeb.Components.Common.snapshot_version_chip
+              id="canvas-workflow-version"
+              inserted_at={@snapshot.inserted_at}
               version={@snapshot_version_tag}
             />
           </:title>
@@ -107,7 +108,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
             <LightningWeb.WorkflowLive.JobView.job_edit_view
               job={@selected_job}
               snapshot={@snapshot}
-              snapshot_version_tag={@snapshot_version_tag}
+              snapshot_version={@snapshot_version_tag}
               current_user={@current_user}
               project={@project}
               socket={@socket}
@@ -1049,7 +1050,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
           query_params =
             socket.assigns.query_params
-            |> Map.drop(["a"])
+            # |> Map.drop(["a"])
             |> Map.put("v", workflow.lock_version)
             |> Map.reject(fn {_key, value} -> is_nil(value) end)
 
@@ -1479,7 +1480,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
       if snapshot.lock_version == workflow.lock_version do
         {Ecto.Changeset.change(workflow), "latest"}
       else
-        {Ecto.Changeset.change(snapshot), snapshot.id}
+        {Ecto.Changeset.change(snapshot), String.slice(snapshot.id, 0..6)}
       end
 
     socket
@@ -1548,7 +1549,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
         {Ecto.Changeset.change(workflow), "latest"}
 
       %Ecto.Changeset{data: %Workflow{}} ->
-        {Ecto.Changeset.change(snapshot), snapshot.id}
+        {Ecto.Changeset.change(snapshot), String.slice(snapshot.id, 0..6)}
     end
   end
 

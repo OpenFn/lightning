@@ -106,10 +106,6 @@ export default {
       mutations.forEach(mutation => {
         const { attributeName, oldValue } = mutation as AttributeMutationRecord;
         const newValue = this.el.getAttribute(attributeName);
-
-        console.log('OLD VALUE', oldValue);
-        console.log('NEW VALUE', newValue);
-
         if (oldValue !== newValue) {
           this.render();
         }

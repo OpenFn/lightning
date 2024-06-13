@@ -4,7 +4,6 @@ defmodule LightningWeb.WorkflowLive.JobView do
   import LightningWeb.WorkflowLive.Components
 
   alias Lightning.Credentials
-  alias Lightning.Helpers
   alias LightningWeb.Components.Tabbed
   alias LightningWeb.WorkflowLive.EditorPane
 
@@ -62,7 +61,7 @@ defmodule LightningWeb.WorkflowLive.JobView do
   attr :socket, :any, required: true
   attr :follow_run_id, :any, default: nil
   attr :snapshot, :any, required: true
-  attr :snapshot_version_tag, :string, required: true
+  attr :snapshot_version, :any, required: true
 
   slot :footer
 
@@ -92,9 +91,10 @@ defmodule LightningWeb.WorkflowLive.JobView do
               @form[:project_credential_id] && @form[:project_credential_id].value
             )
           } />
-          <.snapshot_version_chip
-            snapshot={@snapshot}
-            version={@snapshot_version_tag}
+          <LightningWeb.Components.Common.snapshot_version_chip
+            id="inspector-workflow-version"
+            inserted_at={@snapshot.inserted_at}
+            version={@snapshot_version}
           />
           <div class="flex flex-grow items-center justify-end">
             <.link
@@ -126,7 +126,7 @@ defmodule LightningWeb.WorkflowLive.JobView do
           module={EditorPane}
           id={"job-editor-pane-#{@job.id}"}
           form={@form}
-          disabled={@snapshot_version_tag != "latest"}
+          disabled={disabled?(@form.source.data)}
           class="h-full"
         />
       </.collapsible_panel>
@@ -180,31 +180,8 @@ defmodule LightningWeb.WorkflowLive.JobView do
     """
   end
 
-  def snapshot_version_chip(assigns) do
-    ~H"""
-    <div
-      id="modal-header-workflow-snapshot-block"
-      class="flex items-baseline text-sm font-normal"
-    >
-      <span
-        id="workflow-snapshot-version-chip"
-        phx-hook="Tooltip"
-        data-placement="bottom"
-        aria-label={
-          if @version == "latest",
-            do: "This is the latest version of the workflow.",
-            else:
-              "You are viewing a snapshot of this workflow that was made on #{Helpers.format_date(@snapshot.inserted_at)}"
-        }
-        class={"inline-flex items-center rounded-md bg-#{if @version == "latest", do: "blue-100", else: "yellow-100"} px-2 py-1 text-xs font-medium text-#{if @version == "latest", do: "blue-800", else: "yellow-800"}"}
-      >
-        <%= if @version == "latest",
-          do: @version,
-          else: String.slice(@version, 0..6) %>
-      </span>
-    </div>
-    """
-  end
+  defp disabled?(%Lightning.Workflows.Job{}), do: false
+  defp disabled?(%Lightning.Workflows.Snapshot.Job{}), do: true
 
   defp credential_block(assigns) do
     ~H"""
