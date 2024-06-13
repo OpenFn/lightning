@@ -84,7 +84,61 @@ defmodule Lightning.Factories do
     %Lightning.Invocation.Step{
       id: fn -> Ecto.UUID.generate() end,
       job: build(:job),
-      input_dataclip: build(:dataclip)
+      input_dataclip: build(:dataclip),
+      snapshot: build(:snapshot)
+    }
+  end
+
+  def snapshot_factory do
+    %Lightning.Workflows.Snapshot{
+      name: sequence(:name, &"snapshot-#{&1}"),
+      lock_version: 1,
+      workflow: build(:workflow),
+      jobs: build_list(3, :snapshot_job),
+      triggers: build_list(2, :snapshot_trigger),
+      edges: build_list(2, :snapshot_edge)
+    }
+  end
+
+  def snapshot_job_factory do
+    %Lightning.Workflows.Snapshot.Job{
+      id: Ecto.UUID.generate(),
+      name: sequence(:job_name, &"job-#{&1}"),
+      body: "console.log('hello!');",
+      adaptor: "some_adaptor",
+      project_credential_id: Ecto.UUID.generate(),
+      inserted_at: DateTime.utc_now(),
+      updated_at: DateTime.utc_now()
+    }
+  end
+
+  def snapshot_trigger_factory do
+    %Lightning.Workflows.Snapshot.Trigger{
+      id: Ecto.UUID.generate(),
+      comment: "A sample trigger",
+      custom_path: "some/path",
+      cron_expression: "* * * * *",
+      enabled: true,
+      type: :webhook,
+      has_auth_method: false,
+      webhook_auth_methods: build_list(1, :webhook_auth_method),
+      inserted_at: DateTime.utc_now(),
+      updated_at: DateTime.utc_now()
+    }
+  end
+
+  def snapshot_edge_factory do
+    %Lightning.Workflows.Snapshot.Edge{
+      id: Ecto.UUID.generate(),
+      source_job_id: Ecto.UUID.generate(),
+      source_trigger_id: Ecto.UUID.generate(),
+      target_job_id: Ecto.UUID.generate(),
+      condition_type: :always,
+      condition_expression: "true",
+      condition_label: "Always",
+      enabled: true,
+      inserted_at: DateTime.utc_now(),
+      updated_at: DateTime.utc_now()
     }
   end
 
@@ -99,6 +153,7 @@ defmodule Lightning.Factories do
   def run_factory do
     %Lightning.Run{
       id: fn -> Ecto.UUID.generate() end,
+      snapshot: build(:snapshot),
       options: %Lightning.Runs.RunOptions{}
     }
   end
@@ -150,7 +205,8 @@ defmodule Lightning.Factories do
   def workorder_factory do
     %Lightning.WorkOrder{
       id: fn -> Ecto.UUID.generate() end,
-      workflow: build(:workflow)
+      workflow: build(:workflow),
+      snapshot: build(:snapshot)
     }
   end
 
