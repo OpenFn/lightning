@@ -167,7 +167,7 @@ export default ({
         <div
           className={`${
             showPanel ? 'flex flex-1 flex-col z-10 overflow-auto' : ''
-          } bg-white`}
+          } ${vertical ? 'pt-2' : 'pl-2'} bg-white`}
         >
           <div
             className={[
@@ -178,7 +178,6 @@ export default ({
               'w-full',
               'justify-items-end',
               'sticky',
-              vertical ? 'pt-2' : 'pl-2',
             ].join(' ')}
           >
             <Tabs
@@ -192,7 +191,7 @@ export default ({
             />
             <div
               className={`flex select-none flex-1 text-right py-2 ${
-                !showPanel && !vertical ? 'px-2 flex-col-reverse' : 'flex-row'
+                !showPanel && !vertical ? 'flex-col-reverse' : 'flex-row'
               }`}
             >
               <ViewColumnsIcon
@@ -211,7 +210,7 @@ export default ({
             <div
               className={`flex flex-1 ${
                 vertical ? 'overflow-auto' : 'overflow-hidden'
-              } px-2`}
+              }`}
             >
               {selectedTab === 'docs' && <Docs adaptor={adaptor} />}
               {selectedTab === 'metadata' && (

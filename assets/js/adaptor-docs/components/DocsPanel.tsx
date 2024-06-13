@@ -55,7 +55,7 @@ const DocsPanel = ({ specifier, onInsert }: DocsPanelProps) => {
   }
 
   return (
-    <div className="block m-2 w-full overflow-auto">
+    <div className="block w-full overflow-auto ml-1">
       <h1 className="h1 text-lg font-bold text-secondary-700 mb-2">
         {name} ({version})
       </h1>
