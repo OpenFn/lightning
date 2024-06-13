@@ -21,6 +21,10 @@ and this project adheres to
 
 ### Fixed
 
+## [v2.6.2] - 2024-06-13
+
+### Fixed
+
 - Fix vanishing Docs panel when Editor panel is collapsed and opened again
   [#2195](https://github.com/OpenFn/lightning/issues/2195)
 - Maintain tab when RunViewer remounts/push state drops tab hash
