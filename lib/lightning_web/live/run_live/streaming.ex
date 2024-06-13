@@ -209,14 +209,6 @@ defmodule LightningWeb.RunLive.Streaming do
     quote do
       import unquote(__MODULE__)
 
-      # def maybe_load_input_dataclip(socket) do
-      #   maybe_load_input_dataclip(socket)
-      # end
-
-      # def maybe_load_output_dataclip(socket) do
-      #   maybe_load_output_dataclip(socket)
-      # end
-
       def apply_selected_step_id(socket, id) do
         case id do
           nil ->

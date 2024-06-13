@@ -37,7 +37,8 @@ defmodule Lightning.Runs.Handlers do
     def call(run, params) do
       with {:ok, attrs} <- new(run, params) |> apply_action(:validate),
            {:ok, step} <- insert(attrs) do
-        run = Runs.get(attrs.run_id, include: [:workflow])
+        run = Runs.get(attrs.run_id, include: [:workflow, :snapshot])
+        step = Repo.preload(step, :snapshot)
         WorkOrders.Events.run_updated(run.workflow.project_id, run)
         Runs.Events.step_started(attrs.run_id, step)
 
@@ -202,6 +203,7 @@ defmodule Lightning.Runs.Handlers do
       with {:ok, complete_step} <-
              params |> new(options) |> apply_action(:validate),
            {:ok, step} <- update_step(complete_step, options) do
+        step = Repo.preload(step, :snapshot)
         Runs.Events.step_completed(complete_step.run_id, step)
 
         {:ok, step}

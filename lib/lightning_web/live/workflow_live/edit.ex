@@ -1050,6 +1050,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
           query_params =
             socket.assigns.query_params
+            # TODO: Talk to Ayodele about this !
             # |> Map.drop(["a"])
             |> Map.put("v", workflow.lock_version)
             |> Map.reject(fn {_key, value} -> is_nil(value) end)

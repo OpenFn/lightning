@@ -241,7 +241,9 @@ defmodule Lightning.Runs do
     |> Repo.transaction()
     |> tap(fn result ->
       with {:ok, %{runs: {_n, runs}}} <- result do
-        Enum.each(runs, &Events.run_updated/1)
+        runs
+        |> Enum.map(fn run -> Repo.preload(run, :snapshot) end)
+        |> Enum.each(&Events.run_updated/1)
       end
     end)
   end
