@@ -166,7 +166,7 @@ export default ({
         </div>
         <div
           className={`${
-            showPanel ? 'flex flex-1 flex-col z-10 overflow-auto' : ''
+            showPanel ? 'flex flex-1 flex-col z-10 overflow-hidden' : ''
           } ${vertical ? 'pt-2' : 'pl-2'} bg-white`}
         >
           <div
