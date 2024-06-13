@@ -284,7 +284,7 @@ defmodule Lightning.WorkOrders do
         join: s in assoc(a, :steps),
         where: s.id == ^step_id,
         preload: [
-          steps: [snapshot: [triggers: [:webhook_auth_methods]]],
+          steps: [snapshot: [triggers: :webhook_auth_methods]],
           work_order: [workflow: :edges]
         ]
       )
@@ -296,7 +296,7 @@ defmodule Lightning.WorkOrders do
         preload: [
           :job,
           :input_dataclip,
-          snapshot: [triggers: [:webhook_auth_methods]]
+          snapshot: [triggers: :webhook_auth_methods]
         ]
       )
       |> Repo.one()

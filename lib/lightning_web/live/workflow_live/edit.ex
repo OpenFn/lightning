@@ -432,7 +432,10 @@ defmodule LightningWeb.WorkflowLive.Edit do
                 <.trigger_form
                   form={tf}
                   on_change={&send_form_changed/1}
-                  disabled={!@can_edit_workflow}
+                  disabled={
+                    !@can_edit_workflow or
+                      @snapshot_version_tag != "latest"
+                  }
                   can_write_webhook_auth_method={@can_write_webhook_auth_method}
                   webhook_url={webhook_url(@selected_trigger)}
                   selected_trigger={@selected_trigger}
@@ -458,7 +461,10 @@ defmodule LightningWeb.WorkflowLive.Edit do
                 <!-- Show only the currently selected one -->
                 <.edge_form
                   form={ef}
-                  disabled={!@can_edit_workflow}
+                  disabled={
+                    !@can_edit_workflow or
+                      @snapshot_version_tag != "latest"
+                  }
                   cancel_url={close_url(assigns, :selected_edge, :unselect)}
                 />
               </div>
@@ -827,19 +833,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
           ])
 
         if workflow do
-          run_id = Map.get(params, "a")
-          job_id = Map.get(params, "s")
-
-          snapshot =
-            if run_id && job_id do
-              Invocation.get_step_for_run_and_job(
-                run_id,
-                job_id
-              )
-              |> Map.get(:snapshot)
-            else
-              Snapshot.get_by_version(workflow.id, version)
-            end
+          {snapshot, run_id} = get_snapshot_and_run_id(params, workflow, version)
 
           socket
           |> assign(selected_run: run_id)
@@ -851,6 +845,29 @@ defmodule LightningWeb.WorkflowLive.Edit do
           |> push_redirect(to: ~p"/projects/#{socket.assigns.project}/w")
         end
     end
+  end
+
+  def get_snapshot_and_run_id(params, workflow, version) do
+    run_id = Map.get(params, "a")
+
+    snapshot =
+      case run_id do
+        nil -> fetch_snapshot_by_version(workflow.id, version)
+        _ -> fetch_run_snapshot(run_id)
+      end
+
+    {snapshot, run_id}
+  end
+
+  defp fetch_run_snapshot(run_id) do
+    case Runs.get(run_id, include: [snapshot: [triggers: :webhook_auth_methods]]) do
+      nil -> {:error, :not_found}
+      run -> run.snapshot
+    end
+  end
+
+  defp fetch_snapshot_by_version(workflow_id, version) do
+    Snapshot.get_by_version(workflow_id, version)
   end
 
   defp remove_edges_from_params(initial_params, edges_to_delete, id) do

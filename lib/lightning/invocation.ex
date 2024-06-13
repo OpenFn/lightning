@@ -95,7 +95,7 @@ defmodule Lightning.Invocation do
         join: a in assoc(s, :runs),
         on: a.id == ^run_id,
         where: s.job_id == ^job_id,
-        preload: [snapshot: [triggers: [:webhook_auth_methods]]]
+        preload: [snapshot: [triggers: :webhook_auth_methods]]
 
     Repo.one(query)
   end
@@ -423,10 +423,10 @@ defmodule Lightning.Invocation do
           steps: [
             :job,
             :input_dataclip,
-            snapshot: [triggers: [:webhook_auth_methods]]
+            snapshot: [triggers: :webhook_auth_methods]
           ]
         ],
-        snapshot: [triggers: [:webhook_auth_methods]]
+        snapshot: [triggers: :webhook_auth_methods]
       ],
       order_by: [desc_nulls_first: workorder.last_activity],
       distinct: true

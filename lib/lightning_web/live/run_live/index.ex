@@ -246,10 +246,10 @@ defmodule LightningWeb.RunLive.Index do
               steps: [
                 :job,
                 :input_dataclip,
-                snapshot: [triggers: [:webhook_auth_methods]]
+                snapshot: [triggers: :webhook_auth_methods]
               ]
             ],
-            snapshot: [triggers: [:webhook_auth_methods]]
+            snapshot: [triggers: :webhook_auth_methods]
           ]
         ],
         force: true
@@ -297,10 +297,10 @@ defmodule LightningWeb.RunLive.Index do
             steps: [
               :job,
               :input_dataclip,
-              snapshot: [triggers: [:webhook_auth_methods]]
+              snapshot: [triggers: :webhook_auth_methods]
             ]
           ],
-          snapshot: [triggers: [:webhook_auth_methods]]
+          snapshot: [triggers: :webhook_auth_methods]
         ],
         force: true
       )
