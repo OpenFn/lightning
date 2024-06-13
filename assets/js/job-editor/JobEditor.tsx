@@ -155,7 +155,7 @@ export default ({
     <>
       <div className="cursor-pointer"></div>
       <div className={`flex h-full flex-${vertical ? 'col' : 'row'}`}>
-        <div className="flex-1 rounded-md">
+        <div className="flex-1 rounded-md overflow-hidden">
           <Editor
             source={source}
             adaptor={adaptor}
@@ -166,8 +166,8 @@ export default ({
         </div>
         <div
           className={`${
-            showPanel ? 'flex flex-1 flex-col z-10 overflow-auto' : ''
-          } bg-white`}
+            showPanel ? 'flex flex-1 flex-col z-10 overflow-hidden' : ''
+          } ${vertical ? 'pt-2' : 'pl-2'} bg-white`}
         >
           <div
             className={[
@@ -178,7 +178,6 @@ export default ({
               'w-full',
               'justify-items-end',
               'sticky',
-              vertical ? 'pt-2' : 'pl-2',
             ].join(' ')}
           >
             <Tabs
@@ -192,7 +191,7 @@ export default ({
             />
             <div
               className={`flex select-none flex-1 text-right py-2 ${
-                !showPanel && !vertical ? 'px-2 flex-col-reverse' : 'flex-row'
+                !showPanel && !vertical ? 'flex-col-reverse' : 'flex-row'
               }`}
             >
               <ViewColumnsIcon
@@ -211,7 +210,7 @@ export default ({
             <div
               className={`flex flex-1 ${
                 vertical ? 'overflow-auto' : 'overflow-hidden'
-              } px-2`}
+              }`}
             >
               {selectedTab === 'docs' && <Docs adaptor={adaptor} />}
               {selectedTab === 'metadata' && (

@@ -21,6 +21,9 @@ and this project adheres to
 
 ### Fixed
 
+- Fix vanishing Docs panel when Editor panel is collapsed and opened again
+  [#2195](https://github.com/OpenFn/lightning/issues/2195)
+
 ## [v2.6.1] - 2024-06-12
 
 ### Changed
