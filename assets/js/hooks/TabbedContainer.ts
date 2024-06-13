@@ -13,6 +13,10 @@ function getHash() {
   return window.location.hash.replace('#', '') || null;
 }
 
+function getHashFromTab(tab: HTMLElement) {
+  return tab.getAttribute('aria-controls')?.replace('-panel', '') || null;
+}
+
 const TabbedContainer = {
   mounted(this: TabbedContainer) {
     this.defaultHash = this.el.dataset.defaultHash || null;
@@ -31,8 +35,6 @@ const TabbedContainer = {
     this.selectTab(getHash() || this.defaultHash);
   },
   updated() {
-    // console.log('TabbedContainer: updated', getHash());
-    // TODO: check to see if we need to do this, or if it interferes
     this.selectTab(getHash());
   },
   selectTab(nextHash: string | null) {
@@ -95,8 +97,26 @@ const TabbedSelector: PhoenixHook<{
 
     this.selectTab(getHash() || this.defaultHash);
   },
+  updated() {
+    const selected = this.el.querySelector<HTMLElement>(
+      '[aria-selected="true"]'
+    );
+
+    // If there is a currently selected tab, and the URL hash is not set,
+    // set the URL hash to the selected tab.
+    // This is useful when the user navigates to a page with a selected tab
+    // but the hash url is not set (the server isn't aware of hash state).
+    if (selected) {
+      let selectedTabHash = getHashFromTab(selected);
+
+      if (selectedTabHash && getHash() === null) {
+        window.location.hash = selectedTabHash;
+      }
+    } else {
+      this.selectTab(getHash() || this.defaultHash);
+    }
+  },
   selectTab(nextHash: string | null) {
-    console.debug('TabbedSelector: selectTab', nextHash);
     if (!nextHash) {
       return;
     }
@@ -147,7 +167,7 @@ const TabbedPanels: PhoenixHook<{
     this.showPanel(getHash() || this.defaultHash);
   },
   updated() {
-    this.showPanel(getHash());
+    this.showPanel(getHash() || this.defaultHash);
   },
   showPanel(nextHash: string | null) {
     if (!nextHash) {
