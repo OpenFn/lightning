@@ -376,6 +376,9 @@ defmodule LightningWeb.RunLive.Components do
               <.step_rerun_tag {assigns} />
             <% end %>
             <.link
+              id={"inspect-step-#{@step.id}"}
+              phx-hook="Tooltip"
+              aria-label="Inspect this step"
               class="cursor-pointer"
               navigate={
                 ~p"/projects/#{@project_id}/w/#{@step.snapshot.workflow_id}"
@@ -385,7 +388,6 @@ defmodule LightningWeb.RunLive.Components do
               <.icon
                 naked
                 name="hero-document-magnifying-glass-mini"
-                title="Inspect Step"
                 class="h-5 w-5"
               />
             </.link>
@@ -421,23 +423,17 @@ defmodule LightningWeb.RunLive.Components do
 
   defp step_rerun_tag(assigns) do
     assigns =
-      assign(assigns,
-        deleted: is_nil(assigns.step.job),
-        latest: assigns.workflow_version == assigns.step.snapshot.lock_version
-      )
+      assign(assigns, deleted: is_nil(assigns.step.job))
 
     ~H"""
     <%= if @step.input_dataclip && is_nil(@step.input_dataclip.wiped_at) do %>
       <span
         id={@step.id}
+        phx-hook="Tooltip"
         {if not @deleted do
-          if @latest do
-            ["phx-click": "rerun", "phx-value-run_id": @run.id, "phx-value-step_id": @step.id, title: "Rerun workflow from here"]
-          else
-            ["phx-click": "rerun", "phx-value-run_id": @run.id, "phx-value-step_id": @step.id, title: "Retries will be executed with the latest version of this workflow"]
-          end
+            ["phx-click": "rerun", "phx-value-run_id": @run.id, "phx-value-step_id": @step.id, "aria-label": "Rerun from this step with the latest version of this workflow"]
         else
-          [title: "This step has been deleted and cannot be retried. Try running from other steps"]
+          ["aria-label": "This step has been deleted and cannot be retried. Try running from other steps"]
         end}
       >
         <.icon

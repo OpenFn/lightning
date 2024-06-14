@@ -5,7 +5,6 @@ defmodule LightningWeb.Components.Common do
   alias Phoenix.LiveView.JS
 
   attr :id, :string, required: true
-  attr :inserted_at, :any, required: true
   attr :version, :string, required: true
   attr :tooltip, :string, required: false
 

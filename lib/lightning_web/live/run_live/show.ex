@@ -38,12 +38,11 @@ defmodule LightningWeb.RunLive.Show do
 
               tooltip =
                 if snapshot_version == "latest",
-                  do: "This run is based off the latest version of this workflow.",
+                  do: "This run is based on the latest version of this workflow.",
                   else:
-                    "This run is based off a snapshot of this workflow that was made on #{Lightning.Helpers.format_date(assigns.inserted_at)}" %>
+                    "This run is based on a snapshot of this workflow that was taken on #{Lightning.Helpers.format_date(run.snapshot.inserted_at)}" %>
               <LightningWeb.Components.Common.snapshot_version_chip
                 id="run-workflow-version"
-                inserted_at={run.snapshot.inserted_at}
                 version={snapshot_version}
                 tooltip={tooltip}
               />
