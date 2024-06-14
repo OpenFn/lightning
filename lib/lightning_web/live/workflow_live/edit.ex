@@ -62,6 +62,12 @@ defmodule LightningWeb.WorkflowLive.Edit do
               id="canvas-workflow-version"
               inserted_at={@snapshot && @snapshot.inserted_at}
               version={@snapshot_version_tag}
+              tooltip={
+                if @snapshot_version_tag == "latest",
+                  do: "This is the latest version of the workflow.",
+                  else:
+                    "You are viewing a snapshot of this workflow that was made on #{Lightning.Helpers.format_date(@snapshot.inserted_at)}"
+              }
             />
           </:title>
           <.snapshot_version_switcher

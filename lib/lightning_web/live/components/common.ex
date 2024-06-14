@@ -6,29 +6,24 @@ defmodule LightningWeb.Components.Common do
 
   attr :id, :string, required: true
   attr :inserted_at, :any, required: true
-  attr :version, :any, required: true
+  attr :version, :string, required: true
+  attr :tooltip, :string, required: false
 
   def snapshot_version_chip(assigns) do
-    tooltip =
-      if assigns.version == "latest",
-        do: "This is the latest version of the workflow.",
-        else:
-          "You are viewing a snapshot of this workflow that was made on #{Lightning.Helpers.format_date(assigns.inserted_at)}"
-
     styles =
       if assigns.version == "latest",
         do: "bg-blue-100 text-blue-800",
         else: "bg-yellow-100 text-yellow-800"
 
-    assigns = assign(assigns, tooltip: tooltip, styles: styles)
+    has_tooltip? = Map.has_key?(assigns, :tooltip)
+
+    assigns = assign(assigns, has_tooltip?: has_tooltip?, styles: styles)
 
     ~H"""
     <div id={"#{@id}-container"} class="flex items-baseline text-sm font-normal">
       <span
         id={@id}
-        phx-hook="Tooltip"
-        data-placement="bottom"
-        aria-label={@tooltip}
+        {if @has_tooltip?, do: ["phx-hook": "Tooltip", "data-placement": "bottom", "aria-label": @tooltip], else: []}
         class={"inline-flex items-center rounded-md px-2 py-1 text-xs font-medium #{@styles}"}
       >
         <%= @version %>

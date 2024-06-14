@@ -30,15 +30,22 @@ defmodule LightningWeb.RunLive.Show do
             </span>
             <div class="mx-2"></div>
             <.async_result :let={run} assign={@run}>
+              <% snapshot_version =
+                if run.snapshot.lock_version ==
+                     @workflow.lock_version,
+                   do: "latest",
+                   else: String.slice(run.snapshot.id, 0..6)
+
+              tooltip =
+                if snapshot_version == "latest",
+                  do: "This run is based off the latest version of this workflow.",
+                  else:
+                    "This run is based off a snapshot of this workflow that was made on #{Lightning.Helpers.format_date(assigns.inserted_at)}" %>
               <LightningWeb.Components.Common.snapshot_version_chip
                 id="run-workflow-version"
                 inserted_at={run.snapshot.inserted_at}
-                version={
-                  if run.snapshot.lock_version ==
-                       @workflow.lock_version,
-                     do: "latest",
-                     else: String.slice(run.snapshot.id, 0..6)
-                }
+                version={snapshot_version}
+                tooltip={tooltip}
               />
             </.async_result>
           </:title>

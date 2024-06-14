@@ -95,6 +95,12 @@ defmodule LightningWeb.WorkflowLive.JobView do
             id="inspector-workflow-version"
             inserted_at={@snapshot && @snapshot.inserted_at}
             version={@snapshot_version}
+            tooltip={
+              if @snapshot_version == "latest",
+                do: "This is the latest version of the job.",
+                else:
+                  "You are viewing a snapshot of this job that was made on #{Lightning.Helpers.format_date(@snapshot.inserted_at)}"
+            }
           />
           <div class="flex flex-grow items-center justify-end">
             <.link
