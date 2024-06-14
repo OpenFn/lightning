@@ -931,13 +931,15 @@ defmodule LightningWeb.WorkflowLive.Edit do
       can_edit_workflow: can_edit_workflow,
       has_child_edges: has_child_edges,
       is_first_job: is_first_job,
-      has_steps: has_steps
+      has_steps: has_steps,
+      snapshot_version_tag: tag
     } = socket.assigns
 
     with true <- can_edit_workflow || :not_authorized,
          true <- !has_child_edges || :has_child_edges,
          true <- !is_first_job || :is_first_job,
-         true <- !has_steps || :has_steps do
+         true <- !has_steps || :has_steps,
+         true <- tag == "latest" || :view_only do
       edges_to_delete =
         Ecto.Changeset.get_assoc(changeset, :edges, :struct)
         |> Enum.filter(&(&1.target_job_id == id))
@@ -971,6 +973,14 @@ defmodule LightningWeb.WorkflowLive.Edit do
            :error,
            "You can't delete a step that has already been ran."
          )}
+
+      :view_only ->
+        {:noreply,
+         socket
+         |> put_flash(
+           :error,
+           "Cannot delete a node in snapshot mode, switch to latest"
+         )}
     end
   end
 
@@ -979,11 +989,13 @@ defmodule LightningWeb.WorkflowLive.Edit do
       changeset: changeset,
       workflow_params: initial_params,
       can_edit_workflow: can_edit_workflow,
-      selected_edge: selected_edge
+      selected_edge: selected_edge,
+      snapshot_version_tag: tag
     } = socket.assigns
 
     with true <- can_edit_workflow || :not_authorized,
-         true <- is_nil(selected_edge.source_trigger_id) || :is_initial_edge do
+         true <- is_nil(selected_edge.source_trigger_id) || :is_initial_edge,
+         true <- tag == "latest" || :view_only do
       edges_to_delete =
         Ecto.Changeset.get_assoc(changeset, :edges, :struct)
         |> Enum.filter(&(&1.id == id))
@@ -1004,6 +1016,14 @@ defmodule LightningWeb.WorkflowLive.Edit do
         {:noreply,
          socket
          |> put_flash(:error, "You are not authorized to delete edges.")}
+
+      :view_only ->
+        {:noreply,
+         socket
+         |> put_flash(
+           :error,
+           "Cannot delete an edge in snapshot mode, switch to latest"
+         )}
     end
   end
 
@@ -1029,11 +1049,13 @@ defmodule LightningWeb.WorkflowLive.Edit do
     %{
       project: project,
       workflow_params: initial_params,
-      can_edit_workflow: can_edit_workflow
+      can_edit_workflow: can_edit_workflow,
+      snapshot_version_tag: tag
     } =
       socket.assigns
 
-    if can_edit_workflow do
+    with true <- can_edit_workflow || :not_authorized,
+         true <- tag == "latest" || :view_only do
       next_params =
         case params do
           %{"workflow" => params} ->
@@ -1056,7 +1078,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
           query_params =
             socket.assigns.query_params
             # TODO: Talk to Ayodele about this !
-            # |> Map.drop(["a"])
+            |> Map.drop(["a"])
             |> Map.put("v", workflow.lock_version)
             |> Map.reject(fn {_key, value} -> is_nil(value) end)
 
@@ -1081,9 +1103,15 @@ defmodule LightningWeb.WorkflowLive.Edit do
            |> push_patches_applied(initial_params)}
       end
     else
-      {:noreply,
-       socket
-       |> put_flash(:error, "You are not authorized to perform this action.")}
+      :view_only ->
+        {:noreply,
+         socket
+         |> put_flash(:error, "Cannot save in snapshot mode, switch to latest.")}
+
+      :not_authorized ->
+        {:noreply,
+         socket
+         |> put_flash(:error, "You are not authorized to perform this action.")}
     end
   end
 
@@ -1143,45 +1171,54 @@ defmodule LightningWeb.WorkflowLive.Edit do
       can_run_workflow: can_run_workflow?,
       current_user: current_user,
       changeset: changeset,
-      project: %{id: project_id}
+      project: %{id: project_id},
+      snapshot_version_tag: tag
     } = socket.assigns
 
-    if can_run_workflow? do
-      with :ok <-
-             UsageLimiter.limit_action(%Action{type: :new_run}, %Context{
-               project_id: project_id
-             }),
-           {:ok, workflow} <-
-             Helpers.save_workflow(%{changeset | action: :update}),
-           {:ok, run} <-
-             WorkOrders.retry(run_id, step_id, created_by: current_user) do
-        Runs.subscribe(run)
+    with true <- can_run_workflow? || :not_authorized,
+         true <- tag == "latest" || :view_only,
+         :ok <-
+           UsageLimiter.limit_action(%Action{type: :new_run}, %Context{
+             project_id: project_id
+           }),
+         {:ok, workflow} <-
+           Helpers.save_workflow(%{changeset | action: :update}),
+         {:ok, run} <-
+           WorkOrders.retry(run_id, step_id, created_by: current_user) do
+      Runs.subscribe(run)
 
-        {:noreply,
-         socket
-         |> assign_workflow(workflow)
-         |> follow_run(run)
-         |> push_event("push-hash", %{"hash" => "log"})}
-      else
-        {:error, _reason, %{text: error_text}} ->
-          {:noreply, put_flash(socket, :error, error_text)}
+      snapshot = Snapshot.get_by_version(workflow.id, workflow.lock_version)
 
-        {:error, %{text: message}} ->
-          {:noreply, put_flash(socket, :error, message)}
-
-        {:error, changeset} ->
-          {
-            :noreply,
-            socket
-            |> assign_changeset(changeset)
-            |> mark_validated()
-            |> put_flash(:error, "Workflow could not be saved")
-          }
-      end
-    else
       {:noreply,
        socket
-       |> put_flash(:error, "You are not authorized to perform this action.")}
+       |> assign_workflow(workflow, snapshot)
+       |> follow_run(run)
+       |> push_event("push-hash", %{"hash" => "log"})}
+    else
+      {:error, _reason, %{text: error_text}} ->
+        {:noreply, put_flash(socket, :error, error_text)}
+
+      {:error, %{text: message}} ->
+        {:noreply, put_flash(socket, :error, message)}
+
+      {:error, changeset} ->
+        {
+          :noreply,
+          socket
+          |> assign_changeset(changeset)
+          |> mark_validated()
+          |> put_flash(:error, "Workflow could not be saved")
+        }
+
+      :not_authorized ->
+        {:noreply,
+         socket
+         |> put_flash(:error, "You are not authorized to perform this action.")}
+
+      :view_only ->
+        {:noreply,
+         socket
+         |> put_flash(:error, "Cannot rerun in snapshot mode, switch to latest.")}
     end
   end
 
@@ -1194,33 +1231,33 @@ defmodule LightningWeb.WorkflowLive.Edit do
       current_user: current_user,
       workflow_params: workflow_params,
       can_edit_workflow: can_edit_workflow,
-      can_run_workflow: can_run_workflow
+      can_run_workflow: can_run_workflow,
+      snapshot_version_tag: tag
     } = socket.assigns
 
     socket = socket |> apply_params(workflow_params, :workflow)
 
-    if can_run_workflow && can_edit_workflow do
-      Helpers.save_and_run(
-        socket.assigns.changeset,
-        params,
-        project: project,
-        selected_job: selected_job,
-        created_by: current_user
-      )
+    with true <- (can_run_workflow && can_edit_workflow) || :not_authorized,
+         true <- tag == "latest" || :view_only,
+         {:ok, %{workorder: workorder, workflow: workflow}} <-
+           Helpers.save_and_run(
+             socket.assigns.changeset,
+             params,
+             project: project,
+             selected_job: selected_job,
+             created_by: current_user
+           ) do
+      %{runs: [run]} = workorder
+
+      Runs.subscribe(run)
+
+      snapshot = Snapshot.get_by_version(workflow.id, workflow.lock_version)
+
+      {:noreply,
+       socket
+       |> assign_workflow(workflow, snapshot)
+       |> follow_run(run)}
     else
-      {:error, :unauthorized}
-    end
-    |> case do
-      {:ok, %{workorder: workorder, workflow: workflow}} ->
-        %{runs: [run]} = workorder
-
-        Runs.subscribe(run)
-
-        {:noreply,
-         socket
-         |> assign_workflow(workflow)
-         |> follow_run(run)}
-
       {:error, %Ecto.Changeset{data: %WorkOrders.Manual{}} = changeset} ->
         {:noreply,
          socket
@@ -1235,10 +1272,15 @@ defmodule LightningWeb.WorkflowLive.Edit do
           |> put_flash(:error, "Workflow could not be saved")
         }
 
-      {:error, :unauthorized} ->
+      :unauthorized ->
         {:noreply,
          socket
          |> put_flash(:error, "You are not authorized to perform this action.")}
+
+      :view_only ->
+        {:noreply,
+         socket
+         |> put_flash(:error, "Cannot run in snapshot mode, switch to latest.")}
 
       {:error, %{text: message}} ->
         {:noreply, put_flash(socket, :error, message)}
