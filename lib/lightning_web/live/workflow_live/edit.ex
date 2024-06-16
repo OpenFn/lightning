@@ -1280,7 +1280,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
           |> put_flash(:error, "Workflow could not be saved")
         }
 
-      :unauthorized ->
+      :not_authorized ->
         {:noreply,
          socket
          |> put_flash(:error, "You are not authorized to perform this action.")}

@@ -261,7 +261,9 @@ defmodule LightningWeb.RunLive.ComponentsTest do
       |> Floki.parse_fragment!()
 
     assert html
-           |> Floki.find(~s{span[title="Rerun workflow from here"]})
+           |> Floki.find(
+             ~s{span[aria-label="Rerun from this step with the latest version of this workflow"]}
+           )
            |> Enum.any?()
 
     html =
@@ -276,7 +278,9 @@ defmodule LightningWeb.RunLive.ComponentsTest do
       |> Floki.parse_fragment!()
 
     refute html
-           |> Floki.find(~s{span[title="Rerun workflow from here"]})
+           |> Floki.find(
+             ~s{span[aria-label="Rerun from this step with the latest version of this workflow"]}
+           )
            |> Enum.any?()
   end
 
