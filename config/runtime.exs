@@ -518,16 +518,16 @@ where_to_view_anonymous_public_impact_data =
   case env!("USAGE_TRACKING_ENABLED", &Utils.ensure_boolean/1, true) do
     true ->
       Logger.notice(
-        "Thank you for participating in anonymous public impact tracking!\n" <>
+        "❤️ Thank you for participating in anonymous public impact reporting!\n" <>
           about_anonymous_public_impact_tracking <>
-          "\nIf you would like to opt-out of anonymous public impact tracking, you can set your `USAGE_TRACKING_ENABLED` environment variable to `false` at any time.\n"
+          "\nYou are reporting to #{env!("USAGE_TRACKER_HOST", :string, "https://impact.openfn.org")}. If you would like to opt-out of anonymous public impact reporting, you can set your `USAGE_TRACKING_ENABLED` environment variable to `false` at any time.\n"
       )
 
     false ->
       Logger.notice(
-        "You have opted-out of anonymous public impact tracking.\n" <>
+        "You have opted-out of anonymous public impact reporting.\n" <>
           about_anonymous_public_impact_tracking <>
-          "\nIf the product is benefitting you or your organization, we hope you will consider opting-in to anonymous public impact tracking in the future. You can do so by setting your `USAGE_TRACKING_ENABLED` environment variable to `true` at any time.\n"
+          "\nIf the product is benefitting you or your organization, we hope you will consider opting-in to anonymous public impact reporting in the future. You can do so by setting your `USAGE_TRACKING_ENABLED` environment variable to `true` at any time.\n"
       )
   end
 
