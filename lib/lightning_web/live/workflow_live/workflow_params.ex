@@ -71,11 +71,26 @@ defmodule LightningWeb.WorkflowNewLive.WorkflowParams do
   """
   @spec to_map(Ecto.Changeset.t()) :: %{String.t() => any()}
   def to_map(%Ecto.Changeset{data: %Lightning.Workflows.Snapshot{}} = changeset) do
-    to_serializable(changeset, &Ecto.Changeset.get_embed/2)
+    changeset
+    |> to_serializable(&Ecto.Changeset.get_embed/2)
+    |> add_disabled_to_nested(true)
   end
 
   def to_map(%Ecto.Changeset{} = changeset) do
-    to_serializable(changeset, &Ecto.Changeset.get_assoc/2)
+    changeset
+    |> to_serializable(&Ecto.Changeset.get_assoc/2)
+    |> add_disabled_to_nested(false)
+  end
+
+  defp add_disabled_to_nested(map, disabled_value) do
+    map
+    |> Map.update("jobs", [], &add_disabled_to_list(&1, disabled_value))
+    |> Map.update("edges", [], &add_disabled_to_list(&1, disabled_value))
+    |> Map.update("triggers", [], &add_disabled_to_list(&1, disabled_value))
+  end
+
+  defp add_disabled_to_list(list, disabled_value) do
+    Enum.map(list, fn item -> Map.put(item, "disabled", disabled_value) end)
   end
 
   defp to_serializable(%Ecto.Changeset{} = changeset, accessor)

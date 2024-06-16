@@ -20,6 +20,7 @@ type EditorProps = {
   metadata?: object; // TODO I can actually this very effectively from adaptors...
   onChange?: (newSource: string) => void;
   disabled?: boolean;
+  disabledMessage?: string;
 };
 
 const spinner = (
@@ -151,6 +152,7 @@ export default function Editor({
   adaptor,
   onChange,
   disabled,
+  disabledMessage,
   metadata,
 }: EditorProps) {
   const [lib, setLib] = useState<Lib[]>();
@@ -315,6 +317,9 @@ export default function Editor({
         options={{
           ...options,
           readOnly: disabled,
+          readOnlyMessage: {
+            value: disabledMessage,
+          },
         }}
         onMount={handleEditorDidMount}
         onChange={handleSourceChange}

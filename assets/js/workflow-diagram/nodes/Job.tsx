@@ -14,7 +14,8 @@ const JobNode = ({
   ...props
 }: NodeProps<NodeData>) => {
   const toolbar = () => [
-    props.data?.allowPlaceholder && [<PlusButton />, <PathButton />],
+    props.data?.allowPlaceholder &&
+      !props.data?.disabled && [<PlusButton />, <PathButton />],
   ];
 
   const adaptorIconsData = useAdaptorIcons();

@@ -69,9 +69,10 @@ defmodule LightningWeb.WorkflowLive.Edit do
               }
             />
           </:title>
-          <.snapshot_version_switcher
-            :if={display_snapshot_version_switcher(@snapshot, @workflow)}
-            label="Switch to the latest version to retry this run"
+          <.version_switcher
+            :if={display_switcher(@snapshot, @workflow)}
+            id={"canvas-#{@workflow.id}"}
+            label="Switch to the latest version"
             version={@snapshot_version_tag}
           />
           <div class="mx-2"></div>
@@ -145,9 +146,10 @@ defmodule LightningWeb.WorkflowLive.Edit do
                   <% {is_empty, error_message} =
                     editor_is_empty(@workflow_form, @selected_job) %>
 
-                  <.snapshot_version_switcher
-                    :if={display_snapshot_version_switcher(@snapshot, @workflow)}
-                    label="Switch to the latest version to retry this run"
+                  <.version_switcher
+                    :if={display_switcher(@snapshot, @workflow)}
+                    id={"inspector-#{@selected_job.id}"}
+                    label="Switch to the latest version"
                     version={@snapshot_version_tag}
                   />
 
@@ -253,7 +255,10 @@ defmodule LightningWeb.WorkflowLive.Edit do
                             "text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
                           ]}
                           form={@manual_run_form.id}
-                          disabled={@save_and_run_disabled}
+                          disabled={
+                            @save_and_run_disabled ||
+                              @snapshot_version_tag != "latest"
+                          }
                         >
                           <.icon name="hero-play-solid" class="w-4 h-4 mr-1" />
                           Create New Work Order
@@ -522,7 +527,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
     "#{assigns[:base_url]}?#{query_string}"
   end
 
-  defp display_snapshot_version_switcher(snapshot, workflow) do
+  defp display_switcher(snapshot, workflow) do
     snapshot && snapshot.lock_version != workflow.lock_version
   end
 
@@ -577,7 +582,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
     end
   end
 
-  defp snapshot_version_switcher(assigns) do
+  defp version_switcher(assigns) do
     ~H"""
     <div class="flex items-center justify-between">
       <span class="flex flex-grow flex-col">
@@ -586,8 +591,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
         </span>
       </span>
       <button
-        id="snapshot_version_switcher"
-        phx-click="switch-snapshot-version"
+        id={"version_switcher-#{@id}"}
+        phx-click="switch-version"
         type="button"
         class={"#{if @version == "latest", do: "bg-indigo-600", else: "bg-gray-200"} relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:ring-offset-2"}
       >
@@ -895,7 +900,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
      })}
   end
 
-  def handle_event("switch-snapshot-version", _params, socket) do
+  def handle_event("switch-version", _params, socket) do
     %{changeset: prev_changeset, project: project, workflow: workflow} =
       socket.assigns
 
@@ -913,15 +918,15 @@ defmodule LightningWeb.WorkflowLive.Edit do
       |> Map.reject(fn {_k, v} -> is_nil(v) end)
       |> Map.put("v", lock_version)
 
+    url = ~p"/projects/#{project.id}/w/#{workflow.id}?#{query_params}"
+
     {:noreply,
      socket
      |> assign(changeset: next_changeset)
      |> assign(workflow_params: next_params)
      |> assign(snapshot_version_tag: version)
      |> push_event("patches-applied", %{patches: patches})
-     |> push_patch(
-       to: ~p"/projects/#{project.id}/w/#{workflow.id}?#{query_params}"
-     )}
+     |> push_patch(to: url)}
   end
 
   def handle_event("delete_node", %{"id" => id}, socket) do
@@ -1077,7 +1082,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
           query_params =
             socket.assigns.query_params
-            # TODO: Talk to Ayodele about this !
             |> Map.drop(["a"])
             |> Map.put("v", workflow.lock_version)
             |> Map.reject(fn {_key, value} -> is_nil(value) end)
@@ -1088,7 +1092,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
            |> put_flash(:info, "Workflow saved")
            |> push_patches_applied(initial_params)
            |> push_patch(
-             to: ~p"/projects/#{project.id}/w/#{workflow.id}?#{query_params}"
+             to: ~p"/projects/#{project.id}/w/#{workflow.id}?#{query_params}",
+             replace: true
            )}
 
         {:error, %{text: message}} ->
@@ -1106,7 +1111,10 @@ defmodule LightningWeb.WorkflowLive.Edit do
       :view_only ->
         {:noreply,
          socket
-         |> put_flash(:error, "Cannot save in snapshot mode, switch to latest.")}
+         |> put_flash(
+           :error,
+           "Cannot save in snapshot mode, switch to the latest version."
+         )}
 
       :not_authorized ->
         {:noreply,
@@ -1287,6 +1295,69 @@ defmodule LightningWeb.WorkflowLive.Edit do
     end
   end
 
+  def handle_event("manual_run_submit", _params, socket) do
+    {:noreply, socket}
+  end
+
+  # The retry_from_run event is for creating a new run for an existing work
+  # order, just like clicking "rerun from here" on the history page.
+  def handle_event(
+        "rerun",
+        %{"run_id" => run_id, "step_id" => step_id},
+        socket
+      ) do
+    %{
+      can_run_workflow: can_run_workflow?,
+      current_user: current_user,
+      changeset: changeset,
+      project: %{id: project_id},
+      snapshot_version_tag: tag
+    } = socket.assigns
+
+    with true <- can_run_workflow? || :not_authorized,
+         true <- tag == "latest" || :view_only,
+         :ok <-
+           UsageLimiter.limit_action(%Action{type: :new_run}, %Context{
+             project_id: project_id
+           }),
+         {:ok, workflow} <-
+           Helpers.save_workflow(%{changeset | action: :update}),
+         {:ok, run} <-
+           WorkOrders.retry(run_id, step_id, created_by: current_user) do
+      Runs.subscribe(run)
+
+      snapshot = Snapshot.get_by_version(workflow.id, workflow.lock_version)
+
+      {:noreply,
+       socket |> assign_workflow(workflow, snapshot) |> follow_run(run)}
+    else
+      {:error, _reason, %{text: error_text}} ->
+        {:noreply, put_flash(socket, :error, error_text)}
+
+      {:error, %{text: message}} ->
+        {:noreply, put_flash(socket, :error, message)}
+
+      {:error, changeset} ->
+        {
+          :noreply,
+          socket
+          |> assign_changeset(changeset)
+          |> mark_validated()
+          |> put_flash(:error, "Workflow could not be saved")
+        }
+
+      :not_authorized ->
+        {:noreply,
+         socket
+         |> put_flash(:error, "You are not authorized to perform this action.")}
+
+      :view_only ->
+        {:noreply,
+         socket
+         |> put_flash(:error, "Cannot rerun in snapshot mode, switch to latest.")}
+    end
+  end
+
   @impl true
   def handle_info({"form_changed", %{"workflow" => params}}, socket) do
     {:noreply, handle_new_params(socket, params, :workflow)}
@@ -1409,8 +1480,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
   end
 
   defp assign_manual_run_form(socket, changeset) do
-    socket
-    |> assign(manual_run_form: to_form(changeset, id: "manual_run_form"))
+    assign(socket, manual_run_form: to_form(changeset, id: "manual_run_form"))
   end
 
   defp save_and_run_disabled?(attrs) do

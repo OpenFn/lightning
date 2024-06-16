@@ -5,6 +5,7 @@ defmodule LightningWeb.WorkflowLive.EditorPane do
 
   attr :id, :string, required: true
   attr :disabled, :boolean, default: false
+  attr :disabled_message, :string, required: true
   attr :class, :string, default: ""
   attr :on_change, :any, required: true
   attr :adaptor, :string, required: true
@@ -20,6 +21,7 @@ defmodule LightningWeb.WorkflowLive.EditorPane do
         source={@source}
         id={"job-editor-#{@job_id}"}
         disabled={@disabled}
+        disabled_message={@disabled_message}
         phx-target={@myself}
       />
     </div>
