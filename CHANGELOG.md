@@ -19,6 +19,11 @@ and this project adheres to
 
 ### Changed
 
+- Added a notice on application start about anonymous public impact reporting
+  and its importance for the sustainability of
+  [Digital Public Goods](https://digitalpublicgoods.net/) and
+  [Digital Public Infrastructure](https://www.codevelop.fund/insights-1/what-is-digital-public-infrastructure).
+
 ### Fixed
 
 ## [v2.6.2] - 2024-06-13
