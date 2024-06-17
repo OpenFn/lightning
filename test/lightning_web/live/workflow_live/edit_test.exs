@@ -1,5 +1,7 @@
 defmodule LightningWeb.WorkflowLive.EditTest do
   # alias Lightning.Workflows
+  alias Lightning.Helpers
+  alias Lightning.Workflows.Snapshot
   alias Lightning.Workflows
   alias Lightning.Repo
   use LightningWeb.ConnCase, async: true
@@ -242,6 +244,209 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
   describe "edit" do
     setup :create_workflow
+
+    test "can edit workflow canvas when opening it with a non latest snapshot",
+         %{conn: conn, project: project, workflow: workflow} do
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version]}"
+        )
+
+      {:ok, snapshot} = Snapshot.get_or_create_latest_for(workflow)
+
+      assert snapshot.lock_version == workflow.lock_version
+
+      assert view
+             |> has_element?(
+               "[id='canvas-workflow-version'][aria-label='This is the latest version of this workflow']",
+               "latest"
+             )
+
+      refute view
+             |> has_element?(
+               "[id='version-switcher-canvas-#{workflow.id}][data-version='latest']"
+             )
+
+      view |> fill_workflow_name("#{workflow.name} v2")
+
+      workflow.jobs
+      |> Enum.with_index()
+      |> Enum.each(fn {job, idx} ->
+        view |> select_node(job, workflow.lock_version)
+
+        refute view
+               |> has_element?("[id='workflow_jobs_#{idx}_name'][disabled]")
+
+        refute view |> has_element?("[id='adaptor-name'][disabled]")
+        refute view |> has_element?("[id='adaptor-version'][disabled]")
+
+        refute view
+               |> has_element?(
+                 "[id='workflow_jobs_#{idx}_project_credential_id'][disabled]"
+               )
+
+        view |> click_edit(job)
+
+        assert view
+               |> has_element?(
+                 "[id='inspector-workflow-version'][aria-label='This is the latest version of this workflow']",
+                 "latest"
+               )
+
+        refute view
+               |> has_element?("[id='manual_run_form_dataclip_id'][disabled]")
+
+        refute view
+               |> has_element?(
+                 "[id='job-editor-#{job.id}'][data-disabled='true'][data-disabled-message='Cannot edit in snapshot mode, switch to the latest version.']"
+               )
+
+        refute view
+               |> has_element?("[id='version-switcher-inspector-#{job.id}]")
+
+        refute view
+               |> has_element?(
+                 "[type='submit'][form='workflow-form'][disabled]",
+                 "Save"
+               )
+      end)
+
+      workflow.edges
+      |> Enum.with_index()
+      |> Enum.each(fn {edge, idx} ->
+        view |> select_node(edge, workflow.lock_version)
+
+        refute view
+               |> has_element?(
+                 "[id='workflow_edges_#{idx}_condition_type'][disabled]"
+               )
+      end)
+
+      workflow.triggers
+      |> Enum.with_index()
+      |> Enum.each(fn {trigger, idx} ->
+        view |> select_node(trigger, workflow.lock_version)
+
+        refute view
+               |> has_element?("[id='triggerType'][disabled]")
+
+        refute view
+               |> has_element?(
+                 "[id='workflow_triggers_#{idx}_enabled'][disabled]"
+               )
+      end)
+
+      job_1 = List.first(workflow.jobs)
+
+      view |> select_node(job_1, workflow.lock_version)
+
+      view
+      |> form("#workflow-form", %{
+        "workflow" => %{
+          "jobs" => %{
+            "0" => %{
+              "name" => "#{job_1.name} v2"
+            }
+          }
+        }
+      })
+      |> render_change()
+
+      view
+      |> form("#workflow-form")
+      |> render_submit()
+
+      workflow = Repo.reload!(workflow)
+
+      assert snapshot.lock_version < workflow.lock_version
+
+      version = String.slice(snapshot.id, 0..6)
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: snapshot.lock_version]}"
+        )
+
+      assert view
+             |> has_element?(
+               "[id='canvas-workflow-version'][aria-label='You are viewing a snapshot of this workflow that was taken on #{Helpers.format_date(snapshot.inserted_at)}']",
+               version
+             )
+
+      assert view
+             |> has_element?(
+               "[id='version-switcher-canvas-#{workflow.id}'][data-version='#{version}']"
+             )
+
+      snapshot.jobs
+      |> Enum.with_index()
+      |> Enum.each(fn {job, idx} ->
+        view |> select_node(job, workflow.lock_version)
+
+        assert view
+               |> has_element?("[id='snapshot_jobs_#{idx}_name'][disabled]")
+
+        assert view |> has_element?("[id='adaptor-name'][disabled]")
+        assert view |> has_element?("[id='adaptor-version'][disabled]")
+
+        assert view
+               |> has_element?(
+                 "[id='snapshot_jobs_#{idx}_project_credential_id'][disabled]"
+               )
+
+        view |> click_edit(job)
+
+        assert view
+               |> has_element?(
+                 "[id='inspector-workflow-version'][aria-label='You are viewing a snapshot of this workflow that was taken on #{Helpers.format_date(snapshot.inserted_at)}']",
+                 version
+               )
+
+        assert view
+               |> has_element?("[id='manual_run_form_dataclip_id'][disabled]")
+
+        assert view
+               |> has_element?(
+                 "[id='job-editor-#{job.id}'][data-disabled='true'][data-disabled-message='Cannot edit in snapshot mode, switch to the latest version.']"
+               )
+
+        assert view
+               |> has_element?("[id='version-switcher-inspector-#{job.id}]")
+
+        assert view
+               |> has_element?(
+                 "[type='submit'][form='workflow-form'][disabled]",
+                 "Save"
+               )
+      end)
+
+      snapshot.edges
+      |> Enum.with_index()
+      |> Enum.each(fn {edge, idx} ->
+        view |> select_node(edge, workflow.lock_version)
+
+        assert view
+               |> has_element?(
+                 "[id='snapshot_edges_#{idx}_condition_type'][disabled]"
+               )
+      end)
+
+      snapshot.triggers
+      |> Enum.with_index()
+      |> Enum.each(fn {trigger, idx} ->
+        view |> select_node(trigger, workflow.lock_version)
+
+        assert view
+               |> has_element?("[id='triggerType'][disabled]")
+
+        assert view
+               |> has_element?(
+                 "[id='snapshot_triggers_#{idx}_enabled'][disabled]"
+               )
+      end)
+    end
 
     test "click on pencil icon activates workflow name edit mode", %{
       conn: conn,
