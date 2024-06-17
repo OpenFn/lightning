@@ -21,6 +21,9 @@ and this project adheres to
 
 ### Fixed
 
+- Fix race condition when syncing from openfn while deploy actions are running
+  [#2179](https://github.com/OpenFn/lightning/issues/2179)
+
 ## [v2.6.2] - 2024-06-13
 
 ### Fixed

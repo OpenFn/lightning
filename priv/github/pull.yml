@@ -16,7 +16,9 @@ on:
       commitMessage:
         description: 'Commit message for project state and spec'
         required: true
-
+concurrency:
+  group: openfn-deployment
+  cancel-in-progress: false
 jobs:
   pull-from-lightning:
     runs-on: ubuntu-latest
