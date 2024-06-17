@@ -446,6 +446,30 @@ defmodule LightningWeb.WorkflowLive.EditTest do
                  "[id='snapshot_triggers_#{idx}_enabled'][disabled]"
                )
       end)
+
+      force_event(view, :save) =~
+        "Cannot save in snapshot mode, switch to the latest version."
+
+      force_event(view, :delete_node, List.last(snapshot.jobs)) =~
+        "Cannot delete a node in snapshot mode, switch to latest"
+
+      force_event(view, :delete_edge, List.last(snapshot.edges)) =~
+        "Cannot delete a node in snapshot mode, switch to latest"
+
+      force_event(view, :manual_run_submit, %{}) =~
+        "Cannot run in snapshot mode, switch to latest."
+
+      force_event(view, :rerun, nil, nil) =~
+        "Cannot rerun in snapshot mode, switch to latest."
+
+      %{socket: socket} = :sys.get_state(view.pid)
+      assert socket.assigns.changeset.data |> is_struct(Workflow)
+
+      view
+      |> render_click("switch-version", %{})
+
+      %{socket: socket} = :sys.get_state(view.pid)
+      assert socket.assigns.changeset.data |> is_struct(Snapshot)
     end
 
     test "click on pencil icon activates workflow name edit mode", %{

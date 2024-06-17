@@ -131,6 +131,16 @@ defmodule Lightning.WorkflowLive.Helpers do
     |> render_click("delete_edge", %{id: edge.id})
   end
 
+  def force_event(view, :manual_run_submit, params) do
+    view
+    |> render_click("manual_run_submit", %{"manual" => params})
+  end
+
+  def force_event(view, :rerun, run_id, step_id) do
+    view
+    |> render_click("rerun", %{"run_id" => run_id, "step_id" => step_id})
+  end
+
   @doc """
   This helper is used to fill in the form fields for a given job.
   Internally it looks up the index of the job in the workflow_params

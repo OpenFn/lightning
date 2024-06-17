@@ -1000,7 +1000,9 @@ defmodule LightningWeb.WorkflowLive.Edit do
     } = socket.assigns
 
     with true <- can_edit_workflow || :not_authorized,
-         true <- is_nil(selected_edge.source_trigger_id) || :is_initial_edge,
+         true <-
+           (selected_edge && is_nil(selected_edge.source_trigger_id)) ||
+             :is_initial_edge,
          true <- tag == "latest" || :view_only do
       edges_to_delete =
         Ecto.Changeset.get_assoc(changeset, :edges, :struct)
