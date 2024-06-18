@@ -47,7 +47,7 @@ defmodule LightningWeb.RunWithOptionsTest do
           ],
           "starting_node_id" => trigger.id,
           "triggers" => [%{"id" => trigger.id}],
-          "options" => %{"output_dataclips" => true, "run_timeout_ms" => 60000}
+          "options" => %{"output_dataclips" => true, "run_timeout_ms" => 300000}
         }
 
       run = Runs.get_for_worker(run.id)
@@ -96,7 +96,7 @@ defmodule LightningWeb.RunWithOptionsTest do
           ],
           "starting_node_id" => trigger.id,
           "triggers" => [%{"id" => trigger.id}],
-          "options" => %{"output_dataclips" => true, "run_timeout_ms" => 60000}
+          "options" => %{"output_dataclips" => true, "run_timeout_ms" => 300000}
         }
 
       assert RunWithOptions.render(run)
