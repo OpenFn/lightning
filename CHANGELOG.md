@@ -19,6 +19,10 @@ and this project adheres to
 
 ### Changed
 
+- Increase default `WORKER_MAX_RUN_DURATION_SECONDS` to 300 to match the
+  [ws-worker default](https://github.com/OpenFn/kit/blob/main/packages/ws-worker/src/util/cli.ts#L149-L153)
+  so if people don't set their timeout via ENV, at least the two match up.
+
 ### Fixed
 
 ## [v2.6.2] - 2024-06-13
