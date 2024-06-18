@@ -486,7 +486,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
         <.live_component
           :if={
             @live_action == :edit && @can_write_webhook_auth_method &&
-              @selected_trigger
+              @selected_trigger && @snapshot_version_tag == "latest"
           }
           module={LightningWeb.WorkflowLive.WebhookAuthMethodModalComponent}
           id="webhooks_auth_method_modal"

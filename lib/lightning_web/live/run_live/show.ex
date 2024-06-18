@@ -70,7 +70,9 @@ defmodule LightningWeb.RunLive.Show do
                   <:label>Workflow</:label>
                   <:value>
                     <.link
-                      navigate={~p"/projects/#{@project}/w/#{@workflow.id}"}
+                      navigate={
+                        ~p"/projects/#{@project}/w/#{@workflow.id}?v=#{run.snapshot.lock_version}"
+                      }
                       class="hover:underline hover:text-primary-900 whitespace-nowrap text-ellipsis"
                     >
                       <span class="whitespace-nowrap text-ellipsis">

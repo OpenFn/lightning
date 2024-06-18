@@ -463,13 +463,13 @@ defmodule LightningWeb.WorkflowLive.EditTest do
         "Cannot rerun in snapshot mode, switch to latest."
 
       %{socket: socket} = :sys.get_state(view.pid)
-      assert socket.assigns.changeset.data |> is_struct(Workflow)
+      assert is_struct(socket.assigns.changeset.data, Workflow)
 
       view
-      |> render_click("switch-version", %{})
+      |> render_click("switch-version")
 
       %{socket: socket} = :sys.get_state(view.pid)
-      assert socket.assigns.changeset.data |> is_struct(Snapshot)
+      assert is_struct(socket.assigns.changeset.data, Snapshot)
     end
 
     test "click on pencil icon activates workflow name edit mode", %{
