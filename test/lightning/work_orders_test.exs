@@ -62,7 +62,7 @@ defmodule Lightning.WorkOrdersTest do
 
       assert run.options == %Lightning.Runs.RunOptions{
                save_dataclips: false,
-               run_timeout_ms: 300000
+               run_timeout_ms: 300_000
              }
 
       workorder_id = workorder.id
@@ -130,7 +130,7 @@ defmodule Lightning.WorkOrdersTest do
 
       assert run.options == %Lightning.Runs.RunOptions{
                save_dataclips: true,
-               run_timeout_ms: 300000
+               run_timeout_ms: 300_000
              }
 
       workorder_id = workorder.id
@@ -178,7 +178,7 @@ defmodule Lightning.WorkOrdersTest do
 
       assert run.options == %Lightning.Runs.RunOptions{
                save_dataclips: true,
-               run_timeout_ms: 300000
+               run_timeout_ms: 300_000
              }
 
       assert_received %Events.RunCreated{
@@ -278,7 +278,7 @@ defmodule Lightning.WorkOrdersTest do
 
       assert retry_run.options == %Lightning.Runs.RunOptions{
                save_dataclips: true,
-               run_timeout_ms: 300000
+               run_timeout_ms: 300_000
              }
 
       assert retry_run.snapshot_id == snapshot2.id,
@@ -340,7 +340,7 @@ defmodule Lightning.WorkOrdersTest do
 
       assert retry_run.options == %Lightning.Runs.RunOptions{
                save_dataclips: true,
-               run_timeout_ms: 300000
+               run_timeout_ms: 300_000
              }
 
       steps = Ecto.assoc(retry_run, :steps) |> Repo.all()
@@ -619,7 +619,7 @@ defmodule Lightning.WorkOrdersTest do
 
       assert retry_run.options == %Lightning.Runs.RunOptions{
                save_dataclips: true,
-               run_timeout_ms: 300000
+               run_timeout_ms: 300_000
              }
 
       assert retry_run |> Repo.preload(:steps) |> Map.get(:steps) == [],

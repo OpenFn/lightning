@@ -302,7 +302,7 @@ defmodule Lightning.RunsTest do
 
       assert %Lightning.Runs.RunOptions{
                save_dataclips: false,
-               run_timeout_ms: 300000
+               run_timeout_ms: 300_000
              } = run.options
 
       step =
