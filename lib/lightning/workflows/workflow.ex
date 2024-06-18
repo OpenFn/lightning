@@ -25,6 +25,7 @@ defmodule Lightning.Workflows.Workflow do
 
   schema "workflows" do
     field :name, :string
+    field :concurrency, :integer, default: nil
 
     has_many :edges, Edge, on_replace: :delete_if_exists
 
