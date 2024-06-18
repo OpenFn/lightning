@@ -511,7 +511,7 @@ config :lightning, :metrics,
 
 # Digital Public Goods Anonymous Impact Tracking ===============================
 about_anonymous_public_impact_tracking =
-  "\nOpenFn is a free and open-source Digital Public Good. Even if you are unable to contribute to the movement financially or by participating in our product development community, sending these anonymous aggregate usage reports will help us ensure the long-term sustainability of the project by better demonstrating our impact and helping us secure further donor support.\n" <>
+  "\nOpenFn is a free and open-source Digital Public Good. Even if you are unable to contribute to the movement financially or by participating in our product development community, sending these anonymous aggregate usage reports will ensure the long-term sustainability of the project by allowing us to understand the needs of our users, by better demonstrating our impact, and by helping us secure further donor support.\n" <>
     "\nView the aggregated anonymous public metrics submitted by other OpenFn instance administrators like you from around the world here: https://analytics.openfn.org/public/dashboard/d4d7766e-e2fe-4673-b4e5-8bf52f0054a1\n"
 
 where_to_view_anonymous_public_impact_data =
