@@ -2,6 +2,8 @@ alias Lightning.Config.Utils
 import Config
 import Dotenvy
 
+require Logger
+
 # config/runtime.exs is executed for all environments, including
 # during releases. It is executed after compilation and before the
 # system starts, so it is typically used to load production configuration
@@ -220,24 +222,6 @@ base_cron = [
   {"1 2 * * *", Lightning.Projects, args: %{"type" => "data_retention"}}
 ]
 
-usage_tracking_resubmission_batch_size =
-  env!("USAGE_TRACKING_RESUBMISSION_BATCH_SIZE", :integer, 10)
-
-usage_tracking_cron = [
-  {
-    "30 1,9,17 * * *",
-    Lightning.UsageTracking.DayWorker,
-    args: %{
-      "batch_size" => env!("USAGE_TRACKING_DAILY_BATCH_SIZE", :integer, 10)
-    }
-  },
-  {
-    "* * * * *",
-    Lightning.UsageTracking.ResubmissionCandidatesWorker,
-    args: %{"batch_size" => usage_tracking_resubmission_batch_size}
-  }
-]
-
 cleanup_cron =
   if Application.get_env(:lightning, :purge_deleted_after_days) > 0,
     do: [
@@ -249,7 +233,7 @@ cleanup_cron =
     ],
     else: []
 
-all_cron = base_cron ++ usage_tracking_cron ++ cleanup_cron
+all_cron = base_cron ++ cleanup_cron
 
 config :lightning, Oban,
   name: Lightning.Oban,
@@ -511,4 +495,9 @@ config :lightning, :usage_tracking,
   cleartext_uuids_enabled:
     env!("USAGE_TRACKING_UUIDS", :string, nil) == "cleartext",
   enabled: env!("USAGE_TRACKING_ENABLED", &Utils.ensure_boolean/1, true),
-  host: env!("USAGE_TRACKER_HOST", :string, "https://impact.openfn.org")
+  host: env!("USAGE_TRACKER_HOST", :string, "https://impact.openfn.org"),
+  resubmission_batch_size:
+    env!("USAGE_TRACKING_RESUBMISSION_BATCH_SIZE", :integer, 10),
+  daily_batch_size: env!("USAGE_TRACKING_DAILY_BATCH_SIZE", :integer, 10)
+
+# ==============================================================================
