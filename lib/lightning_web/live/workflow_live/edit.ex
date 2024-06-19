@@ -69,14 +69,33 @@ defmodule LightningWeb.WorkflowLive.Edit do
               }
             />
           </:title>
-          <.version_switcher
-            :if={display_switcher(@snapshot, @workflow)}
-            id={"canvas-#{@workflow.id}"}
-            label="Switch to the latest version"
-            version={@snapshot_version_tag}
-          />
           <div class="mx-2"></div>
-          <.with_changes_indicator changeset={@changeset}>
+          <div :if={display_switcher(@snapshot, @workflow)} class="flex">
+            <div class="flex-shrink-0">
+              <Heroicons.information_circle solid class="h-5 w-5 text-yellow-600" />
+            </div>
+            <div class="ml-1 flex-1 md:flex md:justify-between">
+              <p class="text-sm text-yellow-600">
+                You cannot edit or run an old snapshot of a workflow.
+              </p>
+            </div>
+          </div>
+          <div class="mx-1"></div>
+          <.button
+            :if={display_switcher(@snapshot, @workflow)}
+            id={@workflow.id}
+            type="button"
+            phx-click="switch-version"
+            phx-value-type="commit"
+            color_class="text-white bg-primary-600 hover:bg-primary-700"
+          >
+            Switch to the latest version
+            <Heroicons.arrow_up_on_square_stack class="w-4 h-4 ml-1" />
+          </.button>
+          <.with_changes_indicator
+            :if={!display_switcher(@snapshot, @workflow)}
+            changeset={@changeset}
+          >
             <div class="flex flex-row gap-2">
               <.icon
                 :if={!@can_edit_workflow}
@@ -84,7 +103,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
                 class="w-5 h-5 place-self-center text-gray-300"
               />
               <Form.submit_button
-                class=""
                 phx-disable-with="Saving..."
                 disabled={
                   !@can_edit_workflow or !@changeset.valid? or
@@ -146,9 +164,9 @@ defmodule LightningWeb.WorkflowLive.Edit do
                   <% {is_empty, error_message} =
                     editor_is_empty(@workflow_form, @selected_job) %>
 
-                  <.version_switcher
+                  <.version_switcher_toggle
                     :if={display_switcher(@snapshot, @workflow)}
-                    id={"inspector-#{@selected_job.id}"}
+                    id={@selected_job.id}
                     label="Switch to the latest version"
                     version={@snapshot_version_tag}
                   />
@@ -582,7 +600,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
     end
   end
 
-  defp version_switcher(assigns) do
+  defp version_switcher_toggle(assigns) do
     ~H"""
     <div class="flex items-center justify-between">
       <span class="flex flex-grow flex-col">
@@ -591,9 +609,10 @@ defmodule LightningWeb.WorkflowLive.Edit do
         </span>
       </span>
       <button
-        id={"version-switcher-#{@id}"}
+        id={"version-switcher-toggle-#{@id}"}
         data-version={@version}
         phx-click="switch-version"
+        phx-value-type="toggle"
         type="button"
         class={"#{if @version == "latest", do: "bg-indigo-600", else: "bg-gray-200"} relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:ring-offset-2"}
       >
@@ -892,16 +911,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
     |> Map.update!("jobs", &Enum.reject(&1, fn job -> job["id"] == id end))
   end
 
-  @impl true
-  def handle_event("get-initial-state", _params, socket) do
-    {:noreply,
-     socket
-     |> push_event("current-workflow-params", %{
-       workflow_params: socket.assigns.workflow_params
-     })}
-  end
-
-  def handle_event("switch-version", _params, socket) do
+  defp toggle_latest_version(socket) do
     %{changeset: prev_changeset, project: project, workflow: workflow} =
       socket.assigns
 
@@ -921,13 +931,59 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
     url = ~p"/projects/#{project.id}/w/#{workflow.id}?#{query_params}"
 
+    socket
+    |> assign(changeset: next_changeset)
+    |> assign(workflow_params: next_params)
+    |> assign(snapshot_version_tag: version)
+    |> push_event("patches-applied", %{patches: patches})
+    |> push_patch(to: url)
+  end
+
+  defp commit_latest_version(socket) do
+    %{changeset: prev_changeset, project: project, workflow: workflow} =
+      socket.assigns
+
+    snapshot = Snapshot.get_by_version(workflow.id, workflow.lock_version)
+
+    next_changeset = Ecto.Changeset.change(workflow)
+
+    prev_params = WorkflowParams.to_map(prev_changeset)
+    next_params = WorkflowParams.to_map(next_changeset)
+
+    patches = WorkflowParams.to_patches(prev_params, next_params)
+
+    lock_version = Ecto.Changeset.get_field(next_changeset, :lock_version)
+
+    query_params =
+      socket.assigns.query_params
+      |> Map.reject(fn {_k, v} -> is_nil(v) end)
+      |> Map.put("v", lock_version)
+
+    url = ~p"/projects/#{project.id}/w/#{workflow.id}?#{query_params}"
+
+    socket
+    |> assign_workflow(workflow, snapshot)
+    |> push_event("patches-applied", %{patches: patches})
+    |> push_patch(to: url)
+  end
+
+  @impl true
+  def handle_event("get-initial-state", _params, socket) do
     {:noreply,
      socket
-     |> assign(changeset: next_changeset)
-     |> assign(workflow_params: next_params)
-     |> assign(snapshot_version_tag: version)
-     |> push_event("patches-applied", %{patches: patches})
-     |> push_patch(to: url)}
+     |> push_event("current-workflow-params", %{
+       workflow_params: socket.assigns.workflow_params
+     })}
+  end
+
+  def handle_event("switch-version", %{"type" => type}, socket) do
+    updated_socket =
+      case type do
+        "commit" -> commit_latest_version(socket)
+        "toggle" -> toggle_latest_version(socket)
+      end
+
+    {:noreply, updated_socket}
   end
 
   def handle_event("delete_node", %{"id" => id}, socket) do
