@@ -76,6 +76,33 @@ defmodule Lightning.Config do
       Application.get_env(:lightning, :emails, [])
       |> Keyword.get(:sender_name)
     end
+
+    @impl true
+    def usage_tracking do
+      Application.get_env(:lightning, :usage_tracking)
+    end
+
+    @impl true
+    def usage_tracking_cron_opts do
+      opts = usage_tracking()
+
+      if opts[:enabled] do
+        [
+          {
+            "30 1,9,17 * * *",
+            Lightning.UsageTracking.DayWorker,
+            args: %{"batch_size" => opts[:daily_batch_size]}
+          },
+          {
+            "* * * * *",
+            Lightning.UsageTracking.ResubmissionCandidatesWorker,
+            args: %{"batch_size" => opts[:resubmission_batch_size]}
+          }
+        ]
+      else
+        []
+      end
+    end
   end
 
   defmodule Utils do
@@ -131,6 +158,8 @@ defmodule Lightning.Config do
   @callback cors_origin() :: list()
   @callback instance_admin_email() :: String.t()
   @callback email_sender_name() :: String.t()
+  @callback usage_tracking() :: Keyword.t()
+  @callback usage_tracking_cron_opts() :: [Oban.Plugins.Cron.cron_input()]
 
   @doc """
   Returns the Token signer used to sign and verify run tokens.
@@ -193,6 +222,14 @@ defmodule Lightning.Config do
 
   def email_sender_name do
     impl().email_sender_name()
+  end
+
+  def usage_tracking do
+    impl().usage_tracking()
+  end
+
+  def usage_tracking_cron_opts do
+    impl().usage_tracking_cron_opts()
   end
 
   defp impl do

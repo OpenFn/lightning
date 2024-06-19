@@ -222,24 +222,6 @@ base_cron = [
   {"1 2 * * *", Lightning.Projects, args: %{"type" => "data_retention"}}
 ]
 
-usage_tracking_resubmission_batch_size =
-  env!("USAGE_TRACKING_RESUBMISSION_BATCH_SIZE", :integer, 10)
-
-usage_tracking_cron = [
-  {
-    "30 1,9,17 * * *",
-    Lightning.UsageTracking.DayWorker,
-    args: %{
-      "batch_size" => env!("USAGE_TRACKING_DAILY_BATCH_SIZE", :integer, 10)
-    }
-  },
-  {
-    "* * * * *",
-    Lightning.UsageTracking.ResubmissionCandidatesWorker,
-    args: %{"batch_size" => usage_tracking_resubmission_batch_size}
-  }
-]
-
 cleanup_cron =
   if Application.get_env(:lightning, :purge_deleted_after_days) > 0,
     do: [
@@ -251,7 +233,7 @@ cleanup_cron =
     ],
     else: []
 
-all_cron = base_cron ++ usage_tracking_cron ++ cleanup_cron
+all_cron = base_cron ++ cleanup_cron
 
 config :lightning, Oban,
   name: Lightning.Oban,
@@ -509,32 +491,13 @@ config :lightning, :metrics,
   run_queue_metrics_period_seconds:
     env!("METRICS_RUN_QUEUE_METRICS_PERIOD_SECONDS", :integer, 5)
 
-# Digital Public Goods Anonymous Impact Tracking ===============================
-about_anonymous_public_impact_tracking =
-  "\nOpenFn is a free and open-source Digital Public Good. Even if you are unable to contribute to the movement financially or by participating in our product development community, sending these anonymous aggregate usage reports will ensure the long-term sustainability of the project by allowing us to understand the needs of our users, by better demonstrating our impact, and by helping us secure further donor support.\n" <>
-    "\nView the aggregated anonymous public metrics submitted by other OpenFn instance administrators like you from around the world here: https://analytics.openfn.org/public/dashboard/d4d7766e-e2fe-4673-b4e5-8bf52f0054a1\n"
-
-where_to_view_anonymous_public_impact_data =
-  case env!("USAGE_TRACKING_ENABLED", &Utils.ensure_boolean/1, true) do
-    true ->
-      Logger.notice(
-        "❤️ Thank you for participating in anonymous public impact reporting!\n" <>
-          about_anonymous_public_impact_tracking <>
-          "\nYou are reporting to #{env!("USAGE_TRACKER_HOST", :string, "https://impact.openfn.org")}. If you would like to opt-out of anonymous public impact reporting, you can set your `USAGE_TRACKING_ENABLED` environment variable to `false` at any time.\n"
-      )
-
-    false ->
-      Logger.notice(
-        "You have opted-out of anonymous public impact reporting.\n" <>
-          about_anonymous_public_impact_tracking <>
-          "\nIf the product is benefitting you or your organization, we hope you will consider opting-in to anonymous public impact reporting in the future. You can do so by setting your `USAGE_TRACKING_ENABLED` environment variable to `true` at any time.\n"
-      )
-  end
-
 config :lightning, :usage_tracking,
   cleartext_uuids_enabled:
     env!("USAGE_TRACKING_UUIDS", :string, nil) == "cleartext",
   enabled: env!("USAGE_TRACKING_ENABLED", &Utils.ensure_boolean/1, true),
-  host: env!("USAGE_TRACKER_HOST", :string, "https://impact.openfn.org")
+  host: env!("USAGE_TRACKER_HOST", :string, "https://impact.openfn.org"),
+  resubmission_batch_size:
+    env!("USAGE_TRACKING_RESUBMISSION_BATCH_SIZE", :integer, 10),
+  daily_batch_size: env!("USAGE_TRACKING_DAILY_BATCH_SIZE", :integer, 10)
 
 # ==============================================================================
