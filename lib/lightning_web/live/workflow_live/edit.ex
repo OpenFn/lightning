@@ -70,7 +70,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
             />
           </:title>
           <div class="mx-2"></div>
-          <div :if={display_switcher(@snapshot, @workflow)} class="flex">
+          <div :if={@snapshot_version_tag != "latest"} class="flex">
             <div class="flex-shrink-0">
               <Heroicons.information_circle solid class="h-5 w-5 text-yellow-600" />
             </div>
@@ -82,7 +82,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
           </div>
           <div class="mx-1"></div>
           <.button
-            :if={display_switcher(@snapshot, @workflow)}
+            :if={@snapshot_version_tag != "latest"}
             id={@workflow.id}
             type="button"
             phx-click="switch-version"
@@ -93,7 +93,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
             <Heroicons.arrow_up_on_square_stack class="w-4 h-4 ml-1" />
           </.button>
           <.with_changes_indicator
-            :if={!display_switcher(@snapshot, @workflow)}
+            :if={@snapshot_version_tag == "latest"}
             changeset={@changeset}
           >
             <div class="flex flex-row gap-2">
