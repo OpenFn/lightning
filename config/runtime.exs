@@ -261,7 +261,7 @@ config :lightning,
 
 config :lightning,
        :max_run_duration_seconds,
-       env!("WORKER_MAX_RUN_DURATION_SECONDS", :integer, 60)
+       env!("WORKER_MAX_RUN_DURATION_SECONDS", :integer, 300)
 
 config :lightning,
        :max_dataclip_size_bytes,
