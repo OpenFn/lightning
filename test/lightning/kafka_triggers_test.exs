@@ -14,6 +14,132 @@ defmodule Lightning.KafkaTriggersTest do
   alias Lightning.Workflows.Workflow
   alias Lightning.WorkOrder
 
+  describe ".start_triggers/0" do
+    setup do
+      {:ok, pid} = start_supervised(PipelineSupervisor)
+
+      trigger_1 =
+        insert(
+          :trigger,
+          type: :kafka,
+          kafka_configuration: configuration(index: 1),
+          enabled: true
+        )
+
+      trigger_2 =
+        insert(
+          :trigger,
+          type: :kafka,
+          kafka_configuration: configuration(index: 2, ssl: false),
+          enabled: true
+        )
+
+      %{pid: pid, trigger_1: trigger_1, trigger_2: trigger_2}
+    end
+
+    test "does not attempt anything if the supervisor is not running" do
+      stop_supervised!(PipelineSupervisor)
+
+      with_mock Supervisor,
+        start_child: fn _sup_pid, _child_spec -> {:ok, "fake-pid"} end,
+        count_children: fn _sup_pid -> %{specs: 1} end do
+        KafkaTriggers.start_triggers()
+
+        assert_not_called(Supervisor.count_children(:_))
+        assert_not_called(Supervisor.start_child(:_, :_))
+      end
+    end
+
+    test "returns :ok if the supervisor is not running" do
+      stop_supervised!(PipelineSupervisor)
+
+      with_mock Supervisor,
+        start_child: fn _sup_pid, _child_spec -> {:ok, "fake-pid"} end,
+        count_children: fn _sup_pid -> %{specs: 1} end do
+        assert KafkaTriggers.start_triggers() == :ok
+      end
+    end
+
+    test "does not start children if supervisor already has children", %{
+      pid: pid
+    } do
+      # TODO This behaviour may be obsolete, might be unnecessarily 
+      # defensive
+      with_mock Supervisor,
+        start_child: fn _sup_pid, _child_spec -> {:ok, "fake-pid"} end,
+        count_children: fn _sup_pid -> %{specs: 1} end do
+        KafkaTriggers.start_triggers()
+
+        assert_called(Supervisor.count_children(pid))
+        assert_not_called(Supervisor.start_child(:_, :_))
+      end
+    end
+
+    test "returns :ok if supervisor already has chidren" do
+      with_mock Supervisor,
+        start_child: fn _sup_pid, _child_spec -> {:ok, "fake-pid"} end,
+        count_children: fn _sup_pid -> %{specs: 1} end do
+        assert KafkaTriggers.start_triggers() == :ok
+      end
+    end
+
+    test "asks supervisor to start a child for each trigger", %{
+      pid: pid,
+      trigger_1: trigger_1,
+      trigger_2: trigger_2
+    } do
+      with_mock Supervisor,
+        start_child: fn _sup_pid, _child_spec -> {:ok, "fake-pid"} end,
+        count_children: fn _sup_pid -> %{specs: 0} end do
+        KafkaTriggers.start_triggers()
+
+        assert_called(
+          Supervisor.start_child(pid, child_spec(trigger: trigger_1, index: 1))
+        )
+
+        assert_called(
+          Supervisor.start_child(
+            pid,
+            child_spec(trigger: trigger_2, index: 2, ssl: false)
+          )
+        )
+      end
+    end
+
+    test "handles the case where the consumer group does not use SASL", %{
+      pid: pid
+    } do
+      no_auth_trigger =
+        insert(
+          :trigger,
+          type: :kafka,
+          kafka_configuration: configuration(index: 3, sasl: false),
+          enabled: true
+        )
+
+      with_mock Supervisor,
+        start_child: fn _sup_pid, _child_spec -> {:ok, "fake-pid"} end,
+        count_children: fn _sup_pid -> %{specs: 0} end do
+        KafkaTriggers.start_triggers()
+
+        assert_called(
+          Supervisor.start_child(
+            pid,
+            child_spec(trigger: no_auth_trigger, index: 3, sasl: false)
+          )
+        )
+      end
+    end
+
+    test "returns :ok" do
+      with_mock Supervisor,
+        start_child: fn _sup_pid, _child_spec -> {:ok, "fake-pid"} end,
+        count_children: fn _sup_pid -> %{specs: 0} end do
+        assert KafkaTriggers.start_triggers() == :ok
+      end
+    end
+  end
+
   describe ".find_enabled_triggers/0" do
     test "returns enabled kafka triggers" do
       trigger_1 =
@@ -52,7 +178,11 @@ defmodule Lightning.KafkaTriggersTest do
       timestamp: timestamp
     } do
       trigger =
-        insert(:trigger, type: :kafka, kafka_configuration: configuration(%{}))
+        insert(
+          :trigger,
+          type: :kafka,
+          kafka_configuration: configuration(partition_timestamps: %{})
+        )
 
       trigger
       |> KafkaTriggers.update_partition_data(partition, timestamp)
@@ -69,7 +199,7 @@ defmodule Lightning.KafkaTriggersTest do
         insert(
           :trigger,
           type: :kafka,
-          kafka_configuration: configuration(%{"3" => 123})
+          kafka_configuration: configuration(partition_timestamps: %{"3" => 123})
         )
 
       trigger
@@ -91,10 +221,12 @@ defmodule Lightning.KafkaTriggersTest do
           :trigger,
           type: :kafka,
           kafka_configuration:
-            configuration(%{
-              "3" => 123,
-              "#{partition}" => timestamp + 1
-            })
+            configuration(
+              partition_timestamps: %{
+                "3" => 123,
+                "#{partition}" => timestamp + 1
+              }
+            )
         )
 
       trigger
@@ -116,10 +248,12 @@ defmodule Lightning.KafkaTriggersTest do
           :trigger,
           type: :kafka,
           kafka_configuration:
-            configuration(%{
-              "3" => 123,
-              "#{partition}" => timestamp - 1
-            })
+            configuration(
+              partition_timestamps: %{
+                "3" => 123,
+                "#{partition}" => timestamp - 1
+              }
+            )
         )
 
       trigger
@@ -130,23 +264,6 @@ defmodule Lightning.KafkaTriggersTest do
         "3" => 123,
         "#{partition}" => timestamp
       })
-    end
-
-    defp configuration(partition_timestamps) do
-      # TODO Centralise the generation of config to avoid drift
-      %{
-        group_id: "lightning-1",
-        hosts: [["host-1", "9092"], ["other-host-1", "9093"]],
-        hosts_string: "host-1:9092,other-host-1:9093",
-        initial_offset_reset_policy: "earliest",
-        partition_timestamps: partition_timestamps,
-        password: nil,
-        sasl: nil,
-        ssl: false,
-        topics: ["bar_topic"],
-        topics_string: "bar_topic",
-        username: nil
-      }
     end
 
     defp assert_persisted_config(trigger, expected_partition_timestamps) do
@@ -1195,39 +1312,64 @@ defmodule Lightning.KafkaTriggersTest do
         username: username
       }
     end
-
-    defp child_spec(opts) do
-      trigger = opts |> Keyword.get(:trigger)
-      index = opts |> Keyword.get(:index)
-      sasl = opts |> Keyword.get(:sasl, true)
-      ssl = opts |> Keyword.get(:ssl, true)
-
-      offset_timestamp = "171524976732#{index}" |> String.to_integer()
-
-      %{
-        id: trigger.id,
-        start: {
-          Lightning.KafkaTriggers.Pipeline,
-          :start_link,
-          [
-            [
-              group_id: "lightning-#{index}",
-              hosts: [{"host-#{index}", 9092}, {"other-host-#{index}", 9093}],
-              offset_reset_policy: {:timestamp, offset_timestamp},
-              trigger_id: trigger.id |> String.to_atom(),
-              sasl: sasl_config(index, sasl),
-              ssl: ssl,
-              topics: ["topic-#{index}-1", "topic-#{index}-2"]
-            ]
-          ]
-        }
-      }
-    end
-
-    defp sasl_config(index, true = _sasl) do
-      {:plain, "my-user-#{index}", "secret-#{index}"}
-    end
-
-    defp sasl_config(_index, false = _sasl), do: nil
   end
+
+  defp child_spec(opts) do
+    trigger = opts |> Keyword.get(:trigger)
+    index = opts |> Keyword.get(:index)
+    sasl = opts |> Keyword.get(:sasl, true)
+    ssl = opts |> Keyword.get(:ssl, true)
+
+    offset_timestamp = "171524976732#{index}" |> String.to_integer()
+
+    %{
+      id: trigger.id,
+      start: {
+        Lightning.KafkaTriggers.Pipeline,
+        :start_link,
+        [
+          [
+            group_id: "lightning-#{index}",
+            hosts: [{"host-#{index}", 9092}, {"other-host-#{index}", 9093}],
+            offset_reset_policy: {:timestamp, offset_timestamp},
+            trigger_id: trigger.id |> String.to_atom(),
+            sasl: sasl_config(index, sasl),
+            ssl: ssl,
+            topics: ["topic-#{index}-1", "topic-#{index}-2"]
+          ]
+        ]
+      }
+    }
+  end
+
+  defp configuration(opts) do
+    index = opts |> Keyword.get(:index, 1)
+    partition_timestamps = opts |> Keyword.get(:partition_timestamps, %{})
+    sasl = opts |> Keyword.get(:sasl, true)
+    ssl = opts |> Keyword.get(:ssl, true)
+
+    password = if sasl, do: "secret-#{index}", else: nil
+    sasl_type = if sasl, do: "plain", else: nil
+    username = if sasl, do: "my-user-#{index}", else: nil
+
+    initial_offset_reset_policy = "171524976732#{index}"
+
+    %{
+      group_id: "lightning-#{index}",
+      hosts: [["host-#{index}", "9092"], ["other-host-#{index}", "9093"]],
+      initial_offset_reset_policy: initial_offset_reset_policy,
+      partition_timestamps: partition_timestamps,
+      password: password,
+      sasl: sasl_type,
+      ssl: ssl,
+      topics: ["topic-#{index}-1", "topic-#{index}-2"],
+      username: username
+    }
+  end
+
+  defp sasl_config(index, true = _sasl) do
+    {:plain, "my-user-#{index}", "secret-#{index}"}
+  end
+
+  defp sasl_config(_index, false = _sasl), do: nil
 end

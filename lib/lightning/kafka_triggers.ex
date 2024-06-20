@@ -7,6 +7,26 @@ defmodule Lightning.KafkaTriggers do
   alias Lightning.WorkOrder
   alias Lightning.WorkOrders
 
+  def start_triggers do
+    supervisor = GenServer.whereis(:kafka_pipeline_supervisor)
+
+    if supervisor do
+      %{specs: child_count} = Supervisor.count_children(supervisor)
+
+      if child_count == 0 do
+        find_enabled_triggers()
+        |> Enum.map(fn trigger ->
+          generate_pipeline_child_spec(trigger)
+        end)
+        |> Enum.each(fn child_spec ->
+          Supervisor.start_child(supervisor, child_spec)
+        end)
+      end
+    end
+
+    :ok
+  end
+
   def find_enabled_triggers do
     query =
       from t in Trigger,
@@ -343,8 +363,8 @@ defmodule Lightning.KafkaTriggers do
         hosts
         |> Enum.map(fn
           [host, port] -> "#{host}:#{port}"
-            # TODO something_else is a bandaid for a live validation issue
-            # make a better plan
+          # TODO something_else is a bandaid for a live validation issue
+          # make a better plan
           something_else -> something_else
         end)
         |> Enum.join(", ")
