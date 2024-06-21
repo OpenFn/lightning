@@ -131,8 +131,7 @@ config :lightning, Lightning.FailureAlerter,
 # Disables / Hides the credential transfer feature for beta (in LightningWeb.CredentialLive.Edit)
 config :lightning, LightningWeb, allow_credential_transfer: false
 
-# Rather than default  since httpc doesnt have certificate checking
-config :tesla, adapter: Tesla.Adapter.Hackney
+config :tesla, adapter: {Tesla.Adapter.Finch, name: Lightning.Finch}
 
 config :lightning, :is_resettable_demo, false
 config :lightning, :default_retention_period, nil

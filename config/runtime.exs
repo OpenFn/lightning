@@ -128,6 +128,15 @@ config :lightning,
       end
     end)
 
+config :lightning, :apollo,
+  endpoint:
+    env!(
+      "APOLLO_ENDPOINT",
+      :string,
+      Utils.get_env([:lightning, :apollo, :endpoint])
+    ),
+  openai_api_key: env!("OPENAI_API_KEY", :string, nil)
+
 config :lightning, Lightning.Runtime.RuntimeManager,
   start:
     env!(

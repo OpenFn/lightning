@@ -44,6 +44,18 @@ defmodule Lightning.Config do
     def default_max_run_duration do
       Application.get_env(:lightning, :max_run_duration_seconds)
     end
+
+    @impl true
+    def apollo(key \\ nil) do
+      case key do
+        nil ->
+          Application.get_env(:lightning, :apollo, []) |> Map.new()
+
+        key when is_atom(key) ->
+          Application.get_env(:lightning, :apollo, []) |> Keyword.get(key)
+      end
+    end
+
     @impl true
     def oauth_provider(key) do
       Application.get_env(:lightning, :oauth_clients)
@@ -151,14 +163,7 @@ defmodule Lightning.Config do
     end
   end
 
-  @callback run_token_signer() :: Joken.Signer.t()
-  @callback worker_token_signer() :: Joken.Signer.t()
-  @callback repo_connection_token_signer() :: Joken.Signer.t()
-  @callback worker_secret() :: binary() | nil
-  @callback grace_period() :: integer()
-  @callback default_max_run_duration() :: integer()
-  @callback purge_deleted_after_days() :: integer()
-  @callback get_extension_mod(key :: atom()) :: any()
+  @callback apollo(key :: atom() | nil) :: map()
   @callback check_flag?(atom()) :: boolean() | nil
   @callback cors_origin() :: list()
   @callback default_max_run_duration() :: integer()
@@ -175,6 +180,12 @@ defmodule Lightning.Config do
   @callback worker_secret() :: binary() | nil
   @callback worker_token_signer() :: Joken.Signer.t()
 
+  @doc """
+  Returns the Apollo server configuration.
+  """
+  def apollo(key \\ nil) do
+    impl().apollo(key)
+  end
 
   @doc """
   Returns the Token signer used to sign and verify run tokens.
