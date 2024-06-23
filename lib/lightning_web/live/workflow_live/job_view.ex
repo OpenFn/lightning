@@ -122,18 +122,19 @@ defmodule LightningWeb.WorkflowLive.JobView do
           <%= render_slot(slot) %>
         </.collapsible_panel>
       <% end %>
+      <% {editor_disabled?, editor_disabled_message, editor_panel_title} =
+        editor_disabled?(@form.source.data) %>
       <.collapsible_panel
         id="job-editor-panel"
         class="h-full border border-l-0"
-        panel_title="Editor"
+        panel_title={editor_panel_title}
       >
-        <% {disabled, disabled_message} = disabled(@form.source.data) %>
         <.live_component
           module={EditorPane}
           id={"job-editor-pane-#{@job.id}"}
           form={@form}
-          disabled={disabled}
-          disabled_message={disabled_message}
+          disabled={editor_disabled?}
+          disabled_message={editor_disabled_message}
           class="h-full"
         />
       </.collapsible_panel>
@@ -187,10 +188,12 @@ defmodule LightningWeb.WorkflowLive.JobView do
     """
   end
 
-  defp disabled(%Lightning.Workflows.Job{}), do: {false, ""}
+  defp editor_disabled?(%Lightning.Workflows.Job{}), do: {false, "", "Editor"}
 
-  defp disabled(%Lightning.Workflows.Snapshot.Job{}),
-    do: {true, "Cannot edit in snapshot mode, switch to the latest version."}
+  defp editor_disabled?(%Lightning.Workflows.Snapshot.Job{}),
+    do:
+      {true, "Cannot edit in snapshot mode, switch to the latest version.",
+       "Editor (read-only)"}
 
   defp credential_block(assigns) do
     ~H"""

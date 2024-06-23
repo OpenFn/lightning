@@ -403,6 +403,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
                       base_url={@base_url}
                       snapshot_lock_version={@snapshot && @snapshot.lock_version}
                       job={@selected_job}
+                      selected_run={@selected_run}
                       form={@workflow_form}
                     />
                   </div>
@@ -648,7 +649,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
     ~H"""
     <.link
-      patch={"#{@base_url}?s=#{@job.id}&m=expand" <> if @snapshot_lock_version, do: "&v=#{@snapshot_lock_version}", else: ""}
+      patch={"#{@base_url}?s=#{@job.id}&m=expand" <> (if @snapshot_lock_version, do: "&v=#{@snapshot_lock_version}", else: "") <> (if @selected_run, do: "&a=#{@selected_run}", else: "")}
       class={@button_classes}
     >
       <.icon name="hero-code-bracket" class="w-4 h-4 text-grey-400" />
@@ -864,7 +865,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
           ])
 
         if workflow do
-          {snapshot, run_id} = get_snapshot_and_run_id(params, workflow, version)
+          run_id = Map.get(params, "a")
+          snapshot = snapshot_by_version(workflow.id, version)
 
           socket
           |> assign(selected_run: run_id)
@@ -878,28 +880,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
     end
   end
 
-  def get_snapshot_and_run_id(params, workflow, version) do
-    run_id = Map.get(params, "a")
-
-    snapshot =
-      case run_id do
-        nil -> fetch_snapshot_by_version(workflow.id, version)
-        _ -> fetch_run_snapshot(run_id)
-      end
-
-    {snapshot, run_id}
-  end
-
-  defp fetch_run_snapshot(run_id) do
-    case Runs.get(run_id, include: [snapshot: [triggers: :webhook_auth_methods]]) do
-      nil -> {:error, :not_found}
-      run -> run.snapshot
-    end
-  end
-
-  defp fetch_snapshot_by_version(workflow_id, version) do
-    Snapshot.get_by_version(workflow_id, version)
-  end
+  defp snapshot_by_version(workflow_id, version),
+    do: Snapshot.get_by_version(workflow_id, version)
 
   defp remove_edges_from_params(initial_params, edges_to_delete, id) do
     Map.update!(initial_params, "edges", fn edges ->
@@ -943,7 +925,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
     %{changeset: prev_changeset, project: project, workflow: workflow} =
       socket.assigns
 
-    snapshot = Snapshot.get_by_version(workflow.id, workflow.lock_version)
+    snapshot = snapshot_by_version(workflow.id, workflow.lock_version)
 
     next_changeset = Ecto.Changeset.change(workflow)
 
@@ -1137,11 +1119,10 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
       case Helpers.save_workflow(changeset) do
         {:ok, workflow} ->
-          snapshot = Snapshot.get_by_version(workflow.id, workflow.lock_version)
+          snapshot = snapshot_by_version(workflow.id, workflow.lock_version)
 
           query_params =
             socket.assigns.query_params
-            |> Map.drop(["a"])
             |> Map.put("v", workflow.lock_version)
             |> Map.reject(fn {_key, value} -> is_nil(value) end)
 
@@ -1318,7 +1299,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
       Runs.subscribe(run)
 
-      snapshot = Snapshot.get_by_version(workflow.id, workflow.lock_version)
+      snapshot = snapshot_by_version(workflow.id, workflow.lock_version)
 
       {:noreply,
        socket
@@ -1385,7 +1366,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
            WorkOrders.retry(run_id, step_id, created_by: current_user) do
       Runs.subscribe(run)
 
-      snapshot = Snapshot.get_by_version(workflow.id, workflow.lock_version)
+      snapshot = snapshot_by_version(workflow.id, workflow.lock_version)
 
       {:noreply,
        socket |> assign_workflow(workflow, snapshot) |> follow_run(run)}
