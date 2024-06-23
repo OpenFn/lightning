@@ -377,7 +377,8 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       assert view
              |> has_element?(
-               "[id='version-switcher-canvas-#{workflow.id}'][data-version='#{version}']"
+               "[id='#{workflow.id}']",
+               "Switch to the latest version"
              )
 
       snapshot.jobs
@@ -413,7 +414,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
                )
 
         assert view
-               |> has_element?("[id='version-switcher-inspector-#{job.id}]")
+               |> has_element?("[id='version-switcher-toggle-#{job.id}]")
 
         assert view
                |> has_element?(
@@ -466,7 +467,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       assert is_struct(socket.assigns.changeset.data, Workflow)
 
       view
-      |> render_click("switch-version")
+      |> render_click("switch-version", %{"type" => "toggle"})
 
       %{socket: socket} = :sys.get_state(view.pid)
       assert is_struct(socket.assigns.changeset.data, Snapshot)
