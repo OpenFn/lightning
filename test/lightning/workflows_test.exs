@@ -3,11 +3,10 @@ defmodule Lightning.WorkflowsTest do
 
   import Lightning.Factories
 
-  alias Lightning.KafkaTriggers
   alias Lightning.Workflows
   alias Lightning.Workflows.Trigger
-
-  import Mock
+  alias Lightning.Workflows.Triggers.Events
+  alias Lightning.Workflows.Triggers.Events.KafkaTriggerUpdated
 
   describe "workflows" do
     test "list_workflows/0 returns all workflows" do
@@ -67,27 +66,59 @@ defmodule Lightning.WorkflowsTest do
       assert workflow.name == "some-updated-name"
     end
 
-    test "save_workflow/1 triggers any additional kafka trigger processing" do
-      workflow = insert(:workflow)
+    test "save_workflow/1 publishes event for updated Kafka triggers" do
+      kafka_configuration = build(:triggers_kafka_configuration)
 
-      _trigger_1 = insert(:trigger, type: :kafka, workflow: workflow)
-      _trigger_2 = insert(:trigger, type: :kafka, workflow: workflow)
+      workflow = insert(:workflow) |> Repo.preload(:triggers)
 
-      update_attrs = %{name: "some-updated-name"}
-
-      with_mock KafkaTriggers,
-        [enable_disable_triggers: fn _trigger -> :ok end] do
-
-        {:ok, updated_workflow} = 
-          Workflows.change_workflow(workflow, update_attrs)
-          |> Workflows.save_workflow()
-
-        updated_workflow = updated_workflow |> Repo.preload(:triggers)
-
-        assert_called(
-          KafkaTriggers.enable_disable_triggers(updated_workflow.triggers)
+      kafka_trigger_1 =
+        insert(
+          :trigger,
+          type: :kafka,
+          workflow: workflow,
+          kafka_configuration: kafka_configuration,
+          enabled: false
         )
-      end
+      cron_trigger_1 =
+        insert(
+          :trigger,
+          type: :cron,
+          workflow: workflow,
+          enabled: false
+        )
+      kafka_trigger_2 =
+        insert(
+          :trigger,
+          type: :kafka,
+          workflow: workflow,
+          kafka_configuration: kafka_configuration,
+          enabled: false
+        )
+
+      triggers = [
+        {kafka_trigger_1, %{enabled: true}},
+        {cron_trigger_1, %{enabled: true}},
+        {kafka_trigger_2, %{enabled: true}},
+      ]
+
+      changeset = workflow |> build_changeset(triggers)
+
+      Events.subscribe_to_kafka_trigger_updated()
+
+      changeset |> Workflows.save_workflow()
+
+      assert_received %KafkaTriggerUpdated{trigger: ^kafka_trigger_1}
+      assert_received %KafkaTriggerUpdated{trigger: ^kafka_trigger_2}
+    end
+
+    defp build_changeset(workflow, triggers_and_attrs) do
+      triggers_changes =
+        triggers_and_attrs
+        |> Enum.map(fn {trigger, attrs} ->
+          Trigger.changeset(trigger, attrs)
+        end)
+
+      Ecto.Changeset.change(workflow, triggers: triggers_changes)
     end
 
     test "save_workflow/1 using attrs" do
