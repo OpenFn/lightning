@@ -1,4 +1,4 @@
-defmodule Lightning.Workflows.Trigger.KafkaConfiguration do
+defmodule Lightning.Workflows.Triggers.KafkaConfiguration do
   use Ecto.Schema
   import Ecto.Changeset
 

@@ -15,7 +15,7 @@ defmodule Lightning.Workflows.Trigger do
   import Ecto.Query
 
   alias Lightning.Workflows.Workflow
-  alias Lightning.Workflows.Trigger.KafkaConfiguration
+  alias Lightning.Workflows.Triggers.KafkaConfiguration
 
   @type t :: %__MODULE__{
           __meta__: Ecto.Schema.Metadata.t(),

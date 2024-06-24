@@ -1,7 +1,7 @@
 defmodule LightningWeb.JobLive.KafkaSetupComponent do
   use LightningWeb, :live_component
 
-  alias Lightning.Workflows.Trigger.KafkaConfiguration
+  alias Lightning.Workflows.Triggers.KafkaConfiguration
   alias LightningWeb.Components.Form
 
 
