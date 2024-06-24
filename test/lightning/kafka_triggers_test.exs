@@ -1314,6 +1314,90 @@ defmodule Lightning.KafkaTriggersTest do
     end
   end
 
+  describe ".get_kafka_triggers_being_updated/1" do
+    setup do
+      %{workflow: insert(:workflow) |> Repo.preload(:triggers)}
+    end
+    test "returns kafka triggers contained within changeset", %{
+      workflow: workflow
+    } do
+      kafka_configuration = build(:triggers_kafka_configuration)
+
+      kafka_trigger_1 =
+        insert(
+          :trigger,
+          type: :kafka,
+          workflow: workflow,
+          kafka_configuration: kafka_configuration,
+          enabled: false
+        )
+      cron_trigger_1 =
+        insert(
+          :trigger,
+          type: :cron,
+          workflow: workflow,
+          enabled: false
+        )
+      kafka_trigger_2 =
+        insert(
+          :trigger,
+          type: :kafka,
+          workflow: workflow,
+          kafka_configuration: kafka_configuration,
+          enabled: false
+        )
+      webhook_trigger_1 =
+        insert(
+          :trigger,
+          type: :cron,
+          workflow: workflow,
+          enabled: false
+        )
+
+      triggers = [
+        {kafka_trigger_1, %{enabled: true}},
+        {cron_trigger_1, %{enabled: true}},
+        {kafka_trigger_2, %{enabled: true}},
+        {webhook_trigger_1, %{enabled: true}},
+      ]
+
+      changeset = workflow |> build_changeset(triggers)
+
+      assert KafkaTriggers.get_kafka_triggers_being_updated(changeset) == [
+        kafka_trigger_1,
+        kafka_trigger_2
+      ]
+    end
+
+    test "returns empty list if triggers is an empty list", %{
+      workflow: workflow
+    } do
+      changeset = workflow |> build_changeset([])
+
+      assert KafkaTriggers.get_kafka_triggers_being_updated(changeset) == []
+    end
+
+    test "returns empty list if triggers is nil", %{
+      workflow: workflow
+    } do
+      changeset =
+        workflow
+        |> Ecto.Changeset.change(%{name: "foo-bar-baz"})
+
+      assert KafkaTriggers.get_kafka_triggers_being_updated(changeset) == []
+    end
+
+    defp build_changeset(workflow, triggers_and_attrs) do
+      triggers_changes =
+        triggers_and_attrs
+        |> Enum.map(fn {trigger, attrs} ->
+          Trigger.changeset(trigger, attrs)
+        end)
+
+      Ecto.Changeset.change(workflow, triggers: triggers_changes)
+    end
+  end
+
   defp child_spec(opts) do
     trigger = opts |> Keyword.get(:trigger)
     index = opts |> Keyword.get(:index)

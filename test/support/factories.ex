@@ -263,6 +263,19 @@ defmodule Lightning.Factories do
       data: %{some: :data} |> Jason.encode!()
     }
   end
+
+  def triggers_kafka_configuration_factory do
+    %Lightning.Workflows.Triggers.KafkaConfiguration{
+      group_id: "arb_group_id",
+      hosts: [
+        ["localhost", "9096"],
+        ["localhost", "9095"],
+        ["localhost", "9094"]
+      ],
+      initial_offset_reset_policy: "earliest",
+      topics: ["arb_topic"]
+    }
+  end
   # ----------------------------------------------------------------------------
   # Helpers
   # ----------------------------------------------------------------------------

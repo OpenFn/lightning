@@ -7,7 +7,6 @@ defmodule Lightning.Workflows do
 
   alias Ecto.Multi
 
-  alias Lightning.KafkaTriggers
   alias Lightning.Projects.Project
   alias Lightning.Repo
   alias Lightning.Workflows.Edge
@@ -16,7 +15,7 @@ defmodule Lightning.Workflows do
   alias Lightning.Workflows.Query
   alias Lightning.Workflows.Snapshot
   alias Lightning.Workflows.Trigger
-  alias Lightning.Workflows.Trigger
+  alias Lightning.Workflows.Triggers
   alias Lightning.Workflows.Workflow
 
   defdelegate subscribe(project_id), to: Events
@@ -56,6 +55,20 @@ defmodule Lightning.Workflows do
   @spec save_workflow(Ecto.Changeset.t(Workflow.t()) | map()) ::
           {:ok, Workflow.t()} | {:error, Ecto.Changeset.t(Workflow.t())}
   def save_workflow(%Ecto.Changeset{data: %Workflow{}} = changeset) do
+    kafka_triggers_to_update =
+      Kafka.Triggers.get_kafka_triggers_being_updated(changeset)
+    # kafka_triggers_to_update =
+    #   changeset
+    #   |> Ecto.Changeset.get_change(:triggers)
+    #   |> Enum.filter(fn changeset ->
+    #     %Ecto.Changeset{data: trigger} = changeset
+    #
+    #     trigger.type == :kafka
+    #   end)
+    #   |> Enum.map(fn changeset ->
+    #     changeset.data
+    #   end)
+
     Multi.new()
     |> Multi.insert_or_update(:workflow, changeset)
     |> then(fn multi ->
@@ -68,11 +81,10 @@ defmodule Lightning.Workflows do
     |> Repo.transaction()
     |> case do
       {:ok, %{workflow: workflow}} ->
-        workflow
-        |> Repo.preload(:triggers)
-        |> then(fn %{triggers: triggers} ->
-          KafkaTriggers.enable_disable_triggers(triggers)
-        end) 
+        kafka_triggers_to_update
+        |> Enum.each(fn trigger ->
+          Triggers.Events.kafka_trigger_updated(trigger) 
+        end)
 
         Events.workflow_updated(workflow)
 
