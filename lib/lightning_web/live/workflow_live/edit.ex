@@ -83,7 +83,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
           <div class="mx-1"></div>
           <.button
             :if={@snapshot_version_tag != "latest"}
-            id={@workflow.id}
+            id={"version-switcher-button-#{@workflow.id}"}
             type="button"
             phx-click="switch-version"
             phx-value-type="commit"

@@ -1,5 +1,4 @@
 defmodule LightningWeb.WorkflowLive.EditTest do
-  # alias Lightning.Workflows
   alias Lightning.Helpers
   alias Lightning.Workflows.Snapshot
   alias Lightning.Workflows
@@ -245,7 +244,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
   describe "edit" do
     setup :create_workflow
 
-    test "can edit workflow canvas when opening it with a non latest snapshot",
+    test "Switching between workflow versions maintains correct read-only and edit modes",
          %{conn: conn, project: project, workflow: workflow} do
       {:ok, view, _html} =
         live(
@@ -377,7 +376,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       assert view
              |> has_element?(
-               "[id='#{workflow.id}']",
+               "[id='version-switcher-button-#{workflow.id}']",
                "Switch to the latest version"
              )
 
@@ -448,13 +447,16 @@ defmodule LightningWeb.WorkflowLive.EditTest do
                )
       end)
 
+      last_job = List.last(snapshot.jobs)
+      last_edge = List.last(snapshot.edges)
+
       force_event(view, :save) =~
         "Cannot save in snapshot mode, switch to the latest version."
 
-      force_event(view, :delete_node, List.last(snapshot.jobs)) =~
+      force_event(view, :delete_node, last_job) =~
         "Cannot delete a node in snapshot mode, switch to latest"
 
-      force_event(view, :delete_edge, List.last(snapshot.edges)) =~
+      force_event(view, :delete_edge, last_edge) =~
         "Cannot delete a node in snapshot mode, switch to latest"
 
       force_event(view, :manual_run_submit, %{}) =~
@@ -463,14 +465,134 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       force_event(view, :rerun, nil, nil) =~
         "Cannot rerun in snapshot mode, switch to latest."
 
-      %{socket: socket} = :sys.get_state(view.pid)
-      assert is_struct(socket.assigns.changeset.data, Workflow)
+      assert view
+             |> element(
+               "p",
+               "You cannot edit or run an old snapshot of a workflow."
+             )
+             |> has_element?()
+
+      assert view
+             |> element("#version-switcher-button-#{workflow.id}")
+             |> has_element?()
+
+      refute view |> element("[type='submit']", "Save") |> has_element?()
 
       view
-      |> render_click("switch-version", %{"type" => "toggle"})
+      |> element("#version-switcher-button-#{workflow.id}")
+      |> render_click()
 
-      %{socket: socket} = :sys.get_state(view.pid)
-      assert is_struct(socket.assigns.changeset.data, Snapshot)
+      refute view
+             |> element(
+               "p",
+               "You cannot edit or run an old snapshot of a workflow."
+             )
+             |> has_element?()
+
+      refute view
+             |> element("#version-switcher-button-#{workflow.id}")
+             |> has_element?()
+
+      assert view |> element("[type='submit']", "Save") |> has_element?()
+    end
+
+    test "Inspector renders run thru their snapshots and allows switching to the latest versions for edition",
+         %{conn: conn, project: project, workflow: workflow} do
+      {:ok, earliest_snapshot} = Snapshot.get_or_create_latest_for(workflow)
+
+      run_1 =
+        insert(:run,
+          work_order: build(:workorder, workflow: workflow),
+          starting_trigger: build(:trigger),
+          dataclip: build(:dataclip),
+          finished_at: build(:timestamp),
+          snapshot: earliest_snapshot,
+          state: :started
+        )
+
+      jobs_attrs =
+        workflow.jobs
+        |> Enum.with_index()
+        |> Enum.map(fn {job, idx} ->
+          %{
+            id: job.id,
+            name: "job-number-#{idx}",
+            body:
+              ~s[fn(state => { console.log("job body number #{idx}"); return state; })]
+          }
+        end)
+
+      {:ok, workflow} =
+        Workflows.change_workflow(workflow, %{jobs: jobs_attrs})
+        |> Workflows.save_workflow()
+
+      {:ok, latest_snapshot} = Snapshot.get_or_create_latest_for(workflow)
+
+      run_2 =
+        insert(:run,
+          work_order: build(:workorder, workflow: workflow),
+          starting_trigger: build(:trigger),
+          dataclip: build(:dataclip),
+          finished_at: build(:timestamp),
+          snapshot: latest_snapshot,
+          state: :started
+        )
+
+      job_1 = List.last(run_1.snapshot.jobs)
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project}/w/#{workflow}?#{[a: run_1, s: job_1, m: "expand", v: run_1.snapshot.lock_version]}"
+        )
+
+      run_1_version = String.slice(run_1.snapshot.id, 0..6)
+
+      assert view
+             |> has_element?(
+               "[id='inspector-workflow-version'][aria-label='You are viewing a snapshot of this workflow that was taken on #{Helpers.format_date(run_1.snapshot.inserted_at)}']",
+               run_1_version
+             )
+
+      assert view
+             |> has_element?(
+               "#job-editor-panel-panel-header-title",
+               "Editor (read-only)"
+             )
+
+      assert view
+             |> has_element?(
+               "[id='job-editor-#{job_1.id}'][data-disabled-message='Cannot edit in snapshot mode, switch to the latest version.'][data-disabled='true'][data-source='#{job_1.body}']"
+             )
+
+      assert view |> has_element?("[id='manual_run_form_dataclip_id'][disabled]")
+
+      assert view |> has_element?("div", job_1.name)
+
+      view |> element("#version-switcher-toggle-#{job_1.id}") |> render_click()
+
+      job_2 = List.last(run_2.snapshot.jobs)
+
+      assert view
+             |> has_element?(
+               "[id='inspector-workflow-version'][aria-label='This is the latest version of this workflow']",
+               "latest"
+             )
+
+      assert view
+             |> has_element?(
+               "#job-editor-panel-panel-header-title",
+               "Editor"
+             )
+
+      assert view
+             |> has_element?(
+               "[id='job-editor-#{job_1.id}'][data-disabled-message=''][data-disabled='false'][data-source='#{job_2.body}']"
+             )
+
+      refute view |> has_element?("[id='manual_run_form_dataclip_id'][disabled]")
+
+      assert view |> has_element?("div", job_2.name)
     end
 
     test "click on pencil icon activates workflow name edit mode", %{
