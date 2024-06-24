@@ -4,7 +4,6 @@ defmodule Lightning.KafkaTesting.Utils do
   alias Lightning.Jobs
   alias Lightning.KafkaTriggers
   alias Lightning.KafkaTriggers.PipelineSupervisor
-  alias Lightning.KafkaTriggers.PipelineWorker
   alias Lightning.KafkaTriggers.MessageCandidateSetSupervisor
   alias Lightning.Projects
   alias Lightning.Workflows
@@ -86,8 +85,6 @@ defmodule Lightning.KafkaTesting.Utils do
 
   def start_supervisor_and_children() do
     {:ok, _sup} = PipelineSupervisor.start_link([])
-
-    PipelineWorker.perform(%Oban.Job{args: %{}})
   end
 
   # alias Lightning.Accounts.User

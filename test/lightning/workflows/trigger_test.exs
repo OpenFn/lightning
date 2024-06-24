@@ -2,6 +2,7 @@ defmodule Lightning.Workflows.TriggerTest do
   use Lightning.DataCase, async: true
 
   alias Lightning.Workflows.Trigger
+  alias Lightning.Workflows.Triggers.KafkaConfiguration
 
   describe "changeset/2" do
     test "type must be valid" do
@@ -124,7 +125,7 @@ defmodule Lightning.Workflows.TriggerTest do
         Trigger.changeset(
           %Trigger{
             type: :kafka,
-            kafka_configuration: %Trigger.KafkaConfiguration{group_id: "foo"}
+            kafka_configuration: %KafkaConfiguration{group_id: "foo"}
           },
           %{
             type: :webhook
@@ -147,7 +148,7 @@ defmodule Lightning.Workflows.TriggerTest do
         Trigger.changeset(
           %Trigger{
             type: :kafka,
-            kafka_configuration: %Trigger.KafkaConfiguration{group_id: "foo"}
+            kafka_configuration: %KafkaConfiguration{group_id: "foo"}
           },
           %{
             type: :cron

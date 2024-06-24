@@ -1,8 +1,8 @@
-defmodule Lightning.Workflows.Trigger.KafkaConfigurationTest do
+defmodule Lightning.Workflows.Triggers.KafkaConfigurationTest do
   use Lightning.DataCase, async: true
 
   alias Ecto.Changeset
-  alias Lightning.Workflows.Trigger.KafkaConfiguration
+  alias Lightning.Workflows.Triggers.KafkaConfiguration
 
   describe "generate_hosts_string/1" do
     test "adds hosts_string change to changeset" do
