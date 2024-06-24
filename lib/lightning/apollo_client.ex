@@ -21,6 +21,19 @@ defmodule Lightning.ApolloClient do
     client() |> Tesla.post("/services/job_chat", payload)
   end
 
+  @doc """
+  Checks if the Apollo endpoint is available.
+  """
+  @spec test() :: :ok | :error
+  def test() do
+    client()
+    |> Tesla.get("/")
+    |> case do
+      {:ok, %{status: status}} when status in 200..299 -> :ok
+      _ -> :error
+    end
+  end
+
   defp client do
     Tesla.client([
       {Tesla.Middleware.BaseUrl, Lightning.Config.apollo(:endpoint)},
