@@ -25,7 +25,7 @@ defmodule Lightning.ApolloClient do
   Checks if the Apollo endpoint is available.
   """
   @spec test() :: :ok | :error
-  def test() do
+  def test do
     client()
     |> Tesla.get("/")
     |> case do

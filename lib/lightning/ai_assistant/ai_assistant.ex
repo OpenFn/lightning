@@ -39,16 +39,58 @@ defmodule Lightning.AiAssistant do
 
     @spec put_history(t(), history() | [%{String.t() => any()}]) :: t()
     def put_history(session, history) do
+      history =
+        Enum.map(history, fn h ->
+          %{role: h["role"] || h[:role], content: h["content"] || h[:content]}
+        end)
+
       %{session | history: history}
     end
+
+    @doc """
+    Puts the given expression into the session.
+    """
+    @spec put_expression(t(), String.t()) :: t()
+    def put_expression(session, expression) do
+      %{session | expression: expression}
+    end
   end
+
+  @doc """
+  Creates a new session with the given job.
+
+  **Example**
+
+      iex> AiAssistant.new_session(%Lightning.Workflows.Job{
+      ...>   body: "fn()",
+      ...>   adaptor: "@openfn/language-common@latest"
+      ...> })
+      %Lightning.AiAssistant.Session{
+        expression: "fn()",
+        adaptor: "@openfn/language-common@1.6.2",
+        history: []
+      }
+
+  > ℹ️ The `adaptor` field is resolved to the latest version when `@latest`
+  > is provided as Apollo expects a specific version.
+  """
 
   @spec new_session(Job.t()) :: Session.t()
   def new_session(job) do
     Session.new(job.body, job.adaptor)
   end
 
-  @spec query(Session.t(), String.t()) :: Tesla.Env.result()
+  @doc """
+  Queries the AI assistant with the given content.
+
+  Returns `{:ok, session}` if the query was successful, otherwise `:error`.
+
+  **Example**
+
+      iex> AiAssistant.query(session, "fn()")
+      {:ok, session}
+  """
+  @spec query(Session.t(), String.t()) :: {:ok, Session.t()} | :error
   def query(session, content) do
     ApolloClient.query(
       content,
@@ -76,7 +118,7 @@ defmodule Lightning.AiAssistant do
   Checks if the Apollo endpoint is available.
   """
   @spec endpoint_available?() :: boolean()
-  def endpoint_available?() do
+  def endpoint_available? do
     ApolloClient.test() == :ok
   end
 end

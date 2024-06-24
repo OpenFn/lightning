@@ -17,10 +17,19 @@ defmodule Lightning.AiAssistantTest do
     end
 
     test "put_history" do
-      session = Session.new("fn()", "@openfn/language-common@latest")
-      session = Session.put_history(session, [%{role: :user, content: "fn()"}])
+      session =
+        Session.new("fn()", "@openfn/language-common@latest")
+        |> Session.put_history([%{role: :user, content: "fn()"}])
 
       assert session.history == [%{role: :user, content: "fn()"}]
+    end
+
+    test "put_expression" do
+      session =
+        Session.new("fn()", "@openfn/language-common@latest")
+        |> Session.put_expression("fn(state => state)")
+
+      assert session.expression == "fn(state => state)"
     end
   end
 
@@ -73,10 +82,8 @@ defmodule Lightning.AiAssistantTest do
       end
     end)
 
-    expect(Lightning.Tesla.Mock, :call, fn %{method: :post, url: url}, _opts ->
-      assert url =~ "/services/job_chat"
-
-      reply = """
+    reply =
+      """
       {
         "response": "Based on the provided guide and the API documentation for the OpenFn @openfn/language-common@1.14.0 adaptor, you can create jobs using the functions provided by the API to interact with different data sources and perform various operations.\\n\\nTo create a job using the HTTP adaptor, you can use functions like `get`, `post`, `put`, `patch`, `head`, and `options` to make HTTP requests. Here's an example job code using the HTTP adaptor:\\n\\n```javascript\\nconst { get, post, each, dataValue } = require('@openfn/language-common');\\n\\nexecute(\\n  get('/patients'),\\n  each('$.data.patients[*]', (item, index) => {\\n    item.id = `item-${index}`;\\n  }),\\n  post('/patients', dataValue('patients'))\\n);\\n```\\n\\nIn this example, the job first fetches patient data using a GET request, then iterates over each patient to modify their ID, and finally posts the modified patient data back.\\n\\nYou can similarly create jobs using the Salesforce adaptor or the ODK adaptor by utilizing functions like `upsert`, `create`, `fields`, `field`, etc., as shown in the provided examples.\\n\\nFeel free to ask if you have any specific questions or need help with",
         "history": [
@@ -88,13 +95,19 @@ defmodule Lightning.AiAssistantTest do
         ]
       }
       """
+      |> Jason.decode!()
 
-      {:ok, %Tesla.Env{status: 200, body: reply |> Jason.decode!()}}
+    expect(Lightning.Tesla.Mock, :call, fn %{method: :post, url: url}, _opts ->
+      assert url =~ "/services/job_chat"
+
+      {:ok, %Tesla.Env{status: 200, body: reply}}
     end)
 
     {:ok, session} = AiAssistant.query(session, "foo")
 
-    assert session.history
+    assert session.history ==
+             reply["history"]
+             |> Enum.map(fn h -> %{role: h["role"], content: h["content"]} end)
   end
 
   test "authorized?" do

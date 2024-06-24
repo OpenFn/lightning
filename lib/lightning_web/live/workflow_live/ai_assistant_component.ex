@@ -1,6 +1,6 @@
 defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
-  alias Phoenix.LiveView.AsyncResult
   use LightningWeb, :live_component
+  alias Phoenix.LiveView.AsyncResult
 
   def mount(socket) do
     {:ok,
