@@ -413,7 +413,7 @@ defmodule LightningWeb.WorkflowLive.Components do
             <.input
               type="textarea"
               field={@form[:condition_expression]}
-              class="h-24"
+              class="h-24 font-mono proportional-nums"
               phx-debounce="300"
               maxlength="255"
             />

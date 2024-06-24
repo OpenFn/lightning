@@ -108,6 +108,7 @@ defmodule LightningWeb.WorkflowLive.JobView do
           <%= render_slot(slot) %>
         </.collapsible_panel>
       <% end %>
+      <%= render_slot(@inner_block) %>
       <.collapsible_panel
         id="job-editor-panel"
         class="h-full border border-l-0"

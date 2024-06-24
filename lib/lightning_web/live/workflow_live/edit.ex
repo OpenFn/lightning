@@ -100,22 +100,54 @@ defmodule LightningWeb.WorkflowLive.Edit do
               }
               form={single_inputs_for(@workflow_form, :jobs, @selected_job.id)}
             >
-              <:collapsible_panel
+              <.collapsible_panel
                 id={"manual-job-#{@selected_job.id}"}
-                panel_title="Input"
+                class="h-full border border-l-0"
               >
-                <LightningWeb.WorkflowLive.ManualWorkorder.component
-                  id={"manual-job-#{@selected_job.id}"}
-                  form={@manual_run_form}
-                  dataclips={@selectable_dataclips}
-                  disabled={!@can_run_workflow}
-                  project={@project}
-                  admin_contacts={@admin_contacts}
-                  can_edit_data_retention={@can_edit_data_retention}
-                  follow_run_id={@follow_run && @follow_run.id}
-                  show_wiped_dataclip_selector={@show_wiped_dataclip_selector}
-                />
-              </:collapsible_panel>
+                <:tabs>
+                  <LightningWeb.Components.Tabbed.tabs
+                    id="tab-bar-left"
+                    default_hash="manual"
+                    class="flex flex-row space-x-6 -my-2 job-viewer-tabs"
+                  >
+                    <:tab hash="manual">
+                      <span class="inline-block align-middle">Input</span>
+                    </:tab>
+                    <:tab hash="aichat">
+                      <span class="inline-block align-middle">AI Assistant</span>
+                    </:tab>
+                  </LightningWeb.Components.Tabbed.tabs>
+                </:tabs>
+                <LightningWeb.Components.Tabbed.panels
+                  id="input-panels"
+                  class="contents"
+                  default_hash="manual"
+                >
+                  <:panel hash="manual" class="overflow-auto h-full">
+                    <div class="grow flex flex-col gap-4 min-h-0 h-full">
+                      <LightningWeb.WorkflowLive.ManualWorkorder.component
+                        id={"manual-job-#{@selected_job.id}"}
+                        form={@manual_run_form}
+                        dataclips={@selectable_dataclips}
+                        disabled={!@can_run_workflow}
+                        project={@project}
+                        admin_contacts={@admin_contacts}
+                        can_edit_data_retention={@can_edit_data_retention}
+                        follow_run_id={@follow_run && @follow_run.id}
+                        show_wiped_dataclip_selector={@show_wiped_dataclip_selector}
+                      />
+                    </div>
+                  </:panel>
+                  <:panel hash="aichat" class="h-full">
+                    <div class="grow gap-4 min-h-0 h-full">
+                      <.live_component
+                        module={LightningWeb.WorkflowLive.AiAssistantComponent}
+                        id={"aichat-#{@selected_job.id}"}
+                      />
+                    </div>
+                  </:panel>
+                </LightningWeb.Components.Tabbed.panels>
+              </.collapsible_panel>
               <:footer>
                 <div class="flex flex-row gap-x-2">
                   <% {is_empty, error_message} =
