@@ -977,7 +977,11 @@ defmodule LightningWeb.WorkflowLive.Edit do
              WorkOrders.retry(run_id, step_id, created_by: current_user) do
         Runs.subscribe(run)
 
-        {:noreply, socket |> assign_workflow(workflow) |> follow_run(run)}
+        {:noreply,
+         socket
+         |> assign_workflow(workflow)
+         |> follow_run(run)
+         |> push_event("push-hash", %{"hash" => "log"})}
       else
         {:error, _reason, %{text: error_text}} ->
           {:noreply, put_flash(socket, :error, error_text)}

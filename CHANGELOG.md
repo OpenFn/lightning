@@ -19,6 +19,9 @@ and this project adheres to
 
 ### Changed
 
+- Reverted behaviour on "Rerun from here" to select the Log tab.
+  [#2202](https://github.com/OpenFn/lightning/issues/2202)
+
 ### Fixed
 
 ## [v2.6.3] - 2024-06-19
