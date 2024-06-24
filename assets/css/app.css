@@ -110,7 +110,7 @@
 }
 
 div[id^='tippy-'] {
-  @apply rounded-md p-2 z-[9999] 
+  @apply rounded-md p-2 z-[9999]
          text-xs text-center text-primary-50
          bg-primary-950;
 }
@@ -257,4 +257,8 @@ div.line-num::before {
         hover:text-gray-600
         hover:border-b-gray-300;
   }
+}
+
+.makeup-html pre {
+  @apply overflow-x-auto;
 }
