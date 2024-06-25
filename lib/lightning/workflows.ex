@@ -7,6 +7,7 @@ defmodule Lightning.Workflows do
 
   alias Ecto.Multi
 
+  alias Lightning.KafkaTriggers
   alias Lightning.Projects.Project
   alias Lightning.Repo
   alias Lightning.Workflows.Edge
@@ -56,18 +57,7 @@ defmodule Lightning.Workflows do
           {:ok, Workflow.t()} | {:error, Ecto.Changeset.t(Workflow.t())}
   def save_workflow(%Ecto.Changeset{data: %Workflow{}} = changeset) do
     kafka_triggers_to_update =
-      Kafka.Triggers.get_kafka_triggers_being_updated(changeset)
-    # kafka_triggers_to_update =
-    #   changeset
-    #   |> Ecto.Changeset.get_change(:triggers)
-    #   |> Enum.filter(fn changeset ->
-    #     %Ecto.Changeset{data: trigger} = changeset
-    #
-    #     trigger.type == :kafka
-    #   end)
-    #   |> Enum.map(fn changeset ->
-    #     changeset.data
-    #   end)
+      KafkaTriggers.get_kafka_triggers_being_updated(changeset)
 
     Multi.new()
     |> Multi.insert_or_update(:workflow, changeset)
@@ -83,7 +73,7 @@ defmodule Lightning.Workflows do
       {:ok, %{workflow: workflow}} ->
         kafka_triggers_to_update
         |> Enum.each(fn trigger ->
-          Triggers.Events.kafka_trigger_updated(trigger) 
+          Triggers.Events.kafka_trigger_updated(trigger)
         end)
 
         Events.workflow_updated(workflow)
