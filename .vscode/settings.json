@@ -7,7 +7,8 @@
     "editor.defaultFormatter": "JakeBecker.elixir-ls"
   },
   "files.associations": {
-    "*.heex": "phoenix-heex"
+    "*.heex": "phoenix-heex",
+    "app.css": "tailwindcss"
   },
   "emmet.includeLanguages": {
     "phoenix-heex": "html"

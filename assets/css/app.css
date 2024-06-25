@@ -260,8 +260,21 @@ div.line-num::before {
 }
 
 .makeup-html {
-  @apply text-balance;
+  @apply text-pretty;
+
+  ul {
+    @apply list-disc list-outside ml-4;
+  }
+
+  p:not(:first-of-type) {
+    @apply mt-4;
+  }
+
   pre {
-    @apply text-wrap border border-slate-200 rounded-md p-2 my-2;
+    @apply text-wrap text-slate-200 bg-slate-700 rounded-md p-2 my-2;
+
+    code {
+      @apply text-sm leading-3;
+    }
   }
 }

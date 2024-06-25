@@ -17,7 +17,9 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
 
   def update(%{selected_job: job} = assigns, socket) do
     {:ok,
-     socket |> assign(assigns) |> assign(session: AiAssistant.new_session(job))}
+     socket
+     |> assign(assigns)
+     |> assign(session: AiAssistant.new_session(job))}
   end
 
   def render(assigns) do

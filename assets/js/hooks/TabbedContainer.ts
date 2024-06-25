@@ -76,12 +76,42 @@ const TabbedContainer = {
   },
 } as TabbedContainer;
 
+// When hash is null
+// and the local storage is null
+// Set the default tab to active
+
+// When hash is null
+// and the local storage is not null
+// Set the tab from local storage to active
+
+// When the hash is not null
+// and the hash can be found in the tabs
+// Set the tab from the hash to active
+
+// When a tab is set it also sets local storage
+
+function storeComponentHash(component: HTMLElement, hash: string | null) {
+  if (hash) {
+    localStorage.setItem(`${component.id}-hash`, hash);
+  } else {
+    localStorage.removeItem(`${component.id}-hash`);
+  }
+}
+
+function getComponentHash(component: HTMLElement) {
+  return localStorage.getItem(`${component.id}-hash`);
+}
+
 const TabbedSelector: PhoenixHook<{
   defaultHash: string | null;
-  selectTab(nextHash: string | null): void;
   _onHashChange(e: Event): void;
+  updateTabs(): void;
+  findTarget(hash: string | null): HTMLElement | null;
+  syncSelectedTab(): void;
 }> = {
   mounted(this: typeof TabbedSelector) {
+    console.debug('TabbedSelector', this.el);
+
     this.defaultHash = this.el.dataset.defaultHash || null;
 
     // Trigger a URL hash change when the server sends a 'push-hash' event.
@@ -90,41 +120,27 @@ const TabbedSelector: PhoenixHook<{
     });
 
     this._onHashChange = _evt => {
-      this.selectTab(getHash());
+      this.syncSelectedTab();
+      this.updateTabs();
     };
 
     window.addEventListener('hashchange', this._onHashChange);
 
-    this.selectTab(getHash() || this.defaultHash);
+    this.syncSelectedTab();
+    this.updateTabs();
+    const tabToSelect = getComponentHash(this.el);
+    console.debug('tabToSelect', tabToSelect);
+  },
+  syncSelectedTab() {
+    syncHash(this);
   },
   updated() {
-    const selected = this.el.querySelector<HTMLElement>(
-      '[aria-selected="true"]'
-    );
-
-    // If there is a currently selected tab, and the URL hash is not set,
-    // set the URL hash to the selected tab.
-    // This is useful when the user navigates to a page with a selected tab
-    // but the hash url is not set (the server isn't aware of hash state).
-    if (selected) {
-      let selectedTabHash = getHashFromTab(selected);
-
-      if (selectedTabHash && getHash() === null) {
-        window.location.hash = selectedTabHash;
-      }
-    } else {
-      this.selectTab(getHash() || this.defaultHash);
-    }
+    this.syncSelectedTab();
+    this.updateTabs();
   },
-  selectTab(nextHash: string | null) {
-    if (!nextHash) {
-      return;
-    }
-
-    const targetTab: HTMLElement | null = this.el.querySelector<HTMLElement>(
-      `[aria-controls="${nextHash}-panel"]`
-    );
-
+  updateTabs() {
+    const hashToSelect = getComponentHash(this.el);
+    const targetTab = this.findTarget(hashToSelect);
     if (!targetTab) {
       return;
     }
@@ -140,6 +156,15 @@ const TabbedSelector: PhoenixHook<{
       targetTab.setAttribute('aria-selected', 'true');
     });
   },
+  findTarget(hash: string | null) {
+    if (!hash) {
+      return null;
+    }
+
+    return this.el.querySelector<HTMLElement>(
+      `[aria-controls="${hash}-panel"]`
+    );
+  },
   destroyed() {
     window.removeEventListener('hashchange', this._onHashChange);
   },
@@ -147,10 +172,13 @@ const TabbedSelector: PhoenixHook<{
 
 const TabbedPanels: PhoenixHook<{
   defaultHash: string | null;
-  showPanel(nextHash: string | null): void;
+  syncSelectedPanel(): void;
+  findTarget(hash: string | null): HTMLElement | null;
+  updatePanels(): void;
   _onHashChange(e: Event): void;
 }> = {
   mounted(this: typeof TabbedPanels) {
+    console.debug('TabbedPanels', this.el);
     this.defaultHash = this.el.dataset.defaultHash || null;
 
     // Trigger a URL hash change when the server sends a 'push-hash' event.
@@ -159,25 +187,25 @@ const TabbedPanels: PhoenixHook<{
     });
 
     this._onHashChange = _evt => {
-      this.showPanel(getHash() || this.defaultHash);
+      this.syncSelectedPanel();
+      this.updatePanels();
     };
 
     window.addEventListener('hashchange', this._onHashChange);
 
-    this.showPanel(getHash() || this.defaultHash);
+    this.syncSelectedPanel();
+    this.updatePanels();
   },
   updated() {
-    this.showPanel(getHash() || this.defaultHash);
+    this.syncSelectedPanel();
+    this.updatePanels();
   },
-  showPanel(nextHash: string | null) {
-    if (!nextHash) {
-      return;
-    }
-
-    const targetPanel: HTMLElement | null = this.el.querySelector<HTMLElement>(
-      `[aria-labelledby="${nextHash}-tab"]`
-    );
-
+  syncSelectedPanel() {
+    syncHash(this);
+  },
+  updatePanels() {
+    const hashToSelect = getComponentHash(this.el);
+    const targetPanel = this.findTarget(hashToSelect);
     if (!targetPanel) {
       return;
     }
@@ -192,9 +220,34 @@ const TabbedPanels: PhoenixHook<{
       targetPanel.classList.remove('hidden');
     });
   },
+  findTarget(hash: string | null) {
+    if (!hash) {
+      return null;
+    }
+
+    return this.el.querySelector<HTMLElement>(
+      `[aria-labelledby="${hash}-tab"]`
+    );
+  },
   destroyed() {
     window.removeEventListener('hashchange', this._onHashChange);
   },
 } as typeof TabbedPanels;
+
+function syncHash(component: typeof TabbedSelector | typeof TabbedPanels) {
+  const hash = getHash();
+
+  // could be a tab that we don't have
+  if (hash && component.findTarget(hash)) {
+    storeComponentHash(component.el, hash);
+  } else {
+    const storedHash = getComponentHash(component.el);
+    // if there is a stored hash, check if it exists in the tabs
+    // if it doesn't exist, set the default hash
+    if (!storedHash || !component.findTarget(storedHash)) {
+      storeComponentHash(component.el, component.defaultHash);
+    }
+  }
+}
 
 export { TabbedContainer, TabbedSelector, TabbedPanels };

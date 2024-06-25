@@ -158,7 +158,7 @@ defmodule LightningWeb.WorkflowLive.JobView do
             container: {:div, class: "h-full p-2"}
           ) %>
         <% else %>
-          <div class="w-1/2 h-16 text-center m-auto p-2">
+          <div class="w-1/2 h-16 text-center m-auto p-4">
             <div class="text-gray-500 pb-2">
               After you click run, the logs and output will be visible here.
             </div>
