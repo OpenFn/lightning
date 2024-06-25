@@ -111,6 +111,51 @@ defmodule Lightning.WorkflowsTest do
       assert_received %KafkaTriggerUpdated{trigger: ^kafka_trigger_2}
     end
 
+    test "save_workflow/1 does not publish events if save fails" do
+      kafka_configuration = build(:triggers_kafka_configuration)
+
+      workflow = insert(:workflow) |> Repo.preload(:triggers)
+
+      kafka_trigger_1 =
+        insert(
+          :trigger,
+          type: :kafka,
+          workflow: workflow,
+          kafka_configuration: kafka_configuration,
+          enabled: false
+        )
+      cron_trigger_1 =
+        insert(
+          :trigger,
+          type: :cron,
+          workflow: workflow,
+          enabled: false
+        )
+      kafka_trigger_2 =
+        insert(
+          :trigger,
+          type: :kafka,
+          workflow: workflow,
+          kafka_configuration: kafka_configuration,
+          enabled: false
+        )
+
+      triggers = [
+        {kafka_trigger_1, %{enabled: true}},
+        {cron_trigger_1, %{type: :unobtainium}},
+        {kafka_trigger_2, %{enabled: true}},
+      ]
+
+      changeset = workflow |> build_changeset(triggers)
+
+      Events.subscribe_to_kafka_trigger_updated()
+
+      changeset |> Workflows.save_workflow()
+
+      refute_received %KafkaTriggerUpdated{trigger: ^kafka_trigger_1}
+      refute_received %KafkaTriggerUpdated{trigger: ^kafka_trigger_2}
+    end
+
     defp build_changeset(workflow, triggers_and_attrs) do
       triggers_changes =
         triggers_and_attrs

@@ -382,4 +382,23 @@ defmodule Lightning.KafkaTriggers do
         |> Enum.join(", ")
     end
   end
+
+  def get_kafka_triggers_being_updated(changeset) do
+    changeset
+    |> Ecto.Changeset.fetch_change(:triggers)
+    |> case do
+      :error ->
+        []
+      {:ok, triggers} ->
+        triggers
+    end
+    |> Enum.filter(fn changeset ->
+      %Ecto.Changeset{data: trigger} = changeset
+
+      trigger.type == :kafka
+    end)
+    |> Enum.map(fn changeset ->
+      changeset.data
+    end)
+  end
 end
