@@ -1304,7 +1304,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
       {:noreply,
        socket
        |> assign_workflow(workflow, snapshot)
-       |> follow_run(run)}
+       |> follow_run(run)
+       |> push_event("push-hash", %{"hash" => "log"})}
     else
       {:error, %Ecto.Changeset{data: %WorkOrders.Manual{}} = changeset} ->
         {:noreply,
@@ -1337,65 +1338,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
   def handle_event("manual_run_submit", _params, socket) do
     {:noreply, socket}
-  end
-
-  # The retry_from_run event is for creating a new run for an existing work
-  # order, just like clicking "rerun from here" on the history page.
-  def handle_event(
-        "rerun",
-        %{"run_id" => run_id, "step_id" => step_id},
-        socket
-      ) do
-    %{
-      can_run_workflow: can_run_workflow?,
-      current_user: current_user,
-      changeset: changeset,
-      project: %{id: project_id},
-      snapshot_version_tag: tag
-    } = socket.assigns
-
-    with true <- can_run_workflow? || :not_authorized,
-         true <- tag == "latest" || :view_only,
-         :ok <-
-           UsageLimiter.limit_action(%Action{type: :new_run}, %Context{
-             project_id: project_id
-           }),
-         {:ok, workflow} <-
-           Helpers.save_workflow(%{changeset | action: :update}),
-         {:ok, run} <-
-           WorkOrders.retry(run_id, step_id, created_by: current_user) do
-      Runs.subscribe(run)
-
-      snapshot = snapshot_by_version(workflow.id, workflow.lock_version)
-
-      {:noreply,
-       socket |> assign_workflow(workflow, snapshot) |> follow_run(run)}
-    else
-      {:error, _reason, %{text: error_text}} ->
-        {:noreply, put_flash(socket, :error, error_text)}
-
-      {:error, %{text: message}} ->
-        {:noreply, put_flash(socket, :error, message)}
-
-      {:error, changeset} ->
-        {
-          :noreply,
-          socket
-          |> assign_changeset(changeset)
-          |> mark_validated()
-          |> put_flash(:error, "Workflow could not be saved")
-        }
-
-      :not_authorized ->
-        {:noreply,
-         socket
-         |> put_flash(:error, "You are not authorized to perform this action.")}
-
-      :view_only ->
-        {:noreply,
-         socket
-         |> put_flash(:error, "Cannot rerun in snapshot mode, switch to latest.")}
-    end
   end
 
   @impl true
