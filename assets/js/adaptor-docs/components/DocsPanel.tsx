@@ -13,7 +13,7 @@ const docsLink = (
     You can check the external docs site at
     <a
       className="text-indigo-400 underline underline-offset-2 hover:text-indigo-500 ml-2"
-      href="https://docs.openfn.org/adaptors/#where-to-find-them."
+      href="https://docs.openfn.org/adaptors/#where-to-find-them"
       target="none"
     >
       docs.openfn.org/adaptors
