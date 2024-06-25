@@ -259,6 +259,9 @@ div.line-num::before {
   }
 }
 
-.makeup-html pre {
-  @apply text-pretty border border-slate-200 rounded-md p-2 my-2;
+.makeup-html {
+  @apply text-balance;
+  pre {
+    @apply text-wrap border border-slate-200 rounded-md p-2 my-2;
+  }
 }

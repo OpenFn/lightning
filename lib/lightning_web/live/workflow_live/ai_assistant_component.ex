@@ -56,7 +56,7 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
             >
               <div class="">
                 <div class="rounded-full p-2 bg-indigo-200 text-indigo-700 ring-4 ring-white">
-                  <.icon name="hero-sparkles" class="" />
+                  <.icon name="hero-cpu-chip" class="" />
                 </div>
               </div>
 
@@ -136,30 +136,24 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
       )
 
     ~H"""
-    <div class="min-w-0 flex-1">
-      <div class="overflow-hidden rounded-lg shadow-sm ring-1 ring-inset ring-gray-300 focus-within:ring-2 focus-within:ring-indigo-600">
-        <label for={@form[:content].name} class="sr-only">
-          Describe your request
-        </label>
-        <textarea
-          id="content"
-          name={@form[:content].name}
-          rows="3"
-          class="block w-full resize-none border-0 bg-transparent py-1.5 text-gray-900 placeholder:text-gray-400 focus:ring-0 sm:text-sm sm:leading-6"
-          placeholder="..."
-          disabled={@disabled}
-        ><%= Phoenix.HTML.Form.normalize_value("textarea", @form[:content].value) %></textarea>
-        <.error :for={msg <- @errors}><%= msg %></.error>
-      </div>
-
-      <div class="relative">
-        <div class="absolute inset-x-0 bottom-0 flex justify-between py-2 pl-3 pr-2">
-          <div class="flex items-center space-x-5"></div>
-          <div class="flex-shrink-0">
-            <.button type="submit" disabled={@disabled}>
-              Send
-            </.button>
-          </div>
+    <div class="w-full max-h-72 flex flex-row rounded-lg shadow-sm ring-1 ring-inset ring-gray-300 focus-within:ring-2 focus-within:ring-indigo-600">
+      <label for={@form[:content].name} class="sr-only">
+        Describe your request
+      </label>
+      <textarea
+        id="content"
+        name={@form[:content].name}
+        class="block grow resize-none border-0 bg-transparent py-1.5 text-gray-900 placeholder:text-gray-400 focus:ring-0 text-sm"
+        placeholder="..."
+        disabled={@disabled}
+      ><%= Phoenix.HTML.Form.normalize_value("textarea", @form[:content].value) %></textarea>
+      <.error :for={msg <- @errors}><%= msg %></.error>
+      <div class="py-2 pl-3 pr-2">
+        <div class="flex items-center space-x-5"></div>
+        <div class="flex-shrink-0">
+          <.button type="submit" disabled={@disabled}>
+            Send
+          </.button>
         </div>
       </div>
     </div>
