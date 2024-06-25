@@ -168,6 +168,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
                     :if={display_switcher(@snapshot, @workflow)}
                     id={@selected_job.id}
                     label="Switch to the latest version"
+                    disabled={job_deleted?(@selected_job, @workflow)}
                     version={@snapshot_version_tag}
                   />
 
@@ -416,15 +417,13 @@ defmodule LightningWeb.WorkflowLive.Edit do
                         class="focus:ring-red-500 bg-red-600 hover:bg-red-700 disabled:bg-red-300"
                         disabled={
                           !@can_edit_workflow or @has_child_edges or @is_first_job or
-                            @has_steps or
                             @snapshot_version_tag != "latest"
                         }
                         tooltip={
                           deletion_tooltip_message(
                             @can_edit_workflow,
                             @has_child_edges,
-                            @is_first_job,
-                            @has_steps
+                            @is_first_job
                           )
                         }
                         data-confirm="Are you sure you want to delete this step?"
@@ -580,8 +579,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
   defp deletion_tooltip_message(
          can_edit_job,
          has_child_edges,
-         is_first_job,
-         has_steps
+         is_first_job
        ) do
     cond do
       !can_edit_job ->
@@ -593,17 +591,22 @@ defmodule LightningWeb.WorkflowLive.Edit do
       is_first_job ->
         "You can't delete the first step in a workflow."
 
-      has_steps ->
-        "You can't delete a step with associated history while it's protected by your data retention period. (Workflow 'snapshots' are coming. For now, disable the incoming edge to prevent the job from running.)"
-
       true ->
         nil
     end
   end
 
+  defp job_deleted?(selected_job, workflow) do
+    not Enum.any?(workflow.jobs, fn job -> job.id == selected_job.id end)
+  end
+
   defp version_switcher_toggle(assigns) do
     ~H"""
-    <div class="flex items-center justify-between">
+    <div
+      id={"version-switcher-toggle-wrapper-#{@id}"}
+      class="flex items-center justify-between"
+      {if @disabled, do: ["phx-hook": "Tooltip", "data-placement": "top", "aria-label": "Can't switch to the latest version, the job has been deleted from the workflow."], else: []}
+    >
       <span class="flex flex-grow flex-col">
         <span class="inline-flex items-center px-2 py-1 font-medium text-yellow-600">
           <%= @label %>
@@ -615,6 +618,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
         phx-click="switch-version"
         phx-value-type="toggle"
         type="button"
+        disabled={@disabled}
         class={"#{if @version == "latest", do: "bg-indigo-600", else: "bg-gray-200"} relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:ring-offset-2"}
       >
         <span
@@ -894,31 +898,44 @@ defmodule LightningWeb.WorkflowLive.Edit do
   end
 
   defp toggle_latest_version(socket) do
-    %{changeset: prev_changeset, project: project, workflow: workflow} =
+    %{
+      changeset: prev_changeset,
+      project: project,
+      workflow: workflow,
+      selected_job: selected_job
+    } =
       socket.assigns
 
-    {next_changeset, version} = switch_changeset(socket)
+    if job_deleted?(selected_job, workflow) do
+      put_flash(
+        socket,
+        :info,
+        "Can't switch to the latest version, the job has been deleted from the workflow."
+      )
+    else
+      {next_changeset, version} = switch_changeset(socket)
 
-    prev_params = WorkflowParams.to_map(prev_changeset)
-    next_params = WorkflowParams.to_map(next_changeset)
+      prev_params = WorkflowParams.to_map(prev_changeset)
+      next_params = WorkflowParams.to_map(next_changeset)
 
-    patches = WorkflowParams.to_patches(prev_params, next_params)
+      patches = WorkflowParams.to_patches(prev_params, next_params)
 
-    lock_version = Ecto.Changeset.get_field(next_changeset, :lock_version)
+      lock_version = Ecto.Changeset.get_field(next_changeset, :lock_version)
 
-    query_params =
-      socket.assigns.query_params
-      |> Map.reject(fn {_k, v} -> is_nil(v) end)
-      |> Map.put("v", lock_version)
+      query_params =
+        socket.assigns.query_params
+        |> Map.reject(fn {_k, v} -> is_nil(v) end)
+        |> Map.put("v", lock_version)
 
-    url = ~p"/projects/#{project.id}/w/#{workflow.id}?#{query_params}"
+      url = ~p"/projects/#{project.id}/w/#{workflow.id}?#{query_params}"
 
-    socket
-    |> assign(changeset: next_changeset)
-    |> assign(workflow_params: next_params)
-    |> assign(snapshot_version_tag: version)
-    |> push_event("patches-applied", %{patches: patches})
-    |> push_patch(to: url)
+      socket
+      |> assign(changeset: next_changeset)
+      |> assign(workflow_params: next_params)
+      |> assign(snapshot_version_tag: version)
+      |> push_event("patches-applied", %{patches: patches})
+      |> push_patch(to: url)
+    end
   end
 
   defp commit_latest_version(socket) do
@@ -975,14 +992,12 @@ defmodule LightningWeb.WorkflowLive.Edit do
       can_edit_workflow: can_edit_workflow,
       has_child_edges: has_child_edges,
       is_first_job: is_first_job,
-      has_steps: has_steps,
       snapshot_version_tag: tag
     } = socket.assigns
 
     with true <- can_edit_workflow || :not_authorized,
          true <- !has_child_edges || :has_child_edges,
          true <- !is_first_job || :is_first_job,
-         true <- !has_steps || :has_steps,
          true <- tag == "latest" || :view_only do
       edges_to_delete =
         Ecto.Changeset.get_assoc(changeset, :edges, :struct)
@@ -1009,14 +1024,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
         {:noreply,
          socket
          |> put_flash(:error, "You can't delete the first step in a workflow.")}
-
-      :has_steps ->
-        {:noreply,
-         socket
-         |> put_flash(
-           :error,
-           "You can't delete a step that has already been ran."
-         )}
 
       :view_only ->
         {:noreply,
@@ -1526,10 +1533,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
     |> Enum.any?()
   end
 
-  defp has_steps?(job) do
-    Map.has_key?(job, :steps) && !Enum.empty?(job.steps)
-  end
-
   defp get_filtered_edges(workflow_changeset, filter_func) do
     workflow_changeset
     |> Ecto.Changeset.get_assoc(:edges, :struct)
@@ -1711,7 +1714,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
       :jobs ->
         socket
         |> assign(
-          has_steps: has_steps?(value),
           has_child_edges: has_child_edges?(socket.assigns.changeset, value.id),
           is_first_job: first_job?(socket.assigns.changeset, value.id),
           selected_job: value,

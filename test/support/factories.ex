@@ -363,7 +363,8 @@ defmodule Lightning.Factories do
         %{
           id: Ecto.UUID.generate(),
           source_job_id: source_job.id,
-          target_job_id: target_job.id
+          target_job_id: target_job.id,
+          condition_type: :always
         }
         |> Map.merge(extra |> Enum.into(%{}))
       )
@@ -384,7 +385,8 @@ defmodule Lightning.Factories do
             Enum.into(extra, %{
               id: Ecto.UUID.generate(),
               source_trigger_id: trigger.id,
-              target_job_id: job.id
+              target_job_id: job.id,
+              condition_type: :always
             })
           )
     }

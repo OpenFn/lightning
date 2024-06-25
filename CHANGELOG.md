@@ -24,6 +24,8 @@ and this project adheres to
   specific snapshot version and the latest version. Edit mode is available when
   displaying the latest version.
   [#1843](https://github.com/OpenFn/lightning/issues/1843)
+- Allow users to delete steps sssociated with runs in the Workflow Canvas
+  [#2027](https://github.com/OpenFn/lightning/issues/2027)
 
 ### Changed
 

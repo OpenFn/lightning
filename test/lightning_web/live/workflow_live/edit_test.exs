@@ -1,9 +1,6 @@
 defmodule LightningWeb.WorkflowLive.EditTest do
-  alias Lightning.Helpers
-  alias Lightning.Workflows.Snapshot
-  alias Lightning.Workflows
-  alias Lightning.Repo
   use LightningWeb.ConnCase, async: true
+
   import Phoenix.LiveViewTest
   import Lightning.WorkflowLive.Helpers
   import Lightning.WorkflowsFixtures
@@ -11,6 +8,10 @@ defmodule LightningWeb.WorkflowLive.EditTest do
   import Lightning.Factories
   import Ecto.Query
 
+  alias Lightning.Helpers
+  alias Lightning.Workflows.Snapshot
+  alias Lightning.Workflows
+  alias Lightning.Repo
   alias LightningWeb.CredentialLiveHelpers
   alias Lightning.Workflows.Workflow
 
@@ -595,6 +596,70 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       assert view |> has_element?("div", job_2.name)
     end
 
+    test "Can't switch to the latest version from a deleted step", %{
+      conn: conn,
+      project: project,
+      workflow: workflow
+    } do
+      {:ok, snapshot} = Snapshot.get_or_create_latest_for(workflow)
+
+      run =
+        insert(:run,
+          work_order: build(:workorder, workflow: workflow),
+          starting_trigger: build(:trigger),
+          dataclip: build(:dataclip),
+          finished_at: build(:timestamp),
+          snapshot: snapshot,
+          state: :started
+        )
+
+      jobs_attrs =
+        workflow.jobs
+        |> Enum.with_index()
+        |> Enum.map(fn {job, idx} ->
+          %{
+            id: job.id,
+            name: "job-number-#{idx}",
+            body:
+              ~s[fn(state => { console.log("job body number #{idx}"); return state; })]
+          }
+        end)
+
+      {:ok, workflow} =
+        Workflows.change_workflow(workflow, %{jobs: jobs_attrs})
+        |> Workflows.save_workflow()
+
+      {:ok, latest_snapshot} = Snapshot.get_or_create_latest_for(workflow)
+
+      insert(:run,
+        work_order: build(:workorder, workflow: workflow),
+        starting_trigger: build(:trigger),
+        dataclip: build(:dataclip),
+        finished_at: build(:timestamp),
+        snapshot: latest_snapshot,
+        state: :started
+      )
+
+      job_to_delete = workflow.jobs |> List.last() |> Repo.delete!()
+
+      workflow = Repo.reload(workflow) |> Repo.preload(:jobs)
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project}/w/#{workflow}?#{[a: run, s: job_to_delete, m: "expand", v: run.snapshot.lock_version]}"
+        )
+
+      assert view
+             |> has_element?(
+               "[id='version-switcher-toggle-#{job_to_delete.id}'][disabled]"
+             )
+
+      assert view
+             |> render_click("switch-version", %{"type" => "toggle"}) =~
+               "Can&#39;t switch to the latest version, the job has been deleted from the workflow."
+    end
+
     test "click on pencil icon activates workflow name edit mode", %{
       conn: conn,
       project: project,
@@ -926,23 +991,21 @@ defmodule LightningWeb.WorkflowLive.EditTest do
     end
 
     @tag role: :editor
-    test "can't delete a step that has already been ran", %{
+    test "can delete a step that has already been ran", %{
       conn: conn,
       project: project
     } do
       trigger = build(:trigger, type: :webhook)
 
-      [job_a, job_b, job_c] = insert_list(3, :job)
+      [job_a, job_b] = insert_list(2, :job)
 
       workflow =
         build(:workflow)
         |> with_job(job_a)
         |> with_job(job_b)
-        |> with_job(job_c)
         |> with_trigger(trigger)
         |> with_edge({trigger, job_a})
         |> with_edge({job_a, job_b})
-        |> with_edge({job_a, job_c})
         |> insert()
 
       insert(:step, job: job_b)
@@ -957,14 +1020,24 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       view |> select_node(job_b, workflow.lock_version)
 
-      assert view |> delete_job_button_is_disabled?(job_b)
-
-      assert view |> force_event(:delete_node, job_b) =~
-               "You can&#39;t delete a step with associated history"
-
-      view |> select_node(job_c, workflow.lock_version)
+      assert_patched(
+        view,
+        ~p"/projects/#{project}/w/#{workflow}?s=#{job_b}&v=#{workflow.lock_version}"
+      )
 
       refute view |> delete_job_button_is_disabled?(job_b)
+
+      view |> click_delete_job(job_b)
+
+      project_id = project.id
+
+      assert_push_event(view, "patches-applied", %{
+        patches: [
+          %{value: ^project_id, path: "/project_id", op: "replace"},
+          %{op: "remove", path: "/jobs/1"},
+          %{op: "remove", path: "/edges/1"}
+        ]
+      })
     end
 
     @tag role: :editor
