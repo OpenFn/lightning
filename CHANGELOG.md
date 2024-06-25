@@ -24,6 +24,8 @@ and this project adheres to
 
 ### Fixed
 
+- Fixed broken link to adaptor docs site.
+
 ## [v2.6.3] - 2024-06-19
 
 ### Changed
