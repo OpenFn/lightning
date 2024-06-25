@@ -168,6 +168,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
                     :if={display_switcher(@snapshot, @workflow)}
                     id={@selected_job.id}
                     label="Switch to the latest version"
+                    disabled={job_deleted?(@selected_job, @workflow)}
                     version={@snapshot_version_tag}
                   />
 
@@ -595,9 +596,17 @@ defmodule LightningWeb.WorkflowLive.Edit do
     end
   end
 
+  defp job_deleted?(selected_job, workflow) do
+    not Enum.any?(workflow.jobs, fn job -> job.id == selected_job.id end)
+  end
+
   defp version_switcher_toggle(assigns) do
     ~H"""
-    <div class="flex items-center justify-between">
+    <div
+      id={"version-switcher-toggle-wrapper-#{@id}"}
+      class="flex items-center justify-between"
+      {if @disabled, do: ["phx-hook": "Tooltip", "data-placement": "top", "aria-label": "Can't switch to the latest version; the job has been deleted from the workflow."], else: []}
+    >
       <span class="flex flex-grow flex-col">
         <span class="inline-flex items-center px-2 py-1 font-medium text-yellow-600">
           <%= @label %>
@@ -609,6 +618,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
         phx-click="switch-version"
         phx-value-type="toggle"
         type="button"
+        disabled={@disabled}
         class={"#{if @version == "latest", do: "bg-indigo-600", else: "bg-gray-200"} relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:ring-offset-2"}
       >
         <span
@@ -888,31 +898,44 @@ defmodule LightningWeb.WorkflowLive.Edit do
   end
 
   defp toggle_latest_version(socket) do
-    %{changeset: prev_changeset, project: project, workflow: workflow} =
+    %{
+      changeset: prev_changeset,
+      project: project,
+      workflow: workflow,
+      selected_job: selected_job
+    } =
       socket.assigns
 
-    {next_changeset, version} = switch_changeset(socket)
+    if job_deleted?(selected_job, workflow) do
+      put_flash(
+        socket,
+        :info,
+        "Can't switch to the latest version; the job has been deleted from the workflow."
+      )
+    else
+      {next_changeset, version} = switch_changeset(socket)
 
-    prev_params = WorkflowParams.to_map(prev_changeset)
-    next_params = WorkflowParams.to_map(next_changeset)
+      prev_params = WorkflowParams.to_map(prev_changeset)
+      next_params = WorkflowParams.to_map(next_changeset)
 
-    patches = WorkflowParams.to_patches(prev_params, next_params)
+      patches = WorkflowParams.to_patches(prev_params, next_params)
 
-    lock_version = Ecto.Changeset.get_field(next_changeset, :lock_version)
+      lock_version = Ecto.Changeset.get_field(next_changeset, :lock_version)
 
-    query_params =
-      socket.assigns.query_params
-      |> Map.reject(fn {_k, v} -> is_nil(v) end)
-      |> Map.put("v", lock_version)
+      query_params =
+        socket.assigns.query_params
+        |> Map.reject(fn {_k, v} -> is_nil(v) end)
+        |> Map.put("v", lock_version)
 
-    url = ~p"/projects/#{project.id}/w/#{workflow.id}?#{query_params}"
+      url = ~p"/projects/#{project.id}/w/#{workflow.id}?#{query_params}"
 
-    socket
-    |> assign(changeset: next_changeset)
-    |> assign(workflow_params: next_params)
-    |> assign(snapshot_version_tag: version)
-    |> push_event("patches-applied", %{patches: patches})
-    |> push_patch(to: url)
+      socket
+      |> assign(changeset: next_changeset)
+      |> assign(workflow_params: next_params)
+      |> assign(snapshot_version_tag: version)
+      |> push_event("patches-applied", %{patches: patches})
+      |> push_patch(to: url)
+    end
   end
 
   defp commit_latest_version(socket) do
