@@ -17,6 +17,14 @@ and this project adheres to
 
 ### Added
 
+- Use of snapshots for displaying runs and their associated steps in the History
+  page. [#1825](https://github.com/OpenFn/lightning/issues/1825)
+- Added view-only mode for rendering workflows and runs in the Workflow Canvas
+  and the Inspector page using snapshots, with the option to switch between a
+  specific snapshot version and the latest version. Edit mode is available when
+  displaying the latest version.
+  [#1843](https://github.com/OpenFn/lightning/issues/1843)
+
 ### Changed
 
 - Reverted behaviour on "Rerun from here" to select the Log tab.
