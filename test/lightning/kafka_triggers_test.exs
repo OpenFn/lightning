@@ -63,7 +63,7 @@ defmodule Lightning.KafkaTriggersTest do
     test "does not start children if supervisor already has children", %{
       pid: pid
     } do
-      # TODO This behaviour may be obsolete, might be unnecessarily 
+      # TODO This behaviour may be obsolete, might be unnecessarily
       # defensive
       with_mock Supervisor,
         start_child: fn _sup_pid, _child_spec -> {:ok, "fake-pid"} end,
@@ -1395,6 +1395,91 @@ defmodule Lightning.KafkaTriggersTest do
         end)
 
       Ecto.Changeset.change(workflow, triggers: triggers_changes)
+    end
+  end
+
+  describe ".update_pipeline/1" do
+    setup do
+      kafka_configuration = build(:triggers_kafka_configuration)
+
+      enabled_trigger =
+        insert(
+          :trigger,
+          type: :kafka,
+          kafka_configuration: kafka_configuration,
+          enabled: true
+        )
+      disabled_trigger =
+        insert(
+          :trigger,
+          type: :kafka,
+          kafka_configuration: kafka_configuration,
+          enabled: false
+        )
+
+      child_spec = KafkaTriggers.generate_pipeline_child_spec(enabled_trigger)
+
+      %{
+        child_spec: child_spec,
+        disabled_trigger: disabled_trigger,
+        enabled_trigger: enabled_trigger,
+        supervisor: self()
+      }
+    end
+
+    test "adds enabled trigger with the correct child spec", %{
+      child_spec: child_spec,
+      enabled_trigger: trigger,
+      supervisor: supervisor
+    } do
+      with_mock Supervisor,
+        # delete_child: fn _sup_pid, _child_id -> {:ok, "anything"} end,
+        start_child: fn _sup_pid, _child_spec -> {:ok, "fake-pid"} end do
+        # terminate_child: fn _sup_pid, _child_id -> {:ok, "anything"} end do
+        KafkaTriggers.update_pipeline(supervisor, trigger)
+
+        assert_called(Supervisor.start_child(supervisor, child_spec))
+      end
+    end
+
+    test "removes child if trigger is disabled", %{
+      disabled_trigger: trigger,
+      supervisor: supervisor
+    } do
+      with_mock Supervisor,
+        delete_child: fn _sup_pid, _child_id -> {:ok, "anything"} end,
+        terminate_child: fn _sup_pid, _child_id -> {:ok, "anything"} end do
+        KafkaTriggers.update_pipeline(supervisor, trigger)
+
+        assert_called(Supervisor.terminate_child(supervisor, trigger.id))
+        assert_called(Supervisor.delete_child(supervisor, trigger.id))
+
+        assert call_sequence() == [:terminate_child, :delete_child]
+      end
+    end
+
+    test "if triggers is enabled and pipeline exists, removes and adds", %{
+      child_spec: child_spec,
+      enabled_trigger: trigger,
+      supervisor: supervisor
+    } do
+      with_mock Supervisor,
+        delete_child: fn _sup_pid, _child_id -> {:ok, "anything"} end,
+        start_child: in_series([_sup_pid, child_spec]) end do
+        terminate_child: fn _sup_pid, _child_id -> {:ok, "anything"} end do
+
+        KafkaTriggers.update_pipeline(supervisor, trigger)
+
+        assert_called(Supervisor.start_child(supervisor, child_spec))
+      end
+    end
+
+    defp call_sequence do
+      Supervisor
+      |> call_history()
+      |> Enum.map(fn {_pid, {_supervisor, call, _args}, _response} ->
+        call
+      end)
     end
   end
 

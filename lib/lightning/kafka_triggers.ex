@@ -401,4 +401,15 @@ defmodule Lightning.KafkaTriggers do
       changeset.data
     end)
   end
+
+  def update_pipeline(supervisor, trigger) do
+    case trigger do
+      %{enabled: true} ->
+        spec = generate_pipeline_child_spec(trigger)
+        Supervisor.start_child(supervisor, spec)
+      %{enabled: false} ->
+        Supervisor.terminate_child(supervisor, trigger.id)
+        Supervisor.delete_child(supervisor, trigger.id)
+    end
+  end
 end
