@@ -1,9 +1,6 @@
 defmodule LightningWeb.WorkflowLive.EditTest do
-  alias Lightning.Helpers
-  alias Lightning.Workflows.Snapshot
-  alias Lightning.Workflows
-  alias Lightning.Repo
   use LightningWeb.ConnCase, async: true
+
   import Phoenix.LiveViewTest
   import Lightning.WorkflowLive.Helpers
   import Lightning.WorkflowsFixtures
@@ -11,6 +8,10 @@ defmodule LightningWeb.WorkflowLive.EditTest do
   import Lightning.Factories
   import Ecto.Query
 
+  alias Lightning.Helpers
+  alias Lightning.Workflows.Snapshot
+  alias Lightning.Workflows
+  alias Lightning.Repo
   alias LightningWeb.CredentialLiveHelpers
   alias Lightning.Workflows.Workflow
 
@@ -593,6 +594,70 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       refute view |> has_element?("[id='manual_run_form_dataclip_id'][disabled]")
 
       assert view |> has_element?("div", job_2.name)
+    end
+
+    test "Can't switch to the latest version from a deleted step", %{
+      conn: conn,
+      project: project,
+      workflow: workflow
+    } do
+      {:ok, snapshot} = Snapshot.get_or_create_latest_for(workflow)
+
+      run =
+        insert(:run,
+          work_order: build(:workorder, workflow: workflow),
+          starting_trigger: build(:trigger),
+          dataclip: build(:dataclip),
+          finished_at: build(:timestamp),
+          snapshot: snapshot,
+          state: :started
+        )
+
+      jobs_attrs =
+        workflow.jobs
+        |> Enum.with_index()
+        |> Enum.map(fn {job, idx} ->
+          %{
+            id: job.id,
+            name: "job-number-#{idx}",
+            body:
+              ~s[fn(state => { console.log("job body number #{idx}"); return state; })]
+          }
+        end)
+
+      {:ok, workflow} =
+        Workflows.change_workflow(workflow, %{jobs: jobs_attrs})
+        |> Workflows.save_workflow()
+
+      {:ok, latest_snapshot} = Snapshot.get_or_create_latest_for(workflow)
+
+      insert(:run,
+        work_order: build(:workorder, workflow: workflow),
+        starting_trigger: build(:trigger),
+        dataclip: build(:dataclip),
+        finished_at: build(:timestamp),
+        snapshot: latest_snapshot,
+        state: :started
+      )
+
+      job_to_delete = workflow.jobs |> List.last() |> Repo.delete!()
+
+      workflow = Repo.reload(workflow) |> Repo.preload(:jobs)
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project}/w/#{workflow}?#{[a: run, s: job_to_delete, m: "expand", v: run.snapshot.lock_version]}"
+        )
+
+      assert view
+             |> has_element?(
+               "[id='version-switcher-toggle-#{job_to_delete.id}'][disabled]"
+             )
+
+      assert view
+             |> render_click("switch-version", %{"type" => "toggle"}) =~
+               "Can&#39;t switch to the latest version, the job has been deleted from the workflow."
     end
 
     test "click on pencil icon activates workflow name edit mode", %{

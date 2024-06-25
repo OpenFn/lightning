@@ -910,7 +910,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
       put_flash(
         socket,
         :info,
-        "Can't switch to the latest version; the job has been deleted from the workflow."
+        "Can't switch to the latest version, the job has been deleted from the workflow."
       )
     else
       {next_changeset, version} = switch_changeset(socket)
