@@ -47,6 +47,20 @@ defmodule Lightning.AiAssistant do
       %{session | history: history}
     end
 
+    @spec push_history(t(), %{String.t() => any()}) :: t()
+    def push_history(session, message) do
+      history =
+        session.history ++
+          [
+            %{
+              role: message["role"] || message[:role],
+              content: message["content"] || message[:content]
+            }
+          ]
+
+      %{session | history: history}
+    end
+
     @doc """
     Puts the given expression into the session.
     """
@@ -78,6 +92,11 @@ defmodule Lightning.AiAssistant do
   @spec new_session(Job.t()) :: Session.t()
   def new_session(job) do
     Session.new(job.body, job.adaptor)
+  end
+
+  @spec push_history(Session.t(), %{String.t() => any()}) :: Session.t()
+  def push_history(session, message) do
+    Session.push_history(session, message)
   end
 
   @doc """

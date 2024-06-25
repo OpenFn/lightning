@@ -6,22 +6,11 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
   def mount(socket) do
     {:ok,
      socket
-     |> assign(:messages, [
-       %{
-         role: :assistant,
-         content:
-           "Based on the provided guide and the API documentation for the OpenFn @openfn/language-common@1.14.0 adaptor, you can create jobs using the functions provided by the API to interact with different data sources and perform various operations.\n\nTo create a job using the HTTP adaptor, you can use functions like `get`, `post`, `put`, `patch`, `head`, and `options` to make HTTP requests. Here's an example job code using the HTTP adaptor:\n\n```javascript\nconst { get, post, each, dataValue } = require('@openfn/language-common');\n\nexecute(\n  get('/patients'),\n  each('$.data.patients[*]', (item, index) => {\n    item.id = `item-${index}`;\n  }),\n  post('/patients', dataValue('patients'))\n);\n```\n\nIn this example, the job first fetches patient data using a GET request, then iterates over each patient to modify their ID, and finally posts the modified patient data back.\n\nYou can similarly create jobs using the Salesforce adaptor or the ODK adaptor by utilizing functions like `upsert`, `create`, `fields`, `field`, etc., as shown in the provided examples.\n\nFeel free to ask if you have any specific questions or need help with"
-       },
-       %{role: :user, content: "what?"},
-       %{role: :assistant, content: "Hello, how can I help you?"},
-       %{role: :user, content: "Hello, I'm here to be helped."}
-     ])
      |> assign(%{
        pending_message: AsyncResult.ok(nil),
        form: to_form(%{"content" => nil})
      })
      |> assign_async(:endpoint_available?, fn ->
-       Process.sleep(1000)
        {:ok, %{endpoint_available?: AiAssistant.endpoint_available?()}}
      end)}
   end
@@ -42,16 +31,16 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
             </div>
           </div>
         </:loading>
-        <div class="row-span-full flex flex-col-reverse gap-4 p-2 overflow-y-auto">
-          <%= for message <- @messages do %>
+        <div class="row-span-full flex flex-col gap-4 p-2 overflow-y-auto">
+          <%= for message <- @session.history do %>
             <div
-              :if={message.role == :user}
+              :if={message.role == "user"}
               class="ml-auto bg-blue-500 text-white p-2 rounded-lg text-right break-words"
             >
               <%= message.content %>
             </div>
             <div
-              :if={message.role == :assistant}
+              :if={message.role == "assistant"}
               class="mr-auto p-2 rounded-lg break-words text-wrap flex flex-row gap-x-2 makeup-html"
             >
               <div class="">
@@ -65,6 +54,31 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
               </div>
             </div>
           <% end %>
+          <.async_result assign={@pending_message}>
+            <:loading>
+              <div class="mr-auto p-2 rounded-lg break-words text-wrap flex flex-row gap-x-2 animate-pulse">
+                <div class="">
+                  <div class="rounded-full p-2 bg-indigo-200 text-indigo-700 ring-4 ring-white">
+                    <.icon name="hero-sparkles" class="" />
+                  </div>
+                </div>
+                <div class="h-2 bg-slate-700 rounded"></div>
+              </div>
+            </:loading>
+            <:failed>
+              <div class="mr-auto p-2 rounded-lg break-words text-wrap flex flex-row gap-x-2">
+                <div class="">
+                  <div class="rounded-full p-2 bg-indigo-200 text-indigo-700 ring-4 ring-white">
+                    <.icon name="hero-sparkles" class="" />
+                  </div>
+                </div>
+                <div class="flex gap-2">
+                  <.icon name="exclamation-triangle" class="text-red" />
+                  <span>An error occured! Please try again later.</span>
+                </div>
+              </div>
+            </:failed>
+          </.async_result>
         </div>
         <.form
           for={@form}
@@ -83,42 +97,35 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
   end
 
   def handle_event("send_message", %{"content" => content}, socket) do
-    response_id = Ecto.UUID.generate()
-
-    socket =
-      socket
-      |> update(:messages, fn messages ->
-        [
-          %{role: :assistant, content: "...", id: response_id},
-          %{role: :user, content: content} | messages
-        ]
-      end)
-      |> assign(:pending_message, AsyncResult.loading())
-      |> start_async(
-        :process_message,
-        fn ->
-          Process.sleep(1000)
-
-          %{
-            id: response_id,
-            role: :assistant,
-            content: "Got it!"
-          }
-        end
-      )
-
-    {:noreply, socket}
-  end
-
-  def handle_async(:process_message, {:ok, message}, socket) do
     {:noreply,
      socket
-     |> update(:messages, fn messages ->
-       messages
-       |> Enum.find_index(&(&1.id == message.id))
-       |> then(fn index -> List.replace_at(messages, index, message) end)
-     end)
+     |> assign(:pending_message, AsyncResult.loading())
+     |> assign(
+       :session,
+       AiAssistant.push_history(socket.assigns.session, %{
+         "role" => "user",
+         "content" => content
+       })
+     )
+     |> start_async(
+       :process_message,
+       fn ->
+         AiAssistant.query(socket.assigns.session, content)
+       end
+     )}
+  end
+
+  def handle_async(:process_message, {:ok, {:ok, session}}, socket) do
+    {:noreply,
+     socket
+     |> assign(:session, session)
      |> assign(:pending_message, AsyncResult.ok(nil))}
+  end
+
+  def handle_async(:process_message, {:ok, :error}, socket) do
+    {:noreply,
+     socket
+     |> assign(:pending_message, AsyncResult.failed(nil, :error))}
   end
 
   attr :disabled, :boolean
