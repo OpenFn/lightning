@@ -113,7 +113,10 @@ defmodule LightningWeb.WorkflowLive.Edit do
                     <:tab hash="manual">
                       <span class="inline-block align-middle">Input</span>
                     </:tab>
-                    <:tab hash="aichat">
+                    <:tab
+                      :if={Lightning.AiAssistant.authorized?(@current_user)}
+                      hash="aichat"
+                    >
                       <span class="inline-block align-middle">AI Assistant</span>
                     </:tab>
                   </LightningWeb.Components.Tabbed.tabs>
@@ -138,10 +141,15 @@ defmodule LightningWeb.WorkflowLive.Edit do
                       />
                     </div>
                   </:panel>
-                  <:panel hash="aichat" class="h-full">
+                  <:panel
+                    :if={Lightning.AiAssistant.authorized?(@current_user)}
+                    hash="aichat"
+                    class="h-full"
+                  >
                     <div class="grow gap-4 min-h-0 h-full">
                       <.live_component
                         module={LightningWeb.WorkflowLive.AiAssistantComponent}
+                        selected_job={@selected_job}
                         id={"aichat-#{@selected_job.id}"}
                       />
                     </div>
