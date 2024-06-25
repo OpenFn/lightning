@@ -964,8 +964,11 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       view |> click_delete_job(job_b)
 
+      project_id = project.id
+
       assert_push_event(view, "patches-applied", %{
         patches: [
+          %{value: ^project_id, path: "/project_id", op: "replace"},
           %{op: "remove", path: "/jobs/1"},
           %{op: "remove", path: "/edges/1"}
         ]

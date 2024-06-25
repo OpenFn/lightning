@@ -605,7 +605,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
     <div
       id={"version-switcher-toggle-wrapper-#{@id}"}
       class="flex items-center justify-between"
-      {if @disabled, do: ["phx-hook": "Tooltip", "data-placement": "top", "aria-label": "Can't switch to the latest version; the job has been deleted from the workflow."], else: []}
+      {if @disabled, do: ["phx-hook": "Tooltip", "data-placement": "top", "aria-label": "Can't switch to the latest version, the job has been deleted from the workflow."], else: []}
     >
       <span class="flex flex-grow flex-col">
         <span class="inline-flex items-center px-2 py-1 font-medium text-yellow-600">
