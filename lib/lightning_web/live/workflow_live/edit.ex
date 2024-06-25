@@ -127,7 +127,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
                   default_hash="manual"
                 >
                   <:panel hash="manual" class="overflow-auto h-full">
-                    <div class="grow flex flex-col gap-4 min-h-0 h-full">
+                    <div class="grow flex flex-col gap-4 p-2 min-h-0 h-full">
                       <LightningWeb.WorkflowLive.ManualWorkorder.component
                         id={"manual-job-#{@selected_job.id}"}
                         form={@manual_run_form}
@@ -146,7 +146,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
                     hash="aichat"
                     class="h-full"
                   >
-                    <div class="grow gap-4 min-h-0 h-full">
+                    <div class="grow min-h-0 h-full text-sm">
                       <.live_component
                         module={LightningWeb.WorkflowLive.AiAssistantComponent}
                         selected_job={@selected_job}

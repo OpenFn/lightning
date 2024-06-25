@@ -24,8 +24,8 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
 
   def render(assigns) do
     ~H"""
-    <div class="grid grid-cols-1 grid-rows-2 gap-4 h-full">
-      <div class="row-span-full flex flex-col-reverse gap-4 overflow-y-auto">
+    <div class="grid grid-cols-1 grid-rows-2 gap-4 h-full flow-root">
+      <div class="row-span-full flex flex-col-reverse gap-4 p-2 overflow-y-auto">
         <%= for message <- @messages do %>
           <div
             :if={message.role == :user}
@@ -35,16 +35,24 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
           </div>
           <div
             :if={message.role == :assistant}
-            class="mr-auto bg-gray-200 text-gray-800 p-2 rounded-lg break-words text-wrap max-w-full makeup-html"
+            class="mr-auto p-2 rounded-lg break-words text-wrap flex flex-row gap-x-2 makeup-html"
           >
-            <%= message.content |> Earmark.as_html!() |> raw() %>
+            <div class="">
+              <div class="rounded-full p-2 bg-indigo-200 text-indigo-700 ring-4 ring-white">
+                <.icon name="hero-sparkles" class="" />
+              </div>
+            </div>
+
+            <div>
+              <%= message.content |> Earmark.as_html!() |> raw() %>
+            </div>
           </div>
         <% end %>
       </div>
       <.form
         for={@form}
         phx-submit="send_message"
-        class="row-span-1"
+        class="row-span-1 p-2 pt-0"
         phx-target={@myself}
       >
         <.chat_input form={@form} disabled={not is_nil(@pending_message.loading)} />

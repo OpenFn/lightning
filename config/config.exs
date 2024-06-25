@@ -96,7 +96,7 @@ config :esbuild,
 
 # https://fly.io/phoenix-files/tailwind-standalone/
 config :tailwind,
-  version: "3.3.5",
+  version: "3.4.4",
   default: [
     args: ~w(
       --config=tailwind.config.js

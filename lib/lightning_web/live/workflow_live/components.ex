@@ -572,7 +572,7 @@ defmodule LightningWeb.WorkflowLive.Components do
       </div>
       <div
         id={"#{@id}-panel-content"}
-        class="panel-content min-h-0 min-w-0 flex-1 pt-2 p-4 pb-2 bg-white"
+        class="panel-content min-h-0 min-w-0 flex-1 bg-white"
       >
         <%= render_slot(@inner_block) %>
       </div>

@@ -10,7 +10,6 @@ module.exports = {
   darkMode: 'class',
   content: [
     './js/**/*.{js,jsx,ts,tsx}',
-    './node_modules/@openfn/**/*.{js,jsx,ts,tsx,css}',
     '../lib/*_web.ex',
     '../lib/*_web/**/*.*ex',
     '../deps/petal_components/**/*.*ex',

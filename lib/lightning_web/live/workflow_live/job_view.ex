@@ -119,7 +119,7 @@ defmodule LightningWeb.WorkflowLive.JobView do
           id={"job-editor-pane-#{@job.id}"}
           form={@form}
           disabled={false}
-          class="h-full"
+          class="h-full p-2"
         />
       </.collapsible_panel>
       <.collapsible_panel id="output-logs" class="h-full border border-l-0">
@@ -155,10 +155,10 @@ defmodule LightningWeb.WorkflowLive.JobView do
               "project_id" => @project.id,
               "user_id" => @current_user.id
             },
-            container: {:div, class: "h-full"}
+            container: {:div, class: "h-full p-2"}
           ) %>
         <% else %>
-          <div class="w-1/2 h-16 text-center m-auto pt-4">
+          <div class="w-1/2 h-16 text-center m-auto p-2">
             <div class="text-gray-500 pb-2">
               After you click run, the logs and output will be visible here.
             </div>
