@@ -273,6 +273,7 @@ defmodule Lightning.Factories do
         ["localhost", "9094"]
       ],
       initial_offset_reset_policy: "earliest",
+      ssl: false,
       topics: ["arb_topic"]
     }
   end
