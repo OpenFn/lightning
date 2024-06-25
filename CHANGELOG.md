@@ -26,6 +26,7 @@ and this project adheres to
   [#1843](https://github.com/OpenFn/lightning/issues/1843)
 - Allow users to delete steps sssociated with runs in the Workflow Canvas
   [#2027](https://github.com/OpenFn/lightning/issues/2027)
+- Link to adaptor `/src` from inspector.
 
 ### Changed
 
