@@ -23,6 +23,8 @@ and this project adheres to
 
 - Reverted behaviour on "Rerun from here" to select the Log tab.
   [#2202](https://github.com/OpenFn/lightning/issues/2202)
+- Don't allow connections between an orphaned node and a
+  Trigger[#2188](https://github.com/OpenFn/lightning/issues/2188)
 
 ### Fixed
 
