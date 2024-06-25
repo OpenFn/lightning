@@ -17,6 +17,8 @@ and this project adheres to
 
 ### Added
 
+- Link to adaptor `/src` from inspector.
+
 ### Changed
 
 - Reverted behaviour on "Rerun from here" to select the Log tab.
