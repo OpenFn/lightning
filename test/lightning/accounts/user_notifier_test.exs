@@ -4,15 +4,13 @@ defmodule Lightning.Accounts.UserNotifierTest do
 
   import Swoosh.TestAssertions
 
-  alias Lightning.DigestEmailWorker
   alias Lightning.Accounts.{UserNotifier, User}
+  alias Lightning.DigestEmailWorker
   alias Lightning.Projects.Project
   alias Lightning.Credentials.Credential
 
   describe "Notification emails" do
     test "notify_project_deletion/2" do
-      Mox.expect(Lightning.MockConfig, :purge_deleted_after_days, fn -> 7 end)
-
       admin_email = Lightning.Config.instance_admin_email()
 
       user =
@@ -23,13 +21,19 @@ defmodule Lightning.Accounts.UserNotifierTest do
 
       project = Lightning.ProjectsFixtures.project_fixture(name: "project-a")
 
+      actual_deletion_date =
+        Lightning.Config.purge_deleted_after_days()
+        |> Lightning.Helpers.actual_deletion_date()
+        |> Lightning.Helpers.format_date()
+
       UserNotifier.notify_project_deletion(user, project)
 
       assert_email_sent(
         subject: "Project scheduled for deletion",
         to: "user@openfn.org",
-        text_body:
-          "Hi User,\n\nproject-a project has been scheduled for deletion. All of the workflows in this project have been disabled,\nand the resources will be deleted in 7 day(s) from today at 02:00 UTC. If this doesn't sound right, please email\n#{admin_email} to cancel the deletion.\n"
+        text_body: """
+        Hi User,\n\nYour OpenFn project "project-a" has been scheduled for deletion.\nAll of the workflows in this project have been disabled, and it's associated resources will be deleted on #{actual_deletion_date}.\n\nIf you don’t want this project deleted, please email #{admin_email} as soon as possible.\n\nOpenFn
+        """
       )
     end
 
@@ -51,8 +55,9 @@ defmodule Lightning.Accounts.UserNotifierTest do
       assert_email_sent(
         subject: "Project #{project.name}",
         to: "user@openfn.org",
-        text_body:
-          "\nHi Anna,\n\nYou've been added to the project \"a-test-project\" as an editor.\n\nClick the link below to check it out:\n\n#{url}\n\n"
+        text_body: """
+        Hi Anna,\n\nYou've been granted "editor" access to the "a-test-project" project on OpenFn.\n\nVisit the URL below to check it out:\n\n#{url}\n\nOpenFn
+        """
       )
     end
 
@@ -74,10 +79,10 @@ defmodule Lightning.Accounts.UserNotifierTest do
         )
 
       assert_email_sent(
-        subject: "Confirmation instructions",
+        subject: "Confirm your OpenFn account",
         to: "real@email.com",
         text_body:
-          "\nHi ,\n\nWelcome and thanks for registering a new account on OpenFn. Please confirm your account by visiting the URL below:\n\n#{url} .\n\nIf you didn't create an account with us, please ignore this.\n\n"
+          "\nHi ,\n\nWelcome, and thanks for registering a new account on OpenFn. Please confirm your account by visiting the URL below:\n\n#{url} .\n\nOpenFn\n"
       )
     end
 
@@ -104,7 +109,7 @@ defmodule Lightning.Accounts.UserNotifierTest do
         subject: "New OpenFn Lightning account",
         to: "real@email.com",
         text_body:
-          "\nHi Joe,\n\nSuper User has just created an account for you on OpenFn. You can complete your registration by visiting the URL below:\n\n#{url} .\n\nIf you do not wish to have an account, please ignore this email.\n\n"
+          "Hi Joe,\n\nSuper User has just created an account for you on OpenFn. You can complete your registration by visiting the URL below:\n\n#{url} .\n\nIf you do not wish to have an account, please ignore this email.\n"
       )
     end
 
@@ -209,7 +214,7 @@ defmodule Lightning.Accounts.UserNotifierTest do
         text_body: """
         Hi Elias,
 
-        Here's a daily digest for "Real Project" project activity since #{start_date |> Calendar.strftime("%a %B %d %Y at %H:%M %Z")}.
+        Here's your daily project digest for "Real Project", covering activity from #{start_date |> Calendar.strftime("%a %B %d %Y at %H:%M %Z")} to #{end_date |> Calendar.strftime("%a %B %d %Y at %H:%M %Z")}.
 
         Workflow A:
         - 12 workorders correctly processed today
@@ -230,6 +235,8 @@ defmodule Lightning.Accounts.UserNotifierTest do
         #{UserNotifier.build_digest_url(workflow_c, start_date, end_date)}
 
 
+
+        OpenFn
         """
       )
     end
@@ -285,7 +292,7 @@ defmodule Lightning.Accounts.UserNotifierTest do
         text_body: """
         Hi Elias,
 
-        Here's a weekly digest for "Real Project" project activity since #{start_date |> Calendar.strftime("%a %B %d %Y at %H:%M %Z")}.
+        Here's your weekly project digest for "Real Project", covering activity from #{start_date |> Calendar.strftime("%a %B %d %Y at %H:%M %Z")} to #{end_date |> Calendar.strftime("%a %B %d %Y at %H:%M %Z")}.
 
         Workflow A:
         - 12 workorders correctly processed this week
@@ -306,6 +313,8 @@ defmodule Lightning.Accounts.UserNotifierTest do
         #{UserNotifier.build_digest_url(workflow_c, start_date, end_date)}
 
 
+
+        OpenFn
         """
       )
     end
@@ -363,7 +372,7 @@ defmodule Lightning.Accounts.UserNotifierTest do
         text_body: """
         Hi Elias,
 
-        Here's a monthly digest for "Real Project" project activity since #{start_date |> Calendar.strftime("%a %B %d %Y at %H:%M %Z")}.
+        Here's your monthly project digest for "Real Project", covering activity from #{start_date |> Calendar.strftime("%a %B %d %Y at %H:%M %Z")} to #{end_date |> Calendar.strftime("%a %B %d %Y at %H:%M %Z")}.
 
         Workflow A:
         - 12 workorders correctly processed this month
@@ -384,6 +393,8 @@ defmodule Lightning.Accounts.UserNotifierTest do
         #{UserNotifier.build_digest_url(workflow_c, start_date, end_date)}
 
 
+
+        OpenFn
         """
       )
     end
