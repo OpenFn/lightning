@@ -49,6 +49,24 @@ defmodule Lightning.Helpers do
     Timex.Format.DateTime.Formatters.Strftime.format!(date, formatter)
   end
 
+  def time_until(grace_period, cron_expression, unit) do
+    now = Timex.now()
+
+    due_date =
+      now
+      |> Timex.shift([{unit, grace_period}])
+      |> DateTime.to_naive()
+
+    {:ok, cron_expression} = Crontab.CronExpression.Parser.parse(cron_expression)
+
+    next_execution =
+      Crontab.Scheduler.get_next_run_date!(cron_expression, due_date)
+
+    next_execution
+    |> Timex.diff(now, :duration)
+    |> Timex.format_duration(:humanized)
+  end
+
   def indefinite_article(noun) do
     first_letter = String.first(noun) |> String.downcase()
     if Enum.member?(["a", "e", "i", "o", "u"], first_letter), do: "an", else: "a"

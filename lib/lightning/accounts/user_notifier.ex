@@ -12,7 +12,7 @@ defmodule Lightning.Accounts.UserNotifier do
   import Swoosh.Email
 
   alias Lightning.Accounts.User
-  alias Lightning.Helpers
+  # alias Lightning.Helpers
   alias Lightning.Mailer
   alias Lightning.Projects
   alias Lightning.Projects.Project
@@ -58,16 +58,15 @@ defmodule Lightning.Accounts.UserNotifier do
   Deliver instructions to confirm account.
   """
   def deliver_confirmation_instructions(user, token) do
-    deliver(user.email, "Confirmation instructions", """
+    deliver(user.email, "Confirm your OpenFn account", """
 
     Hi #{user.first_name},
 
-    Welcome and thanks for registering a new account on OpenFn. Please confirm your account by visiting the URL below:
+    Welcome, and thanks for registering a new account on OpenFn. Please confirm your account by visiting the URL below:
 
     #{url(LightningWeb.Endpoint, ~p"/users/confirm/#{token}")} .
 
-    If you didn't create an account with us, please ignore this.
-
+    OpenFn
     """)
   end
 
@@ -100,9 +99,11 @@ defmodule Lightning.Accounts.UserNotifier do
 
     Hi #{user.first_name},
 
-    You've been added to the project "#{project.name}" as #{Helpers.indefinite_article(role)} #{role}.
+    You've been granted "#{role}" access to the "#{project.name}" project on OpenFn.
 
-    Click the link below to check it out:\n\n#{url}
+    Visit the URL below to check it out:\n\n#{url}
+
+    OpenFn
 
     """)
   end
@@ -110,10 +111,10 @@ defmodule Lightning.Accounts.UserNotifier do
   defp permanent_deletion_grace do
     grace_period = Lightning.Config.purge_deleted_after_days()
 
-    if grace_period <= 0 do
-      "a few minutes"
-    else
-      "#{grace_period} days"
+    cond do
+      grace_period <= 0 -> "a few minutes"
+      grace_period == 1 -> "#{grace_period} day"
+      true -> "#{grace_period} days"
     end
   end
 
@@ -166,17 +167,18 @@ defmodule Lightning.Accounts.UserNotifier do
 
     Hi #{user.first_name},
 
-    Your "#{credential.name}" has been scheduled for deletion.
+    Your "#{credential.name}" Credential has been scheduled for deletion.
 
     Here's what this means for you:
 
     - The credential has been disconnected from all projects. Nobody can use it.
-    - Any jobs that were using this credential are now set to run without any credential. (If they require authentication, they may no longer function properly.)
-    - After #{permanent_deletion_grace()} your credentials secrets will be scrubbed. The record itself may be kept until all related audit trail activity has expired.
+    - Any jobs using this credential will now run without a credential. (If they require authentication, they may no longer function properly.)
+    - After #{permanent_deletion_grace()} your credential’s secrets will be scrubbed. The record itself will be kept until all related audit trail activity has expired.
 
-    You can cancel this deletion anytime before the scheduled date.
+    You can cancel this deletion anytime before the scheduled date via the “Credentials” menu accessed by clicking opening the user menu in the top-right corner of the OpenFn interface.
 
-    If you have any questions or don't want your credential deleted, please contact #{admin()} as soon as possible.
+    OpenFn
+
     """)
   end
 
@@ -199,16 +201,19 @@ defmodule Lightning.Accounts.UserNotifier do
   @doc """
   Deliver instructions to update a user email.
   """
-  def deliver_update_email_instructions(email, url) do
-    deliver(email, "Update email instructions", """
+  def deliver_update_email_instructions(user, url) do
+    deliver(user.email, "Finish updating your email", """
 
-    Hi #{email},
+    Hi #{user.first_name},
 
-    You can change your email by visiting the URL below:
+    We have received a request to change the email associated with your OpenFn account. To proceed, please visit the URL below:
 
     #{url}
 
     If you didn't request this change, please ignore this.
+
+    OpenFn
+
     """)
   end
 
@@ -299,17 +304,29 @@ defmodule Lightning.Accounts.UserNotifier do
     deliver(user.email, title, body)
   end
 
-  defp human_readable_grace_period do
-    grace_period = Lightning.Config.purge_deleted_after_days()
-    if grace_period > 0, do: "#{grace_period} day(s) from today", else: "today"
+  defp human_readable_grace_period(grace_period) do
+    case grace_period do
+      0 -> "today"
+      1 -> "#{grace_period} day from today"
+      _ -> "#{grace_period} days from today"
+    end
   end
 
   def notify_project_deletion(%User{} = user, %Project{} = project) do
+    grace_period = Lightning.Config.purge_deleted_after_days()
+
     deliver(user.email, "Project scheduled for deletion", """
     Hi #{user.first_name},
 
-    #{project.name} project has been scheduled for deletion. All of the workflows in this project have been disabled,
-    and the resources will be deleted in #{human_readable_grace_period()} at 02:00 UTC. If this doesn't sound right, please email
+    Your OpenFn project “{#{project.name}” has been scheduled for deletion. All of the workflows in this project have been disabled, and its associated resources will be deleted in #{human_readable_grace_period(grace_period)} at {{actual_deletion_time – calculate based on the next 2am after the timestamp in the db?}}.
+
+    If you don’t want this project deleted, please email support@openfn.org as soon as possible..
+
+    OpenFn
+
+
+    Your OpenFn project "#{project.name}" has been scheduled for deletion. All of the workflows in this project have been disabled,
+    and the resources will be deleted in #{human_readable_grace_period(grace_period)} at 02:00 UTC. If this doesn't sound right, please email
     #{admin()} to cancel the deletion.
     """)
   end
