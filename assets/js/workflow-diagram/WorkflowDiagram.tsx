@@ -102,6 +102,11 @@ export default React.forwardRef<HTMLElement, WorkflowDiagramProps>(
 
         if (layoutId) {
           chartCache.current.lastLayout = layoutId;
+
+          // ignore autofit option for now
+          // I'll remove the option later
+          const autofit = false;
+
           layout(newModel, setModel, flow, { duration: 300, autofit }).then(
             positions => {
               // Note we don't update positions until the animation has finished

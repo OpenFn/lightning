@@ -4,8 +4,12 @@ import { getRectOfNodes, ReactFlowInstance } from 'reactflow';
 
 import { FIT_PADDING } from './constants';
 import { Flow, Positions } from './types';
+import getViewportBounds, { intersect } from './util/get-viewport-bounds';
 
-export type LayoutOpts = { duration: number | false; autofit: boolean };
+export type LayoutOpts = {
+  duration: number | false;
+  autofit: boolean | Flow.Node[];
+};
 
 const calculateLayout = async (
   model: Flow.Model,
@@ -15,6 +19,9 @@ const calculateLayout = async (
 ): Promise<Positions> => {
   const { nodes, edges } = model;
   const { duration } = options;
+
+  // Before we layout, work out whether there are any new unpositioned placeholders
+  const newPlaceholders = model.nodes.filter(n => n.position?._default);
 
   const g = new Dagre.graphlib.Graph().setDefaultEdgeLabel(() => ({}));
   g.setGraph({
@@ -47,9 +54,41 @@ const calculateLayout = async (
 
   const hasOldPositions = nodes.find(n => n.position);
 
+  // Work out whether to zoom the view, and to what bounds
+  let autofit = false;
+  if (newPlaceholders.length) {
+    console.log(flow.getViewport());
+    console.log({ finalPositions });
+
+    const visible = [];
+    let doFit = false;
+    // TODO where do I get the canvas size from?
+    const rect = getViewportBounds(flow.getViewport(), 1498, 780, 1);
+    console.log({ rect });
+    for (const id in finalPositions) {
+      const pos = finalPositions[id];
+      const isInside = intersect(pos, rect);
+      const node = newModel.nodes.find(n => n.id === id);
+      if (isInside) {
+        visible.push(node);
+      } else if (node.type === 'placeholder') {
+        // If the placerholder is NOT visible within the bounds,
+        // we'll need to run a fit
+        doFit = true;
+      }
+    }
+
+    // const visibleNodes = flow.getIntersectingNodes(rect, false);
+    console.log(visible.map(n => n.data?.name ?? n.type));
+
+    if (doFit) {
+      autofit = visible;
+    }
+  }
+
   // If the old model had no positions, this is a first load and we should not animate
   if (hasOldPositions && duration) {
-    await animate(model, newModel, update, flow, options);
+    await animate(model, newModel, update, flow, { duration, autofit });
   } else {
     update(newModel);
   }
@@ -102,7 +141,14 @@ export const animate = (
 
       if (isFirst) {
         // Synchronise a fit to the final position with the same duration
-        const bounds = getRectOfNodes(to.nodes);
+
+        // TODO do we fit to ALL nodes or VISIBLE nodes, and who decides?
+        let fitTarget = to.nodes;
+        if (typeof autofit !== 'boolean') {
+          console.log('FIT');
+          fitTarget = autofit;
+        }
+        const bounds = getRectOfNodes(fitTarget);
         if (autofit) {
           flowInstance.fitBounds(bounds, { duration, padding: FIT_PADDING });
         }
