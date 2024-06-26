@@ -13,7 +13,7 @@
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-EPF2X7PV.js"></script>
-    <script src="dist/sidebar_items-EE17098B.js"></script>
+    <script src="dist/sidebar_items-EAEE3EB3.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -187,7 +187,14 @@ permissions are needed for the github app:</p><table><thead><tr><th style="text-
 app:</p><ul><li><code class="inline">GITHUB_APP_ID</code> - the github app ID.</li><li><code class="inline">GITHUB_APP_NAME</code> - the github app name</li><li><code class="inline">GITHUB_APP_CLIENT_ID</code> - the github app Client ID</li><li><code class="inline">GITHUB_APP_CLIENT_SECRET</code> - the github app Client Secret</li><li><code class="inline">GITHUB_CERT</code> - the github app private key</li></ul><p>You can access these from your github app settings menu. Also needed for the
 configurtaion is:</p><ul><li><code class="inline">REPO_CONNECTION_SIGNING_SECRET</code> - secret used to sign access tokens. This
 access token is used to authenticate requests made from the github actions.
-You can generate this using <code class="inline">mix lightning.gen_encryption_key</code></li></ul><h3 id="other-config" class="section-heading">
+You can generate this using <code class="inline">mix lightning.gen_encryption_key</code></li></ul><h3 id="ai-chat" class="section-heading">
+  <a href="#ai-chat" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
+  </a>
+  <span class="text">AI Chat</span>
+</h3>
+<p>🧪 <strong>Experimental</strong></p><p>Lightning can be configured to use an AI chatbot for user interactions.</p><p>See <a href="https://github.com/OpenFn/apollo">openfn/apollo</a> for more information on
+the Apollo AI service.</p><p>The following environment variables are required:</p><ul><li><code class="inline">OPENAI_API_KEY</code> - your OpenAI API key.</li><li><code class="inline">APOLLO_ENDPOINT</code> - the endpoint for the OpenFn Apollo AI service.</li></ul><h3 id="other-config" class="section-heading">
   <a href="#other-config" class="hover-link">
     <i class="ri-link-m" aria-hidden="true"></i>
   </a>
@@ -217,8 +224,9 @@ and/or history)</li><li><code class="inline">IS_RESETTABLE_DEMO</code> - If set 
 the initial &quot;Lightning Demo&quot; state. Note that this will destroy <em>most</em> of what
 you have in your database!</li><li><code class="inline">ALLOW_SIGNUP</code>: Set to <code class="inline">true</code> to enable user access to the registration page.
 Set to <code class="inline">false</code> to disable new user registrations and block access to the
-registration page. Default is <code class="inline">true</code>.</li><li><code class="inline">EMAIL_ADMIN</code> - This is used as the sender email address for system emails.
-It is also displayed in the menu as the support email.</li><li><code class="inline">EMAIL_SENDER_NAME</code> - This is displayed in the email client as the sender name for emails sent by the application.</li></ul><h3 id="google-oauth2" class="section-heading">
+registration page. Default is <code class="inline">true</code>.</li><li><code class="inline">EMAIL_ADMIN</code> - This is used as the sender email address for system emails. It
+is also displayed in the menu as the support email.</li><li><code class="inline">EMAIL_SENDER_NAME</code> - This is displayed in the email client as the sender name
+for emails sent by the application.</li></ul><h3 id="google-oauth2" class="section-heading">
   <a href="#google-oauth2" class="hover-link">
     <i class="ri-link-m" aria-hidden="true"></i>
   </a>

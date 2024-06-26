@@ -11,6 +11,9 @@ Lightning.Accounts.html
 Lightning.AdaptorRegistry.Npm.html
 Lightning.AdaptorRegistry.html
 Lightning.AdaptorService.html
+Lightning.AiAssistant.Session.html
+Lightning.AiAssistant.html
+Lightning.ApolloClient.html
 Lightning.Auditing.Audit.html
 Lightning.Auditing.html
 Lightning.AuthProviders.AuthConfig.html
@@ -254,6 +257,7 @@ LightningWeb.VersionControlController.html
 LightningWeb.WebhooksController.html
 LightningWeb.WorkerChannel.html
 LightningWeb.WorkerSocket.html
+LightningWeb.WorkflowLive.AiAssistantComponent.html
 LightningWeb.WorkflowLive.EditorPane.html
 LightningWeb.WorkflowLive.Helpers.html
 LightningWeb.WorkflowLive.JobView.html
@@ -298,8 +302,8 @@ dist/merriweather-latin-ext-300-normal-K6L27CZ5.woff2
 dist/merriweather-vietnamese-300-italic-EHHNZPUO.woff2
 dist/merriweather-vietnamese-300-normal-U376L4Z4.woff2
 dist/remixicon-NKANDIL5.woff2
-dist/search_data-F8C2DBFC.js
-dist/sidebar_items-EE17098B.js
+dist/search_data-F8C89993.js
+dist/sidebar_items-EAEE3EB3.js
 index.html
 provisioning.html
 readme.html
