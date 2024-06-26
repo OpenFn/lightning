@@ -133,7 +133,9 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
   def handle_async(:process_message, {:ok, :error}, socket) do
     {:noreply,
      socket
-     |> assign(:pending_message, AsyncResult.failed(nil, :error))}
+     |> update(:pending_message, fn async_result ->
+       AsyncResult.failed(async_result, :error)
+     end)}
   end
 
   attr :disabled, :boolean
