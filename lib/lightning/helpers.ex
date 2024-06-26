@@ -66,12 +66,6 @@ defmodule Lightning.Helpers do
     Timex.Format.DateTime.Formatters.Strftime.format!(date, formatter)
   end
 
-  @spec indefinite_article(binary()) :: nonempty_binary()
-  def indefinite_article(noun) do
-    first_letter = String.first(noun) |> String.downcase()
-    if Enum.member?(["a", "e", "i", "o", "u"], first_letter), do: "an", else: "a"
-  end
-
   @doc """
   Recursively ensures a given map is safe to convert to JSON,
   where all keys are strings and all values are json safe (primitive values).
