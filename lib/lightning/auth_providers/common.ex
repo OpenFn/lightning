@@ -128,7 +128,7 @@ defmodule Lightning.AuthProviders.Common do
   Builds a new OAuth client with the specified configuration, authorization URL, token URL, and options.
   """
   def build_client(provider, wellknown_url, opts \\ []) do
-    config = get_config(provider)
+    config = Lightning.Config.oauth_provider(provider)
 
     if is_nil(config) or is_nil(config[:client_id]) or
          is_nil(config[:client_secret]) do
@@ -181,7 +181,7 @@ defmodule Lightning.AuthProviders.Common do
         wellknown_url
       ) do
     {:ok, wellknown} = get_wellknown(wellknown_url)
-    config = get_config(provider)
+    config = Lightning.Config.oauth_provider(provider)
 
     Tesla.post(
       wellknown.introspection_endpoint,
@@ -233,13 +233,5 @@ defmodule Lightning.AuthProviders.Common do
     expiration_time = DateTime.from_unix!(expires_at)
     time_remaining = DateTime.diff(expiration_time, current_time, time_unit)
     time_remaining >= threshold
-  end
-
-  @doc """
-  Retrieves the configuration for a specified OAuth provider.
-  """
-  def get_config(provider) do
-    Application.get_env(:lightning, :oauth_clients)
-    |> Keyword.get(provider)
   end
 end

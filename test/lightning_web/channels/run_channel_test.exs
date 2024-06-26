@@ -366,13 +366,13 @@ defmodule LightningWeb.RunChannelTest do
 
       wellknown_url = "http://localhost:#{bypass.port}/auth/.well-known"
 
-      Lightning.ApplicationHelpers.put_temporary_env(:lightning, :oauth_clients,
-        google: [
+      Mox.stub(Lightning.MockConfig, :oauth_provider, fn :google ->
+        [
           client_id: "foo",
           client_secret: "bar",
           wellknown_url: wellknown_url
         ]
-      )
+      end)
 
       expect_wellknown(bypass)
 

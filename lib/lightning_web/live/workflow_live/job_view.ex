@@ -72,6 +72,17 @@ defmodule LightningWeb.WorkflowLive.JobView do
   end
 
   def job_edit_view(assigns) do
+    {editor_disabled?, editor_disabled_message, editor_panel_title} =
+      editor_disabled?(assigns.form.source.data)
+
+    assigns =
+      assigns
+      |> assign(
+        editor_disabled?: editor_disabled?,
+        editor_disabled_message: editor_disabled_message,
+        editor_panel_title: editor_panel_title
+      )
+
     ~H"""
     <.container id={"job-edit-view-#{@job.id}"}>
       <:top>
@@ -122,20 +133,19 @@ defmodule LightningWeb.WorkflowLive.JobView do
           <%= render_slot(slot) %>
         </.collapsible_panel>
       <% end %>
-      <% {editor_disabled?, editor_disabled_message, editor_panel_title} =
-        editor_disabled?(@form.source.data) %>
+      <%= render_slot(@inner_block) %>
       <.collapsible_panel
         id="job-editor-panel"
         class="h-full border border-l-0"
-        panel_title={editor_panel_title}
+        panel_title={@editor_panel_title}
       >
         <.live_component
           module={EditorPane}
           id={"job-editor-pane-#{@job.id}"}
           form={@form}
-          disabled={editor_disabled?}
-          disabled_message={editor_disabled_message}
-          class="h-full"
+          disabled={@editor_disabled?}
+          disabled_message={@editor_disabled_message}
+          class="h-full p-2"
         />
       </.collapsible_panel>
       <.collapsible_panel id="output-logs" class="h-full border border-l-0">
@@ -171,10 +181,10 @@ defmodule LightningWeb.WorkflowLive.JobView do
               "project_id" => @project.id,
               "user_id" => @current_user.id
             },
-            container: {:div, class: "h-full"}
+            container: {:div, class: "h-full p-2"}
           ) %>
         <% else %>
-          <div class="w-1/2 h-16 text-center m-auto pt-4">
+          <div class="w-1/2 h-16 text-center m-auto p-4">
             <div class="text-gray-500 pb-2">
               After you click run, the logs and output will be visible here.
             </div>

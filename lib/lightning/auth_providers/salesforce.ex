@@ -24,7 +24,7 @@ defmodule Lightning.AuthProviders.Salesforce do
 
   def wellknown_url(sandbox) do
     key = if sandbox, do: :sandbox_wellknown_url, else: :prod_wellknown_url
-    config = Common.get_config(:salesforce)
+    config = Lightning.Config.oauth_provider(:salesforce)
     config[key]
   end
 

@@ -88,6 +88,20 @@ configurtaion is:
   access token is used to authenticate requests made from the github actions.
   You can generate this using `mix lightning.gen_encryption_key`
 
+### AI Chat
+
+🧪 **Experimental**
+
+Lightning can be configured to use an AI chatbot for user interactions.
+
+See [openfn/apollo](https://github.com/OpenFn/apollo) for more information on
+the Apollo AI service.
+
+The following environment variables are required:
+
+- `OPENAI_API_KEY` - your OpenAI API key.
+- `APOLLO_ENDPOINT` - the endpoint for the OpenFn Apollo AI service.
+
 ### Other config
 
 - `ADAPTORS_PATH` - where you store your locally installed adaptors
@@ -139,9 +153,10 @@ configurtaion is:
 - `ALLOW_SIGNUP`: Set to `true` to enable user access to the registration page.
   Set to `false` to disable new user registrations and block access to the
   registration page. Default is `true`.
-- `EMAIL_ADMIN` - This is used as the sender email address for system emails.
-It is also displayed in the menu as the support email.
-- `EMAIL_SENDER_NAME` - This is displayed in the email client as the sender name for emails sent by the application.
+- `EMAIL_ADMIN` - This is used as the sender email address for system emails. It
+  is also displayed in the menu as the support email.
+- `EMAIL_SENDER_NAME` - This is displayed in the email client as the sender name
+  for emails sent by the application.
 
 ### Google Oauth2
 

@@ -46,6 +46,23 @@ defmodule Lightning.Config do
     end
 
     @impl true
+    def apollo(key \\ nil) do
+      case key do
+        nil ->
+          Application.get_env(:lightning, :apollo, []) |> Map.new()
+
+        key when is_atom(key) ->
+          Application.get_env(:lightning, :apollo, []) |> Keyword.get(key)
+      end
+    end
+
+    @impl true
+    def oauth_provider(key) do
+      Application.get_env(:lightning, :oauth_clients)
+      |> Keyword.get(key)
+    end
+
+    @impl true
     def purge_deleted_after_days do
       Application.get_env(:lightning, :purge_deleted_after_days)
     end
@@ -146,20 +163,29 @@ defmodule Lightning.Config do
     end
   end
 
-  @callback run_token_signer() :: Joken.Signer.t()
-  @callback worker_token_signer() :: Joken.Signer.t()
-  @callback repo_connection_token_signer() :: Joken.Signer.t()
-  @callback worker_secret() :: binary() | nil
-  @callback grace_period() :: integer()
-  @callback default_max_run_duration() :: integer()
-  @callback purge_deleted_after_days() :: integer()
-  @callback get_extension_mod(key :: atom()) :: any()
+  @callback apollo(key :: atom() | nil) :: map()
   @callback check_flag?(atom()) :: boolean() | nil
   @callback cors_origin() :: list()
-  @callback instance_admin_email() :: String.t()
+  @callback default_max_run_duration() :: integer()
   @callback email_sender_name() :: String.t()
+  @callback get_extension_mod(key :: atom()) :: any()
+  @callback grace_period() :: integer()
+  @callback instance_admin_email() :: String.t()
+  @callback oauth_provider(key :: atom()) :: keyword() | nil
+  @callback purge_deleted_after_days() :: integer()
+  @callback repo_connection_token_signer() :: Joken.Signer.t()
+  @callback run_token_signer() :: Joken.Signer.t()
   @callback usage_tracking() :: Keyword.t()
   @callback usage_tracking_cron_opts() :: [Oban.Plugins.Cron.cron_input()]
+  @callback worker_secret() :: binary() | nil
+  @callback worker_token_signer() :: Joken.Signer.t()
+
+  @doc """
+  Returns the Apollo server configuration.
+  """
+  def apollo(key \\ nil) do
+    impl().apollo(key)
+  end
 
   @doc """
   Returns the Token signer used to sign and verify run tokens.
@@ -198,6 +224,10 @@ defmodule Lightning.Config do
 
   def repo_connection_token_signer do
     impl().repo_connection_token_signer()
+  end
+
+  def oauth_provider(key) do
+    impl().oauth_provider(key)
   end
 
   def purge_deleted_after_days do

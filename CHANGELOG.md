@@ -27,13 +27,22 @@ and this project adheres to
 - Allow users to delete steps sssociated with runs in the Workflow Canvas
   [#2027](https://github.com/OpenFn/lightning/issues/2027)
 - Link to adaptor `/src` from inspector.
+- Prototype AI Assistant for working with job code.
+  [#2193](https://github.com/OpenFn/lightning/issues/2193)
 
 ### Changed
 
 - Reverted behaviour on "Rerun from here" to select the Log tab.
   [#2202](https://github.com/OpenFn/lightning/issues/2202)
+- Don't allow connections between an orphaned node and a
+  Trigger[#2188](https://github.com/OpenFn/lightning/issues/2188)
+- Reduce the minimum zoom in the workflow diagram
+  [#2214](https://github.com/OpenFn/lightning/issues/2214)
 
 ### Fixed
+
+- Fix some adaptor docs not displaying
+  [#2019](https://github.com/OpenFn/lightning/issues/2019)
 
 ## [v2.6.3] - 2024-06-19
 

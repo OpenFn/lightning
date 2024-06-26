@@ -414,7 +414,7 @@ defmodule LightningWeb.WorkflowLive.Components do
             <.input
               type="textarea"
               field={@form[:condition_expression]}
-              class="h-24"
+              class="h-24 font-mono proportional-nums"
               phx-debounce="300"
               maxlength="255"
             />
@@ -573,7 +573,7 @@ defmodule LightningWeb.WorkflowLive.Components do
       </div>
       <div
         id={"#{@id}-panel-content"}
-        class="panel-content min-h-0 min-w-0 flex-1 pt-2 p-4 pb-2 bg-white"
+        class="panel-content min-h-0 min-w-0 flex-1 bg-white"
       >
         <%= render_slot(@inner_block) %>
       </div>
