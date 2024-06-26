@@ -32,6 +32,9 @@ and this project adheres to
 
 ### Fixed
 
+- Fix some adaptor docs not displaying
+  [#2019](https://github.com/OpenFn/lightning/issues/2019)
+
 ## [v2.6.3] - 2024-06-19
 
 ### Changed
