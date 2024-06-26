@@ -15,7 +15,13 @@ defmodule LightningWeb.RunLive.Streaming do
   def get_run_async(socket, run_id) do
     socket
     |> start_async(:run, fn ->
-      Runs.get(run_id, include: [steps: [:job], workflow: [:project]])
+      Runs.get(run_id,
+        include: [
+          steps: [:job, snapshot: [triggers: :webhook_auth_methods]],
+          workflow: [:project],
+          snapshot: [triggers: :webhook_auth_methods]
+        ]
+      )
     end)
   end
 
@@ -202,14 +208,6 @@ defmodule LightningWeb.RunLive.Streaming do
   defp helpers do
     quote do
       import unquote(__MODULE__)
-
-      # def maybe_load_input_dataclip(socket) do
-      #   maybe_load_input_dataclip(socket)
-      # end
-
-      # def maybe_load_output_dataclip(socket) do
-      #   maybe_load_output_dataclip(socket)
-      # end
 
       def apply_selected_step_id(socket, id) do
         case id do

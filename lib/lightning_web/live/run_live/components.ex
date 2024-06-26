@@ -142,6 +142,13 @@ defmodule LightningWeb.RunLive.Components do
   attr :rest, :global
 
   def step_item(assigns) do
+    job =
+      Enum.find(assigns.step.snapshot.jobs, fn job ->
+        job.id == assigns.step.job_id
+      end)
+
+    assigns = assign(assigns, job: job)
+
     ~H"""
     <div
       class={[
@@ -180,13 +187,13 @@ defmodule LightningWeb.RunLive.Components do
           </div>
         <% end %>
         <div class="flex text-sm space-x-1 text-gray-900 items-center">
-          <span><%= @step.job.name %></span>
-          <%= unless @job_id == @step.job_id do %>
+          <span><%= @job.name %></span>
+          <%= unless @job_id == @job.id do %>
             <.link
               class="pl-1"
               navigate={
-                ~p"/projects/#{@project_id}/w/#{@step.job.workflow_id}"
-                  <> "?a=#{@run_id}&m=expand&s=#{@step.job_id}#log"
+                ~p"/projects/#{@project_id}/w/#{@step.snapshot.workflow_id}"
+                  <> "?v=#{@step.snapshot.lock_version}&a=#{@run_id}&m=expand&s=#{@step.job_id}#log"
               }
             >
               <.icon
@@ -264,6 +271,7 @@ defmodule LightningWeb.RunLive.Components do
 
   attr :project, :map, required: true
   attr :run, :map, required: true
+  attr :workflow_version, :integer, required: true
   attr :can_edit_data_retention, :boolean, required: true
   attr :can_run_workflow, :boolean, required: true
 
@@ -290,6 +298,7 @@ defmodule LightningWeb.RunLive.Components do
           project_id={@project.id}
           run={@run}
           can_edit_data_retention={@can_edit_data_retention}
+          workflow_version={@workflow_version}
           step={step}
         />
       <% end %>
@@ -299,11 +308,17 @@ defmodule LightningWeb.RunLive.Components do
 
   attr :step, :map, required: true
   attr :run, :map, required: true
+  attr :workflow_version, :integer, required: true
   attr :project_id, :string, required: true
   attr :can_run_workflow, :boolean, required: true
   attr :can_edit_data_retention, :boolean, required: true
 
   def step_list_item(assigns) do
+    job =
+      Enum.find(assigns.step.snapshot.jobs, fn job ->
+        job.id == assigns.step.job_id
+      end)
+
     is_clone =
       DateTime.compare(assigns.step.inserted_at, assigns.run.inserted_at) ==
         :lt
@@ -314,7 +329,11 @@ defmodule LightningWeb.RunLive.Components do
       if is_clone, do: base_classes ++ ~w(opacity-50), else: base_classes
 
     assigns =
-      assign(assigns, is_clone: is_clone, step_item_classes: step_item_classes)
+      assign(assigns,
+        is_clone: is_clone,
+        step_item_classes: step_item_classes,
+        job: job
+      )
 
     ~H"""
     <div id={"step-#{@step.id}"} role="row" class={@step_item_classes}>
@@ -331,7 +350,7 @@ defmodule LightningWeb.RunLive.Components do
               }
               class="hover:underline hover:underline-offset-2"
             >
-              <span><%= @step.job.name %></span>
+              <span><%= @job.name %></span>
             </.link>
 
             <%= if @is_clone do %>
@@ -357,16 +376,18 @@ defmodule LightningWeb.RunLive.Components do
               <.step_rerun_tag {assigns} />
             <% end %>
             <.link
+              id={"inspect-step-#{@step.id}"}
+              phx-hook="Tooltip"
+              aria-label="Inspect this step"
               class="cursor-pointer"
               navigate={
-                ~p"/projects/#{@project_id}/w/#{@step.job.workflow_id}"
-                  <> "?a=#{@run.id}&m=expand&s=#{@step.job_id}#log"
+                ~p"/projects/#{@project_id}/w/#{@step.snapshot.workflow_id}"
+                  <> "?v=#{@step.snapshot.lock_version}&a=#{@run.id}&m=expand&s=#{@job.id}#log"
               }
             >
               <.icon
                 naked
                 name="hero-document-magnifying-glass-mini"
-                title="Inspect Step"
                 class="h-5 w-5"
               />
             </.link>
@@ -401,17 +422,28 @@ defmodule LightningWeb.RunLive.Components do
   end
 
   defp step_rerun_tag(assigns) do
+    assigns =
+      assign(assigns, deleted: is_nil(assigns.step.job))
+
     ~H"""
     <%= if @step.input_dataclip && is_nil(@step.input_dataclip.wiped_at) do %>
       <span
         id={@step.id}
-        class="hover:text-primary-400 cursor-pointer"
-        phx-click="rerun"
-        phx-value-run_id={@run.id}
-        phx-value-step_id={@step.id}
-        title="Rerun workflow from here"
+        phx-hook="Tooltip"
+        {if not @deleted do
+            ["phx-click": "rerun", "phx-value-run_id": @run.id, "phx-value-step_id": @step.id, "aria-label": "Rerun from this step with the latest version of this workflow"]
+        else
+          ["aria-label": "This step has been deleted and cannot be retried. Try running from other steps"]
+        end}
       >
-        <.icon naked name="hero-play-circle-mini" class="h-5 w-5" />
+        <.icon
+          {if not @deleted, do: [naked: true], else: []}
+          name="hero-play-circle-mini"
+          class={"h-5 w-5 #{if not @deleted,
+            do: "hover:text-primary-400 cursor-pointer",
+            else: "text-gray-400 hover:text-gray-400"
+        }"}
+        />
       </span>
     <% else %>
       <span

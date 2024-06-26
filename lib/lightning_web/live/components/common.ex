@@ -4,6 +4,33 @@ defmodule LightningWeb.Components.Common do
 
   alias Phoenix.LiveView.JS
 
+  attr :id, :string, required: true
+  attr :version, :string, required: true
+  attr :tooltip, :string, required: false
+
+  def snapshot_version_chip(assigns) do
+    styles =
+      if assigns.version == "latest",
+        do: "bg-blue-100 text-blue-800",
+        else: "bg-yellow-100 text-yellow-800"
+
+    has_tooltip? = Map.has_key?(assigns, :tooltip)
+
+    assigns = assign(assigns, has_tooltip?: has_tooltip?, styles: styles)
+
+    ~H"""
+    <div id={"#{@id}-container"} class="flex items-baseline text-sm font-normal">
+      <span
+        id={@id}
+        {if @has_tooltip?, do: ["phx-hook": "Tooltip", "data-placement": "bottom", "aria-label": @tooltip], else: []}
+        class={"inline-flex items-center rounded-md px-2 py-1 text-xs font-medium #{@styles}"}
+      >
+        <%= @version %>
+      </span>
+    </div>
+    """
+  end
+
   attr :icon_classes, :string, default: "h-4 w-4 inline-block mr-1"
 
   def version_chip(assigns) do

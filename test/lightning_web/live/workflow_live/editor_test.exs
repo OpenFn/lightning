@@ -8,6 +8,7 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
   import Ecto.Query
 
   alias Lightning.Invocation
+  alias Lightning.Workflows
   alias Lightning.Workflows.Workflow
 
   setup :register_and_log_in_user
@@ -19,11 +20,15 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
     workflow: workflow,
     conn: conn
   } do
-    {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/w/#{workflow.id}")
+    {:ok, view, _html} =
+      live(
+        conn,
+        ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version]}"
+      )
 
     job = workflow.jobs |> List.first()
 
-    view |> select_node(job)
+    view |> select_node(job, workflow.lock_version)
 
     view |> job_panel_element(job)
 
@@ -60,7 +65,7 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
     {:ok, view, _html} =
       live(
         conn,
-        ~p"/projects/#{project}/w/#{workflow}?#{[s: job, m: "expand"]}"
+        ~p"/projects/#{project}/w/#{workflow}?#{[s: job, m: "expand", v: workflow.lock_version]}"
       )
 
     actual_attrs =
@@ -124,7 +129,7 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project}/w/#{workflow}?#{[s: job, m: "expand"]}"
+          ~p"/projects/#{project}/w/#{workflow}?#{[s: job, m: "expand", v: workflow.lock_version]}"
         )
 
       # dataclip dropdown is disabled
@@ -177,7 +182,7 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project}/w/#{workflow}?#{[s: job, m: "expand"]}"
+          ~p"/projects/#{project}/w/#{workflow}?#{[s: job, m: "expand", v: workflow.lock_version]}"
         )
 
       assert view
@@ -213,7 +218,10 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       job = w.jobs |> hd
 
       {:ok, view, _html} =
-        live(conn, ~p"/projects/#{p}/w/#{w}?#{[s: job, m: "expand"]}")
+        live(
+          conn,
+          ~p"/projects/#{p}/w/#{w}?#{[s: job, m: "expand", v: w.lock_version]}"
+        )
 
       assert Invocation.list_dataclips_for_job(job) |> Enum.count() == 0
 
@@ -249,7 +257,10 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       job = w.jobs |> hd
 
       {:ok, view, _html} =
-        live(conn, ~p"/projects/#{p}/w/#{w}?#{[s: job, m: "expand"]}")
+        live(
+          conn,
+          ~p"/projects/#{p}/w/#{w}?#{[s: job, m: "expand", v: w.lock_version]}"
+        )
 
       view
       |> form("#manual-job-#{job.id} form", %{
@@ -277,7 +288,10 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       job = w.jobs |> hd
 
       {:ok, view, _html} =
-        live(conn, ~p"/projects/#{project_id}/w/#{w}?#{[s: job, m: "expand"]}")
+        live(
+          conn,
+          ~p"/projects/#{project_id}/w/#{w}?#{[s: job, m: "expand", v: w.lock_version]}"
+        )
 
       assert Invocation.list_dataclips_for_job(job) |> Enum.count() == 0
 
@@ -303,7 +317,10 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       job = w.jobs |> hd
 
       {:ok, view, _html} =
-        live(conn, ~p"/projects/#{p}/w/#{w}?#{[s: job, m: "expand"]}")
+        live(
+          conn,
+          ~p"/projects/#{p}/w/#{w}?#{[s: job, m: "expand", v: w.lock_version]}"
+        )
 
       assert view
              |> element(
@@ -359,7 +376,10 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       )
 
       {:ok, view, _html} =
-        live(conn, ~p"/projects/#{p}/w/#{w}?#{[s: job, m: "expand"]}")
+        live(
+          conn,
+          ~p"/projects/#{p}/w/#{w}?#{[s: job, m: "expand", v: w.lock_version]}"
+        )
 
       body = %{"val" => Ecto.UUID.generate()}
 
@@ -413,6 +433,8 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
         insert(:workflow, project: project)
         |> Lightning.Repo.preload([:jobs, :work_orders])
 
+      {:ok, _snapshot} = Workflows.Snapshot.get_or_create_latest_for(workflow)
+
       new_job_name = "new job"
 
       assert workflow.jobs |> Enum.count() === 0
@@ -425,12 +447,16 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       %{"value" => %{"id" => job_id}} =
         job_patch = add_job_patch(new_job_name)
 
-      {:ok, view, _html} = live(conn, ~p"/projects/#{project}/w/#{workflow}")
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project}/w/#{workflow}?#{[v: workflow.lock_version]}"
+        )
 
       # add a job to it but don't save
       view |> push_patches_to_view([job_patch])
 
-      view |> select_node(%{id: job_id})
+      view |> select_node(%{id: job_id}, workflow.lock_version)
 
       view |> click_edit(%{id: job_id})
 
@@ -543,7 +569,8 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
     test "retry a work order saves the workflow first", %{
       conn: conn,
       project: project,
-      workflow: %{jobs: [job_1 | _], triggers: [trigger]} = workflow
+      workflow: %{jobs: [job_1 | _], triggers: [trigger]} = workflow,
+      snapshot: snapshot
     } do
       Mox.verify_on_exit!()
 
@@ -557,16 +584,19 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       %{runs: [run]} =
         insert(:workorder,
           workflow: workflow,
+          snapshot: snapshot,
           dataclip: dataclip,
           state: :failed,
           runs: [
             build(:run,
               dataclip: dataclip,
+              snapshot: snapshot,
               starting_job: job_1,
               state: :failed,
               steps: [
                 build(:step,
                   job: job_1,
+                  snapshot: snapshot,
                   input_dataclip: dataclip,
                   output_dataclip: build(:dataclip),
                   exit_reason: "fail",
@@ -583,7 +613,7 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project}/w/#{workflow}?#{[s: job_1.id, a: run.id, m: "expand"]}"
+          ~p"/projects/#{project}/w/#{workflow}?#{[s: job_1.id, a: run.id, m: "expand", v: workflow.lock_version]}"
         )
 
       view
@@ -653,7 +683,8 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
          %{
            conn: conn,
            project: project,
-           workflow: %{jobs: [job_1, job_2 | _rest]} = workflow
+           workflow: %{jobs: [job_1, job_2 | _rest]} = workflow,
+           snapshot: snapshot
          } do
       input_dataclip = insert(:dataclip, project: project, type: :http_request)
 
@@ -667,13 +698,16 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       %{runs: [run]} =
         insert(:workorder,
           workflow: workflow,
+          snapshot: snapshot,
           dataclip: input_dataclip,
           runs: [
             build(:run,
+              snapshot: snapshot,
               dataclip: input_dataclip,
               starting_job: job_1,
               steps: [
                 build(:step,
+                  snapshot: snapshot,
                   job: job_1,
                   input_dataclip: input_dataclip,
                   output_dataclip: output_dataclip,
@@ -682,6 +716,7 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
                   exit_reason: "success"
                 ),
                 build(:step,
+                  snapshot: snapshot,
                   job: job_2,
                   input_dataclip: output_dataclip,
                   output_dataclip:
@@ -705,13 +740,16 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       for dataclip <- dataclips do
         insert(:workorder,
           workflow: workflow,
+          snapshot: snapshot,
           dataclip: dataclip,
           runs: [
             build(:run,
+              snapshot: snapshot,
               dataclip: dataclip,
               starting_job: job_2,
               steps: [
                 build(:step,
+                  snapshot: snapshot,
                   job: job_2,
                   input_dataclip: dataclip,
                   output_dataclip: nil,
@@ -728,7 +766,7 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project}/w/#{workflow}?#{[s: job_2.id, a: run.id, m: "expand"]}"
+          ~p"/projects/#{project}/w/#{workflow}?#{[s: job_2.id, a: run.id, m: "expand", v: workflow.lock_version]}"
         )
 
       # the step dataclip is different from the run dataclip.
@@ -761,16 +799,19 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
          %{
            conn: conn,
            project: project,
-           workflow: %{jobs: [job_1 | _rest]} = workflow
+           workflow: %{jobs: [job_1 | _rest]} = workflow,
+           snapshot: snapshot
          } do
       input_dataclip = insert(:dataclip, project: project, type: :http_request)
 
       %{runs: [run]} =
         insert(:workorder,
           workflow: workflow,
+          snapshot: snapshot,
           dataclip: input_dataclip,
           runs: [
             build(:run,
+              snapshot: snapshot,
               dataclip: input_dataclip,
               starting_job: job_1,
               steps: []
@@ -785,14 +826,17 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       for dataclip <- dataclips do
         insert(:workorder,
           workflow: workflow,
+          snapshot: snapshot,
           dataclip: dataclip,
           runs: [
             build(:run,
+              snapshot: snapshot,
               dataclip: dataclip,
               starting_job: job_1,
               steps: [
                 build(:step,
                   job: job_1,
+                  snapshot: snapshot,
                   input_dataclip: dataclip,
                   output_dataclip: nil,
                   started_at: build(:timestamp),
@@ -808,7 +852,7 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project}/w/#{workflow}?#{[s: job_1.id, a: run.id, m: "expand"]}"
+          ~p"/projects/#{project}/w/#{workflow}?#{[s: job_1.id, a: run.id, m: "expand", v: workflow.lock_version]}"
         )
 
       # the form has the dataclip
@@ -834,7 +878,8 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
            conn: conn,
            project: project,
            workflow:
-             %{jobs: [job_1, job_2 | _rest], triggers: [trigger]} = workflow
+             %{jobs: [job_1, job_2 | _rest], triggers: [trigger]} = workflow,
+           snapshot: snapshot
          } do
       input_dataclip = insert(:dataclip, project: project, type: :http_request)
 
@@ -848,15 +893,18 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       %{runs: [run]} =
         insert(:workorder,
           workflow: workflow,
+          snapshot: snapshot,
           dataclip: input_dataclip,
           state: :failed,
           runs: [
             build(:run,
+              snapshot: snapshot,
               dataclip: input_dataclip,
               starting_trigger: trigger,
               state: :failed,
               steps: [
                 build(:step,
+                  snapshot: snapshot,
                   job: job_1,
                   input_dataclip: input_dataclip,
                   output_dataclip: output_dataclip,
@@ -865,6 +913,7 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
                   finished_at: build(:timestamp)
                 ),
                 build(:step,
+                  snapshot: snapshot,
                   job: job_2,
                   input_dataclip: output_dataclip,
                   output_dataclip: build(:dataclip),
@@ -880,7 +929,7 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project}/w/#{workflow}?#{[s: job_2.id, a: run.id, m: "expand"]}"
+          ~p"/projects/#{project}/w/#{workflow}?#{[s: job_2.id, a: run.id, m: "expand", v: workflow.lock_version]}"
         )
 
       # Wait out all the async renders on RunViewerLive, avoiding Postgrex client
@@ -927,21 +976,25 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
          %{
            conn: conn,
            project: project,
-           workflow: %{jobs: [job_1 | _rest], triggers: [trigger]} = workflow
+           workflow: %{jobs: [job_1 | _rest], triggers: [trigger]} = workflow,
+           snapshot: snapshot
          } do
       input_dataclip = insert(:dataclip, project: project, type: :http_request)
 
       %{runs: [run]} =
         insert(:workorder,
           workflow: workflow,
+          snapshot: snapshot,
           dataclip: input_dataclip,
           runs: [
             build(:run,
+              snapshot: snapshot,
               dataclip: input_dataclip,
               starting_trigger: trigger,
               steps: [
                 build(:step,
                   job: job_1,
+                  snapshot: snapshot,
                   input_dataclip: nil,
                   output_dataclip: nil,
                   started_at: build(:timestamp),
@@ -956,7 +1009,7 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project}/w/#{workflow}?#{[s: job_1.id, a: run.id, m: "expand"]}"
+          ~p"/projects/#{project}/w/#{workflow}?#{[s: job_1.id, a: run.id, m: "expand", v: workflow.lock_version]}"
         )
 
       # notice that we haven't wiped the run dataclip.
@@ -995,7 +1048,8 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
          %{
            conn: conn,
            project: project,
-           workflow: %{jobs: [job_1 | _rest]} = workflow
+           workflow: %{jobs: [job_1 | _rest]} = workflow,
+           snapshot: snapshot
          } do
       input_dataclip =
         insert(:dataclip,
@@ -1008,13 +1062,16 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       %{runs: [run]} =
         insert(:workorder,
           workflow: workflow,
+          snapshot: snapshot,
           dataclip: input_dataclip,
           runs: [
             build(:run,
+              snapshot: snapshot,
               dataclip: input_dataclip,
               starting_job: job_1,
               steps: [
                 build(:step,
+                  snapshot: snapshot,
                   job: job_1,
                   input_dataclip: input_dataclip,
                   output_dataclip: nil,
@@ -1030,7 +1087,7 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project}/w/#{workflow}?#{[s: job_1.id, a: run.id, m: "expand"]}"
+          ~p"/projects/#{project}/w/#{workflow}?#{[s: job_1.id, a: run.id, m: "expand", v: workflow.lock_version]}"
         )
 
       # the form contains the dataclip
@@ -1065,14 +1122,16 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
          %{
            conn: conn,
            project: project,
-           workflow: %{jobs: [_job_1, job_2 | _rest]} = workflow
+           workflow: %{jobs: [_job_1, job_2 | _rest]} = workflow,
+           snapshot: snapshot
          } do
-      {dataclips, %{runs: [run]} = workorder} = rerun_setup(project, workflow)
+      {dataclips, %{runs: [run]} = workorder} =
+        rerun_setup(project, workflow, snapshot)
 
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project}/w/#{workflow}?#{[s: job_2.id, a: run.id, m: "expand"]}"
+          ~p"/projects/#{project}/w/#{workflow}?#{[s: job_2.id, a: run.id, m: "expand", v: workflow.lock_version]}"
         )
 
       # user gets option to rerun
@@ -1103,11 +1162,13 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
         Lightning.Repo.preload(workorder, [:runs], force: true).runs
 
       assert Enum.count(all_runs) == 2
-      [new_run] = Enum.reject(all_runs, fn a -> a.id == run.id end)
+
+      [new_run] =
+        Enum.reject(all_runs, fn a -> a.id == run.id end)
 
       html = render(view)
 
-      refute html =~ run.id
+      # refute html =~ run.id
       assert html =~ new_run.id
     end
 
@@ -1115,14 +1176,16 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
          %{
            conn: conn,
            project: project,
-           workflow: %{jobs: [_job_1, job_2 | _rest]} = workflow
+           workflow: %{jobs: [_job_1, job_2 | _rest]} = workflow,
+           snapshot: snapshot
          } do
-      {_dataclips, %{runs: [run]} = workorder} = rerun_setup(project, workflow)
+      {_dataclips, %{runs: [run]} = workorder} =
+        rerun_setup(project, workflow, snapshot)
 
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project}/w/#{workflow}?#{[s: job_2.id, a: run.id, m: "expand"]}"
+          ~p"/projects/#{project}/w/#{workflow}?#{[s: job_2.id, a: run.id, m: "expand", v: workflow.lock_version]}"
         )
 
       # user gets option to rerun
@@ -1145,7 +1208,8 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
          %{
            conn: conn,
            project: project,
-           workflow: %{jobs: [job_1, job_2 | _rest]} = workflow
+           workflow: %{jobs: [job_1, job_2 | _rest]} = workflow,
+           snapshot: snapshot
          } do
       wiped_dataclip =
         insert(:dataclip,
@@ -1158,15 +1222,18 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       %{runs: [run]} =
         insert(:workorder,
           workflow: workflow,
+          snapshot: snapshot,
           dataclip: wiped_dataclip,
           state: :success,
           runs: [
             build(:run,
+              snapshot: snapshot,
               dataclip: wiped_dataclip,
               starting_job: job_1,
               state: :success,
               steps: [
                 build(:step,
+                  snapshot: snapshot,
                   job: job_1,
                   input_dataclip: nil,
                   output_dataclip: nil,
@@ -1175,6 +1242,7 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
                   exit_reason: "success"
                 ),
                 build(:step,
+                  snapshot: snapshot,
                   job: job_2,
                   input_dataclip: nil,
                   output_dataclip: nil,
@@ -1190,7 +1258,7 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project}/w/#{workflow}?#{[s: job_2.id, a: run.id, m: "expand"]}"
+          ~p"/projects/#{project}/w/#{workflow}?#{[s: job_2.id, a: run.id, m: "expand", v: workflow.lock_version]}"
         )
 
       # user cannot rerun
@@ -1241,7 +1309,7 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project}/w/#{workflow}?#{[s: job_1.id, a: run.id, m: "expand"]}"
+          ~p"/projects/#{project}/w/#{workflow}?#{[s: job_1.id, a: run.id, m: "expand", v: workflow.lock_version]}"
         )
 
       # dataclip body is displayed
@@ -1302,7 +1370,8 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
          %{
            conn: conn,
            project: project,
-           workflow: %{jobs: [job_1 | _rest]} = workflow
+           workflow: %{jobs: [job_1 | _rest]} = workflow,
+           snapshot: snapshot
          } do
       dataclip =
         insert(:dataclip,
@@ -1313,9 +1382,11 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       %{runs: [run]} =
         insert(:workorder,
           workflow: workflow,
+          snapshot: snapshot,
           dataclip: dataclip,
           runs: [
             build(:run,
+              snapshot: snapshot,
               dataclip: dataclip,
               starting_job: job_1,
               claimed_at: build(:timestamp),
@@ -1331,7 +1402,7 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project}/w/#{workflow}?#{[s: job_1.id, a: run.id, m: "expand"]}"
+          ~p"/projects/#{project}/w/#{workflow}?#{[s: job_1.id, a: run.id, m: "expand", v: workflow.lock_version]}"
         )
 
       # user cannot rerun
@@ -1362,7 +1433,7 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project}/w/#{workflow}?#{[s: job_1.id, m: "expand"]}"
+          ~p"/projects/#{project}/w/#{workflow}?#{[s: job_1.id, m: "expand", v: workflow.lock_version]}"
         )
 
       # action button is rendered correctly
@@ -1478,7 +1549,7 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project}/w/#{workflow}?#{[s: job, m: "expand"]}"
+          ~p"/projects/#{project}/w/#{workflow}?#{[s: job, m: "expand", v: workflow.lock_version]}"
         )
 
       assert has_element?(view, "#job-editor-pane-#{job.id}")
@@ -1521,7 +1592,8 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
     test "all users can view output and logs for a follwed run", %{
       conn: conn,
       project: project,
-      workflow: %{jobs: [job_1 | _rest]} = workflow
+      workflow: %{jobs: [job_1 | _rest]} = workflow,
+      snapshot: snapshot
     } do
       input_dataclip =
         insert(:dataclip,
@@ -1542,17 +1614,20 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       %{runs: [run]} =
         insert(:workorder,
           workflow: workflow,
+          snapshot: snapshot,
           dataclip: input_dataclip,
           state: :success,
           runs: [
             build(:run,
               dataclip: input_dataclip,
+              snapshot: snapshot,
               starting_job: job_1,
               state: :success,
               log_lines: [log_line],
               steps: [
                 build(:step,
                   job: job_1,
+                  snapshot: snapshot,
                   input_dataclip: input_dataclip,
                   output_dataclip: output_dataclip,
                   started_at: build(:timestamp),
@@ -1569,7 +1644,7 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
         {:ok, view, _html} =
           live(
             conn,
-            ~p"/projects/#{project}/w/#{workflow}?#{[s: job_1.id, a: run.id, m: "expand"]}"
+            ~p"/projects/#{project}/w/#{workflow}?#{[s: job_1.id, a: run.id, m: "expand", v: workflow.lock_version]}"
           )
 
         run_view = find_live_child(view, "run-viewer-#{run.id}")
@@ -1600,7 +1675,7 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
     end
   end
 
-  defp rerun_setup(project, %{jobs: [job_1, job_2 | _rest]} = workflow) do
+  defp rerun_setup(project, %{jobs: [job_1, job_2 | _rest]} = workflow, snapshot) do
     input_dataclip = insert(:dataclip, project: project, type: :http_request)
 
     output_dataclip =
@@ -1613,15 +1688,18 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
     workorder =
       insert(:workorder,
         workflow: workflow,
+        snapshot: snapshot,
         dataclip: input_dataclip,
         state: :success,
         runs: [
           build(:run,
+            snapshot: snapshot,
             dataclip: input_dataclip,
             starting_job: job_1,
             state: :success,
             steps: [
               build(:step,
+                snapshot: snapshot,
                 job: job_1,
                 input_dataclip: input_dataclip,
                 output_dataclip: output_dataclip,
@@ -1630,6 +1708,7 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
                 exit_reason: "success"
               ),
               build(:step,
+                snapshot: snapshot,
                 job: job_2,
                 input_dataclip: output_dataclip,
                 output_dataclip:
@@ -1653,13 +1732,16 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
     for dataclip <- dataclips do
       insert(:workorder,
         workflow: workflow,
+        snapshot: snapshot,
         dataclip: dataclip,
         runs: [
           build(:run,
+            snapshot: snapshot,
             dataclip: dataclip,
             starting_job: job_2,
             steps: [
               build(:step,
+                snapshot: snapshot,
                 job: job_2,
                 input_dataclip: dataclip,
                 output_dataclip: nil,

@@ -2,7 +2,6 @@ defmodule LightningWeb.WorkflowLive.Components do
   @moduledoc false
   use LightningWeb, :component
 
-  alias Lightning.Workflows.Trigger
   alias LightningWeb.Components.Form
   alias Phoenix.LiveView.JS
 
@@ -161,7 +160,7 @@ defmodule LightningWeb.WorkflowLive.Components do
   attr :can_write_webhook_auth_method, :boolean, required: true
   attr :webhook_url, :string, required: true
   attr :on_change, :any, required: true
-  attr :selected_trigger, Trigger, required: true
+  attr :selected_trigger, :any, required: true
   attr :action, :any, required: true
 
   def trigger_form(%{form: form} = assigns) do
@@ -249,7 +248,9 @@ defmodule LightningWeb.WorkflowLive.Components do
                     href="#"
                     class={[
                       "text-indigo-400 underline not-italic inline-flex items-center",
-                      if(@action == :new or !@can_write_webhook_auth_method,
+                      if(
+                        @action == :new or !@can_write_webhook_auth_method or
+                          @disabled,
                         do: "text-gray-500 cursor-not-allowed",
                         else: ""
                       )
@@ -289,7 +290,7 @@ defmodule LightningWeb.WorkflowLive.Components do
                     href="#"
                     class={[
                       "text-primary-700 underline hover:text-primary-800",
-                      !@can_write_webhook_auth_method &&
+                      (!@can_write_webhook_auth_method or @disabled) &&
                         "text-gray-500 cursor-not-allowed"
                     ]}
                     phx-click={show_modal("webhooks_auth_method_modal")}

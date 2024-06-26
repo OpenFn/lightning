@@ -20,6 +20,7 @@ type EditorProps = {
   metadata?: object; // TODO I can actually this very effectively from adaptors...
   onChange?: (newSource: string) => void;
   disabled?: boolean;
+  disabledMessage?: string;
 };
 
 const spinner = (
@@ -151,6 +152,7 @@ export default function Editor({
   adaptor,
   onChange,
   disabled,
+  disabledMessage,
   metadata,
 }: EditorProps) {
   const [lib, setLib] = useState<Lib[]>();
@@ -272,7 +274,6 @@ export default function Editor({
       ...defaultOptions,
       overflowWidgetsDomNode: overflowNode,
       fixedOverflowWidgets: true,
-      readOnly: disabled,
     });
 
     return () => {
@@ -313,7 +314,13 @@ export default function Editor({
         defaultPath="/job.js"
         loading={<div className="text-white">Loading...</div>}
         value={source || DEFAULT_TEXT}
-        options={options}
+        options={{
+          ...options,
+          readOnly: disabled,
+          readOnlyMessage: {
+            value: disabledMessage,
+          },
+        }}
         onMount={handleEditorDidMount}
         onChange={handleSourceChange}
       />

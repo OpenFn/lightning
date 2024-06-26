@@ -7,6 +7,7 @@ defmodule LightningWeb.WorkOrderLiveTest do
   alias Lightning.Runs
   alias Lightning.WorkOrders.Events
   alias Lightning.WorkOrders.SearchParams
+  alias Lightning.Workflows
 
   alias LightningWeb.LiveHelpers
 
@@ -18,21 +19,27 @@ defmodule LightningWeb.WorkOrderLiveTest do
   setup :create_project_for_current_user
   setup :stub_usage_limiter_ok
 
-  defp setup_work_order(project, job) do
+  defp setup_work_order(project) do
     dataclip = insert(:dataclip)
-    workflow = insert(:simple_workflow, project: project)
+    %{jobs: [job]} = workflow = insert(:simple_workflow, project: project)
+
+    {:ok, snapshot} =
+      Workflows.Snapshot.get_or_create_latest_for(workflow)
 
     work_order =
       work_order_for(job,
         workflow: workflow,
+        snapshot: snapshot,
         dataclip: dataclip,
         runs: [
           build(:run, %{
             starting_job: job,
             dataclip: dataclip,
+            snapshot: snapshot,
             steps: [
               %{
                 job: job,
+                snapshot: snapshot,
                 started_at: build(:timestamp),
                 finished_at: nil,
                 exit_reason: nil,
@@ -49,6 +56,7 @@ defmodule LightningWeb.WorkOrderLiveTest do
 
   defp setup_work_order_with_multiple_runs(
          workflow,
+         snapshot,
          trigger,
          job,
          dataclip,
@@ -57,6 +65,7 @@ defmodule LightningWeb.WorkOrderLiveTest do
     work_order =
       insert(:workorder,
         workflow: workflow,
+        snapshot: snapshot,
         trigger: trigger,
         dataclip: dataclip,
         last_activity: DateTime.utc_now()
@@ -78,11 +87,13 @@ defmodule LightningWeb.WorkOrderLiveTest do
       work_order: work_order,
       starting_trigger: trigger,
       dataclip: dataclip,
+      snapshot: work_order.snapshot,
       state: state,
       "#{state}_at": timestamp,
       steps: [
         build(:step,
           job: job,
+          snapshot: work_order.snapshot,
           started_at: build(:timestamp),
           finished_at: build(:timestamp),
           input_dataclip: dataclip
@@ -156,8 +167,7 @@ defmodule LightningWeb.WorkOrderLiveTest do
     test "WorkOrderComponent renders correctly with valid data", %{
       project: project
     } do
-      %{jobs: [job]} = insert(:simple_workflow, project: project)
-      {work_order, _dataclip} = setup_work_order(project, job)
+      {work_order, _dataclip} = setup_work_order(project)
 
       assert_work_order_steps(work_order, 1)
 
@@ -177,8 +187,7 @@ defmodule LightningWeb.WorkOrderLiveTest do
     test "WorkOrderComponent renders steps when details are toggled", %{
       project: project
     } do
-      %{jobs: [job]} = insert(:simple_workflow, project: project)
-      {work_order, _dataclip} = setup_work_order(project, job)
+      {work_order, _dataclip} = setup_work_order(project)
 
       assert_work_order_steps(work_order, 1)
 
@@ -487,6 +496,8 @@ defmodule LightningWeb.WorkOrderLiveTest do
       job = insert(:job, workflow: workflow)
       dataclip = insert(:dataclip)
 
+      {:ok, snapshot} = Workflows.Snapshot.get_or_create_latest_for(workflow)
+
       runs_params = [
         %{state: :claimed, state_timestamp: build(:timestamp)},
         %{state: :started, state_timestamp: build(:timestamp)}
@@ -495,6 +506,7 @@ defmodule LightningWeb.WorkOrderLiveTest do
       {work_order, [run_1, run_2]} =
         setup_work_order_with_multiple_runs(
           workflow,
+          snapshot,
           trigger,
           job,
           dataclip,
@@ -533,10 +545,13 @@ defmodule LightningWeb.WorkOrderLiveTest do
       trigger = insert(:trigger, type: :webhook, workflow: workflow)
       job = insert(:job, workflow: workflow)
 
+      {:ok, snapshot} = Workflows.Snapshot.get_or_create_latest_for(workflow)
+
       dataclip = insert(:dataclip)
 
       insert(:workorder,
         workflow: workflow,
+        snapshot: snapshot,
         trigger: trigger,
         dataclip: dataclip,
         last_activity: DateTime.utc_now(),
@@ -546,6 +561,7 @@ defmodule LightningWeb.WorkOrderLiveTest do
       work_order =
         insert(:workorder,
           workflow: workflow,
+          snapshot: snapshot,
           trigger: trigger,
           dataclip: dataclip,
           last_activity: DateTime.utc_now()
@@ -554,12 +570,14 @@ defmodule LightningWeb.WorkOrderLiveTest do
       %{id: run_id} =
         insert(:run,
           work_order: work_order,
+          snapshot: snapshot,
           starting_trigger: trigger,
           dataclip: dataclip,
           finished_at: build(:timestamp),
           steps: [
             build(:step,
               job: job,
+              snapshot: snapshot,
               started_at: build(:timestamp),
               finished_at: build(:timestamp),
               exit_reason: "fail",
@@ -818,20 +836,26 @@ defmodule LightningWeb.WorkOrderLiveTest do
           body: ~s[fn(state => { return {...state, extra: "data"} })]
         )
 
+      {:ok, snapshot} =
+        Lightning.Workflows.Snapshot.get_or_create_latest_for(workflow)
+
       dataclip = insert(:dataclip)
 
       insert(:workorder,
         workflow: workflow,
         trigger: trigger,
         dataclip: dataclip,
+        snapshot: snapshot,
         last_activity: DateTime.utc_now(),
         runs: [
           build(:run,
             starting_trigger: trigger,
             dataclip: dataclip,
+            snapshot: snapshot,
             steps: [
               build(:step,
                 job: job,
+                snapshot: snapshot,
                 input_dataclip: dataclip,
                 started_at: build(:timestamp),
                 finished_at: build(:timestamp),
@@ -851,20 +875,26 @@ defmodule LightningWeb.WorkOrderLiveTest do
           body: ~s[fn(state => { return {...state, extra: "data"} })]
         )
 
+      {:ok, snapshot_two} =
+        Lightning.Workflows.Snapshot.get_or_create_latest_for(workflow_two)
+
       dataclip_two = insert(:dataclip)
 
       insert(:workorder,
         workflow: workflow_two,
         trigger: trigger_two,
         dataclip: dataclip_two,
+        snapshot: snapshot_two,
         last_activity: DateTime.utc_now(),
         runs: [
           build(:run,
             starting_trigger: trigger_two,
             dataclip: dataclip_two,
+            snapshot: snapshot_two,
             steps: [
               build(:step,
                 job: job_two,
+                snapshot: snapshot_two,
                 input_dataclip: dataclip_two,
                 started_at: build(:timestamp),
                 finished_at: build(:timestamp),
@@ -930,33 +960,23 @@ defmodule LightningWeb.WorkOrderLiveTest do
           body: ~s[fn(state => { return {...state, extra: "data"} })]
         )
 
+      {:ok, snapshot_one} =
+        Workflows.Snapshot.get_or_create_latest_for(workflow_one)
+
       dataclip =
         insert(:dataclip,
           type: :http_request,
           body: %{"username" => "eliaswalyba"}
         )
 
-      # work_order_one =
-      #   insert(:workorder,
-      #     workflow: workflow_one,
-      #     trigger: trigger_one,
-      #     dataclip: dataclip,
-      #     last_activity: DateTime.utc_now()
-      #   )
-
-      # run_one =
-      #   insert(:run,
-      #     work_order: work_order_one,
-      #     dataclip: dataclip,
-      #     starting_trigger: trigger_one
-      #   )
-
       %{runs: [run_one]} =
         work_order_for(trigger_one,
           workflow: workflow_one,
+          snapshot: snapshot_one,
           dataclip: dataclip,
           runs: [
             build(:run,
+              snapshot: snapshot_one,
               dataclip: dataclip,
               starting_trigger: trigger_one
             )
@@ -979,18 +999,18 @@ defmodule LightningWeb.WorkOrderLiveTest do
       trigger_two = insert(:trigger, type: :webhook, workflow: workflow_two)
       job_two = insert(:job, workflow: workflow_two)
 
+      {:ok, snapshot_two} =
+        Workflows.Snapshot.get_or_create_latest_for(workflow_two)
+
       dataclip =
         insert(:dataclip, type: :http_request, body: %{"username" => "qassim"})
-
-      {:ok, snapshot} =
-        Lightning.Workflows.Snapshot.get_or_create_latest_for(workflow_two)
 
       work_order_two =
         insert(:workorder,
           workflow: workflow_two,
           trigger: trigger_two,
           dataclip: dataclip,
-          snapshot: snapshot,
+          snapshot: snapshot_two,
           last_activity: DateTime.utc_now(),
           state: :failed
         )
@@ -1000,7 +1020,7 @@ defmodule LightningWeb.WorkOrderLiveTest do
           work_order: work_order_two,
           dataclip: dataclip,
           starting_trigger: trigger_two,
-          snapshot: snapshot
+          snapshot: snapshot_two
         )
 
       expected_d2 = Timex.now() |> Timex.shift(days: -10)
@@ -1291,10 +1311,13 @@ defmodule LightningWeb.WorkOrderLiveTest do
 
       dataclip = insert(:dataclip, project: project)
 
+      {:ok, snapshot} = Workflows.Snapshot.get_or_create_latest_for(workflow)
+
       workorder =
         insert(:workorder,
           state: :success,
           workflow: workflow,
+          snapshot: snapshot,
           trigger: trigger,
           dataclip: dataclip,
           last_activity: DateTime.utc_now()
@@ -1305,6 +1328,7 @@ defmodule LightningWeb.WorkOrderLiveTest do
       run_1 =
         insert(:run,
           work_order: workorder,
+          snapshot: snapshot,
           state: :failed,
           starting_trigger: trigger,
           inserted_at: now |> Timex.shift(minutes: -5),
@@ -1312,6 +1336,7 @@ defmodule LightningWeb.WorkOrderLiveTest do
           steps:
             build_list(1, :step, %{
               job: job,
+              snapshot: snapshot,
               exit_reason: "fail",
               started_at: now |> Timex.shift(seconds: -40),
               finished_at: now |> Timex.shift(seconds: -20),
@@ -1323,11 +1348,13 @@ defmodule LightningWeb.WorkOrderLiveTest do
         insert(:run,
           state: :success,
           work_order: workorder,
+          snapshot: snapshot,
           starting_job: job,
           dataclip: dataclip,
           steps:
             build_list(1, :step,
               job: job,
+              snapshot: snapshot,
               started_at: Timex.shift(now, seconds: -20),
               finished_at: now,
               input_dataclip: dataclip
@@ -1392,12 +1419,16 @@ defmodule LightningWeb.WorkOrderLiveTest do
         enabled: true
       )
 
+      {:ok, snapshot} =
+        Workflows.Snapshot.get_or_create_latest_for(workflow)
+
       dataclip = insert(:dataclip, project: project)
 
       workorder =
         insert(:workorder,
           state: :success,
           workflow: workflow,
+          snapshot: snapshot,
           trigger: trigger,
           dataclip: dataclip,
           last_activity: DateTime.utc_now()
@@ -1406,6 +1437,7 @@ defmodule LightningWeb.WorkOrderLiveTest do
       run_1 =
         insert(:run,
           work_order: workorder,
+          snapshot: snapshot,
           state: :failed,
           starting_trigger: trigger,
           inserted_at: build(:timestamp),
@@ -1413,6 +1445,7 @@ defmodule LightningWeb.WorkOrderLiveTest do
           steps:
             build_list(1, :step, %{
               job: job,
+              snapshot: snapshot,
               exit_reason: "fail",
               started_at: build(:timestamp),
               finished_at: build(:timestamp),
@@ -1424,11 +1457,13 @@ defmodule LightningWeb.WorkOrderLiveTest do
         insert(:run,
           state: :success,
           work_order: workorder,
+          snapshot: snapshot,
           starting_job: job,
           dataclip: dataclip,
           steps:
             build_list(1, :step,
               job: job,
+              snapshot: snapshot,
               started_at: build(:timestamp),
               finished_at: build(:timestamp),
               input_dataclip: dataclip
@@ -1543,11 +1578,14 @@ defmodule LightningWeb.WorkOrderLiveTest do
       job_1 = insert(:job, workflow: workflow)
       job_2 = insert(:job, workflow: workflow)
 
+      {:ok, snapshot} = Workflows.Snapshot.get_or_create_latest_for(workflow)
+
       dataclip = insert(:dataclip)
 
       work_order =
         insert(:workorder,
           workflow: workflow,
+          snapshot: snapshot,
           trigger: trigger,
           dataclip: dataclip
         )
@@ -1555,6 +1593,7 @@ defmodule LightningWeb.WorkOrderLiveTest do
       run =
         insert(:run,
           work_order: work_order,
+          snapshot: snapshot,
           dataclip: dataclip,
           starting_trigger: trigger
         )
@@ -1563,6 +1602,7 @@ defmodule LightningWeb.WorkOrderLiveTest do
         insert(:step,
           job: job_1,
           runs: [run],
+          snapshot: snapshot,
           exit_reason: "success",
           started_at: build(:timestamp),
           finished_at: build(:timestamp)
@@ -1575,6 +1615,7 @@ defmodule LightningWeb.WorkOrderLiveTest do
         insert(:step,
           job: job_2,
           runs: [run],
+          snapshot: snapshot,
           exit_reason: "success",
           started_at: build(:timestamp),
           finished_at: build(:timestamp)

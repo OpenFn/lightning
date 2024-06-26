@@ -241,7 +241,11 @@ defmodule Lightning.Runs do
     |> Repo.transaction()
     |> tap(fn result ->
       with {:ok, %{runs: {_n, runs}}} <- result do
-        Enum.each(runs, &Events.run_updated/1)
+        # TODO: remove the requirement for events to be hydrated with a specific
+        # set of preloads.
+        runs
+        |> Enum.map(fn run -> Repo.preload(run, :snapshot) end)
+        |> Enum.each(&Events.run_updated/1)
       end
     end)
   end

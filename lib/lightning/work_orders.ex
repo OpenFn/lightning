@@ -283,14 +283,21 @@ defmodule Lightning.WorkOrders do
         where: a.id == ^run_id,
         join: s in assoc(a, :steps),
         where: s.id == ^step_id,
-        preload: [:steps, work_order: [workflow: :edges]]
+        preload: [
+          steps: [snapshot: [triggers: :webhook_auth_methods]],
+          work_order: [workflow: :edges]
+        ]
       )
       |> Repo.one()
 
     step =
       from(s in Ecto.assoc(run, :steps),
         where: s.id == ^step_id,
-        preload: [:job, :input_dataclip]
+        preload: [
+          :job,
+          :input_dataclip,
+          snapshot: [triggers: :webhook_auth_methods]
+        ]
       )
       |> Repo.one()
 

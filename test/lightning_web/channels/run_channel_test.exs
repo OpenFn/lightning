@@ -5,6 +5,7 @@ defmodule LightningWeb.RunChannelTest do
   alias Lightning.Invocation.Dataclip
   alias Lightning.Invocation.Step
   alias Lightning.Workers
+  alias Lightning.Workflows
 
   import Ecto.Query
   import Lightning.TestUtils
@@ -492,6 +493,8 @@ defmodule LightningWeb.RunChannelTest do
       %{triggers: [trigger], jobs: [job]} =
         workflow = insert(:simple_workflow, project: project)
 
+      {:ok, snapshot} = Workflows.Snapshot.create(workflow)
+
       Repo.update(
         Ecto.Changeset.change(job, project_credential_id: project_credential_id)
       )
@@ -500,7 +503,8 @@ defmodule LightningWeb.RunChannelTest do
         insert(:workorder,
           workflow: workflow,
           trigger: trigger,
-          dataclip: dataclip
+          dataclip: dataclip,
+          snapshot: snapshot
         )
 
       run =
@@ -508,6 +512,7 @@ defmodule LightningWeb.RunChannelTest do
           work_order: work_order,
           starting_trigger: trigger,
           dataclip: dataclip,
+          snapshot: snapshot,
           options:
             Lightning.Extensions.MockUsageLimiter.get_run_options(%Context{
               project_id: project.id
@@ -546,7 +551,8 @@ defmodule LightningWeb.RunChannelTest do
         workflow: workflow,
         credential: credential,
         project: project,
-        trigger: trigger
+        trigger: trigger,
+        snapshot: snapshot
       }
     end
 
@@ -765,11 +771,14 @@ defmodule LightningWeb.RunChannelTest do
       %{triggers: [trigger]} =
         workflow = insert(:simple_workflow, project: project)
 
+      {:ok, snapshot} = Workflows.Snapshot.create(workflow)
+
       work_order =
         insert(:workorder,
           workflow: workflow,
           trigger: trigger,
-          dataclip: dataclip
+          dataclip: dataclip,
+          snapshot: snapshot
         )
 
       run =
@@ -777,6 +786,7 @@ defmodule LightningWeb.RunChannelTest do
           work_order: work_order,
           starting_trigger: trigger,
           dataclip: dataclip,
+          snapshot: snapshot,
           options:
             Lightning.Extensions.MockUsageLimiter.get_run_options(%Context{
               project_id: project.id
@@ -1138,17 +1148,26 @@ defmodule LightningWeb.RunChannelTest do
       })
       |> insert()
 
-    %{workflow: workflow, job: job, trigger: trigger}
+    {:ok, snapshot} = Workflows.Snapshot.create(workflow)
+
+    %{workflow: workflow, job: job, trigger: trigger, snapshot: snapshot}
   end
 
   defp create_run(context) do
-    assert_context_keys(context, [:project, :credential, :workflow, :trigger])
+    assert_context_keys(context, [
+      :project,
+      :credential,
+      :workflow,
+      :trigger,
+      :snapshot
+    ])
 
     %{
       project: project,
       credential: credential,
       workflow: workflow,
-      trigger: trigger
+      trigger: trigger,
+      snapshot: snapshot
     } = context
 
     dataclip =
@@ -1158,7 +1177,8 @@ defmodule LightningWeb.RunChannelTest do
       insert(:workorder,
         workflow: workflow,
         trigger: trigger,
-        dataclip: dataclip
+        dataclip: dataclip,
+        snapshot: snapshot
       )
 
     run =
@@ -1166,6 +1186,7 @@ defmodule LightningWeb.RunChannelTest do
         work_order: work_order,
         starting_trigger: trigger,
         dataclip: dataclip,
+        snapshot: snapshot,
         options:
           Lightning.Extensions.MockUsageLimiter.get_run_options(%Context{
             project_id: project.id

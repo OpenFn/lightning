@@ -105,6 +105,7 @@ type JobEditorProps = {
   adaptor: string;
   source: string;
   disabled?: boolean;
+  disabledMessage?: string;
   metadata?: object | true;
   onSourceChanged?: (src: string) => void;
 };
@@ -113,6 +114,7 @@ export default ({
   adaptor,
   source,
   disabled,
+  disabledMessage,
   metadata,
   onSourceChanged,
 }: JobEditorProps) => {
@@ -161,6 +163,7 @@ export default ({
             adaptor={adaptor}
             metadata={metadata === true ? undefined : metadata}
             disabled={disabled}
+            disabledMessage={disabledMessage}
             onChange={onSourceChanged}
           />
         </div>

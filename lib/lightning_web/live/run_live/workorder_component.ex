@@ -324,6 +324,7 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
                 can_edit_data_retention={@can_edit_data_retention}
                 can_run_workflow={@can_run_workflow}
                 run={run}
+                workflow_version={@work_order.workflow.lock_version}
                 project={@project}
               />
             </div>

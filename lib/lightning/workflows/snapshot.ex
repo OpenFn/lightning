@@ -13,6 +13,7 @@ defmodule Lightning.Workflows.Snapshot do
 
   alias Lightning.Projects.ProjectCredential
   alias Lightning.Repo
+  alias Lightning.Workflows.WebhookAuthMethod
   alias Lightning.Workflows.Workflow
 
   @type t :: %__MODULE__{
@@ -52,6 +53,11 @@ defmodule Lightning.Workflows.Snapshot do
       field :cron_expression, :string
       field :enabled, :boolean
       field :type, Ecto.Enum, values: [:webhook, :cron]
+      field :has_auth_method, :boolean, virtual: true
+
+      many_to_many :webhook_auth_methods, WebhookAuthMethod,
+        join_through: "trigger_webhook_auth_methods",
+        on_replace: :delete
 
       field :inserted_at, :utc_datetime
       field :updated_at, :utc_datetime
@@ -174,6 +180,15 @@ defmodule Lightning.Workflows.Snapshot do
         s.workflow_id == ^workflow.id and
           s.lock_version == w.lock_version
     )
+  end
+
+  def get_by_version(workflow_id, version) do
+    from(s in __MODULE__,
+      join: w in assoc(s, :workflow),
+      where: s.workflow_id == ^workflow_id and s.lock_version == ^version,
+      preload: [triggers: [:webhook_auth_methods]]
+    )
+    |> Repo.one()
   end
 
   @doc """

@@ -18,7 +18,7 @@ type JobEditorEntrypoint = PhoenixHook<
     removeHandleEvent(callbackRef: unknown): void;
     _timeout: number | null;
   },
-  { adaptor: string; source: string; disabled: string }
+  { adaptor: string; source: string; disabled: string; disabledMessage: string }
 >;
 
 type AttributeMutationRecord = MutationRecord & {
@@ -69,7 +69,7 @@ export default {
     }
   },
   render() {
-    const { adaptor, source, disabled } = this.el.dataset;
+    const { adaptor, source, disabled, disabledMessage } = this.el.dataset;
     if (adaptor.split('@').at(-1) === 'latest') {
       console.warn(
         "job-editor hook received an adaptor with @latest as it's version - to load docs a specific version must be provided"
@@ -82,6 +82,7 @@ export default {
           source={source}
           metadata={this.metadata}
           disabled={disabled === 'true'}
+          disabledMessage={disabledMessage}
           onSourceChanged={src => this.handleContentChange(src)}
         />
       );
@@ -106,7 +107,6 @@ export default {
       mutations.forEach(mutation => {
         const { attributeName, oldValue } = mutation as AttributeMutationRecord;
         const newValue = this.el.getAttribute(attributeName);
-
         if (oldValue !== newValue) {
           this.render();
         }
@@ -114,7 +114,13 @@ export default {
     });
 
     this.observer.observe(this.el, {
-      attributeFilter: ['data-adaptor', 'data-change-event'],
+      attributeFilter: [
+        'data-adaptor',
+        'data-change-event',
+        'data-disabled',
+        'data-disabled-message',
+        'data-source',
+      ],
       attributeOldValue: true,
     });
   },

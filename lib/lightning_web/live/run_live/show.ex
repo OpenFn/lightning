@@ -13,6 +13,36 @@ defmodule LightningWeb.RunLive.Show do
 
   on_mount {LightningWeb.Hooks, :project_scope}
 
+  attr :run, :map, required: true
+  attr :workflow, :map, required: true
+
+  defp snapshot_version(assigns) do
+    %{run: run, workflow: workflow} = assigns
+
+    snapshot_version =
+      if run.snapshot.lock_version == workflow.lock_version do
+        "latest"
+      else
+        String.slice(run.snapshot.id, 0..6)
+      end
+
+    assigns =
+      assign(assigns, snapshot_version: snapshot_version)
+
+    ~H"""
+    <LightningWeb.Components.Common.snapshot_version_chip
+      id="run-workflow-version"
+      version={@snapshot_version}
+      tooltip={
+        if @snapshot_version == "latest",
+          do: "This run is based on the latest version of this workflow.",
+          else:
+            "This run is based on a snapshot of this workflow that was taken on #{Lightning.Helpers.format_date(run.snapshot.inserted_at)}"
+      }
+    />
+    """
+  end
+
   @impl true
   def render(assigns) do
     assigns =
@@ -27,6 +57,12 @@ defmodule LightningWeb.RunLive.Show do
             <span class="pl-2 font-light">
               <%= display_short_uuid(@id) %>
             </span>
+            <div class="mx-2"></div>
+            <.async_result :let={run} assign={@run}>
+              <%= if run do %>
+                <.snapshot_version run={run} workflow={@workflow} />
+              <% end %>
+            </.async_result>
           </:title>
         </LayoutComponents.header>
       </:header>
@@ -50,7 +86,9 @@ defmodule LightningWeb.RunLive.Show do
                   <:label>Workflow</:label>
                   <:value>
                     <.link
-                      navigate={~p"/projects/#{@project}/w/#{@workflow.id}"}
+                      navigate={
+                        ~p"/projects/#{@project}/w/#{@workflow.id}?v=#{run.snapshot.lock_version}"
+                      }
                       class="hover:underline hover:text-primary-900 whitespace-nowrap text-ellipsis"
                     >
                       <span class="whitespace-nowrap text-ellipsis">

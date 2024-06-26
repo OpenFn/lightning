@@ -12,7 +12,7 @@ defmodule Lightning.Workflows.SnapshotsTest do
     |> case do
       {:ok, snapshot} ->
         assert snapshot.name == workflow.name
-        assert snapshot.jobs |> length() == 7
+        assert length(snapshot.jobs) == length(workflow.jobs)
 
         for original_job <- workflow.jobs do
           assert snapshot_job =
@@ -22,8 +22,8 @@ defmodule Lightning.Workflows.SnapshotsTest do
           assert_job_equal(snapshot_job, original_job)
         end
 
-        assert snapshot.triggers |> length() == 1
-        assert snapshot.edges |> length() == workflow.edges |> length()
+        assert length(snapshot.triggers) == length(workflow.triggers)
+        assert length(snapshot.edges) == length(workflow.edges)
 
         for original_edge <- workflow.edges do
           assert snapshot_edge =
@@ -57,11 +57,11 @@ defmodule Lightning.Workflows.SnapshotsTest do
     snapshot = Workflows.Snapshot.get_current_for(workflow)
 
     assert snapshot.name == workflow.name
-    assert snapshot.jobs |> length() == 1
-    assert snapshot.triggers |> length() == 1
+    assert length(snapshot.jobs) == length(workflow.jobs)
+    assert length(snapshot.triggers) == length(workflow.triggers)
     # TODO: edges should be cleaned up when jobs are removed, this requires
     # runs and steps to be disassociated from jobs
-    assert snapshot.edges |> length() == 7
+    assert length(snapshot.edges) == length(workflow.edges)
 
     snapshot = snapshot |> Lightning.Repo.reload!()
 

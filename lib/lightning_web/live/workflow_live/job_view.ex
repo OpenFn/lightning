@@ -60,6 +60,8 @@ defmodule LightningWeb.WorkflowLive.JobView do
   attr :close_url, :any, required: true
   attr :socket, :any, required: true
   attr :follow_run_id, :any, default: nil
+  attr :snapshot, :any, required: true
+  attr :snapshot_version, :any, required: true
 
   slot :footer
 
@@ -70,6 +72,17 @@ defmodule LightningWeb.WorkflowLive.JobView do
   end
 
   def job_edit_view(assigns) do
+    {editor_disabled?, editor_disabled_message, editor_panel_title} =
+      editor_disabled?(assigns.form.source.data)
+
+    assigns =
+      assigns
+      |> assign(
+        editor_disabled?: editor_disabled?,
+        editor_disabled_message: editor_disabled_message,
+        editor_panel_title: editor_panel_title
+      )
+
     ~H"""
     <.container id={"job-edit-view-#{@job.id}"}>
       <:top>
@@ -85,8 +98,20 @@ defmodule LightningWeb.WorkflowLive.JobView do
           </div>
           <.adaptor_block adaptor={@job.adaptor} />
           <.credential_block credential={
-            fetch_credential(@form[:project_credential_id].value)
+            fetch_credential(
+              @form[:project_credential_id] && @form[:project_credential_id].value
+            )
           } />
+          <LightningWeb.Components.Common.snapshot_version_chip
+            id="inspector-workflow-version"
+            version={@snapshot_version}
+            tooltip={
+              if @snapshot_version == "latest",
+                do: "This is the latest version of this workflow",
+                else:
+                  "You are viewing a snapshot of this workflow that was taken on #{Lightning.Helpers.format_date(@snapshot.inserted_at)}"
+            }
+          />
           <div class="flex flex-grow items-center justify-end">
             <.link
               id={"close-job-edit-view-#{@job.id}"}
@@ -112,13 +137,14 @@ defmodule LightningWeb.WorkflowLive.JobView do
       <.collapsible_panel
         id="job-editor-panel"
         class="h-full border border-l-0"
-        panel_title="Editor"
+        panel_title={@editor_panel_title}
       >
         <.live_component
           module={EditorPane}
           id={"job-editor-pane-#{@job.id}"}
           form={@form}
-          disabled={false}
+          disabled={@editor_disabled?}
+          disabled_message={@editor_disabled_message}
           class="h-full p-2"
         />
       </.collapsible_panel>
@@ -171,6 +197,13 @@ defmodule LightningWeb.WorkflowLive.JobView do
     </.container>
     """
   end
+
+  defp editor_disabled?(%Lightning.Workflows.Job{}), do: {false, "", "Editor"}
+
+  defp editor_disabled?(%Lightning.Workflows.Snapshot.Job{}),
+    do:
+      {true, "Cannot edit in snapshot mode, switch to the latest version.",
+       "Editor (read-only)"}
 
   defp credential_block(assigns) do
     ~H"""

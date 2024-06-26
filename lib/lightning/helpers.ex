@@ -45,6 +45,10 @@ defmodule Lightning.Helpers do
     |> Timex.Format.Duration.Formatters.Humanized.format()
   end
 
+  def format_date(date, formatter \\ "%a %d/%m/%Y at %H:%M:%S") do
+    Timex.Format.DateTime.Formatters.Strftime.format!(date, formatter)
+  end
+
   def indefinite_article(noun) do
     first_letter = String.first(noun) |> String.downcase()
     if Enum.member?(["a", "e", "i", "o", "u"], first_letter), do: "an", else: "a"

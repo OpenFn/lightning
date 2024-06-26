@@ -4,33 +4,45 @@ defmodule Lightning.WorkflowLive.Helpers do
   import Lightning.Factories
   import ExUnit.Assertions
 
+  alias Lightning.Workflows
   alias Lightning.Projects.Project
   alias Lightning.Workflows.Job
   alias Lightning.Workflows.Edge
 
   # Interaction Helpers
 
-  def select_node(view, node) do
+  def select_node(view, node, version \\ nil) do
+    query_string =
+      if version, do: "?s=#{node.id}&v=#{version}", else: "?s=#{node.id}"
+
     view
-    |> render_patch("?s=#{node.id}")
+    |> render_patch(query_string)
   end
 
   def select_first_job(view) do
+    changeset = :sys.get_state(view.pid).socket.assigns.changeset
+
     job =
-      :sys.get_state(view.pid).socket.assigns.changeset
+      changeset
       |> Ecto.Changeset.get_assoc(:jobs, :struct)
       |> List.first()
 
-    {job, 0, view |> select_node(job)}
+    version = Ecto.Changeset.get_field(changeset, :lock_version)
+
+    {job, 0, view |> select_node(job, version)}
   end
 
   def select_trigger(view) do
+    changeset = :sys.get_state(view.pid).socket.assigns.changeset
+
     trigger =
-      :sys.get_state(view.pid).socket.assigns.changeset
+      changeset
       |> Ecto.Changeset.get_assoc(:triggers, :struct)
       |> List.first()
 
-    {trigger, 0, view |> select_node(trigger)}
+    version = Ecto.Changeset.get_field(changeset, :lock_version)
+
+    {trigger, 0, view |> select_node(trigger, version)}
   end
 
   def click_edit(view, job) do
@@ -117,6 +129,16 @@ defmodule Lightning.WorkflowLive.Helpers do
   def force_event(view, :delete_edge, edge) do
     view
     |> render_click("delete_edge", %{id: edge.id})
+  end
+
+  def force_event(view, :manual_run_submit, params) do
+    view
+    |> render_click("manual_run_submit", %{"manual" => params})
+  end
+
+  def force_event(view, :rerun, run_id, step_id) do
+    view
+    |> render_click("rerun", %{"run_id" => run_id, "step_id" => step_id})
   end
 
   @doc """
@@ -402,6 +424,11 @@ defmodule Lightning.WorkflowLive.Helpers do
       |> with_edge({job_1, job_2}, %{condition_type: :on_job_success})
       |> insert()
 
-    %{workflow: workflow |> Lightning.Repo.preload([:jobs, :triggers, :edges])}
+    {:ok, snapshot} = Workflows.Snapshot.get_or_create_latest_for(workflow)
+
+    %{
+      workflow: workflow |> Lightning.Repo.preload([:jobs, :triggers, :edges]),
+      snapshot: snapshot
+    }
   end
 end
