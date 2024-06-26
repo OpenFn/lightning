@@ -53,12 +53,6 @@ const calculateLayout = async (
     obj[next.id] = next.position;
     return obj;
   }, {} as Positions);
-  // console.log({ finalPositions });
-
-  // for (const id in finalPositions) {
-  //   const n = newModel.nodes.find(n => n.id === id);
-  //   console.log(n?.data.name ?? 'trigger', finalPositions[id]);
-  // }
 
   const hasOldPositions = nodes.find(n => n.position);
 
@@ -77,11 +71,8 @@ const calculateLayout = async (
     // This usually just occurs when adding or removing placeholder nodes
 
     // First work out the size of the current viewpoint in canvas coordinates
-    // TODO where do I get the canvas size from?
-
     if (newPlaceholders.length) {
-      const rect = getVisibleRect(flow.getViewport(), viewBounds, 0.8);
-      console.log({ rect });
+      const rect = getVisibleRect(flow.getViewport(), viewBounds, 0.9);
       // Now work out the visible nodes, paying special attention to the placeholder
       //
       for (const id in finalPositions) {
@@ -111,11 +102,11 @@ const calculateLayout = async (
         }
       }
     } else {
+      // TODO this behaviour probably causes more trouble than its worth?
       // otherwise, if running a layout, fit to the currently visible nodes
       // this usually means we've removed a placeholder and lets us tidy up
       doFit = true;
       const rect = getVisibleRect(flow.getViewport(), viewBounds, 1.1);
-      console.log({ rect });
       for (const id in finalPositions) {
         // again, use the OLD position to work out visibility
         const pos = oldPositions[id] || finalPositions;
@@ -128,10 +119,7 @@ const calculateLayout = async (
     }
 
     // Useful debugging
-    if (doFit) {
-      console.log(fitTargets.map(n => n.data?.name ?? n.type));
-      console.log({ fitTargets });
-    }
+    //console.log(fitTargets.map(n => n.data?.name ?? n.type));
   }
 
   // If we need to run a fit, save the set of visible nodes as the fit target
@@ -202,7 +190,7 @@ export const animate = (
         if (autofit) {
           flowInstance.fitBounds(bounds, {
             duration: typeof duration === 'number' ? duration : 0,
-            // padding: FIT_PADDING,
+            padding: FIT_PADDING,
           });
         }
         isFirst = false;

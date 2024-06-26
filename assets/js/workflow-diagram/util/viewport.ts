@@ -20,10 +20,8 @@ export const getVisibleRect = (
   const zoom = 1 / viewport.zoom;
 
   // Also invert the viewport x and y positions
-  const x = -viewport.x * (1 / scale);
-  const y = -viewport.y * (1 / scale);
-  console.log(`scale x ${scale}`, -viewport.x, x);
-  console.log(`scale y ${scale}`, -viewport.y, y);
+  const x = -viewport.x + (1 - scale) * viewport.x;
+  const y = -viewport.y + (1 - scale) * viewport.y;
 
   // Return the projected visible rect
   return {
