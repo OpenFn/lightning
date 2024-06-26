@@ -51,6 +51,8 @@ and this project adheres to
 
 - Fix some adaptor docs not displaying
   [#2019](https://github.com/OpenFn/lightning/issues/2019)
+- Fix broken `mix lightning.install_adaptor_icons` task due to addition of Finch
+  http client change.
 
 ## [v2.6.3] - 2024-06-19
 
