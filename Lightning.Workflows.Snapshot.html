@@ -13,7 +13,7 @@
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-EPF2X7PV.js"></script>
-    <script src="dist/sidebar_items-EAEE3EB3.js"></script>
+    <script src="dist/sidebar_items-8C999D14.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -193,6 +193,14 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
+        <a href="#get_by_version/2" translate="no">get_by_version(workflow_id, version)</a>
+
+      </div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
         <a href="#get_current_for/1" translate="no">get_current_for(workflow)</a>
 
       </div>
@@ -249,7 +257,7 @@ Pages
     </a>
     <h1 class="signature" translate="no">t()</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/snapshot.ex#L18" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/snapshot.ex#L19" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -300,10 +308,12 @@ Pages
       cron_expression: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
       custom_path: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
       enabled: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
+      has_auth_method: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
       id: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
       inserted_at: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
       type: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
-      updated_at: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>()
+      updated_at: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
+      webhook_auth_methods: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>()
     }
   ],
   workflow:
@@ -337,7 +347,7 @@ Pages
     </a>
     <h1 class="signature" translate="no">build(workflow)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/snapshot.ex#L118" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/snapshot.ex#L124" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -365,7 +375,7 @@ Pages
     </a>
     <h1 class="signature" translate="no">create(workflow)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/snapshot.ex#L142" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/snapshot.ex#L148" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -394,7 +404,7 @@ Pages
     </a>
     <h1 class="signature" translate="no">get_all_for(workflow)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/snapshot.ex#L148" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/snapshot.ex#L154" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -413,6 +423,28 @@ Pages
 
   </section>
 </section>
+<section class="detail" id="get_by_version/2">
+
+  <div class="detail-header">
+    <a href="#get_by_version/2" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">get_by_version(workflow_id, version)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/snapshot.ex#L185" class="icon-action" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+
+  </section>
+</section>
 <section class="detail" id="get_current_for/1">
 
   <div class="detail-header">
@@ -422,7 +454,7 @@ Pages
     </a>
     <h1 class="signature" translate="no">get_current_for(workflow)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/snapshot.ex#L165" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/snapshot.ex#L171" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -453,7 +485,7 @@ workflow has been updated elsewhere.</p>
     </a>
     <h1 class="signature" translate="no">get_or_create_latest_for(workflow)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/snapshot.ex#L184" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/snapshot.ex#L199" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -482,7 +514,7 @@ workflow has been updated elsewhere.</p>
     </a>
     <h1 class="signature" translate="no">get_or_create_latest_for(multi, workflow)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/snapshot.ex#L195" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/snapshot.ex#L210" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -511,7 +543,7 @@ workflow has been updated elsewhere.</p>
     </a>
     <h1 class="signature" translate="no">new(workflow)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/snapshot.ex#L80" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/snapshot.ex#L86" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
