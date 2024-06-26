@@ -21,7 +21,7 @@ defmodule Lightning.KafkaTriggers.Supervisor do
             Lightning.KafkaTriggers.PipelineSupervisor,
             type: :supervisor
           },
-          {Task, Lightning.KafkaTriggers.start_triggers() / 0},
+          {Task, &Lightning.KafkaTriggers.start_triggers/0},
           Lightning.KafkaTriggers.EventListener
         ]
       else
