@@ -1,5 +1,4 @@
 defmodule LightningWeb.WorkOrderLiveTest do
-  alias Lightning.Workflows
   use LightningWeb.ConnCase, async: true
 
   import Phoenix.LiveViewTest
@@ -8,6 +7,7 @@ defmodule LightningWeb.WorkOrderLiveTest do
   alias Lightning.Runs
   alias Lightning.WorkOrders.Events
   alias Lightning.WorkOrders.SearchParams
+  alias Lightning.Workflows
 
   alias LightningWeb.LiveHelpers
 

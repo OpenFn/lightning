@@ -13,6 +13,7 @@ defmodule Lightning.Workflows.Snapshot do
 
   alias Lightning.Projects.ProjectCredential
   alias Lightning.Repo
+  alias Lightning.Workflows.WebhookAuthMethod
   alias Lightning.Workflows.Workflow
 
   @type t :: %__MODULE__{
@@ -54,7 +55,7 @@ defmodule Lightning.Workflows.Snapshot do
       field :type, Ecto.Enum, values: [:webhook, :cron]
       field :has_auth_method, :boolean, virtual: true
 
-      many_to_many :webhook_auth_methods, Lightning.Workflows.WebhookAuthMethod,
+      many_to_many :webhook_auth_methods, WebhookAuthMethod,
         join_through: "trigger_webhook_auth_methods",
         on_replace: :delete
 

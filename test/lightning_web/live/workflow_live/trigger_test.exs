@@ -1,9 +1,9 @@
 defmodule LightningWeb.WorkflowLive.TriggerTest do
-  alias Lightning.Workflows
   use LightningWeb.ConnCase, async: true
 
   alias Lightning.Name
   alias Lightning.Repo
+  alias Lightning.Workflows
   alias Lightning.Workflows.WebhookAuthMethod
 
   import Phoenix.LiveViewTest

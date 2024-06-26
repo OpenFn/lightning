@@ -1,9 +1,9 @@
 defmodule LightningWeb.RunLive.ComponentsTest do
-  alias Lightning.Workflows
   use LightningWeb.ConnCase, async: true
 
   import Phoenix.LiveViewTest
 
+  alias Lightning.Workflows
   alias LightningWeb.RunLive.Components
   alias LightningWeb.RunLive.Index
 

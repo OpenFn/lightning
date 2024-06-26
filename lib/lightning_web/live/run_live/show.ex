@@ -13,11 +13,40 @@ defmodule LightningWeb.RunLive.Show do
 
   on_mount {LightningWeb.Hooks, :project_scope}
 
+  attr :run, :map, required: true
+  attr :workflow, :map, required: true
+
+  defp snapshot_version(assigns) do
+    %{run: run, workflow: workflow} = assigns
+
+    snapshot_version =
+      if run.snapshot.lock_version == workflow.lock_version do
+        "latest"
+      else
+        String.slice(run.snapshot.id, 0..6)
+      end
+
+    assigns =
+      assign(assigns, snapshot_version: snapshot_version)
+
+    ~H"""
+    <LightningWeb.Components.Common.snapshot_version_chip
+      id="run-workflow-version"
+      version={@snapshot_version}
+      tooltip={
+        if @snapshot_version == "latest",
+          do: "This run is based on the latest version of this workflow.",
+          else:
+            "This run is based on a snapshot of this workflow that was taken on #{Lightning.Helpers.format_date(run.snapshot.inserted_at)}"
+      }
+    />
+    """
+  end
+
   @impl true
   def render(assigns) do
-    no_step_selected? = is_nil(assigns.selected_step_id)
-
-    assigns = assign(assigns, :no_step_selected?, no_step_selected?)
+    assigns =
+      assigns |> assign(:no_step_selected?, is_nil(assigns.selected_step_id))
 
     ~H"""
     <LayoutComponents.page_content>
@@ -30,22 +59,9 @@ defmodule LightningWeb.RunLive.Show do
             </span>
             <div class="mx-2"></div>
             <.async_result :let={run} assign={@run}>
-              <% snapshot_version =
-                if run.snapshot.lock_version ==
-                     @workflow.lock_version,
-                   do: "latest",
-                   else: String.slice(run.snapshot.id, 0..6)
-
-              tooltip =
-                if snapshot_version == "latest",
-                  do: "This run is based on the latest version of this workflow.",
-                  else:
-                    "This run is based on a snapshot of this workflow that was taken on #{Lightning.Helpers.format_date(run.snapshot.inserted_at)}" %>
-              <LightningWeb.Components.Common.snapshot_version_chip
-                id="run-workflow-version"
-                version={snapshot_version}
-                tooltip={tooltip}
-              />
+              <%= if run do %>
+                <.snapshot_version run={run} workflow={@workflow} />
+              <% end %>
             </.async_result>
           </:title>
         </LayoutComponents.header>

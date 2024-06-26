@@ -1,11 +1,11 @@
 defmodule LightningWeb.RunChannelTest do
-  alias Lightning.Workflows
   use LightningWeb.ChannelCase, async: true
 
   alias Lightning.Extensions.UsageLimiting.Context
   alias Lightning.Invocation.Dataclip
   alias Lightning.Invocation.Step
   alias Lightning.Workers
+  alias Lightning.Workflows
 
   import Ecto.Query
   import Lightning.TestUtils

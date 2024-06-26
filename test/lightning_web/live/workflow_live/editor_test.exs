@@ -1,5 +1,4 @@
 defmodule LightningWeb.WorkflowLive.EditorTest do
-  alias Lightning.Workflows
   use LightningWeb.ConnCase, async: true
 
   import Phoenix.LiveViewTest
@@ -9,6 +8,7 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
   import Ecto.Query
 
   alias Lightning.Invocation
+  alias Lightning.Workflows
   alias Lightning.Workflows.Workflow
 
   setup :register_and_log_in_user
