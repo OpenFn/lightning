@@ -17,9 +17,9 @@ defmodule Lightning.KafkaTriggers.EventListener do
 
   @impl true
   def handle_info(%Events.KafkaTriggerUpdated{trigger: trigger}, state) do
-    supervisor = GenServer.whereis(:kafka_pipeline_supervisor)
-
-    supervisor |> KafkaTriggers.update_pipeline(trigger)
+    if supervisor = GenServer.whereis(:kafka_pipeline_supervisor) do
+      supervisor |> KafkaTriggers.update_pipeline(trigger)
+    end
 
     {:noreply, state}
   end

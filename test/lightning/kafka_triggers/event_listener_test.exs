@@ -16,11 +16,13 @@ defmodule Lightning.KafkaTriggers.EventListenerTest do
   setup :set_mox_from_context
 
   setup do
-    pid = start_supervised!(PipelineSupervisor, []) |> IO.inspect()
+    pid = start_supervised!(PipelineSupervisor, [])
+    trigger = build(:trigger)
 
     %{
       state: %{},
-      supervisor_pid: pid
+      supervisor_pid: pid,
+      trigger: trigger
     }
   end
 
@@ -28,9 +30,9 @@ defmodule Lightning.KafkaTriggers.EventListenerTest do
     assert {:ok, _pid} = EventListener.start_link([])
   end
 
-  test "init/1 subscribes to the Kafka triggers topic" do
-    trigger = build(:trigger)
-
+  test "init/1 subscribes to the Kafka triggers topic", %{
+    trigger: trigger
+  } do
     assert EventListener.init([]) == {:ok, %{}}
 
     Events.kafka_trigger_updated(trigger)
@@ -41,12 +43,10 @@ defmodule Lightning.KafkaTriggers.EventListenerTest do
   test "handle_info/1 updates the trigger's pipeline", %{
     supervisor_pid: pid,
     state: state,
+    trigger: trigger
   } do
-    trigger = insert(:trigger)
-
-    with_mock KafkaTriggers, 
+    with_mock KafkaTriggers,
       update_pipeline: fn _supervisor, _trigger -> {:ok, "fake-pid"} end do
-
       EventListener.handle_info(%KafkaTriggerUpdated{trigger: trigger}, state)
 
       assert_called(KafkaTriggers.update_pipeline(pid, trigger))
@@ -54,24 +54,24 @@ defmodule Lightning.KafkaTriggers.EventListenerTest do
   end
 
   test "handle_info/1 returns appropriate response", %{
-    state: state
+    state: state,
+    trigger: trigger
   } do
-    trigger = insert(:trigger)
-
-    with_mock KafkaTriggers, 
+    with_mock KafkaTriggers,
       update_pipeline: fn _supervisor, _trigger -> {:ok, "fake-pid"} end do
-
       assert {:noreply, ^state} =
-        EventListener.handle_info(%KafkaTriggerUpdated{trigger: trigger}, state)
+               EventListener.handle_info(
+                 %KafkaTriggerUpdated{trigger: trigger},
+                 state
+               )
     end
   end
 
   test "handle_info/1 ignores non-KafkaTriggerUpdated events", %{
     state: state
   } do
-    with_mock KafkaTriggers, 
+    with_mock KafkaTriggers,
       update_pipeline: fn _supervisor, _trigger -> {:ok, "fake-pid"} end do
-
       assert {:noreply, ^state} = EventListener.handle_info("huh?", state)
 
       assert_not_called(KafkaTriggers.update_pipeline(:_, :_))
@@ -80,19 +80,17 @@ defmodule Lightning.KafkaTriggers.EventListenerTest do
 
   test "handle_info/1 does nothing if PipelineSupervisor is not running", %{
     state: state,
-    supervisor_pid: pid
+    trigger: trigger
   } do
-    GenServer.whereis(:kafka_pipeline_supervisor) |> IO.inspect(label: "supervisor_pid")
+    stop_supervised!(PipelineSupervisor)
 
-    stop_supervised!(pid)
-
-    trigger = insert(:trigger)
-
-    with_mock KafkaTriggers, 
+    with_mock KafkaTriggers,
       update_pipeline: fn _supervisor, _trigger -> {:ok, "fake-pid"} end do
-
       assert {:noreply, ^state} =
-        EventListener.handle_info(%KafkaTriggerUpdated{trigger: trigger}, state)
+               EventListener.handle_info(
+                 %KafkaTriggerUpdated{trigger: trigger},
+                 state
+               )
 
       assert_not_called(KafkaTriggers.update_pipeline(:_, :_))
     end
