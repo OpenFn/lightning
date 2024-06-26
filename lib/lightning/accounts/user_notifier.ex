@@ -304,30 +304,44 @@ defmodule Lightning.Accounts.UserNotifier do
     deliver(user.email, title, body)
   end
 
-  defp human_readable_grace_period(grace_period) do
-    case grace_period do
-      0 -> "today"
-      1 -> "#{grace_period} day from today"
-      _ -> "#{grace_period} days from today"
-    end
-  end
+  # defp human_readable_grace_period(grace_period) do
+  #   case grace_period do
+  #     0 -> "today"
+  #     1 -> "#{grace_period} day from today"
+  #     _ -> "#{grace_period} days from today"
+  #   end
+  # end
 
   def notify_project_deletion(%User{} = user, %Project{} = project) do
     grace_period = Lightning.Config.purge_deleted_after_days()
 
     deliver(user.email, "Project scheduled for deletion", """
+
     Hi #{user.first_name},
 
-    Your OpenFn project “{#{project.name}” has been scheduled for deletion. All of the workflows in this project have been disabled, and its associated resources will be deleted in #{human_readable_grace_period(grace_period)} at {{actual_deletion_time – calculate based on the next 2am after the timestamp in the db?}}.
+    Your OpenFn project “#{project.name}” has been scheduled for deletion.
+    All of the workflows in this project have been disabled, and its associated resources will be deleted on #{actual_deletion_date(grace_period, "4 2 * * *", :days)}.
 
-    If you don’t want this project deleted, please email support@openfn.org as soon as possible..
+    If you don’t want this project deleted, please email #{admin()} as soon as possible.
 
     OpenFn
 
-
-    Your OpenFn project "#{project.name}" has been scheduled for deletion. All of the workflows in this project have been disabled,
-    and the resources will be deleted in #{human_readable_grace_period(grace_period)} at 02:00 UTC. If this doesn't sound right, please email
-    #{admin()} to cancel the deletion.
     """)
+  end
+
+  defp actual_deletion_date(grace_period, cron_expression, unit) do
+    now = Timex.now()
+
+    due_date = now |> Timex.shift([{unit, grace_period}]) |> DateTime.to_naive()
+
+    {:ok, cron_expression} = Crontab.CronExpression.Parser.parse(cron_expression)
+
+    cron_expression
+    |> Crontab.Scheduler.get_next_run_date!(due_date)
+    |> format_date()
+  end
+
+  defp format_date(date, formatter \\ "%a %d/%m/%Y at %H:%M:%S") do
+    Timex.Format.DateTime.Formatters.Strftime.format!(date, formatter)
   end
 end
