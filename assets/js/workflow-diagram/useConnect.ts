@@ -60,8 +60,11 @@ const getDropTargetError = (
   if (target === source) {
     return true;
   }
+  const targetNode = model.nodes.find(n => n.id === target);
 
-  // TODO cannot link to trigger
+  if (targetNode?.type === 'trigger') {
+    return 'Cannot connect to a trigger';
+  }
 
   if (isUpstream(model, target, source)) {
     // Don't allow linking to direct ancestors, as it'll cause a loop
