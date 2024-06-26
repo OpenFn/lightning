@@ -1423,7 +1423,7 @@ defmodule Lightning.KafkaTriggersTest do
         child_spec: child_spec,
         disabled_trigger: disabled_trigger,
         enabled_trigger: enabled_trigger,
-        supervisor: self()
+        supervisor: 100000001
       }
     end
 
@@ -1458,19 +1458,62 @@ defmodule Lightning.KafkaTriggersTest do
       end
     end
 
-    test "if triggers is enabled and pipeline exists, removes and adds", %{
+    test "if trigger is enabled and pipeline is running, removes and adds", %{
       child_spec: child_spec,
       enabled_trigger: trigger,
       supervisor: supervisor
     } do
-      with_mock Supervisor,
+      with_mock Supervisor, [:passthrough],
         delete_child: fn _sup_pid, _child_id -> {:ok, "anything"} end,
-        start_child: in_series([_sup_pid, child_spec]) end do
-        terminate_child: fn _sup_pid, _child_id -> {:ok, "anything"} end do
+        start_child: [in_series(
+          [supervisor, child_spec],
+          [{:error, :already_started}, {:ok, "fake-pid"}]
+        )],
+        terminate_child: fn _sup_pid, _child_id -> {:ok, "anything"} end,
+        which_children: fn _sup_pid -> [] end do
 
         KafkaTriggers.update_pipeline(supervisor, trigger)
 
-        assert_called(Supervisor.start_child(supervisor, child_spec))
+        assert_called(Supervisor.terminate_child(supervisor, trigger.id))
+        assert_called(Supervisor.delete_child(supervisor, trigger.id))
+        assert_called_exactly(Supervisor.start_child(supervisor, child_spec), 2)
+
+        expected_call_sequence = [
+          :start_child,
+          :terminate_child,
+          :delete_child,
+          :start_child
+        ]
+
+        assert call_sequence() == expected_call_sequence
+      end
+    end
+
+    test "if trigger is enabled and pipeline is present, removes and adds", %{
+      child_spec: child_spec,
+      enabled_trigger: trigger,
+      supervisor: supervisor
+    } do
+      with_mock Supervisor, [:passthrough],
+        delete_child: fn _sup_pid, _child_id -> {:ok, "anything"} end,
+        start_child: [in_series(
+          [supervisor, child_spec],
+          [{:error, :already_present}, {:ok, "fake-pid"}]
+        )],
+        which_children: fn _sup_pid -> [] end do
+
+        KafkaTriggers.update_pipeline(supervisor, trigger)
+
+        assert_called(Supervisor.delete_child(supervisor, trigger.id))
+        assert_called_exactly(Supervisor.start_child(supervisor, child_spec), 2)
+
+        expected_call_sequence = [
+          :start_child,
+          :delete_child,
+          :start_child
+        ]
+
+        assert call_sequence() == expected_call_sequence
       end
     end
 

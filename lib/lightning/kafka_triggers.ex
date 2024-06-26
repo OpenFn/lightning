@@ -406,7 +406,19 @@ defmodule Lightning.KafkaTriggers do
     case trigger do
       %{enabled: true} ->
         spec = generate_pipeline_child_spec(trigger)
-        Supervisor.start_child(supervisor, spec)
+        case Supervisor.start_child(supervisor, spec) do
+          {:error, :already_started} ->
+            Supervisor.terminate_child(supervisor, trigger.id)
+            Supervisor.delete_child(supervisor, trigger.id)
+            Supervisor.start_child(supervisor, spec)
+
+          {:error, :already_present} ->
+            Supervisor.delete_child(supervisor, trigger.id)
+            Supervisor.start_child(supervisor, spec)
+
+          response ->
+            response
+        end
       %{enabled: false} ->
         Supervisor.terminate_child(supervisor, trigger.id)
         Supervisor.delete_child(supervisor, trigger.id)
