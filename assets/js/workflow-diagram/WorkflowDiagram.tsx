@@ -100,8 +100,11 @@ export default React.forwardRef<HTMLElement, WorkflowDiagramProps>(
 
         if (layoutId) {
           chartCache.current.lastLayout = layoutId;
-
-          layout(newModel, setModel, flow, { duration: 300 }).then(
+          const viewBounds = {
+            width: ref?.clientWidth ?? 0,
+            height: ref?.clientHeight ?? 0,
+          };
+          layout(newModel, setModel, flow, viewBounds, { duration: 300 }).then(
             positions => {
               // Note we don't update positions until the animation has finished
               chartCache.current.positions = positions;
@@ -120,7 +123,7 @@ export default React.forwardRef<HTMLElement, WorkflowDiagramProps>(
       } else {
         chartCache.current.positions = {};
       }
-    }, [workflow, flow, placeholders]);
+    }, [workflow, flow, placeholders, ref]);
 
     useEffect(() => {
       const updatedModel = updateSelectionStyles(model, selection);
@@ -172,6 +175,7 @@ export default React.forwardRef<HTMLElement, WorkflowDiagramProps>(
         let isFirstCallback = true;
 
         const throttledResize = throttle(() => {
+          // TODO we shouldn't fit erverything here, we should just fit visible
           flow.fitView({ duration: FIT_DURATION, padding: FIT_PADDING });
         }, FIT_DURATION * 2);
 

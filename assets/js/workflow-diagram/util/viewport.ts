@@ -3,11 +3,15 @@
 // work out the view bounds
 import { Rect, XYPosition, Viewport } from 'reactflow';
 
+type ViewBounds = {
+  width: number;
+  height: number;
+};
+
 // TODO use scale to make the bounds artificially smaller
 export const getVisibleRect = (
   viewport: Viewport,
-  width: number,
-  height: number,
+  viewBounds: ViewBounds,
   scale = 1
 ) => {
   // Invert the zoom so that low zooms INCREASE the bouds size
@@ -20,9 +24,9 @@ export const getVisibleRect = (
   // Return the projected visible rect
   return {
     x: x * zoom,
-    width: width * scale * zoom,
+    width: viewBounds.width * scale * zoom,
     y: y * zoom,
-    height: height * scale * zoom,
+    height: viewBounds.height * scale * zoom,
   };
 };
 

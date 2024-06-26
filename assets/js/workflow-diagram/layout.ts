@@ -15,6 +15,7 @@ const calculateLayout = async (
   model: Flow.Model,
   update: (newModel: Flow.Model) => any,
   flow: ReactFlowInstance,
+  viewBounds: { width: number; height: number },
   options: Omit<LayoutOpts, 'autofit'> = {}
 ): Promise<Positions> => {
   const { nodes, edges } = model;
@@ -55,44 +56,66 @@ const calculateLayout = async (
 
   const hasOldPositions = nodes.find(n => n.position);
 
-  // Work out whether to zoom the view, and to what bounds
   let autofit: LayoutOpts['autofit'] = false;
-  if (newPlaceholders.length) {
-    const visible: Flow.Node[] = [];
-    let doFit: boolean = false;
+  let doFit: boolean = false;
+  const fitTargets: Flow.Node[] = [];
+
+  if (hasOldPositions) {
+    // When updating the layout, we should try and fit to the currently visible nodes
+    // This usually just occurs when adding or removing placeholder nodes
 
     // First work out the size of the current viewpoint in canvas coordinates
     // TODO where do I get the canvas size from?
-    const rect = getVisibleRect(flow.getViewport(), 1498, 780, 0.95);
 
-    // Now work out which nodes are visible
-    for (const id in finalPositions) {
-      const pos = finalPositions[id];
-      const isInside = isPointInRect(pos, rect);
-      const node = newModel.nodes.find(n => n.id === id)!;
+    if (newPlaceholders.length) {
+      const rect = getVisibleRect(flow.getViewport(), viewBounds, 0.95);
+      // Now work out the visible nodes, paying special attention to the placeholder
+      //
+      for (const id in finalPositions) {
+        const pos = finalPositions[id];
+        const isInside = isPointInRect(pos, rect);
+        const node = newModel.nodes.find(n => n.id === id)!;
 
-      if (isInside) {
-        visible.push(node);
-      } else if (node?.type === 'placeholder') {
-        // If the placeholder is NOT visible within the bounds,
-        // include it in the set of visible nodes and force a fit
-        doFit = true;
-        visible.push({
-          ...node,
-          // cheat on the size so we get a better fit
-          height: 100,
-          width: 100,
-        });
+        if (isInside) {
+          fitTargets.push(node);
+        } else if (node?.type === 'placeholder') {
+          // If the placeholder is NOT visible within the bounds,
+          // include it in the set of visible nodes and force a fit
+          doFit = true;
+          fitTargets.push({
+            ...node,
+            // cheat on the size so we get a better fit
+            height: 100,
+            width: 100,
+          });
+        }
+      }
+    } else {
+      // otherwise, if running a layout, fit to the visible nodes
+      // this usually means we've removed a placeholder and lets us tidy up
+      // TODO: this doesn't quite work because if we remove a placeholder,
+      // we might trigger an unneccessary fit!
+      doFit = true;
+      // Note that we should be more strict about visibility here
+      // any partially visible node we should fit to
+      const rect = getVisibleRect(flow.getViewport(), viewBounds, 1.1);
+      for (const id in finalPositions) {
+        const pos = finalPositions[id];
+        const isInside = isPointInRect(pos, rect);
+        if (isInside) {
+          const node = newModel.nodes.find(n => n.id === id)!;
+          fitTargets.push(node);
+        }
       }
     }
 
     // Useful debugging
     // console.log(visible.map(n => n.data?.name ?? n.type));
+  }
 
-    // If we need to run a fit, save the set of visible nodes as the fit target
-    if (doFit) {
-      autofit = visible;
-    }
+  // If we need to run a fit, save the set of visible nodes as the fit target
+  if (doFit) {
+    autofit = fitTargets;
   }
 
   // If the old model had no positions, this is a first load and we should not animate
