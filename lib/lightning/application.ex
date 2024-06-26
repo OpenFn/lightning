@@ -97,6 +97,7 @@ defmodule Lightning.Application do
       LightningWeb.Telemetry,
       # Start the PubSub system
       {Phoenix.PubSub, name: Lightning.PubSub},
+      {Finch, name: Lightning.Finch},
       auth_providers_cache_childspec,
       # Start the Endpoint (http/https)
       LightningWeb.Endpoint,

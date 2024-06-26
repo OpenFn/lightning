@@ -110,7 +110,7 @@
 }
 
 div[id^='tippy-'] {
-  @apply rounded-md p-2 z-[9999] 
+  @apply rounded-md p-2 z-[9999]
          text-xs text-center text-primary-50
          bg-primary-950;
 }
@@ -256,5 +256,25 @@ div.line-num::before {
     @apply text-gray-500
         hover:text-gray-600
         hover:border-b-gray-300;
+  }
+}
+
+.makeup-html {
+  @apply text-pretty;
+
+  ul {
+    @apply list-disc list-outside ml-4;
+  }
+
+  p:not(:first-of-type) {
+    @apply mt-4;
+  }
+
+  pre {
+    @apply text-wrap text-slate-200 bg-slate-700 rounded-md p-2 my-2;
+
+    code {
+      @apply text-sm leading-3;
+    }
   }
 }

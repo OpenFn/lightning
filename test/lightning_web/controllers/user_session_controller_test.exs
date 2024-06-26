@@ -34,8 +34,6 @@ defmodule LightningWeb.UserSessionControllerTest do
 
   setup :verify_on_exit!
 
-  Mox.stub_with(Lightning.MockConfig, Lightning.Config.API)
-
   setup do
     %{user: user_fixture()}
   end

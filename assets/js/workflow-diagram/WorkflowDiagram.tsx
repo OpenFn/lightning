@@ -211,6 +211,7 @@ export default React.forwardRef<HTMLElement, WorkflowDiagramProps>(
           deleteKeyCode={null}
           fitView
           fitViewOptions={{ padding: FIT_PADDING }}
+          minZoom={0.2}
           {...connectHandlers}
         >
           <Controls showInteractive={false} position="bottom-left">

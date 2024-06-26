@@ -136,3 +136,5 @@ else
 end
 
 config :lightning, :is_resettable_demo, true
+
+config :lightning, :apollo, endpoint: "http://localhost:3000"

@@ -18,6 +18,8 @@ and this project adheres to
 ### Added
 
 - Link to adaptor `/src` from inspector.
+- Prototype AI Assistant for working with job code.
+  [#2193](https://github.com/OpenFn/lightning/issues/2193)
 
 ### Changed
 
@@ -25,6 +27,8 @@ and this project adheres to
   [#2202](https://github.com/OpenFn/lightning/issues/2202)
 - Don't allow connections between an orphaned node and a
   Trigger[#2188](https://github.com/OpenFn/lightning/issues/2188)
+- Reduce the minimum zoom in the workflow diagram
+  [#2214](https://github.com/OpenFn/lightning/issues/2214)
 
 ### Fixed
 
