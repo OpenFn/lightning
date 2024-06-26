@@ -4,7 +4,7 @@ import { getRectOfNodes, ReactFlowInstance } from 'reactflow';
 
 import { FIT_PADDING } from './constants';
 import { Flow, Positions } from './types';
-import getViewportBounds, { intersect } from './util/get-viewport-bounds';
+import { getVisibleRect, isPointInRect } from './util/viewport';
 
 export type LayoutOpts = {
   duration: number | false;
@@ -55,32 +55,40 @@ const calculateLayout = async (
   const hasOldPositions = nodes.find(n => n.position);
 
   // Work out whether to zoom the view, and to what bounds
-  let autofit = false;
+  let autofit: LayoutOpts['autofit'] = false;
   if (newPlaceholders.length) {
-    console.log(flow.getViewport());
-    console.log({ finalPositions });
+    const visible: Flow.Node[] = [];
+    let doFit: boolean = false;
 
-    const visible = [];
-    let doFit = false;
+    // First work out the size of the current viewpoint in canvas coordinates
     // TODO where do I get the canvas size from?
-    const rect = getViewportBounds(flow.getViewport(), 1498, 780, 1);
-    console.log({ rect });
+    const rect = getVisibleRect(flow.getViewport(), 1498, 780, 1);
+
+    // Now work out which nodes are visible
     for (const id in finalPositions) {
       const pos = finalPositions[id];
-      const isInside = intersect(pos, rect);
-      const node = newModel.nodes.find(n => n.id === id);
+      const isInside = isPointInRect(pos, rect);
+      const node = newModel.nodes.find(n => n.id === id)!;
+
       if (isInside) {
         visible.push(node);
-      } else if (node.type === 'placeholder') {
-        // If the placerholder is NOT visible within the bounds,
-        // we'll need to run a fit
+      } else if (node?.type === 'placeholder') {
+        // If the placeholder is NOT visible within the bounds,
+        // include it in the set of visible nodes and force a fit
         doFit = true;
+        visible.push({
+          ...node,
+          // cheat on the size so we get a better fit
+          height: 100,
+          width: 100,
+        });
       }
     }
 
-    // const visibleNodes = flow.getIntersectingNodes(rect, false);
-    console.log(visible.map(n => n.data?.name ?? n.type));
+    // Useful debugging
+    // console.log(visible.map(n => n.data?.name ?? n.type));
 
+    // If we need to run a fit, save the set of visible nodes as the fit target
     if (doFit) {
       autofit = visible;
     }
@@ -141,16 +149,16 @@ export const animate = (
 
       if (isFirst) {
         // Synchronise a fit to the final position with the same duration
-
-        // TODO do we fit to ALL nodes or VISIBLE nodes, and who decides?
         let fitTarget = to.nodes;
         if (typeof autofit !== 'boolean') {
-          console.log('FIT');
           fitTarget = autofit;
         }
         const bounds = getRectOfNodes(fitTarget);
         if (autofit) {
-          flowInstance.fitBounds(bounds, { duration, padding: FIT_PADDING });
+          flowInstance.fitBounds(bounds, {
+            duration: typeof duration === 'number' ? duration : 0,
+            padding: FIT_PADDING,
+          });
         }
         isFirst = false;
       }

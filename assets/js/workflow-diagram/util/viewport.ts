@@ -1,11 +1,15 @@
-// TODO shrink the viewport by 10% each side
-// Or at least, take a scaler
-
 // Given react-flows viewport, which gives use the topleft x/y and
 // zoom, and the dimensions of the canvas,
 // work out the view bounds
+import { Rect, XYPosition, Viewport } from 'reactflow';
+
 // TODO use scale to make the bounds artificially smaller
-export default (viewport, width, height, scale = 1) => {
+export const getVisibleRect = (
+  viewport: Viewport,
+  width: number,
+  height: number,
+  scale = 1
+) => {
   // Invert the zoom so that low zooms INCREASE the bouds size
   const zoom = 1 / viewport.zoom;
 
@@ -23,7 +27,7 @@ export default (viewport, width, height, scale = 1) => {
 };
 
 // This returns true if the point at pos fits anywhere inside rect
-export const intersect = (pos, rect) => {
+export const isPointInRect = (pos: XYPosition, rect: Rect) => {
   return (
     pos.x >= rect.x &&
     pos.x <= rect.x + rect.width &&
@@ -31,5 +35,3 @@ export const intersect = (pos, rect) => {
     pos.y <= rect.y + rect.height
   );
 };
-
-// wha if x/y really is center?
