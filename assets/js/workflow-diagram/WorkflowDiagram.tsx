@@ -6,6 +6,8 @@ import ReactFlow, {
   ReactFlowInstance,
   ReactFlowProvider,
   applyNodeChanges,
+  getRectOfNodes,
+  Rect,
 } from 'reactflow';
 import { useStore, StoreApi } from 'zustand';
 import { shallow } from 'zustand/shallow';
@@ -24,6 +26,7 @@ import shouldLayout from './util/should-layout';
 
 import type { WorkflowState } from '../workflow-editor/store';
 import type { Flow, Positions } from './types';
+import { getVisibleRect, isPointInRect } from './util/viewport';
 
 type WorkflowDiagramProps = {
   selection: string | null;
@@ -169,14 +172,43 @@ export default React.forwardRef<HTMLElement, WorkflowDiagramProps>(
       [updateSelection]
     );
 
-    // Trigger a fit when the parent div changes size
+    // Trigger a fit to bounds when the parent div changes size
+    // To keep the chart more stable, try and take a snapshot of the target bounds
+    // when a new resize starts
+    // This will be imperfect but stops the user completely losing context
     useEffect(() => {
       if (flow && ref) {
         let isFirstCallback = true;
 
+        let cachedTargetBounds: Rect;
+        let cacheTimeout: any;
+
         const throttledResize = throttle(() => {
-          // TODO we shouldn't fit erverything here, we should just fit visible
-          flow.fitView({ duration: FIT_DURATION, padding: FIT_PADDING });
+          clearTimeout(cacheTimeout);
+
+          // After 3 seconds, clear the timeout and take a new cache snapshot
+          cacheTimeout = setTimeout(() => {
+            cachedTargetBounds = null;
+          }, 3000);
+
+          if (!cachedTargetBounds) {
+            // Take a snapshot of what bounds to try and maintain throughout the resize
+            const viewBounds = {
+              width: ref?.clientWidth ?? 0,
+              height: ref?.clientHeight ?? 0,
+            };
+            const rect = getVisibleRect(flow.getViewport(), viewBounds, 1);
+            const visible = model.nodes.filter(n =>
+              isPointInRect(n.position, rect)
+            );
+            cachedTargetBounds = getRectOfNodes(visible);
+          }
+
+          // Run an animated fit
+          flow.fitBounds(cachedTargetBounds, {
+            duration: FIT_DURATION,
+            padding: FIT_PADDING,
+          });
         }, FIT_DURATION * 2);
 
         const resizeOb = new ResizeObserver(function (entries) {
@@ -193,7 +225,7 @@ export default React.forwardRef<HTMLElement, WorkflowDiagramProps>(
           resizeOb.unobserve(ref);
         };
       }
-    }, [flow, ref]);
+    }, [flow, ref, model]);
 
     const connectHandlers = useConnect(model, setModel, store);
 
