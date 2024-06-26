@@ -18,6 +18,8 @@ and this project adheres to
 ### Added
 
 - Link to adaptor `/src` from inspector.
+- Prototype AI Assistant for working with job code.
+  [#2193](https://github.com/OpenFn/lightning/issues/2193)
 
 ### Changed
 
