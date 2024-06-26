@@ -8,20 +8,12 @@ defmodule Lightning.KafkaTriggers do
   alias Lightning.WorkOrders
 
   def start_triggers do
-    supervisor = GenServer.whereis(:kafka_pipeline_supervisor)
-
-    if supervisor do
-      %{specs: child_count} = Supervisor.count_children(supervisor)
-
-      if child_count == 0 do
-        find_enabled_triggers()
-        |> Enum.map(fn trigger ->
-          generate_pipeline_child_spec(trigger)
-        end)
-        |> Enum.each(fn child_spec ->
-          Supervisor.start_child(supervisor, child_spec)
-        end)
-      end
+    if supervisor = GenServer.whereis(:kafka_pipeline_supervisor) do
+      find_enabled_triggers()
+      |> Enum.each(fn trigger ->
+        child_spec = generate_pipeline_child_spec(trigger)
+        Supervisor.start_child(supervisor, child_spec)
+      end)
     end
 
     :ok
@@ -389,6 +381,7 @@ defmodule Lightning.KafkaTriggers do
     |> case do
       :error ->
         []
+
       {:ok, triggers} ->
         triggers
     end
@@ -406,6 +399,7 @@ defmodule Lightning.KafkaTriggers do
     case trigger do
       %{enabled: true} ->
         spec = generate_pipeline_child_spec(trigger)
+
         case Supervisor.start_child(supervisor, spec) do
           {:error, :already_started} ->
             Supervisor.terminate_child(supervisor, trigger.id)
@@ -419,6 +413,7 @@ defmodule Lightning.KafkaTriggers do
           response ->
             response
         end
+
       %{enabled: false} ->
         Supervisor.terminate_child(supervisor, trigger.id)
         Supervisor.delete_child(supervisor, trigger.id)

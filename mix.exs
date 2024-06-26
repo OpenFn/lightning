@@ -53,8 +53,7 @@ defmodule Lightning.MixProject do
   def application do
     [
       mod: {Lightning.Application, [:timex]},
-      extra_applications: [:logger, :runtime_tools, :os_mon, :scrivener],
-      start_phases: [start_kafka_triggers: []]
+      extra_applications: [:logger, :runtime_tools, :os_mon, :scrivener]
     ]
   end
 
