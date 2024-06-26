@@ -65,7 +65,6 @@ const calculateLayout = async (
       obj[next.id] = next.position;
       return obj;
     }, {} as Positions);
-    console.log({ oldPositions });
 
     // When updating the layout, we should try and fit to the currently visible nodes
     // This usually just occurs when adding or removing placeholder nodes
