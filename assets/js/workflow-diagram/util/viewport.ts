@@ -8,6 +8,8 @@ type ViewBounds = {
   height: number;
 };
 
+// do the thing is d3ee
+
 // TODO use scale to make the bounds artificially smaller
 export const getVisibleRect = (
   viewport: Viewport,
@@ -18,8 +20,10 @@ export const getVisibleRect = (
   const zoom = 1 / viewport.zoom;
 
   // Also invert the viewport x and y positions
-  const x = -viewport.x * scale;
-  const y = -viewport.y * scale;
+  const x = -viewport.x * (1 / scale);
+  const y = -viewport.y * (1 / scale);
+  console.log(`scale x ${scale}`, -viewport.x, x);
+  console.log(`scale y ${scale}`, -viewport.y, y);
 
   // Return the projected visible rect
   return {
