@@ -17,6 +17,14 @@ and this project adheres to
 
 ### Added
 
+### Changed
+
+### Fixed
+
+## [v2.7.0] - 2024-06-26
+
+### Added
+
 - Use of snapshots for displaying runs and their associated steps in the History
   page. [#1825](https://github.com/OpenFn/lightning/issues/1825)
 - Added view-only mode for rendering workflows and runs in the Workflow Canvas
