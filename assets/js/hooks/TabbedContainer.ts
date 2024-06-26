@@ -9,14 +9,6 @@ type TabbedContainer = PhoenixHook<{
   selectTab(hash: string | null): void;
 }>;
 
-function getHash() {
-  return window.location.hash.replace('#', '') || null;
-}
-
-function getHashFromTab(tab: HTMLElement) {
-  return tab.getAttribute('aria-controls')?.replace('-panel', '') || null;
-}
-
 const TabbedContainer = {
   mounted(this: TabbedContainer) {
     this.defaultHash = this.el.dataset.defaultHash || null;
@@ -76,30 +68,26 @@ const TabbedContainer = {
   },
 } as TabbedContainer;
 
-// When hash is null
-// and the local storage is null
-// Set the default tab to active
+function getHash() {
+  return window.location.hash.replace('#', '') || null;
+}
 
-// When hash is null
-// and the local storage is not null
-// Set the tab from local storage to active
-
-// When the hash is not null
-// and the hash can be found in the tabs
-// Set the tab from the hash to active
-
-// When a tab is set it also sets local storage
+function storageKey(component: HTMLElement) {
+  return component.dataset.storageKey || `${component.id}-hash`;
+}
 
 function storeComponentHash(component: HTMLElement, hash: string | null) {
+  const key = storageKey(component);
   if (hash) {
-    localStorage.setItem(`${component.id}-hash`, hash);
+    localStorage.setItem(key, hash);
   } else {
-    localStorage.removeItem(`${component.id}-hash`);
+    localStorage.removeItem(key);
   }
 }
 
 function getComponentHash(component: HTMLElement) {
-  return localStorage.getItem(`${component.id}-hash`);
+  const key = storageKey(component);
+  return localStorage.getItem(key);
 }
 
 const TabbedSelector: PhoenixHook<{
@@ -110,8 +98,6 @@ const TabbedSelector: PhoenixHook<{
   syncSelectedTab(): void;
 }> = {
   mounted(this: typeof TabbedSelector) {
-    console.debug('TabbedSelector', this.el);
-
     this.defaultHash = this.el.dataset.defaultHash || null;
 
     // Trigger a URL hash change when the server sends a 'push-hash' event.
@@ -128,8 +114,6 @@ const TabbedSelector: PhoenixHook<{
 
     this.syncSelectedTab();
     this.updateTabs();
-    const tabToSelect = getComponentHash(this.el);
-    console.debug('tabToSelect', tabToSelect);
   },
   syncSelectedTab() {
     syncHash(this);
@@ -141,9 +125,7 @@ const TabbedSelector: PhoenixHook<{
   updateTabs() {
     const hashToSelect = getComponentHash(this.el);
     const targetTab = this.findTarget(hashToSelect);
-    if (!targetTab) {
-      return;
-    }
+    if (!targetTab) return;
 
     requestAnimationFrame(() => {
       const parent = targetTab.parentNode!;
@@ -157,9 +139,7 @@ const TabbedSelector: PhoenixHook<{
     });
   },
   findTarget(hash: string | null) {
-    if (!hash) {
-      return null;
-    }
+    if (!hash) return null;
 
     return this.el.querySelector<HTMLElement>(
       `[aria-controls="${hash}-panel"]`
@@ -172,13 +152,12 @@ const TabbedSelector: PhoenixHook<{
 
 const TabbedPanels: PhoenixHook<{
   defaultHash: string | null;
-  syncSelectedPanel(): void;
-  findTarget(hash: string | null): HTMLElement | null;
-  updatePanels(): void;
   _onHashChange(e: Event): void;
+  updatePanels(): void;
+  findTarget(hash: string | null): HTMLElement | null;
+  syncSelectedPanel(): void;
 }> = {
   mounted(this: typeof TabbedPanels) {
-    console.debug('TabbedPanels', this.el);
     this.defaultHash = this.el.dataset.defaultHash || null;
 
     // Trigger a URL hash change when the server sends a 'push-hash' event.
@@ -221,9 +200,7 @@ const TabbedPanels: PhoenixHook<{
     });
   },
   findTarget(hash: string | null) {
-    if (!hash) {
-      return null;
-    }
+    if (!hash) return null;
 
     return this.el.querySelector<HTMLElement>(
       `[aria-labelledby="${hash}-tab"]`
