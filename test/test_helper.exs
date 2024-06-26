@@ -22,9 +22,6 @@ ExUnit.configure(
   exclude: [:integration]
 )
 
-ExUnit.start()
-Ecto.Adapters.SQL.Sandbox.mode(Lightning.Repo, :manual)
-
 Mox.defmock(Lightning.Extensions.MockRateLimiter,
   for: Lightning.Extensions.RateLimiting
 )
@@ -46,3 +43,6 @@ Application.put_env(:lightning, Lightning.Extensions,
   account_hook: Lightning.Extensions.AccountHook,
   project_hook: Lightning.Extensions.ProjectHook
 )
+
+ExUnit.start()
+Ecto.Adapters.SQL.Sandbox.mode(Lightning.Repo, :manual)

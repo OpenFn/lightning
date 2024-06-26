@@ -19,7 +19,7 @@ defmodule Lightning.AuthProviders.Google do
     do: "https://developers.google.com/identity/protocols/oauth2/scopes"
 
   def wellknown_url(_sandbox) do
-    config = Common.get_config(:google)
+    config = Lightning.Config.oauth_provider(:google)
     config[:wellknown_url]
   end
 
