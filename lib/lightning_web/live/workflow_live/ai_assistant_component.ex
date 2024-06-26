@@ -8,6 +8,7 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
      socket
      |> assign(%{
        pending_message: AsyncResult.ok(nil),
+       session: nil,
        form: to_form(%{"content" => nil})
      })
      |> assign_async(:endpoint_available?, fn ->
@@ -15,11 +16,16 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
      end)}
   end
 
-  def update(%{selected_job: job} = assigns, socket) do
+  def update(%{selected_job: job}, socket) do
     {:ok,
      socket
-     |> assign(assigns)
-     |> assign(session: AiAssistant.new_session(job))}
+     |> update(:session, fn session ->
+       if session && job.id == session.id do
+         session |> AiAssistant.Session.put_expression(job.body)
+       else
+         AiAssistant.new_session(job)
+       end
+     end)}
   end
 
   def render(assigns) do

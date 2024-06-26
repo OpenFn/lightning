@@ -13,12 +13,14 @@ defmodule Lightning.AiAssistant do
     """
 
     defstruct [
+      :id,
       :expression,
       :adaptor,
       :history
     ]
 
     @type t() :: %__MODULE__{
+            id: Ecto.UUID.t(),
             expression: String.t(),
             adaptor: String.t(),
             history: history()
@@ -28,11 +30,12 @@ defmodule Lightning.AiAssistant do
             %{role: :user | :assistant, content: String.t()}
           ]
 
-    @spec new(String.t(), String.t()) :: t()
-    def new(expression, adaptor) do
+    @spec new(Job.t()) :: t()
+    def new(job) do
       %Session{
-        expression: expression,
-        adaptor: Lightning.AdaptorRegistry.resolve_adaptor(adaptor),
+        id: job.id,
+        expression: job.body,
+        adaptor: Lightning.AdaptorRegistry.resolve_adaptor(job.adaptor),
         history: []
       }
     end
@@ -91,7 +94,7 @@ defmodule Lightning.AiAssistant do
 
   @spec new_session(Job.t()) :: Session.t()
   def new_session(job) do
-    Session.new(job.body, job.adaptor)
+    Session.new(job)
   end
 
   @spec push_history(Session.t(), %{String.t() => any()}) :: Session.t()
