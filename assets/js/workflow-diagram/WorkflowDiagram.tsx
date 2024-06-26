@@ -43,8 +43,6 @@ export default React.forwardRef<HTMLElement, WorkflowDiagramProps>(
 
     const [model, setModel] = useState<Flow.Model>({ nodes: [], edges: [] });
 
-    const [autofit, setAutofit] = useState<boolean>(true);
-
     const updateSelection = useCallback(
       (id?: string | null) => {
         id = id || null;
@@ -103,11 +101,7 @@ export default React.forwardRef<HTMLElement, WorkflowDiagramProps>(
         if (layoutId) {
           chartCache.current.lastLayout = layoutId;
 
-          // ignore autofit option for now
-          // I'll remove the option later
-          const autofit = false;
-
-          layout(newModel, setModel, flow, { duration: 300, autofit }).then(
+          layout(newModel, setModel, flow, { duration: 300 }).then(
             positions => {
               // Note we don't update positions until the animation has finished
               chartCache.current.positions = positions;
@@ -219,16 +213,7 @@ export default React.forwardRef<HTMLElement, WorkflowDiagramProps>(
           minZoom={0.2}
           {...connectHandlers}
         >
-          <Controls showInteractive={false} position="bottom-left">
-            <ControlButton
-              onClick={() => {
-                setAutofit(!autofit);
-              }}
-              title="Automatically fit view"
-            >
-              <ViewfinderCircleIcon style={{ opacity: autofit ? 1 : 0.4 }} />
-            </ControlButton>
-          </Controls>
+          <Controls showInteractive={false} position="bottom-left" />
         </ReactFlow>
       </ReactFlowProvider>
     );

@@ -7,20 +7,21 @@ import { Flow, Positions } from './types';
 import { getVisibleRect, isPointInRect } from './util/viewport';
 
 export type LayoutOpts = {
-  duration: number | false;
-  autofit: boolean | Flow.Node[];
+  duration?: number | false;
+  autofit?: boolean | Flow.Node[];
 };
 
 const calculateLayout = async (
   model: Flow.Model,
   update: (newModel: Flow.Model) => any,
   flow: ReactFlowInstance,
-  options: LayoutOuts = {}
+  options: Omit<LayoutOpts, 'autofit'> = {}
 ): Promise<Positions> => {
   const { nodes, edges } = model;
   const { duration } = options;
 
   // Before we layout, work out whether there are any new unpositioned placeholders
+  // @ts-ignore _default is a temporary flag added by us
   const newPlaceholders = model.nodes.filter(n => n.position?._default);
 
   const g = new Dagre.graphlib.Graph().setDefaultEdgeLabel(() => ({}));
