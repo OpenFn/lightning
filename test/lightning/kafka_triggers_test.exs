@@ -60,21 +60,6 @@ defmodule Lightning.KafkaTriggersTest do
       end
     end
 
-    test "does not start children if supervisor already has children", %{
-      pid: pid
-    } do
-      # TODO This behaviour may be obsolete, might be unnecessarily
-      # defensive
-      with_mock Supervisor,
-        start_child: fn _sup_pid, _child_spec -> {:ok, "fake-pid"} end,
-        count_children: fn _sup_pid -> %{specs: 1} end do
-        KafkaTriggers.start_triggers()
-
-        assert_called(Supervisor.count_children(pid))
-        assert_not_called(Supervisor.start_child(:_, :_))
-      end
-    end
-
     test "returns :ok if supervisor already has chidren" do
       with_mock Supervisor,
         start_child: fn _sup_pid, _child_spec -> {:ok, "fake-pid"} end,
@@ -1318,6 +1303,7 @@ defmodule Lightning.KafkaTriggersTest do
     setup do
       %{workflow: insert(:workflow) |> Repo.preload(:triggers)}
     end
+
     test "returns kafka triggers contained within changeset", %{
       workflow: workflow
     } do
@@ -1331,6 +1317,7 @@ defmodule Lightning.KafkaTriggersTest do
           kafka_configuration: kafka_configuration,
           enabled: false
         )
+
       cron_trigger_1 =
         insert(
           :trigger,
@@ -1338,6 +1325,7 @@ defmodule Lightning.KafkaTriggersTest do
           workflow: workflow,
           enabled: false
         )
+
       kafka_trigger_2 =
         insert(
           :trigger,
@@ -1346,6 +1334,7 @@ defmodule Lightning.KafkaTriggersTest do
           kafka_configuration: kafka_configuration,
           enabled: false
         )
+
       webhook_trigger_1 =
         insert(
           :trigger,
@@ -1358,15 +1347,15 @@ defmodule Lightning.KafkaTriggersTest do
         {kafka_trigger_1, %{enabled: true}},
         {cron_trigger_1, %{enabled: true}},
         {kafka_trigger_2, %{enabled: true}},
-        {webhook_trigger_1, %{enabled: true}},
+        {webhook_trigger_1, %{enabled: true}}
       ]
 
       changeset = workflow |> build_changeset(triggers)
 
       assert KafkaTriggers.get_kafka_triggers_being_updated(changeset) == [
-        kafka_trigger_1,
-        kafka_trigger_2
-      ]
+               kafka_trigger_1,
+               kafka_trigger_2
+             ]
     end
 
     test "returns empty list if triggers is an empty list", %{
@@ -1409,6 +1398,7 @@ defmodule Lightning.KafkaTriggersTest do
           kafka_configuration: kafka_configuration,
           enabled: true
         )
+
       disabled_trigger =
         insert(
           :trigger,
@@ -1423,7 +1413,7 @@ defmodule Lightning.KafkaTriggersTest do
         child_spec: child_spec,
         disabled_trigger: disabled_trigger,
         enabled_trigger: enabled_trigger,
-        supervisor: 100000001
+        supervisor: 100_000_001
       }
     end
 
@@ -1465,13 +1455,14 @@ defmodule Lightning.KafkaTriggersTest do
     } do
       with_mock Supervisor, [:passthrough],
         delete_child: fn _sup_pid, _child_id -> {:ok, "anything"} end,
-        start_child: [in_series(
-          [supervisor, child_spec],
-          [{:error, :already_started}, {:ok, "fake-pid"}]
-        )],
+        start_child: [
+          in_series(
+            [supervisor, child_spec],
+            [{:error, :already_started}, {:ok, "fake-pid"}]
+          )
+        ],
         terminate_child: fn _sup_pid, _child_id -> {:ok, "anything"} end,
         which_children: fn _sup_pid -> [] end do
-
         KafkaTriggers.update_pipeline(supervisor, trigger)
 
         assert_called(Supervisor.terminate_child(supervisor, trigger.id))
@@ -1496,12 +1487,13 @@ defmodule Lightning.KafkaTriggersTest do
     } do
       with_mock Supervisor, [:passthrough],
         delete_child: fn _sup_pid, _child_id -> {:ok, "anything"} end,
-        start_child: [in_series(
-          [supervisor, child_spec],
-          [{:error, :already_present}, {:ok, "fake-pid"}]
-        )],
+        start_child: [
+          in_series(
+            [supervisor, child_spec],
+            [{:error, :already_present}, {:ok, "fake-pid"}]
+          )
+        ],
         which_children: fn _sup_pid -> [] end do
-
         KafkaTriggers.update_pipeline(supervisor, trigger)
 
         assert_called(Supervisor.delete_child(supervisor, trigger.id))

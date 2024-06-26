@@ -7,8 +7,6 @@ defmodule Lightning.Application do
 
   require Logger
 
-  alias Lightning.KafkaTriggers
-
   @impl true
   def start(_type, _args) do
     # Initialize ETS table for adapter lookup
@@ -107,27 +105,11 @@ defmodule Lightning.Application do
       adaptor_service_childspec,
       {Lightning.TaskWorker, name: :cli_task_worker},
       {Lightning.Runtime.RuntimeManager,
-       worker_secret: Lightning.Config.worker_secret()}
+       worker_secret: Lightning.Config.worker_secret()},
+      {Lightning.KafkaTriggers.Supervisor, type: :supervisor}
       # Start a worker by calling: Lightning.Worker.start_link(arg)
       # {Lightning.Worker, arg}
     ]
-
-    run_kafka_trigger_supervisors =
-      Application.get_env(
-        :lightning,
-        :kafka_triggers
-      )[:run_supervisors]
-
-    children =
-      if run_kafka_trigger_supervisors do
-        children ++
-          [
-            Lightning.KafkaTriggers.PipelineSupervisor,
-            Lightning.KafkaTriggers.MessageCandidateSetSupervisor
-          ]
-      else
-        children
-      end
 
     # See https://hexdocs.pm/elixir/Supervisor.html
     # for other strategies and supported options
@@ -161,21 +143,6 @@ defmodule Lightning.Application do
     end
 
     state
-  end
-
-  @impl true
-  def start_phase(:start_kafka_triggers, _type, _args) do
-    run_kafka_trigger_supervisors =
-      Application.get_env(
-        :lightning,
-        :kafka_triggers
-      )[:run_supervisors]
-
-    if run_kafka_trigger_supervisors do
-      KafkaTriggers.start_triggers()
-    end
-
-    :ok
   end
 
   def oban_opts do
