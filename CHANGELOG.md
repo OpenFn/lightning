@@ -25,6 +25,8 @@ and this project adheres to
 
 - Reverted behaviour on "Rerun from here" to select the Log tab.
   [#2202](https://github.com/OpenFn/lightning/issues/2202)
+- Reduce the minimum zoom in the workflow diagram
+  [#2214](https://github.com/OpenFn/lightning/issues/2214)
 
 ### Fixed
 
