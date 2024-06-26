@@ -62,7 +62,7 @@ const calculateLayout = async (
 
     // First work out the size of the current viewpoint in canvas coordinates
     // TODO where do I get the canvas size from?
-    const rect = getVisibleRect(flow.getViewport(), 1498, 780, 1);
+    const rect = getVisibleRect(flow.getViewport(), 1498, 780, 0.95);
 
     // Now work out which nodes are visible
     for (const id in finalPositions) {

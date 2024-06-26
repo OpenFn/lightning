@@ -14,15 +14,15 @@ export const getVisibleRect = (
   const zoom = 1 / viewport.zoom;
 
   // Also invert the viewport x and y positions
-  const x = -viewport.x;
-  const y = -viewport.y;
+  const x = -viewport.x * scale;
+  const y = -viewport.y * scale;
 
   // Return the projected visible rect
   return {
     x: x * zoom,
-    width: width * zoom,
+    width: width * scale * zoom,
     y: y * zoom,
-    height: height * zoom,
+    height: height * scale * zoom,
   };
 };
 
