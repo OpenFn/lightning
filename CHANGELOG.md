@@ -19,6 +19,10 @@ and this project adheres to
 
 ### Changed
 
+- In the workflow diagram, smartly update the view when adding new nodes
+  [#2174](https://github.com/OpenFn/lightning/issues/2174)
+- In the workflow diagram, remove the "autofit" toggle in the control bar
+
 ### Fixed
 
 ## [v2.7.0] - 2024-06-26
