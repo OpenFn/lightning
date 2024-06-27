@@ -16,8 +16,7 @@ export const EDGE_COLOR_SELECTED_DISABLED = '#bdbaf3';
 export const ERROR_COLOR = '#ef4444';
 
 export const edgeLabelStyles = (selected?: boolean, data) => {
-  const { label, condition_type, enabled } = data;
-
+  const { label, enabled } = data;
   const primaryColor = (selected?: boolean, enabled?: boolean) => {
     if (enabled) return selected ? EDGE_COLOR_SELECTED : EDGE_COLOR;
     return selected ? EDGE_COLOR_SELECTED_DISABLED : EDGE_COLOR_DISABLED;
@@ -25,7 +24,7 @@ export const edgeLabelStyles = (selected?: boolean, data) => {
 
   const backgroundColor = enabled ? 'white' : '#F6F6F6';
 
-  if (label) {
+  if (label && label.length > 1) {
     return {
       padding: '0 4px',
       height: '32px',
