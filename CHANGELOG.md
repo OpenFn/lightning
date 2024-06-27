@@ -21,6 +21,9 @@ and this project adheres to
 
 ### Fixed
 
+- Fix jumpy cursor in the Job editor.
+  [#2229](https://github.com/OpenFn/lightning/issues/2229)
+
 ## [v2.7.0] - 2024-06-26
 
 ### Added
