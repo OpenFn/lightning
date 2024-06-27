@@ -101,7 +101,6 @@ const calculateLayout = async (
         }
       }
     } else {
-      // TODO this behaviour probably causes more trouble than its worth?
       // otherwise, if running a layout, fit to the currently visible nodes
       // this usually means we've removed a placeholder and lets us tidy up
       doFit = true;
