@@ -1816,10 +1816,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
     end)
   end
 
-  # defp find_item(%Snapshot{} = snapshot, id) do
-  #   find_item_helper(snapshot, id, &Map.get/2)
-  # end
-
   defp find_item_helper(data, id, accessor) do
     [:jobs, :triggers, :edges]
     |> Enum.reduce_while(nil, fn field, _ ->

@@ -118,8 +118,7 @@ export default {
         'data-adaptor',
         'data-change-event',
         'data-disabled',
-        'data-disabled-message',
-        'data-source',
+        'data-disabled-message'
       ],
       attributeOldValue: true,
     });
