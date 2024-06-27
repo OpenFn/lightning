@@ -113,7 +113,7 @@ defmodule Lightning.Accounts.UserNotifierTest do
 
         Sizwe has just created an OpenFn account for you. You can complete your registration by visiting the URL below:
 
-        #{url} .
+        #{url}
 
         If you think this account was created by mistake, you can contact Sizwe (super@email.com) or ignore this email.
 
