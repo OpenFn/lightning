@@ -106,10 +106,19 @@ defmodule Lightning.Accounts.UserNotifierTest do
         )
 
       assert_email_sent(
-        subject: "New OpenFn Lightning account",
+        subject: "Confirm your OpenFn account",
         to: "real@email.com",
-        text_body:
-          "Hi Joe,\n\nSuper User has just created an account for you on OpenFn. You can complete your registration by visiting the URL below:\n\n#{url} .\n\nIf you do not wish to have an account, please ignore this email.\n"
+        text_body: """
+        Hi Joe,
+
+        Super User has just created an OpenFn account for you. You can complete your registration by visiting the URL below:
+
+        #{url} .
+
+        If you have not requested an OpenFn account or no longer need an account, please contact #{Lightning.Config.instance_admin_email()} to delete this account.
+
+        OpenFn
+        """
       )
     end
 
@@ -119,7 +128,7 @@ defmodule Lightning.Accounts.UserNotifierTest do
       })
 
       assert_email_sent(
-        subject: "Lightning Account Deletion",
+        subject: "Account scheduled for deletion",
         to: "real@email.com"
       )
     end

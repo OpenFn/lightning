@@ -73,14 +73,16 @@ defmodule Lightning.Accounts.UserNotifier do
   Deliver instructions to confirm account.
   """
   def deliver_confirmation_instructions(enroller, user, token) do
-    deliver(user.email, "New OpenFn Lightning account", """
+    deliver(user.email, "Confirm your OpenFn account", """
     Hi #{user.first_name},
 
-    #{enroller.first_name} has just created an account for you on OpenFn. You can complete your registration by visiting the URL below:
+    #{enroller.first_name} has just created an OpenFn account for you. You can complete your registration by visiting the URL below:
 
     #{url(LightningWeb.Endpoint, ~p"/users/confirm/#{token}")} .
 
-    If you do not wish to have an account, please ignore this email.
+    If you have not requested an OpenFn account or no longer need an account, please contact #{admin()} to delete this account.
+
+    OpenFn
     """)
   end
 
@@ -161,16 +163,25 @@ defmodule Lightning.Accounts.UserNotifier do
   Deliver an email to notify the user about their account being deleted
   """
   def send_deletion_notification_email(user) do
-    deliver(user.email, "Lightning Account Deletion", """
-    Hi #{user.first_name},
+    actual_deletion_date =
+      Lightning.Config.purge_deleted_after_days()
+      |> Lightning.Helpers.actual_deletion_date()
+      |> Lightning.Helpers.format_date()
 
-    Your Lightning account has been scheduled for deletion. It has been disabled and you will no longer be able to login.
+    deliver(user.email, "Account scheduled for deletion", """
+     Hi #{user.first_name},
 
-    It will be permanently deleted in #{permanent_deletion_grace()}. This will delete all of your credentials and remove you from all projects.
+    Your OpenFn account has been scheduled for deletion. It has been disabled and you’ll no longer be able to log in.
 
-    Note that if you have auditable events associated with projects, your account won't be permanently deleted until that audit activity expires.
+    Your account will be permanently deleted on #{actual_deletion_date} with all of your credentials and you’ll be removed from all projects you’re currently a collaborator on.
+
+    You can cancel this deletion
+
+    Please note that if you have auditable events associated with projects, your account won't be permanently deleted until that audit activity expires.
 
     If you have any questions or don't want your account deleted, please contact #{admin()} as soon as possible.
+
+    OpenFn
     """)
   end
 
