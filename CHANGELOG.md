@@ -21,6 +21,9 @@ and this project adheres to
 
 ### Fixed
 
+- Show common functions in the Docs panel
+  [#1733](https://github.com/OpenFn/lightning/issues/1733)
+
 ## [v2.7.0] - 2024-06-26
 
 ### Added
