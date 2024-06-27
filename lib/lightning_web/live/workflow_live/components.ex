@@ -408,22 +408,43 @@ defmodule LightningWeb.WorkflowLive.Components do
         <div>
           <.label>
             JS Expression
-            <p class="font-normal text-xs text-gray-500 ">
-              To match on output of last Step
-            </p>
-            <.input
-              type="textarea"
-              field={@form[:condition_expression]}
-              class="h-24 font-mono proportional-nums"
-              phx-debounce="300"
-              maxlength="255"
-            />
           </.label>
+          <.input
+            type="textarea"
+            field={@form[:condition_expression]}
+            class="h-24 font-mono proportional-nums"
+            phx-debounce="300"
+            maxlength="255"
+            placeholder="eg: !state.error"
+          />
+          <details class="mt-5 ml-2">
+            <summary class="text-xs cursor-pointer">Help with expressions</summary>
+            <div class="font-normal text-xs text-gray-500 ml-1 pl-2 border-l-2 border-grey-500">
+              <p class="mb-2 mt-1">
+                Use the state from the previous step to decide whether this step should fire.
+              </p>
+              <p class="mb-2">
+                Must be a single JavaScript expression. <code>state</code>
+                is in scope.
+              </p>
+              <p class="">
+                Check
+                <a
+                  class="text-indigo-700 hover:underline"
+                  href="https://docs.openfn.org/documentation/build/paths#writing-javascript-expressions-for-custom-path-conditions"
+                  target="_blank"
+                >
+                  docs.openfn.org
+                </a>
+                for more details.
+              </p>
+            </div>
+          </details>
         </div>
       <% end %>
       <%= if @form[:source_trigger_id].value do %>
         <div class="max-w-xl text-sm text-gray-500 mt-3">
-          <p>This path will be active if its trigger is enabled.</p>
+          <p>This path will be active if its trigger is enabled</p>
         </div>
       <% else %>
         <div class="mt-7 border-t flex flex-col justify-between">
