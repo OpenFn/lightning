@@ -75,13 +75,19 @@ defmodule Lightning.Workflows.Workflow do
   end
 
   @spec workflow_activated?(Ecto.Changeset.t()) :: boolean()
-  def workflow_activated?(changeset) do
-    case changeset do
-      %Ecto.Changeset{data: %Workflow{}} -> get_assoc(changeset, :triggers)
-      %Ecto.Changeset{data: %Snapshot{}} -> get_embed(changeset, :triggers)
-    end
+  def workflow_activated?(%Ecto.Changeset{data: %Snapshot{}}) do
+    false
+  end
+
+  def workflow_activated?(%Ecto.Changeset{data: %Workflow{}} = changeset) do
+    changeset
+    |> get_assoc(:triggers)
     |> Enum.any?(fn trigger_changeset ->
-      get_field(trigger_changeset, :enabled) == true
+      if trigger_changeset.data.__meta__.state == :built do
+        get_field(trigger_changeset, :enabled) == true
+      else
+        get_change(trigger_changeset, :enabled) == true
+      end
     end)
   end
 
