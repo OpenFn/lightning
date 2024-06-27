@@ -608,9 +608,10 @@ defmodule Lightning.ProjectsTest do
           Hi #{user.first_name},
 
           Your OpenFn project "#{project.name}" has been scheduled for deletion.
+
           All of the workflows in this project have been disabled, and it's associated resources will be deleted on #{actual_deletion_date}.
 
-          If you don’t want this project deleted, please email #{admin_email} as soon as possible.
+          If you don't want this project deleted, please email #{admin_email} as soon as possible.
 
           OpenFn
           """
@@ -1415,14 +1416,15 @@ defmodule Lightning.ProjectsTest do
 
   defp data_retention_email(updated_project) do
     %{
-      subject: "Updated data retention policy for #{updated_project.name}",
+      subject:
+        "The data retention policy for #{updated_project.name} has been modified",
       body: """
       Hi anna,
 
       The data retention policy for your project, #{updated_project.name}, has been updated. Here are the new details:
 
       - 14 days history retention
-      - I/O data is saved for reprocessing
+      - input/output (I/O) data is saved for reprocessing
       - 7 days I/O data retention
 
       This policy can be changed by owners and administrators. If you haven't approved this change, please reset the policy by visiting the URL below:

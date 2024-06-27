@@ -153,12 +153,12 @@ defmodule LightningWeb.ProjectLiveTest do
 
       assert_email_sent(
         to: [{"", user_1.email}],
-        subject: "Project #{project_name}"
+        subject: "You now have access to \"#{project_name}\""
       )
 
       assert_email_sent(
         to: [{"", user_2.email}],
-        subject: "Project #{project_name}"
+        subject: "You now have access to \"#{project_name}\""
       )
     end
 

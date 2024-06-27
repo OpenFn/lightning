@@ -58,12 +58,13 @@ defmodule Lightning.Accounts.UserNotifier do
   """
   def deliver_confirmation_instructions(user, token) do
     deliver(user.email, "Confirm your OpenFn account", """
-
     Hi #{user.first_name},
 
-    Welcome, and thanks for registering a new account on OpenFn. Please confirm your account by visiting the URL below:
+    Welcome to OpenFn. Please confirm your account by visiting the URL below:
 
-    #{url(LightningWeb.Endpoint, ~p"/users/confirm/#{token}")} .
+    #{url(LightningWeb.Endpoint, ~p"/users/confirm/#{token}")}
+
+    If you didn't create an account with us, please ignore this.
 
     OpenFn
     """)
@@ -78,9 +79,9 @@ defmodule Lightning.Accounts.UserNotifier do
 
     #{enroller.first_name} has just created an OpenFn account for you. You can complete your registration by visiting the URL below:
 
-    #{url(LightningWeb.Endpoint, ~p"/users/confirm/#{token}")} .
+    #{url(LightningWeb.Endpoint, ~p"/users/confirm/#{token}")}
 
-    If you have not requested an OpenFn account or no longer need an account, please contact #{admin()} to delete this account.
+    If you think this account was created by mistake, you can contact #{enroller.first_name} (#{enroller.email}) or ignore this email.
 
     OpenFn
     """)
@@ -93,7 +94,7 @@ defmodule Lightning.Accounts.UserNotifier do
     role = Projects.get_project_user_role(user, project) |> Atom.to_string()
     url = LightningWeb.RouteHelpers.project_dashboard_url(project.id)
 
-    deliver(user.email, "Project #{project.name}", """
+    deliver(user.email, "You now have access to \"#{project.name}\"", """
     Hi #{user.first_name},
 
     You've been granted "#{role}" access to the "#{project.name}" project on OpenFn.
@@ -122,8 +123,11 @@ defmodule Lightning.Accounts.UserNotifier do
           updated_project :: map()
         ) :: {:ok, term()} | {:error, term()}
   def send_data_retention_change_email(user, updated_project) do
-    history_retention_period = updated_project.history_retention_period
-    io_data_retention_period = updated_project.dataclip_retention_period
+    history_retention_period = updated_project.history_retention_period || "∞"
+
+    io_data_retention_period =
+      updated_project.dataclip_retention_period || history_retention_period
+
     io_data_saved = updated_project.retention_policy != :erase_all
 
     settings_page_url =
@@ -132,23 +136,17 @@ defmodule Lightning.Accounts.UserNotifier do
         ~p"/projects/#{updated_project.id}/settings#data-storage"
       )
 
-    history_day_or_days =
-      if history_retention_period == 1, do: "day", else: "days"
-
-    io_data_days_or_days =
-      if io_data_retention_period == 1, do: "day", else: "days"
-
     deliver(
       user.email,
-      "Updated data retention policy for #{updated_project.name}",
+      "The data retention policy for #{updated_project.name} has been modified",
       """
       Hi #{user.first_name},
 
       The data retention policy for your project, #{updated_project.name}, has been updated. Here are the new details:
 
-      - #{history_retention_period} #{history_day_or_days} history retention
-      - I/O data #{if io_data_saved, do: "is", else: "is not"} saved for reprocessing
-      - #{io_data_retention_period} #{io_data_days_or_days} I/O data retention
+      - #{history_retention_period} #{pluralize_with_s(history_retention_period, "day")} history retention
+      - input/output (I/O) data #{if io_data_saved, do: "is", else: "is not"} saved for reprocessing
+      - #{io_data_retention_period} #{pluralize_with_s(io_data_retention_period, "day")} I/O data retention
 
       This policy can be changed by owners and administrators. If you haven't approved this change, please reset the policy by visiting the URL below:
 
@@ -168,14 +166,12 @@ defmodule Lightning.Accounts.UserNotifier do
       |> Lightning.Helpers.actual_deletion_date()
       |> Lightning.Helpers.format_date()
 
-    deliver(user.email, "Account scheduled for deletion", """
+    deliver(user.email, "Your account has been scheduled for deletion", """
      Hi #{user.first_name},
 
-    Your OpenFn account has been scheduled for deletion. It has been disabled and you’ll no longer be able to log in.
+    Your OpenFn account has been scheduled for deletion. It has been disabled and you'll no longer be able to log in.
 
-    Your account will be permanently deleted on #{actual_deletion_date} with all of your credentials and you’ll be removed from all projects you’re currently a collaborator on.
-
-    You can cancel this deletion
+    Your account and of your credentials will be permanently deleted on #{actual_deletion_date} and you'll be removed from all projects you're currently a collaborator on.
 
     Please note that if you have auditable events associated with projects, your account won't be permanently deleted until that audit activity expires.
 
@@ -186,21 +182,25 @@ defmodule Lightning.Accounts.UserNotifier do
   end
 
   def send_credential_deletion_notification_email(user, credential) do
-    deliver(user.email, "Credential Deletion", """
-    Hi #{user.first_name},
+    deliver(
+      user.email,
+      "Your \"#{credential.name}\" credential will be deleted",
+      """
+      Hi #{user.first_name},
 
-    Your "#{credential.name}" Credential has been scheduled for deletion.
+      Your "#{credential.name}" credential has been scheduled for deletion.
 
-    Here's what this means for you:
+      Here's what this means for you:
 
-    - The credential has been disconnected from all projects. Nobody can use it.
-    - Any jobs using this credential will now run without a credential. (If they require authentication, they may no longer function properly.)
-    - After #{permanent_deletion_grace()} your credential’s secrets will be scrubbed. The record itself will be kept until all related audit trail activity has expired.
+      - The credential has been disconnected from all projects. Nobody can use it.
+      - Any jobs using this credential will now run without a credential. (If they require authentication, they may no longer function properly.)
+      - After #{permanent_deletion_grace()} your credential's secrets will be scrubbed. The record itself will be kept until all related audit trail activity has expired.
 
-    You can cancel this deletion anytime before the scheduled date via the “Credentials” menu accessed by clicking opening the user menu in the top-right corner of the OpenFn interface.
+      You can cancel this deletion anytime before the scheduled date via the "Credentials" menu accessed by clicking opening the user menu in the top-right corner of the OpenFn interface.
 
-    OpenFn
-    """)
+      OpenFn
+      """
+    )
   end
 
   @doc """
@@ -208,13 +208,13 @@ defmodule Lightning.Accounts.UserNotifier do
   """
   def deliver_reset_password_instructions(user, url) do
     deliver(user.email, "Finish resetting your password", """
-    Hi {{first_name}},
+    Hi #{user.first_name},
 
     We have received a request to reset your OpenFn password. To proceed, please visit the URL below:
 
     #{url}
 
-    Note that this link is only valid for #{Lightning.Config.reset_password_token_validity_in_days()} day. If you didn't request this change, please ignore this.
+    Note that this link is only valid for #{Lightning.Config.reset_password_token_validity_in_days()} #{pluralize_with_s(Lightning.Config.reset_password_token_validity_in_days(), "day")}. If you didn't request this change, please ignore this.
 
     OpenFn
     """)
@@ -224,7 +224,7 @@ defmodule Lightning.Accounts.UserNotifier do
   Deliver instructions to update a user email.
   """
   def deliver_update_email_instructions(user, url) do
-    deliver(user.email, "Finish updating your email", """
+    deliver(user.email, "Please confirm your new email", """
     Hi #{user.first_name},
 
     We have received a request to change the email associated with your OpenFn account. To proceed, please visit the URL below:
@@ -241,13 +241,14 @@ defmodule Lightning.Accounts.UserNotifier do
   Deliver warning to update a user email.
   """
   def deliver_update_email_warning(user, new_email) do
-    deliver(user.email, "Update email warning", """
+    deliver(user.email, "Your OpenFn email was changed", """
     Hi #{user.email},
 
     We have received a request to change the email address associated with your OpenFn account from #{user.email} to #{new_email}.
+
     An email has been sent to your new email address with a confirmation link.
 
-    If you didn't request this change, please contact #{admin()} immediately to regain control of your account. When your account has been secured, we’d also recommend that you turn on multi-factor authentication to prevent further unauthorized access.
+    If you didn't request this change, please contact #{admin()} immediately to regain control of your account. When your account has been secured, we'd also recommend that you turn on multi-factor authentication to prevent further unauthorized access.
 
     OpenFn
     """)
@@ -340,11 +341,15 @@ defmodule Lightning.Accounts.UserNotifier do
     Hi #{user.first_name},
 
     Your OpenFn project "#{project.name}" has been scheduled for deletion.
+
     All of the workflows in this project have been disabled, and it's associated resources will be deleted on #{actual_deletion_date}.
 
-    If you don’t want this project deleted, please email #{admin()} as soon as possible.
+    If you don't want this project deleted, please email #{admin()} as soon as possible.
 
     OpenFn
     """)
   end
+
+  defp pluralize_with_s(1, string), do: string
+  defp pluralize_with_s(_integer, string), do: "#{string}s"
 end

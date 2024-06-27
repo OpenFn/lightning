@@ -159,7 +159,7 @@ defmodule LightningWeb.UserLiveTest do
       assert has_element?(index_live, "#user-#{user.id}")
 
       assert_email_sent(
-        subject: "Account scheduled for deletion",
+        subject: "Your account has been scheduled for deletion",
         to: user.email
       )
 

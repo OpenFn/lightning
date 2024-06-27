@@ -32,7 +32,7 @@ defmodule Lightning.Accounts.UserNotifierTest do
         subject: "Project scheduled for deletion",
         to: "user@openfn.org",
         text_body: """
-        Hi User,\n\nYour OpenFn project "project-a" has been scheduled for deletion.\nAll of the workflows in this project have been disabled, and it's associated resources will be deleted on #{actual_deletion_date}.\n\nIf you don’t want this project deleted, please email #{admin_email} as soon as possible.\n\nOpenFn
+        Hi User,\n\nYour OpenFn project "project-a" has been scheduled for deletion.\n\nAll of the workflows in this project have been disabled, and it's associated resources will be deleted on #{actual_deletion_date}.\n\nIf you don't want this project deleted, please email #{admin_email} as soon as possible.\n\nOpenFn
         """
       )
     end
@@ -53,7 +53,7 @@ defmodule Lightning.Accounts.UserNotifierTest do
       )
 
       assert_email_sent(
-        subject: "Project #{project.name}",
+        subject: "You now have access to \"#{project.name}\"",
         to: "user@openfn.org",
         text_body: """
         Hi Anna,\n\nYou've been granted "editor" access to the "a-test-project" project on OpenFn.\n\nVisit the URL below to check it out:\n\n#{url}\n\nOpenFn
@@ -82,7 +82,7 @@ defmodule Lightning.Accounts.UserNotifierTest do
         subject: "Confirm your OpenFn account",
         to: "real@email.com",
         text_body:
-          "\nHi ,\n\nWelcome, and thanks for registering a new account on OpenFn. Please confirm your account by visiting the URL below:\n\n#{url} .\n\nOpenFn\n"
+          "Hi ,\n\nWelcome to OpenFn. Please confirm your account by visiting the URL below:\n\n#{url}\n\nIf you didn't create an account with us, please ignore this.\n\nOpenFn\n"
       )
     end
 
@@ -90,7 +90,7 @@ defmodule Lightning.Accounts.UserNotifierTest do
       token = "sometoken"
 
       UserNotifier.deliver_confirmation_instructions(
-        %User{first_name: "Super User", email: "super@email.com"},
+        %User{first_name: "Sizwe", email: "super@email.com"},
         %User{
           first_name: "Joe",
           email: "real@email.com"
@@ -111,11 +111,11 @@ defmodule Lightning.Accounts.UserNotifierTest do
         text_body: """
         Hi Joe,
 
-        Super User has just created an OpenFn account for you. You can complete your registration by visiting the URL below:
+        Sizwe has just created an OpenFn account for you. You can complete your registration by visiting the URL below:
 
         #{url} .
 
-        If you have not requested an OpenFn account or no longer need an account, please contact #{Lightning.Config.instance_admin_email()} to delete this account.
+        If you think this account was created by mistake, you can contact Sizwe (super@email.com) or ignore this email.
 
         OpenFn
         """
@@ -128,7 +128,7 @@ defmodule Lightning.Accounts.UserNotifierTest do
       })
 
       assert_email_sent(
-        subject: "Account scheduled for deletion",
+        subject: "Your account has been scheduled for deletion",
         to: "real@email.com"
       )
     end
@@ -142,7 +142,7 @@ defmodule Lightning.Accounts.UserNotifierTest do
       )
 
       assert_email_sent(
-        subject: "Credential Deletion",
+        subject: "Your \"Test\" credential will be deleted",
         to: "real@email.com"
       )
     end
