@@ -21,6 +21,8 @@ and this project adheres to
 
 ### Fixed
 
+- Fixed react key error [#2233](https://github.com/OpenFn/lightning/issues/2233)
+
 ## [v2.7.0] - 2024-06-26
 
 ### Added
