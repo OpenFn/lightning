@@ -5,11 +5,14 @@ defmodule Lightning.AiAssistantTest do
   alias Lightning.AiAssistant
   alias Lightning.AiAssistant.Session
 
+  import Lightning.Factories
+
   setup :verify_on_exit!
 
   describe "Session" do
     test "creation" do
-      session = Session.new("fn()", "@openfn/language-common@latest")
+      job = build(:job, body: "fn()", adaptor: "@openfn/language-common@latest")
+      session = Session.new(job)
 
       assert session.adaptor == "@openfn/language-common@1.6.2"
       assert session.expression == "fn()"
@@ -17,16 +20,20 @@ defmodule Lightning.AiAssistantTest do
     end
 
     test "put_history" do
+      job = build(:job, body: "fn()", adaptor: "@openfn/language-common@latest")
+
       session =
-        Session.new("fn()", "@openfn/language-common@latest")
+        Session.new(job)
         |> Session.put_history([%{role: :user, content: "fn()"}])
 
       assert session.history == [%{role: :user, content: "fn()"}]
     end
 
     test "put_expression" do
+      job = build(:job, body: "fn()", adaptor: "@openfn/language-common@latest")
+
       session =
-        Session.new("fn()", "@openfn/language-common@latest")
+        Session.new(job)
         |> Session.put_expression("fn(state => state)")
 
       assert session.expression == "fn(state => state)"
