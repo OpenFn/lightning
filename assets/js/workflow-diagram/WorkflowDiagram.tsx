@@ -244,7 +244,6 @@ export default React.forwardRef<HTMLElement, WorkflowDiagramProps>(
           onEdgeClick={handleEdgeClick}
           onInit={setFlow}
           deleteKeyCode={null}
-          minZoom={0.2}
           fitView
           fitViewOptions={{ padding: FIT_PADDING }}
           minZoom={0.2}
