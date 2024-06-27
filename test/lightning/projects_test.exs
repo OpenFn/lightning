@@ -1,4 +1,5 @@
 defmodule Lightning.ProjectsTest do
+  require Phoenix.VerifiedRoutes
   use Lightning.DataCase, async: true
 
   alias Lightning.Invocation.Dataclip
@@ -226,8 +227,15 @@ defmodule Lightning.ProjectsTest do
 
       assert Enum.count(admins) == 2
 
-      for %{user: user} <- admins do
-        assert_email_sent(data_retention_change_email(user, updated_project))
+      %{subject: subject, body: body} = data_retention_email(updated_project)
+
+      for %{user: %{email: email}} <- admins do
+        assert_receive {:email,
+                        %Swoosh.Email{
+                          subject: ^subject,
+                          to: [{"", ^email}],
+                          text_body: ^body
+                        }}
       end
 
       # editors and viewers do not receive any email
@@ -238,16 +246,28 @@ defmodule Lightning.ProjectsTest do
 
       assert Enum.count(non_admins) == 2
 
-      for %{user: user} <- non_admins do
-        assert_email_not_sent(data_retention_change_email(user, updated_project))
+      for %{user: %{email: email}} <- non_admins do
+        refute_receive {:email,
+                        %Swoosh.Email{
+                          subject: ^subject,
+                          to: [{"", ^email}],
+                          text_body: ^body
+                        }}
+
+        # data_retention_email(user, updated_project) |> assert_email_not_sent()
       end
 
       # no email is sent when there's no change
       assert {:ok, updated_project} =
                Projects.update_project(updated_project, update_attrs)
 
-      for %{user: user} <- project.project_users do
-        assert_email_not_sent(data_retention_change_email(user, updated_project))
+      for %{user: %{email: email}} <- project.project_users do
+        refute_receive {:email,
+                        %Swoosh.Email{
+                          subject: ^subject,
+                          to: [{"", ^email}],
+                          text_body: ^body
+                        }}
       end
 
       # no email is sent when there's an error in the changeset
@@ -257,8 +277,13 @@ defmodule Lightning.ProjectsTest do
                  dataclip_retention_period: 7
                })
 
-      for %{user: user} <- project.project_users do
-        assert_email_not_sent(data_retention_change_email(user, updated_project))
+      for %{user: %{email: email}} <- project.project_users do
+        refute_receive {:email,
+                        %Swoosh.Email{
+                          subject: ^subject,
+                          to: [{"", ^email}],
+                          text_body: ^body
+                        }}
       end
     end
 
@@ -569,19 +594,28 @@ defmodule Lightning.ProjectsTest do
 
       admin_email = Lightning.Config.instance_admin_email()
 
-      [user_2, user_1]
+      [user_1, user_2]
       |> Enum.each(fn user ->
-        to = [{"", user.email}]
+        actual_deletion_date =
+          Lightning.Config.purge_deleted_after_days()
+          |> Lightning.Helpers.actual_deletion_date()
+          |> Lightning.Helpers.format_date()
 
-        text_body =
-          "Hi #{user.first_name},\n\n#{project.name} project has been scheduled for deletion. All of the workflows in this project have been disabled,\nand the resources will be deleted in 7 day(s) from today at 02:00 UTC. If this doesn't sound right, please email\n#{admin_email} to cancel the deletion.\n"
+        assert_email_sent(
+          subject: "Project scheduled for deletion",
+          to: [{"", user.email}],
+          text_body: """
+          Hi #{user.first_name},
 
-        assert_receive {:email,
-                        %Swoosh.Email{
-                          subject: "Project scheduled for deletion",
-                          to: ^to,
-                          text_body: ^text_body
-                        }}
+          Your OpenFn project "#{project.name}" has been scheduled for deletion.
+
+          All of the workflows in this project have been disabled, and it's associated resources will be deleted on #{actual_deletion_date}.
+
+          If you don't want this project deleted, please email #{admin_email} as soon as possible.
+
+          OpenFn
+          """
+        )
       end)
     end
 
@@ -1380,27 +1414,26 @@ defmodule Lightning.ProjectsTest do
     }
   end
 
-  defp data_retention_change_email(user, project) do
-    body = """
-    Hi #{user.first_name},
+  defp data_retention_email(updated_project) do
+    %{
+      subject:
+        "The data retention policy for #{updated_project.name} has been modified",
+      body: """
+      Hi anna,
 
-    We'd like to inform you that the data retention policy for your project, #{project.name}, was recently updated.
-    If you haven't approved this change, we recommend that you log in into your OpenFn account to reset the policy.
+      The data retention policy for your project, #{updated_project.name}, has been updated. Here are the new details:
 
-    Should you require assistance with your account, feel free to contact #{Lightning.Config.instance_admin_email()}.
+      - 14 days history retention
+      - input/output (I/O) data is saved for reprocessing
+      - 7 days I/O data retention
 
-    Best regards,
-    The OpenFn Team
-    """
+      This policy can be changed by owners and administrators. If you haven't approved this change, please reset the policy by visiting the URL below:
 
-    Swoosh.Email.new()
-    |> Swoosh.Email.to(user.email)
-    |> Swoosh.Email.from(
-      {Lightning.Config.email_sender_name(),
-       Lightning.Config.instance_admin_email()}
-    )
-    |> Swoosh.Email.subject("An update to your #{project.name} retention policy")
-    |> Swoosh.Email.text_body(body)
+      #{LightningWeb.Endpoint.url() <> "/projects/#{updated_project.id}/settings#data-storage"}
+
+      OpenFn
+      """
+    }
   end
 
   defp dataclip_with_body_and_request(dataclip) do

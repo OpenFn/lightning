@@ -19,6 +19,8 @@ and this project adheres to
 
 ### Changed
 
+- Update email copies [#2213](https://github.com/OpenFn/lightning/issues/2213)
+
 ### Fixed
 
 ## [v2.7.0] - 2024-06-26

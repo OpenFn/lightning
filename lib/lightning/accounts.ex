@@ -496,12 +496,12 @@ defmodule Lightning.Accounts do
     Repo.insert!(user_token)
 
     UserNotifier.deliver_update_email_warning(
-      user.email,
+      user,
       current_email
     )
 
     UserNotifier.deliver_update_email_instructions(
-      current_email,
+      user,
       update_email_url_fun.(encoded_token)
     )
   end
@@ -832,9 +832,11 @@ defmodule Lightning.Accounts do
   and the token is deleted.
   """
   def confirm_user(token) do
-    with {:ok, query} <- UserToken.verify_email_token_query(token, "confirm"),
+    with {:ok, query} <-
+           UserToken.verify_email_token_query(token, "confirm"),
          %User{} = user <- Repo.one(query),
-         {:ok, %{user: user}} <- Repo.transaction(confirm_user_multi(user)) do
+         {:ok, %{user: user}} <-
+           Repo.transaction(confirm_user_multi(user)) do
       {:ok, user}
     else
       _ -> :error
