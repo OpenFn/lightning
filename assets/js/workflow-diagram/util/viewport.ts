@@ -1,6 +1,3 @@
-// Given react-flows viewport, which gives use the topleft x/y and
-// zoom, and the dimensions of the canvas,
-// work out the view bounds
 import { Rect, XYPosition, Viewport } from 'reactflow';
 
 type ViewBounds = {
@@ -8,9 +5,6 @@ type ViewBounds = {
   height: number;
 };
 
-// do the thing is d3ee
-
-// TODO use scale to make the bounds artificially smaller
 export const getVisibleRect = (
   viewport: Viewport,
   viewBounds: ViewBounds,
