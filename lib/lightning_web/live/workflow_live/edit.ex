@@ -26,6 +26,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
   alias Lightning.WorkOrders
   alias LightningWeb.Components.Form
   alias LightningWeb.WorkflowLive.Helpers
+  alias LightningWeb.WorkflowLive.Presence
   alias LightningWeb.WorkflowNewLive.WorkflowParams
 
   require Lightning.Run
@@ -69,7 +70,45 @@ defmodule LightningWeb.WorkflowLive.Edit do
                     "You are viewing a snapshot of this workflow that was taken on #{Lightning.Helpers.format_date(@snapshot.inserted_at)}"
               }
             />
+            <div class="mx-2"></div>
+            <div class="isolate flex -space-x-1 overflow-hidden text-xs font-normal">
+              <%= for {_user_id, %{metas: [%{user_info: online_user}]}} <- [@high_priority_user] do %>
+                <span
+                  :if={online_user.id != @current_user.id}
+                  id={"workflow-canvas-online-user-#{online_user.id}"}
+                  phx-hook="Tooltip"
+                  aria-label={"#{online_user.first_name} #{online_user.last_name} (#{online_user.email})"}
+                  data-placement="right"
+                  class="inline-flex h-6 w-6 items-center justify-center rounded-full border-2 border-green-400 bg-green-500"
+                >
+                  <span class="text-xs font-medium leading-none text-white">
+                    <%= String.at(online_user.first_name, 0) <>
+                      if is_nil(online_user.last_name),
+                        do: "",
+                        else: String.at(online_user.last_name, 0) %>
+                  </span>
+                </span>
+              <% end %>
+              <%= for {_user_id, %{metas: [%{user_info: online_user}]}} <- @low_priority_users do %>
+                <span
+                  :if={online_user.id != @current_user.id}
+                  id={"workflow-canvas-online-user-#{online_user.id}"}
+                  phx-hook="Tooltip"
+                  aria-label={"#{online_user.first_name} #{online_user.last_name} (#{online_user.email})"}
+                  data-placement="right"
+                  class="inline-flex h-6 w-6 items-center justify-center rounded-full border-2 border-gray-400 bg-gray-500"
+                >
+                  <span class="text-xs font-medium leading-none text-white">
+                    <%= String.at(online_user.first_name, 0) <>
+                      if is_nil(online_user.last_name),
+                        do: "",
+                        else: String.at(online_user.last_name, 0) %>
+                  </span>
+                </span>
+              <% end %>
+            </div>
           </:title>
+
           <div class="mx-2"></div>
           <div :if={@snapshot_version_tag != "latest"} class="flex">
             <div class="flex-shrink-0">
@@ -172,7 +211,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
                         dataclips={@selectable_dataclips}
                         disabled={
                           !@can_run_workflow ||
-                            @snapshot_version_tag != "latest"
+                            @snapshot_version_tag != "latest" ||
+                            !high_priority?(@current_user, @high_priority_user)
                         }
                         project={@project}
                         admin_contacts={@admin_contacts}
@@ -206,7 +246,10 @@ defmodule LightningWeb.WorkflowLive.Edit do
                     :if={display_switcher(@snapshot, @workflow)}
                     id={@selected_job.id}
                     label="Latest Version"
-                    disabled={job_deleted?(@selected_job, @workflow)}
+                    disabled={
+                      job_deleted?(@selected_job, @workflow) ||
+                        !high_priority?(@current_user, @high_priority_user)
+                    }
                     version={@snapshot_version_tag}
                   />
 
@@ -241,7 +284,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
                           selected_dataclip_wiped?(
                             @manual_run_form,
                             @selectable_dataclips
-                          ) || @snapshot_version_tag != "latest"
+                          ) || @snapshot_version_tag != "latest" ||
+                          !high_priority?(@current_user, @high_priority_user)
                       }
                     >
                       <%= if processing(@follow_run) do %>
@@ -277,7 +321,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
                         aria-haspopup="true"
                         disabled={
                           @save_and_run_disabled ||
-                            @snapshot_version_tag != "latest"
+                            @snapshot_version_tag != "latest" ||
+                            !high_priority?(@current_user, @high_priority_user)
                         }
                         phx-click={show_dropdown("create-new-work-order")}
                       >
@@ -314,7 +359,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
                           form={@manual_run_form.id}
                           disabled={
                             @save_and_run_disabled ||
-                              @snapshot_version_tag != "latest"
+                              @snapshot_version_tag != "latest" ||
+                              !high_priority?(@current_user, @high_priority_user)
                           }
                         >
                           <.icon name="hero-play-solid" class="w-4 h-4 mr-1" />
@@ -425,7 +471,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
                 on_change={&send_form_changed/1}
                 editable={
                   @can_edit_workflow &&
-                    @snapshot_version_tag == "latest"
+                    @snapshot_version_tag == "latest" &&
+                    high_priority?(@current_user, @high_priority_user)
                 }
                 form={jf}
                 project_user={@project_user}
@@ -450,7 +497,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
                         class="focus:ring-red-500 bg-red-600 hover:bg-red-700 disabled:bg-red-300"
                         disabled={
                           !@can_edit_workflow or @has_child_edges or @is_first_job or
-                            @snapshot_version_tag != "latest"
+                            @snapshot_version_tag != "latest" ||
+                            !high_priority?(@current_user, @high_priority_user)
                         }
                         tooltip={
                           deletion_tooltip_message(
@@ -496,7 +544,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
                   on_change={&send_form_changed/1}
                   disabled={
                     !@can_edit_workflow or
-                      @snapshot_version_tag != "latest"
+                      @snapshot_version_tag != "latest" ||
+                      !high_priority?(@current_user, @high_priority_user)
                   }
                   can_write_webhook_auth_method={@can_write_webhook_auth_method}
                   webhook_url={webhook_url(@selected_trigger)}
@@ -525,7 +574,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
                   form={ef}
                   disabled={
                     !@can_edit_workflow or
-                      @snapshot_version_tag != "latest"
+                      @snapshot_version_tag != "latest" ||
+                      !high_priority?(@current_user, @high_priority_user)
                   }
                   cancel_url={close_url(assigns, :selected_edge, :unselect)}
                 />
@@ -552,6 +602,17 @@ defmodule LightningWeb.WorkflowLive.Edit do
       </div>
     </LayoutComponents.page_content>
     """
+  end
+
+  defp high_priority?(
+         current_user,
+         {_user_id, %{metas: [%{user_info: guest_user}]}} = _high_priority_user
+       ) do
+    current_user.id == guest_user.id
+  end
+
+  defp high_priority?(_current_user, _high_priority_user) do
+    true
   end
 
   @spec close_url(map(), atom(), atom()) :: String.t()
@@ -860,6 +921,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
      socket
      |> authorize()
      |> assign(
+       low_priority_users: %{},
+       high_priority_user: %{},
        active_menu_item: :overview,
        expanded_job: nil,
        follow_run: nil,
@@ -938,6 +1001,18 @@ defmodule LightningWeb.WorkflowLive.Edit do
           ])
 
         if workflow do
+          if connected?(socket) do
+            user = socket.assigns.current_user
+            topic = "workflow-canvas-#{workflow.id}-user_live:presence"
+
+            Presence.track(self(), topic, user.id, %{
+              user_info: user,
+              joined_at: DateTime.utc_now() |> DateTime.to_unix()
+            })
+
+            LightningWeb.Endpoint.subscribe(topic)
+          end
+
           run_id = Map.get(params, "a")
           version = Map.get(params, "v") || workflow.lock_version
 
@@ -1469,6 +1544,21 @@ defmodule LightningWeb.WorkflowLive.Edit do
      |> assign(follow_run: run)}
   end
 
+  def handle_info(%{event: "presence_diff", payload: _diff}, socket) do
+    [high_priority_user | low_priority_users] =
+      Presence.list(
+        "workflow-canvas-#{socket.assigns.workflow.id}-user_live:presence"
+      )
+      |> Enum.sort_by(fn {_user_id, %{metas: [%{joined_at: joined_at}]}} ->
+        joined_at
+      end)
+
+    {:noreply,
+     socket
+     |> assign(low_priority_users: low_priority_users)
+     |> assign(high_priority_user: high_priority_user)}
+  end
+
   def handle_info(%{}, socket), do: {:noreply, socket}
 
   defp maybe_show_manual_run(socket) do
@@ -1913,8 +2003,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
   attr :snapshot_version_tag, :string, required: true
 
   defp save_workflow_button(assigns) do
-    alias Phoenix.LiveView.JS
-
     %{
       can_edit_workflow: can_edit_workflow,
       changeset: changeset,
