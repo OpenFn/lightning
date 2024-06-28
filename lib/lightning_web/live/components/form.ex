@@ -24,28 +24,14 @@ defmodule LightningWeb.Components.Form do
       focus:ring-2
       focus:ring-offset-2
       focus:ring-primary-500
+      enabled:bg-primary-600
+      enabled:hover:bg-primary-700
+      disabled:bg-primary-300
     ]
-
-    inactive_classes = ~w[
-      bg-primary-300
-    ] ++ base_classes
-
-    active_classes = ~w[
-      bg-primary-600
-      hover:bg-primary-700
-    ] ++ base_classes
 
     assigns =
       assigns
-      |> assign_new(:class, fn -> "" end)
-      |> update(:class, fn class, %{rest: rest} ->
-        if rest[:disabled] do
-          inactive_classes
-        else
-          active_classes
-        end
-        |> Enum.concat(List.wrap(class))
-      end)
+      |> assign_new(:class, fn -> base_classes end)
 
     ~H"""
     <button type="submit" class={@class} {@rest}>

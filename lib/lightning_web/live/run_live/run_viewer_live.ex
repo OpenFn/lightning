@@ -3,6 +3,7 @@ defmodule LightningWeb.RunLive.RunViewerLive do
   use LightningWeb.RunLive.Streaming, chunk_size: 100
 
   import LightningWeb.RunLive.Components
+  import LightningWeb.Components.Icons
 
   alias Lightning.Accounts.User
   alias Lightning.Policies.Permissions
