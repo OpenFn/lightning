@@ -23,6 +23,8 @@ and this project adheres to
 
 - Fix jumpy cursor in the Job editor.
   [#2229](https://github.com/OpenFn/lightning/issues/2229)
+- Rework syncing behaviour to prevent changes getting thrown out on a socket
+  reconnect. [#2007](https://github.com/OpenFn/lightning/issues/2007)
 
 ## [v2.7.0] - 2024-06-26
 
