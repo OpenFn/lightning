@@ -62,6 +62,10 @@ defmodule LightningWeb.WorkflowLive.JobView do
   attr :follow_run_id, :any, default: nil
   attr :snapshot, :any, required: true
   attr :snapshot_version, :any, required: true
+  attr :display_banner, :boolean, default: false
+  attr :banner_message, :string, default: ""
+  attr :high_priority_user, :any, required: true
+  attr :low_priority_users, :any, required: true
 
   slot :footer
 
@@ -112,6 +116,11 @@ defmodule LightningWeb.WorkflowLive.JobView do
                   "You are viewing a snapshot of this workflow that was taken on #{Lightning.Helpers.format_date(@snapshot.inserted_at)}"
             }
           />
+          <LightningWeb.WorkflowLive.Components.online_users
+            high_priority_user={@high_priority_user}
+            low_priority_users={@low_priority_users}
+            current_user={@current_user}
+          />
           <div class="flex flex-grow items-center justify-end">
             <.offline_indicator />
             <.link
@@ -131,6 +140,10 @@ defmodule LightningWeb.WorkflowLive.JobView do
             </.link>
           </div>
         </div>
+        <LightningWeb.WorkflowLive.Components.workflow_info_banner
+          :if={@display_banner}
+          message={@banner_message}
+        />
       </:top>
       <%= for slot <- @collapsible_panel do %>
         <.collapsible_panel
@@ -207,7 +220,7 @@ defmodule LightningWeb.WorkflowLive.JobView do
     """
   end
 
-  defp editor_disabled?(%Lightning.Workflows.Job{}), do: {false, "", "Editor"}
+  defp editor_disabled?(%Lightning.Workflows.Job{}), do: {false, nil, "Editor"}
 
   defp editor_disabled?(%Lightning.Workflows.Snapshot.Job{}),
     do:

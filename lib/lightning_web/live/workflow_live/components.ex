@@ -730,4 +730,64 @@ defmodule LightningWeb.WorkflowLive.Components do
     </.modal>
     """
   end
+
+  def workflow_info_banner(assigns) do
+    ~H"""
+    <div class="relative flex-none border-1 border-yellow-400 bg-yellow-50 p-4">
+      <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 flex">
+        <div class="flex-shrink-0">
+          <Heroicons.exclamation_triangle solid class="h-5 w-5 text-yellow-400" />
+        </div>
+        <div class="ml-2">
+          <p class="text-sm text-yellow-700">
+            <%= @message %>
+          </p>
+        </div>
+      </div>
+    </div>
+    """
+  end
+
+  def online_users(assigns) do
+    ~H"""
+    <div class="flex gap-0">
+      <.render_user
+        :if={@high_priority_user.user.id != @current_user.id}
+        user={@high_priority_user.user}
+        priority={:high}
+      />
+
+      <%= for %{user: online_user} <- @low_priority_users do %>
+        <.render_user
+          :if={online_user.id != @current_user.id}
+          user={online_user}
+          priority={:low}
+        />
+      <% end %>
+    </div>
+    """
+  end
+
+  defp render_user(assigns) do
+    ~H"""
+    <span
+      id={"workflow-canvas-online-user-#{@user.id}"}
+      phx-hook="Tooltip"
+      aria-label={"#{@user.first_name} #{@user.last_name} (#{@user.email})"}
+      data-placement="right"
+      class={"inline-flex h-6 w-6 items-center justify-center rounded-full border-2 #{if @priority == :high, do: "border-green-400 bg-green-500", else: "border-gray-400 bg-gray-500"}"}
+    >
+      <span class="text-xs font-medium leading-none text-white">
+        <%= user_name(@user) %>
+      </span>
+    </span>
+    """
+  end
+
+  defp user_name(user) do
+    String.at(user.first_name, 0) <>
+      if is_nil(user.last_name),
+        do: "",
+        else: String.at(user.last_name, 0)
+  end
 end
