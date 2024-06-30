@@ -733,7 +733,10 @@ defmodule LightningWeb.WorkflowLive.Components do
 
   def workflow_info_banner(assigns) do
     ~H"""
-    <div class="relative flex-none border-1 border-yellow-400 bg-yellow-50 p-4">
+    <div
+      id={@id}
+      class="relative flex-none border-1 border-yellow-400 bg-yellow-50 p-4"
+    >
       <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 flex">
         <div class="flex-shrink-0">
           <Heroicons.exclamation_triangle solid class="h-5 w-5 text-yellow-400" />
@@ -754,7 +757,7 @@ defmodule LightningWeb.WorkflowLive.Components do
       <.render_user
         :for={%{user: online_user, priority: priority} <- @presences}
         :if={online_user.id != @current_user.id}
-        id={"#{@id}-online-user-#{online_user.id}"}
+        id={"#{@id}-#{online_user.id}"}
         user={online_user}
         priority={priority}
       />

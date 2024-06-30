@@ -129,7 +129,11 @@ defmodule LightningWeb.WorkflowLive.Edit do
           </.with_changes_indicator>
         </LayoutComponents.header>
       </:header>
-      <.workflow_info_banner :if={@display_banner} message={@banner_message} />
+      <.workflow_info_banner
+        :if={@display_banner}
+        id={"canvas-banner-#{@current_user.id}"}
+        message={@banner_message}
+      />
       <div class="relative h-full flex" id={"workflow-edit-#{@workflow.id}"}>
         <%!-- Job Edit View --%>
         <div class="flex-none" id="job-editor-pane">
@@ -1129,13 +1133,17 @@ defmodule LightningWeb.WorkflowLive.Edit do
       can_edit_workflow: can_edit_workflow,
       has_child_edges: has_child_edges,
       is_first_job: is_first_job,
-      snapshot_version_tag: tag
+      snapshot_version_tag: tag,
+      current_user_presence: current_user_presence
     } = socket.assigns
 
     with true <- can_edit_workflow || :not_authorized,
          true <- !has_child_edges || :has_child_edges,
          true <- !is_first_job || :is_first_job,
-         true <- tag == "latest" || :view_only do
+         true <- tag == "latest" || :view_only,
+         true <-
+           current_user_presence.has_presence_edit_priority ||
+             :presence_low_priority do
       edges_to_delete =
         Ecto.Changeset.get_assoc(changeset, :edges, :struct)
         |> Enum.filter(&(&1.target_job_id == id))
@@ -1169,6 +1177,14 @@ defmodule LightningWeb.WorkflowLive.Edit do
            :error,
            "Cannot delete a node in snapshot mode, switch to latest"
          )}
+
+      :presence_low_priority ->
+        {:noreply,
+         socket
+         |> put_flash(
+           :error,
+           "Cannot delete a node in low priority mode"
+         )}
     end
   end
 
@@ -1178,14 +1194,18 @@ defmodule LightningWeb.WorkflowLive.Edit do
       workflow_params: initial_params,
       can_edit_workflow: can_edit_workflow,
       selected_edge: selected_edge,
-      snapshot_version_tag: tag
+      snapshot_version_tag: tag,
+      current_user_presence: current_user_presence
     } = socket.assigns
 
     with true <- can_edit_workflow || :not_authorized,
          true <-
            (selected_edge && is_nil(selected_edge.source_trigger_id)) ||
              :is_initial_edge,
-         true <- tag == "latest" || :view_only do
+         true <- tag == "latest" || :view_only,
+         true <-
+           current_user_presence.has_presence_edit_priority ||
+             :presence_low_priority do
       edges_to_delete =
         Ecto.Changeset.get_assoc(changeset, :edges, :struct)
         |> Enum.filter(&(&1.id == id))
@@ -1214,6 +1234,14 @@ defmodule LightningWeb.WorkflowLive.Edit do
            :error,
            "Cannot delete an edge in snapshot mode, switch to latest"
          )}
+
+      :presence_low_priority ->
+        {:noreply,
+         socket
+         |> put_flash(
+           :error,
+           "Cannot delete an edge in low priority mode"
+         )}
     end
   end
 
@@ -1240,12 +1268,16 @@ defmodule LightningWeb.WorkflowLive.Edit do
       project: project,
       workflow_params: initial_params,
       can_edit_workflow: can_edit_workflow,
-      snapshot_version_tag: tag
+      snapshot_version_tag: tag,
+      current_user_presence: current_user_presence
     } =
       socket.assigns
 
     with true <- can_edit_workflow || :not_authorized,
-         true <- tag == "latest" || :view_only do
+         true <- tag == "latest" || :view_only,
+         true <-
+           current_user_presence.has_presence_edit_priority ||
+             :presence_low_priority do
       next_params =
         case params do
           %{"workflow" => params} ->
@@ -1298,6 +1330,14 @@ defmodule LightningWeb.WorkflowLive.Edit do
          |> put_flash(
            :error,
            "Cannot save in snapshot mode, switch to the latest version."
+         )}
+
+      :presence_low_priority ->
+        {:noreply,
+         socket
+         |> put_flash(
+           :error,
+           "Cannot save in low priority mode."
          )}
 
       :not_authorized ->
@@ -1372,11 +1412,15 @@ defmodule LightningWeb.WorkflowLive.Edit do
       current_user: current_user,
       changeset: changeset,
       project: %{id: project_id},
-      snapshot_version_tag: tag
+      snapshot_version_tag: tag,
+      current_user_presence: current_user_presence
     } = socket.assigns
 
     with true <- can_run_workflow? || :not_authorized,
          true <- tag == "latest" || :view_only,
+         true <-
+           current_user_presence.has_presence_edit_priority ||
+             :presence_low_priority,
          :ok <-
            UsageLimiter.limit_action(%Action{type: :new_run}, %Context{
              project_id: project_id
@@ -1419,6 +1463,11 @@ defmodule LightningWeb.WorkflowLive.Edit do
         {:noreply,
          socket
          |> put_flash(:error, "Cannot rerun in snapshot mode, switch to latest.")}
+
+      :presence_low_priority ->
+        {:noreply,
+         socket
+         |> put_flash(:error, "Cannot rerun in low priority mode.")}
     end
   end
 
@@ -1432,13 +1481,17 @@ defmodule LightningWeb.WorkflowLive.Edit do
       workflow_params: workflow_params,
       can_edit_workflow: can_edit_workflow,
       can_run_workflow: can_run_workflow,
-      snapshot_version_tag: tag
+      snapshot_version_tag: tag,
+      current_user_presence: current_user_presence
     } = socket.assigns
 
     socket = socket |> apply_params(workflow_params, :workflow)
 
     with true <- (can_run_workflow && can_edit_workflow) || :not_authorized,
          true <- tag == "latest" || :view_only,
+         true <-
+           current_user_presence.has_presence_edit_priority ||
+             :presence_low_priority,
          {:ok, %{workorder: workorder, workflow: workflow}} <-
            Helpers.save_and_run(
              socket.assigns.changeset,
@@ -1482,6 +1535,11 @@ defmodule LightningWeb.WorkflowLive.Edit do
         {:noreply,
          socket
          |> put_flash(:error, "Cannot run in snapshot mode, switch to latest.")}
+
+      :presence_low_priority ->
+        {:noreply,
+         socket
+         |> put_flash(:error, "Cannot run in low priority mode.")}
 
       {:error, %{text: message}} ->
         {:noreply, put_flash(socket, :error, message)}
