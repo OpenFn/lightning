@@ -484,6 +484,7 @@ defmodule LightningWeb.WorkflowLive.Components do
   end
 
   attr :form, :map, required: true
+  attr :disabled, :boolean, default: false
 
   def workflow_name_field(assigns) do
     ~H"""
@@ -497,7 +498,7 @@ defmodule LightningWeb.WorkflowLive.Components do
     >
       <div class="relative grow">
         <div class="flex items-center">
-          <.text_input form={f} has_errors={f.errors[:name]} />
+          <.text_input form={f} has_errors={f.errors[:name]} disabled={@disabled} />
           <%= if f.errors[:name] do %>
             <span class="text-sm text-red-600 font-normal mx-2 px-2 py-2 rounded whitespace-nowrap z-10">
               <Icon.exclamation_circle class="h-5 w-5 inline-block" />
@@ -531,7 +532,8 @@ defmodule LightningWeb.WorkflowLive.Components do
         :name,
         class: @classes,
         required: true,
-        placeholder: "Untitled"
+        placeholder: "Untitled",
+        disabled: @disabled
       ) %>
       <div class="pointer-events-none absolute inset-y-0 right-0 flex
       items-center pr-3 peer-focus:invisible">

@@ -65,7 +65,14 @@ defmodule LightningWeb.WorkflowLive.Edit do
       <:header>
         <LayoutComponents.header current_user={@current_user}>
           <:title>
-            <.workflow_name_field form={@workflow_form} />
+            <.workflow_name_field
+              form={@workflow_form}
+              disabled={
+                !@can_edit_workflow or
+                  @snapshot_version_tag != "latest" or
+                  !@has_presence_edit_priority
+              }
+            />
             <div class="mx-2"></div>
             <LightningWeb.Components.Common.snapshot_version_chip
               id="canvas-workflow-version"
@@ -1134,7 +1141,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
       has_child_edges: has_child_edges,
       is_first_job: is_first_job,
       snapshot_version_tag: tag,
-      current_user_presence: current_user_presence
+      has_presence_edit_priority: has_presence_edit_priority
     } = socket.assigns
 
     with true <- can_edit_workflow || :not_authorized,
@@ -1142,7 +1149,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
          true <- !is_first_job || :is_first_job,
          true <- tag == "latest" || :view_only,
          true <-
-           current_user_presence.has_presence_edit_priority ||
+           has_presence_edit_priority ||
              :presence_low_priority do
       edges_to_delete =
         Ecto.Changeset.get_assoc(changeset, :edges, :struct)
@@ -1195,7 +1202,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
       can_edit_workflow: can_edit_workflow,
       selected_edge: selected_edge,
       snapshot_version_tag: tag,
-      current_user_presence: current_user_presence
+      has_presence_edit_priority: has_presence_edit_priority
     } = socket.assigns
 
     with true <- can_edit_workflow || :not_authorized,
@@ -1204,7 +1211,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
              :is_initial_edge,
          true <- tag == "latest" || :view_only,
          true <-
-           current_user_presence.has_presence_edit_priority ||
+           has_presence_edit_priority ||
              :presence_low_priority do
       edges_to_delete =
         Ecto.Changeset.get_assoc(changeset, :edges, :struct)
@@ -1269,14 +1276,14 @@ defmodule LightningWeb.WorkflowLive.Edit do
       workflow_params: initial_params,
       can_edit_workflow: can_edit_workflow,
       snapshot_version_tag: tag,
-      current_user_presence: current_user_presence
+      has_presence_edit_priority: has_presence_edit_priority
     } =
       socket.assigns
 
     with true <- can_edit_workflow || :not_authorized,
          true <- tag == "latest" || :view_only,
          true <-
-           current_user_presence.has_presence_edit_priority ||
+           has_presence_edit_priority ||
              :presence_low_priority do
       next_params =
         case params do
@@ -1413,13 +1420,13 @@ defmodule LightningWeb.WorkflowLive.Edit do
       changeset: changeset,
       project: %{id: project_id},
       snapshot_version_tag: tag,
-      current_user_presence: current_user_presence
+      has_presence_edit_priority: has_presence_edit_priority
     } = socket.assigns
 
     with true <- can_run_workflow? || :not_authorized,
          true <- tag == "latest" || :view_only,
          true <-
-           current_user_presence.has_presence_edit_priority ||
+           has_presence_edit_priority ||
              :presence_low_priority,
          :ok <-
            UsageLimiter.limit_action(%Action{type: :new_run}, %Context{
@@ -1482,7 +1489,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
       can_edit_workflow: can_edit_workflow,
       can_run_workflow: can_run_workflow,
       snapshot_version_tag: tag,
-      current_user_presence: current_user_presence
+      has_presence_edit_priority: has_presence_edit_priority
     } = socket.assigns
 
     socket = socket |> apply_params(workflow_params, :workflow)
@@ -1490,7 +1497,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
     with true <- (can_run_workflow && can_edit_workflow) || :not_authorized,
          true <- tag == "latest" || :view_only,
          true <-
-           current_user_presence.has_presence_edit_priority ||
+           has_presence_edit_priority ||
              :presence_low_priority,
          {:ok, %{workorder: workorder, workflow: workflow}} <-
            Helpers.save_and_run(

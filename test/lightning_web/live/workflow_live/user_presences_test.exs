@@ -62,7 +62,7 @@ defmodule LightningWeb.WorkflowLive.UserPresencesTest do
       {:ok, amy_view, _html} =
         live(
           amy_session,
-          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version, s: job.id]}"
+          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version, s: job.id, m: "expand"]}"
         )
 
       # Neither banner nor online users components are rendered in Canvas
@@ -232,7 +232,7 @@ defmodule LightningWeb.WorkflowLive.UserPresencesTest do
       {:ok, amy_view, _html} =
         live(
           amy_session,
-          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version, s: job.id]}"
+          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version, s: job.id, m: "expand"]}"
         )
 
       refute amy_view |> has_element?("#inspector-online-users-#{amy.id}")
@@ -247,7 +247,7 @@ defmodule LightningWeb.WorkflowLive.UserPresencesTest do
       {:ok, ana_view, _html} =
         live(
           ana_session,
-          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version, s: job.id]}"
+          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version, s: job.id, m: "expand"]}"
         )
 
       refute amy_view |> has_element?("#inspector-online-users-#{amy.id}")
@@ -271,7 +271,7 @@ defmodule LightningWeb.WorkflowLive.UserPresencesTest do
       {:ok, aly_view, _html} =
         live(
           aly_session,
-          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version, s: job.id]}"
+          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version, s: job.id, m: "expand"]}"
         )
 
       refute amy_view |> has_element?("#inspector-online-users-#{amy.id}")
@@ -377,14 +377,14 @@ defmodule LightningWeb.WorkflowLive.UserPresencesTest do
       {:ok, amy_view, _html} =
         live(
           amy_session,
-          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version, s: job.id]}"
+          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version, s: job.id, m: "expand"]}"
         )
 
       # Amy joins in another session
       {:ok, another_amy_view, _html} =
         live(
           another_amy_session,
-          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version, s: job.id]}"
+          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version, s: job.id, m: "expand"]}"
         )
 
       assert amy_view |> has_element?("#inspector-banner-#{amy.id}")
