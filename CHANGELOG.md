@@ -17,6 +17,9 @@ and this project adheres to
 
 ### Added
 
+- Handle Simultaneous Editors Working In Same Workflow
+  [#1949](https://github.com/OpenFn/lightning/issues/1949)
+
 ### Changed
 
 ### Fixed
