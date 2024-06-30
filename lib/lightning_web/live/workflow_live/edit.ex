@@ -988,7 +988,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
   defp track_user_presence(socket) do
     if connected?(socket) do
-      Lightning.Workflows.Presence.track_user_presence(
+      Presence.track_user_presence(
         socket.assigns.current_user,
         "workflow-#{socket.assigns.workflow.id}:presence",
         socket.assigns.pid
@@ -1557,7 +1557,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
   def handle_info(%{event: "presence_diff", payload: _diff}, socket) do
     summary =
       "workflow-#{socket.assigns.workflow.id}:presence"
-      |> Lightning.Workflows.Presence.list_presences()
+      |> Presence.list_presences()
       |> build_presence_summary(socket.assigns.current_user)
 
     {:noreply, assign(socket, summary)}
