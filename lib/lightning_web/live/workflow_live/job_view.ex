@@ -116,6 +116,7 @@ defmodule LightningWeb.WorkflowLive.JobView do
             }
           />
           <LightningWeb.WorkflowLive.Components.online_users
+            :if={}
             id="inspector-online-users"
             presences={@presences}
             current_user={@current_user}
@@ -133,6 +134,7 @@ defmodule LightningWeb.WorkflowLive.JobView do
         </div>
         <LightningWeb.WorkflowLive.Components.workflow_info_banner
           :if={@display_banner}
+          id={"inspector-banner-#{@current_user.id}"}
           message={@banner_message}
         />
       </:top>

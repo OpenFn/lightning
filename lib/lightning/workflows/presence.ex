@@ -56,10 +56,11 @@ defmodule Lightning.Workflows.Presence do
     grouped_presences
     |> Enum.map(fn {_id, group} ->
       active_sessions = length(group)
+      presence = List.first(group)
 
       new_user_presence(
-        List.first(group).user,
-        Enum.map(group, & &1.joined_at) |> Enum.min(),
+        presence.user,
+        presence.joined_at,
         :low,
         active_sessions
       )
