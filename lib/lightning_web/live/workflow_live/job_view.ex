@@ -222,15 +222,12 @@ defmodule LightningWeb.WorkflowLive.JobView do
 
   defp editor_disabled?(params) do
     cond do
-      params.display_banner ->
-        {true, "Cannot edit in low priority access.", "Editor (read-only)"}
-
       is_struct(params.form.source.data, Lightning.Workflows.Snapshot.Job) ->
         {true, "Cannot edit in snapshot mode, switch to the latest version.",
          "Editor (read-only)"}
 
-      is_struct(params.form.source.data, Lightning.Workflows.Job) ->
-        {false, "", "Editor"}
+      params.display_banner ->
+        {true, "Cannot edit in low priority access.", "Editor (read-only)"}
 
       true ->
         {false, "", "Editor"}
