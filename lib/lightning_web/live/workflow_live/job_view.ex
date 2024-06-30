@@ -116,7 +116,6 @@ defmodule LightningWeb.WorkflowLive.JobView do
             }
           />
           <LightningWeb.WorkflowLive.Components.online_users
-            :if={}
             id="inspector-online-users"
             presences={@presences}
             current_user={@current_user}
