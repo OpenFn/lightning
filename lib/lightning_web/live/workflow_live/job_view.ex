@@ -64,8 +64,7 @@ defmodule LightningWeb.WorkflowLive.JobView do
   attr :snapshot_version, :any, required: true
   attr :display_banner, :boolean, default: false
   attr :banner_message, :string, default: ""
-  attr :high_priority_user, :any, required: true
-  attr :low_priority_users, :any, required: true
+  attr :presences, :list, required: true
 
   slot :footer
 
@@ -77,7 +76,7 @@ defmodule LightningWeb.WorkflowLive.JobView do
 
   def job_edit_view(assigns) do
     {editor_disabled?, editor_disabled_message, editor_panel_title} =
-      editor_disabled?(assigns.form.source.data)
+      editor_disabled?(assigns)
 
     assigns =
       assigns
@@ -117,8 +116,8 @@ defmodule LightningWeb.WorkflowLive.JobView do
             }
           />
           <LightningWeb.WorkflowLive.Components.online_users
-            high_priority_user={@high_priority_user}
-            low_priority_users={@low_priority_users}
+            id="inspector-online-users"
+            presences={@presences}
             current_user={@current_user}
           />
           <div class="flex flex-grow items-center justify-end">
@@ -220,12 +219,22 @@ defmodule LightningWeb.WorkflowLive.JobView do
     """
   end
 
-  defp editor_disabled?(%Lightning.Workflows.Job{}), do: {false, nil, "Editor"}
+  defp editor_disabled?(params) do
+    cond do
+      params.display_banner ->
+        {true, "Cannot edit in low priority access.", "Editor (read-only)"}
 
-  defp editor_disabled?(%Lightning.Workflows.Snapshot.Job{}),
-    do:
-      {true, "Cannot edit in snapshot mode, switch to the latest version.",
-       "Editor (read-only)"}
+      is_struct(params.form.source.data, Lightning.Workflows.Snapshot.Job) ->
+        {true, "Cannot edit in snapshot mode, switch to the latest version.",
+         "Editor (read-only)"}
+
+      is_struct(params.form.source.data, Lightning.Workflows.Job) ->
+        {false, "", "Editor"}
+
+      true ->
+        {false, "", "Editor"}
+    end
+  end
 
   defp credential_block(assigns) do
     ~H"""

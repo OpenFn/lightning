@@ -750,20 +750,14 @@ defmodule LightningWeb.WorkflowLive.Components do
 
   def online_users(assigns) do
     ~H"""
-    <div class="flex gap-0">
+    <div id={@id} class="flex gap-0">
       <.render_user
-        :if={@high_priority_user.user.id != @current_user.id}
-        user={@high_priority_user.user}
-        priority={:high}
+        :for={%{user: online_user, priority: priority} <- @presences}
+        :if={online_user.id != @current_user.id}
+        id={"#{@id}-online-user-#{online_user.id}"}
+        user={online_user}
+        priority={priority}
       />
-
-      <%= for %{user: online_user} <- @low_priority_users do %>
-        <.render_user
-          :if={online_user.id != @current_user.id}
-          user={online_user}
-          priority={:low}
-        />
-      <% end %>
     </div>
     """
   end
@@ -771,7 +765,7 @@ defmodule LightningWeb.WorkflowLive.Components do
   defp render_user(assigns) do
     ~H"""
     <span
-      id={"workflow-canvas-online-user-#{@user.id}"}
+      id={@id}
       phx-hook="Tooltip"
       aria-label={"#{@user.first_name} #{@user.last_name} (#{@user.email})"}
       data-placement="right"
