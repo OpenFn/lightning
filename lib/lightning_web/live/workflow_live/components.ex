@@ -417,15 +417,17 @@ defmodule LightningWeb.WorkflowLive.Components do
             maxlength="255"
             placeholder="eg: !state.error"
           />
-          <details class="mt-5 ml-2">
-            <summary class="text-xs cursor-pointer">Help with expressions</summary>
+          <details class="mt-5 ml-1">
+            <summary class="text-xs cursor-pointer">
+              How to write expressions
+            </summary>
             <div class="font-normal text-xs text-gray-500 ml-1 pl-2 border-l-2 border-grey-500">
               <p class="mb-2 mt-1">
-                Use the state from the previous step to decide whether this step should fire.
+                Use the state from the previous step to decide whether this step should run.
               </p>
               <p class="mb-2">
-                Must be a single JavaScript expression. <code>state</code>
-                is in scope.
+                Must be a single JavaScript expression with <code>state</code>
+                in scope.
               </p>
               <p class="">
                 Check
