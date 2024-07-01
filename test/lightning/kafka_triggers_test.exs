@@ -1456,7 +1456,7 @@ defmodule Lightning.KafkaTriggersTest do
         start_child: [
           in_series(
             [supervisor, child_spec],
-            [{:error, :already_started}, {:ok, "fake-pid"}]
+            [{:error, {:already_started, "other-pid"}}, {:ok, "fake-pid"}]
           )
         ],
         terminate_child: fn _sup_pid, _child_id -> {:ok, "anything"} end,
