@@ -100,3 +100,9 @@ liveSocket.connect();
 // >> liveSocket.enableLatencySim(1000)  // enabled for duration of browser session
 // >> liveSocket.disableLatencySim()
 window.liveSocket = liveSocket;
+
+// Testing helper to simulate a reconnect
+window.triggerReconnect = function triggerReconnect(timeout = 5000) {
+  liveSocket.disconnect();
+  setTimeout(liveSocket.connect.bind(liveSocket), timeout);
+};

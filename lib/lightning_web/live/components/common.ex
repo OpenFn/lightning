@@ -2,6 +2,8 @@ defmodule LightningWeb.Components.Common do
   @moduledoc false
   use LightningWeb, :component
 
+  import LightningWeb.Components.Icons
+
   alias Phoenix.LiveView.JS
 
   attr :id, :string, required: true

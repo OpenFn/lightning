@@ -12,6 +12,8 @@ defmodule LightningWeb.Components.Viewers do
 
   use LightningWeb, :component
 
+  import LightningWeb.Components.Icons
+
   alias Lightning.Invocation.Dataclip
   alias LightningWeb.Components.Icon
 

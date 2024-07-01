@@ -5,6 +5,7 @@ defmodule LightningWeb.RunLive.Index do
   use LightningWeb, :live_view
 
   import Ecto.Changeset, only: [get_change: 2]
+  import LightningWeb.Components.Icons
 
   alias Lightning.Extensions.UsageLimiting.Action
   alias Lightning.Extensions.UsageLimiting.Context
