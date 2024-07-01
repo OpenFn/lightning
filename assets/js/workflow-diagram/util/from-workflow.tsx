@@ -45,10 +45,9 @@ const fromWorkflow = (
   placeholders: Flow.Model = { nodes: [], edges: [] },
   selectedId: string | null
 ): Flow.Model => {
-  console.log(workflow);
   const allowPlaceholder =
     placeholders.nodes.length === 0 && !workflow.disabled;
-  console.log(allowPlaceholder);
+
   const process = (
     items: Array<Lightning.Node | Lightning.Edge>,
     collection: Array<Flow.Node | Flow.Edge>,
