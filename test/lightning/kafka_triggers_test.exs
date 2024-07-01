@@ -1423,10 +1423,8 @@ defmodule Lightning.KafkaTriggersTest do
       supervisor: supervisor
     } do
       with_mock Supervisor,
-        # delete_child: fn _sup_pid, _child_id -> {:ok, "anything"} end,
         start_child: fn _sup_pid, _child_spec -> {:ok, "fake-pid"} end do
-        # terminate_child: fn _sup_pid, _child_id -> {:ok, "anything"} end do
-        KafkaTriggers.update_pipeline(supervisor, trigger)
+        KafkaTriggers.update_pipeline(supervisor, trigger.id)
 
         assert_called(Supervisor.start_child(supervisor, child_spec))
       end
@@ -1439,7 +1437,7 @@ defmodule Lightning.KafkaTriggersTest do
       with_mock Supervisor,
         delete_child: fn _sup_pid, _child_id -> {:ok, "anything"} end,
         terminate_child: fn _sup_pid, _child_id -> {:ok, "anything"} end do
-        KafkaTriggers.update_pipeline(supervisor, trigger)
+        KafkaTriggers.update_pipeline(supervisor, trigger.id)
 
         assert_called(Supervisor.terminate_child(supervisor, trigger.id))
         assert_called(Supervisor.delete_child(supervisor, trigger.id))
@@ -1463,7 +1461,7 @@ defmodule Lightning.KafkaTriggersTest do
         ],
         terminate_child: fn _sup_pid, _child_id -> {:ok, "anything"} end,
         which_children: fn _sup_pid -> [] end do
-        KafkaTriggers.update_pipeline(supervisor, trigger)
+        KafkaTriggers.update_pipeline(supervisor, trigger.id)
 
         assert_called(Supervisor.terminate_child(supervisor, trigger.id))
         assert_called(Supervisor.delete_child(supervisor, trigger.id))
@@ -1494,7 +1492,7 @@ defmodule Lightning.KafkaTriggersTest do
           )
         ],
         which_children: fn _sup_pid -> [] end do
-        KafkaTriggers.update_pipeline(supervisor, trigger)
+        KafkaTriggers.update_pipeline(supervisor, trigger.id)
 
         assert_called(Supervisor.delete_child(supervisor, trigger.id))
         assert_called_exactly(Supervisor.start_child(supervisor, child_spec), 2)
@@ -1506,6 +1504,23 @@ defmodule Lightning.KafkaTriggersTest do
         ]
 
         assert call_sequence() == expected_call_sequence
+      end
+    end
+
+    test "cannot find a trigger with the given trigger id", %{
+      supervisor: supervisor
+    } do
+      trigger_id = Ecto.UUID.generate()
+
+      with_mock Supervisor, [:passthrough],
+        delete_child: fn _sup_pid, _child_id -> {:ok, "anything"} end,
+        start_child: fn _sup_pid, _child_spec -> {:ok, "fake-pid"} end,
+        terminate_child: fn _sup_pid, _child_id -> {:ok, "anything"} end do
+        KafkaTriggers.update_pipeline(supervisor, trigger_id)
+
+        assert_not_called(Supervisor.terminate_child(:_, :_))
+        assert_not_called(Supervisor.delete_child(:_, :_))
+        assert_not_called(Supervisor.start_child(:_, :_))
       end
     end
 
