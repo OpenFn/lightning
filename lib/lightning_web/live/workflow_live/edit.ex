@@ -109,7 +109,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
             disabled={!@has_presence_edit_priority}
             phx-click="switch-version"
             phx-value-type="commit"
-            color_class="text-white bg-primary-600 hover:bg-primary-700 disabled:bg-primary-400"
+            color_class="text-white bg-primary-600 hover:bg-primary-700 disabled:bg-primary-300"
           >
             Switch to the latest version
             <Heroicons.arrow_up_on_square_stack class="w-4 h-4 ml-1" />
