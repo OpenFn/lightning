@@ -9,11 +9,11 @@ defmodule LightningWeb.WorkflowLive.EditTest do
   import Ecto.Query
 
   alias Lightning.Helpers
-  alias Lightning.Workflows.Snapshot
-  alias Lightning.Workflows
   alias Lightning.Repo
-  alias LightningWeb.CredentialLiveHelpers
+  alias Lightning.Workflows
+  alias Lightning.Workflows.Snapshot
   alias Lightning.Workflows.Workflow
+  alias LightningWeb.CredentialLiveHelpers
 
   setup :register_and_log_in_user
   setup :create_project_for_current_user
@@ -104,7 +104,6 @@ defmodule LightningWeb.WorkflowLive.EditTest do
                 "name" => ["Job name can't be blank."]
               }
             },
-            %{op: "add", path: "/jobs/0/disabled", value: false},
             %{op: "add", path: "/jobs/0/body", value: ""},
             %{
               op: "add",
@@ -362,6 +361,10 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       assert snapshot.lock_version < workflow.lock_version
 
       version = String.slice(snapshot.id, 0..6)
+
+      view
+      |> element("a[href='/projects/#{project.id}/w']", "Workflows")
+      |> render_click()
 
       {:ok, view, _html} =
         live(
