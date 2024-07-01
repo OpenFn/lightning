@@ -6,7 +6,6 @@ export namespace Lightning {
     id: string;
     name: string;
     workflow_id: string;
-    disabled: boolean;
 
     // Not technically from Lightning, but we'll infer this and scribble it
     placeholder?: boolean;
@@ -44,7 +43,6 @@ export namespace Lightning {
     error_path?: boolean;
     errors: any;
     condition_label?: string;
-    disabled: boolean;
   }
 
   export type Workflow = {
@@ -53,6 +51,7 @@ export namespace Lightning {
     triggers: TriggerNode[];
     jobs: JobNode[];
     edges: Edge[];
+    disabled: boolean;
   };
 }
 
