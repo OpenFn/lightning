@@ -108,9 +108,10 @@ defmodule LightningWeb.WorkflowLive.Edit do
             :if={@snapshot_version_tag != "latest"}
             id={"version-switcher-button-#{@workflow.id}"}
             type="button"
+            disabled={!@has_presence_edit_priority}
             phx-click="switch-version"
             phx-value-type="commit"
-            color_class="text-white bg-primary-600 hover:bg-primary-700"
+            color_class="text-white bg-primary-600 hover:bg-primary-700 disabled:bg-primary-400"
           >
             Switch to latest version
           </.button>
@@ -1078,6 +1079,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
       |> assign(workflow_params: next_params)
       |> assign(snapshot_version_tag: version)
       |> push_event("patches-applied", %{patches: patches})
+      |> maybe_disable_canvas()
       |> push_patch(to: url)
     end
   end
@@ -1125,9 +1127,17 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
   def handle_event("switch-version", %{"type" => type}, socket) do
     updated_socket =
-      case type do
-        "commit" -> commit_latest_version(socket)
-        "toggle" -> toggle_latest_version(socket)
+      if socket.assigns.has_presence_edit_priority do
+        case type do
+          "commit" -> commit_latest_version(socket)
+          "toggle" -> toggle_latest_version(socket)
+        end
+      else
+        put_flash(
+          socket,
+          :info,
+          "Can't switch to the latest version in low priority mode."
+        )
       end
 
     {:noreply, updated_socket}
@@ -1605,12 +1615,19 @@ defmodule LightningWeb.WorkflowLive.Edit do
     {:noreply,
      socket
      |> assign(summary)
-     |> disable_diagram(!summary.has_presence_edit_priority)}
+     |> maybe_disable_canvas()}
   end
 
   def handle_info(%{}, socket), do: {:noreply, socket}
 
-  defp disable_diagram(socket, disabled) do
+  defp maybe_disable_canvas(socket) do
+    %{
+      has_presence_edit_priority: has_edit_priority,
+      snapshot_version_tag: version
+    } = socket.assigns
+
+    disabled = !has_edit_priority or version != "latest"
+
     push_event(socket, "set-disabled", %{disabled: disabled})
   end
 
@@ -1864,7 +1881,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
   end
 
   defp assign_workflow(socket, workflow, snapshot) do
-    {changeset, snapshot_version_tag} =
+    {changeset, version} =
       if snapshot.lock_version == workflow.lock_version do
         {Ecto.Changeset.change(workflow), "latest"}
       else
@@ -1874,8 +1891,9 @@ defmodule LightningWeb.WorkflowLive.Edit do
     socket
     |> assign(workflow: workflow)
     |> assign(snapshot: snapshot)
-    |> assign(snapshot_version_tag: snapshot_version_tag)
+    |> assign(snapshot_version_tag: version)
     |> assign_changeset(changeset)
+    |> maybe_disable_canvas()
   end
 
   defp apply_params(socket, params, type) do
