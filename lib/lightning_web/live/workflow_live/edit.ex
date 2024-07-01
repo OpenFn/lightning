@@ -1602,10 +1602,17 @@ defmodule LightningWeb.WorkflowLive.Edit do
       |> Presence.list_presences()
       |> build_presence_summary(socket.assigns.current_user)
 
-    {:noreply, assign(socket, summary)}
+    {:noreply,
+     socket
+     |> assign(summary)
+     |> disable_diagram(!summary.has_presence_edit_priority)}
   end
 
   def handle_info(%{}, socket), do: {:noreply, socket}
+
+  defp disable_diagram(socket, disabled) do
+    push_event(socket, "set-disabled", %{disabled: disabled})
+  end
 
   defp initial_presence_summary(current_user) do
     init_user_presence = %Presence{

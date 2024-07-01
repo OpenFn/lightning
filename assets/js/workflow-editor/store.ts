@@ -24,6 +24,7 @@ export type WorkflowProps = {
   triggers: Lightning.TriggerNode[];
   jobs: Lightning.JobNode[];
   edges: Lightning.Edge[];
+  disabled: boolean;
 };
 
 export interface WorkflowState extends WorkflowProps {
@@ -36,6 +37,7 @@ export interface WorkflowState extends WorkflowProps {
   ) => T | undefined;
   onChange: (pendingAction: PendingAction) => void;
   applyPatches: (patches: Patch[]) => void;
+  setDisabled: (value: boolean) => void;
 }
 
 // Immer's Patch type has an array of strings for the path, but RFC 6902
@@ -74,6 +76,7 @@ export const createWorkflowStore = (
     triggers: [],
     jobs: [],
     edges: [],
+    disabled: false,
   };
 
   // Calculate the next state using Immer, and then call the onChange callback
@@ -216,6 +219,12 @@ export const createWorkflowStore = (
       set(state => applyPatches(state, immerPatches));
     },
     onChange,
+    setDisabled: (value: boolean) => {
+      set(state => ({
+        ...state,
+        disabled: value,
+      }));
+    },
   }));
 };
 
