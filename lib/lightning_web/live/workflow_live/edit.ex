@@ -1462,7 +1462,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
       {:error, %{text: message}} ->
         {:noreply, put_flash(socket, :error, message)}
 
-      {:error, changeset} ->
+      {:error, _changeset} ->
         {
           :noreply,
           socket
