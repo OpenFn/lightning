@@ -395,9 +395,11 @@ defmodule Lightning.KafkaTriggers do
     end)
   end
 
-  def update_pipeline(supervisor, trigger) do
-    case trigger do
-      %{enabled: true} ->
+  def update_pipeline(supervisor, trigger_id) do
+    case Repo.get(Trigger, trigger_id) do
+      nil ->
+        nil
+      %{enabled: true} = trigger ->
         spec = generate_pipeline_child_spec(trigger)
 
         case Supervisor.start_child(supervisor, spec) do
@@ -414,7 +416,7 @@ defmodule Lightning.KafkaTriggers do
             response
         end
 
-      %{enabled: false} ->
+      %{enabled: false} = trigger ->
         Supervisor.terminate_child(supervisor, trigger.id)
         Supervisor.delete_child(supervisor, trigger.id)
     end

@@ -101,14 +101,19 @@ defmodule Lightning.WorkflowsTest do
         {kafka_trigger_2, %{enabled: true}},
       ]
 
+      kafka_trigger_1_id = kafka_trigger_1.id
+      cron_trigger_1_id = cron_trigger_1.id
+      kafka_trigger_2_id = kafka_trigger_2.id
+
       changeset = workflow |> build_changeset(triggers)
 
       Events.subscribe_to_kafka_trigger_updated()
 
       changeset |> Workflows.save_workflow()
 
-      assert_received %KafkaTriggerUpdated{trigger: ^kafka_trigger_1}
-      assert_received %KafkaTriggerUpdated{trigger: ^kafka_trigger_2}
+      assert_received %KafkaTriggerUpdated{trigger_id: ^kafka_trigger_1_id}
+      assert_received %KafkaTriggerUpdated{trigger_id: ^kafka_trigger_2_id}
+      refute_received %KafkaTriggerUpdated{trigger_id: ^cron_trigger_1_id}
     end
 
     test "save_workflow/1 does not publish events if save fails" do
@@ -146,14 +151,19 @@ defmodule Lightning.WorkflowsTest do
         {kafka_trigger_2, %{enabled: true}},
       ]
 
+      kafka_trigger_1_id = kafka_trigger_1.id
+      cron_trigger_1_id = cron_trigger_1.id
+      kafka_trigger_2_id = kafka_trigger_2.id
+
       changeset = workflow |> build_changeset(triggers)
 
       Events.subscribe_to_kafka_trigger_updated()
 
       changeset |> Workflows.save_workflow()
 
-      refute_received %KafkaTriggerUpdated{trigger: ^kafka_trigger_1}
-      refute_received %KafkaTriggerUpdated{trigger: ^kafka_trigger_2}
+      refute_received %KafkaTriggerUpdated{trigger_id: ^kafka_trigger_1_id}
+      refute_received %KafkaTriggerUpdated{trigger_id: ^kafka_trigger_2_id}
+      refute_received %KafkaTriggerUpdated{trigger_id: ^cron_trigger_1_id}
     end
 
     defp build_changeset(workflow, triggers_and_attrs) do
