@@ -82,18 +82,10 @@ defmodule Lightning.KafkaTriggers.Pipeline do
         trigger
         |> KafkaTriggers.update_partition_data(partition, timestamp)
 
-        # IO.inspect(message, label: :full_message)
-        # %Broadway.Message{data: data, metadata: %{ts: ts}} = message
-
-        IO.puts(
-          ">>>> #{trigger_id} received #{data} on #{partition} produced at #{timestamp}"
-        )
-
-      # IO.inspect(message)
       {:error,
        %{errors: [trigger_id: {_, [constraint: :unique, constraint_name: _]}]}} ->
         IO.puts(
-          "**** #{trigger_id} received DUPLICATE #{data} on #{partition} produced at #{timestamp}"
+          "**** #{trigger_id} received DUPLICATE on #{partition} produced at #{timestamp}"
         )
 
       _ ->
@@ -119,11 +111,12 @@ defmodule Lightning.KafkaTriggers.Pipeline do
   end
 
   defp client_config(opts) do
+    connect_timeout = opts |> Keyword.get(:connect_timeout)
     sasl = opts |> Keyword.get(:sasl)
     ssl = opts |> Keyword.get(:ssl)
 
     # TODO Not tested
-    base_config = [{:ssl, ssl}, {:connect_timeout, 30000}]
+    base_config = [{:ssl, ssl}, {:connect_timeout, connect_timeout}]
 
     case sasl do
       nil ->

@@ -24,6 +24,7 @@ defmodule Lightning.KafkaTriggers.PipelineTest do
       with_mock Broadway,
         start_link: fn _module, _opts -> {:ok, "fake-pid"} end do
         Pipeline.start_link(
+          connect_timeout: 15_000,
           group_id: group_id,
           hosts: hosts,
           offset_reset_policy: offset_reset_policy,
@@ -47,7 +48,7 @@ defmodule Lightning.KafkaTriggers.PipelineTest do
                          client_config: [
                            sasl: sasl_expected,
                            ssl: ssl,
-                           connect_timeout: 30000
+                           connect_timeout: 15_000
                          ],
                          hosts: hosts,
                          group_id: group_id,
@@ -80,6 +81,7 @@ defmodule Lightning.KafkaTriggers.PipelineTest do
       with_mock Broadway,
         start_link: fn _module, _opts -> {:ok, "fake-pid"} end do
         Pipeline.start_link(
+          connect_timeout: 15_000,
           group_id: group_id,
           hosts: hosts,
           offset_reset_policy: offset_reset_policy,
@@ -100,7 +102,7 @@ defmodule Lightning.KafkaTriggers.PipelineTest do
                      module: {
                        BroadwayKafka.Producer,
                        [
-                         client_config: [ssl: ssl, connect_timeout: 30000],
+                         client_config: [ssl: ssl, connect_timeout: 15_000],
                          hosts: hosts,
                          group_id: group_id,
                          topics: topics,

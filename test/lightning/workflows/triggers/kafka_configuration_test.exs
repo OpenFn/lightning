@@ -128,6 +128,7 @@ defmodule Lightning.Workflows.Triggers.KafkaConfigurationTest do
   describe "changeset/2" do
     setup do
       base_changes = %{
+        connect_timeout: 7,
         hosts: [
           ["host1", "9092"],
           ["host2", "9093"]
@@ -144,6 +145,7 @@ defmodule Lightning.Workflows.Triggers.KafkaConfigurationTest do
       }
 
       base_expectation = %{
+        connect_timeout: 7,
         hosts: [
           ["host1", "9092"],
           ["host2", "9093"]
@@ -383,6 +385,97 @@ defmodule Lightning.Workflows.Triggers.KafkaConfigurationTest do
                initial_offset_reset_policy: {
                  "can't be blank",
                  [{:validation, :required}]
+               }
+             ]
+    end
+
+    test "is invalid if connect_timeout is not provided", %{
+      base_changes: base_changes
+    } do
+      changeset =
+        KafkaConfiguration.changeset(
+          %KafkaConfiguration{},
+          base_changes
+          |> Map.merge(%{connect_timeout: nil})
+        )
+
+      assert %Changeset{errors: errors, valid?: false} = changeset
+
+      assert errors == [
+               connect_timeout: {
+                 "can't be blank",
+                 [{:validation, :required}]
+               }
+             ]
+    end
+
+    test "is invalid if connect_timeout is not an integer", %{
+      base_changes: base_changes
+    } do
+      changeset =
+        KafkaConfiguration.changeset(
+          %KafkaConfiguration{},
+          base_changes
+          |> Map.merge(%{connect_timeout: 1.5})
+        )
+
+      assert %Changeset{errors: errors, valid?: false} = changeset
+
+      assert errors == [
+               connect_timeout: {
+                 "is invalid",
+                 [
+                   {:type, :integer},
+                   {:validation, :cast}
+                 ]
+               }
+             ]
+    end
+
+    test "is invalid if connect_timeout is negative", %{
+      base_changes: base_changes
+    } do
+      changeset =
+        KafkaConfiguration.changeset(
+          %KafkaConfiguration{},
+          base_changes
+          |> Map.merge(%{connect_timeout: -1})
+        )
+
+      assert %Changeset{errors: errors, valid?: false} = changeset
+
+      assert errors == [
+               connect_timeout: {
+                 "must be greater than %{number}",
+                 [
+                   {:validation, :number},
+                   {:kind, :greater_than},
+                   {:number, 0}
+                 ]
+               }
+             ]
+    end
+
+    test "is invalid if connect_timeout is zero", %{
+      base_changes: base_changes
+    } do
+      changeset =
+        KafkaConfiguration.changeset(
+          %KafkaConfiguration{},
+          base_changes
+          |> Map.merge(%{connect_timeout: 0})
+        )
+
+      assert %Changeset{errors: errors, valid?: false} = changeset
+
+      assert errors == [
+               connect_timeout: {
+                 "must be greater than %{number}",
+                 [
+                   {:validation, :number},
+                   {:kind, :greater_than},
+                   {:number, 0}
+                 ]
                }
              ]
     end

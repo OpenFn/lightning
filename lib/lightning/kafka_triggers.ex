@@ -301,6 +301,7 @@ defmodule Lightning.KafkaTriggers do
   """
   def generate_pipeline_child_spec(trigger) do
     %{
+      connect_timeout: connect_timeout,
       group_id: group_id,
       hosts: hosts_list,
       password: password,
@@ -332,6 +333,7 @@ defmodule Lightning.KafkaTriggers do
         :start_link,
         [
           [
+            connect_timeout: connect_timeout * 1000,
             group_id: group_id,
             hosts: hosts,
             offset_reset_policy: offset_reset_policy,

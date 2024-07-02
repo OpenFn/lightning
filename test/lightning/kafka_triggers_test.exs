@@ -1286,6 +1286,7 @@ defmodule Lightning.KafkaTriggersTest do
       initial_offset_reset_policy = "171524976732#{index}"
 
       %{
+        connect_timeout: 30 + index,
         group_id: "lightning-#{index}",
         hosts: [["host-#{index}", "9092"], ["other-host-#{index}", "9093"]],
         initial_offset_reset_policy: initial_offset_reset_policy,
@@ -1599,6 +1600,7 @@ defmodule Lightning.KafkaTriggersTest do
         :start_link,
         [
           [
+            connect_timeout: (30 + index) * 1000,
             group_id: "lightning-#{index}",
             hosts: [{"host-#{index}", 9092}, {"other-host-#{index}", 9093}],
             offset_reset_policy: {:timestamp, offset_timestamp},
@@ -1625,6 +1627,7 @@ defmodule Lightning.KafkaTriggersTest do
     initial_offset_reset_policy = "171524976732#{index}"
 
     %{
+      connect_timeout: 30 + index,
       group_id: "lightning-#{index}",
       hosts: [["host-#{index}", "9092"], ["other-host-#{index}", "9093"]],
       initial_offset_reset_policy: initial_offset_reset_policy,
