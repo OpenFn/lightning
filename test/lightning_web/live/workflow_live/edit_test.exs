@@ -454,8 +454,6 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       last_job = List.last(snapshot.jobs)
       last_edge = List.last(snapshot.edges)
 
-      # IO.inspect(snapshot.edges)
-
       assert force_event(view, :save) =~
                "Cannot save in snapshot mode, switch to the latest version."
 

@@ -65,6 +65,7 @@ defmodule LightningWeb.WorkflowLive.JobView do
   attr :display_banner, :boolean, default: false
   attr :banner_message, :string, default: ""
   attr :presences, :list, required: true
+  attr :prior_user_presence, :any, required: true
 
   slot :footer
 
@@ -119,6 +120,7 @@ defmodule LightningWeb.WorkflowLive.JobView do
             id="inspector-online-users"
             presences={@presences}
             current_user={@current_user}
+            prior_user={@prior_user_presence.user}
           />
           <div class="flex flex-grow items-center justify-end">
             <.offline_indicator />

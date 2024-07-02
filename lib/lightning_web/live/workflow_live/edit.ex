@@ -54,7 +54,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
         save_and_run_disabled: save_and_run_disabled?(assigns),
         display_banner:
           !assigns.has_presence_edit_priority &&
-            assigns.current_user.id not in assigns.view_only_users_ids,
+            assigns.current_user.id not in assigns.view_only_users_ids &&
+            assigns.snapshot_version_tag == "latest",
         banner_message:
           banner_message(
             assigns.current_user_presence,
@@ -96,7 +97,10 @@ defmodule LightningWeb.WorkflowLive.Edit do
           </:title>
 
           <div class="mx-2"></div>
-          <div :if={@snapshot_version_tag != "latest"} class="flex">
+          <div
+            :if={@snapshot_version_tag != "latest" && @can_edit_workflow}
+            class="flex"
+          >
             <div class="flex-shrink-0">
               <Heroicons.information_circle solid class="h-5 w-5 text-indigo-500" />
             </div>
@@ -111,7 +115,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
             :if={@snapshot_version_tag != "latest"}
             id={"version-switcher-button-#{@workflow.id}"}
             type="button"
-            disabled={!@has_presence_edit_priority}
             phx-click="switch-version"
             phx-value-type="commit"
             color_class="text-white bg-primary-600 hover:bg-primary-700 disabled:bg-primary-300"
@@ -166,6 +169,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
               display_banner={@display_banner}
               banner_message={@banner_message}
               presences={@presences}
+              prior_user_presence={@prior_user_presence}
               project={@project}
               socket={@socket}
               follow_run_id={@follow_run && @follow_run.id}
@@ -1028,7 +1032,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
   end
 
   defp track_user_presence(socket) do
-    if connected?(socket) do
+    if connected?(socket) && socket.assigns.snapshot_version_tag == "latest" do
       Presence.track_user_presence(
         socket.assigns.current_user,
         "workflow-#{socket.assigns.workflow.id}:presence",
@@ -1084,6 +1088,14 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
       url = ~p"/projects/#{project.id}/w/#{workflow.id}?#{query_params}"
 
+      if version != "latest" do
+        Presence.untrack(
+          socket.assigns.pid,
+          "workflow-#{socket.assigns.workflow.id}:presence",
+          socket.assigns.current_user.id
+        )
+      end
+
       socket
       |> assign(changeset: next_changeset)
       |> assign(workflow_params: next_params)
@@ -1107,7 +1119,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
     patches = WorkflowParams.to_patches(prev_params, next_params)
 
-    lock_version = Ecto.Changeset.get_field(next_changeset, :lock_version)
+    lock_version =
+      Ecto.Changeset.get_field(next_changeset, :lock_version)
 
     query_params =
       socket.assigns.query_params
@@ -1137,17 +1150,9 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
   def handle_event("switch-version", %{"type" => type}, socket) do
     updated_socket =
-      if socket.assigns.has_presence_edit_priority do
-        case type do
-          "commit" -> commit_latest_version(socket)
-          "toggle" -> toggle_latest_version(socket)
-        end
-      else
-        put_flash(
-          socket,
-          :info,
-          "Can't switch to the latest version in low priority mode."
-        )
+      case type do
+        "commit" -> commit_latest_version(socket)
+        "toggle" -> toggle_latest_version(socket)
       end
 
     {:noreply, updated_socket}
@@ -1225,7 +1230,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
       has_presence_edit_priority: has_presence_edit_priority
     } = socket.assigns
 
-    # IO.inspect(selected_edge)
+    # TODO: SELECTED EDGE CAN BE NULL SOMETIMES !
 
     with true <- can_edit_workflow || :not_authorized,
          true <-
@@ -1624,7 +1629,11 @@ defmodule LightningWeb.WorkflowLive.Edit do
       |> Presence.list_presences()
       |> build_presence_summary(socket)
 
-    {:noreply, socket |> assign(summary) |> maybe_disable_canvas()}
+    {:noreply,
+     socket
+     |> assign(summary)
+     |> maybe_switch_workflow_version()
+     |> maybe_disable_canvas()}
   end
 
   def handle_info(%{}, socket), do: {:noreply, socket}
@@ -1639,6 +1648,40 @@ defmodule LightningWeb.WorkflowLive.Edit do
     disabled = !(has_edit_priority && version == "latest" && can_edit_workflow)
 
     push_event(socket, "set-disabled", %{disabled: disabled})
+  end
+
+  defp maybe_switch_workflow_version(socket) do
+    %{
+      workflow: workflow,
+      prior_user_presence: prior_presence,
+      current_user: current_user,
+      selected_run: selected_run
+    } = socket.assigns
+
+    if prior_presence.user.id == current_user.id do
+      reloaded_workflow = reload_workflow(workflow)
+
+      socket = assign(socket, workflow: reloaded_workflow)
+
+      if selected_run do
+        toggle_latest_version(socket)
+      else
+        commit_latest_version(socket)
+      end
+    else
+      socket
+    end
+  end
+
+  defp reload_workflow(%Workflow{id: workflow_id}) do
+    Workflows.get_workflow(workflow_id)
+    |> Lightning.Repo.preload([
+      :edges,
+      triggers: Trigger.with_auth_methods_query(),
+      jobs:
+        {Workflows.jobs_ordered_subquery(),
+         [:credential, steps: Invocation.Query.any_step()]}
+    ])
   end
 
   defp initial_presence_summary(current_user) do
