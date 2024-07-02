@@ -13,7 +13,7 @@
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-EPF2X7PV.js"></script>
-    <script src="dist/sidebar_items-82382B84.js"></script>
+    <script src="dist/sidebar_items-B855D843.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -210,7 +210,7 @@ by <code class="inline">actor_id</code>.</p></div>
     </a>
     <h1 class="signature" translate="no">update_changes(changes)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auditing/audit.ex#L12" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auditing/audit.ex#L10" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -254,7 +254,7 @@ by <code class="inline">actor_id</code>.</p></div>
     </a>
     <h1 class="signature" translate="no">event(item_type, event, item_id, actor_id, changes \\ %{}, update_fun \\ fn x -&gt; x end)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auditing/audit.ex#L182" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auditing/audit.ex#L179" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -269,17 +269,17 @@ by <code class="inline">actor_id</code>.</p></div>
           <pre translate="no"><span class="attribute">@spec</span> event(
   <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>(),
   <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>(),
-  <a href="https://hexdocs.pm/ecto/3.10.3/Ecto.UUID.html#t:t/0">Ecto.UUID.t</a>(),
-  <a href="https://hexdocs.pm/ecto/3.10.3/Ecto.UUID.html#t:t/0">Ecto.UUID.t</a>(),
-  <a href="https://hexdocs.pm/ecto/3.10.3/Ecto.Changeset.html#t:t/0">Ecto.Changeset.t</a>() | <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>() | nil,
+  <a href="https://hexdocs.pm/ecto/3.11.2/Ecto.UUID.html#t:t/0">Ecto.UUID.t</a>(),
+  <a href="https://hexdocs.pm/ecto/3.11.2/Ecto.UUID.html#t:t/0">Ecto.UUID.t</a>(),
+  <a href="https://hexdocs.pm/ecto/3.11.2/Ecto.Changeset.html#t:t/0">Ecto.Changeset.t</a>() | <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>() | nil,
   update_changes_fun :: (<a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>() -&gt; <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>())
-) :: :no_changes | <a href="https://hexdocs.pm/ecto/3.10.3/Ecto.Changeset.html#t:t/0">Ecto.Changeset.t</a>()</pre>
+) :: :no_changes | <a href="https://hexdocs.pm/ecto/3.11.2/Ecto.Changeset.html#t:t/0">Ecto.Changeset.t</a>()</pre>
 
       </div>
 
 <p>Creates a <code class="inline">changeset</code> for the <code class="inline">event</code> identified by <code class="inline">item_id</code> and caused
-by <code class="inline">actor_id</code>.</p><p>The given <code class="inline">changes</code> can be either <code class="inline">nil</code>, <a href="https://hexdocs.pm/ecto/3.10.3/Ecto.Changeset.html"><code class="inline">Ecto.Changeset</code></a>, struct or map.</p><p>It returns <code class="inline">:no_changes</code> in case of an <a href="https://hexdocs.pm/ecto/3.10.3/Ecto.Changeset.html"><code class="inline">Ecto.Changeset</code></a> changes that changed nothing
-or an <a href="https://hexdocs.pm/ecto/3.10.3/Ecto.Changeset.html"><code class="inline">Ecto.Changeset</code></a> with the event ready to be inserted.</p>
+by <code class="inline">actor_id</code>.</p><p>The given <code class="inline">changes</code> can be either <code class="inline">nil</code>, <a href="https://hexdocs.pm/ecto/3.11.2/Ecto.Changeset.html"><code class="inline">Ecto.Changeset</code></a>, struct or map.</p><p>It returns <code class="inline">:no_changes</code> in case of an <a href="https://hexdocs.pm/ecto/3.11.2/Ecto.Changeset.html"><code class="inline">Ecto.Changeset</code></a> changes that changed nothing
+or an <a href="https://hexdocs.pm/ecto/3.11.2/Ecto.Changeset.html"><code class="inline">Ecto.Changeset</code></a> with the event ready to be inserted.</p>
   </section>
 </section>
 <section class="detail" id="save/2">
@@ -291,7 +291,7 @@ or an <a href="https://hexdocs.pm/ecto/3.10.3/Ecto.Changeset.html"><code class="
     </a>
     <h1 class="signature" translate="no">save(changes, repo)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auditing/audit.ex#L154" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auditing/audit.ex#L151" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -303,8 +303,8 @@ or an <a href="https://hexdocs.pm/ecto/3.10.3/Ecto.Changeset.html"><code class="
 
       <div class="specs">
 
-          <pre translate="no"><span class="attribute">@spec</span> save(<a href="https://hexdocs.pm/ecto/3.10.3/Ecto.Changeset.html#t:t/0">Ecto.Changeset.t</a>() | :no_changes, <a href="https://hexdocs.pm/ecto/3.10.3/Ecto.Repo.html#t:t/0">Ecto.Repo.t</a>()) ::
-  {:ok, :no_changes} | {:ok, <a href="https://hexdocs.pm/ecto/3.10.3/Ecto.Schema.html#t:t/0">Ecto.Schema.t</a>()} | {:error, <a href="https://hexdocs.pm/ecto/3.10.3/Ecto.Changeset.html#t:t/0">Ecto.Changeset.t</a>()}</pre>
+          <pre translate="no"><span class="attribute">@spec</span> save(<a href="https://hexdocs.pm/ecto/3.11.2/Ecto.Changeset.html#t:t/0">Ecto.Changeset.t</a>() | :no_changes, <a href="https://hexdocs.pm/ecto/3.11.2/Ecto.Repo.html#t:t/0">Ecto.Repo.t</a>()) ::
+  {:ok, :no_changes} | {:ok, <a href="https://hexdocs.pm/ecto/3.11.2/Ecto.Schema.html#t:t/0">Ecto.Schema.t</a>()} | {:error, <a href="https://hexdocs.pm/ecto/3.11.2/Ecto.Changeset.html#t:t/0">Ecto.Changeset.t</a>()}</pre>
 
       </div>
 
