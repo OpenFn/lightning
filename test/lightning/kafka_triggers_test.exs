@@ -1304,7 +1304,7 @@ defmodule Lightning.KafkaTriggersTest do
       %{workflow: insert(:workflow) |> Repo.preload(:triggers)}
     end
 
-    test "returns kafka triggers contained within changeset", %{
+    test "returns updated kafka trigger ids contained within changeset", %{
       workflow: workflow
     } do
       kafka_configuration = build(:triggers_kafka_configuration)
@@ -1353,8 +1353,31 @@ defmodule Lightning.KafkaTriggersTest do
       changeset = workflow |> build_changeset(triggers)
 
       assert KafkaTriggers.get_kafka_triggers_being_updated(changeset) == [
-               kafka_trigger_1,
-               kafka_trigger_2
+               kafka_trigger_1.id,
+               kafka_trigger_2.id
+             ]
+    end
+
+    test "returns ids for new kafka triggers being inserted", %{
+      workflow: workflow
+    } do
+      kafka_trigger_1_id = Ecto.UUID.generate()
+      cron_trigger_1_id = Ecto.UUID.generate()
+      kafka_trigger_2_id = Ecto.UUID.generate()
+      webhook_trigger_1_id = Ecto.UUID.generate()
+
+      triggers = [
+        {%Trigger{}, %{id: kafka_trigger_1_id, type: :kafka}},
+        {%Trigger{}, %{id: cron_trigger_1_id, type: :cron}},
+        {%Trigger{}, %{id: kafka_trigger_2_id, type: :kafka}},
+        {%Trigger{}, %{id: webhook_trigger_1_id, type: :webhook}}
+      ]
+
+      changeset = workflow |> build_changeset(triggers)
+
+      assert KafkaTriggers.get_kafka_triggers_being_updated(changeset) == [
+               kafka_trigger_1_id,
+               kafka_trigger_2_id
              ]
     end
 
@@ -1507,7 +1530,7 @@ defmodule Lightning.KafkaTriggersTest do
       end
     end
 
-    test "cannot find a trigger with the given trigger id", %{
+    test "cannot find a trigger with the given trigger id - does nothing", %{
       supervisor: supervisor
     } do
       trigger_id = Ecto.UUID.generate()
@@ -1521,6 +1544,34 @@ defmodule Lightning.KafkaTriggersTest do
         assert_not_called(Supervisor.terminate_child(:_, :_))
         assert_not_called(Supervisor.delete_child(:_, :_))
         assert_not_called(Supervisor.start_child(:_, :_))
+      end
+    end
+
+    test "enabled trigger exists but is not a kafka trigger - does nothing", %{
+      supervisor: supervisor
+    } do
+      trigger = insert(:trigger, type: :webhook, enabled: true)
+
+      with_mock Supervisor, [:passthrough],
+        start_child: fn _sup_pid, _child_spec -> {:ok, "fake-pid"} end do
+        KafkaTriggers.update_pipeline(supervisor, trigger.id)
+
+        assert_not_called(Supervisor.start_child(:_, :_))
+      end
+    end
+
+    test "disabled trigger exists but is not a kafka trigger - does nothing", %{
+      supervisor: supervisor
+    } do
+      trigger = insert(:trigger, type: :cron, enabled: false)
+
+      with_mock Supervisor, [:passthrough],
+        delete_child: fn _sup_pid, _child_id -> {:ok, "anything"} end,
+        terminate_child: fn _sup_pid, _child_id -> {:ok, "anything"} end do
+        KafkaTriggers.update_pipeline(supervisor, trigger.id)
+
+        assert_not_called(Supervisor.terminate_child(:_, :_))
+        assert_not_called(Supervisor.delete_child(:_, :_))
       end
     end
 

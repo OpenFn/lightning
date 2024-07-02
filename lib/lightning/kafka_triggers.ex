@@ -1,6 +1,7 @@
 defmodule Lightning.KafkaTriggers do
   import Ecto.Query
 
+  alias Ecto.Changeset
   alias Lightning.KafkaTriggers.TriggerKafkaMessage
   alias Lightning.Repo
   alias Lightning.Workflows.Trigger
@@ -377,7 +378,7 @@ defmodule Lightning.KafkaTriggers do
 
   def get_kafka_triggers_being_updated(changeset) do
     changeset
-    |> Ecto.Changeset.fetch_change(:triggers)
+    |> Changeset.fetch_change(:triggers)
     |> case do
       :error ->
         []
@@ -386,17 +387,22 @@ defmodule Lightning.KafkaTriggers do
         triggers
     end
     |> Enum.filter(fn changeset ->
-      %Ecto.Changeset{data: trigger} = changeset
+      {_data_or_change, type} = 
+        changeset
+        |> Changeset.fetch_field(:type)
 
-      trigger.type == :kafka
+      type == :kafka
     end)
     |> Enum.map(fn changeset ->
-      changeset.data
+      {_data_or_change, id} = Changeset.fetch_field(changeset, :id)
+      id
     end)
   end
 
   def update_pipeline(supervisor, trigger_id) do
-    case Repo.get(Trigger, trigger_id) do
+    Trigger
+    |> Repo.get_by(id: trigger_id, type: :kafka)
+    |> case do
       nil ->
         nil
       %{enabled: true} = trigger ->
