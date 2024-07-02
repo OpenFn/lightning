@@ -48,6 +48,15 @@ defmodule LightningWeb.Endpoint do
     if: {LightningWeb.PromExPlugAuthorization, nil},
     do: {PromEx.Plug, prom_ex_module: Lightning.PromEx}
 
+  @plug_extensions Application.compile_env(
+                     :lightning,
+                     Lightning.Extensions.Plugs,
+                     []
+                   )
+  for {plug, mfa_opts} <- @plug_extensions do
+    plug Replug, plug: plug, opts: mfa_opts
+  end
+
   plug Replug,
     plug: Plug.Parsers,
     opts: {LightningWeb.PlugConfigs, :plug_parsers}
