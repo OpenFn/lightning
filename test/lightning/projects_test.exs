@@ -1,5 +1,6 @@
 defmodule Lightning.ProjectsTest do
   require Phoenix.VerifiedRoutes
+  alias Swoosh.Email
   use Lightning.DataCase, async: true
 
   alias Lightning.Invocation.Dataclip
@@ -580,30 +581,29 @@ defmodule Lightning.ProjectsTest do
       user_2 = insert(:user, email: "user_2@openfn.org", first_name: "user_2")
 
       project =
-        project_fixture(
+        insert(:project,
           name: "project-to-delete",
-          project_users: [%{user_id: user_1.id}, %{user_id: user_2.id}]
+          project_users: [%{user: user_1}, %{user: user_2}]
         )
 
       assert project.scheduled_deletion == nil
 
       Projects.schedule_project_deletion(project)
 
-      project = Projects.get_project!(project.id)
-      assert project.scheduled_deletion != nil
-
       admin_email = Lightning.Config.instance_admin_email()
 
-      [user_1, user_2]
-      |> Enum.each(fn user ->
-        actual_deletion_date =
-          Lightning.Config.purge_deleted_after_days()
-          |> Lightning.Helpers.actual_deletion_date()
-          |> Lightning.Helpers.format_date()
+      actual_deletion_date =
+        Lightning.Config.purge_deleted_after_days()
+        |> Lightning.Helpers.actual_deletion_date()
+        |> Lightning.Helpers.format_date()
 
-        assert_email_sent(
+      for user <- [user_1, user_2] do
+        email = %Email{
           subject: "Project scheduled for deletion",
           to: [{"", user.email}],
+          from:
+            {Lightning.Config.email_sender_name(),
+             Lightning.Config.instance_admin_email()},
           text_body: """
           Hi #{user.first_name},
 
@@ -615,8 +615,13 @@ defmodule Lightning.ProjectsTest do
 
           OpenFn
           """
-        )
-      end)
+        }
+
+        assert_email_sent(email)
+      end
+
+      project = Repo.reload!(project)
+      assert project.scheduled_deletion != nil
     end
 
     test "schedule_project_deletion/1 schedules a project for deletion to now when purge_deleted_after_days is nil" do
