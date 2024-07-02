@@ -100,6 +100,11 @@ defmodule Lightning.Config do
     end
 
     @impl true
+    def reset_password_token_validity_in_days do
+      1
+    end
+
+    @impl true
     def usage_tracking_cron_opts do
       opts = usage_tracking()
 
@@ -176,6 +181,7 @@ defmodule Lightning.Config do
   @callback repo_connection_token_signer() :: Joken.Signer.t()
   @callback run_token_signer() :: Joken.Signer.t()
   @callback usage_tracking() :: Keyword.t()
+  @callback reset_password_token_validity_in_days() :: integer()
   @callback usage_tracking_cron_opts() :: [Oban.Plugins.Cron.cron_input()]
   @callback worker_secret() :: binary() | nil
   @callback worker_token_signer() :: Joken.Signer.t()
@@ -256,6 +262,10 @@ defmodule Lightning.Config do
 
   def usage_tracking do
     impl().usage_tracking()
+  end
+
+  def reset_password_token_validity_in_days do
+    impl().reset_password_token_validity_in_days()
   end
 
   def usage_tracking_cron_opts do

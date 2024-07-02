@@ -133,6 +133,7 @@ defmodule LightningWeb do
 
       import LightningWeb.Components.Pills
       import LightningWeb.Components.Loaders
+      import LightningWeb.Components.Icons
 
       unquote(verified_routes())
     end

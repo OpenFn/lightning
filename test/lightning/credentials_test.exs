@@ -191,7 +191,7 @@ defmodule Lightning.CredentialsTest do
       assert is_nil(retrieved_job.project_credential_id)
 
       assert_email_sent(
-        subject: "Credential Deletion",
+        subject: "Your \"#{credential.name}\" credential will be deleted",
         to: user.email
       )
     end

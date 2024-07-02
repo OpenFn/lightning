@@ -11,7 +11,7 @@
   "dependencies": {
     "@heroicons/react": "^2.1.1",
     "@monaco-editor/react": "^4.4.5",
-    "@openfn/describe-package": "^0.0.20",
+    "@openfn/describe-package": "^0.1.0",
     "@tailwindcss/container-queries": "^0.1.1",
     "@tailwindcss/forms": "^0.5.6",
     "classcat": "^5.0.4",
@@ -23,6 +23,8 @@
     "jsonpath": "^1.1.1",
     "marked": "^4.2.4",
     "monaco-editor": "^0.34.0",
+    "p-debounce": "^4.0.0",
+    "p-retry": "^6.2.0",
     "postcss": "^8.4.23",
     "rc-resize-observer": "^1.4.0",
     "react": "^18.1.0",

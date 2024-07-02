@@ -10,7 +10,7 @@ import {
   createWorkflowStore,
 } from './store';
 
-type WorkflowEditorEntrypoint = PhoenixHook<
+export type WorkflowEditorEntrypoint = PhoenixHook<
   {
     _isMounting: boolean;
     _pendingWorker: Promise<void>;
@@ -121,6 +121,11 @@ export default {
     // TODO: request the workflow params, but this time create a diff
     // between the current state and the server state and send those diffs
     // to the server.
+    console.log('reconnected', this.workflowStore.getState());
+    this.pushEventTo(this.el, 'get-current-state', {}, response => {
+      console.log('get-current-state response', response);
+      this.workflowStore.getState().rebase(response['workflow_params']);
+    });
   },
   getItem(id?: string) {
     if (id) {

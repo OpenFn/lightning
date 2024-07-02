@@ -19,9 +19,28 @@ and this project adheres to
 
 ### Changed
 
+- In the workflow diagram, smartly update the view when adding new nodes
+  [#2174](https://github.com/OpenFn/lightning/issues/2174)
+- In the workflow diagram, remove the "autofit" toggle in the control bar
+
 ### Fixed
 
 - Fixed react key error [#2233](https://github.com/OpenFn/lightning/issues/2233)
+- Show common functions in the Docs panel
+  [#1733](https://github.com/OpenFn/lightning/issues/1733)
+
+## [v2.7.1] - 2024-07-01
+
+### Changed
+
+- Update email copies [#2213](https://github.com/OpenFn/lightning/issues/2213)
+
+### Fixed
+
+- Fix jumpy cursor in the Job editor.
+  [#2229](https://github.com/OpenFn/lightning/issues/2229)
+- Rework syncing behaviour to prevent changes getting thrown out on a socket
+  reconnect. [#2007](https://github.com/OpenFn/lightning/issues/2007)
 
 ## [v2.7.0] - 2024-06-26
 

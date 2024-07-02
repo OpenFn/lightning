@@ -1,5 +1,6 @@
 defmodule LightningWeb.WorkflowLive.EditorPane do
   use LightningWeb, :live_component
+
   alias Lightning.Credentials
   alias LightningWeb.JobLive.JobBuilderComponents
 
@@ -20,6 +21,7 @@ defmodule LightningWeb.WorkflowLive.EditorPane do
         adaptor={@adaptor}
         source={@source}
         id={"job-editor-#{@job_id}"}
+        job_id={@job_id}
         disabled={@disabled}
         disabled_message={@disabled_message}
         phx-target={@myself}
@@ -40,8 +42,7 @@ defmodule LightningWeb.WorkflowLive.EditorPane do
         adaptor:
           form[:adaptor].value
           |> Lightning.AdaptorRegistry.resolve_adaptor(),
-        source: form[:body].value,
-        credential: fetch_credential(form[:project_credential_id].value),
+        source: form.source.data.body,
         job_id: form[:id].value
       )
 
@@ -52,7 +53,9 @@ defmodule LightningWeb.WorkflowLive.EditorPane do
   def handle_event("request_metadata", _params, socket) do
     pid = self()
 
-    %{adaptor: adaptor, credential: credential, id: id} = socket.assigns
+    %{adaptor: adaptor, id: id, form: form} = socket.assigns
+
+    credential = fetch_credential(form[:project_credential_id].value)
 
     Task.start(fn ->
       metadata =

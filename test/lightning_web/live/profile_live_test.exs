@@ -169,7 +169,10 @@ defmodule LightningWeb.ProfileLiveTest do
       |> render_submit()
       |> follow_redirect(conn, Routes.user_session_path(conn, :delete))
 
-      assert_email_sent(subject: "Lightning Account Deletion", to: user.email)
+      assert_email_sent(
+        subject: "Your account has been scheduled for deletion",
+        to: user.email
+      )
     end
 
     test "users can't schedule deletion for other users", %{

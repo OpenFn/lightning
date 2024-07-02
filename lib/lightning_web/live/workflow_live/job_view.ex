@@ -113,8 +113,16 @@ defmodule LightningWeb.WorkflowLive.JobView do
             }
           />
           <div class="flex flex-grow items-center justify-end">
+            <.offline_indicator />
             <.link
               id={"close-job-edit-view-#{@job.id}"}
+              phx-disconnected={
+                Phoenix.LiveView.JS.set_attribute(
+                  {"data-confirm",
+                   "You're currently disconnected.\nBy closing you will lose any unsaved changes.\nAre you sure you want to close this job?"}
+                )
+              }
+              phx-connected={Phoenix.LiveView.JS.remove_attribute("data-confirm")}
               patch={@close_url}
               phx-hook="ClosePanelViaEscape"
             >
@@ -181,7 +189,8 @@ defmodule LightningWeb.WorkflowLive.JobView do
               "project_id" => @project.id,
               "user_id" => @current_user.id
             },
-            container: {:div, class: "h-full p-2"}
+            container: {:div, class: "h-full p-2"},
+            sticky: true
           ) %>
         <% else %>
           <div class="w-1/2 h-16 text-center m-auto p-4">
