@@ -25,9 +25,7 @@ defmodule Lightning.Projects.ProjectOauthClient do
   rules such as uniqueness of the association.
   """
 
-  use Ecto.Schema
-
-  import Ecto.Changeset
+  use Lightning.Schema
 
   alias Lightning.Credentials.OauthClient
   alias Lightning.Projects.Project
@@ -39,8 +37,6 @@ defmodule Lightning.Projects.ProjectOauthClient do
           project: Project.t() | Ecto.Association.NotLoaded.t() | nil
         }
 
-  @primary_key {:id, :binary_id, autogenerate: true}
-  @foreign_key_type :binary_id
   schema "project_oauth_clients" do
     belongs_to :oauth_client, OauthClient
     belongs_to :project, Project

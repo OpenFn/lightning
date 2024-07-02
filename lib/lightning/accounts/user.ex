@@ -2,9 +2,8 @@ defmodule Lightning.Accounts.User do
   @moduledoc """
   The User model.
   """
-  use Ecto.Schema
+  use Lightning.Schema
 
-  import Ecto.Changeset
   import Ecto.Query
   import EctoEnum
 
@@ -19,8 +18,6 @@ defmodule Lightning.Accounts.User do
     :superuser
   ])
 
-  @primary_key {:id, :binary_id, autogenerate: true}
-  @foreign_key_type :binary_id
   schema "users" do
     field :first_name, :string
     field :last_name, :string
