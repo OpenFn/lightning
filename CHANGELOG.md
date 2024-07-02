@@ -19,6 +19,8 @@ and this project adheres to
 
 ### Changed
 
+- All models to use the `public` schema.
+  [#2249](https://github.com/OpenFn/lightning/pull/2249)
 - In the workflow diagram, smartly update the view when adding new nodes
   [#2174](https://github.com/OpenFn/lightning/issues/2174)
 - In the workflow diagram, remove the "autofit" toggle in the control bar

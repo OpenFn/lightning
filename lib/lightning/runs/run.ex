@@ -4,9 +4,8 @@ defmodule Lightning.Run do
 
 
   """
-  use Ecto.Schema
+  use Lightning.Schema
 
-  import Ecto.Changeset
   import Lightning.Validators
 
   alias Lightning.Accounts.User
@@ -45,8 +44,6 @@ defmodule Lightning.Run do
           work_order: WorkOrder.t() | Ecto.Association.NotLoaded.t()
         }
 
-  @primary_key {:id, :binary_id, autogenerate: true}
-  @foreign_key_type :binary_id
   schema "runs" do
     belongs_to :work_order, WorkOrder
 

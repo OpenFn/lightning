@@ -3,11 +3,8 @@ defmodule Lightning.UsageTracking.Report do
   Report submitted to Usage Tracker
 
   """
-  use Ecto.Schema
+  use Lightning.Schema
 
-  import Ecto.Changeset
-
-  @primary_key {:id, :binary_id, autogenerate: true}
   schema "usage_tracking_reports" do
     field :data, :map
     field :submitted, :boolean

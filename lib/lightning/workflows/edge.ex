@@ -8,8 +8,7 @@ defmodule Lightning.Workflows.Edge do
   The source of the edge is either a job or a trigger.
   The target of the edge is always a job.
   """
-  use Ecto.Schema
-  import Ecto.Changeset
+  use Lightning.Schema
   import Lightning.Validators
 
   alias Lightning.Workflows.Job
@@ -31,8 +30,6 @@ defmodule Lightning.Workflows.Edge do
         }
 
   @conditions [:on_job_success, :on_job_failure, :always, :js_expression]
-  @primary_key {:id, :binary_id, autogenerate: true}
-  @foreign_key_type :binary_id
   schema "workflow_edges" do
     belongs_to :workflow, Workflow
     belongs_to :source_job, Job
@@ -47,7 +44,7 @@ defmodule Lightning.Workflows.Edge do
 
     field :delete, :boolean, virtual: true
 
-    timestamps(type: :utc_datetime)
+    timestamps()
   end
 
   def new(attrs) do

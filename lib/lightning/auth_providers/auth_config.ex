@@ -2,8 +2,7 @@ defmodule Lightning.AuthProviders.AuthConfig do
   @moduledoc """
   AuthProvider model
   """
-  use Ecto.Schema
-  import Ecto.Changeset
+  use Lightning.Schema
 
   @type t :: %__MODULE__{
           __meta__: Ecto.Schema.Metadata.t(),
@@ -14,8 +13,6 @@ defmodule Lightning.AuthProviders.AuthConfig do
           redirect_uri: String.t() | nil
         }
 
-  @primary_key {:id, :binary_id, autogenerate: true}
-  @foreign_key_type :binary_id
   schema "auth_providers" do
     field :name, :string
 
