@@ -69,7 +69,6 @@ defmodule Lightning.KafkaTriggers do
 
     trigger
     |> Trigger.changeset(%{kafka_configuration: updated_kafka_configuration})
-    |> Repo.update()
   end
 
   @doc """

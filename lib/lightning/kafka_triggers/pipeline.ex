@@ -1,13 +1,14 @@
 defmodule Lightning.KafkaTriggers.Pipeline do
   use Broadway
 
-  import Ecto.Query
+  # import Ecto.Query
 
+  alias Ecto.Multi
   alias Lightning.KafkaTriggers
   alias Lightning.KafkaTriggers.TriggerKafkaMessage
   alias Lightning.KafkaTriggers.TriggerKafkaMessageRecord
   alias Lightning.Repo
-  alias Lightning.Workflows.Trigger
+  # alias Lightning.Workflows.Trigger
 
   def start_link(opts) do
     trigger_id = opts |> Keyword.get(:trigger_id)
@@ -41,7 +42,7 @@ defmodule Lightning.KafkaTriggers.Pipeline do
       metadata: %{
         key: key,
         offset: offset,
-        partition: partition,
+        partition: _partition,
         topic: topic,
         ts: timestamp
       }
@@ -59,38 +60,55 @@ defmodule Lightning.KafkaTriggers.Pipeline do
         }
       )
 
-    case record_changeset |> Repo.insert() do
-      # TODO Use transaction for DB operations
-      {:ok, _} ->
-        trigger =
-          Trigger
-          |> preload([:workflow])
-          |> Repo.get(trigger_id |> Atom.to_string())
+    message_changeset = 
+      %TriggerKafkaMessage{}
+      |> TriggerKafkaMessage.changeset(%{
+        data: data,
+        key: key,
+        message_timestamp: timestamp,
+        metadata: message.metadata,
+        offset: offset,
+        topic: topic,
+        trigger_id: trigger_id |> Atom.to_string()
+      })
 
-        %TriggerKafkaMessage{}
-        |> TriggerKafkaMessage.changeset(%{
-          data: data,
-          key: key,
-          message_timestamp: timestamp,
-          metadata: message.metadata,
-          offset: offset,
-          topic: topic,
-          trigger_id: trigger_id |> Atom.to_string()
-        })
-        |> Repo.insert!()
 
-        trigger
-        |> KafkaTriggers.update_partition_data(partition, timestamp)
-
-      {:error,
-       %{errors: [trigger_id: {_, [constraint: :unique, constraint_name: _]}]}} ->
-        IO.puts(
-          "**** #{trigger_id} received DUPLICATE on #{partition} produced at #{timestamp}"
-        )
-
-      _ ->
-        raise "Unhandled error when persisting TriggerKafkaMessageRecord"
-    end
+    Multi.new()
+    |> Multi.insert(:record, record_changeset)
+    |> Multi.insert(:message, message_changeset)
+    |> Repo.transaction()
+    # case record_changeset |> Repo.insert() do
+    #   # TODO Use transaction for DB operations
+    #   {:ok, _} ->
+    #     trigger =
+    #       Trigger
+    #       |> preload([:workflow])
+    #       |> Repo.get(trigger_id |> Atom.to_string())
+    #
+    #     %TriggerKafkaMessage{}
+    #     |> TriggerKafkaMessage.changeset(%{
+    #       data: data,
+    #       key: key,
+    #       message_timestamp: timestamp,
+    #       metadata: message.metadata,
+    #       offset: offset,
+    #       topic: topic,
+    #       trigger_id: trigger_id |> Atom.to_string()
+    #     })
+    #     |> Repo.insert!()
+    #
+    #     trigger
+    #     |> KafkaTriggers.update_partition_data(partition, timestamp)
+    #
+    #   {:error,
+    #    %{errors: [trigger_id: {_, [constraint: :unique, constraint_name: _]}]}} ->
+    #     IO.puts(
+    #       "**** #{trigger_id} received DUPLICATE on #{partition} produced at #{timestamp}"
+    #     )
+    #
+    #   _ ->
+    #     raise "Unhandled error when persisting TriggerKafkaMessageRecord"
+    # end
 
     message
   end
