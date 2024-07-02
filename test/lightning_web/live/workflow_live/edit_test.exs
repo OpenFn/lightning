@@ -1190,5 +1190,85 @@ defmodule LightningWeb.WorkflowLive.EditTest do
              |> element("#workflow_edges_#{idx}_enabled[checked]")
              |> has_element?()
     end
+
+    test "does not call the limiter when the trigger is not enabled", %{
+      conn: conn,
+      project: project,
+      workflow: workflow
+    } do
+      Mox.verify_on_exit!()
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version]}"
+        )
+
+      # We expect zero calls
+      Mox.expect(
+        Lightning.Extensions.MockUsageLimiter,
+        :limit_action,
+        0,
+        fn %{type: :activate_workflow}, _context ->
+          {:error, :too_many_workflows, %{text: "some error message"}}
+        end
+      )
+
+      job_2 = workflow.jobs |> Enum.at(1)
+
+      view |> select_node(job_2, workflow.lock_version)
+
+      new_job_name = "My Other Job"
+
+      assert view |> fill_job_fields(job_2, %{name: new_job_name}) =~
+               new_job_name
+
+      click_save(view)
+
+      assert Lightning.Repo.reload(job_2).name == new_job_name
+    end
+
+    test "calls the limiter when the trigger is enabled", %{
+      conn: conn,
+      project: project,
+      workflow: workflow
+    } do
+      Mox.verify_on_exit!()
+
+      workflow.triggers
+      |> hd()
+      |> Ecto.Changeset.change(%{enabled: false})
+      |> Lightning.Repo.update!()
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version]}"
+        )
+
+      # We expect 1 call
+      error_msg = "Oopsie Doopsie! An error occured"
+
+      Mox.expect(
+        Lightning.Extensions.MockUsageLimiter,
+        :limit_action,
+        1,
+        fn %{type: :activate_workflow}, _context ->
+          {:error, :too_many_workflows, %{text: error_msg}}
+        end
+      )
+
+      select_trigger(view)
+
+      view
+      |> form("#workflow-form", %{
+        "workflow" => %{"triggers" => %{"0" => %{"enabled" => true}}}
+      })
+      |> render_change()
+
+      html = click_save(view)
+
+      assert html =~ error_msg
+    end
   end
 end
