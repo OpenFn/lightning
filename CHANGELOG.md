@@ -25,6 +25,7 @@ and this project adheres to
 
 ### Fixed
 
+- Fixed react key error [#2233](https://github.com/OpenFn/lightning/issues/2233)
 - Show common functions in the Docs panel
   [#1733](https://github.com/OpenFn/lightning/issues/1733)
 
