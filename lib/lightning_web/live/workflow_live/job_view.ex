@@ -144,6 +144,7 @@ defmodule LightningWeb.WorkflowLive.JobView do
         <LightningWeb.WorkflowLive.Components.workflow_info_banner
           :if={@display_banner}
           id={"inspector-banner-#{@current_user.id}"}
+          position="relative"
           message={@banner_message}
         />
       </:top>

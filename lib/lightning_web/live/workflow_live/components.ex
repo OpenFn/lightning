@@ -737,7 +737,7 @@ defmodule LightningWeb.WorkflowLive.Components do
     ~H"""
     <div
       id={@id}
-      class="relative flex-none border-1 border-yellow-400 bg-yellow-50 p-4"
+      class={"#{@position} w-full flex-none border-1 border-yellow-400 bg-yellow-50 p-4"}
     >
       <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 flex">
         <div class="flex-shrink-0">

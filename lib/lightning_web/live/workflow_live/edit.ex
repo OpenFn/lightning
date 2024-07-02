@@ -143,11 +143,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
           </.with_changes_indicator>
         </LayoutComponents.header>
       </:header>
-      <.workflow_info_banner
-        :if={@display_banner}
-        id={"canvas-banner-#{@current_user.id}"}
-        message={@banner_message}
-      />
+
       <div class="relative h-full flex" id={"workflow-edit-#{@workflow.id}"}>
         <%!-- Job Edit View --%>
         <div class="flex-none" id="job-editor-pane">
@@ -438,6 +434,12 @@ defmodule LightningWeb.WorkflowLive.Edit do
           return_to={
             ~p"/projects/#{@project.id}/w/#{@workflow.id}?s=#{@selected_job.id}"
           }
+        />
+        <.workflow_info_banner
+          :if={@display_banner}
+          id={"canvas-banner-#{@current_user.id}"}
+          position="absolute"
+          message={@banner_message}
         />
         <.form
           id="workflow-form"
