@@ -1,9 +1,13 @@
 <div>
   <p>Hi <%= @recipient.first_name %>,</p>
+
   <p>
-    Work order <code><%= @work_order_id %></code>
-    run failed for workflow "<%= @workflow_name %>".
+    A run just failed for the "<%= @workflow_name %>" workflow.<br /> Click
+    <a href={@work_order_url}>here</a>
+    to view the state of the work order and <a href={@run_url}>here</a>
+    to inspect the run or view the logs at the bottom of this email.
   </p>
+
   <%= if @count > 1 do %>
     <p>
       Note that runs for this workflow have failed <%= @count %> times in
@@ -11,9 +15,9 @@
       alerts for this workflow ("<%= @workflow_name %>") at most every <%= @duration %> to avoid cluttering your inbox.
     </p>
   <% end %>
-  <p>
-    Click <a href={@run_url}>here</a> to inspect the run or view the logs below.
-  </p>
+
+  <p>OpenFn</p>
+
   <p>
     <pre style="background-color: #ededed; padding: 16px; margin: 8px 0">
       <%= Enum.map(@run_logs, fn(log) -> %>

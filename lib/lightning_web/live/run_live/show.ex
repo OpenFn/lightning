@@ -2,6 +2,7 @@ defmodule LightningWeb.RunLive.Show do
   use LightningWeb, :live_view
   use LightningWeb.RunLive.Streaming, chunk_size: 100
 
+  import LightningWeb.Components.Icons
   import LightningWeb.RunLive.Components
 
   alias Lightning.Policies.Permissions

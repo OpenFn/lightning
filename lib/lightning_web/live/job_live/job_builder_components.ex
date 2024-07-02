@@ -2,10 +2,11 @@ defmodule LightningWeb.JobLive.JobBuilderComponents do
   use LightningWeb, :component
 
   attr :adaptor, :string, required: true
+  attr :change_event, :string, default: "job_body_changed"
   attr :disabled, :boolean, default: false
   attr :disabled_message, :string, required: true
+  attr :job_id, :string, required: true
   attr :source, :string, required: true
-  attr :change_event, :string, default: "job_body_changed"
   attr :rest, :global
 
   def job_editor_component(assigns) do
@@ -13,6 +14,7 @@ defmodule LightningWeb.JobLive.JobBuilderComponents do
 
     ~H"""
     <div
+      data-job-id={@job_id}
       data-adaptor={@adaptor}
       data-source={@source}
       data-disabled={@disabled}

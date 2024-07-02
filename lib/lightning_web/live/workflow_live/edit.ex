@@ -3,6 +3,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
   use LightningWeb, {:live_view, container: {:div, []}}
 
   import LightningWeb.Components.NewInputs
+  import LightningWeb.Components.Icons
   import LightningWeb.WorkflowLive.Components
 
   alias Lightning.Extensions.UsageLimiting.Action
@@ -102,16 +103,14 @@ defmodule LightningWeb.WorkflowLive.Edit do
                 name="hero-lock-closed"
                 class="w-5 h-5 place-self-center text-gray-300"
               />
-              <Form.submit_button
-                phx-disable-with="Saving..."
-                disabled={
-                  !@can_edit_workflow or !@changeset.valid? or
-                    @snapshot_version_tag != "latest"
-                }
-                form="workflow-form"
-              >
-                Save
-              </Form.submit_button>
+              <div class="m-auto">
+                <.offline_indicator />
+              </div>
+              <.save_workflow_button
+                changeset={@changeset}
+                can_edit_workflow={@can_edit_workflow}
+                snapshot_version_tag={@snapshot_version_tag}
+              />
             </div>
           </.with_changes_indicator>
         </LayoutComponents.header>
@@ -326,16 +325,11 @@ defmodule LightningWeb.WorkflowLive.Edit do
                     </div>
                   </div>
                   <.with_changes_indicator changeset={@changeset}>
-                    <Form.submit_button
-                      phx-disable-with="Saving..."
-                      disabled={
-                        !@can_edit_workflow or !@changeset.valid? or
-                          @snapshot_version_tag != "latest"
-                      }
-                      form="workflow-form"
-                    >
-                      Save
-                    </Form.submit_button>
+                    <.save_workflow_button
+                      changeset={@changeset}
+                      can_edit_workflow={@can_edit_workflow}
+                      snapshot_version_tag={@snapshot_version_tag}
+                    />
                   </.with_changes_indicator>
                 </div>
               </:footer>
@@ -1013,6 +1007,10 @@ defmodule LightningWeb.WorkflowLive.Edit do
      |> push_event("current-workflow-params", %{
        workflow_params: socket.assigns.workflow_params
      })}
+  end
+
+  def handle_event("get-current-state", _params, socket) do
+    {:reply, %{workflow_params: socket.assigns.workflow_params}, socket}
   end
 
   def handle_event("switch-version", %{"type" => type}, socket) do
@@ -1816,10 +1814,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
     end)
   end
 
-  # defp find_item(%Snapshot{} = snapshot, id) do
-  #   find_item_helper(snapshot, id, &Map.get/2)
-  # end
-
   defp find_item_helper(data, id, accessor) do
     [:jobs, :triggers, :edges]
     |> Enum.reduce_while(nil, fn field, _ ->
@@ -1866,6 +1860,40 @@ defmodule LightningWeb.WorkflowLive.Edit do
       </div>
       <%= render_slot(@inner_block) %>
     </div>
+    """
+  end
+
+  attr :can_edit_workflow, :boolean, required: true
+  attr :changeset, Ecto.Changeset, required: true
+  attr :snapshot_version_tag, :string, required: true
+
+  defp save_workflow_button(assigns) do
+    alias Phoenix.LiveView.JS
+
+    %{
+      can_edit_workflow: can_edit_workflow,
+      changeset: changeset,
+      snapshot_version_tag: snapshot_version_tag
+    } = assigns
+
+    assigns =
+      assigns
+      |> assign(
+        disabled:
+          !can_edit_workflow or !changeset.valid? or
+            snapshot_version_tag != "latest"
+      )
+
+    ~H"""
+    <Form.submit_button
+      phx-disable-with="Saving..."
+      disabled={@disabled}
+      form="workflow-form"
+      phx-disconnected={JS.set_attribute({"disabled", ""})}
+      phx-connected={!@disabled && JS.remove_attribute("disabled")}
+    >
+      Save
+    </Form.submit_button>
     """
   end
 end

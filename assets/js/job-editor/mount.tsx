@@ -2,23 +2,37 @@ import React from 'react';
 import { createRoot } from 'react-dom/client';
 import type JobEditor from './JobEditor';
 import { sortMetadata } from '../metadata-loader/metadata';
-import { PhoenixHook } from '../hooks/PhoenixHook';
+import { LiveSocket, PhoenixHook } from '../hooks/PhoenixHook';
+import type WorkflowEditorEntrypoint from '../workflow-editor';
+import pRetry from 'p-retry';
+import pDebounce from 'p-debounce';
+import { WorkflowStore } from '../workflow-editor/store';
+import { Lightning } from '../workflow-diagram/types';
 
 type JobEditorEntrypoint = PhoenixHook<
   {
     componentRoot: ReturnType<typeof createRoot> | null;
     changeEvent: string;
     field?: HTMLTextAreaElement | null;
-    handleContentChange(content: string): void;
+    findWorkflowEditorStore(): Promise<WorkflowStore>;
+    workflowEditorStore: WorkflowStore;
+    handleContentChange(content: string): Promise<void>;
     metadata?: true | object;
     observer: MutationObserver | null;
     render(): void;
     requestMetadata(): Promise<{}>;
     setupObserver(): void;
-    removeHandleEvent(callbackRef: unknown): void;
-    _timeout: number | null;
+    pushChange(content: string): Promise<void>;
+    _debouncedPushChange(content: string): Promise<void>;
+    currentContent: string;
   },
-  { adaptor: string; source: string; disabled: string; disabledMessage: string }
+  {
+    adaptor: string;
+    source: string;
+    disabled: string;
+    disabledMessage: string;
+    jobID: string;
+  }
 >;
 
 type AttributeMutationRecord = MutationRecord & {
@@ -31,13 +45,31 @@ let JobEditorComponent: typeof JobEditor | undefined;
 const EDITOR_DEBOUNCE_MS = 300;
 
 export default {
+  findWorkflowEditorStore() {
+    return pRetry(
+      () => {
+        console.debug('Looking up WorkflowEditorHook');
+        return lookupWorkflowEditorHook(this.liveSocket, this.el);
+      },
+      { retries: 5 }
+    ).then(hook => {
+      return hook.workflowStore;
+    });
+  },
+  reconnected() {
+    console.debug('Reconnected JobEditor');
+    // this.handleContentChange(this.currentContent);
+  },
   mounted(this: JobEditorEntrypoint) {
+    window.jobEditor = this;
+
     console.group('JobEditor');
     console.debug('Mounted');
+    this._debouncedPushChange = pDebounce(this.pushChange, EDITOR_DEBOUNCE_MS);
+
     import('./JobEditor').then(module => {
       console.group('JobEditor');
       console.debug('loaded module');
-      console.groupEnd();
       JobEditorComponent = module.default as typeof JobEditor;
       this.componentRoot = createRoot(this.el);
 
@@ -50,43 +82,54 @@ export default {
       this.setupObserver();
       this.render();
       this.requestMetadata().then(() => this.render());
+      console.groupEnd();
     });
 
     console.groupEnd();
   },
   handleContentChange(content: string) {
-    if (this._timeout) {
-      clearTimeout(this._timeout);
-      this._timeout = window.setTimeout(() => {
-        this.pushEventTo(this.el, this.changeEvent, { source: content });
-        this._timeout = null;
-      }, EDITOR_DEBOUNCE_MS);
-    } else {
-      this.pushEventTo(this.el, this.changeEvent, { source: content });
-      this._timeout = window.setTimeout(() => {
-        this._timeout = null;
-      }, EDITOR_DEBOUNCE_MS);
+    this._debouncedPushChange(content);
+  },
+  async pushChange(content: string) {
+    console.debug('pushChange', content);
+    const jobId = this.el.dataset.jobId;
+
+    if (!jobId) {
+      throw new Error(
+        'No jobId found on JobEditor element, refusing to push change'
+      );
     }
+
+    await this.findWorkflowEditorStore().then(workflowStore => {
+      workflowStore.getState().change({ jobs: [{ id: jobId, body: content }] });
+    });
   },
   render() {
-    const { adaptor, source, disabled, disabledMessage } = this.el.dataset;
-    if (adaptor.split('@').at(-1) === 'latest') {
-      console.warn(
-        "job-editor hook received an adaptor with @latest as it's version - to load docs a specific version must be provided"
-      );
-    }
-    if (JobEditorComponent) {
-      this.componentRoot?.render(
-        <JobEditorComponent
-          adaptor={adaptor}
-          source={source}
-          metadata={this.metadata}
-          disabled={disabled === 'true'}
-          disabledMessage={disabledMessage}
-          onSourceChanged={src => this.handleContentChange(src)}
-        />
-      );
-    }
+    const { adaptor, disabled, disabledMessage, jobId } = this.el.dataset;
+
+    checkAdaptorVersion(adaptor);
+
+    this.findWorkflowEditorStore().then(workflowStore => {
+      const job = workflowStore.getState().getById<Lightning.Job>(jobId);
+
+      if (!job) {
+        console.error('Job not found', jobId);
+        return;
+      }
+
+      if (JobEditorComponent) {
+        this.componentRoot?.render(
+          <JobEditorComponent
+            adaptor={adaptor}
+            source={job.body}
+            metadata={this.metadata}
+            disabled={disabled === 'true'}
+            disabledMessage={disabledMessage}
+            onSourceChanged={src => this.handleContentChange(src)}
+          />
+        );
+      }
+    });
   },
   requestMetadata() {
     this.metadata = true; // indicate we're loading
@@ -119,7 +162,6 @@ export default {
         'data-change-event',
         'data-disabled',
         'data-disabled-message',
-        'data-source',
       ],
       attributeOldValue: true,
     });
@@ -129,3 +171,29 @@ export default {
     this.observer?.disconnect();
   },
 } as JobEditorEntrypoint;
+
+function lookupWorkflowEditorHook(liveSocket: LiveSocket, el: HTMLElement) {
+  let found: typeof WorkflowEditorEntrypoint | undefined;
+  liveSocket.withinOwners(el, view => {
+    for (let hook of Object.values(view.viewHooks)) {
+      if (hook.el.getAttribute('phx-hook') === 'WorkflowEditor') {
+        found = hook as typeof WorkflowEditorEntrypoint;
+        break;
+      }
+    }
+  });
+
+  if (!found) {
+    throw new Error('WorkflowEditor hook not found');
+  }
+
+  return found;
+}
+
+function checkAdaptorVersion(adaptor: string) {
+  if (adaptor.split('@').at(-1) === 'latest') {
+    console.warn(
+      "job-editor hook received an adaptor with @latest as it's version - to load docs a specific version must be provided"
+    );
+  }
+}

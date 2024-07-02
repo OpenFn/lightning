@@ -1,6 +1,8 @@
 defmodule Lightning.FailureAlerter do
   @moduledoc false
 
+  use LightningWeb, :verified_routes
+
   alias Lightning.Projects.ProjectAlertsLimiter
   alias Lightning.Run
 
@@ -46,6 +48,9 @@ defmodule Lightning.FailureAlerter do
     run_url =
       LightningWeb.RouteHelpers.show_run_url(project_id, run_id)
 
+    work_order_url =
+      ~p"/projects/#{project_id}/history?filters[workorder_id]=#{work_order_id}"
+
     # rate limiting per workflow AND user
     bucket_key = "#{workflow_id}::#{recipient.id}"
 
@@ -58,6 +63,7 @@ defmodule Lightning.FailureAlerter do
       {:allow, count} ->
         Lightning.FailureEmail.deliver_failure_email(recipient.email, %{
           work_order_id: work_order_id,
+          work_order_url: work_order_url,
           count: count,
           time_scale: time_scale,
           rate_limit: rate_limit,

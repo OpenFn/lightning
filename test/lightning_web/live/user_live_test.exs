@@ -158,7 +158,10 @@ defmodule LightningWeb.UserLiveTest do
 
       assert has_element?(index_live, "#user-#{user.id}")
 
-      assert_email_sent(subject: "Lightning Account Deletion", to: user.email)
+      assert_email_sent(
+        subject: "Your account has been scheduled for deletion",
+        to: user.email
+      )
 
       assert html =~
                "#{DateTime.utc_now() |> Timex.shift(days: 7) |> Map.fetch!(:year)}"

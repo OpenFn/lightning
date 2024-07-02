@@ -12,6 +12,11 @@ export namespace Lightning {
     placeholder?: boolean;
   }
 
+  export interface Job extends Node {
+    adaptor: string | null;
+    body: string;
+  }
+
   export interface CronTrigger extends Node {
     type: 'cron';
     enabled: boolean;
