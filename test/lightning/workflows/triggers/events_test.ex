@@ -18,12 +18,11 @@ defmodule Lightning.Workflows.Triggers.EventsTest do
   end
 
   test "can broadcast a kafka trigger updated event" do
-    trigger = insert(:trigger)
-    trigger_id = trigger.id
+    trigger_id = Ecto.UUID.generate()
 
     Events.subscribe_to_kafka_trigger_updated()
 
-    Events.kafka_trigger_updated(trigger)
+    Events.kafka_trigger_updated(trigger_id)
 
     assert_receive %KafkaTriggerUpdated{trigger_id: ^trigger_id}
   end

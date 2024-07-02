@@ -4,10 +4,10 @@ defmodule Lightning.Workflows.Triggers.Events do
     defstruct trigger_id: nil
   end
 
-  def kafka_trigger_updated(trigger) do
+  def kafka_trigger_updated(trigger_id) do
     Lightning.broadcast(
       kafka_trigger_updated_topic(),
-      %KafkaTriggerUpdated{trigger_id: trigger.id}
+      %KafkaTriggerUpdated{trigger_id: trigger_id}
     )
   end
 

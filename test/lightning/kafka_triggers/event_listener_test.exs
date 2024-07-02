@@ -37,7 +37,7 @@ defmodule Lightning.KafkaTriggers.EventListenerTest do
 
     assert EventListener.init([]) == {:ok, %{}}
 
-    Events.kafka_trigger_updated(trigger)
+    Events.kafka_trigger_updated(trigger_id)
 
     assert_receive %KafkaTriggerUpdated{trigger_id: ^trigger_id}
   end

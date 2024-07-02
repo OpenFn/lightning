@@ -56,9 +56,6 @@ defmodule Lightning.Workflows do
   @spec save_workflow(Ecto.Changeset.t(Workflow.t()) | map()) ::
           {:ok, Workflow.t()} | {:error, Ecto.Changeset.t(Workflow.t())}
   def save_workflow(%Ecto.Changeset{data: %Workflow{}} = changeset) do
-    kafka_triggers_to_update =
-      KafkaTriggers.get_kafka_triggers_being_updated(changeset)
-
     Multi.new()
     |> Multi.insert_or_update(:workflow, changeset)
     |> then(fn multi ->
@@ -71,10 +68,7 @@ defmodule Lightning.Workflows do
     |> Repo.transaction()
     |> case do
       {:ok, %{workflow: workflow}} ->
-        kafka_triggers_to_update
-        |> Enum.each(fn trigger ->
-          Triggers.Events.kafka_trigger_updated(trigger)
-        end)
+        publish_kafka_trigger_events(changeset)
 
         Events.workflow_updated(workflow)
 
@@ -98,6 +92,14 @@ defmodule Lightning.Workflows do
   def save_workflow(%{} = attrs) do
     Workflow.changeset(%Workflow{}, attrs)
     |> save_workflow()
+  end
+
+  defp publish_kafka_trigger_events(changeset) do
+    changeset
+    |> KafkaTriggers.get_kafka_triggers_being_updated()
+    |> Enum.each(fn trigger_id ->
+      Triggers.Events.kafka_trigger_updated(trigger_id)
+    end)
   end
 
   @doc """
