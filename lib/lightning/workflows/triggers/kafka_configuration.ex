@@ -34,7 +34,6 @@ defmodule Lightning.Workflows.Triggers.KafkaConfiguration do
   def changeset(kafka_configuration, attrs) do
     kafka_configuration
     |> cast(attrs, [
-      :group_id,
       :hosts,
       :hosts_string,
       :initial_offset_reset_policy,
@@ -47,13 +46,13 @@ defmodule Lightning.Workflows.Triggers.KafkaConfiguration do
       :username
     ])
     |> validate_required([
-      :group_id,
       :hosts_string,
       :initial_offset_reset_policy,
       :topics_string
     ])
     |> apply_hosts_string()
     |> apply_topics_string()
+    |> set_group_id_if_required()
     |> validate_sasl_credentials()
   end
 
@@ -204,4 +203,15 @@ defmodule Lightning.Workflows.Triggers.KafkaConfiguration do
   end
 
   def sasl_types, do: @sasl_types |> Enum.map(&Atom.to_string(&1))
+
+  def set_group_id_if_required(changeset) do
+    changeset
+    |> delete_change(:group_id)
+    |> case do
+      set = %{data: %{group_id: nil}} ->
+        set |> put_change(:group_id, "lightning-#{Ecto.UUID.generate()}")
+      set ->
+        set
+    end
+  end
 end
