@@ -111,14 +111,5 @@ defmodule Lightning.Workflows.Presence do
         active_sessions
       )
     end)
-    |> Enum.sort_by(& &1.joined_at)
-    |> Enum.with_index()
-    |> Enum.map(fn {user_presence, index} ->
-      if index == 0 do
-        %{user_presence | priority: :high}
-      else
-        user_presence
-      end
-    end)
   end
 end

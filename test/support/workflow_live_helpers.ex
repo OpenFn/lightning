@@ -136,6 +136,10 @@ defmodule Lightning.WorkflowLive.Helpers do
     |> render_click("manual_run_submit", %{"manual" => params})
   end
 
+  def force_event(view, :switch_workflow_version, type) do
+    view |> render_click("switch-version", %{"type" => type})
+  end
+
   def force_event(view, :rerun, run_id, step_id) do
     view
     |> render_click("rerun", %{"run_id" => run_id, "step_id" => step_id})
