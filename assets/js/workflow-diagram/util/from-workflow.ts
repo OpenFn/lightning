@@ -4,6 +4,10 @@ import { sortOrderForSvg, styleEdge, styleItem, styleNode } from '../styles';
 function getEdgeLabel(edge: Lightning.Edge) {
   let label = '( )';
 
+  if (edge.condition_label) {
+    return edge.condition_label;
+  }
+
   switch (edge.condition_type) {
     case 'on_job_success':
       label = '✓';
@@ -76,10 +80,11 @@ const fromWorkflow = (
         styleNode(model);
       } else {
         const edge = item as Lightning.Edge;
+        const label = getEdgeLabel(edge);
         model.source = edge.source_trigger_id || edge.source_job_id;
         model.target = edge.target_job_id;
         model.type = 'step';
-        model.label = getEdgeLabel(edge);
+        model.label = label;
         model.markerEnd = {
           type: 'arrowclosed',
           width: 32,
@@ -90,6 +95,7 @@ const fromWorkflow = (
           // TODO something is up here - ?? true is a hack
           // without it, new edges are marked as disabled
           enabled: edge.enabled ?? true,
+          label,
         };
 
         // Note: we don't allow the user to disable the edge that goes from a
