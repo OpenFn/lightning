@@ -757,11 +757,11 @@ defmodule LightningWeb.WorkflowLive.Components do
     ~H"""
     <div id={@id} class="flex gap-0">
       <.render_user
-        :for={%{user: online_user, priority: priority} <- @presences}
+        :for={%{user: online_user} <- @presences}
         :if={online_user.id != @current_user.id}
         id={"#{@id}-#{online_user.id}"}
         user={online_user}
-        priority={priority}
+        prior={@prior_user.id == online_user.id}
       />
     </div>
     """
@@ -774,7 +774,7 @@ defmodule LightningWeb.WorkflowLive.Components do
       phx-hook="Tooltip"
       aria-label={"#{@user.first_name} #{@user.last_name} (#{@user.email})"}
       data-placement="right"
-      class={"inline-flex h-6 w-6 items-center justify-center rounded-full border-2 #{if @priority == :high, do: "border-green-400 bg-green-500", else: "border-gray-400 bg-gray-500"}"}
+      class={"inline-flex h-6 w-6 items-center justify-center rounded-full border-2 #{if @prior, do: "border-green-400 bg-green-500", else: "border-gray-400 bg-gray-500"}"}
     >
       <span class="text-xs font-medium leading-none text-white">
         <%= user_name(@user) %>

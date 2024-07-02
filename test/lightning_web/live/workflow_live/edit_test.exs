@@ -454,20 +454,22 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       last_job = List.last(snapshot.jobs)
       last_edge = List.last(snapshot.edges)
 
-      force_event(view, :save) =~
-        "Cannot save in snapshot mode, switch to the latest version."
+      # IO.inspect(snapshot.edges)
 
-      force_event(view, :delete_node, last_job) =~
-        "Cannot delete a node in snapshot mode, switch to latest"
+      assert force_event(view, :save) =~
+               "Cannot save in snapshot mode, switch to the latest version."
 
-      force_event(view, :delete_edge, last_edge) =~
-        "Cannot delete a node in snapshot mode, switch to latest"
+      assert force_event(view, :delete_node, last_job) =~
+               "Cannot delete a node in snapshot mode, switch to latest"
 
-      force_event(view, :manual_run_submit, %{}) =~
-        "Cannot run in snapshot mode, switch to latest."
+      assert force_event(view, :delete_edge, last_edge) =~
+               "Cannot delete a node in snapshot mode, switch to latest"
 
-      force_event(view, :rerun, nil, nil) =~
-        "Cannot rerun in snapshot mode, switch to latest."
+      assert force_event(view, :manual_run_submit, %{}) =~
+               "Cannot run in snapshot mode, switch to latest."
+
+      assert force_event(view, :rerun, nil, nil) =~
+               "Cannot rerun in snapshot mode, switch to latest."
 
       assert view
              |> element(

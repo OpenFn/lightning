@@ -52,7 +52,9 @@ defmodule LightningWeb.WorkflowLive.Edit do
           end,
         workflow_form: to_form(assigns.changeset),
         save_and_run_disabled: save_and_run_disabled?(assigns),
-        display_banner: !assigns.has_presence_edit_priority,
+        display_banner:
+          !assigns.has_presence_edit_priority &&
+            assigns.current_user.id not in assigns.view_only_users_ids,
         banner_message:
           banner_message(
             assigns.current_user_presence,
@@ -89,6 +91,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
               id="canvas-online-users"
               presences={@presences}
               current_user={@current_user}
+              prior_user={@prior_user_presence.user}
             />
           </:title>
 
@@ -601,10 +604,10 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
     cond do
       current_user_presence.active_sessions > 1 ->
-        "You can't edit this workflow because you have #{current_user_presence.active_sessions} sessions currently openning it. Please make sure you have only one session opening this workflow to have edit mode enabled."
+        "You cannot edit this workflow because it has #{current_user_presence.active_sessions} active sessions at the moment. To enable editing, close other active sessions."
 
       current_user_presence.priority == :low ->
-        "This workflow is currently locked for editing because a collaborator (#{prior_user_name}) is currently working on it. You will be able to inspect this workflow and its associated jobs but will not be able to make changes."
+        "This workflow is currently locked for editing because a collaborator (#{prior_user_name}) is currently working on it. You can inspect this workflow and its associated steps but cannot make edits."
 
       true ->
         nil
@@ -915,11 +918,18 @@ defmodule LightningWeb.WorkflowLive.Edit do
   def mount(_params, _session, %{assigns: assigns} = socket) do
     pid = self()
 
+    view_only_users_ids =
+      Lightning.Repo.preload(assigns.project, project_users: [:user])
+      |> Map.get(:project_users)
+      |> Enum.filter(fn pu -> pu.role == :viewer end)
+      |> Enum.map(fn pu -> pu.user.id end)
+
     {:ok,
      socket
      |> authorize()
      |> assign(
        pid: pid,
+       view_only_users_ids: view_only_users_ids,
        active_menu_item: :overview,
        expanded_job: nil,
        follow_run: nil,
@@ -1215,9 +1225,11 @@ defmodule LightningWeb.WorkflowLive.Edit do
       has_presence_edit_priority: has_presence_edit_priority
     } = socket.assigns
 
+    # IO.inspect(selected_edge)
+
     with true <- can_edit_workflow || :not_authorized,
          true <-
-           (selected_edge && is_nil(selected_edge.source_trigger_id)) ||
+           (selected_edge && is_nil(selected_edge.source_job_id)) ||
              :is_initial_edge,
          true <- tag == "latest" || :view_only,
          true <-
@@ -1610,12 +1622,9 @@ defmodule LightningWeb.WorkflowLive.Edit do
     summary =
       "workflow-#{socket.assigns.workflow.id}:presence"
       |> Presence.list_presences()
-      |> build_presence_summary(socket.assigns.current_user)
+      |> build_presence_summary(socket)
 
-    {:noreply,
-     socket
-     |> assign(summary)
-     |> maybe_disable_canvas()}
+    {:noreply, socket |> assign(summary) |> maybe_disable_canvas()}
   end
 
   def handle_info(%{}, socket), do: {:noreply, socket}
@@ -1623,10 +1632,11 @@ defmodule LightningWeb.WorkflowLive.Edit do
   defp maybe_disable_canvas(socket) do
     %{
       has_presence_edit_priority: has_edit_priority,
-      snapshot_version_tag: version
+      snapshot_version_tag: version,
+      can_edit_workflow: can_edit_workflow
     } = socket.assigns
 
-    disabled = !has_edit_priority or version != "latest"
+    disabled = !(has_edit_priority && version == "latest" && can_edit_workflow)
 
     push_event(socket, "set-disabled", %{disabled: disabled})
   end
@@ -1634,9 +1644,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
   defp initial_presence_summary(current_user) do
     init_user_presence = %Presence{
       user: current_user,
-      priority: :high,
-      active_sessions: 1,
-      joined_at: DateTime.utc_now() |> DateTime.to_unix()
+      active_sessions: 1
     }
 
     %{
@@ -1647,15 +1655,34 @@ defmodule LightningWeb.WorkflowLive.Edit do
     }
   end
 
-  defp build_presence_summary(presences, current_user) do
-    prior_user_presence =
-      get_prior_user_presence(presences, current_user)
+  defp build_presence_summary(presences, socket) do
+    %{
+      current_user_presence: current_user_presence,
+      current_user: current_user,
+      view_only_users_ids: view_only_users_ids
+    } = socket.assigns
+
+    presences = Enum.sort_by(presences, & &1.joined_at)
 
     current_user_presence =
-      get_current_user_presence(presences, current_user)
+      Enum.find(presences, current_user_presence, fn presence ->
+        presence.user.id == current_user.id
+      end)
+
+    presences_promotable =
+      Enum.reject(presences, fn presence ->
+        presence.user.id in view_only_users_ids
+      end)
+
+    prior_user_presence =
+      if length(presences_promotable) > 0 do
+        List.first(presences_promotable)
+      else
+        current_user_presence
+      end
 
     has_presence_edit_priority =
-      current_user_presence.priority == :high &&
+      current_user_presence.user.id == prior_user_presence.user.id &&
         current_user_presence.active_sessions <= 1
 
     %{
@@ -1664,30 +1691,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
       current_user_presence: current_user_presence,
       has_presence_edit_priority: has_presence_edit_priority
     }
-  end
-
-  defp get_current_user_presence(presences, current_user) do
-    Enum.find(
-      presences,
-      %{user: current_user, active_sessions: 1, priority: :high},
-      fn %Lightning.Workflows.Presence{
-           user: user
-         } ->
-        user.id == current_user.id
-      end
-    )
-  end
-
-  defp get_prior_user_presence(presences, current_user) do
-    Enum.find(
-      presences,
-      %{user: current_user, active_sessions: 1, priority: :high},
-      fn %Lightning.Workflows.Presence{
-           priority: priority
-         } ->
-        priority == :high
-      end
-    )
   end
 
   defp maybe_show_manual_run(socket) do

@@ -189,6 +189,27 @@ defmodule LightningWeb.WorkflowLive.UserPresencesTest do
       refute render(aly_view) =~ aly.first_name
       assert render(aly_view) =~ amy.first_name
       assert render(aly_view) =~ ana.first_name
+
+      last_job = workflow.jobs |> List.last()
+      last_edge = workflow.edges |> List.last()
+
+      assert force_event(ana_view, :save) =~
+               "Cannot save in low priority mode."
+
+      assert force_event(ana_view, :delete_node, last_job) =~
+               "Cannot delete in low priority mode."
+
+      assert force_event(ana_view, :delete_edge, last_edge) =~
+               "Cannot delete in low priority mode."
+
+      assert force_event(ana_view, :manual_run_submit, %{}) =~
+               "Cannot run in low priority mode."
+
+      assert force_event(ana_view, :rerun, nil, nil) =~
+               "Cannot rerun in low priority mode."
+
+      assert force_event(ana_view, :switch_workflow_version, "commit") =~
+               "Cannot switch in low priority mode."
     end
 
     test "in inspector", %{conn: conn} do
