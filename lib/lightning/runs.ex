@@ -133,6 +133,7 @@ defmodule Lightning.Runs do
   See LightingWeb.RunChannel.handle_in("fetch:dataclip", _, _)
   for more details.
   """
+  # TODO Add test for kafka coverage
   @spec get_input(Run.t()) :: String.t() | nil
   def get_input(%Run{} = run) do
     from(d in Ecto.assoc(run, :dataclip),
@@ -140,7 +141,7 @@ defmodule Lightning.Runs do
         type(
           fragment(
             """
-            CASE WHEN type = 'http_request'
+            CASE WHEN type IN ('http_request', 'kafka')
             THEN jsonb_build_object('data', ?, 'request', ?)
             ELSE ? END
             """,

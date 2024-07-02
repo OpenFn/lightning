@@ -183,6 +183,7 @@ defmodule LightningWeb.WorkflowLive.Components do
         class=""
         options={[
           "Cron Schedule (UTC)": "cron",
+          "Kafka Consumer": "kafka",
           "Webhook Event": "webhook"
         ]}
         disabled={@disabled}
@@ -197,6 +198,16 @@ defmodule LightningWeb.WorkflowLive.Components do
             form={@form}
             on_change={@on_change}
             module={LightningWeb.JobLive.CronSetupComponent}
+            disabled={@disabled}
+          />
+        <% :kafka -> %>
+          <div class="hidden sm:block" aria-hidden="true">
+            <div class="py-2"></div>
+          </div>
+          <.live_component
+            id="kafka-setup-component"
+            form={@form}
+            module={LightningWeb.JobLive.KafkaSetupComponent}
             disabled={@disabled}
           />
         <% :webhook -> %>

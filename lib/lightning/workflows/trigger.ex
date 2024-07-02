@@ -16,13 +16,14 @@ defmodule Lightning.Workflows.Trigger do
   import Ecto.Query
 
   alias Lightning.Workflows.Workflow
+  alias Lightning.Workflows.Triggers.KafkaConfiguration
 
   @type t :: %__MODULE__{
           __meta__: Ecto.Schema.Metadata.t(),
           id: Ecto.UUID.t() | nil
         }
 
-  @trigger_types [:webhook, :cron]
+  @trigger_types [:webhook, :cron, :kafka]
 
   @type trigger_type :: :webhook | :cron
   @primary_key {:id, :binary_id, autogenerate: true}
@@ -44,6 +45,8 @@ defmodule Lightning.Workflows.Trigger do
     many_to_many :webhook_auth_methods, Lightning.Workflows.WebhookAuthMethod,
       join_through: "trigger_webhook_auth_methods",
       on_replace: :delete
+
+    embeds_one :kafka_configuration, KafkaConfiguration, on_replace: :update
 
     timestamps(type: :utc_datetime)
   end
@@ -67,6 +70,11 @@ defmodule Lightning.Workflows.Trigger do
         :cron_expression,
         :has_auth_method
       ])
+      |> cast_embed(
+        :kafka_configuration,
+        required: false,
+        with: &KafkaConfiguration.changeset/2
+      )
 
     changeset
     |> validate()
@@ -101,11 +109,18 @@ defmodule Lightning.Workflows.Trigger do
       :webhook ->
         changeset
         |> put_change(:cron_expression, nil)
+        |> put_change(:kafka_configuration, nil)
 
       :cron ->
         changeset
         |> put_default(:cron_expression, "0 0 * * *")
         |> validate_cron()
+        |> put_change(:kafka_configuration, nil)
+
+      :kafka ->
+        changeset
+        |> put_change(:cron_expression, nil)
+        |> validate_required([:kafka_configuration])
 
       nil ->
         changeset

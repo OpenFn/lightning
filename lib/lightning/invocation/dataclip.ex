@@ -34,8 +34,8 @@ defmodule Lightning.Invocation.Dataclip do
           source_step: Step.t() | Ecto.Association.NotLoaded.t() | nil
         }
 
-  @type source_type :: :http_request | :global | :step_result | :saved_input
-  @source_types [:http_request, :global, :step_result, :saved_input]
+  @type source_type :: :http_request | :global | :step_result | :saved_input | :kafka
+  @source_types [:http_request, :global, :step_result, :saved_input, :kafka]
 
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id
@@ -108,11 +108,20 @@ defmodule Lightning.Invocation.Dataclip do
   end
 
   defp validate_request(changeset) do
-    if fetch_field!(changeset, :type) != :http_request and
-         not is_nil(fetch_field!(changeset, :request)) do
-      add_error(changeset, :request, "cannot be set for this type")
-    else
-      changeset
+    request = fetch_field!(changeset, :request)
+    type = fetch_field!(changeset, :type)
+
+    case {type, request} do
+      {:kafka, nil} ->
+        add_error(changeset, :request, "must be set for kafka type")
+      {:http_request, _request} ->
+        changeset
+      {:kafka, _request} ->
+        changeset
+      {_, request} when not is_nil(request) ->
+        add_error(changeset, :request, "cannot be set for this type")
+      {_, _} ->
+        changeset
     end
   end
 
