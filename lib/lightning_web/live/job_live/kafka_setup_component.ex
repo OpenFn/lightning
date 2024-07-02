@@ -61,6 +61,10 @@ defmodule LightningWeb.JobLive.KafkaSetupComponent do
         <div class="col-span-4 @md:col-span-2">
           <Form.text_field field={:initial_offset_reset_policy} form={kafka_config} disabled={@disabled} />
         </div>
+
+        <div class="col-span-4 @md:col-span-2">
+          <Form.text_field field={:connect_timeout} form={kafka_config} disabled={@disabled} />
+        </div>
       <% end %>
     </div>
     """

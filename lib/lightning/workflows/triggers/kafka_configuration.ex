@@ -18,6 +18,7 @@ defmodule Lightning.Workflows.Triggers.KafkaConfiguration do
            ]}
 
   embedded_schema do
+    field :connect_timeout, :integer, default: 30
     field :group_id, :string
     field :hosts, {:array, {:array, :string}}
     field :hosts_string, :string, virtual: true
@@ -34,6 +35,7 @@ defmodule Lightning.Workflows.Triggers.KafkaConfiguration do
   def changeset(kafka_configuration, attrs) do
     kafka_configuration
     |> cast(attrs, [
+      :connect_timeout,
       :hosts,
       :hosts_string,
       :initial_offset_reset_policy,
@@ -46,6 +48,7 @@ defmodule Lightning.Workflows.Triggers.KafkaConfiguration do
       :username
     ])
     |> validate_required([
+      :connect_timeout,
       :hosts_string,
       :initial_offset_reset_policy,
       :topics_string
@@ -54,6 +57,7 @@ defmodule Lightning.Workflows.Triggers.KafkaConfiguration do
     |> apply_topics_string()
     |> set_group_id_if_required()
     |> validate_sasl_credentials()
+    |> validate_number(:connect_timeout, greater_than: 0)
   end
 
   def generate_hosts_string(changeset) do
