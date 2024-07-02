@@ -3,7 +3,7 @@ defmodule Lightning.Runs.RunOptions do
   Options that are passed to the worker to control configurable limits and
   behaviors during run execution and reporting.
   """
-  use Ecto.Schema
+  use Lightning.Schema
 
   @type t :: %__MODULE__{
           save_dataclips: boolean(),

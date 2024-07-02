@@ -2,9 +2,7 @@ defmodule Lightning.Credentials.Credential do
   @moduledoc """
   The Credential model.
   """
-  use Ecto.Schema
-
-  import Ecto.Changeset
+  use Lightning.Schema
 
   alias Lightning.Accounts.User
   alias Lightning.Credentials.OauthClient
@@ -16,8 +14,6 @@ defmodule Lightning.Credentials.Credential do
           body: nil | %{}
         }
 
-  @primary_key {:id, :binary_id, autogenerate: true}
-  @foreign_key_type :binary_id
   schema "credentials" do
     field :name, :string
     field :body, Lightning.Encrypted.Map, redact: true
@@ -31,7 +27,7 @@ defmodule Lightning.Credentials.Credential do
     has_many :project_credentials, ProjectCredential
     has_many :projects, through: [:project_credentials, :project]
 
-    timestamps(type: :utc_datetime)
+    timestamps()
   end
 
   @doc false

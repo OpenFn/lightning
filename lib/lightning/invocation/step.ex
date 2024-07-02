@@ -18,9 +18,7 @@ defmodule Lightning.Invocation.Step do
   -  `"exception"`
   -  `"lost"`
   """
-  use Ecto.Schema
-
-  import Ecto.Changeset
+  use Lightning.Schema
 
   alias Lightning.Credentials.Credential
   alias Lightning.Invocation.Dataclip
@@ -37,8 +35,6 @@ defmodule Lightning.Invocation.Step do
           job: Job.t() | Ecto.Association.NotLoaded.t() | nil
         }
 
-  @primary_key {:id, :binary_id, autogenerate: true}
-  @foreign_key_type :binary_id
   schema "steps" do
     field :exit_reason, :string
     field :error_type, :string

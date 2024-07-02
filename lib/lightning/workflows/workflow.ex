@@ -7,9 +7,7 @@ defmodule Lightning.Workflows.Workflow do
   * `name`
     A plain text identifier
   """
-  use Ecto.Schema
-
-  import Ecto.Changeset
+  use Lightning.Schema
 
   alias Lightning.Projects.Project
   alias Lightning.Workflows.Edge
@@ -25,8 +23,6 @@ defmodule Lightning.Workflows.Workflow do
           project: nil | Project.t() | Ecto.Association.NotLoaded.t()
         }
 
-  @primary_key {:id, :binary_id, autogenerate: true}
-  @foreign_key_type :binary_id
   schema "workflows" do
     field :name, :string
 
@@ -46,7 +42,7 @@ defmodule Lightning.Workflows.Workflow do
 
     field :delete, :boolean, virtual: true
 
-    timestamps(type: :utc_datetime)
+    timestamps()
   end
 
   @doc false

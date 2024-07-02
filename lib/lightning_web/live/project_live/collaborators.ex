@@ -4,8 +4,7 @@ defmodule LightningWeb.ProjectLive.Collaborators do
   It is mirroring the `Project -> ProjectUser` relationship.
   """
 
-  use Ecto.Schema
-  import Ecto.Changeset
+  use Lightning.Schema
 
   embedded_schema do
     embeds_many :collaborators, Collaborator, on_replace: :delete do

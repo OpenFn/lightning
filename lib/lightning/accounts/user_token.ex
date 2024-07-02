@@ -17,10 +17,9 @@ defmodule Lightning.Accounts.UserToken do
   session they deem invalid.
   """
 
-  use Ecto.Schema
+  use Lightning.Schema
   use Joken.Config
 
-  import Ecto.Changeset
   import Ecto.Query
 
   alias Lightning.Accounts.User
@@ -37,8 +36,6 @@ defmodule Lightning.Accounts.UserToken do
   @sudo_session_validity_in_seconds 60 * 5
   @auth_validity_in_seconds 30
 
-  @primary_key {:id, :binary_id, autogenerate: true}
-  @foreign_key_type :binary_id
   schema "user_tokens" do
     field :token, :binary
     field :context, :string

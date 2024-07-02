@@ -2,9 +2,7 @@ defmodule Lightning.Projects.Project do
   @moduledoc """
   Project model
   """
-  use Ecto.Schema
-
-  import Ecto.Changeset
+  use Lightning.Schema
 
   alias Lightning.Projects.ProjectCredential
   alias Lightning.Projects.ProjectOauthClient
@@ -21,8 +19,6 @@ defmodule Lightning.Projects.Project do
 
   @retention_periods [7, 14, 30, 90, 180, 365]
 
-  @primary_key {:id, :binary_id, autogenerate: true}
-  @foreign_key_type :binary_id
   schema "projects" do
     field :name, :string
     field :description, :string

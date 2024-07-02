@@ -2,9 +2,7 @@ defmodule Lightning.Auditing.Audit do
   @moduledoc """
   Macro module to add common model behaviour to a given Ecto model
   """
-  use Ecto.Schema
-
-  import Ecto.Changeset
+  use Lightning.Schema
 
   require Ecto.Query
   require Logger
@@ -92,8 +90,7 @@ defmodule Lightning.Auditing.Audit do
   defmodule Changes do
     @moduledoc false
 
-    use Ecto.Schema
-    import Ecto.Changeset
+    use Lightning.Schema
 
     @primary_key false
     embedded_schema do

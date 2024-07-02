@@ -2,8 +2,7 @@ defmodule Lightning.Accounts.UserTOTP do
   @moduledoc """
   User Time based OTPs schema
   """
-  use Ecto.Schema
-  import Ecto.Changeset
+  use Lightning.Schema
 
   @type t :: %__MODULE__{
           id: Ecto.UUID.t() | nil,
@@ -12,9 +11,6 @@ defmodule Lightning.Accounts.UserTOTP do
           user:
             Lightning.Accounts.User.t() | Ecto.Association.NotLoaded.t() | nil
         }
-
-  @primary_key {:id, :binary_id, autogenerate: true}
-  @foreign_key_type :binary_id
 
   schema "user_totps" do
     field :secret, :binary, redact: true

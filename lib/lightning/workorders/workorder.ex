@@ -3,9 +3,7 @@ defmodule Lightning.WorkOrder do
   Ecto model for WorkOrders.
   """
 
-  use Ecto.Schema
-
-  import Ecto.Changeset
+  use Lightning.Schema
 
   alias Lightning.Invocation.Dataclip
   alias Lightning.Run

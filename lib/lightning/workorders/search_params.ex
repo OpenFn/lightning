@@ -4,13 +4,10 @@ defmodule Lightning.WorkOrders.SearchParams do
   a query to the database.
   """
 
-  # What should be defaults
-
-  use Ecto.Schema
-  import Ecto.Changeset
+  use Lightning.Schema
 
   @statuses ~w(pending running success failed crashed killed cancelled lost exception)
-  @statuses_set MapSet.new(@statuses, fn x -> String.to_existing_atom(x) end)
+  @statuses_set MapSet.new(@statuses)
   @search_fields ~w(id body log)
 
   defmacro status_list do

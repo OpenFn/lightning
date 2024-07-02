@@ -15,9 +15,7 @@ defmodule Lightning.Workflows.Job do
     in this context, the front end will ensure a version is stated (`@latest`
     being the default).
   """
-  use Ecto.Schema
-
-  import Ecto.Changeset
+  use Lightning.Schema
 
   alias Lightning.Credentials.Credential
   alias Lightning.Projects.ProjectCredential
@@ -33,8 +31,6 @@ defmodule Lightning.Workflows.Job do
           workflow: nil | Workflow.t() | Ecto.Association.NotLoaded.t()
         }
 
-  @primary_key {:id, :binary_id, autogenerate: true}
-  @foreign_key_type :binary_id
   schema "jobs" do
     field :body, :string
 

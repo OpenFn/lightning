@@ -849,15 +849,17 @@ defmodule Lightning.SetupUtils do
   end
 
   defp get_most_privileged_user!(project) do
-    Ecto.assoc(project, :project_users)
-    |> with_cte("role_ordering",
-      as:
-        fragment(
+    role_ordering_query =
+      from(
+        s in fragment(
           "SELECT * FROM UNNEST(?::varchar[]) WITH ORDINALITY o(role, ord)",
           ~w[owner admin editor viewer]
-        )
-    )
-    |> join(:inner, [pu], o in "role_ordering", on: pu.role == o.role)
+        ),
+        select: %{role: s.role, ord: s.ord}
+      )
+
+    Ecto.assoc(project, :project_users)
+    |> join(:inner, [pu], o in ^role_ordering_query, on: pu.role == o.role)
     |> join(:inner, [pu], u in assoc(pu, :user))
     |> order_by([pu, o], asc: o.ord)
     |> select([pu, _o, u], u)

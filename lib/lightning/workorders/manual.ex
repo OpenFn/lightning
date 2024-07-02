@@ -3,9 +3,7 @@ defmodule Lightning.WorkOrders.Manual do
   A model is used to build WorkOrders with custom input data.
   """
 
-  use Ecto.Schema
-
-  import Ecto.Changeset
+  use Lightning.Schema
 
   alias Lightning.Validators
 

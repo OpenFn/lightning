@@ -576,8 +576,8 @@ defmodule Lightning.ProjectsTest do
     end
 
     test "schedule_project_deletion/1 schedules a project for deletion and notify all project users via email." do
-      user_1 = user_fixture(email: "user_1@openfn.org", first_name: "user_1")
-      user_2 = user_fixture(email: "user_2@openfn.org", first_name: "user_2")
+      user_1 = insert(:user, email: "user_1@openfn.org", first_name: "user_1")
+      user_2 = insert(:user, email: "user_2@openfn.org", first_name: "user_2")
 
       project =
         project_fixture(

@@ -11,8 +11,7 @@ defmodule Lightning.Workflows.Trigger do
   A webhook trigger allows a Job to invoked (via `Lightning.Invocation`) when it's
   endpoint is called.
   """
-  use Ecto.Schema
-  import Ecto.Changeset
+  use Lightning.Schema
   import Ecto.Query
 
   alias Lightning.Workflows.Workflow
@@ -25,8 +24,6 @@ defmodule Lightning.Workflows.Trigger do
   @trigger_types [:webhook, :cron]
 
   @type trigger_type :: :webhook | :cron
-  @primary_key {:id, :binary_id, autogenerate: true}
-  @foreign_key_type :binary_id
   schema "triggers" do
     field :comment, :string
     field :custom_path, :string
@@ -45,7 +42,7 @@ defmodule Lightning.Workflows.Trigger do
       join_through: "trigger_webhook_auth_methods",
       on_replace: :delete
 
-    timestamps(type: :utc_datetime)
+    timestamps()
   end
 
   def new(attrs) do

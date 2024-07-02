@@ -3,9 +3,7 @@ defmodule Lightning.VersionControl.ProjectRepoConnection do
   Ecto model for project repo connections
   """
 
-  use Ecto.Schema
-
-  import Ecto.Changeset
+  use Lightning.Schema
 
   alias Lightning.Projects.Project
 
@@ -18,8 +16,6 @@ defmodule Lightning.VersionControl.ProjectRepoConnection do
           project: nil | Project.t() | Ecto.Association.NotLoaded
         }
 
-  @primary_key {:id, :binary_id, autogenerate: true}
-  @foreign_key_type :binary_id
   schema "project_repo_connections" do
     field :github_installation_id, :string
     field :repo, :string
