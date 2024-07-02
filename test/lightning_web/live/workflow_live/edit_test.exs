@@ -778,6 +778,8 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       assert form_html =~ "Path"
 
+      assert form_html =~ "Label"
+
       assert form_html =~
                ~S[<option selected="selected" value="always">Always</option><option value="js_expression">Matches a Javascript Expression</option></select>]
 
@@ -786,8 +788,6 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       assert form_html =~
                ~S[<option selected="selected" value="on_job_success">On Success</option>]
-
-      refute form_html =~ "Label"
 
       form_html =
         view
