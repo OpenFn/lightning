@@ -1,8 +1,10 @@
 defmodule Lightning.Workflows.Triggers.KafkaConfigurationTest do
-  use Lightning.DataCase, async: true
+  use Lightning.DataCase, async: false
 
   alias Ecto.Changeset
   alias Lightning.Workflows.Triggers.KafkaConfiguration
+
+  import Mock
 
   describe "generate_hosts_string/1" do
     test "adds hosts_string change to changeset" do
@@ -126,7 +128,6 @@ defmodule Lightning.Workflows.Triggers.KafkaConfigurationTest do
   describe "changeset/2" do
     setup do
       base_changes = %{
-        group_id: "group_id",
         hosts: [
           ["host1", "9092"],
           ["host2", "9093"]
@@ -143,7 +144,6 @@ defmodule Lightning.Workflows.Triggers.KafkaConfigurationTest do
       }
 
       base_expectation = %{
-        group_id: "group_id",
         hosts: [
           ["host1", "9092"],
           ["host2", "9093"]
@@ -161,25 +161,28 @@ defmodule Lightning.Workflows.Triggers.KafkaConfigurationTest do
 
       %{
         base_changes: base_changes,
-        base_expectation: base_expectation
+        base_expectation: base_expectation,
+        changes_sans_group_id: base_expectation
       }
     end
 
     test "creates a valid changeset", %{
       base_changes: base_changes,
-      base_expectation: base_expectation
+      changes_sans_group_id: changes_sans_group_id
     } do
       changeset =
         KafkaConfiguration.changeset(%KafkaConfiguration{}, base_changes)
 
-      assert %Changeset{changes: changes, valid?: true} = changeset
+      partial_group_id_pattern = ~r/^lightning-[[:xdigit:]]{8}/
 
-      assert changes == base_expectation
+      assert %Changeset{changes: changes, valid?: true} = changeset
+      assert changes |> Map.delete(:group_id) == changes_sans_group_id
+      assert changes.group_id |> String.match?(partial_group_id_pattern)
     end
 
     test "allows hosts_string to override hosts", %{
       base_changes: base_changes,
-      base_expectation: base_expectation
+      changes_sans_group_id: changes_sans_group_id
     } do
       changeset =
         KafkaConfiguration.changeset(
@@ -190,7 +193,7 @@ defmodule Lightning.Workflows.Triggers.KafkaConfigurationTest do
       assert %Changeset{changes: changes, valid?: true} = changeset
 
       expectation =
-        base_expectation
+        changes_sans_group_id
         |> Map.merge(%{
           hosts: [
             ["host3", "9094"],
@@ -199,12 +202,12 @@ defmodule Lightning.Workflows.Triggers.KafkaConfigurationTest do
           hosts_string: "host3:9094, host4:9095"
         })
 
-      assert changes == expectation
+      assert changes |> Map.delete(:group_id) == expectation
     end
 
     test "allows topics_string to override topics", %{
       base_changes: base_changes,
-      base_expectation: base_expectation
+      changes_sans_group_id: changes_sans_group_id
     } do
       changeset =
         KafkaConfiguration.changeset(
@@ -215,13 +218,13 @@ defmodule Lightning.Workflows.Triggers.KafkaConfigurationTest do
       assert %Changeset{changes: changes, valid?: true} = changeset
 
       expectation =
-        base_expectation
+        changes_sans_group_id
         |> Map.merge(%{
           topics: ["biz", "boz"],
           topics_string: "biz, boz"
         })
 
-      assert changes == expectation
+      assert changes |> Map.delete(:group_id) == expectation
     end
 
     test "is invalid if sasl selected but no username", %{
@@ -381,23 +384,6 @@ defmodule Lightning.Workflows.Triggers.KafkaConfigurationTest do
                  "can't be blank",
                  [{:validation, :required}]
                }
-             ]
-    end
-
-    test "is invalid if group_id is not provided", %{
-      base_changes: base_changes
-    } do
-      changeset =
-        KafkaConfiguration.changeset(
-          %KafkaConfiguration{},
-          base_changes
-          |> Map.merge(%{group_id: nil})
-        )
-
-      assert %Changeset{errors: errors, valid?: false} = changeset
-
-      assert errors == [
-               group_id: {"can't be blank", [{:validation, :required}]}
              ]
     end
   end
@@ -582,6 +568,51 @@ defmodule Lightning.Workflows.Triggers.KafkaConfigurationTest do
         changeset |> KafkaConfiguration.apply_topics_string()
 
       assert topics == []
+    end
+  end
+
+  describe ".set_group_id_if_required/1" do
+    test "adds a generated group_id to the changeset" do
+      with_mock Ecto.UUID, 
+        generate: fn -> "a-b-c-d" end do
+        changeset = 
+          Changeset.change(%KafkaConfiguration{}, %{})
+          |> KafkaConfiguration.set_group_id_if_required()
+
+        assert %Changeset{changes: %{group_id: "lightning-a-b-c-d"}} = changeset
+      end
+    end
+
+    test "does not add a change if the struct already has a group_id" do
+      changeset = 
+        %KafkaConfiguration{group_id: "foo"}
+        |> Changeset.change(%{})
+        |> KafkaConfiguration.set_group_id_if_required()
+
+      %Changeset{changes: changes} = changeset
+
+      assert changes == %{}
+    end
+
+    test "clears any existing group_id changes" do
+      changeset = 
+        %KafkaConfiguration{group_id: "foo"}
+        |> Changeset.change(%{group_id: "bar"})
+        |> KafkaConfiguration.set_group_id_if_required()
+
+      %Changeset{changes: changes} = changeset
+
+      assert changes == %{}
+
+      with_mock Ecto.UUID, 
+        generate: fn -> "a-b-c-d" end do
+        changeset = 
+          %KafkaConfiguration{}
+          |> Changeset.change(%{group_id: "foo"})
+          |> KafkaConfiguration.set_group_id_if_required()
+
+        assert %Changeset{changes: %{group_id: "lightning-a-b-c-d"}} = changeset
+      end
     end
   end
 end
