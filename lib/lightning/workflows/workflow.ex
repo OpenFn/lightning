@@ -75,10 +75,6 @@ defmodule Lightning.Workflows.Workflow do
   end
 
   @spec workflow_activated?(Ecto.Changeset.t()) :: boolean()
-  def workflow_activated?(%Ecto.Changeset{data: %Snapshot{}}) do
-    false
-  end
-
   def workflow_activated?(%Ecto.Changeset{data: %Workflow{}} = changeset) do
     changeset
     |> get_assoc(:triggers)
