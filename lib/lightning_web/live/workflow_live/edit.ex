@@ -1232,11 +1232,9 @@ defmodule LightningWeb.WorkflowLive.Edit do
       has_presence_edit_priority: has_presence_edit_priority
     } = socket.assigns
 
-    # TODO: SELECTED EDGE CAN BE NULL SOMETIMES !
-
     with true <- can_edit_workflow || :not_authorized,
          true <-
-           (selected_edge && is_nil(selected_edge.source_job_id)) ||
+           (selected_edge && is_nil(selected_edge.source_trigger_id)) ||
              :is_initial_edge,
          true <- tag == "latest" || :view_only,
          true <-

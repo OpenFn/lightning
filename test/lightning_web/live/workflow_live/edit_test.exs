@@ -460,8 +460,10 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       assert force_event(view, :delete_node, last_job) =~
                "Cannot delete a node in snapshot mode, switch to latest"
 
+      view |> select_node(last_edge, snapshot.lock_version)
+
       assert force_event(view, :delete_edge, last_edge) =~
-               "Cannot delete a node in snapshot mode, switch to latest"
+               "Cannot delete an edge in snapshot mode, switch to latest"
 
       assert force_event(view, :manual_run_submit, %{}) =~
                "Cannot run in snapshot mode, switch to latest."

@@ -142,7 +142,7 @@ defmodule LightningWeb.WorkflowLive.UserPresencesTest do
       assert ana_view |> has_element?("#canvas-banner-#{ana.id}")
 
       assert ana_view |> element("#canvas-banner-#{ana.id}") |> render() =~
-               "This workflow is currently locked for editing because a collaborator (Amy Ly) is currently working on it. You will be able to inspect this workflow and its associated jobs but will not be able to make changes."
+               "This workflow is currently locked for editing because a collaborator (Amy Ly) is currently working on it. You can inspect this workflow and its associated steps but cannot make edits."
 
       refute render(amy_view) =~ amy.first_name
       assert render(amy_view) =~ ana.first_name
@@ -168,7 +168,7 @@ defmodule LightningWeb.WorkflowLive.UserPresencesTest do
       assert ana_view |> has_element?("#canvas-banner-#{ana.id}")
 
       assert ana_view |> element("#canvas-banner-#{ana.id}") |> render() =~
-               "This workflow is currently locked for editing because a collaborator (Amy Ly) is currently working on it. You will be able to inspect this workflow and its associated jobs but will not be able to make changes."
+               "This workflow is currently locked for editing because a collaborator (Amy Ly) is currently working on it. You can inspect this workflow and its associated steps but cannot make edits."
 
       refute aly_view |> has_element?("#canvas-online-users-#{aly.id}")
       assert aly_view |> has_element?("#canvas-online-users-#{amy.id}")
@@ -176,7 +176,7 @@ defmodule LightningWeb.WorkflowLive.UserPresencesTest do
       assert aly_view |> has_element?("#canvas-banner-#{aly.id}")
 
       assert aly_view |> element("#canvas-banner-#{aly.id}") |> render() =~
-               "This workflow is currently locked for editing because a collaborator (Amy Ly) is currently working on it. You will be able to inspect this workflow and its associated jobs but will not be able to make changes."
+               "This workflow is currently locked for editing because a collaborator (Amy Ly) is currently working on it. You can inspect this workflow and its associated steps but cannot make edits."
 
       refute render(amy_view) =~ amy.first_name
       assert render(amy_view) =~ ana.first_name
@@ -196,20 +196,23 @@ defmodule LightningWeb.WorkflowLive.UserPresencesTest do
       assert force_event(ana_view, :save) =~
                "Cannot save in low priority mode."
 
+      ana_view
+      |> select_node(last_job, workflow.lock_version)
+
       assert force_event(ana_view, :delete_node, last_job) =~
-               "Cannot delete in low priority mode."
+               "Cannot delete a node in low priority mode"
+
+      ana_view
+      |> select_node(last_edge, workflow.lock_version)
 
       assert force_event(ana_view, :delete_edge, last_edge) =~
-               "Cannot delete in low priority mode."
+               "Cannot delete an edge in low priority mode"
 
       assert force_event(ana_view, :manual_run_submit, %{}) =~
                "Cannot run in low priority mode."
 
       assert force_event(ana_view, :rerun, nil, nil) =~
                "Cannot rerun in low priority mode."
-
-      assert force_event(ana_view, :switch_workflow_version, "commit") =~
-               "Cannot switch in low priority mode."
     end
 
     test "in inspector", %{conn: conn} do
@@ -280,7 +283,7 @@ defmodule LightningWeb.WorkflowLive.UserPresencesTest do
       assert ana_view |> has_element?("#inspector-banner-#{ana.id}")
 
       assert ana_view |> element("#canvas-banner-#{ana.id}") |> render() =~
-               "This workflow is currently locked for editing because a collaborator (Amy Ly) is currently working on it. You will be able to inspect this workflow and its associated jobs but will not be able to make changes."
+               "This workflow is currently locked for editing because a collaborator (Amy Ly) is currently working on it. You can inspect this workflow and its associated steps but cannot make edits."
 
       refute render(amy_view) =~ amy.first_name
       assert render(amy_view) =~ ana.first_name
@@ -306,7 +309,7 @@ defmodule LightningWeb.WorkflowLive.UserPresencesTest do
       assert ana_view |> has_element?("#inspector-banner-#{ana.id}")
 
       assert ana_view |> element("#canvas-banner-#{ana.id}") |> render() =~
-               "This workflow is currently locked for editing because a collaborator (Amy Ly) is currently working on it. You will be able to inspect this workflow and its associated jobs but will not be able to make changes."
+               "This workflow is currently locked for editing because a collaborator (Amy Ly) is currently working on it. You can inspect this workflow and its associated steps but cannot make edits."
 
       refute aly_view |> has_element?("#inspector-online-users-#{aly.id}")
       assert aly_view |> has_element?("#inspector-online-users-#{amy.id}")
@@ -314,7 +317,7 @@ defmodule LightningWeb.WorkflowLive.UserPresencesTest do
       assert aly_view |> has_element?("#inspector-banner-#{aly.id}")
 
       assert aly_view |> element("#canvas-banner-#{aly.id}") |> render() =~
-               "This workflow is currently locked for editing because a collaborator (Amy Ly) is currently working on it. You will be able to inspect this workflow and its associated jobs but will not be able to make changes."
+               "This workflow is currently locked for editing because a collaborator (Amy Ly) is currently working on it. You can inspect this workflow and its associated steps but cannot make edits."
 
       refute render(amy_view) =~ amy.first_name
       assert render(amy_view) =~ ana.first_name
@@ -368,10 +371,10 @@ defmodule LightningWeb.WorkflowLive.UserPresencesTest do
       assert another_amy_view |> has_element?("#canvas-banner-#{amy.id}")
 
       assert amy_view |> element("#canvas-banner-#{amy.id}") |> render() =~
-               "You can&#39;t edit this workflow because you have 2 sessions currently openning it. Please make sure you have only one session opening this workflow to have edit mode enabled."
+               "You cannot edit this workflow because it has 2 active sessions at the moment. To enable editing, close other active sessions."
 
       assert another_amy_view |> element("#canvas-banner-#{amy.id}") |> render() =~
-               "You can&#39;t edit this workflow because you have 2 sessions currently openning it. Please make sure you have only one session opening this workflow to have edit mode enabled."
+               "You cannot edit this workflow because it has 2 active sessions at the moment. To enable editing, close other active sessions."
     end
 
     test "in inspector", %{conn: conn} do
@@ -412,12 +415,12 @@ defmodule LightningWeb.WorkflowLive.UserPresencesTest do
       assert another_amy_view |> has_element?("#inspector-banner-#{amy.id}")
 
       assert amy_view |> element("#inspector-banner-#{amy.id}") |> render() =~
-               "You can&#39;t edit this workflow because you have 2 sessions currently openning it. Please make sure you have only one session opening this workflow to have edit mode enabled."
+               "You cannot edit this workflow because it has 2 active sessions at the moment. To enable editing, close other active sessions."
 
       assert another_amy_view
              |> element("#inspector-banner-#{amy.id}")
              |> render() =~
-               "You can&#39;t edit this workflow because you have 2 sessions currently openning it. Please make sure you have only one session opening this workflow to have edit mode enabled."
+               "You cannot edit this workflow because it has 2 active sessions at the moment. To enable editing, close other active sessions."
     end
   end
 end
