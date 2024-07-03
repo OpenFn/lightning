@@ -2158,7 +2158,9 @@ defmodule LightningWeb.WorkflowLive.Edit do
       disabled={@disabled}
       form="workflow-form"
       phx-disconnected={JS.set_attribute({"disabled", ""})}
-      phx-connected={!@disabled && JS.remove_attribute("disabled")}
+      phx-connected={
+        !@disabled && !@has_presence_priority && JS.remove_attribute("disabled")
+      }
     >
       Save
     </Form.submit_button>
