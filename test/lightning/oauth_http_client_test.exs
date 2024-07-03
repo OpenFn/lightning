@@ -185,7 +185,6 @@ defmodule Lightning.AuthProviders.OauthHTTPClientTest do
       expected_params = [
         access_type: "offline",
         client_id: "client123",
-        prompt: "consent",
         redirect_uri: "http://localhost:4002/authenticate/callback",
         response_type: "code",
         scope: "email",
