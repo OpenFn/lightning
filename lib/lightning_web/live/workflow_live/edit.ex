@@ -614,7 +614,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
       current_user_presence.active_sessions > 1 ->
         "You cannot edit this workflow because it has #{current_user_presence.active_sessions} active sessions at the moment. To enable editing, close other active sessions."
 
-      current_user_presence.priority == :low ->
+      current_user_presence.user.id != prior_user_presence.user.id ->
         "This workflow is currently locked for editing because a collaborator (#{prior_user_name}) is currently working on it. You can inspect this workflow and its associated steps but cannot make edits."
 
       true ->
@@ -924,19 +924,13 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
   @impl true
   def mount(_params, _session, %{assigns: assigns} = socket) do
-    pid = self()
-
     view_only_users_ids =
-      Lightning.Repo.preload(assigns.project, project_users: [:user])
-      |> Map.get(:project_users)
-      |> Enum.filter(fn pu -> pu.role == :viewer end)
-      |> Enum.map(fn pu -> pu.user.id end)
+      assigns.project |> view_only_users() |> Enum.map(fn pu -> pu.user.id end)
 
     {:ok,
      socket
      |> authorize()
      |> assign(
-       pid: pid,
        view_only_users_ids: view_only_users_ids,
        active_menu_item: :overview,
        expanded_job: nil,
@@ -1032,11 +1026,17 @@ defmodule LightningWeb.WorkflowLive.Edit do
       Presence.track_user_presence(
         socket.assigns.current_user,
         "workflow-#{socket.assigns.workflow.id}:presence",
-        socket.assigns.pid
+        self()
       )
     end
 
     socket
+  end
+
+  defp view_only_users(project) do
+    Lightning.Repo.preload(project, project_users: [:user])
+    |> Map.get(:project_users)
+    |> Enum.filter(fn pu -> pu.role == :viewer end)
   end
 
   defp snapshot_by_version(workflow_id, version),
@@ -1086,7 +1086,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
       if version != "latest" do
         Presence.untrack(
-          socket.assigns.pid,
+          self(),
           "workflow-#{socket.assigns.workflow.id}:presence",
           socket.assigns.current_user.id
         )
@@ -1211,7 +1211,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
          socket
          |> put_flash(
            :error,
-           "Cannot delete a node in low priority mode"
+           "You can’t delete a node in view-only mode"
          )}
     end
   end
@@ -1268,7 +1268,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
          socket
          |> put_flash(
            :error,
-           "Cannot delete an edge in low priority mode"
+           "You can’t delete an edge in view-only mode"
          )}
     end
   end
@@ -1621,7 +1621,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
     summary =
       "workflow-#{socket.assigns.workflow.id}:presence"
       |> Presence.list_presences()
-      |> build_presence_summary(socket)
+      |> Presence.build_presences_summary(socket.assigns)
 
     {:noreply,
      socket
@@ -1652,7 +1652,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
       selected_run: selected_run
     } = socket.assigns
 
-    if prior_presence.user.id == current_user.id && !Workflows.latest?(workflow) do
+    if prior_presence.user.id == current_user.id &&
+         Workflows.has_newer_version?(workflow) do
       reloaded_workflow = get_workflow_by_id(workflow.id)
 
       socket = assign(socket, workflow: reloaded_workflow)
@@ -1689,44 +1690,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
       prior_user_presence: init_user_presence,
       current_user_presence: init_user_presence,
       has_presence_edit_priority: true
-    }
-  end
-
-  defp build_presence_summary(presences, socket) do
-    %{
-      current_user_presence: current_user_presence,
-      current_user: current_user,
-      view_only_users_ids: view_only_users_ids
-    } = socket.assigns
-
-    presences = Enum.sort_by(presences, & &1.joined_at)
-
-    current_user_presence =
-      Enum.find(presences, current_user_presence, fn presence ->
-        presence.user.id == current_user.id
-      end)
-
-    presences_promotable =
-      Enum.reject(presences, fn presence ->
-        presence.user.id in view_only_users_ids
-      end)
-
-    prior_user_presence =
-      if length(presences_promotable) > 0 do
-        List.first(presences_promotable)
-      else
-        current_user_presence
-      end
-
-    has_presence_edit_priority =
-      current_user_presence.user.id == prior_user_presence.user.id &&
-        current_user_presence.active_sessions <= 1
-
-    %{
-      presences: presences,
-      prior_user_presence: prior_user_presence,
-      current_user_presence: current_user_presence,
-      has_presence_edit_priority: has_presence_edit_priority
     }
   end
 

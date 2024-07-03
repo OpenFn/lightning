@@ -200,13 +200,13 @@ defmodule LightningWeb.WorkflowLive.UserPresencesTest do
       |> select_node(last_job, workflow.lock_version)
 
       assert force_event(ana_view, :delete_node, last_job) =~
-               "Cannot delete a node in low priority mode"
+               "You can’t delete a node in view-only mode"
 
       ana_view
       |> select_node(last_edge, workflow.lock_version)
 
       assert force_event(ana_view, :delete_edge, last_edge) =~
-               "Cannot delete an edge in low priority mode"
+               "You can’t delete an edge in view-only mode"
 
       assert force_event(ana_view, :manual_run_submit, %{}) =~
                "Cannot run in low priority mode."

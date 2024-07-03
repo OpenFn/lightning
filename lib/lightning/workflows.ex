@@ -406,12 +406,12 @@ defmodule Lightning.Workflows do
     from(j in Job, order_by: [asc: j.inserted_at])
   end
 
-  def latest?(%Workflow{lock_version: version}) do
-    query =
-      from s in Snapshot,
-        where: s.lock_version > ^version,
-        select: count(s.id)
-
-    Repo.one(query) == 0
+  def has_newer_version?(%Workflow{lock_version: version}) do
+    from(s in Snapshot,
+      where: s.lock_version > ^version,
+      limit: 1,
+      select: true
+    )
+    |> Repo.exists?()
   end
 end
