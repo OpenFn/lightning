@@ -19,6 +19,8 @@ and this project adheres to
 
 ### Changed
 
+- Allow endpoint plugs to be injected at compile time.
+  [#2248](https://github.com/OpenFn/lightning/pull/2248)
 - All models to use the `public` schema.
   [#2249](https://github.com/OpenFn/lightning/pull/2249)
 - In the workflow diagram, smartly update the view when adding new nodes
