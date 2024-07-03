@@ -277,6 +277,12 @@ defmodule Lightning.Factories do
       topics: ["arb_topic"]
     }
   end
+
+  def trigger_kafka_message_record_factory do
+    %Lightning.KafkaTriggers.TriggerKafkaMessageRecord{
+      topic_partition_offset: "foo_1_1001",
+    }
+  end
   # ----------------------------------------------------------------------------
   # Helpers
   # ----------------------------------------------------------------------------

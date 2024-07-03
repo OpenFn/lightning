@@ -509,4 +509,7 @@ config :lightning, :usage_tracking,
     env!("USAGE_TRACKING_RESUBMISSION_BATCH_SIZE", :integer, 10),
   daily_batch_size: env!("USAGE_TRACKING_DAILY_BATCH_SIZE", :integer, 10)
 
+config :lightning, :kafka_pipelines,
+  duplicate_tracking_retention_seconds:
+    env!("KAFKA_DUPLICATE_TRACKING_RETENTION_SECONDS", :integer, 3600)
 # ==============================================================================
