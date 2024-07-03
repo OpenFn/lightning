@@ -27,8 +27,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
   alias Lightning.WorkOrders
   alias LightningWeb.Components.Form
   alias LightningWeb.WorkflowLive.Helpers
-  alias LightningWeb.WorkflowLive.Presence
   alias LightningWeb.WorkflowNewLive.WorkflowParams
+  alias Phoenix.LiveView.JS
 
   require Lightning.Run
 
@@ -138,6 +138,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
                 changeset={@changeset}
                 can_edit_workflow={@can_edit_workflow}
                 snapshot_version_tag={@snapshot_version_tag}
+                has_presence_priority={@has_presence_edit_priority}
               />
             </div>
           </.with_changes_indicator>
@@ -369,6 +370,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
                       changeset={@changeset}
                       can_edit_workflow={@can_edit_workflow}
                       snapshot_version_tag={@snapshot_version_tag}
+                      has_presence_priority={@has_presence_edit_priority}
                     />
                   </.with_changes_indicator>
                 </div>
@@ -2169,12 +2171,14 @@ defmodule LightningWeb.WorkflowLive.Edit do
   attr :can_edit_workflow, :boolean, required: true
   attr :changeset, Ecto.Changeset, required: true
   attr :snapshot_version_tag, :string, required: true
+  attr :has_presence_priority, :boolean, required: true
 
   defp save_workflow_button(assigns) do
     %{
       can_edit_workflow: can_edit_workflow,
       changeset: changeset,
-      snapshot_version_tag: snapshot_version_tag
+      snapshot_version_tag: snapshot_version_tag,
+      has_presence_priority: has_presence_priority
     } = assigns
 
     assigns =
@@ -2182,7 +2186,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
       |> assign(
         disabled:
           !can_edit_workflow or !changeset.valid? or
-            snapshot_version_tag != "latest"
+            snapshot_version_tag != "latest" or !has_presence_priority
       )
 
     ~H"""
