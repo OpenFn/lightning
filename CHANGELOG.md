@@ -19,6 +19,12 @@ and this project adheres to
 
 ### Changed
 
+### Fixed
+
+## [v2.7.2] - 2024-07-03
+
+### Changed
+
 - Allow endpoint plugs to be injected at compile time.
   [#2248](https://github.com/OpenFn/lightning/pull/2248)
 - All models to use the `public` schema.
@@ -31,7 +37,6 @@ and this project adheres to
 
 - Remove prompt parameter from the authorization URL parameters for the Generic
   Oauth Clients [#2250](https://github.com/OpenFn/lightning/issues/2250)
-
 - Fixed react key error [#2233](https://github.com/OpenFn/lightning/issues/2233)
 - Show common functions in the Docs panel
   [#1733](https://github.com/OpenFn/lightning/issues/1733)
