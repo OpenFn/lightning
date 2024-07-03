@@ -194,25 +194,25 @@ defmodule LightningWeb.WorkflowLive.UserPresencesTest do
       last_edge = workflow.edges |> List.last()
 
       assert force_event(ana_view, :save) =~
-               "Cannot save in low priority mode."
+               "Cannot save in view-only mode"
 
       ana_view
       |> select_node(last_job, workflow.lock_version)
 
       assert force_event(ana_view, :delete_node, last_job) =~
-               "You can’t delete a node in view-only mode"
+               "Cannot delete a step in view-only mode"
 
       ana_view
       |> select_node(last_edge, workflow.lock_version)
 
       assert force_event(ana_view, :delete_edge, last_edge) =~
-               "You can’t delete an edge in view-only mode"
+               "Cannot delete an edge in view-only mode"
 
       assert force_event(ana_view, :manual_run_submit, %{}) =~
-               "Cannot run in low priority mode."
+               "Cannot run in view-only mode"
 
       assert force_event(ana_view, :rerun, nil, nil) =~
-               "Cannot rerun in low priority mode."
+               "Cannot rerun in view-only mode"
     end
 
     test "in inspector", %{conn: conn} do

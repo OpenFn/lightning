@@ -1203,7 +1203,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
          socket
          |> put_flash(
            :error,
-           "Cannot delete a node in snapshot mode, switch to latest"
+           "Cannot delete a step in snapshot mode, switch to latest"
          )}
 
       :presence_low_priority ->
@@ -1211,7 +1211,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
          socket
          |> put_flash(
            :error,
-           "You can’t delete a node in view-only mode"
+           "Cannot delete a step in view-only mode"
          )}
     end
   end
@@ -1268,7 +1268,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
          socket
          |> put_flash(
            :error,
-           "You can’t delete an edge in view-only mode"
+           "Cannot delete an edge in view-only mode"
          )}
     end
   end
@@ -1365,7 +1365,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
          socket
          |> put_flash(
            :error,
-           "Cannot save in low priority mode."
+           "Cannot save in view-only mode"
          )}
 
       :not_authorized ->
@@ -1495,7 +1495,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
       :presence_low_priority ->
         {:noreply,
          socket
-         |> put_flash(:error, "Cannot rerun in low priority mode.")}
+         |> put_flash(:error, "Cannot rerun in view-only mode")}
     end
   end
 
@@ -1567,7 +1567,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
       :presence_low_priority ->
         {:noreply,
          socket
-         |> put_flash(:error, "Cannot run in low priority mode.")}
+         |> put_flash(:error, "Cannot run in view-only mode")}
 
       {:error, %{text: message}} ->
         {:noreply, put_flash(socket, :error, message)}
@@ -2149,7 +2149,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
       |> assign(
         disabled:
           !can_edit_workflow or !changeset.valid? or
-            snapshot_version_tag != "latest" or !has_presence_priority
+            snapshot_version_tag != "latest" || !has_presence_priority
       )
 
     ~H"""
